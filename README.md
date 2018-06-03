@@ -1,10 +1,7 @@
-# Go GXPlatform
 
-Official Go implementation of the GXPlatform protocol. 
+## Go GXPlatform
 
-## Go Ethereum
-
-Official golang implementation of the Ethereum protocol.
+Official golang implementation of the GXPlatform protocol.
 
 ## Building the source
 
