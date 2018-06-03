@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"runtime"
 	"time"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 	"testing"
 	"reflect"
 	"github.com/davecgh/go-spew/spew"

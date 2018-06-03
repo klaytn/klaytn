@@ -1,12 +1,12 @@
 package keystore
 
 import (
-	"groundx.xyz/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/accounts"
 	"github.com/pborman/uuid"
 	"encoding/json"
 	"encoding/hex"
 	"crypto/sha256"
-	"groundx.xyz/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/crypto"
 	"fmt"
 	"crypto/aes"
 	"crypto/cipher"

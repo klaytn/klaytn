@@ -2,11 +2,11 @@ package node
 
 import (
 	"reflect"
-	"groundx.xyz/go-gxplatform/accounts"
-	"groundx.xyz/go-gxplatform/p2p"
-	"groundx.xyz/go-gxplatform/rpc"
-	"groundx.xyz/go-gxplatform/gxdb"
-	"groundx.xyz/go-gxplatform/event"
+	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/p2p"
+	"ground-x/go-gxplatform/rpc"
+	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/event"
 )
 
 type ServiceContext struct {

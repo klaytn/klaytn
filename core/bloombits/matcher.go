@@ -1,12 +1,12 @@
 package bloombits
 
 import (
-	"groundx.xyz/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/crypto"
 	"context"
 	"sync/atomic"
 	"time"
 	"bytes"
-	"groundx.xyz/go-gxplatform/common/bitutil"
+	"ground-x/go-gxplatform/common/bitutil"
 	"sort"
 	"sync"
 	"math"

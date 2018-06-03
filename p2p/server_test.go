@@ -1,17 +1,17 @@
 package p2p
 
 import (
-	"groundx.xyz/go-gxplatform/p2p/discover"
+	"ground-x/go-gxplatform/p2p/discover"
 	"crypto/ecdsa"
-	"groundx.xyz/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/crypto"
 	"math/rand"
 	"net"
-	"groundx.xyz/go-gxplatform/crypto/sha3"
+	"ground-x/go-gxplatform/crypto/sha3"
 	"testing"
 	"time"
 	"reflect"
 	"errors"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 )
 
 func init() {

@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"time"
 
-	"groundx.xyz/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/matrics"
 )
 
 // a regexp for extracting the unit from time.Duration.String

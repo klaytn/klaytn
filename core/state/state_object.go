@@ -19,9 +19,9 @@ package state
 import (
 	"bytes"
 	"fmt"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/crypto"
-	"groundx.xyz/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/rlp"
 	"io"
 	"math/big"
 )

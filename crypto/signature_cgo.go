@@ -20,8 +20,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
-	"groundx.xyz/go-gxplatform/common/math"
-	"groundx.xyz/go-gxplatform/crypto/secp256k1"
+	"ground-x/go-gxplatform/common/math"
+	"ground-x/go-gxplatform/crypto/secp256k1"
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.

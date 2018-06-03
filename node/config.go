@@ -1,20 +1,20 @@
 package node
 
 import (
-	"groundx.xyz/go-gxplatform/p2p"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/p2p"
+	"ground-x/go-gxplatform/log"
 	"runtime"
 	"strings"
 	"path/filepath"
 	"os"
-	"groundx.xyz/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/accounts"
 	"io/ioutil"
-	"groundx.xyz/go-gxplatform/accounts/keystore"
+	"ground-x/go-gxplatform/accounts/keystore"
 	"fmt"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 	"crypto/ecdsa"
-	"groundx.xyz/go-gxplatform/crypto"
-	"groundx.xyz/go-gxplatform/p2p/discover"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/p2p/discover"
 )
 
 const (

@@ -1,10 +1,10 @@
 package keystore
 
 import (
-	"groundx.xyz/go-gxplatform/accounts"
-	"groundx.xyz/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/core/types"
 	"math/big"
-	"groundx.xyz/go-gxplatform"
+	"ground-x/go-gxplatform"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original

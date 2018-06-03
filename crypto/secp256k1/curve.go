@@ -36,7 +36,7 @@ import (
 	"math/big"
 	"unsafe"
 
-	"groundx.xyz/go-gxplatform/common/math"
+	"ground-x/go-gxplatform/common/math"
 )
 
 /*

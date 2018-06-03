@@ -1,19 +1,19 @@
 package miner
 
 import (
-	"groundx.xyz/go-gxplatform/accounts"
-	"groundx.xyz/go-gxplatform/core"
-	"groundx.xyz/go-gxplatform/gxdb"
-	"groundx.xyz/go-gxplatform/event"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/consensus"
-	"groundx.xyz/go-gxplatform/params"
+	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/event"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/params"
 	"sync/atomic"
 	"fmt"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/core/state"
-	"groundx.xyz/go-gxplatform/gxp/downloader"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/gxp/downloader"
 )
 
 // Backend wraps all methods required for mining.

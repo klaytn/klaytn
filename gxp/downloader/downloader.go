@@ -1,21 +1,21 @@
 package downloader
 
 import (
-	"groundx.xyz/go-gxplatform/params"
+	"ground-x/go-gxplatform/params"
 	"time"
 	"errors"
-	"groundx.xyz/go-gxplatform/event"
+	"ground-x/go-gxplatform/event"
 	"sync"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
 	"math/big"
-	"groundx.xyz/go-gxplatform/core/rawdb"
-	"groundx.xyz/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/core/rawdb"
+	"ground-x/go-gxplatform/gxdb"
 	"sync/atomic"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 	"fmt"
-	"groundx.xyz/go-gxplatform/matrics"
-	"groundx.xyz/go-gxplatform"
+	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform"
 )
 
 var (

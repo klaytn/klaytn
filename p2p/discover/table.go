@@ -33,10 +33,10 @@ import (
 	"sync"
 	"time"
 
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/p2p/netutil"
-	"groundx.xyz/go-gxplatform/crypto"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/p2p/netutil"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/log"
 )
 
 const (

@@ -19,7 +19,7 @@ package p2p
 import (
 	"fmt"
 
-	"groundx.xyz/go-gxplatform/p2p/discover"
+	"ground-x/go-gxplatform/p2p/discover"
 )
 
 // Protocol represents a P2P subprotocol implementation.

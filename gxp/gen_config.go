@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"time"
 
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/common/hexutil"
-	"groundx.xyz/go-gxplatform/consensus/gxhash"
-	"groundx.xyz/go-gxplatform/core"
-	"groundx.xyz/go-gxplatform/gxp/downloader"
-	"groundx.xyz/go-gxplatform/gxp/gasprice"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/common/hexutil"
+	"ground-x/go-gxplatform/consensus/gxhash"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/gxp/downloader"
+	"ground-x/go-gxplatform/gxp/gasprice"
 )
 
 var _ = (*configMarshaling)(nil)

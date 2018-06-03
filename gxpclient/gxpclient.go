@@ -2,15 +2,15 @@ package gxpclient
 
 import (
 	"context"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/rlp"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/common/hexutil"
-	"groundx.xyz/go-gxplatform/rpc"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/common/hexutil"
+	"ground-x/go-gxplatform/rpc"
 	"math/big"
 	"encoding/json"
 	"fmt"
-	"groundx.xyz/go-gxplatform"
+	"ground-x/go-gxplatform"
 	"errors"
 )
 

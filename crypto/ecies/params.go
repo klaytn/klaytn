@@ -42,7 +42,7 @@ import (
 	"fmt"
 	"hash"
 
-	ethcrypto "groundx.xyz/go-gxplatform/crypto"
+	ethcrypto "ground-x/go-gxplatform/crypto"
 )
 
 var (

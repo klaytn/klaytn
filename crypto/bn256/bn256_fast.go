@@ -19,7 +19,7 @@
 // Package bn256 implements the Optimal Ate pairing over a 256-bit Barreto-Naehrig curve.
 package bn256
 
-import "groundx.xyz/go-gxplatform/crypto/bn256/cloudflare"
+import "ground-x/go-gxplatform/crypto/bn256/cloudflare"
 
 // G1 is an abstract cyclic group. The zero value is suitable for use as the
 // output of an operation, but cannot be used as an input.

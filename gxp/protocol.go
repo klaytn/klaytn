@@ -1,13 +1,13 @@
 package gxp
 
 import (
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/core"
-	"groundx.xyz/go-gxplatform/event"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/event"
 	"math/big"
 	"io"
-	"groundx.xyz/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/rlp"
 	"fmt"
 )
 

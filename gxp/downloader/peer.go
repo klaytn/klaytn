@@ -3,14 +3,14 @@ package downloader
 import (
 	"time"
 	"sort"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 	"sync"
 	"math/big"
 	"sync/atomic"
 	"fmt"
 	"math"
-	"groundx.xyz/go-gxplatform/event"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/event"
+	"ground-x/go-gxplatform/log"
 	"errors"
 )
 

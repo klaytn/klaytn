@@ -17,7 +17,7 @@ import (
 	"bytes"
 	"bufio"
 	"regexp"
-	"groundx.xyz/go-gxplatform/internal/build"
+	"ground-x/go-gxplatform/internal/build"
 )
 
 var (

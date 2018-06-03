@@ -2,11 +2,11 @@ package core
 
 import (
 	"io"
-	"groundx.xyz/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/core/types"
 	"os"
-	"groundx.xyz/go-gxplatform/rlp"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/common"
 	"errors"
 )
 

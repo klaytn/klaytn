@@ -1,7 +1,7 @@
 package bloombits
 
 import (
-	"groundx.xyz/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/core/types"
 	"errors"
 )
 

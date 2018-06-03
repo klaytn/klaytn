@@ -2,8 +2,8 @@ package main
 
 import (
 	"gopkg.in/urfave/cli.v1"
-	"groundx.xyz/go-gxplatform/cmd/utils"
-	"groundx.xyz/go-gxplatform/console"
+	"ground-x/go-gxplatform/cmd/utils"
+	"ground-x/go-gxplatform/console"
 )
 
 var (

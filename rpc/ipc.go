@@ -2,9 +2,9 @@ package rpc
 
 import (
 	"net"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 	"context"
-	"groundx.xyz/go-gxplatform/p2p/netutil"
+	"ground-x/go-gxplatform/p2p/netutil"
 )
 
 // ServeListener accepts connections on l, serving JSON-RPC on them.

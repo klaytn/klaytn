@@ -1,10 +1,10 @@
 package core
 
 import (
-	"groundx.xyz/go-gxplatform/consensus"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/core/vm"
+	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/core/vm"
 	"math/big"
 )
 

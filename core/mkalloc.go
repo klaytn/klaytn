@@ -29,8 +29,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"groundx.xyz/go-gxplatform/core"
-	"groundx.xyz/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/rlp"
 	"math/big"
 	"os"
 	"sort"

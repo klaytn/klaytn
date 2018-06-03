@@ -2,14 +2,14 @@ package gxp
 
 import (
 	"time"
-	"groundx.xyz/go-gxplatform/core/rawdb"
-	"groundx.xyz/go-gxplatform/params"
-	"groundx.xyz/go-gxplatform/common/bitutil"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/core"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/core/bloombits"
-	"groundx.xyz/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/core/rawdb"
+	"ground-x/go-gxplatform/params"
+	"ground-x/go-gxplatform/common/bitutil"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/core/bloombits"
+	"ground-x/go-gxplatform/gxdb"
 )
 
 const (

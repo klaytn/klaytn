@@ -17,10 +17,10 @@
 package rawdb
 
 import (
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/rlp"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/core/types"
 	"encoding/binary"
 )
 

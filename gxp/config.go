@@ -3,17 +3,17 @@ package gxp
 import (
 	"time"
 	"math/big"
-	"groundx.xyz/go-gxplatform/params"
-	"groundx.xyz/go-gxplatform/core"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/params"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/common"
 	"os"
 	"os/user"
 	"runtime"
 	"path/filepath"
-	"groundx.xyz/go-gxplatform/common/hexutil"
-	"groundx.xyz/go-gxplatform/consensus/gxhash"
-	"groundx.xyz/go-gxplatform/gxp/gasprice"
-	"groundx.xyz/go-gxplatform/gxp/downloader"
+	"ground-x/go-gxplatform/common/hexutil"
+	"ground-x/go-gxplatform/consensus/gxhash"
+	"ground-x/go-gxplatform/gxp/gasprice"
+	"ground-x/go-gxplatform/gxp/downloader"
 )
 
 // DefaultConfig contains default settings for use on the GxPlatform main net.

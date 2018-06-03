@@ -7,9 +7,9 @@ import (
 	"errors"
 	"math/big"
 
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/common/hexutil"
-	"groundx.xyz/go-gxplatform/common/math"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/common/hexutil"
+	"ground-x/go-gxplatform/common/math"
 )
 
 var _ = (*genesisAccountMarshaling)(nil)

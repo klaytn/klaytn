@@ -1,11 +1,11 @@
 package miner
 
 import (
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/common"
 	"container/ring"
 	"sync"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 )
 
 // headerRetriever is used by the unconfirmed block set to verify whether a previously

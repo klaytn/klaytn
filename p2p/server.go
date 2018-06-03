@@ -25,14 +25,14 @@ import (
 	"sync"
 	"time"
 
-	"groundx.xyz/go-gxplatform/common/mclock"
-	"groundx.xyz/go-gxplatform/event"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/p2p/discover"
-	"groundx.xyz/go-gxplatform/p2p/nat"
-	"groundx.xyz/go-gxplatform/p2p/netutil"
+	"ground-x/go-gxplatform/common/mclock"
+	"ground-x/go-gxplatform/event"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/p2p/discover"
+	"ground-x/go-gxplatform/p2p/nat"
+	"ground-x/go-gxplatform/p2p/netutil"
 
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 )
 
 const (

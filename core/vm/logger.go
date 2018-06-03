@@ -17,15 +17,15 @@
 package vm
 
 import (
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 	"math/big"
 	"time"
 	"io"
 	"fmt"
-	"groundx.xyz/go-gxplatform/common/math"
+	"ground-x/go-gxplatform/common/math"
 	"encoding/hex"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/common/hexutil"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/common/hexutil"
 )
 
 type Storage map[common.Hash]common.Hash

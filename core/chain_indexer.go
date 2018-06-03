@@ -1,16 +1,16 @@
 package core
 
 import (
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/event"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/event"
 	"time"
 	"sync"
-	"groundx.xyz/go-gxplatform/gxdb"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/log"
 	"sync/atomic"
 	"fmt"
-	"groundx.xyz/go-gxplatform/core/rawdb"
+	"ground-x/go-gxplatform/core/rawdb"
 	"encoding/binary"
 )
 

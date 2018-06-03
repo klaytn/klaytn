@@ -1,13 +1,13 @@
 package core
 
 import (
-	"groundx.xyz/go-gxplatform/params"
-	"groundx.xyz/go-gxplatform/consensus"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/core/state"
-	"groundx.xyz/go-gxplatform/core/vm"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/params"
+	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/core/vm"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/crypto"
 	"fmt"
 )
 

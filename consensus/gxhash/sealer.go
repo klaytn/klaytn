@@ -2,14 +2,14 @@ package gxhash
 
 import (
 	crand "crypto/rand"
-	"groundx.xyz/go-gxplatform/consensus"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/common"
 	"math/big"
 	"math/rand"
 	"runtime"
 	"sync"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 	"math"
 )
 

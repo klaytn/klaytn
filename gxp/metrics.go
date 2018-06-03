@@ -1,8 +1,8 @@
 package gxp
 
 import (
-	"groundx.xyz/go-gxplatform/matrics"
-	"groundx.xyz/go-gxplatform/p2p"
+	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/p2p"
 )
 
 var (

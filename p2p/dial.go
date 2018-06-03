@@ -24,9 +24,9 @@ import (
 	"net"
 	"time"
 
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/p2p/discover"
-	"groundx.xyz/go-gxplatform/p2p/netutil"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/p2p/discover"
+	"ground-x/go-gxplatform/p2p/netutil"
 )
 
 const (

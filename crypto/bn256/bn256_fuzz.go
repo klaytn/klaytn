@@ -22,8 +22,8 @@ import (
 	"bytes"
 	"math/big"
 
-	cloudflare "groundx.xyz/go-gxplatform/crypto/bn256/cloudflare"
-	google "groundx.xyz/go-gxplatform/crypto/bn256/google"
+	cloudflare "ground-x/go-gxplatform/crypto/bn256/cloudflare"
+	google "ground-x/go-gxplatform/crypto/bn256/google"
 )
 
 // FuzzAdd fuzzez bn256 addition between the Google and Cloudflare libraries.

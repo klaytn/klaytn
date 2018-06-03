@@ -1,15 +1,15 @@
 package keystore
 
 import (
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 	"crypto/ecdsa"
 	"encoding/hex"
-	"groundx.xyz/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/crypto"
 	"encoding/json"
 	"io"
 	"bytes"
 	"strings"
-	"groundx.xyz/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/accounts"
 	"os"
 	"path/filepath"
 	"io/ioutil"

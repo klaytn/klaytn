@@ -1,7 +1,7 @@
 package vm
 
 import (
-	"groundx.xyz/go-gxplatform/params"
+	"ground-x/go-gxplatform/params"
 	"math/big"
 )
 

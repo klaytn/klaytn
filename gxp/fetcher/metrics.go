@@ -1,6 +1,6 @@
 package fetcher
 
-import "groundx.xyz/go-gxplatform/matrics"
+import "ground-x/go-gxplatform/matrics"
 
 var (
 	propAnnounceInMeter   = metrics.NewRegisteredMeter("gxp/fetcher/prop/announces/in", nil)

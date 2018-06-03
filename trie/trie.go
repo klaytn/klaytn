@@ -20,10 +20,10 @@ import (
 	"bytes"
 	"fmt"
 
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/crypto"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/matrics"
 )
 
 var (

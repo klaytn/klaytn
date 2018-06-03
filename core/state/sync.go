@@ -1,9 +1,9 @@
 package state
 
 import (
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/trie"
-	"groundx.xyz/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/trie"
+	"ground-x/go-gxplatform/rlp"
 	"bytes"
 )
 

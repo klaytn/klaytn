@@ -2,18 +2,18 @@ package filters
 
 import (
 	"fmt"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/common/hexutil"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/common/hexutil"
 	"time"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/event"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/event"
 	"sync"
-	"groundx.xyz/go-gxplatform/rpc"
+	"ground-x/go-gxplatform/rpc"
 	"context"
 	"math/big"
 	"encoding/json"
-	"groundx.xyz/go-gxplatform/gxdb"
-	"groundx.xyz/go-gxplatform"
+	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform"
 	"errors"
 )
 

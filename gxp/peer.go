@@ -4,13 +4,13 @@ import (
 	"time"
 	"errors"
 	"math/big"
-	"groundx.xyz/go-gxplatform/p2p"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/p2p"
+	"ground-x/go-gxplatform/common"
 	"sync"
 	"gopkg.in/fatih/set.v0"
 	"fmt"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/rlp"
 )
 
 var (

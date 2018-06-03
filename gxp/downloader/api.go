@@ -1,11 +1,11 @@
 package downloader
 
 import (
-	"groundx.xyz/go-gxplatform/event"
+	"ground-x/go-gxplatform/event"
 	"context"
-	"groundx.xyz/go-gxplatform/rpc"
+	"ground-x/go-gxplatform/rpc"
 	"sync"
-	"groundx.xyz/go-gxplatform"
+	"ground-x/go-gxplatform"
 )
 
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.

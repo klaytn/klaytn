@@ -2,9 +2,9 @@ package keystore
 
 import (
 	"encoding/json"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/accounts"
 	"time"
 	"fmt"
 	"sync"

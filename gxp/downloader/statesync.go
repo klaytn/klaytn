@@ -1,17 +1,17 @@
 package downloader
 
 import (
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/trie"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/trie"
 	"time"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/core/rawdb"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/core/rawdb"
 	"hash"
 	"sync"
-	"groundx.xyz/go-gxplatform/crypto/sha3"
+	"ground-x/go-gxplatform/crypto/sha3"
 	"fmt"
-	"groundx.xyz/go-gxplatform/gxdb"
-	"groundx.xyz/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/core/state"
 )
 
 // stateReq represents a batch of state fetch requests grouped together into

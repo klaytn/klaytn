@@ -1,6 +1,6 @@
 package downloader
 
-import "groundx.xyz/go-gxplatform/matrics"
+import "ground-x/go-gxplatform/matrics"
 
 var (
 	headerInMeter      = metrics.NewRegisteredMeter("gxp/downloader/headers/in", nil)

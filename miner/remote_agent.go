@@ -3,13 +3,13 @@ package miner
 import (
 	"time"
 	"sync"
-	"groundx.xyz/go-gxplatform/consensus"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/common"
 	"sync/atomic"
 	"math/big"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/consensus/gxhash"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/consensus/gxhash"
 	"errors"
 )
 

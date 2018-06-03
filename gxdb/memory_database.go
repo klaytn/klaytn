@@ -18,7 +18,7 @@ package gxdb
 
 import (
 	"errors"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 	"sync"
 )
 

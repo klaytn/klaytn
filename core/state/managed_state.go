@@ -2,7 +2,7 @@ package state
 
 import (
 	"sync"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 )
 
 type account struct {

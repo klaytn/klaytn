@@ -19,7 +19,7 @@ package params
 import (
 	"fmt"
 	"math/big"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 )
 
 var (

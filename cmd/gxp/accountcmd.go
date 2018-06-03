@@ -2,14 +2,14 @@ package main
 
 import (
 	"io/ioutil"
-	"groundx.xyz/go-gxplatform/accounts/keystore"
+	"ground-x/go-gxplatform/accounts/keystore"
 	"fmt"
 	"gopkg.in/urfave/cli.v1"
-	"groundx.xyz/go-gxplatform/crypto"
-	"groundx.xyz/go-gxplatform/cmd/utils"
-	"groundx.xyz/go-gxplatform/accounts"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/console"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/cmd/utils"
+	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/console"
 )
 
 var (

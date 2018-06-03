@@ -11,13 +11,13 @@ import (
 	"sort"
 	"os/signal"
 	"syscall"
-	"groundx.xyz/go-gxplatform/rpc"
+	"ground-x/go-gxplatform/rpc"
 
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 	"github.com/robertkrimen/otto"
-	"groundx.xyz/go-gxplatform/internal/jsre"
-	"groundx.xyz/go-gxplatform/internal/web3ext"
+	"ground-x/go-gxplatform/internal/jsre"
+	"ground-x/go-gxplatform/internal/web3ext"
 )
 
 var (

@@ -1,7 +1,7 @@
 package keystore
 
 import (
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 	"os"
 	"encoding/json"
 	"fmt"

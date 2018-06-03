@@ -2,7 +2,7 @@ package keystore
 
 import (
 	"time"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 	"github.com/rjeczalik/notify"
 )
 

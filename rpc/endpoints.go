@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"net"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 )
 
 // StartHTTPEndpoint starts the HTTP RPC endpoint, configured with cors/vhosts/modules

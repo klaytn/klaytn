@@ -2,11 +2,11 @@ package core
 
 import (
 	"container/heap"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/core/types"
 	"sort"
 	"math/big"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 	"math"
 )
 

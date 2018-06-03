@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"github.com/robertkrimen/otto"
 	"io"
-	"groundx.xyz/go-gxplatform/internal/jsre/deps"
+	"ground-x/go-gxplatform/internal/jsre/deps"
 	"time"
 	"math/rand"
 	"encoding/binary"
 	"io/ioutil"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 )
 
 var (

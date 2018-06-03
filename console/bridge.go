@@ -1,8 +1,8 @@
 package console
 
 import (
-	"groundx.xyz/go-gxplatform/rpc"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/rpc"
+	"ground-x/go-gxplatform/log"
 	"io"
 	"strings"
 	"fmt"

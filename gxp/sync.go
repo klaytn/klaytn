@@ -2,13 +2,13 @@ package gxp
 
 import (
 	"time"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/p2p/discover"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/p2p/discover"
+	"ground-x/go-gxplatform/common"
 	"math/rand"
 	"sync/atomic"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/gxp/downloader"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/gxp/downloader"
 )
 
 const (

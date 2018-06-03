@@ -33,9 +33,9 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"groundx.xyz/go-gxplatform/crypto"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/rlp"
 )
 
 var (

@@ -2,9 +2,9 @@ package miner
 
 import (
 	"sync"
-	"groundx.xyz/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/consensus"
 	"sync/atomic"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 )
 
 type CpuAgent struct {

@@ -2,14 +2,14 @@ package gasprice
 
 import (
 	"math/big"
-	"groundx.xyz/go-gxplatform/params"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/params"
+	"ground-x/go-gxplatform/common"
 	"sync"
 	"context"
-	"groundx.xyz/go-gxplatform/rpc"
-	"groundx.xyz/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/rpc"
+	"ground-x/go-gxplatform/core/types"
 	"sort"
-	"groundx.xyz/go-gxplatform/internal/gxapi"
+	"ground-x/go-gxplatform/internal/gxapi"
 )
 
 var maxPrice = big.NewInt(500 * params.Shannon)

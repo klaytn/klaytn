@@ -19,14 +19,14 @@ package state
 
 import (
 	"fmt"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/core/types"
-	"groundx.xyz/go-gxplatform/crypto"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/rlp"
 	"math/big"
 	"sync"
-	"groundx.xyz/go-gxplatform/trie"
+	"ground-x/go-gxplatform/trie"
 	"sort"
 )
 

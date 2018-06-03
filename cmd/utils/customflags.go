@@ -9,7 +9,7 @@ import (
 	"encoding"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
-	"groundx.xyz/go-gxplatform/common/math"
+	"ground-x/go-gxplatform/common/math"
 	"os/user"
 	"errors"
 )

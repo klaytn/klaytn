@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"os"
 	"os/user"
-	"groundx.xyz/go-gxplatform/p2p"
-	"groundx.xyz/go-gxplatform/p2p/nat"
+	"ground-x/go-gxplatform/p2p"
+	"ground-x/go-gxplatform/p2p/nat"
 )
 
 const (

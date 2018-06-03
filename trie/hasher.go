@@ -18,9 +18,9 @@ package trie
 
 import (
 	"bytes"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/crypto/sha3"
-	"groundx.xyz/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/crypto/sha3"
+	"ground-x/go-gxplatform/rlp"
 	"hash"
 	"sync"
 )

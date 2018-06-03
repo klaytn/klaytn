@@ -2,13 +2,13 @@ package fetcher
 
 import (
 	"time"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"errors"
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 	"math/rand"
-	"groundx.xyz/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/consensus"
 )
 
 const (

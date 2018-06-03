@@ -2,13 +2,13 @@ package vm
 
 import (
 	"math/big"
-	"groundx.xyz/go-gxplatform/common/math"
+	"ground-x/go-gxplatform/common/math"
 	"errors"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/crypto"
 	"fmt"
-	"groundx.xyz/go-gxplatform/params"
-	"groundx.xyz/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/params"
+	"ground-x/go-gxplatform/core/types"
 )
 
 var (

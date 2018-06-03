@@ -18,8 +18,8 @@ package trie
 
 import (
 	"fmt"
-	"groundx.xyz/go-gxplatform/common"
-	"groundx.xyz/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/rlp"
 	"io"
 	"strings"
 )

@@ -24,11 +24,11 @@ import (
 	"fmt"
 	"net"
 	"time"
-	"groundx.xyz/go-gxplatform/rlp"
-	"groundx.xyz/go-gxplatform/p2p/netutil"
-	"groundx.xyz/go-gxplatform/p2p/nat"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/p2p/netutil"
+	"ground-x/go-gxplatform/p2p/nat"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/crypto"
 )
 
 const Version = 4

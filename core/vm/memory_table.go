@@ -2,7 +2,7 @@ package vm
 
 import (
 	"math/big"
-	"groundx.xyz/go-gxplatform/common/math"
+	"ground-x/go-gxplatform/common/math"
 )
 
 func memorySha3(stack *Stack) *big.Int {

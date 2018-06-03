@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"groundx.xyz/go-gxplatform/log"
+	"ground-x/go-gxplatform/log"
 )
 
 // Enabled is checked by the constructor functions for all of the

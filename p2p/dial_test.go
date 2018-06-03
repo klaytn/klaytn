@@ -4,11 +4,11 @@ import (
 	"net"
 	"time"
 	"reflect"
-	"groundx.xyz/go-gxplatform/p2p/discover"
+	"ground-x/go-gxplatform/p2p/discover"
 	"encoding/binary"
 	"github.com/davecgh/go-spew/spew"
 	"testing"
-	"groundx.xyz/go-gxplatform/p2p/netutil"
+	"ground-x/go-gxplatform/p2p/netutil"
 )
 
 func init() {

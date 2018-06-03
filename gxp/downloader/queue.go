@@ -3,13 +3,13 @@ package downloader
 import (
 	"fmt"
 
-	"groundx.xyz/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/core/types"
 	"time"
-	"groundx.xyz/go-gxplatform/common"
+	"ground-x/go-gxplatform/common"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"sync"
-	"groundx.xyz/go-gxplatform/log"
-	"groundx.xyz/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/matrics"
 	"errors"
 )
 

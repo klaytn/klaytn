@@ -2,12 +2,12 @@ package main
 
 import (
 	"gopkg.in/urfave/cli.v1"
-	"groundx.xyz/go-gxplatform/node"
-	"groundx.xyz/go-gxplatform/cmd/utils"
-	gxplatform "groundx.xyz/go-gxplatform/gxp"
+	"ground-x/go-gxplatform/node"
+	"ground-x/go-gxplatform/cmd/utils"
+	gxplatform "ground-x/go-gxplatform/gxp"
 	"os"
 	"bufio"
-	"groundx.xyz/go-gxplatform/params"
+	"ground-x/go-gxplatform/params"
 	"errors"
 	"reflect"
 	"unicode"
