@@ -5,7 +5,7 @@ Official golang implementation of the GXPlatform protocol.
 
 ## Building the source
 
-Building geth requires both a Go (version 1.7 or later) and a C compiler.
+Building gxp requires both a Go (version 1.7 or later) and a C compiler.
 You can install them using your favourite package manager.
 Once the dependencies are installed, run
 
@@ -17,21 +17,21 @@ or, to build the full suite of utilities:
 
 ## Executables
 
-The go-ethereum project comes with several wrappers/executables found in the `cmd` directory.
+The go-gxplatform project comes with several wrappers/executables found in the `cmd` directory.
 
 | Command    | Description |
 |:----------:|-------------|
-| **`gxp`** | Our main GXP CLI client. It is the entry point into the GXP network (main-, test- or private net), capable of running as a full node (default) archive node (retaining all historical state) or a light node (retrieving data live). It can be used by other processes as a gateway into the Ethereum network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `gxp --help`|
+| **`gxp`** | Our main GXP CLI client. It is the entry point into the GXP network (main-, test- or private net), capable of running as a full node (default) archive node (retaining all historical state) or a light node (retrieving data live). It can be used by other processes as a gateway into the GXP network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `gxp --help`|
 
 ## Running gxp
 
 Going through all the possible command line flags is out of scope here, but we've
 enumerated a few common parameter combos to get you up to speed quickly on how you can run your
-own Geth instance.
+own GXP instance.
 
-### Full node on the main Ethereum network
+### Full node on the main GXPlatform network
 
-By far the most common scenario is people wanting to simply interact with the Ethereum network:
+By far the most common scenario is people wanting to simply interact with the GXPlatform network:
 create accounts; transfer funds; deploy and interact with contracts. For this particular use-case
 the user doesn't care about years-old historical data, so we can fast-sync quickly to the current
 state of the network. To do so:
@@ -42,16 +42,16 @@ $ gxp console
 
 This command will:
 
- * Start geth in fast sync mode (default, can be changed with the `--syncmode` flag), causing it to
-   download more data in exchange for avoiding processing the entire history of the Ethereum network,
+ * Start gxp in fast sync mode (default, can be changed with the `--syncmode` flag), causing it to
+   download more data in exchange for avoiding processing the entire history of the GXPlatform network,
    which is very CPU intensive.
 
-### Full node on the Ethereum test network
+### Full node on the GXPlatform test network
 
-Transitioning towards developers, if you'd like to play around with creating Ethereum contracts, you
+Transitioning towards developers, if you'd like to play around with creating GXPlatform contracts, you
 almost certainly would like to do that without any real money involved until you get the hang of the
 entire system. In other words, instead of attaching to the main network, you want to join the **test**
-network with your node, which is fully equivalent to the main network, but with play-Ether only.
+network with your node, which is fully equivalent to the main network, but with play-GXP only.
 
 ```
 $ gxp --testnet console
@@ -60,19 +60,19 @@ $ gxp --testnet console
 The `console` subcommand have the exact same meaning as above and they are equally useful on the
 testnet too. Please see above for their explanations if you've skipped to here.
 
-Specifying the `--testnet` flag however will reconfigure your Geth instance a bit:
+Specifying the `--testnet` flag however will reconfigure your GXP instance a bit:
 
- * Instead of using the default data directory (`~/.ethereum` on Linux for example), Geth will nest
-   itself one level deeper into a `testnet` subfolder (`~/.ethereum/testnet` on Linux). Note, on OSX
+ * Instead of using the default data directory (`~/.gxp` on Linux for example), GXP will nest
+   itself one level deeper into a `testnet` subfolder (`~/.gxp/testnet` on Linux). Note, on OSX
    and Linux this also means that attaching to a running testnet node requires the use of a custom
-   endpoint since `geth attach` will try to attach to a production node endpoint by default. E.g.
-   `geth attach <datadir>/testnet/geth.ipc`. Windows users are not affected by this.
- * Instead of connecting the main Ethereum network, the client will connect to the test network,
+   endpoint since `gxp attach` will try to attach to a production node endpoint by default. E.g.
+   `gxp attach <datadir>/testnet/gxp.ipc`. Windows users are not affected by this.
+ * Instead of connecting the main GXPlatform network, the client will connect to the test network,
    which uses different P2P bootnodes, different network IDs and genesis states.
    
 *Note: Although there are some internal protective measures to prevent transactions from crossing
 over between the main network and test network, you should make sure to always use separate accounts
-for play-money and real-money. Unless you manually move accounts, Geth will by default correctly
+for play-money and real-money. Unless you manually move accounts, GXP will by default correctly
 separate the two networks and will not make any accounts available between them.*
 
 ```
@@ -118,11 +118,11 @@ HTTP based JSON-RPC API options:
   * `--wsapi` API's offered over the WS-RPC interface (default: "gxp,net,web3")
   * `--wsorigins` Origins from which to accept websockets requests
   * `--ipcdisable` Disable the IPC-RPC server
-  * `--ipcapi` API's offered over the IPC-RPC interface (default: "admin,eth,miner,net,personal,txpool,web3")
+  * `--ipcapi` API's offered over the IPC-RPC interface (default: "admin,gxp,miner,net,personal,txpool,web3")
   * `--ipcpath` Filename for IPC socket/pipe within the datadir (explicit paths escape it)
 
 You'll need to use your own programming environments' capabilities (libraries, tools, etc) to connect
-via HTTP, WS or IPC to a Geth node configured with the above flags and you'll need to speak [JSON-RPC](http://www.jsonrpc.org/specification)
+via HTTP, WS or IPC to a GXP node configured with the above flags and you'll need to speak [JSON-RPC](http://www.jsonrpc.org/specification)
 on all transports. You can reuse the same connection for multiple requests!
 
 ### Operating a private network
@@ -165,7 +165,7 @@ configs:
 }
 ```
 
-With the genesis state defined in the above JSON file, you'll need to initialize **every** Geth node
+With the genesis state defined in the above JSON file, you'll need to initialize **every** GXP node
 with it prior to starting it up to ensure all blockchain parameters are correctly set:
 
 ```
