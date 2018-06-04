@@ -10,7 +10,7 @@ import (
 type CpuAgent struct {
 	mu sync.Mutex
 
-	workCh        chan *Work
+	workCh        chan *Task
 	stop          chan struct{}
 	quitCurrentOp chan struct{}
 	returnCh      chan<- *Result
@@ -26,12 +26,12 @@ func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine) *CpuAgent
 		chain:  chain,
 		engine: engine,
 		stop:   make(chan struct{}, 1),
-		workCh: make(chan *Work, 1),
+		workCh: make(chan *Task, 1),
 	}
 	return miner
 }
 
-func (self *CpuAgent) Work() chan<- *Work            { return self.workCh }
+func (self *CpuAgent) Work() chan<- *Task            { return self.workCh }
 func (self *CpuAgent) SetReturnCh(ch chan<- *Result) { self.returnCh = ch }
 
 func (self *CpuAgent) Stop() {
@@ -81,7 +81,7 @@ out:
 	}
 }
 
-func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
+func (self *CpuAgent) mine(work *Task, stop <-chan struct{}) {
 	if result, err := self.engine.Seal(self.chain, work.Block, stop); result != nil {
 		log.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash())
 		self.returnCh <- &Result{work, result}

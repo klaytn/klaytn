@@ -9,7 +9,7 @@ Building gxp requires both a Go (version 1.7 or later) and a C compiler.
 You can install them using your favourite package manager.
 Once the dependencies are installed, run
 
-    go run build/ci.go install ./cmd/gxp
+    make gxp   or  make all
 
 ## Executables
 

@@ -34,16 +34,16 @@ const (
 
 // Agent can register themself with the worker
 type Agent interface {
-	Work() chan<- *Work
+	Work() chan<- *Task
 	SetReturnCh(chan<- *Result)
 	Stop()
 	Start()
 	GetHashRate() int64
 }
 
-// Work is the workers current environment and holds
+// Task is the workers current environment and holds
 // all of the current state information
-type Work struct {
+type Task struct {
 	config *params.ChainConfig
 	signer types.Signer
 
@@ -64,7 +64,7 @@ type Work struct {
 }
 
 type Result struct {
-	Work  *Work
+	Task  *Task
 	Block *types.Block
 }
 
@@ -97,7 +97,7 @@ type worker struct {
 	extra    []byte
 
 	currentMu sync.Mutex
-	current   *Work
+	current   *Task
 
 	snapshotMu    sync.RWMutex
 	snapshotBlock *types.Block
@@ -300,7 +300,7 @@ func (self *worker) wait() {
 				continue
 			}
 			block := result.Block
-			work := result.Work
+			work := result.Task
 
 			// Update the block hash in all logs since it is now available and not when the
 			// receipt/log of individual transactions were created.
@@ -345,7 +345,7 @@ func (self *worker) wait() {
 }
 
 // push sends a new work task to currently live miner agents.
-func (self *worker) push(work *Work) {
+func (self *worker) push(work *Task) {
 	if atomic.LoadInt32(&self.mining) != 1 {
 		return
 	}
@@ -363,7 +363,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	work := &Work{
+	work := &Task{
 		config:    self.config,
 		signer:    types.NewEIP155Signer(self.config.ChainId),
 		state:     state,
@@ -481,7 +481,7 @@ func (self *worker) commitNewWork() {
 	fmt.Printf("####### worker.commitNewWork finished\n")
 }
 
-func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
+func (self *worker) commitUncle(work *Task, uncle *types.Header) error {
 	hash := uncle.Hash()
 	if work.uncles.Has(hash) {
 		return fmt.Errorf("uncle not unique")
@@ -509,7 +509,7 @@ func (self *worker) updateSnapshot() {
 	self.snapshotState = self.current.state.Copy()
 }
 
-func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
+func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
 	if env.gasPool == nil {
 		env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
 	}
@@ -604,7 +604,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
+func (env *Task) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 
 	fmt.Printf("#### worker.commitTransaction %v\n",tx)
 
