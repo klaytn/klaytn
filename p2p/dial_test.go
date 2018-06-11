@@ -1,14 +1,14 @@
 package p2p
 
 import (
-	"net"
-	"time"
-	"reflect"
-	"ground-x/go-gxplatform/p2p/discover"
 	"encoding/binary"
 	"github.com/davecgh/go-spew/spew"
-	"testing"
+	"ground-x/go-gxplatform/p2p/discover"
 	"ground-x/go-gxplatform/p2p/netutil"
+	"net"
+	"reflect"
+	"testing"
+	"time"
 )
 
 func init() {
@@ -677,4 +677,3 @@ func (t *resolveMock) Close()                                   {}
 func (t *resolveMock) Bootstrap([]*discover.Node)               {}
 func (t *resolveMock) Lookup(discover.NodeID) []*discover.Node  { return nil }
 func (t *resolveMock) ReadRandomNodes(buf []*discover.Node) int { return 0 }
-

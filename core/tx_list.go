@@ -2,12 +2,12 @@ package core
 
 import (
 	"container/heap"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/core/types"
-	"sort"
-	"math/big"
 	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/log"
 	"math"
+	"math/big"
+	"sort"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
@@ -500,4 +500,3 @@ func (l *txPricedList) Discard(count int, local *accountSet) types.Transactions 
 	}
 	return drop
 }
-

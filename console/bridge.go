@@ -1,13 +1,13 @@
 package console
 
 import (
-	"ground-x/go-gxplatform/rpc"
+	"encoding/json"
+	"fmt"
 	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/rpc"
 	"io"
 	"strings"
-	"fmt"
 	"time"
-	"encoding/json"
 
 	"github.com/robertkrimen/otto"
 )
@@ -336,4 +336,3 @@ func throwJSException(msg interface{}) otto.Value {
 	}
 	panic(val)
 }
-

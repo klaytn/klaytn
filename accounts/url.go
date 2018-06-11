@@ -17,10 +17,10 @@
 package accounts
 
 import (
-	"strings"
-	"fmt"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 )
 
 // URL represents the canonical identification URL of a wallet or account.

@@ -1,22 +1,22 @@
 package miner
 
 import (
-	"ground-x/go-gxplatform/params"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/core/state"
-	"gopkg.in/fatih/set.v0"
-	"ground-x/go-gxplatform/core"
-	"time"
-	"ground-x/go-gxplatform/consensus"
-	"sync"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/gxdb"
-	"sync/atomic"
-	"ground-x/go-gxplatform/log"
-	"math/big"
 	"fmt"
+	"gopkg.in/fatih/set.v0"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/core/vm"
+	"ground-x/go-gxplatform/event"
+	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/params"
+	"math/big"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 const (
@@ -131,15 +131,19 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		agents:         make(map[Agent]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
 	}
-	// Subscribe NewTxsEvent for tx pool
-	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
-	// Subscribe events for blockchain
-	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
-	go worker.update()
 
-	go worker.wait()
-	worker.commitNewWork()
+	// istanbul BFT
+	if _, ok := engine.(consensus.Istanbul); ok || !config.IsBFT {
+		// Subscribe NewTxsEvent for tx pool
+		worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
+		// Subscribe events for blockchain
+		worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
+		worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+		go worker.update()
+
+		go worker.wait()
+		worker.commitNewWork()
+	}
 
 	return worker
 }
@@ -188,6 +192,11 @@ func (self *worker) start() {
 
 	atomic.StoreInt32(&self.mining, 1)
 
+	// istanbul BFT
+	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
+		istanbul.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock)
+	}
+
 	// spin up agents
 	for agent := range self.agents {
 		agent.Start()
@@ -204,6 +213,12 @@ func (self *worker) stop() {
 			agent.Stop()
 		}
 	}
+
+	// istanbul BFT
+	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
+		istanbul.Stop()
+	}
+
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.atWork, 0)
 }
@@ -232,6 +247,10 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
+			// istanbul BFT
+			if h, ok := self.engine.(consensus.Handler); ok {
+				h.NewChainHead()
+			}
 			self.commitNewWork()
 
 			// Handle ChainSideEvent
@@ -244,10 +263,9 @@ func (self *worker) update() {
 		case ev := <-self.txsCh:
 
 			fmt.Printf("############# worker receive NewTxsEvent[%d]\n", len(ev.Txs))
-		    for _, tx := range ev.Txs {
+			for _, tx := range ev.Txs {
 				fmt.Printf("#### worker receive tx[ %s ]\n", tx.String())
 			}
-
 
 			fmt.Printf("###### atomic.LoadInt32(&self.mining) = %d\n", atomic.LoadInt32(&self.mining))
 			// Apply transactions to the pending state if we're not mining.
@@ -261,7 +279,7 @@ func (self *worker) update() {
 				for _, tx := range ev.Txs {
 					acc, err := types.Sender(self.current.signer, tx)
 					if err != nil {
-						log.Error("fail to types.Sender ",err)
+						log.Error("fail to types.Sender ", err)
 						fmt.Printf("###### fail to make address with %s\n", tx.String())
 					}
 					txs[acc] = append(txs[acc], tx)
@@ -606,7 +624,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 func (env *Task) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
 
-	fmt.Printf("#### worker.commitTransaction %v\n",tx)
+	fmt.Printf("#### worker.commitTransaction \n")
 
 	snap := env.state.Snapshot()
 

@@ -1,15 +1,15 @@
 package main
 
 import (
-	"io/ioutil"
-	"ground-x/go-gxplatform/accounts/keystore"
 	"fmt"
 	"gopkg.in/urfave/cli.v1"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/cmd/utils"
 	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/accounts/keystore"
+	"ground-x/go-gxplatform/cmd/utils"
 	"ground-x/go-gxplatform/console"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/log"
+	"io/ioutil"
 )
 
 var (
@@ -360,4 +360,3 @@ func accountImport(ctx *cli.Context) error {
 	fmt.Printf("Address: {%x}\n", acct.Address)
 	return nil
 }
-

@@ -17,11 +17,11 @@
 package accounts
 
 import (
-	"strings"
-	"math/big"
+	"errors"
 	"fmt"
 	"math"
-	"errors"
+	"math/big"
+	"strings"
 )
 
 // DefaultRootDerivationPath is the root path to which custom derivation endpoints

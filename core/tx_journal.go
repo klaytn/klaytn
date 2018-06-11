@@ -1,13 +1,13 @@
 package core
 
 import (
-	"io"
-	"ground-x/go-gxplatform/core/types"
-	"os"
-	"ground-x/go-gxplatform/rlp"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/common"
 	"errors"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/rlp"
+	"io"
+	"os"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted

@@ -1,8 +1,8 @@
 package rpc
 
 import (
-	"net"
 	"ground-x/go-gxplatform/log"
+	"net"
 )
 
 // StartHTTPEndpoint starts the HTTP RPC endpoint, configured with cors/vhosts/modules
@@ -83,4 +83,3 @@ func StartIPCEndpoint(ipcEndpoint string, apis []API) (net.Listener, *Server, er
 	go handler.ServeListener(listener)
 	return listener, handler, nil
 }
-

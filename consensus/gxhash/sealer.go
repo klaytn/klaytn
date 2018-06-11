@@ -2,15 +2,15 @@ package gxhash
 
 import (
 	crand "crypto/rand"
+	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/consensus"
 	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/log"
+	"math"
 	"math/big"
 	"math/rand"
 	"runtime"
 	"sync"
-	"ground-x/go-gxplatform/log"
-	"math"
 )
 
 // Seal implements consensus.Engine, attempting to find a nonce that satisfies

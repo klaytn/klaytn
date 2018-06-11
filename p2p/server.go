@@ -820,6 +820,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *discover.Node) e
 		srv.log.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		return err
 	}
+
 	clog := srv.log.New("id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags)
 	// For dialed connections, check that the remote public key matches.
 	if dialDest != nil && c.id != dialDest.ID {

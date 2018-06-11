@@ -17,9 +17,9 @@
 package vm
 
 import (
+	"errors"
 	"ground-x/go-gxplatform/params"
 	"math/big"
-	"errors"
 )
 
 type (

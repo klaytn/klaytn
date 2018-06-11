@@ -1,20 +1,20 @@
 package core
 
 import (
-	"time"
-	"ground-x/go-gxplatform/matrics"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core/state"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/params"
-	"math/big"
-	"sync"
-	"math"
 	"fmt"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/event"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/params"
+	"math"
+	"math/big"
 	"sort"
+	"sync"
+	"time"
 )
 
 const (
@@ -296,9 +296,6 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 // reset retrieves the current state of the blockchain and ensures the content
 // of the transaction pool is valid with regard to the chain state.
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
-
-	fmt.Printf("tx_pool.reset ################ \n")
-
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions
 
@@ -503,7 +500,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
-	fmt.Printf("### txpool.validateTx %s\n", tx.String())
+	fmt.Printf("### txpool.validateTx \n")
 
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 32*1024 {
@@ -557,7 +554,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
-	fmt.Printf("### txpool.add %s\n", tx.String())
+	fmt.Printf("### txpool.add \n")
 
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
@@ -608,8 +605,6 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
 		log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
 
-		fmt.Printf("### txpool.add.pool.txFeed.Send %s\n", tx.String())
-
 		// We've directly injected a replacement transaction, notify subsystems
 		go pool.txFeed.Send(NewTxsEvent{types.Transactions{tx}})
 
@@ -635,7 +630,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 // Note, this method assumes the pool lock is held!
 func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, error) {
 
-	fmt.Printf("### txpool.enqueueTx hash %s,  %s\n", hash.String(), tx.String())
+	fmt.Printf("### txpool.enqueueTx hash %s \n", hash.String())
 
 	// Try to insert the transaction into the future queue
 	from, _ := types.Sender(pool.signer, tx) // already validated
@@ -742,9 +737,6 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
-
-	fmt.Printf("### txpool.addTx hash %s\n", tx.String())
-
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
@@ -766,17 +758,12 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	fmt.Printf("### txpool.addTxs %d\n", len(txs))
-
 	return pool.addTxsLocked(txs, local)
 }
 
 // addTxsLocked attempts to queue a batch of transactions if they are valid,
 // whilst assuming the transaction pool lock is already held.
 func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
-
-	fmt.Printf("### txpool.addTxsLocked %d\n", len(txs))
-
 	// Add the batch of transaction, tracking the accepted ones
 	dirty := make(map[common.Address]struct{})
 	errs := make([]error, len(txs))
@@ -790,7 +777,6 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 			}
 		}
 	}
-	fmt.Printf("### txpool.addTxsLocked len(dirty) %d\n", len(dirty))
 
 	// Only reprocess the internal state if something was actually added
 	if len(dirty) > 0 {
@@ -835,9 +821,6 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 // removeTx removes a single transaction from the queue, moving all subsequent
 // transactions back to the future queue.
 func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
-
-	fmt.Printf("### txpool.removeTx %s\n", hash.String())
-
 	// Fetch the transaction we wish to delete
 	tx, ok := pool.all[hash]
 	if !ok {
@@ -885,13 +868,6 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
 	fmt.Printf("###### call promoteExecutable len(accounts) %d \n", len(accounts))
 
-	for addr := range pool.queue {
-		fmt.Printf("### pool.queue address %s\n", addr.Hex())
-	}
-	for addr := range pool.pending {
-		fmt.Printf("### pool.pending address %s\n", addr.Hex())
-	}
-
 	// Track the promoted transactions to broadcast them at once
 	var promoted []*types.Transaction
 
@@ -903,9 +879,6 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 	}
 
-	fmt.Printf("###### start pool.queue size %d\n", len(pool.queue))
-	fmt.Printf("###### start pool.pending size %d\n", len(pool.pending))
-
 	// Iterate over all accounts and promote any executable transactions
 	for _, addr := range accounts {
 
@@ -913,12 +886,10 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
 		list := pool.queue[addr]
 		if list == nil {
-			fmt.Printf("account txlist is null ############## \n")
 			continue // Just in case someone calls with a non existing account
 		}
 		// Drop all transactions that are deemed too old (low nonce)
 		for _, tx := range list.Forward(pool.currentState.GetNonce(addr)) {
-			fmt.Printf("account forwward tx ############## \n")
 			hash := tx.Hash()
 			log.Trace("Removed old queued transaction", "hash", hash)
 			delete(pool.all, hash)
@@ -927,7 +898,6 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Drop all transactions that are too costly (low balance or out of gas)
 		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
-			fmt.Printf("account drop tx ############## \n")
 			hash := tx.Hash()
 			log.Trace("Removed unpayable queued transaction", "hash", hash)
 			delete(pool.all, hash)
@@ -973,7 +943,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
 		count := pool.txFeed.Send(NewTxsEvent{promoted})
 
-		fmt.Printf("pool.txFeed.Send(NewTxsEvent) promoted (%d)  %d ############## \n", len(promoted), count)
+		fmt.Printf("#### pool.txFeed.Send(NewTxsEvent) promoted (%d)  %d\n", len(promoted), count)
 	}
 	// If the pending limit is overflown, start equalizing allowances
 	pending := uint64(0)

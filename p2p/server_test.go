@@ -1,17 +1,17 @@
 package p2p
 
 import (
-	"ground-x/go-gxplatform/p2p/discover"
 	"crypto/ecdsa"
+	"errors"
 	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/crypto/sha3"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/p2p/discover"
 	"math/rand"
 	"net"
-	"ground-x/go-gxplatform/crypto/sha3"
+	"reflect"
 	"testing"
 	"time"
-	"reflect"
-	"errors"
-	"ground-x/go-gxplatform/log"
 )
 
 func init() {
@@ -485,4 +485,3 @@ func randomID() (id discover.NodeID) {
 	}
 	return id
 }
-

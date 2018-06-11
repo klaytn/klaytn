@@ -1,10 +1,10 @@
 package keystore
 
 import (
+	"ground-x/go-gxplatform"
 	"ground-x/go-gxplatform/accounts"
 	"ground-x/go-gxplatform/core/types"
 	"math/big"
-	"ground-x/go-gxplatform"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original
@@ -120,4 +120,3 @@ func (w *keystoreWallet) SignTxWithPassphrase(account accounts.Account, passphra
 	// Account seems valid, request the keystore to sign
 	return w.keystore.SignTxWithPassphrase(account, passphrase, tx, chainID)
 }
-

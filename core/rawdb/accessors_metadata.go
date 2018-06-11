@@ -17,11 +17,11 @@
 package rawdb
 
 import (
-	"ground-x/go-gxplatform/rlp"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/params"
 	"encoding/json"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/params"
+	"ground-x/go-gxplatform/rlp"
 )
 
 // ReadDatabaseVersion retrieves the version number of the database.

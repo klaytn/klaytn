@@ -1,19 +1,19 @@
 package gxhash
 
 import (
-	"math/big"
-	"time"
+	"bytes"
 	"errors"
-	"ground-x/go-gxplatform/core/types"
+	"fmt"
+	"gopkg.in/fatih/set.v0"
 	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/common/math"
 	"ground-x/go-gxplatform/consensus"
 	"ground-x/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/params"
+	"math/big"
 	"runtime"
-	"gopkg.in/fatih/set.v0"
-	"fmt"
-	"ground-x/go-gxplatform/common/math"
-	"bytes"
+	"time"
 )
 
 var (

@@ -2,11 +2,11 @@ package rpc
 
 import (
 	"context"
-	"time"
-	"testing"
-	"net"
 	"encoding/json"
+	"net"
 	"reflect"
+	"testing"
+	"time"
 )
 
 type Service struct{}

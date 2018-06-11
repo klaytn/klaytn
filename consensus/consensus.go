@@ -4,6 +4,7 @@ import (
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/core/state"
 	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/p2p"
 	"ground-x/go-gxplatform/params"
 	"ground-x/go-gxplatform/rpc"
 	"math/big"
@@ -78,6 +79,9 @@ type Engine interface {
 
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API
+
+	// Protocol returns the protocol for this consensus
+	Protocol() Protocol
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -86,4 +90,27 @@ type PoW interface {
 
 	// Hashrate returns the current mining hashrate of a PoW consensus engine.
 	Hashrate() float64
+}
+
+// Handler should be implemented is the consensus needs to handle and send peer's message
+type Handler interface {
+	// NewChainHead handles a new head block comes
+	NewChainHead() error
+
+	// HandleMsg handles a message from peer
+	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
+
+	// SetBroadcaster sets the broadcaster to send message to peers
+	SetBroadcaster(Broadcaster)
+}
+
+// Istanbul is a consensus engine to avoid byzantine failure
+type Istanbul interface {
+	Engine
+
+	// Start starts the engine
+	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
+
+	// Stop stops the engine
+	Stop() error
 }

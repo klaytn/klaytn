@@ -1,20 +1,20 @@
 package rpc
 
 import (
-	"net"
-	"fmt"
-	"os"
-	"math/rand"
-	"runtime"
-	"time"
-	"ground-x/go-gxplatform/log"
-	"testing"
-	"reflect"
-	"github.com/davecgh/go-spew/spew"
-	"sync"
 	"context"
+	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"ground-x/go-gxplatform/log"
+	"math/rand"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"reflect"
+	"runtime"
+	"sync"
+	"testing"
+	"time"
 )
 
 func TestClientRequest(t *testing.T) {
@@ -548,4 +548,3 @@ func (l *flakeyListener) Accept() (net.Conn, error) {
 	}
 	return c, err
 }
-

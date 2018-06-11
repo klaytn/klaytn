@@ -1,8 +1,8 @@
 package vm
 
 import (
-	"math/big"
 	"ground-x/go-gxplatform/common/math"
+	"math/big"
 )
 
 func memorySha3(stack *Stack) *big.Int {

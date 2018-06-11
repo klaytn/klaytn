@@ -1,16 +1,16 @@
 package gxp
 
 import (
-	"time"
 	"errors"
-	"math/big"
-	"ground-x/go-gxplatform/p2p"
-	"ground-x/go-gxplatform/common"
-	"sync"
-	"gopkg.in/fatih/set.v0"
 	"fmt"
+	"gopkg.in/fatih/set.v0"
+	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/p2p"
 	"ground-x/go-gxplatform/rlp"
+	"math/big"
+	"sync"
+	"time"
 )
 
 var (
@@ -111,6 +111,13 @@ func (p *peer) MarkTransaction(hash common.Hash) {
 		p.knownTxs.Pop()
 	}
 	p.knownTxs.Add(hash)
+}
+
+// istanbul BFT
+// Send writes an RLP-encoded message with the given code.
+// data should encode as an RLP list.
+func (p *peer) Send(msgcode uint64, data interface{}) error {
+	return p2p.Send(p.rw, msgcode, data)
 }
 
 // SendTransactions sends transactions to the peer and includes the hashes
@@ -276,7 +283,7 @@ func (p *peer) readStatus(network uint64, status *statusData, genesis common.Has
 // String implements fmt.Stringer.
 func (p *peer) String() string {
 	return fmt.Sprintf("Peer %s [%s]", p.id,
-		fmt.Sprintf("eth/%2d", p.version),
+		fmt.Sprintf("gxp/%2d", p.version),
 	)
 }
 
@@ -322,6 +329,18 @@ func (ps *peerSet) Unregister(id string) error {
 	}
 	delete(ps.peers, id)
 	return nil
+}
+
+// istanbul BFT
+func (ps *peerSet) Peers() map[string]*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	set := make(map[string]*peer)
+	for id, p := range ps.peers {
+		set[id] = p
+	}
+	return set
 }
 
 // Peer retrieves the registered peer with the given id.

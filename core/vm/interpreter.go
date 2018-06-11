@@ -17,10 +17,10 @@
 package vm
 
 import (
-	"ground-x/go-gxplatform/params"
-	"sync/atomic"
 	"fmt"
 	"ground-x/go-gxplatform/common/math"
+	"ground-x/go-gxplatform/params"
+	"sync/atomic"
 )
 
 // Config are the configuration options for the Interpreter

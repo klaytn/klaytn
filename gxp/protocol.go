@@ -1,14 +1,14 @@
 package gxp
 
 import (
-	"ground-x/go-gxplatform/core/types"
+	"fmt"
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/event"
-	"math/big"
-	"io"
 	"ground-x/go-gxplatform/rlp"
-	"fmt"
+	"io"
+	"math/big"
 )
 
 // Constants to match up protocol versions and messages
@@ -21,10 +21,10 @@ const (
 var ProtocolName = "gxp"
 
 // ProtocolVersions are the upported versions of the gxp protocol (first is primary).
-var ProtocolVersions = []uint{gxp63,gxp62}
+var ProtocolVersions = []uint{gxp63, gxp62}
 
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{17,8}
+var ProtocolLengths = []uint64{17, 8}
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message
 

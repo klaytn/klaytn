@@ -1,14 +1,14 @@
 package core
 
 import (
-	"ground-x/go-gxplatform/params"
-	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/core/state"
-	"ground-x/go-gxplatform/core/vm"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/crypto"
 	"fmt"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/core/vm"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/params"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -68,10 +68,14 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 // indicating the block was invalid.
 func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, uint64, error) {
 	fmt.Printf("#### state_processor ApplyTransaction\n")
+	fmt.Printf("### config.IsBFT %t , tx.GasPrice() %d", config.IsBFT, tx.GasPrice())
+	// istanbul BFT
+	if config.IsBFT && tx.GasPrice() != nil && tx.GasPrice().Cmp(common.Big0) > 0 {
+		return nil, uint64(0), ErrInvalidGasPrice
+	}
 
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
 	if err != nil {
-		fmt.Printf("#### state_processor ApplyTransaction tx.AsMessage err %v\n", err)
 		return nil, 0, err
 	}
 	// Create a new context to be used in the EVM environment
@@ -79,7 +83,6 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
-	fmt.Printf("#### state_processor ApplyTransaction.ApplyMessage\n")
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
 	if err != nil {

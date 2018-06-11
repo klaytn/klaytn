@@ -1,19 +1,20 @@
 package node
 
 import (
-	"reflect"
 	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/event"
+	"ground-x/go-gxplatform/gxdb"
 	"ground-x/go-gxplatform/p2p"
 	"ground-x/go-gxplatform/rpc"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/event"
+	"reflect"
+	"crypto/ecdsa"
 )
 
 type ServiceContext struct {
-	config 			*Config
-	services		map[reflect.Type]Service
-	EventMux        *event.TypeMux
-	AccountManager  *accounts.Manager
+	config         *Config
+	services       map[reflect.Type]Service
+	EventMux       *event.TypeMux
+	AccountManager *accounts.Manager
 }
 
 // OpenDatabase opens an existing database with the given name (or creates one
@@ -45,6 +46,11 @@ func (ctx *ServiceContext) Service(service interface{}) error {
 		return nil
 	}
 	return ErrServiceUnknown
+}
+
+// NodeKey returns node key from config
+func (ctx *ServiceContext) NodeKey() *ecdsa.PrivateKey {
+	return ctx.config.NodeKey()
 }
 
 // ServiceConstructor is the function signature of the constructors needed to be

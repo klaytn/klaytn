@@ -1,23 +1,23 @@
 package main
 
 import (
-	"log"
-	"strings"
-	"time"
-	"path/filepath"
-	"runtime"
-	"os"
+	"bufio"
+	"bytes"
+	"encoding/base64"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"go/parser"
 	"go/token"
-	"os/exec"
-	"encoding/base64"
-	"bytes"
-	"bufio"
-	"regexp"
 	"ground-x/go-gxplatform/internal/build"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strings"
+	"time"
 )
 
 var (
@@ -890,6 +890,3 @@ func xgoTool(args []string) *exec.Cmd {
 	}
 	return cmd
 }
-
-
-

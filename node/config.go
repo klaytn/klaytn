@@ -1,20 +1,20 @@
 package node
 
 import (
-	"ground-x/go-gxplatform/p2p"
+	"crypto/ecdsa"
+	"fmt"
+	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/accounts/keystore"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/crypto"
 	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/p2p"
+	"ground-x/go-gxplatform/p2p/discover"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
-	"path/filepath"
-	"os"
-	"ground-x/go-gxplatform/accounts"
-	"io/ioutil"
-	"ground-x/go-gxplatform/accounts/keystore"
-	"fmt"
-	"ground-x/go-gxplatform/common"
-	"crypto/ecdsa"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/p2p/discover"
 )
 
 const (
@@ -399,4 +399,3 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 	}
 	return accounts.NewManager(backends...), ephemeral, nil
 }
-

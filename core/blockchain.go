@@ -17,31 +17,31 @@
 package core
 
 import (
-	mrand "math/rand"
 	"errors"
+	"fmt"
 	"github.com/hashicorp/golang-lru"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/common/mclock"
 	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/core/rawdb"
 	"ground-x/go-gxplatform/core/state"
 	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/core/vm"
+	"ground-x/go-gxplatform/crypto"
 	"ground-x/go-gxplatform/event"
 	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/log"
 	"ground-x/go-gxplatform/matrics"
 	"ground-x/go-gxplatform/params"
+	"ground-x/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/trie"
+	"io"
+	"math/big"
+	mrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/core/rawdb"
-	"fmt"
-	"ground-x/go-gxplatform/trie"
-	"io"
-	"ground-x/go-gxplatform/rlp"
-	"ground-x/go-gxplatform/crypto"
-	"math/big"
-	"ground-x/go-gxplatform/common/mclock"
 )
 
 var (
@@ -89,8 +89,8 @@ type BlockChain struct {
 	cacheConfig *CacheConfig        // Cache configuration for pruning
 
 	db     gxdb.Database // Low level persistent database to store final content in
-	triegc *prque.Prque   // Priority queue mapping block numbers to tries to gc
-	gcproc time.Duration  // Accumulates canonical block processing for trie dumping
+	triegc *prque.Prque  // Priority queue mapping block numbers to tries to gc
+	gcproc time.Duration // Accumulates canonical block processing for trie dumping
 
 	hc            *HeaderChain
 	rmLogsFeed    event.Feed
@@ -876,7 +876,6 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 	fmt.Printf("#### blockchain.WriteBlockWithState block %v, receipts[%d]\n", block, len(receipts))
 
-
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
@@ -1407,6 +1406,11 @@ func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
 	return headers, nil
 }
 
+// istanbul BFT
+func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
+	return bc.badBlocks.Contains(hash)
+}
+
 // addBadBlock adds a bad block to the bad-block LRU cache
 func (bc *BlockChain) addBadBlock(block *types.Block) {
 	bc.badBlocks.Add(block.Header().Hash(), block.Header())
@@ -1563,4 +1567,3 @@ func (bc *BlockChain) SubscribeChainSideEvent(ch chan<- ChainSideEvent) event.Su
 func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 	return bc.scope.Track(bc.logsFeed.Subscribe(ch))
 }
-

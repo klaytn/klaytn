@@ -22,7 +22,6 @@ import (
 	"context"
 	"net"
 	"time"
-
 )
 
 // This is used if the dialing context has no deadline. It is much smaller than the

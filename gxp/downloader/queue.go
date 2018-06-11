@@ -3,14 +3,14 @@ package downloader
 import (
 	"fmt"
 
-	"ground-x/go-gxplatform/core/types"
-	"time"
-	"ground-x/go-gxplatform/common"
+	"errors"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"sync"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/log"
 	"ground-x/go-gxplatform/matrics"
-	"errors"
+	"sync"
+	"time"
 )
 
 var (
@@ -865,4 +865,3 @@ func (q *queue) Prepare(offset uint64, mode SyncMode) {
 	}
 	q.mode = mode
 }
-

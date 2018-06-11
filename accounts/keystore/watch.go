@@ -1,9 +1,9 @@
 package keystore
 
 import (
-	"time"
-	"ground-x/go-gxplatform/log"
 	"github.com/rjeczalik/notify"
+	"ground-x/go-gxplatform/log"
+	"time"
 )
 
 type watcher struct {
@@ -87,4 +87,3 @@ func (w *watcher) loop() {
 		}
 	}
 }
-

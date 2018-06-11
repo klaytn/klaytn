@@ -1,16 +1,16 @@
 package bloombits
 
 import (
-	"ground-x/go-gxplatform/crypto"
-	"context"
-	"sync/atomic"
-	"time"
 	"bytes"
+	"context"
+	"errors"
 	"ground-x/go-gxplatform/common/bitutil"
+	"ground-x/go-gxplatform/crypto"
+	"math"
 	"sort"
 	"sync"
-	"math"
-	"errors"
+	"sync/atomic"
+	"time"
 )
 
 // bloomIndexes represents the bit indexes inside the bloom filter that belong
@@ -631,4 +631,3 @@ func (s *MatcherSession) Multiplex(batch int, wait time.Duration, mux chan chan 
 		}
 	}
 }
-

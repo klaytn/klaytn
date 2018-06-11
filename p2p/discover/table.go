@@ -34,9 +34,9 @@ import (
 	"time"
 
 	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/p2p/netutil"
 	"ground-x/go-gxplatform/crypto"
 	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/p2p/netutil"
 )
 
 const (

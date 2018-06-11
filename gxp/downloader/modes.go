@@ -55,4 +55,3 @@ func (mode *SyncMode) UnmarshalText(text []byte) error {
 	}
 	return nil
 }
-

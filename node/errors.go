@@ -1,10 +1,10 @@
 package node
 
 import (
-	"syscall"
-	"reflect"
-	"fmt"
 	"errors"
+	"fmt"
+	"reflect"
+	"syscall"
 )
 
 var (
@@ -45,4 +45,3 @@ type StopError struct {
 func (e *StopError) Error() string {
 	return fmt.Sprintf("server: %v, services: %v", e.Server, e.Services)
 }
-

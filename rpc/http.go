@@ -1,21 +1,21 @@
 package rpc
 
 import (
-	"net"
-	"net/http"
-	"sync"
-	"time"
-	"io"
-	"context"
 	"bytes"
-	"fmt"
+	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"mime"
+	"net"
+	"net/http"
 	"strings"
+	"sync"
+	"time"
 
-	"github.com/rs/cors"
 	"errors"
+	"github.com/rs/cors"
 )
 
 const (
@@ -256,4 +256,3 @@ func newVHostHandler(vhosts []string, next http.Handler) http.Handler {
 	}
 	return &virtualHostHandler{vhostMap, next}
 }
-

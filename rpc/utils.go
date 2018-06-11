@@ -6,6 +6,7 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
+	"math/big"
 	"math/rand"
 	"reflect"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
-	"math/big"
 )
 
 var (

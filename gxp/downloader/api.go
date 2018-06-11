@@ -1,11 +1,11 @@
 package downloader
 
 import (
-	"ground-x/go-gxplatform/event"
 	"context"
+	"ground-x/go-gxplatform"
+	"ground-x/go-gxplatform/event"
 	"ground-x/go-gxplatform/rpc"
 	"sync"
-	"ground-x/go-gxplatform"
 )
 
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.
@@ -147,4 +147,3 @@ func (api *PublicDownloaderAPI) SubscribeSyncStatus(status chan interface{}) *Sy
 	api.installSyncSubscription <- status
 	return &SyncStatusSubscription{api: api, c: status}
 }
-

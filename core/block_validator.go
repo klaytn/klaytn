@@ -2,10 +2,10 @@ package core
 
 import (
 	"fmt"
-	"ground-x/go-gxplatform/params"
 	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/params"
 )
 
 // BlockValidator is responsible for validating block headers, uncles and

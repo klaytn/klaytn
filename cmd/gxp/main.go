@@ -1,23 +1,23 @@
 package main
 
 import (
-	"os"
 	"fmt"
+	"os"
 
-	"ground-x/go-gxplatform/cmd/utils"
 	"gopkg.in/urfave/cli.v1"
-	"sort"
-	"runtime"
-	"ground-x/go-gxplatform/matrics"
-	"time"
 	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/node"
 	"ground-x/go-gxplatform/accounts/keystore"
-	"strings"
-	gxp2 "ground-x/go-gxplatform/gxp"
+	"ground-x/go-gxplatform/cmd/utils"
 	"ground-x/go-gxplatform/console"
+	gxp2 "ground-x/go-gxplatform/gxp"
 	"ground-x/go-gxplatform/gxpclient"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/node"
+	"runtime"
+	"sort"
+	"strings"
+	"time"
 )
 
 const (
@@ -118,7 +118,7 @@ func init() {
 	// Initialize the CLI app and start Geth
 	app.Action = gxp
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2018 The go-ethereum Authors"
+	app.Copyright = "Copyright 2013-2018 The go-gxplatform Authors"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
@@ -229,7 +229,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 		var gxp *gxp2.GXP
 		if err := stack.Service(&gxp); err != nil {
-			utils.Fatalf("Ethereum service not running: %v", err)
+			utils.Fatalf("GXPlatform service not running: %v", err)
 		}
 		// Use a reduced number of threads if requested
 		if threads := ctx.GlobalInt(utils.MinerThreadsFlag.Name); threads > 0 {

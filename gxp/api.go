@@ -1,21 +1,21 @@
 package gxp
 
 import (
+	"compress/gzip"
 	"fmt"
-	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/trie"
 	"ground-x/go-gxplatform/common/hexutil"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/miner"
+	"ground-x/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/trie"
+	"io"
 	"math/big"
 	"os"
-	"io"
 	"strings"
-	"compress/gzip"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/rlp"
-	"ground-x/go-gxplatform/core/state"
-	"ground-x/go-gxplatform/miner"
 )
 
 // PublicGXPAPI provides an API to access GXPlatform full node-related

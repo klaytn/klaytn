@@ -2,8 +2,8 @@ package jsre
 
 import (
 	"github.com/robertkrimen/otto"
-	"strings"
 	"sort"
+	"strings"
 )
 
 // CompleteKeywords returns potential continuations for the given line. Since line is
@@ -55,4 +55,3 @@ func getCompletions(vm *otto.Otto, line string) (results []string) {
 	sort.Strings(results)
 	return results
 }
-

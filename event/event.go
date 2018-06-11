@@ -1,11 +1,11 @@
 package event
 
 import (
-	"time"
-	"sync"
-	"reflect"
-	"fmt"
 	"errors"
+	"fmt"
+	"reflect"
+	"sync"
+	"time"
 )
 
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.

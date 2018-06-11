@@ -1,8 +1,8 @@
 package bitutil
 
 import (
-	"unsafe"
 	"runtime"
+	"unsafe"
 )
 
 const wordSize = int(unsafe.Sizeof(uintptr(0)))

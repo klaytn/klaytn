@@ -3,10 +3,10 @@ package jsre
 import (
 	"fmt"
 	"github.com/robertkrimen/otto"
-	"strings"
 	"io"
-	"strconv"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/fatih/color"
 )
@@ -254,4 +254,3 @@ func constructorPrototype(obj *otto.Object) *otto.Object {
 	}
 	return nil
 }
-

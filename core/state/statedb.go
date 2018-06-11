@@ -24,10 +24,10 @@ import (
 	"ground-x/go-gxplatform/crypto"
 	"ground-x/go-gxplatform/log"
 	"ground-x/go-gxplatform/rlp"
-	"math/big"
-	"sync"
 	"ground-x/go-gxplatform/trie"
+	"math/big"
 	"sort"
+	"sync"
 )
 
 type revision struct {

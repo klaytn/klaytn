@@ -1,17 +1,17 @@
 package keystore
 
 import (
-	"ground-x/go-gxplatform/accounts"
-	"github.com/pborman/uuid"
-	"encoding/json"
-	"encoding/hex"
-	"crypto/sha256"
-	"ground-x/go-gxplatform/crypto"
-	"fmt"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
+	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/crypto"
 )
 
 // creates a Key and stores that in the given KeyStore by decrypting a presale key JSON
@@ -122,4 +122,3 @@ func pkcs7Unpad(in []byte) []byte {
 	}
 	return in[:len(in)-int(padding)]
 }
-

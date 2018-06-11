@@ -21,22 +21,22 @@
 package keystore
 
 import (
-	crand "crypto/rand"
-	"ground-x/go-gxplatform/accounts"
 	"crypto/ecdsa"
-	"reflect"
-	"time"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/event"
-	"sync"
-	"path/filepath"
-	"runtime"
-	"os"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/core/types"
-	"math/big"
-	"fmt"
+	crand "crypto/rand"
 	"errors"
+	"fmt"
+	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/event"
+	"math/big"
+	"os"
+	"path/filepath"
+	"reflect"
+	"runtime"
+	"sync"
+	"time"
 )
 
 var (
@@ -82,7 +82,6 @@ func NewKeyStore(keydir string, scryptN, scryptP int) *KeyStore {
 	return ks
 }
 
-
 // NewPlaintextKeyStore creates a keystore for the given directory.
 // Deprecated: Use NewKeyStore.
 func NewPlaintextKeyStore(keydir string) *KeyStore {
@@ -111,7 +110,7 @@ func (ks *KeyStore) init(keydir string) {
 	accs := ks.cache.accounts()
 	ks.wallets = make([]accounts.Wallet, len(accs))
 	for i := 0; i < len(accs); i++ {
-		ks.wallets[i] =  &keystoreWallet{account: accs[i], keystore: ks}
+		ks.wallets[i] = &keystoreWallet{account: accs[i], keystore: ks}
 	}
 }
 

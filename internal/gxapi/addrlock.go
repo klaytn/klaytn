@@ -1,8 +1,8 @@
 package gxapi
 
 import (
-	"sync"
 	"ground-x/go-gxplatform/common"
+	"sync"
 )
 
 type AddrLocker struct {

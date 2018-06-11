@@ -1,20 +1,20 @@
 package filters
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"ground-x/go-gxplatform"
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/common/hexutil"
-	"time"
 	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/event"
-	"sync"
-	"ground-x/go-gxplatform/rpc"
-	"context"
-	"math/big"
-	"encoding/json"
 	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform"
-	"errors"
+	"ground-x/go-gxplatform/rpc"
+	"math/big"
+	"sync"
+	"time"
 )
 
 var (
@@ -533,4 +533,3 @@ func decodeTopic(s string) (common.Hash, error) {
 	}
 	return common.BytesToHash(b), err
 }
-

@@ -1,15 +1,15 @@
 package gxp
 
 import (
-	"time"
-	"ground-x/go-gxplatform/core/rawdb"
-	"ground-x/go-gxplatform/params"
-	"ground-x/go-gxplatform/common/bitutil"
 	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/common/bitutil"
 	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/core/bloombits"
+	"ground-x/go-gxplatform/core/rawdb"
+	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/params"
+	"time"
 )
 
 const (
@@ -77,7 +77,7 @@ const (
 type BloomIndexer struct {
 	size uint64 // section size to generate bloombits for
 
-	db  gxdb.Database       // database instance to write index data and metadata into
+	db  gxdb.Database        // database instance to write index data and metadata into
 	gen *bloombits.Generator // generator to rotate the bloom bits crating the bloom index
 
 	section uint64      // Section is the section number being processed currently

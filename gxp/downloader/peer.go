@@ -1,17 +1,17 @@
 package downloader
 
 import (
-	"time"
-	"sort"
-	"ground-x/go-gxplatform/common"
-	"sync"
-	"math/big"
-	"sync/atomic"
+	"errors"
 	"fmt"
-	"math"
+	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/event"
 	"ground-x/go-gxplatform/log"
-	"errors"
+	"math"
+	"math/big"
+	"sort"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 const (
@@ -558,4 +558,3 @@ func (ps *peerSet) medianRTT() time.Duration {
 	}
 	return median
 }
-

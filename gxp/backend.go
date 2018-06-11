@@ -1,35 +1,38 @@
 package gxp
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/p2p"
-	"ground-x/go-gxplatform/params"
-	"math/big"
-	"sync"
-	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/internal/gxapi"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/core/rawdb"
+	"errors"
 	"fmt"
-	"ground-x/go-gxplatform/node"
-	"ground-x/go-gxplatform/core/vm"
-	"ground-x/go-gxplatform/gxp/gasprice"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/rlp"
-	"runtime"
+	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/common/hexutil"
+	"ground-x/go-gxplatform/consensus"
 	"ground-x/go-gxplatform/consensus/gxhash"
-	"ground-x/go-gxplatform/rpc"
-	"ground-x/go-gxplatform/core/types"
-	"sync/atomic"
-	"ground-x/go-gxplatform/miner"
+	"ground-x/go-gxplatform/core"
 	"ground-x/go-gxplatform/core/bloombits"
+	"ground-x/go-gxplatform/core/rawdb"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/core/vm"
+	"ground-x/go-gxplatform/event"
+	"ground-x/go-gxplatform/gxdb"
 	"ground-x/go-gxplatform/gxp/downloader"
 	"ground-x/go-gxplatform/gxp/filters"
-	"errors"
+	"ground-x/go-gxplatform/gxp/gasprice"
+	"ground-x/go-gxplatform/internal/gxapi"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/miner"
+	"ground-x/go-gxplatform/node"
+	"ground-x/go-gxplatform/p2p"
+	"ground-x/go-gxplatform/params"
+	"ground-x/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/rpc"
+	"math/big"
+	"runtime"
+	"sync"
+	"sync/atomic"
+	"ground-x/go-gxplatform/consensus/istanbul"
+	istanbulBackend "ground-x/go-gxplatform/consensus/istanbul/backend"
+	"ground-x/go-gxplatform/crypto"
 )
 
 type LesServer interface {
@@ -105,13 +108,18 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 		chainConfig:    chainConfig,
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, &config.Gxhash, chainConfig, chainDb),
+		engine:         CreateConsensusEngine(ctx, config , chainConfig, chainDb),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
 		etherbase:      config.Gxbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
+	}
+
+	// istanbul BFT. force to set the istanbul etherbase to node key address
+	if chainConfig.Istanbul != nil {
+		gxp.etherbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
 
 	log.Info("Initialising GXP protocol", "versions", ProtocolVersions, "network", config.NetworkId)
@@ -144,11 +152,12 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	}
 	gxp.txPool = core.NewTxPool(config.TxPool, gxp.chainConfig, gxp.blockchain)
 
-	if gxp.protocolManager, err = NewProtocolManager(gxp.chainConfig, config.SyncMode , config.NetworkId, gxp.eventMux, gxp.txPool, gxp.engine, gxp.blockchain, chainDb); err != nil {
+	if gxp.protocolManager, err = NewProtocolManager(gxp.chainConfig, config.SyncMode, config.NetworkId, gxp.eventMux, gxp.txPool, gxp.engine, gxp.blockchain, chainDb); err != nil {
 		return nil, err
 	}
 	gxp.miner = miner.New(gxp, gxp.chainConfig, gxp.EventMux(), gxp.engine)
-	gxp.miner.SetExtra(makeExtraData(config.ExtraData))
+	// istanbul BFT
+	gxp.miner.SetExtra(makeExtraData(config.ExtraData, gxp.chainConfig.IsBFT))
 
 	gxp.APIBackend = &GxpAPIBackend{gxp, nil}
 	gpoParams := config.GPO
@@ -160,7 +169,8 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	return gxp, nil
 }
 
-func makeExtraData(extra []byte) []byte {
+// istanbul BFT
+func makeExtraData(extra []byte, isBFT bool) []byte {
 	if len(extra) == 0 {
 		// create default extradata
 		extra, _ = rlp.EncodeToBytes([]interface{}{
@@ -170,8 +180,8 @@ func makeExtraData(extra []byte) []byte {
 			runtime.GOOS,
 		})
 	}
-	if uint64(len(extra)) > params.MaximumExtraDataSize {
-		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.MaximumExtraDataSize)
+	if uint64(len(extra)) > params.GetMaximumExtraDataSize(isBFT) {
+		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", params.GetMaximumExtraDataSize(isBFT))
 		extra = nil
 	}
 	return extra
@@ -189,31 +199,38 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (gxdb.Datab
 	return db, nil
 }
 
-// CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *gxhash.Config, chainConfig *params.ChainConfig, db gxdb.Database) consensus.Engine {
+// CreateConsensusEngine creates the required type of consensus engine instance for an GXPlatform service
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db gxdb.Database) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	//if chainConfig.Clique != nil {
 	//	return clique.New(chainConfig.Clique, db)
 	//}
+	if chainConfig.Istanbul != nil {
+		if chainConfig.Istanbul.Epoch != 0 {
+			config.Istanbul.Epoch = chainConfig.Istanbul.Epoch
+		}
+		config.Istanbul.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
+		return istanbulBackend.New(&config.Istanbul, ctx.NodeKey(), db)
+	}
 	// Otherwise assume proof-of-work
 	switch {
-	case config.PowMode == gxhash.ModeFake:
+	case config.Gxhash.PowMode == gxhash.ModeFake:
 		log.Warn("Gxhash used in fake mode")
 		return gxhash.NewFaker()
-	case config.PowMode == gxhash.ModeTest:
+	case config.Gxhash.PowMode == gxhash.ModeTest:
 		log.Warn("Gxhash used in test mode")
 		return gxhash.NewTester()
-	case config.PowMode == gxhash.ModeShared:
+	case config.Gxhash.PowMode == gxhash.ModeShared:
 		log.Warn("Gxhash used in shared mode")
 		return gxhash.NewShared()
 	default:
 		engine := gxhash.New(gxhash.Config{
-			CacheDir:       ctx.ResolvePath(config.CacheDir),
-			CachesInMem:    config.CachesInMem,
-			CachesOnDisk:   config.CachesOnDisk,
-			DatasetDir:     config.DatasetDir,
-			DatasetsInMem:  config.DatasetsInMem,
-			DatasetsOnDisk: config.DatasetsOnDisk,
+			CacheDir:       ctx.ResolvePath(config.Gxhash.CacheDir),
+			CachesInMem:    config.Gxhash.CachesInMem,
+			CachesOnDisk:   config.Gxhash.CachesOnDisk,
+			DatasetDir:     config.Gxhash.DatasetDir,
+			DatasetsInMem:  config.Gxhash.DatasetsInMem,
+			DatasetsOnDisk: config.Gxhash.DatasetsOnDisk,
 		})
 		engine.SetThreads(-1) // Disable CPU mining
 		return engine
@@ -298,6 +315,11 @@ func (s *GXP) Etherbase() (eb common.Address, err error) {
 // SetEtherbase sets the mining reward address.
 func (s *GXP) SetEtherbase(etherbase common.Address) {
 	s.lock.Lock()
+	// istanbul BFT
+	if _, ok := s.engine.(consensus.Istanbul); ok {
+		log.Error("Cannot set etherbase in Istanbul consensus")
+		return
+	}
 	s.etherbase = etherbase
 	s.lock.Unlock()
 

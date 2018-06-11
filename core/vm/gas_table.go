@@ -1,9 +1,9 @@
 package vm
 
 import (
+	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/common/math"
 	"ground-x/go-gxplatform/params"
-	"ground-x/go-gxplatform/common"
 )
 
 // memoryGasCosts calculates the quadratic gas for memory expansion. It does so

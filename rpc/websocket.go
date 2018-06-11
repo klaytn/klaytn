@@ -1,18 +1,18 @@
 package rpc
 
 import (
-	"encoding/json"
 	"bytes"
-	"net/http"
-	"gopkg.in/fatih/set.v0"
-	"strings"
-	"os"
-	"ground-x/go-gxplatform/log"
-	"fmt"
 	"context"
-	"net"
 	"crypto/tls"
+	"encoding/json"
+	"fmt"
+	"gopkg.in/fatih/set.v0"
+	"ground-x/go-gxplatform/log"
+	"net"
+	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/net/websocket"

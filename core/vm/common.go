@@ -1,9 +1,9 @@
 package vm
 
 import (
-	"math/big"
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/common/math"
+	"math/big"
 )
 
 // calculates the memory size required for a step

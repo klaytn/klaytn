@@ -33,7 +33,6 @@ var (
 	// next one expected based on the local chain.
 	ErrNonceTooHigh = errors.New("nonce too high")
 
-
 	// tx_pool
 
 	// ErrInvalidSender is returned if the transaction contains an invalid signature.
@@ -71,4 +70,7 @@ var (
 	// than some meaningful limit a user might use. This is not a consensus error
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
+
+	// istanbul BFT
+	ErrInvalidGasPrice = errors.New("Gas price not 0")
 )

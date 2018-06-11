@@ -22,13 +22,13 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/p2p/nat"
+	"ground-x/go-gxplatform/p2p/netutil"
+	"ground-x/go-gxplatform/rlp"
 	"net"
 	"time"
-	"ground-x/go-gxplatform/rlp"
-	"ground-x/go-gxplatform/p2p/netutil"
-	"ground-x/go-gxplatform/p2p/nat"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/crypto"
 )
 
 const Version = 4

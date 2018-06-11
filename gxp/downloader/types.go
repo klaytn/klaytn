@@ -60,4 +60,3 @@ type statePack struct {
 func (p *statePack) PeerId() string { return p.peerId }
 func (p *statePack) Items() int     { return len(p.states) }
 func (p *statePack) Stats() string  { return fmt.Sprintf("%d", len(p.states)) }
-

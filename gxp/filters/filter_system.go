@@ -1,19 +1,19 @@
 package filters
 
 import (
-	"ground-x/go-gxplatform/rpc"
-	"time"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/log"
-	"sync"
-	"fmt"
-	"ground-x/go-gxplatform/core/rawdb"
 	"context"
-	"ground-x/go-gxplatform"
 	"errors"
+	"fmt"
+	"ground-x/go-gxplatform"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/core/rawdb"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/event"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/rpc"
+	"sync"
+	"time"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -494,4 +494,3 @@ func (es *EventSystem) eventLoop() {
 		}
 	}
 }
-

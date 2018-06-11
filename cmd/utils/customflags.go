@@ -1,17 +1,17 @@
 package utils
 
 import (
-	"fmt"
-	"strings"
-	"path"
-	"os"
-	"flag"
 	"encoding"
-	"gopkg.in/urfave/cli.v1"
-	"math/big"
-	"ground-x/go-gxplatform/common/math"
-	"os/user"
 	"errors"
+	"flag"
+	"fmt"
+	"gopkg.in/urfave/cli.v1"
+	"ground-x/go-gxplatform/common/math"
+	"math/big"
+	"os"
+	"os/user"
+	"path"
+	"strings"
 )
 
 // Custom type which is registered in the flags library which cli uses for
@@ -221,4 +221,3 @@ func homeDir() string {
 	}
 	return ""
 }
-

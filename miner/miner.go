@@ -1,27 +1,27 @@
 package miner
 
 import (
+	"fmt"
 	"ground-x/go-gxplatform/accounts"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/event"
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/event"
+	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/gxp/downloader"
+	"ground-x/go-gxplatform/log"
 	"ground-x/go-gxplatform/params"
 	"sync/atomic"
-	"fmt"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/core/state"
-	"ground-x/go-gxplatform/gxp/downloader"
 )
 
 // Backend wraps all methods required for mining.
 type Backend interface {
 	AccountManager() *accounts.Manager
-	BlockChain() *core.BlockChain
-	TxPool() *core.TxPool
-	ChainDb() gxdb.Database
+	BlockChain() 	 *core.BlockChain
+	TxPool() 	     *core.TxPool
+	ChainDb() 		 gxdb.Database
 }
 
 // Miner creates blocks and searches for proof-of-work values.
@@ -137,7 +137,8 @@ func (self *Miner) HashRate() (tot int64) {
 }
 
 func (self *Miner) SetExtra(extra []byte) error {
-	if uint64(len(extra)) > params.MaximumExtraDataSize {
+	// istanbul BFT
+	if uint64(len(extra)) > params.GetMaximumExtraDataSize(self.worker.chain.Config().IsBFT) {
 		return fmt.Errorf("Extra exceeds max length. %d > %v", len(extra), params.MaximumExtraDataSize)
 	}
 	self.worker.setExtra(extra)
@@ -162,5 +163,3 @@ func (self *Miner) SetEtherbase(addr common.Address) {
 	self.coinbase = addr
 	self.worker.setEtherbase(addr)
 }
-
-

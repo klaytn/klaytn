@@ -17,8 +17,8 @@
 package vm
 
 import (
-	"math/big"
 	"fmt"
+	"math/big"
 )
 
 // stack is an object for basic stack operations. Items popped to the stack are

@@ -17,37 +17,37 @@
 package node
 
 import (
+	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/p2p"
+	"ground-x/go-gxplatform/rpc"
 	"net"
 	"sync"
-	"ground-x/go-gxplatform/rpc"
-	"ground-x/go-gxplatform/p2p"
-	"ground-x/go-gxplatform/accounts"
 
+	"errors"
+	"fmt"
 	"github.com/prometheus/prometheus/util/flock"
 	"ground-x/go-gxplatform/event"
-	"path/filepath"
-	"strings"
-	"errors"
+	"ground-x/go-gxplatform/gxdb"
 	"ground-x/go-gxplatform/log"
 	"os"
+	"path/filepath"
 	"reflect"
-	"fmt"
-	"ground-x/go-gxplatform/gxdb"
+	"strings"
 )
 
 // Node is a container on which services can be registered.
 type Node struct {
-	eventmux  *event.TypeMux
-	config    *Config
-	accman    *accounts.Manager
+	eventmux *event.TypeMux
+	config   *Config
+	accman   *accounts.Manager
 
 	ephemeralKeystore string
 	instanceDirLock   flock.Releaser
 
-	serverConfig  p2p.Config
-	server 		  *p2p.Server
+	serverConfig p2p.Config
+	server       *p2p.Server
 
-	serviceFuncs  []ServiceConstructor
+	serviceFuncs []ServiceConstructor
 	services     map[reflect.Type]Service // Currently running services
 
 	rpcAPIs       []rpc.API
@@ -91,7 +91,7 @@ func New(conf *Config) (*Node, error) {
 		return nil, errors.New(`Config.Name must not contain '/' or '\'`)
 	}
 	if conf.Name == datadirDefaultKeyStore {
-		return nil, errors.New(`Config.Name cannot be "` + datadirDefaultKeyStore +`"`)
+		return nil, errors.New(`Config.Name cannot be "` + datadirDefaultKeyStore + `"`)
 	}
 	if strings.HasSuffix(conf.Name, ".ipc") {
 		return nil, errors.New(`Config.Name cannot end in ".ipc"`)
@@ -110,15 +110,15 @@ func New(conf *Config) (*Node, error) {
 	// Note: any interaction with Config that would create/touch files
 	// in the data directory or instance directory is delayed until Start.
 	return &Node{
-		accman: 		   am,
+		accman:            am,
 		ephemeralKeystore: ephemeralKeystore,
-		config: 		   conf,
-		serviceFuncs: 	   []ServiceConstructor{},
-		ipcEndpoint: 	   conf.IPCEndpoint(),
-		httpEndpoint: 	   conf.HTTPEndpoint(),
-		wsEndpoint: 	   conf.WSEndpoint(),
-		eventmux: 	       new(event.TypeMux),
-		log: 	           conf.Logger,
+		config:            conf,
+		serviceFuncs:      []ServiceConstructor{},
+		ipcEndpoint:       conf.IPCEndpoint(),
+		httpEndpoint:      conf.HTTPEndpoint(),
+		wsEndpoint:        conf.WSEndpoint(),
+		eventmux:          new(event.TypeMux),
+		log:               conf.Logger,
 	}, nil
 }
 
@@ -159,8 +159,9 @@ func (n *Node) Start() error {
 	if n.serverConfig.NodeDatabase == "" {
 		n.serverConfig.NodeDatabase = n.config.NodeDB()
 	}
+
 	running := &p2p.Server{Config: n.serverConfig}
-	n.log.Info("Starting peer-to-peer node","instance", n.serverConfig.Name)
+	n.log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
 
 	// Otherwise copy and specialize the P2P configuration
 	services := make(map[reflect.Type]Service)
@@ -172,7 +173,7 @@ func (n *Node) Start() error {
 			EventMux:       n.eventmux,
 			AccountManager: n.accman,
 		}
-		for kind, s := range services {  // copy needed for threaded access
+		for kind, s := range services { // copy needed for threaded access
 			ctx.services[kind] = s
 		}
 		// Construct and save the service
@@ -199,7 +200,7 @@ func (n *Node) Start() error {
 	for kind, service := range services {
 		// Start the next service, stopping all previous upon failure
 		if err := service.Start(running); err != nil {
-			for _,kind := range started {
+			for _, kind := range started {
 				services[kind].Stop()
 			}
 			running.Stop()
@@ -237,7 +238,7 @@ func (n *Node) openDataDir() error {
 		return err
 	}
 
-	release,_,err := flock.New(filepath.Join(instdir,"LOCK"))
+	release, _, err := flock.New(filepath.Join(instdir, "LOCK"))
 	if err != nil {
 		return convertFileLockError(err)
 	}
@@ -274,7 +275,6 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 	}
 	// All API endpoints started successfully
 	n.rpcAPIs = apis
-
 
 	return nil
 }
@@ -579,7 +579,6 @@ func (n *Node) OpenDatabase(name string, cache, handles int) (gxdb.Database, err
 func (n *Node) ResolvePath(x string) string {
 	return n.config.resolvePath(x)
 }
-
 
 func (n *Node) apis() []rpc.API {
 	return []rpc.API{

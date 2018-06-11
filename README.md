@@ -73,7 +73,7 @@ separate the two networks and will not make any accounts available between them.
 
 ```
 
-### Configuration
+### Configuration (PoW)
 
 As an alternative to passing the numerous flags to the `gxp` binary, you can also pass a configuration file via:
 
@@ -167,6 +167,107 @@ with it prior to starting it up to ensure all blockchain parameters are correctl
 ```
 $ gxp init path/to/genesis.json
 ```
+
+### Configuration (istanbul-BFT)
+When --nodes --verbose flags are given, a static-nodes.json template as well as the validators' node keys, public keys, and addresses are generated.
+When --save flag is given, all generated configs will be saved. Use BFT when --bft flag is given.
+
+Note: the generated static-nodes.json template are set with IP 0.0.0.0, please make according change to match your environment.
+```
+./istanbul setup --num 4 --nodes --verbose --bft
+validators
+{
+	"Address": "0x7871bce4a383c0c01c81e0f7e1798d97b49cd64c",
+	"Nodekey": "81a74dc939a2e023a3743396cc9beb04cc092e11aceadf07e5f5e4299bb9a8c6",
+	"NodeInfo": "enode://fd6ea50203d1603ab2e2d26b48dc92feba58c1867e6abfbaf2193739fa23feddc61d2a7eb788ea3ec6f09ba86299df1ead14ddb3a3a43856203e0961631553ed@0.0.0.0:30303?discport=0"
+}
+{
+	"Address": "0x7e1b0308c8baaf40f4614f5ca94aa0d1acfd645c",
+	"Nodekey": "6e29d0af0f10f73dcd1547cf129ed99730188d2ea8b4eeaf2933ec15c13e9fef",
+	"NodeInfo": "enode://ad0c9c871b4fd631e6a92442ec22b8b39108724bc2f48bffefdbc8afa776c5348c7a724cf0b003edf6bfe60fd36c59221d11478698c4dd093836198ca1c870c5@0.0.0.0:30303?discport=0"
+}
+{
+	"Address": "0x9148c161d204c17bf0ff0df222242bc822663ffe",
+	"Nodekey": "2fcb8cb40a2cc8262140566dd5aa8fb38e455263707ddac1be1c71becf884b79",
+	"NodeInfo": "enode://2da0b0abfe22814790f4bd5925bcb4fb89c950bec9612ecff773417945c3899ca64094d331baef5196c6ba2744163991530978d50f05225b33c4a7d81eaee7b1@0.0.0.0:30303?discport=0"
+}
+{
+	"Address": "0xf13783ba2087067663413cc2561262bdd892b357",
+	"Nodekey": "e49b505d4a6d2b29d3411b5568eba9d4da0c48499cd6c30c9aae3db3822cc322",
+	"NodeInfo": "enode://315a62772a05386f15d66ea7a39b1500d3749fdeea847811b4f8da842049c1ec7ccfe6db0f518415d21d713d92448c251793ebea9e1a6baf9b03502964737670@0.0.0.0:30303?discport=0"
+}
+
+static-nodes.json
+[
+	"enode://fd6ea50203d1603ab2e2d26b48dc92feba58c1867e6abfbaf2193739fa23feddc61d2a7eb788ea3ec6f09ba86299df1ead14ddb3a3a43856203e0961631553ed@0.0.0.0:30303?discport=0",
+	"enode://ad0c9c871b4fd631e6a92442ec22b8b39108724bc2f48bffefdbc8afa776c5348c7a724cf0b003edf6bfe60fd36c59221d11478698c4dd093836198ca1c870c5@0.0.0.0:30303?discport=0",
+	"enode://2da0b0abfe22814790f4bd5925bcb4fb89c950bec9612ecff773417945c3899ca64094d331baef5196c6ba2744163991530978d50f05225b33c4a7d81eaee7b1@0.0.0.0:30303?discport=0",
+	"enode://315a62772a05386f15d66ea7a39b1500d3749fdeea847811b4f8da842049c1ec7ccfe6db0f518415d21d713d92448c251793ebea9e1a6baf9b03502964737670@0.0.0.0:30303?discport=0"
+]
+
+
+genesis.json
+{
+    "config": {
+        "chainId": 2017,
+        "homesteadBlock": 1,
+        "eip155Block": 3,
+        "istanbul": {
+            "epoch": 30000,
+            "policy": 0
+        },
+        "isBFT": true
+    },
+    "nonce": "0x0",
+    "timestamp": "0x5b1e64b0",
+    "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000f89af854947871bce4a383c0c01c81e0f7e1798d97b49cd64c947e1b0308c8baaf40f4614f5ca94aa0d1acfd645c949148c161d204c17bf0ff0df222242bc822663ffe94f13783ba2087067663413cc2561262bdd892b357b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0",
+    "gasLimit": "0x82f79cd9000",
+    "difficulty": "0x1",
+    "mixHash": "0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365",
+    "coinbase": "0x0000000000000000000000000000000000000000",
+    "alloc": {
+        "7871bce4a383c0c01c81e0f7e1798d97b49cd64c": {
+            "balance": "0x446c3b15f9926687d2c40534fdb564000000000000"
+        },
+        "7e1b0308c8baaf40f4614f5ca94aa0d1acfd645c": {
+            "balance": "0x446c3b15f9926687d2c40534fdb564000000000000"
+        },
+        "9148c161d204c17bf0ff0df222242bc822663ffe": {
+            "balance": "0x446c3b15f9926687d2c40534fdb564000000000000"
+        },
+        "f13783ba2087067663413cc2561262bdd892b357": {
+            "balance": "0x446c3b15f9926687d2c40534fdb564000000000000"
+        }
+    },
+    "number": "0x0",
+    "gasUsed": "0x0",
+    "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}
+
+```
+istanbul의 setup 명령어로 만들어진 nodekey를 각 노드의 nodekey 화일에 저장한다.
+
+```nodekey
+81a74dc939a2e023a3743396cc9beb04cc092e11aceadf07e5f5e4299bb9a8c6
+```
+
+미리 생성된 계정이 있는 경우에는 genesis.json 파일에 alloc 설정에 계정에 대한 balance 값을 추가함
+
+nodekey 화일과 static-nodes.json 화일을 datadir로 복사한다.
+Genesis 블락을 다음의 명령어로 생성한다.
+```
+./gxp --datadir $DATAPATH init genesis.json
+
+```
+각 노드를 다음 명령어로 실행함. 실행시에 --mine 옵션으로 마이닝을 실행하고 --gasprice 0 옵션으로 gasprice를 0으로 세팅함.
+```
+gxp --datadir $DATAPATH --port 30303 --rpc --rpcaddr 0.0.0.0 --rpcport "8123" --rpccorsdomain "*"
+--nodiscover --networkid 3900 --nat "any" --wsport "8546" --ws --wsaddr 0.0.0.0 --wsorigins="*"
+--rpcapi "db,txpool,gxp,net,web3,miner,personal,admin,rpc" --mine --gasprice 0 console
+
+```
+동일 머신에서 수행시에는 --port , --rpcport --wsport 옵션을 다르게 설정하고 --networkid는 동일하게 설정함
+
 
 ## License
 

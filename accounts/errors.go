@@ -1,8 +1,8 @@
 package accounts
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 // ErrUnknownAccount is returned for any requested operation for which no backend

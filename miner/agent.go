@@ -1,10 +1,10 @@
 package miner
 
 import (
-	"sync"
 	"ground-x/go-gxplatform/consensus"
-	"sync/atomic"
 	"ground-x/go-gxplatform/log"
+	"sync"
+	"sync/atomic"
 )
 
 type CpuAgent struct {
@@ -40,7 +40,7 @@ func (self *CpuAgent) Stop() {
 	}
 	self.stop <- struct{}{}
 done:
-// Empty work channel
+	// Empty work channel
 	for {
 		select {
 		case <-self.workCh:

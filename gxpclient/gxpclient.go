@@ -2,16 +2,16 @@ package gxpclient
 
 import (
 	"context"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/rlp"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/common/hexutil"
-	"ground-x/go-gxplatform/rpc"
-	"math/big"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"ground-x/go-gxplatform"
-	"errors"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/common/hexutil"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/rpc"
+	"math/big"
 )
 
 // Client defines typed wrappers for the Ethereum RPC API.

@@ -1,24 +1,24 @@
 package gxhash
 
 import (
-	"math/big"
 	"errors"
-	"path/filepath"
 	"fmt"
+	"github.com/hashicorp/golang-lru/simplelru"
+	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/rpc"
+	"math"
+	"math/big"
+	"math/rand"
 	"os"
-	"unsafe"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"sync"
-	"github.com/hashicorp/golang-lru/simplelru"
-	"ground-x/go-gxplatform/log"
-	"runtime"
-	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/rpc"
-	"math/rand"
-	"ground-x/go-gxplatform/matrics"
 	"time"
-	"math"
+	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
 )
@@ -558,4 +558,9 @@ func (ethash *Gxhash) APIs(chain consensus.ChainReader) []rpc.API {
 // dataset.
 func SeedHash(block uint64) []byte {
 	return seedHash(block)
+}
+
+// Protocol implements consensus.Engine.Protocol
+func (ethash *Gxhash) Protocol() consensus.Protocol {
+	return consensus.GxpProtocol
 }

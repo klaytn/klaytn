@@ -50,4 +50,3 @@ func PrintDepricationWarning(str string) {
 
 `, line, emptyLine, str, emptyLine, line)
 }
-

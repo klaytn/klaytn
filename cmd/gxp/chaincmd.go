@@ -1,12 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"gopkg.in/urfave/cli.v1"
 	"ground-x/go-gxplatform/cmd/utils"
-	"os"
 	"ground-x/go-gxplatform/core"
-	"encoding/json"
 	"ground-x/go-gxplatform/log"
+	"os"
 )
 
 var (

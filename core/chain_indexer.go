@@ -1,17 +1,17 @@
 package core
 
 import (
+	"encoding/binary"
+	"fmt"
 	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/rawdb"
 	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/event"
-	"time"
-	"sync"
 	"ground-x/go-gxplatform/gxdb"
 	"ground-x/go-gxplatform/log"
+	"sync"
 	"sync/atomic"
-	"fmt"
-	"ground-x/go-gxplatform/core/rawdb"
-	"encoding/binary"
+	"time"
 )
 
 // ChainIndexerBackend defines the methods needed to process chain segments in
@@ -49,8 +49,8 @@ type ChainIndexerChain interface {
 // after an entire section has been finished or in case of rollbacks that might
 // affect already finished sections.
 type ChainIndexer struct {
-	chainDb  gxdb.Database      // Chain database to index the data from
-	indexDb  gxdb.Database      // Prefixed table-view of the db to write index metadata into
+	chainDb  gxdb.Database       // Chain database to index the data from
+	indexDb  gxdb.Database       // Prefixed table-view of the db to write index metadata into
 	backend  ChainIndexerBackend // Background processor generating the index data content
 	children []*ChainIndexer     // Child indexers to cascade chain updates to
 
@@ -430,5 +430,3 @@ func (c *ChainIndexer) removeSectionHead(section uint64) {
 
 	c.indexDb.Delete(append([]byte("shead"), data[:]...))
 }
-
-

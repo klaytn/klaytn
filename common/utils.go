@@ -1,9 +1,9 @@
 package common
 
 import (
-	"io/ioutil"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 )
 
 // LoadJSON reads the given file and unmarshals its content.

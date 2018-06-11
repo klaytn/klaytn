@@ -1,14 +1,14 @@
 package gxp
 
 import (
-	"time"
-	"ground-x/go-gxplatform/core/types"
-	"ground-x/go-gxplatform/p2p/discover"
 	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/gxp/downloader"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/p2p/discover"
 	"math/rand"
 	"sync/atomic"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/gxp/downloader"
+	"time"
 )
 
 const (
@@ -198,4 +198,3 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		go pm.BroadcastBlock(head, false)
 	}
 }
-

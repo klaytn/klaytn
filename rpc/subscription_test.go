@@ -1,13 +1,13 @@
 package rpc
 
 import (
-	"fmt"
-	"time"
-	"sync"
 	"context"
-	"testing"
-	"net"
 	"encoding/json"
+	"fmt"
+	"net"
+	"sync"
+	"testing"
+	"time"
 )
 
 type NotificationTestService struct {
@@ -312,4 +312,3 @@ func TestSubscriptionMultipleNamespaces(t *testing.T) {
 		}
 	}
 }
-

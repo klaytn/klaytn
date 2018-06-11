@@ -1,8 +1,8 @@
 package bloombits
 
 import (
-	"ground-x/go-gxplatform/core/types"
 	"errors"
+	"ground-x/go-gxplatform/core/types"
 )
 
 // errSectionOutOfBounds is returned if the user tried to add more bloom filters
@@ -68,4 +68,3 @@ func (b *Generator) Bitset(idx uint) ([]byte, error) {
 	}
 	return b.blooms[idx], nil
 }
-

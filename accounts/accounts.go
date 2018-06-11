@@ -17,11 +17,11 @@
 package accounts
 
 import (
+	"ground-x/go-gxplatform"
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/core/types"
-	"math/big"
 	"ground-x/go-gxplatform/event"
-	"ground-x/go-gxplatform"
+	"math/big"
 )
 
 // Account represents an GXPlatform account located at a specific location defined

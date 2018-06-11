@@ -1,17 +1,17 @@
 package downloader
 
 import (
+	"fmt"
 	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/trie"
-	"time"
-	"ground-x/go-gxplatform/log"
 	"ground-x/go-gxplatform/core/rawdb"
+	"ground-x/go-gxplatform/core/state"
+	"ground-x/go-gxplatform/crypto/sha3"
+	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/trie"
 	"hash"
 	"sync"
-	"ground-x/go-gxplatform/crypto/sha3"
-	"fmt"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/core/state"
+	"time"
 )
 
 // stateReq represents a batch of state fetch requests grouped together into
@@ -462,4 +462,3 @@ func (s *stateSync) updateStats(written, duplicate, unexpected int, duration tim
 		rawdb.WriteFastTrieProgress(s.d.stateDB, s.d.syncStatsState.processed)
 	}
 }
-

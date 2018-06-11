@@ -1,19 +1,20 @@
 package gxp
 
 import (
-	"time"
-	"math/big"
-	"ground-x/go-gxplatform/params"
-	"ground-x/go-gxplatform/core"
 	"ground-x/go-gxplatform/common"
-	"os"
-	"os/user"
-	"runtime"
-	"path/filepath"
 	"ground-x/go-gxplatform/common/hexutil"
 	"ground-x/go-gxplatform/consensus/gxhash"
-	"ground-x/go-gxplatform/gxp/gasprice"
+	"ground-x/go-gxplatform/core"
 	"ground-x/go-gxplatform/gxp/downloader"
+	"ground-x/go-gxplatform/gxp/gasprice"
+	"ground-x/go-gxplatform/params"
+	"math/big"
+	"os"
+	"os/user"
+	"path/filepath"
+	"runtime"
+	"time"
+	"ground-x/go-gxplatform/consensus/istanbul"
 )
 
 // DefaultConfig contains default settings for use on the GxPlatform main net.
@@ -38,6 +39,8 @@ var DefaultConfig = Config{
 		Blocks:     20,
 		Percentile: 60,
 	},
+
+	Istanbul: *istanbul.DefaultConfig,
 }
 
 func init() {
@@ -78,7 +81,7 @@ type Config struct {
 	TrieTimeout        time.Duration
 
 	// Mining-related options
-	Gxbase    common.Address 	`toml:",omitempty"`
+	Gxbase       common.Address `toml:",omitempty"`
 	MinerThreads int            `toml:",omitempty"`
 	ExtraData    []byte         `toml:",omitempty"`
 	GasPrice     *big.Int
@@ -94,6 +97,8 @@ type Config struct {
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
+	// Istanbul options
+	Istanbul istanbul.Config
 
 	// Miscellaneous options
 	DocRoot string `toml:"-"`

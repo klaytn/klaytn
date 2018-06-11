@@ -1,8 +1,8 @@
 package core
 
 import (
-	"ground-x/go-gxplatform/consensus"
 	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/consensus"
 	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/core/vm"
 	"math/big"

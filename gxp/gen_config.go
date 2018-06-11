@@ -3,15 +3,15 @@
 package gxp
 
 import (
-	"math/big"
-	"time"
-
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/common/hexutil"
 	"ground-x/go-gxplatform/consensus/gxhash"
+	"ground-x/go-gxplatform/consensus/istanbul"
 	"ground-x/go-gxplatform/core"
 	"ground-x/go-gxplatform/gxp/downloader"
 	"ground-x/go-gxplatform/gxp/gasprice"
+	"math/big"
+	"time"
 )
 
 var _ = (*configMarshaling)(nil)
@@ -38,6 +38,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		TxPool                  core.TxPoolConfig
 		GPO                     gasprice.Config
 		EnablePreimageRecording bool
+		Istanbul                istanbul.Config
 		DocRoot                 string `toml:"-"`
 	}
 	var enc Config
@@ -60,6 +61,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.TxPool = c.TxPool
 	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
+	enc.Istanbul = c.Istanbul
 	enc.DocRoot = c.DocRoot
 	return &enc, nil
 }
@@ -86,6 +88,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		TxPool                  *core.TxPoolConfig
 		GPO                     *gasprice.Config
 		EnablePreimageRecording *bool
+		Istanbul                *istanbul.Config
 		DocRoot                 *string `toml:"-"`
 	}
 	var dec Config
@@ -148,6 +151,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.EnablePreimageRecording != nil {
 		c.EnablePreimageRecording = *dec.EnablePreimageRecording
+	}
+	if dec.Istanbul != nil {
+		c.Istanbul = *dec.Istanbul
 	}
 	if dec.DocRoot != nil {
 		c.DocRoot = *dec.DocRoot

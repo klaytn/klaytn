@@ -1,16 +1,16 @@
 package miner
 
 import (
-	"time"
-	"sync"
-	"ground-x/go-gxplatform/consensus"
+	"errors"
 	"ground-x/go-gxplatform/common"
-	"sync/atomic"
-	"math/big"
+	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/consensus/gxhash"
 	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/consensus/gxhash"
-	"errors"
+	"math/big"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 type hashrate struct {
@@ -183,4 +183,3 @@ func (a *RemoteAgent) loop(workCh chan *Task, quitCh chan struct{}) {
 		}
 	}
 }
-

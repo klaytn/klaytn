@@ -152,4 +152,3 @@ func bitsetDecodePartialBytes(data []byte, target int) ([]byte, int, error) {
 	}
 	return decomp, ptr, nil
 }
-

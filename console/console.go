@@ -1,17 +1,17 @@
 package console
 
 import (
-	"io/ioutil"
-	"strings"
-	"os"
-	"regexp"
-	"io"
-	"path/filepath"
 	"fmt"
-	"sort"
-	"os/signal"
-	"syscall"
 	"ground-x/go-gxplatform/rpc"
+	"io"
+	"io/ioutil"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"syscall"
 
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
@@ -422,4 +422,3 @@ func (c *Console) Stop(graceful bool) error {
 	c.jsre.Stop(graceful)
 	return nil
 }
-

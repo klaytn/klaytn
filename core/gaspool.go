@@ -1,8 +1,8 @@
 package core
 
 import (
-	"math"
 	"fmt"
+	"math"
 )
 
 // GasPool tracks the amount of gas available during execution of the transactions

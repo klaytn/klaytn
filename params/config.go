@@ -18,8 +18,8 @@ package params
 
 import (
 	"fmt"
-	"math/big"
 	"ground-x/go-gxplatform/common"
+	"math/big"
 )
 
 var (
@@ -30,16 +30,16 @@ var (
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainId:             big.NewInt(1),
-		HomesteadBlock:      big.NewInt(0),
-		Gxhash:              new(GxhashConfig),
+		ChainId:        big.NewInt(1),
+		HomesteadBlock: big.NewInt(0),
+		Gxhash:         new(GxhashConfig),
 	}
 
 	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	TestnetChainConfig = &ChainConfig{
-		ChainId:             big.NewInt(2),
-		HomesteadBlock:      big.NewInt(0),
-		Gxhash:              new(GxhashConfig),
+		ChainId:        big.NewInt(2),
+		HomesteadBlock: big.NewInt(0),
+		Gxhash:         new(GxhashConfig),
 	}
 
 	// AllGxhashProtocolChanges contains every protocol change (GxIPs) introduced
@@ -47,19 +47,21 @@ var (
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllGxhashProtocolChanges = &ChainConfig{big.NewInt(0), big.NewInt(0), big.NewInt(0),new(GxhashConfig), nil}
+	AllGxhashProtocolChanges = &ChainConfig{big.NewInt(0), big.NewInt(0), big.NewInt(0), new(GxhashConfig), nil, nil, false}
 
 	// AllCliqueProtocolChanges contains every protocol change (GxIPs) introduced
 	// and accepted by the GX Platform core developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(0), big.NewInt(0), big.NewInt(0),nil, &CliqueConfig{Period: 0, Epoch: 30000}}
+	AllCliqueProtocolChanges = &ChainConfig{big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, &CliqueConfig{Period: 0, Epoch: 30000}, nil, false}
 
-	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0),  big.NewInt(0),new(GxhashConfig), nil}
+	TestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), big.NewInt(0), new(GxhashConfig), nil, nil, false}
 	TestRules       = TestChainConfig.Rules(new(big.Int))
-)
 
+	// istanbul BFT
+	BFTTestChainConfig = &ChainConfig{big.NewInt(1), big.NewInt(0), big.NewInt(0), new(GxhashConfig), nil, nil, true}
+)
 
 // ChainConfig is the core config which determines the blockchain settings.
 //
@@ -76,6 +78,9 @@ type ChainConfig struct {
 	// Various consensus engines
 	Gxhash *GxhashConfig `json:"gxhash,omitempty"`
 	Clique *CliqueConfig `json:"clique,omitempty"`
+	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
+
+	IsBFT bool `json:"isBFT"`
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -97,6 +102,17 @@ func (c *CliqueConfig) String() string {
 	return "clique"
 }
 
+// IstanbulConfig is the consensus engine configs for Istanbul based sealing.
+type IstanbulConfig struct {
+	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
+	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection
+}
+
+// String implements the stringer interface, returning the consensus engine details.
+func (c *IstanbulConfig) String() string {
+	return "istanbul"
+}
+
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -105,11 +121,14 @@ func (c *ChainConfig) String() string {
 		engine = c.Gxhash
 	case c.Clique != nil:
 		engine = c.Clique
+	case c.Istanbul != nil:
+		engine = c.Istanbul
 	default:
 		engine = "unknown"
 	}
-	return fmt.Sprintf("{ChainID: %v Engine: %v}",
+	return fmt.Sprintf("{ChainID: %v IsBFT: %v Engine: %v}",
 		c.ChainId,
+		c.IsBFT,
 		engine,
 	)
 }

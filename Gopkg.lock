@@ -61,6 +61,12 @@
   revision = "1395d1447324cbea88d249fbfcfd70ea878fdfca"
 
 [[projects]]
+  name = "github.com/inconshreveable/log15"
+  packages = ["."]
+  revision = "0decfc6c20d9ca0ad143b0e89dcaa20f810b4fb3"
+  version = "v2.13"
+
+[[projects]]
   name = "github.com/influxdata/influxdb"
   packages = [
     "client",
@@ -160,6 +166,12 @@
   version = "v1.4.0"
 
 [[projects]]
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
+
+[[projects]]
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
@@ -186,6 +198,12 @@
     "leveldb/util"
   ]
   revision = "ae970a0732be3a1f5311da86118d37b9f4bd2a5a"
+
+[[projects]]
+  name = "github.com/urfave/cli"
+  packages = ["."]
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
 
 [[projects]]
   branch = "master"
@@ -275,6 +293,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "74e31e52c9fffd873362d57bf64faac5839b245cc1818036fc63952764a026b6"
+  inputs-digest = "97ca13e9e7462934c4dd55380520d359b7546527d063b868dd1387aa7f1664ae"
   solver-name = "gps-cdcl"
   solver-version = 1

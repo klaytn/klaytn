@@ -18,14 +18,14 @@ package vm
 
 import (
 	"crypto/sha256"
+	"errors"
 	"golang.org/x/crypto/ripemd160"
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/common/math"
 	"ground-x/go-gxplatform/crypto"
+	"ground-x/go-gxplatform/crypto/bn256"
 	"ground-x/go-gxplatform/params"
 	"math/big"
-	"ground-x/go-gxplatform/crypto/bn256"
-	"errors"
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation

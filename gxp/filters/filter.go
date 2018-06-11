@@ -1,14 +1,14 @@
 package filters
 
 import (
-	"ground-x/go-gxplatform/event"
 	"context"
-	"ground-x/go-gxplatform/rpc"
-	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/core"
 	"ground-x/go-gxplatform/core/bloombits"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/event"
 	"ground-x/go-gxplatform/gxdb"
+	"ground-x/go-gxplatform/rpc"
 	"math/big"
 )
 
@@ -286,4 +286,3 @@ func bloomFilter(bloom types.Bloom, addresses []common.Address, topics [][]commo
 	}
 	return true
 }
-

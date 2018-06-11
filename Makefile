@@ -16,6 +16,11 @@ gxp:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/gxp\" to launch gxp."
 
+istanbul:
+	build/env.sh go run build/ci.go install ./cmd/istanbul
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/istanbul\" to launch istanbul."
+
 all:
 	build/env.sh go run build/ci.go install
 

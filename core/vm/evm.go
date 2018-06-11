@@ -18,11 +18,11 @@ package vm
 
 import (
 	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/crypto"
 	"ground-x/go-gxplatform/params"
 	"math/big"
 	"sync/atomic"
 	"time"
-	"ground-x/go-gxplatform/crypto"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already

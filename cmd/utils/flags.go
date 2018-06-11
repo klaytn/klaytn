@@ -1,36 +1,36 @@
 package utils
 
 import (
+	"crypto/ecdsa"
+	"fmt"
 	"gopkg.in/urfave/cli.v1"
-	"path/filepath"
-	"os"
-	"ground-x/go-gxplatform/params"
-	"ground-x/go-gxplatform/node"
+	"ground-x/go-gxplatform/accounts"
+	"ground-x/go-gxplatform/accounts/keystore"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/common/fdlimit"
+	"ground-x/go-gxplatform/consensus/gxhash"
 	"ground-x/go-gxplatform/core"
 	"ground-x/go-gxplatform/core/state"
-	"runtime"
-	"ground-x/go-gxplatform/matrics"
-	"strings"
-	"ground-x/go-gxplatform/gxp"
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/p2p"
-	"crypto/ecdsa"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/p2p/discover"
-	"ground-x/go-gxplatform/log"
-	"fmt"
-	"ground-x/go-gxplatform/p2p/nat"
-	"ground-x/go-gxplatform/accounts/keystore"
-	"ground-x/go-gxplatform/accounts"
-	"strconv"
-	"io/ioutil"
-	"ground-x/go-gxplatform/p2p/netutil"
-	"ground-x/go-gxplatform/gxp/gasprice"
-	"math/big"
 	"ground-x/go-gxplatform/core/vm"
+	"ground-x/go-gxplatform/crypto"
 	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/consensus/gxhash"
-	"ground-x/go-gxplatform/common/fdlimit"
+	"ground-x/go-gxplatform/gxp"
+	"ground-x/go-gxplatform/gxp/gasprice"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/node"
+	"ground-x/go-gxplatform/p2p"
+	"ground-x/go-gxplatform/p2p/discover"
+	"ground-x/go-gxplatform/p2p/nat"
+	"ground-x/go-gxplatform/p2p/netutil"
+	"ground-x/go-gxplatform/params"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
 )
 
 // NewApp creates an app with sane defaults.
@@ -512,7 +512,6 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
-
 // setListenAddress creates a TCP listening address string from set command
 // line flags.
 func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
@@ -849,7 +848,6 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 	}
 }
 
-
 // SetGxConfig applies gxp-related command line flags to the config.
 func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 	// Avoid conflicting network flags
@@ -941,8 +939,8 @@ func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 // RegisterEthService adds an Ethereum client to the stack.
 func RegisterEthService(stack *node.Node, cfg *gxp.Config) {
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			fullNode, err := gxp.New(ctx, cfg)
-			return fullNode, err
+		fullNode, err := gxp.New(ctx, cfg)
+		return fullNode, err
 	})
 	if err != nil {
 		Fatalf("Failed to register the Ethereum service: %v", err)

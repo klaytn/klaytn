@@ -1,13 +1,13 @@
 package p2p
 
 import (
+	"errors"
 	"fmt"
+	"math/rand"
 	"net"
+	"reflect"
 	"testing"
 	"time"
-	"math/rand"
-	"reflect"
-	"errors"
 )
 
 var discard = Protocol{

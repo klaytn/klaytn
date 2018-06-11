@@ -2,15 +2,15 @@ package jsre
 
 import (
 	crand "crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"github.com/robertkrimen/otto"
-	"io"
-	"ground-x/go-gxplatform/internal/jsre/deps"
-	"time"
-	"math/rand"
-	"encoding/binary"
-	"io/ioutil"
 	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/internal/jsre/deps"
+	"io"
+	"io/ioutil"
+	"math/rand"
+	"time"
 )
 
 var (
@@ -315,4 +315,3 @@ func compileAndRun(vm *otto.Otto, filename string, src interface{}) (otto.Value,
 	}
 	return vm.Run(script)
 }
-

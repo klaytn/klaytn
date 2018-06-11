@@ -1,17 +1,17 @@
 package main
 
 import (
+	"bufio"
+	"errors"
+	"fmt"
 	"gopkg.in/urfave/cli.v1"
-	"ground-x/go-gxplatform/node"
 	"ground-x/go-gxplatform/cmd/utils"
 	gxplatform "ground-x/go-gxplatform/gxp"
-	"os"
-	"bufio"
+	"ground-x/go-gxplatform/node"
 	"ground-x/go-gxplatform/params"
-	"errors"
+	"os"
 	"reflect"
 	"unicode"
-	"fmt"
 
 	"github.com/naoina/toml"
 )
@@ -41,8 +41,8 @@ var tomlSettings = toml.Config{
 }
 
 type gxpConfig struct {
-	Gxp       gxplatform.Config
-	Node      node.Config
+	Gxp  gxplatform.Config
+	Node node.Config
 }
 
 func loadConfig(file string, cfg *gxpConfig) error {
@@ -73,8 +73,8 @@ func defaultNodeConfig() node.Config {
 func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
 	// Load defaults.
 	cfg := gxpConfig{
-		Gxp:       gxplatform.DefaultConfig,
-		Node:      defaultNodeConfig(),
+		Gxp:  gxplatform.DefaultConfig,
+		Node: defaultNodeConfig(),
 	}
 
 	// Load config file.

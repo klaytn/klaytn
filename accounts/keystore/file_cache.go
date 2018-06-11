@@ -2,13 +2,13 @@ package keystore
 
 import (
 	"gopkg.in/fatih/set.v0"
-	"time"
-	"sync"
-	"io/ioutil"
-	"path/filepath"
 	"ground-x/go-gxplatform/log"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 )
 
 // fileCache is a cache of files seen during scan of keystore.
@@ -83,4 +83,3 @@ func skipKeyFile(fi os.FileInfo) bool {
 	}
 	return false
 }
-

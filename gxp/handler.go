@@ -1,27 +1,28 @@
 package gxp
 
 import (
-	"time"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"ground-x/go-gxplatform/core"
-	"ground-x/go-gxplatform/params"
-	"ground-x/go-gxplatform/p2p"
-	"ground-x/go-gxplatform/event"
-	"sync"
-	"ground-x/go-gxplatform/consensus"
-	"ground-x/go-gxplatform/gxdb"
-	"ground-x/go-gxplatform/p2p/discover"
-	"ground-x/go-gxplatform/core/types"
-	"sync/atomic"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/gxp/fetcher"
-	"math/big"
 	"ground-x/go-gxplatform/common"
-	"math"
-	"encoding/json"
-	"ground-x/go-gxplatform/rlp"
+	"ground-x/go-gxplatform/consensus"
+	"ground-x/go-gxplatform/core"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/event"
+	"ground-x/go-gxplatform/gxdb"
 	"ground-x/go-gxplatform/gxp/downloader"
+	"ground-x/go-gxplatform/gxp/fetcher"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/p2p"
+	"ground-x/go-gxplatform/p2p/discover"
+	"ground-x/go-gxplatform/params"
+	"ground-x/go-gxplatform/rlp"
+	"math"
+	"math/big"
+	"sync"
+	"sync/atomic"
+	"time"
+	"ground-x/go-gxplatform/crypto"
 )
 
 const (
@@ -76,24 +77,33 @@ type ProtocolManager struct {
 	// wait group is used for graceful shutdowns during downloading
 	// and processing
 	wg sync.WaitGroup
+	// istanbul BFT
+	engine consensus.Engine
 }
 
 // NewProtocolManager returns a new GXP sub protocol manager. The GXP sub protocol manages peers capable
 // with the GXPlatform network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb gxdb.Database) (*ProtocolManager, error){
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb gxdb.Database) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
-		networkId: 	 networkId,
-		eventMux: 	 mux,
-		txpool: 	 txpool,
+		networkId:   networkId,
+		eventMux:    mux,
+		txpool:      txpool,
 		blockchain:  blockchain,
 		chainconfig: config,
-		peers: 		 newPeerSet(),
+		peers:       newPeerSet(),
 		newPeerCh:   make(chan *peer),
 		noMorePeers: make(chan struct{}),
-		txsyncCh: 	 make(chan *txsync),
-		quitSync: 	 make(chan struct{}),
+		txsyncCh:    make(chan *txsync),
+		quitSync:    make(chan struct{}),
+		engine:      engine,
 	}
+
+	// istanbul BFT
+	if handler, ok := engine.(consensus.Handler); ok {
+		handler.SetBroadcaster(manager)
+	}
+
 	// Figure out whether to allow fast sync or not
 	if mode == downloader.FastSync && blockchain.CurrentBlock().NumberU64() > 0 {
 		log.Warn("Blockchain not empty, fast sync disabled")
@@ -102,15 +112,21 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	if mode == downloader.FastSync {
 		manager.fastSync = uint32(1)
 	}
-
-	manager.SubProtocols = make([]p2p.Protocol, 0, len(ProtocolVersions))
-	for i, version := range ProtocolVersions {
-
+	// istanbul BFT
+    protocol := engine.Protocol()
+	// Initiate a sub-protocol for every implemented version we can handle
+	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Versions))
+	for i, version := range protocol.Versions {
+		// Skip protocol version if incompatible with the mode of operation
+		if mode == downloader.FastSync && version < gxp63 {
+			continue
+		}
+		// Compatible; initialise the sub-protocol
 		version := version
 		manager.SubProtocols = append(manager.SubProtocols, p2p.Protocol{
-			Name:    ProtocolName,
+			Name:    protocol.Name ,
 			Version: version,
-			Length:  ProtocolLengths[i],
+			Length:  protocol.Lengths[i],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
 				peer := manager.newPeer(int(version), p, rw)
 				select {
@@ -284,6 +300,20 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 	}
 	defer msg.Discard()
+
+	// istanbul BFT
+	if handler, ok := pm.engine.(consensus.Handler); ok {
+		pubKey, err := p.ID().Pubkey()
+		if err != nil {
+			return err
+		}
+		addr := crypto.PubkeyToAddress(*pubKey)
+		handled, err := handler.HandleMsg(addr, msg)
+		// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
+		if handled {
+			return err
+		}
+	}
 
 	// Handle the message depending on its contents
 	switch {
@@ -523,9 +553,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Deliver all to the downloader
-		//if err := pm.downloader.DeliverReceipts(p.id, receipts); err != nil {
-		//	log.Debug("Failed to deliver receipts", "err", err)
-		//}
+		if err := pm.downloader.DeliverReceipts(p.id, receipts); err != nil {
+			log.Debug("Failed to deliver receipts", "err", err)
+		}
 
 	case msg.Code == NewBlockHashesMsg:
 		var announces newBlockHashesData
@@ -533,18 +563,13 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
 		// Mark the hashes as present at the remote node
+		// Schedule all the unknown hashes for retrieval
 		for _, block := range announces {
 			p.MarkBlock(block.Hash)
-		}
-		// Schedule all the unknown hashes for retrieval
-		unknown := make(newBlockHashesData, 0, len(announces))
-		for _, block := range announces {
+
 			if !pm.blockchain.HasBlock(block.Hash, block.Number) {
-				unknown = append(unknown, block)
+				pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 			}
-		}
-		for _, block := range unknown {
-			pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 		}
 
 	case msg.Code == NewBlockMsg:
@@ -706,5 +731,22 @@ func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 	}
 }
 
+// istanbul BFT
+func (pm *ProtocolManager) Enqueue(id string, block *types.Block) {
+	pm.fetcher.Enqueue(id, block)
+}
 
-
+func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
+	m := make(map[common.Address]consensus.Peer)
+    for _, p := range pm.peers.Peers() {
+          pubKey, err := p.ID().Pubkey()
+          if err != nil {
+          	  continue
+		  }
+		  addr := crypto.PubkeyToAddress(*pubKey)
+		  if targets[addr] {
+		  	 m[addr] = p
+		  }
+	}
+	return m
+}

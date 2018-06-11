@@ -17,13 +17,13 @@
 package rawdb
 
 import (
-	"ground-x/go-gxplatform/common"
-	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/core/types"
-	"encoding/binary"
-	"math/big"
-	"ground-x/go-gxplatform/rlp"
 	"bytes"
+	"encoding/binary"
+	"ground-x/go-gxplatform/common"
+	"ground-x/go-gxplatform/core/types"
+	"ground-x/go-gxplatform/log"
+	"ground-x/go-gxplatform/rlp"
+	"math/big"
 )
 
 // ReadCanonicalHash retrieves the hash assigned to a canonical block number.

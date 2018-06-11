@@ -1,19 +1,19 @@
 package keystore
 
 import (
+	"bufio"
 	"encoding/json"
+	"fmt"
+	"gopkg.in/fatih/set.v0"
+	"ground-x/go-gxplatform/accounts"
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/accounts"
-	"time"
-	"fmt"
-	"sync"
-	"gopkg.in/fatih/set.v0"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
-	"path/filepath"
-	"bufio"
-	"os"
+	"sync"
+	"time"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does
@@ -227,8 +227,8 @@ func (ac *accountCache) scanAccounts() error {
 	var (
 		buf = new(bufio.Reader)
 		key struct {
-			   Address string `json:"address"`
-		   }
+			Address string `json:"address"`
+		}
 	)
 	readAccount := func(path string) *accounts.Account {
 		fd, err := os.Open(path)
@@ -279,4 +279,3 @@ func (ac *accountCache) scanAccounts() error {
 	log.Trace("Handled keystore changes", "time", end.Sub(start))
 	return nil
 }
-

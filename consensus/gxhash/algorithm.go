@@ -1,20 +1,20 @@
 package gxhash
 
 import (
+	"encoding/binary"
+	"ground-x/go-gxplatform/common"
+	bitutil "ground-x/go-gxplatform/common/bitutil"
+	"ground-x/go-gxplatform/crypto"
 	"ground-x/go-gxplatform/crypto/sha3"
+	"ground-x/go-gxplatform/log"
 	"hash"
 	"math/big"
-	"time"
-	"ground-x/go-gxplatform/common"
 	"reflect"
-	"unsafe"
-	"sync/atomic"
-	"encoding/binary"
 	"runtime"
 	"sync"
-	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/log"
-	bitutil "ground-x/go-gxplatform/common/bitutil"
+	"sync/atomic"
+	"time"
+	"unsafe"
 )
 
 const (

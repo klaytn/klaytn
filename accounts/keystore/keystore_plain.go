@@ -1,10 +1,10 @@
 package keystore
 
 import (
-	"ground-x/go-gxplatform/common"
-	"os"
 	"encoding/json"
 	"fmt"
+	"ground-x/go-gxplatform/common"
+	"os"
 	"path/filepath"
 )
 
@@ -42,4 +42,3 @@ func (ks keyStorePlain) JoinPath(filename string) string {
 	}
 	return filepath.Join(ks.keysDirPath, filename)
 }
-

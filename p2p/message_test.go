@@ -1,14 +1,14 @@
 package p2p
 
 import (
-	"fmt"
-	"testing"
-	"runtime"
-	"time"
 	"bytes"
-	"io"
-	"strings"
 	"encoding/hex"
+	"fmt"
+	"io"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
 )
 
 func ExampleMsgPipe() {
@@ -134,4 +134,3 @@ func unhex(str string) []byte {
 	}
 	return b
 }
-
