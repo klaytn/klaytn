@@ -28,13 +28,13 @@ const (
 	defaultGasPrice = 50 * params.Shannon
 )
 
-// PublicEthereumAPI provides an API to access Ethereum related information.
+// PublicGXPAPI provides an API to access GXP related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicGXPAPI struct {
 	b Backend
 }
 
-// NewPublicGXPAPI creates a new Ethereum protocol API.
+// NewPublicGXPAPI creates a new GXP protocol API.
 func NewPublicGXPAPI(b Backend) *PublicGXPAPI {
 	return &PublicGXPAPI{b}
 }
@@ -44,7 +44,7 @@ func (s *PublicGXPAPI) GasPrice(ctx context.Context) (*big.Int, error) {
 	return s.b.SuggestPrice(ctx)
 }
 
-// ProtocolVersion returns the current Ethereum protocol version this node supports
+// ProtocolVersion returns the current GXP protocol version this node supports
 func (s *PublicGXPAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
 }
@@ -1369,7 +1369,7 @@ func (s *PublicNetAPI) PeerCount() hexutil.Uint {
 	return hexutil.Uint(s.net.PeerCount())
 }
 
-// Version returns the current ethereum protocol version.
+// Version returns the current gxp protocol version.
 func (s *PublicNetAPI) Version() string {
 	return fmt.Sprintf("%d", s.networkVersion)
 }
