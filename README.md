@@ -18,6 +18,7 @@ The go-gxplatform project comes with several wrappers/executables found in the `
 | Command    | Description |
 |:----------:|-------------|
 | **`gxp`** | Our main GXP CLI client. It is the entry point into the GXP network (main-, test- or private net), capable of running as a full node (default) archive node (retaining all historical state) or a light node (retrieving data live). It can be used by other processes as a gateway into the GXP network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `gxp --help`|
+| **`istanbul`** | tools for configuring Istanbul BFT (IBFT) network.
 
 ## Running gxp
 
