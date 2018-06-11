@@ -97,7 +97,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gxpConfig) {
 func makeFullNode(ctx *cli.Context) *node.Node {
 	stack, cfg := makeConfigNode(ctx)
 
-	utils.RegisterEthService(stack, &cfg.Gxp)
+	utils.RegisterGxpService(stack, &cfg.Gxp)
 
 	return stack
 }

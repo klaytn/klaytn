@@ -936,8 +936,8 @@ func SetGxConfig(ctx *cli.Context, stack *node.Node, cfg *gxp.Config) {
 	}
 }
 
-// RegisterEthService adds an Ethereum client to the stack.
-func RegisterEthService(stack *node.Node, cfg *gxp.Config) {
+// RegisterGxpService adds an GXP client to the stack.
+func RegisterGxpService(stack *node.Node, cfg *gxp.Config) {
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		fullNode, err := gxp.New(ctx, cfg)
 		return fullNode, err
