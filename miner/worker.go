@@ -88,7 +88,7 @@ type worker struct {
 	agents map[Agent]struct{}
 	recv   chan *Result
 
-	eth     Backend
+	gxp     Backend
 	chain   *core.BlockChain
 	proc    core.Validator
 	chainDb gxdb.Database
@@ -113,32 +113,32 @@ type worker struct {
 	atWork int32
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, gxp Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
 		config:         config,
 		engine:         engine,
-		eth:            eth,
+		gxp:            gxp,
 		mux:            mux,
 		txsCh:          make(chan core.NewTxsEvent, txChanSize),
 		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
-		chainDb:        eth.ChainDb(),
+		chainDb:        gxp.ChainDb(),
 		recv:           make(chan *Result, resultQueueSize),
-		chain:          eth.BlockChain(),
-		proc:           eth.BlockChain().Validator(),
+		chain:          gxp.BlockChain(),
+		proc:           gxp.BlockChain().Validator(),
 		possibleUncles: make(map[common.Hash]*types.Block),
 		coinbase:       coinbase,
 		agents:         make(map[Agent]struct{}),
-		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
+		unconfirmed:    newUnconfirmedBlocks(gxp.BlockChain(), miningLogAtDepth),
 	}
 
 	// istanbul BFT
 	if _, ok := engine.(consensus.Istanbul); ok || !config.IsBFT {
 		// Subscribe NewTxsEvent for tx pool
-		worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
+		worker.txsSub = gxp.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 		// Subscribe events for blockchain
-		worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-		worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+		worker.chainHeadSub = gxp.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
+		worker.chainSideSub = gxp.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 		go worker.update()
 
 		go worker.wait()
@@ -148,7 +148,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	return worker
 }
 
-func (self *worker) setEtherbase(addr common.Address) {
+func (self *worker) setCoinbase(addr common.Address) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.coinbase = addr
@@ -443,7 +443,7 @@ func (self *worker) commitNewWork() {
 	}
 	// Create the current work task and check any fork transitions needed
 	work := self.current
-	pending, err := self.eth.TxPool().Pending()
+	pending, err := self.gxp.TxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return

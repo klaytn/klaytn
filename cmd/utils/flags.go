@@ -247,8 +247,8 @@ var (
 		Usage: "Target gas limit sets the artificial target gas floor for the blocks to mine",
 		Value: params.GenesisGasLimit,
 	}
-	EtherbaseFlag = cli.StringFlag{
-		Name:  "etherbase",
+	CoinbaseFlag = cli.StringFlag{
+		Name:  "coinbase",
 		Usage: "Public address for block mining rewards (default = first account created)",
 		Value: "0",
 	}
@@ -647,13 +647,13 @@ func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error
 	return accs[index], nil
 }
 
-// setEtherbase retrieves the etherbase either from the directly specified
+// setCoinbase retrieves the coinbase either from the directly specified
 // command line flags or from the keystore if CLI indexed.
 func setGxbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *gxp.Config) {
-	if ctx.GlobalIsSet(EtherbaseFlag.Name) {
-		account, err := MakeAddress(ks, ctx.GlobalString(EtherbaseFlag.Name))
+	if ctx.GlobalIsSet(CoinbaseFlag.Name) {
+		account, err := MakeAddress(ks, ctx.GlobalString(CoinbaseFlag.Name))
 		if err != nil {
-			Fatalf("Option %q: %v", EtherbaseFlag.Name, err)
+			Fatalf("Option %q: %v", CoinbaseFlag.Name, err)
 		}
 		cfg.Gxbase = account.Address
 	}
@@ -949,7 +949,7 @@ func RegisterGxpService(stack *node.Node, cfg *gxp.Config) {
 		return fullNode, err
 	})
 	if err != nil {
-		Fatalf("Failed to register the Ethereum service: %v", err)
+		Fatalf("Failed to register the GXP service: %v", err)
 	}
 }
 

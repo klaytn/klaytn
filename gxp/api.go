@@ -26,7 +26,7 @@ import (
 // PublicGXPAPI provides an API to access GXPlatform full node-related
 // information.
 type PublicGXPAPI struct {
-	e *GXP
+	gxp *GXP
 }
 
 // NewPublicGXPAPI creates a new GXP protocol API for full nodes.
@@ -34,25 +34,20 @@ func NewPublicGXPAPI(e *GXP) *PublicGXPAPI {
 	return &PublicGXPAPI{e}
 }
 
-// Etherbase is the address that mining rewards will be send to
-func (api *PublicGXPAPI) Etherbase() (common.Address, error) {
-	return api.e.Etherbase()
-}
-
-// Coinbase is the address that mining rewards will be send to (alias for Etherbase)
+// Coinbase is the address that mining rewards will be send to
 func (api *PublicGXPAPI) Coinbase() (common.Address, error) {
-	return api.Etherbase()
+	return api.gxp.Coinbase()
 }
 
 // Hashrate returns the POW hashrate
 func (api *PublicGXPAPI) Hashrate() hexutil.Uint64 {
-	return hexutil.Uint64(api.e.Miner().HashRate())
+	return hexutil.Uint64(api.gxp.Miner().HashRate())
 }
 
 // PublicMinerAPI provides an API to control the miner.
 // It offers only methods that operate on data that pose no security risk when it is publicly accessible.
 type PublicMinerAPI struct {
-	e     *GXP
+	gxp   *GXP
 	agent *miner.RemoteAgent
 }
 
@@ -66,7 +61,7 @@ func NewPublicMinerAPI(e *GXP) *PublicMinerAPI {
 
 // Mining returns an indication if this node is currently mining.
 func (api *PublicMinerAPI) Mining() bool {
-	return api.e.IsMining()
+	return api.gxp.IsMining()
 }
 
 // SubmitWork can be used by external miner to submit their POW solution. It returns an indication if the work was
@@ -80,8 +75,8 @@ func (api *PublicMinerAPI) SubmitWork(nonce types.BlockNonce, solution, digest c
 // result[1], 32 bytes hex encoded seed hash used for DAG
 // result[2], 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
 func (api *PublicMinerAPI) GetWork() ([3]string, error) {
-	if !api.e.IsMining() {
-		if err := api.e.StartMining(false); err != nil {
+	if !api.gxp.IsMining() {
+		if err := api.gxp.StartMining(false); err != nil {
 			return [3]string{}, err
 		}
 	}
@@ -172,9 +167,9 @@ func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
 	return true
 }
 
-// SetEtherbase sets the etherbase of the miner
-func (api *PrivateMinerAPI) SetEtherbase(etherbase common.Address) bool {
-	api.e.SetEtherbase(etherbase)
+// SetCoinbase sets the coinbase of the miner
+func (api *PrivateMinerAPI) SetCoinbase(coinbase common.Address) bool {
+	api.e.SetCoinbase(coinbase)
 	return true
 }
 

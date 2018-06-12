@@ -68,14 +68,14 @@ type GXP struct {
 
 	APIBackend *GxpAPIBackend
 
-	miner     *miner.Miner
-	gasPrice  *big.Int
-	etherbase common.Address
+	miner    *miner.Miner
+	gasPrice *big.Int
+	coinbase common.Address
 
 	networkId     uint64
 	netRPCService *gxapi.PublicNetAPI
 
-	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
+	lock sync.RWMutex // Protects the variadic fields (gxp.g. gas price and coinbase)
 }
 
 func (s *GXP) AddLesServer(ls LesServer) {
@@ -112,14 +112,14 @@ func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
 		gasPrice:       config.GasPrice,
-		etherbase:      config.Gxbase,
+		coinbase:       config.Gxbase,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
 
-	// istanbul BFT. force to set the istanbul etherbase to node key address
+	// istanbul BFT. force to set the istanbul coinbase to node key address
 	if chainConfig.Istanbul != nil {
-		gxp.etherbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
+		gxp.coinbase = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
 
 	log.Info("Initialising GXP protocol", "versions", ProtocolVersions, "network", config.NetworkId)
@@ -298,53 +298,53 @@ func (s *GXP) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *GXP) Etherbase() (eb common.Address, err error) {
+func (s *GXP) Coinbase() (eb common.Address, err error) {
 	s.lock.RLock()
-	etherbase := s.etherbase
+	coinbase := s.coinbase
 	s.lock.RUnlock()
 
-	if etherbase != (common.Address{}) {
-		return etherbase, nil
+	if coinbase != (common.Address{}) {
+		return coinbase, nil
 	}
 	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
 		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
-			etherbase := accounts[0].Address
+			coinbase := accounts[0].Address
 
 			s.lock.Lock()
-			s.etherbase = etherbase
+			s.coinbase = coinbase
 			s.lock.Unlock()
 
-			log.Info("Etherbase automatically configured", "address", etherbase)
-			return etherbase, nil
+			log.Info("Coinbase automatically configured", "address", coinbase)
+			return coinbase, nil
 		}
 	}
-	return common.Address{}, fmt.Errorf("etherbase must be explicitly specified")
+	return common.Address{}, fmt.Errorf("coinbase must be explicitly specified")
 }
 
-// SetEtherbase sets the mining reward address.
-func (s *GXP) SetEtherbase(etherbase common.Address) {
+// SetCoinbase sets the mining reward address.
+func (s *GXP) SetCoinbase(coinbase common.Address) {
 	s.lock.Lock()
 	// istanbul BFT
 	if _, ok := s.engine.(consensus.Istanbul); ok {
-		log.Error("Cannot set etherbase in Istanbul consensus")
+		log.Error("Cannot set coinbase in Istanbul consensus")
 		return
 	}
-	s.etherbase = etherbase
+	s.coinbase = coinbase
 	s.lock.Unlock()
 
-	s.miner.SetEtherbase(etherbase)
+	s.miner.SetCoinbase(coinbase)
 }
 
 func (s *GXP) StartMining(local bool) error {
-	eb, err := s.Etherbase()
+	eb, err := s.Coinbase()
 	if err != nil {
-		log.Error("Cannot start mining without etherbase", "err", err)
-		return fmt.Errorf("etherbase missing: %v", err)
+		log.Error("Cannot start mining without coinbase", "err", err)
+		return fmt.Errorf("coinbase missing: %v", err)
 	}
 	//if clique, ok := s.engine.(*clique.Clique); ok {
 	//	wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 	//	if wallet == nil || err != nil {
-	//		log.Error("Etherbase account unavailable locally", "err", err)
+	//		log.Error("Coinbase account unavailable locally", "err", err)
 	//		return fmt.Errorf("signer missing: %v", err)
 	//	}
 	//	clique.Authorize(eb, wallet.SignHash)
