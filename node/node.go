@@ -33,6 +33,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"ground-x/go-gxplatform/internal/debug"
 )
 
 // Node is a container on which services can be registered.
@@ -589,6 +590,10 @@ func (n *Node) apis() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPublicAdminAPI(n),
 			Public:    true,
+		}, {
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   debug.Handler,
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",

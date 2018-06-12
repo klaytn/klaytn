@@ -277,6 +277,15 @@ func (s *GXP) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPrivateAdminAPI(s),
 		}, {
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   NewPublicDebugAPI(s),
+			Public:    true,
+		}, {
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   NewPrivateDebugAPI(s.chainConfig, s),
+		}, {
 			Namespace: "net",
 			Version:   "1.0",
 			Service:   s.netRPCService,

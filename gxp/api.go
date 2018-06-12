@@ -16,6 +16,11 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"ground-x/go-gxplatform/rpc"
+	"ground-x/go-gxplatform/params"
+	"context"
+	"ground-x/go-gxplatform/core/rawdb"
+	"errors"
 )
 
 // PublicGXPAPI provides an API to access GXPlatform full node-related
@@ -269,6 +274,70 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 		blocks = blocks[:0]
 	}
 	return true, nil
+}
+
+// PublicDebugAPI is the collection of Ethereum full node APIs exposed
+// over the public debugging endpoint.
+type PublicDebugAPI struct {
+	gxp *GXP
+}
+
+// NewPublicDebugAPI creates a new API definition for the full node-
+// related public debug methods of the Ethereum service.
+func NewPublicDebugAPI(gxp *GXP) *PublicDebugAPI {
+	return &PublicDebugAPI{gxp: gxp}
+}
+
+// DumpBlock retrieves the entire state of the database at a given block.
+func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error) {
+	if blockNr == rpc.PendingBlockNumber {
+		// If we're dumping the pending state, we need to request
+		// both the pending block as well as the pending state from
+		// the miner and operate on those
+		_, stateDb := api.gxp.miner.Pending()
+		return stateDb.RawDump(), nil
+	}
+	var block *types.Block
+	if blockNr == rpc.LatestBlockNumber {
+		block = api.gxp.blockchain.CurrentBlock()
+	} else {
+		block = api.gxp.blockchain.GetBlockByNumber(uint64(blockNr))
+	}
+	if block == nil {
+		return state.Dump{}, fmt.Errorf("block #%d not found", blockNr)
+	}
+	stateDb, err := api.gxp.BlockChain().StateAt(block.Root())
+	if err != nil {
+		return state.Dump{}, err
+	}
+	return stateDb.RawDump(), nil
+}
+
+// PrivateDebugAPI is the collection of Ethereum full node APIs exposed over
+// the private debugging endpoint.
+type PrivateDebugAPI struct {
+	config *params.ChainConfig
+	gxp    *GXP
+}
+
+// NewPrivateDebugAPI creates a new API definition for the full node-related
+// private debug methods of the Ethereum service.
+func NewPrivateDebugAPI(config *params.ChainConfig, eth *GXP) *PrivateDebugAPI {
+	return &PrivateDebugAPI{config: config, gxp: eth}
+}
+
+// Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
+func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
+	if preimage := rawdb.ReadPreimage(api.gxp.ChainDb(), hash); preimage != nil {
+		return preimage, nil
+	}
+	return nil, errors.New("unknown preimage")
+}
+
+// GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
+// and returns them as a JSON list of block-hashes
+func (api *PrivateDebugAPI) GetBadBlocks(ctx context.Context) ([]core.BadBlockArgs, error) {
+	return api.gxp.BlockChain().BadBlocks()
 }
 
 // StorageRangeResult is the result of a debug_storageRangeAt API call.

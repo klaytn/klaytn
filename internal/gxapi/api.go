@@ -22,6 +22,11 @@ import (
 	"ground-x/go-gxplatform/rpc"
 	"math/big"
 	"time"
+	"github.com/davecgh/go-spew/spew"
+	"strings"
+	"ground-x/go-gxplatform/consensus/gxhash"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 const (
@@ -412,7 +417,6 @@ func signHash(data []byte) []byte {
 //
 // https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_sign
 func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr common.Address, passwd string) (hexutil.Bytes, error) {
-	fmt.Printf("### gxapi.api.Sign \n")
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
 
@@ -484,7 +488,6 @@ func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
 func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*big.Int, error) {
-	fmt.Printf("### gxapi.api.GetBalance %s\n", address.Hex())
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, err
@@ -1346,6 +1349,100 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	}
 
 	return common.Hash{}, fmt.Errorf("Transaction %#x not found", matchTx.Hash())
+}
+
+// PublicDebugAPI is the collection of Ethereum APIs exposed over the public
+// debugging endpoint.
+type PublicDebugAPI struct {
+	b Backend
+}
+
+// NewPublicDebugAPI creates a new API definition for the public debug methods
+// of the GXP service.
+func NewPublicDebugAPI(b Backend) *PublicDebugAPI {
+	return &PublicDebugAPI{b: b}
+}
+
+// GetBlockRlp retrieves the RLP encoded for of a single block.
+func (api *PublicDebugAPI) GetBlockRlp(ctx context.Context, number uint64) (string, error) {
+	block, _ := api.b.BlockByNumber(ctx, rpc.BlockNumber(number))
+	if block == nil {
+		return "", fmt.Errorf("block #%d not found", number)
+	}
+	encoded, err := rlp.EncodeToBytes(block)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", encoded), nil
+}
+
+// PrintBlock retrieves a block and returns its pretty printed form.
+func (api *PublicDebugAPI) PrintBlock(ctx context.Context, number uint64) (string, error) {
+	block, _ := api.b.BlockByNumber(ctx, rpc.BlockNumber(number))
+	if block == nil {
+		return "", fmt.Errorf("block #%d not found", number)
+	}
+	return spew.Sdump(block), nil
+}
+
+// SeedHash retrieves the seed hash of a block.
+func (api *PublicDebugAPI) SeedHash(ctx context.Context, number uint64) (string, error) {
+	block, _ := api.b.BlockByNumber(ctx, rpc.BlockNumber(number))
+	if block == nil {
+		return "", fmt.Errorf("block #%d not found", number)
+	}
+	return fmt.Sprintf("0x%x", gxhash.SeedHash(number)), nil
+}
+
+// PrivateDebugAPI is the collection of Ethereum APIs exposed over the private
+// debugging endpoint.
+type PrivateDebugAPI struct {
+	b Backend
+}
+
+// NewPrivateDebugAPI creates a new API definition for the private debug methods
+// of the Ethereum service.
+func NewPrivateDebugAPI(b Backend) *PrivateDebugAPI {
+	return &PrivateDebugAPI{b: b}
+}
+
+// ChaindbProperty returns leveldb properties of the chain database.
+func (api *PrivateDebugAPI) ChaindbProperty(property string) (string, error) {
+	ldb, ok := api.b.ChainDb().(interface {
+		LDB() *leveldb.DB
+	})
+	if !ok {
+		return "", fmt.Errorf("chaindbProperty does not work for memory databases")
+	}
+	if property == "" {
+		property = "leveldb.stats"
+	} else if !strings.HasPrefix(property, "leveldb.") {
+		property = "leveldb." + property
+	}
+	return ldb.LDB().GetProperty(property)
+}
+
+func (api *PrivateDebugAPI) ChaindbCompact() error {
+	ldb, ok := api.b.ChainDb().(interface {
+		LDB() *leveldb.DB
+	})
+	if !ok {
+		return fmt.Errorf("chaindbCompact does not work for memory databases")
+	}
+	for b := byte(0); b < 255; b++ {
+		log.Info("Compacting chain database", "range", fmt.Sprintf("0x%0.2X-0x%0.2X", b, b+1))
+		err := ldb.LDB().CompactRange(util.Range{Start: []byte{b}, Limit: []byte{b + 1}})
+		if err != nil {
+			log.Error("Database compaction failed", "err", err)
+			return err
+		}
+	}
+	return nil
+}
+
+// SetHead rewinds the head of the blockchain to a previous block.
+func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) {
+	api.b.SetHead(uint64(number))
 }
 
 // PublicNetAPI offers network related RPC methods
