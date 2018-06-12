@@ -61,7 +61,7 @@ func gen(ctx *cli.Context) error {
 				discover.PubkeyID(&keys[i].PublicKey),
 				net.ParseIP("0.0.0.0"),
 				0,
-				uint16(30303)).String(),
+				uint16(30303) + uint16(i) * uint16(10101)).String(),
 		}
 
 		nodes = append(nodes, string(v.NodeInfo))

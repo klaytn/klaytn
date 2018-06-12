@@ -873,9 +873,6 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (e
 
 // WriteBlockWithState writes the block and all associated state to the database.
 func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
-
-	fmt.Printf("#### blockchain.WriteBlockWithState block %v, receipts[%d]\n", block, len(receipts))
-
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
