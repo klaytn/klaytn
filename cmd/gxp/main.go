@@ -128,6 +128,7 @@ func init() {
 		walletCommand,
 		// See consolecmd.go:
 		consoleCommand,
+		attachCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
