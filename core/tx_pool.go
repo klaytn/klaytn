@@ -499,9 +499,6 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
-
-	fmt.Printf("### txpool.validateTx \n")
-
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > 32*1024 {
 		return ErrOversizedData
@@ -553,9 +550,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 // whitelisted, preventing any associated transaction from being dropped out of
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
-
-	fmt.Printf("### txpool.add \n")
-
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
@@ -629,9 +623,6 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 //
 // Note, this method assumes the pool lock is held!
 func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, error) {
-
-	fmt.Printf("### txpool.enqueueTx hash %s \n", hash.String())
-
 	// Try to insert the transaction into the future queue
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if pool.queue[from] == nil {
@@ -878,9 +869,6 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
 	// Iterate over all accounts and promote any executable transactions
 	for _, addr := range accounts {
-
-		fmt.Printf("## ----------------------------\n")
-
 		list := pool.queue[addr]
 		if list == nil {
 			continue // Just in case someone calls with a non existing account
@@ -901,8 +889,6 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.priced.Removed()
 			queuedNofundsCounter.Inc(1)
 		}
-
-		fmt.Printf("## pool.pendingState.GetNonce(addr) new tx's nonce(%d) must be more than all tx's nonce (%d\n)", pool.pendingState.GetNonce(addr), (*list.txs.index)[0])
 
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
