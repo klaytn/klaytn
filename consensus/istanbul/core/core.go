@@ -8,12 +8,11 @@ import (
 	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/event"
 	"ground-x/go-gxplatform/log"
-	metrics "ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/matrics"
 	"math"
 	"math/big"
 	"sync"
 	"time"
-	"fmt"
 )
 
 // New creates an Istanbul consensus core
@@ -164,7 +163,6 @@ func (c *core) commit() {
 
 // startNewRound starts a new round. if round equals to 0, it means to starts a new sequence
 func (c *core) startNewRound(round *big.Int) {
-	fmt.Printf("#### istanbul.core.startNewRound %d\n", round)
 	var logger log.Logger
 	if c.current == nil {
 		logger = c.logger.New("old_round", -1, "old_seq", 0)

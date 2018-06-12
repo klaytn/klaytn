@@ -26,6 +26,15 @@
   version = "v1.7.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/fjl/memsize"
+  packages = [
+    ".",
+    "memsizeui"
+  ]
+  revision = "f6d5545993d68e9e42df43eb57958f898dea3623"
+
+[[projects]]
   name = "github.com/go-stack/stack"
   packages = ["."]
   revision = "259ab82a6cad3992b4e21ff5cac294ccb06474bc"
@@ -293,6 +302,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "97ca13e9e7462934c4dd55380520d359b7546527d063b868dd1387aa7f1664ae"
+  inputs-digest = "af9408d7cf00d466030b51f4fa89148ca8879f415cf8a8cf715e6153b04349ea"
   solver-name = "gps-cdcl"
   solver-version = 1

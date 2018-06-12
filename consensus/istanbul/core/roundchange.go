@@ -5,7 +5,6 @@ import (
 	"ground-x/go-gxplatform/consensus/istanbul"
 	"math/big"
 	"sync"
-	"fmt"
 )
 
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1
@@ -50,7 +49,6 @@ func (c *core) sendRoundChange(round *big.Int) {
 }
 
 func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
-	fmt.Printf("#### istanbul.roundchange %v from %v\n", msg, src)
 	logger := c.logger.New("state", c.state, "from", src.Address().Hex())
 
 	// Decode ROUND CHANGE message
@@ -74,8 +72,6 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 		logger.Warn("Failed to add round change message", "from", src, "msg", msg, "err", err)
 		return err
 	}
-
-	fmt.Printf("#### round %d and 2*validators.F() + 1  %d\n", num, int(2*c.valSet.F()+1))
 
 	// Once we received f+1 ROUND CHANGE messages, those messages form a weak certificate.
 	// If our round number is smaller than the certificate's round number, we would

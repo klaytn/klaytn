@@ -3,7 +3,6 @@ package core
 import (
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/consensus/istanbul"
-	"fmt"
 )
 
 // Start implements core.Engine.Start
@@ -56,7 +55,6 @@ func (c *core) unsubscribeEvents() {
 }
 
 func (c *core) handleEvents() {
-	fmt.Printf("##### istanbul.core.handleEvents\n")
 	// Clear state
 	defer func() {
 		c.current = nil
@@ -107,7 +105,6 @@ func (c *core) handleEvents() {
 			}
 			switch event.Data.(type) {
 			case istanbul.FinalCommittedEvent:
-				fmt.Printf("##### istanbul.core.FinalCommittedEvent\n")
 				c.handleFinalCommitted()
 			}
 		}

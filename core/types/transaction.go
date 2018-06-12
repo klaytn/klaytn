@@ -401,9 +401,6 @@ func (t *TransactionsByPriceAndNonce) Count() (int, int) {
 // Note, the input map is reowned so the caller should not interact any more with
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
-
-	fmt.Printf("##### transaction.NewTransactionsByPriceAndNonce len(txs's addr) %d\n", len(txs))
-
 	// Initialize a price based heap with the head transactions
 	heads := make(TxByPrice, 0, len(txs))
 	for _, accTxs := range txs {

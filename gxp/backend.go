@@ -83,8 +83,8 @@ func (s *GXP) AddLesServer(ls LesServer) {
 	ls.SetBloomBitsIndexer(s.bloomIndexer)
 }
 
-// New creates a new Ethereum object (including the
-// initialisation of the common Ethereum object)
+// New creates a new GXP object (including the
+// initialisation of the common GXP object)
 func New(ctx *node.ServiceContext, config *Config) (*GXP, error) {
 	if config.SyncMode == downloader.LightSync {
 		return nil, errors.New("can't run gxp.GXP in light sync mode, use les.LightGXP")

@@ -330,9 +330,6 @@ func (es *EventSystem) broadcast(filters filterIndex, ev interface{}) {
 			}
 		}
 	case core.NewTxsEvent:
-
-		fmt.Printf("########## filter_system NewTxsEvent txs[%d]\n", len(e.Txs))
-
 		hashes := make([]common.Hash, 0, len(e.Txs))
 		for _, tx := range e.Txs {
 			hashes = append(hashes, tx.Hash())

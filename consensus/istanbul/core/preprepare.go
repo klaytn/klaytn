@@ -31,7 +31,6 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 }
 
 func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
-	fmt.Printf("#### istanbul.Preprepare %v\n", msg)
 	logger := c.logger.New("from", src, "state", c.state)
 
 	// Decode PRE-PREPARE

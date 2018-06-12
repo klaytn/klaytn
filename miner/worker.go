@@ -261,13 +261,6 @@ func (self *worker) update() {
 
 			// Handle NewTxsEvent
 		case ev := <-self.txsCh:
-
-			fmt.Printf("############# worker receive NewTxsEvent[%d]\n", len(ev.Txs))
-			for _, tx := range ev.Txs {
-				fmt.Printf("#### worker receive tx[ %s ]\n", tx.String())
-			}
-
-			fmt.Printf("###### atomic.LoadInt32(&self.mining) = %d\n", atomic.LoadInt32(&self.mining))
 			// Apply transactions to the pending state if we're not mining.
 			//
 			// Note all transactions received may not be continuous with transactions
@@ -280,14 +273,11 @@ func (self *worker) update() {
 					acc, err := types.Sender(self.current.signer, tx)
 					if err != nil {
 						log.Error("fail to types.Sender ", err)
-						fmt.Printf("###### fail to make address with %s\n", tx.String())
 					}
 					txs[acc] = append(txs[acc], tx)
 				}
 				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
-				fmt.Printf("###### types.NewTransactionsByPriceAndNonce(self.current.signer, txs) \n")
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
-				fmt.Printf("###### self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase) \n")
 				self.updateSnapshot()
 				self.currentMu.Unlock()
 			} else {
@@ -495,8 +485,6 @@ func (self *worker) commitNewWork() {
 	}
 	self.push(work)
 	self.updateSnapshot()
-
-	fmt.Printf("####### worker.commitNewWork finished\n")
 }
 
 func (self *worker) commitUncle(work *Task, uncle *types.Header) error {

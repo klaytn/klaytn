@@ -101,6 +101,12 @@ var (
 		Name:  "light",
 		Usage: "Enable light client mode (replaced by --syncmode)",
 	}
+	defaultSyncMode = gxp.DefaultConfig.SyncMode
+	SyncModeFlag    = TextMarshalerFlag{
+		Name:  "syncmode",
+		Usage: `Blockchain sync mode ("fast", "full", or "light")`,
+		Value: &defaultSyncMode,
+	}
 	GCModeFlag = cli.StringFlag{
 		Name:  "gcmode",
 		Usage: `Blockchain garbage collection mode ("full", "archive")`,

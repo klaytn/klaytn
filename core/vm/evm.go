@@ -40,7 +40,7 @@ type (
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
-		precompiles := PrecompiledContractsHomestead
+		precompiles := PrecompiledContractsByzantium
 
 		if p := precompiles[*contract.CodeAddr]; p != nil {
 			return RunPrecompiledContract(p, input, contract)
@@ -152,6 +152,15 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		snapshot = evm.StateDB.Snapshot()
 	)
 	if !evm.StateDB.Exist(addr) {
+		precompiles := PrecompiledContractsByzantium
+		if precompiles[addr] == nil && value.Sign() == 0 {
+			// Calling a non existing account, don't do antything, but ping the tracer
+			if evm.vmConfig.Debug && evm.depth == 0 {
+				evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
+				evm.vmConfig.Tracer.CaptureEnd(ret, 0, 0, nil)
+			}
+			return nil, gas, nil
+		}
 		evm.StateDB.CreateAccount(addr)
 	}
 	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)

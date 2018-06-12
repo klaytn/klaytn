@@ -238,9 +238,6 @@ func (c *stateObject) AddBalance(amount *big.Int) {
 	// EIP158: We must check emptiness for the objects such that the account
 	// clearing (0,0,0 objects) can take effect.
 	if amount.Sign() == 0 {
-
-		fmt.Printf("###### state_object.AddBalance amount.Sign == 0\n")
-
 		if c.empty() {
 			c.touch()
 		}

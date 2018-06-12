@@ -19,7 +19,7 @@ import (
 
 // DefaultConfig contains default settings for use on the GxPlatform main net.
 var DefaultConfig = Config{
-	//SyncMode: downloader.FastSync,
+	SyncMode: downloader.FullSync,
 	Gxhash: gxhash.Config{
 		CacheDir:       "gxhash",
 		CachesInMem:    2,

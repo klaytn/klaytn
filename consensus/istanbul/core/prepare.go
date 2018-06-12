@@ -3,7 +3,6 @@ package core
 import (
 	"ground-x/go-gxplatform/consensus/istanbul"
 	"reflect"
-	"fmt"
 )
 
 func (c *core) sendPrepare() {
@@ -22,7 +21,6 @@ func (c *core) sendPrepare() {
 }
 
 func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
-	fmt.Printf("#### istanbul.prepare %v\n", msg)
 	// Decode PREPARE message
 	var prepare *istanbul.Subject
 	err := msg.Decode(&prepare)

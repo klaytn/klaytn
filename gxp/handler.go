@@ -698,8 +698,6 @@ func (pm *ProtocolManager) txBroadcastLoop() {
 		select {
 		case event := <-pm.txsCh:
 
-			fmt.Printf("###### handler.txBroadcastLoop with NewTxEvent from tx_pool  txs[%d]\n", len(event.Txs))
-
 			pm.BroadcastTxs(event.Txs)
 
 			// Err() channel will be closed when unsubscribing.

@@ -18,6 +18,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"math/big"
+	"ground-x/go-gxplatform/internal/debug"
 )
 
 const (
@@ -132,9 +134,13 @@ func init() {
 	app.Flags = append(app.Flags, nodeFlags...)
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, consoleFlags...)
+	app.Flags = append(app.Flags, debug.Flags...)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())
+		if err := debug.Setup(ctx); err != nil {
+			return err
+		}
 		// Start system runtime metrics collection
 		go metrics.CollectProcessMetrics(3 * time.Second)
 
@@ -143,6 +149,7 @@ func init() {
 	}
 
 	app.After = func(ctx *cli.Context) error {
+		debug.Exit()
 		console.Stdin.Close() // Resets terminal mode.
 		return nil
 	}
@@ -169,6 +176,7 @@ func gxp(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
+	debug.Memsize.Add("node", stack)
 
 	// Start up the node itself
 	utils.StartNode(stack)
@@ -224,6 +232,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			}
 		}
 	}()
+
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
 
@@ -245,5 +254,12 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		if err := gxp.StartMining(true); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
+	}else {
+		// istanbul BFT
+		var gxp *gxp2.GXP
+		if err := stack.Service(&gxp); err != nil {
+			utils.Fatalf("GXPlatform service not running: %v", err)
+		}
+		gxp.TxPool().SetGasPrice(big.NewInt(0))
 	}
 }

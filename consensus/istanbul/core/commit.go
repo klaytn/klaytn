@@ -4,7 +4,6 @@ import (
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/consensus/istanbul"
 	"reflect"
-	"fmt"
 )
 
 func (c *core) sendCommit() {
@@ -35,7 +34,6 @@ func (c *core) broadcastCommit(sub *istanbul.Subject) {
 }
 
 func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
-	fmt.Printf("#### istanbul.Commit %v\n", msg)
 	// Decode COMMIT message
 	var commit *istanbul.Subject
 	err := msg.Decode(&commit)

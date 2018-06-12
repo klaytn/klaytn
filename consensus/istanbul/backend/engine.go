@@ -3,7 +3,7 @@ package backend
 import (
 	"bytes"
 	"errors"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"ground-x/go-gxplatform/common"
 	"ground-x/go-gxplatform/common/hexutil"
 	"ground-x/go-gxplatform/consensus"
@@ -19,7 +19,6 @@ import (
 	"math/big"
 	"math/rand"
 	"time"
-	"fmt"
 )
 
 const (
@@ -80,7 +79,7 @@ var (
 	recentAddresses, _ = lru.NewARC(inmemoryAddresses)
 )
 
-// Author retrieves the Ethereum address of the account that minted the given
+// Author retrieves the GXP address of the account that minted the given
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
@@ -377,7 +376,6 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
 func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
-	fmt.Printf("#### istanbul consensus.Seal\n")
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
 	number := header.Number.Uint64()
@@ -421,8 +419,6 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 	go sb.EventMux().Post(istanbul.RequestEvent{
 		Proposal: block,
 	})
-
-	fmt.Printf("#### istanbul consensus.Seal END\n")
 
 	for {
 		select {
@@ -604,7 +600,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
-// ecrecover extracts the Ethereum account address from a signed header.
+// ecrecover extracts the GXP account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
 	hash := header.Hash()
 	if addr, ok := recentAddresses.Get(hash); ok {

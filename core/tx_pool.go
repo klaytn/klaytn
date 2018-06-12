@@ -865,9 +865,6 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
-
-	fmt.Printf("###### call promoteExecutable len(accounts) %d \n", len(accounts))
-
 	// Track the promoted transactions to broadcast them at once
 	var promoted []*types.Transaction
 
@@ -909,18 +906,10 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 
 		// Gather all executable transactions and promote them
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
-
-			fmt.Printf("account ready tx ############## \n")
-
 			hash := tx.Hash()
 			if pool.promoteTx(addr, hash, tx) {
-
-				fmt.Printf("pool.promoteTx(addr, hash, tx) true ############## \n")
-
 				log.Trace("Promoting queued transaction", "hash", hash)
 				promoted = append(promoted, tx)
-			} else {
-				fmt.Printf("pool.promoteTx(addr, hash, tx) false ############## \n")
 			}
 		}
 		// Drop all transactions over the allowed limit
@@ -940,18 +929,13 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	}
 	// Notify subsystem for new promoted transactions.
 	if len(promoted) > 0 {
-
-		count := pool.txFeed.Send(NewTxsEvent{promoted})
-
-		fmt.Printf("#### pool.txFeed.Send(NewTxsEvent) promoted (%d)  %d\n", len(promoted), count)
+		pool.txFeed.Send(NewTxsEvent{promoted})
 	}
 	// If the pending limit is overflown, start equalizing allowances
 	pending := uint64(0)
 	for _, list := range pool.pending {
 		pending += uint64(list.Len())
 	}
-
-	fmt.Printf("pending %d > pool.config.GlobalSlots %d ############## \n", pending, pool.config.GlobalSlots)
 
 	if pending > pool.config.GlobalSlots {
 		pendingBeforeCap := pending
@@ -1025,8 +1009,6 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		queued += uint64(list.Len())
 	}
 
-	fmt.Printf("queued %d > pool.config.GlobalQueue %d ############## \n", queued, pool.config.GlobalQueue)
-
 	if queued > pool.config.GlobalQueue {
 		// Sort all accounts with queued transactions by heartbeat
 		addresses := make(addresssByHeartbeat, 0, len(pool.queue))
@@ -1061,16 +1043,6 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				queuedRateLimitCounter.Inc(1)
 			}
 		}
-	}
-
-	fmt.Printf("###### end pool.queue size %d\n", len(pool.queue))
-	fmt.Printf("###### end pool.pending size %d\n", len(pool.pending))
-
-	for addr := range pool.queue {
-		fmt.Printf("### pool.queue address %s\n", addr.Hex())
-	}
-	for addr := range pool.pending {
-		fmt.Printf("### pool.pending address %s\n", addr.Hex())
 	}
 }
 

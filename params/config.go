@@ -147,13 +147,15 @@ func (c *ChainConfig) IsEIP155(num *big.Int) bool {
 // The returned GasTable's fields shouldn't, under any circumstances, be changed.
 func (c *ChainConfig) GasTable(num *big.Int) GasTable {
 	if num == nil {
-		return GasTableHomestead
+		return GasTableEIP150
 	}
 	switch {
+	case c.IsEIP155(num):
+		return GasTableEIP150
 	case c.IsHomestead(num):
 		return GasTableHomestead
 	default:
-		return GasTableHomestead
+		return GasTableEIP150
 	}
 }
 
