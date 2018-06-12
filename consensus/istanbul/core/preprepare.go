@@ -4,11 +4,9 @@ import (
 	"ground-x/go-gxplatform/consensus"
 	"ground-x/go-gxplatform/consensus/istanbul"
 	"time"
-	"fmt"
 )
 
 func (c *core) sendPreprepare(request *istanbul.Request) {
-	fmt.Printf("#### sendPreprepare %v\n", request)
 	logger := c.logger.New("state", c.state)
 
 	// If I'm the proposer and I have the same sequence with the proposal

@@ -519,10 +519,6 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	if env.gasPool == nil {
 		env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
 	}
-
-	aCount, tCount := txs.Count()
-	fmt.Printf("#### worker.commitTransactions len(txs) (account(%d) , all_tx(%d))\n", aCount, tCount)
-
 	var coalescedLogs []*types.Log
 
 	for {
@@ -533,7 +529,6 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}
 		// Retrieve the next transaction and abort if all done
 		tx := txs.Peek()
-		fmt.Printf("### worker.commitTransactions txs.Peek %v\n", tx)
 		if tx == nil {
 			break
 		}
@@ -545,12 +540,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
-		fmt.Printf("#### worker.commitTransactions tx.Protected() %t\n", tx.Protected())
-
 		if tx.Protected() {
-
-			fmt.Printf("#### worker.commitTransactions protected tx %s\n", tx.String())
-
 			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash())
 
 			txs.Pop()
@@ -611,9 +601,6 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 
 func (env *Task) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
-
-	fmt.Printf("#### worker.commitTransaction \n")
-
 	snap := env.state.Snapshot()
 
 	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, &env.header.GasUsed, vm.Config{})

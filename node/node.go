@@ -373,8 +373,6 @@ func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrig
 	if err != nil {
 		return err
 	}
-	fmt.Printf("### WebSocket endpoint opened url %s\n", listener.Addr())
-
 	n.log.Info("WebSocket endpoint opened", "url", fmt.Sprintf("ws://%s", listener.Addr()))
 	// All listeners booted successfully
 	n.wsEndpoint = endpoint
