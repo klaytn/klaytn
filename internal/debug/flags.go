@@ -12,8 +12,8 @@ import (
 	"ground-x/go-gxplatform/log"
 	"ground-x/go-gxplatform/log/term"
 	"io"
-	"ground-x/go-gxplatform/matrics/exp"
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics/exp"
+	"ground-x/go-gxplatform/metrics"
 )
 
 var Memsize memsizeui.Handler

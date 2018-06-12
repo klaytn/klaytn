@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"sync"
 
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics"
 )
 
 type exp struct {

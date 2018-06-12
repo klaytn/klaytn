@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/influxdb/client"
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics"
 )
 
 type reporter struct {

@@ -17,7 +17,7 @@ import (
 	"ground-x/go-gxplatform/gxp"
 	"ground-x/go-gxplatform/gxp/gasprice"
 	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics"
 	"ground-x/go-gxplatform/node"
 	"ground-x/go-gxplatform/p2p"
 	"ground-x/go-gxplatform/p2p/discover"

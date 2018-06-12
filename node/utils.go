@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"ground-x/go-gxplatform/common/hexutil"
 	"ground-x/go-gxplatform/crypto"
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics"
 	"ground-x/go-gxplatform/p2p"
 	"ground-x/go-gxplatform/p2p/discover"
 	"ground-x/go-gxplatform/rpc"

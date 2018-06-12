@@ -8,7 +8,7 @@ import (
 	"ground-x/go-gxplatform/core/types"
 	"ground-x/go-gxplatform/event"
 	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics"
 	"math"
 	"math/big"
 	"sync"

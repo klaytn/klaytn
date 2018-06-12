@@ -1,7 +1,7 @@
 package gxp
 
 import (
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics"
 	"ground-x/go-gxplatform/p2p"
 )
 

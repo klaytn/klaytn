@@ -21,7 +21,7 @@ package p2p
 import (
 	"net"
 
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics"
 )
 
 var (

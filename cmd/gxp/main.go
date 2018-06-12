@@ -12,7 +12,7 @@ import (
 	gxp2 "ground-x/go-gxplatform/gxp"
 	"ground-x/go-gxplatform/gxpclient"
 	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics"
 	"ground-x/go-gxplatform/node"
 	"runtime"
 	"sort"

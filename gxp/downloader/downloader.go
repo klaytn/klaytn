@@ -10,7 +10,7 @@ import (
 	"ground-x/go-gxplatform/event"
 	"ground-x/go-gxplatform/gxdb"
 	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics"
 	"ground-x/go-gxplatform/params"
 	"math/big"
 	"sync"

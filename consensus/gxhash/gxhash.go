@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/golang-lru/simplelru"
 	"ground-x/go-gxplatform/consensus"
 	"ground-x/go-gxplatform/log"
-	"ground-x/go-gxplatform/matrics"
+	"ground-x/go-gxplatform/metrics"
 	"ground-x/go-gxplatform/rpc"
 	"math"
 	"math/big"
