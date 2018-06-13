@@ -21,6 +21,11 @@ istanbul:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/istanbul\" to launch istanbul."
 
+abigen:
+	build/env.sh go run build/ci.go install ./cmd/abigen
+	@echo "Done building."
+	@echo "Run \"$(GOBIN)/abigen\" to launch abigen."
+
 all:
 	build/env.sh go run build/ci.go install
 

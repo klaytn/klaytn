@@ -52,6 +52,7 @@ const (
 	TxStatusUnknown TxStatus = iota
 	TxStatusQueued
 	TxStatusPending
+	// for Les
 	TxStatusIncluded
 )
 

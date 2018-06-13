@@ -273,6 +273,16 @@
   version = "v0.3.0"
 
 [[projects]]
+  branch = "master"
+  name = "golang.org/x/tools"
+  packages = [
+    "go/ast/astutil",
+    "imports",
+    "internal/fastwalk"
+  ]
+  revision = "8c39fb57ad842377bfea6ab5eff7608e4e8f6765"
+
+[[projects]]
   name = "gopkg.in/fatih/set.v0"
   packages = ["."]
   revision = "57907de300222151a123d29255ed17f5ed43fad3"
@@ -302,6 +312,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "af9408d7cf00d466030b51f4fa89148ca8879f415cf8a8cf715e6153b04349ea"
+  inputs-digest = "37959b45cc63999c3877b3c816551f63877559cb1d187d3a1946ac06fc43148d"
   solver-name = "gps-cdcl"
   solver-version = 1

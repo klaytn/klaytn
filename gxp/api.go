@@ -308,7 +308,7 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 	return stateDb.RawDump(), nil
 }
 
-// PrivateDebugAPI is the collection of Ethereum full node APIs exposed over
+// PrivateDebugAPI is the collection of GXP full node APIs exposed over
 // the private debugging endpoint.
 type PrivateDebugAPI struct {
 	config *params.ChainConfig
@@ -316,7 +316,7 @@ type PrivateDebugAPI struct {
 }
 
 // NewPrivateDebugAPI creates a new API definition for the full node-related
-// private debug methods of the Ethereum service.
+// private debug methods of the GXP service.
 func NewPrivateDebugAPI(config *params.ChainConfig, eth *GXP) *PrivateDebugAPI {
 	return &PrivateDebugAPI{config: config, gxp: eth}
 }
@@ -348,6 +348,19 @@ type storageEntry struct {
 	Value common.Hash  `json:"value"`
 }
 
+// StorageRangeAt returns the storage at the given block height and transaction index.
+//func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
+//	_, _, statedb, err := api.computeTxEnv(blockHash, txIndex, 0)
+//	if err != nil {
+//		return StorageRangeResult{}, err
+//	}
+//	st := statedb.StorageTrie(contractAddress)
+//	if st == nil {
+//		return StorageRangeResult{}, fmt.Errorf("account %x doesn't exist", contractAddress)
+//	}
+//	return storageRangeAt(st, keyStart, maxResult)
+//}
+
 func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeResult, error) {
 	it := trie.NewIterator(st.NodeIterator(start))
 	result := StorageRangeResult{Storage: storageMap{}}
@@ -370,3 +383,87 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 	}
 	return result, nil
 }
+
+// GetModifiedAccountsByumber returns all accounts that have changed between the
+// two blocks specified. A change is defined as a difference in nonce, balance,
+// code hash, or storage hash.
+//
+// With one parameter, returns the list of accounts modified in the specified block.
+func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(startNum uint64, endNum *uint64) ([]common.Address, error) {
+	var startBlock, endBlock *types.Block
+
+	startBlock = api.gxp.blockchain.GetBlockByNumber(startNum)
+	if startBlock == nil {
+		return nil, fmt.Errorf("start block %x not found", startNum)
+	}
+
+	if endNum == nil {
+		endBlock = startBlock
+		startBlock = api.gxp.blockchain.GetBlockByHash(startBlock.ParentHash())
+		if startBlock == nil {
+			return nil, fmt.Errorf("block %x has no parent", endBlock.Number())
+		}
+	} else {
+		endBlock = api.gxp.blockchain.GetBlockByNumber(*endNum)
+		if endBlock == nil {
+			return nil, fmt.Errorf("end block %d not found", *endNum)
+		}
+	}
+	return api.getModifiedAccounts(startBlock, endBlock)
+}
+
+// GetModifiedAccountsByHash returns all accounts that have changed between the
+// two blocks specified. A change is defined as a difference in nonce, balance,
+// code hash, or storage hash.
+//
+// With one parameter, returns the list of accounts modified in the specified block.
+func (api *PrivateDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, endHash *common.Hash) ([]common.Address, error) {
+	var startBlock, endBlock *types.Block
+	startBlock = api.gxp.blockchain.GetBlockByHash(startHash)
+	if startBlock == nil {
+		return nil, fmt.Errorf("start block %x not found", startHash)
+	}
+
+	if endHash == nil {
+		endBlock = startBlock
+		startBlock = api.gxp.blockchain.GetBlockByHash(startBlock.ParentHash())
+		if startBlock == nil {
+			return nil, fmt.Errorf("block %x has no parent", endBlock.Number())
+		}
+	} else {
+		endBlock = api.gxp.blockchain.GetBlockByHash(*endHash)
+		if endBlock == nil {
+			return nil, fmt.Errorf("end block %x not found", *endHash)
+		}
+	}
+	return api.getModifiedAccounts(startBlock, endBlock)
+}
+
+func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
+	if startBlock.Number().Uint64() >= endBlock.Number().Uint64() {
+		return nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
+	}
+
+	oldTrie, err := trie.NewSecure(startBlock.Root(), trie.NewDatabase(api.gxp.chainDb), 0)
+	if err != nil {
+		return nil, err
+	}
+	newTrie, err := trie.NewSecure(endBlock.Root(), trie.NewDatabase(api.gxp.chainDb), 0)
+	if err != nil {
+		return nil, err
+	}
+
+	diff, _ := trie.NewDifferenceIterator(oldTrie.NodeIterator([]byte{}), newTrie.NodeIterator([]byte{}))
+	iter := trie.NewIterator(diff)
+
+	var dirty []common.Address
+	for iter.Next() {
+		key := newTrie.GetKey(iter.Key)
+		if key == nil {
+			return nil, fmt.Errorf("no preimage found for hash %x", iter.Key)
+		}
+		dirty = append(dirty, common.BytesToAddress(key))
+	}
+	return dirty, nil
+}
+
