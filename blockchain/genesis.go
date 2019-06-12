@@ -172,7 +172,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 				genesis = DefaultGenesisBlock()
 			}
 			if genesis.Config.Governance != nil {
-				genesis.Governance = setGenesisGovernance(genesis)
+				genesis.Governance = SetGenesisGovernance(genesis)
 			}
 		} else {
 			logger.Info("Writing custom genesis block")
@@ -359,7 +359,7 @@ func decodePrealloc(data string) GenesisAlloc {
 
 type GovernanceSet map[string]interface{}
 
-func setGenesisGovernance(genesis *Genesis) []byte {
+func SetGenesisGovernance(genesis *Genesis) []byte {
 	g := make(GovernanceSet)
 	governance := genesis.Config.Governance
 	g["governance.governancemode"] = governance.GovernanceMode
