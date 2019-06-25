@@ -1,0 +1,221 @@
+#!/bin/bash
+#
+# kpnd         Startup script for the kpn
+#
+# chkconifg: - 85 15
+# description : kpnd is the Klaytn proxy node daemon
+#
+# processname: kpnd
+# config:  /etc/kpnd/conf/kpnd.conf
+# pidfile: /var/run/kpnd.pid
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+if [ -f /etc/kpnd/conf/kpnd.conf ]; then
+        . /etc/kpnd/conf/kpnd.conf
+fi
+
+kpn=/usr/bin/kpn
+prog=kpnd
+lockfile=${LOCKFILE-/var/lock/subsys/kpnd}
+pidfile=${PIDFILE-/var/run/kpnd.pid}
+RETVAL=0
+STOP_TIMEOUT=${STOP_TIMEOUT-10}
+
+set -f
+OPTIONS=""
+
+if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
+    OPTIONS="$OPTIONS --metrics"
+fi
+
+if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
+    OPTIONS="$OPTIONS --prometheus"
+fi
+
+if [[ ! -z $DB_NO_PARALLEL_WRITE ]] && [[ $DB_NO_PARALLEL_WRITE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --db.no-parallel-write"
+fi
+
+if [[ ! -z $MULTICHANNEL ]] && [[ $MULTICHANNEL -eq 1 ]]; then
+    OPTIONS="$OPTIONS --multichannel"
+fi
+
+if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --rpc"
+    if [ ! -z $RPC_API ]; then
+        OPTIONS="$OPTIONS --rpcapi $RPC_API"
+    fi
+    if [ ! -z $RPC_PORT ]; then
+        OPTIONS="$OPTIONS --rpcport $RPC_PORT"
+    fi
+    if [ ! -z $RPC_ADDR ]; then
+        OPTIONS="$OPTIONS --rpcaddr $RPC_ADDR"
+    fi
+    if [ ! -z $RPC_CORSDOMAIN ]; then
+        OPTIONS="$OPTIONS --rpccorsdomain $RPC_CORSDOMAIN"
+    fi
+    if [ ! -z $RPC_VHOSTS ]; then
+        OPTIONS="$OPTIONS --rpcvhosts $RPC_VHOSTS"
+    fi
+fi
+
+if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --ws"
+    if [ ! -z $WS_API ]; then
+        OPTIONS="$OPTIONS --wsapi $WS_API"
+    fi
+    if [ ! -z $WS_PORT ]; then
+        OPTIONS="$OPTIONS --wsport $WS_PORT"
+    fi
+    if [ ! -z $WS_ADDR ]; then
+        OPTIONS="$OPTIONS --wsaddr $WS_ADDR"
+    fi
+    if [ ! -z $WS_ORIGINS ]; then
+        OPTIONS="$OPTIONS --wsorigins $WS_ORIGINS"
+    fi
+fi
+
+# Cypress network => NETWORK_ID is null && NETWORK = "cypress"
+# Baobab network => NETWORK_ID is null && NETWORK = "baobab"
+# Else => private network
+if [[ -z $NETWORK_ID ]]; then
+    if [[ $NETWORK == "baobab" ]]; then
+        OPTIONS="$OPTIONS --baobab"
+    elif [[ $NETWORK == "cypress" ]]; then
+        OPTIONS="$OPTIONS --cypress"
+    else
+        echo
+        echo "[ERROR] network id is not specified and network is not available."
+        echo "Available network: baobab, cypress"
+        exit 1
+    fi
+else
+    OPTIONS="$OPTIONS --networkid $NETWORK_ID"
+    echo "[INFO] creating a private network: $NETWORK_ID"
+    if [[ ! -z $NETWORK ]]; then
+        echo
+        echo "[WARN] ignoring the specified network: $NETWORK"
+    fi
+fi
+
+if [ ! -z $DATA_DIR ]; then
+    OPTIONS="$OPTIONS --datadir $DATA_DIR"
+fi
+
+if [ ! -z $PORT ]; then
+    OPTIONS="$OPTIONS --port $PORT"
+fi
+
+if [ ! -z $SUBPORT ]; then
+    OPTIONS="$OPTIONS --subport $SUBPORT"
+fi
+
+if [ ! -z $SERVER_TYPE ]; then
+    OPTIONS="$OPTIONS --srvtype $SERVER_TYPE"
+fi
+
+if [ ! -z $VERBOSITY ]; then
+    OPTIONS="$OPTIONS --verbosity $VERBOSITY"
+fi
+
+if [ ! -z $TXPOOL_EXEC_SLOTS_ALL ]; then
+    OPTIONS="$OPTIONS --txpool.exec-slots.all $TXPOOL_EXEC_SLOTS_ALL"
+fi
+
+if [ ! -z $TXPOOL_NONEXEC_SLOTS_ALL ]; then
+    OPTIONS="$OPTIONS --txpool.nonexec-slots.all $TXPOOL_NONEXEC_SLOTS_ALL"
+fi
+
+if [ ! -z $TXPOOL_EXEC_SLOTS_ACCOUNT ]; then
+    OPTIONS="$OPTIONS --txpool.exec-slots.account $TXPOOL_EXEC_SLOTS_ACCOUNT"
+fi
+
+if [ ! -z $TXPOOL_NONEXEC_SLOTS_ACCOUNT ]; then
+    OPTIONS="$OPTIONS --txpool.nonexec-slots.account $TXPOOL_NONEXEC_SLOTS_ACCOUNT"
+fi
+
+if [ ! -z TXPOOL_LIFE_TIME ]; then
+    OPTIONS="$OPTIONS --txpool.lifetime $TXPOOL_LIFE_TIME"
+fi
+
+if [ ! -z $SYNCMODE ]; then
+    OPTIONS="$OPTIONS --syncmode $SYNCMODE"
+fi
+
+if [ ! -z $MAXCONNECTIONS ]; then
+    OPTIONS="$OPTIONS --maxconnections $MAXCONNECTIONS"
+fi
+
+if [ ! -z $LDBCACHESIZE ]; then
+    OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
+fi
+
+if [[ ! -z $NO_DISCOVER ]] && [[ $NO_DISCOVER -eq 1 ]]; then
+    OPTIONS="$OPTIONS --nodiscover"
+fi
+
+if [[ ! -z $BOOTNODES ]] && [[ $BOOTNODES != "" ]]; then
+    OPTIONS="$OPTIONS --bootnodes $BOOTNODES"
+fi
+
+if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+    OPTIONS="$OPTIONS $ADDITIONAL"
+fi
+set +f
+
+start() {
+        echo -n "Starting $prog: "
+        if [ ! -d ${LOG_DIR} ]; then
+                mkdir -p ${LOG_DIR}
+        fi
+
+        __pids_var_run "$prog" "$pidfile"
+        [ -n "$pid" ] && echo && return
+
+        set -f
+        $kpn $OPTIONS >> ${LOG_DIR}/kpnd.out 2>&1 &
+        RETVAL=$?
+        PIDNUM=$!
+        set +f
+        if [ $RETVAL = 0 ]; then
+                echo $PIDNUM > ${pidfile}
+                touch ${lockfile}
+                success "$prog startup"
+        else
+                failure "$prog startup"
+        fi
+        echo
+        return $RETVAL
+}
+
+stop() {
+        echo -n "Shutting down $prog: "
+        killproc -p ${pidfile} -d ${STOP_TIMEOUT} $kpn
+        RETVAL=$?
+        echo
+        [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status -p ${pidfile} -l ${lockfile} $kpn
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $prog {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit $?
