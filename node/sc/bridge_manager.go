@@ -24,10 +24,12 @@ import (
 	"github.com/klaytn/klaytn/common"
 	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"math/big"
 	"path"
+	"sync"
 	"time"
 )
 
@@ -63,6 +65,10 @@ type RequestValueTransferEvent struct {
 	txHash       common.Hash
 }
 
+func (rEv *RequestValueTransferEvent) Nonce() uint64 {
+	return rEv.RequestNonce
+}
+
 // HandleValueTransferEvent from Bridge contract
 type HandleValueTransferEvent struct {
 	TokenType    uint8
@@ -93,8 +99,8 @@ type BridgeInfo struct {
 	onServiceChain     bool
 	subscribed         bool
 
-	pendingRequestEvent *eventSortedMap // TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
-	nextHandleNonce     uint64          // This nonce will be used for getting pending request value transfer events.
+	pendingRequestEvent *bridgepool.EventSortedMap // TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
+	nextHandleNonce     uint64                     // This nonce will be used for getting pending request value transfer events.
 
 	isRunning                   bool
 	handleNonce                 uint64 // the nonce from the handle value transfer event from the bridge.
@@ -115,7 +121,7 @@ func NewBridgeInfo(subBridge *SubBridge, addr common.Address, bridge *bridgecont
 		cpBridge,
 		local,
 		subscribed,
-		newEventSortedMap(),
+		bridgepool.NewEventSortedMap(),
 		0,
 		true,
 		0,
@@ -154,6 +160,16 @@ func (bi *BridgeInfo) loop() {
 			return
 		}
 	}
+}
+
+func (bi *BridgeInfo) GetPendingRequestEvents(start uint64) []*RequestValueTransferEvent {
+	ready := bi.pendingRequestEvent.Ready(start)
+	var readyEvent []*RequestValueTransferEvent
+	for _, item := range ready {
+		readyEvent = append(readyEvent, item.(*RequestValueTransferEvent))
+	}
+
+	return readyEvent
 }
 
 // processingPendingRequestEvents handles pending request value transfer events of the bridge.
@@ -334,9 +350,7 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferE
 
 // GetReadyRequestValueTransferEvents returns the processable events with the increasing nonce.
 func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []*RequestValueTransferEvent {
-	ready := bi.pendingRequestEvent.Ready(bi.nextHandleNonce)
-	vtPendingRequestEventMeter.Dec(int64(len(ready)))
-	return ready
+	return bi.GetPendingRequestEvents(bi.nextHandleNonce)
 }
 
 // DecodeRLP decodes the Klaytn
@@ -370,6 +384,7 @@ type BridgeManager struct {
 	receivedEvents map[common.Address]event.Subscription
 	withdrawEvents map[common.Address]event.Subscription
 	bridges        map[common.Address]*BridgeInfo
+	mu             sync.RWMutex
 
 	tokenReceived event.Feed
 	tokenWithdraw event.Feed
@@ -382,7 +397,7 @@ type BridgeManager struct {
 }
 
 func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
-	bridgeAddrJournal := newBridgeAddrJournal(path.Join(main.config.DataDir, BridgeAddrJournal), main.config)
+	bridgeAddrJournal := newBridgeAddrJournal(path.Join(main.config.DataDir, BridgeAddrJournal))
 
 	bridgeManager := &BridgeManager{
 		subBridge:      main,
@@ -414,6 +429,9 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 
 // LogBridgeStatus logs the bridge contract requested/handled nonce status as an information.
 func (bm *BridgeManager) LogBridgeStatus() {
+	bm.mu.RLock()
+	defer bm.mu.RUnlock()
+
 	if len(bm.bridges) == 0 {
 		return
 	}
@@ -465,12 +483,18 @@ func (bm *BridgeManager) GetAllBridge() []*BridgeJournal {
 
 // GetBridge returns bridge contract of the specified address.
 func (bm *BridgeManager) GetBridgeInfo(addr common.Address) (*BridgeInfo, bool) {
+	bm.mu.RLock()
+	defer bm.mu.RUnlock()
+
 	bridge, ok := bm.bridges[addr]
 	return bridge, ok
 }
 
 // DeleteBridgeInfo deletes the bridge info of the specified address.
 func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
+	bm.mu.Lock()
+	defer bm.mu.Unlock()
+
 	bi := bm.bridges[addr]
 	if bi == nil {
 		return errNoBridgeInfo
@@ -484,6 +508,9 @@ func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
 
 // SetBridgeInfo stores the address and bridge pair with local/remote and subscription status.
 func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local bool, subscribed bool) error {
+	bm.mu.Lock()
+	defer bm.mu.Unlock()
+
 	if bm.bridges[addr] != nil {
 		return errDuplicatedBridgeInfo
 	}
@@ -790,6 +817,9 @@ func (bm *BridgeManager) loop(
 
 // Stop closes a subscribed event scope of the bridge manager.
 func (bm *BridgeManager) Stop() {
+	bm.mu.RLock()
+	defer bm.mu.RUnlock()
+
 	for _, bi := range bm.bridges {
 		close(bi.closed)
 	}

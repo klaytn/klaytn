@@ -206,7 +206,7 @@ func (sbapi *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[
 		"counterPart":      bi.counterpartAddress,
 		"onServiceChain":   bi.onServiceChain,
 		"isSubscribed":     bi.subscribed,
-		"pendingEventSize": len(bi.pendingRequestEvent.items),
+		"pendingEventSize": bi.pendingRequestEvent.Len(),
 	}, nil
 }
 
@@ -335,8 +335,8 @@ func (sbapi *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr,
 		return errors.New("invalid toke pair")
 	}
 
-	cBi, cExist := sbapi.sc.bridgeManager.bridges[cBridgeAddr]
-	pBi, pExist := sbapi.sc.bridgeManager.bridges[pBridgeAddr]
+	cBi, cExist := sbapi.sc.bridgeManager.GetBridgeInfo(cBridgeAddr)
+	pBi, pExist := sbapi.sc.bridgeManager.GetBridgeInfo(pBridgeAddr)
 
 	if !cExist || !pExist {
 		return errors.New("bridge does not exist")

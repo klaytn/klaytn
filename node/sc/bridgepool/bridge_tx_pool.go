@@ -18,18 +18,21 @@
 // This file is derived from core/tx_pool.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package sc
+package bridgepool
 
 import (
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/metrics"
 	"math/big"
 	"sync"
 	"time"
 )
+
+var logger = log.NewModuleLogger(log.ServiceChain)
 
 var (
 	ErrKnownTx           = errors.New("Known Transaction")

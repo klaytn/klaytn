@@ -630,7 +630,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfer
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
-	for _, ev := range bi.pendingRequestEvent.Ready(math.MaxUint64) {
+	for _, ev := range bi.GetPendingRequestEvents(math.MaxUint64) {
 		handleKLAYTransfer(info, bi, ev)
 	}
 	info.sim.Commit()
@@ -672,7 +672,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestTokenTransfer(info *testInfo, bi *BridgeInfo) {
-	for _, ev := range bi.pendingRequestEvent.Ready(math.MaxUint64) {
+	for _, ev := range bi.GetPendingRequestEvents(math.MaxUint64) {
 		handleTokenTransfer(info, bi, ev)
 	}
 	info.sim.Commit()
@@ -723,7 +723,7 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferE
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestNFTTransfer(info *testInfo, bi *BridgeInfo) {
-	for _, ev := range bi.pendingRequestEvent.Ready(math.MaxUint64) {
+	for _, ev := range bi.GetPendingRequestEvents(math.MaxUint64) {
 		handleNFTTransfer(info, bi, ev)
 	}
 	info.sim.Commit()

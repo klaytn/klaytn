@@ -35,6 +35,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
@@ -100,7 +101,7 @@ type SubBridge struct {
 
 	blockchain   *blockchain.BlockChain
 	txPool       *blockchain.TxPool
-	bridgeTxPool *BridgeTxPool
+	bridgeTxPool *bridgepool.BridgeTxPool
 
 	// chain event
 	chainHeadCh  chan blockchain.ChainHeadEvent
@@ -168,7 +169,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		bootFail:       false,
 	}
 	// TODO-Klaytn change static config to user define config
-	bridgetxConfig := BridgeTxPoolConfig{
+	bridgetxConfig := bridgepool.BridgeTxPoolConfig{
 		ParentChainID: new(big.Int).SetUint64(config.ParentChainID),
 		Journal:       path.Join(config.DataDir, "bridge_transactions.rlp"),
 		Rejournal:     time.Hour,
@@ -185,7 +186,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 
 	sc.APIBackend = &SubBridgeAPI{sc}
 
-	sc.bridgeTxPool = NewBridgeTxPool(bridgetxConfig)
+	sc.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
 
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -215,7 +216,7 @@ func (sb *SubBridge) BridgePeerSet() *bridgePeerSet {
 	return sb.peers
 }
 
-func (sb *SubBridge) GetBridgeTxPool() *BridgeTxPool {
+func (sb *SubBridge) GetBridgeTxPool() *bridgepool.BridgeTxPool {
 	return sb.bridgeTxPool
 }
 

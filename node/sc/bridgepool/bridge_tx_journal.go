@@ -18,7 +18,7 @@
 // This file is derived from core/tx_journal.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package sc
+package bridgepool
 
 import (
 	"errors"
@@ -33,14 +33,14 @@ import (
 // into the journal, but no such file is currently open.
 var errNoActiveJournal = errors.New("no active journal")
 
-// devNull is a WriteCloser that just discards anything written into it. Its
+// DevNull is a WriteCloser that just discards anything written into it. Its
 // goal is to allow the transaction journal to write into a fake journal when
 // loading transactions on startup without printing warnings due to no file
 // being readt for write.
-type devNull struct{}
+type DevNull struct{}
 
-func (*devNull) Write(p []byte) (n int, err error) { return len(p), nil }
-func (*devNull) Close() error                      { return nil }
+func (*DevNull) Write(p []byte) (n int, err error) { return len(p), nil }
+func (*DevNull) Close() error                      { return nil }
 
 // bridgeTxJournal is a rotating log of transactions with the aim of storing locally
 // created transactions to allow non-executed ones to survive node restarts.
@@ -71,7 +71,7 @@ func (journal *bridgeTxJournal) load(add func([]*types.Transaction) []error) err
 	defer input.Close()
 
 	// Temporarily discard any journal additions (don't double add on load)
-	journal.writer = new(devNull)
+	journal.writer = new(DevNull)
 	defer func() { journal.writer = nil }()
 
 	// Inject all transactions from the journal into the pool

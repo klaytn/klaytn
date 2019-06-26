@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/contracts/servicechain_nft"
 	"github.com/klaytn/klaytn/contracts/servicechain_token"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -965,7 +966,7 @@ func TestErrorDupSubscription(t *testing.T) {
 		nil,
 		true,
 		true,
-		newEventSortedMap(),
+		bridgepool.NewEventSortedMap(),
 		0,
 		true,
 		0,

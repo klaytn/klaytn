@@ -18,45 +18,49 @@
 // This file is derived from core/tx_list.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package sc
+package bridgepool
 
 import (
 	"container/heap"
 	"sync"
 )
 
-// eventSortedMap is a nonce->event map with a heap based index to allow
-// iterating over the contents in a nonce-incrementing way.
-type eventSortedMap struct {
-	mu    *sync.Mutex
-	items map[uint64]*RequestValueTransferEvent // Hash map storing the event data
-	index *nonceHeap                            // Heap of nonces of all the stored events (non-strict mode)
+type itemWithNonce interface {
+	Nonce() uint64
 }
 
-// newEventSortedMap creates a new nonce-sorted event map.
-func newEventSortedMap() *eventSortedMap {
-	return &eventSortedMap{
+// EventSortedMap is a nonce->item map with a heap based index to allow
+// iterating over the contents in a nonce-incrementing way.
+type EventSortedMap struct {
+	mu    *sync.Mutex
+	items map[uint64]itemWithNonce // Hash map storing the item data
+	index *nonceHeap               // Heap of nonces of all the stored items (non-strict mode)
+}
+
+// NewEventSortedMap creates a new nonce-sorted item map.
+func NewEventSortedMap() *EventSortedMap {
+	return &EventSortedMap{
 		mu:    new(sync.Mutex),
-		items: make(map[uint64]*RequestValueTransferEvent),
+		items: make(map[uint64]itemWithNonce),
 		index: new(nonceHeap),
 	}
 }
 
-// Get retrieves the current events associated with the given nonce.
-func (m *eventSortedMap) Get(nonce uint64) *RequestValueTransferEvent {
+// Get retrieves the current items associated with the given nonce.
+func (m *EventSortedMap) Get(nonce uint64) itemWithNonce {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	return m.items[nonce]
 }
 
-// Put inserts a new event into the map, also updating the map's nonce
-// index. If a event already exists with the same nonce, it's overwritten.
-func (m *eventSortedMap) Put(event *RequestValueTransferEvent) {
+// Put inserts a new item into the map, also updating the map's nonce
+// index. If a item already exists with the same nonce, it's overwritten.
+func (m *EventSortedMap) Put(event itemWithNonce) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	nonce := event.RequestNonce
+	nonce := event.Nonce()
 	if m.items[nonce] == nil {
 		heap.Push(m.index, nonce)
 	}
@@ -70,7 +74,7 @@ func (m *eventSortedMap) Put(event *RequestValueTransferEvent) {
 // Note, all events with nonces lower than start will also be returned to
 // prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
-func (m *eventSortedMap) Ready(start uint64) []*RequestValueTransferEvent {
+func (m *EventSortedMap) Ready(start uint64) []interface{} {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -79,7 +83,7 @@ func (m *eventSortedMap) Ready(start uint64) []*RequestValueTransferEvent {
 		return nil
 	}
 	// Otherwise start accumulating incremental events
-	var ready []*RequestValueTransferEvent
+	var ready []interface{}
 	for next := (*m.index)[0]; m.index.Len() > 0 && (*m.index)[0] == next; next++ {
 		ready = append(ready, m.items[next])
 		delete(m.items, next)
@@ -89,7 +93,7 @@ func (m *eventSortedMap) Ready(start uint64) []*RequestValueTransferEvent {
 	return ready
 }
 
-func (m *eventSortedMap) Len() int {
+func (m *EventSortedMap) Len() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

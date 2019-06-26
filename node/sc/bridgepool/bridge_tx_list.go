@@ -18,7 +18,7 @@
 // This file is derived from core/tx_list.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-package sc
+package bridgepool
 
 import (
 	"container/heap"
