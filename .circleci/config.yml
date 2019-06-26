@@ -1,0 +1,517 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2.1
+jobs:
+  build:
+    machine: true
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Build"
+          command: |
+            cd $HOME
+            wget https://s3.ap-northeast-2.amazonaws.com/klaytn-ops-stuff/circle-ci/go1.11.2.tar.gz
+            tar xfz go1.11.2.tar.gz
+            export PATH=$HOME/go-go1.11.2/bin:$PATH
+            cd -
+            make fmt
+            make all
+
+  test-datasync:
+    docker:
+      - image: kjhman21/dev:go1.11.2-solc0.4.24
+    working_directory: /go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Run test datasync"
+          command: |
+            make test-datasync
+
+  test-networks:
+    docker:
+      - image: kjhman21/dev:go1.11.2-solc0.4.24
+    working_directory: /go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Run test networks"
+          command: |
+            make test-networks
+
+  test-tests:
+    docker:
+      - image: kjhman21/dev:go1.11.2-solc0.4.24
+    working_directory: /go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Run test tests"
+          command: |
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
+            make test-tests
+
+  test-others:
+    docker:
+      - image: kjhman21/dev:go1.11.2-solc0.4.24
+    working_directory: /go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Run test others"
+          command: |
+            make test-others
+
+  coverage:
+    docker:
+      - image: kjhman21/dev:go1.11.2-solc0.4.24
+    working_directory: /go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Run coverage tests"
+          command: |
+            export GOPATH=/go
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
+            make cover
+            mkdir -p /tmp/coverage_reports
+            cp coverage_report.txt /tmp/coverage_reports/
+            cp coverage_report.html /tmp/coverage_reports/
+            bash <(curl -s https://codecov.io/bash)
+      - store_artifacts:
+          path: /tmp/coverage_reports
+
+  linters:
+    docker:
+      - image: circleci/golang:1.11.2
+    working_directory: /go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Run linters"
+          command: |
+            make lint-try
+            mkdir -p /tmp/linter_reports
+            cp linter_report.txt /tmp/linter_reports/
+      - store_artifacts:
+          path: /tmp/linter_reports
+
+  packaging-linux:
+    machine: true
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Install awscli"
+          command: |
+            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+            python get-pip.py --user
+            ~/.local/bin/pip install awscli --upgrade --user
+
+      - run:
+          name: "Build kcn, kpn, ken, kgen, kscn, kbn for linux-amd64"
+          command: |
+            export GOPATH=~/go
+            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+            make klay-linux-amd64
+
+      - run:
+          name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for linux-amd64"
+          command: |
+            for item in kcn kpn ken kgen kscn kbn
+            do
+              PACK_NAME=${item}-linux-amd64
+              if [ ${item} = kgen ]; then
+                mkdir -p ${PACK_NAME}/bin
+                cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+              else
+                mkdir -p ${PACK_NAME}/{bin,conf}
+                cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+                cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+                cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
+              fi
+              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-linux-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+
+  packaging-linux-baobab:
+    machine: true
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Install awscli"
+          command: |
+            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+            python get-pip.py --user
+            ~/.local/bin/pip install awscli --upgrade --user
+
+      - run:
+          name: "Build kcn, kpn, ken for linux-amd64"
+          command: |
+            export GOPATH=~/go
+            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+            make klay-linux-amd64
+
+      - run:
+          name: "Packaging baobab versions of kcn, kpn, ken for linux-amd64"
+          command: |
+            for item in kcn kpn ken
+            do
+              PACK_NAME=${item}-linux-amd64
+              mkdir -p ${PACK_NAME}/{bin,conf}
+              cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
+              KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-linux-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+
+  packaging-darwin:
+    machine: true
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Install awscli"
+          command: |
+            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+            python get-pip.py --user
+            ~/.local/bin/pip install awscli --upgrade --user
+
+      - run:
+          name: "Build kcn, kpn, ken, kgen, kscn, kbn for macOS"
+          command: |
+            export GOPATH=~/go
+            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+            make klay-darwin-amd64
+
+      - run:
+          name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for macOS"
+          command: |
+            for item in kcn kpn ken kgen kscn kbn
+            do
+              PACK_NAME=${item}-darwin-amd64
+              if [ ${item} = kgen ]; then
+                mkdir -p ${PACK_NAME}/bin
+                cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
+              else
+                mkdir -p ${PACK_NAME}/{bin,conf}
+                cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
+                cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+                cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
+              fi
+              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+
+  packaging-darwin-baobab:
+    machine: true
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Install awscli"
+          command: |
+            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+            python get-pip.py --user
+            ~/.local/bin/pip install awscli --upgrade --user
+
+      - run:
+          name: "Build kcn, kpn, ken for macOS"
+          command: |
+            export GOPATH=~/go
+            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+            make klay-darwin-amd64
+
+      - run:
+          name: "Packaging baobab versions of kcn, kpn, ken for macOS"
+          command: |
+            for item in kcn kpn ken
+            do
+              PACK_NAME=${item}-darwin-amd64
+              mkdir -p ${PACK_NAME}/{bin,conf}
+              cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
+              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
+              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
+              KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+
+  packaging-windows:
+    machine: true
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - run:
+          name: "Install awscli"
+          command: |
+            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+            python get-pip.py --user
+            ~/.local/bin/pip install awscli --upgrade --user
+
+      - run:
+          name: "Build kcn, kpn, ken, kgen, kscn, kbn for windows"
+          command: |
+            export GOPATH=~/go
+            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+            make klay-windows-amd64
+
+      - run:
+          name: "Packaging kcn, kpn, ken, kgen for windows"
+          command: |
+            for item in kcn kpn ken kgen
+            do
+              PACK_NAME=${item}-windows-amd64
+              if [ ${item} = kgen ]; then
+                mkdir -p ${PACK_NAME}/bin
+                cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
+              else
+                mkdir -p ${PACK_NAME}/{bin,conf}
+                cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
+                cp build/packaging/windows/conf/${item}-conf.cmd ${PACK_NAME}/conf/
+                cp build/packaging/windows/start-${item}.bat ${PACK_NAME}/
+              fi
+              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-windows-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+
+
+  rpm-untagged:
+    docker:
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    working_directory: /go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
+      - run:
+          name: "Build & Deploy rpm package"
+          command: |
+            export GOPATH=/go
+            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
+            go run build/rpm/main.go gen_spec --devel --build_num $CIRCLE_BUILD_NUM > /rpmbuild_home/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
+            cd ..
+            mv klaytn klaytn-devel-$KLAYTN_VERSION
+            tar czf klaytn-devel-$KLAYTN_VERSION.tar.gz klaytn-devel-$KLAYTN_VERSION
+            mv klaytn-devel-$KLAYTN_VERSION.tar.gz /rpmbuild_home/SOURCES/
+            rpmbuild -ba /rpmbuild_home/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
+            scp -o StrictHostKeyChecking=no /rpmbuild_home/RPMS/x86_64/klaytn-devel-v*.rpm ec2-user@52.79.114.173:/srv/repo/
+            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+
+  rpm-tagged:
+    docker:
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    working_directory: /go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
+
+      - run:
+          name: "Build & Deploy rpm package"
+          command: |
+            export GOPATH=/go
+            export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
+            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
+
+            for item in kcn kpn ken kscn kbn
+            do
+              cd /go/src/github.com/klaytn/klaytn
+              go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
+              cd /go/src/github.com/klaytn
+              cp -R klaytn ${item}d-$KLAYTN_VERSION
+              ls -R ${item}d-$KLAYTN_VERSION/build/rpm/etc/init.d
+              tar czf ${item}d-$KLAYTN_VERSION.tar.gz ${item}d-$KLAYTN_VERSION
+              mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
+              rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
+              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
+            done
+            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+
+  rpm-tagged-baobab:
+    docker:
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    working_directory: /go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
+
+      - run:
+          name: "Build & Deploy rpm package"
+          command: |
+            export GOPATH=/go
+            export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
+            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
+
+            for item in kcn kpn ken
+            do
+              cd /go/src/github.com/klaytn/klaytn
+              go run build/rpm/main.go gen_spec --node_type $item --baobab > /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
+              cd /go/src/github.com/klaytn
+              cp -R klaytn ${item}d-baobab-$KLAYTN_VERSION
+              ls -R ${item}d-baobab-$KLAYTN_VERSION/build/rpm/etc/init.d
+              tar czf ${item}d-baobab-$KLAYTN_VERSION.tar.gz ${item}d-baobab-$KLAYTN_VERSION
+              mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
+              rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
+              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
+            done
+            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+
+  deploy-rpm-private:
+    docker:
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
+      - run:
+          name: "Update RPM repository"
+          command: |
+            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+
+  deploy-rpm-public:
+    docker:
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "8f:f3:85:1d:09:1d:1d:14:72:70:61:94:b5:f3:2f:bc"
+      - run:
+          name: "Update RPM repository"
+          command: |
+            ssh -o StrictHostKeyChecking=no ec2-user@packages.klaytn.net createrepo --update /data/packages/rhel/7/prod
+
+
+workflows:
+  version: 2
+  build_n_packaging:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+
+      - test-datasync:
+          filters:
+            tags:
+              only: /.*/
+
+      - test-networks:
+          filters:
+            tags:
+              only: /.*/
+
+      - test-tests:
+          filters:
+            tags:
+              only: /.*/
+
+      - test-others:
+          filters:
+            tags:
+              only: /.*/
+
+      - deploy-rpm-private:
+          requires:
+            - rpm-tagged
+            - rpm-tagged-baobab
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - rpm-tagged:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - rpm-tagged-baobab:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - packaging-linux:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - packaging-linux-baobab:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - packaging-darwin:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - packaging-darwin-baobab:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+      - packaging-windows:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+  nightly-coverage:
+    triggers:
+      - schedule:
+          cron: "0 18 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - coverage
+
+  nightly-linters:
+    triggers:
+      - schedule:
+          cron: "0 19 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - linters

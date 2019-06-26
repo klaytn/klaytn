@@ -1,0 +1,20 @@
+FROM ubuntu:18.04
+USER root
+RUN apt update
+RUN apt install -y git lsb-core sudo
+RUN apt install -y libboost-all-dev
+RUN apt install -y build-essential cmake
+WORKDIR /root
+RUN git clone --recursive https://github.com/ethereum/solidity.git
+WORKDIR /root/solidity
+RUN git checkout v0.4.24
+RUN ./scripts/build.sh
+RUN mkdir /root/golang-1.12.5
+WORKDIR /root/golang-1.12.5
+RUN curl -O https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz
+RUN tar -xvzf go1.12.5.linux-amd64.tar.gz
+RUN mv go /usr/local
+RUN ln -s /usr/local/go/bin/go /usr/bin/
+RUN ln -s /usr/local/go/bin/gofmt /usr/bin/
+RUN ln -s /usr/local/go/bin/godoc /usr/bin/
+

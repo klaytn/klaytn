@@ -1,0 +1,30 @@
+syntax = "proto3";
+package grpc;
+
+option java_multiple_files = true;
+option java_package = "com.klaytn.grpc";
+option java_outer_classname = "KlaytnNodeProto";
+option objc_class_prefix = "Klay";
+
+
+message Empty {
+}
+
+message RPCRequest {
+    string service = 1;
+    string method = 2;
+    bytes params = 3;
+}
+
+message RPCResponse {
+    bytes payload = 1;
+}
+
+//----------------------------------------
+// Service Definition
+
+service KlaytnNode {
+    rpc Call(RPCRequest) returns (RPCResponse) {}
+    rpc Subscribe(RPCRequest) returns (stream RPCResponse) {}
+    rpc BiCall(stream RPCRequest) returns (stream RPCResponse) {}
+}

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+
+BIN=$(cd "$(dirname $0)"; pwd)
+CMD_HOME=$(dirname $BIN)
+CONF=$CMD_HOME/conf
+STOP_TIMEOUT=10 # seconds to wait for a clean exit
+
+source $CONF/kbnd.conf
+
+pidfile=$CMD_HOME/kbnd.pid
+
+__pid_run() {
+    unset pid
+    if [ ! -f $pidfile ]; then
+        return
+    fi
+    PID_NUM=$(eval "cat $pidfile")
+    if [[ ! -z "$PID_NUM" ]]; then
+        export pid=$(eval "ps -p $PID_NUM -o pid=")
+    fi
+}
+
+__kill_timeout() {
+    local PIDNUM=$1
+    kill $PIDNUM
+    for i in `seq 0 100 $((1000 * $STOP_TIMEOUT))`; do
+        if ! kill -0 $PIDNUM 2> /dev/null; then
+            echo "OK"
+            return
+        fi
+        sleep 0.1
+    done
+    kill -9 $PIDNUM && echo "Killed"
+}
+
+start() {
+    __pid_run
+    [ -n "$pid" ] && echo "kbnd already running...[$pid]" && return
+
+    if [ ! -f $KEY_PATH ]; then
+        echo
+        echo "  [ERROR] : KEY_PATH is not defined in $CONF/kbnd.conf"
+        exit 1
+    fi
+
+    echo -n "Starting kbnd: "
+
+    if [ ! -d $LOG_DIR ]; then
+        mkdir -p $LOG_DIR
+    fi
+
+    if [ ! -d $DATA_DIR ]; then
+        mkdir -p $DATA_DIR
+    fi
+
+    set -f
+    OPTIONS="--nodekey ${KEY_PATH}"
+    if [[ ! -z $NETWORK_ID ]] && [[ $NETWORK_ID != "" ]]; then
+        OPTIONS="$OPTIONS --networkid $NETWORK_ID"
+    fi
+
+    if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
+        OPTIONS="$OPTIONS --metrics"
+    fi
+
+    if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
+        OPTIONS="$OPTIONS --prometheus"
+    fi
+
+    if [[ ! -z $AUTHORIZED_NODES ]] && [[ $AUTHORIZED_NODES != "" ]]; then
+        OPTIONS="$OPTIONS --authorized-nodes $AUTHORIZED_NODES"
+    fi
+
+    if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+        OPTIONS="$OPTIONS $ADDITIONAL"
+    fi
+
+    if [ ! -z $DATA_DIR ]; then
+        OPTIONS="$OPTIONS --datadir $DATA_DIR"
+    fi
+
+    $BIN/kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
+    RETVAL=$?
+    PIDNUM=$!
+    set +f
+    if [ $RETVAL = 0 ]; then
+        echo $PIDNUM > ${pidfile}
+        echo "OK"
+    else
+        echo "Fail"
+    fi
+    return $RETVAL
+}
+
+stop() {
+    __pid_run
+    [ -z "$pid" ] && echo "kbnd is not running" && return
+    echo -n "Shutting down kbnd:  "
+    __kill_timeout $(eval "cat ${pidfile}") && rm -f ${pidfile}
+}
+
+status() {
+    __pid_run
+    if [ -n "$pid" ]; then
+        echo "kbnd is running"
+    else
+        echo "kbnd is down"
+    fi
+}
+
+restart() {
+    stop
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status
+        ;;
+    restart)
+        restart
+        ;;
+    *)
+        echo "Usages: kbnd {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit 0

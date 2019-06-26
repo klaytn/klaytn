@@ -1,0 +1,114 @@
+#!/bin/bash
+#
+# kbnd         Startup script for the kbn
+#
+# chkconifg: - 85 15
+# description : kbnd is Klaytn boot node daemon
+#
+# processname: kbnd
+# config:  /etc/kbnd/conf/kbnd.conf
+# pidfile: /var/run/kbnd.pid
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+if [ -f /etc/kbnd/conf/kbnd.conf ]; then
+        . /etc/kbnd/conf/kbnd.conf
+fi
+
+kbn=/usr/bin/kbn
+prog=kbnd
+lockfile=${LOCKFILE-/var/lock/subsys/kbnd}
+pidfile=${PIDFILE-/var/run/kbnd.pid}
+RETVAL=0
+STOP_TIMEOUT=${STOP_TIMEOUT-10}
+
+start() {
+        echo -n "Starting $prog: "
+        if [ ! -d ${LOG_DIR} ]; then
+                mkdir -p ${LOG_DIR}
+        fi
+
+        if [ ! -d $DATA_DIR ]; then
+            mkdir -p $DATA_DIR
+        fi
+
+        __pids_var_run "$prog" "$pidfile"
+        [ -n "$pid" ] && echo && return
+
+        if [ ! -f $KEY_PATH ]; then
+            echo
+            echo "  [ERROR] : KEY_PATH is not defined in /etc/kbnd/conf/kbnd.conf"
+            exit 1
+        fi
+
+        set -f
+        OPTIONS="--nodekey ${KEY_PATH}"
+        if [[ ! -z $NETWORK_ID ]] && [[ $NETWORK_ID != "" ]]; then
+            OPTIONS="$OPTIONS --networkid $NETWORK_ID"
+        fi
+
+        if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
+            OPTIONS="$OPTIONS --metrics"
+        fi
+
+        if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
+            OPTIONS="$OPTIONS --prometheus"
+        fi
+
+        if [ ! -z $DATA_DIR ]; then
+            OPTIONS="$OPTIONS --datadir $DATA_DIR"
+        fi
+
+        if [[ ! -z $AUTHORIZED_NODES ]] && [[ $AUTHORIZED_NODES != "" ]]; then
+            OPTIONS="$OPTIONS --authorized-nodes $AUTHORIZED_NODES"
+        fi
+
+        if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+            OPTIONS="$OPTIONS $ADDITIONAL"
+        fi
+
+        $kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
+        RETVAL=$?
+        PIDNUM=$!
+        set +f
+        if [ $RETVAL = 0 ]; then
+                echo $PIDNUM > ${pidfile}
+                touch ${lockfile}
+                success "$prog startup"
+        else
+                failure "$prog startup"
+        fi
+        echo
+        return $RETVAL
+}
+
+stop() {
+        echo -n "Shutting down $prog: "
+        killproc -p ${pidfile} -d ${STOP_TIMEOUT} kbn
+        RETVAL=$?
+        echo
+        [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status -p ${pidfile} -l ${lockfile} $kbn
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $prog {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+exit $?

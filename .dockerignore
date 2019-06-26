@@ -1,0 +1,7 @@
+**/.git
+.git
+!.git/HEAD
+!.git/refs/heads
+
+build/_workspace
+build/_bin
