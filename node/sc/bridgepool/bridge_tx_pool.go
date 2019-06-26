@@ -91,7 +91,7 @@ type BridgeTxPool struct {
 
 	journal *bridgeTxJournal // Journal of transaction to back up to disk
 
-	queue map[common.Address]*bridgeTxSortedMap // Queued but non-processable transactions
+	queue map[common.Address]*ItemSortedMap // Queued but non-processable transactions
 	// TODO-Klaytn-Servicechain refine heartbeat for the tx not for account.
 	all map[common.Hash]*types.Transaction // All transactions to allow lookups
 
@@ -108,7 +108,7 @@ func NewBridgeTxPool(config BridgeTxPoolConfig) *BridgeTxPool {
 	// Create the transaction pool with its initial settings
 	pool := &BridgeTxPool{
 		config: config,
-		queue:  make(map[common.Address]*bridgeTxSortedMap),
+		queue:  make(map[common.Address]*ItemSortedMap),
 		all:    make(map[common.Hash]*types.Transaction),
 		closed: make(chan struct{}),
 	}
@@ -208,7 +208,12 @@ func (pool *BridgeTxPool) Content() map[common.Address]types.Transactions {
 
 	queued := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.queue {
-		queued[addr] = list.Flatten()
+		var queuedTxs []*types.Transaction
+		txs := list.Flatten()
+		for _, tx := range txs {
+			queuedTxs = append(queuedTxs, tx.(*types.Transaction))
+		}
+		queued[addr] = queuedTxs
 	}
 	return queued
 }
@@ -241,7 +246,12 @@ func (pool *BridgeTxPool) Pending() map[common.Address]types.Transactions {
 func (pool *BridgeTxPool) pending() map[common.Address]types.Transactions {
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.queue {
-		pending[addr] = list.Flatten()
+		var pendingTxs []*types.Transaction
+		txs := list.Flatten()
+		for _, tx := range txs {
+			pendingTxs = append(pendingTxs, tx.(*types.Transaction))
+		}
+		pending[addr] = pendingTxs
 	}
 	return pending
 }
@@ -254,7 +264,10 @@ func (pool *BridgeTxPool) PendingTxsByAddress(from *common.Address, limit int) t
 	var pendingTxs types.Transactions
 
 	if list, exist := pool.queue[*from]; exist {
-		pendingTxs = list.FlattenByCount(limit)
+		txs := list.FlattenByCount(limit)
+		for _, tx := range txs {
+			pendingTxs = append(pendingTxs, tx.(*types.Transaction))
+		}
 		return pendingTxs
 	}
 	return nil
@@ -266,10 +279,10 @@ func (pool *BridgeTxPool) PendingTxHashesByAddress(from *common.Address, limit i
 	defer pool.mu.Unlock()
 
 	if list, exist := pool.queue[*from]; exist {
-		pendingTxs := list.FlattenByCount(limit)
-		pendingTxHashes := make([]common.Hash, len(pendingTxs))
-		for i := 0; i < len(pendingTxs); i++ {
-			pendingTxHashes[i] = pendingTxs[i].Hash()
+		pendingTxHashes := make([]common.Hash, limit)
+		txs := list.FlattenByCount(limit)
+		for _, tx := range txs {
+			pendingTxHashes = append(pendingTxHashes, tx.(*types.Transaction).Hash())
 		}
 		return pendingTxHashes
 	}
@@ -316,7 +329,7 @@ func (pool *BridgeTxPool) add(tx *types.Transaction) error {
 	}
 
 	if pool.queue[from] == nil {
-		pool.queue[from] = newBridgeTxSortedMap()
+		pool.queue[from] = NewItemSortedMap()
 	} else {
 		if pool.queue[from].Get(tx.Nonce()) != nil {
 			return ErrDuplicatedNonceTx

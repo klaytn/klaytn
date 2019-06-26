@@ -966,7 +966,7 @@ func TestErrorDupSubscription(t *testing.T) {
 		nil,
 		true,
 		true,
-		bridgepool.NewEventSortedMap(),
+		bridgepool.NewItemSortedMap(),
 		0,
 		true,
 		0,

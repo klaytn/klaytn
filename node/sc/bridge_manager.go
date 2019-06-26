@@ -99,8 +99,8 @@ type BridgeInfo struct {
 	onServiceChain     bool
 	subscribed         bool
 
-	pendingRequestEvent *bridgepool.EventSortedMap // TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
-	nextHandleNonce     uint64                     // This nonce will be used for getting pending request value transfer events.
+	pendingRequestEvent *bridgepool.ItemSortedMap // TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
+	nextHandleNonce     uint64                    // This nonce will be used for getting pending request value transfer events.
 
 	isRunning                   bool
 	handleNonce                 uint64 // the nonce from the handle value transfer event from the bridge.
@@ -121,7 +121,7 @@ func NewBridgeInfo(subBridge *SubBridge, addr common.Address, bridge *bridgecont
 		cpBridge,
 		local,
 		subscribed,
-		bridgepool.NewEventSortedMap(),
+		bridgepool.NewItemSortedMap(),
 		0,
 		true,
 		0,
