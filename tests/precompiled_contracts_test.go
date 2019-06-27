@@ -18,12 +18,12 @@ package tests
 
 import (
 	"crypto/sha256"
-	"github.com/ground-x/klaytn/accounts/abi"
-	"github.com/ground-x/klaytn/blockchain/types"
-	"github.com/ground-x/klaytn/common"
-	"github.com/ground-x/klaytn/common/hexutil"
-	"github.com/ground-x/klaytn/common/profile"
-	"github.com/ground-x/klaytn/crypto"
+	"github.com/klaytn/klaytn/accounts/abi"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ripemd160"
 	"math/big"
