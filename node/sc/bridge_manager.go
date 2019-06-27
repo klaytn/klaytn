@@ -26,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/storage/database"
 	"io"
 	"math/big"
 	"path"
@@ -88,10 +89,7 @@ type BridgeJournal struct {
 }
 
 type BridgeInfo struct {
-	// TODO-Klaytn need to remove and replace subBridge in BridgeInfo
-	// subBridge is used for only AddressManager().GetCounterPartToken.
-	// Token pair information will be included by BridgeInfo instead of subBridge
-	subBridge *SubBridge
+	bridgeDB database.DBManager
 
 	address            common.Address
 	counterpartAddress common.Address // TODO-Klaytn need to set counterpart
@@ -115,9 +113,9 @@ type BridgeInfo struct {
 	closed   chan struct{}
 }
 
-func NewBridgeInfo(subBridge *SubBridge, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool) *BridgeInfo {
+func NewBridgeInfo(db database.DBManager, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool) *BridgeInfo {
 	bi := &BridgeInfo{
-		subBridge,
+		db,
 		addr,
 		cpAddr,
 		account,
@@ -330,7 +328,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 
 	bridgeAcc.IncNonce()
 
-	bi.subBridge.ChainDB().WriteHandleTxHashFromRequestTxHash(ev.txHash, handleTx.Hash())
+	bi.bridgeDB.WriteHandleTxHashFromRequestTxHash(ev.txHash, handleTx.Hash())
 	return nil
 }
 
@@ -569,7 +567,7 @@ func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontra
 	if bm.bridges[addr] != nil {
 		return ErrDuplicatedBridgeInfo
 	}
-	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, cpAddr, cpBridge, account, local, subscribed)
+	bm.bridges[addr] = NewBridgeInfo(bm.subBridge.chainDB, addr, bridge, cpAddr, cpBridge, account, local, subscribed)
 	return nil
 }
 
