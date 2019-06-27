@@ -135,7 +135,8 @@ type SubBridge struct {
 	// service on/off
 	onAnchoringTx bool
 
-	checkConnection int64
+	checkConnection     int64
+	isAllBridgeRestored bool
 }
 
 // New creates a new CN object (including the
@@ -298,6 +299,8 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 
 	if err := sc.bridgeManager.RestoreBridges(); err != nil {
 		logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
+	} else {
+		sc.isAllBridgeRestored = true
 	}
 
 	sc.bridgeAccountManager.scAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccountManager.scAccount.address))
@@ -524,7 +527,13 @@ func (sc *SubBridge) loop() {
 				logger.Error("fail to process handle value transfer event ", "err", err)
 			}
 		case <-report.C:
-			// report status
+			if !sc.isAllBridgeRestored {
+				if err := sc.bridgeManager.RestoreBridges(); err != nil {
+					logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
+				} else {
+					sc.isAllBridgeRestored = true
+				}
+			}
 		case err := <-sc.chainHeadSub.Err():
 			if err != nil {
 				logger.Error("subbridge block subscription ", "err", err)

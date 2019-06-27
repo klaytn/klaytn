@@ -53,6 +53,7 @@ var (
 	ErrDuplicatedToken      = errors.New("token is duplicated")
 	ErrNoRecovery           = errors.New("recovery does not exist")
 	ErrAlreadySubscribed    = errors.New("already subscribed")
+	ErrBridgeRestore        = errors.New("restoring bridges is failed")
 )
 
 // RequestValueTransferEvent from Bridge contract
@@ -113,7 +114,7 @@ type BridgeInfo struct {
 	closed   chan struct{}
 }
 
-func NewBridgeInfo(db database.DBManager, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool) *BridgeInfo {
+func NewBridgeInfo(db database.DBManager, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool) (*BridgeInfo, error) {
 	bi := &BridgeInfo{
 		db,
 		addr,
@@ -135,13 +136,13 @@ func NewBridgeInfo(db database.DBManager, addr common.Address, bridge *bridgecon
 	}
 
 	if err := bi.UpdateInfo(); err != nil {
-		logger.Error("NewBridgeInfo can't be updated.", "err", err)
+		return bi, err
 	}
 
 	bi.nextHandleNonce = bi.handleNonce
 	go bi.loop()
 
-	return bi
+	return bi, nil
 }
 
 func (bi *BridgeInfo) loop() {
@@ -203,12 +204,14 @@ func (bi *BridgeInfo) GetPendingRequestEvents(start uint64) []*RequestValueTrans
 
 // processingPendingRequestEvents handles pending request value transfer events of the bridge.
 func (bi *BridgeInfo) processingPendingRequestEvents() error {
+	logger.Trace("Get pending request value transfer event", "nextHandleNonce", bi.nextHandleNonce, "len(pendingEvent)", bi.pendingRequestEvent.Len())
+
 	ReadyEvent := bi.GetReadyRequestValueTransferEvents()
 	if ReadyEvent == nil {
 		return nil
 	}
 
-	logger.Debug("Get Pending request value transfer event", "len(readyEvent)", len(ReadyEvent), "nextHandleNonce", bi.nextHandleNonce, "len(pendingEvent)", bi.pendingRequestEvent.Len())
+	logger.Trace("Get ready request value transfer event", "len(readyEvent)", len(ReadyEvent), "nextHandleNonce", bi.nextHandleNonce, "len(pendingEvent)", bi.pendingRequestEvent.Len())
 
 	diff := bi.requestNonceFromCounterPart - bi.handleNonce
 	if diff > errorDiffRequestHandleNonce {
@@ -363,6 +366,7 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferE
 		bi.UpdateRequestNonceFromCounterpart(ev.RequestNonce + 1)
 		bi.pendingRequestEvent.Put(ev)
 	}
+	logger.Trace("added pending request events to the bridge info:", "bi.pendingRequestEvent", bi.pendingRequestEvent.Len())
 
 	vtPendingRequestEventMeter.Inc(int64(len(evs)))
 
@@ -567,55 +571,86 @@ func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontra
 	if bm.bridges[addr] != nil {
 		return ErrDuplicatedBridgeInfo
 	}
-	bm.bridges[addr] = NewBridgeInfo(bm.subBridge.chainDB, addr, bridge, cpAddr, cpBridge, account, local, subscribed)
-	return nil
+	var err error
+	bm.bridges[addr], err = NewBridgeInfo(bm.subBridge.chainDB, addr, bridge, cpAddr, cpBridge, account, local, subscribed)
+	return err
 }
 
 // RestoreBridges setups bridge subscription by using the journal cache.
 func (bm *BridgeManager) RestoreBridges() error {
+	var counter = 0
 	bm.stopAllRecoveries()
 
 	for _, journal := range bm.journal.cache {
+		var cBridgeInfo *BridgeInfo
+		var pBridgeInfo *BridgeInfo
+		var ok bool
+
 		cBridgeAddr := journal.LocalAddress
 		pBridgeAddr := journal.RemoteAddress
-		cBridge, err := bridgecontract.NewBridge(cBridgeAddr, bm.subBridge.localBackend)
-		if err != nil {
-			logger.Error("local bridge creation is failed", err)
-			continue
-		}
-		pBridge, err := bridgecontract.NewBridge(pBridgeAddr, bm.subBridge.remoteBackend)
-		if err != nil {
-			logger.Error("remote bridge creation is failed", err)
-			continue
-		}
 		bam := bm.subBridge.bridgeAccountManager
-		err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, bam.scAccount, true, false)
-		if err != nil {
-			logger.Error("setting local bridge info is failed", err)
-			continue
+
+		// Set bridge info
+		cBridgeInfo, ok = bm.GetBridgeInfo(cBridgeAddr)
+		if !ok {
+			cBridge, err := bridgecontract.NewBridge(cBridgeAddr, bm.subBridge.localBackend)
+			if err != nil || cBridge == nil {
+				logger.Error("local bridge creation is failed", "err", err, "bridge", cBridge)
+				break
+			}
+			err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, nil, bam.scAccount, true, false)
+			if err != nil {
+				logger.Error("setting local bridge info is failed", "err", err)
+				break
+			}
+			cBridgeInfo, ok = bm.GetBridgeInfo(cBridgeAddr)
 		}
-		err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridge, bam.mcAccount, false, false)
-		if err != nil {
-			logger.Error("setting remote bridge info is failed", err)
-			continue
+		pBridgeInfo, ok = bm.GetBridgeInfo(pBridgeAddr)
+		if !ok {
+			pBridge, err := bridgecontract.NewBridge(pBridgeAddr, bm.subBridge.remoteBackend)
+			if err != nil || pBridge == nil {
+				logger.Error("remote bridge creation is failed", "err", err, "bridge", pBridge)
+				break
+			}
+			err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridgeInfo.bridge, bam.mcAccount, false, false)
+			if err != nil {
+				logger.Error("setting remote bridge info is failed", "err", err)
+				break
+			}
+			pBridgeInfo, ok = bm.GetBridgeInfo(pBridgeAddr)
 		}
 
+		// Subscribe bridge events
 		if journal.Subscribed {
-			logger.Info("automatic bridge subscription", "local", cBridgeAddr, "remote", pBridgeAddr)
-			if err := bm.subscribeEvent(cBridgeAddr, cBridge); err != nil {
-				logger.Error("local bridge subscription is failed", err)
-				continue
+			if !cBridgeInfo.subscribed {
+				logger.Info("automatic local bridge subscription", "info", cBridgeInfo, "address", cBridgeInfo.address.String())
+				if err := bm.subscribeEvent(cBridgeAddr, cBridgeInfo.bridge); err != nil {
+					logger.Error("local bridge subscription is failed", "err", err)
+					break
+				}
 			}
-			if err := bm.subscribeEvent(pBridgeAddr, pBridge); err != nil {
-				// TODO-Klaytn need to consider how to retry.
-				bm.UnsubscribeEvent(cBridgeAddr)
-				logger.Error("local bridge subscription is failed", err)
-				continue
+			if !pBridgeInfo.subscribed {
+				logger.Info("automatic remote bridge subscription", "info", pBridgeInfo, "address", pBridgeInfo.address.String())
+				if err := bm.subscribeEvent(pBridgeAddr, pBridgeInfo.bridge); err != nil {
+					logger.Error("remote bridge subscription is failed", "err", err)
+					bm.DeleteBridgeInfo(pBridgeAddr)
+					break
+				}
 			}
-			bm.AddRecovery(cBridgeAddr, pBridgeAddr)
+			recovery := bm.recoveries[cBridgeAddr]
+			if recovery == nil {
+				bm.AddRecovery(cBridgeAddr, pBridgeAddr)
+			}
 		}
+
+		counter++
 	}
-	return nil
+
+	if len(bm.journal.cache) == counter {
+		logger.Info("succeeded to restore bridges", "pairs", counter)
+		return nil
+	}
+	return ErrBridgeRestore
 }
 
 // SetJournal inserts or updates journal for a given addresses pair.

@@ -593,6 +593,11 @@ func TestMethodRestoreBridges(t *testing.T) {
 		t.Fatal("bm restoring bridges failed")
 	}
 
+	// Duplicated RestoreBridges
+	if err := bm.RestoreBridges(); err != nil {
+		t.Fatal("bm restoring bridges failed")
+	}
+
 	// Case 1: check bridge contract creation.
 	for i := 0; i < 4; i++ {
 		info, _ := bm.GetBridgeInfo(bridgeAddrs[i])
@@ -937,7 +942,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	bm.bridges[addr] = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, nil, true, true)
+	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, nil, true, true)
 
 	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
 
@@ -979,9 +984,9 @@ func (bm *BridgeManager) deployBridgeTest(acc *accountInfo, backend *backends.Si
 	}
 	logger.Info("Bridge is deploying on CurrentChain", "addr", addr, "txHash", tx.Hash().String())
 
+	backend.Commit()
+
 	// TODO-Klaytn-Servicechain needs to support WaitMined
-	//backend.Commit()
-	//
 	//timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
 	//defer cancelTimeout()
 	//
