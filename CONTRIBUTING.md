@@ -45,26 +45,26 @@ You can use the following labels:
 
 Labels for initial issue categories:
 
-- bug: Issues with the code-level bugs.
-- documentation: Issues with the documentation.
-- enhancement: Issues for enhancement requests.
+- issue/bug: Issues with the code-level bugs.
+- issue/documentation: Issues with the documentation.
+- issue/enhancement: Issues for enhancement requests.
 
 Status of open issues (will be tagged by the project moderators):
 
 - (no label): The default status.
-- need more information : The issue's creator needs to provide additional information to review.
-- reviewing: The issue is under review.
-- re-label needed: The label needs to be changed to confirmed as being a `bug` or future `enhancement`.
-- approved: The issue is confirmed as being a `bug` to be fixed or `enhancement` to be developed.
-- contribution welcome: The fix or enhancement is approved and you are invited to contribute to it.
+- open/need more information : The issue's creator needs to provide additional information to review.
+- open/reviewing: The issue is under review.
+- open/re-label needed: The label needs to be changed to confirmed as being a `bug` or future `enhancement`.
+- open/approved: The issue is confirmed as being a `bug` to be fixed or `enhancement` to be developed.
+- open/contribution welcome: The fix or enhancement is approved and you are invited to contribute to it.
 
 Status of closed issues:
 
-- fixed: A fix for the issue was provided.
-- duplicate: The issue is also reported in a different issue and is being managed there.
-- invalid: The issue cannot be reproduced.
-- reject: The issue is rejected after review.
-- wontfix: This issue will not be worked on.
+- closed/fixed: A fix for the issue was provided.
+- closed/duplicate: The issue is also reported in a different issue and is being managed there.
+- closed/invalid: The issue cannot be reproduced.
+- closed/reject: The issue is rejected after review.
+- closed/wontfix: This issue will not be worked on.
 
 ### Code Contribution
 
