@@ -2,11 +2,11 @@
 
 ## 1. Your Use of Open Source Software
 
-We may make (but are not obligated to make) the source code of Klaytn Blockchain Network Platform (“Platform”), the software on the Platform, etc. for download as open source software. If you use this open source software, you agree to be bound by and comply with any license that applies to this open source software. You will not indicate that you are associated with us in connection with your use, modifications or distributions of this open source software.
+We may make (but are not obligated to make) the source code of Klaytn Blockchain Network Platform ("Platform"), the software on the Platform, etc. for download as open source software. If you use this open source software, you agree to be bound by and comply with any license that applies to this open source software. You will not indicate that you are associated with us in connection with your use, modifications or distributions of this open source software.
 
 ## 2. Services Provided on the Platform
 
-The Platform is a combination of peer-to-peer subnetworks of nodes transmitting transactions and blocks to execute value transfers and run smart contracts. The Core Cell Network (“CCN”), which is one of the subnetworks that constitute the Platform, verifies and executes transactions that occur on the Platform. The CCN is operated by Klaytn Governance Council, which is a collective group of Core Cell Operators, and Klaytn is not directly involved in any services that are provided in or individual transactions that occur on the Platform.
+The Platform is a combination of peer-to-peer subnetworks of nodes transmitting transactions and blocks to execute value transfers and run smart contracts. The Core Cell Network ("CCN"), which is one of the subnetworks that constitute the Platform, verifies and executes transactions that occur on the Platform. The CCN is operated by Klaytn Governance Council, which is a collective group of Core Cell Operators, and Klaytn is not directly involved in any services that are provided in or individual transactions that occur on the Platform.
 
 ## 3. Your Installation of BApp on the Platform
 
@@ -16,7 +16,7 @@ Once transaction is executed successfully and respective block generation is ver
 
 ## 4. User Content
 
-If you or the users of your BApp post, upload, input, provide or submit any content on the Platform (collectively, your “User Content”), you must ensure that the User Content provided by you or the users of your BApp at that or at any other time is true, accurate, up to date and complete and that any User Content you or the users of your BApp post, upload, input, provide or submit via the Platform do not breach or infringe legal rights of any third party. To the extent that is technically possible, you agree to prevent, remove or block access of any User Content that you or the users of your BApp post, upload, input, provide or submit via the Platform that violate or may violate legal rights (such as rights of privacy and publicity) of others or any applicable laws or regulations. We do not own, control or endorse any User Content that is transmitted, stored or processed via the Platform or sent to us and we are not responsible or liable for any User Content. We make no assurance that any of Your Content will be secured or that such content will remain confidential.
+If you or the users of your BApp post, upload, input, provide or submit any content on the Platform (collectively, your "User Content"), you must ensure that the User Content provided by you or the users of your BApp at that or at any other time is true, accurate, up to date and complete and that any User Content you or the users of your BApp post, upload, input, provide or submit via the Platform do not breach or infringe legal rights of any third party. To the extent that is technically possible, you agree to prevent, remove or block access of any User Content that you or the users of your BApp post, upload, input, provide or submit via the Platform that violate or may violate legal rights (such as rights of privacy and publicity) of others or any applicable laws or regulations. We do not own, control or endorse any User Content that is transmitted, stored or processed via the Platform or sent to us and we are not responsible or liable for any User Content. We make no assurance that any of Your Content will be secured or that such content will remain confidential.
 
 You are solely responsible and liable for all of your User Content and for your use of any interactive features, links or information or content on the Platform, and you represent and warrant that (i) you own all intellectual property rights (or have obtained all necessary permissions) to provide your User Content and to grant the licenses in these Terms of Use; (ii) your User Content will not violate any agreements or confidentiality obligations; and (iii) your User Content will not violate, infringe or misappropriate any intellectual property right or other proprietary right, including the right of publicity or privacy, of any person or entity. 
 
@@ -33,7 +33,3 @@ You are entirely responsible for any and all activities that occur under your ac
 By posting, uploading, inputting, providing or submitting your User Content to the Platform, you grant to participants of the Platform and any necessary sub-licensees a non-exclusive, worldwide, perpetual, right and permission to use, reproduce, copy, edit, modify, translate, reformat, create derivative works from, distribute, transmit, publicly perform and publicly display your User Content and sub-license such rights to others.
 
 If we have reason to believe that there is likely to be a breach of security, breach or misuse of the Platform or if you breach any of your obligations under these terms, we may suspend your use of the Platform at any time and for any reason. 
-
- 
-
- 
