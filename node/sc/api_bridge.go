@@ -93,8 +93,8 @@ func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 		return nil, err
 	}
 
-	pAcc := sbapi.sc.bridgeManager.subBridge.bridgeAccountManager.mcAccount
-	cAcc := sbapi.sc.bridgeManager.subBridge.bridgeAccountManager.scAccount
+	pAcc := sbapi.sc.bridgeAccountManager.mcAccount
+	cAcc := sbapi.sc.bridgeAccountManager.scAccount
 
 	err = sbapi.sc.bridgeManager.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, cAcc, true, false)
 	if err != nil {
@@ -106,14 +106,8 @@ func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 		return nil, err
 	}
 
-	err = sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
-	if err != nil {
-		return nil, err
-	}
-
 	err = sbapi.sc.bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
 	if err != nil {
-		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
 		return nil, err
 	}
 
@@ -122,7 +116,7 @@ func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 
 // SubscribeBridge enables the given service/main chain bridges to subscribe the events.
 func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
-	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
+	if !sbapi.sc.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
 
@@ -135,7 +129,6 @@ func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Addre
 	err = sbapi.sc.bridgeManager.SubscribeEvent(pBridgeAddr)
 	if err != nil {
 		logger.Error("Failed to SubscribeEvent parent bridge", "addr", pBridgeAddr, "err", err)
-		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
 		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
 		return err
 	}
@@ -147,8 +140,6 @@ func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Addre
 
 	err = sbapi.sc.bridgeManager.AddRecovery(cBridgeAddr, pBridgeAddr)
 	if err != nil {
-		// TODO-Klaytn-ServiceChain: delete the journal
-		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
 		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
 		sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)
 		return err
@@ -158,7 +149,7 @@ func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Addre
 
 // UnsubscribeBridge disables the event subscription of the given service/main chain bridges.
 func (sbapi *SubBridgeAPI) UnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
-	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
+	if !sbapi.sc.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
 
@@ -188,13 +179,13 @@ func (sbapi *SubBridgeAPI) ListBridge() []*BridgeJournal {
 }
 
 func (sbapi *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[string]interface{}, error) {
-	if ctBridge := sbapi.sc.AddressManager().GetCounterPartBridge(bridgeAddr); ctBridge == (common.Address{}) {
+	if ctBridge := sbapi.sc.bridgeManager.GetCounterPartBridgeAddr(bridgeAddr); ctBridge == (common.Address{}) {
 		return nil, ErrInvalidBridgePair
 	}
 
 	bi, ok := sbapi.sc.bridgeManager.GetBridgeInfo(bridgeAddr)
 	if !ok {
-		return nil, errNoBridgeInfo
+		return nil, ErrNoBridgeInfo
 	}
 
 	bi.UpdateInfo()
@@ -219,11 +210,6 @@ func (sbapi *SubBridgeAPI) GetAnchoring() bool {
 }
 
 func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
-	err := sbapi.sc.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
-	if err != nil {
-		return err
-	}
-
 	cBridge, err := bridge.NewBridge(cBridgeAddr, sbapi.sc.localBackend)
 	if err != nil {
 		return err
@@ -246,7 +232,6 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 
 	err = bm.SetJournal(cBridgeAddr, pBridgeAddr)
 	if err != nil {
-		sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
 		return err
 	}
 
@@ -254,7 +239,7 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 }
 
 func (sbapi *SubBridgeAPI) DeregisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
-	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
+	if !sbapi.sc.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
 
@@ -282,15 +267,14 @@ func (sbapi *SubBridgeAPI) DeregisterBridge(cBridgeAddr common.Address, pBridgeA
 		logger.Warn("failed to Delete main chain bridge info", "err", err, "bridge", pBridgeAddr.String())
 	}
 
-	_, _, err := sbapi.sc.AddressManager().DeleteBridge(cBridgeAddr)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
+	if !sbapi.sc.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
+		return ErrInvalidBridgePair
+	}
+
 	cBi, cExist := sbapi.sc.bridgeManager.GetBridgeInfo(cBridgeAddr)
 	pBi, pExist := sbapi.sc.bridgeManager.GetBridgeInfo(pBridgeAddr)
 
@@ -298,8 +282,14 @@ func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, p
 		return errors.New("bridge does not exist")
 	}
 
-	if sbapi.sc.AddressManager().GetCounterPartBridge(cBridgeAddr) != pBridgeAddr {
-		return ErrInvalidBridgePair
+	err := cBi.RegisterToken(cTokenAddr, pTokenAddr)
+	if err != nil {
+		return err
+	}
+
+	err = pBi.RegisterToken(pTokenAddr, cTokenAddr)
+	if err != nil {
+		return err
 	}
 
 	cBi.account.Lock()
@@ -320,27 +310,29 @@ func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, p
 	}
 	pBi.account.IncNonce()
 	pBi.account.UnLock()
-
 	logger.Debug("mcBridge registered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
 
-	if err := sbapi.sc.AddressManager().AddToken(cTokenAddr, pTokenAddr); err != nil {
-		return err
-	}
 	logger.Info("Register token", "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
 	return nil
 }
 
 func (sbapi *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
-	if sbapi.sc.AddressManager().GetCounterPartToken(cTokenAddr) != pTokenAddr {
-		return errors.New("invalid toke pair")
-	}
-
 	cBi, cExist := sbapi.sc.bridgeManager.GetBridgeInfo(cBridgeAddr)
 	pBi, pExist := sbapi.sc.bridgeManager.GetBridgeInfo(pBridgeAddr)
 
 	if !cExist || !pExist {
 		return errors.New("bridge does not exist")
 	}
+
+	pTokenAddrCheck := cBi.GetCounterPartToken(cTokenAddr)
+	cTokenAddrCheck := pBi.GetCounterPartToken(pTokenAddr)
+
+	if pTokenAddr != pTokenAddrCheck || cTokenAddr != cTokenAddrCheck {
+		return errors.New("invalid toke pair")
+	}
+
+	cBi.DeregisterToken(cTokenAddr, pTokenAddr)
+	pBi.DeregisterToken(pTokenAddr, cTokenAddr)
 
 	cBi.account.Lock()
 	defer cBi.account.UnLock()
@@ -359,8 +351,6 @@ func (sbapi *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr,
 	}
 	pBi.account.IncNonce()
 	logger.Debug("mcBridge deregistered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
-
-	_, _, err = sbapi.sc.AddressManager().DeleteToken(cTokenAddr)
 	return err
 }
 

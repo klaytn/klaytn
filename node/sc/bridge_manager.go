@@ -46,10 +46,12 @@ const (
 )
 
 var (
-	errNoBridgeInfo         = errors.New("bridge information does not exist")
-	errDuplicatedBridgeInfo = errors.New("bridge information is duplicated")
-	errNoRecovery           = errors.New("recovery does not exist")
-	errAlreadySubscribed    = errors.New("already subscribed")
+	ErrInvalidTokenPair     = errors.New("invalid token pair")
+	ErrNoBridgeInfo         = errors.New("bridge information does not exist")
+	ErrDuplicatedBridgeInfo = errors.New("bridge information is duplicated")
+	ErrDuplicatedToken      = errors.New("token is duplicated")
+	ErrNoRecovery           = errors.New("recovery does not exist")
+	ErrAlreadySubscribed    = errors.New("already subscribed")
 )
 
 // RequestValueTransferEvent from Bridge contract
@@ -99,6 +101,8 @@ type BridgeInfo struct {
 	onServiceChain     bool
 	subscribed         bool
 
+	counterpartToken map[common.Address]common.Address
+
 	pendingRequestEvent *bridgepool.ItemSortedMap // TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
 	nextHandleNonce     uint64                    // This nonce will be used for getting pending request value transfer events.
 
@@ -121,6 +125,7 @@ func NewBridgeInfo(subBridge *SubBridge, addr common.Address, bridge *bridgecont
 		cpBridge,
 		local,
 		subscribed,
+		make(map[common.Address]common.Address),
 		bridgepool.NewItemSortedMap(),
 		0,
 		true,
@@ -160,6 +165,32 @@ func (bi *BridgeInfo) loop() {
 			return
 		}
 	}
+}
+
+func (bi *BridgeInfo) RegisterToken(token, counterpartToken common.Address) error {
+	_, exist := bi.counterpartToken[token]
+	if exist {
+		return ErrDuplicatedToken
+	}
+	bi.counterpartToken[token] = counterpartToken
+	return nil
+}
+
+func (bi *BridgeInfo) DeregisterToken(token, counterpartToken common.Address) error {
+	_, exist := bi.counterpartToken[token]
+	if !exist {
+		return ErrInvalidTokenPair
+	}
+	delete(bi.counterpartToken, token)
+	return nil
+}
+
+func (bi *BridgeInfo) GetCounterPartToken(token common.Address) common.Address {
+	cpToken, exist := bi.counterpartToken[token]
+	if !exist {
+		return common.Address{}
+	}
+	return cpToken
 }
 
 func (bi *BridgeInfo) GetPendingRequestEvents(start uint64) []*RequestValueTransferEvent {
@@ -213,7 +244,7 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 
 func (bi *BridgeInfo) UpdateInfo() error {
 	if bi == nil {
-		return errNoBridgeInfo
+		return ErrNoBridgeInfo
 	}
 
 	rn, err := bi.bridge.RequestNonce(nil)
@@ -235,19 +266,14 @@ func (bi *BridgeInfo) UpdateInfo() error {
 	}
 	bi.isRunning = isRunning
 
-	counterPart, err := bi.bridge.CounterpartBridge(nil)
-	if err != nil {
-		return err
-	}
-	bi.counterpartAddress = counterPart
-
 	return nil
 }
 
 // handleRequestValueTransferEvent handles the given request value transfer event.
 func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEvent) error {
 	tokenType := ev.TokenType
-	tokenAddr := bi.subBridge.AddressManager().GetCounterPartToken(ev.TokenAddr)
+	tokenAddr := bi.GetCounterPartToken(ev.TokenAddr)
+	// TODO-Klaytn-Servicechain Add counterpart token address in requestValueTransferEvent
 	if tokenType != KLAY && tokenAddr == (common.Address{}) {
 		logger.Warn("Unregistered counter part token address.", "addr", tokenAddr.Hex())
 		ctTokenAddr, err := bi.counterpartBridge.AllowedTokens(nil, ev.TokenAddr)
@@ -258,7 +284,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 			return errors.New("can't get counterpart token from bridge")
 		}
 
-		if err := bi.subBridge.AddressManager().AddToken(ev.TokenAddr, ctTokenAddr); err != nil {
+		if err := bi.RegisterToken(ev.TokenAddr, ctTokenAddr); err != nil {
 			return err
 		}
 		tokenAddr = ctTokenAddr
@@ -427,6 +453,35 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 	return bridgeManager, nil
 }
 
+func (bm *BridgeManager) IsValidBridgePair(bridge1, bridge2 common.Address) bool {
+	b1, ok1 := bm.GetBridgeInfo(bridge1)
+	b2, ok2 := bm.GetBridgeInfo(bridge2)
+
+	if ok1 && ok2 {
+		if bridge1 == b2.counterpartAddress && bridge2 == b1.counterpartAddress {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (bm *BridgeManager) GetCounterPartBridgeAddr(bridgeAddr common.Address) common.Address {
+	bridge, ok := bm.GetBridgeInfo(bridgeAddr)
+	if ok {
+		return bridge.counterpartAddress
+	}
+	return common.Address{}
+}
+
+func (bm *BridgeManager) GetCounterPartBridge(bridgeAddr common.Address) *bridgecontract.Bridge {
+	bridge, ok := bm.GetBridgeInfo(bridgeAddr)
+	if ok {
+		return bridge.counterpartBridge
+	}
+	return nil
+}
+
 // LogBridgeStatus logs the bridge contract requested/handled nonce status as an information.
 func (bm *BridgeManager) LogBridgeStatus() {
 	bm.mu.RLock()
@@ -497,7 +552,7 @@ func (bm *BridgeManager) DeleteBridgeInfo(addr common.Address) error {
 
 	bi := bm.bridges[addr]
 	if bi == nil {
-		return errNoBridgeInfo
+		return ErrNoBridgeInfo
 	}
 
 	close(bi.closed)
@@ -512,7 +567,7 @@ func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontra
 	defer bm.mu.Unlock()
 
 	if bm.bridges[addr] != nil {
-		return errDuplicatedBridgeInfo
+		return ErrDuplicatedBridgeInfo
 	}
 	bm.bridges[addr] = NewBridgeInfo(bm.subBridge, addr, bridge, cpAddr, cpBridge, account, local, subscribed)
 	return nil
@@ -546,7 +601,6 @@ func (bm *BridgeManager) RestoreBridges() error {
 			logger.Error("setting remote bridge info is failed", err)
 			continue
 		}
-		bm.subBridge.AddressManager().AddBridge(cBridgeAddr, pBridgeAddr)
 
 		if journal.Subscribed {
 			logger.Info("automatic bridge subscription", "local", cBridgeAddr, "remote", pBridgeAddr)
@@ -556,7 +610,6 @@ func (bm *BridgeManager) RestoreBridges() error {
 			}
 			if err := bm.subscribeEvent(pBridgeAddr, pBridge); err != nil {
 				// TODO-Klaytn need to consider how to retry.
-				bm.subBridge.AddressManager().DeleteBridge(cBridgeAddr)
 				bm.UnsubscribeEvent(cBridgeAddr)
 				logger.Error("local bridge subscription is failed", err)
 				continue
@@ -583,11 +636,11 @@ func (bm *BridgeManager) AddRecovery(localAddress, remoteAddress common.Address)
 	// Check if bridge information is exist.
 	localBridgeInfo, ok := bm.GetBridgeInfo(localAddress)
 	if !ok {
-		return errNoBridgeInfo
+		return ErrNoBridgeInfo
 	}
 	remoteBridgeInfo, ok := bm.GetBridgeInfo(remoteAddress)
 	if !ok {
-		return errNoBridgeInfo
+		return ErrNoBridgeInfo
 	}
 
 	// Create and start value transfer recovery.
@@ -602,7 +655,7 @@ func (bm *BridgeManager) DeleteRecovery(localAddress, remoteAddress common.Addre
 	// Stop the recovery.
 	recovery, ok := bm.recoveries[localAddress]
 	if !ok {
-		return errNoRecovery
+		return ErrNoRecovery
 	}
 	recovery.Stop()
 	delete(bm.recoveries, localAddress)
@@ -674,10 +727,10 @@ func (bm *BridgeManager) deployBridge(acc *accountInfo, backend bind.ContractBac
 func (bm *BridgeManager) SubscribeEvent(addr common.Address) error {
 	bridgeInfo, ok := bm.GetBridgeInfo(addr)
 	if !ok {
-		return errNoBridgeInfo
+		return ErrNoBridgeInfo
 	}
 	if bridgeInfo.subscribed {
-		return errAlreadySubscribed
+		return ErrAlreadySubscribed
 	}
 	err := bm.subscribeEvent(addr, bridgeInfo.bridge)
 	if err != nil {
@@ -739,7 +792,7 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 		withdrawnSub.Unsubscribe()
 		delete(bm.receivedEvents, addr)
 		delete(bm.withdrawEvents, addr)
-		return errNoBridgeInfo
+		return ErrNoBridgeInfo
 	}
 	bridgeInfo.subscribed = true
 
