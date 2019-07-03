@@ -32,7 +32,7 @@ func TestBridgeJournal(t *testing.T) {
 		}
 	}()
 
-	journal := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
+	journal := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"))
 	if err := journal.load(func(journal BridgeJournal) error {
 		t.Log("Local address ", journal.LocalAddress.Hex())
 		t.Log("Remote address ", journal.RemoteAddress.Hex())
@@ -62,7 +62,7 @@ func TestBridgeJournal(t *testing.T) {
 		t.Fatalf("fail to close file %v", err)
 	}
 
-	journal = newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
+	journal = newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"))
 
 	if err := journal.load(func(journal BridgeJournal) error {
 		switch address := journal.LocalAddress.Hex(); address {
@@ -87,56 +87,6 @@ func TestBridgeJournal(t *testing.T) {
 	}
 }
 
-// TestBridgeJournalDisable tests insert method when VTRecovery is disabled.
-func TestBridgeJournalDisable(t *testing.T) {
-	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), "test.rlp")); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
-
-	// Step 1: Make new journal
-	addrJournal := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: false})
-
-	if err := addrJournal.load(func(journal BridgeJournal) error {
-		t.Log("Local address ", journal.LocalAddress.Hex())
-		t.Log("Remote address ", journal.RemoteAddress.Hex())
-		t.Log("Subscribed", journal.Subscribed)
-		return nil
-	}); err != nil {
-		t.Fatalf("fail to load journal %v", err)
-	}
-	if err := addrJournal.rotate([]*BridgeJournal{}); err != nil {
-		t.Fatalf("fail to rotate journal %v", err)
-	}
-
-	err := addrJournal.insert(common.BytesToAddress([]byte("test1")), common.BytesToAddress([]byte("test2")))
-	if err != nil {
-		t.Fatalf("fail to insert address %v", err)
-	}
-
-	if err := addrJournal.close(); err != nil {
-		t.Fatalf("fail to close file %v", err)
-	}
-
-	// Step 2: Check journal is empty.
-	addrJournal = newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
-
-	if err := addrJournal.load(func(journal BridgeJournal) error {
-		t.Log("Local address ", journal.LocalAddress.Hex())
-		t.Log("Remote address ", journal.RemoteAddress.Hex())
-		t.Log("Subscribed", journal.Subscribed)
-		addrJournal.cache[journal.LocalAddress] = &journal
-		return nil
-	}); err != nil {
-		t.Fatalf("fail to load journal %v", err)
-	}
-
-	if len(addrJournal.cache) > 0 {
-		t.Fatalf("fail to disabling journal option %v", err)
-	}
-}
-
 // TestBridgeJournalCache tests the journal cache.
 func TestBridgeJournalCache(t *testing.T) {
 	defer func() {
@@ -146,7 +96,7 @@ func TestBridgeJournalCache(t *testing.T) {
 	}()
 
 	// Step 1: Make new journal
-	journals := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"), &SCConfig{VTRecovery: true})
+	journals := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"))
 
 	if err := journals.load(func(journal BridgeJournal) error { return nil }); err != nil {
 		t.Fatalf("fail to load journal %v", err)

@@ -37,6 +37,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"math/big"
+	"net"
 	"sync"
 	"time"
 )
@@ -46,6 +47,7 @@ const (
 	chainHeadChanSize   = 10000
 	chainLogChanSize    = 10000
 	transactionChanSize = 10000
+	rpcBufferSize       = 1024 * 1024
 )
 
 // NodeInfo represents a short summary of the Klaytn sub-protocol metadata
@@ -104,6 +106,10 @@ type MainBridge struct {
 	peers        *bridgePeerSet
 	handler      *MainBridgeHandler
 	eventhandler *MainChainEventHandler
+
+	rpcServer     *rpc.Server
+	rpcConn       net.Conn
+	rpcResponseCh chan []byte
 }
 
 // New creates a new CN object (including the
@@ -130,6 +136,7 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 		txCh:           make(chan blockchain.NewTxsEvent, transactionChanSize),
 		quitSync:       make(chan struct{}),
 		maxPeers:       config.MaxPeer,
+		rpcResponseCh:  make(chan []byte),
 	}
 
 	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
@@ -151,6 +158,26 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 	if err != nil {
 		return nil, err
 	}
+
+	sc.rpcServer = rpc.NewServer()
+	p1, p2 := net.Pipe()
+	sc.rpcConn = p1
+	go sc.rpcServer.ServeCodec(rpc.NewJSONCodec(p2), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
+
+	go func() {
+		for {
+			data := make([]byte, rpcBufferSize)
+			rlen, err := sc.rpcConn.Read(data)
+			if err != nil {
+				logger.Error("failed to read from RPC server pipe", "err", err)
+			}
+			logger.Trace("mainbridge message from rpc server pipe", "rlen", rlen)
+			err = sc.SendRPCResponseData(data[:rlen])
+			if err != nil {
+				logger.Error("failed to send response data from RPC server pipe", err)
+			}
+		}
+	}()
 
 	return sc, nil
 }
@@ -210,6 +237,17 @@ func (sc *MainBridge) SetComponents(components []interface{}) {
 			sc.txPool = v
 			// event from core-service
 			sc.txSub = sc.txPool.SubscribeNewTxsEvent(sc.txCh)
+		case []rpc.API:
+			logger.Debug("p2p rpc registered", "len(v)", len(v))
+			for _, api := range v {
+				// net is not necessary in the main bridge.
+				if api.Public && api.Namespace != "net" {
+					logger.Error("p2p rpc registered", "namespace", api.Namespace)
+					if err := sc.rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
+						logger.Error("pRPC failed to register", "namespace", api.Namespace)
+					}
+				}
+			}
 		}
 	}
 
@@ -366,6 +404,21 @@ func (pm *MainBridge) handle(p BridgePeer) error {
 			return err
 		}
 	}
+}
+
+func (sb *MainBridge) SendRPCResponseData(data []byte) error {
+	peers := sb.BridgePeerSet().peers
+	logger.Trace("mainbridge send rpc response data to peers", "data len", len(data), "peers", len(peers))
+	for _, peer := range peers {
+		err := peer.SendResponseRPC(data)
+		if err != nil {
+			logger.Error("failed to send rpc response to the peer", "err", err)
+		}
+		return err
+	}
+
+	// TODO-Klaytn Added timeout basedon ctx
+	return nil
 }
 
 func (sc *MainBridge) loop() {

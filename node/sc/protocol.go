@@ -31,17 +31,22 @@ const (
 	// Protocol messages belonging to servicechain/1
 	StatusMsg = 0x00
 
+	// Below message can be deprecated.
 	ServiceChainTxsMsg                     = 0x01
 	ServiceChainReceiptResponseMsg         = 0x02
 	ServiceChainReceiptRequestMsg          = 0x03
 	ServiceChainParentChainInfoResponseMsg = 0x04
 	ServiceChainParentChainInfoRequestMsg  = 0x05
+
+	ServiceChainCall     = 0x06
+	ServiceChainResponse = 0x07
+	ServiceChainNotify   = 0x08
 )
 
 var (
 	SCProtocolName    = "servicechain"
 	SCProtocolVersion = []uint{1}
-	SCProtocolLength  = []uint64{6}
+	SCProtocolLength  = []uint64{9}
 )
 
 // Protocol defines the protocol of the consensus

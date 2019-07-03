@@ -491,9 +491,6 @@ func TestBasicJournal(t *testing.T) {
 
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
-	if sc.addressManager, err = NewAddressManager(); err != nil {
-		t.Fatal("new address manager is failed")
-	}
 
 	localAddr, err := bm.DeployBridgeTest(sim, true)
 	if err != nil {
@@ -504,7 +501,6 @@ func TestBasicJournal(t *testing.T) {
 		t.Fatal("deploy bridge test failed", remoteAddr)
 	}
 
-	sc.addressManager.AddBridge(localAddr, remoteAddr)
 	bm.SetJournal(localAddr, remoteAddr)
 
 	if err := bm.RestoreBridges(); err != nil {
@@ -514,12 +510,10 @@ func TestBasicJournal(t *testing.T) {
 	localInfo, ok := bm.GetBridgeInfo(localAddr)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, false, localInfo.subscribed)
-	assert.Equal(t, sc.addressManager.GetCounterPartBridge(localAddr), remoteAddr)
 
 	remoteInfo, ok := bm.GetBridgeInfo(remoteAddr)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, false, remoteInfo.subscribed)
-	assert.Equal(t, sc.addressManager.GetCounterPartBridge(remoteAddr), localAddr)
 }
 
 // TestMethodRestoreBridges tests restoring bridges from the journal.
@@ -572,10 +566,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 	}
 
 	// Prepare manager and deploy bridge contract.
-	bm, err := NewBridgeManager(sc)
-	if sc.addressManager, err = NewAddressManager(); err != nil {
-		t.Fatal("new address manager is failed")
-	}
+	bm, _ := NewBridgeManager(sc)
 
 	var bridgeAddrs [4]common.Address
 	for i := 0; i < 4; i++ {
@@ -592,14 +583,17 @@ func TestMethodRestoreBridges(t *testing.T) {
 	sim.Commit()
 
 	// Set journal
-	sc.addressManager.AddBridge(bridgeAddrs[0], bridgeAddrs[1])
 	bm.SetJournal(bridgeAddrs[0], bridgeAddrs[1])
 	bm.journal.cache[bridgeAddrs[0]].Subscribed = true
-	sc.addressManager.AddBridge(bridgeAddrs[2], bridgeAddrs[3])
 	bm.SetJournal(bridgeAddrs[2], bridgeAddrs[3])
 	bm.journal.cache[bridgeAddrs[2]].Subscribed = true
 
 	// Call RestoreBridges
+	if err := bm.RestoreBridges(); err != nil {
+		t.Fatal("bm restoring bridges failed")
+	}
+
+	// Duplicated RestoreBridges
 	if err := bm.RestoreBridges(); err != nil {
 		t.Fatal("bm restoring bridges failed")
 	}
@@ -610,18 +604,13 @@ func TestMethodRestoreBridges(t *testing.T) {
 		assert.NotEqual(t, nil, info.bridge)
 	}
 
-	// Case 2: check address manager
-	am := bm.subBridge.addressManager
-	assert.Equal(t, bridgeAddrs[1], am.GetCounterPartBridge(bridgeAddrs[0]))
-	assert.Equal(t, bridgeAddrs[3], am.GetCounterPartBridge(bridgeAddrs[2]))
-
-	// Case 3: check subscription
+	// Case 2: check subscription
 	for i := 0; i < 4; i++ {
 		info, _ := bm.GetBridgeInfo(bridgeAddrs[i])
 		assert.Equal(t, true, info.subscribed)
 	}
 
-	// Case 4: check recovery
+	// Case 3: check recovery
 	recovery1 := bm.recoveries[bridgeAddrs[0]]
 	assert.NotEqual(t, nil, recovery1)
 	recovery1.Start()
@@ -848,9 +837,6 @@ func TestScenarioSubUnsub(t *testing.T) {
 
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
-	if sc.addressManager, err = NewAddressManager(); err != nil {
-		t.Fatal("new address manager is failed")
-	}
 
 	localAddr, err := bm.DeployBridgeTest(sim, true)
 	if err != nil {
@@ -956,24 +942,8 @@ func TestErrorDupSubscription(t *testing.T) {
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	bm.bridges[addr] = &BridgeInfo{
-		nil,
-		addr,
-		common.Address{},
-		nil,
-		bridge,
-		nil,
-		true,
-		true,
-		newEventSortedMap(),
-		0,
-		true,
-		0,
-		0,
-		0,
-		make(chan struct{}),
-		make(chan struct{}),
-	}
+	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, nil, true, true)
+
 	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
 
 	bm.SubscribeEvent(addr)
@@ -1014,9 +984,9 @@ func (bm *BridgeManager) deployBridgeTest(acc *accountInfo, backend *backends.Si
 	}
 	logger.Info("Bridge is deploying on CurrentChain", "addr", addr, "txHash", tx.Hash().String())
 
+	backend.Commit()
+
 	// TODO-Klaytn-Servicechain needs to support WaitMined
-	//backend.Commit()
-	//
 	//timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
 	//defer cancelTimeout()
 	//

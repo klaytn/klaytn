@@ -697,7 +697,7 @@ var (
 		"node/cn/peer.go":                                    "eth/peer.go",
 		"node/cn/api_test.go":                                "eth/api_test.go",
 		"node/sc/bridge_addr_journal.go":                     "core/tx_journal.go",
-		"node/sc/bridge_event_list.go":                       "core/tx_list.go",
+		"node/sc/sorted_map_list.go":                         "core/tx_list.go",
 		"node/sc/bridge_tx_journal.go":                       "core/tx_journal.go",
 		"node/sc/bridge_tx_list.go":                          "core/tx_list.go",
 		"node/sc/bridge_tx_pool.go":                          "core/tx_pool.go",

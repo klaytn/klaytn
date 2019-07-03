@@ -219,12 +219,12 @@ func (io StdIOConn) SetWriteDeadline(t time.Time) error {
 	return &net.OpError{Op: "set", Net: "stdio", Source: nil, Addr: nil, Err: errors.New("deadline not supported")}
 }
 func DialStdIO(ctx context.Context) (*Client, error) {
-	return newClient(ctx, func(_ context.Context) (net.Conn, error) {
+	return NewClient(ctx, func(_ context.Context) (net.Conn, error) {
 		return StdIOConn{}, nil
 	})
 }
 
-func newClient(initctx context.Context, connectFunc func(context.Context) (net.Conn, error)) (*Client, error) {
+func NewClient(initctx context.Context, connectFunc func(context.Context) (net.Conn, error)) (*Client, error) {
 	conn, err := connectFunc(initctx)
 	if err != nil {
 		return nil, err
@@ -463,7 +463,7 @@ func (c *Client) newMessage(method string, paramsIn ...interface{}) (*jsonrpcMes
 func (c *Client) send(ctx context.Context, op *requestOp, msg interface{}) error {
 	select {
 	case c.requestOp <- op:
-		logger.Trace("", "msg", log.Lazy{Fn: func() string {
+		logger.Trace("rpc client send", "msg", log.Lazy{Fn: func() string {
 			return fmt.Sprint("sending ", msg)
 		}})
 		err := c.write(ctx, msg)
@@ -551,17 +551,17 @@ func (c *Client) dispatch(conn net.Conn) {
 			for _, msg := range batch {
 				switch {
 				case msg.isNotification():
-					logger.Trace("", "msg", log.Lazy{Fn: func() string {
+					logger.Trace("rpc client Notification", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: notification ", msg)
 					}})
 					c.handleNotification(msg)
 				case msg.isResponse():
-					logger.Trace("", "msg", log.Lazy{Fn: func() string {
+					logger.Trace("rpc client Response", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: response ", msg)
 					}})
 					c.handleResponse(msg)
 				default:
-					logger.Debug("", "msg", log.Lazy{Fn: func() string {
+					logger.Debug("rpc client default", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: dropping weird message", msg)
 					}})
 					// TODO: maybe close
