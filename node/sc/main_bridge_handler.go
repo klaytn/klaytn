@@ -27,7 +27,6 @@ import (
 )
 
 var (
-	ErrNoChildChainID    = errors.New("There is no childChainID")
 	ErrRPCBufferOverflow = errors.New("received mainbridge rpc call message is bigger than buffer")
 	ErrRPCDecode         = errors.New("failed to decode mainbridge rpc call message")
 )
