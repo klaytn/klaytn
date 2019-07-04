@@ -27,7 +27,6 @@ import (
 )
 
 var (
-	ErrRPCBufferOverflow = errors.New("received mainbridge rpc call message is bigger than buffer")
 	ErrRPCDecode         = errors.New("failed to decode mainbridge rpc call message")
 )
 
@@ -83,8 +82,6 @@ func (mbh *MainBridgeHandler) HandleSubMsg(p BridgePeer, msg p2p.Msg) error {
 }
 
 func (mbh *MainBridgeHandler) handleCallMsg(p BridgePeer, msg p2p.Msg) error {
-	// Decode p2p message
-	// TODO-Klaytn-ServiceChain: check msg.Size is enough.
 	logger.Trace("mainbridge writes the rpc call message to rpc server", "msg.Size", msg.Size, "msg", msg)
 	data := make([]byte, msg.Size)
 	err := msg.Decode(&data)
@@ -92,12 +89,6 @@ func (mbh *MainBridgeHandler) handleCallMsg(p BridgePeer, msg p2p.Msg) error {
 		logger.Error("error in mainbridge message handler", err)
 		return err
 	}
-	if uint32(len(data)) > msg.Size {
-		logger.Error("received mainbridge rpc call message is bigger than buffer", "msg", msg.Size, "data", len(data))
-		return ErrRPCBufferOverflow
-	}
-
-	logger.Trace("mainbridge writes the rpc call message to rpc server", "data", len(data))
 
 	// Write to RPC server pipe
 	_, err = mbh.mainbridge.rpcConn.Write(data)
