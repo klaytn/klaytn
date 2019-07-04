@@ -240,7 +240,7 @@ func (sc *MainBridge) SetComponents(components []interface{}) {
 		case []rpc.API:
 			logger.Debug("p2p rpc registered", "len(v)", len(v))
 			for _, api := range v {
-				// net is not necessary in the main bridge.
+				// TODO-Klaytn-ServiceChain: actually only klay namespace is required.
 				if api.Public && api.Namespace != "net" {
 					logger.Error("p2p rpc registered", "namespace", api.Namespace)
 					if err := sc.rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
