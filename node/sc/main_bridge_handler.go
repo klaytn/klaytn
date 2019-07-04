@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	ErrRPCDecode         = errors.New("failed to decode mainbridge rpc call message")
+	ErrRPCDecode = errors.New("failed to decode mainbridge rpc call message")
 )
 
 type MainBridgeHandler struct {
