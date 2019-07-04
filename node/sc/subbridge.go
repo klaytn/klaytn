@@ -331,11 +331,6 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 	sc.requestEventSub = sc.bridgeManager.SubscribeTokenReceived(sc.requestEventCh)
 	sc.handleEventSub = sc.bridgeManager.SubscribeTokenWithDraw(sc.handleEventCh)
 
-	//if err := sc.bridgeManager.RestoreBridges(); err != nil {
-	//	logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
-	//} else {
-	//	sc.isAllBridgeRestored = true
-	//}
 	go sc.restoreBridgeLoop()
 
 	sc.bridgeAccountManager.scAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccountManager.scAccount.address))
@@ -522,7 +517,6 @@ func (sc *SubBridge) restoreBridgeLoop() {
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
-	// Keep waiting for and reacting to the various events
 	for {
 		select {
 		case <-sc.quitSync:
