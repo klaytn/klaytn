@@ -11,17 +11,16 @@ jobs:
       - run:
           name: "Build"
           command: |
-            cd $HOME
-            wget https://s3.ap-northeast-2.amazonaws.com/klaytn-ops-stuff/circle-ci/go1.11.2.tar.gz
-            tar xfz go1.11.2.tar.gz
-            export PATH=$HOME/go-go1.11.2/bin:$PATH
-            cd -
+            curl -O https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz
+            mkdir $HOME/go1.12.5
+            tar -C $HOME/go1.12.5 -xzf go1.12.5.linux-amd64.tar.gz
+            export PATH=$HOME/go1.12.5/go/bin:$PATH
             make fmt
             make all
 
   test-datasync:
     docker:
-      - image: kjhman21/dev:go1.11.2-solc0.4.24
+      - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -32,7 +31,7 @@ jobs:
 
   test-networks:
     docker:
-      - image: kjhman21/dev:go1.11.2-solc0.4.24
+      - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -43,7 +42,7 @@ jobs:
 
   test-tests:
     docker:
-      - image: kjhman21/dev:go1.11.2-solc0.4.24
+      - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -55,7 +54,7 @@ jobs:
 
   test-others:
     docker:
-      - image: kjhman21/dev:go1.11.2-solc0.4.24
+      - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -66,7 +65,7 @@ jobs:
 
   coverage:
     docker:
-      - image: kjhman21/dev:go1.11.2-solc0.4.24
+      - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
