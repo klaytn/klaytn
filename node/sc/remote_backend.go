@@ -187,7 +187,7 @@ func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.H
 	return r, err
 }
 
-// ChainID can return the chain ID of the chain by using the p2p client.
+// ChainID returns the chain ID of the sub-bridge configuration.
 func (rb *RemoteBackend) ChainID(ctx context.Context) (*big.Int, error) {
 	return big.NewInt(int64(rb.subBridge.config.ParentChainID)), nil
 }
