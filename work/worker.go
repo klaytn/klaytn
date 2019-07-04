@@ -269,29 +269,8 @@ func (self *worker) handleTxsCh(quitByErr chan bool) {
 	for {
 		select {
 		// Handle NewTxsEvent
-		case ev := <-self.txsCh:
-			// Apply transactions to the pending state if we're not mining.
-			//
-			// Note all transactions received may not be continuous with transactions
-			// already included in the current mining block. These transactions will
-			// be automatically eliminated.
-			if atomic.LoadInt32(&self.mining) == 0 {
-				self.currentMu.Lock()
-				self.current.stateMu.Lock()
-				txs := make(map[common.Address]types.Transactions)
-				for _, tx := range ev.Txs {
-					acc, err := types.Sender(self.current.signer, tx)
-					if err != nil {
-						logger.Error("fail to types.Sender ", err)
-					}
-					txs[acc] = append(txs[acc], tx)
-				}
-				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
-				self.current.commitTransactions(self.mux, txset, self.chain, self.rewardbase)
-				self.updateSnapshot()
-				self.current.stateMu.Unlock()
-				self.currentMu.Unlock()
-			} else {
+		case <-self.txsCh:
+			if atomic.LoadInt32(&self.mining) != 0 {
 				// If we're mining, but nothing is being processed, wake on new transactions
 				if self.config.Clique != nil && self.config.Clique.Period == 0 {
 					self.commitNewWork()
