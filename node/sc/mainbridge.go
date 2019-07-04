@@ -417,7 +417,6 @@ func (sb *MainBridge) SendRPCResponseData(data []byte) error {
 		return err
 	}
 
-	// TODO-Klaytn Added timeout basedon ctx
 	return nil
 }
 

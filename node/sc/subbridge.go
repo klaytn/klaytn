@@ -237,7 +237,6 @@ func (sb *SubBridge) SendRPCData(data []byte) error {
 	}
 	logger.Trace("send rpc message from the subbridge, done")
 
-	// TODO-Klaytn Added timeout basedon ctx
 	return nil
 }
 
