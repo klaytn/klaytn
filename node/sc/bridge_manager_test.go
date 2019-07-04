@@ -503,6 +503,9 @@ func TestBasicJournal(t *testing.T) {
 
 	bm.SetJournal(localAddr, remoteAddr)
 
+	ps := sc.BridgePeerSet()
+	ps.peers["test"] = nil
+
 	if err := bm.RestoreBridges(); err != nil {
 		t.Fatal("bm restoring bridges failed")
 	}
@@ -587,6 +590,9 @@ func TestMethodRestoreBridges(t *testing.T) {
 	bm.journal.cache[bridgeAddrs[0]].Subscribed = true
 	bm.SetJournal(bridgeAddrs[2], bridgeAddrs[3])
 	bm.journal.cache[bridgeAddrs[2]].Subscribed = true
+
+	ps := sc.BridgePeerSet()
+	ps.peers["test"] = nil
 
 	// Call RestoreBridges
 	if err := bm.RestoreBridges(); err != nil {

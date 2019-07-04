@@ -40,6 +40,7 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
 	"math/big"
+	"net"
 	"path"
 	"sync"
 	"sync/atomic"
@@ -135,8 +136,9 @@ type SubBridge struct {
 	// service on/off
 	onAnchoringTx bool
 
-	checkConnection     int64
-	isAllBridgeRestored bool
+	checkConnection int64
+	rpcConn         net.Conn
+	rpcSendCh       chan []byte
 }
 
 // New creates a new CN object (including the
@@ -161,12 +163,13 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		logsCh:         make(chan []*types.Log, chainLogChanSize),
 		//txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
-		quitSync:       make(chan struct{}),
-		maxPeers:       config.MaxPeer,
 		requestEventCh: make(chan RequestValueTransferEvent, tokenReceivedChanSize),
 		handleEventCh:  make(chan HandleValueTransferEvent, tokenTransferChanSize),
+		quitSync:       make(chan struct{}),
+		maxPeers:       config.MaxPeer,
 		onAnchoringTx:  false,
 		bootFail:       false,
+		rpcSendCh:      make(chan []byte),
 	}
 	// TODO-Klaytn change static config to user define config
 	bridgetxConfig := bridgepool.BridgeTxPoolConfig{
@@ -204,6 +207,38 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	sc.bridgeAccountManager.mcAccount.SetChainID(new(big.Int).SetUint64(config.ParentChainID))
 
 	return sc, nil
+}
+
+func (sb *SubBridge) SetRPCConn(conn net.Conn) {
+	sb.rpcConn = conn
+	go func() {
+		for {
+			data := make([]byte, rpcBufferSize)
+			rlen, err := conn.Read(data)
+			if err != nil || rlen <= 0 {
+				//logger.Error("failed to read from RPC server pipe", "err", err, "rlen", rlen)
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			sb.rpcSendCh <- data[:rlen]
+		}
+	}()
+}
+
+func (sb *SubBridge) SendRPCData(data []byte) error {
+	peers := sb.BridgePeerSet().peers
+	logger.Trace("send rpc message from the subbridge", "len", len(data), "peers", len(peers))
+	for _, peer := range peers {
+		err := peer.SendRequestRPC(data)
+		if err != nil {
+			logger.Error("SendRPCData Error", "err", err)
+		}
+		return err
+	}
+	logger.Trace("send rpc message from the subbridge, done")
+
+	// TODO-Klaytn Added timeout basedon ctx
+	return nil
 }
 
 // implement PeerSetManager
@@ -297,11 +332,12 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 	sc.requestEventSub = sc.bridgeManager.SubscribeTokenReceived(sc.requestEventCh)
 	sc.handleEventSub = sc.bridgeManager.SubscribeTokenWithDraw(sc.handleEventCh)
 
-	if err := sc.bridgeManager.RestoreBridges(); err != nil {
-		logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
-	} else {
-		sc.isAllBridgeRestored = true
-	}
+	//if err := sc.bridgeManager.RestoreBridges(); err != nil {
+	//	logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
+	//} else {
+	//	sc.isAllBridgeRestored = true
+	//}
+	go sc.restoreBridgeLoop()
 
 	sc.bridgeAccountManager.scAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccountManager.scAccount.address))
 
@@ -483,15 +519,33 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 	}
 }
 
-func (sc *SubBridge) loop() {
-	defer sc.pmwg.Done()
-
-	report := time.NewTicker(1 * time.Second)
-	defer report.Stop()
+func (sc *SubBridge) restoreBridgeLoop() {
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
 
 	// Keep waiting for and reacting to the various events
 	for {
 		select {
+		case <-sc.quitSync:
+			return
+		case <-ticker.C:
+			if err := sc.bridgeManager.RestoreBridges(); err != nil {
+				logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
+				continue
+			}
+			return
+		}
+	}
+}
+
+func (sc *SubBridge) loop() {
+	defer sc.pmwg.Done()
+
+	// Keep waiting for and reacting to the various events
+	for {
+		select {
+		case sendData := <-sc.rpcSendCh:
+			sc.SendRPCData(sendData)
 		// Handle ChainHeadEvent
 		case ev := <-sc.chainHeadCh:
 			if ev.Block != nil {
@@ -525,14 +579,6 @@ func (sc *SubBridge) loop() {
 			vtHandleEventMeter.Mark(1)
 			if err := sc.eventhandler.ProcessHandleEvent(ev); err != nil {
 				logger.Error("fail to process handle value transfer event ", "err", err)
-			}
-		case <-report.C:
-			if !sc.isAllBridgeRestored {
-				if err := sc.bridgeManager.RestoreBridges(); err != nil {
-					logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
-				} else {
-					sc.isAllBridgeRestored = true
-				}
 			}
 		case err := <-sc.chainHeadSub.Err():
 			if err != nil {

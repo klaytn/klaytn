@@ -111,6 +111,9 @@ type BridgePeer interface {
 	// this function terminates, the Peer is disconnected.
 	Handle(bn *MainBridge) error
 
+	SendRequestRPC(data []byte) error
+	SendResponseRPC(data []byte) error
+
 	// SendServiceChainTxs sends child chain tx data to from child chain to parent chain.
 	SendServiceChainTxs(txs types.Transactions) error
 
@@ -147,6 +150,8 @@ type baseBridgePeer struct {
 	term          chan struct{} // Termination channel to stop the broadcaster
 
 	chainID *big.Int // A child chain must know parent chain's ChainID to sign a transaction.
+
+	respCh chan *big.Int
 }
 
 // newKnownTxCache returns an empty cache for knownTxsCache.
@@ -166,6 +171,7 @@ func newBridgePeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
 			id:            fmt.Sprintf("%x", id[:8]),
 			knownTxsCache: newKnownTxCache(),
 			term:          make(chan struct{}),
+			respCh:        make(chan *big.Int),
 		},
 	}
 }
@@ -214,6 +220,14 @@ func (p *baseBridgePeer) AddToKnownTxs(hash common.Hash) {
 // data should have been encoded as an RLP list.
 func (p *baseBridgePeer) Send(msgcode uint64, data interface{}) error {
 	return p2p.Send(p.rw, msgcode, data)
+}
+
+func (p *baseBridgePeer) SendRequestRPC(data []byte) error {
+	return p2p.Send(p.rw, ServiceChainCall, data)
+}
+
+func (p *baseBridgePeer) SendResponseRPC(data []byte) error {
+	return p2p.Send(p.rw, ServiceChainResponse, data)
 }
 
 func (p *baseBridgePeer) SendServiceChainTxs(txs types.Transactions) error {

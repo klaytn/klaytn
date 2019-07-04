@@ -84,7 +84,7 @@ func DialHTTPWithClient(endpoint string, client *http.Client) (*Client, error) {
 	req.Header.Set("Accept", contentType)
 
 	initctx := context.Background()
-	return newClient(initctx, func(context.Context) (net.Conn, error) {
+	return NewClient(initctx, func(context.Context) (net.Conn, error) {
 		return &httpConn{client: client, req: req, closed: make(chan struct{})}, nil
 	})
 }
