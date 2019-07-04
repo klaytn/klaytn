@@ -86,14 +86,14 @@ func (mbh *MainBridgeHandler) handleCallMsg(p BridgePeer, msg p2p.Msg) error {
 	data := make([]byte, msg.Size)
 	err := msg.Decode(&data)
 	if err != nil {
-		logger.Error("error in mainbridge message handler", err)
+		logger.Error("error in mainbridge message handler", "err", err)
 		return err
 	}
 
 	// Write to RPC server pipe
 	_, err = mbh.mainbridge.rpcConn.Write(data)
 	if err != nil {
-		logger.Error("write to RPC server failed", err)
+		logger.Error("write to RPC server failed", "err", err)
 		return err
 	}
 	return nil
