@@ -23,6 +23,7 @@ package sc
 import (
 	"errors"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"os"
@@ -37,18 +38,16 @@ var (
 // bridgeAddrJournal is a rotating log of addresses with the aim of storing locally
 // created addresses to allow deployed bridge contracts to survive node restarts.
 type bridgeAddrJournal struct {
-	path   string // Filesystem path to store the addresses at
-	config *SCConfig
+	path   string         // Filesystem path to store the addresses at
 	writer io.WriteCloser // Output stream to write new addresses into
 	cache  map[common.Address]*BridgeJournal
 }
 
 // newBridgeAddrJournal creates a new bridge addr journal to
-func newBridgeAddrJournal(path string, config *SCConfig) *bridgeAddrJournal {
+func newBridgeAddrJournal(path string) *bridgeAddrJournal {
 	return &bridgeAddrJournal{
-		path:   path,
-		config: config,
-		cache:  make(map[common.Address]*BridgeJournal),
+		path:  path,
+		cache: make(map[common.Address]*BridgeJournal),
 	}
 }
 
@@ -67,7 +66,7 @@ func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) er
 	defer input.Close()
 
 	// Temporarily discard any journal additions (don't double add on load)
-	journal.writer = new(devNull)
+	journal.writer = new(bridgepool.DevNull)
 	defer func() { journal.writer = nil }()
 
 	// Inject all addresses from the journal into the pool
@@ -101,10 +100,6 @@ func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) er
 
 // insert adds the specified address to the local disk journal.
 func (journal *bridgeAddrJournal) insert(localAddress common.Address, remoteAddress common.Address) error {
-	if !journal.config.VTRecovery {
-		logger.Debug("Value Transfer Recovery journal is disabled")
-		return nil
-	}
 	if journal.cache[localAddress] != nil {
 		return errDuplicatedJournal
 	}
