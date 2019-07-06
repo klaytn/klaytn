@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
+	"io"
 	"math/big"
 	"net"
 	"path"
@@ -211,14 +212,21 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 
 func (sb *SubBridge) SetRPCConn(conn net.Conn) {
 	sb.rpcConn = conn
+
 	go func() {
 		for {
 			data := make([]byte, rpcBufferSize)
-			rlen, err := conn.Read(data)
-			if err != nil || rlen <= 0 {
-				//logger.Error("failed to read from RPC server pipe", "err", err, "rlen", rlen)
-				time.Sleep(100 * time.Millisecond)
-				continue
+			rlen, err := sb.rpcConn.Read(data)
+			if err != nil {
+				if err == io.EOF {
+					logger.Trace("EOF from the rpc pipe")
+					time.Sleep(100 * time.Millisecond)
+					continue
+				} else {
+					// If no one closes the pipe, this situation should not happen.
+					logger.Error("failed to read from the rpc pipe", "err", err, "rlen", rlen)
+					return
+				}
 			}
 			sb.rpcSendCh <- data[:rlen]
 		}

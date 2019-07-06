@@ -203,7 +203,10 @@ func (sbh *SubBridgeHandler) HandleMainMsg(p BridgePeer, msg p2p.Msg) error {
 			return nil
 		}
 		logger.Trace("send rpc response to the rpc client")
-		sbh.subbridge.rpcConn.Write(data)
+		_, err = sbh.subbridge.rpcConn.Write(data)
+		if err != nil {
+			return err
+		}
 		return nil
 	case StatusMsg:
 		return nil
