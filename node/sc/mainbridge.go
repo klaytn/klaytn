@@ -36,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
+	"io"
 	"math/big"
 	"net"
 	"sync"
@@ -169,7 +170,15 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 			data := make([]byte, rpcBufferSize)
 			rlen, err := sc.rpcConn.Read(data)
 			if err != nil {
-				logger.Error("failed to read from RPC server pipe", "err", err)
+				if err == io.EOF {
+					logger.Trace("EOF from the rpc server pipe")
+					time.Sleep(100 * time.Millisecond)
+					continue
+				} else {
+					// If no one closes the pipe, this situation should not happen.
+					logger.Error("failed to read from the rpc pipe", "err", err, "rlen", rlen)
+					return
+				}
 			}
 			logger.Trace("mainbridge message from rpc server pipe", "rlen", rlen)
 			err = sc.SendRPCResponseData(data[:rlen])
@@ -240,8 +249,7 @@ func (sc *MainBridge) SetComponents(components []interface{}) {
 		case []rpc.API:
 			logger.Debug("p2p rpc registered", "len(v)", len(v))
 			for _, api := range v {
-				// TODO-Klaytn-ServiceChain: actually only klay namespace is required.
-				if api.Public && api.Namespace != "net" {
+				if api.Public && api.Namespace == "klay" {
 					logger.Error("p2p rpc registered", "namespace", api.Namespace)
 					if err := sc.rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
 						logger.Error("pRPC failed to register", "namespace", api.Namespace)
