@@ -96,6 +96,7 @@ type SubBridge struct {
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh    chan BridgePeer
+	addPeerCh    chan bool
 	removePeerCh chan bool
 	quitSync     chan struct{}
 	noMorePeers  chan struct{}
@@ -158,6 +159,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chainDB:        chainDB,
 		peers:          newBridgePeerSet(),
 		newPeerCh:      make(chan BridgePeer),
+		addPeerCh:      make(chan bool),
 		removePeerCh:   make(chan bool),
 		noMorePeers:    make(chan struct{}),
 		eventMux:       ctx.EventMux,
@@ -427,6 +429,7 @@ func (s *SubBridge) Start(srvr p2p.Server) error {
 					defer func() {
 						s.removePeerCh <- true
 					}()
+					s.addPeerCh <- true
 					return s.handle(peer)
 				case <-s.quitSync:
 					return p2p.DiscQuitting
@@ -532,18 +535,27 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 func (sc *SubBridge) resetBridgeLoop() {
 	defer sc.pmwg.Done()
 
+	ticker := time.NewTicker(resetBridgeCycle)
+	defer ticker.Stop()
+
 	peerCount := 0
+	needReset := false
 
 	for {
 		select {
 		case <-sc.quitSync:
 			return
-		case <-sc.newPeerCh:
+		case <-sc.addPeerCh:
 			peerCount++
 		case <-sc.removePeerCh:
 			peerCount--
 			if peerCount == 0 {
+				needReset = true
+			}
+		case <-ticker.C:
+			if needReset && peerCount > 1 {
 				sc.bridgeManager.ResetAllSubscribedEvents()
+				needReset = false
 			}
 		}
 	}
