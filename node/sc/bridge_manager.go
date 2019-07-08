@@ -589,42 +589,47 @@ func (bm *BridgeManager) RestoreBridges() error {
 	for _, journal := range bm.journal.cache {
 		var cBridgeInfo *BridgeInfo
 		var pBridgeInfo *BridgeInfo
-		var ok bool
+		var cok bool
+		var pok bool
 
 		cBridgeAddr := journal.LocalAddress
 		pBridgeAddr := journal.RemoteAddress
 		bam := bm.subBridge.bridgeAccountManager
 
 		// Set bridge info
-		cBridgeInfo, ok = bm.GetBridgeInfo(cBridgeAddr)
-		if !ok {
+		cBridgeInfo, cok = bm.GetBridgeInfo(cBridgeAddr)
+		pBridgeInfo, pok = bm.GetBridgeInfo(pBridgeAddr)
+		if !cok || !pok {
 			cBridge, err := bridgecontract.NewBridge(cBridgeAddr, bm.subBridge.localBackend)
-			if err != nil || cBridge == nil {
+			if err != nil {
 				logger.Error("local bridge creation is failed", "err", err, "bridge", cBridge)
 				break
 			}
-			err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, nil, bam.scAccount, true, false)
-			if err != nil {
-				logger.Error("setting local bridge info is failed", "err", err)
-				bm.DeleteBridgeInfo(cBridgeAddr)
-				break
-			}
-			cBridgeInfo, ok = bm.GetBridgeInfo(cBridgeAddr)
-		}
-		pBridgeInfo, ok = bm.GetBridgeInfo(pBridgeAddr)
-		if !ok {
 			pBridge, err := bridgecontract.NewBridge(pBridgeAddr, bm.subBridge.remoteBackend)
-			if err != nil || pBridge == nil {
+			if err != nil {
 				logger.Error("remote bridge creation is failed", "err", err, "bridge", pBridge)
 				break
 			}
-			err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridgeInfo.bridge, bam.mcAccount, false, false)
-			if err != nil {
-				logger.Error("setting remote bridge info is failed", "err", err)
-				bm.DeleteBridgeInfo(pBridgeAddr)
-				break
+
+			if !cok {
+				err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, bam.scAccount, true, false)
+				if err != nil {
+					logger.Error("setting local bridge info is failed", "err", err)
+					bm.DeleteBridgeInfo(cBridgeAddr)
+					break
+				}
+				cBridgeInfo, cok = bm.GetBridgeInfo(cBridgeAddr)
 			}
-			pBridgeInfo, ok = bm.GetBridgeInfo(pBridgeAddr)
+
+			if !pok {
+				err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridgeInfo.bridge, bam.mcAccount, false, false)
+				if err != nil {
+					logger.Error("setting remote bridge info is failed", "err", err)
+					bm.DeleteBridgeInfo(pBridgeAddr)
+					break
+				}
+				pBridgeInfo, pok = bm.GetBridgeInfo(pBridgeAddr)
+			}
 		}
 
 		// Subscribe bridge events
