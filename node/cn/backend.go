@@ -298,6 +298,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	//@TODO Klaytn add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
+	cn.addComponent(cn.APIs())
 
 	return cn, nil
 }

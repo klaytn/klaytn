@@ -578,6 +578,11 @@ func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontra
 
 // RestoreBridges setups bridge subscription by using the journal cache.
 func (bm *BridgeManager) RestoreBridges() error {
+	if bm.subBridge.peers.Len() < 1 {
+		logger.Error("check peer connections to restore bridges")
+		return ErrBridgeRestore
+	}
+
 	var counter = 0
 	bm.stopAllRecoveries()
 
@@ -601,6 +606,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 			err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, nil, bam.scAccount, true, false)
 			if err != nil {
 				logger.Error("setting local bridge info is failed", "err", err)
+				bm.DeleteBridgeInfo(cBridgeAddr)
 				break
 			}
 			cBridgeInfo, ok = bm.GetBridgeInfo(cBridgeAddr)
@@ -615,6 +621,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 			err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridgeInfo.bridge, bam.mcAccount, false, false)
 			if err != nil {
 				logger.Error("setting remote bridge info is failed", "err", err)
+				bm.DeleteBridgeInfo(pBridgeAddr)
 				break
 			}
 			pBridgeInfo, ok = bm.GetBridgeInfo(pBridgeAddr)
@@ -622,6 +629,9 @@ func (bm *BridgeManager) RestoreBridges() error {
 
 		// Subscribe bridge events
 		if journal.Subscribed {
+			bm.UnsubscribeEvent(cBridgeAddr)
+			bm.UnsubscribeEvent(pBridgeAddr)
+
 			if !cBridgeInfo.subscribed {
 				logger.Info("automatic local bridge subscription", "info", cBridgeInfo, "address", cBridgeInfo.address.String())
 				if err := bm.subscribeEvent(cBridgeAddr, cBridgeInfo.bridge); err != nil {

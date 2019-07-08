@@ -236,7 +236,7 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 		return nil, err
 	}
 
-	return newClient(ctx, func(ctx context.Context) (net.Conn, error) {
+	return NewClient(ctx, func(ctx context.Context) (net.Conn, error) {
 		return wsDialContext(ctx, config)
 	})
 }

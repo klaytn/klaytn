@@ -20,147 +20,233 @@ import (
 	"context"
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/client"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/pkg/errors"
 	"math/big"
+	"net"
 	"sync/atomic"
+	"time"
 )
 
 var (
 	ConnectionFailErr = errors.New("fail to connect remote chain")
 )
 
+const timeout = 30 * time.Second
+
 // TODO-Klaytn currently RemoteBackend is only for ServiceChain, especially Bridge SmartContract
 type RemoteBackend struct {
-	subBrige  *SubBridge
+	subBridge *SubBridge
 	targetUrl string
 
-	klayClient *client.Client
+	rpcClient *rpc.Client
+	chainID   *big.Int
 }
 
-func NewRemoteBackend(main *SubBridge, rawUrl string) (*RemoteBackend, error) {
-	client, err := client.Dial(rawUrl)
-	if err != nil {
-		logger.Error("fail to connect RemoteChain", "url", rawUrl, "err", err)
-		client = nil
-	} else {
-		logger.Info("success to connect RemoteChain", "url", rawUrl)
-	}
+func NewRpcClientP2P(sb *SubBridge) *rpc.Client {
+	initctx := context.Background()
+	c, _ := rpc.NewClient(initctx, func(context.Context) (net.Conn, error) {
+		p1, p2 := net.Pipe()
+		sb.SetRPCConn(p1)
+		return p2, nil
+	})
+	return c
+}
+
+func NewRemoteBackend(sb *SubBridge, rawUrl string) (*RemoteBackend, error) {
+	rCli := NewRpcClientP2P(sb)
 
 	return &RemoteBackend{
-		subBrige:   main,
-		targetUrl:  rawUrl,
-		klayClient: client,
+		subBridge: sb,
+		targetUrl: rawUrl,
+		rpcClient: rCli,
 	}, nil
 }
 
 func (rb *RemoteBackend) checkConnection() bool {
-	if rb.klayClient == nil {
-		logger.Error("klayclient is nil so try to reconnect")
-		return rb.tryReconnect()
+	var connected = true
+
+	if rb.subBridge.bridgeServer == nil {
+		return false
 	}
-	if atomic.CompareAndSwapInt64(&rb.subBrige.checkConnection, 1, 0) {
-		rb.klayClient.Close()
-		logger.Error("klayclient is disconnected so try to reconnect")
-		connected := rb.tryReconnect()
+
+	peers := rb.subBridge.bridgeServer.PeersInfo()
+	if peers == nil || len(peers) < 1 {
+		return false
+	}
+
+	if atomic.CompareAndSwapInt64(&rb.subBridge.checkConnection, 1, 0) {
+		if rb.subBridge.peers.Len() > 0 {
+			connected = true
+		}
 		if !connected {
-			atomic.StoreInt64(&rb.subBrige.checkConnection, 1)
+			atomic.StoreInt64(&rb.subBridge.checkConnection, 1)
 		} else {
-			rb.subBrige.bridgeManager.ResetAllSubscribedEvents()
+			rb.subBridge.bridgeManager.ResetAllSubscribedEvents()
 		}
 		return connected
 	}
-	return true
-}
-
-func (rb *RemoteBackend) tryReconnect() bool {
-	client, err := client.Dial(rb.targetUrl)
-	if err != nil {
-		logger.Error("fail to reconnect RemoteChain", "url", rb.targetUrl, "err", err)
-		return false
-	}
-	logger.Info("success to reconnect RemoteChain", "url", rb.targetUrl)
-
-	rb.klayClient = client
-	return true
+	return connected
 }
 
 func (rb *RemoteBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
 	if !rb.checkConnection() {
 		return nil, ConnectionFailErr
 	}
-	return rb.klayClient.CodeAt(ctx, contract, blockNumber)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	var result hexutil.Bytes
+	err := rb.rpcClient.CallContext(ctx, &result, "klay_getCode", contract, toBlockNumArg(blockNumber))
+	return result, err
 }
 
 func (rb *RemoteBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	if !rb.checkConnection() {
 		return nil, ConnectionFailErr
 	}
-	return rb.klayClient.CallContract(ctx, call, blockNumber)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	var hex hexutil.Bytes
+	err := rb.rpcClient.CallContext(ctx, &hex, "klay_call", toCallArg(call), toBlockNumArg(blockNumber))
+	return hex, err
 }
 
 func (rb *RemoteBackend) PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error) {
 	if !rb.checkConnection() {
 		return nil, ConnectionFailErr
 	}
-	return rb.klayClient.PendingCodeAt(ctx, contract)
+	var result hexutil.Bytes
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	err := rb.rpcClient.CallContext(ctx, &result, "klay_getCode", contract, "pending")
+	return result, err
 }
 
 func (rb *RemoteBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
 	if !rb.checkConnection() {
 		return 0, ConnectionFailErr
 	}
-	return rb.klayClient.PendingNonceAt(ctx, account)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	var result hexutil.Uint64
+	err := rb.rpcClient.CallContext(ctx, &result, "klay_getTransactionCount", account, "pending")
+	return uint64(result), err
 }
 
 func (rb *RemoteBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	if !rb.checkConnection() {
 		return nil, ConnectionFailErr
 	}
-	return rb.klayClient.SuggestGasPrice(ctx)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	var hex hexutil.Big
+	if err := rb.rpcClient.CallContext(ctx, &hex, "klay_gasPrice"); err != nil {
+		return nil, err
+	}
+	return (*big.Int)(&hex), nil
 }
 
-func (rb *RemoteBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (gas uint64, err error) {
+func (rb *RemoteBackend) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (uint64, error) {
 	if !rb.checkConnection() {
 		return 0, ConnectionFailErr
 	}
-	return rb.klayClient.EstimateGas(ctx, call)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	var hex hexutil.Uint64
+	err := rb.rpcClient.CallContext(ctx, &hex, "klay_estimateGas", toCallArg(msg))
+	if err != nil {
+		return 0, err
+	}
+	return uint64(hex), nil
 }
 
 func (rb *RemoteBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	if !rb.checkConnection() {
 		return ConnectionFailErr
 	}
-	return rb.subBrige.bridgeTxPool.AddLocal(tx)
-	// return rb.klayClient.SendTransaction(ctx, tx)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return rb.subBridge.bridgeTxPool.AddLocal(tx)
 }
 
 func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
 	if !rb.checkConnection() {
 		return nil, ConnectionFailErr
 	}
-	return rb.klayClient.TransactionReceipt(ctx, txHash)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	var r *types.Receipt
+	err := rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
+	if err == nil {
+		if r == nil {
+			return nil, klaytn.NotFound
+		}
+	}
+	return r, err
 }
 
-// ChainID can return the chain ID of the chain.
+// ChainID returns the chain ID of the sub-bridge configuration.
 func (rb *RemoteBackend) ChainID(ctx context.Context) (*big.Int, error) {
-	if !rb.checkConnection() {
-		return nil, ConnectionFailErr
-	}
-	return rb.klayClient.ChainID(ctx)
+	return big.NewInt(int64(rb.subBridge.config.ParentChainID)), nil
 }
 
-func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) ([]types.Log, error) {
+func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) (result []types.Log, err error) {
 	if !rb.checkConnection() {
 		return nil, ConnectionFailErr
 	}
-	return rb.klayClient.FilterLogs(ctx, query)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	err = rb.rpcClient.CallContext(ctx, &result, "klay_getLogs", toFilterArg(query))
+	return
 }
 
 func (rb *RemoteBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
 	if !rb.checkConnection() {
 		return nil, ConnectionFailErr
 	}
-	return rb.klayClient.SubscribeFilterLogs(ctx, query, ch)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return rb.rpcClient.KlaySubscribe(ctx, ch, "logs", toFilterArg(query))
+}
+
+func toFilterArg(q klaytn.FilterQuery) interface{} {
+	arg := map[string]interface{}{
+		"fromBlock": toBlockNumArg(q.FromBlock),
+		"toBlock":   toBlockNumArg(q.ToBlock),
+		"address":   q.Addresses,
+		"topics":    q.Topics,
+	}
+	if q.FromBlock == nil {
+		arg["fromBlock"] = "0x0"
+	}
+	return arg
+}
+
+func toBlockNumArg(number *big.Int) string {
+	if number == nil {
+		return "latest"
+	}
+	return hexutil.EncodeBig(number)
+}
+
+func toCallArg(msg klaytn.CallMsg) interface{} {
+	arg := map[string]interface{}{
+		"from": msg.From,
+		"to":   msg.To,
+	}
+	if len(msg.Data) > 0 {
+		arg["data"] = hexutil.Bytes(msg.Data)
+	}
+	if msg.Value != nil {
+		arg["value"] = (*hexutil.Big)(msg.Value)
+	}
+	if msg.Gas != 0 {
+		arg["gas"] = hexutil.Uint64(msg.Gas)
+	}
+	if msg.GasPrice != nil {
+		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
+	}
+	return arg
 }

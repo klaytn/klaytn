@@ -194,6 +194,20 @@ func (sbh *SubBridgeHandler) GetSentChainTxsLimit() uint64 {
 func (sbh *SubBridgeHandler) HandleMainMsg(p BridgePeer, msg p2p.Msg) error {
 	// Handle the message depending on its contents
 	switch msg.Code {
+	case ServiceChainResponse:
+		logger.Trace("received rpc ServiceChainResponse")
+		data := make([]byte, msg.Size)
+		err := msg.Decode(&data)
+		if err != nil {
+			logger.Error("failed to decode the p2p ServiceChainResponse message", "err", err)
+			return nil
+		}
+		logger.Trace("send rpc response to the rpc client")
+		_, err = sbh.subbridge.rpcConn.Write(data)
+		if err != nil {
+			return err
+		}
+		return nil
 	case StatusMsg:
 		return nil
 	case ServiceChainParentChainInfoResponseMsg:
@@ -201,6 +215,7 @@ func (sbh *SubBridgeHandler) HandleMainMsg(p BridgePeer, msg p2p.Msg) error {
 		if err := sbh.handleServiceChainParentChainInfoResponseMsg(p, msg); err != nil {
 			return err
 		}
+
 	case ServiceChainReceiptResponseMsg:
 		logger.Debug("received ServiceChainReceiptResponseMsg")
 		if err := sbh.handleServiceChainReceiptResponseMsg(p, msg); err != nil {
