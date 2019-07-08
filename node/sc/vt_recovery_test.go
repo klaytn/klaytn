@@ -661,11 +661,11 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 	defer bi.account.UnLock()
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.Amount)
-	_, err := bi.bridge.HandleTokenTransfer(
+	_, err := bi.bridge.HandleERC20Transfer(
 		bi.account.GetTransactOpts(),
 		ev.Amount, ev.To, info.tokenRemoteAddr, ev.RequestNonce, ev.BlockNumber)
 	if err != nil {
-		log.Fatalf("Failed to HandleTokenTransfer: %v", err)
+		log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 	}
 	info.sim.Commit()
 }
@@ -712,11 +712,16 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferE
 		nftAddr = info.nftRemoteAddr
 	}
 
-	_, err := bi.bridge.HandleNFTTransfer(
+	_, err := bi.bridge.HandleERC721Transfer(
 		bi.account.GetTransactOpts(),
-		ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.BlockNumber)
+		ev.Amount,
+		ev.To,
+		nftAddr,
+		ev.RequestNonce,
+		ev.BlockNumber,
+		ev.URI)
 	if err != nil {
-		log.Fatalf("Failed to handleNFTTransfer: %v", err)
+		log.Fatalf("Failed to handleERC721Transfer: %v", err)
 	}
 	info.sim.Commit()
 }

@@ -63,8 +63,9 @@ type RequestValueTransferEvent struct {
 	TokenAddr    common.Address
 	From         common.Address
 	To           common.Address
-	Amount       *big.Int // Amount is UID in NFT
+	Amount       *big.Int // Amount is UID in ERC721 token
 	RequestNonce uint64
+	URI          string   // uri of ERC721 token
 	BlockNumber  uint64
 	txHash       common.Hash
 }
@@ -313,17 +314,17 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 
 	case TOKEN:
-		handleTx, err = bi.bridge.HandleTokenTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 		if err != nil {
 			return err
 		}
-		logger.Trace("Bridge succeeded to HandleTokenTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
+		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 	case NFT:
-		handleTx, err = bi.bridge.HandleNFTTransfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber, ev.URI)
 		if err != nil {
 			return err
 		}
-		logger.Trace("Bridge succeeded to HandleNFTTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
+		logger.Trace("Bridge succeeded to HandleERC721Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 	default:
 		logger.Warn("Got Unknown Token Type ReceivedEvent", "bridge", ev.ContractAddr, "nonce", ev.RequestNonce, "from", ev.From)
 		return nil
@@ -717,13 +718,17 @@ func (bm *BridgeManager) stopAllRecoveries() {
 // Deploy Bridge SmartContract on same node or remote node
 func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) (*bridgecontract.Bridge, common.Address, error) {
 	var acc *accountInfo
+	var modeMintBurn bool
+
 	if local {
 		acc = bm.subBridge.bridgeAccountManager.scAccount
+		modeMintBurn = true
 	} else {
 		acc = bm.subBridge.bridgeAccountManager.mcAccount
+		modeMintBurn = false
 	}
 
-	addr, bridge, err := bm.deployBridge(acc, backend)
+	addr, bridge, err := bm.deployBridge(acc, backend, modeMintBurn)
 	if err != nil {
 		return nil, common.Address{}, err
 	}
@@ -734,10 +739,10 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 // DeployBridge handles actual smart contract deployment.
 // To create contract, the chain ID, nonce, account key, private key, contract binding and gas price are used.
 // The deployed contract address, transaction are returned. An error is also returned if any.
-func (bm *BridgeManager) deployBridge(acc *accountInfo, backend bind.ContractBackend) (common.Address, *bridgecontract.Bridge, error) {
+func (bm *BridgeManager) deployBridge(acc *accountInfo, backend bind.ContractBackend, modeMintBurn bool) (common.Address, *bridgecontract.Bridge, error) {
 	acc.Lock()
 	auth := acc.GetTransactOpts()
-	addr, tx, contract, err := bridgecontract.DeployBridge(auth, backend)
+	addr, tx, contract, err := bridgecontract.DeployBridge(auth, backend, modeMintBurn)
 	if err != nil {
 		logger.Error("Failed to deploy contract.", "err", err)
 		acc.UnLock()

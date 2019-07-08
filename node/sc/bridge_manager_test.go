@@ -209,7 +209,7 @@ func TestBridgeManager(t *testing.T) {
 
 				case 1:
 					// WithdrawToken by Event
-					tx, err := bridge.HandleTokenTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+					tx, err := bridge.HandleERC20Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawToken: %v", err)
 					}
@@ -224,7 +224,7 @@ func TestBridgeManager(t *testing.T) {
 					fmt.Println("NFT owner before WithdrawERC721: ", owner.String())
 
 					// WithdrawToken by Event
-					tx, err := bridge.HandleNFTTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.BlockNumber)
+					tx, err := bridge.HandleERC721Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.BlockNumber, ev.URI)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawERC721: %v", err)
 					}
@@ -963,7 +963,7 @@ func TestErrorDupSubscription(t *testing.T) {
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
 	if local {
 		acc := bm.subBridge.bridgeAccountManager.scAccount
-		addr, bridge, err := bm.deployBridgeTest(acc, backend)
+		addr, bridge, err := bm.deployBridgeTest(acc, backend, true)
 		err = bm.SetBridgeInfo(addr, bridge, common.Address{}, nil, acc, local, false)
 		if err != nil {
 			return common.Address{}, err
@@ -971,7 +971,7 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 		return addr, err
 	} else {
 		acc := bm.subBridge.bridgeAccountManager.mcAccount
-		addr, bridge, err := bm.deployBridgeTest(acc, backend)
+		addr, bridge, err := bm.deployBridgeTest(acc, backend, false)
 		err = bm.SetBridgeInfo(addr, bridge, common.Address{}, nil, acc, local, false)
 		if err != nil {
 			return common.Address{}, err
@@ -980,10 +980,10 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 	}
 }
 
-func (bm *BridgeManager) deployBridgeTest(acc *accountInfo, backend *backends.SimulatedBackend) (common.Address, *bridge.Bridge, error) {
+func (bm *BridgeManager) deployBridgeTest(acc *accountInfo, backend *backends.SimulatedBackend, modeMintBurn bool) (common.Address, *bridge.Bridge, error) {
 	auth := acc.GetTransactOpts()
 	auth.Value = big.NewInt(10000)
-	addr, tx, contract, err := bridge.DeployBridge(auth, backend)
+	addr, tx, contract, err := bridge.DeployBridge(auth, backend, modeMintBurn)
 	if err != nil {
 		logger.Error("", "err", err)
 		return common.Address{}, nil, err

@@ -1,14 +1,24 @@
 pragma solidity ^0.4.24;
 
 import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
+
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
+
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
+
 import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+
 import "../servicechain_nft/INFTReceiver.sol";
 import "../servicechain_token/ITokenReceiver.sol";
 
 contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     uint64 public constant VERSION = 1;
+    bool public modeMintBurn = false;
     address public counterpartBridge;
     bool public isRunning;
 
@@ -23,12 +33,13 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
 
     enum TokenKind {
         KLAY,
-        TOKEN,
-        NFT
+        ERC20,
+        ERC721
     }
 
-    constructor () public payable {
+    constructor (bool _modeMintBurn) public payable {
         isRunning = true;
+        modeMintBurn = _modeMintBurn;
     }
 
     /**
@@ -38,13 +49,15 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
      * @param contractAddress Address of token contract the token belong to.
      * @param amount is the amount for KLAY/TOKEN and the NFT ID for NFT.
      * @param requestNonce is the order number of the request value transfer.
+     * @param uri is uri of ERC721 token.
      */
     event RequestValueTransfer(TokenKind kind,
         address from,
         uint256 amount,
         address contractAddress,
         address to,
-        uint64 requestNonce);
+        uint64 requestNonce,
+        string uri);
 
     /**
      * Event to log the withdrawal of a token from the Bridge.
@@ -86,8 +99,8 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         delete allowedTokens[_token];
     }
 
-    // handleTokenTransfer sends the token by the request.
-    function handleTokenTransfer(
+    // handleERC20Transfer sends the token by the request.
+    function handleERC20Transfer(
         uint256 _amount,
         address _to,
         address _contractAddress,
@@ -99,10 +112,15 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        emit HandleValueTransfer(_to, TokenKind.TOKEN, _contractAddress, _amount, handleNonce);
+        emit HandleValueTransfer(_to, TokenKind.ERC20, _contractAddress, _amount, handleNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
-        IERC20(_contractAddress).transfer(_to, _amount);
+
+        if (modeMintBurn) {
+            ERC20Mintable(_contractAddress).mint(_to, _amount);
+        } else {
+            IERC20(_contractAddress).transfer(_to, _amount);
+        }
     }
 
     // handleKLAYTransfer sends the KLAY by the request.
@@ -123,23 +141,29 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         _to.transfer(_amount);
     }
 
-    // handleNFTTransfer sends the NFT by the request.
-    function handleNFTTransfer(
+    // handleERC721Transfer sends the NFT by the request.
+    function handleERC721Transfer(
         uint256 _uid,
         address _to,
         address _contractAddress,
         uint64 _requestNonce,
-        uint64 _requestBlockNumber
+        uint64 _requestBlockNumber,
+        string tokenURI
     )
         external
         onlyOwner
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        emit HandleValueTransfer(_to, TokenKind.NFT, _contractAddress, _uid, handleNonce);
+        emit HandleValueTransfer(_to, TokenKind.ERC721, _contractAddress, _uid, handleNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
-        IERC721(_contractAddress).safeTransferFrom(address(this), _to, _uid);
+
+        if (modeMintBurn) {
+            ERC721MetadataMintable(_contractAddress).mintWithTokenURI(_to, _uid, tokenURI);
+        } else {
+            IERC721(_contractAddress).safeTransferFrom(address(this), _to, _uid);
+        }
     }
 
     bytes4 constant TOKEN_RECEIVED = 0xbc04f0af;
@@ -156,7 +180,7 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         require(allowedTokens[msg.sender] != address(0), "Not a valid token");
         require(_amount > 0, "zero amount");
 
-        emit RequestValueTransfer(TokenKind.TOKEN, _from, _amount, msg.sender, _to, requestNonce);
+        emit RequestValueTransfer(TokenKind.ERC20, _from, _amount, msg.sender, _to, requestNonce,"");
         requestNonce++;
         return TOKEN_RECEIVED;
     }
@@ -175,7 +199,7 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         require(isRunning, "stopped bridge");
         require(allowedTokens[msg.sender] != address(0), "Not a valid token");
 
-        emit RequestValueTransfer(TokenKind.NFT, from, tokenId, msg.sender, to, requestNonce);
+        emit RequestValueTransfer(TokenKind.ERC721, from, tokenId, msg.sender, to, requestNonce,"");
         requestNonce++;
         return ERC721_RECEIVED;
     }
@@ -191,7 +215,8 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
             msg.value,
             address(0),
             msg.sender,
-            requestNonce
+            requestNonce,
+            ""
         );
         requestNonce++;
     }
@@ -207,7 +232,56 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
             msg.value,
             address(0),
             _to,
-            requestNonce
+            requestNonce,
+            ""
+        );
+        requestNonce++;
+    }
+
+    // requestERC20Transfer requests transfer ERC20 to _to on relative chain.
+    function requestERC20Transfer(address _contractAddress, address _to, uint256 _amount) external {
+        require(isRunning, "stopped bridge");
+        require(msg.value > 0, "zero msg.value");
+
+        IERC20(_contractAddress).transferFrom(msg.sender, address(this), _amount);
+
+        if (modeMintBurn) {
+            ERC20Burnable(_contractAddress).burn(_amount);
+        }
+
+        emit RequestValueTransfer(
+            TokenKind.KLAY,
+            msg.sender,
+            msg.value,
+            address(0),
+            _to,
+            requestNonce,
+            ""
+        );
+        requestNonce++;
+    }
+
+    // requestERC721Transfer requests transfer ERC721 to _to on relative chain.
+    function requestERC721Transfer(address _contractAddress, address _to, uint256 _uid) external {
+        require(isRunning, "stopped bridge");
+        require(msg.value > 0, "zero msg.value");
+
+        IERC721(_contractAddress).transferFrom(msg.sender, address(this), _uid);
+
+        string memory uri = ERC721Metadata(_contractAddress).tokenURI(_uid);
+
+        if (modeMintBurn) {
+            ERC721Burnable(_contractAddress).burn(_uid);
+        }
+
+        emit RequestValueTransfer(
+            TokenKind.KLAY,
+            msg.sender,
+            msg.value,
+            address(0),
+            _to,
+            requestNonce,
+            uri
         );
         requestNonce++;
     }
