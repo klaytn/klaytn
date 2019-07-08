@@ -1,11 +1,15 @@
 pragma solidity ^0.4.24;
 
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
+
 import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./INFTReceiver.sol";
 
 
-contract ServiceChainNFT is ERC721Full("ServiceChainNFT", "SCN"), Ownable {
+contract ServiceChainNFT is ERC721Full("ServiceChainNFT", "SCN"), ERC721Burnable, ERC721MetadataMintable, Ownable {
     address public bridge;
 
     constructor (address _bridge) public {

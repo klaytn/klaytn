@@ -810,6 +810,1663 @@ func (_ERC20 *ERC20Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ER
 	}), nil
 }
 
+// ERC20BurnableABI is the input ABI used to generate the binding from.
+const ERC20BurnableABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"addedValue\",\"type\":\"uint256\"}],\"name\":\"increaseAllowance\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"burnFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"subtractedValue\",\"type\":\"uint256\"}],\"name\":\"decreaseAllowance\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"}]"
+
+// ERC20BurnableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const ERC20BurnableBinRuntime = `0x6080604052600436106100a35763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663095ea7b381146100a857806318160ddd146100e057806323b872dd14610107578063395093511461013157806342966c681461015557806370a082311461016f57806379cc679014610190578063a457c2d7146101b4578063a9059cbb146101d8578063dd62ed3e146101fc575b600080fd5b3480156100b457600080fd5b506100cc600160a060020a0360043516602435610223565b604080519115158252519081900360200190f35b3480156100ec57600080fd5b506100f56102a1565b60408051918252519081900360200190f35b34801561011357600080fd5b506100cc600160a060020a03600435811690602435166044356102a7565b34801561013d57600080fd5b506100cc600160a060020a0360043516602435610344565b34801561016157600080fd5b5061016d6004356103f4565b005b34801561017b57600080fd5b506100f5600160a060020a0360043516610401565b34801561019c57600080fd5b5061016d600160a060020a036004351660243561041c565b3480156101c057600080fd5b506100cc600160a060020a036004351660243561042a565b3480156101e457600080fd5b506100cc600160a060020a0360043516602435610475565b34801561020857600080fd5b506100f5600160a060020a036004358116906024351661048b565b6000600160a060020a038316151561023a57600080fd5b336000818152600160209081526040808320600160a060020a03881680855290835292819020869055805186815290519293927f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929181900390910190a350600192915050565b60025490565b600160a060020a03831660009081526001602090815260408083203384529091528120548211156102d757600080fd5b600160a060020a038416600090815260016020908152604080832033845290915290205461030b908363ffffffff6104b616565b600160a060020a038516600090815260016020908152604080832033845290915290205561033a8484846104cd565b5060019392505050565b6000600160a060020a038316151561035b57600080fd5b336000908152600160209081526040808320600160a060020a038716845290915290205461038f908363ffffffff6105bf16565b336000818152600160209081526040808320600160a060020a0389168085529083529281902085905580519485525191937f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929081900390910190a350600192915050565b6103fe33826105d8565b50565b600160a060020a031660009081526020819052604090205490565b61042682826106a6565b5050565b6000600160a060020a038316151561044157600080fd5b336000908152600160209081526040808320600160a060020a038716845290915290205461038f908363ffffffff6104b616565b60006104823384846104cd565b50600192915050565b600160a060020a03918216600090815260016020908152604080832093909416825291909152205490565b600080838311156104c657600080fd5b5050900390565b600160a060020a0383166000908152602081905260409020548111156104f257600080fd5b600160a060020a038216151561050757600080fd5b600160a060020a038316600090815260208190526040902054610530908263ffffffff6104b616565b600160a060020a038085166000908152602081905260408082209390935590841681522054610565908263ffffffff6105bf16565b600160a060020a038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b6000828201838110156105d157600080fd5b9392505050565b600160a060020a03821615156105ed57600080fd5b600160a060020a03821660009081526020819052604090205481111561061257600080fd5b600254610625908263ffffffff6104b616565b600255600160a060020a038216600090815260208190526040902054610651908263ffffffff6104b616565b600160a060020a038316600081815260208181526040808320949094558351858152935191937fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef929081900390910190a35050565b600160a060020a03821660009081526001602090815260408083203384529091529020548111156106d657600080fd5b600160a060020a038216600090815260016020908152604080832033845290915290205461070a908263ffffffff6104b616565b600160a060020a038316600090815260016020908152604080832033845290915290205561042682826105d85600a165627a7a723058201c9720a2dd01d06e2039482e6302d0d941466dd89e5594cc6559bea07b36ae510029`
+
+// ERC20BurnableBin is the compiled bytecode used for deploying new contracts.
+const ERC20BurnableBin = `0x608060405234801561001057600080fd5b50610764806100206000396000f3006080604052600436106100a35763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663095ea7b381146100a857806318160ddd146100e057806323b872dd14610107578063395093511461013157806342966c681461015557806370a082311461016f57806379cc679014610190578063a457c2d7146101b4578063a9059cbb146101d8578063dd62ed3e146101fc575b600080fd5b3480156100b457600080fd5b506100cc600160a060020a0360043516602435610223565b604080519115158252519081900360200190f35b3480156100ec57600080fd5b506100f56102a1565b60408051918252519081900360200190f35b34801561011357600080fd5b506100cc600160a060020a03600435811690602435166044356102a7565b34801561013d57600080fd5b506100cc600160a060020a0360043516602435610344565b34801561016157600080fd5b5061016d6004356103f4565b005b34801561017b57600080fd5b506100f5600160a060020a0360043516610401565b34801561019c57600080fd5b5061016d600160a060020a036004351660243561041c565b3480156101c057600080fd5b506100cc600160a060020a036004351660243561042a565b3480156101e457600080fd5b506100cc600160a060020a0360043516602435610475565b34801561020857600080fd5b506100f5600160a060020a036004358116906024351661048b565b6000600160a060020a038316151561023a57600080fd5b336000818152600160209081526040808320600160a060020a03881680855290835292819020869055805186815290519293927f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929181900390910190a350600192915050565b60025490565b600160a060020a03831660009081526001602090815260408083203384529091528120548211156102d757600080fd5b600160a060020a038416600090815260016020908152604080832033845290915290205461030b908363ffffffff6104b616565b600160a060020a038516600090815260016020908152604080832033845290915290205561033a8484846104cd565b5060019392505050565b6000600160a060020a038316151561035b57600080fd5b336000908152600160209081526040808320600160a060020a038716845290915290205461038f908363ffffffff6105bf16565b336000818152600160209081526040808320600160a060020a0389168085529083529281902085905580519485525191937f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929081900390910190a350600192915050565b6103fe33826105d8565b50565b600160a060020a031660009081526020819052604090205490565b61042682826106a6565b5050565b6000600160a060020a038316151561044157600080fd5b336000908152600160209081526040808320600160a060020a038716845290915290205461038f908363ffffffff6104b616565b60006104823384846104cd565b50600192915050565b600160a060020a03918216600090815260016020908152604080832093909416825291909152205490565b600080838311156104c657600080fd5b5050900390565b600160a060020a0383166000908152602081905260409020548111156104f257600080fd5b600160a060020a038216151561050757600080fd5b600160a060020a038316600090815260208190526040902054610530908263ffffffff6104b616565b600160a060020a038085166000908152602081905260408082209390935590841681522054610565908263ffffffff6105bf16565b600160a060020a038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b6000828201838110156105d157600080fd5b9392505050565b600160a060020a03821615156105ed57600080fd5b600160a060020a03821660009081526020819052604090205481111561061257600080fd5b600254610625908263ffffffff6104b616565b600255600160a060020a038216600090815260208190526040902054610651908263ffffffff6104b616565b600160a060020a038316600081815260208181526040808320949094558351858152935191937fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef929081900390910190a35050565b600160a060020a03821660009081526001602090815260408083203384529091529020548111156106d657600080fd5b600160a060020a038216600090815260016020908152604080832033845290915290205461070a908263ffffffff6104b616565b600160a060020a038316600090815260016020908152604080832033845290915290205561042682826105d85600a165627a7a723058201c9720a2dd01d06e2039482e6302d0d941466dd89e5594cc6559bea07b36ae510029`
+
+// DeployERC20Burnable deploys a new Klaytn contract, binding an instance of ERC20Burnable to it.
+func DeployERC20Burnable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC20Burnable, error) {
+	parsed, err := abi.JSON(strings.NewReader(ERC20BurnableABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ERC20BurnableBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &ERC20Burnable{ERC20BurnableCaller: ERC20BurnableCaller{contract: contract}, ERC20BurnableTransactor: ERC20BurnableTransactor{contract: contract}, ERC20BurnableFilterer: ERC20BurnableFilterer{contract: contract}}, nil
+}
+
+// ERC20Burnable is an auto generated Go binding around a Klaytn contract.
+type ERC20Burnable struct {
+	ERC20BurnableCaller     // Read-only binding to the contract
+	ERC20BurnableTransactor // Write-only binding to the contract
+	ERC20BurnableFilterer   // Log filterer for contract events
+}
+
+// ERC20BurnableCaller is an auto generated read-only Go binding around a Klaytn contract.
+type ERC20BurnableCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC20BurnableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type ERC20BurnableTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC20BurnableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type ERC20BurnableFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC20BurnableSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type ERC20BurnableSession struct {
+	Contract     *ERC20Burnable    // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// ERC20BurnableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type ERC20BurnableCallerSession struct {
+	Contract *ERC20BurnableCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts        // Call options to use throughout this session
+}
+
+// ERC20BurnableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type ERC20BurnableTransactorSession struct {
+	Contract     *ERC20BurnableTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
+}
+
+// ERC20BurnableRaw is an auto generated low-level Go binding around a Klaytn contract.
+type ERC20BurnableRaw struct {
+	Contract *ERC20Burnable // Generic contract binding to access the raw methods on
+}
+
+// ERC20BurnableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type ERC20BurnableCallerRaw struct {
+	Contract *ERC20BurnableCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ERC20BurnableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type ERC20BurnableTransactorRaw struct {
+	Contract *ERC20BurnableTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewERC20Burnable creates a new instance of ERC20Burnable, bound to a specific deployed contract.
+func NewERC20Burnable(address common.Address, backend bind.ContractBackend) (*ERC20Burnable, error) {
+	contract, err := bindERC20Burnable(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20Burnable{ERC20BurnableCaller: ERC20BurnableCaller{contract: contract}, ERC20BurnableTransactor: ERC20BurnableTransactor{contract: contract}, ERC20BurnableFilterer: ERC20BurnableFilterer{contract: contract}}, nil
+}
+
+// NewERC20BurnableCaller creates a new read-only instance of ERC20Burnable, bound to a specific deployed contract.
+func NewERC20BurnableCaller(address common.Address, caller bind.ContractCaller) (*ERC20BurnableCaller, error) {
+	contract, err := bindERC20Burnable(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20BurnableCaller{contract: contract}, nil
+}
+
+// NewERC20BurnableTransactor creates a new write-only instance of ERC20Burnable, bound to a specific deployed contract.
+func NewERC20BurnableTransactor(address common.Address, transactor bind.ContractTransactor) (*ERC20BurnableTransactor, error) {
+	contract, err := bindERC20Burnable(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20BurnableTransactor{contract: contract}, nil
+}
+
+// NewERC20BurnableFilterer creates a new log filterer instance of ERC20Burnable, bound to a specific deployed contract.
+func NewERC20BurnableFilterer(address common.Address, filterer bind.ContractFilterer) (*ERC20BurnableFilterer, error) {
+	contract, err := bindERC20Burnable(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20BurnableFilterer{contract: contract}, nil
+}
+
+// bindERC20Burnable binds a generic wrapper to an already deployed contract.
+func bindERC20Burnable(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ERC20BurnableABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ERC20Burnable *ERC20BurnableRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ERC20Burnable.Contract.ERC20BurnableCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ERC20Burnable *ERC20BurnableRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.ERC20BurnableTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ERC20Burnable *ERC20BurnableRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.ERC20BurnableTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ERC20Burnable *ERC20BurnableCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ERC20Burnable.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ERC20Burnable *ERC20BurnableTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ERC20Burnable *ERC20BurnableTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.contract.Transact(opts, method, params...)
+}
+
+// Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
+//
+// Solidity: function allowance(owner address, spender address) constant returns(uint256)
+func (_ERC20Burnable *ERC20BurnableCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ERC20Burnable.contract.Call(opts, out, "allowance", owner, spender)
+	return *ret0, err
+}
+
+// Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
+//
+// Solidity: function allowance(owner address, spender address) constant returns(uint256)
+func (_ERC20Burnable *ERC20BurnableSession) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
+	return _ERC20Burnable.Contract.Allowance(&_ERC20Burnable.CallOpts, owner, spender)
+}
+
+// Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
+//
+// Solidity: function allowance(owner address, spender address) constant returns(uint256)
+func (_ERC20Burnable *ERC20BurnableCallerSession) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
+	return _ERC20Burnable.Contract.Allowance(&_ERC20Burnable.CallOpts, owner, spender)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(owner address) constant returns(uint256)
+func (_ERC20Burnable *ERC20BurnableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ERC20Burnable.contract.Call(opts, out, "balanceOf", owner)
+	return *ret0, err
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(owner address) constant returns(uint256)
+func (_ERC20Burnable *ERC20BurnableSession) BalanceOf(owner common.Address) (*big.Int, error) {
+	return _ERC20Burnable.Contract.BalanceOf(&_ERC20Burnable.CallOpts, owner)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(owner address) constant returns(uint256)
+func (_ERC20Burnable *ERC20BurnableCallerSession) BalanceOf(owner common.Address) (*big.Int, error) {
+	return _ERC20Burnable.Contract.BalanceOf(&_ERC20Burnable.CallOpts, owner)
+}
+
+// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
+//
+// Solidity: function totalSupply() constant returns(uint256)
+func (_ERC20Burnable *ERC20BurnableCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ERC20Burnable.contract.Call(opts, out, "totalSupply")
+	return *ret0, err
+}
+
+// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
+//
+// Solidity: function totalSupply() constant returns(uint256)
+func (_ERC20Burnable *ERC20BurnableSession) TotalSupply() (*big.Int, error) {
+	return _ERC20Burnable.Contract.TotalSupply(&_ERC20Burnable.CallOpts)
+}
+
+// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
+//
+// Solidity: function totalSupply() constant returns(uint256)
+func (_ERC20Burnable *ERC20BurnableCallerSession) TotalSupply() (*big.Int, error) {
+	return _ERC20Burnable.Contract.TotalSupply(&_ERC20Burnable.CallOpts)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(spender address, value uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableTransactor) Approve(opts *bind.TransactOpts, spender common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.contract.Transact(opts, "approve", spender, value)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(spender address, value uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableSession) Approve(spender common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.Approve(&_ERC20Burnable.TransactOpts, spender, value)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(spender address, value uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableTransactorSession) Approve(spender common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.Approve(&_ERC20Burnable.TransactOpts, spender, value)
+}
+
+// Burn is a paid mutator transaction binding the contract method 0x42966c68.
+//
+// Solidity: function burn(value uint256) returns()
+func (_ERC20Burnable *ERC20BurnableTransactor) Burn(opts *bind.TransactOpts, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.contract.Transact(opts, "burn", value)
+}
+
+// Burn is a paid mutator transaction binding the contract method 0x42966c68.
+//
+// Solidity: function burn(value uint256) returns()
+func (_ERC20Burnable *ERC20BurnableSession) Burn(value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.Burn(&_ERC20Burnable.TransactOpts, value)
+}
+
+// Burn is a paid mutator transaction binding the contract method 0x42966c68.
+//
+// Solidity: function burn(value uint256) returns()
+func (_ERC20Burnable *ERC20BurnableTransactorSession) Burn(value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.Burn(&_ERC20Burnable.TransactOpts, value)
+}
+
+// BurnFrom is a paid mutator transaction binding the contract method 0x79cc6790.
+//
+// Solidity: function burnFrom(from address, value uint256) returns()
+func (_ERC20Burnable *ERC20BurnableTransactor) BurnFrom(opts *bind.TransactOpts, from common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.contract.Transact(opts, "burnFrom", from, value)
+}
+
+// BurnFrom is a paid mutator transaction binding the contract method 0x79cc6790.
+//
+// Solidity: function burnFrom(from address, value uint256) returns()
+func (_ERC20Burnable *ERC20BurnableSession) BurnFrom(from common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.BurnFrom(&_ERC20Burnable.TransactOpts, from, value)
+}
+
+// BurnFrom is a paid mutator transaction binding the contract method 0x79cc6790.
+//
+// Solidity: function burnFrom(from address, value uint256) returns()
+func (_ERC20Burnable *ERC20BurnableTransactorSession) BurnFrom(from common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.BurnFrom(&_ERC20Burnable.TransactOpts, from, value)
+}
+
+// DecreaseAllowance is a paid mutator transaction binding the contract method 0xa457c2d7.
+//
+// Solidity: function decreaseAllowance(spender address, subtractedValue uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableTransactor) DecreaseAllowance(opts *bind.TransactOpts, spender common.Address, subtractedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.contract.Transact(opts, "decreaseAllowance", spender, subtractedValue)
+}
+
+// DecreaseAllowance is a paid mutator transaction binding the contract method 0xa457c2d7.
+//
+// Solidity: function decreaseAllowance(spender address, subtractedValue uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableSession) DecreaseAllowance(spender common.Address, subtractedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.DecreaseAllowance(&_ERC20Burnable.TransactOpts, spender, subtractedValue)
+}
+
+// DecreaseAllowance is a paid mutator transaction binding the contract method 0xa457c2d7.
+//
+// Solidity: function decreaseAllowance(spender address, subtractedValue uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableTransactorSession) DecreaseAllowance(spender common.Address, subtractedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.DecreaseAllowance(&_ERC20Burnable.TransactOpts, spender, subtractedValue)
+}
+
+// IncreaseAllowance is a paid mutator transaction binding the contract method 0x39509351.
+//
+// Solidity: function increaseAllowance(spender address, addedValue uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableTransactor) IncreaseAllowance(opts *bind.TransactOpts, spender common.Address, addedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.contract.Transact(opts, "increaseAllowance", spender, addedValue)
+}
+
+// IncreaseAllowance is a paid mutator transaction binding the contract method 0x39509351.
+//
+// Solidity: function increaseAllowance(spender address, addedValue uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableSession) IncreaseAllowance(spender common.Address, addedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.IncreaseAllowance(&_ERC20Burnable.TransactOpts, spender, addedValue)
+}
+
+// IncreaseAllowance is a paid mutator transaction binding the contract method 0x39509351.
+//
+// Solidity: function increaseAllowance(spender address, addedValue uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableTransactorSession) IncreaseAllowance(spender common.Address, addedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.IncreaseAllowance(&_ERC20Burnable.TransactOpts, spender, addedValue)
+}
+
+// Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
+//
+// Solidity: function transfer(to address, value uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableTransactor) Transfer(opts *bind.TransactOpts, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.contract.Transact(opts, "transfer", to, value)
+}
+
+// Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
+//
+// Solidity: function transfer(to address, value uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableSession) Transfer(to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.Transfer(&_ERC20Burnable.TransactOpts, to, value)
+}
+
+// Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
+//
+// Solidity: function transfer(to address, value uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableTransactorSession) Transfer(to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.Transfer(&_ERC20Burnable.TransactOpts, to, value)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(from address, to address, value uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableTransactor) TransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.contract.Transact(opts, "transferFrom", from, to, value)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(from address, to address, value uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableSession) TransferFrom(from common.Address, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.TransferFrom(&_ERC20Burnable.TransactOpts, from, to, value)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(from address, to address, value uint256) returns(bool)
+func (_ERC20Burnable *ERC20BurnableTransactorSession) TransferFrom(from common.Address, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Burnable.Contract.TransferFrom(&_ERC20Burnable.TransactOpts, from, to, value)
+}
+
+// ERC20BurnableApprovalIterator is returned from FilterApproval and is used to iterate over the raw logs and unpacked data for Approval events raised by the ERC20Burnable contract.
+type ERC20BurnableApprovalIterator struct {
+	Event *ERC20BurnableApproval // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC20BurnableApprovalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC20BurnableApproval)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC20BurnableApproval)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC20BurnableApprovalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC20BurnableApprovalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC20BurnableApproval represents a Approval event raised by the ERC20Burnable contract.
+type ERC20BurnableApproval struct {
+	Owner   common.Address
+	Spender common.Address
+	Value   *big.Int
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterApproval is a free log retrieval operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: e Approval(owner indexed address, spender indexed address, value uint256)
+func (_ERC20Burnable *ERC20BurnableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20BurnableApprovalIterator, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var spenderRule []interface{}
+	for _, spenderItem := range spender {
+		spenderRule = append(spenderRule, spenderItem)
+	}
+
+	logs, sub, err := _ERC20Burnable.contract.FilterLogs(opts, "Approval", ownerRule, spenderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20BurnableApprovalIterator{contract: _ERC20Burnable.contract, event: "Approval", logs: logs, sub: sub}, nil
+}
+
+// WatchApproval is a free log subscription operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: e Approval(owner indexed address, spender indexed address, value uint256)
+func (_ERC20Burnable *ERC20BurnableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20BurnableApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var spenderRule []interface{}
+	for _, spenderItem := range spender {
+		spenderRule = append(spenderRule, spenderItem)
+	}
+
+	logs, sub, err := _ERC20Burnable.contract.WatchLogs(opts, "Approval", ownerRule, spenderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC20BurnableApproval)
+				if err := _ERC20Burnable.contract.UnpackLog(event, "Approval", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ERC20BurnableTransferIterator is returned from FilterTransfer and is used to iterate over the raw logs and unpacked data for Transfer events raised by the ERC20Burnable contract.
+type ERC20BurnableTransferIterator struct {
+	Event *ERC20BurnableTransfer // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC20BurnableTransferIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC20BurnableTransfer)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC20BurnableTransfer)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC20BurnableTransferIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC20BurnableTransferIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC20BurnableTransfer represents a Transfer event raised by the ERC20Burnable contract.
+type ERC20BurnableTransfer struct {
+	From  common.Address
+	To    common.Address
+	Value *big.Int
+	Raw   types.Log // Blockchain specific contextual infos
+}
+
+// FilterTransfer is a free log retrieval operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: e Transfer(from indexed address, to indexed address, value uint256)
+func (_ERC20Burnable *ERC20BurnableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20BurnableTransferIterator, error) {
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+
+	logs, sub, err := _ERC20Burnable.contract.FilterLogs(opts, "Transfer", fromRule, toRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20BurnableTransferIterator{contract: _ERC20Burnable.contract, event: "Transfer", logs: logs, sub: sub}, nil
+}
+
+// WatchTransfer is a free log subscription operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: e Transfer(from indexed address, to indexed address, value uint256)
+func (_ERC20Burnable *ERC20BurnableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20BurnableTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+
+	logs, sub, err := _ERC20Burnable.contract.WatchLogs(opts, "Transfer", fromRule, toRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC20BurnableTransfer)
+				if err := _ERC20Burnable.contract.UnpackLog(event, "Transfer", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ERC20MintableABI is the input ABI used to generate the binding from.
+const ERC20MintableABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"addedValue\",\"type\":\"uint256\"}],\"name\":\"increaseAllowance\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"mint\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"addMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"subtractedValue\",\"type\":\"uint256\"}],\"name\":\"decreaseAllowance\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isMinter\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"}]"
+
+// ERC20MintableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const ERC20MintableBinRuntime = `0x6080604052600436106100b95763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663095ea7b381146100be57806318160ddd146100f657806323b872dd1461011d578063395093511461014757806340c10f191461016b57806370a082311461018f578063983b2d56146101b057806398650275146101d3578063a457c2d7146101e8578063a9059cbb1461020c578063aa271e1a14610230578063dd62ed3e14610251575b600080fd5b3480156100ca57600080fd5b506100e2600160a060020a0360043516602435610278565b604080519115158252519081900360200190f35b34801561010257600080fd5b5061010b6102f6565b60408051918252519081900360200190f35b34801561012957600080fd5b506100e2600160a060020a03600435811690602435166044356102fc565b34801561015357600080fd5b506100e2600160a060020a0360043516602435610399565b34801561017757600080fd5b506100e2600160a060020a0360043516602435610449565b34801561019b57600080fd5b5061010b600160a060020a0360043516610472565b3480156101bc57600080fd5b506101d1600160a060020a036004351661048d565b005b3480156101df57600080fd5b506101d16104ad565b3480156101f457600080fd5b506100e2600160a060020a03600435166024356104b8565b34801561021857600080fd5b506100e2600160a060020a0360043516602435610503565b34801561023c57600080fd5b506100e2600160a060020a0360043516610510565b34801561025d57600080fd5b5061010b600160a060020a0360043581169060243516610529565b6000600160a060020a038316151561028f57600080fd5b336000818152600160209081526040808320600160a060020a03881680855290835292819020869055805186815290519293927f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929181900390910190a350600192915050565b60025490565b600160a060020a038316600090815260016020908152604080832033845290915281205482111561032c57600080fd5b600160a060020a0384166000908152600160209081526040808320338452909152902054610360908363ffffffff61055416565b600160a060020a038516600090815260016020908152604080832033845290915290205561038f84848461056b565b5060019392505050565b6000600160a060020a03831615156103b057600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546103e4908363ffffffff61065d16565b336000818152600160209081526040808320600160a060020a0389168085529083529281902085905580519485525191937f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929081900390910190a350600192915050565b600061045433610510565b151561045f57600080fd5b6104698383610676565b50600192915050565b600160a060020a031660009081526020819052604090205490565b61049633610510565b15156104a157600080fd5b6104aa81610720565b50565b6104b633610768565b565b6000600160a060020a03831615156104cf57600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546103e4908363ffffffff61055416565b600061046933848461056b565b600061052360038363ffffffff6107b016565b92915050565b600160a060020a03918216600090815260016020908152604080832093909416825291909152205490565b6000808383111561056457600080fd5b5050900390565b600160a060020a03831660009081526020819052604090205481111561059057600080fd5b600160a060020a03821615156105a557600080fd5b600160a060020a0383166000908152602081905260409020546105ce908263ffffffff61055416565b600160a060020a038085166000908152602081905260408082209390935590841681522054610603908263ffffffff61065d16565b600160a060020a038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b60008282018381101561066f57600080fd5b9392505050565b600160a060020a038216151561068b57600080fd5b60025461069e908263ffffffff61065d16565b600255600160a060020a0382166000908152602081905260409020546106ca908263ffffffff61065d16565b600160a060020a0383166000818152602081815260408083209490945583518581529351929391927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9281900390910190a35050565b61073160038263ffffffff6107e716565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b61077960038263ffffffff61083516565b604051600160a060020a038216907fe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb6669290600090a250565b6000600160a060020a03821615156107c757600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b600160a060020a03811615156107fc57600080fd5b61080682826107b0565b1561081057600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b600160a060020a038116151561084a57600080fd5b61085482826107b0565b151561085f57600080fd5b600160a060020a0316600090815260209190915260409020805460ff191690555600a165627a7a723058201033e609667a6f19e86bd234f1797001a75eb1df73bcb70daf6276aa2267d4fe0029`
+
+// ERC20MintableBin is the compiled bytecode used for deploying new contracts.
+const ERC20MintableBin = `0x60806040526100163364010000000061001b810204565b6100f8565b6100336003826401000000006107e761006a82021704565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b600160a060020a038116151561007f57600080fd5b61009282826401000000006100c1810204565b1561009c57600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b6000600160a060020a03821615156100d857600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b6108ad806101076000396000f3006080604052600436106100b95763ffffffff7c0100000000000000000000000000000000000000000000000000000000600035041663095ea7b381146100be57806318160ddd146100f657806323b872dd1461011d578063395093511461014757806340c10f191461016b57806370a082311461018f578063983b2d56146101b057806398650275146101d3578063a457c2d7146101e8578063a9059cbb1461020c578063aa271e1a14610230578063dd62ed3e14610251575b600080fd5b3480156100ca57600080fd5b506100e2600160a060020a0360043516602435610278565b604080519115158252519081900360200190f35b34801561010257600080fd5b5061010b6102f6565b60408051918252519081900360200190f35b34801561012957600080fd5b506100e2600160a060020a03600435811690602435166044356102fc565b34801561015357600080fd5b506100e2600160a060020a0360043516602435610399565b34801561017757600080fd5b506100e2600160a060020a0360043516602435610449565b34801561019b57600080fd5b5061010b600160a060020a0360043516610472565b3480156101bc57600080fd5b506101d1600160a060020a036004351661048d565b005b3480156101df57600080fd5b506101d16104ad565b3480156101f457600080fd5b506100e2600160a060020a03600435166024356104b8565b34801561021857600080fd5b506100e2600160a060020a0360043516602435610503565b34801561023c57600080fd5b506100e2600160a060020a0360043516610510565b34801561025d57600080fd5b5061010b600160a060020a0360043581169060243516610529565b6000600160a060020a038316151561028f57600080fd5b336000818152600160209081526040808320600160a060020a03881680855290835292819020869055805186815290519293927f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929181900390910190a350600192915050565b60025490565b600160a060020a038316600090815260016020908152604080832033845290915281205482111561032c57600080fd5b600160a060020a0384166000908152600160209081526040808320338452909152902054610360908363ffffffff61055416565b600160a060020a038516600090815260016020908152604080832033845290915290205561038f84848461056b565b5060019392505050565b6000600160a060020a03831615156103b057600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546103e4908363ffffffff61065d16565b336000818152600160209081526040808320600160a060020a0389168085529083529281902085905580519485525191937f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929081900390910190a350600192915050565b600061045433610510565b151561045f57600080fd5b6104698383610676565b50600192915050565b600160a060020a031660009081526020819052604090205490565b61049633610510565b15156104a157600080fd5b6104aa81610720565b50565b6104b633610768565b565b6000600160a060020a03831615156104cf57600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546103e4908363ffffffff61055416565b600061046933848461056b565b600061052360038363ffffffff6107b016565b92915050565b600160a060020a03918216600090815260016020908152604080832093909416825291909152205490565b6000808383111561056457600080fd5b5050900390565b600160a060020a03831660009081526020819052604090205481111561059057600080fd5b600160a060020a03821615156105a557600080fd5b600160a060020a0383166000908152602081905260409020546105ce908263ffffffff61055416565b600160a060020a038085166000908152602081905260408082209390935590841681522054610603908263ffffffff61065d16565b600160a060020a038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b60008282018381101561066f57600080fd5b9392505050565b600160a060020a038216151561068b57600080fd5b60025461069e908263ffffffff61065d16565b600255600160a060020a0382166000908152602081905260409020546106ca908263ffffffff61065d16565b600160a060020a0383166000818152602081815260408083209490945583518581529351929391927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9281900390910190a35050565b61073160038263ffffffff6107e716565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b61077960038263ffffffff61083516565b604051600160a060020a038216907fe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb6669290600090a250565b6000600160a060020a03821615156107c757600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b600160a060020a03811615156107fc57600080fd5b61080682826107b0565b1561081057600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b600160a060020a038116151561084a57600080fd5b61085482826107b0565b151561085f57600080fd5b600160a060020a0316600090815260209190915260409020805460ff191690555600a165627a7a723058201033e609667a6f19e86bd234f1797001a75eb1df73bcb70daf6276aa2267d4fe0029`
+
+// DeployERC20Mintable deploys a new Klaytn contract, binding an instance of ERC20Mintable to it.
+func DeployERC20Mintable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC20Mintable, error) {
+	parsed, err := abi.JSON(strings.NewReader(ERC20MintableABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ERC20MintableBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &ERC20Mintable{ERC20MintableCaller: ERC20MintableCaller{contract: contract}, ERC20MintableTransactor: ERC20MintableTransactor{contract: contract}, ERC20MintableFilterer: ERC20MintableFilterer{contract: contract}}, nil
+}
+
+// ERC20Mintable is an auto generated Go binding around a Klaytn contract.
+type ERC20Mintable struct {
+	ERC20MintableCaller     // Read-only binding to the contract
+	ERC20MintableTransactor // Write-only binding to the contract
+	ERC20MintableFilterer   // Log filterer for contract events
+}
+
+// ERC20MintableCaller is an auto generated read-only Go binding around a Klaytn contract.
+type ERC20MintableCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC20MintableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type ERC20MintableTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC20MintableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type ERC20MintableFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC20MintableSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type ERC20MintableSession struct {
+	Contract     *ERC20Mintable    // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// ERC20MintableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type ERC20MintableCallerSession struct {
+	Contract *ERC20MintableCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts        // Call options to use throughout this session
+}
+
+// ERC20MintableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type ERC20MintableTransactorSession struct {
+	Contract     *ERC20MintableTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
+}
+
+// ERC20MintableRaw is an auto generated low-level Go binding around a Klaytn contract.
+type ERC20MintableRaw struct {
+	Contract *ERC20Mintable // Generic contract binding to access the raw methods on
+}
+
+// ERC20MintableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type ERC20MintableCallerRaw struct {
+	Contract *ERC20MintableCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ERC20MintableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type ERC20MintableTransactorRaw struct {
+	Contract *ERC20MintableTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewERC20Mintable creates a new instance of ERC20Mintable, bound to a specific deployed contract.
+func NewERC20Mintable(address common.Address, backend bind.ContractBackend) (*ERC20Mintable, error) {
+	contract, err := bindERC20Mintable(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20Mintable{ERC20MintableCaller: ERC20MintableCaller{contract: contract}, ERC20MintableTransactor: ERC20MintableTransactor{contract: contract}, ERC20MintableFilterer: ERC20MintableFilterer{contract: contract}}, nil
+}
+
+// NewERC20MintableCaller creates a new read-only instance of ERC20Mintable, bound to a specific deployed contract.
+func NewERC20MintableCaller(address common.Address, caller bind.ContractCaller) (*ERC20MintableCaller, error) {
+	contract, err := bindERC20Mintable(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20MintableCaller{contract: contract}, nil
+}
+
+// NewERC20MintableTransactor creates a new write-only instance of ERC20Mintable, bound to a specific deployed contract.
+func NewERC20MintableTransactor(address common.Address, transactor bind.ContractTransactor) (*ERC20MintableTransactor, error) {
+	contract, err := bindERC20Mintable(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20MintableTransactor{contract: contract}, nil
+}
+
+// NewERC20MintableFilterer creates a new log filterer instance of ERC20Mintable, bound to a specific deployed contract.
+func NewERC20MintableFilterer(address common.Address, filterer bind.ContractFilterer) (*ERC20MintableFilterer, error) {
+	contract, err := bindERC20Mintable(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20MintableFilterer{contract: contract}, nil
+}
+
+// bindERC20Mintable binds a generic wrapper to an already deployed contract.
+func bindERC20Mintable(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ERC20MintableABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ERC20Mintable *ERC20MintableRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ERC20Mintable.Contract.ERC20MintableCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ERC20Mintable *ERC20MintableRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.ERC20MintableTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ERC20Mintable *ERC20MintableRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.ERC20MintableTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ERC20Mintable *ERC20MintableCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ERC20Mintable.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ERC20Mintable *ERC20MintableTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ERC20Mintable *ERC20MintableTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.contract.Transact(opts, method, params...)
+}
+
+// Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
+//
+// Solidity: function allowance(owner address, spender address) constant returns(uint256)
+func (_ERC20Mintable *ERC20MintableCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ERC20Mintable.contract.Call(opts, out, "allowance", owner, spender)
+	return *ret0, err
+}
+
+// Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
+//
+// Solidity: function allowance(owner address, spender address) constant returns(uint256)
+func (_ERC20Mintable *ERC20MintableSession) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
+	return _ERC20Mintable.Contract.Allowance(&_ERC20Mintable.CallOpts, owner, spender)
+}
+
+// Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
+//
+// Solidity: function allowance(owner address, spender address) constant returns(uint256)
+func (_ERC20Mintable *ERC20MintableCallerSession) Allowance(owner common.Address, spender common.Address) (*big.Int, error) {
+	return _ERC20Mintable.Contract.Allowance(&_ERC20Mintable.CallOpts, owner, spender)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(owner address) constant returns(uint256)
+func (_ERC20Mintable *ERC20MintableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ERC20Mintable.contract.Call(opts, out, "balanceOf", owner)
+	return *ret0, err
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(owner address) constant returns(uint256)
+func (_ERC20Mintable *ERC20MintableSession) BalanceOf(owner common.Address) (*big.Int, error) {
+	return _ERC20Mintable.Contract.BalanceOf(&_ERC20Mintable.CallOpts, owner)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(owner address) constant returns(uint256)
+func (_ERC20Mintable *ERC20MintableCallerSession) BalanceOf(owner common.Address) (*big.Int, error) {
+	return _ERC20Mintable.Contract.BalanceOf(&_ERC20Mintable.CallOpts, owner)
+}
+
+// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
+//
+// Solidity: function isMinter(account address) constant returns(bool)
+func (_ERC20Mintable *ERC20MintableCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _ERC20Mintable.contract.Call(opts, out, "isMinter", account)
+	return *ret0, err
+}
+
+// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
+//
+// Solidity: function isMinter(account address) constant returns(bool)
+func (_ERC20Mintable *ERC20MintableSession) IsMinter(account common.Address) (bool, error) {
+	return _ERC20Mintable.Contract.IsMinter(&_ERC20Mintable.CallOpts, account)
+}
+
+// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
+//
+// Solidity: function isMinter(account address) constant returns(bool)
+func (_ERC20Mintable *ERC20MintableCallerSession) IsMinter(account common.Address) (bool, error) {
+	return _ERC20Mintable.Contract.IsMinter(&_ERC20Mintable.CallOpts, account)
+}
+
+// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
+//
+// Solidity: function totalSupply() constant returns(uint256)
+func (_ERC20Mintable *ERC20MintableCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ERC20Mintable.contract.Call(opts, out, "totalSupply")
+	return *ret0, err
+}
+
+// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
+//
+// Solidity: function totalSupply() constant returns(uint256)
+func (_ERC20Mintable *ERC20MintableSession) TotalSupply() (*big.Int, error) {
+	return _ERC20Mintable.Contract.TotalSupply(&_ERC20Mintable.CallOpts)
+}
+
+// TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
+//
+// Solidity: function totalSupply() constant returns(uint256)
+func (_ERC20Mintable *ERC20MintableCallerSession) TotalSupply() (*big.Int, error) {
+	return _ERC20Mintable.Contract.TotalSupply(&_ERC20Mintable.CallOpts)
+}
+
+// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
+//
+// Solidity: function addMinter(account address) returns()
+func (_ERC20Mintable *ERC20MintableTransactor) AddMinter(opts *bind.TransactOpts, account common.Address) (*types.Transaction, error) {
+	return _ERC20Mintable.contract.Transact(opts, "addMinter", account)
+}
+
+// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
+//
+// Solidity: function addMinter(account address) returns()
+func (_ERC20Mintable *ERC20MintableSession) AddMinter(account common.Address) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.AddMinter(&_ERC20Mintable.TransactOpts, account)
+}
+
+// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
+//
+// Solidity: function addMinter(account address) returns()
+func (_ERC20Mintable *ERC20MintableTransactorSession) AddMinter(account common.Address) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.AddMinter(&_ERC20Mintable.TransactOpts, account)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(spender address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactor) Approve(opts *bind.TransactOpts, spender common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.contract.Transact(opts, "approve", spender, value)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(spender address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableSession) Approve(spender common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.Approve(&_ERC20Mintable.TransactOpts, spender, value)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(spender address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactorSession) Approve(spender common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.Approve(&_ERC20Mintable.TransactOpts, spender, value)
+}
+
+// DecreaseAllowance is a paid mutator transaction binding the contract method 0xa457c2d7.
+//
+// Solidity: function decreaseAllowance(spender address, subtractedValue uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactor) DecreaseAllowance(opts *bind.TransactOpts, spender common.Address, subtractedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.contract.Transact(opts, "decreaseAllowance", spender, subtractedValue)
+}
+
+// DecreaseAllowance is a paid mutator transaction binding the contract method 0xa457c2d7.
+//
+// Solidity: function decreaseAllowance(spender address, subtractedValue uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableSession) DecreaseAllowance(spender common.Address, subtractedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.DecreaseAllowance(&_ERC20Mintable.TransactOpts, spender, subtractedValue)
+}
+
+// DecreaseAllowance is a paid mutator transaction binding the contract method 0xa457c2d7.
+//
+// Solidity: function decreaseAllowance(spender address, subtractedValue uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactorSession) DecreaseAllowance(spender common.Address, subtractedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.DecreaseAllowance(&_ERC20Mintable.TransactOpts, spender, subtractedValue)
+}
+
+// IncreaseAllowance is a paid mutator transaction binding the contract method 0x39509351.
+//
+// Solidity: function increaseAllowance(spender address, addedValue uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactor) IncreaseAllowance(opts *bind.TransactOpts, spender common.Address, addedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.contract.Transact(opts, "increaseAllowance", spender, addedValue)
+}
+
+// IncreaseAllowance is a paid mutator transaction binding the contract method 0x39509351.
+//
+// Solidity: function increaseAllowance(spender address, addedValue uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableSession) IncreaseAllowance(spender common.Address, addedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.IncreaseAllowance(&_ERC20Mintable.TransactOpts, spender, addedValue)
+}
+
+// IncreaseAllowance is a paid mutator transaction binding the contract method 0x39509351.
+//
+// Solidity: function increaseAllowance(spender address, addedValue uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactorSession) IncreaseAllowance(spender common.Address, addedValue *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.IncreaseAllowance(&_ERC20Mintable.TransactOpts, spender, addedValue)
+}
+
+// Mint is a paid mutator transaction binding the contract method 0x40c10f19.
+//
+// Solidity: function mint(to address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactor) Mint(opts *bind.TransactOpts, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.contract.Transact(opts, "mint", to, value)
+}
+
+// Mint is a paid mutator transaction binding the contract method 0x40c10f19.
+//
+// Solidity: function mint(to address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableSession) Mint(to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.Mint(&_ERC20Mintable.TransactOpts, to, value)
+}
+
+// Mint is a paid mutator transaction binding the contract method 0x40c10f19.
+//
+// Solidity: function mint(to address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactorSession) Mint(to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.Mint(&_ERC20Mintable.TransactOpts, to, value)
+}
+
+// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
+//
+// Solidity: function renounceMinter() returns()
+func (_ERC20Mintable *ERC20MintableTransactor) RenounceMinter(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC20Mintable.contract.Transact(opts, "renounceMinter")
+}
+
+// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
+//
+// Solidity: function renounceMinter() returns()
+func (_ERC20Mintable *ERC20MintableSession) RenounceMinter() (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.RenounceMinter(&_ERC20Mintable.TransactOpts)
+}
+
+// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
+//
+// Solidity: function renounceMinter() returns()
+func (_ERC20Mintable *ERC20MintableTransactorSession) RenounceMinter() (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.RenounceMinter(&_ERC20Mintable.TransactOpts)
+}
+
+// Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
+//
+// Solidity: function transfer(to address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactor) Transfer(opts *bind.TransactOpts, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.contract.Transact(opts, "transfer", to, value)
+}
+
+// Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
+//
+// Solidity: function transfer(to address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableSession) Transfer(to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.Transfer(&_ERC20Mintable.TransactOpts, to, value)
+}
+
+// Transfer is a paid mutator transaction binding the contract method 0xa9059cbb.
+//
+// Solidity: function transfer(to address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactorSession) Transfer(to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.Transfer(&_ERC20Mintable.TransactOpts, to, value)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(from address, to address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactor) TransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.contract.Transact(opts, "transferFrom", from, to, value)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(from address, to address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableSession) TransferFrom(from common.Address, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.TransferFrom(&_ERC20Mintable.TransactOpts, from, to, value)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(from address, to address, value uint256) returns(bool)
+func (_ERC20Mintable *ERC20MintableTransactorSession) TransferFrom(from common.Address, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ERC20Mintable.Contract.TransferFrom(&_ERC20Mintable.TransactOpts, from, to, value)
+}
+
+// ERC20MintableApprovalIterator is returned from FilterApproval and is used to iterate over the raw logs and unpacked data for Approval events raised by the ERC20Mintable contract.
+type ERC20MintableApprovalIterator struct {
+	Event *ERC20MintableApproval // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC20MintableApprovalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC20MintableApproval)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC20MintableApproval)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC20MintableApprovalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC20MintableApprovalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC20MintableApproval represents a Approval event raised by the ERC20Mintable contract.
+type ERC20MintableApproval struct {
+	Owner   common.Address
+	Spender common.Address
+	Value   *big.Int
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterApproval is a free log retrieval operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: e Approval(owner indexed address, spender indexed address, value uint256)
+func (_ERC20Mintable *ERC20MintableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20MintableApprovalIterator, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var spenderRule []interface{}
+	for _, spenderItem := range spender {
+		spenderRule = append(spenderRule, spenderItem)
+	}
+
+	logs, sub, err := _ERC20Mintable.contract.FilterLogs(opts, "Approval", ownerRule, spenderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20MintableApprovalIterator{contract: _ERC20Mintable.contract, event: "Approval", logs: logs, sub: sub}, nil
+}
+
+// WatchApproval is a free log subscription operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: e Approval(owner indexed address, spender indexed address, value uint256)
+func (_ERC20Mintable *ERC20MintableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20MintableApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var spenderRule []interface{}
+	for _, spenderItem := range spender {
+		spenderRule = append(spenderRule, spenderItem)
+	}
+
+	logs, sub, err := _ERC20Mintable.contract.WatchLogs(opts, "Approval", ownerRule, spenderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC20MintableApproval)
+				if err := _ERC20Mintable.contract.UnpackLog(event, "Approval", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ERC20MintableMinterAddedIterator is returned from FilterMinterAdded and is used to iterate over the raw logs and unpacked data for MinterAdded events raised by the ERC20Mintable contract.
+type ERC20MintableMinterAddedIterator struct {
+	Event *ERC20MintableMinterAdded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC20MintableMinterAddedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC20MintableMinterAdded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC20MintableMinterAdded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC20MintableMinterAddedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC20MintableMinterAddedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC20MintableMinterAdded represents a MinterAdded event raised by the ERC20Mintable contract.
+type ERC20MintableMinterAdded struct {
+	Account common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterMinterAdded is a free log retrieval operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
+//
+// Solidity: e MinterAdded(account indexed address)
+func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ERC20MintableMinterAddedIterator, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _ERC20Mintable.contract.FilterLogs(opts, "MinterAdded", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20MintableMinterAddedIterator{contract: _ERC20Mintable.contract, event: "MinterAdded", logs: logs, sub: sub}, nil
+}
+
+// WatchMinterAdded is a free log subscription operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
+//
+// Solidity: e MinterAdded(account indexed address)
+func (_ERC20Mintable *ERC20MintableFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ERC20MintableMinterAdded, account []common.Address) (event.Subscription, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _ERC20Mintable.contract.WatchLogs(opts, "MinterAdded", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC20MintableMinterAdded)
+				if err := _ERC20Mintable.contract.UnpackLog(event, "MinterAdded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ERC20MintableMinterRemovedIterator is returned from FilterMinterRemoved and is used to iterate over the raw logs and unpacked data for MinterRemoved events raised by the ERC20Mintable contract.
+type ERC20MintableMinterRemovedIterator struct {
+	Event *ERC20MintableMinterRemoved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC20MintableMinterRemovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC20MintableMinterRemoved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC20MintableMinterRemoved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC20MintableMinterRemovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC20MintableMinterRemovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC20MintableMinterRemoved represents a MinterRemoved event raised by the ERC20Mintable contract.
+type ERC20MintableMinterRemoved struct {
+	Account common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterMinterRemoved is a free log retrieval operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
+//
+// Solidity: e MinterRemoved(account indexed address)
+func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ERC20MintableMinterRemovedIterator, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _ERC20Mintable.contract.FilterLogs(opts, "MinterRemoved", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20MintableMinterRemovedIterator{contract: _ERC20Mintable.contract, event: "MinterRemoved", logs: logs, sub: sub}, nil
+}
+
+// WatchMinterRemoved is a free log subscription operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
+//
+// Solidity: e MinterRemoved(account indexed address)
+func (_ERC20Mintable *ERC20MintableFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ERC20MintableMinterRemoved, account []common.Address) (event.Subscription, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _ERC20Mintable.contract.WatchLogs(opts, "MinterRemoved", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC20MintableMinterRemoved)
+				if err := _ERC20Mintable.contract.UnpackLog(event, "MinterRemoved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ERC20MintableTransferIterator is returned from FilterTransfer and is used to iterate over the raw logs and unpacked data for Transfer events raised by the ERC20Mintable contract.
+type ERC20MintableTransferIterator struct {
+	Event *ERC20MintableTransfer // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC20MintableTransferIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC20MintableTransfer)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC20MintableTransfer)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC20MintableTransferIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC20MintableTransferIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC20MintableTransfer represents a Transfer event raised by the ERC20Mintable contract.
+type ERC20MintableTransfer struct {
+	From  common.Address
+	To    common.Address
+	Value *big.Int
+	Raw   types.Log // Blockchain specific contextual infos
+}
+
+// FilterTransfer is a free log retrieval operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: e Transfer(from indexed address, to indexed address, value uint256)
+func (_ERC20Mintable *ERC20MintableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20MintableTransferIterator, error) {
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+
+	logs, sub, err := _ERC20Mintable.contract.FilterLogs(opts, "Transfer", fromRule, toRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC20MintableTransferIterator{contract: _ERC20Mintable.contract, event: "Transfer", logs: logs, sub: sub}, nil
+}
+
+// WatchTransfer is a free log subscription operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: e Transfer(from indexed address, to indexed address, value uint256)
+func (_ERC20Mintable *ERC20MintableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20MintableTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+
+	logs, sub, err := _ERC20Mintable.contract.WatchLogs(opts, "Transfer", fromRule, toRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC20MintableTransfer)
+				if err := _ERC20Mintable.contract.UnpackLog(event, "Transfer", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
 // IERC20ABI is the input ABI used to generate the binding from.
 const IERC20ABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"who\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"}]"
 
@@ -1584,6 +3241,666 @@ func (_ITokenReceiver *ITokenReceiverTransactorSession) OnTokenReceived(_from co
 	return _ITokenReceiver.Contract.OnTokenReceived(&_ITokenReceiver.TransactOpts, _from, amount, _to)
 }
 
+// MinterRoleABI is the input ABI used to generate the binding from.
+const MinterRoleABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"addMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isMinter\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterRemoved\",\"type\":\"event\"}]"
+
+// MinterRoleBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const MinterRoleBinRuntime = `0x`
+
+// MinterRoleBin is the compiled bytecode used for deploying new contracts.
+const MinterRoleBin = `0x`
+
+// DeployMinterRole deploys a new Klaytn contract, binding an instance of MinterRole to it.
+func DeployMinterRole(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *MinterRole, error) {
+	parsed, err := abi.JSON(strings.NewReader(MinterRoleABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(MinterRoleBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &MinterRole{MinterRoleCaller: MinterRoleCaller{contract: contract}, MinterRoleTransactor: MinterRoleTransactor{contract: contract}, MinterRoleFilterer: MinterRoleFilterer{contract: contract}}, nil
+}
+
+// MinterRole is an auto generated Go binding around a Klaytn contract.
+type MinterRole struct {
+	MinterRoleCaller     // Read-only binding to the contract
+	MinterRoleTransactor // Write-only binding to the contract
+	MinterRoleFilterer   // Log filterer for contract events
+}
+
+// MinterRoleCaller is an auto generated read-only Go binding around a Klaytn contract.
+type MinterRoleCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// MinterRoleTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type MinterRoleTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// MinterRoleFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type MinterRoleFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// MinterRoleSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type MinterRoleSession struct {
+	Contract     *MinterRole       // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// MinterRoleCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type MinterRoleCallerSession struct {
+	Contract *MinterRoleCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts     // Call options to use throughout this session
+}
+
+// MinterRoleTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type MinterRoleTransactorSession struct {
+	Contract     *MinterRoleTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
+}
+
+// MinterRoleRaw is an auto generated low-level Go binding around a Klaytn contract.
+type MinterRoleRaw struct {
+	Contract *MinterRole // Generic contract binding to access the raw methods on
+}
+
+// MinterRoleCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type MinterRoleCallerRaw struct {
+	Contract *MinterRoleCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// MinterRoleTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type MinterRoleTransactorRaw struct {
+	Contract *MinterRoleTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewMinterRole creates a new instance of MinterRole, bound to a specific deployed contract.
+func NewMinterRole(address common.Address, backend bind.ContractBackend) (*MinterRole, error) {
+	contract, err := bindMinterRole(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &MinterRole{MinterRoleCaller: MinterRoleCaller{contract: contract}, MinterRoleTransactor: MinterRoleTransactor{contract: contract}, MinterRoleFilterer: MinterRoleFilterer{contract: contract}}, nil
+}
+
+// NewMinterRoleCaller creates a new read-only instance of MinterRole, bound to a specific deployed contract.
+func NewMinterRoleCaller(address common.Address, caller bind.ContractCaller) (*MinterRoleCaller, error) {
+	contract, err := bindMinterRole(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &MinterRoleCaller{contract: contract}, nil
+}
+
+// NewMinterRoleTransactor creates a new write-only instance of MinterRole, bound to a specific deployed contract.
+func NewMinterRoleTransactor(address common.Address, transactor bind.ContractTransactor) (*MinterRoleTransactor, error) {
+	contract, err := bindMinterRole(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &MinterRoleTransactor{contract: contract}, nil
+}
+
+// NewMinterRoleFilterer creates a new log filterer instance of MinterRole, bound to a specific deployed contract.
+func NewMinterRoleFilterer(address common.Address, filterer bind.ContractFilterer) (*MinterRoleFilterer, error) {
+	contract, err := bindMinterRole(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &MinterRoleFilterer{contract: contract}, nil
+}
+
+// bindMinterRole binds a generic wrapper to an already deployed contract.
+func bindMinterRole(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(MinterRoleABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_MinterRole *MinterRoleRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _MinterRole.Contract.MinterRoleCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_MinterRole *MinterRoleRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _MinterRole.Contract.MinterRoleTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_MinterRole *MinterRoleRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _MinterRole.Contract.MinterRoleTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_MinterRole *MinterRoleCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _MinterRole.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_MinterRole *MinterRoleTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _MinterRole.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_MinterRole *MinterRoleTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _MinterRole.Contract.contract.Transact(opts, method, params...)
+}
+
+// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
+//
+// Solidity: function isMinter(account address) constant returns(bool)
+func (_MinterRole *MinterRoleCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _MinterRole.contract.Call(opts, out, "isMinter", account)
+	return *ret0, err
+}
+
+// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
+//
+// Solidity: function isMinter(account address) constant returns(bool)
+func (_MinterRole *MinterRoleSession) IsMinter(account common.Address) (bool, error) {
+	return _MinterRole.Contract.IsMinter(&_MinterRole.CallOpts, account)
+}
+
+// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
+//
+// Solidity: function isMinter(account address) constant returns(bool)
+func (_MinterRole *MinterRoleCallerSession) IsMinter(account common.Address) (bool, error) {
+	return _MinterRole.Contract.IsMinter(&_MinterRole.CallOpts, account)
+}
+
+// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
+//
+// Solidity: function addMinter(account address) returns()
+func (_MinterRole *MinterRoleTransactor) AddMinter(opts *bind.TransactOpts, account common.Address) (*types.Transaction, error) {
+	return _MinterRole.contract.Transact(opts, "addMinter", account)
+}
+
+// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
+//
+// Solidity: function addMinter(account address) returns()
+func (_MinterRole *MinterRoleSession) AddMinter(account common.Address) (*types.Transaction, error) {
+	return _MinterRole.Contract.AddMinter(&_MinterRole.TransactOpts, account)
+}
+
+// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
+//
+// Solidity: function addMinter(account address) returns()
+func (_MinterRole *MinterRoleTransactorSession) AddMinter(account common.Address) (*types.Transaction, error) {
+	return _MinterRole.Contract.AddMinter(&_MinterRole.TransactOpts, account)
+}
+
+// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
+//
+// Solidity: function renounceMinter() returns()
+func (_MinterRole *MinterRoleTransactor) RenounceMinter(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _MinterRole.contract.Transact(opts, "renounceMinter")
+}
+
+// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
+//
+// Solidity: function renounceMinter() returns()
+func (_MinterRole *MinterRoleSession) RenounceMinter() (*types.Transaction, error) {
+	return _MinterRole.Contract.RenounceMinter(&_MinterRole.TransactOpts)
+}
+
+// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
+//
+// Solidity: function renounceMinter() returns()
+func (_MinterRole *MinterRoleTransactorSession) RenounceMinter() (*types.Transaction, error) {
+	return _MinterRole.Contract.RenounceMinter(&_MinterRole.TransactOpts)
+}
+
+// MinterRoleMinterAddedIterator is returned from FilterMinterAdded and is used to iterate over the raw logs and unpacked data for MinterAdded events raised by the MinterRole contract.
+type MinterRoleMinterAddedIterator struct {
+	Event *MinterRoleMinterAdded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *MinterRoleMinterAddedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(MinterRoleMinterAdded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(MinterRoleMinterAdded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *MinterRoleMinterAddedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *MinterRoleMinterAddedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// MinterRoleMinterAdded represents a MinterAdded event raised by the MinterRole contract.
+type MinterRoleMinterAdded struct {
+	Account common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterMinterAdded is a free log retrieval operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
+//
+// Solidity: e MinterAdded(account indexed address)
+func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterAddedIterator, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _MinterRole.contract.FilterLogs(opts, "MinterAdded", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return &MinterRoleMinterAddedIterator{contract: _MinterRole.contract, event: "MinterAdded", logs: logs, sub: sub}, nil
+}
+
+// WatchMinterAdded is a free log subscription operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
+//
+// Solidity: e MinterAdded(account indexed address)
+func (_MinterRole *MinterRoleFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterAdded, account []common.Address) (event.Subscription, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _MinterRole.contract.WatchLogs(opts, "MinterAdded", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(MinterRoleMinterAdded)
+				if err := _MinterRole.contract.UnpackLog(event, "MinterAdded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// MinterRoleMinterRemovedIterator is returned from FilterMinterRemoved and is used to iterate over the raw logs and unpacked data for MinterRemoved events raised by the MinterRole contract.
+type MinterRoleMinterRemovedIterator struct {
+	Event *MinterRoleMinterRemoved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *MinterRoleMinterRemovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(MinterRoleMinterRemoved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(MinterRoleMinterRemoved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *MinterRoleMinterRemovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *MinterRoleMinterRemovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// MinterRoleMinterRemoved represents a MinterRemoved event raised by the MinterRole contract.
+type MinterRoleMinterRemoved struct {
+	Account common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterMinterRemoved is a free log retrieval operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
+//
+// Solidity: e MinterRemoved(account indexed address)
+func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterRemovedIterator, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _MinterRole.contract.FilterLogs(opts, "MinterRemoved", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return &MinterRoleMinterRemovedIterator{contract: _MinterRole.contract, event: "MinterRemoved", logs: logs, sub: sub}, nil
+}
+
+// WatchMinterRemoved is a free log subscription operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
+//
+// Solidity: e MinterRemoved(account indexed address)
+func (_MinterRole *MinterRoleFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterRemoved, account []common.Address) (event.Subscription, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _MinterRole.contract.WatchLogs(opts, "MinterRemoved", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(MinterRoleMinterRemoved)
+				if err := _MinterRole.contract.UnpackLog(event, "MinterRemoved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// RolesABI is the input ABI used to generate the binding from.
+const RolesABI = "[]"
+
+// RolesBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const RolesBinRuntime = `0x73000000000000000000000000000000000000000030146080604052600080fd00a165627a7a72305820940ae78c3795f61b7b72239ebb8497c12f7cc4c6651567d7550db6d35fb832370029`
+
+// RolesBin is the compiled bytecode used for deploying new contracts.
+const RolesBin = `0x604c602c600b82828239805160001a60731460008114601c57601e565bfe5b5030600052607381538281f30073000000000000000000000000000000000000000030146080604052600080fd00a165627a7a72305820940ae78c3795f61b7b72239ebb8497c12f7cc4c6651567d7550db6d35fb832370029`
+
+// DeployRoles deploys a new Klaytn contract, binding an instance of Roles to it.
+func DeployRoles(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Roles, error) {
+	parsed, err := abi.JSON(strings.NewReader(RolesABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(RolesBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Roles{RolesCaller: RolesCaller{contract: contract}, RolesTransactor: RolesTransactor{contract: contract}, RolesFilterer: RolesFilterer{contract: contract}}, nil
+}
+
+// Roles is an auto generated Go binding around a Klaytn contract.
+type Roles struct {
+	RolesCaller     // Read-only binding to the contract
+	RolesTransactor // Write-only binding to the contract
+	RolesFilterer   // Log filterer for contract events
+}
+
+// RolesCaller is an auto generated read-only Go binding around a Klaytn contract.
+type RolesCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// RolesTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type RolesTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// RolesFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type RolesFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// RolesSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type RolesSession struct {
+	Contract     *Roles            // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// RolesCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type RolesCallerSession struct {
+	Contract *RolesCaller  // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts // Call options to use throughout this session
+}
+
+// RolesTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type RolesTransactorSession struct {
+	Contract     *RolesTransactor  // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// RolesRaw is an auto generated low-level Go binding around a Klaytn contract.
+type RolesRaw struct {
+	Contract *Roles // Generic contract binding to access the raw methods on
+}
+
+// RolesCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type RolesCallerRaw struct {
+	Contract *RolesCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// RolesTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type RolesTransactorRaw struct {
+	Contract *RolesTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewRoles creates a new instance of Roles, bound to a specific deployed contract.
+func NewRoles(address common.Address, backend bind.ContractBackend) (*Roles, error) {
+	contract, err := bindRoles(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Roles{RolesCaller: RolesCaller{contract: contract}, RolesTransactor: RolesTransactor{contract: contract}, RolesFilterer: RolesFilterer{contract: contract}}, nil
+}
+
+// NewRolesCaller creates a new read-only instance of Roles, bound to a specific deployed contract.
+func NewRolesCaller(address common.Address, caller bind.ContractCaller) (*RolesCaller, error) {
+	contract, err := bindRoles(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &RolesCaller{contract: contract}, nil
+}
+
+// NewRolesTransactor creates a new write-only instance of Roles, bound to a specific deployed contract.
+func NewRolesTransactor(address common.Address, transactor bind.ContractTransactor) (*RolesTransactor, error) {
+	contract, err := bindRoles(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &RolesTransactor{contract: contract}, nil
+}
+
+// NewRolesFilterer creates a new log filterer instance of Roles, bound to a specific deployed contract.
+func NewRolesFilterer(address common.Address, filterer bind.ContractFilterer) (*RolesFilterer, error) {
+	contract, err := bindRoles(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &RolesFilterer{contract: contract}, nil
+}
+
+// bindRoles binds a generic wrapper to an already deployed contract.
+func bindRoles(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(RolesABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Roles *RolesRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Roles.Contract.RolesCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Roles *RolesRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Roles.Contract.RolesTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Roles *RolesRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Roles.Contract.RolesTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Roles *RolesCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _Roles.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Roles *RolesTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Roles.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Roles *RolesTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Roles.Contract.contract.Transact(opts, method, params...)
+}
+
 // SafeMathABI is the input ABI used to generate the binding from.
 const SafeMathABI = "[]"
 
@@ -1749,13 +4066,13 @@ func (_SafeMath *SafeMathTransactorRaw) Transact(opts *bind.TransactOpts, method
 }
 
 // ServiceChainTokenABI is the input ABI used to generate the binding from.
-const ServiceChainTokenABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"INITIAL_SUPPLY\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"name\":\"\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"addedValue\",\"type\":\"uint256\"}],\"name\":\"increaseAllowance\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"subtractedValue\",\"type\":\"uint256\"}],\"name\":\"decreaseAllowance\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_amount\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"requestValueTransfer\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"}]"
+const ServiceChainTokenABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"INITIAL_SUPPLY\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"decimals\",\"outputs\":[{\"name\":\"\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"addedValue\",\"type\":\"uint256\"}],\"name\":\"increaseAllowance\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"mint\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"burnFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"addMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"subtractedValue\",\"type\":\"uint256\"}],\"name\":\"decreaseAllowance\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isMinter\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_amount\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"requestValueTransfer\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"}]"
 
 // ServiceChainTokenBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ServiceChainTokenBinRuntime = `0x6080604052600436106100c45763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306fdde0381146100c9578063095ea7b31461015357806318160ddd1461018b57806323b872dd146101b25780632ff2e9dc146101dc578063313ce567146101f1578063395093511461021c57806370a082311461024057806395d89b4114610261578063a457c2d714610276578063a9059cbb1461029a578063c6b07116146102be578063dd62ed3e146102e4575b600080fd5b3480156100d557600080fd5b506100de61030b565b6040805160208082528351818301528351919283929083019185019080838360005b83811015610118578181015183820152602001610100565b50505050905090810190601f1680156101455780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561015f57600080fd5b50610177600160a060020a0360043516602435610342565b604080519115158252519081900360200190f35b34801561019757600080fd5b506101a06103c0565b60408051918252519081900360200190f35b3480156101be57600080fd5b50610177600160a060020a03600435811690602435166044356103c6565b3480156101e857600080fd5b506101a0610463565b3480156101fd57600080fd5b50610206610473565b6040805160ff9092168252519081900360200190f35b34801561022857600080fd5b50610177600160a060020a0360043516602435610478565b34801561024c57600080fd5b506101a0600160a060020a0360043516610528565b34801561026d57600080fd5b506100de610543565b34801561028257600080fd5b50610177600160a060020a036004351660243561057a565b3480156102a657600080fd5b50610177600160a060020a03600435166024356105c5565b3480156102ca57600080fd5b506102e2600435600160a060020a03602435166105db565b005b3480156102f057600080fd5b506101a0600160a060020a0360043581169060243516610773565b60408051808201909152601181527f53657276696365436861696e546f6b656e000000000000000000000000000000602082015281565b6000600160a060020a038316151561035957600080fd5b336000818152600160209081526040808320600160a060020a03881680855290835292819020869055805186815290519293927f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929181900390910190a350600192915050565b60025490565b600160a060020a03831660009081526001602090815260408083203384529091528120548211156103f657600080fd5b600160a060020a038416600090815260016020908152604080832033845290915290205461042a908363ffffffff61079e16565b600160a060020a03851660009081526001602090815260408083203384529091529020556104598484846107b5565b5060019392505050565b6b033b2e3c9fd0803ce800000081565b601281565b6000600160a060020a038316151561048f57600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546104c3908363ffffffff6108a716565b336000818152600160209081526040808320600160a060020a0389168085529083529281902085905580519485525191937f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929081900390910190a350600192915050565b600160a060020a031660009081526020819052604090205490565b60408051808201909152600381527f5343540000000000000000000000000000000000000000000000000000000000602082015281565b6000600160a060020a038316151561059157600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546104c3908363ffffffff61079e16565b60006105d23384846107b5565b50600192915050565b6003546000906105f490600160a060020a0316846105c5565b50600354604080517ff099d9bd00000000000000000000000000000000000000000000000000000000815233600482015260248101869052600160a060020a0385811660448301529151919092169163f099d9bd9160648083019260209291908290030181600087803b15801561066a57600080fd5b505af115801561067e573d6000803e3d6000fd5b505050506040513d602081101561069457600080fd5b505190507fffffffff0000000000000000000000000000000000000000000000000000000081167fbc04f0af000000000000000000000000000000000000000000000000000000001461076e57604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602f60248201527f53656e7420746f206120627269646765207768696368206973206e6f7420616e60448201527f2045524332302072656365697665720000000000000000000000000000000000606482015290519081900360840190fd5b505050565b600160a060020a03918216600090815260016020908152604080832093909416825291909152205490565b600080838311156107ae57600080fd5b5050900390565b600160a060020a0383166000908152602081905260409020548111156107da57600080fd5b600160a060020a03821615156107ef57600080fd5b600160a060020a038316600090815260208190526040902054610818908263ffffffff61079e16565b600160a060020a03808516600090815260208190526040808220939093559084168152205461084d908263ffffffff6108a716565b600160a060020a038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b6000828201838110156108b957600080fd5b9392505050565b6000903b11905600a165627a7a72305820e7eddbe2240dee2eb35e40d423ee56a7a0ff0cd6bde0594d2bf251114e462d2a0029`
+const ServiceChainTokenBinRuntime = `0x6080604052600436106101065763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306fdde03811461010b578063095ea7b31461019557806318160ddd146101cd57806323b872dd146101f45780632ff2e9dc1461021e578063313ce56714610233578063395093511461025e57806340c10f191461028257806342966c68146102a657806370a08231146102c057806379cc6790146102e157806395d89b4114610305578063983b2d561461031a578063986502751461033b578063a457c2d714610350578063a9059cbb14610374578063aa271e1a14610398578063c6b07116146103b9578063dd62ed3e146103dd575b600080fd5b34801561011757600080fd5b50610120610404565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561015a578181015183820152602001610142565b50505050905090810190601f1680156101875780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b3480156101a157600080fd5b506101b9600160a060020a036004351660243561043b565b604080519115158252519081900360200190f35b3480156101d957600080fd5b506101e26104b9565b60408051918252519081900360200190f35b34801561020057600080fd5b506101b9600160a060020a03600435811690602435166044356104bf565b34801561022a57600080fd5b506101e261055c565b34801561023f57600080fd5b5061024861056c565b6040805160ff9092168252519081900360200190f35b34801561026a57600080fd5b506101b9600160a060020a0360043516602435610571565b34801561028e57600080fd5b506101b9600160a060020a0360043516602435610621565b3480156102b257600080fd5b506102be60043561064a565b005b3480156102cc57600080fd5b506101e2600160a060020a0360043516610657565b3480156102ed57600080fd5b506102be600160a060020a0360043516602435610672565b34801561031157600080fd5b50610120610680565b34801561032657600080fd5b506102be600160a060020a03600435166106b7565b34801561034757600080fd5b506102be6106d4565b34801561035c57600080fd5b506101b9600160a060020a03600435166024356106df565b34801561038057600080fd5b506101b9600160a060020a036004351660243561072a565b3480156103a457600080fd5b506101b9600160a060020a0360043516610737565b3480156103c557600080fd5b506102be600435600160a060020a0360243516610750565b3480156103e957600080fd5b506101e2600160a060020a03600435811690602435166108e9565b60408051808201909152601181527f53657276696365436861696e546f6b656e000000000000000000000000000000602082015281565b6000600160a060020a038316151561045257600080fd5b336000818152600160209081526040808320600160a060020a03881680855290835292819020869055805186815290519293927f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929181900390910190a350600192915050565b60025490565b600160a060020a03831660009081526001602090815260408083203384529091528120548211156104ef57600080fd5b600160a060020a0384166000908152600160209081526040808320338452909152902054610523908363ffffffff61091416565b600160a060020a038516600090815260016020908152604080832033845290915290205561055284848461092b565b5060019392505050565b6b033b2e3c9fd0803ce800000081565b601281565b6000600160a060020a038316151561058857600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546105bc908363ffffffff610a1d16565b336000818152600160209081526040808320600160a060020a0389168085529083529281902085905580519485525191937f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929081900390910190a350600192915050565b600061062c33610737565b151561063757600080fd5b6106418383610a36565b50600192915050565b6106543382610ae0565b50565b600160a060020a031660009081526020819052604090205490565b61067c8282610bae565b5050565b60408051808201909152600381527f5343540000000000000000000000000000000000000000000000000000000000602082015281565b6106c033610737565b15156106cb57600080fd5b61065481610c40565b6106dd33610c88565b565b6000600160a060020a03831615156106f657600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546105bc908363ffffffff61091416565b600061064133848461092b565b600061074a60038363ffffffff610cd016565b92915050565b60045460009061076990600160a060020a03168461072a565b5060048054604080517ff099d9bd000000000000000000000000000000000000000000000000000000008152339381019390935260248301869052600160a060020a038581166044850152905191169163f099d9bd9160648083019260209291908290030181600087803b1580156107e057600080fd5b505af11580156107f4573d6000803e3d6000fd5b505050506040513d602081101561080a57600080fd5b505190507fffffffff0000000000000000000000000000000000000000000000000000000081167fbc04f0af00000000000000000000000000000000000000000000000000000000146108e457604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602f60248201527f53656e7420746f206120627269646765207768696368206973206e6f7420616e60448201527f2045524332302072656365697665720000000000000000000000000000000000606482015290519081900360840190fd5b505050565b600160a060020a03918216600090815260016020908152604080832093909416825291909152205490565b6000808383111561092457600080fd5b5050900390565b600160a060020a03831660009081526020819052604090205481111561095057600080fd5b600160a060020a038216151561096557600080fd5b600160a060020a03831660009081526020819052604090205461098e908263ffffffff61091416565b600160a060020a0380851660009081526020819052604080822093909355908416815220546109c3908263ffffffff610a1d16565b600160a060020a038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b600082820183811015610a2f57600080fd5b9392505050565b600160a060020a0382161515610a4b57600080fd5b600254610a5e908263ffffffff610a1d16565b600255600160a060020a038216600090815260208190526040902054610a8a908263ffffffff610a1d16565b600160a060020a0383166000818152602081815260408083209490945583518581529351929391927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9281900390910190a35050565b600160a060020a0382161515610af557600080fd5b600160a060020a038216600090815260208190526040902054811115610b1a57600080fd5b600254610b2d908263ffffffff61091416565b600255600160a060020a038216600090815260208190526040902054610b59908263ffffffff61091416565b600160a060020a038316600081815260208181526040808320949094558351858152935191937fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef929081900390910190a35050565b600160a060020a0382166000908152600160209081526040808320338452909152902054811115610bde57600080fd5b600160a060020a0382166000908152600160209081526040808320338452909152902054610c12908263ffffffff61091416565b600160a060020a038316600090815260016020908152604080832033845290915290205561067c8282610ae0565b610c5160038263ffffffff610d0716565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b610c9960038263ffffffff610d5516565b604051600160a060020a038216907fe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb6669290600090a250565b6000600160a060020a0382161515610ce757600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b600160a060020a0381161515610d1c57600080fd5b610d268282610cd0565b15610d3057600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b600160a060020a0381161515610d6a57600080fd5b610d748282610cd0565b1515610d7f57600080fd5b600160a060020a0316600090815260209190915260409020805460ff19169055565b6000903b11905600a165627a7a723058208e2f3fa6374721cb4d964bae0266d035d7ac93826fa64ad4e8875e9bff96b5270029`
 
 // ServiceChainTokenBin is the compiled bytecode used for deploying new contracts.
-const ServiceChainTokenBin = `0x608060405234801561001057600080fd5b50604051602080610ace8339810160405251610041336b033b2e3c9fd0803ce80000006401000000006100f2810204565b610060600160a060020a0382166401000000006108c06101aa82021704565b15156100cd57604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601860248201527f627269646765206973206e6f74206120636f6e74726163740000000000000000604482015290519081900360640190fd5b60038054600160a060020a031916600160a060020a03929092169190911790556101cb565b600160a060020a038216151561010757600080fd5b60025461012190826401000000006108a76101b282021704565b600255600160a060020a03821660009081526020819052604090205461015490826401000000006108a76101b282021704565b600160a060020a0383166000818152602081815260408083209490945583518581529351929391927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9281900390910190a35050565b6000903b1190565b6000828201838110156101c457600080fd5b9392505050565b6108f4806101da6000396000f3006080604052600436106100c45763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306fdde0381146100c9578063095ea7b31461015357806318160ddd1461018b57806323b872dd146101b25780632ff2e9dc146101dc578063313ce567146101f1578063395093511461021c57806370a082311461024057806395d89b4114610261578063a457c2d714610276578063a9059cbb1461029a578063c6b07116146102be578063dd62ed3e146102e4575b600080fd5b3480156100d557600080fd5b506100de61030b565b6040805160208082528351818301528351919283929083019185019080838360005b83811015610118578181015183820152602001610100565b50505050905090810190601f1680156101455780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561015f57600080fd5b50610177600160a060020a0360043516602435610342565b604080519115158252519081900360200190f35b34801561019757600080fd5b506101a06103c0565b60408051918252519081900360200190f35b3480156101be57600080fd5b50610177600160a060020a03600435811690602435166044356103c6565b3480156101e857600080fd5b506101a0610463565b3480156101fd57600080fd5b50610206610473565b6040805160ff9092168252519081900360200190f35b34801561022857600080fd5b50610177600160a060020a0360043516602435610478565b34801561024c57600080fd5b506101a0600160a060020a0360043516610528565b34801561026d57600080fd5b506100de610543565b34801561028257600080fd5b50610177600160a060020a036004351660243561057a565b3480156102a657600080fd5b50610177600160a060020a03600435166024356105c5565b3480156102ca57600080fd5b506102e2600435600160a060020a03602435166105db565b005b3480156102f057600080fd5b506101a0600160a060020a0360043581169060243516610773565b60408051808201909152601181527f53657276696365436861696e546f6b656e000000000000000000000000000000602082015281565b6000600160a060020a038316151561035957600080fd5b336000818152600160209081526040808320600160a060020a03881680855290835292819020869055805186815290519293927f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929181900390910190a350600192915050565b60025490565b600160a060020a03831660009081526001602090815260408083203384529091528120548211156103f657600080fd5b600160a060020a038416600090815260016020908152604080832033845290915290205461042a908363ffffffff61079e16565b600160a060020a03851660009081526001602090815260408083203384529091529020556104598484846107b5565b5060019392505050565b6b033b2e3c9fd0803ce800000081565b601281565b6000600160a060020a038316151561048f57600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546104c3908363ffffffff6108a716565b336000818152600160209081526040808320600160a060020a0389168085529083529281902085905580519485525191937f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929081900390910190a350600192915050565b600160a060020a031660009081526020819052604090205490565b60408051808201909152600381527f5343540000000000000000000000000000000000000000000000000000000000602082015281565b6000600160a060020a038316151561059157600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546104c3908363ffffffff61079e16565b60006105d23384846107b5565b50600192915050565b6003546000906105f490600160a060020a0316846105c5565b50600354604080517ff099d9bd00000000000000000000000000000000000000000000000000000000815233600482015260248101869052600160a060020a0385811660448301529151919092169163f099d9bd9160648083019260209291908290030181600087803b15801561066a57600080fd5b505af115801561067e573d6000803e3d6000fd5b505050506040513d602081101561069457600080fd5b505190507fffffffff0000000000000000000000000000000000000000000000000000000081167fbc04f0af000000000000000000000000000000000000000000000000000000001461076e57604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602f60248201527f53656e7420746f206120627269646765207768696368206973206e6f7420616e60448201527f2045524332302072656365697665720000000000000000000000000000000000606482015290519081900360840190fd5b505050565b600160a060020a03918216600090815260016020908152604080832093909416825291909152205490565b600080838311156107ae57600080fd5b5050900390565b600160a060020a0383166000908152602081905260409020548111156107da57600080fd5b600160a060020a03821615156107ef57600080fd5b600160a060020a038316600090815260208190526040902054610818908263ffffffff61079e16565b600160a060020a03808516600090815260208190526040808220939093559084168152205461084d908263ffffffff6108a716565b600160a060020a038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b6000828201838110156108b957600080fd5b9392505050565b6000903b11905600a165627a7a72305820e7eddbe2240dee2eb35e40d423ee56a7a0ff0cd6bde0594d2bf251114e462d2a0029`
+const ServiceChainTokenBin = `0x60806040523480156200001157600080fd5b50604051602080620010ba833981016040525162000038336401000000006200010f810204565b62000059336b033b2e3c9fd0803ce800000064010000000062000161810204565b6200007b600160a060020a03821664010000000062000da16200022082021704565b1515620000e957604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601860248201527f627269646765206973206e6f74206120636f6e74726163740000000000000000604482015290519081900360640190fd5b60048054600160a060020a031916600160a060020a0392909216919091179055620002d5565b6200012a60038264010000000062000d076200022882021704565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b600160a060020a03821615156200017757600080fd5b60025462000194908264010000000062000a1d6200028382021704565b600255600160a060020a038216600090815260208190526040902054620001ca908264010000000062000a1d6200028382021704565b600160a060020a0383166000818152602081815260408083209490945583518581529351929391927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9281900390910190a35050565b6000903b1190565b600160a060020a03811615156200023e57600080fd5b6200025382826401000000006200029d810204565b156200025e57600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b6000828201838110156200029657600080fd5b9392505050565b6000600160a060020a0382161515620002b557600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b610dd580620002e56000396000f3006080604052600436106101065763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306fdde03811461010b578063095ea7b31461019557806318160ddd146101cd57806323b872dd146101f45780632ff2e9dc1461021e578063313ce56714610233578063395093511461025e57806340c10f191461028257806342966c68146102a657806370a08231146102c057806379cc6790146102e157806395d89b4114610305578063983b2d561461031a578063986502751461033b578063a457c2d714610350578063a9059cbb14610374578063aa271e1a14610398578063c6b07116146103b9578063dd62ed3e146103dd575b600080fd5b34801561011757600080fd5b50610120610404565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561015a578181015183820152602001610142565b50505050905090810190601f1680156101875780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b3480156101a157600080fd5b506101b9600160a060020a036004351660243561043b565b604080519115158252519081900360200190f35b3480156101d957600080fd5b506101e26104b9565b60408051918252519081900360200190f35b34801561020057600080fd5b506101b9600160a060020a03600435811690602435166044356104bf565b34801561022a57600080fd5b506101e261055c565b34801561023f57600080fd5b5061024861056c565b6040805160ff9092168252519081900360200190f35b34801561026a57600080fd5b506101b9600160a060020a0360043516602435610571565b34801561028e57600080fd5b506101b9600160a060020a0360043516602435610621565b3480156102b257600080fd5b506102be60043561064a565b005b3480156102cc57600080fd5b506101e2600160a060020a0360043516610657565b3480156102ed57600080fd5b506102be600160a060020a0360043516602435610672565b34801561031157600080fd5b50610120610680565b34801561032657600080fd5b506102be600160a060020a03600435166106b7565b34801561034757600080fd5b506102be6106d4565b34801561035c57600080fd5b506101b9600160a060020a03600435166024356106df565b34801561038057600080fd5b506101b9600160a060020a036004351660243561072a565b3480156103a457600080fd5b506101b9600160a060020a0360043516610737565b3480156103c557600080fd5b506102be600435600160a060020a0360243516610750565b3480156103e957600080fd5b506101e2600160a060020a03600435811690602435166108e9565b60408051808201909152601181527f53657276696365436861696e546f6b656e000000000000000000000000000000602082015281565b6000600160a060020a038316151561045257600080fd5b336000818152600160209081526040808320600160a060020a03881680855290835292819020869055805186815290519293927f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929181900390910190a350600192915050565b60025490565b600160a060020a03831660009081526001602090815260408083203384529091528120548211156104ef57600080fd5b600160a060020a0384166000908152600160209081526040808320338452909152902054610523908363ffffffff61091416565b600160a060020a038516600090815260016020908152604080832033845290915290205561055284848461092b565b5060019392505050565b6b033b2e3c9fd0803ce800000081565b601281565b6000600160a060020a038316151561058857600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546105bc908363ffffffff610a1d16565b336000818152600160209081526040808320600160a060020a0389168085529083529281902085905580519485525191937f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925929081900390910190a350600192915050565b600061062c33610737565b151561063757600080fd5b6106418383610a36565b50600192915050565b6106543382610ae0565b50565b600160a060020a031660009081526020819052604090205490565b61067c8282610bae565b5050565b60408051808201909152600381527f5343540000000000000000000000000000000000000000000000000000000000602082015281565b6106c033610737565b15156106cb57600080fd5b61065481610c40565b6106dd33610c88565b565b6000600160a060020a03831615156106f657600080fd5b336000908152600160209081526040808320600160a060020a03871684529091529020546105bc908363ffffffff61091416565b600061064133848461092b565b600061074a60038363ffffffff610cd016565b92915050565b60045460009061076990600160a060020a03168461072a565b5060048054604080517ff099d9bd000000000000000000000000000000000000000000000000000000008152339381019390935260248301869052600160a060020a038581166044850152905191169163f099d9bd9160648083019260209291908290030181600087803b1580156107e057600080fd5b505af11580156107f4573d6000803e3d6000fd5b505050506040513d602081101561080a57600080fd5b505190507fffffffff0000000000000000000000000000000000000000000000000000000081167fbc04f0af00000000000000000000000000000000000000000000000000000000146108e457604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602f60248201527f53656e7420746f206120627269646765207768696368206973206e6f7420616e60448201527f2045524332302072656365697665720000000000000000000000000000000000606482015290519081900360840190fd5b505050565b600160a060020a03918216600090815260016020908152604080832093909416825291909152205490565b6000808383111561092457600080fd5b5050900390565b600160a060020a03831660009081526020819052604090205481111561095057600080fd5b600160a060020a038216151561096557600080fd5b600160a060020a03831660009081526020819052604090205461098e908263ffffffff61091416565b600160a060020a0380851660009081526020819052604080822093909355908416815220546109c3908263ffffffff610a1d16565b600160a060020a038084166000818152602081815260409182902094909455805185815290519193928716927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef92918290030190a3505050565b600082820183811015610a2f57600080fd5b9392505050565b600160a060020a0382161515610a4b57600080fd5b600254610a5e908263ffffffff610a1d16565b600255600160a060020a038216600090815260208190526040902054610a8a908263ffffffff610a1d16565b600160a060020a0383166000818152602081815260408083209490945583518581529351929391927fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9281900390910190a35050565b600160a060020a0382161515610af557600080fd5b600160a060020a038216600090815260208190526040902054811115610b1a57600080fd5b600254610b2d908263ffffffff61091416565b600255600160a060020a038216600090815260208190526040902054610b59908263ffffffff61091416565b600160a060020a038316600081815260208181526040808320949094558351858152935191937fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef929081900390910190a35050565b600160a060020a0382166000908152600160209081526040808320338452909152902054811115610bde57600080fd5b600160a060020a0382166000908152600160209081526040808320338452909152902054610c12908263ffffffff61091416565b600160a060020a038316600090815260016020908152604080832033845290915290205561067c8282610ae0565b610c5160038263ffffffff610d0716565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b610c9960038263ffffffff610d5516565b604051600160a060020a038216907fe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb6669290600090a250565b6000600160a060020a0382161515610ce757600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b600160a060020a0381161515610d1c57600080fd5b610d268282610cd0565b15610d3057600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b600160a060020a0381161515610d6a57600080fd5b610d748282610cd0565b1515610d7f57600080fd5b600160a060020a0316600090815260209190915260409020805460ff19169055565b6000903b11905600a165627a7a723058208e2f3fa6374721cb4d964bae0266d035d7ac93826fa64ad4e8875e9bff96b5270029`
 
 // DeployServiceChainToken deploys a new Klaytn contract, binding an instance of ServiceChainToken to it.
 func DeployServiceChainToken(auth *bind.TransactOpts, backend bind.ContractBackend, _bridge common.Address) (common.Address, *types.Transaction, *ServiceChainToken, error) {
@@ -2016,6 +4333,32 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) Decimals() (uint8, err
 	return _ServiceChainToken.Contract.Decimals(&_ServiceChainToken.CallOpts)
 }
 
+// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
+//
+// Solidity: function isMinter(account address) constant returns(bool)
+func (_ServiceChainToken *ServiceChainTokenCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _ServiceChainToken.contract.Call(opts, out, "isMinter", account)
+	return *ret0, err
+}
+
+// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
+//
+// Solidity: function isMinter(account address) constant returns(bool)
+func (_ServiceChainToken *ServiceChainTokenSession) IsMinter(account common.Address) (bool, error) {
+	return _ServiceChainToken.Contract.IsMinter(&_ServiceChainToken.CallOpts, account)
+}
+
+// IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
+//
+// Solidity: function isMinter(account address) constant returns(bool)
+func (_ServiceChainToken *ServiceChainTokenCallerSession) IsMinter(account common.Address) (bool, error) {
+	return _ServiceChainToken.Contract.IsMinter(&_ServiceChainToken.CallOpts, account)
+}
+
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
 // Solidity: function name() constant returns(string)
@@ -2094,6 +4437,27 @@ func (_ServiceChainToken *ServiceChainTokenCallerSession) TotalSupply() (*big.In
 	return _ServiceChainToken.Contract.TotalSupply(&_ServiceChainToken.CallOpts)
 }
 
+// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
+//
+// Solidity: function addMinter(account address) returns()
+func (_ServiceChainToken *ServiceChainTokenTransactor) AddMinter(opts *bind.TransactOpts, account common.Address) (*types.Transaction, error) {
+	return _ServiceChainToken.contract.Transact(opts, "addMinter", account)
+}
+
+// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
+//
+// Solidity: function addMinter(account address) returns()
+func (_ServiceChainToken *ServiceChainTokenSession) AddMinter(account common.Address) (*types.Transaction, error) {
+	return _ServiceChainToken.Contract.AddMinter(&_ServiceChainToken.TransactOpts, account)
+}
+
+// AddMinter is a paid mutator transaction binding the contract method 0x983b2d56.
+//
+// Solidity: function addMinter(account address) returns()
+func (_ServiceChainToken *ServiceChainTokenTransactorSession) AddMinter(account common.Address) (*types.Transaction, error) {
+	return _ServiceChainToken.Contract.AddMinter(&_ServiceChainToken.TransactOpts, account)
+}
+
 // Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
 //
 // Solidity: function approve(spender address, value uint256) returns(bool)
@@ -2113,6 +4477,48 @@ func (_ServiceChainToken *ServiceChainTokenSession) Approve(spender common.Addre
 // Solidity: function approve(spender address, value uint256) returns(bool)
 func (_ServiceChainToken *ServiceChainTokenTransactorSession) Approve(spender common.Address, value *big.Int) (*types.Transaction, error) {
 	return _ServiceChainToken.Contract.Approve(&_ServiceChainToken.TransactOpts, spender, value)
+}
+
+// Burn is a paid mutator transaction binding the contract method 0x42966c68.
+//
+// Solidity: function burn(value uint256) returns()
+func (_ServiceChainToken *ServiceChainTokenTransactor) Burn(opts *bind.TransactOpts, value *big.Int) (*types.Transaction, error) {
+	return _ServiceChainToken.contract.Transact(opts, "burn", value)
+}
+
+// Burn is a paid mutator transaction binding the contract method 0x42966c68.
+//
+// Solidity: function burn(value uint256) returns()
+func (_ServiceChainToken *ServiceChainTokenSession) Burn(value *big.Int) (*types.Transaction, error) {
+	return _ServiceChainToken.Contract.Burn(&_ServiceChainToken.TransactOpts, value)
+}
+
+// Burn is a paid mutator transaction binding the contract method 0x42966c68.
+//
+// Solidity: function burn(value uint256) returns()
+func (_ServiceChainToken *ServiceChainTokenTransactorSession) Burn(value *big.Int) (*types.Transaction, error) {
+	return _ServiceChainToken.Contract.Burn(&_ServiceChainToken.TransactOpts, value)
+}
+
+// BurnFrom is a paid mutator transaction binding the contract method 0x79cc6790.
+//
+// Solidity: function burnFrom(from address, value uint256) returns()
+func (_ServiceChainToken *ServiceChainTokenTransactor) BurnFrom(opts *bind.TransactOpts, from common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ServiceChainToken.contract.Transact(opts, "burnFrom", from, value)
+}
+
+// BurnFrom is a paid mutator transaction binding the contract method 0x79cc6790.
+//
+// Solidity: function burnFrom(from address, value uint256) returns()
+func (_ServiceChainToken *ServiceChainTokenSession) BurnFrom(from common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ServiceChainToken.Contract.BurnFrom(&_ServiceChainToken.TransactOpts, from, value)
+}
+
+// BurnFrom is a paid mutator transaction binding the contract method 0x79cc6790.
+//
+// Solidity: function burnFrom(from address, value uint256) returns()
+func (_ServiceChainToken *ServiceChainTokenTransactorSession) BurnFrom(from common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ServiceChainToken.Contract.BurnFrom(&_ServiceChainToken.TransactOpts, from, value)
 }
 
 // DecreaseAllowance is a paid mutator transaction binding the contract method 0xa457c2d7.
@@ -2155,6 +4561,48 @@ func (_ServiceChainToken *ServiceChainTokenSession) IncreaseAllowance(spender co
 // Solidity: function increaseAllowance(spender address, addedValue uint256) returns(bool)
 func (_ServiceChainToken *ServiceChainTokenTransactorSession) IncreaseAllowance(spender common.Address, addedValue *big.Int) (*types.Transaction, error) {
 	return _ServiceChainToken.Contract.IncreaseAllowance(&_ServiceChainToken.TransactOpts, spender, addedValue)
+}
+
+// Mint is a paid mutator transaction binding the contract method 0x40c10f19.
+//
+// Solidity: function mint(to address, value uint256) returns(bool)
+func (_ServiceChainToken *ServiceChainTokenTransactor) Mint(opts *bind.TransactOpts, to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ServiceChainToken.contract.Transact(opts, "mint", to, value)
+}
+
+// Mint is a paid mutator transaction binding the contract method 0x40c10f19.
+//
+// Solidity: function mint(to address, value uint256) returns(bool)
+func (_ServiceChainToken *ServiceChainTokenSession) Mint(to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ServiceChainToken.Contract.Mint(&_ServiceChainToken.TransactOpts, to, value)
+}
+
+// Mint is a paid mutator transaction binding the contract method 0x40c10f19.
+//
+// Solidity: function mint(to address, value uint256) returns(bool)
+func (_ServiceChainToken *ServiceChainTokenTransactorSession) Mint(to common.Address, value *big.Int) (*types.Transaction, error) {
+	return _ServiceChainToken.Contract.Mint(&_ServiceChainToken.TransactOpts, to, value)
+}
+
+// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
+//
+// Solidity: function renounceMinter() returns()
+func (_ServiceChainToken *ServiceChainTokenTransactor) RenounceMinter(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ServiceChainToken.contract.Transact(opts, "renounceMinter")
+}
+
+// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
+//
+// Solidity: function renounceMinter() returns()
+func (_ServiceChainToken *ServiceChainTokenSession) RenounceMinter() (*types.Transaction, error) {
+	return _ServiceChainToken.Contract.RenounceMinter(&_ServiceChainToken.TransactOpts)
+}
+
+// RenounceMinter is a paid mutator transaction binding the contract method 0x98650275.
+//
+// Solidity: function renounceMinter() returns()
+func (_ServiceChainToken *ServiceChainTokenTransactorSession) RenounceMinter() (*types.Transaction, error) {
+	return _ServiceChainToken.Contract.RenounceMinter(&_ServiceChainToken.TransactOpts)
 }
 
 // RequestValueTransfer is a paid mutator transaction binding the contract method 0xc6b07116.
@@ -2342,6 +4790,270 @@ func (_ServiceChainToken *ServiceChainTokenFilterer) WatchApproval(opts *bind.Wa
 				// New log arrived, parse the event and forward to the user
 				event := new(ServiceChainTokenApproval)
 				if err := _ServiceChainToken.contract.UnpackLog(event, "Approval", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ServiceChainTokenMinterAddedIterator is returned from FilterMinterAdded and is used to iterate over the raw logs and unpacked data for MinterAdded events raised by the ServiceChainToken contract.
+type ServiceChainTokenMinterAddedIterator struct {
+	Event *ServiceChainTokenMinterAdded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ServiceChainTokenMinterAddedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ServiceChainTokenMinterAdded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ServiceChainTokenMinterAdded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ServiceChainTokenMinterAddedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ServiceChainTokenMinterAddedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ServiceChainTokenMinterAdded represents a MinterAdded event raised by the ServiceChainToken contract.
+type ServiceChainTokenMinterAdded struct {
+	Account common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterMinterAdded is a free log retrieval operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
+//
+// Solidity: e MinterAdded(account indexed address)
+func (_ServiceChainToken *ServiceChainTokenFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ServiceChainTokenMinterAddedIterator, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _ServiceChainToken.contract.FilterLogs(opts, "MinterAdded", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ServiceChainTokenMinterAddedIterator{contract: _ServiceChainToken.contract, event: "MinterAdded", logs: logs, sub: sub}, nil
+}
+
+// WatchMinterAdded is a free log subscription operation binding the contract event 0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6.
+//
+// Solidity: e MinterAdded(account indexed address)
+func (_ServiceChainToken *ServiceChainTokenFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ServiceChainTokenMinterAdded, account []common.Address) (event.Subscription, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _ServiceChainToken.contract.WatchLogs(opts, "MinterAdded", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ServiceChainTokenMinterAdded)
+				if err := _ServiceChainToken.contract.UnpackLog(event, "MinterAdded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ServiceChainTokenMinterRemovedIterator is returned from FilterMinterRemoved and is used to iterate over the raw logs and unpacked data for MinterRemoved events raised by the ServiceChainToken contract.
+type ServiceChainTokenMinterRemovedIterator struct {
+	Event *ServiceChainTokenMinterRemoved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ServiceChainTokenMinterRemovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ServiceChainTokenMinterRemoved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ServiceChainTokenMinterRemoved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ServiceChainTokenMinterRemovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ServiceChainTokenMinterRemovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ServiceChainTokenMinterRemoved represents a MinterRemoved event raised by the ServiceChainToken contract.
+type ServiceChainTokenMinterRemoved struct {
+	Account common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterMinterRemoved is a free log retrieval operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
+//
+// Solidity: e MinterRemoved(account indexed address)
+func (_ServiceChainToken *ServiceChainTokenFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ServiceChainTokenMinterRemovedIterator, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _ServiceChainToken.contract.FilterLogs(opts, "MinterRemoved", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ServiceChainTokenMinterRemovedIterator{contract: _ServiceChainToken.contract, event: "MinterRemoved", logs: logs, sub: sub}, nil
+}
+
+// WatchMinterRemoved is a free log subscription operation binding the contract event 0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692.
+//
+// Solidity: e MinterRemoved(account indexed address)
+func (_ServiceChainToken *ServiceChainTokenFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ServiceChainTokenMinterRemoved, account []common.Address) (event.Subscription, error) {
+
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+
+	logs, sub, err := _ServiceChainToken.contract.WatchLogs(opts, "MinterRemoved", accountRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ServiceChainTokenMinterRemoved)
+				if err := _ServiceChainToken.contract.UnpackLog(event, "MinterRemoved", log); err != nil {
 					return err
 				}
 				event.Raw = log

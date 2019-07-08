@@ -1,11 +1,14 @@
 pragma solidity ^0.4.24;
 
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
+
 import "../externals/openzeppelin-solidity/contracts/utils/Address.sol";
 import "./ITokenReceiver.sol";
 
 
-contract ServiceChainToken is ERC20 {
+contract ServiceChainToken is ERC20, ERC20Mintable, ERC20Burnable {
     string public constant name = "ServiceChainToken";
     string public constant symbol = "SCT";
     uint8 public constant decimals = 18;
