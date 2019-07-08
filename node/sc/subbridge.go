@@ -140,9 +140,9 @@ type SubBridge struct {
 	// service on/off
 	onAnchoringTx bool
 
-	checkConnection int64
-	rpcConn         net.Conn
-	rpcSendCh       chan []byte
+	resetBridgeSubscriptions int64
+	rpcConn                  net.Conn
+	rpcSendCh                chan []byte
 }
 
 // New creates a new CN object (including the
@@ -342,7 +342,10 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 	sc.requestEventSub = sc.bridgeManager.SubscribeTokenReceived(sc.requestEventCh)
 	sc.handleEventSub = sc.bridgeManager.SubscribeTokenWithDraw(sc.handleEventCh)
 
+	sc.pmwg.Add(1)
 	go sc.restoreBridgeLoop()
+
+	sc.pmwg.Add(1)
 	go sc.resetBridgeLoop()
 
 	sc.bridgeAccountManager.scAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccountManager.scAccount.address))
@@ -499,9 +502,7 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 		fmt.Println(err)
 		return err
 	}
-	defer func() {
-		pm.removePeer(p.GetID())
-	}()
+	defer pm.removePeer(p.GetID())
 
 	pm.handler.RegisterNewPeer(p)
 
@@ -520,7 +521,7 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 
 			if pm.peers.Len() == 1 {
 				pm.handler.setMainChainAccountNonceSynced(false)
-				atomic.StoreInt64(&pm.checkConnection, 1)
+				atomic.StoreInt64(&pm.resetBridgeSubscriptions, 1)
 			}
 			return err
 		}
@@ -528,6 +529,8 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 }
 
 func (sc *SubBridge) resetBridgeLoop() {
+	defer sc.pmwg.Done()
+
 	ticker := time.NewTicker(resetBridgeCycle)
 	defer ticker.Stop()
 
@@ -536,9 +539,9 @@ func (sc *SubBridge) resetBridgeLoop() {
 		case <-sc.quitSync:
 			return
 		case <-ticker.C:
-			if atomic.CompareAndSwapInt64(&sc.checkConnection, 1, 0) {
+			if atomic.CompareAndSwapInt64(&sc.resetBridgeSubscriptions, 1, 0) {
 				if sc.peers.Len() < 1 {
-					atomic.StoreInt64(&sc.checkConnection, 1)
+					atomic.StoreInt64(&sc.resetBridgeSubscriptions, 1)
 					continue
 				}
 				sc.bridgeManager.ResetAllSubscribedEvents()
@@ -548,6 +551,8 @@ func (sc *SubBridge) resetBridgeLoop() {
 }
 
 func (sc *SubBridge) restoreBridgeLoop() {
+	defer sc.pmwg.Done()
+
 	ticker := time.NewTicker(restoreBridgeCycle)
 	defer ticker.Stop()
 

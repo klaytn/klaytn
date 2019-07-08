@@ -66,10 +66,7 @@ func NewRemoteBackend(sb *SubBridge, rawUrl string) (*RemoteBackend, error) {
 
 func (rb *RemoteBackend) checkConnection() bool {
 	// It is difficult to determine the exact number of peers, and if there is no peer, timeout will occur.
-	if rb.subBridge.peers.Len() == 0 {
-		return false
-	}
-	return true
+	return rb.subBridge.peers.Len() > 0
 }
 
 func (rb *RemoteBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
