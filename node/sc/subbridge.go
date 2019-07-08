@@ -53,6 +53,9 @@ const (
 
 	tokenReceivedChanSize = 10000
 	tokenTransferChanSize = 10000
+
+	resetBridgeCycle   = 3 * time.Second
+	restoreBridgeCycle = 3 * time.Second
 )
 
 // Backend wraps all methods for local and remote backend
@@ -340,6 +343,7 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 	sc.handleEventSub = sc.bridgeManager.SubscribeTokenWithDraw(sc.handleEventCh)
 
 	go sc.restoreBridgeLoop()
+	go sc.resetBridgeLoop()
 
 	sc.bridgeAccountManager.scAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccountManager.scAccount.address))
 
@@ -495,7 +499,9 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 		fmt.Println(err)
 		return err
 	}
-	defer pm.removePeer(p.GetID())
+	defer func() {
+		pm.removePeer(p.GetID())
+	}()
 
 	pm.handler.RegisterNewPeer(p)
 
@@ -519,10 +525,31 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (sc *SubBridge) resetBridgeLoop() {
+	ticker := time.NewTicker(resetBridgeCycle)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-sc.quitSync:
+			return
+		case <-ticker.C:
+			if atomic.CompareAndSwapInt64(&sc.checkConnection, 1, 0) {
+				if sc.peers.Len() < 1 {
+					atomic.StoreInt64(&sc.checkConnection, 1)
+					continue
+				}
+				sc.bridgeManager.ResetAllSubscribedEvents()
+			}
+		}
+	}
 }
 
 func (sc *SubBridge) restoreBridgeLoop() {
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(restoreBridgeCycle)
 	defer ticker.Stop()
 
 	for {

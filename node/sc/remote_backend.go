@@ -26,7 +26,6 @@ import (
 	"github.com/pkg/errors"
 	"math/big"
 	"net"
-	"sync/atomic"
 	"time"
 )
 
@@ -66,29 +65,11 @@ func NewRemoteBackend(sb *SubBridge, rawUrl string) (*RemoteBackend, error) {
 }
 
 func (rb *RemoteBackend) checkConnection() bool {
-	var connected = true
-
-	if rb.subBridge.bridgeServer == nil {
+	// It is difficult to determine the exact number of peers, and if there is no peer, timeout will occur.
+	if rb.subBridge.peers.Len() == 0 {
 		return false
 	}
-
-	peers := rb.subBridge.bridgeServer.PeersInfo()
-	if peers == nil || len(peers) < 1 {
-		return false
-	}
-
-	if atomic.CompareAndSwapInt64(&rb.subBridge.checkConnection, 1, 0) {
-		if rb.subBridge.peers.Len() > 0 {
-			connected = true
-		}
-		if !connected {
-			atomic.StoreInt64(&rb.subBridge.checkConnection, 1)
-		} else {
-			rb.subBridge.bridgeManager.ResetAllSubscribedEvents()
-		}
-		return connected
-	}
-	return connected
+	return true
 }
 
 func (rb *RemoteBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
