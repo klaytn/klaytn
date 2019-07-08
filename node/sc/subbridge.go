@@ -525,7 +525,6 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 			return err
 		}
 	}
-	return nil
 }
 
 func (sc *SubBridge) resetBridgeLoop() {
