@@ -95,13 +95,12 @@ type SubBridge struct {
 	APIBackend *SubBridgeAPI
 
 	// channels for fetcher, syncer, txsyncLoop
-	newPeerCh   chan BridgePeer
-	quitSync    chan struct{}
-	noMorePeers chan struct{}
+	newPeerCh    chan BridgePeer
+	removePeerCh chan bool
+	quitSync     chan struct{}
+	noMorePeers  chan struct{}
 
-	// wait group is used for graceful shutdowns during downloading
-	// and processing
-	wg   sync.WaitGroup
+	// wait group is used for graceful shutdowns during downloading and processing
 	pmwg sync.WaitGroup
 
 	blockchain   *blockchain.BlockChain
@@ -159,6 +158,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chainDB:        chainDB,
 		peers:          newBridgePeerSet(),
 		newPeerCh:      make(chan BridgePeer),
+		removePeerCh:   make(chan bool),
 		noMorePeers:    make(chan struct{}),
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
@@ -424,8 +424,9 @@ func (s *SubBridge) Start(srvr p2p.Server) error {
 				peer.SetAddr(addr)
 				select {
 				case s.newPeerCh <- peer:
-					s.wg.Add(1)
-					defer s.wg.Done()
+					defer func() {
+						s.removePeerCh <- true
+					}()
 					return s.handle(peer)
 				case <-s.quitSync:
 					return p2p.DiscQuitting
@@ -531,19 +532,17 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 func (sc *SubBridge) resetBridgeLoop() {
 	defer sc.pmwg.Done()
 
-	ticker := time.NewTicker(resetBridgeCycle)
-	defer ticker.Stop()
+	peerCount := 0
 
 	for {
 		select {
 		case <-sc.quitSync:
 			return
-		case <-ticker.C:
-			if atomic.CompareAndSwapInt64(&sc.resetBridgeSubscriptions, 1, 0) {
-				if sc.peers.Len() < 1 {
-					atomic.StoreInt64(&sc.resetBridgeSubscriptions, 1)
-					continue
-				}
+		case <-sc.newPeerCh:
+			peerCount++
+		case <-sc.removePeerCh:
+			peerCount--
+			if peerCount == 0 {
 				sc.bridgeManager.ResetAllSubscribedEvents()
 			}
 		}
