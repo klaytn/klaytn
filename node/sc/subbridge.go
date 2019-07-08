@@ -553,7 +553,7 @@ func (sc *SubBridge) resetBridgeLoop() {
 				needReset = true
 			}
 		case <-ticker.C:
-			if needReset && peerCount > 1 {
+			if needReset && peerCount > 0 {
 				sc.bridgeManager.ResetAllSubscribedEvents()
 				needReset = false
 			}
