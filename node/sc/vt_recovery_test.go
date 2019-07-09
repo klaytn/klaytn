@@ -518,12 +518,12 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	// Register an NFT to chain account (minting)
 	for i := 0; i < testTxCount; i++ {
 		opts := &bind.TransactOpts{From: nodeAuth.From, Signer: nodeAuth.Signer, GasLimit: testGasLimit}
-		_, err = nftLocal.Register(opts, nodeAuth.From, big.NewInt(testNFT+int64(i)))
+		_, err = nftLocal.MintWithTokenURI(opts, nodeAuth.From, big.NewInt(testNFT+int64(i)), "testURI")
 		if err != nil {
 			log.Fatalf("Failed to Register NFT: %v", err)
 		}
 		opts = &bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}
-		_, err = nftRemote.Register(opts, remoteAddr, big.NewInt(testNFT+int64(i)))
+		_, err = nftRemote.MintWithTokenURI(opts, remoteAddr, big.NewInt(testNFT+int64(i)), "testURI")
 		if err != nil {
 			log.Fatalf("Failed to Register NFT: %v", err)
 		}

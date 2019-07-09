@@ -294,7 +294,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 6. Register (Mint) an NFT to Auth4
 	{
-		tx, err = nft.Register(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, auth4.From, big.NewInt(int64(nftTokenID)))
+		tx, err = nft.MintWithTokenURI(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, auth4.From, big.NewInt(int64(nftTokenID)), "testURI")
 		if err != nil {
 			log.Fatalf("Failed to Register NFT: %v", err)
 		}
