@@ -559,11 +559,6 @@ var (
 		Usage: "parent chain ID",
 		Value: 8217, // Klaytn mainnet chain ID
 	}
-	MainChainURLFlag = cli.StringFlag{
-		Name:  "mainchainws",
-		Usage: "mainchain ws url",
-		Value: "ws://0.0.0.0:8546",
-	}
 	VTRecoveryFlag = cli.BoolFlag{
 		Name:  "vtrecovery",
 		Usage: "Enable value transfer recovery (default: false)",

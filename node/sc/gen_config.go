@@ -31,7 +31,6 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		ServiceChainConsensus   string
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
-		MainChainURL            string
 		VTRecovery              bool
 		VTRecoveryInterval      uint64
 	}
@@ -56,7 +55,6 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.ServiceChainConsensus = s.ServiceChainConsensus
 	enc.AnchoringPeriod = s.AnchoringPeriod
 	enc.SentChainTxsLimit = s.SentChainTxsLimit
-	enc.MainChainURL = s.MainChainURL
 	enc.VTRecovery = s.VTRecovery
 	enc.VTRecoveryInterval = s.VTRecoveryInterval
 	return &enc, nil
@@ -85,7 +83,6 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		ServiceChainConsensus   *string
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
-		MainChainURL            *string
 		VTRecovery              *bool
 		VTRecoveryInterval      *uint64
 	}
@@ -152,9 +149,6 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.SentChainTxsLimit != nil {
 		s.SentChainTxsLimit = *dec.SentChainTxsLimit
-	}
-	if dec.MainChainURL != nil {
-		s.MainChainURL = *dec.MainChainURL
 	}
 	if dec.VTRecovery != nil {
 		s.VTRecovery = *dec.VTRecovery

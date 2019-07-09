@@ -38,7 +38,6 @@ const timeout = 30 * time.Second
 // TODO-Klaytn currently RemoteBackend is only for ServiceChain, especially Bridge SmartContract
 type RemoteBackend struct {
 	subBridge *SubBridge
-	targetUrl string
 
 	rpcClient *rpc.Client
 	chainID   *big.Int
@@ -54,12 +53,11 @@ func NewRpcClientP2P(sb *SubBridge) *rpc.Client {
 	return c
 }
 
-func NewRemoteBackend(sb *SubBridge, rawUrl string) (*RemoteBackend, error) {
+func NewRemoteBackend(sb *SubBridge) (*RemoteBackend, error) {
 	rCli := NewRpcClientP2P(sb)
 
 	return &RemoteBackend{
 		subBridge: sb,
-		targetUrl: rawUrl,
 		rpcClient: rCli,
 	}, nil
 }
