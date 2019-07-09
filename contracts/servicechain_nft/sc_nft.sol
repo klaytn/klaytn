@@ -20,16 +20,11 @@ contract ServiceChainNFT is ERC721Full("ServiceChainNFT", "SCN"), ERC721Burnable
         bridge = _bridge;
     }
 
-    // Owner mints the NFT to the user.
-    function register(address _user, uint256 _tokenId) onlyOwner external {
-        _mint(_user, _tokenId);
-    }
-
     // registerBulk registers (startID, endID-1) NFTs to the user once.
     // This is only for load test.
     function registerBulk(address _user, uint256 _startID, uint256 _endID) onlyOwner external {
         for (uint256 uid = _startID; uid < _endID; uid++) {
-            _mint(_user, uid);
+            mintWithTokenURI(_user, uid, "testURI");
         }
     }
 

@@ -65,7 +65,7 @@ type RequestValueTransferEvent struct {
 	To           common.Address
 	Amount       *big.Int // Amount is UID in ERC721 token
 	RequestNonce uint64
-	URI          string   // uri of ERC721 token
+	URI          string // uri of ERC721 token
 	BlockNumber  uint64
 	txHash       common.Hash
 }
@@ -899,6 +899,7 @@ func (bm *BridgeManager) loop(
 				To:           ev.To,
 				Amount:       ev.Amount,
 				RequestNonce: ev.RequestNonce,
+				URI:          ev.Uri,
 				BlockNumber:  ev.Raw.BlockNumber,
 				txHash:       ev.Raw.TxHash,
 			}

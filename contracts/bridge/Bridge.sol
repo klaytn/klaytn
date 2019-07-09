@@ -148,7 +148,7 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         address _contractAddress,
         uint64 _requestNonce,
         uint64 _requestBlockNumber,
-        string tokenURI
+        string _tokenURI
     )
         external
         onlyOwner
@@ -160,14 +160,14 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         handleNonce++;
 
         if (modeMintBurn) {
-            ERC721MetadataMintable(_contractAddress).mintWithTokenURI(_to, _uid, tokenURI);
+            ERC721MetadataMintable(_contractAddress).mintWithTokenURI(_to, _uid, _tokenURI);
         } else {
             IERC721(_contractAddress).safeTransferFrom(address(this), _to, _uid);
         }
     }
 
+    // TODO-Klaytn-Servicechain refactor onToken/NFTReceived function.
     bytes4 constant TOKEN_RECEIVED = 0xbc04f0af;
-
     function onTokenReceived(
         address _from,
         uint256 _amount,
@@ -185,9 +185,9 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         return TOKEN_RECEIVED;
     }
 
+    // TODO-Klaytn-Servicechain refactor onToken/NFTReceived function.
     // Receiver function of NFT for 1-step deposits to the Bridge
     bytes4 private constant ERC721_RECEIVED = 0x150b7a02;
-
     function onNFTReceived(
         address from,
         uint256 tokenId,
@@ -199,7 +199,10 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         require(isRunning, "stopped bridge");
         require(allowedTokens[msg.sender] != address(0), "Not a valid token");
 
-        emit RequestValueTransfer(TokenKind.ERC721, from, tokenId, msg.sender, to, requestNonce,"");
+        // TODO-Klaytn-Servicechain refactor calling msg.sender contract
+        string memory uri = ERC721Metadata(msg.sender).tokenURI(tokenId);
+
+        emit RequestValueTransfer(TokenKind.ERC721, from, tokenId, msg.sender, to, requestNonce, uri);
         requestNonce++;
         return ERC721_RECEIVED;
     }
@@ -241,19 +244,20 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     // requestERC20Transfer requests transfer ERC20 to _to on relative chain.
     function requestERC20Transfer(address _contractAddress, address _to, uint256 _amount) external {
         require(isRunning, "stopped bridge");
-        require(msg.value > 0, "zero msg.value");
-
-        IERC20(_contractAddress).transferFrom(msg.sender, address(this), _amount);
+        require(_amount > 0, "zero msg.value");
+        require(allowedTokens[_contractAddress] != address(0), "Not a valid token");
 
         if (modeMintBurn) {
-            ERC20Burnable(_contractAddress).burn(_amount);
+            ERC20Burnable(_contractAddress).burnFrom(msg.sender, _amount);
+        } else {
+            IERC20(_contractAddress).transferFrom(msg.sender, address(this), _amount);
         }
 
         emit RequestValueTransfer(
-            TokenKind.KLAY,
+            TokenKind.ERC20,
             msg.sender,
-            msg.value,
-            address(0),
+            _amount,
+            _contractAddress,
             _to,
             requestNonce,
             ""
@@ -264,21 +268,20 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
     // requestERC721Transfer requests transfer ERC721 to _to on relative chain.
     function requestERC721Transfer(address _contractAddress, address _to, uint256 _uid) external {
         require(isRunning, "stopped bridge");
-        require(msg.value > 0, "zero msg.value");
-
-        IERC721(_contractAddress).transferFrom(msg.sender, address(this), _uid);
+        require(allowedTokens[_contractAddress] != address(0), "Not a valid token");
 
         string memory uri = ERC721Metadata(_contractAddress).tokenURI(_uid);
 
+        IERC721(_contractAddress).transferFrom(msg.sender, address(this), _uid);
         if (modeMintBurn) {
             ERC721Burnable(_contractAddress).burn(_uid);
         }
 
         emit RequestValueTransfer(
-            TokenKind.KLAY,
+            TokenKind.ERC721,
             msg.sender,
-            msg.value,
-            address(0),
+            _uid,
+            _contractAddress,
             _to,
             requestNonce,
             uri
