@@ -614,7 +614,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 				bm.DeleteBridgeInfo(cBridgeAddr)
 				break
 			}
-			cBridgeInfo, cOk = bm.GetBridgeInfo(cBridgeAddr)
+			cBridgeInfo, _ = bm.GetBridgeInfo(cBridgeAddr)
 		}
 
 		if !pOk {
@@ -624,7 +624,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 				bm.DeleteBridgeInfo(pBridgeAddr)
 				break
 			}
-			pBridgeInfo, pOk = bm.GetBridgeInfo(pBridgeAddr)
+			pBridgeInfo, _ = bm.GetBridgeInfo(pBridgeAddr)
 		}
 
 		// Subscribe bridge events
