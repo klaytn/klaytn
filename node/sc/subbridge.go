@@ -95,8 +95,8 @@ type SubBridge struct {
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh    chan BridgePeer
-	addPeerCh    chan bool
-	removePeerCh chan bool
+	addPeerCh    chan struct{}
+	removePeerCh chan struct{}
 	quitSync     chan struct{}
 	noMorePeers  chan struct{}
 
@@ -157,8 +157,8 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chainDB:        chainDB,
 		peers:          newBridgePeerSet(),
 		newPeerCh:      make(chan BridgePeer),
-		addPeerCh:      make(chan bool),
-		removePeerCh:   make(chan bool),
+		addPeerCh:      make(chan struct{}),
+		removePeerCh:   make(chan struct{}),
 		noMorePeers:    make(chan struct{}),
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
@@ -646,7 +646,7 @@ func (sc *SubBridge) loop() {
 }
 
 func (pm *SubBridge) removePeer(id string) {
-	pm.removePeerCh <- true
+	pm.removePeerCh <- struct{}{}
 
 	// Short circuit if the peer was already removed
 	peer := pm.peers.Peer(id)
