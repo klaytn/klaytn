@@ -587,18 +587,13 @@ func (bm *BridgeManager) RestoreBridges() error {
 	bm.stopAllRecoveries()
 
 	for _, journal := range bm.journal.cache {
-		var cBridgeInfo *BridgeInfo
-		var pBridgeInfo *BridgeInfo
-		var cok bool
-		var pok bool
-
 		cBridgeAddr := journal.LocalAddress
 		pBridgeAddr := journal.RemoteAddress
 		bam := bm.subBridge.bridgeAccountManager
 
 		// Set bridge info
-		cBridgeInfo, cok = bm.GetBridgeInfo(cBridgeAddr)
-		pBridgeInfo, pok = bm.GetBridgeInfo(pBridgeAddr)
+		cBridgeInfo, cok := bm.GetBridgeInfo(cBridgeAddr)
+		pBridgeInfo, pok := bm.GetBridgeInfo(pBridgeAddr)
 		if !cok || !pok {
 			cBridge, err := bridgecontract.NewBridge(cBridgeAddr, bm.subBridge.localBackend)
 			if err != nil {
