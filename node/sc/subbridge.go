@@ -44,7 +44,6 @@ import (
 	"net"
 	"path"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -140,9 +139,8 @@ type SubBridge struct {
 	// service on/off
 	onAnchoringTx bool
 
-	resetBridgeSubscriptions int64
-	rpcConn                  net.Conn
-	rpcSendCh                chan []byte
+	rpcConn   net.Conn
+	rpcSendCh chan []byte
 }
 
 // New creates a new CN object (including the
@@ -426,10 +424,6 @@ func (s *SubBridge) Start(srvr p2p.Server) error {
 				peer.SetAddr(addr)
 				select {
 				case s.newPeerCh <- peer:
-					defer func() {
-						s.removePeerCh <- true
-					}()
-					s.addPeerCh <- true
 					return s.handle(peer)
 				case <-s.quitSync:
 					return p2p.DiscQuitting
@@ -525,7 +519,6 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 
 			if pm.peers.Len() == 1 {
 				pm.handler.setMainChainAccountNonceSynced(false)
-				atomic.StoreInt64(&pm.resetBridgeSubscriptions, 1)
 			}
 			return err
 		}
@@ -653,6 +646,8 @@ func (sc *SubBridge) loop() {
 }
 
 func (pm *SubBridge) removePeer(id string) {
+	pm.removePeerCh <- true
+
 	// Short circuit if the peer was already removed
 	peer := pm.peers.Peer(id)
 	if peer == nil {
