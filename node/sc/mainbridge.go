@@ -48,7 +48,7 @@ const (
 	chainHeadChanSize   = 10000
 	chainLogChanSize    = 10000
 	transactionChanSize = 10000
-	rpcBufferSize       = 1024 * 1024
+	rpcBufferSize       = 1024
 )
 
 // NodeInfo represents a short summary of the Klaytn sub-protocol metadata

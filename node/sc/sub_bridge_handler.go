@@ -379,11 +379,14 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 }
 
 func (sbh *SubBridgeHandler) RegisterNewPeer(p BridgePeer) error {
+	sbh.subbridge.addPeerCh <- struct{}{}
+
 	if sbh.getParentChainID().Cmp(p.GetChainID()) != 0 {
 		return fmt.Errorf("attempt to add a peer with different chainID failed! existing chainID: %v, new chainID: %v", sbh.getParentChainID(), p.GetChainID())
 	}
 	// sync nonce and gasprice with peer
 	sbh.SyncNonceAndGasPrice()
+
 	return nil
 }
 

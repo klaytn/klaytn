@@ -44,7 +44,6 @@ import (
 	"net"
 	"path"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -53,6 +52,9 @@ const (
 
 	tokenReceivedChanSize = 10000
 	tokenTransferChanSize = 10000
+
+	resetBridgeCycle   = 3 * time.Second
+	restoreBridgeCycle = 3 * time.Second
 )
 
 // Backend wraps all methods for local and remote backend
@@ -92,13 +94,13 @@ type SubBridge struct {
 	APIBackend *SubBridgeAPI
 
 	// channels for fetcher, syncer, txsyncLoop
-	newPeerCh   chan BridgePeer
-	quitSync    chan struct{}
-	noMorePeers chan struct{}
+	newPeerCh    chan BridgePeer
+	addPeerCh    chan struct{}
+	removePeerCh chan struct{}
+	quitSync     chan struct{}
+	noMorePeers  chan struct{}
 
-	// wait group is used for graceful shutdowns during downloading
-	// and processing
-	wg   sync.WaitGroup
+	// wait group is used for graceful shutdowns during downloading and processing
 	pmwg sync.WaitGroup
 
 	blockchain   *blockchain.BlockChain
@@ -137,9 +139,8 @@ type SubBridge struct {
 	// service on/off
 	onAnchoringTx bool
 
-	checkConnection int64
-	rpcConn         net.Conn
-	rpcSendCh       chan []byte
+	rpcConn   net.Conn
+	rpcSendCh chan []byte
 }
 
 // New creates a new CN object (including the
@@ -156,6 +157,8 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		chainDB:        chainDB,
 		peers:          newBridgePeerSet(),
 		newPeerCh:      make(chan BridgePeer),
+		addPeerCh:      make(chan struct{}),
+		removePeerCh:   make(chan struct{}),
 		noMorePeers:    make(chan struct{}),
 		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
@@ -339,7 +342,11 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 	sc.requestEventSub = sc.bridgeManager.SubscribeTokenReceived(sc.requestEventCh)
 	sc.handleEventSub = sc.bridgeManager.SubscribeTokenWithDraw(sc.handleEventCh)
 
+	sc.pmwg.Add(1)
 	go sc.restoreBridgeLoop()
+
+	sc.pmwg.Add(1)
+	go sc.resetBridgeLoop()
 
 	sc.bridgeAccountManager.scAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccountManager.scAccount.address))
 
@@ -417,8 +424,6 @@ func (s *SubBridge) Start(srvr p2p.Server) error {
 				peer.SetAddr(addr)
 				select {
 				case s.newPeerCh <- peer:
-					s.wg.Add(1)
-					defer s.wg.Done()
 					return s.handle(peer)
 				case <-s.quitSync:
 					return p2p.DiscQuitting
@@ -511,18 +516,47 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 	for {
 		if err := pm.handleMsg(p); err != nil {
 			p.GetP2PPeer().Log().Debug("Klaytn message handling failed", "err", err)
-
-			if pm.peers.Len() == 1 {
-				pm.handler.setMainChainAccountNonceSynced(false)
-				atomic.StoreInt64(&pm.checkConnection, 1)
-			}
 			return err
 		}
 	}
 }
 
+func (sc *SubBridge) resetBridgeLoop() {
+	defer sc.pmwg.Done()
+
+	ticker := time.NewTicker(resetBridgeCycle)
+	defer ticker.Stop()
+
+	peerCount := 0
+	needResetSubscription := false
+
+	for {
+		select {
+		case <-sc.quitSync:
+			return
+		case <-sc.addPeerCh:
+			peerCount++
+		case <-sc.removePeerCh:
+			peerCount--
+			if peerCount == 0 {
+				needResetSubscription = true
+				sc.handler.setMainChainAccountNonceSynced(false)
+			}
+		case <-ticker.C:
+			if needResetSubscription && peerCount > 0 {
+				err := sc.bridgeManager.ResetAllSubscribedEvents()
+				if err == nil {
+					needResetSubscription = false
+				}
+			}
+		}
+	}
+}
+
 func (sc *SubBridge) restoreBridgeLoop() {
-	ticker := time.NewTicker(3 * time.Second)
+	defer sc.pmwg.Done()
+
+	ticker := time.NewTicker(restoreBridgeCycle)
 	defer ticker.Stop()
 
 	for {
@@ -611,6 +645,8 @@ func (sc *SubBridge) loop() {
 }
 
 func (pm *SubBridge) removePeer(id string) {
+	pm.removePeerCh <- struct{}{}
+
 	// Short circuit if the peer was already removed
 	peer := pm.peers.Peer(id)
 	if peer == nil {

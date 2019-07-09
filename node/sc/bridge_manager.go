@@ -587,44 +587,44 @@ func (bm *BridgeManager) RestoreBridges() error {
 	bm.stopAllRecoveries()
 
 	for _, journal := range bm.journal.cache {
-		var cBridgeInfo *BridgeInfo
-		var pBridgeInfo *BridgeInfo
-		var ok bool
-
 		cBridgeAddr := journal.LocalAddress
 		pBridgeAddr := journal.RemoteAddress
 		bam := bm.subBridge.bridgeAccountManager
 
 		// Set bridge info
-		cBridgeInfo, ok = bm.GetBridgeInfo(cBridgeAddr)
-		if !ok {
-			cBridge, err := bridgecontract.NewBridge(cBridgeAddr, bm.subBridge.localBackend)
-			if err != nil || cBridge == nil {
-				logger.Error("local bridge creation is failed", "err", err, "bridge", cBridge)
-				break
-			}
-			err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, nil, bam.scAccount, true, false)
+		cBridgeInfo, cOk := bm.GetBridgeInfo(cBridgeAddr)
+		pBridgeInfo, pOk := bm.GetBridgeInfo(pBridgeAddr)
+
+		cBridge, err := bridgecontract.NewBridge(cBridgeAddr, bm.subBridge.localBackend)
+		if err != nil {
+			logger.Error("local bridge creation is failed", "err", err, "bridge", cBridge)
+			break
+		}
+
+		pBridge, err := bridgecontract.NewBridge(pBridgeAddr, bm.subBridge.remoteBackend)
+		if err != nil {
+			logger.Error("remote bridge creation is failed", "err", err, "bridge", pBridge)
+			break
+		}
+
+		if !cOk {
+			err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, bam.scAccount, true, false)
 			if err != nil {
 				logger.Error("setting local bridge info is failed", "err", err)
 				bm.DeleteBridgeInfo(cBridgeAddr)
 				break
 			}
-			cBridgeInfo, ok = bm.GetBridgeInfo(cBridgeAddr)
+			cBridgeInfo, _ = bm.GetBridgeInfo(cBridgeAddr)
 		}
-		pBridgeInfo, ok = bm.GetBridgeInfo(pBridgeAddr)
-		if !ok {
-			pBridge, err := bridgecontract.NewBridge(pBridgeAddr, bm.subBridge.remoteBackend)
-			if err != nil || pBridge == nil {
-				logger.Error("remote bridge creation is failed", "err", err, "bridge", pBridge)
-				break
-			}
+
+		if !pOk {
 			err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridgeInfo.bridge, bam.mcAccount, false, false)
 			if err != nil {
 				logger.Error("setting remote bridge info is failed", "err", err)
 				bm.DeleteBridgeInfo(pBridgeAddr)
 				break
 			}
-			pBridgeInfo, ok = bm.GetBridgeInfo(pBridgeAddr)
+			pBridgeInfo, _ = bm.GetBridgeInfo(pBridgeAddr)
 		}
 
 		// Subscribe bridge events
@@ -795,16 +795,23 @@ func (bm *BridgeManager) ResetAllSubscribedEvents() error {
 			bridgeInfo, ok := bm.GetBridgeInfo(journal.LocalAddress)
 			if !ok {
 				logger.Error("ResetAllSubscribedEvents failed to GetBridgeInfo", "localBridge", journal.LocalAddress.String())
-				continue
+				return ErrNoBridgeInfo
 			}
-			bm.subscribeEvent(journal.LocalAddress, bridgeInfo.bridge)
+			err := bm.subscribeEvent(journal.LocalAddress, bridgeInfo.bridge)
+			if err != nil {
+				return err
+			}
+
 			bridgeInfo, ok = bm.GetBridgeInfo(journal.RemoteAddress)
 			if !ok {
 				logger.Error("ResetAllSubscribedEvents failed to GetBridgeInfo", "remoteBridge", journal.RemoteAddress.String())
 				bm.UnsubscribeEvent(journal.LocalAddress)
-				continue
+				return ErrNoBridgeInfo
 			}
-			bm.subscribeEvent(journal.RemoteAddress, bridgeInfo.bridge)
+			err = bm.subscribeEvent(journal.RemoteAddress, bridgeInfo.bridge)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
