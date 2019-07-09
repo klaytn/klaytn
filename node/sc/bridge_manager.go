@@ -795,16 +795,23 @@ func (bm *BridgeManager) ResetAllSubscribedEvents() error {
 			bridgeInfo, ok := bm.GetBridgeInfo(journal.LocalAddress)
 			if !ok {
 				logger.Error("ResetAllSubscribedEvents failed to GetBridgeInfo", "localBridge", journal.LocalAddress.String())
-				continue
+				return ErrNoBridgeInfo
 			}
-			bm.subscribeEvent(journal.LocalAddress, bridgeInfo.bridge)
+			err := bm.subscribeEvent(journal.LocalAddress, bridgeInfo.bridge)
+			if err != nil {
+				return err
+			}
+
 			bridgeInfo, ok = bm.GetBridgeInfo(journal.RemoteAddress)
 			if !ok {
 				logger.Error("ResetAllSubscribedEvents failed to GetBridgeInfo", "remoteBridge", journal.RemoteAddress.String())
 				bm.UnsubscribeEvent(journal.LocalAddress)
-				continue
+				return ErrNoBridgeInfo
 			}
-			bm.subscribeEvent(journal.RemoteAddress, bridgeInfo.bridge)
+			err = bm.subscribeEvent(journal.RemoteAddress, bridgeInfo.bridge)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

@@ -544,8 +544,10 @@ func (sc *SubBridge) resetBridgeLoop() {
 			}
 		case <-ticker.C:
 			if needResetSubscription && peerCount > 0 {
-				sc.bridgeManager.ResetAllSubscribedEvents()
-				needResetSubscription = false
+				err := sc.bridgeManager.ResetAllSubscribedEvents()
+				if err == nil {
+					needResetSubscription = false
+				}
 			}
 		}
 	}
