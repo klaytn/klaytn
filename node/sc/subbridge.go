@@ -516,10 +516,6 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 	for {
 		if err := pm.handleMsg(p); err != nil {
 			p.GetP2PPeer().Log().Debug("Klaytn message handling failed", "err", err)
-
-			if pm.peers.Len() == 1 {
-				pm.handler.setMainChainAccountNonceSynced(false)
-			}
 			return err
 		}
 	}
@@ -532,7 +528,7 @@ func (sc *SubBridge) resetBridgeLoop() {
 	defer ticker.Stop()
 
 	peerCount := 0
-	needReset := false
+	needResetSubscription := false
 
 	for {
 		select {
@@ -543,12 +539,13 @@ func (sc *SubBridge) resetBridgeLoop() {
 		case <-sc.removePeerCh:
 			peerCount--
 			if peerCount == 0 {
-				needReset = true
+				needResetSubscription = true
+				sc.handler.setMainChainAccountNonceSynced(false)
 			}
 		case <-ticker.C:
-			if needReset && peerCount > 0 {
+			if needResetSubscription && peerCount > 0 {
 				sc.bridgeManager.ResetAllSubscribedEvents()
-				needReset = false
+				needResetSubscription = false
 			}
 		}
 	}
