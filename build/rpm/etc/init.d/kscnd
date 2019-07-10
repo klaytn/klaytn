@@ -152,10 +152,6 @@ fi
 if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
     OPTIONS="$OPTIONS --subbridge --subbridgeport $SC_SUB_BRIDGE_PORT --chaintxperiod $SC_TX_PERIOD --chaintxlimit $SC_TX_LIMIT "
     OPTIONS="$OPTIONS --parentchainid $SC_PARENT_CHAIN_ID"
-
-    if [[ ! -z $SC_MAIN_CHAIN_WS ]] && [[ $SC_MAIN_CHAIN_WS != "" ]]; then
-      OPTIONS="$OPTIONS --mainchainws $SC_MAIN_CHAIN_WS"
-    fi
 fi
 
 if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then

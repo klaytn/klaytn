@@ -652,13 +652,6 @@ var flagsWithValues = []struct {
 		errors:      []int{ErrorInvalidValue, NonError, ErrorInvalidValue},
 	},
 	{
-		flag:        "--mainchainws",
-		flagType:    FlagTypeArgument,
-		values:      []string{"ws://0.0.0.0:8546"},
-		wrongValues: []string{},
-		errors:      []int{},
-	},
-	{
 		flag:     "--vtrecovery",
 		flagType: FlagTypeBoolean,
 	},

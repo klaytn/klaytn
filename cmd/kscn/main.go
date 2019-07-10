@@ -72,7 +72,6 @@ var scnHelpFlagGroups = []utils.FlagGroup{
 			utils.AnchoringPeriodFlag,
 			utils.SentChainTxsLimit,
 			utils.ParentChainIDFlag,
-			utils.MainChainURLFlag,
 			utils.VTRecoveryFlag,
 			utils.VTRecoveryIntervalFlag,
 			utils.ServiceChainNewAccountFlag,
