@@ -13,10 +13,10 @@ import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable
 
 import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-import "../servicechain_nft/INFTReceiver.sol";
-import "../servicechain_token/ITokenReceiver.sol";
+import "../sc_erc721/IERC721BridgeReceiver.sol";
+import "../sc_erc20/IERC20BridgeReceiver.sol";
 
-contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
+contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
     uint64 public constant VERSION = 1;
     bool public modeMintBurn = false;
     address public counterpartBridge;
@@ -166,15 +166,13 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         }
     }
 
-    // TODO-Klaytn-Servicechain refactor onToken/NFTReceived function.
-    bytes4 constant TOKEN_RECEIVED = 0xbc04f0af;
-    function onTokenReceived(
+    // Receiver function of ERC20 token for 1-step deposits to the Bridge
+    function onERC20Received(
         address _from,
         uint256 _amount,
         address _to
     )
         public
-        returns (bytes4)
     {
         require(isRunning, "stopped bridge");
         require(allowedTokens[msg.sender] != address(0), "Not a valid token");
@@ -182,29 +180,25 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
 
         emit RequestValueTransfer(TokenKind.ERC20, _from, _amount, msg.sender, _to, requestNonce,"");
         requestNonce++;
-        return TOKEN_RECEIVED;
     }
 
-    // TODO-Klaytn-Servicechain refactor onToken/NFTReceived function.
-    // Receiver function of NFT for 1-step deposits to the Bridge
-    bytes4 private constant ERC721_RECEIVED = 0x150b7a02;
-    function onNFTReceived(
-        address from,
-        uint256 tokenId,
-        address to
+    // Receiver function of ERC721 token for 1-step deposits to the Bridge
+    function onERC721Received(
+        address _from,
+        uint256 _tokenId,
+        address _to
     )
         public
-        returns(bytes4)
     {
         require(isRunning, "stopped bridge");
         require(allowedTokens[msg.sender] != address(0), "Not a valid token");
 
-        // TODO-Klaytn-Servicechain refactor calling msg.sender contract
-        string memory uri = ERC721Metadata(msg.sender).tokenURI(tokenId);
+        // TODO-Klaytn-Servicechain need to refactor calling msg.sender contract
+        // If ERC721 supports public tokenURI() method, it can be passed from ERC721 contract.
+        string memory uri = ERC721Metadata(msg.sender).tokenURI(_tokenId);
 
-        emit RequestValueTransfer(TokenKind.ERC721, from, tokenId, msg.sender, to, requestNonce, uri);
+        emit RequestValueTransfer(TokenKind.ERC721, _from, _tokenId, msg.sender, _to, requestNonce, uri);
         requestNonce++;
-        return ERC721_RECEIVED;
     }
 
     // () requests transfer KLAY to msg.sender address on relative chain.

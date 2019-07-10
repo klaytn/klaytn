@@ -3,7 +3,7 @@ pragma solidity ^0.4.24;
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "../externals/openzeppelin-solidity/contracts/utils/Address.sol";
 import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "./ITokenReceiver.sol";
+import "./IERC20BridgeReceiver.sol";
 
 /**
  * @title ERC20ServiceChain
@@ -25,12 +25,8 @@ contract ERC20ServiceChain is ERC20, Ownable {
         bridge = _bridge;
     }
 
-    bytes4 constant _ERC20_RECEIVED = 0xbc04f0af;
-
     function requestValueTransfer(uint256 _amount, address _to) external {
         transfer(bridge, _amount);
-
-        bytes4 retval = ITokenReceiver(bridge).onTokenReceived(msg.sender, _amount, _to);
-        require(retval == _ERC20_RECEIVED, "Sent to a bridge which is not an ERC20 receiver");
+        IERC20BridgeReceiver(bridge).onERC20Received(msg.sender, _amount, _to);
     }
 }
