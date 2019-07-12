@@ -117,6 +117,8 @@ func init() {
 	app.Flags = union(app.Flags, KPNFlags)
 	app.Flags = union(app.Flags, KENFlags)
 	app.Flags = union(app.Flags, KSCNFlags)
+	app.Flags = union(app.Flags, KSPNFlags)
+	app.Flags = union(app.Flags, KSENFlags)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

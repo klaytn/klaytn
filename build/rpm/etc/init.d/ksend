@@ -1,26 +1,26 @@
 #!/bin/bash
 #
-# kpnd         Startup script for the kpn
+# ksend         Startup script for the ksen
 #
 # chkconifg: - 85 15
-# description : kpnd is the Klaytn proxy node daemon
+# description : ksend is the Klaytn endpoint node daemon
 #
-# processname: kpnd
-# config:  /etc/kpnd/conf/kpnd.conf
-# pidfile: /var/run/kpnd.pid
+# processname: ksend
+# config:  /etc/ksend/conf/ksend.conf
+# pidfile: /var/run/ksend.pid
 #
 
 # Source function library.
 . /etc/init.d/functions
 
-if [ -f /etc/kpnd/conf/kpnd.conf ]; then
-        . /etc/kpnd/conf/kpnd.conf
+if [ -f /etc/ksend/conf/ksend.conf ]; then
+        . /etc/ksend/conf/ksend.conf
 fi
 
-kpn=/usr/bin/kpn
-prog=kpnd
-lockfile=${LOCKFILE-/var/lock/subsys/kpnd}
-pidfile=${PIDFILE-/var/run/kpnd.pid}
+ksen=/usr/bin/ksen
+prog=ksend
+lockfile=${LOCKFILE-/var/lock/subsys/ksend}
+pidfile=${PIDFILE-/var/run/ksend.pid}
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
@@ -153,6 +153,13 @@ if [ ! -z $LDBCACHESIZE ]; then
     OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
 fi
 
+if [[ ! -z $SC_MAIN_BRIDGE ]] && [[ $SC_MAIN_BRIDGE -eq 1 ]]; then
+    OPTIONS="$OPTIONS --mainbridge --mainbridgeport $SC_MAIN_BRIDGE_PORT"
+    if [[ ! -z $SC_MAIN_BRIDGE_INDEXING ]] && [[ $SC_MAIN_BRIDGE_INDEXING -eq 1 ]]; then
+        OPTIONS="$OPTIONS --childchainindexing"
+    fi
+fi
+
 if [[ ! -z $NO_DISCOVER ]] && [[ $NO_DISCOVER -eq 1 ]]; then
     OPTIONS="$OPTIONS --nodiscover"
 fi
@@ -176,7 +183,7 @@ start() {
         [ -n "$pid" ] && echo && return
 
         set -f
-        $kpn $OPTIONS >> ${LOG_DIR}/kpnd.out 2>&1 &
+        $ksen $OPTIONS >> ${LOG_DIR}/ksend.out 2>&1 &
         RETVAL=$?
         PIDNUM=$!
         set +f
@@ -193,7 +200,7 @@ start() {
 
 stop() {
         echo -n "Shutting down $prog: "
-        killproc -p ${pidfile} -d ${STOP_TIMEOUT} $kpn
+        killproc -p ${pidfile} -d ${STOP_TIMEOUT} $ksen
         RETVAL=$?
         echo
         [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
@@ -207,7 +214,7 @@ case "$1" in
         stop
         ;;
     status)
-        status -p ${pidfile} -l ${lockfile} $kpn
+        status -p ${pidfile} -l ${lockfile} $ksen
         ;;
     restart)
         stop

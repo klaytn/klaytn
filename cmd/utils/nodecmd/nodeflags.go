@@ -168,3 +168,41 @@ var KSCNFlags = []cli.Flag{
 	utils.ServiceChainNewAccountFlag,
 	utils.ServiceChainConsensusFlag,
 }
+
+var KSPNFlags = []cli.Flag{
+	utils.TxResendIntervalFlag,
+	utils.TxResendCountFlag,
+	utils.TxResendUseLegacyFlag,
+	utils.CypressFlag,
+	utils.BaobabFlag,
+}
+
+var KSENFlags = []cli.Flag{
+	utils.ServiceChainSignerFlag,
+	utils.CypressFlag,
+	utils.BaobabFlag,
+	utils.ChildChainIndexingFlag,
+	utils.MainBridgeFlag,
+	utils.MainBridgeListenPortFlag,
+	// DBSyncer
+	utils.EnableDBSyncerFlag,
+	utils.DBHostFlag,
+	utils.DBPortFlag,
+	utils.DBNameFlag,
+	utils.DBUserFlag,
+	utils.DBPasswordFlag,
+	utils.EnabledLogModeFlag,
+	utils.MaxIdleConnsFlag,
+	utils.MaxOpenConnsFlag,
+	utils.ConnMaxLifeTimeFlag,
+	utils.BlockSyncChannelSizeFlag,
+	utils.DBSyncerModeFlag,
+	utils.GenQueryThreadFlag,
+	utils.InsertThreadFlag,
+	utils.BulkInsertSizeFlag,
+	utils.EventModeFlag,
+	utils.MaxBlockDiffFlag,
+	utils.TxResendIntervalFlag,
+	utils.TxResendCountFlag,
+	utils.TxResendUseLegacyFlag,
+}

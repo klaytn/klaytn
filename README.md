@@ -7,12 +7,12 @@ Official golang implementation of the Klaytn protocol. Please visit [KlaytnDocs]
 
 ## Building from Sources
 
-Building the Klaytn node binaries as well as utility tools, such as `kcn`, `kpn`, `ken`, `kbn`, `kscn`, `kgen`, `homi` and `abigen` requires
+Building the Klaytn node binaries as well as utility tools, such as `kcn`, `kpn`, `ken`, `kbn`, `kscn`, `kspn', `ksen`, `kgen`, `homi` and `abigen` requires
 both a Go (version 1.11.2 or later) and a C compiler. You can install them using
 your favorite package manager.
 Once the dependencies are installed, run
 
-    make all   (or make {kcn, kpn, ken, kbn, kscn, kgen, homi, abigen})
+    make all   (or make {kcn, kpn, ken, kbn, kscn, kspn, ksen, kgen, homi, abigen})
 
 ## Executables
 
@@ -24,6 +24,8 @@ After successful build, executable binaries are installed at `build/bin/`.
 | `kpn` | The CLI client for Klaytn Proxy Node. Run `kpn --help` for command-line flags. |
 | `ken` | The CLI client for Klaytn Endpoint Node, which is the entry point into the Klaytn network (main-, test- or private net).  It can be used by other processes as a gateway into the Klaytn network via JSON RPC endpoints exposed on top of HTTP, WebSocket, gRPC, and/or IPC transports. Run `ken --help` for command-line flags. |
 | `kscn` | The CLI client for Klaytn ServiceChain Node.  Run `kscn --help` for command-line flags. |
+| `kspn` | The CLI client for Klaytn ServiceChain Proxy Node.  Run `kspn --help` for command-line flags. |
+| `ksen` | The CLI client for Klaytn ServiceChain Endopoint Node.  Run `ksen --help` for command-line flags. |
 | `kbn` | The CLI client for Klaytn Bootnode. Run `kbn --help` for command-line flags. |
 | `kgen` | The CLI client for Klaytn Nodekey Generation Tool. Run `kgen --help` for command-line flags. |
 | `homi` | The CLI client for Klaytn Helper Tool to generate initialization files. Run `homi --help` for command-line flags. |

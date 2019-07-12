@@ -15,6 +15,8 @@ const (
 	PN  = "kpn"
 	EN  = "ken"
 	SCN = "kscn"
+	SPN = "kspn"
+	SEN = "ksen"
 	BN  = "kbn"
 )
 
@@ -28,6 +30,8 @@ var NODE_TYPE = map[string]NodeInfo{
 	PN:  {"kpnd", "kpnd is Klaytn proxy node daemon"},
 	EN:  {"kend", "kend is Klaytn endpoint node daemon"},
 	SCN: {"kscnd", "kscnd is Klaytn servicechain node daemon"},
+	SPN: {"kspnd", "kspnd is Klaytn servicechain proxy node daemon"},
+	SEN: {"ksend", "ksend is Klaytn servicechain endpoint node daemon"},
 	BN:  {"kbnd", "kbnd is Klaytn boot node daemon"},
 }
 
@@ -37,8 +41,8 @@ type RpmSpec struct {
 	Name        string
 	Summary     string
 	MakeTarget  string
-	ProgramName string // kcn, kpn, ken, kscn, kbn
-	DaemonName  string // kcnd, kpnd, kend, kscn, kbn
+	ProgramName string // kcn, kpn, ken, kscn, kspn, ksen, kbn
+	DaemonName  string // kcnd, kpnd, kend, kscn, kspn, ksen, kbn
 	PostFix     string // baobab
 }
 

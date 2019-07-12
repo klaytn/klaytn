@@ -961,6 +961,13 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NetRestrict = list
 	}
 
+	if NodeTypeFlag.Value == "spn" || NodeTypeFlag.Value == "sen" {
+		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+			log.Fatalf("Missing network id for the nodetype: %v", NodeTypeFlag.Value)
+		}
+		cfg.NoDiscovery = true
+	}
+
 	cfg.NetworkID, _ = getNetworkId(ctx)
 }
 
@@ -968,9 +975,9 @@ func convertNodeType(nodetype string) p2p.ConnType {
 	switch strings.ToLower(nodetype) {
 	case "cn":
 		return node.CONSENSUSNODE
-	case "pn":
+	case "pn", "spn":
 		return node.PROXYNODE
-	case "en":
+	case "en", "sen":
 		return node.ENDPOINTNODE
 	default:
 		return node.UNKNOWNNODE
