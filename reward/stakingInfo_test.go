@@ -1,9 +1,83 @@
 package reward
 
 import (
+	"github.com/klaytn/klaytn/common"
+	"github.com/stretchr/testify/assert"
 	"math"
 	"testing"
 )
+
+func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
+	testdata := []common.Address{
+		common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"),
+		common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"),
+		common.StringToAddress("0x994daB8EB6f3FaE044cC0c9a0AB1A038e136b0B6"),
+		common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"),
+	}
+	testCases := []struct {
+		address common.Address
+		index   int
+	}{
+		{common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"), 0},
+		{common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"), 1},
+		{common.StringToAddress("0x994daB8EB6f3FaE044cC0c9a0AB1A038e136b0B6"), 2},
+		{common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"), 3},
+	}
+
+	stakingInfo, error := newEmptyStakingInfo(0)
+	if error != nil {
+		t.Errorf("error has occurred. error : %v", error)
+		t.FailNow()
+	}
+	stakingInfo.CouncilNodeIds = testdata
+
+	for i := 0; i < len(testCases); i++ {
+		result := stakingInfo.GetIndexByNodeId(testCases[i].address)
+		if result == AddrNotFoundInCouncilNodes {
+			t.Errorf("Address is not found in stakingInfo")
+		}
+		assert.Equal(t, testCases[i].index, result)
+	}
+}
+
+func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
+	testdata := struct {
+		address       []common.Address
+		stakingAmount []uint64
+	}{
+		[]common.Address{
+			common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"),
+			common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"),
+			common.StringToAddress("0x994daB8EB6f3FaE044cC0c9a0AB1A038e136b0B6"),
+			common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"),
+		},
+		[]uint64{
+			100, 200, 300, 400,
+		},
+	}
+	testCases := []struct {
+		address       common.Address
+		stakingAmount uint64
+	}{
+		{common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"), 100},
+		{common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"), 200},
+		{common.StringToAddress("0x994daB8EB6f3FaE044cC0c9a0AB1A038e136b0B6"), 300},
+		{common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"), 400},
+	}
+
+	stakingInfo, error := newEmptyStakingInfo(0)
+	if error != nil {
+		t.Errorf("error has occurred. error : %v", error)
+		t.FailNow()
+	}
+	stakingInfo.CouncilNodeIds = testdata.address
+	stakingInfo.CouncilStakingAmounts = testdata.stakingAmount
+
+	for i := 0; i < len(testCases); i++ {
+		result := stakingInfo.GetStakingAmountByNodeId(testCases[i].address)
+		assert.Equal(t, testCases[i].stakingAmount, result)
+	}
+}
 
 func TestCalcGiniCoefficient(t *testing.T) {
 	testCase := []struct {
