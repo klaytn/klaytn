@@ -67,6 +67,7 @@ type RequestValueTransferEvent struct {
 	RequestNonce uint64
 	URI          string // uri of ERC721 token
 	BlockNumber  uint64
+	Fee          *big.Int
 	txHash       common.Hash
 }
 
@@ -307,14 +308,14 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 
 	switch tokenType {
 	case KLAY:
-		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce, ev.BlockNumber)
+		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce, ev.BlockNumber, ev.Fee)
 		if err != nil {
 			return err
 		}
 		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 
 	case TOKEN:
-		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber, ev.Fee)
 		if err != nil {
 			return err
 		}
@@ -900,6 +901,7 @@ func (bm *BridgeManager) loop(
 				Amount:       ev.Amount,
 				RequestNonce: ev.RequestNonce,
 				URI:          ev.Uri,
+				Fee:          ev.Fee,
 				BlockNumber:  ev.Raw.BlockNumber,
 				txHash:       ev.Raw.TxHash,
 			}

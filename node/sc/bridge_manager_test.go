@@ -200,7 +200,7 @@ func TestBridgeManager(t *testing.T) {
 				switch ev.TokenType {
 				case 0:
 					// WithdrawKLAY by Event
-					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
+					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber, ev.Fee)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawKLAY: %v", err)
 					}
@@ -209,7 +209,7 @@ func TestBridgeManager(t *testing.T) {
 
 				case 1:
 					// WithdrawToken by Event
-					tx, err := bridge.HandleERC20Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+					tx, err := bridge.HandleERC20Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber, ev.Fee)
 					if err != nil {
 						log.Fatalf("Failed to WithdrawToken: %v", err)
 					}
@@ -316,7 +316,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 7. RequestValueTransfer from auth2 to auth3
 	{
-		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, testToken, auth3.From)
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, testToken, auth3.From, big.NewInt(0))
 		if err != nil {
 			log.Fatalf("Failed to SafeTransferAndCall: %v", err)
 		}
@@ -338,7 +338,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 8. DepositKLAY from auth to auth3
 	{
-		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: testGasLimit}, auth3.From)
+		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: testGasLimit}, auth3.From, big.NewInt(0))
 		if err != nil {
 			log.Fatalf("Failed to DepositKLAY: %v", err)
 		}

@@ -15,8 +15,9 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "../sc_erc721/IERC721BridgeReceiver.sol";
 import "../sc_erc20/IERC20BridgeReceiver.sol";
+import "./BridgeFee.sol";
 
-contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
+contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeFee {
     uint64 public constant VERSION = 1;
     bool public modeMintBurn = false;
     address public counterpartBridge;
@@ -37,7 +38,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
         ERC721
     }
 
-    constructor (bool _modeMintBurn) public payable {
+    // TODO-Klaytn-Service FeeReceiver should be passed by argument of constructor.
+    constructor (bool _modeMintBurn) BridgeFee(msg.sender) public payable {
         isRunning = true;
         modeMintBurn = _modeMintBurn;
     }
@@ -57,7 +59,9 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
         address contractAddress,
         address to,
         uint64 requestNonce,
-        string uri);
+        string uri,
+        uint256 fee
+    );
 
     /**
      * Event to log the withdrawal of a token from the Bridge.
@@ -105,7 +109,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
         address _to,
         address _contractAddress,
         uint64 _requestNonce,
-        uint64 _requestBlockNumber
+        uint64 _requestBlockNumber,
+        uint256 _fee
     )
         external
         onlyOwner
@@ -116,10 +121,12 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
 
+        uint256 fee = payERC20Fee(modeMintBurn, _contractAddress, _fee);
+
         if (modeMintBurn) {
-            ERC20Mintable(_contractAddress).mint(_to, _amount);
+            ERC20Mintable(_contractAddress).mint(_to, _amount.sub(fee));
         } else {
-            IERC20(_contractAddress).transfer(_to, _amount);
+            IERC20(_contractAddress).transfer(_to, _amount.sub(fee));
         }
     }
 
@@ -128,7 +135,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
         uint256 _amount,
         address _to,
         uint64 _requestNonce,
-        uint64 _requestBlockNumber
+        uint64 _requestBlockNumber,
+        uint256 _fee
     )
         external
         onlyOwner
@@ -138,7 +146,10 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
         emit HandleValueTransfer(_to, TokenKind.KLAY, address(0), _amount, handleNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
-        _to.transfer(_amount);
+
+        uint256 fee = payKlayFee(_fee);
+
+        _to.transfer(_amount.sub(fee));
     }
 
     // handleERC721Transfer sends the NFT by the request.
@@ -170,6 +181,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
     function () external payable {
         require(isRunning, "stopped bridge");
         require(msg.value > 0, "zero msg.value");
+        require(msg.value > getKLAYFee(), "insufficient amount");
 
         emit RequestValueTransfer(
             TokenKind.KLAY,
@@ -178,15 +190,18 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
             address(0),
             msg.sender,
             requestNonce,
-            ""
+            "",
+            getKLAYFee()
         );
         requestNonce++;
     }
 
     // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
-    function requestKLAYTransfer(address _to) external payable {
+    function requestKLAYTransfer(address _to, uint256 _fee) external payable {
         require(isRunning, "stopped bridge");
         require(msg.value > 0, "zero msg.value");
+        require(msg.value > _fee, "insufficient amount");
+        require(getKLAYFee() <= _fee, "insufficient fee");
 
         emit RequestValueTransfer(
             TokenKind.KLAY,
@@ -195,16 +210,19 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
             address(0),
             _to,
             requestNonce,
-            ""
+            "",
+            getKLAYFee()
         );
         requestNonce++;
     }
 
     // _requestERC20Transfer requests transfer ERC20 to _to on relative chain.
-    function _requestERC20Transfer(address _contractAddress, address _from, address _to, uint256 _amount) internal {
+    function _requestERC20Transfer(address _contractAddress, address _from, address _to, uint256 _amount, uint256 _fee) internal {
         require(isRunning, "stopped bridge");
         require(_amount > 0, "zero msg.value");
         require(allowedTokens[_contractAddress] != address(0), "Not a valid token");
+        require(_amount > _fee, "insufficient amount");
+        require(getERC20Fee(_contractAddress) <= _fee, "insufficient fee");
 
         if (modeMintBurn) {
             ERC20Burnable(_contractAddress).burn(_amount);
@@ -217,7 +235,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
             _contractAddress,
             _to,
             requestNonce,
-            ""
+            "",
+            getERC20Fee(_contractAddress)
         );
         requestNonce++;
     }
@@ -226,17 +245,18 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
     function onERC20Received(
         address _from,
         uint256 _amount,
-        address _to
+        address _to,
+        uint256 _fee
     )
     public
     {
-        _requestERC20Transfer(msg.sender, _from, _to, _amount);
+        _requestERC20Transfer(msg.sender, _from, _to, _amount, _fee);
     }
 
     // requestERC20Transfer requests transfer ERC20 to _to on relative chain.
-    function requestERC20Transfer(address _contractAddress, address _to, uint256 _amount) external {
+    function requestERC20Transfer(address _contractAddress, address _to, uint256 _amount, uint256 _fee) external {
         IERC20(_contractAddress).transferFrom(msg.sender, address(this), _amount);
-        _requestERC20Transfer(_contractAddress, msg.sender, _to, _amount);
+        _requestERC20Transfer(_contractAddress, msg.sender, _to, _amount, _fee);
     }
 
     // _requestERC721Transfer requests transfer ERC721 to _to on relative chain.
@@ -257,7 +277,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
             _contractAddress,
             _to,
             requestNonce,
-            uri
+            uri,
+            0
         );
         requestNonce++;
     }
@@ -282,4 +303,19 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
     // chargeWithoutEvent sends KLAY to this contract without event for increasing
     // the withdrawal limit.
     function chargeWithoutEvent() external payable {}
+
+    // setKlayFee set the fee of KLAY tranfser
+    function setKlayFee(uint256 _fee) external onlyOwner {
+        _setKlayFee(_fee);
+    }
+
+    // setERC20Fee set the fee of the token transfer
+    function setERC20Fee(address _token, uint256 _fee) external onlyOwner {
+        _setERC20Fee(_token, _fee);
+    }
+
+    // changeFeeReceiver set fee receiver.
+    function changeFeeReceiver(address _to) external onlyOwner {
+        _changeFeeReceiver(_to);
+    }
 }

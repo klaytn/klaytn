@@ -97,7 +97,7 @@ func TransferSignedTx(auth *bind.TransactOpts, backend *backends.SimulatedBacken
 
 // RequestKLAYTransfer send a requestValueTransfer transaction to the bridge contract.
 func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, t *testing.T) {
-	_, err := b.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit, Value: big.NewInt(1)}, to)
+	_, err := b.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit, Value: big.NewInt(1)}, to, big.NewInt(0))
 	if err != nil {
 		t.Fatalf("fail to DepositKLAY %v", err)
 	}
@@ -105,7 +105,7 @@ func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Ad
 
 // SendHandleKLAYTransfer send a handleValueTransfer transaction to the bridge contract.
 func SendHandleKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, nonce uint64, blockNum uint64, t *testing.T) *types.Transaction {
-	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, big.NewInt(int64(value)), to, nonce, blockNum)
+	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, big.NewInt(int64(value)), to, nonce, blockNum, big.NewInt(0))
 	if err != nil {
 		t.Fatalf("fail to WithdrawKLAY %v", err)
 		return nil
