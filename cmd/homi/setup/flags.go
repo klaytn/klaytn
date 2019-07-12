@@ -76,6 +76,12 @@ var (
 		Value: 0,
 	}
 
+	numOfSCNsFlag = cli.IntFlag{
+		Name: "scn-num",
+		Usage: "Number of service chain nodes",
+		Value: 0,
+	}
+
 	numOfTestKeyFlag = cli.IntFlag{
 		Name:  "test-num",
 		Usage: "Number of test key",
@@ -86,6 +92,12 @@ var (
 		Name:  "chainID",
 		Usage: "ChainID",
 		Value: 1000,
+	}
+
+	serviceChainIDFlag = cli.Uint64Flag{
+		Name: "serviceChainID",
+		Usage: "Service Chain ID",
+		Value: 1001,
 	}
 
 	unitPriceFlag = cli.Uint64Flag{

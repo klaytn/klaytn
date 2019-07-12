@@ -26,9 +26,11 @@ import (
 type Validator struct {
 	Identity       int
 	Genesis        string
+	ServiceGenesis string
 	Address        string
 	NodeKey        string
 	StaticNodes    string
+	BridgeNodes    string
 	Port           int
 	RPCPort        int
 	PrometheusPort int
@@ -38,16 +40,18 @@ type Validator struct {
 	DockerImageId  string
 	UseFastHttp    bool
 	NetworkId      int
+	ParentChainId  int
 	NodeType       string
 	AddPrivKey     bool
 }
 
-func NewValidator(identity int, genesis string, nodeAddress string, nodeKey string, staticNodes string, port int, rpcPort int,
-	prometheusPort int, ethStats string, ip string, dockerImageId string, useFastHttp bool, networkId int,
+func NewValidator(identity int, genesis, serviceGenesis string, nodeAddress string, nodeKey string, staticNodes, bridgeNodes string, port int, rpcPort int,
+	prometheusPort int, ethStats string, ip string, dockerImageId string, useFastHttp bool, networkId, parentChainId int,
 	namePrefix string, nodeType string, addPrivKey bool) *Validator {
 	return &Validator{
 		Identity:       identity,
 		Genesis:        genesis,
+		ServiceGenesis: serviceGenesis,
 		Address:        nodeAddress,
 		NodeKey:        nodeKey,
 		Port:           port,
@@ -59,6 +63,7 @@ func NewValidator(identity int, genesis string, nodeAddress string, nodeKey stri
 		DockerImageId:  dockerImageId,
 		UseFastHttp:    useFastHttp,
 		NetworkId:      networkId,
+		ParentChainId:  parentChainId,
 		NodeType:       nodeType,
 		AddPrivKey:     addPrivKey,
 	}
@@ -87,13 +92,24 @@ var validatorTemplate = `{{ .Name }}:
       - '{{ .Port }}:32323'
       - '{{ .RPCPort }}:8551'
       - '{{ .PrometheusPort }}:61001'
+{{- if eq .Name "SCN-0" }}
+      - '50505:50505'
+      - '50506:50506'
+{{- end }}
     entrypoint:
       - /bin/sh
       - -c
       - |
         mkdir -p /klaytn
+{{- if eq .NodeType "scn" }}
+        echo '{{ .ServiceGenesis }}' > /klaytn/genesis.json
+{{- else }}
         echo '{{ .Genesis }}' > /klaytn/genesis.json
+{{- end }}
         echo '{{ .StaticNodes }}' > /klaytn/static-nodes.json
+{{- if eq .Name "SCN-0" }}
+        echo '{{ .BridgeNodes }}' > /klaytn/mainchain-bridges.json
+{{- end }}
         k{{ .NodeType }} --datadir "/klaytn" init "/klaytn/genesis.json"
 
 {{- if .AddPrivKey}}
@@ -108,7 +124,7 @@ var validatorTemplate = `{{ .Name }}:
         --rpccorsdomain "*" \
         --datadir "/klaytn" \
         --port "32323" \
-        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
         --networkid "{{ .NetworkId }}" \
         --nat "any" \
         --nodekeyhex "{{ .NodeKey }}" \
@@ -128,6 +144,18 @@ var validatorTemplate = `{{ .Name }}:
         --rewardbase {{ .Address }}
 {{- else if eq .NodeType "pn" }}
         --txpool.nolocals
+{{- else if eq .NodeType "en" }}
+{{- if eq .Name "EN-0" }}
+        --mainbridge \
+        --mainbridgeport 50505
+{{- end }}
+{{- else if eq .NodeType "scn"}}
+        --parentchainid {{ .ParentChainId }} \
+        --scconsensus "istanbul" \
+{{- if eq .Name "SCN-0" }}
+        --subbridge \
+        --subbridgeport 50506 \
+{{- end }}
 {{- else }}
 {{- end}}
 
