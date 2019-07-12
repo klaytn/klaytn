@@ -27,6 +27,7 @@ type governanceHelper interface {
 	Epoch() uint64
 	GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error)
 	DeferredTxFee() bool
+	ProposerPolicy() uint64
 }
 
 func isEmptyAddress(addr common.Address) bool {

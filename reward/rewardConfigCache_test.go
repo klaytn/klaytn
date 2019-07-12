@@ -30,6 +30,7 @@ type testGovernance struct {
 	ratio         string
 	unitPrice     uint64
 	useGiniCoeff  bool
+	policy        uint64
 	deferredTxFee bool
 }
 
@@ -40,6 +41,7 @@ func newDefaultTestGovernance() *testGovernance {
 		ratio:         "34/54/12",
 		unitPrice:     25000000000,
 		useGiniCoeff:  true,
+		policy:        2,
 		deferredTxFee: true,
 	}
 }
@@ -72,6 +74,10 @@ func (governance *testGovernance) GetItemAtNumberByIntKey(num uint64, key int) (
 	default:
 		return nil, errors.New("Unhandled key on testGovernance")
 	}
+}
+
+func (governance *testGovernance) ProposerPolicy() uint64 {
+	return governance.policy
 }
 
 func (governance *testGovernance) DeferredTxFee() bool {
