@@ -518,12 +518,12 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	// Register an NFT to chain account (minting)
 	for i := 0; i < testTxCount; i++ {
 		opts := &bind.TransactOpts{From: nodeAuth.From, Signer: nodeAuth.Signer, GasLimit: testGasLimit}
-		_, err = nftLocal.Register(opts, nodeAuth.From, big.NewInt(testNFT+int64(i)))
+		_, err = nftLocal.MintWithTokenURI(opts, nodeAuth.From, big.NewInt(testNFT+int64(i)), "testURI")
 		if err != nil {
 			log.Fatalf("Failed to Register NFT: %v", err)
 		}
 		opts = &bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}
-		_, err = nftRemote.Register(opts, remoteAddr, big.NewInt(testNFT+int64(i)))
+		_, err = nftRemote.MintWithTokenURI(opts, remoteAddr, big.NewInt(testNFT+int64(i)), "testURI")
 		if err != nil {
 			log.Fatalf("Failed to Register NFT: %v", err)
 		}
@@ -661,11 +661,11 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 	defer bi.account.UnLock()
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.Amount)
-	_, err := bi.bridge.HandleTokenTransfer(
+	_, err := bi.bridge.HandleERC20Transfer(
 		bi.account.GetTransactOpts(),
 		ev.Amount, ev.To, info.tokenRemoteAddr, ev.RequestNonce, ev.BlockNumber)
 	if err != nil {
-		log.Fatalf("Failed to HandleTokenTransfer: %v", err)
+		log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 	}
 	info.sim.Commit()
 }
@@ -712,11 +712,16 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferE
 		nftAddr = info.nftRemoteAddr
 	}
 
-	_, err := bi.bridge.HandleNFTTransfer(
+	_, err := bi.bridge.HandleERC721Transfer(
 		bi.account.GetTransactOpts(),
-		ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.BlockNumber)
+		ev.Amount,
+		ev.To,
+		nftAddr,
+		ev.RequestNonce,
+		ev.BlockNumber,
+		ev.URI)
 	if err != nil {
-		log.Fatalf("Failed to handleNFTTransfer: %v", err)
+		log.Fatalf("Failed to handleERC721Transfer: %v", err)
 	}
 	info.sim.Commit()
 }
