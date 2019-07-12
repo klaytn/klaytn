@@ -17,11 +17,18 @@
 package reward
 
 import (
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
+	"math/big"
 )
 
 var logger = log.NewModuleLogger(log.Reward)
+
+type BalanceAdder interface {
+	AddBalance(addr common.Address, v *big.Int)
+}
 
 type governanceHelper interface {
 	Epoch() uint64
@@ -33,4 +40,113 @@ type governanceHelper interface {
 
 func isEmptyAddress(addr common.Address) bool {
 	return addr == common.Address{}
+}
+
+type RewardManager struct {
+	stakingManager    *stakingManager
+	rewardConfigCache *rewardConfigCache
+	governanceHelper  governanceHelper
+}
+
+func NewRewardManager(bc *blockchain.BlockChain, governanceHelper governanceHelper) *RewardManager {
+	stakingManager := newStakingManager(bc, governanceHelper)
+	rewardConfigCache := newRewardConfigCache(governanceHelper)
+	return &RewardManager{
+		stakingManager:    stakingManager,
+		rewardConfigCache: rewardConfigCache,
+		governanceHelper:  governanceHelper,
+	}
+}
+
+func (rm *RewardManager) getTotalTxFee(header *types.Header, rewardConfig *rewardConfig) *big.Int {
+	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
+	totalTxFee := big.NewInt(0).Mul(totalGasUsed, rewardConfig.unitPrice)
+	return totalTxFee
+}
+
+// MintKLAY mints KLAY and gives the KLAY to the block proposer
+func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header) error {
+	rewardConfig, error := rm.rewardConfigCache.get(header.Number.Uint64())
+	if error != nil {
+		return error
+	}
+
+	totalTxFee := rm.getTotalTxFee(header, rewardConfig)
+	blockReward := big.NewInt(0).Add(rewardConfig.mintingAmount, totalTxFee)
+
+	b.AddBalance(header.Rewardbase, blockReward)
+	return nil
+}
+
+// DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
+func (rm *RewardManager) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) error {
+	rewardConfig, error := rm.rewardConfigCache.get(header.Number.Uint64())
+	if error != nil {
+		return error
+	}
+
+	// Calculate total tx fee
+	totalTxFee := common.Big0
+	if rm.governanceHelper.DeferredTxFee() {
+		totalTxFee = rm.getTotalTxFee(header, rewardConfig)
+	}
+
+	rm.distributeBlockReward(b, header, totalTxFee, rewardConfig, pocAddr, kirAddr)
+	return nil
+}
+
+// distributeBlockReward mints KLAY and distribute newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
+func (rm *RewardManager) distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, rewardConfig *rewardConfig, pocAddr common.Address, kirAddr common.Address) {
+	proposer := header.Rewardbase
+	// Block reward
+	blockReward := big.NewInt(0).Add(rewardConfig.mintingAmount, totalTxFee)
+
+	tmpInt := big.NewInt(0)
+
+	tmpInt = tmpInt.Mul(blockReward, rewardConfig.cnRatio)
+	cnReward := big.NewInt(0).Div(tmpInt, rewardConfig.totalRatio)
+
+	tmpInt = tmpInt.Mul(blockReward, rewardConfig.pocRatio)
+	pocIncentive := big.NewInt(0).Div(tmpInt, rewardConfig.totalRatio)
+
+	tmpInt = tmpInt.Mul(blockReward, rewardConfig.kirRatio)
+	kirIncentive := big.NewInt(0).Div(tmpInt, rewardConfig.totalRatio)
+
+	remaining := tmpInt.Sub(blockReward, cnReward)
+	remaining = tmpInt.Sub(remaining, pocIncentive)
+	remaining = tmpInt.Sub(remaining, kirIncentive)
+	pocIncentive = pocIncentive.Add(pocIncentive, remaining)
+
+	// CN reward
+	b.AddBalance(proposer, cnReward)
+
+	// Proposer gets PoC incentive and KIR incentive, if there is no PoC/KIR address.
+	// PoC
+	if isEmptyAddress(pocAddr) {
+		pocAddr = proposer
+	}
+	b.AddBalance(pocAddr, pocIncentive)
+
+	// KIR
+	if isEmptyAddress(kirAddr) {
+		kirAddr = proposer
+	}
+	b.AddBalance(kirAddr, kirIncentive)
+
+	logger.Debug("Block reward", "blockNumber", header.Number.Uint64(),
+		"Reward address of a proposer", proposer, "CN reward amount", cnReward,
+		"PoC address", pocAddr, "Poc incentive", pocIncentive,
+		"KIR address", kirAddr, "KIR incentive", kirIncentive)
+}
+
+func (rm *RewardManager) GetStakingInfo(blockNum uint64) *StakingInfo {
+	return rm.stakingManager.getStakingInfoFromStakingCache(blockNum)
+}
+
+func (rm *RewardManager) Start() {
+	rm.stakingManager.subscribe()
+}
+
+func (rm *RewardManager) Stop() {
+	rm.stakingManager.unsubscribe()
 }
