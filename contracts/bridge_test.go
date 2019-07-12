@@ -123,7 +123,7 @@ func TestBridgeDeployWithKLAY(t *testing.T) {
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
-	bridgeAddress, tx, _, err := bridge.DeployBridge(bridgeAccount, backend)
+	bridgeAddress, tx, _, err := bridge.DeployBridge(bridgeAccount, backend, false)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}
@@ -157,7 +157,7 @@ func TestBridgeRequestValueTransferNonce(t *testing.T) {
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
-	addr, tx, b, err := bridge.DeployBridge(bridgeAccount, backend)
+	addr, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, false)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}
@@ -221,7 +221,7 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
-	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend)
+	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, false)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}
@@ -317,7 +317,7 @@ func TestBridgePublicVariables(t *testing.T) {
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
-	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend)
+	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, false)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}
