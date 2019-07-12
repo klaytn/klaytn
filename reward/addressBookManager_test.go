@@ -17,6 +17,6 @@ func TestAddressBookManager_makeMsgToAddressBook(t *testing.T) {
 	if error != nil {
 		t.Errorf("error has occurred. error : %v", error)
 	} else {
-		assert.Equal(t, msg.To().String(), targetAddress)
+		assert.Equal(t, targetAddress, msg.To().String())
 	}
 }
