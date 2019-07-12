@@ -29,14 +29,13 @@
 /accounts/         @kjhman21
 /api/              @kjhman21
 /blockchain/       @kjhman21
-/build/            @bitaholic
-/client/           @KimKyungup
-/cmd/              @bitaholic
-/cmd/kscn/         @KimKyungup
+/build/            @bitaholic @KimKyungup @jeonghonah
+/client/           @KimKyungup @jeonghonah
+/cmd/              @bitaholic @KimKyungup @jeonghonah
 /common/           @andybclee
 /consensus/        @andybclee
 /console/          @andybclee
-/contracts/        @andybclee
+/contracts/        @andybclee @KimKyungup @jeonghonah
 /crypto/           @aidan-kwon
 /datasync/         @ehnuje
 /event/            @ehnuje
@@ -46,8 +45,7 @@
 /log/              @ehnuje
 /metrics/          @bitaholic
 /networks/         @bitaholic
-/node/             @bitaholic
-/node/sc/          @KimKyungup @jeonghonah
+/node/             @bitaholic @KimKyungup @jeonghonah
 /params/           @andybclee
 /params/version.go @bitaholic
 /ser/              @ehnuje
