@@ -961,7 +961,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NetRestrict = list
 	}
 
-	if NodeTypeFlag.Value == "spn" || NodeTypeFlag.Value == "sen" {
+	if ctx.GlobalIsSet(ListenPortFlag.Name) && (NodeTypeFlag.Value == "spn" || NodeTypeFlag.Value == "sen") {
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			log.Fatalf("Missing network id for the nodetype: %v", NodeTypeFlag.Value)
 		}
