@@ -302,8 +302,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         _setERC20Fee(_token, _fee);
     }
 
-    // changeFeeReceiver set fee receiver.
-    function changeFeeReceiver(address _to) external onlyOwner {
-        _changeFeeReceiver(_to);
+    // setFeeReceiver set fee receiver.
+    function setFeeReceiver(address _to) external onlyOwner {
+        _setFeeReceiver(_to);
     }
 }

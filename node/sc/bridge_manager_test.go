@@ -503,7 +503,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, common.Address{}, nilReceiver)
 	}
 
-	pBridge.ChangeFeeReceiver(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, receiver.From)
+	pBridge.SetFeeReceiver(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, receiver.From)
 	sim.Commit() // block
 
 	{

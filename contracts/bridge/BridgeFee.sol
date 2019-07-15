@@ -41,7 +41,7 @@ contract BridgeFee {
         emit ERC20FeeChanged(_token, _fee);
     }
 
-    function _changeFeeReceiver(address _to) internal {
+    function _setFeeReceiver(address _to) internal {
         receiver = _to;
         emit FeeReceiverChanged(_to);
     }

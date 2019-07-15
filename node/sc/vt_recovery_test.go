@@ -60,7 +60,7 @@ type testInfo struct {
 }
 
 const (
-	testGasLimit     = 10000000
+	testGasLimit     = 1000000
 	testAmount       = 321
 	testToken        = 123
 	testNFT          = int64(7321)
@@ -662,11 +662,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.Amount)
 	_, err := bi.bridge.HandleERC20Transfer(
-		bi.account.GetTransactOpts(),
-		ev.Amount, ev.To,
-		info.tokenRemoteAddr,
-		ev.RequestNonce,
-		ev.BlockNumber)
+		bi.account.GetTransactOpts(), ev.Amount, ev.To, info.tokenRemoteAddr, ev.RequestNonce, ev.BlockNumber)
 	if err != nil {
 		log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 	}
