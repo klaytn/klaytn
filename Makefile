@@ -34,9 +34,9 @@ kbn:
 kscn:
 	build/env.sh go run build/ci.go install ./cmd/kscn
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/kscn\" to launch ServiceChain Node."
+	@echo "Run \"$(GOBIN)/kscn\" to launch ServiceChain Consensus Node."
 
-kpcn:
+kspn:
 	build/env.sh go run build/ci.go install ./cmd/kspn
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/kspn\" to launch ServiceChain Proxy Node."
