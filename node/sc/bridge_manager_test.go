@@ -23,6 +23,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
 	"github.com/klaytn/klaytn/contracts/sc_erc20"
@@ -53,6 +54,16 @@ func WaitGroupWithTimeOut(wg *sync.WaitGroup, duration time.Duration, t *testing
 	case <-time.After(duration):
 		t.Fatal("timed out waiting group")
 	}
+}
+
+// CheckReceipt can check if the tx receipt has expected status.
+func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Duration, expectedStatus uint, t *testing.T) {
+	timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), duration)
+	defer cancelTimeout()
+
+	receipt, err := bind.WaitMined(timeoutContext, b, tx)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, expectedStatus, receipt.Status)
 }
 
 // TestBridgeManager tests the event/method of Token/NFT/Bridge contracts.
@@ -152,17 +163,6 @@ func TestBridgeManager(t *testing.T) {
 	cNftAddr, err := bridge.AllowedTokens(nil, nftAddr)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, cNftAddr, nftAddr)
-
-	// TODO-Klaytn-Servicechain needs to support WaitDeployed
-	//timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
-	//defer cancelTimeout()
-	//
-	//addr, err = bind.WaitDeployed(timeoutContext, sim, tx)
-	//if err != nil {
-	//	log.Fatal("Failed to DeployGXToken.", "err", err, "txHash", tx.Hash().String())
-	//
-	//}
-	//fmt.Println("GXToken is deployed.", "addr", addr.String(), "txHash", tx.Hash().String())
 
 	balance, _ := sim.BalanceAt(context.Background(), auth.From, nil)
 	fmt.Printf("auth(%v) KLAY balance : %v\n", auth.From.String(), balance)
@@ -656,6 +656,26 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		fmt.Println("RequestKLAYTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
+	}
+
+	// 7-1. Request ERC20 Transfer from Alice to Bob with wrong fee
+	{
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, testToken, Bob.From, big.NewInt(0))
+		assert.Equal(t, nil, err)
+
+		sim.Commit() // block
+
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+	}
+
+	// 8-1. Request KLAY transfer from Alice to Bob with wrong fee
+	{
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, Bob.From, big.NewInt(100000))
+		assert.Equal(t, nil, err)
+
+		sim.Commit() // block
+
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
 	}
 
 	// Wait a few second for wait group
