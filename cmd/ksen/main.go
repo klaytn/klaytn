@@ -149,8 +149,6 @@ var senHelpFlagGroups = []utils.FlagGroup{
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,
 			utils.NetworkIdFlag,
-			utils.BaobabFlag,
-			utils.CypressFlag,
 		},
 	},
 	{

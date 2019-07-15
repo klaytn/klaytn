@@ -173,14 +173,10 @@ var KSPNFlags = []cli.Flag{
 	utils.TxResendIntervalFlag,
 	utils.TxResendCountFlag,
 	utils.TxResendUseLegacyFlag,
-	utils.CypressFlag,
-	utils.BaobabFlag,
 }
 
 var KSENFlags = []cli.Flag{
 	utils.ServiceChainSignerFlag,
-	utils.CypressFlag,
-	utils.BaobabFlag,
 	utils.ChildChainIndexingFlag,
 	utils.MainBridgeFlag,
 	utils.MainBridgeListenPortFlag,
