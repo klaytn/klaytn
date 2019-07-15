@@ -19,8 +19,8 @@ package sc
 import (
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/servicechain_nft"
-	"github.com/klaytn/klaytn/contracts/servicechain_token"
+	"github.com/klaytn/klaytn/contracts/sc_erc20"
+	"github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"os"
