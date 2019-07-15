@@ -466,7 +466,7 @@ func gen(ctx *cli.Context) error {
 		if len(enNodeInfos) != 0 {
 			bridgeNodesJsonBytes, _ = json.MarshalIndent(enNodeInfos[:1], "", "\t")
 		}
-		serviceGenesisJsonBytes, _ := json.MarshalIndent(genIstanbulGenesis(ctx, scNodeAddress, nil, serviceChainId), "", "\t")
+		scGenesisJsonBytes, _ := json.MarshalIndent(genIstanbulGenesis(ctx, scNodeAddress, nil, serviceChainId), "", "\t")
 		compose := compose.New(
 			"172.16.239",
 			num,
@@ -474,7 +474,7 @@ func gen(ctx *cli.Context) error {
 			address,
 			nodeKeys,
 			removeSpacesAndLines(genesisJsonBytes),
-			removeSpacesAndLines(serviceGenesisJsonBytes),
+			removeSpacesAndLines(scGenesisJsonBytes),
 			removeSpacesAndLines(staticNodesJsonBytes),
 			removeSpacesAndLines(staticPNNodesJsonBytes),
 			removeSpacesAndLines(staticENNodesJsonBytes),

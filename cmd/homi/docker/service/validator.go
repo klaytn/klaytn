@@ -26,7 +26,7 @@ import (
 type Validator struct {
 	Identity       int
 	Genesis        string
-	ServiceGenesis string
+	SCGenesis      string
 	Address        string
 	NodeKey        string
 	StaticNodes    string
@@ -45,13 +45,13 @@ type Validator struct {
 	AddPrivKey     bool
 }
 
-func NewValidator(identity int, genesis, serviceGenesis string, nodeAddress string, nodeKey string, staticNodes, bridgeNodes string, port int, rpcPort int,
+func NewValidator(identity int, genesis, scGenesis string, nodeAddress string, nodeKey string, staticNodes, bridgeNodes string, port int, rpcPort int,
 	prometheusPort int, ethStats string, ip string, dockerImageId string, useFastHttp bool, networkId, parentChainId int,
 	namePrefix string, nodeType string, addPrivKey bool) *Validator {
 	return &Validator{
 		Identity:       identity,
 		Genesis:        genesis,
-		ServiceGenesis: serviceGenesis,
+		SCGenesis:      scGenesis,
 		Address:        nodeAddress,
 		NodeKey:        nodeKey,
 		Port:           port,
@@ -102,7 +102,7 @@ var validatorTemplate = `{{ .Name }}:
       - |
         mkdir -p /klaytn
 {{- if eq .NodeType "scn" }}
-        echo '{{ .ServiceGenesis }}' > /klaytn/genesis.json
+        echo '{{ .SCGenesis }}' > /klaytn/genesis.json
 {{- else }}
         echo '{{ .Genesis }}' > /klaytn/genesis.json
 {{- end }}

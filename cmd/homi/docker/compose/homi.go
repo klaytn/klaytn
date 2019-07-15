@@ -39,7 +39,7 @@ type Homi struct {
 }
 
 func New(ipPrefix string, number int, secret string, addresses, nodeKeys []string,
-	genesis, serviceGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNNodes, bridegeNodes, dockerImageId string, useFastHttp bool, networkId, parentChainId int,
+	genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNNodes, bridegeNodes, dockerImageId string, useFastHttp bool, networkId, parentChainId int,
 	useGrafana bool, proxyNodeKeys, enNodeKeys, scnNodeKeys []string, useTxGen bool, txGenOpt service.TxGenOption) *Homi {
 	ist := &Homi{
 		IPPrefix:   ipPrefix,
@@ -47,11 +47,11 @@ func New(ipPrefix string, number int, secret string, addresses, nodeKeys []strin
 		UseGrafana: useGrafana,
 		UseTxGen:   useTxGen,
 	}
-	ist.init(number, addresses, nodeKeys, genesis, serviceGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNNodes, bridegeNodes, dockerImageId, useFastHttp, networkId, parentChainId, proxyNodeKeys, enNodeKeys, scnNodeKeys, txGenOpt)
+	ist.init(number, addresses, nodeKeys, genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNNodes, bridegeNodes, dockerImageId, useFastHttp, networkId, parentChainId, proxyNodeKeys, enNodeKeys, scnNodeKeys, txGenOpt)
 	return ist
 }
 
-func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, serviceGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNodes, bridgeNodes, dockerImageId string, useFastHttp bool, networkId, parentChainId int, proxyNodeKeys, enNodeKeys, scnNodeKeys []string, txGenOpt service.TxGenOption) {
+func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNodes, bridgeNodes, dockerImageId string, useFastHttp bool, networkId, parentChainId int, proxyNodeKeys, enNodeKeys, scnNodeKeys []string, txGenOpt service.TxGenOption) {
 	var validatorNames []string
 	for i := 0; i < number; i++ {
 		s := service.NewValidator(i,
@@ -145,7 +145,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, service
 	for i := 0; i < len(scnNodeKeys); i++ {
 		s := service.NewValidator(i,
 			"",
-			serviceGenesis,
+			scGenesis,
 			"",
 			scnNodeKeys[i],
 			"",
