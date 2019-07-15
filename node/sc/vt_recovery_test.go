@@ -60,7 +60,7 @@ type testInfo struct {
 }
 
 const (
-	testGasLimit     = 1000000
+	testGasLimit     = 10000000
 	testAmount       = 321
 	testToken        = 123
 	testNFT          = int64(7321)
@@ -621,7 +621,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfer
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testAmount), ev.Amount)
 	opts := bi.account.GetTransactOpts()
-	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber, ev.Fee)
+	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
 	if err != nil {
 		log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 	}
@@ -663,7 +663,10 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.Amount)
 	_, err := bi.bridge.HandleERC20Transfer(
 		bi.account.GetTransactOpts(),
-		ev.Amount, ev.To, info.tokenRemoteAddr, ev.RequestNonce, ev.BlockNumber, big.NewInt(0))
+		ev.Amount, ev.To,
+		info.tokenRemoteAddr,
+		ev.RequestNonce,
+		ev.BlockNumber)
 	if err != nil {
 		log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 	}
