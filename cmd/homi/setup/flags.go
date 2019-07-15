@@ -77,7 +77,7 @@ var (
 	}
 
 	numOfSCNsFlag = cli.IntFlag{
-		Name: "scn-num",
+		Name:  "scn-num",
 		Usage: "Number of service chain nodes",
 		Value: 0,
 	}
@@ -95,7 +95,7 @@ var (
 	}
 
 	serviceChainIDFlag = cli.Uint64Flag{
-		Name: "serviceChainID",
+		Name:  "serviceChainID",
 		Usage: "Service Chain ID",
 		Value: 1001,
 	}
