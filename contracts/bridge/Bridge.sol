@@ -13,10 +13,10 @@ import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable
 
 import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-import "../servicechain_nft/INFTReceiver.sol";
-import "../servicechain_token/ITokenReceiver.sol";
+import "../sc_erc721/IERC721BridgeReceiver.sol";
+import "../sc_erc20/IERC20BridgeReceiver.sol";
 
-contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
+contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable {
     uint64 public constant VERSION = 1;
     bool public modeMintBurn = false;
     address public counterpartBridge;
@@ -166,47 +166,6 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         }
     }
 
-    // TODO-Klaytn-Servicechain refactor onToken/NFTReceived function.
-    bytes4 constant TOKEN_RECEIVED = 0xbc04f0af;
-    function onTokenReceived(
-        address _from,
-        uint256 _amount,
-        address _to
-    )
-        public
-        returns (bytes4)
-    {
-        require(isRunning, "stopped bridge");
-        require(allowedTokens[msg.sender] != address(0), "Not a valid token");
-        require(_amount > 0, "zero amount");
-
-        emit RequestValueTransfer(TokenKind.ERC20, _from, _amount, msg.sender, _to, requestNonce,"");
-        requestNonce++;
-        return TOKEN_RECEIVED;
-    }
-
-    // TODO-Klaytn-Servicechain refactor onToken/NFTReceived function.
-    // Receiver function of NFT for 1-step deposits to the Bridge
-    bytes4 private constant ERC721_RECEIVED = 0x150b7a02;
-    function onNFTReceived(
-        address from,
-        uint256 tokenId,
-        address to
-    )
-        public
-        returns(bytes4)
-    {
-        require(isRunning, "stopped bridge");
-        require(allowedTokens[msg.sender] != address(0), "Not a valid token");
-
-        // TODO-Klaytn-Servicechain refactor calling msg.sender contract
-        string memory uri = ERC721Metadata(msg.sender).tokenURI(tokenId);
-
-        emit RequestValueTransfer(TokenKind.ERC721, from, tokenId, msg.sender, to, requestNonce, uri);
-        requestNonce++;
-        return ERC721_RECEIVED;
-    }
-
     // () requests transfer KLAY to msg.sender address on relative chain.
     function () external payable {
         require(isRunning, "stopped bridge");
@@ -241,21 +200,19 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         requestNonce++;
     }
 
-    // requestERC20Transfer requests transfer ERC20 to _to on relative chain.
-    function requestERC20Transfer(address _contractAddress, address _to, uint256 _amount) external {
+    // _requestERC20Transfer requests transfer ERC20 to _to on relative chain.
+    function _requestERC20Transfer(address _contractAddress, address _from, address _to, uint256 _amount) internal {
         require(isRunning, "stopped bridge");
         require(_amount > 0, "zero msg.value");
         require(allowedTokens[_contractAddress] != address(0), "Not a valid token");
 
         if (modeMintBurn) {
-            ERC20Burnable(_contractAddress).burnFrom(msg.sender, _amount);
-        } else {
-            IERC20(_contractAddress).transferFrom(msg.sender, address(this), _amount);
+            ERC20Burnable(_contractAddress).burn(_amount);
         }
 
         emit RequestValueTransfer(
             TokenKind.ERC20,
-            msg.sender,
+            _from,
             _amount,
             _contractAddress,
             _to,
@@ -265,21 +222,37 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
         requestNonce++;
     }
 
-    // requestERC721Transfer requests transfer ERC721 to _to on relative chain.
-    function requestERC721Transfer(address _contractAddress, address _to, uint256 _uid) external {
+    // Receiver function of ERC20 token for 1-step deposits to the Bridge
+    function onERC20Received(
+        address _from,
+        uint256 _amount,
+        address _to
+    )
+    public
+    {
+        _requestERC20Transfer(msg.sender, _from, _to, _amount);
+    }
+
+    // requestERC20Transfer requests transfer ERC20 to _to on relative chain.
+    function requestERC20Transfer(address _contractAddress, address _to, uint256 _amount) external {
+        IERC20(_contractAddress).transferFrom(msg.sender, address(this), _amount);
+        _requestERC20Transfer(_contractAddress, msg.sender, _to, _amount);
+    }
+
+    // _requestERC721Transfer requests transfer ERC721 to _to on relative chain.
+    function _requestERC721Transfer(address _contractAddress, address _from, address _to, uint256 _uid) internal {
         require(isRunning, "stopped bridge");
         require(allowedTokens[_contractAddress] != address(0), "Not a valid token");
 
         string memory uri = ERC721Metadata(_contractAddress).tokenURI(_uid);
 
-        IERC721(_contractAddress).transferFrom(msg.sender, address(this), _uid);
         if (modeMintBurn) {
             ERC721Burnable(_contractAddress).burn(_uid);
         }
 
         emit RequestValueTransfer(
             TokenKind.ERC721,
-            msg.sender,
+            _from,
             _uid,
             _contractAddress,
             _to,
@@ -287,6 +260,23 @@ contract Bridge is ITokenReceiver, INFTReceiver, Ownable {
             uri
         );
         requestNonce++;
+    }
+
+    // Receiver function of ERC721 token for 1-step deposits to the Bridge
+    function onERC721Received(
+        address _from,
+        uint256 _tokenId,
+        address _to
+    )
+    public
+    {
+        _requestERC721Transfer(msg.sender, _from, _to, _tokenId);
+    }
+
+    // requestERC721Transfer requests transfer ERC721 to _to on relative chain.
+    function requestERC721Transfer(address _contractAddress, address _to, uint256 _uid) external {
+        IERC721(_contractAddress).transferFrom(msg.sender, address(this), _uid);
+        _requestERC721Transfer(_contractAddress, msg.sender, _to, _uid);
     }
 
     // chargeWithoutEvent sends KLAY to this contract without event for increasing

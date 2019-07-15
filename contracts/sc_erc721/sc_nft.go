@@ -6053,6 +6053,1207 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchTransfer(opt
 	}), nil
 }
 
+// ERC721ServiceChainABI is the input ABI used to generate the binding from.
+const ERC721ServiceChainABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"name\":\"setBridge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"isOwner\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_uid\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"requestValueTransfer\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"bridge\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
+
+// ERC721ServiceChainBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const ERC721ServiceChainBinRuntime = `0x`
+
+// ERC721ServiceChainBin is the compiled bytecode used for deploying new contracts.
+const ERC721ServiceChainBin = `0x`
+
+// DeployERC721ServiceChain deploys a new Klaytn contract, binding an instance of ERC721ServiceChain to it.
+func DeployERC721ServiceChain(auth *bind.TransactOpts, backend bind.ContractBackend, _bridge common.Address) (common.Address, *types.Transaction, *ERC721ServiceChain, error) {
+	parsed, err := abi.JSON(strings.NewReader(ERC721ServiceChainABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ERC721ServiceChainBin), backend, _bridge)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &ERC721ServiceChain{ERC721ServiceChainCaller: ERC721ServiceChainCaller{contract: contract}, ERC721ServiceChainTransactor: ERC721ServiceChainTransactor{contract: contract}, ERC721ServiceChainFilterer: ERC721ServiceChainFilterer{contract: contract}}, nil
+}
+
+// ERC721ServiceChain is an auto generated Go binding around a Klaytn contract.
+type ERC721ServiceChain struct {
+	ERC721ServiceChainCaller     // Read-only binding to the contract
+	ERC721ServiceChainTransactor // Write-only binding to the contract
+	ERC721ServiceChainFilterer   // Log filterer for contract events
+}
+
+// ERC721ServiceChainCaller is an auto generated read-only Go binding around a Klaytn contract.
+type ERC721ServiceChainCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC721ServiceChainTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type ERC721ServiceChainTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC721ServiceChainFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type ERC721ServiceChainFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ERC721ServiceChainSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type ERC721ServiceChainSession struct {
+	Contract     *ERC721ServiceChain // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts       // Call options to use throughout this session
+	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
+}
+
+// ERC721ServiceChainCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type ERC721ServiceChainCallerSession struct {
+	Contract *ERC721ServiceChainCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts             // Call options to use throughout this session
+}
+
+// ERC721ServiceChainTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type ERC721ServiceChainTransactorSession struct {
+	Contract     *ERC721ServiceChainTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
+}
+
+// ERC721ServiceChainRaw is an auto generated low-level Go binding around a Klaytn contract.
+type ERC721ServiceChainRaw struct {
+	Contract *ERC721ServiceChain // Generic contract binding to access the raw methods on
+}
+
+// ERC721ServiceChainCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type ERC721ServiceChainCallerRaw struct {
+	Contract *ERC721ServiceChainCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ERC721ServiceChainTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type ERC721ServiceChainTransactorRaw struct {
+	Contract *ERC721ServiceChainTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewERC721ServiceChain creates a new instance of ERC721ServiceChain, bound to a specific deployed contract.
+func NewERC721ServiceChain(address common.Address, backend bind.ContractBackend) (*ERC721ServiceChain, error) {
+	contract, err := bindERC721ServiceChain(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721ServiceChain{ERC721ServiceChainCaller: ERC721ServiceChainCaller{contract: contract}, ERC721ServiceChainTransactor: ERC721ServiceChainTransactor{contract: contract}, ERC721ServiceChainFilterer: ERC721ServiceChainFilterer{contract: contract}}, nil
+}
+
+// NewERC721ServiceChainCaller creates a new read-only instance of ERC721ServiceChain, bound to a specific deployed contract.
+func NewERC721ServiceChainCaller(address common.Address, caller bind.ContractCaller) (*ERC721ServiceChainCaller, error) {
+	contract, err := bindERC721ServiceChain(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721ServiceChainCaller{contract: contract}, nil
+}
+
+// NewERC721ServiceChainTransactor creates a new write-only instance of ERC721ServiceChain, bound to a specific deployed contract.
+func NewERC721ServiceChainTransactor(address common.Address, transactor bind.ContractTransactor) (*ERC721ServiceChainTransactor, error) {
+	contract, err := bindERC721ServiceChain(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721ServiceChainTransactor{contract: contract}, nil
+}
+
+// NewERC721ServiceChainFilterer creates a new log filterer instance of ERC721ServiceChain, bound to a specific deployed contract.
+func NewERC721ServiceChainFilterer(address common.Address, filterer bind.ContractFilterer) (*ERC721ServiceChainFilterer, error) {
+	contract, err := bindERC721ServiceChain(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721ServiceChainFilterer{contract: contract}, nil
+}
+
+// bindERC721ServiceChain binds a generic wrapper to an already deployed contract.
+func bindERC721ServiceChain(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ERC721ServiceChainABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ERC721ServiceChain *ERC721ServiceChainRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ERC721ServiceChain.Contract.ERC721ServiceChainCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ERC721ServiceChain *ERC721ServiceChainRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.ERC721ServiceChainTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ERC721ServiceChain *ERC721ServiceChainRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.ERC721ServiceChainTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ERC721ServiceChain *ERC721ServiceChainCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _ERC721ServiceChain.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.contract.Transact(opts, method, params...)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(owner address) constant returns(uint256)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "balanceOf", owner)
+	return *ret0, err
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(owner address) constant returns(uint256)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) BalanceOf(owner common.Address) (*big.Int, error) {
+	return _ERC721ServiceChain.Contract.BalanceOf(&_ERC721ServiceChain.CallOpts, owner)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(owner address) constant returns(uint256)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) BalanceOf(owner common.Address) (*big.Int, error) {
+	return _ERC721ServiceChain.Contract.BalanceOf(&_ERC721ServiceChain.CallOpts, owner)
+}
+
+// Bridge is a free data retrieval call binding the contract method 0xe78cea92.
+//
+// Solidity: function bridge() constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) Bridge(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "bridge")
+	return *ret0, err
+}
+
+// Bridge is a free data retrieval call binding the contract method 0xe78cea92.
+//
+// Solidity: function bridge() constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) Bridge() (common.Address, error) {
+	return _ERC721ServiceChain.Contract.Bridge(&_ERC721ServiceChain.CallOpts)
+}
+
+// Bridge is a free data retrieval call binding the contract method 0xe78cea92.
+//
+// Solidity: function bridge() constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) Bridge() (common.Address, error) {
+	return _ERC721ServiceChain.Contract.Bridge(&_ERC721ServiceChain.CallOpts)
+}
+
+// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
+//
+// Solidity: function getApproved(tokenId uint256) constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "getApproved", tokenId)
+	return *ret0, err
+}
+
+// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
+//
+// Solidity: function getApproved(tokenId uint256) constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) GetApproved(tokenId *big.Int) (common.Address, error) {
+	return _ERC721ServiceChain.Contract.GetApproved(&_ERC721ServiceChain.CallOpts, tokenId)
+}
+
+// GetApproved is a free data retrieval call binding the contract method 0x081812fc.
+//
+// Solidity: function getApproved(tokenId uint256) constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) GetApproved(tokenId *big.Int) (common.Address, error) {
+	return _ERC721ServiceChain.Contract.GetApproved(&_ERC721ServiceChain.CallOpts, tokenId)
+}
+
+// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
+//
+// Solidity: function isApprovedForAll(owner address, operator address) constant returns(bool)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "isApprovedForAll", owner, operator)
+	return *ret0, err
+}
+
+// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
+//
+// Solidity: function isApprovedForAll(owner address, operator address) constant returns(bool)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
+	return _ERC721ServiceChain.Contract.IsApprovedForAll(&_ERC721ServiceChain.CallOpts, owner, operator)
+}
+
+// IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
+//
+// Solidity: function isApprovedForAll(owner address, operator address) constant returns(bool)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) IsApprovedForAll(owner common.Address, operator common.Address) (bool, error) {
+	return _ERC721ServiceChain.Contract.IsApprovedForAll(&_ERC721ServiceChain.CallOpts, owner, operator)
+}
+
+// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+//
+// Solidity: function isOwner() constant returns(bool)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "isOwner")
+	return *ret0, err
+}
+
+// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+//
+// Solidity: function isOwner() constant returns(bool)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) IsOwner() (bool, error) {
+	return _ERC721ServiceChain.Contract.IsOwner(&_ERC721ServiceChain.CallOpts)
+}
+
+// IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
+//
+// Solidity: function isOwner() constant returns(bool)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) IsOwner() (bool, error) {
+	return _ERC721ServiceChain.Contract.IsOwner(&_ERC721ServiceChain.CallOpts)
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() constant returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) Name(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "name")
+	return *ret0, err
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() constant returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) Name() (string, error) {
+	return _ERC721ServiceChain.Contract.Name(&_ERC721ServiceChain.CallOpts)
+}
+
+// Name is a free data retrieval call binding the contract method 0x06fdde03.
+//
+// Solidity: function name() constant returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) Name() (string, error) {
+	return _ERC721ServiceChain.Contract.Name(&_ERC721ServiceChain.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "owner")
+	return *ret0, err
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) Owner() (common.Address, error) {
+	return _ERC721ServiceChain.Contract.Owner(&_ERC721ServiceChain.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) Owner() (common.Address, error) {
+	return _ERC721ServiceChain.Contract.Owner(&_ERC721ServiceChain.CallOpts)
+}
+
+// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
+//
+// Solidity: function ownerOf(tokenId uint256) constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
+	var (
+		ret0 = new(common.Address)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "ownerOf", tokenId)
+	return *ret0, err
+}
+
+// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
+//
+// Solidity: function ownerOf(tokenId uint256) constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
+	return _ERC721ServiceChain.Contract.OwnerOf(&_ERC721ServiceChain.CallOpts, tokenId)
+}
+
+// OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
+//
+// Solidity: function ownerOf(tokenId uint256) constant returns(address)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
+	return _ERC721ServiceChain.Contract.OwnerOf(&_ERC721ServiceChain.CallOpts, tokenId)
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(interfaceId bytes4) constant returns(bool)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
+	var (
+		ret0 = new(bool)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "supportsInterface", interfaceId)
+	return *ret0, err
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(interfaceId bytes4) constant returns(bool)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _ERC721ServiceChain.Contract.SupportsInterface(&_ERC721ServiceChain.CallOpts, interfaceId)
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(interfaceId bytes4) constant returns(bool)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _ERC721ServiceChain.Contract.SupportsInterface(&_ERC721ServiceChain.CallOpts, interfaceId)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() constant returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) Symbol(opts *bind.CallOpts) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "symbol")
+	return *ret0, err
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() constant returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) Symbol() (string, error) {
+	return _ERC721ServiceChain.Contract.Symbol(&_ERC721ServiceChain.CallOpts)
+}
+
+// Symbol is a free data retrieval call binding the contract method 0x95d89b41.
+//
+// Solidity: function symbol() constant returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) Symbol() (string, error) {
+	return _ERC721ServiceChain.Contract.Symbol(&_ERC721ServiceChain.CallOpts)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(tokenId uint256) constant returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
+	var (
+		ret0 = new(string)
+	)
+	out := ret0
+	err := _ERC721ServiceChain.contract.Call(opts, out, "tokenURI", tokenId)
+	return *ret0, err
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(tokenId uint256) constant returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721ServiceChain.Contract.TokenURI(&_ERC721ServiceChain.CallOpts, tokenId)
+}
+
+// TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
+//
+// Solidity: function tokenURI(tokenId uint256) constant returns(string)
+func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) TokenURI(tokenId *big.Int) (string, error) {
+	return _ERC721ServiceChain.Contract.TokenURI(&_ERC721ServiceChain.CallOpts, tokenId)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(to address, tokenId uint256) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactor) Approve(opts *bind.TransactOpts, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721ServiceChain.contract.Transact(opts, "approve", to, tokenId)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(to address, tokenId uint256) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainSession) Approve(to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.Approve(&_ERC721ServiceChain.TransactOpts, to, tokenId)
+}
+
+// Approve is a paid mutator transaction binding the contract method 0x095ea7b3.
+//
+// Solidity: function approve(to address, tokenId uint256) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) Approve(to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.Approve(&_ERC721ServiceChain.TransactOpts, to, tokenId)
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactor) RenounceOwnership(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC721ServiceChain.contract.Transact(opts, "renounceOwnership")
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_ERC721ServiceChain *ERC721ServiceChainSession) RenounceOwnership() (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.RenounceOwnership(&_ERC721ServiceChain.TransactOpts)
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) RenounceOwnership() (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.RenounceOwnership(&_ERC721ServiceChain.TransactOpts)
+}
+
+// RequestValueTransfer is a paid mutator transaction binding the contract method 0xc6b07116.
+//
+// Solidity: function requestValueTransfer(_uid uint256, _to address) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactor) RequestValueTransfer(opts *bind.TransactOpts, _uid *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _ERC721ServiceChain.contract.Transact(opts, "requestValueTransfer", _uid, _to)
+}
+
+// RequestValueTransfer is a paid mutator transaction binding the contract method 0xc6b07116.
+//
+// Solidity: function requestValueTransfer(_uid uint256, _to address) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainSession) RequestValueTransfer(_uid *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.RequestValueTransfer(&_ERC721ServiceChain.TransactOpts, _uid, _to)
+}
+
+// RequestValueTransfer is a paid mutator transaction binding the contract method 0xc6b07116.
+//
+// Solidity: function requestValueTransfer(_uid uint256, _to address) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) RequestValueTransfer(_uid *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.RequestValueTransfer(&_ERC721ServiceChain.TransactOpts, _uid, _to)
+}
+
+// SafeTransferFrom is a paid mutator transaction binding the contract method 0xb88d4fde.
+//
+// Solidity: function safeTransferFrom(from address, to address, tokenId uint256, _data bytes) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactor) SafeTransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
+	return _ERC721ServiceChain.contract.Transact(opts, "safeTransferFrom", from, to, tokenId, _data)
+}
+
+// SafeTransferFrom is a paid mutator transaction binding the contract method 0xb88d4fde.
+//
+// Solidity: function safeTransferFrom(from address, to address, tokenId uint256, _data bytes) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainSession) SafeTransferFrom(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.SafeTransferFrom(&_ERC721ServiceChain.TransactOpts, from, to, tokenId, _data)
+}
+
+// SafeTransferFrom is a paid mutator transaction binding the contract method 0xb88d4fde.
+//
+// Solidity: function safeTransferFrom(from address, to address, tokenId uint256, _data bytes) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) SafeTransferFrom(from common.Address, to common.Address, tokenId *big.Int, _data []byte) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.SafeTransferFrom(&_ERC721ServiceChain.TransactOpts, from, to, tokenId, _data)
+}
+
+// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
+//
+// Solidity: function setApprovalForAll(to address, approved bool) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactor) SetApprovalForAll(opts *bind.TransactOpts, to common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721ServiceChain.contract.Transact(opts, "setApprovalForAll", to, approved)
+}
+
+// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
+//
+// Solidity: function setApprovalForAll(to address, approved bool) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.SetApprovalForAll(&_ERC721ServiceChain.TransactOpts, to, approved)
+}
+
+// SetApprovalForAll is a paid mutator transaction binding the contract method 0xa22cb465.
+//
+// Solidity: function setApprovalForAll(to address, approved bool) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.SetApprovalForAll(&_ERC721ServiceChain.TransactOpts, to, approved)
+}
+
+// SetBridge is a paid mutator transaction binding the contract method 0x8dd14802.
+//
+// Solidity: function setBridge(_bridge address) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactor) SetBridge(opts *bind.TransactOpts, _bridge common.Address) (*types.Transaction, error) {
+	return _ERC721ServiceChain.contract.Transact(opts, "setBridge", _bridge)
+}
+
+// SetBridge is a paid mutator transaction binding the contract method 0x8dd14802.
+//
+// Solidity: function setBridge(_bridge address) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainSession) SetBridge(_bridge common.Address) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.SetBridge(&_ERC721ServiceChain.TransactOpts, _bridge)
+}
+
+// SetBridge is a paid mutator transaction binding the contract method 0x8dd14802.
+//
+// Solidity: function setBridge(_bridge address) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) SetBridge(_bridge common.Address) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.SetBridge(&_ERC721ServiceChain.TransactOpts, _bridge)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(from address, to address, tokenId uint256) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactor) TransferFrom(opts *bind.TransactOpts, from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721ServiceChain.contract.Transact(opts, "transferFrom", from, to, tokenId)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(from address, to address, tokenId uint256) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainSession) TransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.TransferFrom(&_ERC721ServiceChain.TransactOpts, from, to, tokenId)
+}
+
+// TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
+//
+// Solidity: function transferFrom(from address, to address, tokenId uint256) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) TransferFrom(from common.Address, to common.Address, tokenId *big.Int) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.TransferFrom(&_ERC721ServiceChain.TransactOpts, from, to, tokenId)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(newOwner address) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
+	return _ERC721ServiceChain.contract.Transact(opts, "transferOwnership", newOwner)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(newOwner address) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.TransferOwnership(&_ERC721ServiceChain.TransactOpts, newOwner)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(newOwner address) returns()
+func (_ERC721ServiceChain *ERC721ServiceChainTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
+	return _ERC721ServiceChain.Contract.TransferOwnership(&_ERC721ServiceChain.TransactOpts, newOwner)
+}
+
+// ERC721ServiceChainApprovalIterator is returned from FilterApproval and is used to iterate over the raw logs and unpacked data for Approval events raised by the ERC721ServiceChain contract.
+type ERC721ServiceChainApprovalIterator struct {
+	Event *ERC721ServiceChainApproval // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC721ServiceChainApprovalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC721ServiceChainApproval)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC721ServiceChainApproval)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC721ServiceChainApprovalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC721ServiceChainApprovalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC721ServiceChainApproval represents a Approval event raised by the ERC721ServiceChain contract.
+type ERC721ServiceChainApproval struct {
+	Owner    common.Address
+	Approved common.Address
+	TokenId  *big.Int
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterApproval is a free log retrieval operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: e Approval(owner indexed address, approved indexed address, tokenId indexed uint256)
+func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721ServiceChainApprovalIterator, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var approvedRule []interface{}
+	for _, approvedItem := range approved {
+		approvedRule = append(approvedRule, approvedItem)
+	}
+	var tokenIdRule []interface{}
+	for _, tokenIdItem := range tokenId {
+		tokenIdRule = append(tokenIdRule, tokenIdItem)
+	}
+
+	logs, sub, err := _ERC721ServiceChain.contract.FilterLogs(opts, "Approval", ownerRule, approvedRule, tokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721ServiceChainApprovalIterator{contract: _ERC721ServiceChain.contract, event: "Approval", logs: logs, sub: sub}, nil
+}
+
+// WatchApproval is a free log subscription operation binding the contract event 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925.
+//
+// Solidity: e Approval(owner indexed address, approved indexed address, tokenId indexed uint256)
+func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var approvedRule []interface{}
+	for _, approvedItem := range approved {
+		approvedRule = append(approvedRule, approvedItem)
+	}
+	var tokenIdRule []interface{}
+	for _, tokenIdItem := range tokenId {
+		tokenIdRule = append(tokenIdRule, tokenIdItem)
+	}
+
+	logs, sub, err := _ERC721ServiceChain.contract.WatchLogs(opts, "Approval", ownerRule, approvedRule, tokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC721ServiceChainApproval)
+				if err := _ERC721ServiceChain.contract.UnpackLog(event, "Approval", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ERC721ServiceChainApprovalForAllIterator is returned from FilterApprovalForAll and is used to iterate over the raw logs and unpacked data for ApprovalForAll events raised by the ERC721ServiceChain contract.
+type ERC721ServiceChainApprovalForAllIterator struct {
+	Event *ERC721ServiceChainApprovalForAll // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC721ServiceChainApprovalForAllIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC721ServiceChainApprovalForAll)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC721ServiceChainApprovalForAll)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC721ServiceChainApprovalForAllIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC721ServiceChainApprovalForAllIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC721ServiceChainApprovalForAll represents a ApprovalForAll event raised by the ERC721ServiceChain contract.
+type ERC721ServiceChainApprovalForAll struct {
+	Owner    common.Address
+	Operator common.Address
+	Approved bool
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterApprovalForAll is a free log retrieval operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
+//
+// Solidity: e ApprovalForAll(owner indexed address, operator indexed address, approved bool)
+func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721ServiceChainApprovalForAllIterator, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var operatorRule []interface{}
+	for _, operatorItem := range operator {
+		operatorRule = append(operatorRule, operatorItem)
+	}
+
+	logs, sub, err := _ERC721ServiceChain.contract.FilterLogs(opts, "ApprovalForAll", ownerRule, operatorRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721ServiceChainApprovalForAllIterator{contract: _ERC721ServiceChain.contract, event: "ApprovalForAll", logs: logs, sub: sub}, nil
+}
+
+// WatchApprovalForAll is a free log subscription operation binding the contract event 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31.
+//
+// Solidity: e ApprovalForAll(owner indexed address, operator indexed address, approved bool)
+func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
+
+	var ownerRule []interface{}
+	for _, ownerItem := range owner {
+		ownerRule = append(ownerRule, ownerItem)
+	}
+	var operatorRule []interface{}
+	for _, operatorItem := range operator {
+		operatorRule = append(operatorRule, operatorItem)
+	}
+
+	logs, sub, err := _ERC721ServiceChain.contract.WatchLogs(opts, "ApprovalForAll", ownerRule, operatorRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC721ServiceChainApprovalForAll)
+				if err := _ERC721ServiceChain.contract.UnpackLog(event, "ApprovalForAll", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ERC721ServiceChainOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the ERC721ServiceChain contract.
+type ERC721ServiceChainOwnershipTransferredIterator struct {
+	Event *ERC721ServiceChainOwnershipTransferred // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC721ServiceChainOwnershipTransferredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC721ServiceChainOwnershipTransferred)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC721ServiceChainOwnershipTransferred)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC721ServiceChainOwnershipTransferredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC721ServiceChainOwnershipTransferredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC721ServiceChainOwnershipTransferred represents a OwnershipTransferred event raised by the ERC721ServiceChain contract.
+type ERC721ServiceChainOwnershipTransferred struct {
+	PreviousOwner common.Address
+	NewOwner      common.Address
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: e OwnershipTransferred(previousOwner indexed address, newOwner indexed address)
+func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*ERC721ServiceChainOwnershipTransferredIterator, error) {
+
+	var previousOwnerRule []interface{}
+	for _, previousOwnerItem := range previousOwner {
+		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
+	}
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	}
+
+	logs, sub, err := _ERC721ServiceChain.contract.FilterLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721ServiceChainOwnershipTransferredIterator{contract: _ERC721ServiceChain.contract, event: "OwnershipTransferred", logs: logs, sub: sub}, nil
+}
+
+// WatchOwnershipTransferred is a free log subscription operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: e OwnershipTransferred(previousOwner indexed address, newOwner indexed address)
+func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
+	var previousOwnerRule []interface{}
+	for _, previousOwnerItem := range previousOwner {
+		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
+	}
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	}
+
+	logs, sub, err := _ERC721ServiceChain.contract.WatchLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC721ServiceChainOwnershipTransferred)
+				if err := _ERC721ServiceChain.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ERC721ServiceChainTransferIterator is returned from FilterTransfer and is used to iterate over the raw logs and unpacked data for Transfer events raised by the ERC721ServiceChain contract.
+type ERC721ServiceChainTransferIterator struct {
+	Event *ERC721ServiceChainTransfer // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log      // Log channel receiving the found contract events
+	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	done bool                // Whether the subscription completed delivering logs
+	fail error               // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ERC721ServiceChainTransferIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ERC721ServiceChainTransfer)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ERC721ServiceChainTransfer)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ERC721ServiceChainTransferIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ERC721ServiceChainTransferIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ERC721ServiceChainTransfer represents a Transfer event raised by the ERC721ServiceChain contract.
+type ERC721ServiceChainTransfer struct {
+	From    common.Address
+	To      common.Address
+	TokenId *big.Int
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterTransfer is a free log retrieval operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: e Transfer(from indexed address, to indexed address, tokenId indexed uint256)
+func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721ServiceChainTransferIterator, error) {
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var tokenIdRule []interface{}
+	for _, tokenIdItem := range tokenId {
+		tokenIdRule = append(tokenIdRule, tokenIdItem)
+	}
+
+	logs, sub, err := _ERC721ServiceChain.contract.FilterLogs(opts, "Transfer", fromRule, toRule, tokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ERC721ServiceChainTransferIterator{contract: _ERC721ServiceChain.contract, event: "Transfer", logs: logs, sub: sub}, nil
+}
+
+// WatchTransfer is a free log subscription operation binding the contract event 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef.
+//
+// Solidity: e Transfer(from indexed address, to indexed address, tokenId indexed uint256)
+func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
+	}
+	var toRule []interface{}
+	for _, toItem := range to {
+		toRule = append(toRule, toItem)
+	}
+	var tokenIdRule []interface{}
+	for _, tokenIdItem := range tokenId {
+		tokenIdRule = append(tokenIdRule, tokenIdItem)
+	}
+
+	logs, sub, err := _ERC721ServiceChain.contract.WatchLogs(opts, "Transfer", fromRule, toRule, tokenIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ERC721ServiceChainTransfer)
+				if err := _ERC721ServiceChain.contract.UnpackLog(event, "Transfer", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
 // IERC165ABI is the input ABI used to generate the binding from.
 const IERC165ABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
@@ -7061,6 +8262,191 @@ func (_IERC721 *IERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<-
 			}
 		}
 	}), nil
+}
+
+// IERC721BridgeReceiverABI is the input ABI used to generate the binding from.
+const IERC721BridgeReceiverABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"_from\",\"type\":\"address\"},{\"name\":\"_tokenId\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"onERC721Received\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// IERC721BridgeReceiverBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const IERC721BridgeReceiverBinRuntime = `0x`
+
+// IERC721BridgeReceiverBin is the compiled bytecode used for deploying new contracts.
+const IERC721BridgeReceiverBin = `0x`
+
+// DeployIERC721BridgeReceiver deploys a new Klaytn contract, binding an instance of IERC721BridgeReceiver to it.
+func DeployIERC721BridgeReceiver(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *IERC721BridgeReceiver, error) {
+	parsed, err := abi.JSON(strings.NewReader(IERC721BridgeReceiverABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(IERC721BridgeReceiverBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &IERC721BridgeReceiver{IERC721BridgeReceiverCaller: IERC721BridgeReceiverCaller{contract: contract}, IERC721BridgeReceiverTransactor: IERC721BridgeReceiverTransactor{contract: contract}, IERC721BridgeReceiverFilterer: IERC721BridgeReceiverFilterer{contract: contract}}, nil
+}
+
+// IERC721BridgeReceiver is an auto generated Go binding around a Klaytn contract.
+type IERC721BridgeReceiver struct {
+	IERC721BridgeReceiverCaller     // Read-only binding to the contract
+	IERC721BridgeReceiverTransactor // Write-only binding to the contract
+	IERC721BridgeReceiverFilterer   // Log filterer for contract events
+}
+
+// IERC721BridgeReceiverCaller is an auto generated read-only Go binding around a Klaytn contract.
+type IERC721BridgeReceiverCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IERC721BridgeReceiverTransactor is an auto generated write-only Go binding around a Klaytn contract.
+type IERC721BridgeReceiverTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IERC721BridgeReceiverFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+type IERC721BridgeReceiverFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IERC721BridgeReceiverSession is an auto generated Go binding around a Klaytn contract,
+// with pre-set call and transact options.
+type IERC721BridgeReceiverSession struct {
+	Contract     *IERC721BridgeReceiver // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts          // Call options to use throughout this session
+	TransactOpts bind.TransactOpts      // Transaction auth options to use throughout this session
+}
+
+// IERC721BridgeReceiverCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// with pre-set call options.
+type IERC721BridgeReceiverCallerSession struct {
+	Contract *IERC721BridgeReceiverCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts                // Call options to use throughout this session
+}
+
+// IERC721BridgeReceiverTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// with pre-set transact options.
+type IERC721BridgeReceiverTransactorSession struct {
+	Contract     *IERC721BridgeReceiverTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts                // Transaction auth options to use throughout this session
+}
+
+// IERC721BridgeReceiverRaw is an auto generated low-level Go binding around a Klaytn contract.
+type IERC721BridgeReceiverRaw struct {
+	Contract *IERC721BridgeReceiver // Generic contract binding to access the raw methods on
+}
+
+// IERC721BridgeReceiverCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+type IERC721BridgeReceiverCallerRaw struct {
+	Contract *IERC721BridgeReceiverCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// IERC721BridgeReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+type IERC721BridgeReceiverTransactorRaw struct {
+	Contract *IERC721BridgeReceiverTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewIERC721BridgeReceiver creates a new instance of IERC721BridgeReceiver, bound to a specific deployed contract.
+func NewIERC721BridgeReceiver(address common.Address, backend bind.ContractBackend) (*IERC721BridgeReceiver, error) {
+	contract, err := bindIERC721BridgeReceiver(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &IERC721BridgeReceiver{IERC721BridgeReceiverCaller: IERC721BridgeReceiverCaller{contract: contract}, IERC721BridgeReceiverTransactor: IERC721BridgeReceiverTransactor{contract: contract}, IERC721BridgeReceiverFilterer: IERC721BridgeReceiverFilterer{contract: contract}}, nil
+}
+
+// NewIERC721BridgeReceiverCaller creates a new read-only instance of IERC721BridgeReceiver, bound to a specific deployed contract.
+func NewIERC721BridgeReceiverCaller(address common.Address, caller bind.ContractCaller) (*IERC721BridgeReceiverCaller, error) {
+	contract, err := bindIERC721BridgeReceiver(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IERC721BridgeReceiverCaller{contract: contract}, nil
+}
+
+// NewIERC721BridgeReceiverTransactor creates a new write-only instance of IERC721BridgeReceiver, bound to a specific deployed contract.
+func NewIERC721BridgeReceiverTransactor(address common.Address, transactor bind.ContractTransactor) (*IERC721BridgeReceiverTransactor, error) {
+	contract, err := bindIERC721BridgeReceiver(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IERC721BridgeReceiverTransactor{contract: contract}, nil
+}
+
+// NewIERC721BridgeReceiverFilterer creates a new log filterer instance of IERC721BridgeReceiver, bound to a specific deployed contract.
+func NewIERC721BridgeReceiverFilterer(address common.Address, filterer bind.ContractFilterer) (*IERC721BridgeReceiverFilterer, error) {
+	contract, err := bindIERC721BridgeReceiver(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &IERC721BridgeReceiverFilterer{contract: contract}, nil
+}
+
+// bindIERC721BridgeReceiver binds a generic wrapper to an already deployed contract.
+func bindIERC721BridgeReceiver(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(IERC721BridgeReceiverABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IERC721BridgeReceiver *IERC721BridgeReceiverRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IERC721BridgeReceiver.Contract.IERC721BridgeReceiverCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IERC721BridgeReceiver *IERC721BridgeReceiverRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IERC721BridgeReceiver.Contract.IERC721BridgeReceiverTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IERC721BridgeReceiver *IERC721BridgeReceiverRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IERC721BridgeReceiver.Contract.IERC721BridgeReceiverTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IERC721BridgeReceiver *IERC721BridgeReceiverCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
+	return _IERC721BridgeReceiver.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IERC721BridgeReceiver *IERC721BridgeReceiverTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IERC721BridgeReceiver.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IERC721BridgeReceiver *IERC721BridgeReceiverTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IERC721BridgeReceiver.Contract.contract.Transact(opts, method, params...)
+}
+
+// OnERC721Received is a paid mutator transaction binding the contract method 0x0285183a.
+//
+// Solidity: function onERC721Received(_from address, _tokenId uint256, _to address) returns()
+func (_IERC721BridgeReceiver *IERC721BridgeReceiverTransactor) OnERC721Received(opts *bind.TransactOpts, _from common.Address, _tokenId *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _IERC721BridgeReceiver.contract.Transact(opts, "onERC721Received", _from, _tokenId, _to)
+}
+
+// OnERC721Received is a paid mutator transaction binding the contract method 0x0285183a.
+//
+// Solidity: function onERC721Received(_from address, _tokenId uint256, _to address) returns()
+func (_IERC721BridgeReceiver *IERC721BridgeReceiverSession) OnERC721Received(_from common.Address, _tokenId *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _IERC721BridgeReceiver.Contract.OnERC721Received(&_IERC721BridgeReceiver.TransactOpts, _from, _tokenId, _to)
+}
+
+// OnERC721Received is a paid mutator transaction binding the contract method 0x0285183a.
+//
+// Solidity: function onERC721Received(_from address, _tokenId uint256, _to address) returns()
+func (_IERC721BridgeReceiver *IERC721BridgeReceiverTransactorSession) OnERC721Received(_from common.Address, _tokenId *big.Int, _to common.Address) (*types.Transaction, error) {
+	return _IERC721BridgeReceiver.Contract.OnERC721Received(&_IERC721BridgeReceiver.TransactOpts, _from, _tokenId, _to)
 }
 
 // IERC721EnumerableABI is the input ABI used to generate the binding from.
@@ -9044,191 +10430,6 @@ func (_IERC721Receiver *IERC721ReceiverTransactorSession) OnERC721Received(opera
 	return _IERC721Receiver.Contract.OnERC721Received(&_IERC721Receiver.TransactOpts, operator, from, tokenId, data)
 }
 
-// INFTReceiverABI is the input ABI used to generate the binding from.
-const INFTReceiverABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"to\",\"type\":\"address\"}],\"name\":\"onNFTReceived\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes4\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
-
-// INFTReceiverBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const INFTReceiverBinRuntime = `0x`
-
-// INFTReceiverBin is the compiled bytecode used for deploying new contracts.
-const INFTReceiverBin = `0x`
-
-// DeployINFTReceiver deploys a new Klaytn contract, binding an instance of INFTReceiver to it.
-func DeployINFTReceiver(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *INFTReceiver, error) {
-	parsed, err := abi.JSON(strings.NewReader(INFTReceiverABI))
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(INFTReceiverBin), backend)
-	if err != nil {
-		return common.Address{}, nil, nil, err
-	}
-	return address, tx, &INFTReceiver{INFTReceiverCaller: INFTReceiverCaller{contract: contract}, INFTReceiverTransactor: INFTReceiverTransactor{contract: contract}, INFTReceiverFilterer: INFTReceiverFilterer{contract: contract}}, nil
-}
-
-// INFTReceiver is an auto generated Go binding around a Klaytn contract.
-type INFTReceiver struct {
-	INFTReceiverCaller     // Read-only binding to the contract
-	INFTReceiverTransactor // Write-only binding to the contract
-	INFTReceiverFilterer   // Log filterer for contract events
-}
-
-// INFTReceiverCaller is an auto generated read-only Go binding around a Klaytn contract.
-type INFTReceiverCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// INFTReceiverTransactor is an auto generated write-only Go binding around a Klaytn contract.
-type INFTReceiverTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// INFTReceiverFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
-type INFTReceiverFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// INFTReceiverSession is an auto generated Go binding around a Klaytn contract,
-// with pre-set call and transact options.
-type INFTReceiverSession struct {
-	Contract     *INFTReceiver     // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// INFTReceiverCallerSession is an auto generated read-only Go binding around a Klaytn contract,
-// with pre-set call options.
-type INFTReceiverCallerSession struct {
-	Contract *INFTReceiverCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts       // Call options to use throughout this session
-}
-
-// INFTReceiverTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
-// with pre-set transact options.
-type INFTReceiverTransactorSession struct {
-	Contract     *INFTReceiverTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
-}
-
-// INFTReceiverRaw is an auto generated low-level Go binding around a Klaytn contract.
-type INFTReceiverRaw struct {
-	Contract *INFTReceiver // Generic contract binding to access the raw methods on
-}
-
-// INFTReceiverCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
-type INFTReceiverCallerRaw struct {
-	Contract *INFTReceiverCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// INFTReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
-type INFTReceiverTransactorRaw struct {
-	Contract *INFTReceiverTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewINFTReceiver creates a new instance of INFTReceiver, bound to a specific deployed contract.
-func NewINFTReceiver(address common.Address, backend bind.ContractBackend) (*INFTReceiver, error) {
-	contract, err := bindINFTReceiver(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &INFTReceiver{INFTReceiverCaller: INFTReceiverCaller{contract: contract}, INFTReceiverTransactor: INFTReceiverTransactor{contract: contract}, INFTReceiverFilterer: INFTReceiverFilterer{contract: contract}}, nil
-}
-
-// NewINFTReceiverCaller creates a new read-only instance of INFTReceiver, bound to a specific deployed contract.
-func NewINFTReceiverCaller(address common.Address, caller bind.ContractCaller) (*INFTReceiverCaller, error) {
-	contract, err := bindINFTReceiver(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &INFTReceiverCaller{contract: contract}, nil
-}
-
-// NewINFTReceiverTransactor creates a new write-only instance of INFTReceiver, bound to a specific deployed contract.
-func NewINFTReceiverTransactor(address common.Address, transactor bind.ContractTransactor) (*INFTReceiverTransactor, error) {
-	contract, err := bindINFTReceiver(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &INFTReceiverTransactor{contract: contract}, nil
-}
-
-// NewINFTReceiverFilterer creates a new log filterer instance of INFTReceiver, bound to a specific deployed contract.
-func NewINFTReceiverFilterer(address common.Address, filterer bind.ContractFilterer) (*INFTReceiverFilterer, error) {
-	contract, err := bindINFTReceiver(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &INFTReceiverFilterer{contract: contract}, nil
-}
-
-// bindINFTReceiver binds a generic wrapper to an already deployed contract.
-func bindINFTReceiver(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(INFTReceiverABI))
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_INFTReceiver *INFTReceiverRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _INFTReceiver.Contract.INFTReceiverCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_INFTReceiver *INFTReceiverRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _INFTReceiver.Contract.INFTReceiverTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_INFTReceiver *INFTReceiverRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _INFTReceiver.Contract.INFTReceiverTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_INFTReceiver *INFTReceiverCallerRaw) Call(opts *bind.CallOpts, result interface{}, method string, params ...interface{}) error {
-	return _INFTReceiver.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_INFTReceiver *INFTReceiverTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _INFTReceiver.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_INFTReceiver *INFTReceiverTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _INFTReceiver.Contract.contract.Transact(opts, method, params...)
-}
-
-// OnNFTReceived is a paid mutator transaction binding the contract method 0x48f32f88.
-//
-// Solidity: function onNFTReceived(from address, tokenId uint256, to address) returns(bytes4)
-func (_INFTReceiver *INFTReceiverTransactor) OnNFTReceived(opts *bind.TransactOpts, from common.Address, tokenId *big.Int, to common.Address) (*types.Transaction, error) {
-	return _INFTReceiver.contract.Transact(opts, "onNFTReceived", from, tokenId, to)
-}
-
-// OnNFTReceived is a paid mutator transaction binding the contract method 0x48f32f88.
-//
-// Solidity: function onNFTReceived(from address, tokenId uint256, to address) returns(bytes4)
-func (_INFTReceiver *INFTReceiverSession) OnNFTReceived(from common.Address, tokenId *big.Int, to common.Address) (*types.Transaction, error) {
-	return _INFTReceiver.Contract.OnNFTReceived(&_INFTReceiver.TransactOpts, from, tokenId, to)
-}
-
-// OnNFTReceived is a paid mutator transaction binding the contract method 0x48f32f88.
-//
-// Solidity: function onNFTReceived(from address, tokenId uint256, to address) returns(bytes4)
-func (_INFTReceiver *INFTReceiverTransactorSession) OnNFTReceived(from common.Address, tokenId *big.Int, to common.Address) (*types.Transaction, error) {
-	return _INFTReceiver.Contract.OnNFTReceived(&_INFTReceiver.TransactOpts, from, tokenId, to)
-}
-
 // MinterRoleABI is the input ABI used to generate the binding from.
 const MinterRoleABI = "[{\"constant\":false,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"addMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isMinter\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterRemoved\",\"type\":\"event\"}]"
 
@@ -10453,13 +11654,13 @@ func (_SafeMath *SafeMathTransactorRaw) Transact(opts *bind.TransactOpts, method
 }
 
 // ServiceChainNFTABI is the input ABI used to generate the binding from.
-const ServiceChainNFTABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenOfOwnerByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"tokenURI\",\"type\":\"string\"}],\"name\":\"mintWithTokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_user\",\"type\":\"address\"},{\"name\":\"_startID\",\"type\":\"uint256\"},{\"name\":\"_endID\",\"type\":\"uint256\"}],\"name\":\"registerBulk\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"isOwner\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"addMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isMinter\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_uid\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"requestValueTransfer\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"bridge\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
+const ServiceChainNFTABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"getApproved\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenOfOwnerByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"tokenURI\",\"type\":\"string\"}],\"name\":\"mintWithTokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_user\",\"type\":\"address\"},{\"name\":\"_startID\",\"type\":\"uint256\"},{\"name\":\"_endID\",\"type\":\"uint256\"}],\"name\":\"registerBulk\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"name\":\"setBridge\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"isOwner\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"symbol\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"addMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"renounceMinter\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"setApprovalForAll\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"isMinter\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"_data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_uid\",\"type\":\"uint256\"},{\"name\":\"_to\",\"type\":\"address\"}],\"name\":\"requestValueTransfer\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"tokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"bridge\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isApprovedForAll\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"account\",\"type\":\"address\"}],\"name\":\"MinterRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"approved\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"approved\",\"type\":\"bool\"}],\"name\":\"ApprovalForAll\",\"type\":\"event\"}]"
 
 // ServiceChainNFTBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ServiceChainNFTBinRuntime = `0x6080604052600436106101695763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166301ffc9a7811461016e57806306fdde03146101a4578063081812fc1461022e578063095ea7b31461026257806318160ddd1461028857806323b872dd146102af5780632f745c59146102d957806342842e0e146102fd57806342966c68146103275780634f6ccce71461033f57806350bb4e7f146103575780636352211e146103c057806370a08231146103d8578063715018a6146103f95780637a9adac61461040e5780638da5cb5b146104355780638f32d59b1461044a57806395d89b411461045f578063983b2d56146104745780639865027514610495578063a22cb465146104aa578063aa271e1a146104d0578063b88d4fde146104f1578063c6b0711614610560578063c87b56dd14610584578063e78cea921461059c578063e985e9c5146105b1578063f2fde38b146105d8575b600080fd5b34801561017a57600080fd5b50610190600160e060020a0319600435166105f9565b604080519115158252519081900360200190f35b3480156101b057600080fd5b506101b9610618565b6040805160208082528351818301528351919283929083019185019080838360005b838110156101f35781810151838201526020016101db565b50505050905090810190601f1680156102205780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561023a57600080fd5b506102466004356106af565b60408051600160a060020a039092168252519081900360200190f35b34801561026e57600080fd5b50610286600160a060020a03600435166024356106e1565b005b34801561029457600080fd5b5061029d610797565b60408051918252519081900360200190f35b3480156102bb57600080fd5b50610286600160a060020a036004358116906024351660443561079d565b3480156102e557600080fd5b5061029d600160a060020a036004351660243561082b565b34801561030957600080fd5b50610286600160a060020a0360043581169060243516604435610878565b34801561033357600080fd5b50610286600435610899565b34801561034b57600080fd5b5061029d6004356108c3565b34801561036357600080fd5b50604080516020600460443581810135601f8101849004840285018401909552848452610190948235600160a060020a03169460248035953695946064949201919081908401838280828437509497506108f89650505050505050565b3480156103cc57600080fd5b5061024660043561092c565b3480156103e457600080fd5b5061029d600160a060020a0360043516610956565b34801561040557600080fd5b50610286610989565b34801561041a57600080fd5b50610286600160a060020a03600435166024356044356109f3565b34801561044157600080fd5b50610246610a62565b34801561045657600080fd5b50610190610a71565b34801561046b57600080fd5b506101b9610a82565b34801561048057600080fd5b50610286600160a060020a0360043516610ae3565b3480156104a157600080fd5b50610286610b00565b3480156104b657600080fd5b50610286600160a060020a03600435166024351515610b0b565b3480156104dc57600080fd5b50610190600160a060020a0360043516610b8f565b3480156104fd57600080fd5b50604080516020601f60643560048181013592830184900484028501840190955281845261028694600160a060020a038135811695602480359092169560443595369560849401918190840183828082843750949750610ba29650505050505050565b34801561056c57600080fd5b50610286600435600160a060020a0360243516610bc4565b34801561059057600080fd5b506101b9600435610d40565b3480156105a857600080fd5b50610246610df5565b3480156105bd57600080fd5b50610190600160a060020a0360043581169060243516610e04565b3480156105e457600080fd5b50610286600160a060020a0360043516610e32565b600160e060020a03191660009081526020819052604090205460ff1690565b60098054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156106a45780601f10610679576101008083540402835291602001916106a4565b820191906000526020600020905b81548152906001019060200180831161068757829003601f168201915b505050505090505b90565b60006106ba82610e4e565b15156106c557600080fd5b50600090815260026020526040902054600160a060020a031690565b60006106ec8261092c565b9050600160a060020a03838116908216141561070757600080fd5b33600160a060020a038216148061072357506107238133610e04565b151561072e57600080fd5b600082815260026020526040808220805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b60075490565b6107a73382610e6b565b15156107b257600080fd5b600160a060020a03821615156107c757600080fd5b6107d18382610eca565b6107db8382610f3b565b6107e58282611042565b8082600160a060020a031684600160a060020a03167fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef60405160405180910390a4505050565b600061083683610956565b821061084157600080fd5b600160a060020a038316600090815260056020526040902080548390811061086557fe5b9060005260206000200154905092915050565b6108948383836020604051908101604052806000815250610ba2565b505050565b6108a33382610e6b565b15156108ae57600080fd5b6108c06108ba8261092c565b8261108b565b50565b60006108cd610797565b82106108d857600080fd5b60078054839081106108e657fe5b90600052602060002001549050919050565b600061090333610b8f565b151561090e57600080fd5b61091884846110d3565b6109228383611122565b5060019392505050565b600081815260016020526040812054600160a060020a031680151561095057600080fd5b92915050565b6000600160a060020a038216151561096d57600080fd5b50600160a060020a031660009081526003602052604090205490565b610991610a71565b151561099c57600080fd5b600d54604051600091600160a060020a0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a3600d805473ffffffffffffffffffffffffffffffffffffffff19169055565b60006109fd610a71565b1515610a0857600080fd5b50815b81811015610a5c57610a5384826040805190810160405280600781526020017f74657374555249000000000000000000000000000000000000000000000000008152506108f8565b50600101610a0b565b50505050565b600d54600160a060020a031690565b600d54600160a060020a0316331490565b600a8054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156106a45780601f10610679576101008083540402835291602001916106a4565b610aec33610b8f565b1515610af757600080fd5b6108c081611155565b610b093361119d565b565b600160a060020a038216331415610b2157600080fd5b336000818152600460209081526040808320600160a060020a03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6000610950600c8363ffffffff6111e516565b610bad84848461079d565b610bb98484848461121c565b1515610a5c57600080fd5b600e54600090610bdf903390600160a060020a03168561079d565b600e54604080517f48f32f8800000000000000000000000000000000000000000000000000000000815233600482015260248101869052600160a060020a038581166044830152915191909216916348f32f889160648083019260209291908290030181600087803b158015610c5457600080fd5b505af1158015610c68573d6000803e3d6000fd5b505050506040513d6020811015610c7e57600080fd5b50519050600160e060020a031981167f150b7a02000000000000000000000000000000000000000000000000000000001461089457604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603060248201527f53656e7420746f206120627269646765207768696368206973206e6f7420616e60448201527f2045524337323120726563656976657200000000000000000000000000000000606482015290519081900360840190fd5b6060610d4b82610e4e565b1515610d5657600080fd5b6000828152600b602090815260409182902080548351601f600260001961010060018616150201909316929092049182018490048402810184019094528084529091830182828015610de95780601f10610dbe57610100808354040283529160200191610de9565b820191906000526020600020905b815481529060010190602001808311610dcc57829003601f168201915b50505050509050919050565b600e54600160a060020a031681565b600160a060020a03918216600090815260046020908152604080832093909416825291909152205460ff1690565b610e3a610a71565b1515610e4557600080fd5b6108c081611389565b600090815260016020526040902054600160a060020a0316151590565b600080610e778361092c565b905080600160a060020a031684600160a060020a03161480610eb2575083600160a060020a0316610ea7846106af565b600160a060020a0316145b80610ec25750610ec28185610e04565b949350505050565b81600160a060020a0316610edd8261092c565b600160a060020a031614610ef057600080fd5b600081815260026020526040902054600160a060020a031615610f37576000818152600260205260409020805473ffffffffffffffffffffffffffffffffffffffff191690555b5050565b6000806000610f4a8585611407565b600084815260066020908152604080832054600160a060020a0389168452600590925290912054909350610f8590600163ffffffff61149d16565b600160a060020a038616600090815260056020526040902080549193509083908110610fad57fe5b90600052602060002001549050806005600087600160a060020a0316600160a060020a0316815260200190815260200160002084815481101515610fed57fe5b6000918252602080832090910192909255600160a060020a0387168152600590915260409020805490611024906000198301611766565b50600093845260066020526040808520859055908452909220555050565b600061104e83836114b4565b50600160a060020a039091166000908152600560209081526040808320805460018101825590845282842081018590559383526006909152902055565b6110958282611544565b6000818152600b60205260409020546002600019610100600184161502019091160415610f37576000818152600b60205260408120610f379161178a565b6110dd8282611600565b600780546000838152600860205260408120829055600182018355919091527fa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c688015550565b61112b82610e4e565b151561113657600080fd5b6000828152600b602090815260409091208251610894928401906117ce565b611166600c8263ffffffff61165b16565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b6111ae600c8263ffffffff6116a916565b604051600160a060020a038216907fe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb6669290600090a250565b6000600160a060020a03821615156111fc57600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b60008061123185600160a060020a03166116f5565b15156112405760019150611380565b6040517f150b7a020000000000000000000000000000000000000000000000000000000081523360048201818152600160a060020a03898116602485015260448401889052608060648501908152875160848601528751918a169463150b7a0294938c938b938b93909160a490910190602085019080838360005b838110156112d35781810151838201526020016112bb565b50505050905090810190601f1680156113005780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b15801561132257600080fd5b505af1158015611336573d6000803e3d6000fd5b505050506040513d602081101561134c57600080fd5b5051600160e060020a031981167f150b7a020000000000000000000000000000000000000000000000000000000014925090505b50949350505050565b600160a060020a038116151561139e57600080fd5b600d54604051600160a060020a038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a3600d805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0392909216919091179055565b81600160a060020a031661141a8261092c565b600160a060020a03161461142d57600080fd5b600160a060020a03821660009081526003602052604090205461145790600163ffffffff61149d16565b600160a060020a03909216600090815260036020908152604080832094909455918152600190915220805473ffffffffffffffffffffffffffffffffffffffff19169055565b600080838311156114ad57600080fd5b5050900390565b600081815260016020526040902054600160a060020a0316156114d657600080fd5b6000818152600160208181526040808420805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0388169081179091558452600390915290912054611524916116fd565b600160a060020a0390921660009081526003602052604090209190915550565b60008060006115538585611716565b60008481526008602052604090205460075490935061157990600163ffffffff61149d16565b915060078281548110151561158a57fe5b90600052602060002001549050806007848154811015156115a757fe5b600091825260208220019190915560078054849081106115c357fe5b60009182526020909120015560078054906115e2906000198301611766565b50600093845260086020526040808520859055908452909220555050565b600160a060020a038216151561161557600080fd5b61161f8282611042565b6040518190600160a060020a038416906000907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908290a45050565b600160a060020a038116151561167057600080fd5b61167a82826111e5565b1561168457600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b600160a060020a03811615156116be57600080fd5b6116c882826111e5565b15156116d357600080fd5b600160a060020a0316600090815260209190915260409020805460ff19169055565b6000903b1190565b60008282018381101561170f57600080fd5b9392505050565b6117208282610eca565b61172a8282610f3b565b6040518190600090600160a060020a038516907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908390a45050565b8154818355818111156108945760008381526020902061089491810190830161184c565b50805460018160011615610100020316600290046000825580601f106117b057506108c0565b601f0160209004906000526020600020908101906108c0919061184c565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061180f57805160ff191683800117855561183c565b8280016001018555821561183c579182015b8281111561183c578251825591602001919060010190611821565b5061184892915061184c565b5090565b6106ac91905b8082111561184857600081556001016118525600a165627a7a723058204fb5be08e6679bc0d5573842e4b72ca0b07cbdbf5a7cfb276a3ed5c2bc79a8eb0029`
+const ServiceChainNFTBinRuntime = `0x6080604052600436106101745763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166301ffc9a7811461017957806306fdde03146101c4578063081812fc1461024e578063095ea7b31461028257806318160ddd146102a857806323b872dd146102cf5780632f745c59146102f957806342842e0e1461031d57806342966c68146103475780634f6ccce71461035f57806350bb4e7f146103775780636352211e146103e057806370a08231146103f8578063715018a6146104195780637a9adac61461042e5780638da5cb5b146104555780638dd148021461046a5780638f32d59b1461048b57806395d89b41146104a0578063983b2d56146104b557806398650275146104d6578063a22cb465146104eb578063aa271e1a14610511578063b88d4fde14610532578063c6b07116146105a1578063c87b56dd146105c5578063e78cea92146105dd578063e985e9c5146105f2578063f2fde38b14610619575b600080fd5b34801561018557600080fd5b506101b07bffffffffffffffffffffffffffffffffffffffffffffffffffffffff196004351661063a565b604080519115158252519081900360200190f35b3480156101d057600080fd5b506101d961066e565b6040805160208082528351818301528351919283929083019185019080838360005b838110156102135781810151838201526020016101fb565b50505050905090810190601f1680156102405780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561025a57600080fd5b50610266600435610705565b60408051600160a060020a039092168252519081900360200190f35b34801561028e57600080fd5b506102a6600160a060020a0360043516602435610737565b005b3480156102b457600080fd5b506102bd6107e0565b60408051918252519081900360200190f35b3480156102db57600080fd5b506102a6600160a060020a03600435811690602435166044356107e6565b34801561030557600080fd5b506102bd600160a060020a0360043516602435610874565b34801561032957600080fd5b506102a6600160a060020a03600435811690602435166044356108c1565b34801561035357600080fd5b506102a66004356108e2565b34801561036b57600080fd5b506102bd60043561090c565b34801561038357600080fd5b50604080516020600460443581810135601f81018490048402850184019095528484526101b0948235600160a060020a03169460248035953695946064949201919081908401838280828437509497506109419650505050505050565b3480156103ec57600080fd5b50610266600435610975565b34801561040457600080fd5b506102bd600160a060020a036004351661099f565b34801561042557600080fd5b506102a66109d2565b34801561043a57600080fd5b506102a6600160a060020a0360043516602435604435610a2f565b34801561046157600080fd5b50610266610a9e565b34801561047657600080fd5b506102a6600160a060020a0360043516610aad565b34801561049757600080fd5b506101b0610ae2565b3480156104ac57600080fd5b506101d9610af3565b3480156104c157600080fd5b506102a6600160a060020a0360043516610b54565b3480156104e257600080fd5b506102a6610b71565b3480156104f757600080fd5b506102a6600160a060020a03600435166024351515610b7c565b34801561051d57600080fd5b506101b0600160a060020a0360043516610c00565b34801561053e57600080fd5b50604080516020601f6064356004818101359283018490048402850184019095528184526102a694600160a060020a038135811695602480359092169560443595369560849401918190840183828082843750949750610c139650505050505050565b3480156105ad57600080fd5b506102a6600435600160a060020a0360243516610c35565b3480156105d157600080fd5b506101d9600435610cdd565b3480156105e957600080fd5b50610266610d92565b3480156105fe57600080fd5b506101b0600160a060020a0360043581169060243516610da1565b34801561062557600080fd5b506102a6600160a060020a0360043516610dcf565b7bffffffffffffffffffffffffffffffffffffffffffffffffffffffff191660009081526020819052604090205460ff1690565b60098054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156106fa5780601f106106cf576101008083540402835291602001916106fa565b820191906000526020600020905b8154815290600101906020018083116106dd57829003601f168201915b505050505090505b90565b600061071082610deb565b151561071b57600080fd5b50600090815260026020526040902054600160a060020a031690565b600061074282610975565b9050600160a060020a03838116908216141561075d57600080fd5b33600160a060020a038216148061077957506107798133610da1565b151561078457600080fd5b6000828152600260205260408082208054600160a060020a031916600160a060020a0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b60075490565b6107f03382610e08565b15156107fb57600080fd5b600160a060020a038216151561081057600080fd5b61081a8382610e67565b6108248382610ecb565b61082e8282610fd2565b8082600160a060020a031684600160a060020a03167fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef60405160405180910390a4505050565b600061087f8361099f565b821061088a57600080fd5b600160a060020a03831660009081526005602052604090208054839081106108ae57fe5b9060005260206000200154905092915050565b6108dd8383836020604051908101604052806000815250610c13565b505050565b6108ec3382610e08565b15156108f757600080fd5b61090961090382610975565b8261101b565b50565b60006109166107e0565b821061092157600080fd5b600780548390811061092f57fe5b90600052602060002001549050919050565b600061094c33610c00565b151561095757600080fd5b6109618484611063565b61096b83836110b2565b5060019392505050565b600081815260016020526040812054600160a060020a031680151561099957600080fd5b92915050565b6000600160a060020a03821615156109b657600080fd5b50600160a060020a031660009081526003602052604090205490565b6109da610ae2565b15156109e557600080fd5b600d54604051600091600160a060020a0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a3600d8054600160a060020a0319169055565b6000610a39610ae2565b1515610a4457600080fd5b50815b81811015610a9857610a8f84826040805190810160405280600781526020017f7465737455524900000000000000000000000000000000000000000000000000815250610941565b50600101610a47565b50505050565b600d54600160a060020a031690565b610ab5610ae2565b1515610ac057600080fd5b600e8054600160a060020a031916600160a060020a0392909216919091179055565b600d54600160a060020a0316331490565b600a8054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156106fa5780601f106106cf576101008083540402835291602001916106fa565b610b5d33610c00565b1515610b6857600080fd5b610909816110e5565b610b7a3361112d565b565b600160a060020a038216331415610b9257600080fd5b336000818152600460209081526040808320600160a060020a03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6000610999600c8363ffffffff61117516565b610c1e8484846107e6565b610c2a848484846111ac565b1515610a9857600080fd5b600e54610c4d903390600160a060020a0316846107e6565b600e54604080517f0285183a00000000000000000000000000000000000000000000000000000000815233600482015260248101859052600160a060020a03848116604483015291519190921691630285183a91606480830192600092919082900301818387803b158015610cc157600080fd5b505af1158015610cd5573d6000803e3d6000fd5b505050505050565b6060610ce882610deb565b1515610cf357600080fd5b6000828152600b602090815260409182902080548351601f600260001961010060018616150201909316929092049182018490048402810184019094528084529091830182828015610d865780601f10610d5b57610100808354040283529160200191610d86565b820191906000526020600020905b815481529060010190602001808311610d6957829003601f168201915b50505050509050919050565b600e54600160a060020a031681565b600160a060020a03918216600090815260046020908152604080832093909416825291909152205460ff1690565b610dd7610ae2565b1515610de257600080fd5b6109098161132e565b600090815260016020526040902054600160a060020a0316151590565b600080610e1483610975565b905080600160a060020a031684600160a060020a03161480610e4f575083600160a060020a0316610e4484610705565b600160a060020a0316145b80610e5f5750610e5f8185610da1565b949350505050565b81600160a060020a0316610e7a82610975565b600160a060020a031614610e8d57600080fd5b600081815260026020526040902054600160a060020a031615610ec75760008181526002602052604090208054600160a060020a03191690555b5050565b6000806000610eda858561139f565b600084815260066020908152604080832054600160a060020a0389168452600590925290912054909350610f1590600163ffffffff61142816565b600160a060020a038616600090815260056020526040902080549193509083908110610f3d57fe5b90600052602060002001549050806005600087600160a060020a0316600160a060020a0316815260200190815260200160002084815481101515610f7d57fe5b6000918252602080832090910192909255600160a060020a0387168152600590915260409020805490610fb49060001983016116e4565b50600093845260066020526040808520859055908452909220555050565b6000610fde838361143f565b50600160a060020a039091166000908152600560209081526040808320805460018101825590845282842081018590559383526006909152902055565b61102582826114c2565b6000818152600b60205260409020546002600019610100600184161502019091160415610ec7576000818152600b60205260408120610ec791611708565b61106d828261157e565b600780546000838152600860205260408120829055600182018355919091527fa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c688015550565b6110bb82610deb565b15156110c657600080fd5b6000828152600b6020908152604090912082516108dd9284019061174c565b6110f6600c8263ffffffff6115d916565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b61113e600c8263ffffffff61162716565b604051600160a060020a038216907fe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb6669290600090a250565b6000600160a060020a038216151561118c57600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b6000806111c185600160a060020a0316611673565b15156111d05760019150611325565b6040517f150b7a020000000000000000000000000000000000000000000000000000000081523360048201818152600160a060020a03898116602485015260448401889052608060648501908152875160848601528751918a169463150b7a0294938c938b938b93909160a490910190602085019080838360005b8381101561126357818101518382015260200161124b565b50505050905090810190601f1680156112905780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b1580156112b257600080fd5b505af11580156112c6573d6000803e3d6000fd5b505050506040513d60208110156112dc57600080fd5b50517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff1981167f150b7a020000000000000000000000000000000000000000000000000000000014925090505b50949350505050565b600160a060020a038116151561134357600080fd5b600d54604051600160a060020a038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a3600d8054600160a060020a031916600160a060020a0392909216919091179055565b81600160a060020a03166113b282610975565b600160a060020a0316146113c557600080fd5b600160a060020a0382166000908152600360205260409020546113ef90600163ffffffff61142816565b600160a060020a039092166000908152600360209081526040808320949094559181526001909152208054600160a060020a0319169055565b6000808383111561143857600080fd5b5050900390565b600081815260016020526040902054600160a060020a03161561146157600080fd5b60008181526001602081815260408084208054600160a060020a031916600160a060020a03881690811790915584526003909152909120546114a29161167b565b600160a060020a0390921660009081526003602052604090209190915550565b60008060006114d18585611694565b6000848152600860205260409020546007549093506114f790600163ffffffff61142816565b915060078281548110151561150857fe5b906000526020600020015490508060078481548110151561152557fe5b6000918252602082200191909155600780548490811061154157fe5b60009182526020909120015560078054906115609060001983016116e4565b50600093845260086020526040808520859055908452909220555050565b600160a060020a038216151561159357600080fd5b61159d8282610fd2565b6040518190600160a060020a038416906000907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908290a45050565b600160a060020a03811615156115ee57600080fd5b6115f88282611175565b1561160257600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b600160a060020a038116151561163c57600080fd5b6116468282611175565b151561165157600080fd5b600160a060020a0316600090815260209190915260409020805460ff19169055565b6000903b1190565b60008282018381101561168d57600080fd5b9392505050565b61169e8282610e67565b6116a88282610ecb565b6040518190600090600160a060020a038516907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908390a45050565b8154818355818111156108dd576000838152602090206108dd9181019083016117ca565b50805460018160011615610100020316600290046000825580601f1061172e5750610909565b601f01602090049060005260206000209081019061090991906117ca565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061178d57805160ff19168380011785556117ba565b828001600101855582156117ba579182015b828111156117ba57825182559160200191906001019061179f565b506117c69291506117ca565b5090565b61070291905b808211156117c657600081556001016117d05600a165627a7a72305820700bdb050b0d96a855c6512e5d51cbbbc9d4b1e74d789708021c36fa779baf080029`
 
 // ServiceChainNFTBin is the compiled bytecode used for deploying new contracts.
-const ServiceChainNFTBin = `0x60806040523480156200001157600080fd5b5060405160208062001d4b83398101604081815291518282018352600f82527f53657276696365436861696e4e465400000000000000000000000000000000006020808401919091528351808501909452600384527f53434e000000000000000000000000000000000000000000000000000000000090840152918181620000c27f01ffc9a700000000000000000000000000000000000000000000000000000000640100000000620002aa810204565b620000f67f80ac58cd00000000000000000000000000000000000000000000000000000000640100000000620002aa810204565b6200012a7f780e9d6300000000000000000000000000000000000000000000000000000000640100000000620002aa810204565b81516200013f90600990602085019062000404565b5080516200015590600a90602084019062000404565b506200018a7f5b5e139f00000000000000000000000000000000000000000000000000000000640100000000620002aa810204565b50505050620001a83362000317640100000000026401000000009004565b600d8054600160a060020a031916331790819055604051600160a060020a0391909116906000907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908290a362000216600160a060020a038216640100000000620016f56200036982021704565b15156200028457604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601860248201527f627269646765206973206e6f74206120636f6e74726163740000000000000000604482015290519081900360640190fd5b600e8054600160a060020a031916600160a060020a0392909216919091179055620004a9565b7fffffffff000000000000000000000000000000000000000000000000000000008082161415620002da57600080fd5b7fffffffff00000000000000000000000000000000000000000000000000000000166000908152602081905260409020805460ff19166001179055565b62000332600c826401000000006200165b6200037182021704565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b6000903b1190565b600160a060020a03811615156200038757600080fd5b6200039c8282640100000000620003cc810204565b15620003a757600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b6000600160a060020a0382161515620003e457600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106200044757805160ff191683800117855562000477565b8280016001018555821562000477579182015b82811115620004775782518255916020019190600101906200045a565b506200048592915062000489565b5090565b620004a691905b8082111562000485576000815560010162000490565b90565b61189280620004b96000396000f3006080604052600436106101695763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166301ffc9a7811461016e57806306fdde03146101a4578063081812fc1461022e578063095ea7b31461026257806318160ddd1461028857806323b872dd146102af5780632f745c59146102d957806342842e0e146102fd57806342966c68146103275780634f6ccce71461033f57806350bb4e7f146103575780636352211e146103c057806370a08231146103d8578063715018a6146103f95780637a9adac61461040e5780638da5cb5b146104355780638f32d59b1461044a57806395d89b411461045f578063983b2d56146104745780639865027514610495578063a22cb465146104aa578063aa271e1a146104d0578063b88d4fde146104f1578063c6b0711614610560578063c87b56dd14610584578063e78cea921461059c578063e985e9c5146105b1578063f2fde38b146105d8575b600080fd5b34801561017a57600080fd5b50610190600160e060020a0319600435166105f9565b604080519115158252519081900360200190f35b3480156101b057600080fd5b506101b9610618565b6040805160208082528351818301528351919283929083019185019080838360005b838110156101f35781810151838201526020016101db565b50505050905090810190601f1680156102205780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561023a57600080fd5b506102466004356106af565b60408051600160a060020a039092168252519081900360200190f35b34801561026e57600080fd5b50610286600160a060020a03600435166024356106e1565b005b34801561029457600080fd5b5061029d610797565b60408051918252519081900360200190f35b3480156102bb57600080fd5b50610286600160a060020a036004358116906024351660443561079d565b3480156102e557600080fd5b5061029d600160a060020a036004351660243561082b565b34801561030957600080fd5b50610286600160a060020a0360043581169060243516604435610878565b34801561033357600080fd5b50610286600435610899565b34801561034b57600080fd5b5061029d6004356108c3565b34801561036357600080fd5b50604080516020600460443581810135601f8101849004840285018401909552848452610190948235600160a060020a03169460248035953695946064949201919081908401838280828437509497506108f89650505050505050565b3480156103cc57600080fd5b5061024660043561092c565b3480156103e457600080fd5b5061029d600160a060020a0360043516610956565b34801561040557600080fd5b50610286610989565b34801561041a57600080fd5b50610286600160a060020a03600435166024356044356109f3565b34801561044157600080fd5b50610246610a62565b34801561045657600080fd5b50610190610a71565b34801561046b57600080fd5b506101b9610a82565b34801561048057600080fd5b50610286600160a060020a0360043516610ae3565b3480156104a157600080fd5b50610286610b00565b3480156104b657600080fd5b50610286600160a060020a03600435166024351515610b0b565b3480156104dc57600080fd5b50610190600160a060020a0360043516610b8f565b3480156104fd57600080fd5b50604080516020601f60643560048181013592830184900484028501840190955281845261028694600160a060020a038135811695602480359092169560443595369560849401918190840183828082843750949750610ba29650505050505050565b34801561056c57600080fd5b50610286600435600160a060020a0360243516610bc4565b34801561059057600080fd5b506101b9600435610d40565b3480156105a857600080fd5b50610246610df5565b3480156105bd57600080fd5b50610190600160a060020a0360043581169060243516610e04565b3480156105e457600080fd5b50610286600160a060020a0360043516610e32565b600160e060020a03191660009081526020819052604090205460ff1690565b60098054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156106a45780601f10610679576101008083540402835291602001916106a4565b820191906000526020600020905b81548152906001019060200180831161068757829003601f168201915b505050505090505b90565b60006106ba82610e4e565b15156106c557600080fd5b50600090815260026020526040902054600160a060020a031690565b60006106ec8261092c565b9050600160a060020a03838116908216141561070757600080fd5b33600160a060020a038216148061072357506107238133610e04565b151561072e57600080fd5b600082815260026020526040808220805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b60075490565b6107a73382610e6b565b15156107b257600080fd5b600160a060020a03821615156107c757600080fd5b6107d18382610eca565b6107db8382610f3b565b6107e58282611042565b8082600160a060020a031684600160a060020a03167fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef60405160405180910390a4505050565b600061083683610956565b821061084157600080fd5b600160a060020a038316600090815260056020526040902080548390811061086557fe5b9060005260206000200154905092915050565b6108948383836020604051908101604052806000815250610ba2565b505050565b6108a33382610e6b565b15156108ae57600080fd5b6108c06108ba8261092c565b8261108b565b50565b60006108cd610797565b82106108d857600080fd5b60078054839081106108e657fe5b90600052602060002001549050919050565b600061090333610b8f565b151561090e57600080fd5b61091884846110d3565b6109228383611122565b5060019392505050565b600081815260016020526040812054600160a060020a031680151561095057600080fd5b92915050565b6000600160a060020a038216151561096d57600080fd5b50600160a060020a031660009081526003602052604090205490565b610991610a71565b151561099c57600080fd5b600d54604051600091600160a060020a0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a3600d805473ffffffffffffffffffffffffffffffffffffffff19169055565b60006109fd610a71565b1515610a0857600080fd5b50815b81811015610a5c57610a5384826040805190810160405280600781526020017f74657374555249000000000000000000000000000000000000000000000000008152506108f8565b50600101610a0b565b50505050565b600d54600160a060020a031690565b600d54600160a060020a0316331490565b600a8054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156106a45780601f10610679576101008083540402835291602001916106a4565b610aec33610b8f565b1515610af757600080fd5b6108c081611155565b610b093361119d565b565b600160a060020a038216331415610b2157600080fd5b336000818152600460209081526040808320600160a060020a03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6000610950600c8363ffffffff6111e516565b610bad84848461079d565b610bb98484848461121c565b1515610a5c57600080fd5b600e54600090610bdf903390600160a060020a03168561079d565b600e54604080517f48f32f8800000000000000000000000000000000000000000000000000000000815233600482015260248101869052600160a060020a038581166044830152915191909216916348f32f889160648083019260209291908290030181600087803b158015610c5457600080fd5b505af1158015610c68573d6000803e3d6000fd5b505050506040513d6020811015610c7e57600080fd5b50519050600160e060020a031981167f150b7a02000000000000000000000000000000000000000000000000000000001461089457604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152603060248201527f53656e7420746f206120627269646765207768696368206973206e6f7420616e60448201527f2045524337323120726563656976657200000000000000000000000000000000606482015290519081900360840190fd5b6060610d4b82610e4e565b1515610d5657600080fd5b6000828152600b602090815260409182902080548351601f600260001961010060018616150201909316929092049182018490048402810184019094528084529091830182828015610de95780601f10610dbe57610100808354040283529160200191610de9565b820191906000526020600020905b815481529060010190602001808311610dcc57829003601f168201915b50505050509050919050565b600e54600160a060020a031681565b600160a060020a03918216600090815260046020908152604080832093909416825291909152205460ff1690565b610e3a610a71565b1515610e4557600080fd5b6108c081611389565b600090815260016020526040902054600160a060020a0316151590565b600080610e778361092c565b905080600160a060020a031684600160a060020a03161480610eb2575083600160a060020a0316610ea7846106af565b600160a060020a0316145b80610ec25750610ec28185610e04565b949350505050565b81600160a060020a0316610edd8261092c565b600160a060020a031614610ef057600080fd5b600081815260026020526040902054600160a060020a031615610f37576000818152600260205260409020805473ffffffffffffffffffffffffffffffffffffffff191690555b5050565b6000806000610f4a8585611407565b600084815260066020908152604080832054600160a060020a0389168452600590925290912054909350610f8590600163ffffffff61149d16565b600160a060020a038616600090815260056020526040902080549193509083908110610fad57fe5b90600052602060002001549050806005600087600160a060020a0316600160a060020a0316815260200190815260200160002084815481101515610fed57fe5b6000918252602080832090910192909255600160a060020a0387168152600590915260409020805490611024906000198301611766565b50600093845260066020526040808520859055908452909220555050565b600061104e83836114b4565b50600160a060020a039091166000908152600560209081526040808320805460018101825590845282842081018590559383526006909152902055565b6110958282611544565b6000818152600b60205260409020546002600019610100600184161502019091160415610f37576000818152600b60205260408120610f379161178a565b6110dd8282611600565b600780546000838152600860205260408120829055600182018355919091527fa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c688015550565b61112b82610e4e565b151561113657600080fd5b6000828152600b602090815260409091208251610894928401906117ce565b611166600c8263ffffffff61165b16565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b6111ae600c8263ffffffff6116a916565b604051600160a060020a038216907fe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb6669290600090a250565b6000600160a060020a03821615156111fc57600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b60008061123185600160a060020a03166116f5565b15156112405760019150611380565b6040517f150b7a020000000000000000000000000000000000000000000000000000000081523360048201818152600160a060020a03898116602485015260448401889052608060648501908152875160848601528751918a169463150b7a0294938c938b938b93909160a490910190602085019080838360005b838110156112d35781810151838201526020016112bb565b50505050905090810190601f1680156113005780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b15801561132257600080fd5b505af1158015611336573d6000803e3d6000fd5b505050506040513d602081101561134c57600080fd5b5051600160e060020a031981167f150b7a020000000000000000000000000000000000000000000000000000000014925090505b50949350505050565b600160a060020a038116151561139e57600080fd5b600d54604051600160a060020a038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a3600d805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0392909216919091179055565b81600160a060020a031661141a8261092c565b600160a060020a03161461142d57600080fd5b600160a060020a03821660009081526003602052604090205461145790600163ffffffff61149d16565b600160a060020a03909216600090815260036020908152604080832094909455918152600190915220805473ffffffffffffffffffffffffffffffffffffffff19169055565b600080838311156114ad57600080fd5b5050900390565b600081815260016020526040902054600160a060020a0316156114d657600080fd5b6000818152600160208181526040808420805473ffffffffffffffffffffffffffffffffffffffff1916600160a060020a0388169081179091558452600390915290912054611524916116fd565b600160a060020a0390921660009081526003602052604090209190915550565b60008060006115538585611716565b60008481526008602052604090205460075490935061157990600163ffffffff61149d16565b915060078281548110151561158a57fe5b90600052602060002001549050806007848154811015156115a757fe5b600091825260208220019190915560078054849081106115c357fe5b60009182526020909120015560078054906115e2906000198301611766565b50600093845260086020526040808520859055908452909220555050565b600160a060020a038216151561161557600080fd5b61161f8282611042565b6040518190600160a060020a038416906000907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908290a45050565b600160a060020a038116151561167057600080fd5b61167a82826111e5565b1561168457600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b600160a060020a03811615156116be57600080fd5b6116c882826111e5565b15156116d357600080fd5b600160a060020a0316600090815260209190915260409020805460ff19169055565b6000903b1190565b60008282018381101561170f57600080fd5b9392505050565b6117208282610eca565b61172a8282610f3b565b6040518190600090600160a060020a038516907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908390a45050565b8154818355818111156108945760008381526020902061089491810190830161184c565b50805460018160011615610100020316600290046000825580601f106117b057506108c0565b601f0160209004906000526020600020908101906108c0919061184c565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061180f57805160ff191683800117855561183c565b8280016001018555821561183c579182015b8281111561183c578251825591602001919060010190611821565b5061184892915061184c565b5090565b6106ac91905b8082111561184857600081556001016118525600a165627a7a723058204fb5be08e6679bc0d5573842e4b72ca0b07cbdbf5a7cfb276a3ed5c2bc79a8eb0029`
+const ServiceChainNFTBin = `0x60806040523480156200001157600080fd5b5060405160208062001ccd83398101604081815291518282018352600f82527f53657276696365436861696e4e465400000000000000000000000000000000006020808401919091528351808501909452600384527f53434e000000000000000000000000000000000000000000000000000000000090840152918291908181620000c57f01ffc9a700000000000000000000000000000000000000000000000000000000640100000000620002ae810204565b620000f97f80ac58cd00000000000000000000000000000000000000000000000000000000640100000000620002ae810204565b6200012d7f780e9d6300000000000000000000000000000000000000000000000000000000640100000000620002ae810204565b81516200014290600990602085019062000408565b5080516200015890600a90602084019062000408565b506200018d7f5b5e139f00000000000000000000000000000000000000000000000000000000640100000000620002ae810204565b50505050620001ab336200031b640100000000026401000000009004565b600d8054600160a060020a031916331790819055604051600160a060020a0391909116906000907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908290a362000219600160a060020a038216640100000000620016736200036d82021704565b15156200028757604080517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152601860248201527f627269646765206973206e6f74206120636f6e74726163740000000000000000604482015290519081900360640190fd5b600e8054600160a060020a031916600160a060020a039290921691909117905550620004ad565b7fffffffff000000000000000000000000000000000000000000000000000000008082161415620002de57600080fd5b7fffffffff00000000000000000000000000000000000000000000000000000000166000908152602081905260409020805460ff19166001179055565b62000336600c82640100000000620015d96200037582021704565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b6000903b1190565b600160a060020a03811615156200038b57600080fd5b620003a08282640100000000620003d0810204565b15620003ab57600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b6000600160a060020a0382161515620003e857600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106200044b57805160ff19168380011785556200047b565b828001600101855582156200047b579182015b828111156200047b5782518255916020019190600101906200045e565b50620004899291506200048d565b5090565b620004aa91905b8082111562000489576000815560010162000494565b90565b61181080620004bd6000396000f3006080604052600436106101745763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166301ffc9a7811461017957806306fdde03146101c4578063081812fc1461024e578063095ea7b31461028257806318160ddd146102a857806323b872dd146102cf5780632f745c59146102f957806342842e0e1461031d57806342966c68146103475780634f6ccce71461035f57806350bb4e7f146103775780636352211e146103e057806370a08231146103f8578063715018a6146104195780637a9adac61461042e5780638da5cb5b146104555780638dd148021461046a5780638f32d59b1461048b57806395d89b41146104a0578063983b2d56146104b557806398650275146104d6578063a22cb465146104eb578063aa271e1a14610511578063b88d4fde14610532578063c6b07116146105a1578063c87b56dd146105c5578063e78cea92146105dd578063e985e9c5146105f2578063f2fde38b14610619575b600080fd5b34801561018557600080fd5b506101b07bffffffffffffffffffffffffffffffffffffffffffffffffffffffff196004351661063a565b604080519115158252519081900360200190f35b3480156101d057600080fd5b506101d961066e565b6040805160208082528351818301528351919283929083019185019080838360005b838110156102135781810151838201526020016101fb565b50505050905090810190601f1680156102405780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561025a57600080fd5b50610266600435610705565b60408051600160a060020a039092168252519081900360200190f35b34801561028e57600080fd5b506102a6600160a060020a0360043516602435610737565b005b3480156102b457600080fd5b506102bd6107e0565b60408051918252519081900360200190f35b3480156102db57600080fd5b506102a6600160a060020a03600435811690602435166044356107e6565b34801561030557600080fd5b506102bd600160a060020a0360043516602435610874565b34801561032957600080fd5b506102a6600160a060020a03600435811690602435166044356108c1565b34801561035357600080fd5b506102a66004356108e2565b34801561036b57600080fd5b506102bd60043561090c565b34801561038357600080fd5b50604080516020600460443581810135601f81018490048402850184019095528484526101b0948235600160a060020a03169460248035953695946064949201919081908401838280828437509497506109419650505050505050565b3480156103ec57600080fd5b50610266600435610975565b34801561040457600080fd5b506102bd600160a060020a036004351661099f565b34801561042557600080fd5b506102a66109d2565b34801561043a57600080fd5b506102a6600160a060020a0360043516602435604435610a2f565b34801561046157600080fd5b50610266610a9e565b34801561047657600080fd5b506102a6600160a060020a0360043516610aad565b34801561049757600080fd5b506101b0610ae2565b3480156104ac57600080fd5b506101d9610af3565b3480156104c157600080fd5b506102a6600160a060020a0360043516610b54565b3480156104e257600080fd5b506102a6610b71565b3480156104f757600080fd5b506102a6600160a060020a03600435166024351515610b7c565b34801561051d57600080fd5b506101b0600160a060020a0360043516610c00565b34801561053e57600080fd5b50604080516020601f6064356004818101359283018490048402850184019095528184526102a694600160a060020a038135811695602480359092169560443595369560849401918190840183828082843750949750610c139650505050505050565b3480156105ad57600080fd5b506102a6600435600160a060020a0360243516610c35565b3480156105d157600080fd5b506101d9600435610cdd565b3480156105e957600080fd5b50610266610d92565b3480156105fe57600080fd5b506101b0600160a060020a0360043581169060243516610da1565b34801561062557600080fd5b506102a6600160a060020a0360043516610dcf565b7bffffffffffffffffffffffffffffffffffffffffffffffffffffffff191660009081526020819052604090205460ff1690565b60098054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156106fa5780601f106106cf576101008083540402835291602001916106fa565b820191906000526020600020905b8154815290600101906020018083116106dd57829003601f168201915b505050505090505b90565b600061071082610deb565b151561071b57600080fd5b50600090815260026020526040902054600160a060020a031690565b600061074282610975565b9050600160a060020a03838116908216141561075d57600080fd5b33600160a060020a038216148061077957506107798133610da1565b151561078457600080fd5b6000828152600260205260408082208054600160a060020a031916600160a060020a0387811691821790925591518593918516917f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b92591a4505050565b60075490565b6107f03382610e08565b15156107fb57600080fd5b600160a060020a038216151561081057600080fd5b61081a8382610e67565b6108248382610ecb565b61082e8282610fd2565b8082600160a060020a031684600160a060020a03167fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef60405160405180910390a4505050565b600061087f8361099f565b821061088a57600080fd5b600160a060020a03831660009081526005602052604090208054839081106108ae57fe5b9060005260206000200154905092915050565b6108dd8383836020604051908101604052806000815250610c13565b505050565b6108ec3382610e08565b15156108f757600080fd5b61090961090382610975565b8261101b565b50565b60006109166107e0565b821061092157600080fd5b600780548390811061092f57fe5b90600052602060002001549050919050565b600061094c33610c00565b151561095757600080fd5b6109618484611063565b61096b83836110b2565b5060019392505050565b600081815260016020526040812054600160a060020a031680151561099957600080fd5b92915050565b6000600160a060020a03821615156109b657600080fd5b50600160a060020a031660009081526003602052604090205490565b6109da610ae2565b15156109e557600080fd5b600d54604051600091600160a060020a0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0908390a3600d8054600160a060020a0319169055565b6000610a39610ae2565b1515610a4457600080fd5b50815b81811015610a9857610a8f84826040805190810160405280600781526020017f7465737455524900000000000000000000000000000000000000000000000000815250610941565b50600101610a47565b50505050565b600d54600160a060020a031690565b610ab5610ae2565b1515610ac057600080fd5b600e8054600160a060020a031916600160a060020a0392909216919091179055565b600d54600160a060020a0316331490565b600a8054604080516020601f60026000196101006001881615020190951694909404938401819004810282018101909252828152606093909290918301828280156106fa5780601f106106cf576101008083540402835291602001916106fa565b610b5d33610c00565b1515610b6857600080fd5b610909816110e5565b610b7a3361112d565b565b600160a060020a038216331415610b9257600080fd5b336000818152600460209081526040808320600160a060020a03871680855290835292819020805460ff1916861515908117909155815190815290519293927f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31929181900390910190a35050565b6000610999600c8363ffffffff61117516565b610c1e8484846107e6565b610c2a848484846111ac565b1515610a9857600080fd5b600e54610c4d903390600160a060020a0316846107e6565b600e54604080517f0285183a00000000000000000000000000000000000000000000000000000000815233600482015260248101859052600160a060020a03848116604483015291519190921691630285183a91606480830192600092919082900301818387803b158015610cc157600080fd5b505af1158015610cd5573d6000803e3d6000fd5b505050505050565b6060610ce882610deb565b1515610cf357600080fd5b6000828152600b602090815260409182902080548351601f600260001961010060018616150201909316929092049182018490048402810184019094528084529091830182828015610d865780601f10610d5b57610100808354040283529160200191610d86565b820191906000526020600020905b815481529060010190602001808311610d6957829003601f168201915b50505050509050919050565b600e54600160a060020a031681565b600160a060020a03918216600090815260046020908152604080832093909416825291909152205460ff1690565b610dd7610ae2565b1515610de257600080fd5b6109098161132e565b600090815260016020526040902054600160a060020a0316151590565b600080610e1483610975565b905080600160a060020a031684600160a060020a03161480610e4f575083600160a060020a0316610e4484610705565b600160a060020a0316145b80610e5f5750610e5f8185610da1565b949350505050565b81600160a060020a0316610e7a82610975565b600160a060020a031614610e8d57600080fd5b600081815260026020526040902054600160a060020a031615610ec75760008181526002602052604090208054600160a060020a03191690555b5050565b6000806000610eda858561139f565b600084815260066020908152604080832054600160a060020a0389168452600590925290912054909350610f1590600163ffffffff61142816565b600160a060020a038616600090815260056020526040902080549193509083908110610f3d57fe5b90600052602060002001549050806005600087600160a060020a0316600160a060020a0316815260200190815260200160002084815481101515610f7d57fe5b6000918252602080832090910192909255600160a060020a0387168152600590915260409020805490610fb49060001983016116e4565b50600093845260066020526040808520859055908452909220555050565b6000610fde838361143f565b50600160a060020a039091166000908152600560209081526040808320805460018101825590845282842081018590559383526006909152902055565b61102582826114c2565b6000818152600b60205260409020546002600019610100600184161502019091160415610ec7576000818152600b60205260408120610ec791611708565b61106d828261157e565b600780546000838152600860205260408120829055600182018355919091527fa66cc928b5edb82af9bd49922954155ab7b0942694bea4ce44661d9a8736c688015550565b6110bb82610deb565b15156110c657600080fd5b6000828152600b6020908152604090912082516108dd9284019061174c565b6110f6600c8263ffffffff6115d916565b604051600160a060020a038216907f6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f690600090a250565b61113e600c8263ffffffff61162716565b604051600160a060020a038216907fe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb6669290600090a250565b6000600160a060020a038216151561118c57600080fd5b50600160a060020a03166000908152602091909152604090205460ff1690565b6000806111c185600160a060020a0316611673565b15156111d05760019150611325565b6040517f150b7a020000000000000000000000000000000000000000000000000000000081523360048201818152600160a060020a03898116602485015260448401889052608060648501908152875160848601528751918a169463150b7a0294938c938b938b93909160a490910190602085019080838360005b8381101561126357818101518382015260200161124b565b50505050905090810190601f1680156112905780820380516001836020036101000a031916815260200191505b5095505050505050602060405180830381600087803b1580156112b257600080fd5b505af11580156112c6573d6000803e3d6000fd5b505050506040513d60208110156112dc57600080fd5b50517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff1981167f150b7a020000000000000000000000000000000000000000000000000000000014925090505b50949350505050565b600160a060020a038116151561134357600080fd5b600d54604051600160a060020a038084169216907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a3600d8054600160a060020a031916600160a060020a0392909216919091179055565b81600160a060020a03166113b282610975565b600160a060020a0316146113c557600080fd5b600160a060020a0382166000908152600360205260409020546113ef90600163ffffffff61142816565b600160a060020a039092166000908152600360209081526040808320949094559181526001909152208054600160a060020a0319169055565b6000808383111561143857600080fd5b5050900390565b600081815260016020526040902054600160a060020a03161561146157600080fd5b60008181526001602081815260408084208054600160a060020a031916600160a060020a03881690811790915584526003909152909120546114a29161167b565b600160a060020a0390921660009081526003602052604090209190915550565b60008060006114d18585611694565b6000848152600860205260409020546007549093506114f790600163ffffffff61142816565b915060078281548110151561150857fe5b906000526020600020015490508060078481548110151561152557fe5b6000918252602082200191909155600780548490811061154157fe5b60009182526020909120015560078054906115609060001983016116e4565b50600093845260086020526040808520859055908452909220555050565b600160a060020a038216151561159357600080fd5b61159d8282610fd2565b6040518190600160a060020a038416906000907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908290a45050565b600160a060020a03811615156115ee57600080fd5b6115f88282611175565b1561160257600080fd5b600160a060020a0316600090815260209190915260409020805460ff19166001179055565b600160a060020a038116151561163c57600080fd5b6116468282611175565b151561165157600080fd5b600160a060020a0316600090815260209190915260409020805460ff19169055565b6000903b1190565b60008282018381101561168d57600080fd5b9392505050565b61169e8282610e67565b6116a88282610ecb565b6040518190600090600160a060020a038516907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef908390a45050565b8154818355818111156108dd576000838152602090206108dd9181019083016117ca565b50805460018160011615610100020316600290046000825580601f1061172e5750610909565b601f01602090049060005260206000209081019061090991906117ca565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061178d57805160ff19168380011785556117ba565b828001600101855582156117ba579182015b828111156117ba57825182559160200191906001019061179f565b506117c69291506117ca565b5090565b61070291905b808211156117c657600081556001016117d05600a165627a7a72305820700bdb050b0d96a855c6512e5d51cbbbc9d4b1e74d789708021c36fa779baf080029`
 
 // DeployServiceChainNFT deploys a new Klaytn contract, binding an instance of ServiceChainNFT to it.
 func DeployServiceChainNFT(auth *bind.TransactOpts, backend bind.ContractBackend, _bridge common.Address) (common.Address, *types.Transaction, *ServiceChainNFT, error) {
@@ -11214,6 +12415,27 @@ func (_ServiceChainNFT *ServiceChainNFTSession) SetApprovalForAll(to common.Addr
 // Solidity: function setApprovalForAll(to address, approved bool) returns()
 func (_ServiceChainNFT *ServiceChainNFTTransactorSession) SetApprovalForAll(to common.Address, approved bool) (*types.Transaction, error) {
 	return _ServiceChainNFT.Contract.SetApprovalForAll(&_ServiceChainNFT.TransactOpts, to, approved)
+}
+
+// SetBridge is a paid mutator transaction binding the contract method 0x8dd14802.
+//
+// Solidity: function setBridge(_bridge address) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactor) SetBridge(opts *bind.TransactOpts, _bridge common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.contract.Transact(opts, "setBridge", _bridge)
+}
+
+// SetBridge is a paid mutator transaction binding the contract method 0x8dd14802.
+//
+// Solidity: function setBridge(_bridge address) returns()
+func (_ServiceChainNFT *ServiceChainNFTSession) SetBridge(_bridge common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.SetBridge(&_ServiceChainNFT.TransactOpts, _bridge)
+}
+
+// SetBridge is a paid mutator transaction binding the contract method 0x8dd14802.
+//
+// Solidity: function setBridge(_bridge address) returns()
+func (_ServiceChainNFT *ServiceChainNFTTransactorSession) SetBridge(_bridge common.Address) (*types.Transaction, error) {
+	return _ServiceChainNFT.Contract.SetBridge(&_ServiceChainNFT.TransactOpts, _bridge)
 }
 
 // TransferFrom is a paid mutator transaction binding the contract method 0x23b872dd.
