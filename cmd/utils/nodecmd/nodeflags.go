@@ -180,6 +180,13 @@ var KSENFlags = []cli.Flag{
 	utils.ChildChainIndexingFlag,
 	utils.MainBridgeFlag,
 	utils.MainBridgeListenPortFlag,
+	utils.SubBridgeFlag,
+	utils.SubBridgeListenPortFlag,
+	utils.AnchoringPeriodFlag,
+	utils.SentChainTxsLimit,
+	utils.ParentChainIDFlag,
+	utils.VTRecoveryFlag,
+	utils.VTRecoveryIntervalFlag,
 	// DBSyncer
 	utils.EnableDBSyncerFlag,
 	utils.DBHostFlag,
