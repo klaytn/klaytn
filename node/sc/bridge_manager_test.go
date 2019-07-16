@@ -418,7 +418,7 @@ func TestBridgeManager(t *testing.T) {
 	bridgeManager.Stop()
 }
 
-// TestBridgeManagerWifhFee tests the event/method of Token/NFT/Bridge contracts with transfer fee.
+// TestBridgeManagerWithFee tests the KLAY/ERC20 transfer with fee.
 func TestBridgeManagerWithFee(t *testing.T) {
 	defer func() {
 		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
