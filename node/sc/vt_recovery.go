@@ -322,6 +322,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 			Amount:       ev.Amount,
 			RequestNonce: ev.RequestNonce,
 			URI:          ev.Uri,
+			Fee:          ev.Fee,
 			BlockNumber:  ev.Raw.BlockNumber,
 			txHash:       ev.Raw.TxHash,
 		})
@@ -347,6 +348,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 			Amount:       ev.Amount,
 			RequestNonce: ev.RequestNonce,
 			URI:          ev.Uri,
+			Fee:          ev.Fee,
 			BlockNumber:  ev.Raw.BlockNumber,
 			txHash:       ev.Raw.TxHash,
 		})

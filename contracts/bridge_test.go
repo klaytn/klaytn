@@ -97,7 +97,7 @@ func TransferSignedTx(auth *bind.TransactOpts, backend *backends.SimulatedBacken
 
 // RequestKLAYTransfer send a requestValueTransfer transaction to the bridge contract.
 func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, t *testing.T) {
-	_, err := b.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit, Value: big.NewInt(1)}, to)
+	_, err := b.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit, Value: big.NewInt(1)}, to, big.NewInt(0))
 	if err != nil {
 		t.Fatalf("fail to DepositKLAY %v", err)
 	}
