@@ -24,15 +24,12 @@
 # subdirectories.
 #/build/logs/      @doctocat
 
-/.circleci/        @bitaholic
-/.github/          @kjhman21
 /accounts/         @kjhman21
-/api/              @kjhman21
-/blockchain/       @kjhman21
-/build/            @bitaholic
-/client/           @KimKyungup
-/cmd/              @bitaholic
-/cmd/kscn/         @KimKyungup
+/api/              @aidan-kwon
+/blockchain/       @ehnuje @nogang @aidan-kwon @kjhman21
+/build/            @KimKyungup @jeonghonah
+/client/           @KimKyungup @jeonghonah
+/cmd/              @KimKyungup @jeonghonah
 /common/           @andybclee
 /consensus/        @andybclee
 /console/          @andybclee
@@ -40,32 +37,23 @@
 /crypto/           @aidan-kwon
 /datasync/         @ehnuje
 /event/            @ehnuje
-/fork/             @kjhman21
+/fork/             @aidan-kwon
 /governance/       @andybclee
-/kerrors/          @kjhman21
+/kerrors/          @aidan-kwon
 /log/              @ehnuje
-/metrics/          @bitaholic
-/networks/         @bitaholic
-/node/             @bitaholic
-/node/sc/          @KimKyungup @jeonghonah
+/metrics/          @ehnuje
+/networks/         @nogang @KimKyungup @jeonghonah
+/node/             @KimKyungup @jeonghonah
 /params/           @andybclee
-/params/version.go @bitaholic
+/params/version.go @kjhman21
 /ser/              @ehnuje
 /storage/          @ehnuje
-/tests/            @kjhman21
-/utils/            @bitaholic
+/tests/            @aidan-kwon
+/utils/            @kjhman21
 /vendor/           @ehnuje
-/work/             @kjhman21
-/.dockerignore     @bitaholic
-/.gitignore        @bitaholic
-/COPYING           @kjhman21
-/COPYING.LESSER    @kjhman21
-/Dockerfile        @bitaholic
+/work/             @ehnuje @nogang
 /Gopkg.lock        @ehnuje
 /Gopkg.toml        @ehnuje
-/Makefile          @bitaholic
-/README.md         @kjhman21
-/interface.go      @kjhman21
 /tags-for-todo-and-note.md   @ehnuje
 
 # The `docs/*` pattern will match files like
