@@ -6,7 +6,7 @@
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
 #*       @global-owner1 @global-owner2
-*       @smseo
+*       @kjhman21
 
 # Order is important; the last matching pattern takes the most
 # precedence. When someone opens a pull request that only
@@ -25,7 +25,7 @@
 #/build/logs/      @doctocat
 
 /.circleci/        @bitaholic
-/.github/          @smseo
+/.github/          @kjhman21
 /accounts/         @kjhman21
 /api/              @kjhman21
 /blockchain/       @kjhman21
@@ -58,14 +58,14 @@
 /work/             @kjhman21
 /.dockerignore     @bitaholic
 /.gitignore        @bitaholic
-/COPYING           @smseo
-/COPYING.LESSER    @smseo
+/COPYING           @kjhman21
+/COPYING.LESSER    @kjhman21
 /Dockerfile        @bitaholic
 /Gopkg.lock        @ehnuje
 /Gopkg.toml        @ehnuje
 /Makefile          @bitaholic
-/README.md         @smseo
-/interface.go      @smseo
+/README.md         @kjhman21
+/interface.go      @kjhman21
 /tags-for-todo-and-note.md   @ehnuje
 
 # The `docs/*` pattern will match files like
