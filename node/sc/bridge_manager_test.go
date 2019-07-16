@@ -23,6 +23,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
 	"github.com/klaytn/klaytn/contracts/sc_erc20"
@@ -53,6 +54,16 @@ func WaitGroupWithTimeOut(wg *sync.WaitGroup, duration time.Duration, t *testing
 	case <-time.After(duration):
 		t.Fatal("timed out waiting group")
 	}
+}
+
+// CheckReceipt can check if the tx receipt has expected status.
+func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Duration, expectedStatus uint, t *testing.T) {
+	timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), duration)
+	defer cancelTimeout()
+
+	receipt, err := bind.WaitMined(timeoutContext, b, tx)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, expectedStatus, receipt.Status)
 }
 
 // TestBridgeManager tests the event/method of Token/NFT/Bridge contracts.
@@ -153,17 +164,6 @@ func TestBridgeManager(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, cNftAddr, nftAddr)
 
-	// TODO-Klaytn-Servicechain needs to support WaitDeployed
-	//timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
-	//defer cancelTimeout()
-	//
-	//addr, err = bind.WaitDeployed(timeoutContext, sim, tx)
-	//if err != nil {
-	//	log.Fatal("Failed to DeployGXToken.", "err", err, "txHash", tx.Hash().String())
-	//
-	//}
-	//fmt.Println("GXToken is deployed.", "addr", addr.String(), "txHash", tx.Hash().String())
-
 	balance, _ := sim.BalanceAt(context.Background(), auth.From, nil)
 	fmt.Printf("auth(%v) KLAY balance : %v\n", auth.From.String(), balance)
 
@@ -218,9 +218,7 @@ func TestBridgeManager(t *testing.T) {
 
 				case 2:
 					owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
-					if err != nil {
-						t.Fatal(err)
-					}
+					assert.Equal(t, nil, err)
 					fmt.Println("NFT owner before WithdrawERC721: ", owner.String())
 
 					// WithdrawToken by Event
@@ -268,27 +266,19 @@ func TestBridgeManager(t *testing.T) {
 		//fmt.Println("WithdrawToken is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
 
 		balance, err = token.BalanceOf(&bind.CallOpts{From: auth.From}, auth.From)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, nil, err)
 		fmt.Println("auth token balance", balance.String())
 
 		balance, err = token.BalanceOf(&bind.CallOpts{From: auth2.From}, auth2.From)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, nil, err)
 		fmt.Println("auth2 token balance", balance.String())
 
 		balance, err = token.BalanceOf(&bind.CallOpts{From: auth3.From}, auth3.From)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, nil, err)
 		fmt.Println("auth3 token balance", balance.String())
 
 		balance, err = token.BalanceOf(&bind.CallOpts{From: auth4.From}, auth4.From)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, nil, err)
 		fmt.Println("auth4 token balance", balance.String())
 	}
 
@@ -302,21 +292,17 @@ func TestBridgeManager(t *testing.T) {
 		sim.Commit() // block
 
 		balance, err = nft.BalanceOf(&bind.CallOpts{From: auth.From}, auth4.From)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, nil, err)
 		fmt.Println("auth4 NFT balance", balance.String())
 		fmt.Println("auth4 address", auth4.From.String())
 		owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, nil, err)
 		fmt.Println("NFT owner after registering", owner.String())
 	}
 
 	// 7. RequestValueTransfer from auth2 to auth3
 	{
-		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, testToken, auth3.From)
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, testToken, auth3.From, big.NewInt(0))
 		if err != nil {
 			log.Fatalf("Failed to SafeTransferAndCall: %v", err)
 		}
@@ -338,7 +324,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 8. DepositKLAY from auth to auth3
 	{
-		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: testGasLimit}, auth3.From)
+		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: testGasLimit}, auth3.From, big.NewInt(0))
 		if err != nil {
 			log.Fatalf("Failed to DepositKLAY: %v", err)
 		}
@@ -374,19 +360,13 @@ func TestBridgeManager(t *testing.T) {
 	// 10. Check Token balance
 	{
 		balance, err = token.BalanceOf(&bind.CallOpts{From: auth.From}, auth.From)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, nil, err)
 		fmt.Println("auth token balance", balance.String())
 		balance, err = token.BalanceOf(&bind.CallOpts{From: auth2.From}, auth2.From)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, nil, err)
 		fmt.Println("auth2 token balance", balance.String())
 		balance, err = token.BalanceOf(&bind.CallOpts{From: auth3.From}, auth3.From)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, nil, err)
 		fmt.Println("auth3 token balance", balance.String())
 
 		if balance.Cmp(testToken) != 0 {
@@ -413,13 +393,323 @@ func TestBridgeManager(t *testing.T) {
 	// 12. Check NFT owner
 	{
 		owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.Equal(t, nil, err)
 		fmt.Println("NFT owner", owner.String())
 		if owner != auth3.From {
 			t.Fatal("NFT owner is mismatched", "expeted", auth3.From.String(), "result", owner.String())
 		}
+	}
+
+	// 13. Nonce check on deploy error
+	{
+
+		nonce, err := sim.NonceAt(context.Background(), bam.scAccount.address, nil)
+		if err != nil {
+			t.Fatal("failed to sim.NonceAt", err)
+		}
+		bam.scAccount.SetNonce(nonce)
+
+		addr2, err := bridgeManager.DeployBridgeNonceTest(sim)
+		if err != nil {
+			log.Fatalf("Failed to deploy new bridge contract: %v %v", err, addr2)
+		}
+	}
+
+	bridgeManager.Stop()
+}
+
+// TestBridgeManagerWithFee tests the KLAY/ERC20 transfer with fee.
+func TestBridgeManagerWithFee(t *testing.T) {
+	defer func() {
+		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(4)
+
+	// Generate a new random account and a funded simulator
+	parentKey, _ := crypto.GenerateKey()
+	parentAcc := bind.NewKeyedTransactor(parentKey)
+
+	childKey, _ := crypto.GenerateKey()
+	childAcc := bind.NewKeyedTransactor(childKey)
+
+	AliceKey, _ := crypto.GenerateKey()
+	Alice := bind.NewKeyedTransactor(AliceKey)
+
+	BobKey, _ := crypto.GenerateKey()
+	Bob := bind.NewKeyedTransactor(BobKey)
+
+	receiverKey, _ := crypto.GenerateKey()
+	receiver := bind.NewKeyedTransactor(receiverKey)
+
+	alloc := blockchain.GenesisAlloc{
+		parentAcc.From: {Balance: big.NewInt(params.KLAY)},
+		childAcc.From:  {Balance: big.NewInt(params.KLAY)},
+		Alice.From:     {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	config := &SCConfig{}
+	config.nodekey = parentKey
+	config.chainkey = childKey
+	config.DataDir = os.TempDir()
+
+	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
+	config.MainChainAccountAddr = &chainKeyAddr
+
+	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+
+	sc := &SubBridge{
+		config:               config,
+		peers:                newBridgePeerSet(),
+		bridgeAccountManager: bam,
+	}
+	var err error
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	bridgeManager, err := NewBridgeManager(sc)
+
+	testToken := big.NewInt(100000000)
+	testKLAY := big.NewInt(1000000000)
+
+	// 1. Deploy Bridge Contract
+	pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, false)
+	if err != nil {
+		log.Fatalf("Failed to deploy new bridge contract: %v", err)
+	}
+	pBridgeInfo, _ := bridgeManager.GetBridgeInfo(pBridgeAddr)
+	pBridge := pBridgeInfo.bridge
+	fmt.Println("===== BridgeContract Addr ", pBridgeAddr.Hex())
+	sim.Commit() // block
+
+	// 2. Deploy Token Contract
+	tokenAddr, tx, token, err := sctoken.DeployServiceChainToken(parentAcc, sim, pBridgeAddr)
+	if err != nil {
+		log.Fatalf("Failed to DeployGXToken: %v", err)
+	}
+	sim.Commit() // block
+
+	// Set value transfer fee
+	{
+		nilReceiver, err := pBridge.Receiver(nil)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, common.Address{}, nilReceiver)
+	}
+
+	pBridge.SetFeeReceiver(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, receiver.From)
+	sim.Commit() // block
+
+	{
+		recev, err := pBridge.Receiver(nil)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, receiver.From, recev)
+	}
+
+	KLAYFee := new(big.Int).SetUint64(500)
+	ERC20Fee := new(big.Int).SetUint64(1000)
+
+	{
+		fee, err := pBridge.FeeOfKLAY(nil)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, big.NewInt(0).String(), fee.String())
+	}
+
+	{
+		fee, err := pBridge.FeeOfERC20(nil, tokenAddr)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, big.NewInt(0).String(), fee.String())
+	}
+
+	pBridge.SetKLAYFee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, KLAYFee)
+	pBridge.SetERC20Fee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, ERC20Fee)
+	sim.Commit() // block
+
+	{
+		fee, err := pBridge.FeeOfKLAY(nil)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, KLAYFee.String(), fee.String())
+	}
+
+	{
+		fee, err := pBridge.FeeOfERC20(nil, tokenAddr)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, ERC20Fee.String(), fee.String())
+	}
+
+	// Register tokens on the bridge
+	pBridge.RegisterToken(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
+	sim.Commit() // block
+
+	cTokenAddr, err := pBridge.AllowedTokens(nil, tokenAddr)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, cTokenAddr, tokenAddr)
+
+	balance, _ := sim.BalanceAt(context.Background(), Alice.From, nil)
+	fmt.Printf("Alice(%v) KLAY balance : %v\n", Alice.From.String(), balance)
+
+	balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
+	fmt.Printf("Bob(%v) KLAY balance : %v\n", Bob.From.String(), balance)
+
+	// 4. Subscribe Bridge Contract
+	bridgeManager.SubscribeEvent(pBridgeAddr)
+
+	tokenCh := make(chan RequestValueTransferEvent)
+	tokenSendCh := make(chan HandleValueTransferEvent)
+	bridgeManager.SubscribeTokenReceived(tokenCh)
+	bridgeManager.SubscribeTokenWithDraw(tokenSendCh)
+
+	go func() {
+		for {
+			select {
+			case ev := <-tokenCh:
+				fmt.Println("Deposit Event",
+					"type", ev.TokenType,
+					"amount", ev.Amount,
+					"from", ev.From.String(),
+					"to", ev.To.String(),
+					"contract", ev.ContractAddr.String(),
+					"token", ev.TokenAddr.String(),
+					"requestNonce", ev.RequestNonce,
+					"fee", ev.Fee.String())
+
+				switch ev.TokenType {
+				case 0:
+					// WithdrawKLAY by Event
+					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
+					if err != nil {
+						log.Fatalf("Failed to WithdrawKLAY: %v", err)
+					}
+					fmt.Println("WithdrawKLAY Transaction by event ", tx.Hash().Hex())
+					sim.Commit() // block
+
+				case 1:
+					// WithdrawToken by Event
+					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+					if err != nil {
+						log.Fatalf("Failed to WithdrawToken: %v", err)
+					}
+					fmt.Println("WithdrawToken Transaction by event ", tx.Hash().Hex())
+					sim.Commit() // block
+				}
+
+				wg.Done()
+
+			case ev := <-tokenSendCh:
+				fmt.Println("receive token withdraw event ", ev.ContractAddr.Hex())
+				fmt.Println("Withdraw Event",
+					"type", ev.TokenType,
+					"amount", ev.Amount,
+					"owner", ev.Owner.String(),
+					"contract", ev.ContractAddr.String(),
+					"token", ev.TokenAddr.String(),
+					"handleNonce", ev.HandleNonce)
+				wg.Done()
+			}
+		}
+	}()
+
+	// 5. transfer from parentAcc to Alice for charging and check balances
+	{
+		tx, err = token.Transfer(&bind.TransactOpts{From: parentAcc.From, Signer: parentAcc.Signer, GasLimit: testGasLimit}, Alice.From, new(big.Int).Add(testToken, ERC20Fee))
+		if err != nil {
+			log.Fatalf("Failed to Transfer for charging: %v", err)
+		}
+		fmt.Println("Transfer Transaction", tx.Hash().Hex())
+		sim.Commit() // block
+
+		balance, err = token.BalanceOf(&bind.CallOpts{From: parentAcc.From}, parentAcc.From)
+		assert.Equal(t, nil, err)
+		fmt.Println("parentAcc token balance", balance.String())
+
+		balance, err = token.BalanceOf(&bind.CallOpts{From: Alice.From}, Alice.From)
+		assert.Equal(t, nil, err)
+		fmt.Println("Alice token balance", balance.String())
+
+		balance, err = token.BalanceOf(&bind.CallOpts{From: Bob.From}, Bob.From)
+		assert.Equal(t, nil, err)
+		fmt.Println("Bob token balance", balance.String())
+	}
+
+	// 7. Request ERC20 Transfer from Alice to Bob
+	{
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, testToken, Bob.From, ERC20Fee)
+		if err != nil {
+			log.Fatalf("Failed to SafeTransferAndCall: %v", err)
+		}
+		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
+		sim.Commit() // block
+	}
+
+	// 8. Request KLAY transfer from Alice to Bob
+	{
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, Bob.From, KLAYFee)
+		if err != nil {
+			log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
+		}
+		fmt.Println("RequestKLAYTransfer Transaction", tx.Hash().Hex())
+
+		sim.Commit() // block
+	}
+
+	// 7-1. Request ERC20 Transfer from Alice to Bob with wrong fee
+	{
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, testToken, Bob.From, big.NewInt(0))
+		assert.Equal(t, nil, err)
+
+		sim.Commit() // block
+
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+	}
+
+	// 8-1. Request KLAY transfer from Alice to Bob with wrong fee
+	{
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, Bob.From, big.NewInt(100000))
+		assert.Equal(t, nil, err)
+
+		sim.Commit() // block
+
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+	}
+
+	// Wait a few second for wait group
+	WaitGroupWithTimeOut(&wg, 3*time.Second, t)
+
+	// 10. Check Token balance
+	{
+		balance, err = token.BalanceOf(nil, Alice.From)
+		assert.Equal(t, nil, err)
+		fmt.Println("Alice token balance", balance.String())
+
+		balance, err = token.BalanceOf(nil, Bob.From)
+		assert.Equal(t, nil, err)
+		fmt.Println("Bob token balance", balance.String())
+		assert.Equal(t, testToken.String(), balance.String())
+
+		balance, err = token.BalanceOf(nil, receiver.From)
+		assert.Equal(t, nil, err)
+		fmt.Println("Fee receiver token balance", balance.String())
+		assert.Equal(t, ERC20Fee.String(), balance.String())
+	}
+
+	// 11. Check KLAY balance
+	{
+		balance, _ = sim.BalanceAt(context.Background(), Alice.From, nil)
+		fmt.Println("Alice KLAY balance :", balance)
+
+		balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
+		fmt.Println("Bob KLAY balance :", balance)
+		assert.Equal(t, testKLAY.Sub(testKLAY, KLAYFee).String(), balance.String())
+
+		balance, _ = sim.BalanceAt(context.Background(), receiver.From, nil)
+		fmt.Println("receiver KLAY balance :", balance)
+		assert.Equal(t, KLAYFee.String(), balance.String())
 	}
 
 	// 13. Nonce check on deploy error
