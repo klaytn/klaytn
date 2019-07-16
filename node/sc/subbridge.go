@@ -717,6 +717,7 @@ func (pm *SubBridge) synchronise(peer BridgePeer) {
 func (s *SubBridge) Stop() error {
 
 	close(s.quitSync)
+	s.bridgeManager.stopAllRecoveries()
 
 	s.chainHeadSub.Unsubscribe()
 	//s.txSub.Unsubscribe()
