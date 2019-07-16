@@ -973,7 +973,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 func convertNodeType(nodetype string) p2p.ConnType {
 	switch strings.ToLower(nodetype) {
-	case "cn":
+	case "cn", "scn":
 		return node.CONSENSUSNODE
 	case "pn", "spn":
 		return node.PROXYNODE
@@ -981,20 +981,6 @@ func convertNodeType(nodetype string) p2p.ConnType {
 		return node.ENDPOINTNODE
 	default:
 		return node.UNKNOWNNODE
-	}
-}
-
-func convertNodeTypeToString(nodetype int) string {
-	switch p2p.ConnType(nodetype) {
-	case node.CONSENSUSNODE:
-		return "CN"
-	case node.PROXYNODE:
-		return "PN"
-	case node.ENDPOINTNODE:
-		return "EN"
-	default:
-		logger.Error("failed to convert nodetype as string", "err", "unknown nodetype")
-		return "unknown"
 	}
 }
 
