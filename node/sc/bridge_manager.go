@@ -851,7 +851,7 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 	}
 	bridgeInfo.subscribed = true
 
-	go bm.loop(addr, tokenReceivedCh, tokenWithdrawCh, bm.scope.Track(receivedSub), bm.scope.Track(withdrawnSub))
+	go bm.loop(addr, tokenReceivedCh, tokenWithdrawCh, receivedSub, withdrawnSub)
 
 	return nil
 }
@@ -887,9 +887,17 @@ func (bm *BridgeManager) loop(
 	defer receivedSub.Unsubscribe()
 	defer withdrawSub.Unsubscribe()
 
+	bi, ok := bm.GetBridgeInfo(addr)
+	if !ok {
+		logger.Error("bridge information is missing")
+		return
+	}
+
 	// TODO-Klaytn change goroutine logic for performance
 	for {
 		select {
+		case <-bi.closed:
+			return
 		case ev := <-receivedCh:
 			receiveEvent := RequestValueTransferEvent{
 				TokenType:    ev.Kind,
