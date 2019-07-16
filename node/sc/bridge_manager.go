@@ -67,6 +67,7 @@ type RequestValueTransferEvent struct {
 	RequestNonce uint64
 	URI          string // uri of ERC721 token
 	BlockNumber  uint64
+	Fee          *big.Int
 	txHash       common.Hash
 }
 
@@ -900,6 +901,7 @@ func (bm *BridgeManager) loop(
 				Amount:       ev.Amount,
 				RequestNonce: ev.RequestNonce,
 				URI:          ev.Uri,
+				Fee:          ev.Fee,
 				BlockNumber:  ev.Raw.BlockNumber,
 				txHash:       ev.Raw.TxHash,
 			}
