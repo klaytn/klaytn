@@ -991,6 +991,36 @@ web3._extend({
 			call: 'subbridge_getBridgeInformation',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'setKLAYFee',
+			call: 'subbridge_setKLAYFee',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'setERC20Fee',
+			call: 'subbridge_setERC20Fee',
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'setFeeReceiver',
+			call: 'subbridge_setFeeReceiver',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'getKLAYFee',
+			call: 'subbridge_getKLAYFee',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getERC20Fee',
+			call: 'subbridge_getERC20Fee',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'getFeeReceiver',
+			call: 'subbridge_getFeeReceiver',
+			params: 1
+		}),
 	],
     properties: [
 		new web3._extend.Property({
