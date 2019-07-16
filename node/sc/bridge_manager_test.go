@@ -512,7 +512,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, receiver.From, recev)
 	}
 
-	KlayFee := new(big.Int).SetUint64(500)
+	KLAYFee := new(big.Int).SetUint64(500)
 	ERC20Fee := new(big.Int).SetUint64(1000)
 
 	{
@@ -527,14 +527,14 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, big.NewInt(0).String(), fee.String())
 	}
 
-	pBridge.SetKLAYFee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, KlayFee)
+	pBridge.SetKLAYFee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, KLAYFee)
 	pBridge.SetERC20Fee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, ERC20Fee)
 	sim.Commit() // block
 
 	{
 		fee, err := pBridge.GetKLAYFee(nil)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, KlayFee.String(), fee.String())
+		assert.Equal(t, KLAYFee.String(), fee.String())
 	}
 
 	{
@@ -649,7 +649,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 8. Request KLAY transfer from Alice to Bob
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, Bob.From, KlayFee)
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, Bob.From, KLAYFee)
 		if err != nil {
 			log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 		}
@@ -705,11 +705,11 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 		balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
 		fmt.Println("Bob KLAY balance :", balance)
-		assert.Equal(t, testKLAY.Sub(testKLAY, KlayFee).String(), balance.String())
+		assert.Equal(t, testKLAY.Sub(testKLAY, KLAYFee).String(), balance.String())
 
 		balance, _ = sim.BalanceAt(context.Background(), receiver.From, nil)
 		fmt.Println("receiver KLAY balance :", balance)
-		assert.Equal(t, KlayFee.String(), balance.String())
+		assert.Equal(t, KLAYFee.String(), balance.String())
 	}
 
 	// 13. Nonce check on deploy error
