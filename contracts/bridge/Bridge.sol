@@ -176,9 +176,9 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         require(isRunning, "stopped bridge");
         require(msg.value > 0, "zero msg.value");
         require(msg.value > _fee, "insufficient amount");
-        require(getKLAYFee() == _fee, "invalid fee");
+        require(feeOfKLAY == _fee, "invalid fee");
 
-        payKLAYFee(_fee);
+        _payKLAYFee(_fee);
 
         emit RequestValueTransfer(
             TokenKind.KLAY,
@@ -195,7 +195,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
 
     // () requests transfer KLAY to msg.sender address on relative chain.
     function () external payable {
-        _requestKLAYTransfer(msg.sender, getKLAYFee());
+        _requestKLAYTransfer(msg.sender, feeOfKLAY);
     }
 
     // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
@@ -208,9 +208,9 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         require(isRunning, "stopped bridge");
         require(_amount > 0, "zero msg.value");
         require(allowedTokens[_contractAddress] != address(0), "Not a valid token");
-        require(_fee == getERC20Fee(_contractAddress), "invalid fee");
+        require(_fee == feeOfERC20[_contractAddress], "invalid fee");
 
-        payERC20Fee(_contractAddress, _fee);
+        _payERC20Fee(_contractAddress, _fee);
 
         if (modeMintBurn) {
             ERC20Burnable(_contractAddress).burn(_amount);

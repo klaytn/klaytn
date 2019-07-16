@@ -516,13 +516,13 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	ERC20Fee := new(big.Int).SetUint64(1000)
 
 	{
-		fee, err := pBridge.GetKLAYFee(nil)
+		fee, err := pBridge.FeeOfKLAY(nil)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, big.NewInt(0).String(), fee.String())
 	}
 
 	{
-		fee, err := pBridge.GetERC20Fee(nil, tokenAddr)
+		fee, err := pBridge.FeeOfERC20(nil, tokenAddr)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, big.NewInt(0).String(), fee.String())
 	}
@@ -532,13 +532,13 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	sim.Commit() // block
 
 	{
-		fee, err := pBridge.GetKLAYFee(nil)
+		fee, err := pBridge.FeeOfKLAY(nil)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, KLAYFee.String(), fee.String())
 	}
 
 	{
-		fee, err := pBridge.GetERC20Fee(nil, tokenAddr)
+		fee, err := pBridge.FeeOfERC20(nil, tokenAddr)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, ERC20Fee.String(), fee.String())
 	}
