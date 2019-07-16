@@ -178,7 +178,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         require(msg.value > _fee, "insufficient amount");
         require(getKLAYFee() == _fee, "invalid fee");
 
-        payKlayFee(_fee);
+        payKLAYFee(_fee);
 
         emit RequestValueTransfer(
             TokenKind.KLAY,
@@ -292,9 +292,9 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     // the withdrawal limit.
     function chargeWithoutEvent() external payable {}
 
-    // setKlayFee set the fee of KLAY tranfser
-    function setKlayFee(uint256 _fee) external onlyOwner {
-        _setKlayFee(_fee);
+    // setKLAYFee set the fee of KLAY tranfser
+    function setKLAYFee(uint256 _fee) external onlyOwner {
+        _setKLAYFee(_fee);
     }
 
     // setERC20Fee set the fee of the token transfer

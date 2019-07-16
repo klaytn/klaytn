@@ -8,10 +8,10 @@ contract BridgeFee {
     using SafeMath for uint256;
 
     address public receiver = address(0);
-    uint256 public feeOfKLAY;
+    uint256 public feeOfKLAY = 0;
     mapping (address => uint256) public feeOfToken;
 
-    event KlayFeeChanged(uint256 indexed fee);
+    event KLAYFeeChanged(uint256 indexed fee);
     event ERC20FeeChanged(address token, uint256 indexed fee);
     event FeeReceiverChanged(address indexed receiver);
 
@@ -19,7 +19,7 @@ contract BridgeFee {
         receiver = _receiver;
     }
 
-    function payKlayFee(uint256 _fee) internal {
+    function payKLAYFee(uint256 _fee) internal {
         if(isValidReceiver() == true && _fee > 0) {
             receiver.transfer(_fee);
         }
@@ -31,9 +31,9 @@ contract BridgeFee {
         }
     }
 
-    function _setKlayFee(uint256 _fee) internal {
+    function _setKLAYFee(uint256 _fee) internal {
         feeOfKLAY = _fee;
-        emit KlayFeeChanged(_fee);
+        emit KLAYFeeChanged(_fee);
     }
 
     function _setERC20Fee(address _token, uint256 _fee) internal {
