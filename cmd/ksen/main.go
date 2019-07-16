@@ -66,6 +66,13 @@ var senHelpFlagGroups = []utils.FlagGroup{
 			utils.ChildChainIndexingFlag,
 			utils.MainBridgeFlag,
 			utils.MainBridgeListenPortFlag,
+			utils.SubBridgeFlag,
+			utils.SubBridgeListenPortFlag,
+			utils.AnchoringPeriodFlag,
+			utils.SentChainTxsLimit,
+			utils.ParentChainIDFlag,
+			utils.VTRecoveryFlag,
+			utils.VTRecoveryIntervalFlag,
 		},
 	},
 	{
