@@ -42,7 +42,7 @@ type RpmSpec struct {
 	Summary     string
 	MakeTarget  string
 	ProgramName string // kcn, kpn, ken, kscn, kspn, ksen, kbn
-	DaemonName  string // kcnd, kpnd, kend, kscn, kspn, ksen, kbn
+	DaemonName  string // kcnd, kpnd, kend, kscnd, kspnd, ksend, kbnd
 	PostFix     string // baobab
 }
 
