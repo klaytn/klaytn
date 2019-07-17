@@ -26,7 +26,9 @@ import (
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/p2p"
+	"math/big"
 )
 
 // BridgeAddPeerOnParentChain can add a static peer on bridge node for service chain.
@@ -249,5 +251,47 @@ func (ec *Client) BridgeTxPendingCount(ctx context.Context) (int, error) {
 func (ec *Client) BridgeGetTxPending(ctx context.Context) (map[common.Address]types.Transactions, error) {
 	var result map[common.Address]types.Transactions
 	err := ec.c.CallContext(ctx, &result, "subbridge_txPending")
+	return result, err
+}
+
+// BridgeSetERC20Fee can set the ERC20 transfer fee.
+func (ec *Client) BridgeSetERC20Fee(ctx context.Context, bridgeAddr, tokenAddr common.Address, fee *big.Int) (common.Hash, error) {
+	var result common.Hash
+	err := ec.c.CallContext(ctx, &result, "subbridge_setERC20Fee", bridgeAddr, tokenAddr, fee)
+	return result, err
+}
+
+// BridgeSetKLAYFee can set the KLAY transfer fee.
+func (ec *Client) BridgeSetKLAYFee(ctx context.Context, bridgeAddr common.Address, fee *big.Int) (common.Hash, error) {
+	var result common.Hash
+	err := ec.c.CallContext(ctx, &result, "subbridge_setKLAYFee", bridgeAddr, fee)
+	return result, err
+}
+
+// BridgeGetERC20Fee returns the ERC20 transfer fee.
+func (ec *Client) BridgeGetERC20Fee(ctx context.Context, bridgeAddr, tokenAddr common.Address) (*big.Int, error) {
+	var result hexutil.Big
+	err := ec.c.CallContext(ctx, &result, "subbridge_getERC20Fee", bridgeAddr, tokenAddr)
+	return (*big.Int)(&result), err
+}
+
+// BridgeGetKLAYFee returns the KLAY transfer fee.
+func (ec *Client) BridgeGetKLAYFee(ctx context.Context, bridgeAddr common.Address) (*big.Int, error) {
+	var result hexutil.Big
+	err := ec.c.CallContext(ctx, &result, "subbridge_getKLAYFee", bridgeAddr)
+	return (*big.Int)(&result), err
+}
+
+// BridgeSetFeeReceiver can set the fee receiver.
+func (ec *Client) BridgeSetFeeReceiver(ctx context.Context, bridgeAddr, receiver common.Address) (common.Hash, error) {
+	var result common.Hash
+	err := ec.c.CallContext(ctx, &result, "subbridge_setFeeReceiver", bridgeAddr, receiver)
+	return result, err
+}
+
+// BridgeGetFeeReceiver returns the fee receiver.
+func (ec *Client) BridgeGetFeeReceiver(ctx context.Context, bridgeAddr common.Address) (common.Address, error) {
+	var result common.Address
+	err := ec.c.CallContext(ctx, &result, "subbridge_getFeeReceiver", bridgeAddr)
 	return result, err
 }

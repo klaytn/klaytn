@@ -17,7 +17,9 @@
 package sc
 
 import (
+	"context"
 	"fmt"
+	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
@@ -25,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node"
 	"github.com/pkg/errors"
+	"math/big"
 )
 
 var (
@@ -314,6 +317,35 @@ func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, p
 
 	logger.Info("Register token", "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
 	return nil
+}
+
+func (sbapi *SubBridgeAPI) GetParentTransactionReceipt(txHash common.Hash) (*types.Receipt, error) {
+	ctx := context.Background()
+	return sbapi.sc.remoteBackend.(bind.DeployBackend).TransactionReceipt(ctx, txHash)
+}
+
+func (sbapi *SubBridgeAPI) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *big.Int) (common.Hash, error) {
+	return sbapi.sc.bridgeManager.SetERC20Fee(bridgeAddr, tokenAddr, fee)
+}
+
+func (sbapi *SubBridgeAPI) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (common.Hash, error) {
+	return sbapi.sc.bridgeManager.SetKLAYFee(bridgeAddr, fee)
+}
+
+func (sbapi *SubBridgeAPI) SetFeeReceiver(bridgeAddr, receiver common.Address) (common.Hash, error) {
+	return sbapi.sc.bridgeManager.SetFeeReceiver(bridgeAddr, receiver)
+}
+
+func (sbapi *SubBridgeAPI) GetERC20Fee(bridgeAddr, tokenAddr common.Address) (*big.Int, error) {
+	return sbapi.sc.bridgeManager.GetERC20Fee(bridgeAddr, tokenAddr)
+}
+
+func (sbapi *SubBridgeAPI) GetKLAYFee(bridgeAddr common.Address) (*big.Int, error) {
+	return sbapi.sc.bridgeManager.GetKLAYFee(bridgeAddr)
+}
+
+func (sbapi *SubBridgeAPI) GetFeeReceiver(bridgeAddr common.Address) (common.Address, error) {
+	return sbapi.sc.bridgeManager.GetFeeReceiver(bridgeAddr)
 }
 
 func (sbapi *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {

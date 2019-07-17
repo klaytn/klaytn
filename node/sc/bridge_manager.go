@@ -945,3 +945,96 @@ func (bm *BridgeManager) Stop() {
 
 	bm.scope.Close()
 }
+
+// SetERC20Fee set the ERC20 transfer fee on the bridge contract.
+func (bm *BridgeManager) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *big.Int) (common.Hash, error) {
+	bi, ok := bm.GetBridgeInfo(bridgeAddr)
+	if !ok {
+		return common.Hash{}, ErrNoBridgeInfo
+	}
+
+	auth := bi.account
+	auth.Lock()
+	defer auth.UnLock()
+
+	tx, err := bi.bridge.SetERC20Fee(auth.GetTransactOpts(), tokenAddr, fee)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	auth.IncNonce()
+
+	return tx.Hash(), nil
+}
+
+// SetKLAYFee set the KLAY transfer fee on the bridge contract.
+func (bm *BridgeManager) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (common.Hash, error) {
+	bi, ok := bm.GetBridgeInfo(bridgeAddr)
+	if !ok {
+		return common.Hash{}, ErrNoBridgeInfo
+	}
+
+	auth := bi.account
+	auth.Lock()
+	defer auth.UnLock()
+
+	tx, err := bi.bridge.SetKLAYFee(auth.GetTransactOpts(), fee)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	auth.IncNonce()
+
+	return tx.Hash(), nil
+}
+
+// SetFeeReceiver set the fee receiver which can get the fee of value transfer request.
+func (bm *BridgeManager) SetFeeReceiver(bridgeAddr, receiver common.Address) (common.Hash, error) {
+	bi, ok := bm.GetBridgeInfo(bridgeAddr)
+	if !ok {
+		return common.Hash{}, ErrNoBridgeInfo
+	}
+
+	auth := bi.account
+	auth.Lock()
+	defer auth.UnLock()
+
+	tx, err := bi.bridge.SetFeeReceiver(auth.GetTransactOpts(), receiver)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	auth.IncNonce()
+
+	return tx.Hash(), nil
+}
+
+// GetERC20Fee returns the ERC20 transfer fee on the bridge contract.
+func (bm *BridgeManager) GetERC20Fee(bridgeAddr, tokenAddr common.Address) (*big.Int, error) {
+	bi, ok := bm.GetBridgeInfo(bridgeAddr)
+	if !ok {
+		return nil, ErrNoBridgeInfo
+	}
+
+	return bi.bridge.FeeOfERC20(nil, tokenAddr)
+}
+
+// GetKLAYFee returns the KLAY transfer fee on the bridge contract.
+func (bm *BridgeManager) GetKLAYFee(bridgeAddr common.Address) (*big.Int, error) {
+	bi, ok := bm.GetBridgeInfo(bridgeAddr)
+	if !ok {
+		return nil, ErrNoBridgeInfo
+	}
+
+	return bi.bridge.FeeOfKLAY(nil)
+}
+
+// GetFeeReceiver returns the receiver which can get fee of value transfer request.
+func (bm *BridgeManager) GetFeeReceiver(bridgeAddr common.Address) (common.Address, error) {
+	bi, ok := bm.GetBridgeInfo(bridgeAddr)
+	if !ok {
+		return common.Address{}, ErrNoBridgeInfo
+	}
+
+	return bi.bridge.Receiver(nil)
+}
