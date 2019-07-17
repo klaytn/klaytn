@@ -174,54 +174,50 @@ func TestGovernance_ValidateVote(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-Issue3567 forbid voting except add, remove validator
-// bellow code is disabled only for temporarily until we solve data race of governance.
-//func TestGovernance_AddVote(t *testing.T) {
-//	gov := getGovernance()
-//
-//	for _, val := range tstData {
-//		ret := gov.AddVote(val.k, val.v)
-//		if ret != val.e {
-//			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
-//		}
-//	}
-//}
+func TestGovernance_AddVote(t *testing.T) {
+	gov := getGovernance()
 
-// TODO-Klaytn-Issue3567 forbid voting except add, remove validator
-// bellow code is disabled only for temporarily until we solve data race of governance.
-//func TestGovernance_RemoveVote(t *testing.T) {
-//	gov := getGovernance()
-//
-//	for _, val := range goodVotes {
-//		ret := gov.AddVote(val.k, val.v)
-//		if ret != val.e {
-//			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
-//		}
-//	}
-//
-//	// Length check. Because []votes has all valid votes, length of voteMap and votes should be equal
-//	if countUncastedVote(gov.voteMap) != len(goodVotes) {
-//		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
-//	}
-//
-//	// Remove unvoted vote. Length should still be same
-//	gov.RemoveVote("istanbul.Epoch", uint64(10000), 0)
-//	if countUncastedVote(gov.voteMap) != len(goodVotes) {
-//		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
-//	}
-//
-//	// Remove vote with wrong key. Length should still be same
-//	gov.RemoveVote("istanbul.EpochEpoch", uint64(10000), 0)
-//	if countUncastedVote(gov.voteMap) != len(goodVotes) {
-//		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
-//	}
-//
-//	// Removed a vote. Length should be len(goodVotes) -1
-//	gov.RemoveVote("istanbul.epoch", uint64(20000), 0)
-//	if countUncastedVote(gov.voteMap) != (len(goodVotes) - 1) {
-//		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes)-1, len(gov.voteMap))
-//	}
-//}
+	for _, val := range tstData {
+		ret := gov.AddVote(val.k, val.v)
+		if ret != val.e {
+			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
+		}
+	}
+}
+
+func TestGovernance_RemoveVote(t *testing.T) {
+	gov := getGovernance()
+
+	for _, val := range goodVotes {
+		ret := gov.AddVote(val.k, val.v)
+		if ret != val.e {
+			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
+		}
+	}
+
+	// Length check. Because []votes has all valid votes, length of voteMap and votes should be equal
+	if countUncastedVote(gov.voteMap) != len(goodVotes) {
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
+	}
+
+	// Remove unvoted vote. Length should still be same
+	gov.RemoveVote("istanbul.Epoch", uint64(10000), 0)
+	if countUncastedVote(gov.voteMap) != len(goodVotes) {
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
+	}
+
+	// Remove vote with wrong key. Length should still be same
+	gov.RemoveVote("istanbul.EpochEpoch", uint64(10000), 0)
+	if countUncastedVote(gov.voteMap) != len(goodVotes) {
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes), len(gov.voteMap))
+	}
+
+	// Removed a vote. Length should be len(goodVotes) -1
+	gov.RemoveVote("istanbul.epoch", uint64(20000), 0)
+	if countUncastedVote(gov.voteMap) != (len(goodVotes) - 1) {
+		t.Errorf("Length of voteMap should be %d, but %d\n", len(goodVotes)-1, len(gov.voteMap))
+	}
+}
 
 func countUncastedVote(data map[string]VoteStatus) int {
 	size := 0
@@ -234,22 +230,20 @@ func countUncastedVote(data map[string]VoteStatus) int {
 	return size
 }
 
-// TODO-Klaytn-Issue3567 forbid voting except add, remove validator
-// bellow code is disabled only for temporarily until we solve data race of governance.
-//func TestGovernance_ClearVotes(t *testing.T) {
-//	gov := getGovernance()
-//
-//	for _, val := range tstData {
-//		ret := gov.AddVote(val.k, val.v)
-//		if ret != val.e {
-//			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
-//		}
-//	}
-//	gov.ClearVotes(0)
-//	if len(gov.voteMap) != 0 {
-//		t.Errorf("Want 0, got %v after clearing votes", len(gov.voteMap))
-//	}
-//}
+func TestGovernance_ClearVotes(t *testing.T) {
+	gov := getGovernance()
+
+	for _, val := range tstData {
+		ret := gov.AddVote(val.k, val.v)
+		if ret != val.e {
+			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
+		}
+	}
+	gov.ClearVotes(0)
+	if len(gov.voteMap) != 0 {
+		t.Errorf("Want 0, got %v after clearing votes", len(gov.voteMap))
+	}
+}
 
 func TestGovernance_GetEncodedVote(t *testing.T) {
 	var err error

@@ -181,10 +181,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			if len(header.Governance) > 0 {
 				gov.UpdateGovernance(number, header.Governance)
 			}
-			// TODO-Klaytn-Issue3567 forbid voting except add, remove validator
-			// as we decide not allowing voting except add, remove validator, bellow code is disabled.
-			// disable is only for temporary until we solve data race of governance
-			//gov.UpdateCurrentGovernance(number)
+			gov.UpdateCurrentGovernance(number)
 			gov.ClearVotes(number)
 
 			// Reload governance values because epoch changed

@@ -305,7 +305,10 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 			logger.Warn("Received Vote was invalid", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 		}
 		if number > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
-			gov.setVotesAndTally(votes, tally)
+			gov.GovernanceVotes = make([]GovernanceVote, len(votes))
+			gov.GovernanceTally = make([]GovernanceTally, len(tally))
+			copy(gov.GovernanceVotes, votes)
+			copy(gov.GovernanceTally, tally)
 		}
 	}
 	return valset, votes, tally

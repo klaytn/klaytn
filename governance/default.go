@@ -68,21 +68,6 @@ var (
 		"istanbul.policy":               params.Policy,
 		"reward.stakingupdateinterval":  params.StakeUpdateInterval,
 		"reward.proposerupdateinterval": params.ProposerRefreshInterval,
-
-		// TODO-Klaytn-Issue3567 forbid voting except add, remove validator
-		// bellow code is added only for temporarily until we solve data race of governance.
-		// until then, voting except add, remove validator will be forbidden
-		"governance.governancemode": params.GovernanceMode,
-		"governance.governingnode":  params.GoverningNode,
-		"istanbul.epoch":            params.Epoch,
-		"istanbul.committeesize":    params.CommitteeSize,
-		"governance.unitprice":      params.UnitPrice,
-		"reward.mintingamount":      params.MintingAmount,
-		"reward.ratio":              params.Ratio,
-		"reward.useginicoeff":       params.UseGiniCoeff,
-		"reward.deferredtxfee":      params.DeferredTxFee,
-		"reward.minimumstake":       params.MinimumStake,
-		"param.txgashumanreadable":  params.ConstTxGasHumanReadable,
 	}
 
 	GovernanceKeyMapReverse = map[int]string{
@@ -150,8 +135,7 @@ type VoteStatus struct {
 }
 
 type Governance struct {
-	ChainConfig    *params.ChainConfig
-	governanceLock sync.RWMutex
+	ChainConfig *params.ChainConfig
 
 	// Map used to keep multiple types of votes
 	voteMap     map[string]VoteStatus
@@ -685,8 +669,6 @@ type governanceJSON struct {
 }
 
 func (gov *Governance) toJSON(num uint64) ([]byte, error) {
-	gov.governanceLock.RLock()
-	defer gov.governanceLock.RUnlock()
 	ret := &governanceJSON{
 		BlockNumber:     num,
 		ChainConfig:     gov.ChainConfig,
@@ -706,8 +688,6 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &j); err != nil {
 		return err
 	}
-	gov.governanceLock.Lock()
-	defer gov.governanceLock.Unlock()
 	gov.ChainConfig = j.ChainConfig
 	gov.voteMap = j.VoteMap
 	gov.nodeAddress = j.NodeAddress
@@ -718,15 +698,6 @@ func (gov *Governance) UnmarshalJSON(b []byte) error {
 	gov.lastGovernanceStateBlock = j.BlockNumber
 
 	return nil
-}
-
-func (gov *Governance) setVotesAndTally(votes []GovernanceVote, tally []GovernanceTally) {
-	gov.governanceLock.Lock()
-	defer gov.governanceLock.Unlock()
-	gov.GovernanceVotes = make([]GovernanceVote, len(votes))
-	gov.GovernanceTally = make([]GovernanceTally, len(tally))
-	copy(gov.GovernanceVotes, votes)
-	copy(gov.GovernanceTally, tally)
 }
 
 func (gov *Governance) CanWriteGovernanceState(num uint64) bool {
