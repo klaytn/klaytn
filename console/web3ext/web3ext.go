@@ -992,6 +992,11 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getParentTransactionReceipt',
+			call: 'subbridge_getParentTransactionReceipt',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'setKLAYFee',
 			call: 'subbridge_setKLAYFee',
 			params: 2
