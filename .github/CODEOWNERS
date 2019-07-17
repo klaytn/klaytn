@@ -44,7 +44,7 @@
 /log/              @ehnuje
 /metrics/          @nogang 
 /networks/         @nogang @KimKyungup @jeonghonah
-/node/             @KimKyungup @jeonghonah
+/node/             @nogang @KimKyungup @jeonghonah
 /params/           @andybclee
 /params/version.go @kjhman21
 /ser/              @ehnuje
