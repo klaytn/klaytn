@@ -111,6 +111,10 @@ const (
 	StorageStateDB
 	VM
 	Work
+	CMDKSPN
+
+	// 51~60
+	CMDKSEN
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -178,4 +182,8 @@ var moduleNames = [ModuleNameLen]string{
 	"storage/statedb",
 	"vm",
 	"work",
+	"cmd/kspn",
+
+	// 51~60
+	"cmd/ksen",
 }

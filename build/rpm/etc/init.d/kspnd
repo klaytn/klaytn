@@ -1,26 +1,26 @@
 #!/bin/bash
 #
-# kpnd         Startup script for the kpn
+# kspnd         Startup script for the kspn
 #
 # chkconifg: - 85 15
-# description : kpnd is the Klaytn proxy node daemon
+# description : kspnd is the Klaytn proxy node daemon
 #
-# processname: kpnd
-# config:  /etc/kpnd/conf/kpnd.conf
-# pidfile: /var/run/kpnd.pid
+# processname: kspnd
+# config:  /etc/kspnd/conf/kspnd.conf
+# pidfile: /var/run/kspnd.pid
 #
 
 # Source function library.
 . /etc/init.d/functions
 
-if [ -f /etc/kpnd/conf/kpnd.conf ]; then
-        . /etc/kpnd/conf/kpnd.conf
+if [ -f /etc/kspnd/conf/kspnd.conf ]; then
+        . /etc/kspnd/conf/kspnd.conf
 fi
 
-kpn=/usr/bin/kpn
-prog=kpnd
-lockfile=${LOCKFILE-/var/lock/subsys/kpnd}
-pidfile=${PIDFILE-/var/run/kpnd.pid}
+kspn=/usr/bin/kspn
+prog=kspnd
+lockfile=${LOCKFILE-/var/lock/subsys/kspnd}
+pidfile=${PIDFILE-/var/run/kspnd.pid}
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
@@ -78,26 +78,17 @@ if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
     fi
 fi
 
-# Cypress network => NETWORK_ID is null && NETWORK = "cypress"
-# Baobab network => NETWORK_ID is null && NETWORK = "baobab"
-# Else => private network
+# private network only for Service Chain
 if [[ -z $NETWORK_ID ]]; then
-    if [[ $NETWORK == "baobab" ]]; then
-        OPTIONS="$OPTIONS --baobab"
-    elif [[ $NETWORK == "cypress" ]]; then
-        OPTIONS="$OPTIONS --cypress"
-    else
-        echo
-        echo "[ERROR] network id is not specified and network is not available."
-        echo "Available network: baobab, cypress"
-        exit 1
-    fi
+    echo
+    echo "[ERROR] network id should be specified for Service Chain."
+    exit 1
 else
     OPTIONS="$OPTIONS --networkid $NETWORK_ID"
     echo "[INFO] creating a private network: $NETWORK_ID"
     if [[ ! -z $NETWORK ]]; then
         echo
-        echo "[WARN] ignoring the specified network: $NETWORK"
+        echo "[WARN] ignoring the specified network for Service Chain: $NETWORK"
     fi
 fi
 
@@ -176,7 +167,7 @@ start() {
         [ -n "$pid" ] && echo && return
 
         set -f
-        $kpn $OPTIONS >> ${LOG_DIR}/kpnd.out 2>&1 &
+        $kspn $OPTIONS >> ${LOG_DIR}/kspnd.out 2>&1 &
         RETVAL=$?
         PIDNUM=$!
         set +f
@@ -193,7 +184,7 @@ start() {
 
 stop() {
         echo -n "Shutting down $prog: "
-        killproc -p ${pidfile} -d ${STOP_TIMEOUT} $kpn
+        killproc -p ${pidfile} -d ${STOP_TIMEOUT} $kspn
         RETVAL=$?
         echo
         [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
@@ -207,7 +198,7 @@ case "$1" in
         stop
         ;;
     status)
-        status -p ${pidfile} -l ${lockfile} $kpn
+        status -p ${pidfile} -l ${lockfile} $kspn
         ;;
     restart)
         stop
