@@ -19,7 +19,6 @@ package sc
 import (
 	"context"
 	"fmt"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
@@ -319,9 +318,9 @@ func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, p
 	return nil
 }
 
-func (sbapi *SubBridgeAPI) GetParentTransactionReceipt(txHash common.Hash) (*types.Receipt, error) {
+func (sbapi *SubBridgeAPI) GetParentTransactionReceipt(txHash common.Hash) (map[string]interface{}, error) {
 	ctx := context.Background()
-	return sbapi.sc.remoteBackend.(bind.DeployBackend).TransactionReceipt(ctx, txHash)
+	return sbapi.sc.remoteBackend.(RemoteBackendInterface).TransactionReceiptRpcOutput(ctx, txHash)
 }
 
 func (sbapi *SubBridgeAPI) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *big.Int) (common.Hash, error) {

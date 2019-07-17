@@ -237,6 +237,18 @@ func (ec *Client) TransactionReceipt(ctx context.Context, txHash common.Hash) (*
 	return r, err
 }
 
+// TransactionReceiptRpcOutput returns the receipt of a transaction by transaction hash as a rpc output.
+func (ec *Client) TransactionReceiptRpcOutput(ctx context.Context, txHash common.Hash) (map[string]interface{}, error) {
+	var r map[string]interface{}
+	err := ec.c.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
+	if err == nil {
+		if r == nil {
+			return nil, klaytn.NotFound
+		}
+	}
+	return r, err
+}
+
 func toBlockNumArg(number *big.Int) string {
 	if number == nil {
 		return "latest"
