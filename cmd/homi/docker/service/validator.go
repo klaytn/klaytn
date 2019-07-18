@@ -92,8 +92,9 @@ var validatorTemplate = `{{ .Name }}:
       - '{{ .Port }}:32323'
       - '{{ .RPCPort }}:8551'
       - '{{ .PrometheusPort }}:61001'
-{{- if eq .Name "SCN-0" }}
+{{- if eq .Name "EN-0" }}
       - '50505:50505'
+{{- else if eq .Name "SCN-0" }}
       - '50506:50506'
 {{- end }}
     entrypoint:
