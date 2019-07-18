@@ -40,7 +40,7 @@ type StakingInfo struct {
 	BlockNum uint64 // Block number where staking information of Council is fetched
 
 	// Information retrieved from AddressBook smart contract
-	CouncilNodeIds       []common.Address // NodeIds of Council
+	CouncilNodeAddrs     []common.Address // NodeIds of Council
 	CouncilStakingdAddrs []common.Address // Address of Staking account which holds staking balance
 	CouncilRewardAddrs   []common.Address // Address of Council account which will get block reward
 	KIRAddr              common.Address   // Address of KIR contract
@@ -56,7 +56,7 @@ type StakingInfo struct {
 func newEmptyStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
-		CouncilNodeIds:        make([]common.Address, 0, 0),
+		CouncilNodeAddrs:      make([]common.Address, 0, 0),
 		CouncilStakingdAddrs:  make([]common.Address, 0, 0),
 		CouncilRewardAddrs:    make([]common.Address, 0, 0),
 		KIRAddr:               common.Address{},
@@ -99,7 +99,7 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
-		CouncilNodeIds:        nodeIds,
+		CouncilNodeAddrs:      nodeIds,
 		CouncilStakingdAddrs:  stakingAddrs,
 		CouncilRewardAddrs:    rewardAddrs,
 		KIRAddr:               KIRAddr,
@@ -112,7 +112,7 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 }
 
 func (s *StakingInfo) GetIndexByNodeId(nodeId common.Address) int {
-	for i, addr := range s.CouncilNodeIds {
+	for i, addr := range s.CouncilNodeAddrs {
 		if addr == nodeId {
 			return i
 		}

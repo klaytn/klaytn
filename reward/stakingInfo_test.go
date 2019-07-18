@@ -46,7 +46,7 @@ func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
 		t.Errorf("error has occurred. error : %v", error)
 		t.FailNow()
 	}
-	stakingInfo.CouncilNodeIds = testdata
+	stakingInfo.CouncilNodeAddrs = testdata
 
 	for i := 0; i < len(testCases); i++ {
 		result := stakingInfo.GetIndexByNodeId(testCases[i].address)
@@ -85,7 +85,7 @@ func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
 		t.Errorf("error has occurred. error : %v", error)
 		t.FailNow()
 	}
-	stakingInfo.CouncilNodeIds = testdata.address
+	stakingInfo.CouncilNodeAddrs = testdata.address
 	stakingInfo.CouncilStakingAmounts = testdata.stakingAmount
 
 	for i := 0; i < len(testCases); i++ {
