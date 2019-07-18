@@ -17,6 +17,8 @@
 package reward
 
 import (
+	"errors"
+	"fmt"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
@@ -53,7 +55,7 @@ type StakingInfo struct {
 	CouncilStakingAmounts []uint64 // Staking amounts of Council
 }
 
-func newEmptyStakingInfo(blockNum uint64) (*StakingInfo, error) {
+func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
 		CouncilNodeAddrs:      make([]common.Address, 0, 0),
@@ -65,11 +67,15 @@ func newEmptyStakingInfo(blockNum uint64) (*StakingInfo, error) {
 		Gini:                  DefaultGiniCoefficient,
 		UseGini:               false,
 	}
-	return stakingInfo, nil
+	return stakingInfo
 }
 
 func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum uint64, nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*StakingInfo, error) {
 	intervalBlock := bc.GetBlockByNumber(blockNum)
+	if intervalBlock == nil {
+		logger.Trace("Failed to get the block by the given number", "blockNum", blockNum)
+		return nil, errors.New(fmt.Sprintf("Failed to get the block by the given number. blockNum: %d", blockNum))
+	}
 	statedb, err := bc.StateAt(intervalBlock.Root())
 	if err != nil {
 		logger.Trace("Failed to make a state for interval block", "interval blockNum", blockNum, "err", err)

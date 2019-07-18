@@ -41,10 +41,7 @@ func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
 		{common.StringToAddress("0x027AbB8c9f952cfFf01B1707fF14E2CB5D439502"), AddrNotFoundInCouncilNodes},
 	}
 
-	stakingInfo, error := newEmptyStakingInfo(0)
-	if error != nil {
-		assert.FailNow(t, error.Error())
-	}
+	stakingInfo := newEmptyStakingInfo(0)
 	stakingInfo.CouncilNodeAddrs = testdata
 
 	for i := 0; i < len(testCases); i++ {
@@ -79,10 +76,7 @@ func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
 		{common.StringToAddress("0x027AbB8c9f952cfFf01B1707fF14E2CB5D439502"), 0},
 	}
 
-	stakingInfo, error := newEmptyStakingInfo(0)
-	if error != nil {
-		assert.FailNow(t, error.Error())
-	}
+	stakingInfo := newEmptyStakingInfo(0)
 	stakingInfo.CouncilNodeAddrs = testdata.address
 	stakingInfo.CouncilStakingAmounts = testdata.stakingAmount
 
@@ -140,7 +134,7 @@ func TestGiniReflectToExpectedCCO(t *testing.T) {
 		},
 	}
 	for i := 0; i < len(testCase); i++ {
-		stakingInfo, _ := newEmptyStakingInfo(uint64(1))
+		stakingInfo := newEmptyStakingInfo(uint64(1))
 
 		weights := make([]float64, len(testCase[i].ccoToken))
 		tokenListToCalcGini := make([]uint64, len(testCase[i].ccoToken))
