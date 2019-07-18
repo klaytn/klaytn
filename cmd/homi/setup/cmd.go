@@ -481,6 +481,12 @@ func gen(ctx *cli.Context) error {
 			bridgeNodesJsonBytes, _ = json.MarshalIndent(enNodeInfos[:1], "", "\t")
 		}
 		scnGenesisJsonBytes, _ := json.MarshalIndent(genIstanbulGenesis(ctx, scnNodeAddress, nil, serviceChainId), "", "\t")
+		var dockerImageId string
+		if scnNum > 0 {
+			dockerImageId = "klaytn-base"
+		} else {
+			dockerImageId = ctx.String(dockerImageIdFlag.Name)
+		}
 		compose := compose.New(
 			"172.16.239",
 			num,
@@ -496,7 +502,7 @@ func gen(ctx *cli.Context) error {
 			removeSpacesAndLines(staticSPNNodesJsonBytes),
 			removeSpacesAndLines(staticSENNodesJsonBytes),
 			removeSpacesAndLines(bridgeNodesJsonBytes),
-			ctx.String(dockerImageIdFlag.Name),
+			dockerImageId,
 			ctx.Bool(fasthttpFlag.Name),
 			ctx.Int(networkIdFlag.Name),
 			int(chainid),
