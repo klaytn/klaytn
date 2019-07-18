@@ -43,12 +43,6 @@ const (
 
 var logger = log.NewModuleLogger(log.ServiceChain)
 
-// DefaultConfig contains default settings for use on the Klaytn main net.
-var DefaultConfig = SCConfig{
-	NetworkId: 1,
-	MaxPeer:   1, // Only a single main-bridge and sub-bridge pair is allowed.
-}
-
 func init() {
 	home := os.Getenv("HOME")
 	if home == "" {
