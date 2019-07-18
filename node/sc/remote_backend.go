@@ -163,21 +163,20 @@ func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.H
 	return r, err
 }
 
-func (rb *RemoteBackend) TransactionReceiptRpcOutput(ctx context.Context, txHash common.Hash) (map[string]interface{}, error) {
+func (rb *RemoteBackend) TransactionReceiptRpcOutput(ctx context.Context, txHash common.Hash) (r map[string]interface{}, err error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	var r map[string]interface{}
-	err := rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
+	err = rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
 	if err == nil {
 		if r == nil {
 			return nil, klaytn.NotFound
 		}
 	}
-	return r, err
+	return
 }
 
 // ChainID returns the chain ID of the sub-bridge configuration.
