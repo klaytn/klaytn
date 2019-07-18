@@ -213,7 +213,7 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	cfg := sc.SCConfig{
 		// TODO-Klaytn this value is temp for test
 		NetworkId: 1,
-		MaxPeer:   50,
+		MaxPeer:   1, // Only a single main-bridge and sub-bridge pair is allowed.
 	}
 
 	// bridge service
