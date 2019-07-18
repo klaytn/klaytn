@@ -172,45 +172,43 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     }
 
     // _requestKLAYTransfer requests transfer KLAY to _to on relative chain.
-    function _requestKLAYTransfer(address _to, uint256 _fee) internal {
+    function _requestKLAYTransfer(address _to, uint256 _feeLimit) internal {
         require(isRunning, "stopped bridge");
         require(msg.value > 0, "zero msg.value");
-        require(msg.value > _fee, "insufficient amount");
-        require(feeOfKLAY == _fee, "invalid fee");
+        require(msg.value > _feeLimit, "insufficient amount");
 
-        _payKLAYFee(_fee);
+        _payKLAYFeeAndRefundChange(_feeLimit);
 
         emit RequestValueTransfer(
             TokenKind.KLAY,
             msg.sender,
-            msg.value.sub(_fee),
+            msg.value.sub(_feeLimit),
             address(0),
             _to,
             requestNonce,
             "",
-            _fee
+            _feeLimit
         );
         requestNonce++;
     }
 
     // () requests transfer KLAY to msg.sender address on relative chain.
     function () external payable {
-        _requestKLAYTransfer(msg.sender, feeOfKLAY);
+        _requestKLAYTransfer(msg.sender, msg.value);
     }
 
     // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
-    function requestKLAYTransfer(address _to, uint256 _fee) external payable {
-        _requestKLAYTransfer(_to, _fee);
+    function requestKLAYTransfer(address _to, uint256 _feeLimit) external payable {
+        _requestKLAYTransfer(_to, _feeLimit);
     }
 
     // _requestERC20Transfer requests transfer ERC20 to _to on relative chain.
-    function _requestERC20Transfer(address _contractAddress, address _from, address _to, uint256 _amount, uint256 _fee) internal {
+    function _requestERC20Transfer(address _contractAddress, address _from, address _to, uint256 _amount, uint256 _feeLimit) internal {
         require(isRunning, "stopped bridge");
         require(_amount > 0, "zero msg.value");
         require(allowedTokens[_contractAddress] != address(0), "Not a valid token");
-        require(_fee == feeOfERC20[_contractAddress], "invalid fee");
 
-        _payERC20Fee(_contractAddress, _fee);
+        _payERC20FeeAndRefundChange(_from, _contractAddress, _feeLimit);
 
         if (modeMintBurn) {
             ERC20Burnable(_contractAddress).burn(_amount);
@@ -224,7 +222,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
             _to,
             requestNonce,
             "",
-            _fee
+            _feeLimit
         );
         requestNonce++;
     }
@@ -234,17 +232,17 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         address _from,
         uint256 _amount,
         address _to,
-        uint256 _fee
+        uint256 _feeLimit
     )
     public
     {
-        _requestERC20Transfer(msg.sender, _from, _to, _amount, _fee);
+        _requestERC20Transfer(msg.sender, _from, _to, _amount, _feeLimit);
     }
 
     // requestERC20Transfer requests transfer ERC20 to _to on relative chain.
-    function requestERC20Transfer(address _contractAddress, address _to, uint256 _amount, uint256 _fee) external {
-        IERC20(_contractAddress).transferFrom(msg.sender, address(this), _amount.add(_fee));
-        _requestERC20Transfer(_contractAddress, msg.sender, _to, _amount, _fee);
+    function requestERC20Transfer(address _contractAddress, address _to, uint256 _amount, uint256 _feeLimit) external {
+        IERC20(_contractAddress).transferFrom(msg.sender, address(this), _amount.add(_feeLimit));
+        _requestERC20Transfer(_contractAddress, msg.sender, _to, _amount, _feeLimit);
     }
 
     // _requestERC721Transfer requests transfer ERC721 to _to on relative chain.
