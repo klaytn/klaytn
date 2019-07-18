@@ -40,11 +40,11 @@ type StakingInfo struct {
 	BlockNum uint64 // Block number where staking information of Council is fetched
 
 	// Information retrieved from AddressBook smart contract
-	CouncilNodeAddrs     []common.Address // NodeIds of Council
-	CouncilStakingdAddrs []common.Address // Address of Staking account which holds staking balance
-	CouncilRewardAddrs   []common.Address // Address of Council account which will get block reward
-	KIRAddr              common.Address   // Address of KIR contract
-	PoCAddr              common.Address   // Address of PoC contract
+	CouncilNodeAddrs    []common.Address // NodeIds of Council
+	CouncilStakingAddrs []common.Address // Address of Staking account which holds staking balance
+	CouncilRewardAddrs  []common.Address // Address of Council account which will get block reward
+	KIRAddr             common.Address   // Address of KIR contract
+	PoCAddr             common.Address   // Address of PoC contract
 
 	UseGini bool
 	Gini    float64 // gini coefficient
@@ -57,7 +57,7 @@ func newEmptyStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
 		CouncilNodeAddrs:      make([]common.Address, 0, 0),
-		CouncilStakingdAddrs:  make([]common.Address, 0, 0),
+		CouncilStakingAddrs:   make([]common.Address, 0, 0),
 		CouncilRewardAddrs:    make([]common.Address, 0, 0),
 		KIRAddr:               common.Address{},
 		PoCAddr:               common.Address{},
@@ -98,7 +98,7 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
 		CouncilNodeAddrs:      nodeIds,
-		CouncilStakingdAddrs:  stakingAddrs,
+		CouncilStakingAddrs:   stakingAddrs,
 		CouncilRewardAddrs:    rewardAddrs,
 		KIRAddr:               KIRAddr,
 		PoCAddr:               PoCAddr,
