@@ -38,6 +38,7 @@ func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
 		{common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"), 1},
 		{common.StringToAddress("0x994daB8EB6f3FaE044cC0c9a0AB1A038e136b0B6"), 2},
 		{common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"), 3},
+		{common.StringToAddress("0x027AbB8c9f952cfFf01B1707fF14E2CB5D439502"), AddrNotFoundInCouncilNodes},
 	}
 
 	stakingInfo, error := newEmptyStakingInfo(0)
@@ -49,9 +50,6 @@ func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
 
 	for i := 0; i < len(testCases); i++ {
 		result := stakingInfo.GetIndexByNodeId(testCases[i].address)
-		if result == AddrNotFoundInCouncilNodes {
-			t.Errorf("Address is not found in stakingInfo")
-		}
 		assert.Equal(t, testCases[i].index, result)
 	}
 }
@@ -79,6 +77,7 @@ func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
 		{common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"), 200},
 		{common.StringToAddress("0x994daB8EB6f3FaE044cC0c9a0AB1A038e136b0B6"), 300},
 		{common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"), 400},
+		{common.StringToAddress("0x027AbB8c9f952cfFf01B1707fF14E2CB5D439502"), 0},
 	}
 
 	stakingInfo, error := newEmptyStakingInfo(0)
