@@ -461,26 +461,26 @@ func gen(ctx *cli.Context) error {
 		enNodeValidators, enNodeKeys := makeEndpoints(enNum, false)
 		enNodeInfos := filterNodeInfo(enNodeValidators)
 
-		scnNodeValidators, scnNodeKeys := makeSCNNodes(scnNum, false)
-		scnNodeInfos := filterNodeInfo(scnNodeValidators)
-		scnNodeAddress := filterAddresses(scnNodeValidators)
+		scnValidators, scnKeys := makeSCNs(scnNum, false)
+		scnInfos := filterNodeInfo(scnValidators)
+		scnAddress := filterAddresses(scnValidators)
 
-		spnNodeValidators, spnNodeKeys := makeSPNNodes(spnNum, false)
-		spnNodeInfos := filterNodeInfo(spnNodeValidators)
+		spnValidators, spnKeys := makeSPNs(spnNum, false)
+		spnInfos := filterNodeInfo(spnValidators)
 
-		senNodeValidators, senNodeKeys := makeSENNodes(senNum, false)
-		senNodeInfos := filterNodeInfo(senNodeValidators)
+		senValidators, senKeys := makeSENs(senNum, false)
+		senInfos := filterNodeInfo(senValidators)
 
-		staticPNNodesJsonBytes, _ := json.MarshalIndent(pnNodeInfos, "", "\t")
-		staticENNodesJsonBytes, _ := json.MarshalIndent(enNodeInfos, "", "\t")
-		staticSCNodesJsonBytes, _ := json.MarshalIndent(scnNodeInfos, "", "\t")
-		staticSPNNodesJsonBytes, _ := json.MarshalIndent(spnNodeInfos, "", "\t")
-		staticSENNodesJsonBytes, _ := json.MarshalIndent(senNodeInfos, "", "\t")
+		staticPNJsonBytes, _ := json.MarshalIndent(pnNodeInfos, "", "\t")
+		staticENJsonBytes, _ := json.MarshalIndent(enNodeInfos, "", "\t")
+		staticSCNJsonBytes, _ := json.MarshalIndent(scnInfos, "", "\t")
+		staticSPNJsonBytes, _ := json.MarshalIndent(spnInfos, "", "\t")
+		staticSENJsonBytes, _ := json.MarshalIndent(senInfos, "", "\t")
 		var bridgeNodesJsonBytes []byte
 		if len(enNodeInfos) != 0 {
 			bridgeNodesJsonBytes, _ = json.MarshalIndent(enNodeInfos[:1], "", "\t")
 		}
-		scnGenesisJsonBytes, _ := json.MarshalIndent(genIstanbulGenesis(ctx, scnNodeAddress, nil, serviceChainId), "", "\t")
+		scnGenesisJsonBytes, _ := json.MarshalIndent(genIstanbulGenesis(ctx, scnAddress, nil, serviceChainId), "", "\t")
 		var dockerImageId string
 		if scnNum > 0 {
 			dockerImageId = "klaytn-base"
@@ -496,11 +496,11 @@ func gen(ctx *cli.Context) error {
 			removeSpacesAndLines(genesisJsonBytes),
 			removeSpacesAndLines(scnGenesisJsonBytes),
 			removeSpacesAndLines(staticNodesJsonBytes),
-			removeSpacesAndLines(staticPNNodesJsonBytes),
-			removeSpacesAndLines(staticENNodesJsonBytes),
-			removeSpacesAndLines(staticSCNodesJsonBytes),
-			removeSpacesAndLines(staticSPNNodesJsonBytes),
-			removeSpacesAndLines(staticSENNodesJsonBytes),
+			removeSpacesAndLines(staticPNJsonBytes),
+			removeSpacesAndLines(staticENJsonBytes),
+			removeSpacesAndLines(staticSCNJsonBytes),
+			removeSpacesAndLines(staticSPNJsonBytes),
+			removeSpacesAndLines(staticSENJsonBytes),
 			removeSpacesAndLines(bridgeNodesJsonBytes),
 			dockerImageId,
 			ctx.Bool(fasthttpFlag.Name),
@@ -509,9 +509,9 @@ func gen(ctx *cli.Context) error {
 			!ctx.BoolT(nografanaFlag.Name),
 			proxyNodeKeys,
 			enNodeKeys,
-			scnNodeKeys,
-			spnNodeKeys,
-			senNodeKeys,
+			scnKeys,
+			spnKeys,
+			senKeys,
 			ctx.Bool(useTxGenFlag.Name),
 			service.TxGenOption{
 				TxGenRate:       ctx.Int(txGenRateFlag.Name),
@@ -780,12 +780,12 @@ func makeEndpoints(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string
 	return endpoints, endpointsNodeKeys
 }
 
-func makeSCNNodes(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
+func makeSCNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
 
 	var p2pPort uint16
 	var scn []*ValidatorInfo
-	var scnNodeKeys []string
+	var scnKeys []string
 	for i := 0; i < num; i++ {
 		if isWorkOnSingleHost {
 			p2pPort = lastIssuedPortNum
@@ -805,12 +805,12 @@ func makeSCNNodes(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string)
 				discover.NodeTypeUnknown).String(),
 		}
 		scn = append(scn, v)
-		scnNodeKeys = append(scnNodeKeys, v.Nodekey)
+		scnKeys = append(scnKeys, v.Nodekey)
 	}
-	return scn, scnNodeKeys
+	return scn, scnKeys
 }
 
-func makeSPNNodes(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
+func makeSPNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
 
 	var p2pPort uint16
@@ -840,7 +840,7 @@ func makeSPNNodes(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string)
 	return proxies, proxyNodeKeys
 }
 
-func makeSENNodes(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
+func makeSENs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
 
 	var p2pPort uint16
