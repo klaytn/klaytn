@@ -33,20 +33,28 @@ func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
 	testCases := []struct {
 		address common.Address
 		index   int
+		error   bool
 	}{
-		{common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"), 0},
-		{common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"), 1},
-		{common.StringToAddress("0x994daB8EB6f3FaE044cC0c9a0AB1A038e136b0B6"), 2},
-		{common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"), 3},
-		{common.StringToAddress("0x027AbB8c9f952cfFf01B1707fF14E2CB5D439502"), AddrNotFoundInCouncilNodes},
+		{common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"), 0, false},
+		{common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"), 1, false},
+		{common.StringToAddress("0x994daB8EB6f3FaE044cC0c9a0AB1A038e136b0B6"), 2, false},
+		{common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"), 3, false},
+		{common.StringToAddress("0x027AbB8c9f952cfFf01B1707fF14E2CB5D439502"), AddrNotFoundInCouncilNodes, true},
 	}
 
 	stakingInfo := newEmptyStakingInfo(0)
 	stakingInfo.CouncilNodeAddrs = testdata
 
 	for i := 0; i < len(testCases); i++ {
-		result := stakingInfo.GetIndexByNodeId(testCases[i].address)
+		result, err := stakingInfo.GetIndexByNodeId(testCases[i].address)
+		var errExist bool
+		if err != nil {
+			errExist = true
+		} else {
+			errExist = false
+		}
 		assert.Equal(t, testCases[i].index, result)
+		assert.Equal(t, testCases[i].error, errExist)
 	}
 }
 
@@ -68,12 +76,13 @@ func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
 	testCases := []struct {
 		address       common.Address
 		stakingAmount uint64
+		error         bool
 	}{
-		{common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"), 100},
-		{common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"), 200},
-		{common.StringToAddress("0x994daB8EB6f3FaE044cC0c9a0AB1A038e136b0B6"), 300},
-		{common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"), 400},
-		{common.StringToAddress("0x027AbB8c9f952cfFf01B1707fF14E2CB5D439502"), 0},
+		{common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"), 100, false},
+		{common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"), 200, false},
+		{common.StringToAddress("0x994daB8EB6f3FaE044cC0c9a0AB1A038e136b0B6"), 300, false},
+		{common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"), 400, false},
+		{common.StringToAddress("0x027AbB8c9f952cfFf01B1707fF14E2CB5D439502"), 0, true},
 	}
 
 	stakingInfo := newEmptyStakingInfo(0)
@@ -81,8 +90,15 @@ func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
 	stakingInfo.CouncilStakingAmounts = testdata.stakingAmount
 
 	for i := 0; i < len(testCases); i++ {
-		result := stakingInfo.GetStakingAmountByNodeId(testCases[i].address)
+		result, err := stakingInfo.GetStakingAmountByNodeId(testCases[i].address)
+		var errExist bool
+		if err != nil {
+			errExist = true
+		} else {
+			errExist = false
+		}
 		assert.Equal(t, testCases[i].stakingAmount, result)
+		assert.Equal(t, testCases[i].error, errExist)
 	}
 }
 
@@ -98,10 +114,7 @@ func TestCalcGiniCoefficient(t *testing.T) {
 
 	for i := 0; i < len(testCase); i++ {
 		result := CalcGiniCoefficient(testCase[i].testdata)
-
-		if result != testCase[i].result {
-			t.Errorf("The result is different from the expected result. result : %v, expected : %v", result, testCase[i].result)
-		}
+		assert.Equal(t, testCase[i].result, result)
 	}
 }
 

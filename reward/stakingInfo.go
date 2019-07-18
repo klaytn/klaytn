@@ -35,6 +35,8 @@ const (
 
 var (
 	maxStakingLimitBigInt = big.NewInt(0).SetUint64(maxStakingLimit)
+
+	ErrAddrNotInStakingInfo = errors.New("Address is not in stakingInfo")
 )
 
 // StakingInfo contains staking information.
@@ -115,21 +117,21 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 	return stakingInfo, nil
 }
 
-func (s *StakingInfo) GetIndexByNodeId(nodeId common.Address) int {
+func (s *StakingInfo) GetIndexByNodeId(nodeId common.Address) (int, error) {
 	for i, addr := range s.CouncilNodeAddrs {
 		if addr == nodeId {
-			return i
+			return i, nil
 		}
 	}
-	return AddrNotFoundInCouncilNodes
+	return AddrNotFoundInCouncilNodes, ErrAddrNotInStakingInfo
 }
 
-func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) uint64 {
-	i := s.GetIndexByNodeId(nodeId)
-	if i != AddrNotFoundInCouncilNodes {
-		return s.CouncilStakingAmounts[i]
+func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) (uint64, error) {
+	i, err := s.GetIndexByNodeId(nodeId)
+	if err != nil {
+		return 0, err
 	}
-	return 0
+	return s.CouncilStakingAmounts[i], nil
 }
 
 type uint64Slice []uint64
