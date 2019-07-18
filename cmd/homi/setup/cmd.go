@@ -457,9 +457,9 @@ func gen(ctx *cli.Context) error {
 		nodeInfos := filterNodeInfo(validators)
 		staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
 		address := filterAddressesString(validators)
-		pnNodeInfos := filterNodeInfo(pnValidators)
-		enNodeValidators, enNodeKeys := makeEndpoints(enNum, false)
-		enNodeInfos := filterNodeInfo(enNodeValidators)
+		pnInfos := filterNodeInfo(pnValidators)
+		enValidators, enKeys := makeEndpoints(enNum, false)
+		enInfos := filterNodeInfo(enValidators)
 
 		scnValidators, scnKeys := makeSCNs(scnNum, false)
 		scnInfos := filterNodeInfo(scnValidators)
@@ -471,14 +471,14 @@ func gen(ctx *cli.Context) error {
 		senValidators, senKeys := makeSENs(senNum, false)
 		senInfos := filterNodeInfo(senValidators)
 
-		staticPNJsonBytes, _ := json.MarshalIndent(pnNodeInfos, "", "\t")
-		staticENJsonBytes, _ := json.MarshalIndent(enNodeInfos, "", "\t")
+		staticPNJsonBytes, _ := json.MarshalIndent(pnInfos, "", "\t")
+		staticENJsonBytes, _ := json.MarshalIndent(enInfos, "", "\t")
 		staticSCNJsonBytes, _ := json.MarshalIndent(scnInfos, "", "\t")
 		staticSPNJsonBytes, _ := json.MarshalIndent(spnInfos, "", "\t")
 		staticSENJsonBytes, _ := json.MarshalIndent(senInfos, "", "\t")
 		var bridgeNodesJsonBytes []byte
-		if len(enNodeInfos) != 0 {
-			bridgeNodesJsonBytes, _ = json.MarshalIndent(enNodeInfos[:1], "", "\t")
+		if len(enInfos) != 0 {
+			bridgeNodesJsonBytes, _ = json.MarshalIndent(enInfos[:1], "", "\t")
 		}
 		scnGenesisJsonBytes, _ := json.MarshalIndent(genIstanbulGenesis(ctx, scnAddress, nil, serviceChainId), "", "\t")
 		var dockerImageId string
@@ -508,7 +508,7 @@ func gen(ctx *cli.Context) error {
 			int(chainid),
 			!ctx.BoolT(nografanaFlag.Name),
 			proxyNodeKeys,
-			enNodeKeys,
+			enKeys,
 			scnKeys,
 			spnKeys,
 			senKeys,
