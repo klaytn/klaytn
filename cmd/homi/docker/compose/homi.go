@@ -39,19 +39,25 @@ type Homi struct {
 }
 
 func New(ipPrefix string, number int, secret string, addresses, nodeKeys []string,
-	genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNNodes, bridegeNodes, dockerImageId string, useFastHttp bool, networkId, parentChainId int,
-	useGrafana bool, proxyNodeKeys, enNodeKeys, scnNodeKeys []string, useTxGen bool, txGenOpt service.TxGenOption) *Homi {
+	genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNNodes, staticSPNNodes, staticSENNodes,
+	bridgeNodes, dockerImageId string, useFastHttp bool, networkId, parentChainId int,
+	useGrafana bool, proxyNodeKeys, enNodeKeys, scnNodeKeys, spnNodeKeys, senNodeKeys []string, useTxGen bool,
+	txGenOpt service.TxGenOption) *Homi {
 	ist := &Homi{
 		IPPrefix:   ipPrefix,
 		EthStats:   service.NewEthStats(fmt.Sprintf("%v.9", ipPrefix), secret),
 		UseGrafana: useGrafana,
 		UseTxGen:   useTxGen,
 	}
-	ist.init(number, addresses, nodeKeys, genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNNodes, bridegeNodes, dockerImageId, useFastHttp, networkId, parentChainId, proxyNodeKeys, enNodeKeys, scnNodeKeys, txGenOpt)
+	ist.init(number, addresses, nodeKeys, genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes,
+		staticSCNNodes, staticSPNNodes, staticSENNodes, bridgeNodes, dockerImageId, useFastHttp, networkId,
+		parentChainId, proxyNodeKeys, enNodeKeys, scnNodeKeys, spnNodeKeys, senNodeKeys, txGenOpt)
 	return ist
 }
 
-func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNodes, bridgeNodes, dockerImageId string, useFastHttp bool, networkId, parentChainId int, proxyNodeKeys, enNodeKeys, scnNodeKeys []string, txGenOpt service.TxGenOption) {
+func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenesis, staticCNNodes, staticPNNodes,
+	staticENNodes, staticSCNNodes, staticSPNNodes, staticSENNodes, bridgeNodes, dockerImageId string, useFastHttp bool,
+	networkId, parentChainId int, proxyNodeKeys, enNodeKeys, scnNodeKeys, spnNodeKeys, senNodeKeys []string, txGenOpt service.TxGenOption) {
 	var validatorNames []string
 	for i := 0; i < number; i++ {
 		s := service.NewValidator(i,
@@ -142,6 +148,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 		validatorNames = append(validatorNames, s.Name)
 	}
 
+	numSCNs := len(scnNodeKeys)
 	for i := 0; i < len(scnNodeKeys); i++ {
 		s := service.NewValidator(i,
 			"",
@@ -165,7 +172,63 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 			false,
 		)
 
-		staticSCNodes = strings.Replace(staticSCNodes, "0.0.0.0", s.IP, 1)
+		staticSCNNodes = strings.Replace(staticSCNNodes, "0.0.0.0", s.IP, 1)
+		ist.Services = append(ist.Services, s)
+		validatorNames = append(validatorNames, s.Name)
+	}
+
+	numSPNs := len(spnNodeKeys)
+	for i := 0; i < len(spnNodeKeys); i++ {
+		s := service.NewValidator(i,
+			"",
+			scGenesis,
+			"",
+			spnNodeKeys[i],
+			"",
+			"",
+			32323+number+numPNs+numENs+numSCNs+i,
+			8551+number+numPNs+numENs+numSCNs+i,
+			61001+number+numPNs+numENs+numSCNs+i,
+			ist.EthStats.Host(),
+			// from subnet ip 10
+			fmt.Sprintf("%v.%v", ist.IPPrefix, number+numPNs+numENs+numSCNs+i+10),
+			dockerImageId,
+			useFastHttp,
+			networkId,
+			parentChainId,
+			"SPN",
+			"spn",
+			false,
+		)
+
+		staticSPNNodes = strings.Replace(staticSPNNodes, "0.0.0.0", s.IP, 1)
+		ist.Services = append(ist.Services, s)
+		validatorNames = append(validatorNames, s.Name)
+	}
+
+	for i := 0; i < len(senNodeKeys); i++ {
+		s := service.NewValidator(i,
+			"",
+			scGenesis,
+			"",
+			senNodeKeys[i],
+			"",
+			bridgeNodes,
+			32323+number+numPNs+numENs+numSCNs+numSPNs+i,
+			8551+number+numPNs+numENs+numSCNs+numSPNs+i,
+			61001+number+numPNs+numENs+numSCNs+numSPNs+i,
+			ist.EthStats.Host(),
+			// from subnet ip 10
+			fmt.Sprintf("%v.%v", ist.IPPrefix, number+numPNs+numENs+numSCNs+numSPNs+i+10),
+			dockerImageId,
+			useFastHttp,
+			networkId,
+			parentChainId,
+			"SEN",
+			"sen",
+			false,
+		)
+
 		ist.Services = append(ist.Services, s)
 		validatorNames = append(validatorNames, s.Name)
 	}
@@ -173,10 +236,11 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 	// update static nodes
 	for i := range ist.Services {
 		if ist.Services[i].NodeType == "scn" {
-			ist.Services[i].StaticNodes = staticSCNodes
-			if ist.Services[i].Name == "SCN-0" {
-				ist.Services[i].BridgeNodes = bridgeNodes
-			}
+			ist.Services[i].StaticNodes = staticSCNNodes
+		} else if ist.Services[i].NodeType == "spn" {
+			ist.Services[i].StaticNodes = staticSCNNodes
+		} else if ist.Services[i].NodeType == "sen" {
+			ist.Services[i].StaticNodes = staticSPNNodes
 		} else if ist.Services[i].NodeType == "en" {
 			ist.Services[i].StaticNodes = staticPNNodes
 		} else {

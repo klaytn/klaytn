@@ -82,6 +82,18 @@ var (
 		Value: 0,
 	}
 
+	numOfSPNsFlag = cli.IntFlag{
+		Name:  "spn-num",
+		Usage: "Number of service chain proxy nodes",
+		Value: 0,
+	}
+
+	numOfSENsFlag = cli.IntFlag{
+		Name:  "sen-num",
+		Usage: "Number of service chain end-point nodes",
+		Value: 0,
+	}
+
 	numOfTestKeyFlag = cli.IntFlag{
 		Name:  "test-num",
 		Usage: "Number of test key",
@@ -128,7 +140,7 @@ var (
 
 	dockerImageIdFlag = cli.StringFlag{
 		Name:        "docker-image-id",
-		Value:       "428948643293.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest",
+		Value:       "klaytn-client",
 		Usage:       "Base docker image ID (Image[:tag])",
 		Destination: &dockerImageId,
 	}

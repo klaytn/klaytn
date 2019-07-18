@@ -66,6 +66,8 @@ func NewValidator(identity int, genesis, scGenesis string, nodeAddress string, n
 		ParentChainId:  parentChainId,
 		NodeType:       nodeType,
 		AddPrivKey:     addPrivKey,
+		StaticNodes:    staticNodes,
+		BridgeNodes:    bridgeNodes,
 	}
 }
 
@@ -92,8 +94,9 @@ var validatorTemplate = `{{ .Name }}:
       - '{{ .Port }}:32323'
       - '{{ .RPCPort }}:8551'
       - '{{ .PrometheusPort }}:61001'
-{{- if eq .Name "SCN-0" }}
+{{- if eq .Name "EN-0" }}
       - '50505:50505'
+{{- else if eq .Name "SCN-0" }}
       - '50506:50506'
 {{- end }}
     entrypoint:
@@ -103,11 +106,15 @@ var validatorTemplate = `{{ .Name }}:
         mkdir -p /klaytn
 {{- if eq .NodeType "scn" }}
         echo '{{ .SCGenesis }}' > /klaytn/genesis.json
+{{- else if eq .NodeType "spn" }}
+        echo '{{ .SCGenesis }}' > /klaytn/genesis.json
+{{- else if eq .NodeType "sen" }}
+        echo '{{ .SCGenesis }}' > /klaytn/genesis.json
 {{- else }}
         echo '{{ .Genesis }}' > /klaytn/genesis.json
 {{- end }}
         echo '{{ .StaticNodes }}' > /klaytn/static-nodes.json
-{{- if eq .Name "SCN-0" }}
+{{- if eq .Name "SEN-0" }}
         echo '{{ .BridgeNodes }}' > /klaytn/mainchain-bridges.json
 {{- end }}
         k{{ .NodeType }} --datadir "/klaytn" init "/klaytn/genesis.json"
@@ -152,7 +159,9 @@ var validatorTemplate = `{{ .Name }}:
 {{- else if eq .NodeType "scn"}}
         --parentchainid {{ .ParentChainId }} \
         --scconsensus "istanbul" \
-{{- if eq .Name "SCN-0" }}
+{{- else if eq .NodeType "sen"}}
+        --parentchainid {{ .ParentChainId }} \
+{{- if eq .Name "SEN-0" }}
         --subbridge \
         --subbridgeport 50506 \
 {{- end }}
