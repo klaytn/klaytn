@@ -31,9 +31,9 @@ func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
 		common.StringToAddress("0xD527822212Fded72c5fE89f46281d5355BD58235"),
 	}
 	testCases := []struct {
-		address common.Address
-		index   int
-		error   bool
+		address    common.Address
+		index      int
+		errorExist bool
 	}{
 		{common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"), 0, false},
 		{common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"), 1, false},
@@ -54,7 +54,7 @@ func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
 			errExist = false
 		}
 		assert.Equal(t, testCases[i].index, result)
-		assert.Equal(t, testCases[i].error, errExist)
+		assert.Equal(t, testCases[i].errorExist, errExist)
 	}
 }
 
@@ -76,7 +76,7 @@ func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
 	testCases := []struct {
 		address       common.Address
 		stakingAmount uint64
-		error         bool
+		errorExist    bool
 	}{
 		{common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"), 100, false},
 		{common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"), 200, false},
@@ -98,7 +98,7 @@ func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
 			errExist = false
 		}
 		assert.Equal(t, testCases[i].stakingAmount, result)
-		assert.Equal(t, testCases[i].error, errExist)
+		assert.Equal(t, testCases[i].errorExist, errExist)
 	}
 }
 
