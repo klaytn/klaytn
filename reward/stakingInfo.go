@@ -77,8 +77,7 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 	}
 
 	// Get balance of stakingAddrs
-	var stakingAmounts []uint64
-	stakingAmounts = make([]uint64, len(stakingAddrs))
+	stakingAmounts := make([]uint64, len(stakingAddrs))
 	for i, stakingAddr := range stakingAddrs {
 		tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KLAY))
 		if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
@@ -88,7 +87,6 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 	}
 
 	var useGini bool
-
 	if res, err := helper.GetItemAtNumberByIntKey(blockNum, params.UseGiniCoeff); err != nil {
 		logger.Trace("Failed to get useGiniCoeff from governance", "blockNum", blockNum, "err", err)
 		return nil, err
