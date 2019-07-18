@@ -210,11 +210,7 @@ func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
 }
 
 func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
-	cfg := sc.SCConfig{
-		// TODO-Klaytn this value is temp for test
-		NetworkId: 1,
-		MaxPeer:   1, // Only a single main-bridge and sub-bridge pair is allowed.
-	}
+	cfg := sc.DefaultConfig
 
 	// bridge service
 	if ctx.GlobalBool(utils.MainBridgeFlag.Name) {
