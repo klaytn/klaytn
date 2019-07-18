@@ -71,9 +71,6 @@ func makeGenesisAccount(addrs []common.Address, balance *big.Int) map[common.Add
 func Alloc(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
-		alloc[common.HexToAddress(contract.AddressBookContractAddress)] = blockchain.GenesisAccount{
-			Balance: big.NewInt(0),
-		}
 		genesis.Alloc = alloc
 	}
 }
