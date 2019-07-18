@@ -43,8 +43,7 @@ func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
 
 	stakingInfo, error := newEmptyStakingInfo(0)
 	if error != nil {
-		t.Errorf("error has occurred. error : %v", error)
-		t.FailNow()
+		assert.FailNow(t, error.Error())
 	}
 	stakingInfo.CouncilNodeAddrs = testdata
 
@@ -82,8 +81,7 @@ func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
 
 	stakingInfo, error := newEmptyStakingInfo(0)
 	if error != nil {
-		t.Errorf("error has occurred. error : %v", error)
-		t.FailNow()
+		assert.FailNow(t, error.Error())
 	}
 	stakingInfo.CouncilNodeAddrs = testdata.address
 	stakingInfo.CouncilStakingAmounts = testdata.stakingAmount
