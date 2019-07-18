@@ -24,48 +24,38 @@
 # subdirectories.
 #/build/logs/      @doctocat
 
-/.circleci/        @bitaholic
-/.github/          @kjhman21
-/accounts/         @kjhman21
-/api/              @kjhman21
-/blockchain/       @kjhman21
-/build/            @bitaholic
-/client/           @KimKyungup
-/cmd/              @bitaholic
-/cmd/kscn/         @KimKyungup
+/accounts/         @KimKyungup @jeonghonah 
+/api/              @aidan-kwon
+/blockchain/       @ehnuje @nogang @KimKyungup @jeonghonah 
+/blockchain/types  @aidan-kwon @jimni1222
+/build/            @KimKyungup @jeonghonah
+/client/           @KimKyungup @jeonghonah
+/cmd/              @KimKyungup @jeonghonah
 /common/           @andybclee
 /consensus/        @andybclee
 /console/          @andybclee
-/contracts/        @andybclee
+/contracts/        @KimKyungup @jeonghonah 
 /crypto/           @aidan-kwon
-/datasync/         @ehnuje
+/datasync/         @ehnuje @nogang 
 /event/            @ehnuje
-/fork/             @kjhman21
+/fork/             @aidan-kwon
 /governance/       @andybclee
-/kerrors/          @kjhman21
+/kerrors/          @aidan-kwon
 /log/              @ehnuje
-/metrics/          @bitaholic
-/networks/         @bitaholic
-/node/             @bitaholic
-/node/sc/          @KimKyungup @jeonghonah
+/metrics/          @nogang 
+/networks/         @nogang @KimKyungup @jeonghonah
+/node/             @nogang @KimKyungup @jeonghonah
 /params/           @andybclee
-/params/version.go @bitaholic
+/params/version.go @kjhman21
+/reward/           @laggu
 /ser/              @ehnuje
 /storage/          @ehnuje
-/tests/            @kjhman21
-/utils/            @bitaholic
+/tests/            @aidan-kwon @jimni1222 
+/utils/            @kjhman21
 /vendor/           @ehnuje
-/work/             @kjhman21
-/.dockerignore     @bitaholic
-/.gitignore        @bitaholic
-/COPYING           @kjhman21
-/COPYING.LESSER    @kjhman21
-/Dockerfile        @bitaholic
+/work/             @ehnuje @nogang
 /Gopkg.lock        @ehnuje
 /Gopkg.toml        @ehnuje
-/Makefile          @bitaholic
-/README.md         @kjhman21
-/interface.go      @kjhman21
 /tags-for-todo-and-note.md   @ehnuje
 
 # The `docs/*` pattern will match files like
