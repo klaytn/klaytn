@@ -155,10 +155,8 @@ func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.H
 	defer cancel()
 	var r *types.Receipt
 	err := rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
-	if err == nil {
-		if r == nil {
-			return nil, klaytn.NotFound
-		}
+	if err == nil && r == nil {
+		return nil, klaytn.NotFound
 	}
 	return r, err
 }
@@ -171,10 +169,8 @@ func (rb *RemoteBackend) TransactionReceiptRpcOutput(ctx context.Context, txHash
 	defer cancel()
 
 	err = rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
-	if err == nil {
-		if r == nil {
-			return nil, klaytn.NotFound
-		}
+	if err == nil && r == nil {
+		return nil, klaytn.NotFound
 	}
 	return
 }

@@ -240,10 +240,8 @@ func (ec *Client) TransactionReceipt(ctx context.Context, txHash common.Hash) (*
 // TransactionReceiptRpcOutput returns the receipt of a transaction by transaction hash as a rpc output.
 func (ec *Client) TransactionReceiptRpcOutput(ctx context.Context, txHash common.Hash) (r map[string]interface{}, err error) {
 	err = ec.c.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
-	if err == nil {
-		if r == nil {
-			return nil, klaytn.NotFound
-		}
+	if err == nil && r == nil {
+		return nil, klaytn.NotFound
 	}
 	return
 }
