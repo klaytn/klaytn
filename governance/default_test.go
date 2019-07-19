@@ -17,6 +17,7 @@
 package governance
 
 import (
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
@@ -514,5 +515,31 @@ func TestVoteValueNilInterface(t *testing.T) {
 		// Parse vote.Value and make it has appropriate type
 		_, err := gov.ParseVoteValue(gVote)
 		assert.Equal(t, nil, err)
+	}
+}
+
+func TestBaoBabGenesisHash(t *testing.T) {
+	baobabHash := common.HexToHash("0xe33ff05ceec2581ca9496f38a2bf9baad5d4eed629e896ccb33d1dc991bc4b4a")
+	genesis := blockchain.DefaultBaobabGenesisBlock()
+	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
+	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
+
+	db := database.NewMemoryDBManager()
+	block, _ := genesis.Commit(db)
+	if block.Hash() != baobabHash {
+		t.Errorf("Generated hash is not equal to Baobab's hash. Want %v, Have %v", baobabHash.String(), block.Hash().String())
+	}
+}
+
+func TestCypressGenesisHash(t *testing.T) {
+	cypressHash := common.HexToHash("0xc72e5293c3c3ba38ed8ae910f780e4caaa9fb95e79784f7ab74c3c262ea7137e")
+	genesis := blockchain.DefaultGenesisBlock()
+	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
+	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
+
+	db := database.NewMemoryDBManager()
+	block, _ := genesis.Commit(db)
+	if block.Hash() != cypressHash {
+		t.Errorf("Generated hash is not equal to Baobab's hash. Want %v, Have %v", cypressHash.String(), block.Hash().String())
 	}
 }
