@@ -200,7 +200,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		return newcfg, stored, nil
 	} else {
 		if storedcfg.Governance == nil {
-			logger.Crit("Governance field is missing")
+			logger.Crit("Failed to read governance. storedcfg.Governance == nil")
 		}
 		if storedcfg.Governance.Reward.StakingUpdateInterval != 0 {
 			params.SetStakingUpdateInterval(storedcfg.Governance.Reward.StakingUpdateInterval)
