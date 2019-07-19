@@ -44,8 +44,8 @@ type Snapshot struct {
 	ValSet        istanbul.ValidatorSet // Set of authorized validators at this moment
 	Policy        uint64
 	CommitteeSize uint64
-	Votes         []governance.GovernanceVote  // List of votes cast in chronological order
-	Tally         []governance.GovernanceTally // Current vote tally to avoid recalculating
+	Votes         []governance.GovernanceVote      // List of votes cast in chronological order
+	Tally         []governance.GovernanceTallyItem // Current vote tally to avoid recalculating
 }
 
 func getGovernanceValue(gov *governance.Governance, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
@@ -86,7 +86,7 @@ func newSnapshot(gov *governance.Governance, number uint64, hash common.Hash, va
 		Policy:        policy,
 		CommitteeSize: committeeSize,
 		Votes:         make([]governance.GovernanceVote, 0),
-		Tally:         make([]governance.GovernanceTally, 0),
+		Tally:         make([]governance.GovernanceTallyItem, 0),
 	}
 	return snap
 }
@@ -124,7 +124,7 @@ func (s *Snapshot) copy() *Snapshot {
 		Policy:        s.Policy,
 		CommitteeSize: s.CommitteeSize,
 		Votes:         make([]governance.GovernanceVote, len(s.Votes)),
-		Tally:         make([]governance.GovernanceTally, len(s.Tally)),
+		Tally:         make([]governance.GovernanceTallyItem, len(s.Tally)),
 	}
 
 	copy(cpy.Votes, s.Votes)
@@ -187,7 +187,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			// Reload governance values because epoch changed
 			snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, number)
 			snap.Votes = make([]governance.GovernanceVote, 0)
-			snap.Tally = make([]governance.GovernanceTally, 0)
+			snap.Tally = make([]governance.GovernanceTallyItem, 0)
 		}
 	}
 	snap.Number += uint64(len(headers))
@@ -245,11 +245,11 @@ func sortValidatorArray(validators []common.Address) []common.Address {
 }
 
 type snapshotJSON struct {
-	Epoch  uint64                       `json:"epoch"`
-	Number uint64                       `json:"number"`
-	Hash   common.Hash                  `json:"hash"`
-	Votes  []governance.GovernanceVote  `json:"votes"`
-	Tally  []governance.GovernanceTally `json:"tally"`
+	Epoch  uint64                           `json:"epoch"`
+	Number uint64                           `json:"number"`
+	Hash   common.Hash                      `json:"hash"`
+	Votes  []governance.GovernanceVote      `json:"votes"`
+	Tally  []governance.GovernanceTallyItem `json:"tally"`
 
 	// for validator set
 	Validators   []common.Address        `json:"validators"`
