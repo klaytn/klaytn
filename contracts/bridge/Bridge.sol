@@ -177,7 +177,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         require(msg.value > 0, "zero msg.value");
         require(msg.value > _feeLimit, "insufficient amount");
 
-        _payKLAYFeeAndRefundChange(_feeLimit);
+        uint256 fee = _payKLAYFeeAndRefundChange(_feeLimit);
 
         emit RequestValueTransfer(
             TokenKind.KLAY,
@@ -187,7 +187,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
             _to,
             requestNonce,
             "",
-            _feeLimit
+            fee
         );
         requestNonce++;
     }
@@ -208,7 +208,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         require(_amount > 0, "zero msg.value");
         require(allowedTokens[_contractAddress] != address(0), "Not a valid token");
 
-        _payERC20FeeAndRefundChange(_from, _contractAddress, _feeLimit);
+        uint256 fee = _payERC20FeeAndRefundChange(_from, _contractAddress, _feeLimit);
 
         if (modeMintBurn) {
             ERC20Burnable(_contractAddress).burn(_amount);
@@ -222,7 +222,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
             _to,
             requestNonce,
             "",
-            _feeLimit
+            fee
         );
         requestNonce++;
     }

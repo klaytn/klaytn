@@ -560,6 +560,9 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 				switch ev.TokenType {
 				case 0:
+					assert.Equal(t, common.Address{}, ev.TokenAddr)
+					assert.Equal(t, KLAYFee, ev.Fee.Int64())
+
 					// WithdrawKLAY by Event
 					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {
@@ -569,6 +572,9 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					sim.Commit() // block
 
 				case 1:
+					assert.Equal(t, tokenAddr, ev.TokenAddr)
+					assert.Equal(t, ERC20Fee, ev.Fee.Int64())
+
 					// WithdrawToken by Event
 					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber)
 					if err != nil {

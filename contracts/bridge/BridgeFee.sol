@@ -19,7 +19,7 @@ contract BridgeFee {
         receiver = _receiver;
     }
 
-    function _payKLAYFeeAndRefundChange(uint256 _feeLimit) internal {
+    function _payKLAYFeeAndRefundChange(uint256 _feeLimit) internal returns(uint256) {
         uint256 fee = feeOfKLAY;
 
         if(isValidReceiver() == true && fee > 0) {
@@ -27,12 +27,15 @@ contract BridgeFee {
 
             receiver.transfer(fee);
             msg.sender.transfer(_feeLimit.sub(fee));
-        } else {
-            msg.sender.transfer(_feeLimit);
+
+            return fee;
         }
+
+        msg.sender.transfer(_feeLimit);
+        return 0;
     }
 
-    function _payERC20FeeAndRefundChange(address from, address _token, uint256 _feeLimit) internal {
+    function _payERC20FeeAndRefundChange(address from, address _token, uint256 _feeLimit) internal returns(uint256){
         uint256 fee = feeOfERC20[_token];
 
         if (isValidReceiver() == true && fee > 0) {
@@ -40,9 +43,12 @@ contract BridgeFee {
 
             IERC20(_token).transfer(receiver, fee);
             IERC20(_token).transfer(from, _feeLimit.sub(fee));
-        } else {
-            IERC20(_token).transfer(from, _feeLimit);
+
+            return fee;
         }
+
+        IERC20(_token).transfer(from, _feeLimit);
+        return 0;
     }
 
     function _setKLAYFee(uint256 _fee) internal {
