@@ -30,7 +30,7 @@ import (
 )
 
 var (
-	ConnectionFailErr = errors.New("fail to connect remote chain")
+	NoParentPeerErr = errors.New("no parent peer")
 )
 
 const timeout = 30 * time.Second
@@ -62,14 +62,13 @@ func NewRemoteBackend(sb *SubBridge) (*RemoteBackend, error) {
 	}, nil
 }
 
-func (rb *RemoteBackend) checkConnection() bool {
-	// It is difficult to determine the exact number of peers, and if there is no peer, timeout will occur.
+func (rb *RemoteBackend) checkParentPeer() bool {
 	return rb.subBridge.peers.Len() > 0
 }
 
 func (rb *RemoteBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
-	if !rb.checkConnection() {
-		return nil, ConnectionFailErr
+	if !rb.checkParentPeer() {
+		return nil, NoParentPeerErr
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -79,8 +78,8 @@ func (rb *RemoteBackend) CodeAt(ctx context.Context, contract common.Address, bl
 }
 
 func (rb *RemoteBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
-	if !rb.checkConnection() {
-		return nil, ConnectionFailErr
+	if !rb.checkParentPeer() {
+		return nil, NoParentPeerErr
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -90,8 +89,8 @@ func (rb *RemoteBackend) CallContract(ctx context.Context, call klaytn.CallMsg, 
 }
 
 func (rb *RemoteBackend) PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error) {
-	if !rb.checkConnection() {
-		return nil, ConnectionFailErr
+	if !rb.checkParentPeer() {
+		return nil, NoParentPeerErr
 	}
 	var result hexutil.Bytes
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -101,8 +100,8 @@ func (rb *RemoteBackend) PendingCodeAt(ctx context.Context, contract common.Addr
 }
 
 func (rb *RemoteBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	if !rb.checkConnection() {
-		return 0, ConnectionFailErr
+	if !rb.checkParentPeer() {
+		return 0, NoParentPeerErr
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -112,8 +111,8 @@ func (rb *RemoteBackend) PendingNonceAt(ctx context.Context, account common.Addr
 }
 
 func (rb *RemoteBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	if !rb.checkConnection() {
-		return nil, ConnectionFailErr
+	if !rb.checkParentPeer() {
+		return nil, NoParentPeerErr
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -125,11 +124,12 @@ func (rb *RemoteBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) 
 }
 
 func (rb *RemoteBackend) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (uint64, error) {
-	if !rb.checkConnection() {
-		return 0, ConnectionFailErr
+	if !rb.checkParentPeer() {
+		return 0, NoParentPeerErr
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+
 	var hex hexutil.Uint64
 	err := rb.rpcClient.CallContext(ctx, &hex, "klay_estimateGas", toCallArg(msg))
 	if err != nil {
@@ -139,8 +139,8 @@ func (rb *RemoteBackend) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (u
 }
 
 func (rb *RemoteBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	if !rb.checkConnection() {
-		return ConnectionFailErr
+	if !rb.checkParentPeer() {
+		return NoParentPeerErr
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -148,19 +148,31 @@ func (rb *RemoteBackend) SendTransaction(ctx context.Context, tx *types.Transact
 }
 
 func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	if !rb.checkConnection() {
-		return nil, ConnectionFailErr
+	if !rb.checkParentPeer() {
+		return nil, NoParentPeerErr
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	var r *types.Receipt
 	err := rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
-	if err == nil {
-		if r == nil {
-			return nil, klaytn.NotFound
-		}
+	if err == nil && r == nil {
+		return nil, klaytn.NotFound
 	}
 	return r, err
+}
+
+func (rb *RemoteBackend) TransactionReceiptRpcOutput(ctx context.Context, txHash common.Hash) (r map[string]interface{}, err error) {
+	if !rb.checkParentPeer() {
+		return nil, NoParentPeerErr
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	err = rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
+	if err == nil && r == nil {
+		return nil, klaytn.NotFound
+	}
+	return
 }
 
 // ChainID returns the chain ID of the sub-bridge configuration.
@@ -169,8 +181,8 @@ func (rb *RemoteBackend) ChainID(ctx context.Context) (*big.Int, error) {
 }
 
 func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) (result []types.Log, err error) {
-	if !rb.checkConnection() {
-		return nil, ConnectionFailErr
+	if !rb.checkParentPeer() {
+		return nil, NoParentPeerErr
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -179,8 +191,8 @@ func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuer
 }
 
 func (rb *RemoteBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
-	if !rb.checkConnection() {
-		return nil, ConnectionFailErr
+	if !rb.checkParentPeer() {
+		return nil, NoParentPeerErr
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
