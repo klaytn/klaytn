@@ -21,6 +21,7 @@
 package sc
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/accounts"
@@ -56,6 +57,12 @@ const (
 	resetBridgeCycle   = 3 * time.Second
 	restoreBridgeCycle = 3 * time.Second
 )
+
+// RemoteBackendInterface wraps methods for remote backend
+type RemoteBackendInterface interface {
+	bind.ContractBackend
+	TransactionReceiptRpcOutput(ctx context.Context, txHash common.Hash) (map[string]interface{}, error)
+}
 
 // Backend wraps all methods for local and remote backend
 type Backend interface {

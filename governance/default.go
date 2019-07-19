@@ -636,6 +636,9 @@ func (g *Governance) searchCache(num uint64) (uint64, bool) {
 }
 
 func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{}, error) {
+	if g.ChainConfig.Istanbul == nil {
+		logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
+	}
 	blockNum := CalcGovernanceInfoBlock(num, g.ChainConfig.Istanbul.Epoch)
 	// Check cache first
 	if gBlockNum, ok := g.searchCache(blockNum); ok {
