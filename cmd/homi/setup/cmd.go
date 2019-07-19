@@ -83,6 +83,8 @@ Args :
 			numOfPNsFlag,
 			numOfENsFlag,
 			numOfSCNsFlag,
+			numOfSPNsFlag,
+			numOfSENsFlag,
 			numOfTestKeyFlag,
 			chainIDFlag,
 			serviceChainIDFlag,
@@ -408,6 +410,8 @@ func gen(ctx *cli.Context) error {
 	proxyNum := ctx.Int(numOfPNsFlag.Name)
 	enNum := ctx.Int(numOfENsFlag.Name)
 	scnNum := ctx.Int(numOfSCNsFlag.Name)
+	spnNum := ctx.Int(numOfSPNsFlag.Name)
+	senNum := ctx.Int(numOfSENsFlag.Name)
 	numTestAccs := ctx.Int(numOfTestKeyFlag.Name)
 	baobab := ctx.Bool(baobabFlag.Name)
 	baobabTest := ctx.Bool(baobabTestFlag.Name)
@@ -453,20 +457,36 @@ func gen(ctx *cli.Context) error {
 		nodeInfos := filterNodeInfo(validators)
 		staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
 		address := filterAddressesString(validators)
-		pnNodeInfos := filterNodeInfo(pnValidators)
-		enNodeValidators, enNodeKeys := makeEndpoints(enNum, false)
-		enNodeInfos := filterNodeInfo(enNodeValidators)
-		scNodeValidators, scnNodeKeys := makeSCNodes(scnNum, false)
-		scNodeInfos := filterNodeInfo(scNodeValidators)
-		scNodeAddress := filterAddresses(scNodeValidators)
-		staticPNNodesJsonBytes, _ := json.MarshalIndent(pnNodeInfos, "", "\t")
-		staticENNodesJsonBytes, _ := json.MarshalIndent(enNodeInfos, "", "\t")
-		staticSCNodesJsonBytes, _ := json.MarshalIndent(scNodeInfos, "", "\t")
+		pnInfos := filterNodeInfo(pnValidators)
+		enValidators, enKeys := makeEndpoints(enNum, false)
+		enInfos := filterNodeInfo(enValidators)
+
+		scnValidators, scnKeys := makeSCNs(scnNum, false)
+		scnInfos := filterNodeInfo(scnValidators)
+		scnAddress := filterAddresses(scnValidators)
+
+		spnValidators, spnKeys := makeSPNs(spnNum, false)
+		spnInfos := filterNodeInfo(spnValidators)
+
+		senValidators, senKeys := makeSENs(senNum, false)
+		senInfos := filterNodeInfo(senValidators)
+
+		staticPNJsonBytes, _ := json.MarshalIndent(pnInfos, "", "\t")
+		staticENJsonBytes, _ := json.MarshalIndent(enInfos, "", "\t")
+		staticSCNJsonBytes, _ := json.MarshalIndent(scnInfos, "", "\t")
+		staticSPNJsonBytes, _ := json.MarshalIndent(spnInfos, "", "\t")
+		staticSENJsonBytes, _ := json.MarshalIndent(senInfos, "", "\t")
 		var bridgeNodesJsonBytes []byte
-		if len(enNodeInfos) != 0 {
-			bridgeNodesJsonBytes, _ = json.MarshalIndent(enNodeInfos[:1], "", "\t")
+		if len(enInfos) != 0 {
+			bridgeNodesJsonBytes, _ = json.MarshalIndent(enInfos[:1], "", "\t")
 		}
-		scGenesisJsonBytes, _ := json.MarshalIndent(genIstanbulGenesis(ctx, scNodeAddress, nil, serviceChainId), "", "\t")
+		scnGenesisJsonBytes, _ := json.MarshalIndent(genIstanbulGenesis(ctx, scnAddress, nil, serviceChainId), "", "\t")
+		var dockerImageId string
+		if scnNum > 0 {
+			dockerImageId = "klaytn-base"
+		} else {
+			dockerImageId = ctx.String(dockerImageIdFlag.Name)
+		}
 		compose := compose.New(
 			"172.16.239",
 			num,
@@ -474,20 +494,24 @@ func gen(ctx *cli.Context) error {
 			address,
 			nodeKeys,
 			removeSpacesAndLines(genesisJsonBytes),
-			removeSpacesAndLines(scGenesisJsonBytes),
+			removeSpacesAndLines(scnGenesisJsonBytes),
 			removeSpacesAndLines(staticNodesJsonBytes),
-			removeSpacesAndLines(staticPNNodesJsonBytes),
-			removeSpacesAndLines(staticENNodesJsonBytes),
-			removeSpacesAndLines(staticSCNodesJsonBytes),
+			removeSpacesAndLines(staticPNJsonBytes),
+			removeSpacesAndLines(staticENJsonBytes),
+			removeSpacesAndLines(staticSCNJsonBytes),
+			removeSpacesAndLines(staticSPNJsonBytes),
+			removeSpacesAndLines(staticSENJsonBytes),
 			removeSpacesAndLines(bridgeNodesJsonBytes),
-			ctx.String(dockerImageIdFlag.Name),
+			dockerImageId,
 			ctx.Bool(fasthttpFlag.Name),
 			ctx.Int(networkIdFlag.Name),
 			int(chainid),
 			!ctx.BoolT(nografanaFlag.Name),
 			proxyNodeKeys,
-			enNodeKeys,
-			scnNodeKeys,
+			enKeys,
+			scnKeys,
+			spnKeys,
+			senKeys,
 			ctx.Bool(useTxGenFlag.Name),
 			service.TxGenOption{
 				TxGenRate:       ctx.Int(txGenRateFlag.Name),
@@ -756,12 +780,12 @@ func makeEndpoints(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string
 	return endpoints, endpointsNodeKeys
 }
 
-func makeSCNodes(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
+func makeSCNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
 
 	var p2pPort uint16
 	var scn []*ValidatorInfo
-	var scnNodeKeys []string
+	var scnKeys []string
 	for i := 0; i < num; i++ {
 		if isWorkOnSingleHost {
 			p2pPort = lastIssuedPortNum
@@ -781,9 +805,69 @@ func makeSCNodes(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) 
 				discover.NodeTypeUnknown).String(),
 		}
 		scn = append(scn, v)
-		scnNodeKeys = append(scnNodeKeys, v.Nodekey)
+		scnKeys = append(scnKeys, v.Nodekey)
 	}
-	return scn, scnNodeKeys
+	return scn, scnKeys
+}
+
+func makeSPNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
+	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
+
+	var p2pPort uint16
+	var proxies []*ValidatorInfo
+	var proxyNodeKeys []string
+	for i := 0; i < num; i++ {
+		if isWorkOnSingleHost {
+			p2pPort = lastIssuedPortNum
+			lastIssuedPortNum++
+		} else {
+			p2pPort = DefaultTcpPort
+		}
+
+		v := &ValidatorInfo{
+			Address: nodeAddrs[i],
+			Nodekey: nodeKeys[i],
+			NodeInfo: discover.NewNode(
+				discover.PubkeyID(&privKeys[i].PublicKey),
+				net.ParseIP("0.0.0.0"),
+				0,
+				p2pPort,
+				discover.NodeTypeUnknown).String(),
+		}
+		proxies = append(proxies, v)
+		proxyNodeKeys = append(proxyNodeKeys, v.Nodekey)
+	}
+	return proxies, proxyNodeKeys
+}
+
+func makeSENs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
+	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
+
+	var p2pPort uint16
+	var endpoints []*ValidatorInfo
+	var endpointsNodeKeys []string
+	for i := 0; i < num; i++ {
+		if isWorkOnSingleHost {
+			p2pPort = lastIssuedPortNum
+			lastIssuedPortNum++
+		} else {
+			p2pPort = DefaultTcpPort
+		}
+
+		v := &ValidatorInfo{
+			Address: nodeAddrs[i],
+			Nodekey: nodeKeys[i],
+			NodeInfo: discover.NewNode(
+				discover.PubkeyID(&privKeys[i].PublicKey),
+				net.ParseIP("0.0.0.0"),
+				0,
+				p2pPort,
+				discover.NodeTypeUnknown).String(),
+		}
+		endpoints = append(endpoints, v)
+		endpointsNodeKeys = append(endpointsNodeKeys, v.Nodekey)
+	}
+	return endpoints, endpointsNodeKeys
 }
 
 func writeValidatorsAndNodesToFile(validators []*ValidatorInfo, parentDir string, nodekeys []string) {

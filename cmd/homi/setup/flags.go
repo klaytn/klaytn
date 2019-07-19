@@ -82,6 +82,18 @@ var (
 		Value: 0,
 	}
 
+	numOfSPNsFlag = cli.IntFlag{
+		Name:  "spn-num",
+		Usage: "Number of service chain proxy nodes",
+		Value: 0,
+	}
+
+	numOfSENsFlag = cli.IntFlag{
+		Name:  "sen-num",
+		Usage: "Number of service chain end-point nodes",
+		Value: 0,
+	}
+
 	numOfTestKeyFlag = cli.IntFlag{
 		Name:  "test-num",
 		Usage: "Number of test key",
