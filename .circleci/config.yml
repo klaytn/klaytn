@@ -70,6 +70,7 @@ jobs:
     steps:
       - checkout
       - run:
+          shell: /bin/bash
           name: "Run coverage tests"
           command: |
             export GOPATH=/go
