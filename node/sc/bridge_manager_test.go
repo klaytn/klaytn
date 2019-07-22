@@ -309,7 +309,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 8. DepositKLAY from auth to auth3
 	{
-		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: testGasLimit}, auth3.From, big.NewInt(0))
+		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: testGasLimit}, auth3.From, testKLAY)
 		if err != nil {
 			log.Fatalf("Failed to DepositKLAY: %v", err)
 		}
@@ -724,7 +724,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-1. Request KLAY transfer from Alice to Bob with same feeLimit with fee
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + KLAYFee), GasLimit: testGasLimit}, Bob.From, big.NewInt(KLAYFee))
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + KLAYFee), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY))
 		if err != nil {
 			log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 		}
@@ -737,7 +737,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-2. Request KLAY transfer from Alice to Bob with zero feeLimit
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY), GasLimit: testGasLimit}, Bob.From, big.NewInt(0))
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY))
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block
@@ -747,7 +747,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-3. Request KLAY transfer from Alice to Bob with insufficient feeLimit
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + (KLAYFee - 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(KLAYFee-1))
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + (KLAYFee - 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY))
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block
@@ -757,7 +757,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-4. Request KLAY transfer from Alice to Bob with enough feeLimit
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + (KLAYFee + 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(KLAYFee+1))
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + (KLAYFee + 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY))
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block

@@ -26,7 +26,11 @@ contract BridgeFee {
             require(_feeLimit >= fee, "invalid feeLimit");
 
             receiver.transfer(fee);
-            msg.sender.transfer(_feeLimit.sub(fee));
+
+            uint256 remain = _feeLimit.sub(fee);
+            if (remain > 0) {
+                msg.sender.transfer(_feeLimit.sub(fee));
+            }
 
             return fee;
         }
@@ -42,7 +46,11 @@ contract BridgeFee {
             require(_feeLimit >= fee, "invalid feeLimit");
 
             IERC20(_token).transfer(receiver, fee);
-            IERC20(_token).transfer(from, _feeLimit.sub(fee));
+
+            uint256 remain = _feeLimit.sub(fee);
+            if (remain > 0) {
+                IERC20(_token).transfer(from, _feeLimit.sub(fee));
+            }
 
             return fee;
         }

@@ -174,7 +174,6 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     // _requestKLAYTransfer requests transfer KLAY to _to on relative chain.
     function _requestKLAYTransfer(address _to, uint256 _feeLimit) internal {
         require(isRunning, "stopped bridge");
-        require(msg.value > 0, "zero msg.value");
         require(msg.value > _feeLimit, "insufficient amount");
 
         uint256 fee = _payKLAYFeeAndRefundChange(_feeLimit);
@@ -198,8 +197,9 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     }
 
     // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
-    function requestKLAYTransfer(address _to, uint256 _feeLimit) external payable {
-        _requestKLAYTransfer(_to, _feeLimit);
+    function requestKLAYTransfer(address _to, uint256 _amount) external payable {
+        uint256 feeLimit = msg.value.sub(_amount);
+        _requestKLAYTransfer(_to, feeLimit);
     }
 
     // _requestERC20Transfer requests transfer ERC20 to _to on relative chain.
