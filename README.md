@@ -1,9 +1,10 @@
 [![CircleCI](https://circleci.com/gh/klaytn/klaytn/tree/master.svg?style=svg&circle-token=f7008cc62f0f16070af2ac3bd8f34989a9fd5724)](https://circleci.com/gh/klaytn/klaytn/tree/master)
 [![codecov](https://codecov.io/gh/klaytn/klaytn/branch/master/graph/badge.svg?token=Tb7cRhQUsU)](https://codecov.io/gh/klaytn/klaytn)
+[![GoDoc](https://godoc.org/github.com/klaytn/klaytn?status.svg)](http://godoc.org/github.com/klaytn/klaytn)
 
 # Klaytn
 
-Official golang implementation of the Klaytn protocol. Please visit [KlaytnDocs](https://docs.klaytn.com/) for more details.
+Official golang implementation of the Klaytn protocol. Please visit [KlaytnDocs](https://docs.klaytn.com/) for more details on Klaytn design, node operation guides and application development resources.
 
 ## Building from Sources
 
