@@ -23,12 +23,11 @@ package bind_test
 import (
 	"context"
 	"github.com/klaytn/klaytn"
-	"math/big"
-	"testing"
-
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/common"
+	"math/big"
+	"testing"
 )
 
 type mockCaller struct {
