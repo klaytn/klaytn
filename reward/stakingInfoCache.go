@@ -48,36 +48,20 @@ func (sc *stakingInfoCache) add(stakingInfo *StakingInfo) {
 	sc.lock.Lock()
 	defer sc.lock.Unlock()
 
-	// Assumption: stakingInfo should not be nil.
+	// Assumption: stakingInfo is not nil.
 
 	if _, ok := sc.cells[stakingInfo.BlockNum]; ok {
 		return
 	}
 
-	if len(sc.cells) < maxStakingCache {
-		// empty room available
-		sc.cells[stakingInfo.BlockNum] = stakingInfo
-		if stakingInfo.BlockNum < sc.minBlockNum || len(sc.cells) == 1 {
-			// new minBlockNum or newly inserted one is the first element
-			sc.minBlockNum = stakingInfo.BlockNum
-		}
-		return
+	if len(sc.cells) >= maxStakingCache {
+		delete(sc.cells, sc.minBlockNum)
 	}
-
-	// evict one and insert new one
-	delete(sc.cells, sc.minBlockNum)
-
-	// update minBlockNum
-	if stakingInfo.BlockNum < sc.minBlockNum {
-		sc.minBlockNum = stakingInfo.BlockNum
-	} else {
-		min := stakingInfo.BlockNum
-		for _, s := range sc.cells {
-			if s.BlockNum < min {
-				min = s.BlockNum
-			}
+	sc.minBlockNum = stakingInfo.BlockNum
+	for _, s := range sc.cells {
+		if s.BlockNum < sc.minBlockNum {
+			sc.minBlockNum = s.BlockNum
 		}
-		sc.minBlockNum = min
 	}
 	sc.cells[stakingInfo.BlockNum] = stakingInfo
 }
