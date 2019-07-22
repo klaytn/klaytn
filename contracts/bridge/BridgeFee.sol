@@ -29,7 +29,7 @@ contract BridgeFee {
 
             uint256 remain = _feeLimit.sub(fee);
             if (remain > 0) {
-                msg.sender.transfer(_feeLimit.sub(fee));
+                msg.sender.transfer(remain);
             }
 
             return fee;
@@ -49,7 +49,7 @@ contract BridgeFee {
 
             uint256 remain = _feeLimit.sub(fee);
             if (remain > 0) {
-                IERC20(_token).transfer(from, _feeLimit.sub(fee));
+                IERC20(_token).transfer(from, remain);
             }
 
             return fee;
