@@ -120,7 +120,7 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 				deferredTxFee: true,
 			},
 			rewardConfig{
-				blockNum:      1,
+				blockNum:      0,
 				mintingAmount: big.NewInt(0).SetUint64(9600000000000000000),
 				cnRatio:       big.NewInt(0).SetInt64(34),
 				pocRatio:      big.NewInt(0).SetInt64(54),
@@ -139,7 +139,7 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 				deferredTxFee: false,
 			},
 			rewardConfig{
-				blockNum:      2,
+				blockNum:      1,
 				mintingAmount: big.NewInt(0).SetInt64(10000),
 				cnRatio:       big.NewInt(0).SetInt64(50),
 				pocRatio:      big.NewInt(0).SetInt64(30),
@@ -158,7 +158,7 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 				deferredTxFee: true,
 			},
 			rewardConfig{
-				blockNum:      3,
+				blockNum:      2,
 				mintingAmount: big.NewInt(0).SetInt64(100000000),
 				cnRatio:       big.NewInt(0).SetInt64(10),
 				pocRatio:      big.NewInt(0).SetInt64(35),
@@ -173,7 +173,7 @@ func TestRewardConfigCache_newRewardConfig(t *testing.T) {
 		testGovernance := &testCases[i].testGovernance
 		rewardConfigCache := newRewardConfigCache(testGovernance)
 
-		rewardConfig, error := rewardConfigCache.newRewardConfig(uint64(i) + 1)
+		rewardConfig, error := rewardConfigCache.newRewardConfig(uint64(i))
 
 		if error != nil {
 			t.Errorf("error has occurred err : %v", error)

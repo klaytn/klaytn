@@ -10,14 +10,13 @@ import (
 )
 
 var (
-	FailGettingConfigure = errors.New("Fail to get configure from governance")
+	FailGettingConfigure = errors.New("fail to get configure from governance")
 )
 
 const (
-	maxRewardConfigCache = 5
+	maxRewardConfigCache = 5 // Must be positive integer
 )
 
-// Cache for parsed reward parameters from governance
 type rewardConfig struct {
 	blockNum uint64
 
@@ -29,6 +28,7 @@ type rewardConfig struct {
 	unitPrice     *big.Int
 }
 
+// Cache for parsed reward parameters from governance
 type rewardConfigCache struct {
 	cache            *lru.ARCCache
 	governanceHelper governanceHelper
@@ -92,8 +92,7 @@ func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) 
 		cnRatio.SetInt64(int64(cn))
 		pocRatio.SetInt64(int64(poc))
 		kirRatio.SetInt64(int64(kir))
-		total := cn + poc + kir
-		totalRatio.SetInt64(int64(total))
+		totalRatio.SetInt64(int64(cn + poc + kir))
 	} else {
 		logger.Error("Couldn't get Ratio from governance", "blockNumber", blockNumber, "err", err)
 		return nil, FailGettingConfigure
@@ -126,14 +125,14 @@ func (rewardConfigCache *rewardConfigCache) add(blockNumber uint64, config *rewa
 func (rewardConfigCache *rewardConfigCache) parseRewardRatio(ratio string) (int, int, int, error) {
 	s := strings.Split(ratio, "/")
 	if len(s) != 3 {
-		return 0, 0, 0, errors.New("Invalid format")
+		return 0, 0, 0, errors.New("invalid format")
 	}
 	cn, err1 := strconv.Atoi(s[0])
 	poc, err2 := strconv.Atoi(s[1])
 	kir, err3 := strconv.Atoi(s[2])
 
 	if err1 != nil || err2 != nil || err3 != nil {
-		return 0, 0, 0, errors.New("Parsing error")
+		return 0, 0, 0, errors.New("parsing error")
 	}
 	return cn, poc, kir, nil
 }
