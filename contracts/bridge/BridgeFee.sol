@@ -7,16 +7,16 @@ import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract BridgeFee {
     using SafeMath for uint256;
 
-    address public receiver = address(0);
+    address public feeReceiver = address(0);
     uint256 public feeOfKLAY = 0;
     mapping (address => uint256) public feeOfERC20;
 
     event KLAYFeeChanged(uint256 indexed fee);
     event ERC20FeeChanged(address token, uint256 indexed fee);
-    event FeeReceiverChanged(address indexed receiver);
+    event FeeReceiverChanged(address indexed feeReceiver);
 
-    constructor(address _receiver) internal {
-        receiver = _receiver;
+    constructor(address _feeReceiver) internal {
+        feeReceiver = _feeReceiver;
     }
 
     function _payKLAYFeeAndRefundChange(uint256 _feeLimit) internal returns(uint256) {
@@ -25,7 +25,7 @@ contract BridgeFee {
         if(isValidReceiver() == true && fee > 0) {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
-            receiver.transfer(fee);
+            feeReceiver.transfer(fee);
             msg.sender.transfer(_feeLimit.sub(fee));
 
             return fee;
@@ -41,7 +41,7 @@ contract BridgeFee {
         if (isValidReceiver() == true && fee > 0) {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
-            IERC20(_token).transfer(receiver, fee);
+            IERC20(_token).transfer(feeReceiver, fee);
             IERC20(_token).transfer(from, _feeLimit.sub(fee));
 
             return fee;
@@ -62,12 +62,12 @@ contract BridgeFee {
     }
 
     function _setFeeReceiver(address _to) internal {
-        receiver = _to;
+        feeReceiver = _to;
         emit FeeReceiverChanged(_to);
     }
 
     function isValidReceiver() public view returns(bool){
-        if (receiver == address(0)){
+        if (feeReceiver == address(0)){
             return false;
         }
         return true;

@@ -1036,5 +1036,5 @@ func (bm *BridgeManager) GetFeeReceiver(bridgeAddr common.Address) (common.Addre
 		return common.Address{}, ErrNoBridgeInfo
 	}
 
-	return bi.bridge.Receiver(nil)
+	return bi.bridge.FeeReceiver(nil)
 }

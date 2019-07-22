@@ -406,7 +406,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	}()
 
 	wg := sync.WaitGroup{}
-	wg.Add(6 * 2)
+	wg.Add(7 * 2)
 
 	// Generate a new random account and a funded simulator
 	parentKey, _ := crypto.GenerateKey()
@@ -480,7 +480,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// Set value transfer fee
 	{
-		nilReceiver, err := pBridge.Receiver(nil)
+		nilReceiver, err := pBridge.FeeReceiver(nil)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, common.Address{}, nilReceiver)
 	}
@@ -489,7 +489,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	sim.Commit() // block
 
 	{
-		recev, err := pBridge.Receiver(nil)
+		recev, err := pBridge.FeeReceiver(nil)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, receiver.From, recev)
 	}
@@ -765,6 +765,22 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 	}
 
+	// 9-4. Request KLAY transfer from Alice to Alice through () payable method
+	{
+		nonce, _ := sim.PendingNonceAt(context.Background(), Alice.From)
+		gasPrice, _ := sim.SuggestGasPrice(context.Background())
+		unsignedTx := types.NewTransaction(nonce, pBridgeAddr, big.NewInt(testKLAY+KLAYFee), testGasLimit, gasPrice, []byte{})
+
+		chainID, _ := sim.ChainID(context.Background())
+		tx, err = types.SignTx(unsignedTx, types.NewEIP155Signer(chainID), AliceKey)
+		sim.SendTransaction(context.Background(), tx)
+		assert.Equal(t, nil, err)
+
+		sim.Commit() // block
+
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+	}
+
 	// Wait a few second for wait group
 	WaitGroupWithTimeOut(&wg, 3*time.Second, t)
 
@@ -790,7 +806,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	{
 		balance, _ = sim.BalanceAt(context.Background(), Alice.From, nil)
 		fmt.Println("Alice KLAY balance :", balance)
-		assert.Equal(t, initialValue-(testKLAY+KLAYFee)*2, balance.Int64())
+		assert.Equal(t, initialValue-(testKLAY+KLAYFee)*2-KLAYFee, balance.Int64())
 
 		balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
 		fmt.Println("Bob KLAY balance :", balance)
@@ -798,7 +814,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 		balance, _ = sim.BalanceAt(context.Background(), receiver.From, nil)
 		fmt.Println("receiver KLAY balance :", balance)
-		assert.Equal(t, KLAYFee*2, balance.Int64())
+		assert.Equal(t, KLAYFee*3, balance.Int64())
 	}
 
 	// 13. Nonce check on deploy error

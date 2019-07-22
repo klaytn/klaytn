@@ -193,7 +193,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
 
     // () requests transfer KLAY to msg.sender address on relative chain.
     function () external payable {
-        _requestKLAYTransfer(msg.sender, msg.value);
+        _requestKLAYTransfer(msg.sender, feeOfKLAY);
     }
 
     // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
@@ -301,7 +301,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     }
 
     // setFeeReceiver set fee receiver.
-    function setFeeReceiver(address _to) external onlyOwner {
-        _setFeeReceiver(_to);
+    function setFeeReceiver(address _feeReceiver) external onlyOwner {
+        _setFeeReceiver(_feeReceiver);
     }
 }
