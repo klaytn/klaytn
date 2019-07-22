@@ -89,35 +89,34 @@ func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount 
 
 func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
 	testCases := []struct {
-		s       string
-		cn      int
-		poc     int
-		kir     int
-		success bool
+		s   string
+		cn  int
+		poc int
+		kir int
+		err error
 	}{
-		{"34/54/12", 34, 54, 12, true},
-		{"3/3/3", 3, 3, 3, true},
-		{"10/20/30", 10, 20, 30, true},
-		{"///", 0, 0, 0, false},
-		{"1//", 0, 0, 0, false},
-		{"/1/", 0, 0, 0, false},
-		{"//1", 0, 0, 0, false},
-		{"1/2/3/4/", 0, 0, 0, false},
-		{"3.3/3.3/3.3", 0, 0, 0, false},
-		{"a/b/c", 0, 0, 0, false},
+		{"34/54/12", 34, 54, 12, nil},
+		{"3/3/3", 3, 3, 3, nil},
+		{"10/20/30", 10, 20, 30, nil},
+		{"34,54,12", 0, 0, 0, InvalidFormat},
+		{"/", 0, 0, 0, InvalidFormat},
+		{"///", 0, 0, 0, InvalidFormat},
+		{"1//", 0, 0, 0, ParsingError},
+		{"/1/", 0, 0, 0, ParsingError},
+		{"//1", 0, 0, 0, ParsingError},
+		{"1/2/3/4/", 0, 0, 0, InvalidFormat},
+		{"3.3/3.3/3.3", 0, 0, 0, ParsingError},
+		{"a/b/c", 0, 0, 0, ParsingError},
 	}
 	rewardConfigCache := newRewardConfigCache(newDefaultTestGovernance())
 
 	for i := 0; i < len(testCases); i++ {
-		cn, poc, kir, error := rewardConfigCache.parseRewardRatio(testCases[i].s)
+		cn, poc, kir, err := rewardConfigCache.parseRewardRatio(testCases[i].s)
 
-		if (error == nil) != testCases[i].success || cn != testCases[i].cn ||
-			poc != testCases[i].poc || kir != testCases[i].kir {
-			t.Errorf("test case %v fail. The result is different", testCases[i].s)
-			t.Errorf("The parsed cn. Result : %v, Expected : %v", cn, testCases[i].cn)
-			t.Errorf("The parsed poc. Result : %v, Expected : %v", poc, testCases[i].poc)
-			t.Errorf("The parsed kir. Result : %v, Expected : %v", kir, testCases[i].kir)
-		}
+		assert.Equal(t, testCases[i].cn, cn)
+		assert.Equal(t, testCases[i].poc, poc)
+		assert.Equal(t, testCases[i].kir, kir)
+		assert.Equal(t, testCases[i].err, err)
 	}
 }
 

@@ -27,6 +27,8 @@ import (
 
 var (
 	FailGettingConfigure = errors.New("fail to get configure from governance")
+	InvalidFormat        = errors.New("invalid format")
+	ParsingError         = errors.New("parsing error")
 )
 
 const (
@@ -141,14 +143,14 @@ func (rewardConfigCache *rewardConfigCache) add(blockNumber uint64, config *rewa
 func (rewardConfigCache *rewardConfigCache) parseRewardRatio(ratio string) (int, int, int, error) {
 	s := strings.Split(ratio, "/")
 	if len(s) != 3 {
-		return 0, 0, 0, errors.New("invalid format")
+		return 0, 0, 0, InvalidFormat
 	}
 	cn, err1 := strconv.Atoi(s[0])
 	poc, err2 := strconv.Atoi(s[1])
 	kir, err3 := strconv.Atoi(s[2])
 
 	if err1 != nil || err2 != nil || err3 != nil {
-		return 0, 0, 0, errors.New("parsing error")
+		return 0, 0, 0, ParsingError
 	}
 	return cn, poc, kir, nil
 }
