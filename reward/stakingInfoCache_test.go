@@ -47,8 +47,18 @@ func TestStakingInfoCache_Add_SameNumber(t *testing.T) {
 	assert.Equal(t, 1, len(stakingInfoCache.cells), "StakingInfo with Same block number is saved to the stakingCache")
 }
 
+func TestStakingInfoCache_Add_SmallNumber(t *testing.T) {
+	stakingInfoCache := newStakingInfoCache()
+
+	for i := uint64(10); i > 0; i-- {
+		testStakingInfo := newEmptyStakingInfo(i)
+		stakingInfoCache.add(testStakingInfo)
+		assert.Equal(t, i, stakingInfoCache.minBlockNum)
+	}
+}
+
 // stakingInfo with minBlockNum should be deleted if add more than limit
-func TestStakingInfoCache_Add(t *testing.T) {
+func TestStakingInfoCache_Add_MinBlockNum(t *testing.T) {
 	stakingInfoCache := newStakingInfoCache()
 
 	for i := 1; i < 5; i++ {
@@ -63,6 +73,30 @@ func TestStakingInfoCache_Add(t *testing.T) {
 	testStakingInfo = newEmptyStakingInfo(uint64(6))
 	stakingInfoCache.add(testStakingInfo) // blockNum 2 should be deleted
 	assert.Equal(t, uint64(3), stakingInfoCache.minBlockNum)
+}
+
+func TestStakingInfoCache_Add(t *testing.T) {
+	testCases := []struct {
+		blockNumber       uint64
+		expectedLen       int
+		expectedMinNumber uint64
+	}{
+		{1, 1, 1},
+		{5, 2, 1},
+		{10, 3, 1},
+		{7, 4, 1},
+		{15, 4, 5},
+		{30, 4, 7},
+		{20, 4, 10},
+		{3, 4, 3},
+	}
+	stakingInfoCache := newStakingInfoCache()
+	for i := 0; i < len(testCases); i++ {
+		testStakingInfo := newEmptyStakingInfo(testCases[i].blockNumber)
+		stakingInfoCache.add(testStakingInfo)
+		assert.Equal(t, testCases[i].expectedLen, len(stakingInfoCache.cells))
+		assert.Equal(t, testCases[i].expectedMinNumber, stakingInfoCache.minBlockNum)
+	}
 }
 
 func TestStakingInfoCache_Get(t *testing.T) {
