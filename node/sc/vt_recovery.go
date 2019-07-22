@@ -91,7 +91,7 @@ func (vtr *valueTransferRecovery) Start() error {
 		}()
 
 		if err := vtr.Recover(); err != nil {
-			logger.Warn("value transfer recovery is failed", "err", err)
+			logger.Warn("initial value transfer recovery is failed", "err", err)
 		}
 
 		vtr.isRunning = true
@@ -104,7 +104,7 @@ func (vtr *valueTransferRecovery) Start() error {
 			case <-ticker.C:
 				if vtr.isRunning {
 					if err := vtr.Recover(); err != nil {
-						logger.Warn("value transfer recovery is failed", "err", err)
+						logger.Trace("value transfer recovery is failed", "err", err)
 					}
 				}
 			}
