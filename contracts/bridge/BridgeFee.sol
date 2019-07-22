@@ -23,7 +23,7 @@ contract BridgeFee {
         uint256 fee = feeOfKLAY;
 
         if(isValidReceiver() == true && fee > 0) {
-            require(_feeLimit >= fee, "invalid feeLimit");
+            require(_feeLimit >= fee, "insufficient feeLimit");
 
             receiver.transfer(fee);
             msg.sender.transfer(_feeLimit.sub(fee));
@@ -39,7 +39,7 @@ contract BridgeFee {
         uint256 fee = feeOfERC20[_token];
 
         if (isValidReceiver() == true && fee > 0) {
-            require(_feeLimit >= fee, "invalid feeLimit");
+            require(_feeLimit >= fee, "insufficient feeLimit");
 
             IERC20(_token).transfer(receiver, fee);
             IERC20(_token).transfer(from, _feeLimit.sub(fee));
