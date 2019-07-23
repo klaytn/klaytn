@@ -25,8 +25,8 @@ contract ERC20ServiceChain is ERC20, Ownable {
         bridge = _bridge;
     }
 
-    function requestValueTransfer(uint256 _amount, address _to, uint256 _fee) external {
-        transfer(bridge, _amount.add(_fee));
-        IERC20BridgeReceiver(bridge).onERC20Received(msg.sender, _amount, _to, _fee);
+    function requestValueTransfer(uint256 _amount, address _to, uint256 _feeLimit) external {
+        transfer(bridge, _amount.add(_feeLimit));
+        IERC20BridgeReceiver(bridge).onERC20Received(msg.sender, _amount, _to, _feeLimit);
     }
 }

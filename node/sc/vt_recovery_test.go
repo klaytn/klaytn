@@ -608,7 +608,7 @@ func requestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 
 	opts := bi.account.GetTransactOpts()
 	opts.Value = big.NewInt(testAmount)
-	_, err := bi.bridge.RequestKLAYTransfer(opts, info.aliceAuth.From, big.NewInt(0))
+	_, err := bi.bridge.RequestKLAYTransfer(opts, info.aliceAuth.From, big.NewInt(testAmount))
 	if err != nil {
 		log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 	}
