@@ -22,7 +22,7 @@ contract BridgeFee {
     function _payKLAYFeeAndRefundChange(uint256 _feeLimit) internal returns(uint256) {
         uint256 fee = feeOfKLAY;
 
-        if(isValidReceiver() == true && fee > 0) {
+        if(feeReceiver != address(0) && fee > 0) {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
             feeReceiver.transfer(fee);
@@ -38,7 +38,7 @@ contract BridgeFee {
     function _payERC20FeeAndRefundChange(address from, address _token, uint256 _feeLimit) internal returns(uint256){
         uint256 fee = feeOfERC20[_token];
 
-        if (isValidReceiver() == true && fee > 0) {
+        if (feeReceiver != address(0) && fee > 0) {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
             IERC20(_token).transfer(feeReceiver, fee);
@@ -64,12 +64,5 @@ contract BridgeFee {
     function _setFeeReceiver(address _to) internal {
         feeReceiver = _to;
         emit FeeReceiverChanged(_to);
-    }
-
-    function isValidReceiver() public view returns(bool){
-        if (feeReceiver == address(0)){
-            return false;
-        }
-        return true;
     }
 }
