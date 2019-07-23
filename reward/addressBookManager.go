@@ -94,7 +94,7 @@ func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) (node
 		return
 	}
 
-	abii, err := abi.JSON(strings.NewReader(abm.addressBookABI))
+	abiInstance, err := abi.JSON(strings.NewReader(abm.addressBookABI))
 	if err != nil {
 		return
 	}
@@ -108,9 +108,9 @@ func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) (node
 		allAddressList,
 	}
 
-	err = abii.Unpack(out, "getAllAddress", result)
+	err = abiInstance.Unpack(out, "getAllAddress", result)
 	if err != nil {
-		logger.Trace("abii.Unpack failed for getAllAddress in AddressBook")
+		logger.Trace("abiInstance.Unpack failed for getAllAddress in AddressBook")
 		return
 	}
 
@@ -147,7 +147,7 @@ func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) (node
 		return
 	}
 
-	return nodeIds, stakingAddrs, rewardAddrs, pocAddr, kirAddr, nil
+	return
 }
 
 // getStakingInfoFromAddressBook returns staking info when calling AddressBook
