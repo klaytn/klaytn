@@ -26,7 +26,7 @@ Klaytn uses weightedRandom policy to choose a block proposer.
 It means, the percentage of becoming a block proposer depends on how much KLAY a node has staked.
 Therefore, a node staked more than others will have more opportunities than other nodes.
 
-StakingInfo is a data including stakingAmount and addresses (node, staking, reward, poc and kir).
+StakingInfo is a data including stakingAmount and addresses (node, staking, reward, PoC and KIR).
 StakingAmount is a balance how much KLAY each node has staked. Only CCO can stake KLAY.
 Each CCO stakes KLAY by a smart contract called staking contract.
 StakingAmount is derived by checking balance of staking contract.
