@@ -187,7 +187,7 @@ func (abm *addressBookManager) getStakingInfoFromAddressBook(blockNum uint64) (*
 		} else {
 			logger.Error("Failed to parse result from AddressBook contract. Use empty staking info", "err", err)
 		}
-		return newEmptyStakingInfo(blockNum)
+		return newEmptyStakingInfo(blockNum), nil
 	}
 
 	return newStakingInfo(abm.bc, abm.governanceHelper, blockNum, nodeIds, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
