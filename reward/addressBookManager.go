@@ -125,14 +125,6 @@ func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) ([]co
 		len(nodeIds) != len(rewardAddrs) ||
 		isEmptyAddress(pocAddr) ||
 		isEmptyAddress(kirAddr) {
-		// This is expected behavior when bootstrapping
-		//logger.Trace("Incomplete node information from AddressBook.",
-		//	"# of nodeIds", len(nodeIds),
-		//	"# of stakingAddrs", len(stakingAddrs),
-		//	"# of rewardAddrs", len(rewardAddrs),
-		//	"PoC address", pocAddr.String(),
-		//	"KIR address", kirAddr.String())
-
 		return nil, nil, nil, common.Address{}, common.Address{}, errAddressBookIncomplete
 	}
 
