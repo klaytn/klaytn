@@ -26,18 +26,17 @@ import (
 )
 
 var (
-	FailGettingConfigure = errors.New("fail to get configure from governance")
-	InvalidFormat        = errors.New("invalid format")
-	ParsingError         = errors.New("parsing error")
+	errFailGettingConfigure = errors.New("fail to get configure from governance")
+	errInvalidFormat        = errors.New("invalid format")
+	errParsingRatio         = errors.New("parsing ratio fail")
 )
 
 const (
-	maxRewardConfigCache = 5 // Must be positive integer
+	maxRewardConfigCache = 3
 )
 
 type rewardConfig struct {
-	blockNum uint64
-
+	blockNum      uint64
 	mintingAmount *big.Int
 	cnRatio       *big.Int
 	pocRatio      *big.Int
@@ -65,7 +64,7 @@ func (rewardConfigCache *rewardConfigCache) get(blockNumber uint64) (*rewardConf
 	result, err := rewardConfigCache.governanceHelper.GetItemAtNumberByIntKey(blockNumber, params.Epoch)
 	if err != nil {
 		logger.Error("Couldn't get epoch from governance", "blockNumber", blockNumber, "err", err)
-		return nil, FailGettingConfigure
+		return nil, errFailGettingConfigure
 	}
 	epoch = result.(uint64)
 
@@ -93,7 +92,7 @@ func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) 
 	result, err := rewardConfigCache.governanceHelper.GetItemAtNumberByIntKey(blockNumber, params.MintingAmount)
 	if err != nil {
 		logger.Error("Couldn't get MintingAmount from governance", "blockNumber", blockNumber, "err", err)
-		return nil, FailGettingConfigure
+		return nil, errFailGettingConfigure
 	}
 	mintingAmount.SetString(result.(string), 10)
 
@@ -105,7 +104,7 @@ func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) 
 	result, err = rewardConfigCache.governanceHelper.GetItemAtNumberByIntKey(blockNumber, params.Ratio)
 	if err != nil {
 		logger.Error("Couldn't get Ratio from governance", "blockNumber", blockNumber, "err", err)
-		return nil, FailGettingConfigure
+		return nil, errFailGettingConfigure
 	}
 	cn, poc, kir, parsingError := rewardConfigCache.parseRewardRatio(result.(string))
 	if parsingError != nil {
@@ -120,7 +119,7 @@ func (rewardConfigCache *rewardConfigCache) newRewardConfig(blockNumber uint64) 
 	result, err = rewardConfigCache.governanceHelper.GetItemAtNumberByIntKey(blockNumber, params.UnitPrice)
 	if err != nil {
 		logger.Error("Couldn't get MintingAmount from governance", "blockNumber", blockNumber, "err", err)
-		return nil, FailGettingConfigure
+		return nil, errFailGettingConfigure
 	}
 	unitPrice.SetUint64(result.(uint64))
 
@@ -143,14 +142,14 @@ func (rewardConfigCache *rewardConfigCache) add(blockNumber uint64, config *rewa
 func (rewardConfigCache *rewardConfigCache) parseRewardRatio(ratio string) (int, int, int, error) {
 	s := strings.Split(ratio, "/")
 	if len(s) != 3 {
-		return 0, 0, 0, InvalidFormat
+		return 0, 0, 0, errInvalidFormat
 	}
 	cn, err1 := strconv.Atoi(s[0])
 	poc, err2 := strconv.Atoi(s[1])
 	kir, err3 := strconv.Atoi(s[2])
 
 	if err1 != nil || err2 != nil || err3 != nil {
-		return 0, 0, 0, ParsingError
+		return 0, 0, 0, errParsingRatio
 	}
 	return cn, poc, kir, nil
 }
