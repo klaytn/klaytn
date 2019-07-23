@@ -24,10 +24,10 @@ Klaytn uses weightedRandom policy to choose a block proposer.
 It means, the percentage of becoming a block proposer depends on how much klay a node has staked.
 Therefore, a node staked more than others will have more opportunities than other nodes.
 
-StakingInfo is a data including stakingAmount and addresses(node, staking, reward, poc, kir).
-stakingAmount is balance how much each node has staked.
+StakingInfo is a data including stakingAmount and addresses (node, staking, reward, poc and kir).
+stakingAmount is a balance how much each node has staked.
 addresses are included stakingAddress which store stakingAmount and reward, poc, kir which get a block reward when a block has been created.
-StakingInfo is made every 86400 blocks(stakingInterval) and used in a next interval.
+StakingInfo is made every 86400 blocks (stakingInterval) and used in a next interval.
 
 type StakingInfo struct {
 	BlockNum              uint64
@@ -60,12 +60,12 @@ The detail information of PoC and KIR is available on Klaytn docs.
  KIR - https://docs.klaytn.com/klaytn/token_economy#klaytn-improvement-reserve
 
 Configures related to reward system such as mintingAmount, ratio and unitPrice are determined by Klaytn governance.
-Configures are all saved as rewardConfig every epoch block(default 604800 blocks) and managed by rewardConfigCache
+All configures are saved as rewardConfig every epoch block (default 604800 blocks) and managed by rewardConfigCache.
 
 A proposer which has made a current block will get the reward of the block.
 A block reward is calculated by following steps.
- 1. calculate totalReward by adding mintingAmount and totalTxFee(unitPrice * gasUsed).
- 2. divide totalReward by ratio(default 34/54/12).
+ 1. calculate totalReward by adding mintingAmount and totalTxFee (unitPrice * gasUsed).
+ 2. divide totalReward by ratio (default 34/54/12).
  3. distribute reward to each address(proposer, PoC, KIR).
 
 related struct
