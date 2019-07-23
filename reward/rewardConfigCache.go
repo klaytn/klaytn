@@ -68,8 +68,10 @@ func (rewardConfigCache *rewardConfigCache) get(blockNumber uint64) (*rewardConf
 	}
 	epoch = result.(uint64)
 
-	if blockNumber > 0 {
-		blockNumber = ((blockNumber - 1) / epoch) * epoch
+	if blockNumber%epoch == 0 {
+		blockNumber -= epoch
+	} else {
+		blockNumber -= blockNumber % epoch
 	}
 
 	if rewardConfigCache.cache.Contains(blockNumber) {
