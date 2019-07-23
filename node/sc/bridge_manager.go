@@ -211,12 +211,12 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 	}
 
 	for idx, ev := range ReadyEvent {
-		if ev.Nonce() < bi.handleNonce {
-			logger.Trace("past requests are ignored", "RequestNonce", ev.Nonce(), "handleNonce", bi.handleNonce)
+		if ev.RequestNonce < bi.handleNonce {
+			logger.Trace("past requests are ignored", "RequestNonce", ev.RequestNonce, "handleNonce", bi.handleNonce)
 			continue
 		}
 
-		if ev.Nonce() > bi.handleNonce+maxPendingNonceDiff {
+		if ev.RequestNonce > bi.handleNonce+maxPendingNonceDiff {
 			logger.Trace("nonce diff is too large", "limitation", maxPendingNonceDiff)
 			return errors.New("nonce diff is too large")
 		}
@@ -226,8 +226,8 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 			logger.Error("Failed handle request value transfer event", "err", err, "len(RePutEvent)", len(ReadyEvent[idx:]))
 			return err
 		}
-		if bi.nextHandleNonce <= ev.Nonce() {
-			bi.nextHandleNonce = ev.Nonce() + 1
+		if bi.nextHandleNonce <= ev.RequestNonce {
+			bi.nextHandleNonce = ev.RequestNonce + 1
 		}
 	}
 
@@ -354,7 +354,7 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferE
 	// TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
 	// - If the size is full and received event has the omitted nonce, it can be allowed.
 	for _, ev := range evs {
-		bi.UpdateRequestNonceFromCounterpart(ev.Nonce() + 1)
+		bi.UpdateRequestNonceFromCounterpart(ev.RequestNonce + 1)
 		bi.pendingRequestEvent.Put(ev)
 	}
 	logger.Trace("added pending request events to the bridge info:", "bi.pendingRequestEvent", bi.pendingRequestEvent.Len())
@@ -890,10 +890,8 @@ func (bm *BridgeManager) loop(
 			return
 		case ev := <-requestEventCh:
 			bm.requestEventFeeder.Send(&RequestValueTransferEvent{ev})
-			//bm.requestEventFeeder.Send(ev)
 		case ev := <-handleEventCh:
 			bm.handleEventFeeder.Send(&HandleValueTransferEvent{ev})
-			//bm.handleEventFeeder.Send(ev)
 		case err := <-requestEventSub.Err():
 			logger.Info("Contract Event Loop Running Stop by receivedSub.Err()", "err", err)
 			return
