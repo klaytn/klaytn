@@ -75,8 +75,8 @@ func (rewardConfigCache *rewardConfigCache) get(blockNumber uint64) (*rewardConf
 		blockNumber -= remainder
 	}
 
-	if rewardConfigCache.cache.Contains(blockNumber) {
-		config, _ := rewardConfigCache.cache.Get(blockNumber)
+	config, ok := rewardConfigCache.cache.Get(blockNumber)
+	if ok {
 		return config.(*rewardConfig), nil
 	}
 
