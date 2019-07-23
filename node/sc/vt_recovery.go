@@ -41,8 +41,8 @@ type valueTransferRecovery struct {
 
 	service2mainHint   *valueTransferHint
 	main2serviceHint   *valueTransferHint
-	serviceChainEvents []*bridge.BridgeRequestValueTransfer
-	mainChainEvents    []*bridge.BridgeRequestValueTransfer
+	serviceChainEvents []*RequestValueTransferEvent
+	mainChainEvents    []*RequestValueTransferEvent
 
 	config       *SCConfig
 	scBridgeInfo *BridgeInfo
@@ -62,8 +62,8 @@ func NewValueTransferRecovery(config *SCConfig, scBridgeInfo, mcBridgeInfo *Brid
 		wg:                 sync.WaitGroup{},
 		service2mainHint:   &valueTransferHint{},
 		main2serviceHint:   &valueTransferHint{},
-		serviceChainEvents: []*bridge.BridgeRequestValueTransfer{},
-		mainChainEvents:    []*bridge.BridgeRequestValueTransfer{},
+		serviceChainEvents: []*RequestValueTransferEvent{},
+		mainChainEvents:    []*RequestValueTransferEvent{},
 		config:             config,
 		scBridgeInfo:       scBridgeInfo,
 		mcBridgeInfo:       mcBridgeInfo,
@@ -240,7 +240,7 @@ func (vtr *valueTransferRecovery) retrievePendingEvents() error {
 
 // retrievePendingEventsFrom retrieves pending events from the specified bridge by using the hint provided.
 // The filter uses a hint as a search range. It returns a slice of events that has log details.
-func retrievePendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*bridge.BridgeRequestValueTransfer, error) {
+func retrievePendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*RequestValueTransferEvent, error) {
 	if br == nil {
 		return nil, errors.New("bridge is nil")
 	}
@@ -251,7 +251,7 @@ func retrievePendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*b
 		return nil, nil
 	}
 
-	var pendingEvents []*bridge.BridgeRequestValueTransfer
+	var pendingEvents []*RequestValueTransferEvent
 	it, err := br.FilterRequestValueTransfer(&bind.FilterOpts{Start: hint.blockNumber}) // to the current
 	if err != nil {
 		return nil, err
@@ -260,7 +260,7 @@ func retrievePendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*b
 		logger.Trace("pending nonce in the event", "requestNonce", it.Event.RequestNonce)
 		if it.Event.RequestNonce >= hint.handleNonce {
 			logger.Trace("filtered pending nonce", "requestNonce", it.Event.RequestNonce, "handledNonce", hint.handleNonce)
-			pendingEvents = append(pendingEvents, it.Event)
+			pendingEvents = append(pendingEvents, &RequestValueTransferEvent{it.Event})
 		}
 	}
 	logger.Debug("retrieved pending events", "len(pendingEvents)", len(pendingEvents))
@@ -301,60 +301,25 @@ func checkRecoveryCondition(hint *valueTransferHint) bool {
 // recoverPendingEvents recovers all pending events by resending them.
 func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	defer func() {
-		vtr.serviceChainEvents = []*bridge.BridgeRequestValueTransfer{}
-		vtr.mainChainEvents = []*bridge.BridgeRequestValueTransfer{}
+		vtr.serviceChainEvents = []*RequestValueTransferEvent{}
+		vtr.mainChainEvents = []*RequestValueTransferEvent{}
 	}()
 
-	var evs []*RequestValueTransferEvent
-
-	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
 	if len(vtr.serviceChainEvents) > 0 {
 		logger.Warn("try to recover service chain's request events", "scBridge", vtr.scBridgeInfo.address.String(), "events", len(vtr.serviceChainEvents))
 	}
-	for _, ev := range vtr.serviceChainEvents {
-		logger.Trace("recover event", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
-		evs = append(evs, &RequestValueTransferEvent{
-			TokenType:    ev.Kind,
-			ContractAddr: ev.Raw.Address,
-			TokenAddr:    ev.ContractAddress,
-			From:         ev.From,
-			To:           ev.To,
-			Amount:       ev.Amount,
-			RequestNonce: ev.RequestNonce,
-			URI:          ev.Uri,
-			Fee:          ev.Fee,
-			BlockNumber:  ev.Raw.BlockNumber,
-			txHash:       ev.Raw.TxHash,
-		})
-	}
-	vtRequestEventMeter.Mark(int64(len(evs)))
-	vtRecoveredRequestEventMeter.Mark(int64(len(evs)))
 
-	vtr.mcBridgeInfo.AddRequestValueTransferEvents(evs)
+	vtRequestEventMeter.Mark(int64(len(vtr.serviceChainEvents)))
+	vtRecoveredRequestEventMeter.Mark(int64(len(vtr.serviceChainEvents)))
 
-	evs = []*RequestValueTransferEvent{}
-	// TODO-Klaytn-ServiceChain: remove the unnecessary copy
+	vtr.mcBridgeInfo.AddRequestValueTransferEvents(vtr.serviceChainEvents)
+
 	if len(vtr.mainChainEvents) > 0 {
 		logger.Warn("try to recover main chain's request events", "mcBridge", vtr.mcBridgeInfo.address.String(), "events", len(vtr.mainChainEvents))
 	}
-	for _, ev := range vtr.mainChainEvents {
-		logger.Trace("recover events", "txHash", ev.Raw.TxHash, "nonce", ev.RequestNonce)
-		evs = append(evs, &RequestValueTransferEvent{
-			TokenType:    ev.Kind,
-			ContractAddr: ev.Raw.Address,
-			TokenAddr:    ev.ContractAddress,
-			From:         ev.From,
-			To:           ev.To,
-			Amount:       ev.Amount,
-			RequestNonce: ev.RequestNonce,
-			URI:          ev.Uri,
-			Fee:          ev.Fee,
-			BlockNumber:  ev.Raw.BlockNumber,
-			txHash:       ev.Raw.TxHash,
-		})
-	}
-	vtHandleEventMeter.Mark(int64(len(evs)))
-	vtr.scBridgeInfo.AddRequestValueTransferEvents(evs)
+
+	vtHandleEventMeter.Mark(int64(len(vtr.mainChainEvents)))
+	vtr.scBridgeInfo.AddRequestValueTransferEvents(vtr.mainChainEvents)
 
 	return nil
 }
