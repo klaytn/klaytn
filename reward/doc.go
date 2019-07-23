@@ -28,7 +28,7 @@ StakingInfo is a data including stakingAmount and addresses (node, staking, rewa
 StakingAmount is a balance how much KLAY each node has staked. Only CCO can stake KLAY.
 Each CCO stakes KLAY by a smart contract called staking contract.
 StakingAmount is derived by checking balance of staking contract.
-A StakingInfo has 5 types of addresses. All addresses are obtained by the addressBookContract which is pre-deployed in the genesis block.
+StakingInfo has 5 types of addresses. All addresses are obtained by the addressBookContract which is pre-deployed in the genesis block.
 stakingAddress are addresses of staking contracts of CCO. reward, PoC and KIR addresses are the addresses which get a block reward when a block has been created.
 StakingInfo is made every 86400 blocks (stakingInterval) and used in a next interval.
 
