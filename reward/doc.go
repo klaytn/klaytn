@@ -20,7 +20,7 @@ The Klaytn Reward System manages stakingInfo and distributes block rewards.
 
 Managing stakingInfo
 
-Klaytn uses weightedRandom policy to choose a block proposer.
+Klaytn uses WeightedRandom policy to choose a block proposer.
 It means, the percentage of becoming a block proposer depends on how much KLAY a node has staked.
 Therefore, a node staked more than others will have more opportunities than other nodes.
 
