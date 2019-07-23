@@ -29,7 +29,6 @@ var (
 
 type addressBookManager struct {
 	bc                         *blockchain.BlockChain
-	chainConfig                *params.ChainConfig
 	governanceHelper           governanceHelper
 	addressBookABI             string
 	addressBookContractAddress common.Address
@@ -38,7 +37,6 @@ type addressBookManager struct {
 func newAddressBookManager(bc *blockchain.BlockChain, governanceHelper governanceHelper) *addressBookManager {
 	return &addressBookManager{
 		bc:                         bc,
-		chainConfig:                bc.Config(),
 		governanceHelper:           governanceHelper,
 		addressBookABI:             contract.AddressBookABI,
 		addressBookContractAddress: common.HexToAddress(contract.AddressBookContractAddress),
@@ -68,14 +66,21 @@ func (abm *addressBookManager) makeMsgToAddressBook() (*types.Transaction, error
 	return msg, nil
 }
 
-func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
+func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) (nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, pocAddr common.Address, kirAddr common.Address, err error) {
+	nodeIds = []common.Address{}
+	stakingAddrs = []common.Address{}
+	rewardAddrs = []common.Address{}
+	pocAddr = common.Address{}
+	kirAddr = common.Address{}
+
 	if result == nil {
-		return nil, nil, nil, common.Address{}, common.Address{}, errAddressBookIncomplete
+		err = errAddressBookIncomplete
+		return
 	}
 
 	abii, err := abi.JSON(strings.NewReader(abm.addressBookABI))
 	if err != nil {
-		return nil, nil, nil, common.Address{}, common.Address{}, err
+		return
 	}
 
 	var (
@@ -90,19 +95,15 @@ func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) ([]co
 	err = abii.Unpack(out, "getAllAddress", result)
 	if err != nil {
 		logger.Trace("abii.Unpack failed for getAllAddress in AddressBook")
-		return nil, nil, nil, common.Address{}, common.Address{}, err
+		return
 	}
 
 	if len(*allTypeList) != len(*allAddressList) {
-		return nil, nil, nil, common.Address{}, common.Address{}, errors.New(fmt.Sprintf("length of type list and address list differ. len(type)=%d, len(addrs)=%d", len(*allTypeList), len(*allAddressList)))
+		err = errors.New(fmt.Sprintf("length of type list and address list differ. len(type)=%d, len(addrs)=%d", len(*allTypeList), len(*allAddressList)))
+		return
 	}
 
 	// Parse and construct node information
-	nodeIds := []common.Address{}
-	stakingAddrs := []common.Address{}
-	rewardAddrs := []common.Address{}
-	pocAddr := common.Address{}
-	kirAddr := common.Address{}
 	for i, addrType := range *allTypeList {
 		switch addrType {
 		case addressTypeNodeID:
@@ -116,7 +117,8 @@ func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) ([]co
 		case addressTypeKIRAddr:
 			kirAddr = (*allAddressList)[i]
 		default:
-			return nil, nil, nil, common.Address{}, common.Address{}, errors.New(fmt.Sprintf("invalid type from AddressBook: %d", addrType))
+			err = errors.New(fmt.Sprintf("invalid type from AddressBook: %d", addrType))
+			return
 		}
 	}
 
@@ -125,7 +127,8 @@ func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) ([]co
 		len(nodeIds) != len(rewardAddrs) ||
 		isEmptyAddress(pocAddr) ||
 		isEmptyAddress(kirAddr) {
-		return nil, nil, nil, common.Address{}, common.Address{}, errAddressBookIncomplete
+		err = errAddressBookIncomplete
+		return
 	}
 
 	return nodeIds, stakingAddrs, rewardAddrs, pocAddr, kirAddr, nil
@@ -134,13 +137,6 @@ func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) ([]co
 // getStakingInfoFromAddressBook returns staking info when calling AddressBook
 // succeeded. It returns an error otherwise.
 func (abm *addressBookManager) getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
-	var nodeIds []common.Address
-	var stakingAddrs []common.Address
-	var rewardAddrs []common.Address
-	var KIRAddr = common.Address{}
-	var PoCAddr = common.Address{}
-	var err error
-
 	if !params.IsStakingUpdateInterval(blockNum) {
 		return nil, errors.New(fmt.Sprintf("not staking block number. blockNum: %d", blockNum))
 	}
@@ -162,7 +158,7 @@ func (abm *addressBookManager) getStakingInfoFromAddressBook(blockNum uint64) (*
 
 	// Create a new context to be used in the EVM environment
 	context := blockchain.NewEVMContext(msg, intervalBlock.Header(), abm.bc, nil)
-	evm := vm.NewEVM(context, statedb, abm.chainConfig, &vm.Config{})
+	evm := vm.NewEVM(context, statedb, abm.bc.Config(), &vm.Config{})
 
 	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
 	logger.Trace("Call AddressBook contract", "used gas", gas, "kerr", kerr)
@@ -171,10 +167,10 @@ func (abm *addressBookManager) getStakingInfoFromAddressBook(blockNum uint64) (*
 		return nil, errors.New(fmt.Sprintf("failed to call AddressBook contract. root err: %s", err))
 	}
 
-	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err = abm.getAllAddressFromAddressBook(res)
+	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err := abm.getAllAddressFromAddressBook(res)
 	if err != nil {
 		if err == errAddressBookIncomplete {
-			// This is expected behavior when smart contract is not setup yet.
+			// This is expected behavior when addressBook contract is not setup yet.
 			logger.Info("Use empty staking info instead of info from AddressBook", "reason", err)
 		} else {
 			logger.Error("Failed to parse result from AddressBook contract. Use empty staking info", "err", err)
