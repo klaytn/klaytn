@@ -42,7 +42,7 @@ AccountKey related functions and variables are defined in the files listed below
   - account_key_role_based.go         : AccountKeyRoleBased is defined according to the AccountKey interface.
   - account_key_serializer.go         : AccountKeySerializer is defined for serialization of AccountKey.
   - account_key_weighted_multi_sig.go : AccountKeyWeightedMultiSig is defined according to the AccountKey interface.
-  - public_key.go                     : PublicKeySerializable is defined to serialize PublicKey.
+  - public_key.go                     : PublicKeySerializable is defined for serialization of PublicKey.
 
 
 For more information on AccountKey, please see the document below.
