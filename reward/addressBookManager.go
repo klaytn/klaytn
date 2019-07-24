@@ -50,6 +50,7 @@ type addressBookManager struct {
 	addressBookContractAddress common.Address
 }
 
+// create and return addressBookManager
 func newAddressBookManager(bc *blockchain.BlockChain, governanceHelper governanceHelper) *addressBookManager {
 	return &addressBookManager{
 		bc:                         bc,
@@ -59,13 +60,14 @@ func newAddressBookManager(bc *blockchain.BlockChain, governanceHelper governanc
 	}
 }
 
+// make a message to the addressBook contract for executing getAllAddress function of the addressBook contract
 func (abm *addressBookManager) makeMsgToAddressBook() (*types.Transaction, error) {
-	abii, err := abi.JSON(strings.NewReader(abm.addressBookABI))
+	abiInstance, err := abi.JSON(strings.NewReader(abm.addressBookABI))
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := abii.Pack("getAllAddress")
+	data, err := abiInstance.Pack("getAllAddress")
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +84,8 @@ func (abm *addressBookManager) makeMsgToAddressBook() (*types.Transaction, error
 	return msg, nil
 }
 
-func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) (nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, pocAddr common.Address, kirAddr common.Address, err error) {
+// It parses all addresses from the result bytes of calling addressBook.
+func (abm *addressBookManager) parseAllAddresses(result []byte) (nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, pocAddr common.Address, kirAddr common.Address, err error) {
 	nodeIds = []common.Address{}
 	stakingAddrs = []common.Address{}
 	rewardAddrs = []common.Address{}
@@ -150,8 +153,10 @@ func (abm *addressBookManager) getAllAddressFromAddressBook(result []byte) (node
 	return
 }
 
-// getStakingInfoFromAddressBook returns staking info when calling AddressBook
-// succeeded. It returns an error otherwise.
+// getStakingInfoFromAddressBook returns stakingInfo when calling AddressBook succeeded.
+// If addressBook is not activated, emptyStakingInfo is returned.
+// After addressBook is activated, it returns stakingInfo with addresses and stakingAmount.
+// Otherwise, it returns an error.
 func (abm *addressBookManager) getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 	if !params.IsStakingUpdateInterval(blockNum) {
 		return nil, errors.New(fmt.Sprintf("not staking block number. blockNum: %d", blockNum))
@@ -183,10 +188,10 @@ func (abm *addressBookManager) getStakingInfoFromAddressBook(blockNum uint64) (*
 		return nil, errors.New(fmt.Sprintf("failed to call AddressBook contract. root err: %s", err))
 	}
 
-	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err := abm.getAllAddressFromAddressBook(res)
+	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err := abm.parseAllAddresses(res)
 	if err != nil {
 		if err == errAddressBookIncomplete {
-			// This is expected behavior when addressBook contract is not setup yet.
+			// This is an expected behavior when the addressBook contract is not activated yet.
 			logger.Info("Use empty staking info instead of info from AddressBook", "reason", err)
 		} else {
 			logger.Error("Failed to parse result from AddressBook contract. Use empty staking info", "err", err)
