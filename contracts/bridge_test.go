@@ -432,7 +432,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 	defer registerOfferEventSub.Unsubscribe()
 
 	// Subscribe bridge contract event
-	b, err := bridge.NewBridge(bridgeAddr, backend)	// create base bridge contract object, not extBridge object
+	b, err := bridge.NewBridge(bridgeAddr, backend) // create base bridge contract object, not extBridge object
 	assert.Equal(t, nil, err)
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
 	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
