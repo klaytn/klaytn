@@ -15,35 +15,37 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-	Package accountkey
+The package accountkey implements the AccountKey used in Klaytn.
+Inside the package are the types, functions and interfaces associated with the AccountKey.
 
-	The package accountkey implements the AccountKey used in Klaytn.
-	Inside the package are the types, functions and interfaces associated with the AccountKey.
+Type of AccountKey
 
-	Files in package accountkey
+The AccountKey types used in Klaytn are as follows:
+  - AccountKeyTypeNil
+  - AccountKeyTypeLegacy
+  - AccountKeyTypePublic
+  - AccountKeyTypeFail
+  - AccountKeyTypeWeightedMultiSig
+  - AccountKeyTypeRoleBased
 
-	- account_key.go: Defines the AccountKey type and the AccountKey interface, and defines the functions related to AccountKey.
-	- account_key_fail.go: AccountKeyFail is defined according to the AccountKey interface.
-	- account_key_legacy.go: AccountKeyLegacy is defined according to the AccountKey interface.
-	- account_key_nil.go: AccountKeyNil is defined according to the AccountKey interface.
-	- account_key_public.go: AccountKeyPublic is defined according to the AccountKey interface.
-	- account_key_role_based.go: AccountKeyRoleBased is defined according to the AccountKey interface.
-	- account_key_serializer.go: AccountKeySerializer is defined for serialization of AccountKey.
-	- account_key_weighted_multi_sig.go: AccountKeyWeightedMultiSig is defined according to the AccountKey interface.
-	- public_key.go: PublicKeySerializable is defined to serialize PublicKey.
-
-	Type of AccountKey
-
-	- AccountKeyTypeNil
-	- AccountKeyTypeLegacy
-	- AccountKeyTypePublic
-	- AccountKeyTypeFail
-	- AccountKeyTypeWeightedMultiSig
-	- AccountKeyTypeRoleBased
-	Each AccountKey type implements the AccountKey interface.
+Each AccountKey type implements the AccountKey interface.
 
 
-	For more information on AccountKey, please see the document below.
-	https://docs.klaytn.com/klaytn/design/account#account-key
+Source Files
+
+AccountKey related functions and variables are defined in the files listed below
+  - account_key.go                    : Defines the AccountKey type and the AccountKey interface, and defines the functions related to AccountKey.
+  - account_key_fail.go               : AccountKeyFail is defined according to the AccountKey interface.
+  - account_key_legacy.go             : AccountKeyLegacy is defined according to the AccountKey interface.
+  - account_key_nil.go                : AccountKeyNil is defined according to the AccountKey interface.
+  - account_key_public.go             : AccountKeyPublic is defined according to the AccountKey interface.
+  - account_key_role_based.go         : AccountKeyRoleBased is defined according to the AccountKey interface.
+  - account_key_serializer.go         : AccountKeySerializer is defined for serialization of AccountKey.
+  - account_key_weighted_multi_sig.go : AccountKeyWeightedMultiSig is defined according to the AccountKey interface.
+  - public_key.go                     : PublicKeySerializable is defined to serialize PublicKey.
+
+
+For more information on AccountKey, please see the document below.
+https://docs.klaytn.com/klaytn/design/account#account-key
 */
 package accountkey
