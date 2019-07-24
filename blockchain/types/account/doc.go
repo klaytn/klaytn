@@ -29,7 +29,7 @@ There are three types of Accounts used in Klaytn.
 
 AccountCommon implements the structure and functions common to Klaytn Account, which also implements the Account interface.
 
-EOA(ExternallyOwnedAccount) and SCA(SmartContractAccount) are implemented in a structure that includes AccountCommon.
+EOA (ExternallyOwnedAccount) and SCA (SmartContractAccount) are implemented in a structure that includes AccountCommon.
 
 LegacyAccount is implemented separately according to the account interface.
 
