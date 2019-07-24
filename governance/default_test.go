@@ -298,7 +298,7 @@ func TestGovernance_ParseVoteValue(t *testing.T) {
 	}
 }
 
-var testGovernanceMap = GovernanceSet{
+var testGovernanceMap = map[string]interface{}{
 	"governance.governancemode": "none",
 	"governance.governingnode":  common.HexToAddress("0x1234567890123456789012345678901234567890"),
 	"governance.unitprice":      uint64(25000000000),
@@ -308,8 +308,8 @@ var testGovernanceMap = GovernanceSet{
 	"reward.minimumstake":       2000000,
 }
 
-func copyMap(src GovernanceSet) GovernanceSet {
-	dst := make(GovernanceSet)
+func copyMap(src map[string]interface{}) map[string]interface{} {
+	dst := make(map[string]interface{})
 	for k, v := range src {
 		dst[k] = v
 	}
@@ -412,7 +412,10 @@ func TestSaveGovernance(t *testing.T) {
 
 		// Make every stored governance map has a difference
 		tstMap["governance.unitprice"] = tstGovernanceInfo[i].e
-		if err := gov.WriteGovernance(blockNum, tstMap, nil); err != nil {
+		src := NewGovernanceSet()
+		delta := NewGovernanceSet()
+		src.Import(tstMap)
+		if err := gov.WriteGovernance(blockNum, src, delta); err != nil {
 			t.Errorf("Error in storing governance: %v", err)
 		}
 	}

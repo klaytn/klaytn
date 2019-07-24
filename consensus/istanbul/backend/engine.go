@@ -551,11 +551,11 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 		return nil, err
 	}
 
-	proposerPolicy, ok := sb.governance.GetGovernanceValue("istanbul.policy").(uint64)
+	proposerPolicy, ok := sb.governance.GetGovernanceValue(params.Policy).(uint64)
 	if !ok {
 		proposerPolicy = params.DefaultProposerPolicy
 	}
-	committeeSize, ok := sb.governance.GetGovernanceValue("istanbul.committeesize").(uint64)
+	committeeSize, ok := sb.governance.GetGovernanceValue(params.CommitteeSize).(uint64)
 	if !ok {
 		committeeSize = params.DefaultSubGroupSize
 	}

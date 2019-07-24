@@ -62,7 +62,7 @@ var (
 
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error) {
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		ret := api.governance.GetLatestGovernanceItem("governance.unitprice").(uint64)
+		ret := api.governance.GetLatestGovernanceItem(params.UnitPrice).(uint64)
 		return big.NewInt(0).SetUint64(ret), nil
 	} else {
 		blockNum := num.Int64()
@@ -80,7 +80,7 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error)
 }
 
 func (api *GovernanceKlayAPI) GasPrice() *big.Int {
-	ret := api.governance.GetLatestGovernanceItem("governance.unitprice").(uint64)
+	ret := api.governance.GetLatestGovernanceItem(params.UnitPrice).(uint64)
 	return big.NewInt(0).SetUint64(ret)
 }
 
@@ -123,9 +123,7 @@ func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
 func (api *PublicGovernanceAPI) ShowTally() []*returnTally {
 	ret := []*returnTally{}
 
-	api.governance.GovernanceTallyLock.RLock()
-	defer api.governance.GovernanceTallyLock.RUnlock()
-	for _, val := range api.governance.GovernanceTally {
+	for _, val := range api.governance.GovernanceTallies.Copy() {
 		item := &returnTally{
 			Key:                val.Key,
 			Value:              val.Value,
@@ -144,7 +142,7 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 	return float64(atomic.LoadUint64(&api.governance.totalVotingPower)) / 1000.0, nil
 }
 
-func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (GovernanceSet, error) {
+func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
@@ -219,7 +217,7 @@ func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
 func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		// If the value hasn't been set in governance, set it with default value
-		if ret := api.governance.GetLatestGovernanceItem("param.txgashumanreadable"); ret == nil {
+		if ret := api.governance.GetLatestGovernanceItem(params.ConstTxGasHumanReadable); ret == nil {
 			return api.setDefaultTxGasHumanReadable()
 		} else {
 			return ret.(uint64), nil
