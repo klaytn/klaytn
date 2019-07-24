@@ -37,7 +37,7 @@ Source Files
 
 Account related functions and variables are defined in the files listed below.
   - account.go                  : Defines the types, interfaces and functions associated with the Account.
-  - account_common.go           : Data structures and functions that are common to EOA (ExternallyOwnedAccount) and SCA (SmartContractAccount) are defined as AccountCommon..
+  - account_common.go           : Data structures and functions that are common to EOA (ExternallyOwnedAccount) and SCA (SmartContractAccount) are defined as AccountCommon.
   - account_serializer.go       : AccountSerializer is defined for serializing Account.
   - externally_owned_account.go : ExternallyOwnedAccount containing an AccountCommon is defined.
   - legacy_account.go           : LegacyAccount that implements the Account interface is defined.
