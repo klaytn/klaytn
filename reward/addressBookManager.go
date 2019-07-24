@@ -84,7 +84,7 @@ func (abm *addressBookManager) makeMsgToAddressBook() (*types.Transaction, error
 	return msg, nil
 }
 
-// It parses all addresses from the result bytes of calling addressBook.
+// It parses the result bytes of calling addressBook to addresses.
 func (abm *addressBookManager) parseAllAddresses(result []byte) (nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, pocAddr common.Address, kirAddr common.Address, err error) {
 	nodeIds = []common.Address{}
 	stakingAddrs = []common.Address{}
@@ -192,9 +192,9 @@ func (abm *addressBookManager) getStakingInfoFromAddressBook(blockNum uint64) (*
 	if err != nil {
 		if err == errAddressBookIncomplete {
 			// This is an expected behavior when the addressBook contract is not activated yet.
-			logger.Info("Use empty staking info instead of info from AddressBook", "reason", err)
+			logger.Info("The addressBook is not yet activated. Use empty stakingInfo", "reason", err)
 		} else {
-			logger.Error("Failed to parse result from AddressBook contract. Use empty staking info", "err", err)
+			logger.Error("Fail while parsing a result from the addressBook. Use empty staking info", "err", err)
 		}
 		return newEmptyStakingInfo(blockNum), nil
 	}
