@@ -17,7 +17,7 @@
 /*
 Package account implements Account used in Klaytn.
 
-Inside the package, the type, structure, functions, and interfaces associated with the Account are defined.
+Inside the package, types, structures, functions, and interfaces associated with the Account are defined.
 
 Type of Account
 
