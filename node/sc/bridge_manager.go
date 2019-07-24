@@ -61,12 +61,8 @@ type RequestValueTransferEvent struct {
 	*bridgecontract.BridgeRequestValueTransfer
 }
 
-func (rEv *RequestValueTransferEvent) Nonce() uint64 {
+func (rEv RequestValueTransferEvent) Nonce() uint64 {
 	return rEv.RequestNonce
-}
-
-func (rEv *RequestValueTransferEvent) BridgeAddr() common.Address {
-	return rEv.Raw.Address
 }
 
 // HandleValueTransferEvent from Bridge contract
