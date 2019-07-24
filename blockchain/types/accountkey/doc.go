@@ -34,7 +34,7 @@ Each AccountKey type implements the AccountKey interface.
 Source Files
 
 AccountKey related functions and variables are defined in the files listed below.
-  - account_key.go                    : Defines the AccountKey type and the AccountKey interface, and defines the functions related to AccountKey.
+  - account_key.go                    : Defines the AccountKey type, the AccountKey interface and the functions related to AccountKey.
   - account_key_fail.go               : AccountKeyFail is defined according to the AccountKey interface.
   - account_key_legacy.go             : AccountKeyLegacy is defined according to the AccountKey interface.
   - account_key_nil.go                : AccountKeyNil is defined according to the AccountKey interface.
