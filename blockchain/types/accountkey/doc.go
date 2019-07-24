@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-The package accountkey implements the AccountKey used in Klaytn.
+Package accountkey implements the AccountKey used in Klaytn.
 Inside the package are the types, functions and interfaces associated with the AccountKey.
 
 Type of AccountKey
