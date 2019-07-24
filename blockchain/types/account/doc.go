@@ -19,7 +19,6 @@ Package account implements Account used in Klaytn.
 
 Inside the package, the type, structure, functions, and interfaces associated with the Account are defined.
 
-
 Type of Account
 
 There are three types of Accounts used in Klaytn.
@@ -34,8 +33,6 @@ EOA(ExternallyOwnedAccount) and SCA(SmartContractAccount) are implemented in a s
 
 LegacyAccount is implemented separately according to the account interface.
 
-
-
 Source Files
 
 Account related functions and variables are defined in the files listed below
@@ -46,9 +43,7 @@ Account related functions and variables are defined in the files listed below
   - legacy_account.go           : LegacyAccount that implements the Account interface is defined.
   - smart_contract_account.go   : SmartContractAccount containing an AccountCommon is defined.
 
-
 For more information on Account, please refer to the document below.
-
 https://docs.klaytn.com/klaytn/design/account#klaytn-accounts
  */
 package account
