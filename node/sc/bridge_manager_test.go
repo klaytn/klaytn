@@ -179,67 +179,64 @@ func TestBridgeManager(t *testing.T) {
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(addr)
 
-	tokenCh := make(chan RequestValueTransferEvent)
-	tokenSendCh := make(chan HandleValueTransferEvent)
-	bridgeManager.SubscribeTokenReceived(tokenCh)
-	bridgeManager.SubscribeTokenWithDraw(tokenSendCh)
+	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
+	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
+	bridgeManager.SubscribeRequestEvent(requestValueTransferEventCh)
+	bridgeManager.SubscribeHandleEvent(handleValueTransferEventCh)
 
 	go func() {
 		for {
 			select {
-			case ev := <-tokenCh:
-				fmt.Println("Deposit Event",
-					"type", ev.TokenType,
+			case ev := <-requestValueTransferEventCh:
+				fmt.Println("Request Event",
+					"type", ev.Kind,
 					"amount", ev.Amount,
 					"from", ev.From.String(),
 					"to", ev.To.String(),
-					"contract", ev.ContractAddr.String(),
-					"token", ev.TokenAddr.String(),
+					"contract", ev.Raw.Address.String(),
+					"token", ev.ContractAddress.String(),
 					"requestNonce", ev.RequestNonce)
 
-				switch ev.TokenType {
-				case 0:
-					// WithdrawKLAY by Event
-					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
+				switch ev.Kind {
+				case KLAY:
+					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
-						log.Fatalf("Failed to WithdrawKLAY: %v", err)
+						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
 					}
 					fmt.Println("WithdrawKLAY Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 
-				case 1:
-					// WithdrawToken by Event
-					tx, err := bridge.HandleERC20Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+				case ERC20:
+					tx, err := bridge.HandleERC20Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
-						log.Fatalf("Failed to WithdrawToken: %v", err)
+						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 					}
-					fmt.Println("WithdrawToken Transaction by event ", tx.Hash().Hex())
+					fmt.Println("HandleERC20Transfer Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 
-				case 2:
+				case ERC721:
 					owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
 					assert.Equal(t, nil, err)
-					fmt.Println("NFT owner before WithdrawERC721: ", owner.String())
+					fmt.Println("NFT owner before HandleERC721Transfer: ", owner.String())
 
-					// WithdrawToken by Event
-					tx, err := bridge.HandleERC721Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.BlockNumber, ev.URI)
+					tx, err := bridge.HandleERC721Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
 					if err != nil {
-						log.Fatalf("Failed to WithdrawERC721: %v", err)
+						log.Fatalf("Failed to HandleERC721Transfer: %v", err)
 					}
-					fmt.Println("WithdrawERC721 Transaction by event ", tx.Hash().Hex())
+					fmt.Println("HandleERC721Transfer Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 				}
 
 				wg.Done()
 
-			case ev := <-tokenSendCh:
-				fmt.Println("receive token withdraw event ", ev.ContractAddr.Hex())
-				fmt.Println("Withdraw Event",
-					"type", ev.TokenType,
-					"amount", ev.Amount,
+			case ev := <-handleValueTransferEventCh:
+				fmt.Println("Handle value transfer event",
+					"bridgeAddr", ev.Raw.Address.Hex(),
+					"type", ev.Kind,
+					"amount", ev.Value,
 					"owner", ev.Owner.String(),
-					"contract", ev.ContractAddr.String(),
-					"token", ev.TokenAddr.String(),
+					"contract", ev.Raw.Address.String(),
+					"token", ev.ContractAddress.String(),
 					"handleNonce", ev.HandleNonce)
 				wg.Done()
 			}
@@ -539,61 +536,61 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(pBridgeAddr)
 
-	tokenCh := make(chan RequestValueTransferEvent)
-	tokenSendCh := make(chan HandleValueTransferEvent)
-	bridgeManager.SubscribeTokenReceived(tokenCh)
-	bridgeManager.SubscribeTokenWithDraw(tokenSendCh)
+	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
+	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
+	bridgeManager.SubscribeRequestEvent(requestValueTransferEventCh)
+	bridgeManager.SubscribeHandleEvent(handleValueTransferEventCh)
 
 	go func() {
 		for {
 			select {
-			case ev := <-tokenCh:
-				fmt.Println("Deposit Event",
-					"type", ev.TokenType,
+			case ev := <-requestValueTransferEventCh:
+				fmt.Println("Request value transfer event",
+					"type", ev.Kind,
 					"amount", ev.Amount,
 					"from", ev.From.String(),
 					"to", ev.To.String(),
-					"contract", ev.ContractAddr.String(),
-					"token", ev.TokenAddr.String(),
+					"contract", ev.Raw.Address.String(),
+					"token", ev.ContractAddress.String(),
 					"requestNonce", ev.RequestNonce,
 					"fee", ev.Fee.String())
 
-				switch ev.TokenType {
-				case 0:
-					assert.Equal(t, common.Address{}, ev.TokenAddr)
+				switch ev.Kind {
+				case KLAY:
+					assert.Equal(t, common.Address{}, ev.ContractAddress)
 					assert.Equal(t, KLAYFee, ev.Fee.Int64())
 
-					// WithdrawKLAY by Event
-					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
+					// HandleKLAYTransfer by Event
+					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
-						log.Fatalf("Failed to WithdrawKLAY: %v", err)
+						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
 					}
-					fmt.Println("WithdrawKLAY Transaction by event ", tx.Hash().Hex())
+					fmt.Println("HandleKLAYTransfer Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 
-				case 1:
-					assert.Equal(t, tokenAddr, ev.TokenAddr)
+				case ERC20:
+					assert.Equal(t, tokenAddr, ev.ContractAddress)
 					assert.Equal(t, ERC20Fee, ev.Fee.Int64())
 
-					// WithdrawToken by Event
-					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+					// HandleERC20Transfer by Event
+					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
-						log.Fatalf("Failed to WithdrawToken: %v", err)
+						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 					}
-					fmt.Println("WithdrawToken Transaction by event ", tx.Hash().Hex())
+					fmt.Println("HandleERC20Transfer Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 				}
 
 				wg.Done()
 
-			case ev := <-tokenSendCh:
-				fmt.Println("receive token withdraw event ", ev.ContractAddr.Hex())
-				fmt.Println("Withdraw Event",
-					"type", ev.TokenType,
-					"amount", ev.Amount,
+			case ev := <-handleValueTransferEventCh:
+				fmt.Println("Handle value transfer event",
+					"bridgeAddr", ev.Raw.Address.Hex(),
+					"type", ev.Kind,
+					"amount", ev.Value,
 					"owner", ev.Owner.String(),
-					"contract", ev.ContractAddr.String(),
-					"token", ev.TokenAddr.String(),
+					"contract", ev.Raw.Address.String(),
+					"token", ev.ContractAddress.String(),
 					"handleNonce", ev.HandleNonce)
 				wg.Done()
 			}

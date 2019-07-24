@@ -42,8 +42,8 @@ const (
 
 const (
 	KLAY uint8 = iota
-	TOKEN
-	NFT
+	ERC20
+	ERC721
 )
 
 var (
@@ -58,31 +58,16 @@ var (
 
 // RequestValueTransferEvent from Bridge contract
 type RequestValueTransferEvent struct {
-	TokenType    uint8
-	ContractAddr common.Address
-	TokenAddr    common.Address
-	From         common.Address
-	To           common.Address
-	Amount       *big.Int // Amount is UID in ERC721 token
-	RequestNonce uint64
-	URI          string // uri of ERC721 token
-	BlockNumber  uint64
-	Fee          *big.Int
-	txHash       common.Hash
+	*bridgecontract.BridgeRequestValueTransfer
 }
 
-func (rEv *RequestValueTransferEvent) Nonce() uint64 {
+func (rEv RequestValueTransferEvent) Nonce() uint64 {
 	return rEv.RequestNonce
 }
 
 // HandleValueTransferEvent from Bridge contract
 type HandleValueTransferEvent struct {
-	TokenType    uint8
-	ContractAddr common.Address
-	TokenAddr    common.Address
-	Owner        common.Address
-	Amount       *big.Int // Amount is UID in NFT
-	HandleNonce  uint64
+	*bridgecontract.BridgeHandleValueTransfer
 }
 
 type BridgeJournal struct {
@@ -274,12 +259,12 @@ func (bi *BridgeInfo) UpdateInfo() error {
 
 // handleRequestValueTransferEvent handles the given request value transfer event.
 func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEvent) error {
-	tokenType := ev.TokenType
-	tokenAddr := bi.GetCounterPartToken(ev.TokenAddr)
+	tokenType := ev.Kind
+	tokenAddr := bi.GetCounterPartToken(ev.ContractAddress)
 	// TODO-Klaytn-Servicechain Add counterpart token address in requestValueTransferEvent
 	if tokenType != KLAY && tokenAddr == (common.Address{}) {
 		logger.Warn("Unregistered counter part token address.", "addr", tokenAddr.Hex())
-		ctTokenAddr, err := bi.counterpartBridge.AllowedTokens(nil, ev.TokenAddr)
+		ctTokenAddr, err := bi.counterpartBridge.AllowedTokens(nil, ev.ContractAddress)
 		if err != nil {
 			return err
 		}
@@ -287,7 +272,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 			return errors.New("can't get counterpart token from bridge")
 		}
 
-		if err := bi.RegisterToken(ev.TokenAddr, ctTokenAddr); err != nil {
+		if err := bi.RegisterToken(ev.ContractAddress, ctTokenAddr); err != nil {
 			return err
 		}
 		tokenAddr = ctTokenAddr
@@ -308,32 +293,32 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 
 	switch tokenType {
 	case KLAY:
-		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce, ev.BlockNumber)
+		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce, ev.Raw.BlockNumber)
 		if err != nil {
 			return err
 		}
 		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 
-	case TOKEN:
-		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber)
+	case ERC20:
+		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.Raw.BlockNumber)
 		if err != nil {
 			return err
 		}
 		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
-	case NFT:
-		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.BlockNumber, ev.URI)
+	case ERC721:
+		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
 		if err != nil {
 			return err
 		}
 		logger.Trace("Bridge succeeded to HandleERC721Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 	default:
-		logger.Warn("Got Unknown Token Type ReceivedEvent", "bridge", ev.ContractAddr, "nonce", ev.RequestNonce, "from", ev.From)
+		logger.Warn("Got Unknown Token Type ReceivedEvent", "bridge", ev.Raw.Address, "nonce", ev.RequestNonce, "from", ev.From)
 		return nil
 	}
 
 	bridgeAcc.IncNonce()
 
-	bi.bridgeDB.WriteHandleTxHashFromRequestTxHash(ev.txHash, handleTx.Hash())
+	bi.bridgeDB.WriteHandleTxHashFromRequestTxHash(ev.Raw.TxHash, handleTx.Hash())
 	return nil
 }
 
@@ -416,8 +401,8 @@ type BridgeManager struct {
 	bridges        map[common.Address]*BridgeInfo
 	mu             sync.RWMutex
 
-	tokenReceived event.Feed
-	tokenWithdraw event.Feed
+	requestEventFeeder event.Feed
+	handleEventFeeder  event.Feed
 
 	scope event.SubscriptionScope
 
@@ -520,14 +505,14 @@ func (bm *BridgeManager) LogBridgeStatus() {
 	logger.Info("VT : Service -> Main Chain", "request", s2mTotalRequestNonce, "handle", s2mTotalHandleNonce, "pending", s2mTotalRequestNonce-s2mTotalHandleNonce)
 }
 
-// SubscribeTokenReceived registers a subscription of TokenReceivedEvent.
-func (bm *BridgeManager) SubscribeTokenReceived(ch chan<- RequestValueTransferEvent) event.Subscription {
-	return bm.scope.Track(bm.tokenReceived.Subscribe(ch))
+// SubscribeRequestEvent registers a subscription of RequestValueTransferEvent.
+func (bm *BridgeManager) SubscribeRequestEvent(ch chan<- *RequestValueTransferEvent) event.Subscription {
+	return bm.scope.Track(bm.requestEventFeeder.Subscribe(ch))
 }
 
-// SubscribeTokenWithDraw registers a subscription of TokenTransferEvent.
-func (bm *BridgeManager) SubscribeTokenWithDraw(ch chan<- HandleValueTransferEvent) event.Subscription {
-	return bm.scope.Track(bm.tokenWithdraw.Subscribe(ch))
+// SubscribeHandleEvent registers a subscription of RequestValueTransferEvent.
+func (bm *BridgeManager) SubscribeHandleEvent(ch chan<- *HandleValueTransferEvent) event.Subscription {
+	return bm.scope.Track(bm.handleEventFeeder.Subscribe(ch))
 }
 
 // GetAllBridge returns a slice of journal cache.
@@ -880,13 +865,13 @@ func (bm *BridgeManager) UnsubscribeEvent(addr common.Address) {
 // Loop handles subscribed event messages.
 func (bm *BridgeManager) loop(
 	addr common.Address,
-	receivedCh <-chan *bridgecontract.BridgeRequestValueTransfer,
-	withdrawCh <-chan *bridgecontract.BridgeHandleValueTransfer,
-	receivedSub event.Subscription,
-	withdrawSub event.Subscription) {
+	requestEventCh <-chan *bridgecontract.BridgeRequestValueTransfer,
+	handleEventCh <-chan *bridgecontract.BridgeHandleValueTransfer,
+	requestEventSub event.Subscription,
+	handleEventSub event.Subscription) {
 
-	defer receivedSub.Unsubscribe()
-	defer withdrawSub.Unsubscribe()
+	defer requestEventSub.Unsubscribe()
+	defer handleEventSub.Unsubscribe()
 
 	bi, ok := bm.GetBridgeInfo(addr)
 	if !ok {
@@ -899,35 +884,14 @@ func (bm *BridgeManager) loop(
 		select {
 		case <-bi.closed:
 			return
-		case ev := <-receivedCh:
-			receiveEvent := RequestValueTransferEvent{
-				TokenType:    ev.Kind,
-				ContractAddr: addr,
-				TokenAddr:    ev.ContractAddress,
-				From:         ev.From,
-				To:           ev.To,
-				Amount:       ev.Amount,
-				RequestNonce: ev.RequestNonce,
-				URI:          ev.Uri,
-				Fee:          ev.Fee,
-				BlockNumber:  ev.Raw.BlockNumber,
-				txHash:       ev.Raw.TxHash,
-			}
-			bm.tokenReceived.Send(receiveEvent)
-		case ev := <-withdrawCh:
-			withdrawEvent := HandleValueTransferEvent{
-				TokenType:    ev.Kind,
-				ContractAddr: addr,
-				TokenAddr:    ev.ContractAddress,
-				Owner:        ev.Owner,
-				Amount:       ev.Value,
-				HandleNonce:  ev.HandleNonce,
-			}
-			bm.tokenWithdraw.Send(withdrawEvent)
-		case err := <-receivedSub.Err():
+		case ev := <-requestEventCh:
+			bm.requestEventFeeder.Send(&RequestValueTransferEvent{ev})
+		case ev := <-handleEventCh:
+			bm.handleEventFeeder.Send(&HandleValueTransferEvent{ev})
+		case err := <-requestEventSub.Err():
 			logger.Info("Contract Event Loop Running Stop by receivedSub.Err()", "err", err)
 			return
-		case err := <-withdrawSub.Err():
+		case err := <-handleEventSub.Err():
 			logger.Info("Contract Event Loop Running Stop by withdrawSub.Err()", "err", err)
 			return
 		}

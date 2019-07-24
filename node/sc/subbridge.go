@@ -51,8 +51,8 @@ import (
 const (
 	forceSyncCycle = 10 * time.Second // Time interval to force syncs, even if few peers are available
 
-	tokenReceivedChanSize = 10000
-	tokenTransferChanSize = 10000
+	requestEventChanSize = 10000
+	handleEventChanSize  = 10000
 
 	resetBridgeCycle   = 3 * time.Second
 	restoreBridgeCycle = 3 * time.Second
@@ -134,9 +134,9 @@ type SubBridge struct {
 	remoteBackend Backend
 	bridgeManager *BridgeManager
 
-	requestEventCh  chan RequestValueTransferEvent
+	requestEventCh  chan *RequestValueTransferEvent
 	requestEventSub event.Subscription
-	handleEventCh   chan HandleValueTransferEvent
+	handleEventCh   chan *HandleValueTransferEvent
 	handleEventSub  event.Subscription
 
 	bridgeAccountManager *BridgeAccountManager
@@ -173,9 +173,10 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		ctx:            ctx,
 		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		logsCh:         make(chan []*types.Log, chainLogChanSize),
-		//txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
-		requestEventCh: make(chan RequestValueTransferEvent, tokenReceivedChanSize),
-		handleEventCh:  make(chan HandleValueTransferEvent, tokenTransferChanSize),
+		//txCh:            make(chan blockchain.NewTxsEvent,
+		// transactionChanSize),
+		requestEventCh: make(chan *RequestValueTransferEvent, requestEventChanSize),
+		handleEventCh:  make(chan *HandleValueTransferEvent, handleEventChanSize),
 		quitSync:       make(chan struct{}),
 		maxPeers:       config.MaxPeer,
 		onAnchoringTx:  false,
@@ -346,8 +347,8 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 		sc.bootFail = true
 		return
 	}
-	sc.requestEventSub = sc.bridgeManager.SubscribeTokenReceived(sc.requestEventCh)
-	sc.handleEventSub = sc.bridgeManager.SubscribeTokenWithDraw(sc.handleEventCh)
+	sc.requestEventSub = sc.bridgeManager.SubscribeRequestEvent(sc.requestEventCh)
+	sc.handleEventSub = sc.bridgeManager.SubscribeHandleEvent(sc.handleEventCh)
 
 	sc.pmwg.Add(1)
 	go sc.restoreBridgeLoop()

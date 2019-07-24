@@ -85,12 +85,12 @@ var (
 			handle:      handleKLAYTransfer,
 			dummyHandle: dummyHandleRequestKLAYTransfer,
 		},
-		TOKEN: {
+		ERC20: {
 			request:     requestTokenTransfer,
 			handle:      handleTokenTransfer,
 			dummyHandle: dummyHandleRequestTokenTransfer,
 		},
-		NFT: {
+		ERC721: {
 			request:     requestNFTTransfer,
 			handle:      handleNFTTransfer,
 			dummyHandle: dummyHandleRequestNFTTransfer,
@@ -132,13 +132,13 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	// 4. Check pending events.
 	t.Log("check pending tx", "len", len(vtr.serviceChainEvents))
 	var count = 0
-	for index, evt := range vtr.serviceChainEvents {
-		assert.Equal(t, info.nodeAuth.From, evt.From)
-		assert.Equal(t, info.aliceAuth.From, evt.To)
-		assert.Equal(t, big.NewInt(testAmount), evt.Amount)
-		assert.Equal(t, uint64(index+testNonceOffset), evt.RequestNonce)
+	for index, ev := range vtr.serviceChainEvents {
+		assert.Equal(t, info.nodeAuth.From, ev.From)
+		assert.Equal(t, info.aliceAuth.From, ev.To)
+		assert.Equal(t, big.NewInt(testAmount), ev.Amount)
+		assert.Equal(t, uint64(index+testNonceOffset), ev.RequestNonce)
 		assert.Condition(t, func() bool {
-			return uint64(testBlockOffset) <= evt.Raw.BlockNumber
+			return uint64(testBlockOffset) <= ev.Raw.BlockNumber
 		})
 		count++
 	}
@@ -173,7 +173,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[TOKEN].request(info, info.localInfo)
+			ops[ERC20].request(info, info.localInfo)
 		}
 	})
 
@@ -190,7 +190,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	ops[TOKEN].dummyHandle(info, info.remoteInfo)
+	ops[ERC20].dummyHandle(info, info.remoteInfo)
 
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -210,7 +210,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[NFT].request(info, info.localInfo)
+			ops[ERC721].request(info, info.localInfo)
 		}
 	})
 
@@ -227,7 +227,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	ops[NFT].dummyHandle(info, info.remoteInfo)
+	ops[ERC721].dummyHandle(info, info.remoteInfo)
 
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -541,11 +541,11 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	}
 
 	// Prepare channel for event handling.
-	requestVTCh := make(chan RequestValueTransferEvent)
-	handleVTCh := make(chan HandleValueTransferEvent)
+	requestVTCh := make(chan *RequestValueTransferEvent)
+	handleVTCh := make(chan *HandleValueTransferEvent)
 	recoveryCh := make(chan bool)
-	bm.SubscribeTokenReceived(requestVTCh)
-	bm.SubscribeTokenWithDraw(handleVTCh)
+	bm.SubscribeRequestEvent(requestVTCh)
+	bm.SubscribeHandleEvent(handleVTCh)
 
 	info := testInfo{
 		t, sim, sc, bm, localInfo, remoteInfo,
@@ -570,17 +570,17 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 				if ev.RequestNonce == (testTxCount - testPendingCount) {
 					t.Log("missing handle value transfer", "nonce", ev.RequestNonce)
 				} else {
-					switch ev.TokenType {
-					case KLAY, TOKEN, NFT:
+					switch ev.Kind {
+					case KLAY, ERC20, ERC721:
 						break
 					default:
-						t.Fatal("received TokenType is unknown")
+						t.Fatalf("received ev.Kind is unknown: %v", ev.Kind)
 					}
 
-					if ev.ContractAddr == info.localInfo.address {
-						ops[ev.TokenType].handle(&info, info.remoteInfo, &ev)
+					if ev.Raw.Address == info.localInfo.address {
+						ops[ev.Kind].handle(&info, info.remoteInfo, ev)
 					} else {
-						ops[ev.TokenType].handle(&info, info.localInfo, &ev)
+						ops[ev.Kind].handle(&info, info.localInfo, ev)
 					}
 				}
 
@@ -621,7 +621,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfer
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testAmount), ev.Amount)
 	opts := bi.account.GetTransactOpts()
-	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce, ev.BlockNumber)
+	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.Amount, ev.To, ev.RequestNonce, ev.Raw.BlockNumber)
 	if err != nil {
 		log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 	}
@@ -662,7 +662,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.Amount)
 	_, err := bi.bridge.HandleERC20Transfer(
-		bi.account.GetTransactOpts(), ev.Amount, ev.To, info.tokenRemoteAddr, ev.RequestNonce, ev.BlockNumber)
+		bi.account.GetTransactOpts(), ev.Amount, ev.To, info.tokenRemoteAddr, ev.RequestNonce, ev.Raw.BlockNumber)
 	if err != nil {
 		log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 	}
@@ -717,8 +717,8 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferE
 		ev.To,
 		nftAddr,
 		ev.RequestNonce,
-		ev.BlockNumber,
-		ev.URI)
+		ev.Raw.BlockNumber,
+		ev.Uri)
 	if err != nil {
 		log.Fatalf("Failed to handleERC721Transfer: %v", err)
 	}

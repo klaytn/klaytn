@@ -67,34 +67,37 @@ func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
 	return nil
 }
 
-func (cce *ChildChainEventHandler) ProcessRequestEvent(ev RequestValueTransferEvent) error {
-	handleBridgeAddr := cce.subbridge.bridgeManager.GetCounterPartBridgeAddr(ev.ContractAddr)
+func (cce *ChildChainEventHandler) ProcessRequestEvent(ev *RequestValueTransferEvent) error {
+	handleBridgeAddr := cce.subbridge.bridgeManager.GetCounterPartBridgeAddr(ev.Raw.Address)
 	if handleBridgeAddr == (common.Address{}) {
-		return fmt.Errorf("there is no counter part bridge of the bridge(%v)", ev.ContractAddr.String())
+		return fmt.Errorf("there is no counter part bridge of the bridge(%v)", ev.Raw.Address.String())
 	}
 
 	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(handleBridgeAddr)
 	if !ok {
-		return fmt.Errorf("there is no counter part bridge info(%v) of the bridge(%v)", handleBridgeAddr.String(), ev.ContractAddr.String())
+		return fmt.Errorf("there is no counter part bridge info(%v) of the bridge(%v)", handleBridgeAddr.String(), ev.Raw.Address.String())
 	}
 
 	// TODO-Klaytn need to manage the size limitation of pending event list.
-	handleBridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{&ev})
+	handleBridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
 	return nil
 }
 
-func (cce *ChildChainEventHandler) ProcessHandleEvent(ev HandleValueTransferEvent) error {
-	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(ev.ContractAddr)
+func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEvent) error {
+	handleBridgeInfo, ok := cce.subbridge.bridgeManager.GetBridgeInfo(ev.Raw.Address)
 	if !ok {
 		return errors.New("there is no bridge")
 	}
 
 	handleBridgeInfo.UpdateHandledNonce(ev.HandleNonce + 1)
 
-	tokenType := ev.TokenType
-	tokenAddr := ev.TokenAddr
-
-	logger.Trace("RequestValueTransfer Event", "bridgeAddr", ev.ContractAddr.String(), "handleNonce", ev.HandleNonce, "to", ev.Owner.String(), "valueType", tokenType, "token/NFT contract", tokenAddr, "value", ev.Amount.String())
+	logger.Trace("RequestValueTransfer Event",
+		"bridgeAddr", ev.Raw.Address.String(),
+		"handleNonce", ev.HandleNonce,
+		"to", ev.Owner.String(),
+		"valueType", ev.Kind,
+		"token/NFT contract", ev.ContractAddress,
+		"value", ev.Value.String())
 	return nil
 }
 
