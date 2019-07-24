@@ -505,12 +505,12 @@ func (bm *BridgeManager) LogBridgeStatus() {
 	logger.Info("VT : Service -> Main Chain", "request", s2mTotalRequestNonce, "handle", s2mTotalHandleNonce, "pending", s2mTotalRequestNonce-s2mTotalHandleNonce)
 }
 
-// SubscribeRequestEvent registers a subscription of TokenReceivedEvent.
+// SubscribeRequestEvent registers a subscription of RequestValueTransferEvent.
 func (bm *BridgeManager) SubscribeRequestEvent(ch chan<- *RequestValueTransferEvent) event.Subscription {
 	return bm.scope.Track(bm.requestEventFeeder.Subscribe(ch))
 }
 
-// SubscribeHandleEvent registers a subscription of TokenTransferEvent.
+// SubscribeHandleEvent registers a subscription of RequestValueTransferEvent.
 func (bm *BridgeManager) SubscribeHandleEvent(ch chan<- *HandleValueTransferEvent) event.Subscription {
 	return bm.scope.Track(bm.handleEventFeeder.Subscribe(ch))
 }

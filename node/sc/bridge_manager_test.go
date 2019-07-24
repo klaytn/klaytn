@@ -199,7 +199,6 @@ func TestBridgeManager(t *testing.T) {
 
 				switch ev.Kind {
 				case KLAY:
-					// WithdrawKLAY by Event
 					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
@@ -208,7 +207,6 @@ func TestBridgeManager(t *testing.T) {
 					sim.Commit() // block
 
 				case ERC20:
-					// WithdrawToken by Event
 					tx, err := bridge.HandleERC20Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
@@ -221,7 +219,6 @@ func TestBridgeManager(t *testing.T) {
 					assert.Equal(t, nil, err)
 					fmt.Println("NFT owner before HandleERC721Transfer: ", owner.String())
 
-					// WithdrawToken by Event
 					tx, err := bridge.HandleERC721Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, nftAddr, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
 					if err != nil {
 						log.Fatalf("Failed to HandleERC721Transfer: %v", err)
