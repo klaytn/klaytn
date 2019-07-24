@@ -45,5 +45,5 @@ Account related functions and variables are defined in the files listed below.
 
 For more information on Account, please refer to the document below.
 https://docs.klaytn.com/klaytn/design/account#klaytn-accounts
- */
+*/
 package account
