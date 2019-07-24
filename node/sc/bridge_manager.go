@@ -259,7 +259,7 @@ func (bi *BridgeInfo) UpdateInfo() error {
 
 // handleRequestValueTransferEvent handles the given request value transfer event.
 func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEvent) error {
-	tokenType := ev.Kind
+	tokenType := ev.TokenType
 	tokenAddr := bi.GetCounterPartToken(ev.TokenAddress)
 	// TODO-Klaytn-Servicechain Add counterpart token address in requestValueTransferEvent
 	if tokenType != KLAY && tokenAddr == (common.Address{}) {

@@ -570,17 +570,17 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 				if ev.RequestNonce == (testTxCount - testPendingCount) {
 					t.Log("missing handle value transfer", "nonce", ev.RequestNonce)
 				} else {
-					switch ev.Kind {
+					switch ev.TokenType {
 					case KLAY, ERC20, ERC721:
 						break
 					default:
-						t.Fatalf("received ev.Kind is unknown: %v", ev.Kind)
+						t.Fatalf("received ev.TokenType is unknown: %v", ev.TokenType)
 					}
 
 					if ev.Raw.Address == info.localInfo.address {
-						ops[ev.Kind].handle(&info, info.remoteInfo, ev)
+						ops[ev.TokenType].handle(&info, info.remoteInfo, ev)
 					} else {
-						ops[ev.Kind].handle(&info, info.localInfo, ev)
+						ops[ev.TokenType].handle(&info, info.localInfo, ev)
 					}
 				}
 

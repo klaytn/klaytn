@@ -189,7 +189,7 @@ func TestBridgeManager(t *testing.T) {
 			select {
 			case ev := <-requestValueTransferEventCh:
 				fmt.Println("Request Event",
-					"type", ev.Kind,
+					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
 					"from", ev.From.String(),
 					"to", ev.To.String(),
@@ -197,7 +197,7 @@ func TestBridgeManager(t *testing.T) {
 					"token", ev.TokenAddress.String(),
 					"requestNonce", ev.RequestNonce)
 
-				switch ev.Kind {
+				switch ev.TokenType {
 				case KLAY:
 					tx, err := bridge.HandleKLAYTransfer(
 						&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit},
@@ -238,7 +238,7 @@ func TestBridgeManager(t *testing.T) {
 			case ev := <-handleValueTransferEventCh:
 				fmt.Println("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
-					"type", ev.Kind,
+					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
 					"owner", ev.To.String(),
 					"contract", ev.Raw.Address.String(),
@@ -552,7 +552,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 			select {
 			case ev := <-requestValueTransferEventCh:
 				fmt.Println("Request value transfer event",
-					"type", ev.Kind,
+					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
 					"from", ev.From.String(),
 					"to", ev.To.String(),
@@ -561,7 +561,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					"requestNonce", ev.RequestNonce,
 					"fee", ev.Fee.String())
 
-				switch ev.Kind {
+				switch ev.TokenType {
 				case KLAY:
 					assert.Equal(t, common.Address{}, ev.TokenAddress)
 					assert.Equal(t, KLAYFee, ev.Fee.Int64())
@@ -592,7 +592,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 			case ev := <-handleValueTransferEventCh:
 				fmt.Println("Handle value transfer event",
 					"bridgeAddr", ev.Raw.Address.Hex(),
-					"type", ev.Kind,
+					"type", ev.TokenType,
 					"amount", ev.ValueOrTokenId,
 					"owner", ev.To.String(),
 					"contract", ev.Raw.Address.String(),

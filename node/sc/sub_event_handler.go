@@ -95,7 +95,7 @@ func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEve
 		"bridgeAddr", ev.Raw.Address.String(),
 		"handleNonce", ev.HandleNonce,
 		"to", ev.To.String(),
-		"valueType", ev.Kind,
+		"valueType", ev.TokenType,
 		"token/NFT contract", ev.TokenAddress,
 		"value", ev.ValueOrTokenId.String())
 	return nil

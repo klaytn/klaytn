@@ -32,7 +32,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
 
     uint64 public lastHandledRequestBlockNumber;
 
-    enum TokenKind {
+    enum TokenType {
         KLAY,
         ERC20,
         ERC721
@@ -45,8 +45,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     }
 
     /**
-     * Event to log the withdrawal of a token from the Bridge.
-     * @param kind The type of token withdrawn (KLAY/ERC20/ERC721).
+     * Event to log the request value transfer from the Bridge.
+     * @param tokenType The type of token withdrawn (KLAY/ERC20/ERC721).
      * @param from is the requester of the request value transfer event.
      * @param to is the receiver of the value.
      * @param tokenAddress Address of token contract the token belong to.
@@ -55,7 +55,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
      * @param uri is uri of ERC721 token.
      */
     event RequestValueTransfer(
-        TokenKind kind,
+        TokenType tokenType,
         address from,
         address to,
         address tokenAddress,
@@ -66,8 +66,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     );
 
     /**
-     * Event to log the withdrawal of a token from the Bridge.
-     * @param kind The type of token withdrawn (KLAY/ERC20/ERC721).
+     * Event to log the handle value trnsfer from the Bridge.
+     * @param tokenType The type of token withdrawn (KLAY/ERC20/ERC721).
      * @param from is an address of the account who requested the value transfer.
      * @param to is an address of the account who will received the value.
      * @param tokenAddress Address of token contract the token belong to.
@@ -75,7 +75,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
      * @param handleNonce is the order number of the handle value transfer.
      */
     event HandleValueTransfer(
-        TokenKind kind,
+        TokenType tokenType,
         address from,
         address to,
         address tokenAddress,
@@ -122,7 +122,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        emit HandleValueTransfer(TokenKind.ERC20, _from, _to, _tokenAddress, _value, handleNonce);
+        emit HandleValueTransfer(TokenType.ERC20, _from, _to, _tokenAddress, _value, handleNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
 
@@ -146,7 +146,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        emit HandleValueTransfer(TokenKind.KLAY, _from, _to, address(0), _value, handleNonce);
+        emit HandleValueTransfer(TokenType.KLAY, _from, _to, address(0), _value, handleNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
 
@@ -168,7 +168,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        emit HandleValueTransfer(TokenKind.ERC721, _from, _to, _tokenAddress, _tokenId, handleNonce);
+        emit HandleValueTransfer(TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, handleNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
 
@@ -187,7 +187,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         uint256 fee = _payKLAYFeeAndRefundChange(_feeLimit);
 
         emit RequestValueTransfer(
-            TokenKind.KLAY,
+            TokenType.KLAY,
             msg.sender,
             _to,
             address(0),
@@ -223,7 +223,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         }
 
         emit RequestValueTransfer(
-            TokenKind.ERC20,
+            TokenType.ERC20,
             _from,
             _to,
             _tokenAddress,
@@ -265,7 +265,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         }
 
         emit RequestValueTransfer(
-            TokenKind.ERC721,
+            TokenType.ERC721,
             _from,
             _to,
             _tokenAddress,

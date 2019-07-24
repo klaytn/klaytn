@@ -455,7 +455,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 		assert.Equal(t, amount.String(), ev.ValueOrTokenId.String())
 		assert.Equal(t, rNonce, ev.HandleNonce)
 		assert.Equal(t, erc20Addr, ev.TokenAddress)
-		assert.Equal(t, sc.ERC20, ev.Kind)
+		assert.Equal(t, sc.ERC20, ev.TokenType)
 		assert.Equal(t, callbackAddr, ev.To)
 
 	case <-time.After(time.Second):
