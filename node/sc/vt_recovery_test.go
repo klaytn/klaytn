@@ -85,12 +85,12 @@ var (
 			handle:      handleKLAYTransfer,
 			dummyHandle: dummyHandleRequestKLAYTransfer,
 		},
-		TOKEN: {
+		ERC20: {
 			request:     requestTokenTransfer,
 			handle:      handleTokenTransfer,
 			dummyHandle: dummyHandleRequestTokenTransfer,
 		},
-		NFT: {
+		ERC721: {
 			request:     requestNFTTransfer,
 			handle:      handleNFTTransfer,
 			dummyHandle: dummyHandleRequestNFTTransfer,
@@ -173,7 +173,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[TOKEN].request(info, info.localInfo)
+			ops[ERC20].request(info, info.localInfo)
 		}
 	})
 
@@ -190,7 +190,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	ops[TOKEN].dummyHandle(info, info.remoteInfo)
+	ops[ERC20].dummyHandle(info, info.remoteInfo)
 
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -210,7 +210,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[NFT].request(info, info.localInfo)
+			ops[ERC721].request(info, info.localInfo)
 		}
 	})
 
@@ -227,7 +227,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	ops[NFT].dummyHandle(info, info.remoteInfo)
+	ops[ERC721].dummyHandle(info, info.remoteInfo)
 
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -571,7 +571,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 					t.Log("missing handle value transfer", "nonce", ev.RequestNonce)
 				} else {
 					switch ev.Kind {
-					case KLAY, TOKEN, NFT:
+					case KLAY, ERC20, ERC721:
 						break
 					default:
 						t.Fatal("received TokenType is unknown")

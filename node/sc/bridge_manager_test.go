@@ -198,7 +198,7 @@ func TestBridgeManager(t *testing.T) {
 					"requestNonce", ev.RequestNonce)
 
 				switch ev.Kind {
-				case 0:
+				case KLAY:
 					// WithdrawKLAY by Event
 					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
@@ -207,7 +207,7 @@ func TestBridgeManager(t *testing.T) {
 					fmt.Println("WithdrawKLAY Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 
-				case 1:
+				case ERC20:
 					// WithdrawToken by Event
 					tx, err := bridge.HandleERC20Transfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, ev.Amount, ev.To, tokenAddr, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
@@ -216,7 +216,7 @@ func TestBridgeManager(t *testing.T) {
 					fmt.Println("HandleERC20Transfer Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 
-				case 2:
+				case ERC721:
 					owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
 					assert.Equal(t, nil, err)
 					fmt.Println("NFT owner before HandleERC721Transfer: ", owner.String())
@@ -559,7 +559,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					"fee", ev.Fee.String())
 
 				switch ev.Kind {
-				case 0:
+				case KLAY:
 					assert.Equal(t, common.Address{}, ev.ContractAddress)
 					assert.Equal(t, KLAYFee, ev.Fee.Int64())
 
@@ -571,7 +571,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					fmt.Println("HandleKLAYTransfer Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 
-				case 1:
+				case ERC20:
 					assert.Equal(t, tokenAddr, ev.ContractAddress)
 					assert.Equal(t, ERC20Fee, ev.Fee.Int64())
 

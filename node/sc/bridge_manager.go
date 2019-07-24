@@ -42,8 +42,8 @@ const (
 
 const (
 	KLAY uint8 = iota
-	TOKEN
-	NFT
+	ERC20
+	ERC721
 )
 
 var (
@@ -299,13 +299,13 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		}
 		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 
-	case TOKEN:
+	case ERC20:
 		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.Raw.BlockNumber)
 		if err != nil {
 			return err
 		}
 		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
-	case NFT:
+	case ERC721:
 		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
 		if err != nil {
 			return err
