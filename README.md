@@ -66,4 +66,4 @@ in our repository in the `COPYING` file.
 
 ## Contributing
 
-As an open source project, Klaytn is always welcoming your contribution. Please read our [CONTTIBUTING.md](./CONTRIBUTING.md) for a walk-through of the contribution process.
+As an open source project, Klaytn is always welcoming your contribution. Please read our [CONTRIBUTING.md](./CONTRIBUTING.md) for a walk-through of the contribution process.
