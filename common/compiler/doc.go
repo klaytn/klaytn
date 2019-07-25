@@ -18,5 +18,9 @@
 // This file is derived from common/compiler/solidity.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package compiler wraps the Solidity compiler executable (solc).
+/*
+Package compiler wraps the Solidity compiler executable (solc).
+
+This package is being used by `abigen` and test codes and provides functions to compile Solidity source codes
+*/
 package compiler
