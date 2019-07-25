@@ -604,17 +604,20 @@ func (g *Governance) addGovernanceCache(num uint64, data GovernanceSet) {
 	}
 	cKey := getGovernanceCacheKey(num)
 	g.itemCache.Add(cKey, data.Items())
-
-	g.idxCache = append(g.idxCache, num)
-	if len(g.idxCache) > params.GovernanceIdxCacheLimit {
-		g.idxCache = g.idxCache[len(g.idxCache)-params.GovernanceIdxCacheLimit:]
-	}
+	g.addIdxCache(num)
 }
 
 // getGovernanceCacheKey returns cache key of the given block number
 func getGovernanceCacheKey(num uint64) common.GovernanceCacheKey {
 	v := fmt.Sprintf("%v", num)
 	return common.GovernanceCacheKey(params.GovernanceCachePrefix + "_" + v)
+}
+
+func (g *Governance) addIdxCache(num uint64) {
+	g.idxCache = append(g.idxCache, num)
+	if len(g.idxCache) > params.GovernanceIdxCacheLimit {
+		g.idxCache = g.idxCache[len(g.idxCache)-params.GovernanceIdxCacheLimit:]
+	}
 }
 
 // Store new governance data on DB. This updates Governance cache too.
@@ -935,14 +938,5 @@ func AddGovernanceCacheForTest(g *Governance, num uint64, config *params.ChainCo
 	// Don't update cache if num (block number) is smaller than the biggest number of cached block number
 
 	data := getGovernanceItemsFromChainConfig(config)
-	cKey := getGovernanceCacheKey(num)
-	g.itemCache.Add(cKey, data.Items())
-
-	g.idxCacheLock.Lock()
-	defer g.idxCacheLock.Unlock()
-
-	g.idxCache = append(g.idxCache, num)
-	if len(g.idxCache) > params.GovernanceIdxCacheLimit {
-		g.idxCache = g.idxCache[len(g.idxCache)-params.GovernanceIdxCacheLimit:]
-	}
+	g.addGovernanceCache(num, data)
 }
