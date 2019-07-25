@@ -24,18 +24,18 @@ Package downloader contains the manual full chain synchronisation.
 How downloader works
 
 The downloader is responsible for synchronizing up-to-date status from the peers connected to it. To do this,
-it downloads "headers", "bodies", and "receipts" in parallel, merges them through the pipeline, and reflect them in the state trie.
+it downloads "headers", "bodies", and "receipts" in parallel, merges them through the pipeline, and reflects them in the state trie.
 
 Source Files
 
 Downloader related functions and variables are defined in the files listed below.
   - api.go              : Console APIs to get synchronization information.
-  - downloader.go       : Functions and variables to sync peer and block. And modules for QOS.
+  - downloader.go       : Functions and variables to sync peer and block. And modules for QoS(Quality of Service).
   - downloader_test.go  : Functions for testing the downloader package.
   - events.go           : Definitions of event types.
   - metrics.go          : Metric variables for packet transmissions and receptions.
   - modes.go            : A definition of type for SyncMode including "FullSync", "FastSync", and "LightSync".
-  - peer.go             : Functions that request a packet to a peer,  check, and set the network status of a peer.
+  - peer.go             : Functions that request a packet to a peer, check, and set the network status of a peer.
   - queue.go            : Functions for managing and scheduling received headers, bodies, and receipts.
   - types.go            : Definitions of the types for downloaded packets.
 */
