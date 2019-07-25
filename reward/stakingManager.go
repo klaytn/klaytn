@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	chainHeadChanSize = 10
+	chainHeadChanSize = 100
 )
 
 type stakingManager struct {
