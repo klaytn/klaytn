@@ -5,26 +5,6 @@ import (
 	"testing"
 )
 
-// checking return stakingInfo correct when stakingInfo is stored in cache
-func TestStakingManager_updateStakingCache(t *testing.T) {
-	testCases := []uint64{
-		1, 30, 31, 86400,
-	}
-	stakingManager := newStakingManager(newTestBlockChain(), nil)
-
-	for i := 0; i < len(testCases); i++ {
-		testStakingInfo := newEmptyStakingInfo(testCases[i])
-		stakingManager.stakingInfoCache.add(testStakingInfo)
-	}
-
-	// should find correct stakingInfo with given block number
-	for i := 0; i < len(testCases); i++ {
-		resultStakingInfo, err := stakingManager.updateStakingCache(testCases[i])
-		assert.NoError(t, err)
-		assert.Equal(t, testCases[i], resultStakingInfo.BlockNum)
-	}
-}
-
 // checking calculate blockNumber of stakingInfo and return the stakingInfo with the blockNumber correct when stakingInfo is stored in cache
 func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
 	testData := []uint64{

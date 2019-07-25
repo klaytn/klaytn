@@ -36,7 +36,7 @@ func newStakingManager(bc *blockchain.BlockChain, governanceHelper governanceHel
 func (sm *stakingManager) getStakingInfoFromStakingCache(blockNum uint64) *StakingInfo {
 	number := params.CalcStakingBlockNumber(blockNum)
 
-	if cachedStakingInfo := sm.stakingInfoCache.get(blockNum); cachedStakingInfo != nil {
+	if cachedStakingInfo := sm.stakingInfoCache.get(number); cachedStakingInfo != nil {
 		logger.Debug("StakingInfoCache hit.", "Block number", blockNum, "number of staking block", number)
 		return cachedStakingInfo
 	}
