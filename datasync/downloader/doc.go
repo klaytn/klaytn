@@ -28,8 +28,8 @@ it downloads "headers", "bodies", and "receipts" in parallel, merges them throug
 
 Source Files
 
-Downloader related functions and variables are defined in the files listed below
-  - api.go              : Console api to get synchronization information.
+Downloader related functions and variables are defined in the files listed below.
+  - api.go              : Console APIs to get synchronization information.
   - downloader.go       : Functions and variables to sync peer and block. And modules for QOS.
   - downloader_test.go  : Functions for testing the downloader package.
   - events.go           : Definitions of event types.
