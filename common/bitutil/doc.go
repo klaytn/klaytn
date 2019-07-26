@@ -11,7 +11,7 @@
 // TODO-Klaytn: put the original LICENSE file in the common/bitutil directory
 
 /*
-Package bitutil implements fast bitwise operations and compression/decompressions
+Package bitutil implements fast bitwise operations and compression/decompressions.
 
 Bitwise Operations
 
