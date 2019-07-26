@@ -32,7 +32,7 @@ func (balanceAdder *testBalanceAdder) GetBalance(addr common.Address) *big.Int {
 	if ok {
 		return balance
 	} else {
-		return big.NewInt(-1)
+		return nil
 	}
 }
 
@@ -103,7 +103,7 @@ func TestRewardManager_MintKLAY(t *testing.T) {
 	if err != nil {
 		t.Errorf("error has occurred. err : %v", err)
 	} else {
-		assert.NotEqual(t, -1, BalanceAdder.GetBalance(header.Rewardbase).Int64())
+		assert.NotNil(t, BalanceAdder.GetBalance(header.Rewardbase).Int64())
 		assert.Equal(t, governance.mintingAmount, BalanceAdder.GetBalance(header.Rewardbase).String())
 	}
 }
@@ -224,7 +224,7 @@ func TestRewardManager_DistributeBlockReward(t *testing.T) {
 			t.FailNow()
 		}
 
-		assert.NotEqual(t, -1, BalanceAdder.GetBalance(header.Rewardbase).Int64())
+		assert.NotNil(t, BalanceAdder.GetBalance(header.Rewardbase).Int64())
 		assert.Equal(t, testCases[i].expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
 		assert.Equal(t, testCases[i].expectedPocBalance.Uint64(), BalanceAdder.GetBalance(pocAddress).Uint64())
 		assert.Equal(t, testCases[i].expectedKirBalance.Uint64(), BalanceAdder.GetBalance(kirAddress).Uint64())
