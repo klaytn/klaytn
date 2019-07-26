@@ -7,8 +7,9 @@ import (
 
 // checking calculate blockNumber of stakingInfo and return the stakingInfo with the blockNumber correct when stakingInfo is stored in cache
 func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
+	stakingInterval := uint64(86400)
 	testData := []uint64{
-		0, 86400, 172800, 259200,
+		0, 1, 2, 3,
 	}
 	testCases := []struct {
 		stakingNumber  uint64
@@ -31,7 +32,7 @@ func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
 	stakingManager := newStakingManager(newTestBlockChain(), newDefaultTestGovernance())
 
 	for i := 0; i < len(testData); i++ {
-		testStakingInfo := newEmptyStakingInfo(testData[i])
+		testStakingInfo := newEmptyStakingInfo(testData[i] * stakingInterval)
 		stakingManager.sic.add(testStakingInfo)
 	}
 

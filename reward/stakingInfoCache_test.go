@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-// test cache limit of sic
+// test cache limit of stakingInfoCache
 func TestStakingInfoCache_Add_Limit(t *testing.T) {
 	stakingInfoCache := newStakingInfoCache()
 
