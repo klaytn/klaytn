@@ -54,7 +54,7 @@ func WaitMined(tx *types.Transaction, backend bind.DeployBackend, t *testing.T) 
 	}
 
 	if receipt == nil {
-		return errors.New("not found receipt")
+		return errors.New("receipt not found")
 	}
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
@@ -382,7 +382,7 @@ func TestBridgePublicVariables(t *testing.T) {
 }
 
 // TestExtendedBridgeAndCallback checks the following:
-// - the extBridge can make contract call to callback contract.
+// - the extBridge can call a callback contract method.
 func TestExtendedBridgeAndCallback(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
@@ -458,7 +458,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 		assert.Equal(t, sc.ERC20, ev.Kind)
 		assert.Equal(t, callbackAddr, ev.Owner)
 
-	case <-time.After(1 * time.Second):
+	case <-time.After(time.Second):
 		t.Fatalf("handleValueTransferEvent was not found.")
 	}
 
@@ -469,7 +469,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 		assert.Equal(t, big.NewInt(1), ev.Price) // TODO-Klaytn-Servicechain : it will be tested later.
 		assert.Equal(t, erc20Addr, ev.TokenAddress)
 
-	case <-time.After(1 * time.Second):
+	case <-time.After(time.Second):
 		t.Fatalf("registerOfferEvent was not found.")
 	}
 }

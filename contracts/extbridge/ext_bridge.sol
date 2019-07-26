@@ -9,11 +9,11 @@ contract ExtBridge is Bridge {
     constructor (bool _modeMintBurn) Bridge(_modeMintBurn) public payable {
     }
 
-    function setCallback(address _addr) public {
+    function setCallback(address _addr) public onlyOwner {
         callback = _addr;
     }
 
-    // handleERC20Transfer sends the ERC20 token by the request and processes extended feature.
+    // handleERC20Transfer sends the ERC20 token by the request and processes the extended feature.
     function handleERC20Transfer(
         uint256 _amount,
         address _to,
@@ -35,7 +35,7 @@ contract ExtBridge is Bridge {
         }
     }
 
-    // handleERC721Transfer sends the ERC721 token by the request and processes extended feature.
+    // handleERC721Transfer sends the ERC721 token by the request and processes the extended feature.
     function handleERC721Transfer(
         uint256 _uid,
         address _to,
