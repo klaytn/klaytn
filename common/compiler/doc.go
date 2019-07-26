@@ -21,6 +21,6 @@
 /*
 Package compiler wraps the Solidity compiler executable (solc).
 
-This package is being used by `abigen` and test codes and provides functions to compile Solidity source codes
+This package is being used by `abigen` and test codes. And the package provides functions to compile Solidity source codes
 */
 package compiler
