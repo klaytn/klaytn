@@ -604,20 +604,17 @@ func (g *Governance) addGovernanceCache(num uint64, data GovernanceSet) {
 	}
 	cKey := getGovernanceCacheKey(num)
 	g.itemCache.Add(cKey, data.Items())
-	g.addIdxCache(num)
+
+	g.idxCache = append(g.idxCache, num)
+	if len(g.idxCache) > params.GovernanceIdxCacheLimit {
+		g.idxCache = g.idxCache[len(g.idxCache)-params.GovernanceIdxCacheLimit:]
+	}
 }
 
 // getGovernanceCacheKey returns cache key of the given block number
 func getGovernanceCacheKey(num uint64) common.GovernanceCacheKey {
 	v := fmt.Sprintf("%v", num)
 	return common.GovernanceCacheKey(params.GovernanceCachePrefix + "_" + v)
-}
-
-func (g *Governance) addIdxCache(num uint64) {
-	g.idxCache = append(g.idxCache, num)
-	if len(g.idxCache) > params.GovernanceIdxCacheLimit {
-		g.idxCache = g.idxCache[len(g.idxCache)-params.GovernanceIdxCacheLimit:]
-	}
 }
 
 // Store new governance data on DB. This updates Governance cache too.
