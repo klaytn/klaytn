@@ -15,14 +15,14 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package Reward implements the Klaytn Reward System.
-The Klaytn Reward System manages stakingInfo and distributes block rewards.
+Package reward implements the Klaytn Reward System.
+The Klaytn reward system manages stakingInfo and distributes block rewards.
 
 Managing stakingInfo
 
 Klaytn uses WeightedRandom policy to choose a block proposer.
 It means, the percentage of becoming a block proposer depends on how much KLAY a node has staked.
-Therefore, a node staked more than others will have more opportunities than other nodes.
+Therefore, a node with stakes more than others will have more opportunities than other nodes.
 
 StakingInfo is a data including stakingAmount and addresses (node, staking, reward, PoC and KIR).
 StakingAmount is a balance how much KLAY each node has staked. Only CCO can stake KLAY.
@@ -66,13 +66,13 @@ PoC - https://docs.klaytn.com/klaytn/token_economy#proof-of-contribution
 
 KIR - https://docs.klaytn.com/klaytn/token_economy#klaytn-improvement-reserve
 
-Configures related to the reward system such as mintingAmount, ratio and unitPrice are determined by the Klaytn governance.
-All configures are saved as rewardConfig on every epoch block (default 604800 blocks) and managed by a rewardConfigCache.
+Configurations related to the reward system such as mintingAmount, ratio and unitPrice are determined by the Klaytn governance.
+All configurations are saved as rewardConfig on every epoch block (default 604,800 blocks) and managed by a rewardConfigCache.
 
 A proposer which has made a current block will get the reward of the block.
 A block reward is calculated by following steps.
 First, calculate totalReward by adding mintingAmount and totalTxFee (unitPrice * gasUsed).
-Second, divide totalReward by ratio (default 34/54/12).
+Second, divide totalReward by ratio (default 34/54/12 - proposer/PoC/KIR).
 Last, distribute reward to each address (proposer, PoC, KIR).
 
  related struct
