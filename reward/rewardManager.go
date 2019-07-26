@@ -43,18 +43,18 @@ func isEmptyAddress(addr common.Address) bool {
 }
 
 type RewardManager struct {
-	stakingManager    *stakingManager
-	rewardConfigCache *rewardConfigCache
-	governanceHelper  governanceHelper
+	sm  *stakingManager
+	rcc *rewardConfigCache
+	gh  governanceHelper
 }
 
-func NewRewardManager(bc *blockchain.BlockChain, governanceHelper governanceHelper) *RewardManager {
-	stakingManager := newStakingManager(bc, governanceHelper)
-	rewardConfigCache := newRewardConfigCache(governanceHelper)
+func NewRewardManager(bc *blockchain.BlockChain, gh governanceHelper) *RewardManager {
+	sm := newStakingManager(bc, gh)
+	rcc := newRewardConfigCache(gh)
 	return &RewardManager{
-		stakingManager:    stakingManager,
-		rewardConfigCache: rewardConfigCache,
-		governanceHelper:  governanceHelper,
+		sm:  sm,
+		rcc: rcc,
+		gh:  gh,
 	}
 }
 
@@ -66,7 +66,7 @@ func (rm *RewardManager) getTotalTxFee(header *types.Header, rewardConfig *rewar
 
 // MintKLAY mints KLAY and gives the KLAY to the block proposer
 func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header) error {
-	rewardConfig, error := rm.rewardConfigCache.get(header.Number.Uint64())
+	rewardConfig, error := rm.rcc.get(header.Number.Uint64())
 	if error != nil {
 		return error
 	}
@@ -80,14 +80,14 @@ func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header) error {
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
 func (rm *RewardManager) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) error {
-	rewardConfig, error := rm.rewardConfigCache.get(header.Number.Uint64())
+	rewardConfig, error := rm.rcc.get(header.Number.Uint64())
 	if error != nil {
 		return error
 	}
 
 	// Calculate total tx fee
 	totalTxFee := common.Big0
-	if rm.governanceHelper.DeferredTxFee() {
+	if rm.gh.DeferredTxFee() {
 		totalTxFee = rm.getTotalTxFee(header, rewardConfig)
 	}
 
@@ -140,13 +140,13 @@ func (rm *RewardManager) distributeBlockReward(b BalanceAdder, header *types.Hea
 }
 
 func (rm *RewardManager) GetStakingInfo(blockNum uint64) *StakingInfo {
-	return rm.stakingManager.getStakingInfoFromStakingCache(blockNum)
+	return rm.sm.getStakingInfo(blockNum)
 }
 
 func (rm *RewardManager) Start() {
-	rm.stakingManager.subscribe()
+	rm.sm.subscribe()
 }
 
 func (rm *RewardManager) Stop() {
-	rm.stakingManager.unsubscribe()
+	rm.sm.chainHeadSub.Unsubscribe()
 }
