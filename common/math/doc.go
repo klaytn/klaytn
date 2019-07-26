@@ -19,11 +19,11 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package math provides convenience functions to use big.Int and to parse string into an integer
+Package math provides convenience functions to use big.Int and to parse string into an integer.
 
 `big.go` provides Max, Min, Pow, Parse functions for big.Int types and it also implements encoding.TextMarshaler and encoding.TextUnmarshaler.
 
-`integer.go` provides functions to parse string into unsigned int and to calculate safely by detecting overflow. It also provides implementation of encoding.TextMarshaler and encoding.TextUnmarshaler
+`integer.go` provides functions to parse string into unsigned int and to calculate safely by detecting overflow. It also provides implementation of encoding.TextMarshaler and encoding.TextUnmarshaler.
 
 encoding.TextMarshaler is the interface implemented by an object that can marshal itself into a textual form. Its MarshalText encodes the receiver into UTF-8-encoded text and returns the result.
 
