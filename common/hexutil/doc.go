@@ -36,6 +36,6 @@ Source Files
 
 `hexutil.go` has functions to provide hex encoding and decoding.
 
-`json.go` implements functions of encoding/TextMarshaler, json/Marshaler and json/Unmarshaler
+`json.go` implements functions of encoding/TextMarshaler, json/Marshaler and json/Unmarshaler.
 */
 package hexutil
