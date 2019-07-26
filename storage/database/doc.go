@@ -18,6 +18,8 @@
 Package database implements various types of databases used in Klaytn.
 This package is used to read/write data from/to the persistent layer.
 
+Overview of database package
+
 DBManager is the interface used by the consumers of database package.
 databaseManager is the implementation of DBManager interface. It contains cacheManager and a list of Database interfaces.
 cacheManager caches data stored in the persistent layer, to decrease the direct access to the persistent layer.
@@ -34,7 +36,7 @@ Source Files
   - memory_database.go       : implementation of MemDB, which wraps go native map structure
   - metrics.go               : metrics used in database package, mostly related to cacheManager
   - partitioned_database.go  : implementation of partitionedDB, which wraps a list of Database interface
-  - schema.go                :
+  - schema.go                : prefixes and suffixes for database keys and database key generating functions
 
 */
 
