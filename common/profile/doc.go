@@ -14,5 +14,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package profile implements type profiler.
+/*
+Package profile provides a profiler which can store a key and related TimeRecord.
+
+The profiler is used in various tests to check the performance of code.
+*/
 package profile
