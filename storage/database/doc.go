@@ -37,7 +37,5 @@ Source Files
   - metrics.go               : metrics used in database package, mostly related to cacheManager
   - partitioned_database.go  : implementation of partitionedDB, which wraps a list of Database interface
   - schema.go                : prefixes and suffixes for database keys and database key generating functions
-
 */
-
 package database
