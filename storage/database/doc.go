@@ -36,6 +36,6 @@ Source Files
   - partitioned_database.go  : implementation of partitionedDB, which wraps a list of Database interface
   - schema.go                :
 
- */
+*/
 
 package database
