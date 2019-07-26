@@ -16,7 +16,7 @@
 
 /*
 Package accountkey implements the AccountKey used in Klaytn.
-Inside the package are the types, functions and interfaces associated with the AccountKey.
+Inside the package, the types, functions and interfaces associated with the AccountKey are defined.
 
 Type of AccountKey
 
