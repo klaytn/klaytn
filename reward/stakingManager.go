@@ -88,7 +88,7 @@ func (sm *stakingManager) subscribe() {
 }
 
 func (sm *stakingManager) handleChainHeadEvent() {
-	defer sm.unsubscribe()
+	defer sm.chainHeadSub.Unsubscribe()
 
 	logger.Info("Start listening chain head event to update stakingInfoCache.")
 
@@ -110,8 +110,4 @@ func (sm *stakingManager) handleChainHeadEvent() {
 			return
 		}
 	}
-}
-
-func (sm *stakingManager) unsubscribe() {
-	sm.chainHeadSub.Unsubscribe()
 }
