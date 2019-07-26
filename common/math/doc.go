@@ -23,6 +23,6 @@ Package math provides convenience functions to use big.Int and to parse string i
 
 `big.go` provides Max, Min, Pow, Parse functions for big.Int types and it also implements encoding.TextMarshaler and encoding.TextUnmarshaler.
 
-`integer.go` provides functions to parse string into unsigned int and to calculate safely by detecting overflow. It also provides implementation of encoding.TextMarshaler and encoding.TextUnmarshaler
+`integer.go` provides functions to parse string into unsigned int and to calculate safely by detecting overflow. It also provides implementation of encoding.TextMarshaler and encoding.TextUnmarshaler.
 */
 package math
