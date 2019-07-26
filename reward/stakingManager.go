@@ -13,7 +13,7 @@ const (
 type stakingManager struct {
 	abm          *addressBookManager
 	sic          *stakingInfoCache
-	govHelper    governanceHelper
+	gh           governanceHelper
 	bc           *blockchain.BlockChain
 	chainHeadCh  chan blockchain.ChainHeadEvent
 	chainHeadSub event.Subscription
@@ -26,7 +26,7 @@ func newStakingManager(bc *blockchain.BlockChain, govHelper governanceHelper) *s
 	return &stakingManager{
 		abm:         abm,
 		sic:         sc,
-		govHelper:   govHelper,
+		gh:          govHelper,
 		bc:          bc,
 		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 	}
@@ -81,8 +81,8 @@ func (sm *stakingManager) handleChainHeadEvent() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-sm.chainHeadCh:
-			if sm.govHelper.ProposerPolicy() == params.WeightedRandom {
-				blockNum := ev.Block.NumberU64() - ev.Block.NumberU64()%sm.govHelper.StakingUpdateInterval()
+			if sm.gh.ProposerPolicy() == params.WeightedRandom {
+				blockNum := ev.Block.NumberU64() - ev.Block.NumberU64()%sm.gh.StakingUpdateInterval()
 				if cachedStakingInfo := sm.sic.get(blockNum); cachedStakingInfo == nil {
 					_, err := sm.updateStakingCache(blockNum)
 					if err != nil {
