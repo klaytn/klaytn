@@ -31,5 +31,11 @@ encodes as "0x".
 
 Integers are encoded using the least amount of digits (no leading zero digits). Their
 encoding may be of uneven length. The number zero encodes as "0x0".
+
+Source Files
+
+`hexutil.go` has functions to provide hex encoding and decoding.
+
+`json.go` implements functions of encoding/TextMarshaler, json/Marshaler and json/Unmarshaler.
 */
 package hexutil
