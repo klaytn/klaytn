@@ -18,6 +18,6 @@
 Package fdlimit handles file descriptors based on the operating system
 
 In Klaytn, `leveldb` database in the `database` package is using this package to get current allowance of file descriptors for this process and to raise it as it requires.
-Because the maximum allowance is different between operating systems, it can be limited by the operating system on which Klaytn run
+Because the maximum allowance is different between operating systems, it can be limited by the operating system on which Klaytn runs.
 */
 package fdlimit
