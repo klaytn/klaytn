@@ -11,32 +11,32 @@ const (
 )
 
 type stakingManager struct {
-	abm              *addressBookManager
-	stakingInfoCache *stakingInfoCache
-	governanceHelper governanceHelper
-	bc               *blockchain.BlockChain
-	chainHeadCh      chan blockchain.ChainHeadEvent
-	chainHeadSub     event.Subscription
+	abm          *addressBookManager
+	sic          *stakingInfoCache
+	govHelper    governanceHelper
+	bc           *blockchain.BlockChain
+	chainHeadCh  chan blockchain.ChainHeadEvent
+	chainHeadSub event.Subscription
 }
 
-func newStakingManager(bc *blockchain.BlockChain, governanceHelper governanceHelper) *stakingManager {
-	abm := newAddressBookManager(bc, governanceHelper)
+func newStakingManager(bc *blockchain.BlockChain, govHelper governanceHelper) *stakingManager {
+	abm := newAddressBookManager(bc, govHelper)
 	sc := newStakingInfoCache()
 
 	return &stakingManager{
-		abm:              abm,
-		stakingInfoCache: sc,
-		governanceHelper: governanceHelper,
-		bc:               bc,
-		chainHeadCh:      make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		abm:         abm,
+		sic:         sc,
+		govHelper:   govHelper,
+		bc:          bc,
+		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 	}
 }
 
 // GetStakingInfoFromStakingCache returns corresponding staking information for a block of blockNum.
-func (sm *stakingManager) getStakingInfoFromStakingCache(blockNum uint64) *StakingInfo {
+func (sm *stakingManager) getStakingInfo(blockNum uint64) *StakingInfo {
 	number := params.CalcStakingBlockNumber(blockNum)
 
-	if cachedStakingInfo := sm.stakingInfoCache.get(number); cachedStakingInfo != nil {
+	if cachedStakingInfo := sm.sic.get(number); cachedStakingInfo != nil {
 		logger.Debug("StakingInfoCache hit.", "Block number", blockNum, "number of staking block", number)
 		return cachedStakingInfo
 	}
@@ -58,9 +58,9 @@ func (sm *stakingManager) updateStakingCache(blockNum uint64) (*StakingInfo, err
 		return nil, err
 	}
 
-	sm.stakingInfoCache.add(stakingInfo)
+	sm.sic.add(stakingInfo)
 
-	logger.Info("Add a new stakingInfo to the stakingInfoCache", "stakingInfo", stakingInfo)
+	logger.Info("Add a new stakingInfo to the sic", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
 }
 
@@ -68,10 +68,10 @@ func (sm *stakingManager) updateStakingCache(blockNum uint64) (*StakingInfo, err
 func (sm *stakingManager) subscribe() {
 	sm.chainHeadSub = sm.bc.SubscribeChainHeadEvent(sm.chainHeadCh)
 
-	go sm.waitHeadChain()
+	go sm.handleChainHeadEvent()
 }
 
-func (sm *stakingManager) waitHeadChain() {
+func (sm *stakingManager) handleChainHeadEvent() {
 	defer sm.unsubscribe()
 
 	logger.Info("Start listening chain head event to update staking cache.")
@@ -81,12 +81,12 @@ func (sm *stakingManager) waitHeadChain() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-sm.chainHeadCh:
-			if sm.governanceHelper.ProposerPolicy() == params.WeightedRandom {
-				blockNum := params.CalcStakingBlockNumber(ev.Block.NumberU64())
-				if cachedStakingInfo := sm.stakingInfoCache.get(blockNum); cachedStakingInfo == nil {
+			if sm.govHelper.ProposerPolicy() == params.WeightedRandom {
+				blockNum := ev.Block.NumberU64() - ev.Block.NumberU64()%sm.govHelper.StakingUpdateInterval()
+				if cachedStakingInfo := sm.sic.get(blockNum); cachedStakingInfo == nil {
 					_, err := sm.updateStakingCache(blockNum)
 					if err != nil {
-						logger.Error("Failed to update staking cache", "err", err)
+						logger.Error("Failed to update staking cache", "blockNumber", blockNum, "err", err)
 					}
 				}
 			}

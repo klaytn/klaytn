@@ -28,6 +28,7 @@ type governanceHelper interface {
 	GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error)
 	DeferredTxFee() bool
 	ProposerPolicy() uint64
+	StakingUpdateInterval() uint64
 }
 
 func isEmptyAddress(addr common.Address) bool {

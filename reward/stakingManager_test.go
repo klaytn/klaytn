@@ -32,12 +32,12 @@ func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
 
 	for i := 0; i < len(testData); i++ {
 		testStakingInfo := newEmptyStakingInfo(testData[i])
-		stakingManager.stakingInfoCache.add(testStakingInfo)
+		stakingManager.sic.add(testStakingInfo)
 	}
 
-	// should find correct stakingInfo with given block number
+	// should find a correct stakingInfo with a given block number
 	for i := 0; i < len(testCases); i++ {
-		resultStakingInfo := stakingManager.getStakingInfoFromStakingCache(testCases[i].stakingNumber)
+		resultStakingInfo := stakingManager.getStakingInfo(testCases[i].stakingNumber)
 		assert.Equal(t, testCases[i].expectedNumber, resultStakingInfo.BlockNum)
 	}
 }

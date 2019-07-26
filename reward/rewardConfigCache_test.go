@@ -25,35 +25,38 @@ import (
 )
 
 type testGovernance struct {
-	epoch         uint64
-	mintingAmount string
-	ratio         string
-	unitPrice     uint64
-	useGiniCoeff  bool
-	policy        uint64
-	deferredTxFee bool
+	epoch           uint64
+	mintingAmount   string
+	ratio           string
+	unitPrice       uint64
+	useGiniCoeff    bool
+	policy          uint64
+	stakingInterval uint64
+	deferredTxFee   bool
 }
 
 func newDefaultTestGovernance() *testGovernance {
 	return &testGovernance{
-		epoch:         604800,
-		mintingAmount: "9600000000000000000",
-		ratio:         "34/54/12",
-		unitPrice:     25000000000,
-		useGiniCoeff:  true,
-		policy:        2,
-		deferredTxFee: true,
+		epoch:           604800,
+		mintingAmount:   "9600000000000000000",
+		ratio:           "34/54/12",
+		unitPrice:       25000000000,
+		useGiniCoeff:    true,
+		policy:          params.WeightedRandom,
+		stakingInterval: 86400,
+		deferredTxFee:   true,
 	}
 }
 
-func newTestGovernance(epoch uint64, mintingAmount string, ratio string, unitPrice uint64, useGiniCoeff bool, deferredTxFee bool) *testGovernance {
+func newTestGovernance(epoch uint64, mintingAmount string, ratio string, unitPrice uint64, useGiniCoeff bool, stakingInterval uint64, deferredTxFee bool) *testGovernance {
 	return &testGovernance{
-		epoch:         epoch,
-		mintingAmount: mintingAmount,
-		ratio:         ratio,
-		unitPrice:     unitPrice,
-		useGiniCoeff:  useGiniCoeff,
-		deferredTxFee: deferredTxFee,
+		epoch:           epoch,
+		mintingAmount:   mintingAmount,
+		ratio:           ratio,
+		unitPrice:       unitPrice,
+		useGiniCoeff:    useGiniCoeff,
+		stakingInterval: stakingInterval,
+		deferredTxFee:   deferredTxFee,
 	}
 }
 
@@ -82,6 +85,10 @@ func (governance *testGovernance) ProposerPolicy() uint64 {
 
 func (governance *testGovernance) DeferredTxFee() bool {
 	return governance.deferredTxFee
+}
+
+func (governance *testGovernance) StakingUpdateInterval() uint64 {
+	return governance.stakingInterval
 }
 
 func (governance *testGovernance) setTestGovernance(epoch uint64, mintingAmount string, ratio string, unitprice uint64, useGiniCoeff bool, deferredTxFee bool) {
