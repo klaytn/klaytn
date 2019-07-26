@@ -14,5 +14,34 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package validator implements the types related to the validators participating in istanbul consensus.
+/*
+Package validator implements the types related to the validators participating in istanbul consensus.
+
+Types in validator package implement `Validator` and `ValidatorSet` interface in istanbul/validator.go file.
+Those types are used for validating blocks to make consensus.
+
+Validator
+
+`Validator` is a node which has 2 features for consensus.
+First, it has a right to make a block. Only validator can make a block.
+Second, it checks blocks made by other validators are valid or not. 2/3 of validators should approve for
+Klaytn uses weightedValidator for Klaytn consensus.
+
+ValidatorSet
+
+`ValidatorSet` is a group of validators. It is also called as a council.
+ValidatorSet calculates the block proposer of a upcoming block.
+A validator selected as a block proposer will have a chance to make a block.
+Only a validator in ValidatorSet can propose a block.
+A block made by a validator which is not in the ValidatorSet will not be accepted by other validators.
+Klaytn uses weightedCouncil for Klaytn consensus.
+
+Files
+
+- default.go   : Validator and ValidatorSet for roundRobin policy is implemented.
+
+- weighted.go  : Validator and ValidatorSet for weightedRandom policy is implemented.
+
+- validator.go : common functions for Validator and ValidatorSet are implemented.
+*/
 package validator
