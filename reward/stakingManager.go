@@ -19,14 +19,14 @@ type stakingManager struct {
 	chainHeadSub event.Subscription
 }
 
-func newStakingManager(bc *blockchain.BlockChain, govHelper governanceHelper) *stakingManager {
-	abm := newAddressBookManager(bc, govHelper)
-	sc := newStakingInfoCache()
+func newStakingManager(bc *blockchain.BlockChain, gh governanceHelper) *stakingManager {
+	abm := newAddressBookManager(bc, gh)
+	sic := newStakingInfoCache()
 
 	return &stakingManager{
 		abm:         abm,
-		sic:         sc,
-		gh:          govHelper,
+		sic:         sic,
+		gh:          gh,
 		bc:          bc,
 		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 	}
@@ -60,7 +60,7 @@ func (sm *stakingManager) updateStakingCache(blockNum uint64) (*StakingInfo, err
 
 	sm.sic.add(stakingInfo)
 
-	logger.Info("Add a new stakingInfo to the sic", "stakingInfo", stakingInfo)
+	logger.Info("Add a new stakingInfo to the stakingInfoCache", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
 }
 
@@ -74,7 +74,7 @@ func (sm *stakingManager) subscribe() {
 func (sm *stakingManager) handleChainHeadEvent() {
 	defer sm.unsubscribe()
 
-	logger.Info("Start listening chain head event to update staking cache.")
+	logger.Info("Start listening chain head event to update stakingInfoCache.")
 
 	for {
 		// A real event arrived, process interesting content
@@ -86,7 +86,7 @@ func (sm *stakingManager) handleChainHeadEvent() {
 				if cachedStakingInfo := sm.sic.get(blockNum); cachedStakingInfo == nil {
 					_, err := sm.updateStakingCache(blockNum)
 					if err != nil {
-						logger.Error("Failed to update staking cache", "blockNumber", blockNum, "err", err)
+						logger.Error("Failed to update stakingInfoCache", "blockNumber", blockNum, "err", err)
 					}
 				}
 			}
