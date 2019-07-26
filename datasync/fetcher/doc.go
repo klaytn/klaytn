@@ -21,11 +21,11 @@
 /*
 Package fetcher contains the block announcement based synchronisation.
  How fetcher works
- Insert the received block into the chain and broadcast a block or block hash to the peer.
-If a block hash is received instead of a block, node requests and reflects the header and body from the connected peer.
+ If the node receives a whole block, fetcher inserts the block into the chain and broadcast it to its peers.
+If a block hash is received instead of a block, node requests and reflects the header and body from the peer who sent the block hash.
  Source Files
- Fetcher related functions and variables are defined in the files listed below.
-  - fetcher.go      : It includes functions for fetching the received block, header, and body, and a queue data structure for the fetch operation.
+ Functions and variables related to fetcher are defined in the files listed below.
+  - fetcher.go      : It includes functions for fetching the received block, header, body, and a queue data structure for the fetch operation.
   - fetcher_test.go : Functions for testing the fetcher's functions.
   - metrics.go      : Metric variables for packet header, body and blocks.
 */
