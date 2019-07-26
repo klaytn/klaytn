@@ -117,7 +117,7 @@ func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Ad
 
 // SendHandleKLAYTransfer send a handleValueTransfer transaction to the bridge contract.
 func SendHandleKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, nonce uint64, blockNum uint64, t *testing.T) *types.Transaction {
-	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, big.NewInt(int64(value)), to, nonce, blockNum)
+	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum)
 	if err != nil {
 		t.Fatalf("fail to SendHandleKLAYTransfer %v", err)
 		return nil
@@ -387,8 +387,8 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
-	//aliceKey, _ := crypto.GenerateKey()
-	//aliceAcc := bind.NewKeyedTransactor(aliceKey)
+	aliceKey, _ := crypto.GenerateKey()
+	aliceAcc := bind.NewKeyedTransactor(aliceKey)
 
 	bobKey, _ := crypto.GenerateKey()
 	bobAcc := bind.NewKeyedTransactor(bobKey)
@@ -444,7 +444,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 	amount := big.NewInt(1000)
 	rNonce := uint64(0)
 	rBlockNumber := uint64(0)
-	tx, err = b.HandleERC20Transfer(bridgeAccount, amount, bobAcc.From, erc20Addr, rNonce, rBlockNumber)
+	tx, err = b.HandleERC20Transfer(bridgeAccount, aliceAcc.From, bobAcc.From, erc20Addr, amount, rNonce, rBlockNumber)
 	assert.NoError(t, err)
 	backend.Commit()
 	assert.Nil(t, WaitMined(tx, backend, t))
@@ -452,11 +452,11 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 	// Check handle request event
 	select {
 	case ev := <-handleValueTransferEventCh:
-		assert.Equal(t, amount.String(), ev.Value.String())
+		assert.Equal(t, amount.String(), ev.ValueOrTokenId.String())
 		assert.Equal(t, rNonce, ev.HandleNonce)
-		assert.Equal(t, erc20Addr, ev.ContractAddress)
-		assert.Equal(t, sc.ERC20, ev.Kind)
-		assert.Equal(t, callbackAddr, ev.Owner)
+		assert.Equal(t, erc20Addr, ev.TokenAddress)
+		assert.Equal(t, sc.ERC20, ev.TokenType)
+		assert.Equal(t, callbackAddr, ev.To)
 
 	case <-time.After(time.Second):
 		t.Fatalf("handleValueTransferEvent was not found.")

@@ -259,12 +259,12 @@ func (bi *BridgeInfo) UpdateInfo() error {
 
 // handleRequestValueTransferEvent handles the given request value transfer event.
 func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEvent) error {
-	tokenType := ev.Kind
-	tokenAddr := bi.GetCounterPartToken(ev.ContractAddress)
+	tokenType := ev.TokenType
+	tokenAddr := bi.GetCounterPartToken(ev.TokenAddress)
 	// TODO-Klaytn-Servicechain Add counterpart token address in requestValueTransferEvent
 	if tokenType != KLAY && tokenAddr == (common.Address{}) {
 		logger.Warn("Unregistered counter part token address.", "addr", tokenAddr.Hex())
-		ctTokenAddr, err := bi.counterpartBridge.AllowedTokens(nil, ev.ContractAddress)
+		ctTokenAddr, err := bi.counterpartBridge.AllowedTokens(nil, ev.TokenAddress)
 		if err != nil {
 			return err
 		}
@@ -272,14 +272,12 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 			return errors.New("can't get counterpart token from bridge")
 		}
 
-		if err := bi.RegisterToken(ev.ContractAddress, ctTokenAddr); err != nil {
+		if err := bi.RegisterToken(ev.TokenAddress, ctTokenAddr); err != nil {
 			return err
 		}
 		tokenAddr = ctTokenAddr
 		logger.Info("Register counter part token address.", "addr", tokenAddr.Hex(), "cpAddr", ctTokenAddr.Hex())
 	}
-
-	to := ev.To
 
 	bridgeAcc := bi.account
 
@@ -293,20 +291,20 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 
 	switch tokenType {
 	case KLAY:
-		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.Amount, to, ev.RequestNonce, ev.Raw.BlockNumber)
+		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
 		if err != nil {
 			return err
 		}
 		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 
 	case ERC20:
-		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.Raw.BlockNumber)
+		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
 		if err != nil {
 			return err
 		}
 		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 	case ERC721:
-		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.Amount, to, tokenAddr, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
+		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
 		if err != nil {
 			return err
 		}

@@ -94,10 +94,10 @@ func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEve
 	logger.Trace("RequestValueTransfer Event",
 		"bridgeAddr", ev.Raw.Address.String(),
 		"handleNonce", ev.HandleNonce,
-		"to", ev.Owner.String(),
-		"valueType", ev.Kind,
-		"token/NFT contract", ev.ContractAddress,
-		"value", ev.Value.String())
+		"to", ev.To.String(),
+		"valueType", ev.TokenType,
+		"token/NFT contract", ev.TokenAddress,
+		"value", ev.ValueOrTokenId.String())
 	return nil
 }
 
