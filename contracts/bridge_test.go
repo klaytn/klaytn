@@ -18,12 +18,15 @@ package contracts
 
 import (
 	"context"
+	"errors"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
+	"github.com/klaytn/klaytn/contracts/extbridge"
+	sctoken "github.com/klaytn/klaytn/contracts/sc_erc20"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
@@ -48,6 +51,15 @@ func WaitMined(tx *types.Transaction, backend bind.DeployBackend, t *testing.T) 
 	if err != nil {
 		t.Fatal("Failed to WaitMined.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
 		return err
+	}
+
+	if receipt == nil {
+		return errors.New("receipt not found")
+	}
+
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		t.Log("receipt", "status", receipt.Status)
+		return errors.New("not successful receipt")
 	}
 	return nil
 }
@@ -234,6 +246,7 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 100)
 	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
+	assert.NoError(t, err)
 	defer handleSub.Unsubscribe()
 	if err != nil {
 		t.Fatalf("fail to DepositKLAY %v", err)
@@ -318,16 +331,12 @@ func TestBridgePublicVariables(t *testing.T) {
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
 	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, false)
-	if err != nil {
-		t.Fatalf("fail to DeployBridge %v", err)
-	}
+	assert.NoError(t, err)
 	backend.Commit()
-	WaitMined(tx, backend, t)
+	assert.Nil(t, WaitMined(tx, backend, t))
 
 	balanceContract, err := backend.BalanceAt(nil, bridgeAddress, nil)
-	if err != nil {
-		t.Fatalf("fail to GetKLAY %v", err)
-	}
+	assert.NoError(t, err)
 	assert.Equal(t, chargeAmount, balanceContract)
 
 	ctx := context.Background()
@@ -337,9 +346,9 @@ func TestBridgePublicVariables(t *testing.T) {
 	opts := sc.MakeTransactOpts(bridgeAccountKey, big.NewInt(int64(nonce)), chainID, gasPrice)
 
 	tx, err = b.SetCounterPartBridge(opts, common.Address{2})
+	assert.NoError(t, err)
 	backend.Commit()
-	WaitMined(tx, backend, t)
-	assert.Equal(t, nil, err)
+	assert.Nil(t, WaitMined(tx, backend, t))
 
 	version, err := b.VERSION(nil)
 	assert.Equal(t, uint64(0x1), version)
@@ -370,4 +379,97 @@ func TestBridgePublicVariables(t *testing.T) {
 
 	rnonce, err := b.RequestNonce(nil)
 	assert.Equal(t, uint64(0), rnonce)
+}
+
+// TestExtendedBridgeAndCallback checks the following:
+// - the extBridge can call a callback contract method.
+func TestExtendedBridgeAndCallback(t *testing.T) {
+	bridgeAccountKey, _ := crypto.GenerateKey()
+	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
+
+	//aliceKey, _ := crypto.GenerateKey()
+	//aliceAcc := bind.NewKeyedTransactor(aliceKey)
+
+	bobKey, _ := crypto.GenerateKey()
+	bobAcc := bind.NewKeyedTransactor(bobKey)
+
+	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
+	backend := backends.NewSimulatedBackend(alloc)
+
+	// Deploy extBridge
+	bridgeAddr, tx, eb, err := extbridge.DeployExtBridge(bridgeAccount, backend, true)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, WaitMined(tx, backend, t))
+
+	// Deploy token
+	erc20Addr, tx, erc20, err := sctoken.DeployServiceChainToken(bridgeAccount, backend, bridgeAddr)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, WaitMined(tx, backend, t))
+
+	// Give minter role to bridge contract
+	tx, err = erc20.AddMinter(bridgeAccount, bridgeAddr)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, WaitMined(tx, backend, t))
+
+	// Deploy callback contract
+	callbackAddr, tx, cb, err := extbridge.DeployCallback(bridgeAccount, backend)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, WaitMined(tx, backend, t))
+
+	// Set callback address to ExtBridge contract
+	tx, err = eb.SetCallback(bridgeAccount, callbackAddr)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, WaitMined(tx, backend, t))
+
+	// Subscribe callback contract event
+	registerOfferEventCh := make(chan *extbridge.CallbackRegisteredOffer, 10)
+	registerOfferEventSub, err := cb.WatchRegisteredOffer(nil, registerOfferEventCh)
+	assert.NoError(t, err)
+	defer registerOfferEventSub.Unsubscribe()
+
+	// Subscribe bridge contract event
+	b, err := bridge.NewBridge(bridgeAddr, backend) // create base bridge contract object, not extBridge object
+	assert.NoError(t, err)
+	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
+	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
+	assert.NoError(t, err)
+	defer handleSub.Unsubscribe()
+
+	// HandleERC20Transfer
+	amount := big.NewInt(1000)
+	rNonce := uint64(0)
+	rBlockNumber := uint64(0)
+	tx, err = b.HandleERC20Transfer(bridgeAccount, amount, bobAcc.From, erc20Addr, rNonce, rBlockNumber)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, WaitMined(tx, backend, t))
+
+	// Check handle request event
+	select {
+	case ev := <-handleValueTransferEventCh:
+		assert.Equal(t, amount.String(), ev.Value.String())
+		assert.Equal(t, rNonce, ev.HandleNonce)
+		assert.Equal(t, erc20Addr, ev.ContractAddress)
+		assert.Equal(t, sc.ERC20, ev.Kind)
+		assert.Equal(t, callbackAddr, ev.Owner)
+
+	case <-time.After(time.Second):
+		t.Fatalf("handleValueTransferEvent was not found.")
+	}
+
+	// Check Callback event
+	select {
+	case ev := <-registerOfferEventCh:
+		assert.Equal(t, amount.String(), ev.ValueOrID.String())
+		assert.Equal(t, big.NewInt(1), ev.Price) // TODO-Klaytn-Servicechain : it will be tested later.
+		assert.Equal(t, erc20Addr, ev.TokenAddress)
+
+	case <-time.After(time.Second):
+		t.Fatalf("registerOfferEvent was not found.")
+	}
 }

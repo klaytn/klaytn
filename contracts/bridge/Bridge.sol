@@ -111,7 +111,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         uint64 _requestNonce,
         uint64 _requestBlockNumber
     )
-        external
+        public
         onlyOwner
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
@@ -134,7 +134,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         uint64 _requestNonce,
         uint64 _requestBlockNumber
     )
-        external
+        public
         onlyOwner
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
@@ -155,7 +155,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         uint64 _requestBlockNumber,
         string _tokenURI
     )
-        external
+        public
         onlyOwner
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
