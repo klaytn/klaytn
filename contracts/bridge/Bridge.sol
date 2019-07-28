@@ -23,6 +23,9 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     address public counterpartBridge;
     bool public isRunning;
 
+    // TODO-Klaytn-Servicechain handleTxHash can be saved after Klaytn supports it.
+    mapping (bytes32 => bool) public handledRequestTxHash;
+
     mapping (address => address) public allowedTokens; // <token, counterpart token>
 
     using SafeMath for uint256;
@@ -67,6 +70,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
 
     /**
      * Event to log the handle value transfer from the Bridge.
+     * @param requestTxHash is a transaction hash of request value transfer.
      * @param tokenType is the type of tokens (KLAY/ERC20/ERC721).
      * @param from is an address of the account who requested the value transfer.
      * @param to is an address of the account who will received the value.
@@ -75,6 +79,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
      * @param handleNonce is the order number of the handle value transfer.
      */
     event HandleValueTransfer(
+        bytes32 requestTxHash,
         TokenType tokenType,
         address from,
         address to,
@@ -110,6 +115,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
 
     // handleERC20Transfer sends the token by the request.
     function handleERC20Transfer(
+        bytes32 _requestTxHash,
         address _from,
         address _to,
         address _tokenAddress,
@@ -122,7 +128,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        emit HandleValueTransfer(TokenType.ERC20, _from, _to, _tokenAddress, _value, handleNonce);
+        emit HandleValueTransfer(_requestTxHash, TokenType.ERC20, _from, _to, _tokenAddress, _value, handleNonce);
+        handledRequestTxHash[_requestTxHash] = true;
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
 
@@ -135,6 +142,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
 
     // handleKLAYTransfer sends the KLAY by the request.
     function handleKLAYTransfer(
+        bytes32 _requestTxHash,
         address _from,
         address _to,
         uint256 _value,
@@ -146,7 +154,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        emit HandleValueTransfer(TokenType.KLAY, _from, _to, address(0), _value, handleNonce);
+        emit HandleValueTransfer(_requestTxHash, TokenType.KLAY, _from, _to, address(0), _value, handleNonce);
+        handledRequestTxHash[_requestTxHash] = true;
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
 
@@ -155,6 +164,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
 
     // handleERC721Transfer sends the ERC721 by the request.
     function handleERC721Transfer(
+        bytes32 _requestTxHash,
         address _from,
         address _to,
         address _tokenAddress,
@@ -168,7 +178,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     {
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
-        emit HandleValueTransfer(TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, handleNonce);
+        emit HandleValueTransfer(_requestTxHash, TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, handleNonce);
+        handledRequestTxHash[_requestTxHash] = true;
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
 

@@ -655,7 +655,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfer
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testAmount), ev.ValueOrTokenId)
 	opts := bi.account.GetTransactOpts()
-	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
 	if err != nil {
 		log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 	}
@@ -696,7 +696,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.ValueOrTokenId)
 	_, err := bi.bridge.HandleERC20Transfer(
-		bi.account.GetTransactOpts(), ev.From, ev.To, info.tokenRemoteAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+		bi.account.GetTransactOpts(), ev.Raw.TxHash, ev.From, ev.To, info.tokenRemoteAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
 	if err != nil {
 		log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 	}
@@ -747,7 +747,7 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferE
 
 	_, err := bi.bridge.HandleERC721Transfer(
 		bi.account.GetTransactOpts(),
-		ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
+		ev.Raw.TxHash, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
 	if err != nil {
 		log.Fatalf("Failed to handleERC721Transfer: %v", err)
 	}
