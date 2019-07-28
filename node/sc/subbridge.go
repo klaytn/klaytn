@@ -139,7 +139,7 @@ type SubBridge struct {
 	handleEventCh   chan *HandleValueTransferEvent
 	handleEventSub  event.Subscription
 
-	bridgeAccountManager *BridgeAccountManager
+	bridgeAccounts *BridgeAccountManager
 
 	bootFail bool
 
@@ -154,10 +154,6 @@ type SubBridge struct {
 // initialisation of the common CN object)
 func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error) {
 	chainDB := CreateDB(ctx, config, "subbridgedata")
-
-	// initialize private keys for servicechain
-	config.chainkey = config.ChainKey()
-	config.nodekey = config.NodeKey()
 
 	sc := &SubBridge{
 		config:         config,
@@ -204,6 +200,10 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	sc.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
 
 	var err error
+	sc.bridgeAccounts, err = NewBridgeAccountManager(config.DataDir)
+	if err != nil {
+		return nil, err
+	}
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
 	if err != nil {
 		return nil, err
@@ -212,11 +212,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	if err != nil {
 		return nil, err
 	}
-	sc.bridgeAccountManager, err = NewBridgeAccountManager(sc.config.chainkey, sc.config.nodekey)
-	if err != nil {
-		return nil, err
-	}
-	sc.bridgeAccountManager.mcAccount.SetChainID(new(big.Int).SetUint64(config.ParentChainID))
+	sc.bridgeAccounts.pAccount.SetChainID(new(big.Int).SetUint64(config.ParentChainID))
 
 	return sc, nil
 }
@@ -316,6 +312,7 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 			// event from core-service
 			sc.chainHeadSub = sc.blockchain.SubscribeChainHeadEvent(sc.chainHeadCh)
 			sc.logsSub = sc.blockchain.SubscribeLogsEvent(sc.logsCh)
+			sc.bridgeAccounts.cAccount.SetChainID(v.Config().ChainID)
 		case *blockchain.TxPool:
 			sc.txPool = v
 			// event from core-service
@@ -356,7 +353,7 @@ func (sc *SubBridge) SetComponents(components []interface{}) {
 	sc.pmwg.Add(1)
 	go sc.resetBridgeLoop()
 
-	sc.bridgeAccountManager.scAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccountManager.scAccount.address))
+	sc.bridgeAccounts.cAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccounts.cAccount.address))
 
 	sc.pmwg.Add(1)
 	go sc.loop()

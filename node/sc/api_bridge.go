@@ -95,8 +95,8 @@ func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 		return nil, err
 	}
 
-	pAcc := sbapi.sc.bridgeAccountManager.mcAccount
-	cAcc := sbapi.sc.bridgeAccountManager.scAccount
+	pAcc := sbapi.sc.bridgeAccounts.pAccount
+	cAcc := sbapi.sc.bridgeAccounts.cAccount
 
 	err = sbapi.sc.bridgeManager.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, cAcc, true, false)
 	if err != nil {
@@ -222,11 +222,11 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 	}
 
 	bm := sbapi.sc.bridgeManager
-	err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, sbapi.sc.bridgeAccountManager.scAccount, true, false)
+	err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, sbapi.sc.bridgeAccounts.cAccount, true, false)
 	if err != nil {
 		return err
 	}
-	err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridge, sbapi.sc.bridgeAccountManager.mcAccount, false, false)
+	err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridge, sbapi.sc.bridgeAccounts.pAccount, false, false)
 	if err != nil {
 		bm.DeleteBridgeInfo(cBridgeAddr)
 		return err
@@ -449,11 +449,11 @@ func (sbapi *SubBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
 }
 
 func (sbapi *SubBridgeAPI) GetMainChainAccountAddr() string {
-	return sbapi.sc.config.MainChainAccountAddr.Hex()
+	return sbapi.sc.bridgeAccounts.pAccount.address.String()
 }
 
 func (sbapi *SubBridgeAPI) GetServiceChainAccountAddr() string {
-	return sbapi.sc.config.ServiceChainAccountAddr.Hex()
+	return sbapi.sc.bridgeAccounts.cAccount.address.String()
 }
 
 func (sbapi *SubBridgeAPI) GetMainChainAccountNonce() uint64 {

@@ -18,6 +18,7 @@ package sc
 
 import (
 	"crypto/ecdsa"
+	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -40,5 +41,17 @@ func MakeTransactOpts(accountKey *ecdsa.PrivateKey, nonce *big.Int, chainID *big
 	auth.Signer = func(signer types.Signer, addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 		return types.SignTx(tx, signer, accountKey)
 	}
+	return auth
+}
+
+func MakeTransactOptsWithKeystore(wallet accounts.Wallet, from common.Address, nonce *big.Int, chainID *big.Int, gasPrice *big.Int) *bind.TransactOpts {
+	if wallet == nil {
+		return nil
+	}
+
+	auth := bind.NewKeyedTransactorWithWallet(from, wallet, chainID)
+	auth.GasLimit = GasLimit
+	auth.GasPrice = gasPrice
+	auth.Nonce = nonce
 	return auth
 }

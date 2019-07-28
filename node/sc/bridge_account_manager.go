@@ -17,16 +17,20 @@
 package sc
 
 import (
-	"crypto/ecdsa"
+	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/klaytn/klaytn/accounts/keystore"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/cmd/homi/setup"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
+	"io/ioutil"
 	"math/big"
+	"path"
 	"sync"
 )
 
 type accountInfo struct {
-	key      *ecdsa.PrivateKey
+	wallet   accounts.Wallet
 	address  common.Address
 	nonce    uint64
 	chainID  *big.Int
@@ -39,32 +43,86 @@ type accountInfo struct {
 // BridgeAccountManager manages bridge account for main/service chain.
 type BridgeAccountManager struct {
 	// TODO-Klaytn need to consider multiple bridge accounts?
-	mcAccount *accountInfo
-	scAccount *accountInfo
+	pAccount *accountInfo
+	cAccount *accountInfo
 }
 
 // NewBridgeAccountManager returns bridgeAccountManager created by main/service bridge account keys.
-func NewBridgeAccountManager(mcKey, scKey *ecdsa.PrivateKey) (*BridgeAccountManager, error) {
+func NewBridgeAccountManager(dataDir string) (*BridgeAccountManager, error) {
+	pWallet, pAcc, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "parent_bridge_account"))
+	if err != nil {
+		return nil, err
+	}
+
+	if isLock {
+		logger.Warn("parent_bridge_account is locked. Please unLock manually for Service chain")
+	}
+
+	cWallet, cAcc, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "child_bridge_account"))
+	if err != nil {
+		return nil, err
+	}
+
+	if isLock {
+		logger.Warn("child_bridge_account is locked. Please unLock manually for Service chain")
+	}
+
+	logger.Info("bridge account is loaded", "parent", pAcc.String(), "child", cAcc.String())
+
 	mcAcc := &accountInfo{
-		key:      mcKey,
-		address:  crypto.PubkeyToAddress(mcKey.PublicKey),
+		wallet:   pWallet,
+		address:  pAcc,
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
 	}
 
 	scAcc := &accountInfo{
-		key:      scKey,
-		address:  crypto.PubkeyToAddress(scKey.PublicKey),
+		wallet:   cWallet,
+		address:  cAcc,
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
 	}
 
 	return &BridgeAccountManager{
-		mcAccount: mcAcc,
-		scAccount: scAcc,
+		pAccount: mcAcc,
+		cAccount: scAcc,
 	}, nil
+}
+
+// ImportUnlockAccountKeystore initialize a keystore, import exist keys, and try to unlock the key for bridge account.
+func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, common.Address, bool, error) {
+	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
+
+	if len(ks.Accounts()) == 0 {
+		pwdStr := setup.RandStringRunes(100)
+		acc, err := ks.NewAccount(pwdStr)
+		if err != nil {
+			return nil, common.Address{}, true, err
+		}
+		setup.WriteFile([]byte(pwdStr), keystorePath, acc.Address.String())
+
+		if err := ks.Unlock(acc, pwdStr); err != nil {
+			logger.Warn("bridge account wallet unlock is failed by created password file.", "address", acc.Address, "err", err)
+			return ks.Wallets()[0], acc.Address, true, nil
+		}
+
+		return ks.Wallets()[0], acc.Address, false, nil
+	}
+
+	acc := ks.Accounts()[0]
+	pwdFilePath := path.Join(keystorePath, acc.Address.String())
+	pwdStr, err := ioutil.ReadFile(pwdFilePath)
+	if err == nil {
+		if err := ks.Unlock(acc, string(pwdStr)); err != nil {
+			logger.Warn("bridge account wallet unlock is failed by exist password file.", "address", acc.Address, "err", err)
+			return ks.Wallets()[0], acc.Address, true, nil
+		}
+		return ks.Wallets()[0], acc.Address, false, nil
+	}
+
+	return ks.Wallets()[0], acc.Address, true, nil
 }
 
 // GetTransactOpts return a transactOpts for transact on local/remote backend.
@@ -76,7 +134,13 @@ func (acc *accountInfo) GetTransactOpts() *bind.TransactOpts {
 	if acc.isNonceSynced {
 		nonce = new(big.Int).SetUint64(acc.nonce)
 	}
-	return MakeTransactOpts(acc.key, nonce, acc.chainID, acc.gasPrice)
+	return MakeTransactOptsWithKeystore(acc.wallet, acc.address, nonce, acc.chainID, acc.gasPrice)
+}
+
+// SignTx sign a transaction with the accountInfo.
+func (acc *accountInfo) SignTx(tx *types.Transaction) (*types.Transaction, error) {
+	account := accounts.Account{Address: acc.address}
+	return acc.wallet.SignTx(account, tx, acc.chainID)
 }
 
 // SetChainID sets the chain ID of the chain of the account.

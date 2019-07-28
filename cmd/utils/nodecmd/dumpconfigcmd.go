@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/cmd/utils"
-	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/dbsyncer"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/node"
@@ -223,15 +222,16 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 		cfg.SubBridgePort = fmt.Sprintf(":%d", ctx.GlobalInt(utils.SubBridgeListenPortFlag.Name))
 	}
 
-	if ctx.GlobalIsSet(utils.MainChainAccountAddrFlag.Name) {
-		tempStr := ctx.GlobalString(utils.MainChainAccountAddrFlag.Name)
-		if !common.IsHexAddress(tempStr) {
-			logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
-		}
-		tempAddr := common.StringToAddress(tempStr)
-		cfg.MainChainAccountAddr = &tempAddr
-		logger.Info("A chain address is registered.", "mainChainAccountAddr", *cfg.MainChainAccountAddr)
-	}
+	//TODO-Klaytn-Servicechain This will be used for new account which has not legacy account key.
+	//if ctx.GlobalIsSet(utils.MainChainAccountAddrFlag.Name) {
+	//	tempStr := ctx.GlobalString(utils.MainChainAccountAddrFlag.Name)
+	//	if !common.IsHexAddress(tempStr) {
+	//		logger.Crit("Given chainaddr does not meet hex format.", "chainaddr", tempStr)
+	//	}
+	//	tempAddr := common.StringToAddress(tempStr)
+	//	cfg.MainChainAccountAddr = &tempAddr
+	//	logger.Info("A chain address is registered.", "mainChainAccountAddr", *cfg.MainChainAccountAddr)
+	//}
 
 	cfg.ChildChainIndexing = ctx.GlobalIsSet(utils.ChildChainIndexingFlag.Name)
 	cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)

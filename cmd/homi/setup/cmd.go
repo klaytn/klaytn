@@ -274,7 +274,7 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, p
 	for i, pk := range privKeys {
 		pwdStr := RandStringRunes(100)
 		ks.ImportECDSA(pk, pwdStr)
-		writeFile([]byte(pwdStr), DirKeys, "passwd"+strconv.Itoa(i+1))
+		WriteFile([]byte(pwdStr), DirKeys, "passwd"+strconv.Itoa(i+1))
 	}
 	return genesisJson
 }
@@ -384,8 +384,8 @@ func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Gen
 	testGenesis.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
 	allocationFunction := genesis.AllocWithPrebaobabContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(testGenesis)
-	writeFile([]byte(baobabOperatorAddress), "baobab_operator", "address")
-	writeFile([]byte(baobabOperatorKey), "baobab_operator", "private")
+	WriteFile([]byte(baobabOperatorAddress), "baobab_operator", "address")
+	WriteFile([]byte(baobabOperatorKey), "baobab_operator", "private")
 	return testGenesis
 }
 
@@ -570,17 +570,17 @@ func downLoadGrafanaJson() {
 func writeCNInfoKey(num int, nodeAddrs []common.Address, nodeKeys []string, privKeys []*ecdsa.PrivateKey,
 	genesisJsonBytes []byte) {
 	const DirCommon = "common"
-	writeFile(genesisJsonBytes, DirCommon, "genesis.json")
+	WriteFile(genesisJsonBytes, DirCommon, "genesis.json")
 
 	validators := makeValidatorsWithIp(num, false, nodeAddrs, nodeKeys, privKeys, []string{CNIpNetwork})
 	staticNodesJsonBytes, _ := json.MarshalIndent(filterNodeInfo(validators), "", "\t")
-	writeFile(staticNodesJsonBytes, DirCommon, "static-nodes.json")
+	WriteFile(staticNodesJsonBytes, DirCommon, "static-nodes.json")
 
 	for i, v := range validators {
 		parentDir := fmt.Sprintf("cn%02d", i+1)
-		writeFile([]byte(nodeKeys[i]), parentDir, "nodekey")
+		WriteFile([]byte(nodeKeys[i]), parentDir, "nodekey")
 		str, _ := json.MarshalIndent(v, "", "\t")
-		writeFile([]byte(str), parentDir, "validator")
+		WriteFile([]byte(str), parentDir, "validator")
 	}
 }
 
@@ -589,9 +589,9 @@ func writePNInfoKey(num int) {
 	validators := makeValidatorsWithIp(num, false, nodeAddrs, nodeKeys, privKeys, []string{PNIpNetwork1, PNIpNetwork2})
 	for i, v := range validators {
 		parentDir := fmt.Sprintf("pn%02d", i+1)
-		writeFile([]byte(nodeKeys[i]), parentDir, "nodekey")
+		WriteFile([]byte(nodeKeys[i]), parentDir, "nodekey")
 		str, _ := json.MarshalIndent(v, "", "\t")
-		writeFile([]byte(str), parentDir, "validator")
+		WriteFile([]byte(str), parentDir, "validator")
 	}
 }
 
@@ -606,30 +606,30 @@ func writeKlayConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDi
 		"/var/run/klay",
 		nodeType,
 	}
-	writeFile([]byte(kConfig.String()), strings.ToLower(nodeType), "klay.conf")
+	WriteFile([]byte(kConfig.String()), strings.ToLower(nodeType), "klay.conf")
 }
 
 func writePrometheusConfig(cnNum int, pnNum int) {
 	pConf := NewPrometheusConfig(cnNum, CNIpNetwork, pnNum, PNIpNetwork1, PNIpNetwork2)
-	writeFile([]byte(pConf.String()), "monitoring", "prometheus.yml")
+	WriteFile([]byte(pConf.String()), "monitoring", "prometheus.yml")
 }
 
 func writeNodeFiles(isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []common.Address, nodeKeys []string,
 	privKeys []*ecdsa.PrivateKey, genesisJsonBytes []byte) {
-	writeFile(genesisJsonBytes, DirScript, "genesis.json")
+	WriteFile(genesisJsonBytes, DirScript, "genesis.json")
 
 	validators := makeValidators(num, isWorkOnSingleHost, nodeAddrs, nodeKeys, privKeys)
 	nodeInfos := filterNodeInfo(validators)
 	staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
 	writeValidatorsAndNodesToFile(validators, DirKeys, nodeKeys)
-	writeFile(staticNodesJsonBytes, DirScript, "static-nodes.json")
+	WriteFile(staticNodesJsonBytes, DirScript, "static-nodes.json")
 
 	if pnum > 0 {
 		proxys, proxyNodeKeys := makeProxys(pnum, isWorkOnSingleHost)
 		pNodeInfos := filterNodeInfo(proxys)
 		staticPNodesJsonBytes, _ := json.MarshalIndent(pNodeInfos, "", "\t")
 		writeValidatorsAndNodesToFile(proxys, DirPnKeys, proxyNodeKeys)
-		writeFile(staticPNodesJsonBytes, DirPnScript, "static-nodes.json")
+		WriteFile(staticPNodesJsonBytes, DirPnScript, "static-nodes.json")
 	}
 }
 
@@ -897,7 +897,7 @@ func writeTestKeys(parentDir string, keys []string) {
 	}
 }
 
-func writeFile(content []byte, parentFolder string, fileName string) {
+func WriteFile(content []byte, parentFolder string, fileName string) {
 	filePath := path.Join(outputPath, parentFolder, fileName)
 	os.MkdirAll(path.Dir(filePath), os.ModePerm)
 	ioutil.WriteFile(filePath, content, os.ModePerm)

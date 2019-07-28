@@ -36,8 +36,6 @@ import (
 )
 
 const (
-	datadirMcBridgeKey          = "mainchainbridgekey"     // Path within the datadir to its main chian bridge private key
-	datadirScBridgeKey          = "servicechainbridgekey"  // Path within the datadir to its service chain bridge private key
 	datadirMainChainBridgeNodes = "mainchain-bridges.json" // Path within the datadir to the static node list
 )
 
@@ -88,13 +86,9 @@ type SCConfig struct {
 	MaxPeer        int
 
 	// ServiceChain
-	MainChainAccountAddr    *common.Address `toml:",omitempty"`
-	ServiceChainAccountAddr *common.Address `toml:",omitempty"`
-	ServiceChainConsensus   string
-	chainkey                *ecdsa.PrivateKey
-	nodekey                 *ecdsa.PrivateKey
-	AnchoringPeriod         uint64
-	SentChainTxsLimit       uint64
+	ServiceChainConsensus string
+	AnchoringPeriod       uint64
+	SentChainTxsLimit     uint64
 
 	ParentChainID      uint64
 	VTRecovery         bool
@@ -175,20 +169,6 @@ func (c *SCConfig) instanceDir() string {
 		return ""
 	}
 	return filepath.Join(c.DataDir, c.name())
-}
-
-// ChainKey retrieves the currently configured private key for parent chain, checking
-// first any manually set key, falling back to the one found in the configured
-// data folder. If no key can be found, a new one is generated.
-func (c *SCConfig) ChainKey() *ecdsa.PrivateKey {
-	return c.getKey(datadirMcBridgeKey)
-}
-
-// NodeKey retrieves the currently configured private key for service chain, checking
-// first any manually set key, falling back to the one found in the configured
-// data folder. If no key can be found, a new one is generated.
-func (c *SCConfig) NodeKey() *ecdsa.PrivateKey {
-	return c.getKey(datadirScBridgeKey)
 }
 
 func (c *SCConfig) getKey(path string) *ecdsa.PrivateKey {

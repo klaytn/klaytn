@@ -67,6 +67,8 @@ func NewKeyedTransactor(key *ecdsa.PrivateKey) *TransactOpts {
 	}
 }
 
+// NewKeyedTransactorWithWallet is a utility method to easily create a transaction signer
+// from a keystore wallet.
 func NewKeyedTransactorWithWallet(address common.Address, wallet accounts.Wallet, chainID *big.Int) *TransactOpts {
 	keyAddr := address
 	return &TransactOpts{
