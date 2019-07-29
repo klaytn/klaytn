@@ -74,8 +74,8 @@ func Test_isEmptyAddress(t *testing.T) {
 			false,
 		},
 	}
-	for i := 0; i < len(testCases); i++ {
-		assert.Equal(t, testCases[i].result, isEmptyAddress(testCases[i].address))
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.result, isEmptyAddress(testCase.address))
 	}
 }
 
@@ -97,13 +97,13 @@ func TestRewardManager_getTotalTxFee(t *testing.T) {
 	header := &types.Header{}
 	unitPrice := big.NewInt(0)
 
-	for i := 0; i < len(testCases); i++ {
-		header.GasUsed = testCases[i].gasUsed
-		rewardConfig.unitPrice = unitPrice.SetUint64(testCases[i].unitPrice)
+	for _, testCase := range testCases {
+		header.GasUsed = testCase.gasUsed
+		rewardConfig.unitPrice = unitPrice.SetUint64(testCase.unitPrice)
 
 		result := rewardManager.getTotalTxFee(header, rewardConfig)
 
-		assert.Equal(t, testCases[i].expectedTotalTxFee, result)
+		assert.Equal(t, testCase.expectedTotalTxFee, result)
 	}
 }
 
@@ -171,14 +171,14 @@ func TestRewardManager_distributeBlockReward(t *testing.T) {
 	kirAddress := common.StringToAddress("0xd38A08AD21B44681f5e75D0a3CA4793f3E6c03e7")
 	governance := newDefaultTestGovernance()
 
-	for i := 0; i < len(testCases); i++ {
+	for _, testCase := range testCases {
 		BalanceAdder := newTestBalanceAdder()
 		rewardManager := NewRewardManager(newTestBlockChain(), governance)
-		rewardManager.distributeBlockReward(BalanceAdder, header, testCases[i].totalTxFee, testCases[i].rewardConfig, pocAddress, kirAddress)
+		rewardManager.distributeBlockReward(BalanceAdder, header, testCase.totalTxFee, testCase.rewardConfig, pocAddress, kirAddress)
 
-		assert.Equal(t, testCases[i].expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
-		assert.Equal(t, testCases[i].expectedPocBalance.Uint64(), BalanceAdder.GetBalance(pocAddress).Uint64())
-		assert.Equal(t, testCases[i].expectedKirBalance.Uint64(), BalanceAdder.GetBalance(kirAddress).Uint64())
+		assert.Equal(t, testCase.expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
+		assert.Equal(t, testCase.expectedPocBalance.Uint64(), BalanceAdder.GetBalance(pocAddress).Uint64())
+		assert.Equal(t, testCase.expectedKirBalance.Uint64(), BalanceAdder.GetBalance(kirAddress).Uint64())
 	}
 }
 
@@ -228,10 +228,10 @@ func TestRewardManager_DistributeBlockReward(t *testing.T) {
 	kirAddress := common.StringToAddress("0xd38A08AD21B44681f5e75D0a3CA4793f3E6c03e7")
 	governance := newDefaultTestGovernance()
 
-	for i := 0; i < len(testCases); i++ {
+	for _, testCase := range testCases {
 		BalanceAdder := newTestBalanceAdder()
-		governance.setTestGovernance(testCases[i].epoch, testCases[i].mintingAmount, testCases[i].ratio, testCases[i].unitprice, testCases[i].useGiniCoeff, testCases[i].deferredTxFee)
-		header.GasUsed = testCases[i].gasUsed
+		governance.setTestGovernance(testCase.epoch, testCase.mintingAmount, testCase.ratio, testCase.unitprice, testCase.useGiniCoeff, testCase.deferredTxFee)
+		header.GasUsed = testCase.gasUsed
 		rewardManager := NewRewardManager(newTestBlockChain(), governance)
 
 		err := rewardManager.DistributeBlockReward(BalanceAdder, header, pocAddress, kirAddress)
@@ -240,8 +240,8 @@ func TestRewardManager_DistributeBlockReward(t *testing.T) {
 		}
 
 		assert.NotNil(t, BalanceAdder.GetBalance(header.Rewardbase).Int64())
-		assert.Equal(t, testCases[i].expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
-		assert.Equal(t, testCases[i].expectedPocBalance.Uint64(), BalanceAdder.GetBalance(pocAddress).Uint64())
-		assert.Equal(t, testCases[i].expectedKirBalance.Uint64(), BalanceAdder.GetBalance(kirAddress).Uint64())
+		assert.Equal(t, testCase.expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
+		assert.Equal(t, testCase.expectedPocBalance.Uint64(), BalanceAdder.GetBalance(pocAddress).Uint64())
+		assert.Equal(t, testCase.expectedKirBalance.Uint64(), BalanceAdder.GetBalance(kirAddress).Uint64())
 	}
 }

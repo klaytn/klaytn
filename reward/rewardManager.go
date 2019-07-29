@@ -65,9 +65,9 @@ func (rm *RewardManager) getTotalTxFee(header *types.Header, rewardConfig *rewar
 
 // MintKLAY mints KLAY and gives the KLAY and the total transaction gas fee to the block proposer.
 func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header) error {
-	rewardConfig, error := rm.rcc.get(header.Number.Uint64())
-	if error != nil {
-		return error
+	rewardConfig, err := rm.rcc.get(header.Number.Uint64())
+	if err != nil {
+		return err
 	}
 
 	totalTxFee := rm.getTotalTxFee(header, rewardConfig)
@@ -79,9 +79,9 @@ func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header) error {
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
 func (rm *RewardManager) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) error {
-	rewardConfig, error := rm.rcc.get(header.Number.Uint64())
-	if error != nil {
-		return error
+	rewardConfig, err := rm.rcc.get(header.Number.Uint64())
+	if err != nil {
+		return err
 	}
 
 	// Calculate total tx fee
