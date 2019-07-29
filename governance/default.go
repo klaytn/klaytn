@@ -564,9 +564,7 @@ func (g *Governance) initializeCache() error {
 	if err != nil {
 		return ErrNotInitialized
 	}
-	g.idxCacheLock.Lock()
 	g.idxCache = indices
-	g.idxCacheLock.Unlock()
 
 	// Put governance items into the itemCache
 	for _, v := range indices {
