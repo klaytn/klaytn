@@ -38,7 +38,7 @@ AccountKey related functions and variables are defined in the files listed below
   - account_key_legacy.go             : An AccountKey for AccountKeyLegacy type is defined. If an account has the legacy key, the account's key pair should be coupled with its address.
   - account_key_nil.go                : An AccountKey for AccountKeyNil type is defined. The nil key is used only for TxTypeAccountUpdate transactions representing an empty key.
   - account_key_public.go             : An AccountKey for AccountKeyPublic type is defined. If an account contains a public key as an account key, the public key will be used in the account's transaction validation process.
-  - account_key_role_based.go         : An AccountKey for role based key is defined.
+  - account_key_role_based.go         : An AccountKey for AccountKeyRoleBased type is defined.
   - account_key_serializer.go         : AccountKeySerializer is defined for serialization of AccountKey.
   - account_key_weighted_multi_sig.go : An AccountKey for AccountKeyWeightedMultiSig type is defined.
   - public_key.go                     : PublicKeySerializable is defined for serialization of public key.
