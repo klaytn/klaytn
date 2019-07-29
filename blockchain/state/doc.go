@@ -39,5 +39,5 @@ Source Files
   - state_object_encoder.go  : stateObjectEncoder is used to encode stateObject in parallel manner
   - statedb.go               : Implementation of StateDB
   - sync.go                  : Functions to schedule a state trie download
- */
+*/
 package state
