@@ -76,7 +76,6 @@ var scnHelpFlagGroups = []utils.FlagGroup{
 			utils.VTRecoveryIntervalFlag,
 			utils.ServiceChainNewAccountFlag,
 			utils.ServiceChainConsensusFlag,
-			utils.MainChainAccountAddrFlag,
 		},
 	},
 	{

@@ -154,7 +154,6 @@ var KENFlags = []cli.Flag{
 
 var KSCNFlags = []cli.Flag{
 	utils.ServiceChainSignerFlag,
-	utils.MainChainAccountAddrFlag,
 	utils.AnchoringPeriodFlag,
 	utils.SentChainTxsLimit,
 	utils.MainBridgeFlag,

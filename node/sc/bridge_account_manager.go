@@ -91,7 +91,7 @@ func NewBridgeAccountManager(dataDir string) (*BridgeAccountManager, error) {
 	}, nil
 }
 
-// ImportUnlockAccountKeystore initialize a keystore, import exist keys, and try to unlock the key for bridge account.
+// InitializeBridgeAccountKeystore initialize a keystore, import existing keys, and try to unlock the bridge account.
 func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, common.Address, bool, error) {
 	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
 
