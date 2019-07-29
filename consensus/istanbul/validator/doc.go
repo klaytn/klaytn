@@ -22,10 +22,11 @@ Those types are used for validating blocks to make consensus.
 
 Validator
 
-`Validator` is a node which has 2 features for consensus.
-First, it has a right to make a block. Only validator can make a block.
-Second, it checks blocks made by other validators are valid or not. 2/3 of validators should approve for
-Klaytn uses weightedValidator for Klaytn consensus.
+`Validator` is a node which has 2 features for consensus, proposing and validating. Klaytn uses weightedValidator for Klaytn consensus.
+
+Propose: A node can propose a block, if it is a proposer. Only validator nodes can be a proposer.
+
+Validate: A validator node can validate blocks from proposers. A block is valid only if more than 2/3 of validators approve the given block.
 
 ValidatorSet
 
