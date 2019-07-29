@@ -18,5 +18,37 @@
 // This file is derived from ethstats/ethstats.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package statdb implements the network stats reporting service.
+/*
+Package statedb implements the Merkle Patricia Trie structure used for state object trie.
+This package is used to read/write data from/to the state object trie.
+
+Overview of statedb package
+
+There are 3 key struct in this package: Trie, SecureTire and Database.
+
+Trie struct represents a Merkle Patricia Trie.
+
+SecureTrie is a basically same as Trie but it wraps a trie with key hashing.
+In a SecureTrie, all access operations hash the key using keccak256.
+This prevents calling code from creating long chains of nodes that increase the access time.
+
+Database is an intermediate write layer between the trie data structures and
+the disk database. The aim is to accumulate trie writes in-memory and only
+periodically flush a couple tries to disk, garbage collecting the remainder.
+
+Source Files
+
+  - database.go    : Implementation of Database struct
+  - derive_sha.go  : Implementation of DeriveShaOrig used in go-ethereum
+  - encoding.go    : Implementation of 3 encodings: KEYBYTES, HEX and COMPACT
+  - errors.go      : Errors used in this package
+  - hasher.go      : Implementation of recursive and bottom-up hashing
+  - iterator.go    : Implementation of key-value trie iterator that traverses a Trie
+  - node.go        : Implementation of 4 types of nodes
+  - proof.go       : Functions which construct a Merkle Patricia Proof for the given key
+  - secure_trie.go : Implementation of Merkle Patricia Trie with key hashing
+  - sync.go        : Implementation of state trie sync
+  - trie.go        : Implementation of Merkle Patricia Trie
+*/
+
 package statedb
