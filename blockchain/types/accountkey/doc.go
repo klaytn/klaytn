@@ -30,7 +30,6 @@ The AccountKey types used in Klaytn are as follows:
 
 Each AccountKey type implements the AccountKey interface.
 
-
 Source Files
 
 AccountKey related functions and variables are defined in the files listed below.
