@@ -16,15 +16,13 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../sc_erc721/IERC721BridgeReceiver.sol";
 import "../sc_erc20/IERC20BridgeReceiver.sol";
 import "./BridgeFee.sol";
+import "./HandledRequests.sol";
 
-contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeFee {
+contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeFee, HandledRequests {
     uint64 public constant VERSION = 1;
     bool public modeMintBurn = false;
     address public counterpartBridge;
     bool public isRunning;
-
-    // TODO-Klaytn-Servicechain handleTxHash can be saved after Klaytn supports it.
-    mapping (bytes32 => bool) public handledRequestTxHash;
 
     mapping (address => address) public allowedTokens; // <token, counterpart token>
 
@@ -129,7 +127,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
         emit HandleValueTransfer(_requestTxHash, TokenType.ERC20, _from, _to, _tokenAddress, _value, handleNonce);
-        handledRequestTxHash[_requestTxHash] = true;
+        _setHandledRequestTxHash(_requestTxHash);
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
 
@@ -155,7 +153,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
         emit HandleValueTransfer(_requestTxHash, TokenType.KLAY, _from, _to, address(0), _value, handleNonce);
-        handledRequestTxHash[_requestTxHash] = true;
+        _setHandledRequestTxHash(_requestTxHash);
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
 
@@ -179,7 +177,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         require(handleNonce == _requestNonce, "mismatched handle / request nonce");
 
         emit HandleValueTransfer(_requestTxHash, TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, handleNonce);
-        handledRequestTxHash[_requestTxHash] = true;
+        _setHandledRequestTxHash(_requestTxHash);
         lastHandledRequestBlockNumber = _requestBlockNumber;
         handleNonce++;
 

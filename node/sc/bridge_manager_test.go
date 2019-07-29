@@ -192,7 +192,7 @@ func TestBridgeManager(t *testing.T) {
 					"token", ev.TokenAddress.String(),
 					"requestNonce", ev.RequestNonce)
 
-				done, err := bridge.HandledRequestTxHash(nil, ev.Raw.TxHash)
+				done, err := bridge.IsHandledRequestTx(nil, ev.Raw.TxHash)
 				assert.NoError(t, err)
 				assert.Equal(t, false, done)
 
@@ -233,7 +233,7 @@ func TestBridgeManager(t *testing.T) {
 				}
 
 				wg.Done()
-				done, err = bridge.HandledRequestTxHash(nil, ev.Raw.TxHash)
+				done, err = bridge.IsHandledRequestTx(nil, ev.Raw.TxHash)
 				assert.NoError(t, err)
 				assert.Equal(t, true, done)
 
