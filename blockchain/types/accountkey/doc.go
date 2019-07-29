@@ -43,7 +43,6 @@ AccountKey related functions and variables are defined in the files listed below
   - account_key_weighted_multi_sig.go : An AccountKey for AccountKeyWeightedMultiSig type is defined. AccountKeyWeightedMultiSig contains Threshold and WeightedPublicKeys.
   - public_key.go                     : PublicKeySerializable is defined for serialization of public key.
 
-
 For more information on AccountKey, please see the document below.
 https://docs.klaytn.com/klaytn/design/account#account-key
 */
