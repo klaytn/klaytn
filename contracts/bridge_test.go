@@ -341,7 +341,6 @@ func TestBridgePublicVariables(t *testing.T) {
 
 	ctx := context.Background()
 	nonce, err := backend.NonceAt(ctx, bridgeAccount.From, nil)
-	chainID, err := backend.ChainID(ctx)
 	gasPrice, err := backend.SuggestGasPrice(ctx)
 	opts := bind.MakeTransactOpts(bridgeAccountKey, big.NewInt(int64(nonce)), gasLimit, gasPrice)
 
