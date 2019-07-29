@@ -49,45 +49,45 @@ type BridgeAccountManager struct {
 
 // NewBridgeAccountManager returns bridgeAccountManager created by main/service bridge account keys.
 func NewBridgeAccountManager(dataDir string) (*BridgeAccountManager, error) {
-	pWallet, pAcc, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "parent_bridge_account"))
+	pWallet, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "parent_bridge_account"))
 	if err != nil {
 		return nil, err
 	}
 
 	if isLock {
-		logger.Warn("parent_bridge_account is locked. Please unLock manually for Service chain")
+		logger.Warn("parent_bridge_account is locked. Please unLock the account manually for Service chain")
 	}
 
-	cWallet, cAcc, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "child_bridge_account"))
+	cWallet, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "child_bridge_account"))
 	if err != nil {
 		return nil, err
 	}
 
 	if isLock {
-		logger.Warn("child_bridge_account is locked. Please unLock manually for Service chain")
+		logger.Warn("child_bridge_account is locked. Please unLock the account manually for Service chain")
 	}
 
-	logger.Info("bridge account is loaded", "parent", pAcc.String(), "child", cAcc.String())
+	logger.Info("bridge account is loaded", "parent", pAccAddr.String(), "child", cAccAddr.String())
 
-	mcAcc := &accountInfo{
+	pAccInfo := &accountInfo{
 		wallet:   pWallet,
-		address:  pAcc,
+		address:  pAccAddr,
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
 	}
 
-	scAcc := &accountInfo{
+	cAccInfo := &accountInfo{
 		wallet:   cWallet,
-		address:  cAcc,
+		address:  cAccAddr,
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
 	}
 
 	return &BridgeAccountManager{
-		pAccount: mcAcc,
-		cAccount: scAcc,
+		pAccount: pAccInfo,
+		cAccount: cAccInfo,
 	}, nil
 }
 
@@ -95,6 +95,7 @@ func NewBridgeAccountManager(dataDir string) (*BridgeAccountManager, error) {
 func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, common.Address, bool, error) {
 	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
 
+	// If there is no keystore file, this creates a random account and the corresponded password file.
 	if len(ks.Accounts()) == 0 {
 		pwdStr := setup.RandStringRunes(100)
 		acc, err := ks.NewAccount(pwdStr)
@@ -111,6 +112,8 @@ func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, comm
 		return ks.Wallets()[0], acc.Address, false, nil
 	}
 
+	// Try to unlock 1st account if valid password file exist. (optional behavior)
+	// If unlocking failed, user should unlock it through API.
 	acc := ks.Accounts()[0]
 	pwdFilePath := path.Join(keystorePath, acc.Address.String())
 	pwdStr, err := ioutil.ReadFile(pwdFilePath)
