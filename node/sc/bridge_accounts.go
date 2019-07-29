@@ -31,9 +31,10 @@ import (
 )
 
 const (
-	GasLimit = 5000000
+	DefaultBridgeTxGasLimit = 5000000
 )
 
+// accountInfo has bridge account's information to make and sign a transaction.
 type accountInfo struct {
 	wallet   accounts.Wallet
 	address  common.Address
@@ -96,6 +97,7 @@ func NewBridgeAccounts(dataDir string) (*BridgeAccounts, error) {
 }
 
 // InitializeBridgeAccountKeystore initializes a keystore, imports existing keys, and tries to unlock the bridge account.
+// This returns the 1st account of the wallet, its address, the lock status and the error.
 func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, common.Address, bool, error) {
 	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
 
@@ -143,7 +145,7 @@ func (acc *accountInfo) GetTransactOpts() *bind.TransactOpts {
 	if acc.isNonceSynced {
 		nonce = new(big.Int).SetUint64(acc.nonce)
 	}
-	return bind.MakeTransactOptsWithKeystore(acc.wallet, acc.address, nonce, acc.chainID, GasLimit, acc.gasPrice)
+	return bind.MakeTransactOptsWithKeystore(acc.wallet, acc.address, nonce, acc.chainID, DefaultBridgeTxGasLimit, acc.gasPrice)
 }
 
 // SignTx signs a transaction with the accountInfo.
