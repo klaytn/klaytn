@@ -40,7 +40,7 @@ AccountKey related functions and variables are defined in the files listed below
   - account_key_public.go             : An AccountKey for AccountKeyPublic type is defined. If an account contains a public key as an account key, the public key will be used in the account's transaction validation process.
   - account_key_role_based.go         : An AccountKey for AccountKeyRoleBased type is defined. AccountKeyRoleBased contains keys that have three roles: RoleTransaction, RoleAccountUpdate, and RoleFeePayer.
   - account_key_serializer.go         : AccountKeySerializer is defined for serialization of AccountKey.
-  - account_key_weighted_multi_sig.go : An AccountKey for AccountKeyWeightedMultiSig type is defined. AccountKeyWeightedMultiSig contains Threshold and WeightedPublicKeys .
+  - account_key_weighted_multi_sig.go : An AccountKey for AccountKeyWeightedMultiSig type is defined. AccountKeyWeightedMultiSig contains Threshold and WeightedPublicKeys.
   - public_key.go                     : PublicKeySerializable is defined for serialization of public key.
 
 
