@@ -167,10 +167,8 @@ type VoteList struct {
 func (api *PublicGovernanceAPI) MyVotes() []*VoteList {
 
 	ret := []*VoteList{}
-	api.governance.voteMapLock.RLock()
-	defer api.governance.voteMapLock.RUnlock()
 
-	for k, v := range api.governance.voteMap {
+	for k, v := range api.governance.voteMap.Copy() {
 		item := &VoteList{
 			Key:      k,
 			Value:    v.Value,
