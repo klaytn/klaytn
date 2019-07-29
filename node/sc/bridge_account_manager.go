@@ -55,7 +55,7 @@ func NewBridgeAccountManager(dataDir string) (*BridgeAccountManager, error) {
 	}
 
 	if isLock {
-		logger.Warn("parent_bridge_account is locked. Please unLock the account manually for Service chain")
+		logger.Warn("parent_bridge_account is locked. Please unlock the account manually for Service Chain")
 	}
 
 	cWallet, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "child_bridge_account"))
@@ -64,7 +64,7 @@ func NewBridgeAccountManager(dataDir string) (*BridgeAccountManager, error) {
 	}
 
 	if isLock {
-		logger.Warn("child_bridge_account is locked. Please unLock the account manually for Service chain")
+		logger.Warn("child_bridge_account is locked. Please unlock the account manually for Service Chain")
 	}
 
 	logger.Info("bridge account is loaded", "parent", pAccAddr.String(), "child", cAccAddr.String())
