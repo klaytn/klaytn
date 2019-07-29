@@ -35,7 +35,7 @@ Source Files
 AccountKey related functions and variables are defined in the files listed below.
   - account_key.go                    : Defines the AccountKey types, the AccountKey interface and the functions related to AccountKey.
   - account_key_fail.go               : An AccountKey for AccountKeyFail type is defined. If an account has the fail key, the account's transaction validation process always fails.
-  - account_key_legacy.go             : An AccountKey for legacy key is defined.
+  - account_key_legacy.go             : An AccountKey for AccountKeyLegacy type is defined. If an account has the legacy key, the account's key pair should be coupled with its address.
   - account_key_nil.go                : An AccountKey for nil key is defined.
   - account_key_public.go             : An AccountKey for public key is defined.
   - account_key_role_based.go         : An AccountKey for role based key is defined.
