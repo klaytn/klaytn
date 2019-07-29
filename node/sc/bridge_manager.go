@@ -46,6 +46,12 @@ const (
 	ERC721
 )
 
+const (
+	TxTypeValueTransfer = iota
+	TxTypeGovernance
+	TxTypeGovernanceRealtime
+)
+
 var (
 	ErrInvalidTokenPair     = errors.New("invalid token pair")
 	ErrNoBridgeInfo         = errors.New("bridge information does not exist")
@@ -212,6 +218,8 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 			continue
 		}
 
+		logger.Trace("handle value transfer event", "evt", ev)
+
 		if ev.RequestNonce > bi.handleNonce+maxPendingNonceDiff {
 			logger.Trace("nonce diff is too large", "limitation", maxPendingNonceDiff)
 			return errors.New("nonce diff is too large")
@@ -241,7 +249,7 @@ func (bi *BridgeInfo) UpdateInfo() error {
 	}
 	bi.UpdateRequestNonce(rn)
 
-	hn, err := bi.bridge.HandleNonce(nil)
+	hn, err := bi.bridge.LastHandledNonce(nil)
 	if err != nil {
 		return err
 	}

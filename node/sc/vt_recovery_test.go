@@ -132,11 +132,10 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	// 4. Check pending events.
 	t.Log("check pending tx", "len", len(vtr.serviceChainEvents))
 	var count = 0
-	for index, ev := range vtr.serviceChainEvents {
+	for _, ev := range vtr.serviceChainEvents {
 		assert.Equal(t, info.nodeAuth.From, ev.From)
 		assert.Equal(t, info.aliceAuth.From, ev.To)
 		assert.Equal(t, big.NewInt(testAmount), ev.ValueOrTokenId)
-		assert.Equal(t, uint64(index+testNonceOffset), ev.RequestNonce)
 		assert.Condition(t, func() bool {
 			return uint64(testBlockOffset) <= ev.Raw.BlockNumber
 		})
@@ -509,10 +508,11 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	// Register tokens on the bridge
 	nodeOpts := &bind.TransactOpts{From: nodeAuth.From, Signer: nodeAuth.Signer, GasLimit: testGasLimit}
 	chainOpts := &bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}
-	_, err = localInfo.bridge.RegisterToken(nodeOpts, tokenLocalAddr, tokenRemoteAddr)
-	_, err = localInfo.bridge.RegisterToken(nodeOpts, nftLocalAddr, nftRemoteAddr)
-	_, err = remoteInfo.bridge.RegisterToken(chainOpts, tokenRemoteAddr, tokenLocalAddr)
-	_, err = remoteInfo.bridge.RegisterToken(chainOpts, nftRemoteAddr, nftLocalAddr)
+	rn, _ := localInfo.bridge.RequestNonce(nil)
+	_, err = localInfo.bridge.RegisterToken(nodeOpts, tokenLocalAddr, tokenRemoteAddr, rn)
+	_, err = localInfo.bridge.RegisterToken(nodeOpts, nftLocalAddr, nftRemoteAddr, rn+1)
+	_, err = remoteInfo.bridge.RegisterToken(chainOpts, tokenRemoteAddr, tokenLocalAddr, rn+2)
+	_, err = remoteInfo.bridge.RegisterToken(chainOpts, nftRemoteAddr, nftLocalAddr, rn+3)
 	sim.Commit()
 
 	// Register an NFT to chain account (minting)
@@ -564,10 +564,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 			case ev := <-recoveryCh:
 				isRecovery = ev
 			case ev := <-requestVTCh:
-				// Intentionally lost a single handle value transfer.
-				// Since the increase of monotony in nonce is checked in the contract,
-				// all subsequent handle transfer will be failed.
-				if ev.RequestNonce == (testTxCount - testPendingCount) {
+				if ev.RequestNonce >= (testTxCount - testPendingCount) {
 					t.Log("missing handle value transfer", "nonce", ev.RequestNonce)
 				} else {
 					switch ev.TokenType {

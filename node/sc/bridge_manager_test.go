@@ -153,8 +153,16 @@ func TestBridgeManager(t *testing.T) {
 	sim.Commit() // block
 
 	// Register tokens on the bridge
-	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
-	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
+	rn, err := bridge.RequestNonce(nil)
+	if err != nil {
+		log.Fatalf("Failed to register token: %v", err)
+	}
+	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr, rn)
+	sim.Commit() // block
+	if err != nil {
+		log.Fatalf("Failed to register token: %v", err)
+	}
+	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr, rn+1)
 	sim.Commit() // block
 
 	cTokenAddr, err := bridge.AllowedTokens(nil, tokenAddr)
@@ -526,7 +534,8 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	}
 
 	// Register tokens on the bridge
-	pBridge.RegisterToken(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
+	rn, err := pBridge.RequestNonce(nil)
+	pBridge.RegisterToken(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr, rn)
 	sim.Commit() // block
 
 	cTokenAddr, err := pBridge.AllowedTokens(nil, tokenAddr)
@@ -1346,7 +1355,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, nil, true, true)
+	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, bam.scAccount, true, true)
 
 	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
 

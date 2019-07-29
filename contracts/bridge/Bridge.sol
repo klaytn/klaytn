@@ -16,21 +16,23 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../sc_erc721/IERC721BridgeReceiver.sol";
 import "../sc_erc20/IERC20BridgeReceiver.sol";
 import "./BridgeFee.sol";
+import "./BridgeMultiSig.sol";
 
-contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeFee {
+contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeFee, BridgeMultiSig {
     uint64 public constant VERSION = 1;
     bool public modeMintBurn = false;
     address public counterpartBridge;
     bool public isRunning;
 
+    uint64 public requestNonce;
+    uint64 public lastHandledRequestBlockNumber;
+    uint64 public lastHandledNonce;
+    uint64 public latestHandledNonce;
+    mapping (uint64 => bool) public handledNonces;  // <handled nonce> history
+
     mapping (address => address) public allowedTokens; // <token, counterpart token>
 
     using SafeMath for uint256;
-
-    uint64 public requestNonce;
-    uint64 public handleNonce;
-
-    uint64 public lastHandledRequestBlockNumber;
 
     enum TokenType {
         KLAY,
@@ -39,7 +41,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     }
 
     // TODO-Klaytn-Service FeeReceiver should be passed by argument of constructor.
-    constructor (bool _modeMintBurn) BridgeFee(address(0)) public payable {
+    constructor (bool _modeMintBurn) BridgeFee(address(0)) BridgeMultiSig() public payable {
         isRunning = true;
         modeMintBurn = _modeMintBurn;
     }
@@ -83,53 +85,112 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         uint64 handleNonce
     );
 
+    modifier onlySigners()
+    {
+        require(msg.sender == owner() || signers[msg.sender]);
+        _;
+    }
+
     // start allows the value transfer request.
-    function start() external onlyOwner {
-        isRunning = true;
+    function start(bool _status, uint64 _requestNonce)
+        external
+        onlySigners
+    {
+        onlySequentialNonce(TransactionType.Governance, _requestNonce);
+        bytes32 voteKey = keccak256(abi.encodePacked(this.start.selector, _status, _requestNonce));
+        if (!voteGovernance(voteKey, msg.sender)) {
+            return;
+        }
+        isRunning = _status;
+        governanceNonces[uint64(TransactionType.Governance)]++;
     }
 
     // stop prevent the value transfer request.
-    function stop() external onlyOwner {
-        isRunning = false;
-    }
-
-    // stop prevent the value transfer request.
-    function setCounterPartBridge(address _bridge) external onlyOwner {
+    function setCounterPartBridge(address _bridge, uint64 _requestNonce)
+        external
+        onlySigners
+    {
+        onlySequentialNonce(TransactionType.Governance, _requestNonce);
+        bytes32 voteKey = keccak256(abi.encodePacked(this.setCounterPartBridge.selector, _bridge, _requestNonce));
+        if (!voteGovernance(voteKey, msg.sender)) {
+            return;
+        }
         counterpartBridge = _bridge;
+        governanceNonces[uint64(TransactionType.Governance)]++;
     }
 
     // registerToken can update the allowed token with the counterpart token.
-    function registerToken(address _token, address _cToken) external onlyOwner {
+    function registerToken(address _token, address _cToken, uint64 _requestNonce)
+        external
+        onlySigners
+    {
+        onlySequentialNonce(TransactionType.Governance, _requestNonce);
+        bytes32 voteKey = keccak256(abi.encodePacked(this.registerToken.selector, _token, _cToken, _requestNonce));
+        if (!voteGovernance(voteKey, msg.sender)) {
+            return;
+        }
         allowedTokens[_token] = _cToken;
+        governanceNonces[uint64(TransactionType.Governance)]++;
     }
 
     // deregisterToken can remove the token in allowedToken list.
-    function deregisterToken(address _token) external onlyOwner {
+    function deregisterToken(address _token, uint64 _requestNonce)
+        external
+        onlySigners
+    {
+        onlySequentialNonce(TransactionType.Governance, _requestNonce);
+        bytes32 voteKey = keccak256(abi.encodePacked(this.deregisterToken.selector, _token, _requestNonce));
+        if (!voteGovernance(voteKey, msg.sender)) {
+            return;
+        }
         delete allowedTokens[_token];
+        governanceNonces[uint64(TransactionType.Governance)]++;
     }
 
-    // handleERC20Transfer sends the token by the request.
-    function handleERC20Transfer(
-        address _from,
-        address _to,
-        address _tokenAddress,
-        uint256 _value,
-        uint64 _requestNonce,
-        uint64 _requestBlockNumber
-    )
-        public
-        onlyOwner
+    // registerSigner registers new signer.
+    function registerSigner(address _signer, bool _isRegister, uint64 _requestNonce)
+    external
+    onlySigners
     {
-        require(handleNonce == _requestNonce, "mismatched handle / request nonce");
-
-        emit HandleValueTransfer(TokenType.ERC20, _from, _to, _tokenAddress, _value, handleNonce);
-        lastHandledRequestBlockNumber = _requestBlockNumber;
-        handleNonce++;
-
-        if (modeMintBurn) {
-            ERC20Mintable(_tokenAddress).mint(_to, _value);
+        onlySequentialNonce(TransactionType.Governance, _requestNonce);
+        require(_signer != address(0), "empty signer");
+        bytes32 voteKey = keccak256(abi.encodePacked(this.registerSigner.selector, _signer, _isRegister, _requestNonce));
+        if (!voteGovernance(voteKey, msg.sender)) {
+            return;
+        }
+        if (_isRegister) {
+            signers[_signer] = true;
         } else {
-            IERC20(_tokenAddress).transfer(_to, _value);
+            delete signers[_signer];
+        }
+        governanceNonces[uint64(TransactionType.Governance)]++;
+    }
+
+    // setSignerThreshold sets signer threshold.
+    function setSignerThreshold(TransactionType _txType, uint64 _threshold, uint64 _requestNonce)
+    external
+    onlySigners
+    {
+        onlySequentialNonce(TransactionType.Governance, _requestNonce);
+        require(_threshold > 0, "zero threshold");
+        bytes32 voteKey = keccak256(abi.encodePacked(this.setSignerThreshold.selector, _txType, _threshold, _requestNonce));
+        if (!voteGovernance(voteKey, msg.sender)) {
+            return;
+        }
+        signerThresholds[uint64(_txType)] = _threshold;
+        governanceNonces[uint64(TransactionType.Governance)]++;
+    }
+
+    function updateNonce(uint64 _requestNonce) internal {
+        if (_requestNonce > latestHandledNonce) {
+            latestHandledNonce = _requestNonce;
+        }
+        // TODO-Klaytn-ServiceChain: optimize this loop if possible.
+        for (uint64 i = lastHandledNonce; i <= latestHandledNonce; i++) {
+            if (!handledNonces[i]) {
+                break;
+            }
+            lastHandledNonce = i+1;
         }
     }
 
@@ -142,15 +203,51 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         uint64 _requestBlockNumber
     )
         public
-        onlyOwner
+        onlySigners
     {
-        require(handleNonce == _requestNonce, "mismatched handle / request nonce");
+        bytes32 txKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _requestNonce));
+        bytes32 voteKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _from, _to, _value, _requestNonce, _requestBlockNumber));
+        if (!voteValueTransfer(txKey, voteKey, msg.sender)) {
+            return;
+        }
 
-        emit HandleValueTransfer(TokenType.KLAY, _from, _to, address(0), _value, handleNonce);
+        emit HandleValueTransfer(TokenType.KLAY, _from, _to, address(0), _value, _requestNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
-        handleNonce++;
+        handledNonces[_requestNonce] = true;
 
+        updateNonce(_requestNonce);
         _to.transfer(_value);
+    }
+
+    // handleERC20Transfer sends the token by the request.
+    function handleERC20Transfer(
+        address _from,
+        address _to,
+        address _tokenAddress,
+        uint256 _value,
+        uint64 _requestNonce,
+        uint64 _requestBlockNumber
+    )
+        public
+        onlySigners
+    {
+        bytes32 txKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _requestNonce));
+        bytes32 voteKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _from, _to, _tokenAddress, _value, _requestNonce, _requestBlockNumber));
+        if (!voteValueTransfer(txKey, voteKey, msg.sender)) {
+            return;
+        }
+
+        emit HandleValueTransfer(TokenType.ERC20, _from, _to, _tokenAddress, _value, _requestNonce);
+        lastHandledRequestBlockNumber = _requestBlockNumber;
+        handledNonces[_requestNonce] = true;
+
+        updateNonce(_requestNonce);
+
+        if (modeMintBurn) {
+            ERC20Mintable(_tokenAddress).mint(_to, _value);
+        } else {
+            IERC20(_tokenAddress).transfer(_to, _value);
+        }
     }
 
     // handleERC721Transfer sends the ERC721 by the request.
@@ -164,13 +261,19 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         string _tokenURI
     )
         public
-        onlyOwner
+        onlySigners
     {
-        require(handleNonce == _requestNonce, "mismatched handle / request nonce");
+        bytes32 txKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _requestNonce));
+        bytes32 voteKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _from, _to, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI));
+        if (!voteValueTransfer(txKey, voteKey, msg.sender)) {
+            return;
+        }
 
-        emit HandleValueTransfer(TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, handleNonce);
+        emit HandleValueTransfer(TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, _requestNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
-        handleNonce++;
+        handledNonces[_requestNonce] = true;
+
+        updateNonce(_requestNonce);
 
         if (modeMintBurn) {
             ERC721MetadataMintable(_tokenAddress).mintWithTokenURI(_to, _tokenId, _tokenURI);
@@ -214,7 +317,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     function _requestERC20Transfer(address _tokenAddress, address _from, address _to, uint256 _value, uint256 _feeLimit) internal {
         require(isRunning, "stopped bridge");
         require(_value > 0, "zero msg.value");
-        require(allowedTokens[_tokenAddress] != address(0), "Not a valid token");
+        require(allowedTokens[_tokenAddress] != address(0), "invalid token");
 
         uint256 fee = _payERC20FeeAndRefundChange(_from, _tokenAddress, _feeLimit);
 
@@ -256,7 +359,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     // _requestERC721Transfer requests transfer ERC721 to _to on relative chain.
     function _requestERC721Transfer(address _tokenAddress, address _from, address _to, uint256 _tokenId) internal {
         require(isRunning, "stopped bridge");
-        require(allowedTokens[_tokenAddress] != address(0), "Not a valid token");
+        require(allowedTokens[_tokenAddress] != address(0), "invalid token");
 
         string memory uri = ERC721Metadata(_tokenAddress).tokenURI(_tokenId);
 
@@ -299,17 +402,25 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     function chargeWithoutEvent() external payable {}
 
     // setKLAYFee set the fee of KLAY tranfser
-    function setKLAYFee(uint256 _fee) external onlyOwner {
+    function setKLAYFee(uint256 _fee)
+        external
+        onlySigners {
         _setKLAYFee(_fee);
     }
 
     // setERC20Fee set the fee of the token transfer
-    function setERC20Fee(address _token, uint256 _fee) external onlyOwner {
+    function setERC20Fee(address _token, uint256 _fee)
+        external
+        onlySigners
+    {
         _setERC20Fee(_token, _fee);
     }
 
     // setFeeReceiver set fee receiver.
-    function setFeeReceiver(address _feeReceiver) external onlyOwner {
+    function setFeeReceiver(address _feeReceiver)
+        external
+        onlySigners
+    {
         _setFeeReceiver(_feeReceiver);
     }
 }

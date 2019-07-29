@@ -295,7 +295,11 @@ func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, p
 	}
 
 	cBi.account.Lock()
-	tx, err := cBi.bridge.RegisterToken(cBi.account.GetTransactOpts(), cTokenAddr, pTokenAddr)
+	rn, err := cBi.bridge.GovernanceNonces(nil, TxTypeGovernance)
+	if err != nil {
+		return err
+	}
+	tx, err := cBi.bridge.RegisterToken(cBi.account.GetTransactOpts(), cTokenAddr, pTokenAddr, rn)
 	if err != nil {
 		cBi.account.UnLock()
 		return err
@@ -305,7 +309,11 @@ func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, p
 	logger.Debug("scBridge registered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
 
 	pBi.account.Lock()
-	tx, err = pBi.bridge.RegisterToken(pBi.account.GetTransactOpts(), pTokenAddr, cTokenAddr)
+	rn, err = pBi.bridge.GovernanceNonces(nil, TxTypeGovernance)
+	if err != nil {
+		return err
+	}
+	tx, err = pBi.bridge.RegisterToken(pBi.account.GetTransactOpts(), pTokenAddr, cTokenAddr, rn)
 	if err != nil {
 		pBi.account.UnLock()
 		return err
@@ -367,7 +375,11 @@ func (sbapi *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr,
 
 	cBi.account.Lock()
 	defer cBi.account.UnLock()
-	tx, err := cBi.bridge.DeregisterToken(cBi.account.GetTransactOpts(), cTokenAddr)
+	rn, err := cBi.bridge.GovernanceNonces(nil, TxTypeGovernance)
+	if err != nil {
+		return err
+	}
+	tx, err := cBi.bridge.DeregisterToken(cBi.account.GetTransactOpts(), cTokenAddr, rn)
 	if err != nil {
 		return err
 	}
@@ -376,7 +388,11 @@ func (sbapi *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr,
 
 	pBi.account.Lock()
 	defer pBi.account.UnLock()
-	tx, err = pBi.bridge.DeregisterToken(pBi.account.GetTransactOpts(), pTokenAddr)
+	rn, err = pBi.bridge.GovernanceNonces(nil, TxTypeGovernance)
+	if err != nil {
+		return err
+	}
+	tx, err = pBi.bridge.DeregisterToken(pBi.account.GetTransactOpts(), pTokenAddr, rn)
 	if err != nil {
 		return err
 	}
