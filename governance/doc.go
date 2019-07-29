@@ -48,11 +48,11 @@ Governance package contains a governance struct which stores current system conf
 If a vote passed, the governance struct is updated to provide new information to related packages and users.
 The API documentation can be found at <https://docs.klaytn.com/api/governance>
 
-When a CN (consensus node which is managed by CCO) propose a block, it write its vote on the block header and other nodes
+When a CN (consensus node which is managed by CCO) proposes a block, it writes its vote on the block header and other nodes
 parse the header and handle it. This process is handled by snapshot.go in the consensus engine and processed by functions in handler.go
 
 If a vote satisfies the requirement (more than 50% of votes in favor of), it will update the governance struct and many other packages
-like "reward", "txpool" and so on will reference it
+like "reward", "txpool" and so on will reference it.
 
 
 Source Files
