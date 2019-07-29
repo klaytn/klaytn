@@ -116,12 +116,12 @@ func TestRewardManager_MintKLAY(t *testing.T) {
 	rewardManager := NewRewardManager(newTestBlockChain(), governance)
 
 	err := rewardManager.MintKLAY(BalanceAdder, header)
-	if err != nil {
-		t.Errorf("error has occurred. err : %v", err)
-	} else {
-		assert.NotNil(t, BalanceAdder.GetBalance(header.Rewardbase).Int64())
-		assert.Equal(t, governance.mintingAmount, BalanceAdder.GetBalance(header.Rewardbase).String())
+	if !assert.NoError(t, err) {
+		t.FailNow()
 	}
+
+	assert.NotNil(t, BalanceAdder.GetBalance(header.Rewardbase).Int64())
+	assert.Equal(t, governance.mintingAmount, BalanceAdder.GetBalance(header.Rewardbase).String())
 }
 
 func TestRewardManager_distributeBlockReward(t *testing.T) {
@@ -235,8 +235,7 @@ func TestRewardManager_DistributeBlockReward(t *testing.T) {
 		rewardManager := NewRewardManager(newTestBlockChain(), governance)
 
 		err := rewardManager.DistributeBlockReward(BalanceAdder, header, pocAddress, kirAddress)
-		if err != nil {
-			t.Errorf("error has occurred. err : %v", err)
+		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
 

@@ -49,22 +49,21 @@ type RewardManager struct {
 }
 
 func NewRewardManager(bc *blockchain.BlockChain, gh governanceHelper) *RewardManager {
-	sm := newStakingManager(bc, gh)
-	rcc := newRewardConfigCache(gh)
 	return &RewardManager{
-		sm:  sm,
-		rcc: rcc,
+		sm:  newStakingManager(bc, gh),
+		rcc: newRewardConfigCache(gh),
 		gh:  gh,
 	}
 }
 
+// getTotalTxFee returns the total transaction gas fee of the block.
 func (rm *RewardManager) getTotalTxFee(header *types.Header, rewardConfig *rewardConfig) *big.Int {
 	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
 	totalTxFee := big.NewInt(0).Mul(totalGasUsed, rewardConfig.unitPrice)
 	return totalTxFee
 }
 
-// MintKLAY mints KLAY and gives the KLAY to the block proposer
+// MintKLAY mints KLAY and gives the KLAY and the total transaction gas fee to the block proposer.
 func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header) error {
 	rewardConfig, error := rm.rcc.get(header.Number.Uint64())
 	if error != nil {
@@ -95,7 +94,7 @@ func (rm *RewardManager) DistributeBlockReward(b BalanceAdder, header *types.Hea
 	return nil
 }
 
-// distributeBlockReward mints KLAY and distribute newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
+// distributeBlockReward mints KLAY and distributes newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
 func (rm *RewardManager) distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, rewardConfig *rewardConfig, pocAddr common.Address, kirAddr common.Address) {
 	proposer := header.Rewardbase
 	// Block reward
