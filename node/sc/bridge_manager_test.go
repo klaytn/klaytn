@@ -192,6 +192,10 @@ func TestBridgeManager(t *testing.T) {
 					"token", ev.TokenAddress.String(),
 					"requestNonce", ev.RequestNonce)
 
+				done, err := bridge.HandledRequestTxHash(nil, ev.Raw.TxHash)
+				assert.NoError(t, err)
+				assert.Equal(t, false, done)
+
 				switch ev.TokenType {
 				case KLAY:
 					tx, err := bridge.HandleKLAYTransfer(
@@ -229,6 +233,9 @@ func TestBridgeManager(t *testing.T) {
 				}
 
 				wg.Done()
+				done, err = bridge.HandledRequestTxHash(nil, ev.Raw.TxHash)
+				assert.NoError(t, err)
+				assert.Equal(t, true, done)
 
 			case ev := <-handleValueTransferEventCh:
 				fmt.Println("Handle value transfer event",
