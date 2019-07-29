@@ -139,7 +139,7 @@ type SubBridge struct {
 	handleEventCh   chan *HandleValueTransferEvent
 	handleEventSub  event.Subscription
 
-	bridgeAccounts *BridgeAccountManager
+	bridgeAccounts *BridgeAccounts
 
 	bootFail bool
 
@@ -200,7 +200,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	sc.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
 
 	var err error
-	sc.bridgeAccounts, err = NewBridgeAccountManager(config.DataDir)
+	sc.bridgeAccounts, err = NewBridgeAccounts(config.DataDir)
 	if err != nil {
 		return nil, err
 	}

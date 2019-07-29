@@ -574,7 +574,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 	for _, journal := range bm.journal.cache {
 		cBridgeAddr := journal.LocalAddress
 		pBridgeAddr := journal.RemoteAddress
-		bam := bm.subBridge.bridgeAccounts
+		bacc := bm.subBridge.bridgeAccounts
 
 		// Set bridge info
 		cBridgeInfo, cOk := bm.GetBridgeInfo(cBridgeAddr)
@@ -593,7 +593,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 		}
 
 		if !cOk {
-			err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, bam.cAccount, true, false)
+			err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, bacc.cAccount, true, false)
 			if err != nil {
 				logger.Error("setting local bridge info is failed", "err", err)
 				bm.DeleteBridgeInfo(cBridgeAddr)
@@ -603,7 +603,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 		}
 
 		if !pOk {
-			err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridgeInfo.bridge, bam.pAccount, false, false)
+			err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridgeInfo.bridge, bacc.pAccount, false, false)
 			if err != nil {
 				logger.Error("setting remote bridge info is failed", "err", err)
 				bm.DeleteBridgeInfo(pBridgeAddr)

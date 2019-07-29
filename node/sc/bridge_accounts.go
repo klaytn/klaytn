@@ -25,8 +25,13 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"io/ioutil"
 	"math/big"
+	"os"
 	"path"
 	"sync"
+)
+
+const (
+	GasLimit = 5000000
 )
 
 type accountInfo struct {
@@ -40,15 +45,14 @@ type accountInfo struct {
 	mu            sync.RWMutex
 }
 
-// BridgeAccountManager manages bridge account for main/service chain.
-type BridgeAccountManager struct {
-	// TODO-Klaytn need to consider multiple bridge accounts?
+// BridgeAccounts manages bridge account for main/service chain.
+type BridgeAccounts struct {
 	pAccount *accountInfo
 	cAccount *accountInfo
 }
 
-// NewBridgeAccountManager returns bridgeAccountManager created by main/service bridge account keys.
-func NewBridgeAccountManager(dataDir string) (*BridgeAccountManager, error) {
+// NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
+func NewBridgeAccounts(dataDir string) (*BridgeAccounts, error) {
 	pWallet, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "parent_bridge_account"))
 	if err != nil {
 		return nil, err
@@ -85,28 +89,30 @@ func NewBridgeAccountManager(dataDir string) (*BridgeAccountManager, error) {
 		gasPrice: nil,
 	}
 
-	return &BridgeAccountManager{
+	return &BridgeAccounts{
 		pAccount: pAccInfo,
 		cAccount: cAccInfo,
 	}, nil
 }
 
-// InitializeBridgeAccountKeystore initialize a keystore, import existing keys, and try to unlock the bridge account.
+// InitializeBridgeAccountKeystore initializes a keystore, imports existing keys, and tries to unlock the bridge account.
 func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, common.Address, bool, error) {
 	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	// If there is no keystore file, this creates a random account and the corresponded password file.
+	// TODO-Klaytn-Servicechain A test-option will be added and this routine will be only executed with it.
 	if len(ks.Accounts()) == 0 {
-		pwdStr := setup.RandStringRunes(100)
-		acc, err := ks.NewAccount(pwdStr)
+		password := setup.RandStringRunes(32)
+		acc, err := ks.NewAccount(password)
 		if err != nil {
 			return nil, common.Address{}, true, err
 		}
-		setup.WriteFile([]byte(pwdStr), keystorePath, acc.Address.String())
+		setup.WriteFile([]byte(password), keystorePath, acc.Address.String())
 
-		if err := ks.Unlock(acc, pwdStr); err != nil {
-			logger.Warn("bridge account wallet unlock is failed by created password file.", "address", acc.Address, "err", err)
-			return ks.Wallets()[0], acc.Address, true, nil
+		if err := ks.Unlock(acc, password); err != nil {
+			logger.Error("bridge account wallet unlock is failed by created password file.", "address", acc.Address, "err", err)
+			os.RemoveAll(keystorePath)
+			return nil, common.Address{}, true, err
 		}
 
 		return ks.Wallets()[0], acc.Address, false, nil
@@ -128,7 +134,7 @@ func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, comm
 	return ks.Wallets()[0], acc.Address, true, nil
 }
 
-// GetTransactOpts return a transactOpts for transact on local/remote backend.
+// GetTransactOpts returns a transactOpts for transact on local/remote backend.
 func (acc *accountInfo) GetTransactOpts() *bind.TransactOpts {
 	var nonce *big.Int
 
@@ -137,13 +143,12 @@ func (acc *accountInfo) GetTransactOpts() *bind.TransactOpts {
 	if acc.isNonceSynced {
 		nonce = new(big.Int).SetUint64(acc.nonce)
 	}
-	return MakeTransactOptsWithKeystore(acc.wallet, acc.address, nonce, acc.chainID, acc.gasPrice)
+	return bind.MakeTransactOptsWithKeystore(acc.wallet, acc.address, nonce, acc.chainID, GasLimit, acc.gasPrice)
 }
 
-// SignTx sign a transaction with the accountInfo.
+// SignTx signs a transaction with the accountInfo.
 func (acc *accountInfo) SignTx(tx *types.Transaction) (*types.Transaction, error) {
-	account := accounts.Account{Address: acc.address}
-	return acc.wallet.SignTx(account, tx, acc.chainID)
+	return acc.wallet.SignTx(accounts.Account{Address: acc.address}, tx, acc.chainID)
 }
 
 // SetChainID sets the chain ID of the chain of the account.

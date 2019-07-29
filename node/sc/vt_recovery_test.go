@@ -447,7 +447,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	config.DataDir = os.TempDir() + "sc"
 	config.VTRecovery = true
 
-	bam, err := NewBridgeAccountManager(config.DataDir)
+	bam, err := NewBridgeAccounts(config.DataDir)
 	assert.NoError(t, err)
 	bam.pAccount.chainID = big.NewInt(0)
 	bam.cAccount.chainID = big.NewInt(0)

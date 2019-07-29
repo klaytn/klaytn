@@ -83,12 +83,12 @@ func TestBridgeManager(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bam, _ := NewBridgeAccountManager(config.DataDir)
-	bam.pAccount.chainID = big.NewInt(0)
-	bam.cAccount.chainID = big.NewInt(0)
+	bacc, _ := NewBridgeAccounts(config.DataDir)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
-	pAuth := bam.cAccount.GetTransactOpts()
-	cAuth := bam.pAccount.GetTransactOpts()
+	pAuth := bacc.cAccount.GetTransactOpts()
+	cAuth := bacc.pAccount.GetTransactOpts()
 
 	// Generate a new random account and a funded simulator
 	aliceKey, _ := crypto.GenerateKey()
@@ -99,16 +99,16 @@ func TestBridgeManager(t *testing.T) {
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{
-		alice.From:           {Balance: big.NewInt(params.KLAY)},
-		bam.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bam.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		alice.From:            {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
 		config:         config,
 		peers:          newBridgePeerSet(),
-		bridgeAccounts: bam,
+		bridgeAccounts: bacc,
 	}
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -338,7 +338,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bam, _ := NewBridgeAccountManager(config.DataDir)
+	bam, _ := NewBridgeAccounts(config.DataDir)
 	bam.pAccount.chainID = big.NewInt(0)
 	bam.cAccount.chainID = big.NewInt(0)
 
@@ -749,7 +749,7 @@ func TestBasicJournal(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bam, _ := NewBridgeAccountManager(os.TempDir())
+	bam, _ := NewBridgeAccounts(os.TempDir())
 	bam.pAccount.chainID = big.NewInt(0)
 	bam.cAccount.chainID = big.NewInt(0)
 
@@ -780,13 +780,9 @@ func TestBasicJournal(t *testing.T) {
 	bm, err := NewBridgeManager(sc)
 
 	localAddr, err := bm.DeployBridgeTest(sim, true)
-	if err != nil {
-		t.Fatal("deploy bridge test failed", localAddr)
-	}
+	assert.NoError(t, err)
 	remoteAddr, err := bm.DeployBridgeTest(sim, false)
-	if err != nil {
-		t.Fatal("deploy bridge test failed", remoteAddr)
-	}
+	assert.NoError(t, err)
 
 	bm.SetJournal(localAddr, remoteAddr)
 
@@ -833,7 +829,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 	config.VTRecovery = true
 	config.VTRecoveryInterval = 60
 
-	bam, _ := NewBridgeAccountManager(os.TempDir())
+	bam, _ := NewBridgeAccounts(os.TempDir())
 	bam.pAccount.chainID = big.NewInt(0)
 	bam.cAccount.chainID = big.NewInt(0)
 
@@ -1057,7 +1053,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bam, _ := NewBridgeAccountManager(os.TempDir())
+	bam, _ := NewBridgeAccounts(os.TempDir())
 	bam.pAccount.chainID = big.NewInt(0)
 	bam.cAccount.chainID = big.NewInt(0)
 
@@ -1122,7 +1118,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bam, _ := NewBridgeAccountManager(os.TempDir())
+	bam, _ := NewBridgeAccounts(os.TempDir())
 	bam.pAccount.chainID = big.NewInt(0)
 	bam.cAccount.chainID = big.NewInt(0)
 
@@ -1227,7 +1223,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bam, _ := NewBridgeAccountManager(os.TempDir())
+	bam, _ := NewBridgeAccounts(os.TempDir())
 	bam.pAccount.chainID = big.NewInt(0)
 	bam.cAccount.chainID = big.NewInt(0)
 
