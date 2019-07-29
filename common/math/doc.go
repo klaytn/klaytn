@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package math provides convenience functions to use big.Int and to parse string into an integer.
+Package math provides convenience functions to use big.Int and to parse a string into an integer.
 
 `big.go` provides Max, Min, Pow, Parse functions for big.Int types and it also implements encoding.TextMarshaler and encoding.TextUnmarshaler.
 
