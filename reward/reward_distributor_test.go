@@ -79,7 +79,7 @@ func Test_isEmptyAddress(t *testing.T) {
 	}
 }
 
-func TestRewardManager_getTotalTxFee(t *testing.T) {
+func TestRewardDistributor_getTotalTxFee(t *testing.T) {
 	testCases := []struct {
 		gasUsed            uint64
 		unitPrice          uint64
@@ -91,7 +91,7 @@ func TestRewardManager_getTotalTxFee(t *testing.T) {
 		{9236192, 50000, big.NewInt(461809600000)},
 		{12936418927364923, 0, big.NewInt(0)},
 	}
-	rewardManager := NewRewardManager(newTestBlockChain(), newDefaultTestGovernance())
+	rewardManager := NewRewardDistributor(newTestBlockChain(), newDefaultTestGovernance())
 	rewardConfig := &rewardConfig{}
 
 	header := &types.Header{}
@@ -103,17 +103,17 @@ func TestRewardManager_getTotalTxFee(t *testing.T) {
 
 		result := rewardManager.getTotalTxFee(header, rewardConfig)
 
-		assert.Equal(t, testCase.expectedTotalTxFee, result)
+		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), result.Uint64())
 	}
 }
 
-func TestRewardManager_MintKLAY(t *testing.T) {
+func TestRewardDistributor_MintKLAY(t *testing.T) {
 	BalanceAdder := newTestBalanceAdder()
 	header := &types.Header{}
 	header.Number = big.NewInt(0)
 	header.Rewardbase = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
 	governance := newDefaultTestGovernance()
-	rewardManager := NewRewardManager(newTestBlockChain(), governance)
+	rewardManager := NewRewardDistributor(newTestBlockChain(), governance)
 
 	err := rewardManager.MintKLAY(BalanceAdder, header)
 	if !assert.NoError(t, err) {
@@ -124,7 +124,7 @@ func TestRewardManager_MintKLAY(t *testing.T) {
 	assert.Equal(t, governance.mintingAmount, BalanceAdder.GetBalance(header.Rewardbase).String())
 }
 
-func TestRewardManager_distributeBlockReward(t *testing.T) {
+func TestRewardDistributor_distributeBlockReward(t *testing.T) {
 	testCases := []struct {
 		totalTxFee         *big.Int
 		rewardConfig       *rewardConfig
@@ -173,7 +173,7 @@ func TestRewardManager_distributeBlockReward(t *testing.T) {
 
 	for _, testCase := range testCases {
 		BalanceAdder := newTestBalanceAdder()
-		rewardManager := NewRewardManager(newTestBlockChain(), governance)
+		rewardManager := NewRewardDistributor(newTestBlockChain(), governance)
 		rewardManager.distributeBlockReward(BalanceAdder, header, testCase.totalTxFee, testCase.rewardConfig, pocAddress, kirAddress)
 
 		assert.Equal(t, testCase.expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
@@ -182,7 +182,7 @@ func TestRewardManager_distributeBlockReward(t *testing.T) {
 	}
 }
 
-func TestRewardManager_DistributeBlockReward(t *testing.T) {
+func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 	testCases := []struct {
 		gasUsed            uint64
 		epoch              uint64
@@ -232,7 +232,7 @@ func TestRewardManager_DistributeBlockReward(t *testing.T) {
 		BalanceAdder := newTestBalanceAdder()
 		governance.setTestGovernance(testCase.epoch, testCase.mintingAmount, testCase.ratio, testCase.unitprice, testCase.useGiniCoeff, testCase.deferredTxFee)
 		header.GasUsed = testCase.gasUsed
-		rewardManager := NewRewardManager(newTestBlockChain(), governance)
+		rewardManager := NewRewardDistributor(newTestBlockChain(), governance)
 
 		err := rewardManager.DistributeBlockReward(BalanceAdder, header, pocAddress, kirAddress)
 		if !assert.NoError(t, err) {

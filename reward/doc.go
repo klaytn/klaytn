@@ -50,7 +50,7 @@ and returns correct stakingInfo to use.
 
 
  related struct
- - RewardManager
+ - RewardDistributor
  - stakingManager
  - addressBookManager
  - stakingInfoCache
@@ -76,7 +76,7 @@ Second, divide totalReward by ratio (default 34/54/12 - proposer/PoC/KIR).
 Last, distribute reward to each address (proposer, PoC, KIR).
 
  related struct
- - RewardManager
+ - RewardDistributor
  - rewardConfigCache
 */
 package reward

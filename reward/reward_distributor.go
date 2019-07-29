@@ -42,14 +42,14 @@ func isEmptyAddress(addr common.Address) bool {
 	return addr == common.Address{}
 }
 
-type RewardManager struct {
+type RewardDistributor struct {
 	sm  *stakingManager
 	rcc *rewardConfigCache
 	gh  governanceHelper
 }
 
-func NewRewardManager(bc *blockchain.BlockChain, gh governanceHelper) *RewardManager {
-	return &RewardManager{
+func NewRewardDistributor(bc *blockchain.BlockChain, gh governanceHelper) *RewardDistributor {
+	return &RewardDistributor{
 		sm:  newStakingManager(bc, gh),
 		rcc: newRewardConfigCache(gh),
 		gh:  gh,
@@ -57,45 +57,45 @@ func NewRewardManager(bc *blockchain.BlockChain, gh governanceHelper) *RewardMan
 }
 
 // getTotalTxFee returns the total transaction gas fee of the block.
-func (rm *RewardManager) getTotalTxFee(header *types.Header, rewardConfig *rewardConfig) *big.Int {
+func (rd *RewardDistributor) getTotalTxFee(header *types.Header, rewardConfig *rewardConfig) *big.Int {
 	totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
-	totalTxFee := big.NewInt(0).Mul(totalGasUsed, rewardConfig.unitPrice)
+	totalTxFee := totalGasUsed.Mul(totalGasUsed, rewardConfig.unitPrice)
 	return totalTxFee
 }
 
 // MintKLAY mints KLAY and gives the KLAY and the total transaction gas fee to the block proposer.
-func (rm *RewardManager) MintKLAY(b BalanceAdder, header *types.Header) error {
-	rewardConfig, err := rm.rcc.get(header.Number.Uint64())
+func (rd *RewardDistributor) MintKLAY(b BalanceAdder, header *types.Header) error {
+	rewardConfig, err := rd.rcc.get(header.Number.Uint64())
 	if err != nil {
 		return err
 	}
 
-	totalTxFee := rm.getTotalTxFee(header, rewardConfig)
-	blockReward := big.NewInt(0).Add(rewardConfig.mintingAmount, totalTxFee)
+	totalTxFee := rd.getTotalTxFee(header, rewardConfig)
+	blockReward := totalTxFee.Add(rewardConfig.mintingAmount, totalTxFee)
 
 	b.AddBalance(header.Rewardbase, blockReward)
 	return nil
 }
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
-func (rm *RewardManager) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) error {
-	rewardConfig, err := rm.rcc.get(header.Number.Uint64())
+func (rd *RewardDistributor) DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address) error {
+	rewardConfig, err := rd.rcc.get(header.Number.Uint64())
 	if err != nil {
 		return err
 	}
 
 	// Calculate total tx fee
 	totalTxFee := common.Big0
-	if rm.gh.DeferredTxFee() {
-		totalTxFee = rm.getTotalTxFee(header, rewardConfig)
+	if rd.gh.DeferredTxFee() {
+		totalTxFee = rd.getTotalTxFee(header, rewardConfig)
 	}
 
-	rm.distributeBlockReward(b, header, totalTxFee, rewardConfig, pocAddr, kirAddr)
+	rd.distributeBlockReward(b, header, totalTxFee, rewardConfig, pocAddr, kirAddr)
 	return nil
 }
 
 // distributeBlockReward mints KLAY and distributes newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
-func (rm *RewardManager) distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, rewardConfig *rewardConfig, pocAddr common.Address, kirAddr common.Address) {
+func (rd *RewardDistributor) distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, rewardConfig *rewardConfig, pocAddr common.Address, kirAddr common.Address) {
 	proposer := header.Rewardbase
 	// Block reward
 	blockReward := big.NewInt(0).Add(rewardConfig.mintingAmount, totalTxFee)
@@ -138,14 +138,14 @@ func (rm *RewardManager) distributeBlockReward(b BalanceAdder, header *types.Hea
 		"KIR address", kirAddr, "KIR incentive", kirIncentive)
 }
 
-func (rm *RewardManager) GetStakingInfo(blockNum uint64) *StakingInfo {
-	return rm.sm.getStakingInfo(blockNum)
+func (rd *RewardDistributor) GetStakingInfo(blockNum uint64) *StakingInfo {
+	return rd.sm.getStakingInfo(blockNum)
 }
 
-func (rm *RewardManager) Start() {
-	rm.sm.subscribe()
+func (rd *RewardDistributor) Start() {
+	rd.sm.subscribe()
 }
 
-func (rm *RewardManager) Stop() {
-	rm.sm.chainHeadSub.Unsubscribe()
+func (rd *RewardDistributor) Stop() {
+	rd.sm.chainHeadSub.Unsubscribe()
 }
