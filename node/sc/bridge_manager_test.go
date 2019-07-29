@@ -348,7 +348,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	// Create Simulated backend
 	initialValue := int64(10000000000)
 	alloc := blockchain.GenesisAlloc{
-		Alice.From:           {Balance: big.NewInt(initialValue)},
+		Alice.From:            {Balance: big.NewInt(initialValue)},
 		bacc.cAccount.address: {Balance: big.NewInt(initialValue)},
 		bacc.pAccount.address: {Balance: big.NewInt(initialValue)},
 	}
@@ -754,9 +754,9 @@ func TestBasicJournal(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:            {Balance: big.NewInt(params.KLAY)},
-		auth2.From:           {Balance: big.NewInt(params.KLAY)},
-		auth4.From:           {Balance: big.NewInt(params.KLAY)},
+		auth.From:             {Balance: big.NewInt(params.KLAY)},
+		auth2.From:            {Balance: big.NewInt(params.KLAY)},
+		auth4.From:            {Balance: big.NewInt(params.KLAY)},
 		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
@@ -834,9 +834,9 @@ func TestMethodRestoreBridges(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:            {Balance: big.NewInt(params.KLAY)},
-		auth2.From:           {Balance: big.NewInt(params.KLAY)},
-		auth4.From:           {Balance: big.NewInt(params.KLAY)},
+		auth.From:             {Balance: big.NewInt(params.KLAY)},
+		auth2.From:            {Balance: big.NewInt(params.KLAY)},
+		auth4.From:            {Balance: big.NewInt(params.KLAY)},
 		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
@@ -1058,9 +1058,9 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:            {Balance: big.NewInt(params.KLAY)},
-		auth2.From:           {Balance: big.NewInt(params.KLAY)},
-		auth4.From:           {Balance: big.NewInt(params.KLAY)},
+		auth.From:             {Balance: big.NewInt(params.KLAY)},
+		auth2.From:            {Balance: big.NewInt(params.KLAY)},
+		auth4.From:            {Balance: big.NewInt(params.KLAY)},
 		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
@@ -1123,9 +1123,9 @@ func TestScenarioSubUnsub(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:            {Balance: big.NewInt(params.KLAY)},
-		auth2.From:           {Balance: big.NewInt(params.KLAY)},
-		auth4.From:           {Balance: big.NewInt(params.KLAY)},
+		auth.From:             {Balance: big.NewInt(params.KLAY)},
+		auth2.From:            {Balance: big.NewInt(params.KLAY)},
+		auth4.From:            {Balance: big.NewInt(params.KLAY)},
 		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
@@ -1228,9 +1228,9 @@ func TestErrorDupSubscription(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:            {Balance: big.NewInt(params.KLAY)},
-		auth2.From:           {Balance: big.NewInt(params.KLAY)},
-		auth4.From:           {Balance: big.NewInt(params.KLAY)},
+		auth.From:             {Balance: big.NewInt(params.KLAY)},
+		auth2.From:            {Balance: big.NewInt(params.KLAY)},
+		auth4.From:            {Balance: big.NewInt(params.KLAY)},
 		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
