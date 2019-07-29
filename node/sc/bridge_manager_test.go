@@ -338,26 +338,26 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bam, _ := NewBridgeAccounts(config.DataDir)
-	bam.pAccount.chainID = big.NewInt(0)
-	bam.cAccount.chainID = big.NewInt(0)
+	bacc, _ := NewBridgeAccounts(config.DataDir)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
-	pAuth := bam.cAccount.GetTransactOpts()
-	cAuth := bam.pAccount.GetTransactOpts()
+	pAuth := bacc.cAccount.GetTransactOpts()
+	cAuth := bacc.pAccount.GetTransactOpts()
 
 	// Create Simulated backend
 	initialValue := int64(10000000000)
 	alloc := blockchain.GenesisAlloc{
 		Alice.From:           {Balance: big.NewInt(initialValue)},
-		bam.cAccount.address: {Balance: big.NewInt(initialValue)},
-		bam.pAccount.address: {Balance: big.NewInt(initialValue)},
+		bacc.cAccount.address: {Balance: big.NewInt(initialValue)},
+		bacc.pAccount.address: {Balance: big.NewInt(initialValue)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
 		config:         config,
 		peers:          newBridgePeerSet(),
-		bridgeAccounts: bam,
+		bridgeAccounts: bacc,
 	}
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -749,16 +749,16 @@ func TestBasicJournal(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bam, _ := NewBridgeAccounts(os.TempDir())
-	bam.pAccount.chainID = big.NewInt(0)
-	bam.cAccount.chainID = big.NewInt(0)
+	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:            {Balance: big.NewInt(params.KLAY)},
 		auth2.From:           {Balance: big.NewInt(params.KLAY)},
 		auth4.From:           {Balance: big.NewInt(params.KLAY)},
-		bam.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bam.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 
@@ -767,7 +767,7 @@ func TestBasicJournal(t *testing.T) {
 		peers:          newBridgePeerSet(),
 		localBackend:   sim,
 		remoteBackend:  sim,
-		bridgeAccounts: bam,
+		bridgeAccounts: bacc,
 	}
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -829,16 +829,16 @@ func TestMethodRestoreBridges(t *testing.T) {
 	config.VTRecovery = true
 	config.VTRecoveryInterval = 60
 
-	bam, _ := NewBridgeAccounts(os.TempDir())
-	bam.pAccount.chainID = big.NewInt(0)
-	bam.cAccount.chainID = big.NewInt(0)
+	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:            {Balance: big.NewInt(params.KLAY)},
 		auth2.From:           {Balance: big.NewInt(params.KLAY)},
 		auth4.From:           {Balance: big.NewInt(params.KLAY)},
-		bam.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bam.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 
@@ -847,7 +847,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 		peers:          newBridgePeerSet(),
 		localBackend:   sim,
 		remoteBackend:  sim,
-		bridgeAccounts: bam,
+		bridgeAccounts: bacc,
 	}
 
 	var err error
@@ -1053,16 +1053,16 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bam, _ := NewBridgeAccounts(os.TempDir())
-	bam.pAccount.chainID = big.NewInt(0)
-	bam.cAccount.chainID = big.NewInt(0)
+	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:            {Balance: big.NewInt(params.KLAY)},
 		auth2.From:           {Balance: big.NewInt(params.KLAY)},
 		auth4.From:           {Balance: big.NewInt(params.KLAY)},
-		bam.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bam.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 
@@ -1071,7 +1071,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 		peers:          newBridgePeerSet(),
 		localBackend:   sim,
 		remoteBackend:  sim,
-		bridgeAccounts: bam,
+		bridgeAccounts: bacc,
 	}
 
 	var err error
@@ -1118,16 +1118,16 @@ func TestScenarioSubUnsub(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bam, _ := NewBridgeAccounts(os.TempDir())
-	bam.pAccount.chainID = big.NewInt(0)
-	bam.cAccount.chainID = big.NewInt(0)
+	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:            {Balance: big.NewInt(params.KLAY)},
 		auth2.From:           {Balance: big.NewInt(params.KLAY)},
 		auth4.From:           {Balance: big.NewInt(params.KLAY)},
-		bam.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bam.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 
@@ -1136,7 +1136,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 		peers:          newBridgePeerSet(),
 		localBackend:   sim,
 		remoteBackend:  sim,
-		bridgeAccounts: bam,
+		bridgeAccounts: bacc,
 	}
 
 	var err error
@@ -1223,16 +1223,16 @@ func TestErrorDupSubscription(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bam, _ := NewBridgeAccounts(os.TempDir())
-	bam.pAccount.chainID = big.NewInt(0)
-	bam.cAccount.chainID = big.NewInt(0)
+	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:            {Balance: big.NewInt(params.KLAY)},
 		auth2.From:           {Balance: big.NewInt(params.KLAY)},
 		auth4.From:           {Balance: big.NewInt(params.KLAY)},
-		bam.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bam.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 
@@ -1241,7 +1241,7 @@ func TestErrorDupSubscription(t *testing.T) {
 		peers:          newBridgePeerSet(),
 		localBackend:   sim,
 		remoteBackend:  sim,
-		bridgeAccounts: bam,
+		bridgeAccounts: bacc,
 	}
 
 	var err error

@@ -447,13 +447,13 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	config.DataDir = os.TempDir() + "sc"
 	config.VTRecovery = true
 
-	bam, err := NewBridgeAccounts(config.DataDir)
+	bacc, err := NewBridgeAccounts(config.DataDir)
 	assert.NoError(t, err)
-	bam.pAccount.chainID = big.NewInt(0)
-	bam.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
-	cAcc := bam.cAccount.GetTransactOpts()
-	pAcc := bam.pAccount.GetTransactOpts()
+	cAcc := bacc.cAccount.GetTransactOpts()
+	pAcc := bacc.pAccount.GetTransactOpts()
 
 	// Generate a new random account and a funded simulator.
 	aliceKey, _ := crypto.GenerateKey()
@@ -470,7 +470,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	sc := &SubBridge{
 		config:         config,
 		peers:          newBridgePeerSet(),
-		bridgeAccounts: bam,
+		bridgeAccounts: bacc,
 	}
 	handler, err := NewSubBridgeHandler(sc.config, sc)
 	if err != nil {
