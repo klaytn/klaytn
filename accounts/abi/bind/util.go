@@ -58,6 +58,7 @@ func WaitMined(ctx context.Context, b DeployBackend, tx *types.Transaction) (*ty
 	}
 }
 
+// CheckWaitMined returns an error if the transaction is not found or not successful status.
 func CheckWaitMined(b DeployBackend, tx *types.Transaction) error {
 	timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancelTimeout()
