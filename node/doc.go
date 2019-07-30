@@ -90,5 +90,20 @@ directory. Mode instance A opens the database "db", node instance B opens the da
             db-2/              -- LevelDB content for "db-2"
         B.ipc                  -- JSON-RPC UNIX domain socket endpoint of instance A
         keystore/              -- account key store, used by both instances
+
+Source Files
+
+Functions and variables related to Node are defined in the files listed below
+  - config.go            : Define the config type for node creation
+  - config_test.go       : Functions for testing the Config
+  - defaults.go          : Defines default values used in node package
+  - errors.go            : Defines errors used in node package
+  - node.go              : Defines a p2p node and functions for node operation
+  - node_example_test.go : Functions for testing the sample Service
+  - node_test.go         : Test functions for testing the Node type
+  - service.go           : Defines Service, Service is an individual protocol that can be registered into a node
+  - service_test.go      : Functions for testing the Service
+  - utils.go             : Administrative API methods
+  - utils_test.go        : Define InstrumentedService type for node test
 */
 package node
