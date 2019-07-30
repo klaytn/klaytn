@@ -19,11 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package common contains various helper functions.
-
-The `common` package defines commonly used data types and constants.
-
-And also it provides cache and helper functions.
+Package common contains various helper functions, commonly used data types and constants.
 
 Source Files
 
