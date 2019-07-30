@@ -11,12 +11,12 @@ contract BridgeMultiSig is Ownable {
     mapping (bytes32 => uint64) public signedTxsCounts; // <sha3(type, args, nonce)>
     mapping (bytes32 => uint64) public committedTxs; // <sha3(type, nonce)>
     mapping (uint64 => uint64) public signerThresholds; // <tx type>
-    mapping (uint64 => uint64) public governanceNonces; // <tx type, nonce>
+    mapping (uint64 => uint64) public configurationNonces; // <tx type, nonce>
 
     enum TransactionType {
         ValueTransfer,
-        Governance,
-        GovernanceRealtime,
+        Configuration,
+        ConfigurationRealtime,
         Max
     }
 
@@ -34,7 +34,7 @@ contract BridgeMultiSig is Ownable {
 
     // onlySequentialNonce checks sequential nonce increase.
     function onlySequentialNonce(TransactionType _txType, uint64 _requestNonce) internal view {
-        require(governanceNonces[uint64(_txType)] == _requestNonce, "nonce mismatch");
+        require(configurationNonces[uint64(_txType)] == _requestNonce, "nonce mismatch");
     }
 
     // voteValueTransfer votes value transfer transaction with the signer.
@@ -56,7 +56,7 @@ contract BridgeMultiSig is Ownable {
 
     // voteGovernanceCommon votes contract governance transaction with the signer.
     // It does not need to check committedTxs since onlySequentialNonce checks it already with harder condition.
-    function voteGovernanceCommon(bytes32 _voteKey, address _signer) internal returns(bool) {
+    function voteConfigurationCommon(bytes32 _voteKey, address _signer) internal returns(bool) {
         if (signedTxs[_voteKey][_signer]) {
             return false;
         }
@@ -68,30 +68,30 @@ contract BridgeMultiSig is Ownable {
     }
 
     // voteGovernance votes contract governance transaction with the signer.
-    function voteGovernance(bytes32 _voteKey, address _signer)
+    function voteConfiguration(bytes32 _voteKey, address _signer)
     internal
     returns(bool)
     {
-        if (!voteGovernanceCommon(_voteKey, _signer)) {
+        if (!voteConfigurationCommon(_voteKey, _signer)) {
             return false;
         }
-        if (signedTxsCounts[_voteKey] ==  signerThresholds[uint64(TransactionType.Governance)]) {
-            governanceNonces[uint64(TransactionType.Governance)]++;
+        if (signedTxsCounts[_voteKey] ==  signerThresholds[uint64(TransactionType.Configuration)]) {
+            configurationNonces[uint64(TransactionType.Configuration)]++;
             return true;
         }
         return false;
     }
 
     // voteGovernanceRealtime votes frequent contract governance transaction with the signer.
-    function voteGovernanceRealtime(bytes32 _voteKey, address _signer)
+    function voteConfigurationRealtime(bytes32 _voteKey, address _signer)
     internal
     returns(bool)
     {
-        if (!voteGovernanceCommon(_voteKey, _signer)) {
+        if (!voteConfigurationCommon(_voteKey, _signer)) {
             return false;
         }
-        if (signedTxsCounts[_voteKey] ==  signerThresholds[uint64(TransactionType.GovernanceRealtime)]) {
-            governanceNonces[uint64(TransactionType.GovernanceRealtime)]++;
+        if (signedTxsCounts[_voteKey] ==  signerThresholds[uint64(TransactionType.ConfigurationRealtime)]) {
+            configurationNonces[uint64(TransactionType.ConfigurationRealtime)]++;
             return true;
         }
         return false;

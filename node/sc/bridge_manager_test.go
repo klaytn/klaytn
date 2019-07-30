@@ -496,7 +496,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, common.Address{}, nilReceiver)
 	}
 
-	gn, err := pBridge.GovernanceNonces(nil, TxTypeGovernance)
+	gn, err := pBridge.ConfigurationNonces(nil, TxTypeConfiguration)
 	assert.NoError(t, err)
 	pBridge.SetFeeReceiver(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, receiver.From, gn)
 	sim.Commit() // block
@@ -519,7 +519,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, big.NewInt(0).String(), fee.String())
 	}
 
-	gnr, err := pBridge.GovernanceNonces(nil, TxTypeGovernanceRealtime)
+	gnr, err := pBridge.ConfigurationNonces(nil, TxTypeConfigurationRealtime)
 	assert.NoError(t, err)
 	_, err = pBridge.SetKLAYFee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee), gnr)
 	assert.NoError(t, err)

@@ -48,8 +48,8 @@ const (
 
 const (
 	TxTypeValueTransfer = iota
-	TxTypeGovernance
-	TxTypeGovernanceRealtime
+	TxTypeConfiguration
+	TxTypeConfigurationRealtime
 )
 
 var (
@@ -927,7 +927,7 @@ func (bm *BridgeManager) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *
 	auth.Lock()
 	defer auth.UnLock()
 
-	rn, err := bi.bridge.GovernanceNonces(nil, TxTypeGovernanceRealtime)
+	rn, err := bi.bridge.ConfigurationNonces(nil, TxTypeConfigurationRealtime)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -953,7 +953,7 @@ func (bm *BridgeManager) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (co
 	auth.Lock()
 	defer auth.UnLock()
 
-	rn, err := bi.bridge.GovernanceNonces(nil, TxTypeGovernanceRealtime)
+	rn, err := bi.bridge.ConfigurationNonces(nil, TxTypeConfigurationRealtime)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -979,7 +979,7 @@ func (bm *BridgeManager) SetFeeReceiver(bridgeAddr, receiver common.Address) (co
 	auth.Lock()
 	defer auth.UnLock()
 
-	rn, err := bi.bridge.GovernanceNonces(nil, TxTypeGovernance)
+	rn, err := bi.bridge.ConfigurationNonces(nil, TxTypeConfiguration)
 	if err != nil {
 		return common.Hash{}, err
 	}
