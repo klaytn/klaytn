@@ -570,14 +570,14 @@ func (g *Governance) initializeCache() error {
 	for _, v := range indices {
 		if num, data, err := g.ReadGovernance(v); err == nil {
 			g.itemCache.Add(getGovernanceCacheKey(num), data)
-			g.actualGovernanceBlock = num
+			atomic.StoreUint64(&g.actualGovernanceBlock, num)
 		} else {
 			logger.Crit("Couldn't read governance cache from database. Check database consistency", "index", v, "err", err)
 		}
 	}
 
 	// the last one is the one to be used now
-	ret, _ := g.itemCache.Get(getGovernanceCacheKey(g.actualGovernanceBlock))
+	ret, _ := g.itemCache.Get(getGovernanceCacheKey(atomic.LoadUint64(&g.actualGovernanceBlock)))
 	g.currentSet.Import(ret.(map[string]interface{}))
 	return nil
 }
@@ -722,8 +722,8 @@ func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 	newNumber, newGovernanceSet, _ := gov.ReadGovernance(num)
 
 	// Do the change only when the governance actually changed
-	if newGovernanceSet != nil && newNumber != gov.actualGovernanceBlock {
-		gov.actualGovernanceBlock = newNumber
+	if newGovernanceSet != nil && newNumber != atomic.LoadUint64(&gov.actualGovernanceBlock) {
+		atomic.StoreUint64(&gov.actualGovernanceBlock, newNumber)
 		gov.currentSet.Import(newGovernanceSet)
 		gov.triggerChange(newGovernanceSet)
 	}
