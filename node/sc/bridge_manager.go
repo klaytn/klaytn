@@ -249,7 +249,7 @@ func (bi *BridgeInfo) UpdateInfo() error {
 	}
 	bi.UpdateRequestNonce(rn)
 
-	hn, err := bi.bridge.LastHandledNonce(nil)
+	hn, err := bi.bridge.SequentialHandledNonce(nil)
 	if err != nil {
 		return err
 	}
@@ -927,7 +927,12 @@ func (bm *BridgeManager) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *
 	auth.Lock()
 	defer auth.UnLock()
 
-	tx, err := bi.bridge.SetERC20Fee(auth.GetTransactOpts(), tokenAddr, fee)
+	rn, err := bi.bridge.GovernanceNonces(nil, TxTypeGovernanceRealtime)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	tx, err := bi.bridge.SetERC20Fee(auth.GetTransactOpts(), tokenAddr, fee, rn)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -948,7 +953,12 @@ func (bm *BridgeManager) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (co
 	auth.Lock()
 	defer auth.UnLock()
 
-	tx, err := bi.bridge.SetKLAYFee(auth.GetTransactOpts(), fee)
+	rn, err := bi.bridge.GovernanceNonces(nil, TxTypeGovernanceRealtime)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	tx, err := bi.bridge.SetKLAYFee(auth.GetTransactOpts(), fee, rn)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -969,7 +979,12 @@ func (bm *BridgeManager) SetFeeReceiver(bridgeAddr, receiver common.Address) (co
 	auth.Lock()
 	defer auth.UnLock()
 
-	tx, err := bi.bridge.SetFeeReceiver(auth.GetTransactOpts(), receiver)
+	rn, err := bi.bridge.GovernanceNonces(nil, TxTypeGovernance)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	tx, err := bi.bridge.SetFeeReceiver(auth.GetTransactOpts(), receiver, rn)
 	if err != nil {
 		return common.Hash{}, err
 	}

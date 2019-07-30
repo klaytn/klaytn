@@ -3,8 +3,9 @@ pragma solidity ^0.4.24;
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
 import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract BridgeMultiSig {
+contract BridgeMultiSig is Ownable {
     mapping (address => bool) public signers;    // <signer, nonce>
     mapping (bytes32 => mapping (address => uint64)) public signedTxs; // <sha3(type, args, nonce), <singer, vote>>
     mapping (bytes32 => uint64) public signedTxsCounts; // <sha3(type, args, nonce)>
@@ -23,6 +24,12 @@ contract BridgeMultiSig {
         for (uint64 i = 0; i < uint64(TransactionType.Max); i++) {
             signerThresholds[uint64(i)] = 1;
         }
+    }
+
+    modifier onlySigners()
+    {
+        require(msg.sender == owner() || signers[msg.sender]);
+        _;
     }
 
     // onlySequentialNonce checks sequential nonce increase.
@@ -69,6 +76,7 @@ contract BridgeMultiSig {
             return false;
         }
         if (signedTxsCounts[_voteKey] ==  signerThresholds[uint64(TransactionType.Governance)]) {
+            governanceNonces[uint64(TransactionType.Governance)]++;
             return true;
         }
         return false;
@@ -83,6 +91,7 @@ contract BridgeMultiSig {
             return false;
         }
         if (signedTxsCounts[_voteKey] ==  signerThresholds[uint64(TransactionType.GovernanceRealtime)]) {
+            governanceNonces[uint64(TransactionType.GovernanceRealtime)]++;
             return true;
         }
         return false;

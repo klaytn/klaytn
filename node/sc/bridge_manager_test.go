@@ -496,13 +496,15 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, common.Address{}, nilReceiver)
 	}
 
-	pBridge.SetFeeReceiver(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, receiver.From)
+	gn, err := pBridge.GovernanceNonces(nil, TxTypeGovernance)
+	assert.NoError(t, err)
+	pBridge.SetFeeReceiver(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, receiver.From, gn)
 	sim.Commit() // block
 
 	{
-		recev, err := pBridge.FeeReceiver(nil)
+		recv, err := pBridge.FeeReceiver(nil)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, receiver.From, recev)
+		assert.Equal(t, receiver.From, recv)
 	}
 
 	{
@@ -517,8 +519,12 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, big.NewInt(0).String(), fee.String())
 	}
 
-	pBridge.SetKLAYFee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee))
-	pBridge.SetERC20Fee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, big.NewInt(ERC20Fee))
+	gnr, err := pBridge.GovernanceNonces(nil, TxTypeGovernanceRealtime)
+	assert.NoError(t, err)
+	_, err = pBridge.SetKLAYFee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee), gnr)
+	assert.NoError(t, err)
+	_, err = pBridge.SetERC20Fee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, big.NewInt(ERC20Fee), gnr+1)
+	assert.NoError(t, err)
 	sim.Commit() // block
 
 	{
@@ -534,8 +540,8 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	}
 
 	// Register tokens on the bridge
-	rn, err := pBridge.RequestNonce(nil)
-	pBridge.RegisterToken(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr, rn)
+	assert.NoError(t, err)
+	pBridge.RegisterToken(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr, gn+1)
 	sim.Commit() // block
 
 	cTokenAddr, err := pBridge.AllowedTokens(nil, tokenAddr)

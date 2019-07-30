@@ -300,7 +300,7 @@ loop:
 				t.Fatal("failed to get LastHandledRequestBlockNumber.", "err", err)
 			}
 
-			resultHandleNonce, err := b.LastHandledNonce(nil)
+			resultHandleNonce, err := b.SequentialHandledNonce(nil)
 			if err != nil {
 				t.Fatal("failed to get HandleNonce.", "err", err)
 			}
@@ -361,7 +361,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	counterpartBridge, err := b.CounterpartBridge(nil)
 	assert.Equal(t, common.Address{2}, counterpartBridge)
 
-	hnonce, err := b.LastHandledNonce(nil)
+	hnonce, err := b.SequentialHandledNonce(nil)
 	assert.Equal(t, uint64(0), hnonce)
 
 	owner, err := b.IsOwner(&bind.CallOpts{From: bridgeAccount.From})
