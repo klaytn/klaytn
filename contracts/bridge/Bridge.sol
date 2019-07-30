@@ -84,96 +84,58 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     );
 
     // start allows the value transfer request.
-    function start(bool _status, uint64 _requestNonce)
+    function start(bool _status)
         external
-        onlySigners
+        onlyOwner
     {
-        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
-        bytes32 voteKey = keccak256(abi.encodePacked(this.start.selector, _status, _requestNonce));
-        if (!voteConfiguration(voteKey, msg.sender)) {
-            return;
-        }
         isRunning = _status;
     }
 
     // stop prevent the value transfer request.
-    function setCounterPartBridge(address _bridge, uint64 _requestNonce)
+    function setCounterPartBridge(address _bridge)
         external
-        onlySigners
+        onlyOwner
     {
-        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
-        bytes32 voteKey = keccak256(abi.encodePacked(this.setCounterPartBridge.selector, _bridge, _requestNonce));
-        if (!voteConfiguration(voteKey, msg.sender)) {
-            return;
-        }
         counterpartBridge = _bridge;
     }
 
     // registerToken can update the allowed token with the counterpart token.
-    function registerToken(address _token, address _cToken, uint64 _requestNonce)
+    function registerToken(address _token, address _cToken)
         external
-        onlySigners
+        onlyOwner
     {
-        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
-        bytes32 voteKey = keccak256(abi.encodePacked(this.registerToken.selector, _token, _cToken, _requestNonce));
-        if (!voteConfiguration(voteKey, msg.sender)) {
-            return;
-        }
         allowedTokens[_token] = _cToken;
     }
 
     // deregisterToken can remove the token in allowedToken list.
-    function deregisterToken(address _token, uint64 _requestNonce)
+    function deregisterToken(address _token)
         external
-        onlySigners
+        onlyOwner
     {
-        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
-        bytes32 voteKey = keccak256(abi.encodePacked(this.deregisterToken.selector, _token, _requestNonce));
-        if (!voteConfiguration(voteKey, msg.sender)) {
-            return;
-        }
         delete allowedTokens[_token];
     }
 
     // registerSigner registers new signer.
-    function registerSigner(address _signer, uint64 _requestNonce)
-    external
-    onlySigners
+    function registerSigner(address _signer)
+        external
+        onlyOwner
     {
-        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
-        require(_signer != address(0));
-        bytes32 voteKey = keccak256(abi.encodePacked(this.registerSigner.selector, _signer, _requestNonce));
-        if (!voteConfiguration(voteKey, msg.sender)) {
-            return;
-        }
         signers[_signer] = true;
     }
 
     // deregisterSigner deregisters the signer.
-    function deregisterSigner(address _signer, uint64 _requestNonce)
-    external
-    onlySigners
+    function deregisterSigner(address _signer)
+        external
+        onlyOwner
     {
-        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
-        require(_signer != address(0));
-        bytes32 voteKey = keccak256(abi.encodePacked(this.registerSigner.selector, _signer, _requestNonce));
-        if (!voteConfiguration(voteKey, msg.sender)) {
-            return;
-        }
         delete signers[_signer];
     }
 
     // setSignerThreshold sets signer threshold.
-    function setSignerThreshold(TransactionType _txType, uint64 _threshold, uint64 _requestNonce)
-    external
-    onlySigners
+    function setSignerThreshold(TransactionType _txType, uint64 _threshold)
+        external
+        onlyOwner
     {
-        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
-        require(_threshold > 0);
-        bytes32 voteKey = keccak256(abi.encodePacked(this.setSignerThreshold.selector, _txType, _threshold, _requestNonce));
-        if (!voteConfiguration(voteKey, msg.sender)) {
-            return;
-        }
         signerThresholds[uint64(_txType)] = _threshold;
     }
 
@@ -401,9 +363,9 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     function setKLAYFee(uint256 _fee, uint64 _requestNonce)
         external
         onlySigners {
-        onlySequentialNonce(TransactionType.ConfigurationRealtime, _requestNonce);
+        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
         bytes32 voteKey = keccak256(abi.encodePacked(this.setKLAYFee.selector, _fee, _requestNonce));
-        if (!voteConfigurationRealtime(voteKey, msg.sender)) {
+        if (!voteConfiguration(voteKey, msg.sender)) {
             return;
         }
         _setKLAYFee(_fee);
@@ -414,24 +376,19 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         external
         onlySigners
     {
-        onlySequentialNonce(TransactionType.ConfigurationRealtime, _requestNonce);
+        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
         bytes32 voteKey = keccak256(abi.encodePacked(this.setERC20Fee.selector, _token, _fee, _requestNonce));
-        if (!voteConfigurationRealtime(voteKey, msg.sender)) {
+        if (!voteConfiguration(voteKey, msg.sender)) {
             return;
         }
         _setERC20Fee(_token, _fee);
     }
 
     // setFeeReceiver set fee receiver.
-    function setFeeReceiver(address _feeReceiver, uint64 _requestNonce)
+    function setFeeReceiver(address _feeReceiver)
         external
-        onlySigners
+        onlyOwner
     {
-        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
-        bytes32 voteKey = keccak256(abi.encodePacked(this.setFeeReceiver.selector, _feeReceiver, _requestNonce));
-        if (!voteConfiguration(voteKey, msg.sender)) {
-            return;
-        }
         _setFeeReceiver(_feeReceiver);
     }
 }

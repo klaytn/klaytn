@@ -152,17 +152,18 @@ func TestBridgeManager(t *testing.T) {
 	}
 	sim.Commit() // block
 
+	// Register the owner as a signer
+	_, err = bridge.RegisterSigner(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, auth2.From)
+	assert.NoError(t, err)
+	sim.Commit() // block
+
 	// Register tokens on the bridge
-	rn, err := bridge.RequestNonce(nil)
-	if err != nil {
-		log.Fatalf("Failed to register token: %v", err)
-	}
-	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr, rn)
+	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
 	sim.Commit() // block
 	if err != nil {
 		log.Fatalf("Failed to register token: %v", err)
 	}
-	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr, rn+1)
+	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
 	sim.Commit() // block
 
 	cTokenAddr, err := bridge.AllowedTokens(nil, tokenAddr)
@@ -496,9 +497,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, common.Address{}, nilReceiver)
 	}
 
-	gn, err := pBridge.ConfigurationNonces(nil, TxTypeConfiguration)
-	assert.NoError(t, err)
-	pBridge.SetFeeReceiver(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, receiver.From, gn)
+	pBridge.SetFeeReceiver(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, receiver.From)
 	sim.Commit() // block
 
 	{
@@ -519,11 +518,14 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, big.NewInt(0).String(), fee.String())
 	}
 
-	gnr, err := pBridge.ConfigurationNonces(nil, TxTypeConfigurationRealtime)
+	cn, err := pBridge.ConfigurationNonces(nil, TxTypeConfiguration)
 	assert.NoError(t, err)
-	_, err = pBridge.SetKLAYFee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee), gnr)
+	_, err = pBridge.RegisterSigner(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, childAcc.From)
 	assert.NoError(t, err)
-	_, err = pBridge.SetERC20Fee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, big.NewInt(ERC20Fee), gnr+1)
+	sim.Commit() // block
+	_, err = pBridge.SetKLAYFee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee), cn)
+	assert.NoError(t, err)
+	_, err = pBridge.SetERC20Fee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, big.NewInt(ERC20Fee), cn+1)
 	assert.NoError(t, err)
 	sim.Commit() // block
 
@@ -541,7 +543,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// Register tokens on the bridge
 	assert.NoError(t, err)
-	pBridge.RegisterToken(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr, gn+1)
+	pBridge.RegisterToken(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
 	sim.Commit() // block
 
 	cTokenAddr, err := pBridge.AllowedTokens(nil, tokenAddr)

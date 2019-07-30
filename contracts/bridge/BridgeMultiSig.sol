@@ -16,7 +16,6 @@ contract BridgeMultiSig is Ownable {
     enum TransactionType {
         ValueTransfer,
         Configuration,
-        ConfigurationRealtime,
         Max
     }
 
@@ -28,7 +27,7 @@ contract BridgeMultiSig is Ownable {
 
     modifier onlySigners()
     {
-        require(msg.sender == owner() || signers[msg.sender]);
+        require(signers[msg.sender]);
         _;
     }
 
@@ -54,9 +53,11 @@ contract BridgeMultiSig is Ownable {
         return false;
     }
 
-    // voteGovernanceCommon votes contract governance transaction with the signer.
-    // It does not need to check committedTxs since onlySequentialNonce checks it already with harder condition.
-    function voteConfigurationCommon(bytes32 _voteKey, address _signer) internal returns(bool) {
+    // voteGovernanceRealtime votes frequent contract governance transaction with the signer.
+    function voteConfiguration(bytes32 _voteKey, address _signer)
+    internal
+    returns(bool)
+    {
         if (signedTxs[_voteKey][_signer]) {
             return false;
         }
@@ -64,34 +65,8 @@ contract BridgeMultiSig is Ownable {
         signedTxs[_voteKey][_signer] = true;
         signedTxsCounts[_voteKey]++;
 
-        return true;
-    }
-
-    // voteGovernance votes contract governance transaction with the signer.
-    function voteConfiguration(bytes32 _voteKey, address _signer)
-    internal
-    returns(bool)
-    {
-        if (!voteConfigurationCommon(_voteKey, _signer)) {
-            return false;
-        }
         if (signedTxsCounts[_voteKey] ==  signerThresholds[uint64(TransactionType.Configuration)]) {
             configurationNonces[uint64(TransactionType.Configuration)]++;
-            return true;
-        }
-        return false;
-    }
-
-    // voteGovernanceRealtime votes frequent contract governance transaction with the signer.
-    function voteConfigurationRealtime(bytes32 _voteKey, address _signer)
-    internal
-    returns(bool)
-    {
-        if (!voteConfigurationCommon(_voteKey, _signer)) {
-            return false;
-        }
-        if (signedTxsCounts[_voteKey] ==  signerThresholds[uint64(TransactionType.ConfigurationRealtime)]) {
-            configurationNonces[uint64(TransactionType.ConfigurationRealtime)]++;
             return true;
         }
         return false;

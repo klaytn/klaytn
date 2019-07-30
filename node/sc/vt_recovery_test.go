@@ -508,11 +508,10 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	// Register tokens on the bridge
 	nodeOpts := &bind.TransactOpts{From: nodeAuth.From, Signer: nodeAuth.Signer, GasLimit: testGasLimit}
 	chainOpts := &bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}
-	rn, _ := localInfo.bridge.RequestNonce(nil)
-	_, err = localInfo.bridge.RegisterToken(nodeOpts, tokenLocalAddr, tokenRemoteAddr, rn)
-	_, err = localInfo.bridge.RegisterToken(nodeOpts, nftLocalAddr, nftRemoteAddr, rn+1)
-	_, err = remoteInfo.bridge.RegisterToken(chainOpts, tokenRemoteAddr, tokenLocalAddr, rn+2)
-	_, err = remoteInfo.bridge.RegisterToken(chainOpts, nftRemoteAddr, nftLocalAddr, rn+3)
+	_, err = localInfo.bridge.RegisterToken(nodeOpts, tokenLocalAddr, tokenRemoteAddr)
+	_, err = localInfo.bridge.RegisterToken(nodeOpts, nftLocalAddr, nftRemoteAddr)
+	_, err = remoteInfo.bridge.RegisterToken(chainOpts, tokenRemoteAddr, tokenLocalAddr)
+	_, err = remoteInfo.bridge.RegisterToken(chainOpts, nftRemoteAddr, nftLocalAddr)
 	sim.Commit()
 
 	// Register an NFT to chain account (minting)
@@ -528,6 +527,13 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 			log.Fatalf("Failed to Register NFT: %v", err)
 		}
 	}
+	sim.Commit()
+
+	// Register the owner as a signer
+	_, err = localInfo.bridge.RegisterSigner(&bind.TransactOpts{From: nodeAuth.From, Signer: nodeAuth.Signer, GasLimit: testGasLimit}, nodeAuth.From)
+	assert.NoError(t, err)
+	_, err = remoteInfo.bridge.RegisterSigner(&bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}, chainAuth.From)
+	assert.NoError(t, err)
 	sim.Commit()
 
 	// Subscribe events.
