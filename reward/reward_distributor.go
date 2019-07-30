@@ -17,7 +17,6 @@
 package reward
 
 import (
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
@@ -43,14 +42,12 @@ func isEmptyAddress(addr common.Address) bool {
 }
 
 type RewardDistributor struct {
-	sm  *stakingManager
 	rcc *rewardConfigCache
 	gh  governanceHelper
 }
 
-func NewRewardDistributor(bc *blockchain.BlockChain, gh governanceHelper) *RewardDistributor {
+func NewRewardDistributor(gh governanceHelper) *RewardDistributor {
 	return &RewardDistributor{
-		sm:  newStakingManager(bc, gh),
 		rcc: newRewardConfigCache(gh),
 		gh:  gh,
 	}
@@ -136,16 +133,4 @@ func (rd *RewardDistributor) distributeBlockReward(b BalanceAdder, header *types
 		"Reward address of a proposer", proposer, "CN reward amount", cnReward,
 		"PoC address", pocAddr, "Poc incentive", pocIncentive,
 		"KIR address", kirAddr, "KIR incentive", kirIncentive)
-}
-
-func (rd *RewardDistributor) GetStakingInfo(blockNum uint64) *StakingInfo {
-	return rd.sm.getStakingInfo(blockNum)
-}
-
-func (rd *RewardDistributor) Start() {
-	rd.sm.subscribe()
-}
-
-func (rd *RewardDistributor) Stop() {
-	rd.sm.chainHeadSub.Unsubscribe()
 }

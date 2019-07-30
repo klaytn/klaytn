@@ -26,7 +26,7 @@ const (
 	chainHeadChanSize = 100
 )
 
-type stakingManager struct {
+type StakingManager struct {
 	ac           *addressBookConnector
 	sic          *stakingInfoCache
 	gh           governanceHelper
@@ -35,8 +35,8 @@ type stakingManager struct {
 	chainHeadSub event.Subscription
 }
 
-func newStakingManager(bc *blockchain.BlockChain, gh governanceHelper) *stakingManager {
-	return &stakingManager{
+func NewStakingManager(bc *blockchain.BlockChain, gh governanceHelper) *StakingManager {
+	return &StakingManager{
 		ac:          newAddressBookConnector(bc, gh),
 		sic:         newStakingInfoCache(),
 		gh:          gh,
@@ -46,7 +46,7 @@ func newStakingManager(bc *blockchain.BlockChain, gh governanceHelper) *stakingM
 }
 
 // GetStakingInfoFromStakingCache returns a corresponding stakingInfo for a blockNum.
-func (sm *stakingManager) getStakingInfo(blockNum uint64) *StakingInfo {
+func (sm *StakingManager) getStakingInfo(blockNum uint64) *StakingInfo {
 	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
 
 	if cachedStakingInfo := sm.sic.get(stakingBlockNumber); cachedStakingInfo != nil {
@@ -65,7 +65,7 @@ func (sm *stakingManager) getStakingInfo(blockNum uint64) *StakingInfo {
 }
 
 // updateStakingCache updates staking cache with a stakingInfo of a given block number.
-func (sm *stakingManager) updateStakingCache(blockNum uint64) (*StakingInfo, error) {
+func (sm *StakingManager) updateStakingCache(blockNum uint64) (*StakingInfo, error) {
 	stakingInfo, err := sm.ac.getStakingInfoFromAddressBook(blockNum)
 	if err != nil {
 		return nil, err
@@ -78,14 +78,14 @@ func (sm *stakingManager) updateStakingCache(blockNum uint64) (*StakingInfo, err
 }
 
 // Subscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.
-func (sm *stakingManager) subscribe() {
+func (sm *StakingManager) Subscribe() {
 	sm.chainHeadSub = sm.bc.SubscribeChainHeadEvent(sm.chainHeadCh)
 
 	go sm.handleChainHeadEvent()
 }
 
-func (sm *stakingManager) handleChainHeadEvent() {
-	defer sm.chainHeadSub.Unsubscribe()
+func (sm *StakingManager) handleChainHeadEvent() {
+	defer sm.UnSubscribe()
 
 	logger.Info("Start listening chain head event to update stakingInfoCache.")
 
@@ -107,4 +107,8 @@ func (sm *stakingManager) handleChainHeadEvent() {
 			return
 		}
 	}
+}
+
+func (sm *StakingManager) UnSubscribe() {
+	sm.chainHeadSub.Unsubscribe()
 }

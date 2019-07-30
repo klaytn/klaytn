@@ -44,14 +44,14 @@ StakingInfo is made every 86400 blocks (stakingInterval) and used in a next inte
 		CouncilStakingAmounts []uint64         // StakingAmounts of Council. They are derived from Staking addresses of council
 	}
 
-StakingInfo is managed by a stakingManager which has a cache for saving StakingInfos.
+StakingInfo is managed by a StakingManager which has a cache for saving StakingInfos.
 The StakingManager calculates block number with interval to find a stakingInfo for current block
 and returns correct stakingInfo to use.
 
 
  related struct
  - RewardDistributor
- - stakingManager
+ - StakingManager
  - addressBookConnector
  - stakingInfoCache
  - stakingInfo
