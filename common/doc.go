@@ -27,7 +27,7 @@ And also it provides cache and helper functions.
 
 Source Files
 
-Each source files provides functions and types as listed below
+Each source file provides functions and types as listed below
   - big.go   	: Defines common big integers often used such as Big1
   - bytes.go	: Provides conversion functions between a byte slice and a string in Hex format
   - cache.go	: Defines Cache interface and constants such as CacheType
