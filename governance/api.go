@@ -166,7 +166,8 @@ type VoteList struct {
 
 func (api *PublicGovernanceAPI) MyVotes() []*VoteList {
 
-	ret := []*VoteList{}
+	ret := make([]*VoteList, 0, api.governance.voteMap.Size())
+	//ret := []*VoteList{}
 
 	for k, v := range api.governance.voteMap.Copy() {
 		item := &VoteList{

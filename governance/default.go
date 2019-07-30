@@ -146,7 +146,7 @@ type VoteStatus struct {
 	Num    uint64      `json:"num"`
 }
 
-type VoteSet struct {
+type VoteMap struct {
 	items map[string]VoteStatus
 	mu    *sync.RWMutex
 }
@@ -155,7 +155,7 @@ type Governance struct {
 	ChainConfig *params.ChainConfig
 
 	// Map used to keep multiple types of votes
-	voteMap VoteSet
+	voteMap VoteMap
 
 	nodeAddress      atomic.Value //common.Address
 	totalVotingPower uint64
@@ -183,8 +183,8 @@ type Governance struct {
 	blockChain *blockchain.BlockChain
 }
 
-func NewVoteMap() VoteSet {
-	return VoteSet{
+func NewVoteMap() VoteMap {
+	return VoteMap{
 		items: make(map[string]VoteStatus),
 		mu:    new(sync.RWMutex),
 	}
@@ -211,7 +211,7 @@ func (gt *GovernanceTallyList) Clear() {
 	gt.items = make([]GovernanceTallyItem, 0)
 }
 
-func (vl *VoteSet) Copy() map[string]VoteStatus {
+func (vl *VoteMap) Copy() map[string]VoteStatus {
 	vl.mu.RLock()
 	defer vl.mu.RUnlock()
 
@@ -223,21 +223,21 @@ func (vl *VoteSet) Copy() map[string]VoteStatus {
 	return ret
 }
 
-func (vl *VoteSet) GetValue(key string) VoteStatus {
+func (vl *VoteMap) GetValue(key string) VoteStatus {
 	vl.mu.RLock()
 	defer vl.mu.RUnlock()
 
 	return vl.items[key]
 }
 
-func (vl *VoteSet) SetValue(key string, val VoteStatus) {
+func (vl *VoteMap) SetValue(key string, val VoteStatus) {
 	vl.mu.Lock()
 	defer vl.mu.Unlock()
 
 	vl.items[key] = val
 }
 
-func (vl *VoteSet) Import(src map[string]VoteStatus) {
+func (vl *VoteMap) Import(src map[string]VoteStatus) {
 	vl.mu.Lock()
 	defer vl.mu.Unlock()
 
@@ -246,14 +246,14 @@ func (vl *VoteSet) Import(src map[string]VoteStatus) {
 	}
 }
 
-func (vl *VoteSet) Clear() {
+func (vl *VoteMap) Clear() {
 	vl.mu.Lock()
 	defer vl.mu.Unlock()
 
 	vl.items = make(map[string]VoteStatus)
 }
 
-func (vl *VoteSet) Size() int {
+func (vl *VoteMap) Size() int {
 	vl.mu.RLock()
 	defer vl.mu.RUnlock()
 

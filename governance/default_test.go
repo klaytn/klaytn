@@ -220,7 +220,7 @@ func TestGovernance_RemoveVote(t *testing.T) {
 	}
 }
 
-func countUncastedVote(data VoteSet) int {
+func countUncastedVote(data VoteMap) int {
 	size := 0
 
 	for _, v := range data.Copy() {
