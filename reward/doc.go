@@ -52,7 +52,7 @@ and returns correct stakingInfo to use.
  related struct
  - RewardDistributor
  - stakingManager
- - addressBookManager
+ - addressBookConnector
  - stakingInfoCache
  - stakingInfo
 

@@ -27,7 +27,7 @@ const (
 )
 
 type stakingManager struct {
-	abm          *addressBookManager
+	ac           *addressBookConnector
 	sic          *stakingInfoCache
 	gh           governanceHelper
 	bc           *blockchain.BlockChain
@@ -36,12 +36,9 @@ type stakingManager struct {
 }
 
 func newStakingManager(bc *blockchain.BlockChain, gh governanceHelper) *stakingManager {
-	abm := newAddressBookManager(bc, gh)
-	sic := newStakingInfoCache()
-
 	return &stakingManager{
-		abm:         abm,
-		sic:         sic,
+		ac:          newAddressBookConnector(bc, gh),
+		sic:         newStakingInfoCache(),
 		gh:          gh,
 		bc:          bc,
 		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
@@ -69,7 +66,7 @@ func (sm *stakingManager) getStakingInfo(blockNum uint64) *StakingInfo {
 
 // updateStakingCache updates staking cache with a stakingInfo of a given block number.
 func (sm *stakingManager) updateStakingCache(blockNum uint64) (*StakingInfo, error) {
-	stakingInfo, err := sm.abm.getStakingInfoFromAddressBook(blockNum)
+	stakingInfo, err := sm.ac.getStakingInfoFromAddressBook(blockNum)
 	if err != nil {
 		return nil, err
 	}
