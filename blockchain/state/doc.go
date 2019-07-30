@@ -27,8 +27,8 @@ Overview of state package
 
 stateObject represents a Klaytn account identified by its address.
 Once it is loaded from the persistent layer, it is cached and managed by StateDB.
-StateDB manages stateObjects and operations to them. Most of the operations are done by StateDB,
-instead of direct access to stateObject.
+
+StateDB caches stateObjects and mediates the operations to them.
 
 Source Files
 
@@ -45,6 +45,5 @@ Source Files
 - statedb.go               : Implementation of StateDB
 
 - sync.go                  : Functions to schedule a state trie download
-
 */
 package state
