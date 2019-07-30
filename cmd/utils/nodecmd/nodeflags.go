@@ -172,6 +172,7 @@ var KSPNFlags = []cli.Flag{
 	utils.TxResendIntervalFlag,
 	utils.TxResendCountFlag,
 	utils.TxResendUseLegacyFlag,
+	utils.ServiceChainConsensusFlag,
 }
 
 var KSENFlags = []cli.Flag{
@@ -186,6 +187,7 @@ var KSENFlags = []cli.Flag{
 	utils.ParentChainIDFlag,
 	utils.VTRecoveryFlag,
 	utils.VTRecoveryIntervalFlag,
+	utils.ServiceChainConsensusFlag,
 	// DBSyncer
 	utils.EnableDBSyncerFlag,
 	utils.DBHostFlag,
