@@ -32,7 +32,7 @@ Each source files provides functions and types as listed below
   - bytes.go	: Provides conversion functions between a byte slice with a string in Hex format
   - cache.go	: Defines Cache interface and constants such as CacheType
   - debug.go	: Provides a function to let an user know where to report a bug. It is being used by datasync/downloader
-  - format.go	: Provides function to print a time.Duration in more readable format
+  - format.go	: Provides a function to print a time.Duration in more readable format
   - path.go  	: Provides functions to check a file's existence and to get an absulute path
   - size.go 	: Provides StorageSize type and its stringer functions
   - types.go	: Provides commonly used Hash and Address types and its methods
