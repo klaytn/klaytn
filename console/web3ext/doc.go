@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package web3ext contains the klaytn specific web3.js extensions.
+Package web3ext contains the Klaytn specific web3.js extensions.
 
 web3ext defines `Modules` which defines APIs for each category. This `Modules` is used by console to provide APIs to users.
 
