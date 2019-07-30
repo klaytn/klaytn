@@ -6,8 +6,8 @@ import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract BridgeMultiSig is Ownable {
-    mapping (address => bool) public signers;    // <signer, nonce>
-    mapping (bytes32 => mapping (address => uint64)) public signedTxs; // <sha3(type, args, nonce), <singer, vote>>
+    mapping (address => bool) public signers;
+    mapping (bytes32 => mapping (address => bool)) public signedTxs; // <sha3(type, args, nonce), <singer, vote>>
     mapping (bytes32 => uint64) public signedTxsCounts; // <sha3(type, args, nonce)>
     mapping (bytes32 => uint64) public committedTxs; // <sha3(type, nonce)>
     mapping (uint64 => uint64) public signerThresholds; // <tx type>
@@ -39,11 +39,11 @@ contract BridgeMultiSig is Ownable {
 
     // voteValueTransfer votes value transfer transaction with the signer.
     function voteValueTransfer(bytes32 _txKey, bytes32 _voteKey, address _signer) internal returns(bool) {
-        if (committedTxs[_txKey] != 0 || signedTxs[_voteKey][_signer] != 0) {
+        if (committedTxs[_txKey] != 0 || signedTxs[_voteKey][_signer]) {
             return false;
         }
 
-        signedTxs[_voteKey][_signer] = 1;
+        signedTxs[_voteKey][_signer] = true;
         signedTxsCounts[_voteKey]++;
 
         if (signedTxsCounts[_voteKey] == signerThresholds[uint64(TransactionType.ValueTransfer)]) {
@@ -57,11 +57,11 @@ contract BridgeMultiSig is Ownable {
     // voteGovernanceCommon votes contract governance transaction with the signer.
     // It does not need to check committedTxs since onlySequentialNonce checks it already with harder condition.
     function voteGovernanceCommon(bytes32 _voteKey, address _signer) internal returns(bool) {
-        if (signedTxs[_voteKey][_signer] != 0) {
+        if (signedTxs[_voteKey][_signer]) {
             return false;
         }
 
-        signedTxs[_voteKey][_signer] = 1;
+        signedTxs[_voteKey][_signer] = true;
         signedTxsCounts[_voteKey]++;
 
         return true;
