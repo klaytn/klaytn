@@ -18,5 +18,27 @@
 // This file is derived from internal/web3ext/web3ext.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package web3ext contains the klaytn specific web3.js extensions.
+/*
+Package web3ext contains the Klaytn specific web3.js extensions.
+
+web3ext defines `Modules` which defines APIs for each category. This `Modules` is used by console to provide APIs to users.
+
+API Categories
+
+APIs are categorized as follows. If you want to know more detail, please refer to <https://docs.klaytn.com/api>
+  - admin
+  - debug
+  - klay
+  - miner
+  - net
+  - personal
+  - rpc
+  - txpool
+  - istanbul
+  - mainbridge
+  - subbridge
+  - clique
+  - governance
+  - bootnode
+*/
 package web3ext
