@@ -39,7 +39,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     }
 
     // TODO-Klaytn-Service FeeReceiver should be passed by argument of constructor.
-    constructor (bool _modeMintBurn) BridgeFee(address(0)) BridgeMultiSig() public payable {
+    constructor (bool _modeMintBurn) BridgeFee(address(0)) public payable {
         isRunning = true;
         modeMintBurn = _modeMintBurn;
     }
