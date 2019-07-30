@@ -21,6 +21,6 @@ HardForkConfig which has hard fork blockNumbers is declared in this package.
 
 Source Files
 
-- fork.go : Declare HardForkConfigs
+- fork.go : Declare HardForkConfig
 */
 package fork
