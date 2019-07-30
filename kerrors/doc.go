@@ -14,5 +14,13 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package kerrors contains universally accessible error variables used in Klaytn.
+/*
+Package kerrors contains universally accessible error variables used in Klaytn.
+
+Mostly, error variables in kerrors package are used in multiple package.
+
+Source File
+
+- kerrors.go : Defines error variables
+*/
 package kerrors
