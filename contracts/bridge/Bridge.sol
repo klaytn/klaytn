@@ -141,7 +141,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     onlySigners
     {
         onlySequentialNonce(TransactionType.Governance, _requestNonce);
-        require(_signer != address(0), "empty signer");
+        require(_signer != address(0));
         bytes32 voteKey = keccak256(abi.encodePacked(this.registerSigner.selector, _signer, _requestNonce));
         if (!voteGovernance(voteKey, msg.sender)) {
             return;
@@ -155,7 +155,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     onlySigners
     {
         onlySequentialNonce(TransactionType.Governance, _requestNonce);
-        require(_signer != address(0), "empty signer");
+        require(_signer != address(0));
         bytes32 voteKey = keccak256(abi.encodePacked(this.registerSigner.selector, _signer, _requestNonce));
         if (!voteGovernance(voteKey, msg.sender)) {
             return;
@@ -169,7 +169,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     onlySigners
     {
         onlySequentialNonce(TransactionType.Governance, _requestNonce);
-        require(_threshold > 0, "zero threshold");
+        require(_threshold > 0);
         bytes32 voteKey = keccak256(abi.encodePacked(this.setSignerThreshold.selector, _txType, _threshold, _requestNonce));
         if (!voteGovernance(voteKey, msg.sender)) {
             return;
