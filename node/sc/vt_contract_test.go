@@ -24,16 +24,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"os"
-	"path"
 	"strconv"
 	"testing"
 )
 
 // TestTokenPublicVariables checks the results of the public variables.
 func TestTokenPublicVariables(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
@@ -44,32 +45,42 @@ func TestTokenPublicVariables(t *testing.T) {
 	})
 
 	initSupply, err := info.tokenLocalBridge.INITIALSUPPLY(nil)
+	assert.NoError(t, err)
 	assert.Equal(t, "1000000000000000000000000000", initSupply.String())
 
 	allowance, err := info.tokenLocalBridge.Allowance(nil, info.chainAuth.From, info.chainAuth.From)
+	assert.NoError(t, err)
 	assert.Equal(t, "0", allowance.String())
 
 	balance, err := info.tokenLocalBridge.BalanceOf(nil, info.nodeAuth.From)
+	assert.NoError(t, err)
 	assert.Equal(t, "1000000000000000000000000000", balance.String())
 
 	decimal, err := info.tokenLocalBridge.Decimals(nil)
+	assert.NoError(t, err)
 	assert.Equal(t, uint8(0x12), decimal)
 
 	name, err := info.tokenLocalBridge.Name(nil)
+	assert.NoError(t, err)
 	assert.Equal(t, "ServiceChainToken", name)
 
 	symbol, err := info.tokenLocalBridge.Symbol(nil)
+	assert.NoError(t, err)
 	assert.Equal(t, "SCT", symbol)
 
-	_, _, _, err = sctoken.DeployServiceChainToken(info.nodeAuth, info.sim, common.Address{0})
-	assert.NotEqual(t, nil, err)
+	_, tx, _, err := sctoken.DeployServiceChainToken(info.nodeAuth, info.sim, common.Address{0})
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NotNil(t, bind.CheckWaitMined(info.sim, tx))
 }
 
 // TestTokenPublicVariables checks the results of the public variables.
 func TestNFTPublicVariables(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
@@ -79,8 +90,10 @@ func TestNFTPublicVariables(t *testing.T) {
 		}
 	})
 
-	_, _, _, err := scnft.DeployServiceChainNFT(info.nodeAuth, info.sim, common.Address{0})
-	assert.NotEqual(t, nil, err)
+	_, tx, _, err := scnft.DeployServiceChainNFT(info.nodeAuth, info.sim, common.Address{0})
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NotNil(t, bind.CheckWaitMined(info.sim, tx))
 
 	balance, err := info.nftLocalBridge.BalanceOf(nil, info.nodeAuth.From)
 	assert.Equal(t, strconv.FormatInt(testTxCount, 10), balance.String())

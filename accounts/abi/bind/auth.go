@@ -57,16 +57,13 @@ func NewKeyedTransactor(key *ecdsa.PrivateKey) *TransactOpts {
 			if address != keyAddr {
 				return nil, errors.New("not authorized to sign this account")
 			}
-			h := signer.Hash(tx)
-			signature, err := crypto.Sign(h[:], key)
-			if err != nil {
-				return nil, err
-			}
-			return tx.WithSignature(signer, signature)
+			return types.SignTx(tx, signer, key)
 		},
 	}
 }
 
+// NewKeyedTransactorWithWallet is a utility method to easily create a transaction signer
+// from a keystore wallet.
 func NewKeyedTransactorWithWallet(address common.Address, wallet accounts.Wallet, chainID *big.Int) *TransactOpts {
 	keyAddr := address
 	return &TransactOpts{
@@ -79,4 +76,29 @@ func NewKeyedTransactorWithWallet(address common.Address, wallet accounts.Wallet
 			return wallet.SignTx(account, tx, chainID)
 		},
 	}
+}
+
+// MakeTransactOpts creates a transaction signer with nonce, gasLimit, and gasPrice from a single private key.
+func MakeTransactOpts(accountKey *ecdsa.PrivateKey, nonce *big.Int, gasLimit uint64, gasPrice *big.Int) *TransactOpts {
+	if accountKey == nil {
+		return nil
+	}
+	auth := NewKeyedTransactor(accountKey)
+	auth.GasLimit = gasLimit
+	auth.GasPrice = gasPrice
+	auth.Nonce = nonce
+	return auth
+}
+
+// MakeTransactOptsWithKeystore creates a transaction signer with nonce, gasLimit, and gasPrice from a keystore wallet.
+func MakeTransactOptsWithKeystore(wallet accounts.Wallet, from common.Address, nonce *big.Int, chainID *big.Int, gasLimit uint64, gasPrice *big.Int) *TransactOpts {
+	if wallet == nil {
+		return nil
+	}
+
+	auth := NewKeyedTransactorWithWallet(from, wallet, chainID)
+	auth.GasLimit = gasLimit
+	auth.GasPrice = gasPrice
+	auth.Nonce = nonce
+	return auth
 }

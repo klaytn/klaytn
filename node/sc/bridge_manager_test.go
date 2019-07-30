@@ -18,7 +18,6 @@ package sc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
@@ -34,7 +33,6 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"path"
 	"sync"
 	"testing"
 	"time"
@@ -67,13 +65,14 @@ func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Dur
 }
 
 // TestBridgeManager tests the event/method of Token/NFT/Bridge contracts.
-// And It tests the nonce error case of bridge deploy (#2284)
 // TODO-Klaytn-Servicechain needs to refine this test.
 // - consider main/service chain simulated backend.
 // - separate each test
 func TestBridgeManager(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
@@ -81,39 +80,35 @@ func TestBridgeManager(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(6)
 
+	// Config Bridge Account Manager
+	config := &SCConfig{}
+	config.DataDir = tempDir
+	bacc, _ := NewBridgeAccounts(config.DataDir)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	pAuth := bacc.cAccount.GetTransactOpts()
+	cAuth := bacc.pAccount.GetTransactOpts()
+
 	// Generate a new random account and a funded simulator
-	key, _ := crypto.GenerateKey()
-	auth := bind.NewKeyedTransactor(key)
+	aliceKey, _ := crypto.GenerateKey()
+	alice := bind.NewKeyedTransactor(aliceKey)
 
-	key2, _ := crypto.GenerateKey()
-	auth2 := bind.NewKeyedTransactor(key2)
+	bobKey, _ := crypto.GenerateKey()
+	bob := bind.NewKeyedTransactor(bobKey)
 
-	key3, _ := crypto.GenerateKey()
-	auth3 := bind.NewKeyedTransactor(key3)
-
-	key4, _ := crypto.GenerateKey()
-	auth4 := bind.NewKeyedTransactor(key4)
-
-	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
+	// Create Simulated backend
+	alloc := blockchain.GenesisAlloc{
+		alice.From:            {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
 	sim := backends.NewSimulatedBackend(alloc)
 
-	balance2, _ := sim.BalanceAt(context.Background(), auth2.From, big.NewInt(0))
-	fmt.Println("after reward, balance :", balance2)
-
-	config := &SCConfig{}
-	config.nodekey = key
-	config.chainkey = key2
-	config.DataDir = os.TempDir()
-
-	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.MainChainAccountAddr = &chainKeyAddr
-
-	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
-
 	sc := &SubBridge{
-		config:               config,
-		peers:                newBridgePeerSet(),
-		bridgeAccountManager: bam,
+		config:         config,
+		peers:          newBridgePeerSet(),
+		bridgeAccounts: bacc,
 	}
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -138,7 +133,7 @@ func TestBridgeManager(t *testing.T) {
 	sim.Commit() // block
 
 	// 2. Deploy Token Contract
-	tokenAddr, tx, token, err := sctoken.DeployServiceChainToken(auth, sim, addr)
+	tokenAddr, tx, token, err := sctoken.DeployServiceChainToken(alice, sim, addr)
 	if err != nil {
 		log.Fatalf("Failed to DeployGXToken: %v", err)
 	}
@@ -146,24 +141,20 @@ func TestBridgeManager(t *testing.T) {
 
 	// 3. Deploy NFT Contract
 	nftTokenID := uint64(4438)
-	nftAddr, tx, nft, err := scnft.DeployServiceChainNFT(auth, sim, addr)
+	nftAddr, tx, nft, err := scnft.DeployServiceChainNFT(alice, sim, addr)
 	if err != nil {
 		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
 	}
 	sim.Commit() // block
 
 	// Register the owner as a signer
-	_, err = bridge.RegisterSigner(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, auth2.From)
+	_, err = bridge.RegisterSigner(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
 	assert.NoError(t, err)
 	sim.Commit() // block
 
 	// Register tokens on the bridge
-	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
-	sim.Commit() // block
-	if err != nil {
-		log.Fatalf("Failed to register token: %v", err)
-	}
-	bridge.RegisterToken(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
+	bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
+	bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
 	sim.Commit() // block
 
 	cTokenAddr, err := bridge.AllowedTokens(nil, tokenAddr)
@@ -173,17 +164,17 @@ func TestBridgeManager(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, cNftAddr, nftAddr)
 
-	balance, _ := sim.BalanceAt(context.Background(), auth.From, nil)
-	fmt.Printf("auth(%v) KLAY balance : %v\n", auth.From.String(), balance)
+	balance, _ := sim.BalanceAt(context.Background(), pAuth.From, nil)
+	fmt.Printf("auth(%v) KLAY balance : %v\n", pAuth.From.String(), balance)
 
-	balance, _ = sim.BalanceAt(context.Background(), auth2.From, nil)
-	fmt.Printf("auth2(%v) KLAY balance : %v\n", auth2.From.String(), balance)
+	balance, _ = sim.BalanceAt(context.Background(), cAuth.From, nil)
+	fmt.Printf("auth2(%v) KLAY balance : %v\n", cAuth.From.String(), balance)
 
-	balance, _ = sim.BalanceAt(context.Background(), auth3.From, nil)
-	fmt.Printf("auth3(%v) KLAY balance : %v\n", auth3.From.String(), balance)
+	balance, _ = sim.BalanceAt(context.Background(), alice.From, nil)
+	fmt.Printf("auth3(%v) KLAY balance : %v\n", alice.From.String(), balance)
 
-	balance, _ = sim.BalanceAt(context.Background(), auth4.From, nil)
-	fmt.Printf("auth4(%v) KLAY balance : %v\n", auth4.From.String(), balance)
+	balance, _ = sim.BalanceAt(context.Background(), bob.From, nil)
+	fmt.Printf("auth4(%v) KLAY balance : %v\n", bob.From.String(), balance)
 
 	// 4. Subscribe Bridge Contract
 	bridgeManager.SubscribeEvent(addr)
@@ -208,9 +199,7 @@ func TestBridgeManager(t *testing.T) {
 
 				switch ev.TokenType {
 				case KLAY:
-					tx, err := bridge.HandleKLAYTransfer(
-						&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit},
-						ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
 					}
@@ -218,9 +207,7 @@ func TestBridgeManager(t *testing.T) {
 					sim.Commit() // block
 
 				case ERC20:
-					tx, err := bridge.HandleERC20Transfer(
-						&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit},
-						ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+					tx, err := bridge.HandleERC20Transfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 					}
@@ -228,13 +215,11 @@ func TestBridgeManager(t *testing.T) {
 					sim.Commit() // block
 
 				case ERC721:
-					owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
+					owner, err := nft.OwnerOf(&bind.CallOpts{From: pAuth.From}, big.NewInt(int64(nftTokenID)))
 					assert.Equal(t, nil, err)
 					fmt.Println("NFT owner before HandleERC721Transfer: ", owner.String())
 
-					tx, err := bridge.HandleERC721Transfer(
-						&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit},
-						ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
+					tx, err := bridge.HandleERC721Transfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
 					if err != nil {
 						log.Fatalf("Failed to HandleERC721Transfer: %v", err)
 					}
@@ -258,60 +243,24 @@ func TestBridgeManager(t *testing.T) {
 		}
 	}()
 
-	// 5. transfer from auth to auth2 for charging and check balances
+	// 6. Register (Mint) an NFT to Alice
 	{
-		tx, err = token.Transfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, auth2.From, testToken)
-		if err != nil {
-			log.Fatalf("Failed to Transfer for charging: %v", err)
-		}
-		fmt.Println("Transfer Transaction", tx.Hash().Hex())
-		sim.Commit() // block
-
-		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
-
-		balance, err = token.BalanceOf(&bind.CallOpts{From: auth.From}, auth.From)
-		assert.Equal(t, nil, err)
-		fmt.Println("auth token balance", balance.String())
-
-		balance, err = token.BalanceOf(&bind.CallOpts{From: auth2.From}, auth2.From)
-		assert.Equal(t, nil, err)
-		fmt.Println("auth2 token balance", balance.String())
-
-		balance, err = token.BalanceOf(&bind.CallOpts{From: auth3.From}, auth3.From)
-		assert.Equal(t, nil, err)
-		fmt.Println("auth3 token balance", balance.String())
-
-		balance, err = token.BalanceOf(&bind.CallOpts{From: auth4.From}, auth4.From)
-		assert.Equal(t, nil, err)
-		fmt.Println("auth4 token balance", balance.String())
-	}
-
-	// 6. Register (Mint) an NFT to Auth4
-	{
-		tx, err = nft.MintWithTokenURI(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, auth4.From, big.NewInt(int64(nftTokenID)), "testURI")
-		if err != nil {
-			log.Fatalf("Failed to Register NFT: %v", err)
-		}
+		tx, err = nft.MintWithTokenURI(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenID)), "testURI")
+		assert.NoError(t, err)
 		fmt.Println("Register NFT Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-		balance, err = nft.BalanceOf(&bind.CallOpts{From: auth.From}, auth4.From)
+		owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenID)))
 		assert.Equal(t, nil, err)
-		fmt.Println("auth4 NFT balance", balance.String())
-		fmt.Println("auth4 address", auth4.From.String())
-		owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
-		assert.Equal(t, nil, err)
-		fmt.Println("NFT owner after registering", owner.String())
+		assert.Equal(t, alice.From, owner)
 	}
 
-	// 7. RequestValueTransfer from auth2 to auth3
+	// 7. Request ERC20 Transfer from Alice to Bob
 	{
-		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, GasLimit: testGasLimit}, testToken, auth3.From, big.NewInt(0))
-		if err != nil {
-			log.Fatalf("Failed to SafeTransferAndCall: %v", err)
-		}
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, testToken, bob.From, big.NewInt(0))
+		assert.NoError(t, err)
 		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
@@ -319,12 +268,10 @@ func TestBridgeManager(t *testing.T) {
 
 	}
 
-	// 8. DepositKLAY from auth to auth3
+	// 8. RequestKLAYTransfer from Alice to Bob
 	{
-		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: testKLAY, GasLimit: testGasLimit}, auth3.From, testKLAY)
-		if err != nil {
-			log.Fatalf("Failed to DepositKLAY: %v", err)
-		}
+		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, bob.From, testKLAY)
+		assert.NoError(t, err)
 		fmt.Println("DepositKLAY Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
@@ -332,12 +279,10 @@ func TestBridgeManager(t *testing.T) {
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 	}
 
-	// 9. Request NFT value transfer from auth4 to auth3
+	// 9. Request NFT transfer from Alice to Bob
 	{
-		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: auth4.From, Signer: auth4.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), auth3.From)
-		if err != nil {
-			log.Fatalf("Failed to nft.RequestValueTransfer: %v", err)
-		}
+		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From)
+		assert.NoError(t, err)
 		fmt.Println("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
 
 		sim.Commit() // block
@@ -350,60 +295,23 @@ func TestBridgeManager(t *testing.T) {
 
 	// 10. Check Token balance
 	{
-		balance, err = token.BalanceOf(&bind.CallOpts{From: auth.From}, auth.From)
+		balance, err = token.BalanceOf(nil, bob.From)
 		assert.Equal(t, nil, err)
-		fmt.Println("auth token balance", balance.String())
-		balance, err = token.BalanceOf(&bind.CallOpts{From: auth2.From}, auth2.From)
-		assert.Equal(t, nil, err)
-		fmt.Println("auth2 token balance", balance.String())
-		balance, err = token.BalanceOf(&bind.CallOpts{From: auth3.From}, auth3.From)
-		assert.Equal(t, nil, err)
-		fmt.Println("auth3 token balance", balance.String())
-
-		if balance.Cmp(testToken) != 0 {
-			t.Fatal("testToken is mismatched,", "expected", testToken.String(), "result", balance.String())
-		}
+		assert.Equal(t, testToken.String(), balance.String())
 	}
 
 	// 11. Check KLAY balance
 	{
-		balance, _ = sim.BalanceAt(context.Background(), auth.From, nil)
-		fmt.Println("auth KLAY balance :", balance)
-
-		balance, _ = sim.BalanceAt(context.Background(), auth2.From, nil)
-		fmt.Println("auth2 KLAY balance :", balance)
-
-		balance, _ = sim.BalanceAt(context.Background(), auth3.From, nil)
-		fmt.Println("auth3 KLAY balance :", balance)
-
-		if balance.Cmp(testKLAY) != 0 {
-			t.Fatal("testKLAY is mismatched,", "expected", testKLAY.String(), "result", balance.String())
-		}
+		balance, err = sim.BalanceAt(context.Background(), bob.From, nil)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, testKLAY.String(), balance.String())
 	}
 
 	// 12. Check NFT owner
 	{
-		owner, err := nft.OwnerOf(&bind.CallOpts{From: auth.From}, big.NewInt(int64(nftTokenID)))
+		owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenID)))
 		assert.Equal(t, nil, err)
-		fmt.Println("NFT owner", owner.String())
-		if owner != auth3.From {
-			t.Fatal("NFT owner is mismatched", "expeted", auth3.From.String(), "result", owner.String())
-		}
-	}
-
-	// 13. Nonce check on deploy error
-	{
-
-		nonce, err := sim.NonceAt(context.Background(), bam.scAccount.address, nil)
-		if err != nil {
-			t.Fatal("failed to sim.NonceAt", err)
-		}
-		bam.scAccount.SetNonce(nonce)
-
-		addr2, err := bridgeManager.DeployBridgeNonceTest(sim)
-		if err != nil {
-			log.Fatalf("Failed to deploy new bridge contract: %v %v", err, addr2)
-		}
+		assert.Equal(t, bob.From, owner)
 	}
 
 	bridgeManager.Stop()
@@ -411,8 +319,10 @@ func TestBridgeManager(t *testing.T) {
 
 // TestBridgeManagerWithFee tests the KLAY/ERC20 transfer with fee.
 func TestBridgeManagerWithFee(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
@@ -421,12 +331,6 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	wg.Add(7 * 2)
 
 	// Generate a new random account and a funded simulator
-	parentKey, _ := crypto.GenerateKey()
-	parentAcc := bind.NewKeyedTransactor(parentKey)
-
-	childKey, _ := crypto.GenerateKey()
-	childAcc := bind.NewKeyedTransactor(childKey)
-
 	AliceKey, _ := crypto.GenerateKey()
 	Alice := bind.NewKeyedTransactor(AliceKey)
 
@@ -436,28 +340,29 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	receiverKey, _ := crypto.GenerateKey()
 	receiver := bind.NewKeyedTransactor(receiverKey)
 
+	// Config Bridge Account Manager
+	config := &SCConfig{}
+	config.DataDir = tempDir
+	bacc, _ := NewBridgeAccounts(config.DataDir)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	pAuth := bacc.cAccount.GetTransactOpts()
+	cAuth := bacc.pAccount.GetTransactOpts()
+
+	// Create Simulated backend
 	initialValue := int64(10000000000)
 	alloc := blockchain.GenesisAlloc{
-		parentAcc.From: {Balance: big.NewInt(initialValue)},
-		childAcc.From:  {Balance: big.NewInt(initialValue)},
-		Alice.From:     {Balance: big.NewInt(initialValue)},
+		Alice.From:            {Balance: big.NewInt(initialValue)},
+		bacc.cAccount.address: {Balance: big.NewInt(initialValue)},
+		bacc.pAccount.address: {Balance: big.NewInt(initialValue)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 
-	config := &SCConfig{}
-	config.nodekey = parentKey
-	config.chainkey = childKey
-	config.DataDir = os.TempDir()
-
-	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.MainChainAccountAddr = &chainKeyAddr
-
-	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
-
 	sc := &SubBridge{
-		config:               config,
-		peers:                newBridgePeerSet(),
-		bridgeAccountManager: bam,
+		config:         config,
+		peers:          newBridgePeerSet(),
+		bridgeAccounts: bacc,
 	}
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -475,19 +380,15 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 1. Deploy Bridge Contract
 	pBridgeAddr, err := bridgeManager.DeployBridgeTest(sim, false)
-	if err != nil {
-		log.Fatalf("Failed to deploy new bridge contract: %v", err)
-	}
+	assert.NoError(t, err)
 	pBridgeInfo, _ := bridgeManager.GetBridgeInfo(pBridgeAddr)
 	pBridge := pBridgeInfo.bridge
 	fmt.Println("===== BridgeContract Addr ", pBridgeAddr.Hex())
 	sim.Commit() // block
 
 	// 2. Deploy Token Contract
-	tokenAddr, tx, token, err := sctoken.DeployServiceChainToken(parentAcc, sim, pBridgeAddr)
-	if err != nil {
-		log.Fatalf("Failed to DeployGXToken: %v", err)
-	}
+	tokenAddr, tx, token, err := sctoken.DeployServiceChainToken(pAuth, sim, pBridgeAddr)
+	assert.NoError(t, err)
 	sim.Commit() // block
 
 	// Set value transfer fee
@@ -497,7 +398,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, common.Address{}, nilReceiver)
 	}
 
-	pBridge.SetFeeReceiver(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, receiver.From)
+	pBridge.SetFeeReceiver(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, receiver.From)
 	sim.Commit() // block
 
 	{
@@ -520,13 +421,10 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	cn, err := pBridge.ConfigurationNonces(nil, TxTypeConfiguration)
 	assert.NoError(t, err)
-	_, err = pBridge.RegisterSigner(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, childAcc.From)
+	_, err = pBridge.RegisterSigner(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
 	assert.NoError(t, err)
-	sim.Commit() // block
-	_, err = pBridge.SetKLAYFee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee), cn)
-	assert.NoError(t, err)
-	_, err = pBridge.SetERC20Fee(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, big.NewInt(ERC20Fee), cn+1)
-	assert.NoError(t, err)
+	pBridge.SetKLAYFee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee), cn)
+	pBridge.SetERC20Fee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, big.NewInt(ERC20Fee), cn+1)
 	sim.Commit() // block
 
 	{
@@ -542,8 +440,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	}
 
 	// Register tokens on the bridge
-	assert.NoError(t, err)
-	pBridge.RegisterToken(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
+	pBridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
 	sim.Commit() // block
 
 	cTokenAddr, err := pBridge.AllowedTokens(nil, tokenAddr)
@@ -584,10 +481,8 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					assert.Equal(t, KLAYFee, ev.Fee.Int64())
 
 					// HandleKLAYTransfer by Event
-					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
-					if err != nil {
-						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
-					}
+					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+					assert.NoError(t, err)
 					fmt.Println("HandleKLAYTransfer Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 
@@ -596,10 +491,8 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					assert.Equal(t, ERC20Fee, ev.Fee.Int64())
 
 					// HandleERC20Transfer by Event
-					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: childAcc.From, Signer: childAcc.Signer, GasLimit: testGasLimit}, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
-					if err != nil {
-						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
-					}
+					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+					assert.NoError(t, err)
 					fmt.Println("HandleERC20Transfer Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 				}
@@ -622,7 +515,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 5. transfer from parentAcc to Alice for charging and check balances
 	{
-		tx, err = token.Transfer(&bind.TransactOpts{From: parentAcc.From, Signer: parentAcc.Signer, GasLimit: testGasLimit}, Alice.From, big.NewInt(initialValue))
+		tx, err = token.Transfer(&bind.TransactOpts{From: pAuth.From, Signer: pAuth.Signer, GasLimit: testGasLimit}, Alice.From, big.NewInt(initialValue))
 		if err != nil {
 			log.Fatalf("Failed to Transfer for charging: %v", err)
 		}
@@ -631,7 +524,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-		balance, err = token.BalanceOf(nil, parentAcc.From)
+		balance, err = token.BalanceOf(nil, pAuth.From)
 		assert.Equal(t, nil, err)
 		fmt.Println("parentAcc token balance", balance.String())
 
@@ -647,9 +540,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	// 7-1. Request ERC20 Transfer from Alice to Bob with same feeLimit with fee
 	{
 		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(ERC20Fee))
-		if err != nil {
-			log.Fatalf("Failed to SafeTransferAndCall: %v", err)
-		}
+		assert.NoError(t, err)
 		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
 
@@ -837,28 +728,15 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, KLAYFee*3, balance.Int64())
 	}
 
-	// 13. Nonce check on deploy error
-	{
-
-		nonce, err := sim.NonceAt(context.Background(), bam.scAccount.address, nil)
-		if err != nil {
-			t.Fatal("failed to sim.NonceAt", err)
-		}
-		bam.scAccount.SetNonce(nonce)
-
-		addr2, err := bridgeManager.DeployBridgeNonceTest(sim)
-		if err != nil {
-			log.Fatalf("Failed to deploy new bridge contract: %v %v", err, addr2)
-		}
-	}
-
 	bridgeManager.Stop()
 }
 
 // TestBasicJournal tests basic journal functionality.
 func TestBasicJournal(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
@@ -876,26 +754,29 @@ func TestBasicJournal(t *testing.T) {
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
 
-	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
-	sim := backends.NewSimulatedBackend(alloc)
-
 	config := &SCConfig{}
-	config.nodekey = key
-	config.chainkey = key2
-	config.DataDir = os.TempDir()
+	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.MainChainAccountAddr = &chainKeyAddr
+	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
-	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+	alloc := blockchain.GenesisAlloc{
+		auth.From:             {Balance: big.NewInt(params.KLAY)},
+		auth2.From:            {Balance: big.NewInt(params.KLAY)},
+		auth4.From:            {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
-		config:               config,
-		peers:                newBridgePeerSet(),
-		localBackend:         sim,
-		remoteBackend:        sim,
-		bridgeAccountManager: bam,
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bacc,
 	}
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -908,13 +789,9 @@ func TestBasicJournal(t *testing.T) {
 	bm, err := NewBridgeManager(sc)
 
 	localAddr, err := bm.DeployBridgeTest(sim, true)
-	if err != nil {
-		t.Fatal("deploy bridge test failed", localAddr)
-	}
+	assert.NoError(t, err)
 	remoteAddr, err := bm.DeployBridgeTest(sim, false)
-	if err != nil {
-		t.Fatal("deploy bridge test failed", remoteAddr)
-	}
+	assert.NoError(t, err)
 
 	bm.SetJournal(localAddr, remoteAddr)
 
@@ -936,8 +813,10 @@ func TestBasicJournal(t *testing.T) {
 
 // TestMethodRestoreBridges tests restoring bridges from the journal.
 func TestMethodRestoreBridges(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
@@ -954,28 +833,32 @@ func TestMethodRestoreBridges(t *testing.T) {
 
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
+	config := &SCConfig{}
+	config.DataDir = tempDir
+	config.VTRecovery = true
+	config.VTRecoveryInterval = 60
 
-	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
+	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{
+		auth.From:             {Balance: big.NewInt(params.KLAY)},
+		auth2.From:            {Balance: big.NewInt(params.KLAY)},
+		auth4.From:            {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
 	sim := backends.NewSimulatedBackend(alloc)
 
-	config := &SCConfig{VTRecovery: true, VTRecoveryInterval: 60}
-	config.nodekey = key
-	config.chainkey = key2
-	config.DataDir = os.TempDir()
-	config.VTRecovery = true
-
-	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.MainChainAccountAddr = &chainKeyAddr
-
-	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
-
 	sc := &SubBridge{
-		config:               config,
-		peers:                newBridgePeerSet(),
-		localBackend:         sim,
-		remoteBackend:        sim,
-		bridgeAccountManager: bam,
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bacc,
 	}
+
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
 	if err != nil {
@@ -1047,14 +930,16 @@ func TestMethodRestoreBridges(t *testing.T) {
 
 // TestMethodGetAllBridge tests a method GetAllBridge.
 func TestMethodGetAllBridge(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
 	sc := &SubBridge{
-		config: &SCConfig{DataDir: os.TempDir(), VTRecovery: true},
+		config: &SCConfig{DataDir: tempDir, VTRecovery: true},
 		peers:  newBridgePeerSet(),
 	}
 	bm, err := NewBridgeManager(sc)
@@ -1076,14 +961,16 @@ func TestMethodGetAllBridge(t *testing.T) {
 
 // TestErrorDuplication tests if duplication of journal insertion is ignored or not.
 func TestErrorDuplication(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
 	sc := &SubBridge{
-		config: &SCConfig{DataDir: os.TempDir(), VTRecovery: true},
+		config: &SCConfig{DataDir: tempDir, VTRecovery: true},
 		peers:  newBridgePeerSet(),
 	}
 	bm, err := NewBridgeManager(sc)
@@ -1114,14 +1001,16 @@ func TestErrorDuplication(t *testing.T) {
 
 // TestMethodSetJournal tests if duplication of journal insertion is ignored or not.
 func TestMethodSetJournal(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
 	sc := &SubBridge{
-		config: &SCConfig{DataDir: os.TempDir(), VTRecovery: true},
+		config: &SCConfig{DataDir: tempDir, VTRecovery: true},
 		peers:  newBridgePeerSet(),
 	}
 	bm, err := NewBridgeManager(sc)
@@ -1149,8 +1038,10 @@ func TestMethodSetJournal(t *testing.T) {
 
 // TestErrorDuplicatedSetBridgeInfo tests if duplication of bridge info insertion.
 func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
@@ -1167,28 +1058,31 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
-
-	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
-	sim := backends.NewSimulatedBackend(alloc)
-
 	config := &SCConfig{}
-	config.nodekey = key
-	config.chainkey = key2
-	config.DataDir = os.TempDir()
+	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.MainChainAccountAddr = &chainKeyAddr
+	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
-	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+	alloc := blockchain.GenesisAlloc{
+		auth.From:             {Balance: big.NewInt(params.KLAY)},
+		auth2.From:            {Balance: big.NewInt(params.KLAY)},
+		auth4.From:            {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
-		config:               config,
-		peers:                newBridgePeerSet(),
-		localBackend:         sim,
-		remoteBackend:        sim,
-		bridgeAccountManager: bam,
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bacc,
 	}
+
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
 	if err != nil {
@@ -1202,15 +1096,17 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	bridgeInfo, _ := bm.GetBridgeInfo(addr)
 
 	// Try to call duplicated SetBridgeInfo
-	err = bm.SetBridgeInfo(addr, bridgeInfo.bridge, common.Address{}, nil, sc.bridgeAccountManager.mcAccount, false, false)
+	err = bm.SetBridgeInfo(addr, bridgeInfo.bridge, common.Address{}, nil, sc.bridgeAccounts.pAccount, false, false)
 	assert.NotEqual(t, nil, err)
 	bm.Stop()
 }
 
 // TestScenarioSubUnsub tests subscription and unsubscription scenario.
 func TestScenarioSubUnsub(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
@@ -1227,28 +1123,31 @@ func TestScenarioSubUnsub(t *testing.T) {
 
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
-
-	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
-	sim := backends.NewSimulatedBackend(alloc)
-
 	config := &SCConfig{}
-	config.nodekey = key
-	config.chainkey = key2
-	config.DataDir = os.TempDir()
+	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.MainChainAccountAddr = &chainKeyAddr
+	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
-	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+	alloc := blockchain.GenesisAlloc{
+		auth.From:             {Balance: big.NewInt(params.KLAY)},
+		auth2.From:            {Balance: big.NewInt(params.KLAY)},
+		auth4.From:            {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
-		config:               config,
-		peers:                newBridgePeerSet(),
-		localBackend:         sim,
-		remoteBackend:        sim,
-		bridgeAccountManager: bam,
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bacc,
 	}
+
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
 	if err != nil {
@@ -1278,14 +1177,16 @@ func TestScenarioSubUnsub(t *testing.T) {
 
 // TestErrorEmptyAccount tests empty account error in case of journal insertion.
 func TestErrorEmptyAccount(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
 	sc := &SubBridge{
-		config: &SCConfig{DataDir: os.TempDir(), VTRecovery: true},
+		config: &SCConfig{DataDir: tempDir, VTRecovery: true},
 		peers:  newBridgePeerSet(),
 	}
 	bm, err := NewBridgeManager(sc)
@@ -1307,8 +1208,10 @@ func TestErrorEmptyAccount(t *testing.T) {
 
 // TestErrorDupSubscription tests duplicated subscription error.
 func TestErrorDupSubscription(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
+		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
@@ -1325,28 +1228,31 @@ func TestErrorDupSubscription(t *testing.T) {
 
 	key4, _ := crypto.GenerateKey()
 	auth4 := bind.NewKeyedTransactor(key4)
-
-	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}, auth4.From: {Balance: big.NewInt(params.KLAY)}}
-	sim := backends.NewSimulatedBackend(alloc)
-
 	config := &SCConfig{}
-	config.nodekey = key
-	config.chainkey = key2
-	config.DataDir = os.TempDir()
+	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.MainChainAccountAddr = &chainKeyAddr
+	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
 
-	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
+	alloc := blockchain.GenesisAlloc{
+		auth.From:             {Balance: big.NewInt(params.KLAY)},
+		auth2.From:            {Balance: big.NewInt(params.KLAY)},
+		auth4.From:            {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
-		config:               config,
-		peers:                newBridgePeerSet(),
-		localBackend:         sim,
-		remoteBackend:        sim,
-		bridgeAccountManager: bam,
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bacc,
 	}
+
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
 	if err != nil {
@@ -1363,7 +1269,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, bam.scAccount, true, true)
+	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true)
 
 	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
 
@@ -1377,16 +1283,22 @@ func TestErrorDupSubscription(t *testing.T) {
 // for TestMethod
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
 	if local {
-		acc := bm.subBridge.bridgeAccountManager.scAccount
+		acc := bm.subBridge.bridgeAccounts.cAccount
 		addr, bridge, err := bm.deployBridgeTest(acc, backend, true)
+		if err != nil {
+			return common.Address{}, err
+		}
 		err = bm.SetBridgeInfo(addr, bridge, common.Address{}, nil, acc, local, false)
 		if err != nil {
 			return common.Address{}, err
 		}
 		return addr, err
 	} else {
-		acc := bm.subBridge.bridgeAccountManager.mcAccount
+		acc := bm.subBridge.bridgeAccounts.pAccount
 		addr, bridge, err := bm.deployBridgeTest(acc, backend, false)
+		if err != nil {
+			return common.Address{}, err
+		}
 		err = bm.SetBridgeInfo(addr, bridge, common.Address{}, nil, acc, local, false)
 		if err != nil {
 			return common.Address{}, err
@@ -1419,19 +1331,4 @@ func (bm *BridgeManager) deployBridgeTest(acc *accountInfo, backend *backends.Si
 	//fmt.Println("deployBridge is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
 
 	return addr, contract, nil
-}
-
-// Nonce should not be increased when error occurs
-func (bm *BridgeManager) DeployBridgeNonceTest(backend bind.ContractBackend) (common.Address, error) {
-	key := bm.subBridge.bridgeAccountManager.mcAccount.key
-	nonce := bm.subBridge.bridgeAccountManager.mcAccount.GetNonce()
-	bm.subBridge.bridgeAccountManager.mcAccount.key = nil
-	_, addr, _ := bm.DeployBridge(backend, false)
-	bm.subBridge.bridgeAccountManager.mcAccount.key = key
-
-	if nonce != bm.subBridge.bridgeAccountManager.mcAccount.GetNonce() {
-		return addr, errors.New("nonce is accidentally increased")
-	}
-
-	return addr, nil
 }

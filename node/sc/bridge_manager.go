@@ -581,7 +581,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 	for _, journal := range bm.journal.cache {
 		cBridgeAddr := journal.LocalAddress
 		pBridgeAddr := journal.RemoteAddress
-		bam := bm.subBridge.bridgeAccountManager
+		bacc := bm.subBridge.bridgeAccounts
 
 		// Set bridge info
 		cBridgeInfo, cOk := bm.GetBridgeInfo(cBridgeAddr)
@@ -600,7 +600,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 		}
 
 		if !cOk {
-			err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, bam.scAccount, true, false)
+			err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, bacc.cAccount, true, false)
 			if err != nil {
 				logger.Error("setting local bridge info is failed", "err", err)
 				bm.DeleteBridgeInfo(cBridgeAddr)
@@ -610,7 +610,7 @@ func (bm *BridgeManager) RestoreBridges() error {
 		}
 
 		if !pOk {
-			err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridgeInfo.bridge, bam.mcAccount, false, false)
+			err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridgeInfo.bridge, bacc.pAccount, false, false)
 			if err != nil {
 				logger.Error("setting remote bridge info is failed", "err", err)
 				bm.DeleteBridgeInfo(pBridgeAddr)
@@ -712,10 +712,10 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 	var modeMintBurn bool
 
 	if local {
-		acc = bm.subBridge.bridgeAccountManager.scAccount
+		acc = bm.subBridge.bridgeAccounts.cAccount
 		modeMintBurn = true
 	} else {
-		acc = bm.subBridge.bridgeAccountManager.mcAccount
+		acc = bm.subBridge.bridgeAccounts.pAccount
 		modeMintBurn = false
 	}
 

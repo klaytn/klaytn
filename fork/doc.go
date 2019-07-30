@@ -14,5 +14,13 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package fork has information related to hard forks.
+/*
+Package fork has information related to hard forks.
+
+HardForkConfig which has hard fork blockNumbers is declared in this package.
+
+Source Files
+
+- fork.go : Declare HardForkConfig
+*/
 package fork

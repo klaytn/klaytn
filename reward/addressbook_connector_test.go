@@ -17,20 +17,21 @@
 package reward
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-var logger = log.NewModuleLogger(log.Reward)
-
-type governanceHelper interface {
-	Epoch() uint64
-	GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error)
-	DeferredTxFee() bool
-	ProposerPolicy() uint64
-	StakingUpdateInterval() uint64
+func newTestBlockChain() *blockchain.BlockChain {
+	return &blockchain.BlockChain{}
 }
 
-func isEmptyAddress(addr common.Address) bool {
-	return addr == common.Address{}
+func TestAddressBookManager_makeMsgToAddressBook(t *testing.T) {
+	targetAddress := "0x0000000000000000000000000000000000000400" // address of addressBook which the message has to be sent to
+	ac := newAddressBookConnector(newTestBlockChain(), nil)
+	msg, err := ac.makeMsgToAddressBook()
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	assert.Equal(t, targetAddress, msg.To().String())
 }

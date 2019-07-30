@@ -22,6 +22,7 @@ package bind
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -55,6 +56,26 @@ func WaitMined(ctx context.Context, b DeployBackend, tx *types.Transaction) (*ty
 		case <-queryTicker.C:
 		}
 	}
+}
+
+// CheckWaitMined returns an error if the transaction is not found or not successful status.
+func CheckWaitMined(b DeployBackend, tx *types.Transaction) error {
+	timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancelTimeout()
+
+	receipt, err := WaitMined(timeoutContext, b, tx)
+	if err != nil {
+		return err
+	}
+
+	if receipt == nil {
+		return errors.New("receipt not found")
+	}
+
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		return errors.New("not successful receipt")
+	}
+	return nil
 }
 
 // WaitDeployed waits for a contract deployment transaction and returns the on-chain

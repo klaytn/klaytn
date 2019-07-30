@@ -118,10 +118,6 @@ type MainBridge struct {
 func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, error) {
 	chainDB := CreateDB(ctx, config, "scchaindata")
 
-	if config.chainkey != nil || config.MainChainAccountAddr != nil {
-		logger.Warn("MainBridge doesn't need a main chain account. The main chain account is only for SubBridge.")
-	}
-
 	sc := &MainBridge{
 		config:         config,
 		chainDB:        chainDB,

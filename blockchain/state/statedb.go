@@ -55,11 +55,8 @@ var (
 // TODO-Klaytn-StateDB Need to consider setting this value by command line option.
 const maxCachedStateObjects = 40960
 
-// StateDBs within the ethereum protocol are used to store anything
-// within the merkle trie. StateDBs take care of caching and storing
-// nested states. It's the general query interface to retrieve:
-// * Contracts
-// * Accounts
+// StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
+// and mediate the operations to them.
 type StateDB struct {
 	db   Database
 	trie Trie
