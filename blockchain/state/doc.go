@@ -30,20 +30,16 @@ Once it is loaded from the persistent layer, it is cached and managed by StateDB
 
 StateDB caches stateObjects and mediates the operations to them.
 
+
 Source Files
 
-- database.go              : Defines Database and other interfaces used in the package
-
-- dump.go                  : Functions to dump the contents of StateDB both in raw format and indented format
-
-- journal.go               : journal and state changes to track the list of state modifications since the last state commit
-
-- state_object.go          : Implementation of stateObject
-
-- state_object_encoder.go  : stateObjectEncoder is used to encode stateObject in parallel manner
-
-- statedb.go               : Implementation of StateDB
-
-- sync.go                  : Functions to schedule a state trie download
+Related functions and variables are defined in the files listed below
+  - database.go              : Defines Database and other interfaces used in the package
+  - dump.go                  : Functions to dump the contents of StateDB both in raw format and indented format
+  - journal.go               : journal and state changes to track the list of state modifications since the last state commit
+  - state_object.go          : Implementation of stateObject
+  - state_object_encoder.go  : stateObjectEncoder is used to encode stateObject in parallel manner
+  - statedb.go               : Implementation of StateDB
+  - sync.go                  : Functions to schedule a state trie download
 */
 package state

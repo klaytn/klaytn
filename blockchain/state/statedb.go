@@ -56,7 +56,7 @@ var (
 const maxCachedStateObjects = 40960
 
 // StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
-// and mediates the operations to them.
+// and mediate the operations to them.
 type StateDB struct {
 	db   Database
 	trie Trie
