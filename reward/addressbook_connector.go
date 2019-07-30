@@ -44,25 +44,25 @@ var (
 )
 
 type addressBookConnector struct {
-	bc                         *blockchain.BlockChain
-	gh                         governanceHelper
-	addressBookABI             string
-	addressBookContractAddress common.Address
+	bc              *blockchain.BlockChain
+	gh              governanceHelper
+	abi             string
+	contractAddress common.Address
 }
 
 // create and return addressBookConnector
 func newAddressBookConnector(bc *blockchain.BlockChain, gh governanceHelper) *addressBookConnector {
 	return &addressBookConnector{
-		bc:                         bc,
-		gh:                         gh,
-		addressBookABI:             contract.AddressBookABI,
-		addressBookContractAddress: common.HexToAddress(contract.AddressBookContractAddress),
+		bc:              bc,
+		gh:              gh,
+		abi:             contract.AddressBookABI,
+		contractAddress: common.HexToAddress(contract.AddressBookContractAddress),
 	}
 }
 
 // make a message to the addressBook contract for executing getAllAddress function of the addressBook contract
 func (ac *addressBookConnector) makeMsgToAddressBook() (*types.Transaction, error) {
-	abiInstance, err := abi.JSON(strings.NewReader(ac.addressBookABI))
+	abiInstance, err := abi.JSON(strings.NewReader(ac.abi))
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (ac *addressBookConnector) makeMsgToAddressBook() (*types.Transaction, erro
 
 	// Create new call message
 	// TODO-Klaytn-Issue1166 Decide who will be sender(i.e. from)
-	msg := types.NewMessage(common.Address{}, &ac.addressBookContractAddress, 0, big.NewInt(0), 10000000, big.NewInt(0), data, false, intrinsicGas)
+	msg := types.NewMessage(common.Address{}, &ac.contractAddress, 0, big.NewInt(0), 10000000, big.NewInt(0), data, false, intrinsicGas)
 
 	return msg, nil
 }
@@ -97,7 +97,7 @@ func (ac *addressBookConnector) parseAllAddresses(result []byte) (nodeIds []comm
 		return
 	}
 
-	abiInstance, err := abi.JSON(strings.NewReader(ac.addressBookABI))
+	abiInstance, err := abi.JSON(strings.NewReader(ac.abi))
 	if err != nil {
 		return
 	}
