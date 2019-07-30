@@ -18,5 +18,24 @@
 // This file is derived from common/bytes.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package common contains various helper functions.
+/*
+Package common contains various helper functions.
+
+The `common` package defines commonly used data types and constants.
+
+And also it provides cache and helper functions.
+
+Source Files
+
+Each source files provides functions and types as listed below
+  - big.go   	: Defines common big integers often used such as Big1
+  - bytes.go	: Provides conversion functions between a byte slice with a string in Hex format
+  - cache.go	: Defines Cache interface and constants such as CacheType
+  - debug.go	: Provides a function to let an user know where to report a bug. It is being used by datasync/downloader
+  - format.go	: Provides function to print a time.Duration in more readable format
+  - path.go  	: Provides functions to check a file's existence and to get an absulute path
+  - size.go 	: Provides StorageSize type and its stringer functions
+  - types.go	: Provides commonly used Hash and Address types and its methods
+  - utils.go	: Provides LoadJSON function to read a JSON file
+*/
 package common
