@@ -1,0 +1,411 @@
+version: '3'
+services:
+  CN-0:
+    hostname: CN-0
+    image: klaytn-base
+    ports:
+      - '32323:32323'
+      - '8551:8551'
+      - '61001:61001'
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /klaytn
+        echo '{"config":{"chainId":1000,"istanbul":{"epoch":604800,"policy":0,"sub":21},"unitPrice":0,"deriveShaImpl":0,"governance":null},"timestamp":"0x5d400d96","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f85ad5945aea9c4229d744bb34ce07c7bcc6ad8af5f74b3bb8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"29eda220055a20f060c8a9605e5d86821003b722":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"5aea9c4229d744bb34ce07c7bcc6ad8af5f74b3b":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"95f33658af634d84227a7adf1dbe2ee67051003c":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}' > /klaytn/genesis.json
+        echo '["kni://da9ec413c5e9ce3dcfb9d84f620318a86a48ba629e7cecdaec8857783b08a4c7af7a543704f46b72ca1e1db3bda5b15ef55385a44282e5abe783956efc0341b6@172.16.239.10:32323?discport=0\u0026ntype=cn"]' > /klaytn/static-nodes.json
+        kcn --datadir "/klaytn" init "/klaytn/genesis.json"
+        kcn \
+        --identity "CN-0" \
+        --rpc \
+        --rpcaddr "0.0.0.0" \
+        --rpcport "8551" \
+        --rpccorsdomain "*" \
+        --datadir "/klaytn" \
+        --port "32323" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
+        --networkid "3000" \
+        --nat "any" \
+        --nodekeyhex "7a54fdb494b4ac3f6b009af27c1fe4e7b0db5154ae248a1d7c88bd68fc744918" \
+        --nodiscover \
+        --debug \
+        --metrics \
+        --prometheus \
+        --syncmode "full" \
+        --rewardbase 0x5AEa9C4229d744bb34ce07C7BcC6AD8Af5F74b3b
+
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.10
+    restart: "no"
+  PN-0:
+    hostname: PN-0
+    image: klaytn-base
+    ports:
+      - '32324:32323'
+      - '8552:8551'
+      - '61002:61001'
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /klaytn
+        echo '{"config":{"chainId":1000,"istanbul":{"epoch":604800,"policy":0,"sub":21},"unitPrice":0,"deriveShaImpl":0,"governance":null},"timestamp":"0x5d400d96","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f85ad5945aea9c4229d744bb34ce07c7bcc6ad8af5f74b3bb8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"29eda220055a20f060c8a9605e5d86821003b722":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"5aea9c4229d744bb34ce07c7bcc6ad8af5f74b3b":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"95f33658af634d84227a7adf1dbe2ee67051003c":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}' > /klaytn/genesis.json
+        echo '["kni://da9ec413c5e9ce3dcfb9d84f620318a86a48ba629e7cecdaec8857783b08a4c7af7a543704f46b72ca1e1db3bda5b15ef55385a44282e5abe783956efc0341b6@172.16.239.10:32323?discport=0\u0026ntype=cn"]' > /klaytn/static-nodes.json
+        kpn --datadir "/klaytn" init "/klaytn/genesis.json"
+        kpn \
+        --identity "PN-0" \
+        --rpc \
+        --rpcaddr "0.0.0.0" \
+        --rpcport "8551" \
+        --rpccorsdomain "*" \
+        --datadir "/klaytn" \
+        --port "32323" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
+        --networkid "3000" \
+        --nat "any" \
+        --nodekeyhex "e5f95a0a33a1141b35b3140a283bbfa9135dd87d82b577fd4c975520a19798a1" \
+        --nodiscover \
+        --debug \
+        --metrics \
+        --prometheus \
+        --syncmode "full" \
+        --txpool.nolocals
+
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.11
+    restart: "no"
+  EN-0:
+    hostname: EN-0
+    image: klaytn-base
+    ports:
+      - '32325:32323'
+      - '8553:8551'
+      - '61003:61001'
+      - '50505:50505'
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /klaytn
+        echo '{"config":{"chainId":1000,"istanbul":{"epoch":604800,"policy":0,"sub":21},"unitPrice":0,"deriveShaImpl":0,"governance":null},"timestamp":"0x5d400d96","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f85ad5945aea9c4229d744bb34ce07c7bcc6ad8af5f74b3bb8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"29eda220055a20f060c8a9605e5d86821003b722":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"5aea9c4229d744bb34ce07c7bcc6ad8af5f74b3b":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"95f33658af634d84227a7adf1dbe2ee67051003c":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}' > /klaytn/genesis.json
+        echo '["kni://ef077302c83e12692a06e2d2ebbbb0dc681a5100399eaaa0c56ae2cd586d17a68c6d088b6d900095a1b25f93cca0713d23ab9c4739e40b63aed764a0a3ddb9e7@172.16.239.11:32323?discport=0\u0026ntype=pn"]' > /klaytn/static-nodes.json
+        ken --datadir "/klaytn" init "/klaytn/genesis.json"
+        ken \
+        --identity "EN-0" \
+        --rpc \
+        --rpcaddr "0.0.0.0" \
+        --rpcport "8551" \
+        --rpccorsdomain "*" \
+        --datadir "/klaytn" \
+        --port "32323" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
+        --networkid "3000" \
+        --nat "any" \
+        --nodekeyhex "e1d763c3e0814e968f5f5bd9b7c602e863b1db31de1a86600ed9657cae1ba537" \
+        --nodiscover \
+        --debug \
+        --metrics \
+        --prometheus \
+        --syncmode "full" \
+        --mainbridge \
+        --mainbridgeport 50505
+
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.12
+    restart: "no"
+  EN-1:
+    hostname: EN-1
+    image: klaytn-base
+    ports:
+      - '32326:32323'
+      - '8554:8551'
+      - '61004:61001'
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /klaytn
+        echo '{"config":{"chainId":1000,"istanbul":{"epoch":604800,"policy":0,"sub":21},"unitPrice":0,"deriveShaImpl":0,"governance":null},"timestamp":"0x5d400d96","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f85ad5945aea9c4229d744bb34ce07c7bcc6ad8af5f74b3bb8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"29eda220055a20f060c8a9605e5d86821003b722":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"5aea9c4229d744bb34ce07c7bcc6ad8af5f74b3b":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"95f33658af634d84227a7adf1dbe2ee67051003c":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}' > /klaytn/genesis.json
+        echo '["kni://ef077302c83e12692a06e2d2ebbbb0dc681a5100399eaaa0c56ae2cd586d17a68c6d088b6d900095a1b25f93cca0713d23ab9c4739e40b63aed764a0a3ddb9e7@172.16.239.11:32323?discport=0\u0026ntype=pn"]' > /klaytn/static-nodes.json
+        ken --datadir "/klaytn" init "/klaytn/genesis.json"
+        ken \
+        --identity "EN-1" \
+        --rpc \
+        --rpcaddr "0.0.0.0" \
+        --rpcport "8551" \
+        --rpccorsdomain "*" \
+        --datadir "/klaytn" \
+        --port "32323" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
+        --networkid "3000" \
+        --nat "any" \
+        --nodekeyhex "00facdc91417df1e481120a5b1e05022aebd84f4703db05a5799a247a8e8e1a9" \
+        --nodiscover \
+        --debug \
+        --metrics \
+        --prometheus \
+        --syncmode "full" \
+
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.13
+    restart: "no"
+  SCN-0:
+    hostname: SCN-0
+    image: klaytn-base
+    ports:
+      - '32327:32323'
+      - '8555:8551'
+      - '61005:61001'
+      - '50506:50506'
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /klaytn
+        echo '{"config":{"chainId":1001,"istanbul":{"epoch":604800,"policy":0,"sub":21},"unitPrice":0,"deriveShaImpl":0,"governance":null},"timestamp":"0x5d400d96","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f86fea948f81c52a5826454aafca62fcf65950cfa316f155946a2ff3cf3551701e02330fd00c351046b2a514e7b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"6a2ff3cf3551701e02330fd00c351046b2a514e7":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"8f81c52a5826454aafca62fcf65950cfa316f155":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}' > /klaytn/genesis.json
+        echo '["kni://0ba1f7c121cb5154cfd75485a0b1924c07294002e05e4e3780195a7eef925231b9cae8aa5eb8cffd2e43e9bdc9c1dbeabbe6e9a9317a6ed0c4628b73487eed35@172.16.239.14:32323?discport=0","kni://d6c503f0517b88288aff372fd6ce4efc695a1fe123a24c672c16b0ad7014238ced4294c71c368b3655f817045d22a1b4e03b13a3bd6ced0079db304597926d23@172.16.239.15:32323?discport=0"]' > /klaytn/static-nodes.json
+        kscn --datadir "/klaytn" init "/klaytn/genesis.json"
+        kscn \
+        --identity "SCN-0" \
+        --rpc \
+        --rpcaddr "0.0.0.0" \
+        --rpcport "8551" \
+        --rpccorsdomain "*" \
+        --datadir "/klaytn" \
+        --port "32323" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
+        --networkid "3000" \
+        --nat "any" \
+        --nodekeyhex "4ed9ab6ec5b58704ba009608226d8a437507b192da7862293b4fbc4cd4abac91" \
+        --nodiscover \
+        --debug \
+        --metrics \
+        --prometheus \
+        --syncmode "full" \
+        --scconsensus "istanbul" \
+
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.14
+    restart: "no"
+  SCN-1:
+    hostname: SCN-1
+    image: klaytn-base
+    ports:
+      - '32328:32323'
+      - '8556:8551'
+      - '61006:61001'
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /klaytn
+        echo '{"config":{"chainId":1001,"istanbul":{"epoch":604800,"policy":0,"sub":21},"unitPrice":0,"deriveShaImpl":0,"governance":null},"timestamp":"0x5d400d96","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f86fea948f81c52a5826454aafca62fcf65950cfa316f155946a2ff3cf3551701e02330fd00c351046b2a514e7b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"6a2ff3cf3551701e02330fd00c351046b2a514e7":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"8f81c52a5826454aafca62fcf65950cfa316f155":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}' > /klaytn/genesis.json
+        echo '["kni://0ba1f7c121cb5154cfd75485a0b1924c07294002e05e4e3780195a7eef925231b9cae8aa5eb8cffd2e43e9bdc9c1dbeabbe6e9a9317a6ed0c4628b73487eed35@172.16.239.14:32323?discport=0","kni://d6c503f0517b88288aff372fd6ce4efc695a1fe123a24c672c16b0ad7014238ced4294c71c368b3655f817045d22a1b4e03b13a3bd6ced0079db304597926d23@172.16.239.15:32323?discport=0"]' > /klaytn/static-nodes.json
+        kscn --datadir "/klaytn" init "/klaytn/genesis.json"
+        kscn \
+        --identity "SCN-1" \
+        --rpc \
+        --rpcaddr "0.0.0.0" \
+        --rpcport "8551" \
+        --rpccorsdomain "*" \
+        --datadir "/klaytn" \
+        --port "32323" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
+        --networkid "3000" \
+        --nat "any" \
+        --nodekeyhex "bfc6b9e8d742302f260ac3257c92755a06526c933e520b5601304812dd4498fa" \
+        --nodiscover \
+        --debug \
+        --metrics \
+        --prometheus \
+        --syncmode "full" \
+        --scconsensus "istanbul" \
+
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.15
+    restart: "no"
+  SPN-0:
+    hostname: SPN-0
+    image: klaytn-base
+    ports:
+      - '32329:32323'
+      - '8557:8551'
+      - '61007:61001'
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /klaytn
+        echo '{"config":{"chainId":1001,"istanbul":{"epoch":604800,"policy":0,"sub":21},"unitPrice":0,"deriveShaImpl":0,"governance":null},"timestamp":"0x5d400d96","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f86fea948f81c52a5826454aafca62fcf65950cfa316f155946a2ff3cf3551701e02330fd00c351046b2a514e7b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"6a2ff3cf3551701e02330fd00c351046b2a514e7":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"8f81c52a5826454aafca62fcf65950cfa316f155":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}' > /klaytn/genesis.json
+        echo '["kni://0ba1f7c121cb5154cfd75485a0b1924c07294002e05e4e3780195a7eef925231b9cae8aa5eb8cffd2e43e9bdc9c1dbeabbe6e9a9317a6ed0c4628b73487eed35@172.16.239.14:32323?discport=0","kni://d6c503f0517b88288aff372fd6ce4efc695a1fe123a24c672c16b0ad7014238ced4294c71c368b3655f817045d22a1b4e03b13a3bd6ced0079db304597926d23@172.16.239.15:32323?discport=0"]' > /klaytn/static-nodes.json
+        kspn --datadir "/klaytn" init "/klaytn/genesis.json"
+        kspn \
+        --identity "SPN-0" \
+        --rpc \
+        --rpcaddr "0.0.0.0" \
+        --rpcport "8551" \
+        --rpccorsdomain "*" \
+        --datadir "/klaytn" \
+        --port "32323" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
+        --networkid "3000" \
+        --nat "any" \
+        --nodekeyhex "079895599d9802a770d2b48a556dec78ddf154737180b2deff12a3961f14fb99" \
+        --nodiscover \
+        --debug \
+        --metrics \
+        --prometheus \
+        --syncmode "full" \
+        --scconsensus "istanbul" \
+
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.16
+    restart: "no"
+  SPN-1:
+    hostname: SPN-1
+    image: klaytn-base
+    ports:
+      - '32330:32323'
+      - '8558:8551'
+      - '61008:61001'
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /klaytn
+        echo '{"config":{"chainId":1001,"istanbul":{"epoch":604800,"policy":0,"sub":21},"unitPrice":0,"deriveShaImpl":0,"governance":null},"timestamp":"0x5d400d96","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f86fea948f81c52a5826454aafca62fcf65950cfa316f155946a2ff3cf3551701e02330fd00c351046b2a514e7b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"6a2ff3cf3551701e02330fd00c351046b2a514e7":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"8f81c52a5826454aafca62fcf65950cfa316f155":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}' > /klaytn/genesis.json
+        echo '["kni://0ba1f7c121cb5154cfd75485a0b1924c07294002e05e4e3780195a7eef925231b9cae8aa5eb8cffd2e43e9bdc9c1dbeabbe6e9a9317a6ed0c4628b73487eed35@172.16.239.14:32323?discport=0","kni://d6c503f0517b88288aff372fd6ce4efc695a1fe123a24c672c16b0ad7014238ced4294c71c368b3655f817045d22a1b4e03b13a3bd6ced0079db304597926d23@172.16.239.15:32323?discport=0"]' > /klaytn/static-nodes.json
+        kspn --datadir "/klaytn" init "/klaytn/genesis.json"
+        kspn \
+        --identity "SPN-1" \
+        --rpc \
+        --rpcaddr "0.0.0.0" \
+        --rpcport "8551" \
+        --rpccorsdomain "*" \
+        --datadir "/klaytn" \
+        --port "32323" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
+        --networkid "3000" \
+        --nat "any" \
+        --nodekeyhex "8b992a08e132a78d1e979c24fc670f576f695d76bc124006c2a281874a64a791" \
+        --nodiscover \
+        --debug \
+        --metrics \
+        --prometheus \
+        --syncmode "full" \
+        --scconsensus "istanbul" \
+
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.17
+    restart: "no"
+  SEN-0:
+    hostname: SEN-0
+    image: klaytn-base
+    ports:
+      - '32331:32323'
+      - '8559:8551'
+      - '61009:61001'
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /klaytn
+        echo '{"config":{"chainId":1001,"istanbul":{"epoch":604800,"policy":0,"sub":21},"unitPrice":0,"deriveShaImpl":0,"governance":null},"timestamp":"0x5d400d96","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f86fea948f81c52a5826454aafca62fcf65950cfa316f155946a2ff3cf3551701e02330fd00c351046b2a514e7b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"6a2ff3cf3551701e02330fd00c351046b2a514e7":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"8f81c52a5826454aafca62fcf65950cfa316f155":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}' > /klaytn/genesis.json
+        echo '["kni://447b830831866b28598cd7061c9ea39dfae8bca259dd6a3510b1aae0667bf74835d5f1d81032c3472cff0bd0e303d27b0d4eb2ff996ac85693fc25074c90f194@172.16.239.16:32323?discport=0","kni://767d52ea6215cc22e1acbd263392d0364fc6dde8de7ae7cf98818ddd7b5af7921cf1ca6e6d4172f12eb1f0739a4682893479fad40ec73ffb1785e686297d2b22@172.16.239.17:32323?discport=0"]' > /klaytn/static-nodes.json
+        echo '["kni://2c061c6e390ecb97134cead2d26d5fb88b06bbe4285b7abe61c9d8e00959ca3e7b1c3d7ae4310272641b9d1643df143d0436f941662e6816982e7f9c6c2536fa@172.16.239.12:50505?discport=0\u0026ntype=en"]' > /klaytn/mainchain-bridges.json
+        ksen --datadir "/klaytn" init "/klaytn/genesis.json"
+        ksen \
+        --identity "SEN-0" \
+        --rpc \
+        --rpcaddr "0.0.0.0" \
+        --rpcport "8551" \
+        --rpccorsdomain "*" \
+        --datadir "/klaytn" \
+        --port "32323" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
+        --networkid "3000" \
+        --nat "any" \
+        --nodekeyhex "2a307e68e8dafcea53b1ae6bb0792f215310592d94878ae60222bb3780901ece" \
+        --nodiscover \
+        --debug \
+        --metrics \
+        --prometheus \
+        --syncmode "full" \
+        --scconsensus "istanbul" \
+        --parentchainid 1000 \
+        --subbridge \
+        --subbridgeport 50506 \
+
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.18
+    restart: "no"
+  SEN-1:
+    hostname: SEN-1
+    image: klaytn-base
+    ports:
+      - '32332:32323'
+      - '8560:8551'
+      - '61010:61001'
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mkdir -p /klaytn
+        echo '{"config":{"chainId":1001,"istanbul":{"epoch":604800,"policy":0,"sub":21},"unitPrice":0,"deriveShaImpl":0,"governance":null},"timestamp":"0x5d400d96","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f86fea948f81c52a5826454aafca62fcf65950cfa316f155946a2ff3cf3551701e02330fd00c351046b2a514e7b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"6a2ff3cf3551701e02330fd00c351046b2a514e7":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"8f81c52a5826454aafca62fcf65950cfa316f155":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}' > /klaytn/genesis.json
+        echo '["kni://447b830831866b28598cd7061c9ea39dfae8bca259dd6a3510b1aae0667bf74835d5f1d81032c3472cff0bd0e303d27b0d4eb2ff996ac85693fc25074c90f194@172.16.239.16:32323?discport=0","kni://767d52ea6215cc22e1acbd263392d0364fc6dde8de7ae7cf98818ddd7b5af7921cf1ca6e6d4172f12eb1f0739a4682893479fad40ec73ffb1785e686297d2b22@172.16.239.17:32323?discport=0"]' > /klaytn/static-nodes.json
+        echo '["kni://2c061c6e390ecb97134cead2d26d5fb88b06bbe4285b7abe61c9d8e00959ca3e7b1c3d7ae4310272641b9d1643df143d0436f941662e6816982e7f9c6c2536fa@172.16.239.12:50505?discport=0\u0026ntype=en"]' > /klaytn/mainchain-bridges.json
+        ksen --datadir "/klaytn" init "/klaytn/genesis.json"
+        ksen \
+        --identity "SEN-1" \
+        --rpc \
+        --rpcaddr "0.0.0.0" \
+        --rpcport "8551" \
+        --rpccorsdomain "*" \
+        --datadir "/klaytn" \
+        --port "32323" \
+        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
+        --networkid "3000" \
+        --nat "any" \
+        --nodekeyhex "b9fa158a08006562c8c7e18869fad5657425ce09064787029b064d3fe9da847c" \
+        --nodiscover \
+        --debug \
+        --metrics \
+        --prometheus \
+        --syncmode "full" \
+        --scconsensus "istanbul" \
+        --parentchainid 1000 \
+        --subbridge \
+        --subbridgeport 50506 \
+
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.19
+    restart: "no"
+  prometheus:
+    hostname: prometheus
+    image: prom/prometheus:v2.3.2
+    ports:
+      - 9090:9090
+    volumes:
+      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+    networks:
+      app_net:
+        ipv4_address: 172.16.239.9
+    restart: "no"
+
+networks:
+  app_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.239.0/24

@@ -146,9 +146,12 @@ var validatorTemplate = `{{ .Name }}:
 {{- end}}
 {{- if eq .NodeType "scn" }}
         --scconsensus "istanbul" \
+{{- else if eq .NodeType "spn" }}
+        --scconsensus "istanbul" \
+{{- else if eq .NodeType "sen" }}
+        --scconsensus "istanbul" \
 {{- end}}
 {{- if .ParentChainId }}
-        --scconsensus "istanbul" \
         --parentchainid {{ .ParentChainId }} \
         --subbridge \
         --subbridgeport 50506 \
