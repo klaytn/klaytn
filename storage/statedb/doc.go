@@ -24,7 +24,7 @@ This package is used to read/write data from/to the state object trie.
 
 Overview of statedb package
 
-There are 3 key struct in this package: Trie, SecureTire and Database.
+There are 3 key struct in this package: Trie, SecureTrie and Database.
 
 Trie struct represents a Merkle Patricia Trie.
 
