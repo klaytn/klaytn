@@ -28,7 +28,7 @@ func newTestBlockChain() *blockchain.BlockChain {
 
 func TestAddressBookManager_makeMsgToAddressBook(t *testing.T) {
 	targetAddress := "0x0000000000000000000000000000000000000400" // address of addressBook which the message has to be sent to
-	addressBookManager := newAddressBookManager(newTestBlockChain(), nil)
+	addressBookManager := newAddressBookConnector(newTestBlockChain(), nil)
 	msg, err := addressBookManager.makeMsgToAddressBook()
 	if err != nil {
 		t.Errorf("err has occurred. err : %v", err)
