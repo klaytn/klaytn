@@ -17,7 +17,7 @@
 /*
 Package kerrors contains universally accessible error variables used in Klaytn.
 
-Mostly, error variables in kerrors package are used in multiple package.
+Mostly, error variables in kerrors package are used in multiple packages.
 
 Source File
 
