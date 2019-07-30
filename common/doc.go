@@ -33,7 +33,7 @@ Each source file provides functions and types as listed below
   - cache.go	: Defines Cache interface and constants such as CacheType
   - debug.go	: Provides a function to let an user know where to report a bug. It is being used by datasync/downloader
   - format.go	: Provides a function to print a time.Duration in more readable format
-  - path.go  	: Provides functions to check a file's existence and to get an absulute path
+  - path.go  	: Provides functions to check a file's existence and to get an absolute path
   - size.go 	: Provides StorageSize type and its stringer functions
   - types.go	: Provides commonly used Hash and Address types and its methods
   - utils.go	: Provides LoadJSON function to read a JSON file
