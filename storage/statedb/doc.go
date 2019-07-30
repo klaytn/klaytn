@@ -38,17 +38,26 @@ periodically flush a couple tries to disk, garbage collecting the remainder.
 
 Source Files
 
-  - database.go    : Implementation of Database struct
-  - derive_sha.go  : Implementation of DeriveShaOrig used in go-ethereum
-  - encoding.go    : Implementation of 3 encodings: KEYBYTES, HEX and COMPACT
-  - errors.go      : Errors used in this package
-  - hasher.go      : Implementation of recursive and bottom-up hashing
-  - iterator.go    : Implementation of key-value trie iterator that traverses a Trie
-  - node.go        : Implementation of 4 types of nodes
-  - proof.go       : Functions which construct a Merkle Patricia Proof for the given key
-  - secure_trie.go : Implementation of Merkle Patricia Trie with key hashing
-  - sync.go        : Implementation of state trie sync
-  - trie.go        : Implementation of Merkle Patricia Trie
-*/
+- database.go    : Implementation of Database struct
 
+- derive_sha.go  : Implementation of DeriveShaOrig used in Klaytn
+
+- encoding.go    : Implementation of 3 encodings: KEYBYTES, HEX and COMPACT
+
+- errors.go      : Errors used in this package
+
+- hasher.go      : Implementation of recursive and bottom-up hashing
+
+- iterator.go    : Implementation of key-value trie iterator that traverses a Trie
+
+- node.go        : Implementation of 4 types of nodes, used in Merkle Patricia Trie
+
+- proof.go       : Functions which construct a Merkle Patricia Proof for the given key
+
+- secure_trie.go : Implementation of Merkle Patricia Trie with key hashing
+
+- sync.go        : Implementation of state trie sync
+
+- trie.go        : Implementation of Merkle Patricia Trie
+*/
 package statedb
