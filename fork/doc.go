@@ -17,7 +17,7 @@
 /*
 Package fork has information related to hard forks.
 
-HardForkConfigs (blockNumber of hard fork) will be declared in this package.
+HardForkConfig which has hard fork blockNumbers is declared in this package.
 
 Source Files
 
