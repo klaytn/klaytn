@@ -4,35 +4,32 @@ package sc
 
 import (
 	"time"
-
-	"github.com/klaytn/klaytn/common"
 )
 
 // MarshalTOML marshals as TOML.
 func (s SCConfig) MarshalTOML() (interface{}, error) {
 	type SCConfig struct {
-		Name                    string `toml:"-"`
-		EnabledMainBridge       bool
-		EnabledSubBridge        bool
-		DataDir                 string
-		NetworkId               uint64
-		SkipBcVersionCheck      bool `toml:"-"`
-		DatabaseHandles         int  `toml:"-"`
-		LevelDBCacheSize        int
-		TrieCacheSize           int
-		TrieTimeout             time.Duration
-		TrieBlockInterval       uint
-		ChildChainIndexing      bool
-		MainBridgePort          string
-		SubBridgePort           string
-		MaxPeer                 int
-		MainChainAccountAddr    *common.Address `toml:",omitempty"`
-		ServiceChainAccountAddr *common.Address `toml:",omitempty"`
-		ServiceChainConsensus   string
-		AnchoringPeriod         uint64
-		SentChainTxsLimit       uint64
-		VTRecovery              bool
-		VTRecoveryInterval      uint64
+		Name                  string `toml:"-"`
+		EnabledMainBridge     bool
+		EnabledSubBridge      bool
+		DataDir               string
+		NetworkId             uint64
+		SkipBcVersionCheck    bool `toml:"-"`
+		DatabaseHandles       int  `toml:"-"`
+		LevelDBCacheSize      int
+		TrieCacheSize         int
+		TrieTimeout           time.Duration
+		TrieBlockInterval     uint
+		ChildChainIndexing    bool
+		MainBridgePort        string
+		SubBridgePort         string
+		MaxPeer               int
+		ServiceChainConsensus string
+		AnchoringPeriod       uint64
+		SentChainTxsLimit     uint64
+		ParentChainID         uint64
+		VTRecovery            bool
+		VTRecoveryInterval    uint64
 	}
 	var enc SCConfig
 	enc.Name = s.Name
@@ -50,11 +47,10 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.MainBridgePort = s.MainBridgePort
 	enc.SubBridgePort = s.SubBridgePort
 	enc.MaxPeer = s.MaxPeer
-	enc.MainChainAccountAddr = s.MainChainAccountAddr
-	enc.ServiceChainAccountAddr = s.ServiceChainAccountAddr
 	enc.ServiceChainConsensus = s.ServiceChainConsensus
 	enc.AnchoringPeriod = s.AnchoringPeriod
 	enc.SentChainTxsLimit = s.SentChainTxsLimit
+	enc.ParentChainID = s.ParentChainID
 	enc.VTRecovery = s.VTRecovery
 	enc.VTRecoveryInterval = s.VTRecoveryInterval
 	return &enc, nil
@@ -63,28 +59,27 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 // UnmarshalTOML unmarshals from TOML.
 func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	type SCConfig struct {
-		Name                    *string `toml:"-"`
-		EnabledMainBridge       *bool
-		EnabledSubBridge        *bool
-		DataDir                 *string
-		NetworkId               *uint64
-		SkipBcVersionCheck      *bool `toml:"-"`
-		DatabaseHandles         *int  `toml:"-"`
-		LevelDBCacheSize        *int
-		TrieCacheSize           *int
-		TrieTimeout             *time.Duration
-		TrieBlockInterval       *uint
-		ChildChainIndexing      *bool
-		MainBridgePort          *string
-		SubBridgePort           *string
-		MaxPeer                 *int
-		MainChainAccountAddr    *common.Address `toml:",omitempty"`
-		ServiceChainAccountAddr *common.Address `toml:",omitempty"`
-		ServiceChainConsensus   *string
-		AnchoringPeriod         *uint64
-		SentChainTxsLimit       *uint64
-		VTRecovery              *bool
-		VTRecoveryInterval      *uint64
+		Name                  *string `toml:"-"`
+		EnabledMainBridge     *bool
+		EnabledSubBridge      *bool
+		DataDir               *string
+		NetworkId             *uint64
+		SkipBcVersionCheck    *bool `toml:"-"`
+		DatabaseHandles       *int  `toml:"-"`
+		LevelDBCacheSize      *int
+		TrieCacheSize         *int
+		TrieTimeout           *time.Duration
+		TrieBlockInterval     *uint
+		ChildChainIndexing    *bool
+		MainBridgePort        *string
+		SubBridgePort         *string
+		MaxPeer               *int
+		ServiceChainConsensus *string
+		AnchoringPeriod       *uint64
+		SentChainTxsLimit     *uint64
+		ParentChainID         *uint64
+		VTRecovery            *bool
+		VTRecoveryInterval    *uint64
 	}
 	var dec SCConfig
 	if err := unmarshal(&dec); err != nil {
@@ -135,12 +130,6 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.MaxPeer != nil {
 		s.MaxPeer = *dec.MaxPeer
 	}
-	if dec.MainChainAccountAddr != nil {
-		s.MainChainAccountAddr = dec.MainChainAccountAddr
-	}
-	if dec.ServiceChainAccountAddr != nil {
-		s.ServiceChainAccountAddr = dec.ServiceChainAccountAddr
-	}
 	if dec.ServiceChainConsensus != nil {
 		s.ServiceChainConsensus = *dec.ServiceChainConsensus
 	}
@@ -149,6 +138,9 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.SentChainTxsLimit != nil {
 		s.SentChainTxsLimit = *dec.SentChainTxsLimit
+	}
+	if dec.ParentChainID != nil {
+		s.ParentChainID = *dec.ParentChainID
 	}
 	if dec.VTRecovery != nil {
 		s.VTRecovery = *dec.VTRecovery

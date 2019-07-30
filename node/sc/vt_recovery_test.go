@@ -30,7 +30,6 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"path"
 	"sync"
 	"testing"
 	"time"
@@ -100,9 +99,11 @@ var (
 
 // TestBasicKLAYTransferRecovery tests each methods of the value transfer recovery.
 func TestBasicKLAYTransferRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
@@ -165,9 +166,11 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 
 // TestBasicTokenTransferRecovery tests the token transfer recovery.
 func TestBasicTokenTransferRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
@@ -202,9 +205,11 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 // TestBasicNFTTransferRecovery tests the NFT transfer recovery.
 // TODO-Klaytn-ServiceChain: implement NFT transfer.
 func TestBasicNFTTransferRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
@@ -238,9 +243,11 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 
 // TestMethodRecover tests the valueTransferRecovery.Recover() method.
 func TestMethodRecover(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
@@ -272,9 +279,11 @@ func TestMethodRecover(t *testing.T) {
 
 // TestMethodStop tests the Stop method for stop the internal goroutine.
 func TestMethodStop(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
@@ -305,9 +314,11 @@ func TestMethodStop(t *testing.T) {
 
 // TestFlagVTRecovery tests the disabled vtrecovery option.
 func TestFlagVTRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete the journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
@@ -330,12 +341,13 @@ func TestFlagVTRecovery(t *testing.T) {
 
 // TestAlreadyStartedVTRecovery tests the already started VTR error cases.
 func TestAlreadyStartedVTRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete the journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
-
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
 			ops[KLAY].request(info, info.localInfo)
@@ -355,9 +367,11 @@ func TestAlreadyStartedVTRecovery(t *testing.T) {
 
 // TestScenarioMainChainRecovery tests the value transfer recovery of the main chain to service chain value transfers.
 func TestScenarioMainChainRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
@@ -390,9 +404,11 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 
 // TestScenarioAutomaticRecovery tests the recovery of the internal goroutine.
 func TestScenarioAutomaticRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
-		if err := os.Remove(path.Join(os.TempDir(), BridgeAddrJournal)); err != nil {
-			t.Fatalf("fail to delete journal file %v", err)
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
 
@@ -428,33 +444,33 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	// Setup configuration.
 	config := &SCConfig{}
-	config.nodekey, _ = crypto.GenerateKey()
-	config.chainkey, _ = crypto.GenerateKey()
-	config.DataDir = os.TempDir()
+	config.DataDir = os.TempDir() + "sc"
 	config.VTRecovery = true
 
+	bacc, err := NewBridgeAccounts(config.DataDir)
+	assert.NoError(t, err)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	cAcc := bacc.cAccount.GetTransactOpts()
+	pAcc := bacc.pAccount.GetTransactOpts()
+
 	// Generate a new random account and a funded simulator.
-	nodeAuth := bind.NewKeyedTransactor(config.nodekey)
-	chainAuth := bind.NewKeyedTransactor(config.chainkey)
 	aliceKey, _ := crypto.GenerateKey()
 	aliceAuth := bind.NewKeyedTransactor(aliceKey)
-	chainKeyAddr := crypto.PubkeyToAddress(config.chainkey.PublicKey)
-	config.ServiceChainAccountAddr = &chainKeyAddr
 
 	// Alloc genesis and create a simulator.
 	alloc := blockchain.GenesisAlloc{
-		nodeAuth.From:  {Balance: big.NewInt(params.KLAY)},
-		chainAuth.From: {Balance: big.NewInt(params.KLAY)},
+		cAcc.From:      {Balance: big.NewInt(params.KLAY)},
+		pAcc.From:      {Balance: big.NewInt(params.KLAY)},
 		aliceAuth.From: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 
-	bam, _ := NewBridgeAccountManager(config.chainkey, config.nodekey)
-
 	sc := &SubBridge{
-		config:               config,
-		peers:                newBridgePeerSet(),
-		bridgeAccountManager: bam,
+		config:         config,
+		peers:          newBridgePeerSet(),
+		bridgeAccounts: bacc,
 	}
 	handler, err := NewSubBridgeHandler(sc.config, sc)
 	if err != nil {
@@ -466,69 +482,86 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
 	localAddr, err := bm.DeployBridgeTest(sim, true)
-	if err != nil {
-		t.Fatal("deploy bridge test failed", localAddr)
-	}
+	assert.NoError(t, err)
 	remoteAddr, err := bm.DeployBridgeTest(sim, false)
-	if err != nil {
-		t.Fatal("deploy bridge test failed", remoteAddr)
-	}
+	assert.NoError(t, err)
+
 	localInfo, _ := bm.GetBridgeInfo(localAddr)
 	remoteInfo, _ := bm.GetBridgeInfo(remoteAddr)
 	sim.Commit()
 
 	// Prepare token contract
-	tokenLocalAddr, _, tokenLocal, err := sctoken.DeployServiceChainToken(nodeAuth, sim, localAddr)
-	if err != nil {
-		log.Fatalf("Failed to DeployServiceChainToken: %v", err)
-	}
-	tokenRemoteAddr, _, tokenRemote, err := sctoken.DeployServiceChainToken(chainAuth, sim, remoteAddr)
+	tokenLocalAddr, tx, tokenLocal, err := sctoken.DeployServiceChainToken(cAcc, sim, localAddr)
 	if err != nil {
 		log.Fatalf("Failed to DeployServiceChainToken: %v", err)
 	}
 	sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(sim, tx))
+
+	tokenRemoteAddr, tx, tokenRemote, err := sctoken.DeployServiceChainToken(pAcc, sim, remoteAddr)
+	if err != nil {
+		log.Fatalf("Failed to DeployServiceChainToken: %v", err)
+	}
+	sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(sim, tx))
+
 	testToken := big.NewInt(testChargeToken)
-	opts := &bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}
-	_, err = tokenRemote.Transfer(opts, remoteAddr, testToken)
+	opts := &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
+	tx, err = tokenRemote.Transfer(opts, remoteAddr, testToken)
 	if err != nil {
 		log.Fatalf("Failed to Transfer for charging: %v", err)
 	}
 	sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(sim, tx))
 
 	// Prepare NFT contract
-	nftLocalAddr, _, nftLocal, err := scnft.DeployServiceChainNFT(nodeAuth, sim, localAddr)
-	if err != nil {
-		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
-	}
-	nftRemoteAddr, _, nftRemote, err := scnft.DeployServiceChainNFT(chainAuth, sim, remoteAddr)
+	nftLocalAddr, tx, nftLocal, err := scnft.DeployServiceChainNFT(cAcc, sim, localAddr)
 	if err != nil {
 		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
 	}
 	sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(sim, tx))
+
+	nftRemoteAddr, tx, nftRemote, err := scnft.DeployServiceChainNFT(pAcc, sim, remoteAddr)
+	if err != nil {
+		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
+	}
+	sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(sim, tx))
 
 	// Register tokens on the bridge
-	nodeOpts := &bind.TransactOpts{From: nodeAuth.From, Signer: nodeAuth.Signer, GasLimit: testGasLimit}
-	chainOpts := &bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}
-	_, err = localInfo.bridge.RegisterToken(nodeOpts, tokenLocalAddr, tokenRemoteAddr)
-	_, err = localInfo.bridge.RegisterToken(nodeOpts, nftLocalAddr, nftRemoteAddr)
-	_, err = remoteInfo.bridge.RegisterToken(chainOpts, tokenRemoteAddr, tokenLocalAddr)
-	_, err = remoteInfo.bridge.RegisterToken(chainOpts, nftRemoteAddr, nftLocalAddr)
+	nodeOpts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
+	chainOpts := &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
+	tx, err = localInfo.bridge.RegisterToken(nodeOpts, tokenLocalAddr, tokenRemoteAddr)
 	sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(sim, tx))
+
+	tx, err = localInfo.bridge.RegisterToken(nodeOpts, nftLocalAddr, nftRemoteAddr)
+	sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(sim, tx))
+
+	tx, err = remoteInfo.bridge.RegisterToken(chainOpts, tokenRemoteAddr, tokenLocalAddr)
+	sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(sim, tx))
+
+	tx, err = remoteInfo.bridge.RegisterToken(chainOpts, nftRemoteAddr, nftLocalAddr)
+	sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(sim, tx))
 
 	// Register an NFT to chain account (minting)
 	for i := 0; i < testTxCount; i++ {
-		opts := &bind.TransactOpts{From: nodeAuth.From, Signer: nodeAuth.Signer, GasLimit: testGasLimit}
-		_, err = nftLocal.MintWithTokenURI(opts, nodeAuth.From, big.NewInt(testNFT+int64(i)), "testURI")
-		if err != nil {
-			log.Fatalf("Failed to Register NFT: %v", err)
-		}
-		opts = &bind.TransactOpts{From: chainAuth.From, Signer: chainAuth.Signer, GasLimit: testGasLimit}
-		_, err = nftRemote.MintWithTokenURI(opts, remoteAddr, big.NewInt(testNFT+int64(i)), "testURI")
-		if err != nil {
-			log.Fatalf("Failed to Register NFT: %v", err)
-		}
+		opts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
+		tx, err = nftLocal.MintWithTokenURI(opts, cAcc.From, big.NewInt(testNFT+int64(i)), "testURI")
+		assert.NoError(t, err)
+		sim.Commit()
+		assert.Nil(t, bind.CheckWaitMined(sim, tx))
+
+		opts = &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
+		tx, err = nftRemote.MintWithTokenURI(opts, remoteAddr, big.NewInt(testNFT+int64(i)), "testURI")
+		assert.NoError(t, err)
+		sim.Commit()
+		assert.Nil(t, bind.CheckWaitMined(sim, tx))
 	}
-	sim.Commit()
 
 	// Subscribe events.
 	err = bm.SubscribeEvent(localAddr)
@@ -551,7 +584,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 		t, sim, sc, bm, localInfo, remoteInfo,
 		tokenLocalAddr, tokenRemoteAddr, tokenLocal, tokenRemote,
 		nftLocalAddr, nftRemoteAddr, nftLocal, nftRemote,
-		nodeAuth, chainAuth, aliceAuth, recoveryCh, sync.Mutex{}, testNFT,
+		cAcc, pAcc, aliceAuth, recoveryCh, sync.Mutex{}, testNFT,
 	}
 
 	// Start a event handling loop.
@@ -608,11 +641,12 @@ func requestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 
 	opts := bi.account.GetTransactOpts()
 	opts.Value = big.NewInt(testAmount)
-	_, err := bi.bridge.RequestKLAYTransfer(opts, info.aliceAuth.From, big.NewInt(testAmount))
+	tx, err := bi.bridge.RequestKLAYTransfer(opts, info.aliceAuth.From, big.NewInt(testAmount))
 	if err != nil {
 		log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 	}
 	info.sim.Commit()
+	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
 func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferEvent) {

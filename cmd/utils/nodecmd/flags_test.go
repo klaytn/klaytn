@@ -577,13 +577,6 @@ var flagsWithValues = []struct {
 		errors:      []int{},
 	},
 	{
-		flag:        "--chainaddr",
-		flagType:    FlagTypeArgument,
-		values:      []string{"0xf4316f69d9522667c0674afcd8638288489f0333", "0x777fd033b5e3bcaad6006bc9f481ffed6b83cf5a"},
-		wrongValues: commonThreeErrors,
-		errors:      []int{NonError, NonError, NonError},
-	},
-	{
 		flag:        "--chaintxperiod",
 		flagType:    FlagTypeArgument,
 		values:      []string{"1", "5", "100"},
