@@ -442,6 +442,5 @@ func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interf
 }
 
 func (gov *Governance) GetLatestGovernanceItem(key int) interface{} {
-	ret, _ := gov.currentSet.GetValue(key)
-	return ret
+	return gov.GetGovernanceValue(key)
 }
