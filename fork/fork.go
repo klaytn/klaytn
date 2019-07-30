@@ -17,8 +17,7 @@
 package fork
 
 var (
-	// hardForkConfig is a global variable defined in params package.
-	// This value will not be changed unless it is a test code.
+	// hardForkConfig will not be changed unless it is a test code.
 	// The test code can override this value via `UpdateHardForkConfig`.
 	hardForkConfig = &HardForkConfig{}
 )
