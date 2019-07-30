@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package state provides a uppermost caching layer of the Klaytn state trie.
+Package state provides an uppermost caching layer of the Klaytn state trie.
 This package is used to read/write stateObject from/to StateDB and it also acts as a bridge between
 the objects and the persistent layer.
 
