@@ -62,7 +62,7 @@ var (
 
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error) {
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		ret := api.governance.GetLatestGovernanceItem(params.UnitPrice).(uint64)
+		ret := api.governance.GetGovernanceValue(params.UnitPrice).(uint64)
 		return big.NewInt(0).SetUint64(ret), nil
 	} else {
 		blockNum := num.Int64()
@@ -80,7 +80,7 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error)
 }
 
 func (api *GovernanceKlayAPI) GasPrice() *big.Int {
-	ret := api.governance.GetLatestGovernanceItem(params.UnitPrice).(uint64)
+	ret := api.governance.GetGovernanceValue(params.UnitPrice).(uint64)
 	return big.NewInt(0).SetUint64(ret)
 }
 
@@ -216,7 +216,7 @@ func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
 func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		// If the value hasn't been set in governance, set it with default value
-		if ret := api.governance.GetLatestGovernanceItem(params.ConstTxGasHumanReadable); ret == nil {
+		if ret := api.governance.GetGovernanceValue(params.ConstTxGasHumanReadable); ret == nil {
 			return api.setDefaultTxGasHumanReadable()
 		} else {
 			return ret.(uint64), nil
