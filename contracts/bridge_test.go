@@ -117,7 +117,7 @@ func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Ad
 
 // SendHandleKLAYTransfer send a handleValueTransfer transaction to the bridge contract.
 func SendHandleKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, nonce uint64, blockNum uint64, t *testing.T) *types.Transaction {
-	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum)
+	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, common.Hash{0}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum)
 	if err != nil {
 		t.Fatalf("fail to SendHandleKLAYTransfer %v", err)
 		return nil
@@ -449,8 +449,8 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 	amount := big.NewInt(1000)
 	rNonce := uint64(0)
 	rBlockNumber := uint64(0)
-	tx, err = b.HandleERC20Transfer(bridgeAccount, aliceAcc.From, bobAcc.From, erc20Addr, amount, rNonce, rBlockNumber)
-	assert.NoError(t, err)
+	tx, err = b.HandleERC20Transfer(bridgeAccount, common.Hash{10}, aliceAcc.From, bobAcc.From, erc20Addr, amount, rNonce, rBlockNumber)
+	assert.Equal(t, nil, err)
 	backend.Commit()
 	assert.Nil(t, WaitMined(tx, backend, t))
 

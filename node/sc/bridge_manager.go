@@ -293,20 +293,20 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 
 	switch tokenType {
 	case KLAY:
-		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
 		if err != nil {
 			return err
 		}
 		logger.Trace("Bridge succeeded to HandleKLAYTransfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 
 	case ERC20:
-		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+		handleTx, err = bi.bridge.HandleERC20Transfer(auth, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
 		if err != nil {
 			return err
 		}
 		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 	case ERC721:
-		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
+		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
 		if err != nil {
 			return err
 		}

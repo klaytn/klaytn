@@ -197,9 +197,15 @@ func TestBridgeManager(t *testing.T) {
 					"token", ev.TokenAddress.String(),
 					"requestNonce", ev.RequestNonce)
 
+				done, err := bridge.HandledRequestTx(nil, ev.Raw.TxHash)
+				assert.NoError(t, err)
+				assert.Equal(t, false, done)
+
 				switch ev.TokenType {
 				case KLAY:
-					tx, err := bridge.HandleKLAYTransfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+					tx, err := bridge.HandleKLAYTransfer(
+						&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit},
+						ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
 					}
@@ -207,7 +213,9 @@ func TestBridgeManager(t *testing.T) {
 					sim.Commit() // block
 
 				case ERC20:
-					tx, err := bridge.HandleERC20Transfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+					tx, err := bridge.HandleERC20Transfer(
+						&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit},
+						ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
 					if err != nil {
 						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 					}
@@ -219,7 +227,9 @@ func TestBridgeManager(t *testing.T) {
 					assert.Equal(t, nil, err)
 					fmt.Println("NFT owner before HandleERC721Transfer: ", owner.String())
 
-					tx, err := bridge.HandleERC721Transfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
+					tx, err := bridge.HandleERC721Transfer(
+						&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit},
+						ev.Raw.TxHash, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
 					if err != nil {
 						log.Fatalf("Failed to HandleERC721Transfer: %v", err)
 					}
@@ -228,6 +238,9 @@ func TestBridgeManager(t *testing.T) {
 				}
 
 				wg.Done()
+				done, err = bridge.HandledRequestTx(nil, ev.Raw.TxHash)
+				assert.NoError(t, err)
+				assert.Equal(t, true, done)
 
 			case ev := <-handleValueTransferEventCh:
 				fmt.Println("Handle value transfer event",
@@ -481,8 +494,10 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					assert.Equal(t, KLAYFee, ev.Fee.Int64())
 
 					// HandleKLAYTransfer by Event
-					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
-					assert.NoError(t, err)
+					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+					if err != nil {
+						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
+					}
 					fmt.Println("HandleKLAYTransfer Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 
@@ -491,8 +506,10 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					assert.Equal(t, ERC20Fee, ev.Fee.Int64())
 
 					// HandleERC20Transfer by Event
-					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
-					assert.NoError(t, err)
+					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+					if err != nil {
+						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
+					}
 					fmt.Println("HandleERC20Transfer Transaction by event ", tx.Hash().Hex())
 					sim.Commit() // block
 				}

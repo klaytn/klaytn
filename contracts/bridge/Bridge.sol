@@ -15,8 +15,9 @@ import "../sc_erc721/IERC721BridgeReceiver.sol";
 import "../sc_erc20/IERC20BridgeReceiver.sol";
 import "./BridgeFee.sol";
 import "./BridgeOperator.sol";
+import "./HandledRequests.sol";
 
-contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, BridgeOperator {
+contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, BridgeOperator, HandledRequests {
     uint64 public constant VERSION = 1;
     bool public modeMintBurn = false;
     address public counterpartBridge;
@@ -67,6 +68,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
 
     /**
      * Event to log the handle value transfer from the Bridge.
+     * @param requestTxHash is a transaction hash of request value transfer.
      * @param tokenType is the type of tokens (KLAY/ERC20/ERC721).
      * @param from is an address of the account who requested the value transfer.
      * @param to is an address of the account who will received the value.
@@ -75,6 +77,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
      * @param handleNonce is the order number of the handle value transfer.
      */
     event HandleValueTransfer(
+        bytes32 requestTxHash,
         TokenType tokenType,
         address from,
         address to,
@@ -152,6 +155,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
 
     // handleERC20Transfer sends the token by the request.
     function handleERC20Transfer(
+        bytes32 _requestTxHash,
         address _from,
         address _to,
         address _tokenAddress,
@@ -167,7 +171,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
             return;
         }
 
-        emit HandleValueTransfer(TokenType.ERC20, _from, _to, _tokenAddress, _value, _requestedNonce);
+        emit HandleValueTransfer(_requestTxHash, TokenType.ERC20, _from, _to, _tokenAddress, _value, _requestedNonce);
+        _setHandledRequestTxHash(_requestTxHash);
         lastHandledRequestBlockNumber = _requestedBlockNumber;
 
         updateHandleNonce(_requestedNonce);
@@ -181,6 +186,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
 
     // handleKLAYTransfer sends the KLAY by the request.
     function handleKLAYTransfer(
+        bytes32 _requestTxHash,
         address _from,
         address _to,
         uint256 _value,
@@ -195,7 +201,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
             return;
         }
 
-        emit HandleValueTransfer(TokenType.KLAY, _from, _to, address(0), _value, _requestedNonce);
+        emit HandleValueTransfer(_requestTxHash, TokenType.KLAY, _from, _to, address(0), _value, _requestedNonce);
+        _setHandledRequestTxHash(_requestTxHash);
         lastHandledRequestBlockNumber = _requestedBlockNumber;
 
         updateHandleNonce(_requestedNonce);
@@ -204,6 +211,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
 
     // handleERC721Transfer sends the ERC721 by the request.
     function handleERC721Transfer(
+        bytes32 _requestTxHash,
         address _from,
         address _to,
         address _tokenAddress,
@@ -220,7 +228,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
             return;
         }
 
-        emit HandleValueTransfer(TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, _requestedNonce);
+        emit HandleValueTransfer(_requestTxHash, TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, _requestedNonce);
+        _setHandledRequestTxHash(_requestTxHash);
         lastHandledRequestBlockNumber = _requestedBlockNumber;
 
         updateHandleNonce(_requestedNonce);
