@@ -140,12 +140,13 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     }
 
     function updateNonce(uint64 _requestNonce) internal {
+        uint64 i;
         handledNonces[_requestNonce] = true;
 
         if (_requestNonce > maxRequestedNonce) {
             maxRequestedNonce = _requestNonce;
         }
-        for (uint64 i = sequentialHandledNonce; i <= maxRequestedNonce && handledNonces[i]; i++) { }
+        for (i = sequentialHandledNonce; i <= maxRequestedNonce && handledNonces[i]; i++) { }
         sequentialHandledNonce = i;
     }
 
