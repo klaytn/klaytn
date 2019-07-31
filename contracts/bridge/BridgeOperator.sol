@@ -33,14 +33,16 @@ contract BridgeOperator is Ownable {
 
     // voteValueTransfer votes value transfer transaction with the operator.
     function voteValueTransfer(uint64 _requestNonce, bytes32 _voteKey) internal returns(bool) {
-        if (closedValueTransferVotes[_requestNonce] || votes[_voteKey][msg.sender]) {
+        if (closedValueTransferVotes[_requestNonce]) {
             return false;
         }
 
-        votes[_voteKey][msg.sender] = true;
-        votesCounts[_voteKey]++;
+        if (!votes[_voteKey][msg.sender]) {
+            votes[_voteKey][msg.sender] = true;
+            votesCounts[_voteKey]++;
+        }
 
-        if (votesCounts[_voteKey] == operatorThresholds[uint8(VoteType.ValueTransfer)]) {
+        if (votesCounts[_voteKey] >= operatorThresholds[uint8(VoteType.ValueTransfer)]) {
             closedValueTransferVotes[_requestNonce] = true;
             return true;
         }
