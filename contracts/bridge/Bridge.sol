@@ -145,12 +145,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         if (_requestNonce > maxRequestedNonce) {
             maxRequestedNonce = _requestNonce;
         }
-        // TODO-Klaytn-ServiceChain: optimize this loop if possible.
-        for (uint64 i = sequentialHandledNonce; i <= maxRequestedNonce; i++) {
-            if (!handledNonces[i]) {
-                break;
-            }
-        }
+        for (uint64 i = sequentialHandledNonce; i <= maxRequestedNonce && handledNonces[i]; i++) { }
         sequentialHandledNonce = i;
     }
 
