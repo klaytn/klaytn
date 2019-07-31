@@ -14,5 +14,18 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package console implements Javascript console.
+/*
+Package console implements Javascript console.
+
+Console is a JavaScript interpreted runtime environment. It is a fully fledged
+JavaScript console attached to a running node via an external or in-process RPC
+client.
+
+Source Files
+
+Each file provides following features
+ - bridge.go	: bridge is a collection of Javascript utility methods to bridge the .js runtime environment and the Go RPC connection backing the remote method calls
+ - console.go	: Implements console which support Javascript runtime environment
+ - prompter.go	: Provides UserPrompter which defines the methods needed by the console to promt the user for various types of inputs
+*/
 package console
