@@ -22,7 +22,7 @@ Those types are used for validating blocks to make consensus.
 
 Validator
 
-`Validator` is a node which has 2 features for consensus, proposing and validating.
+`Validator` is a node which has 2 features to make a consensus; proposing and validating.
 
 Propose: A node can propose a block, if it is a proposer. Only validator nodes can be a proposer.
 
