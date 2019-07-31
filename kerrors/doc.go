@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package kerrors contains universally accessible error variables used in Klaytn.
+Package kerrors contains common error variables used in Klaytn.
 
 Error variables used in multiple packages are declared in kerrors package.
 
