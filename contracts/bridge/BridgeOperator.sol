@@ -7,10 +7,10 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract BridgeOperator is Ownable {
     mapping(address => bool) public operators;
-    mapping(bytes32 => mapping(address => bool)) public signedTxs; // <sha3(type, args, nonce), <singer, vote>>
-    mapping(bytes32 => uint64) public signedTxsCounts; // <sha3(type, args, nonce)>
-    mapping(uint64 => bool) public valueTransferTxs; // nonce
-    mapping(uint8 => uint64) public operatorThresholds; // <tx type>
+    mapping(bytes32 => mapping(address => bool)) public signedVotes; // <sha3(type, args, nonce), <singer, vote>>
+    mapping(bytes32 => uint64) public signedVotesCounts; // <sha3(type, args, nonce)>
+    mapping(uint64 => bool) public valueTransferVotes; // nonce
+    mapping(uint8 => uint64) public operatorThresholds; // <vote type>
     uint64 public configurationNonce;
 
     enum VoteType {
@@ -33,15 +33,15 @@ contract BridgeOperator is Ownable {
 
     // voteValueTransfer votes value transfer transaction with the operator.
     function voteValueTransfer(uint64 _requestNonce, bytes32 _voteKey) internal returns(bool) {
-        if (valueTransferTxs[_requestNonce] || signedTxs[_voteKey][msg.sender]) {
+        if (valueTransferVotes[_requestNonce] || signedVotes[_voteKey][msg.sender]) {
             return false;
         }
 
-        signedTxs[_voteKey][msg.sender] = true;
-        signedTxsCounts[_voteKey]++;
+        signedVotes[_voteKey][msg.sender] = true;
+        signedVotesCounts[_voteKey]++;
 
-        if (signedTxsCounts[_voteKey] == operatorThresholds[uint8(VoteType.ValueTransfer)]) {
-            valueTransferTxs[_requestNonce] = true;
+        if (signedVotesCounts[_voteKey] == operatorThresholds[uint8(VoteType.ValueTransfer)]) {
+            valueTransferVotes[_requestNonce] = true;
             return true;
         }
 
@@ -55,14 +55,14 @@ contract BridgeOperator is Ownable {
     {
         require(configurationNonce == _requestNonce, "nonce mismatch");
 
-        if (signedTxs[_voteKey][msg.sender]) {
+        if (signedVotes[_voteKey][msg.sender]) {
             return false;
         }
 
-        signedTxs[_voteKey][msg.sender] = true;
-        signedTxsCounts[_voteKey]++;
+        signedVotes[_voteKey][msg.sender] = true;
+        signedVotesCounts[_voteKey]++;
 
-        if (signedTxsCounts[_voteKey] == operatorThresholds[uint8(VoteType.Configuration)]) {
+        if (signedVotesCounts[_voteKey] == operatorThresholds[uint8(VoteType.Configuration)]) {
             configurationNonce++;
             return true;
         }
