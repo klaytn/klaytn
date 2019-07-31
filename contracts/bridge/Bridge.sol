@@ -25,7 +25,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     uint64 public requestNonce;
     uint64 public lastHandledRequestBlockNumber;
     uint64 public sequentialHandledNonce;
-    uint64 public maxHandledNonce;
+    uint64 public maxRequestedNonce;
     mapping(uint64 => bool) public handledNonces;  // <handled nonce> history
 
     mapping(address => address) public allowedTokens; // <token, counterpart token>
@@ -142,16 +142,16 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     function updateNonce(uint64 _requestNonce) internal {
         handledNonces[_requestNonce] = true;
 
-        if (_requestNonce > maxHandledNonce) {
-            maxHandledNonce = _requestNonce;
+        if (_requestNonce > maxRequestedNonce) {
+            maxRequestedNonce = _requestNonce;
         }
         // TODO-Klaytn-ServiceChain: optimize this loop if possible.
-        for (uint64 i = sequentialHandledNonce; i <= maxHandledNonce; i++) {
+        for (uint64 i = sequentialHandledNonce; i <= maxRequestedNonce; i++) {
             if (!handledNonces[i]) {
                 break;
             }
-            sequentialHandledNonce = i+1;
         }
+        sequentialHandledNonce = i;
     }
 
     // handleERC20Transfer sends the token by the request.
