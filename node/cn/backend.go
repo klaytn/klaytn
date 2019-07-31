@@ -219,10 +219,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	governance.SetBlockchain(cn.blockchain)
 	// Synchronize proposerpolicy & useGiniCoeff
 	if cn.blockchain.Config().Istanbul != nil {
-		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.ChainConfig.Istanbul.ProposerPolicy
+		cn.blockchain.Config().Istanbul.ProposerPolicy = governance.ProposerPolicy()
 	}
 	if cn.blockchain.Config().Governance.Reward != nil {
-		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = governance.ChainConfig.Governance.Reward.UseGiniCoeff
+		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = governance.UseGiniCoeff()
 	}
 
 	if config.SenderTxHashIndexing {
@@ -247,7 +247,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
 	governance.SetTxPool(cn.txPool)
 	// Synchronize unitprice
-	cn.txPool.SetGasPrice(big.NewInt(0).SetUint64(governance.ChainConfig.UnitPrice))
+	cn.txPool.SetGasPrice(big.NewInt(0).SetUint64(governance.UnitPrice()))
 
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType(), config); err != nil {
 		return nil, err

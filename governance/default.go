@@ -42,6 +42,7 @@ var (
 	ErrNotInitialized     = errors.New("Cache not initialized")
 	ErrItemNotFound       = errors.New("Failed to find governance item")
 	ErrItemNil            = errors.New("Governance Item is nil")
+	ErrUnknownKey         = errors.New("Governnace value of the given key not found")
 )
 
 var (
@@ -693,7 +694,7 @@ func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{},
 	if g.ChainConfig.Istanbul == nil {
 		logger.Crit("Failed to read governance. ChainConfig.Istanbul == nil")
 	}
-	blockNum := CalcGovernanceInfoBlock(num, g.ChainConfig.Istanbul.Epoch)
+	blockNum := CalcGovernanceInfoBlock(num, g.Epoch())
 	// Check cache first
 	if gBlockNum, ok := g.searchCache(blockNum); ok {
 		if data, okay := g.getGovernanceCache(gBlockNum); okay {
@@ -701,7 +702,7 @@ func (g *Governance) ReadGovernance(num uint64) (uint64, map[string]interface{},
 		}
 	}
 	if g.db != nil {
-		bn, result, err := g.db.ReadGovernanceAtNumber(num, g.ChainConfig.Istanbul.Epoch)
+		bn, result, err := g.db.ReadGovernanceAtNumber(num, g.Epoch())
 		result = adjustDecodedSet(result)
 		return bn, result, err
 	} else {
@@ -768,9 +769,8 @@ func (gov *Governance) removeDuplicatedVote(vote *GovernanceVote, number uint64)
 
 func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 	newNumber, newGovernanceSet, _ := gov.ReadGovernance(num)
-
 	// Do the change only when the governance actually changed
-	if newGovernanceSet != nil && newNumber != atomic.LoadUint64(&gov.actualGovernanceBlock) {
+	if newGovernanceSet != nil && newNumber > atomic.LoadUint64(&gov.actualGovernanceBlock) {
 		atomic.StoreUint64(&gov.actualGovernanceBlock, newNumber)
 		gov.currentSet.Import(newGovernanceSet)
 		gov.triggerChange(newGovernanceSet)
@@ -779,7 +779,9 @@ func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 
 func (gov *Governance) triggerChange(src map[string]interface{}) {
 	for k, v := range src {
-		GovernanceItems[GovernanceKeyMap[k]].trigger(gov, k, v)
+		if f := GovernanceItems[GovernanceKeyMap[k]].trigger; f != nil {
+			f(gov, k, v)
+		}
 	}
 }
 
@@ -913,8 +915,8 @@ func (gov *Governance) ReadGovernanceState() {
 		return
 	}
 	gov.UnmarshalJSON(b)
-	params.SetStakingUpdateInterval(gov.ChainConfig.Governance.Reward.StakingUpdateInterval)
-	params.SetProposerUpdateInterval(gov.ChainConfig.Governance.Reward.ProposerUpdateInterval)
+	params.SetStakingUpdateInterval(gov.StakingUpdateInterval())
+	params.SetProposerUpdateInterval(gov.ProposerUpdateInterval())
 
 	if txGasHumanReadable, ok := gov.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
 		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
@@ -982,4 +984,64 @@ func AddGovernanceCacheForTest(g *Governance, num uint64, config *params.ChainCo
 
 	data := getGovernanceItemsFromChainConfig(config)
 	g.addGovernanceCache(num, data)
+}
+
+func (gov *Governance) GovernanceMode() string {
+	return gov.GetGovernanceValue(params.GovernanceMode).(string)
+}
+
+func (gov *Governance) GoverningNode() common.Address {
+   return gov.GetGovernanceValue(params.GoverningNode).(common.Address)
+}
+
+func (gov *Governance) UnitPrice() uint64 {
+   return gov.GetGovernanceValue(params.UnitPrice).(uint64)
+}
+
+func (gov *Governance) CommitteeSize() uint64 {
+   return gov.GetGovernanceValue(params.CommitteeSize).(uint64)
+}
+
+func (gov *Governance) Epoch() uint64 {
+   if ret := gov.GetGovernanceValue(params.Epoch); ret == nil {
+       // When a node is initializing, value can be nil
+       return gov.ChainConfig.Istanbul.Epoch
+   }
+   return gov.GetGovernanceValue(params.Epoch).(uint64)
+}
+
+func (gov *Governance) ProposerPolicy() uint64 {
+   return gov.GetGovernanceValue(params.Policy).(uint64)
+}
+
+func (gov *Governance) DeferredTxFee() bool {
+   return gov.GetGovernanceValue(params.DeferredTxFee).(bool)
+}
+
+func (gov *Governance) MinimumStake() string {
+   return gov.GetGovernanceValue(params.MinimumStake).(string)
+}
+
+func (gov *Governance) MintingAmount() string {
+   return gov.GetGovernanceValue(params.MintingAmount).(string)
+}
+
+func (gov *Governance) ProposerUpdateInterval() uint64 {
+   return gov.GetGovernanceValue(params.ProposerRefreshInterval).(uint64)
+}
+
+func (gov *Governance) Ratio() string {
+   return gov.GetGovernanceValue(params.Ratio).(string)
+}
+
+func (gov *Governance) StakingUpdateInterval() uint64 {
+   return gov.GetGovernanceValue(params.StakeUpdateInterval).(uint64)
+}
+
+func (gov *Governance) UseGiniCoeff() bool {
+   return gov.GetGovernanceValue(params.UseGiniCoeff).(bool)
+}
+
+func (gov *Governance) ChainId() uint64 {
+   return gov.ChainConfig.ChainID.Uint64()
 }

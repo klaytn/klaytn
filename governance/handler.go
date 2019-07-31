@@ -44,67 +44,58 @@ var (
 )
 
 var GovernanceItems = map[int]check{
-	params.GovernanceMode:          {stringT, checkGovernanceMode, updateGovernanceConfig},
-	params.GoverningNode:           {addressT, checkAddress, updateGovernanceConfig},
-	params.UnitPrice:               {uint64T, checkUint64andBool, updateGovernanceConfig},
-	params.AddValidator:            {addressT, checkAddress, updateGovernanceConfig},
-	params.RemoveValidator:         {addressT, checkAddress, updateGovernanceConfig},
-	params.MintingAmount:           {stringT, checkBigInt, updateGovernanceConfig},
-	params.Ratio:                   {stringT, checkRatio, updateGovernanceConfig},
-	params.UseGiniCoeff:            {boolT, checkUint64andBool, updateGovernanceConfig},
-	params.DeferredTxFee:           {boolT, checkUint64andBool, updateGovernanceConfig},
-	params.MinimumStake:            {stringT, checkBigInt, updateGovernanceConfig},
-	params.StakeUpdateInterval:     {uint64T, checkUint64andBool, updateGovernanceConfig},
-	params.ProposerRefreshInterval: {uint64T, checkUint64andBool, updateGovernanceConfig},
-	params.Epoch:                   {uint64T, checkUint64andBool, updateGovernanceConfig},
-	params.Policy:                  {uint64T, checkUint64andBool, updateGovernanceConfig},
-	params.CommitteeSize:           {uint64T, checkUint64andBool, updateGovernanceConfig},
-	params.ConstTxGasHumanReadable: {uint64T, checkUint64andBool, updateParams},
+	params.GovernanceMode:          {stringT, checkGovernanceMode, nil},
+	params.GoverningNode:           {addressT, checkAddress, nil},
+	params.UnitPrice:               {uint64T, checkUint64andBool, updateUnitPrice},
+	params.AddValidator:            {addressT, checkAddress, nil},
+	params.RemoveValidator:         {addressT, checkAddress, nil},
+	params.MintingAmount:           {stringT, checkBigInt, nil},
+	params.Ratio:                   {stringT, checkRatio, nil},
+	params.UseGiniCoeff:            {boolT, checkUint64andBool, updateUseGiniCoeff},
+	params.DeferredTxFee:           {boolT, checkUint64andBool, nil},
+	params.MinimumStake:            {stringT, checkBigInt, nil},
+	params.StakeUpdateInterval:     {uint64T, checkUint64andBool, updateStakingUpdateInterval},
+	params.ProposerRefreshInterval: {uint64T, checkUint64andBool, updateProposerUpdateInterval},
+	params.Epoch:                   {uint64T, checkUint64andBool, nil},
+	params.Policy:                  {uint64T, checkUint64andBool, updateProposerPolicy},
+	params.CommitteeSize:           {uint64T, checkUint64andBool, nil},
+	params.ConstTxGasHumanReadable: {uint64T, checkUint64andBool, updateTxGasHumanReadable},
 }
 
-func updateParams(g *Governance, k string, v interface{}) bool {
-	switch GovernanceKeyMap[k] {
-	case params.ConstTxGasHumanReadable:
-		params.TxGasHumanReadable = v.(uint64)
-		logger.Info("TxGasHumanReadable changed", "New value", params.TxGasHumanReadable)
+func updateTxGasHumanReadable(g *Governance, k string, v interface{}) bool {
+	params.TxGasHumanReadable = v.(uint64)
+	logger.Info("TxGasHumanReadable changed", "New value", params.TxGasHumanReadable)
+	return true
+}
+
+func updateUnitPrice(g *Governance, k string, v interface{}) bool {
+	newPrice := v.(uint64)
+	if g.TxPool != nil {
+		g.TxPool.SetGasPrice(big.NewInt(0).SetUint64(newPrice))
 	}
 	return true
 }
 
-func updateGovernanceConfig(g *Governance, k string, v interface{}) bool {
-	switch GovernanceKeyMap[k] {
-	case params.GovernanceMode:
-		g.ChainConfig.Governance.GovernanceMode = v.(string)
-	case params.GoverningNode:
-		g.ChainConfig.Governance.GoverningNode = v.(common.Address)
-	case params.UnitPrice:
-		newPrice := v.(uint64)
-		g.TxPool.SetGasPrice(big.NewInt(0).SetUint64(newPrice))
-		g.ChainConfig.UnitPrice = newPrice
-	case params.MintingAmount:
-		g.ChainConfig.Governance.Reward.MintingAmount, _ = new(big.Int).SetString(v.(string), 10)
-	case params.Ratio:
-		g.ChainConfig.Governance.Reward.Ratio = v.(string)
-	case params.UseGiniCoeff:
-		g.ChainConfig.Governance.Reward.UseGiniCoeff = v.(bool)
-		g.blockChain.Config().Governance.Reward.UseGiniCoeff = g.ChainConfig.Governance.Reward.UseGiniCoeff
-	case params.DeferredTxFee:
-		g.ChainConfig.Governance.Reward.DeferredTxFee = v.(bool)
-	case params.MinimumStake:
-		g.ChainConfig.Governance.Reward.MinimumStake, _ = new(big.Int).SetString(v.(string), 10)
-	case params.StakeUpdateInterval:
-		g.ChainConfig.Governance.Reward.StakingUpdateInterval = v.(uint64)
-		params.SetStakingUpdateInterval(g.ChainConfig.Governance.Reward.StakingUpdateInterval)
-	case params.ProposerRefreshInterval:
-		g.ChainConfig.Governance.Reward.ProposerUpdateInterval = v.(uint64)
-		params.SetProposerUpdateInterval(g.ChainConfig.Governance.Reward.ProposerUpdateInterval)
-	case params.Epoch:
-		g.ChainConfig.Istanbul.Epoch = v.(uint64)
-	case params.Policy:
-		g.ChainConfig.Istanbul.ProposerPolicy = uint64(v.(uint64))
-		g.blockChain.Config().Istanbul.ProposerPolicy = g.ChainConfig.Istanbul.ProposerPolicy
-	case params.CommitteeSize:
-		g.ChainConfig.Istanbul.SubGroupSize = v.(uint64)
+func updateUseGiniCoeff(g *Governance, k string, v interface{}) bool {
+	if g.blockChain != nil {
+		g.blockChain.SetUseGiniCoeff(g.UseGiniCoeff())
+	}
+	return true
+}
+
+func updateStakingUpdateInterval(g *Governance, k string, v interface{}) bool {
+	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
+	return true
+}
+
+func updateProposerUpdateInterval(g *Governance, k string, v interface{}) bool {
+	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
+	return true
+}
+
+func updateProposerPolicy(g *Governance, k string, v interface{}) bool {
+	if g.blockChain != nil {
+		g.blockChain.SetProposerPolicy(g.ProposerPolicy())
 	}
 	return true
 }
@@ -281,8 +272,8 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		number := header.Number.Uint64()
 		// Check vote's validity
 		if gVote, ok := gov.ValidateVote(gVote); ok {
-			governanceMode := GovernanceModeMap[gov.ChainConfig.Governance.GovernanceMode]
-			governingNode := gov.ChainConfig.Governance.GoverningNode
+			governanceMode := GovernanceModeMap[gov.GovernanceMode()]
+			governingNode := gov.GoverningNode()
 
 			// Remove old vote with same validator and key
 			votes, tally = gov.removePreviousVote(valset, votes, tally, proposer, gVote, governanceMode, governingNode)

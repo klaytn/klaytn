@@ -101,8 +101,9 @@ type CacheConfig struct {
 // included in the canonical one where as GetBlockByNumber always represents the
 // canonical chain.
 type BlockChain struct {
-	chainConfig *params.ChainConfig // Chain & network configuration
-	cacheConfig *CacheConfig        // stateDB caching and trie caching/pruning configuration
+	chainConfig   *params.ChainConfig // Chain & network configuration
+	chainConfigMu *sync.RWMutex
+	cacheConfig   *CacheConfig // stateDB caching and trie caching/pruning configuration
 
 	db     database.DBManager // Low level persistent database to store final content in
 	triegc *prque.Prque       // Priority queue mapping block numbers to tries to gc
@@ -177,6 +178,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 	bc := &BlockChain{
 		chainConfig:     chainConfig,
+		chainConfigMu:   new(sync.RWMutex),
 		cacheConfig:     cacheConfig,
 		db:              db,
 		triegc:          prque.New(),
@@ -226,6 +228,34 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	// Take ownership of this particular state
 	go bc.update()
 	return bc, nil
+}
+
+func (bc *BlockChain) UseGiniCoeff() bool {
+	bc.chainConfigMu.RLock()
+	defer bc.chainConfigMu.RUnlock()
+
+	return bc.chainConfig.Governance.Reward.UseGiniCoeff
+}
+
+func (bc *BlockChain) SetUseGiniCoeff(val bool) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+
+	bc.chainConfig.Governance.Reward.UseGiniCoeff = val
+}
+
+func (bc *BlockChain) ProposerPolicy() uint64 {
+	bc.chainConfigMu.RLock()
+	defer bc.chainConfigMu.RUnlock()
+
+	return bc.chainConfig.Istanbul.ProposerPolicy
+}
+
+func (bc *BlockChain) SetProposerPolicy(val uint64) {
+	bc.chainConfigMu.Lock()
+	defer bc.chainConfigMu.Unlock()
+
+	bc.chainConfig.Istanbul.ProposerPolicy = val
 }
 
 func (bc *BlockChain) getProcInterrupt() bool {
@@ -1052,7 +1082,7 @@ func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
 	}
 
 	if bc.chainConfig.Istanbul != nil {
-		return bc.chainConfig.Istanbul.ProposerPolicy == params.WeightedRandom &&
+		return bc.ProposerPolicy() == params.WeightedRandom &&
 			params.IsStakingUpdateInterval(blockNum)
 	}
 	return false
