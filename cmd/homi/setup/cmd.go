@@ -276,7 +276,7 @@ func genValidatorKeystore(privKeys []*ecdsa.PrivateKey) {
 	ks := keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	for i, pk := range privKeys {
-		pwdStr := RandStringRunes(10)
+		pwdStr := RandStringRunes(16)
 		ks.ImportECDSA(pk, pwdStr)
 		WriteFile([]byte(pwdStr), DirKeys, "passwd"+strconv.Itoa(i+1))
 	}
@@ -902,7 +902,7 @@ func writeTestKeys(parentDir string, privKeys []*ecdsa.PrivateKey, keys []string
 		pk := privKeys[i]
 		ksPath := path.Join(parentPath, "keystore"+strconv.Itoa(i+1))
 		ks := keystore.NewKeyStore(ksPath, keystore.StandardScryptN, keystore.StandardScryptP)
-		pwdStr := RandStringRunes(10)
+		pwdStr := RandStringRunes(16)
 		ks.ImportECDSA(pk, pwdStr)
 		WriteFile([]byte(pwdStr), path.Join(parentDir, "keystore"+strconv.Itoa(i+1)), crypto.PubkeyToAddress(pk.PublicKey).String())
 	}

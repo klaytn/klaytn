@@ -104,7 +104,7 @@ func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, comm
 	// If there is no keystore file, this creates a random account and the corresponded password file.
 	// TODO-Klaytn-Servicechain A test-option will be added and this routine will be only executed with it.
 	if len(ks.Accounts()) == 0 {
-		password := setup.RandStringRunes(10)
+		password := setup.RandStringRunes(16)
 		acc, err := ks.NewAccount(password)
 		if err != nil {
 			return nil, common.Address{}, true, err
