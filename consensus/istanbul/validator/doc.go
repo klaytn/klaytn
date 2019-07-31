@@ -15,14 +15,14 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package validator implements the types related to the validators participating in istanbul consensus.
+Package validator implements the types related to the validators participating in consensus.
 
 Types in validator package implement `Validator` and `ValidatorSet` interface in istanbul/validator.go file.
 Those types are used for validating blocks to make consensus.
 
 Validator
 
-`Validator` is a node which has 2 features for consensus, proposing and validating. Klaytn uses weightedValidator for Klaytn consensus.
+`Validator` is a node which has 2 features for consensus, proposing and validating.
 
 Propose: A node can propose a block, if it is a proposer. Only validator nodes can be a proposer.
 
@@ -31,11 +31,16 @@ Validate: A validator node can validate blocks from proposers. A block is valid 
 ValidatorSet
 
 `ValidatorSet` is a group of validators. It is also called as a council.
-ValidatorSet calculates the block proposer of a upcoming block.
+ValidatorSet calculates the block proposer of an upcoming block.
 A validator selected as a block proposer will have a chance to make a block.
-Only a validator in ValidatorSet can propose a block.
-A block made by a validator which is not in the ValidatorSet will not be accepted by other validators.
-Klaytn uses weightedCouncil for Klaytn consensus.
+
+Implementation in Klaytn
+
+Klaytn implements `Validator` and `ValidatorSet` interface for Klaytn consensus.
+Klaytn reflects the ratio of staking amounts to the probability of selecting a proposer.
+This is called weightedRandom policy.
+Detailed information can be found in https://docs.klaytn.com/klaytn/token_economy#klaytn-governance-council-reward.
+Implementation structures are weightedValidator and weightedCouncil in weighted.go file.
 
 Files
 
