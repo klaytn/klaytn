@@ -243,7 +243,7 @@ func (bi *BridgeInfo) UpdateInfo() error {
 	}
 	bi.UpdateRequestNonce(rn)
 
-	hn, err := bi.bridge.SequentialHandledNonce(nil)
+	hn, err := bi.bridge.SequentialHandleNonce(nil)
 	if err != nil {
 		return err
 	}

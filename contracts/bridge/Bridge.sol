@@ -24,8 +24,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
 
     uint64 public requestNonce;
     uint64 public lastHandledRequestBlockNumber;
-    uint64 public sequentialHandledNonce;
-    uint64 public maxRequestedNonce;
+    uint64 public sequentialHandleNonce;
+    uint64 public maxHandledRequestedNonce;
     mapping(uint64 => bool) public handledNonces;  // <handled nonce> history
 
     mapping(address => address) public allowedTokens; // <token, counterpart token>
@@ -139,15 +139,15 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         operatorThresholds[uint8(_voteType)] = _threshold;
     }
 
-    function updateNonce(uint64 _requestNonce) internal {
+    function updateHandleNonce(uint64 _requestedNonce) internal {
         uint64 i;
-        handledNonces[_requestNonce] = true;
+        handledNonces[_requestedNonce] = true;
 
-        if (_requestNonce > maxRequestedNonce) {
-            maxRequestedNonce = _requestNonce;
+        if (_requestedNonce > maxHandledRequestedNonce) {
+            maxHandledRequestedNonce = _requestedNonce;
         }
-        for (i = sequentialHandledNonce; i <= maxRequestedNonce && handledNonces[i]; i++) { }
-        sequentialHandledNonce = i;
+        for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledNonces[i]; i++) { }
+        sequentialHandleNonce = i;
     }
 
     // handleERC20Transfer sends the token by the request.
@@ -156,21 +156,21 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         address _to,
         address _tokenAddress,
         uint256 _value,
-        uint64 _requestNonce,
-        uint64 _requestBlockNumber
+        uint64 _requestedNonce,
+        uint64 _requestedBlockNumber
     )
         public
         onlyOperators
     {
-        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _value, _requestNonce, _requestBlockNumber));
-        if (!voteValueTransfer(_requestNonce, voteKey)) {
+        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _value, _requestedNonce, _requestedBlockNumber));
+        if (!voteValueTransfer(_requestedNonce, voteKey)) {
             return;
         }
 
-        emit HandleValueTransfer(TokenType.ERC20, _from, _to, _tokenAddress, _value, _requestNonce);
-        lastHandledRequestBlockNumber = _requestBlockNumber;
+        emit HandleValueTransfer(TokenType.ERC20, _from, _to, _tokenAddress, _value, _requestedNonce);
+        lastHandledRequestBlockNumber = _requestedBlockNumber;
 
-        updateNonce(_requestNonce);
+        updateHandleNonce(_requestedNonce);
 
         if (modeMintBurn) {
             ERC20Mintable(_tokenAddress).mint(_to, _value);
@@ -184,21 +184,21 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         address _from,
         address _to,
         uint256 _value,
-        uint64 _requestNonce,
-        uint64 _requestBlockNumber
+        uint64 _requestedNonce,
+        uint64 _requestedBlockNumber
     )
     public
     onlyOperators
     {
-        bytes32 voteKey = keccak256(abi.encodePacked(_from, _to, _value, _requestNonce, _requestBlockNumber));
-        if (!voteValueTransfer(_requestNonce, voteKey)) {
+        bytes32 voteKey = keccak256(abi.encodePacked(_from, _to, _value, _requestedNonce, _requestedBlockNumber));
+        if (!voteValueTransfer(_requestedNonce, voteKey)) {
             return;
         }
 
-        emit HandleValueTransfer(TokenType.KLAY, _from, _to, address(0), _value, _requestNonce);
-        lastHandledRequestBlockNumber = _requestBlockNumber;
+        emit HandleValueTransfer(TokenType.KLAY, _from, _to, address(0), _value, _requestedNonce);
+        lastHandledRequestBlockNumber = _requestedBlockNumber;
 
-        updateNonce(_requestNonce);
+        updateHandleNonce(_requestedNonce);
         _to.transfer(_value);
     }
 
@@ -208,22 +208,22 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         address _to,
         address _tokenAddress,
         uint256 _tokenId,
-        uint64 _requestNonce,
-        uint64 _requestBlockNumber,
+        uint64 _requestedNonce,
+        uint64 _requestedBlockNumber,
         string _tokenURI
     )
         public
         onlyOperators
     {
-        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI));
-        if (!voteValueTransfer(_requestNonce, voteKey)) {
+        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _tokenId, _requestedNonce, _requestedBlockNumber, _tokenURI));
+        if (!voteValueTransfer(_requestedNonce, voteKey)) {
             return;
         }
 
-        emit HandleValueTransfer(TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, _requestNonce);
-        lastHandledRequestBlockNumber = _requestBlockNumber;
+        emit HandleValueTransfer(TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, _requestedNonce);
+        lastHandledRequestBlockNumber = _requestedBlockNumber;
 
-        updateNonce(_requestNonce);
+        updateHandleNonce(_requestedNonce);
 
         if (modeMintBurn) {
             ERC721MetadataMintable(_tokenAddress).mintWithTokenURI(_to, _tokenId, _tokenURI);

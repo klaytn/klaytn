@@ -203,7 +203,7 @@ func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *BridgeInfo)
 	}
 	hint.requestNonce = requestNonce
 
-	handleNonce, err := to.bridge.SequentialHandledNonce(nil)
+	handleNonce, err := to.bridge.SequentialHandleNonce(nil)
 	if err != nil {
 		return nil, err
 	}
