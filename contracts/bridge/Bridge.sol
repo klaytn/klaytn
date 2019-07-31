@@ -163,7 +163,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         onlyOperators
     {
         bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _value, _requestedNonce, _requestedBlockNumber));
-        if (!voteValueTransfer(_requestedNonce, voteKey)) {
+        if (!voteValueTransfer(voteKey, _requestedNonce)) {
             return;
         }
 
@@ -191,7 +191,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     onlyOperators
     {
         bytes32 voteKey = keccak256(abi.encodePacked(_from, _to, _value, _requestedNonce, _requestedBlockNumber));
-        if (!voteValueTransfer(_requestedNonce, voteKey)) {
+        if (!voteValueTransfer(voteKey, _requestedNonce)) {
             return;
         }
 
@@ -216,7 +216,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         onlyOperators
     {
         bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _tokenId, _requestedNonce, _requestedBlockNumber, _tokenURI));
-        if (!voteValueTransfer(_requestedNonce, voteKey)) {
+        if (!voteValueTransfer(voteKey, _requestedNonce)) {
             return;
         }
 

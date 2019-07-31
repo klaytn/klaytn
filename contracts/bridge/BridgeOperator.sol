@@ -31,18 +31,29 @@ contract BridgeOperator is Ownable {
         _;
     }
 
-    // voteValueTransfer votes value transfer transaction with the operator.
-    function voteValueTransfer(uint64 _requestNonce, bytes32 _voteKey) internal returns(bool) {
-        if (closedValueTransferVotes[_requestNonce]) {
-            return false;
-        }
-
+    // voteCommon handles common functionality for voting.
+    function voteCommon(VoteType voteType, bytes32 _voteKey, uint64 _requestNonce)
+        internal
+        returns(bool)
+    {
         if (!votes[_voteKey][msg.sender]) {
             votes[_voteKey][msg.sender] = true;
             votesCounts[_voteKey]++;
         }
+        if (votesCounts[_voteKey] >= operatorThresholds[uint8(voteType)]) {
+            return true;
+        }
+        return false;
+    }
 
-        if (votesCounts[_voteKey] >= operatorThresholds[uint8(VoteType.ValueTransfer)]) {
+    // voteValueTransfer votes value transfer transaction with the operator.
+    function voteValueTransfer(bytes32 _voteKey, uint64 _requestNonce)
+        internal
+        returns(bool)
+    {
+        require(!closedValueTransferVotes[_requestNonce], "closed vote");
+
+        if (voteCommon(VoteType.ValueTransfer, _voteKey, _requestNonce)) {
             closedValueTransferVotes[_requestNonce] = true;
             return true;
         }
@@ -57,17 +68,11 @@ contract BridgeOperator is Ownable {
     {
         require(configurationNonce == _requestNonce, "nonce mismatch");
 
-        if (votes[_voteKey][msg.sender]) {
-            return false;
-        }
-
-        votes[_voteKey][msg.sender] = true;
-        votesCounts[_voteKey]++;
-
-        if (votesCounts[_voteKey] == operatorThresholds[uint8(VoteType.Configuration)]) {
+        if (voteCommon(VoteType.Configuration, _voteKey, _requestNonce)) {
             configurationNonce++;
             return true;
         }
+
         return false;
     }
 }
