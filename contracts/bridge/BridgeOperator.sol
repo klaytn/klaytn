@@ -31,10 +31,6 @@ contract BridgeOperator is Ownable {
         _;
     }
 
-    // onlySequentialNonce checks sequential nonce increase.
-    function onlySequentialNonce(VoteType _voteType, uint64 _requestNonce) internal view {
-    }
-
     // voteValueTransfer votes value transfer transaction with the operator.
     function voteValueTransfer(uint64 _requestNonce, bytes32 _voteKey) internal returns(bool) {
         if (valueTransferTxs[_requestNonce] || signedTxs[_voteKey][msg.sender]) {
@@ -57,7 +53,6 @@ contract BridgeOperator is Ownable {
         internal
         returns(bool)
     {
-        onlySequentialNonce(VoteType.Configuration, _requestNonce);
         require(configurationNonce == _requestNonce, "nonce mismatch");
 
         if (signedTxs[_voteKey][msg.sender]) {
