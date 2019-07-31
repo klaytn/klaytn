@@ -6,12 +6,12 @@ import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract BridgeOperator is Ownable {
-    mapping (address => bool) public operators;
-    mapping (bytes32 => mapping (address => bool)) public signedTxs; // <sha3(type, args, nonce), <singer, vote>>
-    mapping (bytes32 => uint64) public signedTxsCounts; // <sha3(type, args, nonce)>
-    mapping (bytes32 => bool) public committedTxs; // <sha3(type, nonce)>
-    mapping (uint64 => uint64) public operatorThresholds; // <tx type>
-    mapping (uint64 => uint64) public configurationNonces; // <tx type, nonce>
+    mapping(address => bool) public operators;
+    mapping(bytes32 => mapping(address => bool)) public signedTxs; // <sha3(type, args, nonce), <singer, vote>>
+    mapping(bytes32 => uint64) public signedTxsCounts; // <sha3(type, args, nonce)>
+    mapping(bytes32 => bool) public committedTxs; // <sha3(type, nonce)>
+    mapping(uint64 => uint64) public operatorThresholds; // <tx type>
+    mapping(uint64 => uint64) public configurationNonces; // <tx type, nonce>
 
     enum VoteType {
         ValueTransfer,

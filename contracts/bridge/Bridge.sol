@@ -26,9 +26,9 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     uint64 public lastHandledRequestBlockNumber;
     uint64 public sequentialHandledNonce;
     uint64 public maxHandledNonce;
-    mapping (uint64 => bool) public handledNonces;  // <handled nonce> history
+    mapping(uint64 => bool) public handledNonces;  // <handled nonce> history
 
-    mapping (address => address) public allowedTokens; // <token, counterpart token>
+    mapping(address => address) public allowedTokens; // <token, counterpart token>
 
     using SafeMath for uint256;
 
