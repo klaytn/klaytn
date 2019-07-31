@@ -563,9 +563,9 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	}
 
 	// Register the owner as a signer
-	_, err = localInfo.bridge.RegisterSigner(&bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}, cAcc.From)
+	_, err = localInfo.bridge.RegisterOperator(&bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}, cAcc.From)
 	assert.NoError(t, err)
-	_, err = remoteInfo.bridge.RegisterSigner(&bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}, pAcc.From)
+	_, err = remoteInfo.bridge.RegisterOperator(&bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}, pAcc.From)
 	assert.NoError(t, err)
 	sim.Commit()
 

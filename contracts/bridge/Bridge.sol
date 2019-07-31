@@ -14,9 +14,9 @@ import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable
 import "../sc_erc721/IERC721BridgeReceiver.sol";
 import "../sc_erc20/IERC20BridgeReceiver.sol";
 import "./BridgeFee.sol";
-import "./BridgeMultiSig.sol";
+import "./BridgeOperator.sol";
 
-contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, BridgeMultiSig {
+contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, BridgeOperator {
     uint64 public constant VERSION = 1;
     bool public modeMintBurn = false;
     address public counterpartBridge;
@@ -115,28 +115,28 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         delete allowedTokens[_token];
     }
 
-    // registerSigner registers new signer.
-    function registerSigner(address _signer)
+    // registerOperator registers a new operator.
+    function registerOperator(address _operator)
         external
         onlyOwner
     {
-        signers[_signer] = true;
+        operators[_operator] = true;
     }
 
-    // deregisterSigner deregisters the signer.
-    function deregisterSigner(address _signer)
+    // deregisterOperator deregisters the operator.
+    function deregisterOperator(address _operator)
         external
         onlyOwner
     {
-        delete signers[_signer];
+        delete operators[_operator];
     }
 
-    // setSignerThreshold sets signer threshold.
-    function setSignerThreshold(TransactionType _txType, uint64 _threshold)
+    // setOperatorThreshold sets the operator threshold.
+    function setOperatorThreshold(VoteType _voteType, uint64 _threshold)
         external
         onlyOwner
     {
-        signerThresholds[uint64(_txType)] = _threshold;
+        operatorThresholds[uint64(_voteType)] = _threshold;
     }
 
     function updateNonce(uint64 _requestNonce) internal {
@@ -161,10 +161,10 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         uint64 _requestBlockNumber
     )
         public
-        onlySigners
+        onlyOperators
     {
-        bytes32 txKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _requestNonce));
-        bytes32 voteKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _from, _to, _value, _requestNonce, _requestBlockNumber));
+        bytes32 txKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _requestNonce));
+        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _value, _requestNonce, _requestBlockNumber));
         if (!voteValueTransfer(txKey, voteKey, msg.sender)) {
             return;
         }
@@ -187,10 +187,10 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         uint64 _requestBlockNumber
     )
         public
-        onlySigners
+        onlyOperators
     {
-        bytes32 txKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _requestNonce));
-        bytes32 voteKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _from, _to, _tokenAddress, _value, _requestNonce, _requestBlockNumber));
+        bytes32 txKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _requestNonce));
+        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _value, _requestNonce, _requestBlockNumber));
         if (!voteValueTransfer(txKey, voteKey, msg.sender)) {
             return;
         }
@@ -219,10 +219,10 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         string _tokenURI
     )
         public
-        onlySigners
+        onlyOperators
     {
-        bytes32 txKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _requestNonce));
-        bytes32 voteKey = keccak256(abi.encodePacked(TransactionType.ValueTransfer, _from, _to, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI));
+        bytes32 txKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _requestNonce));
+        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI));
         if (!voteValueTransfer(txKey, voteKey, msg.sender)) {
             return;
         }
@@ -362,8 +362,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     // setKLAYFee set the fee of KLAY tranfser
     function setKLAYFee(uint256 _fee, uint64 _requestNonce)
         external
-        onlySigners {
-        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
+        onlyOperators {
+        onlySequentialNonce(VoteType.Configuration, _requestNonce);
         bytes32 voteKey = keccak256(abi.encodePacked(this.setKLAYFee.selector, _fee, _requestNonce));
         if (!voteConfiguration(voteKey, msg.sender)) {
             return;
@@ -374,9 +374,9 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     // setERC20Fee set the fee of the token transfer
     function setERC20Fee(address _token, uint256 _fee, uint64 _requestNonce)
         external
-        onlySigners
+        onlyOperators
     {
-        onlySequentialNonce(TransactionType.Configuration, _requestNonce);
+        onlySequentialNonce(VoteType.Configuration, _requestNonce);
         bytes32 voteKey = keccak256(abi.encodePacked(this.setERC20Fee.selector, _token, _fee, _requestNonce));
         if (!voteConfiguration(voteKey, msg.sender)) {
             return;

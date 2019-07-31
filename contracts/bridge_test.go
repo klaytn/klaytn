@@ -426,7 +426,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 	backend.Commit()
 	assert.Nil(t, WaitMined(tx, backend, t))
 
-	tx, err = eb.RegisterSigner(bridgeAccount, bridgeAccount.From)
+	tx, err = eb.RegisterOperator(bridgeAccount, bridgeAccount.From)
 	assert.NoError(t, err)
 	backend.Commit()
 	assert.Nil(t, WaitMined(tx, backend, t))

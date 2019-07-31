@@ -148,7 +148,7 @@ func TestBridgeManager(t *testing.T) {
 	sim.Commit() // block
 
 	// Register the owner as a signer
-	_, err = bridge.RegisterSigner(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
+	_, err = bridge.RegisterOperator(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
 	assert.NoError(t, err)
 	sim.Commit() // block
 
@@ -421,7 +421,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	cn, err := pBridge.ConfigurationNonces(nil, TxTypeConfiguration)
 	assert.NoError(t, err)
-	_, err = pBridge.RegisterSigner(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
+	_, err = pBridge.RegisterOperator(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
 	assert.NoError(t, err)
 	pBridge.SetKLAYFee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee), cn)
 	pBridge.SetERC20Fee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, big.NewInt(ERC20Fee), cn+1)
