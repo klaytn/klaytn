@@ -427,7 +427,7 @@ func gen(ctx *cli.Context) error {
 		numValidators = cnNum
 	}
 	if numValidators > cnNum {
-		return fmt.Errorf("num-validators(%d) cannot be greater than num(%d)", numValidators, cnNum)
+		return fmt.Errorf("validators-num(%d) cannot be greater than num(%d)", numValidators, cnNum)
 	}
 
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(cnNum)
