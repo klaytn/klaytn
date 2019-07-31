@@ -95,7 +95,7 @@ Source Files
 
 Functions and variables related to Node are defined in the files listed below
   - config.go            : Define the Config type for node creation
-  - config_test.go       : Functions for testing the Config
+  - config_test.go       : Functions for testing the Config type
   - defaults.go          : Defines default values used in node package
   - errors.go            : Defines errors used in node package
   - node.go              : Defines a p2p node and functions for the node operation
