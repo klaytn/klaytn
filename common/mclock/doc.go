@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package mclock is a wrapper for a monotonic clock source
+Package mclock is a wrapper for a monotonic clock source.
 
 mclock package provides a Now() function which returns the current time in nanoseconds from a monotonic clock in Duration type.
 The returned time is based on some arbitrary platform-specific point in the
