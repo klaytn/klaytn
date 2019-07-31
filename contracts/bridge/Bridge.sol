@@ -11,27 +11,27 @@ import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
 
-import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
-
 import "../sc_erc721/IERC721BridgeReceiver.sol";
 import "../sc_erc20/IERC20BridgeReceiver.sol";
 import "./BridgeFee.sol";
+import "./BridgeOperator.sol";
 import "./HandledRequests.sol";
 
-contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeFee, HandledRequests {
+contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, BridgeOperator, HandledRequests {
     uint64 public constant VERSION = 1;
     bool public modeMintBurn = false;
     address public counterpartBridge;
     bool public isRunning;
 
-    mapping (address => address) public allowedTokens; // <token, counterpart token>
+    uint64 public requestNonce;
+    uint64 public lastHandledRequestBlockNumber;
+    uint64 public sequentialHandleNonce;
+    uint64 public maxHandledRequestedNonce;
+    mapping(uint64 => bool) public handledNonces;  // <handled nonce> history
+
+    mapping(address => address) public allowedTokens; // <token, counterpart token>
 
     using SafeMath for uint256;
-
-    uint64 public requestNonce;
-    uint64 public handleNonce;
-
-    uint64 public lastHandledRequestBlockNumber;
 
     enum TokenType {
         KLAY,
@@ -87,28 +87,70 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     );
 
     // start allows the value transfer request.
-    function start() external onlyOwner {
-        isRunning = true;
+    function start(bool _status)
+        external
+        onlyOwner
+    {
+        isRunning = _status;
     }
 
     // stop prevent the value transfer request.
-    function stop() external onlyOwner {
-        isRunning = false;
-    }
-
-    // stop prevent the value transfer request.
-    function setCounterPartBridge(address _bridge) external onlyOwner {
+    function setCounterPartBridge(address _bridge)
+        external
+        onlyOwner
+    {
         counterpartBridge = _bridge;
     }
 
     // registerToken can update the allowed token with the counterpart token.
-    function registerToken(address _token, address _cToken) external onlyOwner {
+    function registerToken(address _token, address _cToken)
+        external
+        onlyOwner
+    {
         allowedTokens[_token] = _cToken;
     }
 
     // deregisterToken can remove the token in allowedToken list.
-    function deregisterToken(address _token) external onlyOwner {
+    function deregisterToken(address _token)
+        external
+        onlyOwner
+    {
         delete allowedTokens[_token];
+    }
+
+    // registerOperator registers a new operator.
+    function registerOperator(address _operator)
+        external
+        onlyOwner
+    {
+        operators[_operator] = true;
+    }
+
+    // deregisterOperator deregisters the operator.
+    function deregisterOperator(address _operator)
+        external
+        onlyOwner
+    {
+        delete operators[_operator];
+    }
+
+    // setOperatorThreshold sets the operator threshold.
+    function setOperatorThreshold(VoteType _voteType, uint64 _threshold)
+        external
+        onlyOwner
+    {
+        operatorThresholds[uint8(_voteType)] = _threshold;
+    }
+
+    function updateHandleNonce(uint64 _requestedNonce) internal {
+        uint64 i;
+        handledNonces[_requestedNonce] = true;
+
+        if (_requestedNonce > maxHandledRequestedNonce) {
+            maxHandledRequestedNonce = _requestedNonce;
+        }
+        for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledNonces[i]; i++) { }
+        sequentialHandleNonce = i;
     }
 
     // handleERC20Transfer sends the token by the request.
@@ -118,18 +160,22 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         address _to,
         address _tokenAddress,
         uint256 _value,
-        uint64 _requestNonce,
-        uint64 _requestBlockNumber
+        uint64 _requestedNonce,
+        uint64 _requestedBlockNumber
     )
         public
-        onlyOwner
+        onlyOperators
     {
-        require(handleNonce == _requestNonce, "mismatched handle / request nonce");
+        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _value, _requestedNonce, _requestedBlockNumber));
+        if (!voteValueTransfer(voteKey, _requestedNonce)) {
+            return;
+        }
 
-        emit HandleValueTransfer(_requestTxHash, TokenType.ERC20, _from, _to, _tokenAddress, _value, handleNonce);
+        emit HandleValueTransfer(_requestTxHash, TokenType.ERC20, _from, _to, _tokenAddress, _value, _requestedNonce);
         _setHandledRequestTxHash(_requestTxHash);
-        lastHandledRequestBlockNumber = _requestBlockNumber;
-        handleNonce++;
+        lastHandledRequestBlockNumber = _requestedBlockNumber;
+
+        updateHandleNonce(_requestedNonce);
 
         if (modeMintBurn) {
             ERC20Mintable(_tokenAddress).mint(_to, _value);
@@ -144,19 +190,22 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         address _from,
         address _to,
         uint256 _value,
-        uint64 _requestNonce,
-        uint64 _requestBlockNumber
+        uint64 _requestedNonce,
+        uint64 _requestedBlockNumber
     )
-        public
-        onlyOwner
+    public
+    onlyOperators
     {
-        require(handleNonce == _requestNonce, "mismatched handle / request nonce");
+        bytes32 voteKey = keccak256(abi.encodePacked(_from, _to, _value, _requestedNonce, _requestedBlockNumber));
+        if (!voteValueTransfer(voteKey, _requestedNonce)) {
+            return;
+        }
 
-        emit HandleValueTransfer(_requestTxHash, TokenType.KLAY, _from, _to, address(0), _value, handleNonce);
+        emit HandleValueTransfer(_requestTxHash, TokenType.KLAY, _from, _to, address(0), _value, _requestedNonce);
         _setHandledRequestTxHash(_requestTxHash);
-        lastHandledRequestBlockNumber = _requestBlockNumber;
-        handleNonce++;
+        lastHandledRequestBlockNumber = _requestedBlockNumber;
 
+        updateHandleNonce(_requestedNonce);
         _to.transfer(_value);
     }
 
@@ -167,19 +216,23 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
         address _to,
         address _tokenAddress,
         uint256 _tokenId,
-        uint64 _requestNonce,
-        uint64 _requestBlockNumber,
+        uint64 _requestedNonce,
+        uint64 _requestedBlockNumber,
         string _tokenURI
     )
         public
-        onlyOwner
+        onlyOperators
     {
-        require(handleNonce == _requestNonce, "mismatched handle / request nonce");
+        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _tokenId, _requestedNonce, _requestedBlockNumber, _tokenURI));
+        if (!voteValueTransfer(voteKey, _requestedNonce)) {
+            return;
+        }
 
-        emit HandleValueTransfer(_requestTxHash, TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, handleNonce);
+        emit HandleValueTransfer(_requestTxHash, TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, _requestedNonce);
         _setHandledRequestTxHash(_requestTxHash);
-        lastHandledRequestBlockNumber = _requestBlockNumber;
-        handleNonce++;
+        lastHandledRequestBlockNumber = _requestedBlockNumber;
+
+        updateHandleNonce(_requestedNonce);
 
         if (modeMintBurn) {
             ERC721MetadataMintable(_tokenAddress).mintWithTokenURI(_to, _tokenId, _tokenURI);
@@ -223,7 +276,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     function _requestERC20Transfer(address _tokenAddress, address _from, address _to, uint256 _value, uint256 _feeLimit) internal {
         require(isRunning, "stopped bridge");
         require(_value > 0, "zero msg.value");
-        require(allowedTokens[_tokenAddress] != address(0), "Not a valid token");
+        require(allowedTokens[_tokenAddress] != address(0), "invalid token");
 
         uint256 fee = _payERC20FeeAndRefundChange(_from, _tokenAddress, _feeLimit);
 
@@ -265,7 +318,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     // _requestERC721Transfer requests transfer ERC721 to _to on relative chain.
     function _requestERC721Transfer(address _tokenAddress, address _from, address _to, uint256 _tokenId) internal {
         require(isRunning, "stopped bridge");
-        require(allowedTokens[_tokenAddress] != address(0), "Not a valid token");
+        require(allowedTokens[_tokenAddress] != address(0), "invalid token");
 
         string memory uri = ERC721Metadata(_tokenAddress).tokenURI(_tokenId);
 
@@ -308,17 +361,34 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, Ownable, BridgeF
     function chargeWithoutEvent() external payable {}
 
     // setKLAYFee set the fee of KLAY tranfser
-    function setKLAYFee(uint256 _fee) external onlyOwner {
+    function setKLAYFee(uint256 _fee, uint64 _requestNonce)
+        external
+        onlyOperators
+    {
+        bytes32 voteKey = keccak256(abi.encodePacked(this.setKLAYFee.selector, _fee, _requestNonce));
+        if (!voteConfiguration(voteKey, _requestNonce)) {
+            return;
+        }
         _setKLAYFee(_fee);
     }
 
     // setERC20Fee set the fee of the token transfer
-    function setERC20Fee(address _token, uint256 _fee) external onlyOwner {
+    function setERC20Fee(address _token, uint256 _fee, uint64 _requestNonce)
+        external
+        onlyOperators
+    {
+        bytes32 voteKey = keccak256(abi.encodePacked(this.setERC20Fee.selector, _token, _fee, _requestNonce));
+        if (!voteConfiguration(voteKey, _requestNonce)) {
+            return;
+        }
         _setERC20Fee(_token, _fee);
     }
 
     // setFeeReceiver set fee receiver.
-    function setFeeReceiver(address _feeReceiver) external onlyOwner {
+    function setFeeReceiver(address _feeReceiver)
+        external
+        onlyOwner
+    {
         _setFeeReceiver(_feeReceiver);
     }
 }

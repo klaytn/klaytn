@@ -147,6 +147,11 @@ func TestBridgeManager(t *testing.T) {
 	}
 	sim.Commit() // block
 
+	// Register the owner as a signer
+	_, err = bridge.RegisterOperator(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
+	assert.NoError(t, err)
+	sim.Commit() // block
+
 	// Register tokens on the bridge
 	bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
 	bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
@@ -410,9 +415,9 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	sim.Commit() // block
 
 	{
-		recev, err := pBridge.FeeReceiver(nil)
+		recv, err := pBridge.FeeReceiver(nil)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, receiver.From, recev)
+		assert.Equal(t, receiver.From, recv)
 	}
 
 	{
@@ -427,8 +432,12 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, big.NewInt(0).String(), fee.String())
 	}
 
-	pBridge.SetKLAYFee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee))
-	pBridge.SetERC20Fee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, big.NewInt(ERC20Fee))
+	cn, err := pBridge.ConfigurationNonce(nil)
+	assert.NoError(t, err)
+	_, err = pBridge.RegisterOperator(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
+	assert.NoError(t, err)
+	pBridge.SetKLAYFee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee), cn)
+	pBridge.SetERC20Fee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, big.NewInt(ERC20Fee), cn+1)
 	sim.Commit() // block
 
 	{
@@ -1277,7 +1286,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, nil, true, true)
+	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true)
 
 	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
 

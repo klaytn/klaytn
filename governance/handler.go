@@ -111,9 +111,6 @@ func updateGovernanceConfig(g *Governance, k string, v interface{}) bool {
 
 // AddVote adds a vote to the voteMap
 func (g *Governance) AddVote(key string, val interface{}) bool {
-	g.voteMapLock.Lock()
-	defer g.voteMapLock.Unlock()
-
 	key = g.getKey(key)
 
 	// If the key is forbidden, stop processing it
@@ -124,11 +121,11 @@ func (g *Governance) AddVote(key string, val interface{}) bool {
 	vote := &GovernanceVote{Key: key, Value: val}
 	var ok bool
 	if vote, ok = g.ValidateVote(vote); ok {
-		g.voteMap[key] = VoteStatus{
+		g.voteMap.SetValue(key, VoteStatus{
 			Value:  vote.Value,
 			Casted: false,
 			Num:    0,
-		}
+		})
 		return true
 	}
 	return false
@@ -439,9 +436,4 @@ func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interf
 	} else {
 		return nil, ErrItemNotFound
 	}
-}
-
-func (gov *Governance) GetLatestGovernanceItem(key int) interface{} {
-	ret, _ := gov.currentSet.GetValue(key)
-	return ret
 }
