@@ -17,8 +17,6 @@
 /*
 Package kerrors contains common error variables used in Klaytn.
 
-Error variables used in multiple packages are declared in kerrors package.
-
 Source File
 
 - kerrors.go : Defines errors
