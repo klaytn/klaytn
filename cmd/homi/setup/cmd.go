@@ -25,6 +25,7 @@ import (
 	"github.com/klaytn/klaytn/cmd/homi/docker/compose"
 	"github.com/klaytn/klaytn/cmd/homi/docker/service"
 	"github.com/klaytn/klaytn/cmd/homi/genesis"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
@@ -251,7 +252,7 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address,
 	return genesis.New(options...)
 }
 
-func genCliqueGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, privKeys []*ecdsa.PrivateKey, chainId uint64) *blockchain.Genesis {
+func genCliqueGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, chainId uint64) *blockchain.Genesis {
 	config := genCliqueConfig(ctx)
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
 	chainID := new(big.Int).SetUint64(chainId)
@@ -267,7 +268,10 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, p
 		genesis.ChainID(chainID),
 		genesis.Clique(config),
 	)
+	return genesisJson
+}
 
+func genValidatorKeystore(privKeys []*ecdsa.PrivateKey) {
 	path := path.Join(outputPath, DirKeys)
 	ks := keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
 
@@ -276,7 +280,6 @@ func genCliqueGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, p
 		ks.ImportECDSA(pk, pwdStr)
 		WriteFile([]byte(pwdStr), DirKeys, "passwd"+strconv.Itoa(i+1))
 	}
-	return genesisJson
 }
 
 func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
@@ -405,9 +408,9 @@ func gen(ctx *cli.Context) error {
 	genType := findGenType(ctx)
 
 	cliqueFlag := ctx.Bool(cliqueFlag.Name)
-	num := ctx.Int(numOfCNsFlag.Name)
+	cnNum := ctx.Int(numOfCNsFlag.Name)
 	numValidators := ctx.Int(numOfValidatorsFlag.Name)
-	proxyNum := ctx.Int(numOfPNsFlag.Name)
+	pnNum := ctx.Int(numOfPNsFlag.Name)
 	enNum := ctx.Int(numOfENsFlag.Name)
 	scnNum := ctx.Int(numOfSCNsFlag.Name)
 	spnNum := ctx.Int(numOfSPNsFlag.Name)
@@ -421,14 +424,14 @@ func gen(ctx *cli.Context) error {
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
 
 	if numValidators == 0 {
-		numValidators = num
+		numValidators = cnNum
 	}
-	if numValidators > num {
-		return fmt.Errorf("num-validators(%d) cannot be greater than num(%d)", numValidators, num)
+	if numValidators > cnNum {
+		return fmt.Errorf("num-validators(%d) cannot be greater than num(%d)", numValidators, cnNum)
 	}
 
-	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
-	_, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
+	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(cnNum)
+	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
 
 	var genesisJsonBytes []byte
 
@@ -444,16 +447,17 @@ func gen(ctx *cli.Context) error {
 	} else if baobab {
 		genesisJsonBytes, _ = json.MarshalIndent(genBaobabGenesis(validatorNodeAddrs, testAddrs), "", "    ")
 	} else if cliqueFlag {
-		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, privKeys, chainid), "", "    ")
+		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid), "", "    ")
 	} else {
 		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid), "", "    ")
 	}
+	genValidatorKeystore(privKeys)
 	lastIssuedPortNum = uint16(ctx.Int(p2pPortFlag.Name))
 
 	switch genType {
 	case TypeDocker:
-		validators := makeValidators(num, false, nodeAddrs, nodeKeys, privKeys)
-		pnValidators, proxyNodeKeys := makeProxys(proxyNum, false)
+		validators := makeValidators(cnNum, false, nodeAddrs, nodeKeys, privKeys)
+		pnValidators, proxyNodeKeys := makeProxys(pnNum, false)
 		nodeInfos := filterNodeInfo(validators)
 		staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
 		address := filterAddressesString(validators)
@@ -489,7 +493,7 @@ func gen(ctx *cli.Context) error {
 		}
 		compose := compose.New(
 			"172.16.239",
-			num,
+			cnNum,
 			"bb98a0b6442386d0cdf8a31b267892c1",
 			address,
 			nodeKeys,
@@ -526,21 +530,21 @@ func gen(ctx *cli.Context) error {
 		fmt.Println("Created : ", path.Join(outputPath, "prometheus.yml"))
 		downLoadGrafanaJson()
 	case TypeLocal:
-		writeNodeFiles(true, num, proxyNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
-		writeTestKeys(DirTestKeys, testKeys)
+		writeNodeFiles(true, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeTestKeys(DirTestKeys, testPrivKeys, testKeys)
 		downLoadGrafanaJson()
 	case TypeRemote:
-		writeNodeFiles(false, num, proxyNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
-		writeTestKeys(DirTestKeys, testKeys)
+		writeNodeFiles(false, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeTestKeys(DirTestKeys, testPrivKeys, testKeys)
 		downLoadGrafanaJson()
 	case TypeDeploy:
-		writeCNInfoKey(num, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeCNInfoKey(cnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
 		writeKlayConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
 			ctx.String(dataDirFlag.Name), ctx.String(logDirFlag.Name), "CN")
 		writeKlayConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
 			ctx.String(dataDirFlag.Name), ctx.String(logDirFlag.Name), "PN")
 		writePNInfoKey(ctx.Int(numOfPNsFlag.Name))
-		writePrometheusConfig(num, ctx.Int(numOfPNsFlag.Name))
+		writePrometheusConfig(cnNum, ctx.Int(numOfPNsFlag.Name))
 	}
 
 	return nil
@@ -886,7 +890,7 @@ func writeValidatorsAndNodesToFile(validators []*ValidatorInfo, parentDir string
 	}
 }
 
-func writeTestKeys(parentDir string, keys []string) {
+func writeTestKeys(parentDir string, privKeys []*ecdsa.PrivateKey, keys []string) {
 	parentPath := path.Join(outputPath, parentDir)
 	os.MkdirAll(parentPath, os.ModePerm)
 
@@ -894,6 +898,13 @@ func writeTestKeys(parentDir string, keys []string) {
 		testKeyFilePath := path.Join(parentPath, "testkey"+strconv.Itoa(i+1))
 		ioutil.WriteFile(testKeyFilePath, []byte(key), os.ModePerm)
 		fmt.Println("Created : ", testKeyFilePath)
+
+		pk := privKeys[i]
+		ksPath := path.Join(parentPath, "keystore"+strconv.Itoa(i+1))
+		ks := keystore.NewKeyStore(ksPath, keystore.StandardScryptN, keystore.StandardScryptP)
+		pwdStr := RandStringRunes(10)
+		ks.ImportECDSA(pk, pwdStr)
+		WriteFile([]byte(pwdStr), path.Join(parentDir, "keystore"+strconv.Itoa(i+1)), crypto.PubkeyToAddress(pk.PublicKey).String())
 	}
 }
 
