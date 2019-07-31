@@ -17,8 +17,8 @@
 /*
 Package validator implements the types related to the validators participating in consensus.
 
-Types in validator package implement `Validator` and `ValidatorSet` interface in istanbul/validator.go file.
-Those types are used for validating blocks to make consensus.
+`Validator` and `ValidatorSet` interfaces are used to validate blocks and make a consensus.
+Implementations of these interfaces are different, depending on proposer-choosing policy.
 
 Validator
 
