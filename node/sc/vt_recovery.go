@@ -161,12 +161,12 @@ func (vtr *valueTransferRecovery) updateRecoveryHint() error {
 	}
 
 	var err error
-	vtr.service2mainHint, err = updateRecoveryHintFromTo(vtr.service2mainHint, vtr.scBridgeInfo.bridge, vtr.mcBridgeInfo.bridge)
+	vtr.service2mainHint, err = updateRecoveryHintFromTo(vtr.service2mainHint, vtr.scBridgeInfo, vtr.mcBridgeInfo)
 	if err != nil {
 		return err
 	}
 
-	vtr.main2serviceHint, err = updateRecoveryHintFromTo(vtr.main2serviceHint, vtr.mcBridgeInfo.bridge, vtr.scBridgeInfo.bridge)
+	vtr.main2serviceHint, err = updateRecoveryHintFromTo(vtr.main2serviceHint, vtr.mcBridgeInfo, vtr.scBridgeInfo)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (vtr *valueTransferRecovery) updateRecoveryHint() error {
 }
 
 // updateRecoveryHint updates a hint for the one-way value transfers.
-func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *bridge.Bridge) (*valueTransferHint, error) {
+func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *BridgeInfo) (*valueTransferHint, error) {
 	var err error
 	var hint valueTransferHint
 
@@ -192,18 +192,18 @@ func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *bridge.Brid
 		logger.Trace("recovery prevHint", "rnonce", prevHint.requestNonce, "hnonce", prevHint.handleNonce, "phnonce", prevHint.prevHandleNonce, "cand", prevHint.candidate)
 	}
 
-	hint.blockNumber, err = to.LastHandledRequestBlockNumber(nil)
+	hint.blockNumber, err = to.bridge.LastHandledRequestBlockNumber(nil)
 	if err != nil {
 		return nil, err
 	}
 
-	requestNonce, err := from.RequestNonce(nil)
+	requestNonce, err := from.bridge.RequestNonce(nil)
 	if err != nil {
 		return nil, err
 	}
 	hint.requestNonce = requestNonce
 
-	handleNonce, err := to.HandleNonce(nil)
+	handleNonce, err := to.bridge.SequentialHandleNonce(nil)
 	if err != nil {
 		return nil, err
 	}

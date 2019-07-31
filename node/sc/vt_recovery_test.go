@@ -133,11 +133,10 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	// 4. Check pending events.
 	t.Log("check pending tx", "len", len(vtr.serviceChainEvents))
 	var count = 0
-	for index, ev := range vtr.serviceChainEvents {
+	for _, ev := range vtr.serviceChainEvents {
 		assert.Equal(t, info.nodeAuth.From, ev.From)
 		assert.Equal(t, info.aliceAuth.From, ev.To)
 		assert.Equal(t, big.NewInt(testAmount), ev.ValueOrTokenId)
-		assert.Equal(t, uint64(index+testNonceOffset), ev.RequestNonce)
 		assert.Condition(t, func() bool {
 			return uint64(testBlockOffset) <= ev.Raw.BlockNumber
 		})
@@ -563,6 +562,13 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 		assert.Nil(t, bind.CheckWaitMined(sim, tx))
 	}
 
+	// Register the owner as a signer
+	_, err = localInfo.bridge.RegisterOperator(&bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}, cAcc.From)
+	assert.NoError(t, err)
+	_, err = remoteInfo.bridge.RegisterOperator(&bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}, pAcc.From)
+	assert.NoError(t, err)
+	sim.Commit()
+
 	// Subscribe events.
 	err = bm.SubscribeEvent(localAddr)
 	if err != nil {
@@ -597,10 +603,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 			case ev := <-recoveryCh:
 				isRecovery = ev
 			case ev := <-requestVTCh:
-				// Intentionally lost a single handle value transfer.
-				// Since the increase of monotony in nonce is checked in the contract,
-				// all subsequent handle transfer will be failed.
-				if ev.RequestNonce == (testTxCount - testPendingCount) {
+				if ev.RequestNonce >= (testTxCount - testPendingCount) {
 					t.Log("missing handle value transfer", "nonce", ev.RequestNonce)
 				} else {
 					switch ev.TokenType {

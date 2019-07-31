@@ -212,6 +212,8 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 			continue
 		}
 
+		logger.Trace("handle value transfer event", "evt", ev)
+
 		if ev.RequestNonce > bi.handleNonce+maxPendingNonceDiff {
 			logger.Trace("nonce diff is too large", "limitation", maxPendingNonceDiff)
 			return errors.New("nonce diff is too large")
@@ -241,7 +243,7 @@ func (bi *BridgeInfo) UpdateInfo() error {
 	}
 	bi.UpdateRequestNonce(rn)
 
-	hn, err := bi.bridge.HandleNonce(nil)
+	hn, err := bi.bridge.SequentialHandleNonce(nil)
 	if err != nil {
 		return err
 	}
@@ -919,7 +921,12 @@ func (bm *BridgeManager) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *
 	auth.Lock()
 	defer auth.UnLock()
 
-	tx, err := bi.bridge.SetERC20Fee(auth.GetTransactOpts(), tokenAddr, fee)
+	rn, err := bi.bridge.ConfigurationNonce(nil)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	tx, err := bi.bridge.SetERC20Fee(auth.GetTransactOpts(), tokenAddr, fee, rn)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -940,7 +947,12 @@ func (bm *BridgeManager) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (co
 	auth.Lock()
 	defer auth.UnLock()
 
-	tx, err := bi.bridge.SetKLAYFee(auth.GetTransactOpts(), fee)
+	rn, err := bi.bridge.ConfigurationNonce(nil)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	tx, err := bi.bridge.SetKLAYFee(auth.GetTransactOpts(), fee, rn)
 	if err != nil {
 		return common.Hash{}, err
 	}
