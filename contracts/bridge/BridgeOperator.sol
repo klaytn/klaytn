@@ -36,7 +36,7 @@ contract BridgeOperator is Ownable {
         require(configurationNonces[uint64(_voteType)] == _requestNonce, "nonce mismatch");
     }
 
-    // voteValueTransfer votes value transfer transaction with the signer.
+    // voteValueTransfer votes value transfer transaction with the operator.
     function voteValueTransfer(bytes32 _txKey, bytes32 _voteKey, address _operator) internal returns(bool) {
         if (committedTxs[_txKey] || signedTxs[_voteKey][_operator]) {
             return false;
@@ -53,7 +53,7 @@ contract BridgeOperator is Ownable {
         return false;
     }
 
-    // voteGovernanceRealtime votes frequent contract governance transaction with the signer.
+    // voteConfiguration votes contract configuration transaction with the operator.
     function voteConfiguration(bytes32 _voteKey, address _operator)
     internal
     returns(bool)
