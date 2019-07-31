@@ -926,7 +926,7 @@ func (bm *BridgeManager) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *
 	auth.Lock()
 	defer auth.UnLock()
 
-	rn, err := bi.bridge.ConfigurationNonces(nil, TxTypeConfiguration)
+	rn, err := bi.bridge.ConfigurationNonce(nil)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -952,7 +952,7 @@ func (bm *BridgeManager) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (co
 	auth.Lock()
 	defer auth.UnLock()
 
-	rn, err := bi.bridge.ConfigurationNonces(nil, TxTypeConfiguration)
+	rn, err := bi.bridge.ConfigurationNonce(nil)
 	if err != nil {
 		return common.Hash{}, err
 	}

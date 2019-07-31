@@ -419,7 +419,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, big.NewInt(0).String(), fee.String())
 	}
 
-	cn, err := pBridge.ConfigurationNonces(nil, TxTypeConfiguration)
+	cn, err := pBridge.ConfigurationNonce(nil)
 	assert.NoError(t, err)
 	_, err = pBridge.RegisterOperator(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
 	assert.NoError(t, err)

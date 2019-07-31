@@ -11,7 +11,7 @@ contract BridgeOperator is Ownable {
     mapping(bytes32 => uint64) public signedTxsCounts; // <sha3(type, args, nonce)>
     mapping(uint64 => bool) public valueTransferTxs; // nonce
     mapping(uint8 => uint64) public operatorThresholds; // <tx type>
-    mapping(uint8 => uint64) public configurationNonces; // <tx type, nonce>
+    uint64 public configurationNonce;
 
     enum VoteType {
         ValueTransfer,
@@ -33,7 +33,6 @@ contract BridgeOperator is Ownable {
 
     // onlySequentialNonce checks sequential nonce increase.
     function onlySequentialNonce(VoteType _voteType, uint64 _requestNonce) internal view {
-        require(configurationNonces[uint8(_voteType)] == _requestNonce, "nonce mismatch");
     }
 
     // voteValueTransfer votes value transfer transaction with the operator.
@@ -59,6 +58,7 @@ contract BridgeOperator is Ownable {
         returns(bool)
     {
         onlySequentialNonce(VoteType.Configuration, _requestNonce);
+        require(configurationNonce == _requestNonce, "nonce mismatch");
 
         if (signedTxs[_voteKey][msg.sender]) {
             return false;
@@ -68,7 +68,7 @@ contract BridgeOperator is Ownable {
         signedTxsCounts[_voteKey]++;
 
         if (signedTxsCounts[_voteKey] == operatorThresholds[uint8(VoteType.Configuration)]) {
-            configurationNonces[uint8(VoteType.Configuration)]++;
+            configurationNonce++;
             return true;
         }
         return false;
