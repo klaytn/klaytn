@@ -20,7 +20,7 @@ contract BridgeOperator is Ownable {
     }
 
     constructor() internal {
-        for (uint64 i = 0; i < uint64(VoteType.Max); i++) {
+        for (uint8 i = 0; i < uint8(VoteType.Max); i++) {
             operatorThresholds[uint8(i)] = 1;
         }
     }

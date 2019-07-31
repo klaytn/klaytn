@@ -154,29 +154,6 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         }
     }
 
-    // handleKLAYTransfer sends the KLAY by the request.
-    function handleKLAYTransfer(
-        address _from,
-        address _to,
-        uint256 _value,
-        uint64 _requestNonce,
-        uint64 _requestBlockNumber
-    )
-        public
-        onlyOperators
-    {
-        bytes32 voteKey = keccak256(abi.encodePacked(_from, _to, _value, _requestNonce, _requestBlockNumber));
-        if (!voteValueTransfer(_requestNonce, voteKey)) {
-            return;
-        }
-
-        emit HandleValueTransfer(TokenType.KLAY, _from, _to, address(0), _value, _requestNonce);
-        lastHandledRequestBlockNumber = _requestBlockNumber;
-
-        updateNonce(_requestNonce);
-        _to.transfer(_value);
-    }
-
     // handleERC20Transfer sends the token by the request.
     function handleERC20Transfer(
         address _from,
@@ -204,6 +181,29 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         } else {
             IERC20(_tokenAddress).transfer(_to, _value);
         }
+    }
+
+    // handleKLAYTransfer sends the KLAY by the request.
+    function handleKLAYTransfer(
+        address _from,
+        address _to,
+        uint256 _value,
+        uint64 _requestNonce,
+        uint64 _requestBlockNumber
+    )
+    public
+    onlyOperators
+    {
+        bytes32 voteKey = keccak256(abi.encodePacked(_from, _to, _value, _requestNonce, _requestBlockNumber));
+        if (!voteValueTransfer(_requestNonce, voteKey)) {
+            return;
+        }
+
+        emit HandleValueTransfer(TokenType.KLAY, _from, _to, address(0), _value, _requestNonce);
+        lastHandledRequestBlockNumber = _requestBlockNumber;
+
+        updateNonce(_requestNonce);
+        _to.transfer(_value);
     }
 
     // handleERC721Transfer sends the ERC721 by the request.

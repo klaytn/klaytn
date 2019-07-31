@@ -46,11 +46,6 @@ const (
 	ERC721
 )
 
-const (
-	TxTypeValueTransfer = iota
-	TxTypeConfiguration
-)
-
 var (
 	ErrInvalidTokenPair     = errors.New("invalid token pair")
 	ErrNoBridgeInfo         = errors.New("bridge information does not exist")
