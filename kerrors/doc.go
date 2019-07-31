@@ -17,10 +17,10 @@
 /*
 Package kerrors contains universally accessible error variables used in Klaytn.
 
-Mostly, error variables in kerrors package are used in multiple packages.
+Error variables used in multiple packages are declared in kerrors package.
 
 Source File
 
-- kerrors.go : Defines error variables
+- kerrors.go : Defines errors
 */
 package kerrors
