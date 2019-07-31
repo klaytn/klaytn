@@ -140,6 +140,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     }
 
     function updateNonce(uint64 _requestNonce) internal {
+        handledNonces[_requestNonce] = true;
+
         if (_requestNonce > maxHandledNonce) {
             maxHandledNonce = _requestNonce;
         }
@@ -171,7 +173,6 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
 
         emit HandleValueTransfer(TokenType.KLAY, _from, _to, address(0), _value, _requestNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
-        handledNonces[_requestNonce] = true;
 
         updateNonce(_requestNonce);
         _to.transfer(_value);
@@ -197,7 +198,6 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
 
         emit HandleValueTransfer(TokenType.ERC20, _from, _to, _tokenAddress, _value, _requestNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
-        handledNonces[_requestNonce] = true;
 
         updateNonce(_requestNonce);
 
@@ -229,7 +229,6 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
 
         emit HandleValueTransfer(TokenType.ERC721, _from, _to, _tokenAddress, _tokenId, _requestNonce);
         lastHandledRequestBlockNumber = _requestBlockNumber;
-        handledNonces[_requestNonce] = true;
 
         updateNonce(_requestNonce);
 
