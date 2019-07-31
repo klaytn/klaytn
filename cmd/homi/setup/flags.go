@@ -53,14 +53,14 @@ var (
 	}
 
 	numOfCNsFlag = cli.IntFlag{
-		Name:  "num",
+		Name:  "cn-num",
 		Usage: "Number of consensus nodes",
 		Value: 4,
 	}
 
 	numOfValidatorsFlag = cli.IntFlag{
 		Name:  "num-validators",
-		Usage: "Number of validators. If not set, it will be set the number of option num",
+		Usage: "Number of validators. If not set, it will be set the number of option cn-num",
 		Value: 0,
 	}
 
