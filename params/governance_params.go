@@ -54,7 +54,7 @@ const (
 	// Block reward will be separated by three pieces and distributed
 	RewardSliceCount = 3
 	// GovernanceConfig is stored in a cache which has below capacity
-	GovernanceCacheLimit    = 3
+	GovernanceCacheLimit    = 512
 	GovernanceIdxCacheLimit = 1000
 	// The prefix for governance cache
 	GovernanceCachePrefix = "governance"
