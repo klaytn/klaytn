@@ -136,7 +136,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         external
         onlyOwner
     {
-        operatorThresholds[uint64(_voteType)] = _threshold;
+        operatorThresholds[uint8(_voteType)] = _threshold;
     }
 
     function updateNonce(uint64 _requestNonce) internal {
@@ -165,9 +165,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         public
         onlyOperators
     {
-        bytes32 txKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _requestNonce));
-        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _value, _requestNonce, _requestBlockNumber));
-        if (!voteValueTransfer(txKey, voteKey, msg.sender)) {
+        bytes32 voteKey = keccak256(abi.encodePacked(_from, _to, _value, _requestNonce, _requestBlockNumber));
+        if (!voteValueTransfer(_requestNonce, voteKey)) {
             return;
         }
 
@@ -190,9 +189,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         public
         onlyOperators
     {
-        bytes32 txKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _requestNonce));
         bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _value, _requestNonce, _requestBlockNumber));
-        if (!voteValueTransfer(txKey, voteKey, msg.sender)) {
+        if (!voteValueTransfer(_requestNonce, voteKey)) {
             return;
         }
 
@@ -221,9 +219,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         public
         onlyOperators
     {
-        bytes32 txKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _requestNonce));
         bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI));
-        if (!voteValueTransfer(txKey, voteKey, msg.sender)) {
+        if (!voteValueTransfer(_requestNonce, voteKey)) {
             return;
         }
 
@@ -361,10 +358,10 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     // setKLAYFee set the fee of KLAY tranfser
     function setKLAYFee(uint256 _fee, uint64 _requestNonce)
         external
-        onlyOperators {
-        onlySequentialNonce(VoteType.Configuration, _requestNonce);
+        onlyOperators
+    {
         bytes32 voteKey = keccak256(abi.encodePacked(this.setKLAYFee.selector, _fee, _requestNonce));
-        if (!voteConfiguration(voteKey, msg.sender)) {
+        if (!voteConfiguration(voteKey, _requestNonce)) {
             return;
         }
         _setKLAYFee(_fee);
@@ -375,9 +372,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         external
         onlyOperators
     {
-        onlySequentialNonce(VoteType.Configuration, _requestNonce);
         bytes32 voteKey = keccak256(abi.encodePacked(this.setERC20Fee.selector, _token, _fee, _requestNonce));
-        if (!voteConfiguration(voteKey, msg.sender)) {
+        if (!voteConfiguration(voteKey, _requestNonce)) {
             return;
         }
         _setERC20Fee(_token, _fee);
