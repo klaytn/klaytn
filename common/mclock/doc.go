@@ -22,7 +22,7 @@
 Package mclock is a wrapper for a monotonic clock source
 
 mclock package provides a Now() function which returns the current time in nanoseconds from a monotonic clock in Duration type.
-The time returned is based on some arbitrary platform-specific point in the
+The returned time is based on some arbitrary platform-specific point in the
 past.  The time returned is guaranteed to increase monotonically at a
 constant rate, unlike time.Now() from the Go standard library, which may
 slow down, speed up, jump forward or backward, due to NTP activity or leap
