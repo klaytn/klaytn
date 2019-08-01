@@ -32,7 +32,7 @@ import (
 type check struct {
 	t         reflect.Type
 	validator func(k string, v interface{}) bool
-	trigger   func(g *Governance, k string, v interface{}) bool
+	trigger   func(g *Governance, k string, v interface{})
 }
 
 var (
@@ -62,42 +62,36 @@ var GovernanceItems = map[int]check{
 	params.ConstTxGasHumanReadable: {uint64T, checkUint64andBool, updateTxGasHumanReadable},
 }
 
-func updateTxGasHumanReadable(g *Governance, k string, v interface{}) bool {
+func updateTxGasHumanReadable(g *Governance, k string, v interface{}) {
 	params.TxGasHumanReadable = v.(uint64)
 	logger.Info("TxGasHumanReadable changed", "New value", params.TxGasHumanReadable)
-	return true
 }
 
-func updateUnitPrice(g *Governance, k string, v interface{}) bool {
+func updateUnitPrice(g *Governance, k string, v interface{}) {
 	newPrice := v.(uint64)
 	if g.TxPool != nil {
 		g.TxPool.SetGasPrice(big.NewInt(0).SetUint64(newPrice))
 	}
-	return true
 }
 
-func updateUseGiniCoeff(g *Governance, k string, v interface{}) bool {
+func updateUseGiniCoeff(g *Governance, k string, v interface{}) {
 	if g.blockChain != nil {
 		g.blockChain.SetUseGiniCoeff(g.UseGiniCoeff())
 	}
-	return true
 }
 
-func updateStakingUpdateInterval(g *Governance, k string, v interface{}) bool {
+func updateStakingUpdateInterval(g *Governance, k string, v interface{}) {
 	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
-	return true
 }
 
-func updateProposerUpdateInterval(g *Governance, k string, v interface{}) bool {
+func updateProposerUpdateInterval(g *Governance, k string, v interface{}) {
 	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
-	return true
 }
 
-func updateProposerPolicy(g *Governance, k string, v interface{}) bool {
+func updateProposerPolicy(g *Governance, k string, v interface{}) {
 	if g.blockChain != nil {
 		g.blockChain.SetProposerPolicy(g.ProposerPolicy())
 	}
-	return true
 }
 
 // AddVote adds a vote to the voteMap
