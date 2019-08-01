@@ -23,6 +23,8 @@ contract BridgeOperator is Ownable {
         for (uint8 i = 0; i < uint8(VoteType.Max); i++) {
             operatorThresholds[uint8(i)] = 1;
         }
+
+        operators[msg.sender] = true;
     }
 
     modifier onlyOperators()
@@ -32,7 +34,7 @@ contract BridgeOperator is Ownable {
     }
 
     // voteCommon handles common functionality for voting.
-    function voteCommon(VoteType voteType, bytes32 _voteKey, uint64 _requestNonce)
+    function voteCommon(VoteType voteType, bytes32 _voteKey)
         internal
         returns(bool)
     {
@@ -53,7 +55,7 @@ contract BridgeOperator is Ownable {
     {
         require(!closedValueTransferVotes[_requestNonce], "closed vote");
 
-        if (voteCommon(VoteType.ValueTransfer, _voteKey, _requestNonce)) {
+        if (voteCommon(VoteType.ValueTransfer, _voteKey)) {
             closedValueTransferVotes[_requestNonce] = true;
             return true;
         }
@@ -68,11 +70,35 @@ contract BridgeOperator is Ownable {
     {
         require(configurationNonce == _requestNonce, "nonce mismatch");
 
-        if (voteCommon(VoteType.Configuration, _voteKey, _requestNonce)) {
+        if (voteCommon(VoteType.Configuration, _voteKey)) {
             configurationNonce++;
             return true;
         }
 
         return false;
+    }
+
+    // registerOperator registers a new operator.
+    function registerOperator(address _operator)
+    external
+    onlyOwner
+    {
+        operators[_operator] = true;
+    }
+
+    // deregisterOperator deregisters the operator.
+    function deregisterOperator(address _operator)
+    external
+    onlyOwner
+    {
+        delete operators[_operator];
+    }
+
+    // setOperatorThreshold sets the operator threshold.
+    function setOperatorThreshold(VoteType _voteType, uint64 _threshold)
+    external
+    onlyOwner
+    {
+        operatorThresholds[uint8(_voteType)] = _threshold;
     }
 }
