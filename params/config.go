@@ -107,7 +107,7 @@ const (
 )
 
 const (
-	ChainIDBaobab = 1001
+	PasswordLength = 16
 )
 
 // ChainConfig is the blockchain config which determines the blockchain settings.
