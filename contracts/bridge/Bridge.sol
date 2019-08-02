@@ -172,7 +172,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     public
     onlyOperators
     {
-        bytes32 voteKey = keccak256(abi.encodePacked(_from, _to, _value, _requestedNonce, _requestedBlockNumber));
+        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _value, _requestedNonce, _requestedBlockNumber));
         if (!voteValueTransfer(voteKey, _requestedNonce)) {
             return;
         }
