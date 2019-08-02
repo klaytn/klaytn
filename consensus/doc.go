@@ -21,7 +21,7 @@
 /*
 Package consensus defines interfaces for consensus engines and ChainReader.
 
-Klaytn currently uses istanbul BFT engine on the mainnet, but PoA based clique engine is also can be used.
+Klaytn currently uses istanbul BFT engine on the mainnet, but PoA based clique engine also can be used.
 Traditional PoW engine(gxhash) is used by legacy test codes but it is deprecated and is not recommended to use.
 
 By implementing the Engine interface, new consensus engine can be added and used in Klaytn.
