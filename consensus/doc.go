@@ -26,6 +26,6 @@ Traditional PoW engine(gxhash) is used by legacy test codes but it is deprecated
 
 By implementing the Engine interface, new consensus engine can be added and used in Klaytn.
 
-ChainReader interface defines a small collection of methods needed to access the local blockchain during header verification.
+ChainReader interface defines a small collection of methods needed to access the local blockchain during a block header verification.
 */
 package consensus
