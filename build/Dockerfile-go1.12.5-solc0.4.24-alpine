@@ -1,4 +1,4 @@
-FROM alpine as solc_builder
+FROM alpine:3.8 as solc_builder
 RUN \
   apk --no-cache --update add build-base cmake boost-dev git; \
   sed -i -E -e 's/include <sys\/poll.h>/include <poll.h>/' /usr/include/boost/asio/detail/socket_types.hpp; \
@@ -9,7 +9,7 @@ RUN \
   apk del sed build-base git make cmake gcc g++ musl-dev curl-dev boost-dev; \
   rm -rf /var/cache/apk/*
 
-FROM alpine as go_builder
+FROM alpine:3.8 as go_builder
 RUN \
   apk add --no-cache --virtual .build-deps bash gcc musl-dev openssl go; \
   wget -O go.src.tar.gz https://dl.google.com/go/go1.12.5.src.tar.gz; \
@@ -17,9 +17,9 @@ RUN \
   cd /usr/local/go/src/ && ./make.bash; \
   apk del .build-deps
 
-FROM alpine
+FROM alpine:3.8
 
-RUN apk add --no-cache ca-certificates boost git make gcc libc-dev
+RUN apk add --no-cache ca-certificates boost git make gcc libc-dev curl bash
 COPY --from=solc_builder /usr/bin/solc /usr/bin/solc
 COPY --from=go_builder /usr/local/go /usr/local
 
