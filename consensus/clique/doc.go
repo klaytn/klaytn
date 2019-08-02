@@ -24,7 +24,7 @@ In clique, only pre-selected nodes can propose a block. The list of these nodes 
 The sequence of proposers is decided by the block number and the number of nodes which can propose a block. If a proposer propose a block in its turn (in-turn), it will have a blockscore(formerly known as difficulty) of 2.
 If a proposer proposer propose a block in other node's turn (out-of-turn), it will have a blockscore of 1.
 
-If an in-turn proposer didn't propose a block for some time, other nodes starts to propose their block with a blockscore of 1
+If an in-turn proposer didn't propose a block for some time, other nodes start to propose their block with a blockscore of 1.
 
 Based on this algorithm, the rule of the `longest chain wins` and the network's liveness can be achieved.
 */
