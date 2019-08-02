@@ -139,7 +139,7 @@ func (sb *backend) GetRewardBase() common.Address {
 }
 
 func (sb *backend) GetSubGroupSize() uint64 {
-	return sb.governance.ChainConfig.Istanbul.SubGroupSize
+	return sb.governance.CommitteeSize()
 }
 
 func (sb *backend) SetCurrentView(view *istanbul.View) {
@@ -360,14 +360,14 @@ func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.Validat
 		return sb.getValidators(block.Number().Uint64()-1, block.ParentHash())
 	}
 
-	return validator.NewValidatorSet(nil, istanbul.ProposerPolicy(sb.governance.ChainConfig.Istanbul.ProposerPolicy), sb.governance.ChainConfig.Istanbul.SubGroupSize, sb.chain)
+	return validator.NewValidatorSet(nil, istanbul.ProposerPolicy(sb.governance.ProposerPolicy()), sb.governance.CommitteeSize(), sb.chain)
 }
 
 func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.ValidatorSet {
 	snap, err := sb.snapshot(sb.chain, number, hash, nil)
 	if err != nil {
 		logger.Error("Snapshot not found.", "err", err)
-		return validator.NewValidatorSet(nil, istanbul.ProposerPolicy(sb.governance.ChainConfig.Istanbul.ProposerPolicy), sb.governance.ChainConfig.Istanbul.SubGroupSize, sb.chain)
+		return validator.NewValidatorSet(nil, istanbul.ProposerPolicy(sb.governance.ProposerPolicy()), sb.governance.CommitteeSize(), sb.chain)
 	}
 	return snap.ValSet
 }

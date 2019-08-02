@@ -163,7 +163,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	}
 
 	// At every epoch governance data will come in block header. Verify it.
-	if number%sb.governance.ChainConfig.Istanbul.Epoch == 0 && len(header.Governance) > 0 {
+	if number%sb.governance.Epoch() == 0 && len(header.Governance) > 0 {
 		return sb.governance.VerifyGovernance(header.Governance)
 	}
 	return sb.verifyCommittedSeals(chain, header, parents)
@@ -306,7 +306,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// If it reaches the Epoch, governance config will be added to block header
-	if number%sb.governance.ChainConfig.Istanbul.Epoch == 0 {
+	if number%sb.governance.Epoch() == 0 {
 		if g := sb.governance.GetGovernanceChange(); g != nil {
 			if data, err := json.Marshal(g); err != nil {
 				logger.Error("Failed to encode governance changes!! Possible configuration mismatch!! ")
@@ -348,7 +348,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	receipts []*types.Receipt) (*types.Block, error) {
 
 	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && sb.governance.ChainConfig.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
+	if sb.chain != nil && sb.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
 		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		pocAddr := common.Address{}
@@ -382,7 +382,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			}
 		}
 
-		reward.DistributeBlockReward(state, header, pocAddr, kirAddr, sb.governance.ChainConfig)
+		reward.DistributeBlockReward(state, header, pocAddr, kirAddr, sb.governance)
 	} else {
 		err := reward.MintKLAY(state, header, sb.governance)
 		if err != nil {
@@ -630,17 +630,17 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers, sb.governance, sb.address, sb.governance.ChainConfig.Istanbul.Epoch)
+	snap, err := snap.apply(headers, sb.governance, sb.address, sb.governance.Epoch())
 	if err != nil {
 		return nil, err
 	}
-	if sb.governance.ChainConfig.Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
+	if sb.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
 		// Snapshot of block N (Snapshot_N) should contain proposers for N+1 and following blocks.
 		// And proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
 		// Let's refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
 		pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(snap.Number + 1))
 		if pHeader != nil {
-			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), sb.governance.ChainConfig); err != nil {
+			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), sb.governance.ChainId()); err != nil {
 				// There are three error cases and they just don't refresh proposers
 				// (1) no validator at all
 				// (2) invalid formatted hash

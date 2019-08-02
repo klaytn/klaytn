@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/params"
 	"math"
 	"math/rand"
 	"reflect"
@@ -396,7 +395,7 @@ func (valSet *defaultSet) F() int {
 
 func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
-func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
+func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64, chainId uint64) error {
 	return nil
 }
 func (valSet *defaultSet) SetBlockNum(blockNum uint64)     { /* Do nothing */ }

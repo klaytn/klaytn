@@ -220,23 +220,23 @@ func isEmptyAddress(addr common.Address) bool {
 }
 
 // DistributeBlockReward distributes block reward to proposer, kirAddr and pocAddr.
-func DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address, config *params.ChainConfig) {
+func DistributeBlockReward(b BalanceAdder, header *types.Header, pocAddr common.Address, kirAddr common.Address, gov *governance.Governance) {
 
 	// Calculate total tx fee
 	totalTxFee := common.Big0
-	if config.Governance.DeferredTxFee() {
+	if gov.DeferredTxFee() {
 		totalGasUsed := big.NewInt(0).SetUint64(header.GasUsed)
-		unitPrice := big.NewInt(0).SetUint64(config.UnitPrice)
+		unitPrice := big.NewInt(0).SetUint64(gov.UnitPrice())
 		totalTxFee = big.NewInt(0).Mul(totalGasUsed, unitPrice)
 	}
 
-	distributeBlockReward(b, header, totalTxFee, pocAddr, kirAddr, config)
+	distributeBlockReward(b, header, totalTxFee, pocAddr, kirAddr, gov)
 }
 
 // distributeBlockReward mints KLAY and distribute newly minted KLAY and transaction fee to proposer, kirAddr and pocAddr.
-func distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, pocAddr common.Address, kirAddr common.Address, config *params.ChainConfig) {
+func distributeBlockReward(b BalanceAdder, header *types.Header, totalTxFee *big.Int, pocAddr common.Address, kirAddr common.Address, gov *governance.Governance) {
 	proposer := header.Rewardbase
-	rewardParams := getRewardGovernanceParameters(config, header)
+	rewardParams := getRewardGovernanceParameters(gov, header)
 
 	// Block reward
 	blockReward := big.NewInt(0).Add(rewardParams.mintingAmount, totalTxFee)
@@ -415,7 +415,7 @@ func waitHeadChain(bc *blockchain.BlockChain) {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-chainHeadCh:
-			if bc.Config().Istanbul.ProposerPolicy == params.WeightedRandom && params.IsStakingUpdateInterval(ev.Block.NumberU64()) {
+			if bc.ProposerPolicy() == params.WeightedRandom && params.IsStakingUpdateInterval(ev.Block.NumberU64()) {
 				blockNum := ev.Block.NumberU64()
 				logger.Debug("ChainHeadEvent arrived and try to update staking cache.", "Block number", blockNum)
 				if _, err := updateStakingCache(bc, blockNum); err != nil {
@@ -514,7 +514,7 @@ func newStakingInfo(bc *blockchain.BlockChain, blockNum uint64, nodeIds []common
 		stakingAmounts[i] = tempStakingAmount.Uint64()
 	}
 
-	useGini := bc.Config().Governance.Reward.UseGiniCoeff
+	useGini := bc.UseGiniCoeff()
 	gini := DefaultGiniCoefficient
 
 	stakingInfo := &StakingInfo{
@@ -558,7 +558,7 @@ func calcGiniCoefficient(stakingAmount uint64Slice) float64 {
 }
 
 // getRewardGovernanceParameters retrieves reward parameters from governance. It also maintains a cache to reuse already parsed parameters.
-func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Header) *blockRewardParameters {
+func getRewardGovernanceParameters(gov *governance.Governance, header *types.Header) *blockRewardParameters {
 	blockRewardCacheLock.Lock()
 	defer blockRewardCacheLock.Unlock()
 
@@ -572,9 +572,10 @@ func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Hea
 	// cache refresh should be done after snapshot calculating vote.
 	// so cache refresh for block header number should be 1 + epoch number
 	// blockNumber cannot be 0 because this function is called by finalize() and finalize for genesis block isn't called
-	if (blockNum-1)%config.Istanbul.Epoch == 0 || blockRewardCache.blockNum+config.Istanbul.Epoch < blockNum || blockRewardCache.mintingAmount == nil {
+	epoch := gov.Epoch()
+	if (blockNum-1)%epoch == 0 || blockRewardCache.blockNum+epoch < blockNum || blockRewardCache.mintingAmount == nil {
 		// Cache missed or not initialized yet. Let's parse governance parameters and update cache
-		cn, poc, kir, err := parseRewardRatio(config.Governance.Reward.Ratio)
+		cn, poc, kir, err := parseRewardRatio(gov.Ratio())
 		if err != nil {
 			logger.Error("Error while parsing reward ratio of governance. Using default ratio", "err", err)
 
@@ -591,11 +592,11 @@ func getRewardGovernanceParameters(config *params.ChainConfig, header *types.Hea
 		newBlockRewardCache.totalRatio = new(big.Int)
 
 		// update new cache entry
-		if config.Governance.Reward.MintingAmount == nil {
+		if gov.MintingAmount() == "" {
 			logger.Error("No minting amount defined in governance. Use default value.", "Default minting amount", params.DefaultMintedKLAY)
 			newBlockRewardCache.mintingAmount = params.DefaultMintedKLAY
 		} else {
-			newBlockRewardCache.mintingAmount = config.Governance.Reward.MintingAmount
+			newBlockRewardCache.mintingAmount, _ = big.NewInt(0).SetString(gov.MintingAmount(), 10)
 		}
 
 		newBlockRewardCache.blockNum = blockNum

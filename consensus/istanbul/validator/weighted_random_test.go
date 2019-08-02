@@ -348,7 +348,7 @@ func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
 	config.ChainID = big.NewInt(1)
 	config.Governance.Reward.UseGiniCoeff = false
-	valSet.Refresh(testPrevHash, 1, config)
+	valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
 
 	for _, val := range validators {
 
@@ -386,7 +386,7 @@ func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
 	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
 	config.Governance.Reward.UseGiniCoeff = false
 	config.ChainID = big.NewInt(1)
-	valSet.Refresh(testPrevHash, 1, config)
+	valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
 
 	for _, val := range validators {
 
@@ -406,7 +406,7 @@ func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
 			}
 		}
 
-		valSet.Refresh(testPrevHash, 1, config)
+		valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
 
 		// check whether removedVal is excluded as expected when refreshing proposers
 		for _, p := range valSet.proposers {

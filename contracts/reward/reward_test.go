@@ -22,6 +22,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"math"
 	"math/big"
@@ -118,8 +119,9 @@ func TestGetRewardGovernanceParameter(t *testing.T) {
 		config.Istanbul.Epoch = testCases[i].epoch
 		config.Governance.Reward.Ratio = testCases[i].ratio
 		config.Governance.Reward.MintingAmount = new(big.Int).SetUint64(testCases[i].mintinAmount)
-
-		governanceParameter := getRewardGovernanceParameters(config, header)
+		dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+		gov := governance.NewGovernance(config, dbm)
+		governanceParameter := getRewardGovernanceParameters(gov, header)
 
 		cn, poc, kir, _ := parseRewardRatio(testCases[i].ratio)
 		cnRatio := big.NewInt(int64(cn))
@@ -149,7 +151,7 @@ func TestUpdateGovernanceParameterByEpoch(t *testing.T) {
 	// 2. update governance parameter with block number before epoch(30 in this test), it should not be updated
 	// 3. update governance parameter with block number after epoch(31 in this test), it should be updated
 	allocBlockRewardCache()
-	blockNumber := int64(1)
+	blockNumber := uint64(1)
 	epoch := uint64(30)
 	cnRatio := new(big.Int).SetUint64(34)
 	pocRatio := new(big.Int).SetUint64(54)
@@ -157,45 +159,64 @@ func TestUpdateGovernanceParameterByEpoch(t *testing.T) {
 	mintingAmount := uint64(9600000000)
 
 	//1. update governanceParameter with block number 1 and check if it is updated well
-	header := &types.Header{Number: big.NewInt(blockNumber)}
+	header := &types.Header{Number: big.NewInt(0).SetUint64(blockNumber)}
 	config := &params.ChainConfig{Istanbul: governance.GetDefaultIstanbulConfig(), Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
 
 	config.Istanbul.Epoch = epoch
 	config.Governance.Reward.Ratio = "34/54/12"
 	config.Governance.Reward.MintingAmount = new(big.Int).SetUint64(mintingAmount)
-
-	governanceParameter := getRewardGovernanceParameters(config, header)
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	gov := governance.NewGovernance(config, dbm)
+	governanceParameter := getRewardGovernanceParameters(gov, header)
 
 	if governanceParameter.blockNum != 1 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
 		governanceParameter.pocRatio.Cmp(pocRatio) != 0 || governanceParameter.kirRatio.Cmp(kirRatio) != 0 {
 		t.Errorf("GovernanceParameter is different")
 	}
 
+	blockNumber = 31
+	currentSet := governance.NewGovernanceSet()
+	delta := governance.NewGovernanceSet()
+	_, current, _ := gov.ReadGovernance(blockNumber)
+	currentSet.Import(current)
+	delta.SetValue(params.Ratio, "40/30/30")
+	gov.WriteGovernance(blockNumber-1, currentSet, delta)
+	governanceParameter = getRewardGovernanceParameters(gov, header)
+
 	// 2. update governance parameter with block number before epoch(30 in this test), it should not be updated
-	header = &types.Header{Number: big.NewInt(30)}
-	config.Governance.Reward.Ratio = "1/2/3"
+	blockNumber = 50
+	header = &types.Header{Number: big.NewInt(0).SetUint64(blockNumber)}
+	governanceParameter = getRewardGovernanceParameters(gov, header)
 
-	governanceParameter = getRewardGovernanceParameters(config, header)
+	if governanceParameter.blockNum != blockNumber || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
+		governanceParameter.pocRatio.Cmp(pocRatio) != 0 || governanceParameter.kirRatio.Cmp(kirRatio) != 0 {
+		t.Errorf("GovernanceParameter is different")
+		t.Errorf("blockNum result : %v, expected : %v", governanceParameter.blockNum, blockNumber)
+		t.Errorf("cnRewardRatio result : %v, expected : %v", governanceParameter.cnRewardRatio, cnRatio)
+		t.Errorf("pocRatio result : %v, expected : %v", governanceParameter.pocRatio, pocRatio)
+		t.Errorf("kirRatio result : %v, expected : %v", governanceParameter.kirRatio, kirRatio)
+	}
 
-	if governanceParameter.blockNum != 1 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
+	header = &types.Header{Number: big.NewInt(0).SetUint64(60)}
+	governanceParameter = getRewardGovernanceParameters(gov, header)
+
+	if governanceParameter.blockNum != blockNumber || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
 		governanceParameter.pocRatio.Cmp(pocRatio) != 0 || governanceParameter.kirRatio.Cmp(kirRatio) != 0 {
 		t.Errorf("GovernanceParameter is different %v", governanceParameter.cnRewardRatio)
 	}
 
 	// 3. update governance parameter with block number after epoch(31 in this test), it should be updated
-	blockNumber = int64(31)
+	blockNumber = uint64(61)
 	cnRatio = new(big.Int).SetUint64(40)
 	pocRatio = new(big.Int).SetUint64(30)
 	kirRatio = new(big.Int).SetUint64(30)
 	mintingAmount = uint64(3000000000)
 
-	header = &types.Header{Number: big.NewInt(blockNumber)}
-	config.Governance.Reward.Ratio = "40/30/30"
-	config.Governance.Reward.MintingAmount = new(big.Int).SetUint64(mintingAmount)
+	header = &types.Header{Number: big.NewInt(0).SetUint64(blockNumber)}
+	gov.UpdateCurrentGovernance(60)
+	governanceParameter = getRewardGovernanceParameters(gov, header)
 
-	governanceParameter = getRewardGovernanceParameters(config, header)
-
-	if governanceParameter.blockNum != 31 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
+	if governanceParameter.blockNum != 61 || governanceParameter.cnRewardRatio.Cmp(cnRatio) != 0 ||
 		governanceParameter.pocRatio.Cmp(pocRatio) != 0 || governanceParameter.kirRatio.Cmp(kirRatio) != 0 {
 		t.Errorf("GovernanceParameter is different")
 	}
@@ -214,7 +235,9 @@ func TestBlockRewardWithDefaultGovernance(t *testing.T) {
 
 	// chain config
 	config := &params.ChainConfig{Istanbul: governance.GetDefaultIstanbulConfig(), Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
-	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, config)
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	gov := governance.NewGovernance(config, dbm)
+	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, gov)
 
 	balance := accounts.GetBalance(proposerAddr)
 	if balance == nil {
@@ -237,8 +260,8 @@ func TestBlockRewardWithDefaultGovernance(t *testing.T) {
 	config = &params.ChainConfig{}
 	config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
 	config.Istanbul = governance.GetDefaultIstanbulConfig()
-
-	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, config)
+	gov = governance.NewGovernance(config, dbm)
+	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, gov)
 
 	balance = accounts.GetBalance(proposerAddr)
 	if balance == nil {
@@ -265,8 +288,10 @@ func TestBlockRewardWithDeferredTxFeeEnabled(t *testing.T) {
 	config := &params.ChainConfig{Istanbul: governance.GetDefaultIstanbulConfig(), Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
 
 	config.Governance.Reward.DeferredTxFee = true
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	gov := governance.NewGovernance(config, dbm)
 
-	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, config)
+	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, gov)
 
 	balance := accounts.GetBalance(proposerAddr)
 	if balance == nil {
@@ -295,8 +320,9 @@ func TestBlockRewardWithDeferredTxFeeEnabled(t *testing.T) {
 
 	config.Governance.Reward.DeferredTxFee = true
 	config.Governance.Reward.MintingAmount = params.DefaultMintedKLAY
-
-	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, config)
+	dbm = database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	gov = governance.NewGovernance(config, dbm)
+	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, gov)
 
 	balance = accounts.GetBalance(proposerAddr)
 	if balance == nil {
@@ -328,8 +354,10 @@ func TestPocKirRewardDistribute(t *testing.T) {
 
 	pocAddr := common.StringToAddress("1111111111111111111111111111111111111111")
 	kirAddr := common.StringToAddress("2222222222222222222222222222222222222222")
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	gov := governance.NewGovernance(config, dbm)
 
-	distributeBlockReward(accounts, header, big.NewInt(0), pocAddr, kirAddr, config)
+	distributeBlockReward(accounts, header, big.NewInt(0), pocAddr, kirAddr, gov)
 
 	cnBalance := accounts.GetBalance(proposerAddr)
 	pocBalance := accounts.GetBalance(pocAddr)
@@ -370,8 +398,10 @@ func TestBlockRewardWithCustomRewardRatio(t *testing.T) {
 	config.Governance.Reward.DeferredTxFee = true
 	config.Governance.Reward.MintingAmount = params.DefaultMintedKLAY
 	config.Governance.Reward.Ratio = fmt.Sprintf("%d/%d/%d", params.DefaultCNRewardRatio, params.DefaultKIRRewardRatio, params.DefaultPoCRewardRatio)
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	gov := governance.NewGovernance(config, dbm)
 
-	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, config)
+	DistributeBlockReward(accounts, header, common.Address{}, common.Address{}, gov)
 
 	balance := accounts.GetBalance(proposerAddr)
 	if balance == nil {

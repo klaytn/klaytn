@@ -121,15 +121,6 @@ func getGovernance() *Governance {
 	return NewGovernance(config, dbm)
 }
 
-func TestNewGovernance(t *testing.T) {
-	config := getTestConfig()
-	tstGovernance := NewGovernance(config, nil)
-
-	if !reflect.DeepEqual(tstGovernance.ChainConfig, config) {
-		t.Errorf("New governance's config is not same as the given one")
-	}
-}
-
 func TestGetDefaultGovernanceConfig(t *testing.T) {
 	tstGovernance := GetDefaultGovernanceConfig(params.UseIstanbul)
 
@@ -543,6 +534,6 @@ func TestCypressGenesisHash(t *testing.T) {
 	db := database.NewMemoryDBManager()
 	block, _ := genesis.Commit(db)
 	if block.Hash() != cypressHash {
-		t.Errorf("Generated hash is not equal to Baobab's hash. Want %v, Have %v", cypressHash.String(), block.Hash().String())
+		t.Errorf("Generated hash is not equal to Cypress's hash. Want %v, Have %v", cypressHash.String(), block.Hash().String())
 	}
 }

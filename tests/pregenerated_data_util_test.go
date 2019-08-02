@@ -478,6 +478,8 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 
 // generateGovernaceDataForTest returns *governance.Governance for test.
 func generateGovernaceDataForTest() *governance.Governance {
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+
 	return governance.NewGovernance(&params.ChainConfig{
 		ChainID:       big.NewInt(2018),
 		UnitPrice:     25000000000,
@@ -488,7 +490,7 @@ func generateGovernaceDataForTest() *governance.Governance {
 			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
 		},
 		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
-	}, nil)
+	}, dbm)
 }
 
 // setUpTest sets up test data directory, verbosity and profile file.

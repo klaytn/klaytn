@@ -62,7 +62,7 @@ var (
 
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error) {
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		ret := api.governance.GetGovernanceValue(params.UnitPrice).(uint64)
+		ret := api.governance.UnitPrice()
 		return big.NewInt(0).SetUint64(ret), nil
 	} else {
 		blockNum := num.Int64()
@@ -80,14 +80,14 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error)
 }
 
 func (api *GovernanceKlayAPI) GasPrice() *big.Int {
-	ret := api.governance.GetGovernanceValue(params.UnitPrice).(uint64)
+	ret := api.governance.UnitPrice()
 	return big.NewInt(0).SetUint64(ret)
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
 func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error) {
-	gMode := api.governance.ChainConfig.Governance.GovernanceMode
-	gNode := api.governance.ChainConfig.Governance.GoverningNode
+	gMode := api.governance.GovernanceMode()
+	gNode := api.governance.GoverningNode()
 
 	if GovernanceModeMap[gMode] == params.GovernanceMode_Single && gNode != api.governance.nodeAddress.Load().(common.Address) {
 		return "", errPermissionDenied
@@ -198,7 +198,7 @@ func (api *PublicGovernanceAPI) NodeAddress() common.Address {
 }
 
 func (api *PublicGovernanceAPI) isGovernanceModeBallot() bool {
-	if GovernanceModeMap[api.governance.ChainConfig.Governance.GovernanceMode] == params.GovernanceMode_Ballot {
+	if GovernanceModeMap[api.governance.GovernanceMode()] == params.GovernanceMode_Ballot {
 		return true
 	}
 	return false
