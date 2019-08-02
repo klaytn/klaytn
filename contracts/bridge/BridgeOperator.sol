@@ -8,9 +8,9 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 contract BridgeOperator is Ownable {
     mapping(address => bool) public operators;
     mapping(bytes32 => mapping(address => bool)) public votes; // <sha3(type, args, nonce), <operator, vote>>
-    mapping(bytes32 => uint64) public votesCounts; // <sha3(type, args, nonce)>
+    mapping(bytes32 => uint8) public votesCounts; // <sha3(type, args, nonce)>
     mapping(uint64 => bool) public closedValueTransferVotes; // nonce
-    mapping(uint8 => uint64) public operatorThresholds; // <vote type>
+    mapping(uint8 => uint8) public operatorThresholds; // <vote type>
     uint64 public configurationNonce;
 
     enum VoteType {
@@ -40,6 +40,7 @@ contract BridgeOperator is Ownable {
     {
         if (!votes[_voteKey][msg.sender]) {
             votes[_voteKey][msg.sender] = true;
+            require(votesCounts[_voteKey] < votesCounts[_voteKey] + 1);
             votesCounts[_voteKey]++;
         }
         if (votesCounts[_voteKey] >= operatorThresholds[uint8(voteType)]) {
@@ -95,7 +96,7 @@ contract BridgeOperator is Ownable {
     }
 
     // setOperatorThreshold sets the operator threshold.
-    function setOperatorThreshold(VoteType _voteType, uint64 _threshold)
+    function setOperatorThreshold(VoteType _voteType, uint8 _threshold)
     external
     onlyOwner
     {
