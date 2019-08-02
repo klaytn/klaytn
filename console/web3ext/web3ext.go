@@ -128,6 +128,12 @@ web3._extend({
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
+		new web3._extend.Method({
+			name: 'itemCacheFromDb',
+			call: 'governance_itemCacheFromDb',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		})
 	],
 	properties: [
 		new web3._extend.Property({
@@ -154,6 +160,22 @@ web3._extend({
 			name: 'nodeAddress',
 			getter: 'governance_nodeAddress',
 		}),
+		new web3._extend.Property({
+			name: 'pendingChanges',
+			getter: 'governance_pendingChanges',
+		}),
+		new web3._extend.Property({
+			name: 'votes',
+			getter: 'governance_votes',
+		}),
+		new web3._extend.Property({
+			name: 'idxCache',
+			getter: 'governance_idxCache',
+		}),
+		new web3._extend.Property({
+			name: 'idxCacheFromDb',
+			getter: 'governance_idxCacheFromDb',
+		})
 	]
 });
 `

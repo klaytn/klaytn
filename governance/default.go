@@ -1045,3 +1045,23 @@ func (gov *Governance) UseGiniCoeff() bool {
 func (gov *Governance) ChainId() uint64 {
 	return gov.ChainConfig.ChainID.Uint64()
 }
+
+func (gov *Governance) PendingChanges() map[string]interface{} {
+	return gov.changeSet.Items()
+}
+
+func (gov *Governance) Votes() []GovernanceVote {
+	return gov.GovernanceVotes.Copy()
+}
+
+func (gov *Governance) IdxCache() []uint64 {
+	gov.idxCacheLock.RLock()
+	defer gov.idxCacheLock.RUnlock()
+
+	return gov.idxCache
+}
+
+func (gov *Governance) IdxCacheFromDb() []uint64 {
+	res, _ := gov.db.ReadRecentGovernanceIdx(0)
+	return res
+}

@@ -157,6 +157,33 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 	}
 }
 
+func (api *PublicGovernanceAPI) PendingChanges() map[string]interface{} {
+	return api.governance.PendingChanges()
+}
+
+func (api *PublicGovernanceAPI) Votes() []GovernanceVote {
+	return api.governance.Votes()
+}
+
+func (api *PublicGovernanceAPI) IdxCache() []uint64 {
+	return api.governance.IdxCache()
+}
+
+func (api *PublicGovernanceAPI) IdxCacheFromDb() []uint64 {
+	return api.governance.IdxCacheFromDb()
+}
+
+func (api *PublicGovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
+	blockNumber := uint64(0)
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
+	} else {
+		blockNumber = uint64(num.Int64())
+	}
+	ret, _ := api.governance.db.ReadGovernance(blockNumber)
+	return ret
+}
+
 type VoteList struct {
 	Key      string
 	Value    interface{}
