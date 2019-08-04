@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	gasLimit uint64 = 1000000         // gasLimit for contract transaction.
+	gasLimit uint64 = 200000          // gasLimit for contract transaction.
 	timeOut         = 3 * time.Second // timeout of context and event loop for simulated backend.
 )
 
@@ -234,7 +234,7 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
-	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, true)
+	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, false)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}
