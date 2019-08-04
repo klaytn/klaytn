@@ -233,7 +233,7 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
-	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, false)
+	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, true)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}
