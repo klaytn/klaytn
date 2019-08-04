@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	gasLimit uint64 = 100000          // gasLimit for contract transaction.
+	gasLimit uint64 = 1000000         // gasLimit for contract transaction.
 	timeOut         = 3 * time.Second // timeout of context and event loop for simulated backend.
 )
 
@@ -117,7 +117,7 @@ func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Ad
 
 // SendHandleKLAYTransfer send a handleValueTransfer transaction to the bridge contract.
 func SendHandleKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, nonce uint64, blockNum uint64, t *testing.T) *types.Transaction {
-	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, common.Hash{0}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum, nil)
+	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, common.Hash{10}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum, nil)
 	if err != nil {
 		t.Fatalf("fail to SendHandleKLAYTransfer %v", err)
 		return nil
@@ -222,7 +222,7 @@ loop:
 // TestBridgeHandleValueTransferNonceAndBlockNumber checks the following:
 // - the bridge allows the handle value transfer with only serialized nonce.
 // - the bridge correctly stores and returns the block number.
-func _TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
+func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
@@ -234,7 +234,7 @@ func _TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
-	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, false)
+	bridgeAddress, tx, b, err := bridge.DeployBridge(bridgeAccount, backend, true)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}
@@ -242,8 +242,10 @@ func _TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	WaitMined(tx, backend, t)
 	t.Log("1. Bridge is deployed.", "bridgeAddress=", bridgeAddress.String(), "txHash=", tx.Hash().String())
 
-	// TODO-Klaytn This routine should be removed. It is temporary code for the bug of bridge contract.
-	TransferSignedTx(bridgeAccount, backend, bridgeAddress, chargeAmount, t)
+	tx, err = b.RegisterOperator(&bind.TransactOpts{From: bridgeAccount.From, Signer: bridgeAccount.Signer, GasLimit: gasLimit}, bridgeAccount.From)
+	assert.NoError(t, err)
+	backend.Commit()
+	WaitMined(tx, backend, t)
 
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 100)
 	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
@@ -285,13 +287,7 @@ loop:
 			}
 			sentNonce++
 			sentBlockNumber++
-			// fail case : smaller nonce
-			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce+1, sentBlockNumber+1, t)
 
-			// fail case : bigger nonce
-			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce-1, sentBlockNumber-1, t)
-
-			// success case : right nonce
 			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce, sentBlockNumber, t)
 			backend.Commit()
 
