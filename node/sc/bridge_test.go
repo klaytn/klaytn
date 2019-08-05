@@ -482,7 +482,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 		assert.Equal(t, amount.String(), ev.ValueOrTokenId.String())
 		assert.Equal(t, rNonce, ev.RequestNonce)
 		assert.Equal(t, erc20Addr, ev.TokenAddress)
-		assert.Equal(t, sc.ERC20, ev.TokenType)
+		assert.Equal(t, ERC20, ev.TokenType)
 		assert.Equal(t, bobAcc.From, ev.To)
 		assert.Equal(t, len(extraData), len(ev.ExtraData))
 		assert.Equal(t, extraData[0].String(), ev.ExtraData[0].String())
