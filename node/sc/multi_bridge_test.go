@@ -91,7 +91,7 @@ func TestStartStop(t *testing.T) {
 
 	isRunning, err := info.b.IsRunning(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, isRunning, true)
+	assert.Equal(t, true, isRunning)
 
 	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
 	tx, err = info.b.Start(opts, false)
@@ -101,5 +101,5 @@ func TestStartStop(t *testing.T) {
 
 	isRunning, err = info.b.IsRunning(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, isRunning, false)
+	assert.Equal(t, false, isRunning)
 }
