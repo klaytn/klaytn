@@ -44,8 +44,6 @@ type DBManager interface {
 	WriteCanonicalHash(hash common.Hash, number uint64)
 	DeleteCanonicalHash(number uint64)
 
-	ReadHeaderNumber(hash common.Hash) *uint64
-
 	ReadHeadHeaderHash() common.Hash
 	WriteHeadHeaderHash(hash common.Hash)
 
@@ -63,6 +61,7 @@ type DBManager interface {
 	ReadHeaderRLP(hash common.Hash, number uint64) rlp.RawValue
 	WriteHeader(header *types.Header)
 	DeleteHeader(hash common.Hash, number uint64)
+	ReadHeaderNumber(hash common.Hash) *uint64
 
 	HasBody(hash common.Hash, number uint64) bool
 	ReadBody(hash common.Hash, number uint64) *types.Body
@@ -140,7 +139,7 @@ type DBManager interface {
 	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// below operations are used in main chain side, not service chain side.
-	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
+	WriteChildChainTxHash(scBlockHash common.Hash, scTxHash common.Hash)
 	ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash common.Hash) common.Hash
 
 	WriteLastIndexedBlockNumber(blockNum uint64)
@@ -1322,11 +1321,11 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 
 // WriteChildChainTxHash writes stores a transaction hash of a transaction which contains
 // ChainHashes, with the key made with given child chain block hash.
-func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
-	key := childChainTxHashKey(ccBlockHash)
+func (dbm *databaseManager) WriteChildChainTxHash(scBlockHash common.Hash, scTxHash common.Hash) {
+	key := childChainTxHashKey(scBlockHash)
 	db := dbm.getDatabase(bridgeServiceDB)
-	if err := db.Put(key, ccTxHash.Bytes()); err != nil {
-		logger.Crit("Failed to store ChildChainTxHash", "ccBlockHash", ccBlockHash.String(), "ccTxHash", ccTxHash.String(), "err", err)
+	if err := db.Put(key, scTxHash.Bytes()); err != nil {
+		logger.Crit("Failed to store ServiceChainTxHash", "scBlockHash", scBlockHash.String(), "scTxHash", scTxHash.String(), "err", err)
 	}
 }
 
