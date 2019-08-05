@@ -22,7 +22,7 @@ Implementations of these interfaces are different, depending on proposer-choosin
 
 Validator
 
-`Validator` is a node which has 2 features to make a consensus; proposing and validating.
+`Validator` is a node which has 2 features to make a consensus: proposing and validating.
 
 Propose: A node can propose a block if it is a proposer. Only validators can be a proposer.
 
