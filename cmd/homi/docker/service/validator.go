@@ -114,7 +114,7 @@ var validatorTemplate = `{{ .Name }}:
         echo '{{ .Genesis }}' > /klaytn/genesis.json
 {{- end }}
         echo '{{ .StaticNodes }}' > /klaytn/static-nodes.json
-{{- if eq .Name "SEN-0" }}
+{{- if .BridgeNodes }}
         echo '{{ .BridgeNodes }}' > /klaytn/mainchain-bridges.json
 {{- end }}
         k{{ .NodeType }} --datadir "/klaytn" init "/klaytn/genesis.json"
@@ -144,6 +144,18 @@ var validatorTemplate = `{{ .Name }}:
         --unlock "75a59b94889a05c03c66c3c84e9d2f8308ca4abd" \
         --password "/klaytn/password.txt" \
 {{- end}}
+{{- if eq .NodeType "scn" }}
+        --scconsensus "istanbul" \
+{{- else if eq .NodeType "spn" }}
+        --scconsensus "istanbul" \
+{{- else if eq .NodeType "sen" }}
+        --scconsensus "istanbul" \
+{{- end}}
+{{- if .ParentChainId }}
+        --parentchainid {{ .ParentChainId }} \
+        --subbridge \
+        --subbridgeport 50506 \
+{{- end}}
 {{- if .UseFastHttp}}
         --srvtype fasthttp \
 {{- end}}
@@ -151,22 +163,10 @@ var validatorTemplate = `{{ .Name }}:
         --rewardbase {{ .Address }}
 {{- else if eq .NodeType "pn" }}
         --txpool.nolocals
-{{- else if eq .NodeType "en" }}
-{{- if eq .Name "EN-0" }}
+{{- else if eq .Name "EN-0" }}
         --mainbridge \
         --mainbridgeport 50505
 {{- end }}
-{{- else if eq .NodeType "scn"}}
-        --parentchainid {{ .ParentChainId }} \
-        --scconsensus "istanbul" \
-{{- else if eq .NodeType "sen"}}
-        --parentchainid {{ .ParentChainId }} \
-{{- if eq .Name "SEN-0" }}
-        --subbridge \
-        --subbridgeport 50506 \
-{{- end }}
-{{- else }}
-{{- end}}
 
     networks:
       app_net:

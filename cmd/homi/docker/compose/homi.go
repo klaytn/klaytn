@@ -149,6 +149,12 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 	}
 
 	numSCNs := len(scnNodeKeys)
+	scnParentChainId := parentChainId
+	scnBridgeNodes := bridgeNodes
+	if len(spnNodeKeys) > 0 || len(senNodeKeys) > 0 {
+		scnParentChainId = 0
+		scnBridgeNodes = ""
+	}
 	for i := 0; i < len(scnNodeKeys); i++ {
 		s := service.NewValidator(i,
 			"",
@@ -156,7 +162,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 			"",
 			scnNodeKeys[i],
 			"",
-			"",
+			scnBridgeNodes,
 			32323+number+numPNs+numENs+i,
 			8551+number+numPNs+numENs+i,
 			61001+number+numPNs+numENs+i,
@@ -166,7 +172,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 			dockerImageId,
 			useFastHttp,
 			networkId,
-			parentChainId,
+			scnParentChainId,
 			"SCN",
 			"scn",
 			false,
@@ -178,6 +184,12 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 	}
 
 	numSPNs := len(spnNodeKeys)
+	spnParentChainId := parentChainId
+	spnBridgeNodes := bridgeNodes
+	if len(senNodeKeys) > 0 {
+		spnParentChainId = 0
+		spnBridgeNodes = ""
+	}
 	for i := 0; i < len(spnNodeKeys); i++ {
 		s := service.NewValidator(i,
 			"",
@@ -185,7 +197,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 			"",
 			spnNodeKeys[i],
 			"",
-			"",
+			spnBridgeNodes,
 			32323+number+numPNs+numENs+numSCNs+i,
 			8551+number+numPNs+numENs+numSCNs+i,
 			61001+number+numPNs+numENs+numSCNs+i,
@@ -195,7 +207,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 			dockerImageId,
 			useFastHttp,
 			networkId,
-			parentChainId,
+			spnParentChainId,
 			"SPN",
 			"spn",
 			false,
