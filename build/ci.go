@@ -242,7 +242,6 @@ func goToolArch(arch string, cc string, subcmd string, args ...string) *exec.Cmd
 
 func doTest(cmdline []string) {
 	var (
-		coverage = flag.Bool("coverage", false, "Whether to record code coverage")
 		parallel = flag.Int("p", 0, "The number of parallel test executions (default: the number of CPUs available)")
 		excludes = flag.String("exclude", "", "Comma-separated top-level directories to be excluded in test")
 	)
@@ -265,9 +264,6 @@ func doTest(cmdline []string) {
 	gotest := goTool("test", buildFlags(env)...)
 	if *parallel != 0 {
 		gotest.Args = append(gotest.Args, "-p", strconv.Itoa(*parallel))
-	}
-	if *coverage {
-		gotest.Args = append(gotest.Args, "-covermode=atomic", "-cover", "-coverprofile=coverage.out")
 	}
 
 	gotest.Args = append(gotest.Args, packages...)
