@@ -121,3 +121,31 @@ func TestSetCounterPartBridge(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, dummy, cBridge)
 }
+
+// TestRegisterDeregisterToken checks the following:
+// - the bridge contract method RegisterToken and DeregisterToken.
+func TestRegisterDeregisterToken(t *testing.T) {
+	info := prepareMultiBridgeTest(t)
+	dummy1 := common.Address{10}
+	dummy2 := common.Address{20}
+
+	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.RegisterToken(opts, dummy1, dummy2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	res, err := info.b.AllowedTokens(nil, dummy1)
+	assert.NoError(t, err)
+	assert.Equal(t, dummy2, res)
+
+	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.DeregisterToken(opts, dummy1)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	res, err = info.b.AllowedTokens(nil, dummy1)
+	assert.NoError(t, err)
+	assert.Equal(t, common.Address{0}, res)
+}
