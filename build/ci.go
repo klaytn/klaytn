@@ -265,7 +265,6 @@ func doTest(cmdline []string) {
 	if *parallel != 0 {
 		gotest.Args = append(gotest.Args, "-p", strconv.Itoa(*parallel))
 	}
-
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)
 }
@@ -292,6 +291,9 @@ func doCover(cmdline []string) {
 	coverExcludes := []string{
 		"/tests",
 		"/metric",
+		"/build",
+		"/contracts",
+		"/client",
 	}
 	coverPackages = build.ExpandPackagesNoVendor(coverPackages)
 	coverPackages = build.ExcludePackages(coverPackages, coverExcludes)
