@@ -217,7 +217,6 @@ loop:
 	t.Fatal("fail to check monotone increasing nonce", "lastNonce", expectedNonce)
 }
 
-// TODO-Klaytn-ServiceChain: current value transfer does not support sequential nonce.
 // TestBridgeHandleValueTransferNonceAndBlockNumber checks the following:
 // - the bridge allows the handle value transfer with arbitrary nonce.
 // - the bridge keeps sequential  handle nonce for the recovery.
