@@ -292,7 +292,6 @@ func doCover(cmdline []string) {
 		"/tests",
 		"/metric",
 		"/build",
-		"/contracts",
 		"/client",
 	}
 	coverPackages = build.ExpandPackagesNoVendor(coverPackages)
