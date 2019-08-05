@@ -294,7 +294,8 @@ func doCover(cmdline []string) {
 
 	coverPackages := []string{"./..."}
 	coverExcludes := []string{
-		"github.com/klaytn/klaytn/tests",
+		"/tests",
+		"/metric",
 	}
 	coverPackages = build.ExpandPackagesNoVendor(coverPackages)
 	coverPackages = build.ExcludePackages(coverPackages, coverExcludes)
@@ -307,21 +308,15 @@ func doCover(cmdline []string) {
 	build.MustRunCommand("sh", "-c", "echo 'mode: atomic' > "+*outputFile)
 
 	// Run the actual tests.
-	for i, testPkg := range packages {
-		gotest := goTool("test", buildFlags(env)...)
-		if *parallel != 0 {
-			gotest.Args = append(gotest.Args, "-p", strconv.Itoa(*parallel))
-		}
-
-		tmpFile := "coverage.tmp." + strconv.Itoa(i)
-
-		gotest.Args = append(gotest.Args, "-cover", "-covermode=atomic", "-coverprofile="+tmpFile, testPkg)
-		gotest.Args = append(gotest.Args, "-coverpkg", coverPackagesString)
-		build.MustRun(gotest)
-
-		build.MustRunCommand("sh", "-c", "tail -n +2 "+tmpFile+" >> "+*outputFile)
-		build.MustRunCommand("sh", "-c", "rm "+tmpFile)
+	gotest := goTool("test", buildFlags(env)...)
+	if *parallel != 0 {
+		gotest.Args = append(gotest.Args, "-p", strconv.Itoa(*parallel))
 	}
+
+	gotest.Args = append(gotest.Args, "-cover", "-covermode=atomic", "-coverprofile="+*outputFile)
+	gotest.Args = append(gotest.Args, "-coverpkg", coverPackagesString)
+	gotest.Args = append(gotest.Args, packages...)
+	build.MustRun(gotest)
 }
 
 func doFmt(cmdline []string) {
