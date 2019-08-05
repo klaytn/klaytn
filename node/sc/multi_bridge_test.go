@@ -64,7 +64,7 @@ func TestRegisterDeregisterOperator(t *testing.T) {
 
 	isOperator, err := info.b.Operators(nil, info.acc.From)
 	assert.NoError(t, err)
-	assert.Equal(t, isOperator, true)
+	assert.Equal(t, true, isOperator)
 
 	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
 	tx, err = info.b.DeregisterOperator(opts, info.acc.From)
@@ -74,5 +74,5 @@ func TestRegisterDeregisterOperator(t *testing.T) {
 
 	isOperator, err = info.b.Operators(nil, info.acc.From)
 	assert.NoError(t, err)
-	assert.Equal(t, isOperator, false)
+	assert.Equal(t, false, isOperator)
 }
