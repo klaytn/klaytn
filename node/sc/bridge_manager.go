@@ -46,6 +46,11 @@ const (
 	ERC721
 )
 
+const (
+	voteTypeValueTransfer = 0
+	voteTypeConfiguration = 1
+)
+
 var (
 	ErrInvalidTokenPair     = errors.New("invalid token pair")
 	ErrNoBridgeInfo         = errors.New("bridge information does not exist")
