@@ -83,7 +83,7 @@ test-others:
 	build/env.sh go run build/ci.go test -p 1 -exclude datasync,networks,tests
 
 cover:
-	build/env.sh go run build/ci.go test -coverage
+	build/env.sh go run build/ci.go cover -coverprofile=coverage.out
 	go tool cover -func=coverage.out -o coverage_report.txt
 	go tool cover -html=coverage.out -o coverage_report.html
 	@echo "Two coverage reports coverage_report.txt and coverage_report.html are generated."
