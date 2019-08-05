@@ -219,7 +219,8 @@ loop:
 
 // TODO-Klaytn-ServiceChain: current value transfer does not support sequential nonce.
 // TestBridgeHandleValueTransferNonceAndBlockNumber checks the following:
-// - the bridge allows the handle value transfer with only serialized nonce.
+// - the bridge allows the handle value transfer with arbitrary nonce.
+// - the bridge keeps sequential  handle nonce for recovery.
 // - the bridge correctly stores and returns the block number.
 func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
@@ -255,7 +256,8 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	}
 	t.Log("2. Bridge is subscribed.")
 
-	sentNonce := uint64(0)
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
 	testCount := uint64(1000)
 	transferAmount := uint64(100)
 	sentBlockNumber := uint64(100000)
@@ -279,9 +281,12 @@ loop:
 
 			if sentNonce == testCount {
 				bal, err := backend.BalanceAt(context.Background(), testAcc.From, nil)
-				assert.Equal(t, err, nil)
+				assert.NoError(t, err)
+				assert.Equal(t, bal, big.NewInt(int64(transferAmount*(testCount-nonceOffset+1))))
 
-				assert.Equal(t, bal, big.NewInt(int64(transferAmount*(testCount+1))))
+				sequentialHandleNonce, err := b.SequentialHandleNonce(nil)
+				assert.NoError(t, err)
+				assert.Equal(t, sequentialHandleNonce, uint64(0))
 				return
 			}
 			sentNonce++
@@ -291,16 +296,12 @@ loop:
 			backend.Commit()
 
 			resultBlockNumber, err := b.LastHandledRequestBlockNumber(nil)
-			if err != nil {
-				t.Fatal("failed to get LastHandledRequestBlockNumber.", "err", err)
-			}
+			assert.NoError(t, err)
 
-			resultHandleNonce, err := b.SequentialHandleNonce(nil)
-			if err != nil {
-				t.Fatal("failed to get HandleNonce.", "err", err)
-			}
+			resultHandleNonce, err := b.MaxHandledRequestedNonce(nil)
+			assert.NoError(t, err)
 
-			assert.Equal(t, sentNonce, resultHandleNonce-1)
+			assert.Equal(t, sentNonce, resultHandleNonce)
 			assert.Equal(t, sentBlockNumber, resultBlockNumber)
 
 		case err := <-handleSub.Err():
