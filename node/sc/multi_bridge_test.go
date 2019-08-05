@@ -119,5 +119,5 @@ func TestSetCounterPartBridge(t *testing.T) {
 
 	cBridge, err := info.b.CounterpartBridge(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, cBridge, dummy)
+	assert.Equal(t, dummy, cBridge)
 }
