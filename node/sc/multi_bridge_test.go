@@ -76,3 +76,30 @@ func TestRegisterDeregisterOperator(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, false, isOperator)
 }
+
+// TestStartStop checks the following:
+// - the bridge contract method Start.
+// - the bridge contract method Stop.
+func TestStartStop(t *testing.T) {
+	info := prepareMultiBridgeTest(t)
+
+	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.Start(opts, true)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	isRunning, err := info.b.IsRunning(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, isRunning, true)
+
+	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.Start(opts, false)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	isRunning, err = info.b.IsRunning(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, isRunning, false)
+}
