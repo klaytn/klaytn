@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package contracts
+package sc
 
 import (
 	"context"
@@ -28,7 +28,6 @@ import (
 	"github.com/klaytn/klaytn/contracts/extbridge"
 	sctoken "github.com/klaytn/klaytn/contracts/sc_erc20"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -38,7 +37,7 @@ import (
 )
 
 const (
-	gasLimit uint64 = 100000          // gasLimit for contract transaction.
+	gasLimit uint64 = 200000          // gasLimit for contract transaction.
 	timeOut         = 3 * time.Second // timeout of context and event loop for simulated backend.
 )
 
@@ -117,7 +116,7 @@ func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Ad
 
 // SendHandleKLAYTransfer send a handleValueTransfer transaction to the bridge contract.
 func SendHandleKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, nonce uint64, blockNum uint64, t *testing.T) *types.Transaction {
-	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, common.Hash{0}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum, nil)
+	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, common.Hash{10}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum, nil)
 	if err != nil {
 		t.Fatalf("fail to SendHandleKLAYTransfer %v", err)
 		return nil
@@ -218,11 +217,11 @@ loop:
 	t.Fatal("fail to check monotone increasing nonce", "lastNonce", expectedNonce)
 }
 
-// TODO-Klaytn-ServiceChain: current value transfer does not support sequential nonce.
 // TestBridgeHandleValueTransferNonceAndBlockNumber checks the following:
-// - the bridge allows the handle value transfer with only serialized nonce.
+// - the bridge allows the handle value transfer with an arbitrary nonce.
+// - the bridge keeps sequential handle nonce for the recovery.
 // - the bridge correctly stores and returns the block number.
-func _TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
+func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
@@ -242,8 +241,10 @@ func _TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	WaitMined(tx, backend, t)
 	t.Log("1. Bridge is deployed.", "bridgeAddress=", bridgeAddress.String(), "txHash=", tx.Hash().String())
 
-	// TODO-Klaytn This routine should be removed. It is temporary code for the bug of bridge contract.
-	TransferSignedTx(bridgeAccount, backend, bridgeAddress, chargeAmount, t)
+	tx, err = b.RegisterOperator(&bind.TransactOpts{From: bridgeAccount.From, Signer: bridgeAccount.Signer, GasLimit: gasLimit}, bridgeAccount.From)
+	assert.NoError(t, err)
+	backend.Commit()
+	WaitMined(tx, backend, t)
 
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 100)
 	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
@@ -254,7 +255,8 @@ func _TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	}
 	t.Log("2. Bridge is subscribed.")
 
-	sentNonce := uint64(0)
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
 	testCount := uint64(1000)
 	transferAmount := uint64(100)
 	sentBlockNumber := uint64(100000)
@@ -278,34 +280,27 @@ loop:
 
 			if sentNonce == testCount {
 				bal, err := backend.BalanceAt(context.Background(), testAcc.From, nil)
-				assert.Equal(t, err, nil)
+				assert.NoError(t, err)
+				assert.Equal(t, bal, big.NewInt(int64(transferAmount*(testCount-nonceOffset+1))))
 
-				assert.Equal(t, bal, big.NewInt(int64(transferAmount*(testCount+1))))
+				sequentialHandleNonce, err := b.SequentialHandleNonce(nil)
+				assert.NoError(t, err)
+				assert.Equal(t, sequentialHandleNonce, uint64(0))
 				return
 			}
 			sentNonce++
 			sentBlockNumber++
-			// fail case : smaller nonce
-			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce+1, sentBlockNumber+1, t)
 
-			// fail case : bigger nonce
-			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce-1, sentBlockNumber-1, t)
-
-			// success case : right nonce
 			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce, sentBlockNumber, t)
 			backend.Commit()
 
 			resultBlockNumber, err := b.LastHandledRequestBlockNumber(nil)
-			if err != nil {
-				t.Fatal("failed to get LastHandledRequestBlockNumber.", "err", err)
-			}
+			assert.NoError(t, err)
 
-			resultHandleNonce, err := b.SequentialHandleNonce(nil)
-			if err != nil {
-				t.Fatal("failed to get HandleNonce.", "err", err)
-			}
+			resultHandleNonce, err := b.MaxHandledRequestedNonce(nil)
+			assert.NoError(t, err)
 
-			assert.Equal(t, sentNonce, resultHandleNonce-1)
+			assert.Equal(t, sentNonce, resultHandleNonce)
 			assert.Equal(t, sentBlockNumber, resultBlockNumber)
 
 		case err := <-handleSub.Err():
@@ -487,7 +482,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 		assert.Equal(t, amount.String(), ev.ValueOrTokenId.String())
 		assert.Equal(t, rNonce, ev.RequestNonce)
 		assert.Equal(t, erc20Addr, ev.TokenAddress)
-		assert.Equal(t, sc.ERC20, ev.TokenType)
+		assert.Equal(t, ERC20, ev.TokenType)
 		assert.Equal(t, bobAcc.From, ev.To)
 		assert.Equal(t, len(extraData), len(ev.ExtraData))
 		assert.Equal(t, extraData[0].String(), ev.ExtraData[0].String())
@@ -509,7 +504,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 		assert.Equal(t, amount.String(), ev.ValueOrTokenId.String())
 		assert.Equal(t, rNonce, ev.HandleNonce)
 		assert.Equal(t, erc20Addr, ev.TokenAddress)
-		assert.Equal(t, sc.ERC20, ev.TokenType)
+		assert.Equal(t, ERC20, ev.TokenType)
 		assert.Equal(t, callbackAddr, ev.To)
 		assert.Equal(t, len(extraData), len(ev.ExtraData))
 		assert.Equal(t, extraData[0].String(), ev.ExtraData[0].String())
