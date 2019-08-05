@@ -1325,7 +1325,7 @@ func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxH
 	key := childChainTxHashKey(ccBlockHash)
 	db := dbm.getDatabase(bridgeServiceDB)
 	if err := db.Put(key, ccTxHash.Bytes()); err != nil {
-		logger.Crit("Failed to store ServiceChainTxHash", "scBlockHash", ccBlockHash.String(), "scTxHash", ccTxHash.String(), "err", err)
+		logger.Crit("Failed to store ChildChainTxHash", "ccBlockHash", ccBlockHash.String(), "ccTxHash", ccTxHash.String(), "err", err)
 	}
 }
 
