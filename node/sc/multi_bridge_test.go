@@ -44,9 +44,7 @@ func prepareMultiBridgeTest(t *testing.T) *bridgeTestInfo {
 	chargeAmount := big.NewInt(10000000)
 	acc.Value = chargeAmount
 	_, tx, b, err := bridge.DeployBridge(acc, sim, false)
-	if err != nil {
-		t.Fatalf("fail to DeployBridge %v", err)
-	}
+	assert.NoError(t, err)
 	sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(sim, tx))
 	return &bridgeTestInfo{acc, b, sim}
