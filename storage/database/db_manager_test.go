@@ -59,7 +59,7 @@ func init() {
 	dbManagers = createDBManagers(dbConfigs)
 }
 
-// createDBManagers generate a list of DBManagers to test various combinations of DBConfig.
+// createDBManagers generates a list of DBManagers to test various combinations of DBConfig.
 func createDBManagers(configs []*DBConfig) []DBManager {
 	dbManagers := make([]DBManager, 0, len(configs))
 
