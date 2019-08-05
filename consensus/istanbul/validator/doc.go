@@ -24,7 +24,7 @@ Validator
 
 `Validator` is a node which has 2 features to make a consensus; proposing and validating.
 
-Propose: A node can propose a block, if it is a proposer. Only validator nodes can be a proposer.
+Propose: A node can propose a block if it is a proposer. Only validators can be a proposer.
 
 Validate: A validator node can validate blocks from proposers. A block is valid only if more than 2/3 of validators approve the given block.
 
