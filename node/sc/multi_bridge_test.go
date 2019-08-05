@@ -20,6 +20,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
@@ -102,4 +103,20 @@ func TestStartStop(t *testing.T) {
 	isRunning, err = info.b.IsRunning(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, false, isRunning)
+}
+
+// TestSetCounterPartBridge checks the following:
+// - the bridge contract method TestSetCounterPartBridge.
+func TestSetCounterPartBridge(t *testing.T) {
+	info := prepareMultiBridgeTest(t)
+
+	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetCounterPartBridge(opts, common.Address{10})
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	cBridge, err := info.b.CounterpartBridge(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, cBridge, common.Address{10})
 }
