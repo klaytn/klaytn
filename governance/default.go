@@ -667,11 +667,11 @@ func getGovernanceCacheKey(num uint64) common.GovernanceCacheKey {
 // Store new governance data on DB. This updates Governance cache too.
 func (g *Governance) WriteGovernance(num uint64, data GovernanceSet, delta GovernanceSet) error {
 	g.idxCacheLock.RLock()
-	idx := make([]uint64, 0, len(g.idxCache))
-	copy(idx, g.idxCache)
+	indices := make([]uint64, 0, len(g.idxCache))
+	copy(indices, g.idxCache)
 	g.idxCacheLock.RUnlock()
 
-	if len(idx) > 0 && num <= idx[len(idx)-1] {
+	if len(indices) > 0 && num <= indices[len(indices)-1] {
 		return nil
 	}
 
