@@ -25,7 +25,7 @@ Source Files
 
 Each file provides following features
  - bridge.go	: bridge is a collection of Javascript utility methods to bridge the .js runtime environment and the Go RPC connection backing the remote method calls
- - console.go	: Implements console which support Javascript runtime environment
+ - console.go	: Implements console which supports Javascript runtime environment
  - prompter.go	: Provides UserPrompter which defines the methods needed by the console to promt the user for various types of inputs
 */
 package console
