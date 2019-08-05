@@ -39,17 +39,17 @@ func prepareMultiBridgeTest(t *testing.T) *bridgeTestInfo {
 	acc := bind.NewKeyedTransactor(accKey)
 
 	alloc := blockchain.GenesisAlloc{acc.From: {Balance: big.NewInt(params.KLAY)}}
-	backend := backends.NewSimulatedBackend(alloc)
+	sim := backends.NewSimulatedBackend(alloc)
 
 	chargeAmount := big.NewInt(10000000)
 	acc.Value = chargeAmount
-	_, tx, b, err := bridge.DeployBridge(acc, backend, false)
+	_, tx, b, err := bridge.DeployBridge(acc, sim, false)
 	if err != nil {
 		t.Fatalf("fail to DeployBridge %v", err)
 	}
-	backend.Commit()
-	WaitMined(tx, backend, t)
-	return &bridgeTestInfo{acc, b, backend}
+	sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(sim, tx))
+	return &bridgeTestInfo{acc, b, sim}
 }
 
 // TestRegisterDeregisterOperator checks the following:
@@ -62,23 +62,19 @@ func TestRegisterDeregisterOperator(t *testing.T) {
 	tx, err := info.b.RegisterOperator(opts, info.acc.From)
 	assert.NoError(t, err)
 	info.sim.Commit()
-	WaitMined(tx, info.sim, t)
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
 	isOperator, err := info.b.Operators(nil, info.acc.From)
+	assert.NoError(t, err)
 	assert.Equal(t, isOperator, true)
-	if err != nil {
-		t.Fatal("failed to get Operators.", "err", err)
-	}
 
 	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
 	tx, err = info.b.DeregisterOperator(opts, info.acc.From)
 	assert.NoError(t, err)
 	info.sim.Commit()
-	WaitMined(tx, info.sim, t)
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
 	isOperator, err = info.b.Operators(nil, info.acc.From)
+	assert.NoError(t, err)
 	assert.Equal(t, isOperator, false)
-	if err != nil {
-		t.Fatal("failed to get Operators.", "err", err)
-	}
 }
