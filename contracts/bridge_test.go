@@ -109,7 +109,7 @@ func TransferSignedTx(auth *bind.TransactOpts, backend *backends.SimulatedBacken
 
 // RequestKLAYTransfer sends a requestValueTransfer transaction to the bridge contract.
 func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, t *testing.T) {
-	_, err := b.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit, Value: new(big.Int).SetUint64(value)}, to, new(big.Int).SetUint64(value))
+	_, err := b.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit, Value: new(big.Int).SetUint64(value)}, to, new(big.Int).SetUint64(value), nil)
 	if err != nil {
 		t.Fatalf("fail to RequestKLAYTransfer %v", err)
 	}
@@ -117,7 +117,7 @@ func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Ad
 
 // SendHandleKLAYTransfer send a handleValueTransfer transaction to the bridge contract.
 func SendHandleKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, nonce uint64, blockNum uint64, t *testing.T) *types.Transaction {
-	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, common.Hash{0}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum)
+	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, common.Hash{0}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum, nil)
 	if err != nil {
 		t.Fatalf("fail to SendHandleKLAYTransfer %v", err)
 		return nil
@@ -400,36 +400,49 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 	bridgeAddr, tx, eb, err := extbridge.DeployExtBridge(bridgeAccount, backend, true)
 	assert.NoError(t, err)
 	backend.Commit()
-	assert.Nil(t, WaitMined(tx, backend, t))
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
 	// Deploy token
 	erc20Addr, tx, erc20, err := sctoken.DeployServiceChainToken(bridgeAccount, backend, bridgeAddr)
 	assert.NoError(t, err)
 	backend.Commit()
-	assert.Nil(t, WaitMined(tx, backend, t))
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	// Register token
+	tx, err = eb.RegisterToken(bridgeAccount, erc20Addr, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	// Charge token to Alice
+	testToken := big.NewInt(100000)
+	tx, err = erc20.Transfer(bridgeAccount, aliceAcc.From, testToken)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
 	// Give minter role to bridge contract
 	tx, err = erc20.AddMinter(bridgeAccount, bridgeAddr)
 	assert.NoError(t, err)
 	backend.Commit()
-	assert.Nil(t, WaitMined(tx, backend, t))
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
 	// Deploy callback contract
 	callbackAddr, tx, cb, err := extbridge.DeployCallback(bridgeAccount, backend)
 	assert.NoError(t, err)
 	backend.Commit()
-	assert.Nil(t, WaitMined(tx, backend, t))
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
 	// Set callback address to ExtBridge contract
 	tx, err = eb.SetCallback(bridgeAccount, callbackAddr)
 	assert.NoError(t, err)
 	backend.Commit()
-	assert.Nil(t, WaitMined(tx, backend, t))
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
 	tx, err = eb.RegisterOperator(bridgeAccount, bridgeAccount.From)
 	assert.NoError(t, err)
 	backend.Commit()
-	assert.Nil(t, WaitMined(tx, backend, t))
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
 	// Subscribe callback contract event
 	registerOfferEventCh := make(chan *extbridge.CallbackRegisteredOffer, 10)
@@ -437,22 +450,58 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 	assert.NoError(t, err)
 	defer registerOfferEventSub.Unsubscribe()
 
-	// Subscribe bridge contract event
+	// Subscribe bridge contract events
 	b, err := bridge.NewBridge(bridgeAddr, backend) // create base bridge contract object, not extBridge object
 	assert.NoError(t, err)
+
+	requestValueTransferEventCh := make(chan *bridge.BridgeRequestValueTransfer, 10)
+	requestSub, err := b.WatchRequestValueTransfer(nil, requestValueTransferEventCh)
+	assert.NoError(t, err)
+	defer requestSub.Unsubscribe()
+
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
 	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
 	assert.NoError(t, err)
 	defer handleSub.Unsubscribe()
 
-	// HandleERC20Transfer
-	amount := big.NewInt(1000)
+	// Approve / RequetERC20Transfer
 	rNonce := uint64(0)
-	rBlockNumber := uint64(0)
-	tx, err = b.HandleERC20Transfer(bridgeAccount, common.Hash{10}, aliceAcc.From, bobAcc.From, erc20Addr, amount, rNonce, rBlockNumber)
-	assert.Equal(t, nil, err)
+	amount := big.NewInt(1000)
+	offerPrice := big.NewInt(10)
+	dummyBigInt := big.NewInt(20)
+	extraData := []*big.Int{offerPrice, dummyBigInt}
+
+	tx, err = erc20.Approve(aliceAcc, bridgeAddr, amount)
+	assert.NoError(t, err)
 	backend.Commit()
-	assert.Nil(t, WaitMined(tx, backend, t))
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	tx, err = b.RequestERC20Transfer(aliceAcc, erc20Addr, bobAcc.From, amount, common.Big0, extraData)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	// Check request request event
+	select {
+	case ev := <-requestValueTransferEventCh:
+		assert.Equal(t, amount.String(), ev.ValueOrTokenId.String())
+		assert.Equal(t, rNonce, ev.RequestNonce)
+		assert.Equal(t, erc20Addr, ev.TokenAddress)
+		assert.Equal(t, sc.ERC20, ev.TokenType)
+		assert.Equal(t, bobAcc.From, ev.To)
+		assert.Equal(t, len(extraData), len(ev.ExtraData))
+		assert.Equal(t, extraData[0].String(), ev.ExtraData[0].String())
+		assert.Equal(t, extraData[1].String(), ev.ExtraData[1].String())
+
+		// HandleERC20Transfer
+		tx, err = b.HandleERC20Transfer(bridgeAccount, ev.Raw.TxHash, ev.From, ev.To, ev.TokenAddress, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
+		assert.NoError(t, err)
+		backend.Commit()
+		assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	case <-time.After(time.Second):
+		t.Fatalf("requestValueTransferEvent was not found.")
+	}
 
 	// Check handle request event
 	select {
@@ -462,6 +511,9 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 		assert.Equal(t, erc20Addr, ev.TokenAddress)
 		assert.Equal(t, sc.ERC20, ev.TokenType)
 		assert.Equal(t, callbackAddr, ev.To)
+		assert.Equal(t, len(extraData), len(ev.ExtraData))
+		assert.Equal(t, extraData[0].String(), ev.ExtraData[0].String())
+		assert.Equal(t, extraData[1].String(), ev.ExtraData[1].String())
 
 	case <-time.After(time.Second):
 		t.Fatalf("handleValueTransferEvent was not found.")
@@ -471,7 +523,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 	select {
 	case ev := <-registerOfferEventCh:
 		assert.Equal(t, amount.String(), ev.ValueOrID.String())
-		assert.Equal(t, big.NewInt(1), ev.Price) // TODO-Klaytn-Servicechain : it will be tested later.
+		assert.Equal(t, offerPrice.String(), ev.Price.String())
 		assert.Equal(t, erc20Addr, ev.TokenAddress)
 
 	case <-time.After(time.Second):
