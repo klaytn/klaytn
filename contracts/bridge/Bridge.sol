@@ -64,7 +64,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         uint64 requestNonce,
         string uri,
         uint256 fee,
-        uint256 []extraData
+        uint256[] extraData
     );
 
     /**
@@ -85,7 +85,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         address tokenAddress,
         uint256 valueOrTokenId,
         uint64 handleNonce,
-        uint256 []extraData
+        uint256[] extraData
 
     );
 
@@ -141,7 +141,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         uint256 _value,
         uint64 _requestedNonce,
         uint64 _requestedBlockNumber,
-        uint256 []_extraData
+        uint256[] _extraData
     )
         public
         onlyOperators
@@ -180,7 +180,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         uint256 _value,
         uint64 _requestedNonce,
         uint64 _requestedBlockNumber,
-        uint256 []_extraData
+        uint256[] _extraData
     )
     public
     onlyOperators
@@ -216,7 +216,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         uint64 _requestedNonce,
         uint64 _requestedBlockNumber,
         string _tokenURI,
-        uint256 []_extraData
+        uint256[] _extraData
     )
         public
         onlyOperators
@@ -248,7 +248,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     }
 
     // _requestKLAYTransfer requests transfer KLAY to _to on relative chain.
-    function _requestKLAYTransfer(address _to, uint256 _feeLimit,  uint256 []_extraData) internal {
+    function _requestKLAYTransfer(address _to, uint256 _feeLimit,  uint256[] _extraData) internal {
         require(isRunning, "stopped bridge");
         require(msg.value > _feeLimit, "insufficient amount");
 
@@ -274,18 +274,19 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     }
 
     // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
-    function requestKLAYTransfer(address _to, uint256 _value, uint256 []_extraData) external payable {
+    function requestKLAYTransfer(address _to, uint256 _value, uint256[] _extraData) external payable {
         uint256 feeLimit = msg.value.sub(_value);
         _requestKLAYTransfer(_to, feeLimit, _extraData);
     }
 
     // _requestERC20Transfer requests transfer ERC20 to _to on relative chain.
-    function _requestERC20Transfer(address _tokenAddress,
+    function _requestERC20Transfer(
+        address _tokenAddress,
         address _from,
         address _to,
         uint256 _value,
         uint256 _feeLimit,
-        uint256 []_extraData
+        uint256[] _extraData
     )
         internal
     {
@@ -319,7 +320,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         uint256 _value,
         address _to,
         uint256 _feeLimit,
-        uint256 []_extraData
+        uint256[] _extraData
     )
         public
     {
@@ -332,7 +333,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         address _to,
         uint256 _value,
         uint256 _feeLimit,
-        uint256 []_extraData
+        uint256[] _extraData
     )
         external
     {
@@ -346,7 +347,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         address _from,
         address _to,
         uint256 _tokenId,
-        uint256 []_extraData
+        uint256[] _extraData
     )
         internal
     {
@@ -378,7 +379,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         address _from,
         uint256 _tokenId,
         address _to,
-        uint256 []_extraData
+        uint256[] _extraData
     )
     public
     {
@@ -386,7 +387,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     }
 
     // requestERC721Transfer requests transfer ERC721 to _to on relative chain.
-    function requestERC721Transfer(address _tokenAddress, address _to, uint256 _tokenId, uint256 []_extraData) external {
+    function requestERC721Transfer(address _tokenAddress, address _to, uint256 _tokenId, uint256[] _extraData) external {
         IERC721(_tokenAddress).transferFrom(msg.sender, address(this), _tokenId);
         _requestERC721Transfer(_tokenAddress, msg.sender, _to, _tokenId, _extraData);
     }
