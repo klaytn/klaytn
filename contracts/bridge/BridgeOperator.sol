@@ -50,13 +50,13 @@ contract BridgeOperator is Ownable {
     }
 
     // voteValueTransfer votes value transfer transaction with the operator.
-    function voteValueTransfer(bytes32 _voteKey, uint64 _requestNonce)
+    function voteValueTransfer(uint64 _requestNonce)
         internal
         returns(bool)
     {
         require(!closedValueTransferVotes[_requestNonce], "closed vote");
 
-        if (voteCommon(VoteType.ValueTransfer, _voteKey)) {
+        if (voteCommon(VoteType.ValueTransfer, keccak256(msg.data))) {
             closedValueTransferVotes[_requestNonce] = true;
             return true;
         }
@@ -65,13 +65,13 @@ contract BridgeOperator is Ownable {
     }
 
     // voteConfiguration votes contract configuration transaction with the operator.
-    function voteConfiguration(bytes32 _voteKey, uint64 _requestNonce)
+    function voteConfiguration(uint64 _requestNonce)
         internal
         returns(bool)
     {
         require(configurationNonce == _requestNonce, "nonce mismatch");
 
-        if (voteCommon(VoteType.Configuration, _voteKey)) {
+        if (voteCommon(VoteType.Configuration, keccak256(msg.data))) {
             configurationNonce++;
             return true;
         }
