@@ -142,8 +142,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         public
         onlyOperators
     {
-        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _value, _requestedNonce, _requestedBlockNumber));
-        if (!voteValueTransfer(voteKey, _requestedNonce)) {
+        if (!voteValueTransfer(_requestedNonce)) {
             return;
         }
 
@@ -172,8 +171,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     public
     onlyOperators
     {
-        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _value, _requestedNonce, _requestedBlockNumber));
-        if (!voteValueTransfer(voteKey, _requestedNonce)) {
+        if (!voteValueTransfer(_requestedNonce)) {
             return;
         }
 
@@ -199,8 +197,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         public
         onlyOperators
     {
-        bytes32 voteKey = keccak256(abi.encodePacked(VoteType.ValueTransfer, _from, _to, _tokenAddress, _tokenId, _requestedNonce, _requestedBlockNumber, _tokenURI));
-        if (!voteValueTransfer(voteKey, _requestedNonce)) {
+        if (!voteValueTransfer(_requestedNonce)) {
             return;
         }
 
@@ -341,8 +338,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         external
         onlyOperators
     {
-        bytes32 voteKey = keccak256(abi.encodePacked(this.setKLAYFee.selector, _fee, _requestNonce));
-        if (!voteConfiguration(voteKey, _requestNonce)) {
+        if (!voteConfiguration(_requestNonce)) {
             return;
         }
         _setKLAYFee(_fee);
@@ -353,8 +349,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         external
         onlyOperators
     {
-        bytes32 voteKey = keccak256(abi.encodePacked(this.setERC20Fee.selector, _token, _fee, _requestNonce));
-        if (!voteConfiguration(voteKey, _requestNonce)) {
+        if (!voteConfiguration(_requestNonce)) {
             return;
         }
         _setERC20Fee(_token, _fee);
