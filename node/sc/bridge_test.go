@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package contracts
+package sc
 
 import (
 	"context"
@@ -28,7 +28,6 @@ import (
 	"github.com/klaytn/klaytn/contracts/extbridge"
 	sctoken "github.com/klaytn/klaytn/contracts/sc_erc20"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -505,7 +504,7 @@ func TestExtendedBridgeAndCallback(t *testing.T) {
 		assert.Equal(t, amount.String(), ev.ValueOrTokenId.String())
 		assert.Equal(t, rNonce, ev.HandleNonce)
 		assert.Equal(t, erc20Addr, ev.TokenAddress)
-		assert.Equal(t, sc.ERC20, ev.TokenType)
+		assert.Equal(t, ERC20, ev.TokenType)
 		assert.Equal(t, callbackAddr, ev.To)
 		assert.Equal(t, len(extraData), len(ev.ExtraData))
 		assert.Equal(t, extraData[0].String(), ev.ExtraData[0].String())
