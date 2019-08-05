@@ -109,14 +109,15 @@ func TestStartStop(t *testing.T) {
 // - the bridge contract method TestSetCounterPartBridge.
 func TestSetCounterPartBridge(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
+	dummy := common.Address{10}
 
 	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
-	tx, err := info.b.SetCounterPartBridge(opts, common.Address{10})
+	tx, err := info.b.SetCounterPartBridge(opts, dummy)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
 	cBridge, err := info.b.CounterpartBridge(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, cBridge, common.Address{10})
+	assert.Equal(t, cBridge, dummy)
 }
