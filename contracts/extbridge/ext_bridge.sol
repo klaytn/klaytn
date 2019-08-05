@@ -21,19 +21,17 @@ contract ExtBridge is Bridge {
         address _tokenAddress,
         uint256 _value,
         uint64 _requestNonce,
-        uint64 _requestBlockNumber
-        //uint256 [] _extraData     // TODO-Klaytn-Servicechain : This will be applied in next PR
+        uint64 _requestBlockNumber,
+        uint256 [] _extraData
     )
         public
     {
-        uint256 offerPrice = 1; //_extraData[0];
+        uint256 offerPrice = _extraData[0];
         if (offerPrice > 0 && callback != address(0)) {
-            //super.handleERC20Transfer(_requestTxHash, _from, callback, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
-            super.handleERC20Transfer(_requestTxHash, _from, callback, _tokenAddress, _value, _requestNonce, _requestBlockNumber);
+            super.handleERC20Transfer(_requestTxHash, _from, callback, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
             Callback(callback).RegisterOffer(_to, _value, _tokenAddress, offerPrice);
         } else {
-            //super.handleERC20Transfer(_requestTxHash, _from, _to, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
-            super.handleERC20Transfer(_requestTxHash, _from, _to, _tokenAddress, _value, _requestNonce, _requestBlockNumber);
+            super.handleERC20Transfer(_requestTxHash, _from, _to, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
         }
     }
 
@@ -46,19 +44,17 @@ contract ExtBridge is Bridge {
         uint256 _tokenId,
         uint64 _requestNonce,
         uint64 _requestBlockNumber,
-        string _tokenURI //,
-        //uint256 [] _extraData     : This will be applied in next PR
+        string _tokenURI,
+        uint256 [] _extraData
     )
         public
     {
         uint256 offerPrice = 1; //_extraData[0];
         if (offerPrice > 0 && callback != address(0)) {
-            //super.handleERC721Transfer(_requestTxHash, _from, callback, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
-            super.handleERC721Transfer(_requestTxHash, _from, callback, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI);
+            super.handleERC721Transfer(_requestTxHash, _from, callback, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
             Callback(callback).RegisterOffer(_to, _tokenId, _tokenAddress, offerPrice);
         } else {
-            //super.handleERC20Transfer(_requestTxHash, _from, _to, _tokenAddress,  _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
-            super.handleERC721Transfer(_requestTxHash, _from, _to, _tokenAddress,  _tokenId, _requestNonce, _requestBlockNumber, _tokenURI);
+            super.handleERC721Transfer(_requestTxHash, _from, _to, _tokenAddress,  _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
         }
     }
 }

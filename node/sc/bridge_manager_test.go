@@ -205,7 +205,7 @@ func TestBridgeManager(t *testing.T) {
 				case KLAY:
 					tx, err := bridge.HandleKLAYTransfer(
 						&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit},
-						ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+						ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 					if err != nil {
 						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
 					}
@@ -215,7 +215,7 @@ func TestBridgeManager(t *testing.T) {
 				case ERC20:
 					tx, err := bridge.HandleERC20Transfer(
 						&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit},
-						ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+						ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 					if err != nil {
 						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 					}
@@ -229,7 +229,7 @@ func TestBridgeManager(t *testing.T) {
 
 					tx, err := bridge.HandleERC721Transfer(
 						&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit},
-						ev.Raw.TxHash, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
+						ev.Raw.TxHash, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri, ev.ExtraData)
 					if err != nil {
 						log.Fatalf("Failed to HandleERC721Transfer: %v", err)
 					}
@@ -272,7 +272,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 7. Request ERC20 Transfer from Alice to Bob
 	{
-		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, testToken, bob.From, big.NewInt(0))
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, testToken, bob.From, big.NewInt(0), nil)
 		assert.NoError(t, err)
 		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
@@ -283,7 +283,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 8. RequestKLAYTransfer from Alice to Bob
 	{
-		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, bob.From, testKLAY)
+		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, bob.From, testKLAY, nil)
 		assert.NoError(t, err)
 		fmt.Println("DepositKLAY Transaction", tx.Hash().Hex())
 
@@ -294,7 +294,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 9. Request NFT transfer from Alice to Bob
 	{
-		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From)
+		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From, nil)
 		assert.NoError(t, err)
 		fmt.Println("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
 
@@ -494,7 +494,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					assert.Equal(t, KLAYFee, ev.Fee.Int64())
 
 					// HandleKLAYTransfer by Event
-					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 					if err != nil {
 						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
 					}
@@ -506,7 +506,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					assert.Equal(t, ERC20Fee, ev.Fee.Int64())
 
 					// HandleERC20Transfer by Event
-					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 					if err != nil {
 						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 					}
@@ -556,7 +556,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 7-1. Request ERC20 Transfer from Alice to Bob with same feeLimit with fee
 	{
-		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(ERC20Fee))
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(ERC20Fee), nil)
 		assert.NoError(t, err)
 		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
 		sim.Commit() // block
@@ -566,7 +566,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 7-2. Request ERC20 Transfer from Alice to Bob with insufficient zero feeLimit
 	{
-		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(0))
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(0), nil)
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block
@@ -576,7 +576,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 7-3. Request ERC20 Transfer from Alice to Bob with insufficient feeLimit
 	{
-		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(ERC20Fee-1))
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(ERC20Fee-1), nil)
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block
@@ -586,7 +586,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 7-4. Request ERC20 Transfer from Alice to Bob with enough feeLimit
 	{
-		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(ERC20Fee+1))
+		tx, err = token.RequestValueTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, big.NewInt(testToken), Bob.From, big.NewInt(ERC20Fee+1), nil)
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block
@@ -599,7 +599,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = token.Approve(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, pBridgeAddr, big.NewInt(testToken+ERC20Fee))
 		assert.Equal(t, nil, err)
 
-		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee))
+		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee), nil)
 		assert.Equal(t, nil, err)
 
 		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
@@ -613,7 +613,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = token.Approve(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, pBridgeAddr, big.NewInt(testToken))
 		assert.Equal(t, nil, err)
 
-		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(0))
+		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(0), nil)
 		assert.Equal(t, nil, err)
 
 		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
@@ -627,7 +627,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = token.Approve(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, pBridgeAddr, big.NewInt(testToken+ERC20Fee-1))
 		assert.Equal(t, nil, err)
 
-		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee-1))
+		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee-1), nil)
 		assert.Equal(t, nil, err)
 
 		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
@@ -641,7 +641,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		tx, err = token.Approve(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, pBridgeAddr, big.NewInt(testToken+ERC20Fee+1))
 		assert.Equal(t, nil, err)
 
-		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee+1))
+		tx, err = pBridge.RequestERC20Transfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, GasLimit: testGasLimit}, tokenAddr, Bob.From, big.NewInt(testToken), big.NewInt(ERC20Fee+1), nil)
 		assert.Equal(t, nil, err)
 
 		fmt.Println("RequestValueTransfer Transaction", tx.Hash().Hex())
@@ -652,7 +652,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-1. Request KLAY transfer from Alice to Bob with same feeLimit with fee
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + KLAYFee), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY))
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + KLAYFee), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY), nil)
 		if err != nil {
 			log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 		}
@@ -665,7 +665,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-2. Request KLAY transfer from Alice to Bob with zero feeLimit
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY))
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY), nil)
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block
@@ -675,7 +675,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-3. Request KLAY transfer from Alice to Bob with insufficient feeLimit
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + (KLAYFee - 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY))
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + (KLAYFee - 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY), nil)
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block
@@ -685,7 +685,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-4. Request KLAY transfer from Alice to Bob with enough feeLimit
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + (KLAYFee + 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY))
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + (KLAYFee + 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY), nil)
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block

@@ -644,7 +644,7 @@ func requestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 
 	opts := bi.account.GetTransactOpts()
 	opts.Value = big.NewInt(testAmount)
-	tx, err := bi.bridge.RequestKLAYTransfer(opts, info.aliceAuth.From, big.NewInt(testAmount))
+	tx, err := bi.bridge.RequestKLAYTransfer(opts, info.aliceAuth.From, big.NewInt(testAmount), nil)
 	if err != nil {
 		log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 	}
@@ -658,7 +658,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfer
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testAmount), ev.ValueOrTokenId)
 	opts := bi.account.GetTransactOpts()
-	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 	if err != nil {
 		log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 	}
@@ -682,9 +682,9 @@ func requestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 
 	var err error
 	if bi.onServiceChain {
-		_, err = info.tokenLocalBridge.RequestValueTransfer(opts, testToken, info.chainAuth.From, big.NewInt(0))
+		_, err = info.tokenLocalBridge.RequestValueTransfer(opts, testToken, info.chainAuth.From, big.NewInt(0), nil)
 	} else {
-		_, err = info.tokenRemoteBridge.RequestValueTransfer(opts, testToken, info.nodeAuth.From, big.NewInt(0))
+		_, err = info.tokenRemoteBridge.RequestValueTransfer(opts, testToken, info.nodeAuth.From, big.NewInt(0), nil)
 	}
 
 	if err != nil {
@@ -699,7 +699,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.ValueOrTokenId)
 	_, err := bi.bridge.HandleERC20Transfer(
-		bi.account.GetTransactOpts(), ev.Raw.TxHash, ev.From, ev.To, info.tokenRemoteAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber)
+		bi.account.GetTransactOpts(), ev.Raw.TxHash, ev.From, ev.To, info.tokenRemoteAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 	if err != nil {
 		log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 	}
@@ -724,9 +724,9 @@ func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 
 	var err error
 	if bi.onServiceChain {
-		_, err = info.nftLocalBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From)
+		_, err = info.nftLocalBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From, nil)
 	} else {
-		_, err = info.nftRemoteBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From)
+		_, err = info.nftRemoteBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From, nil)
 	}
 
 	if err != nil {
@@ -750,7 +750,7 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferE
 
 	_, err := bi.bridge.HandleERC721Transfer(
 		bi.account.GetTransactOpts(),
-		ev.Raw.TxHash, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri)
+		ev.Raw.TxHash, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri, ev.ExtraData)
 	if err != nil {
 		log.Fatalf("Failed to handleERC721Transfer: %v", err)
 	}
