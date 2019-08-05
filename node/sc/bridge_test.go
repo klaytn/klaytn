@@ -219,7 +219,7 @@ loop:
 
 // TestBridgeHandleValueTransferNonceAndBlockNumber checks the following:
 // - the bridge allows the handle value transfer with an arbitrary nonce.
-// - the bridge keeps sequential  handle nonce for the recovery.
+// - the bridge keeps sequential handle nonce for the recovery.
 // - the bridge correctly stores and returns the block number.
 func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
