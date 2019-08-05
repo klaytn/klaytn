@@ -220,7 +220,7 @@ loop:
 // TODO-Klaytn-ServiceChain: current value transfer does not support sequential nonce.
 // TestBridgeHandleValueTransferNonceAndBlockNumber checks the following:
 // - the bridge allows the handle value transfer with arbitrary nonce.
-// - the bridge keeps sequential  handle nonce for recovery.
+// - the bridge keeps sequential  handle nonce for the recovery.
 // - the bridge correctly stores and returns the block number.
 func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
