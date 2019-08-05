@@ -69,6 +69,22 @@ var spnHelpFlagGroups = []utils.FlagGroup{
 		},
 	},
 	{
+		Name: "SERVICECHAIN",
+		Flags: []cli.Flag{
+			utils.ServiceChainConsensusFlag,
+			utils.ChildChainIndexingFlag,
+			utils.MainBridgeFlag,
+			utils.MainBridgeListenPortFlag,
+			utils.SubBridgeFlag,
+			utils.SubBridgeListenPortFlag,
+			utils.AnchoringPeriodFlag,
+			utils.SentChainTxsLimit,
+			utils.ParentChainIDFlag,
+			utils.VTRecoveryFlag,
+			utils.VTRecoveryIntervalFlag,
+		},
+	},
+	{
 		Name: "ACCOUNT",
 		Flags: []cli.Flag{
 			utils.UnlockedAccountFlag,
