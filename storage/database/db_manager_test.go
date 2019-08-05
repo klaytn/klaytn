@@ -87,7 +87,6 @@ func TestDBManager_CanonicalHash(t *testing.T) {
 		assert.Equal(t, common.Hash{}, dbm.ReadCanonicalHash(100))
 
 		// 2. Write a row to the database.
-
 		dbm.WriteCanonicalHash(hash1, num1)
 
 		// 3. Read from the database, only written key-value pair should be found.
@@ -239,8 +238,8 @@ func TestDBManager_Preimage(t *testing.T) {
 	}
 }
 
-// TestDBManager_MainChain tests service chain related database operations, used in main chain.
-func TestDBManager_MainChain(t *testing.T) {
+// TestDBManager_ParentChain tests service chain related database operations, used in the parent chain.
+func TestDBManager_ParentChain(t *testing.T) {
 	for _, dbm := range dbManagers {
 		// 1. Read/Write SerivceChainTxHash
 		assert.Equal(t, common.Hash{}, dbm.ConvertServiceChainBlockHashToMainChainTxHash(hash1))
@@ -262,8 +261,8 @@ func TestDBManager_MainChain(t *testing.T) {
 	}
 }
 
-// TestDBManager_ServiceChain tests service chain related database operations, used in service chain.
-func TestDBManager_ServiceChain(t *testing.T) {
+// TestDBManager_ChildChain tests service chain related database operations, used in the child chain.
+func TestDBManager_ChildChain(t *testing.T) {
 	for _, dbm := range dbManagers {
 		// 1. Read/Write AnchoredBlockNumber
 		assert.Equal(t, uint64(0), dbm.ReadAnchoredBlockNumber())
