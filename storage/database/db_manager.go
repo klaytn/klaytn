@@ -44,8 +44,6 @@ type DBManager interface {
 	WriteCanonicalHash(hash common.Hash, number uint64)
 	DeleteCanonicalHash(number uint64)
 
-	ReadHeaderNumber(hash common.Hash) *uint64
-
 	ReadHeadHeaderHash() common.Hash
 	WriteHeadHeaderHash(hash common.Hash)
 
@@ -63,6 +61,7 @@ type DBManager interface {
 	ReadHeaderRLP(hash common.Hash, number uint64) rlp.RawValue
 	WriteHeader(header *types.Header)
 	DeleteHeader(hash common.Hash, number uint64)
+	ReadHeaderNumber(hash common.Hash) *uint64
 
 	HasBody(hash common.Hash, number uint64) bool
 	ReadBody(hash common.Hash, number uint64) *types.Body
