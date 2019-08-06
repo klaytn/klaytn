@@ -545,7 +545,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 // Klaytn protocol.
 func (s *CN) Stop() error {
 	if s.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
-		s.stakingManager.UnSubscribe()
+		s.stakingManager.Unsubscribe()
 	}
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
