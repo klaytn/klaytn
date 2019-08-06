@@ -207,7 +207,10 @@ func TestBridgeManager(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, false, done)
 
+				// insert the value transfer request event to the bridge info's event list.
 				bridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
+
+				// handle the value transfer request event in the event list.
 				bridgeInfo.processingPendingRequestEvents()
 
 				sim.Commit() // block
@@ -466,7 +469,10 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					"requestNonce", ev.RequestNonce,
 					"fee", ev.Fee.String())
 
+				// insert the value transfer request event to the bridge info's event list.
 				pBridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
+
+				// handle the value transfer request event in the event list.
 				pBridgeInfo.processingPendingRequestEvents()
 
 				sim.Commit() // block
