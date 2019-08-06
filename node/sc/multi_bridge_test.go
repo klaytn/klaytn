@@ -318,7 +318,7 @@ loop:
 
 // TestMultiBridgeKLAYTransfer3 checks the following:
 // - tx is actually handled when operator threshold is satisfied.
-// - No double spending is made due to additional tx.
+// - no double spending is made due to additional tx.
 func TestMultiBridgeKLAYTransfer3(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
 	acc := info.accounts[0]
