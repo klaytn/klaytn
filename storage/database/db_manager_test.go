@@ -49,7 +49,7 @@ var num3 = uint64(12345678)
 
 var hash1 = common.HexToHash("1341655") // 20190805 in hexadecimal
 var hash2 = common.HexToHash("1343A3F") // 20199999 in hexadecimal
-var hash3 = common.HexToHash("BC614E") // 12345678 in hexadecimal
+var hash3 = common.HexToHash("BC614E")  // 12345678 in hexadecimal
 
 func init() {
 	for _, bc := range baseConfigs {
