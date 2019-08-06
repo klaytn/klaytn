@@ -1,12 +1,13 @@
 pragma solidity ^0.4.24;
 
-import "../bridge/Bridge.sol";
+import "../bridge/BridgeTransferERC20.sol";
+import "../bridge/BridgeTransferERC721.sol";
 import "./callback.sol";
 
-contract ExtBridge is Bridge {
+contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
     address public callback = address(0);
 
-    constructor (bool _modeMintBurn) Bridge(_modeMintBurn) public payable {
+    constructor (bool _modeMintBurn) BridgeTransferCommon(_modeMintBurn) public payable {
     }
 
     function setCallback(address _addr) public onlyOwner {
