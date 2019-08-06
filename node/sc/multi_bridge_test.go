@@ -81,7 +81,7 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 
 	chargeAmount := big.NewInt(10000000)
 	res.accounts[0].Value = chargeAmount
-	bAddr, tx, b, err := bridge.DeployBridge(res.accounts[0], res.sim, false)
+	bAddr, tx, b, err := bridge.DeployBridge(res.accounts[0], res.sim, true)
 	res.b = b
 	res.bAddr = bAddr
 	assert.NoError(t, err)
