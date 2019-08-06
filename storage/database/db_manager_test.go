@@ -17,11 +17,15 @@
 package database
 
 import (
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"math/big"
 	"os"
+	"strconv"
 	"testing"
 )
 
@@ -41,8 +45,11 @@ var baseConfigs = []*DBConfig{
 
 var num1 = uint64(20190815)
 var num2 = uint64(20199999)
+var num3 = uint64(12345678)
+
 var hash1 = common.HexToHash("1341655") // 20190805 in hexadecimal
 var hash2 = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+var hash3 = common.HexToHash("BC614E")  // 12345678 in hexadecimal
 
 func init() {
 	for _, bc := range baseConfigs {
@@ -161,28 +168,177 @@ func TestDBManager_FastTrieProgress(t *testing.T) {
 	}
 }
 
+// TestDBManager_Header tests read, write and delete operations of blockchain headers.
 func TestDBManager_Header(t *testing.T) {
-	// TODO-Klaytn-Database Implement this!
+	header := &types.Header{Number: big.NewInt(int64(num1))}
+	headerHash := header.Hash()
+
+	encodedHeader, err := rlp.EncodeToBytes(header)
+	if err != nil {
+		t.Fatal("Failed to encode header!", "err", err)
+	}
+
+	for _, dbm := range dbManagers {
+		assert.False(t, dbm.HasHeader(headerHash, num1))
+		assert.Nil(t, dbm.ReadHeader(headerHash, num1))
+		assert.Nil(t, dbm.ReadHeaderNumber(headerHash))
+
+		dbm.WriteHeader(header)
+
+		assert.True(t, dbm.HasHeader(headerHash, num1))
+		assert.Equal(t, header, dbm.ReadHeader(headerHash, num1))
+		assert.Equal(t, rlp.RawValue(encodedHeader), dbm.ReadHeaderRLP(headerHash, num1))
+		assert.Equal(t, num1, *dbm.ReadHeaderNumber(headerHash))
+
+		dbm.DeleteHeader(headerHash, num1)
+
+		assert.False(t, dbm.HasHeader(headerHash, num1))
+		assert.Nil(t, dbm.ReadHeader(headerHash, num1))
+		assert.Nil(t, dbm.ReadHeaderNumber(headerHash))
+	}
 }
 
+// TestDBManager_Body tests read, write and delete operations of blockchain bodies.
 func TestDBManager_Body(t *testing.T) {
-	// TODO-Klaytn-Database Implement this!
+	body := &types.Body{Transactions: types.Transactions{}}
+	encodedBody, err := rlp.EncodeToBytes(body)
+	if err != nil {
+		t.Fatal("Failed to encode body!", "err", err)
+	}
+
+	for _, dbm := range dbManagers {
+		assert.False(t, dbm.HasBody(hash1, num1))
+		assert.Nil(t, dbm.ReadBody(hash1, num1))
+		assert.Nil(t, dbm.ReadBodyInCache(hash1))
+		assert.Nil(t, dbm.ReadBodyRLP(hash1, num1))
+		assert.Nil(t, dbm.ReadBodyRLPByHash(hash1))
+
+		dbm.WriteBody(hash1, num1, body)
+
+		assert.True(t, dbm.HasBody(hash1, num1))
+		assert.Equal(t, body, dbm.ReadBody(hash1, num1))
+		assert.Equal(t, body, dbm.ReadBodyInCache(hash1))
+		assert.Equal(t, rlp.RawValue(encodedBody), dbm.ReadBodyRLP(hash1, num1))
+		assert.Equal(t, rlp.RawValue(encodedBody), dbm.ReadBodyRLPByHash(hash1))
+
+		dbm.DeleteBody(hash1, num1)
+
+		assert.False(t, dbm.HasBody(hash1, num1))
+		assert.Nil(t, dbm.ReadBody(hash1, num1))
+		assert.Nil(t, dbm.ReadBodyInCache(hash1))
+		assert.Nil(t, dbm.ReadBodyRLP(hash1, num1))
+		assert.Nil(t, dbm.ReadBodyRLPByHash(hash1))
+
+		dbm.WriteBodyRLP(hash1, num1, encodedBody)
+
+		assert.True(t, dbm.HasBody(hash1, num1))
+		assert.Equal(t, body, dbm.ReadBody(hash1, num1))
+		assert.Equal(t, body, dbm.ReadBodyInCache(hash1))
+		assert.Equal(t, rlp.RawValue(encodedBody), dbm.ReadBodyRLP(hash1, num1))
+		assert.Equal(t, rlp.RawValue(encodedBody), dbm.ReadBodyRLPByHash(hash1))
+
+		bodyBatch := dbm.NewBatch(BodyDB)
+		dbm.PutBodyToBatch(bodyBatch, hash2, num2, body)
+		if err := bodyBatch.Write(); err != nil {
+			t.Fatal("Failed to write batch!", "err", err)
+		}
+
+		assert.True(t, dbm.HasBody(hash2, num2))
+		assert.Equal(t, body, dbm.ReadBody(hash2, num2))
+		assert.Equal(t, body, dbm.ReadBodyInCache(hash2))
+		assert.Equal(t, rlp.RawValue(encodedBody), dbm.ReadBodyRLP(hash2, num2))
+		assert.Equal(t, rlp.RawValue(encodedBody), dbm.ReadBodyRLPByHash(hash2))
+	}
 }
 
+// TestDBManager_Td tests read, write and delete operations of blockchain headers' total difficulty.
 func TestDBManager_Td(t *testing.T) {
-	// TODO-Klaytn-Database Implement this!
+	for _, dbm := range dbManagers {
+		assert.Nil(t, dbm.ReadTd(hash1, num1))
+
+		dbm.WriteTd(hash1, num1, big.NewInt(12345))
+		assert.Equal(t, big.NewInt(12345), dbm.ReadTd(hash1, num1))
+
+		dbm.WriteTd(hash1, num1, big.NewInt(54321))
+		assert.Equal(t, big.NewInt(54321), dbm.ReadTd(hash1, num1))
+
+		dbm.DeleteTd(hash1, num1)
+		assert.Nil(t, dbm.ReadTd(hash1, num1))
+	}
 }
 
+// TestDBManager_Receipts read, write and delete operations of blockchain receipts.
 func TestDBManager_Receipts(t *testing.T) {
-	// TODO-Klaytn-Database Implement this!
+	header := &types.Header{Number: big.NewInt(int64(num1))}
+	headerHash := header.Hash()
+	receipts := types.Receipts{generateReceipt(111)}
+
+	for _, dbm := range dbManagers {
+		assert.Nil(t, dbm.ReadReceipts(headerHash, num1))
+		assert.Nil(t, dbm.ReadReceiptsByBlockHash(headerHash))
+
+		dbm.WriteReceipts(headerHash, num1, receipts)
+		dbm.WriteHeader(header)
+
+		assert.Equal(t, receipts, dbm.ReadReceipts(headerHash, num1))
+		assert.Equal(t, receipts, dbm.ReadReceiptsByBlockHash(headerHash))
+
+		dbm.DeleteReceipts(headerHash, num1)
+
+		assert.Nil(t, dbm.ReadReceipts(headerHash, num1))
+		assert.Nil(t, dbm.ReadReceiptsByBlockHash(headerHash))
+	}
 }
 
+// TestDBManager_Block read, write and delete operations of blockchain blocks.
 func TestDBManager_Block(t *testing.T) {
-	// TODO-Klaytn-Database Implement this!
+	header := &types.Header{Number: big.NewInt(int64(num1))}
+	headerHash := header.Hash()
+	block := types.NewBlockWithHeader(header)
+
+	for _, dbm := range dbManagers {
+		assert.False(t, dbm.HasBlock(headerHash, num1))
+		assert.Nil(t, dbm.ReadBlock(headerHash, num1))
+		assert.Nil(t, dbm.ReadBlockByHash(headerHash))
+		assert.Nil(t, dbm.ReadBlockByNumber(num1))
+
+		dbm.WriteBlock(block)
+		dbm.WriteCanonicalHash(headerHash, num1)
+
+		assert.True(t, dbm.HasBlock(headerHash, num1))
+
+		blockFromDB1 := dbm.ReadBlock(headerHash, num1)
+		blockFromDB2 := dbm.ReadBlockByHash(headerHash)
+		blockFromDB3 := dbm.ReadBlockByNumber(num1)
+
+		assert.Equal(t, headerHash, blockFromDB1.Hash())
+		assert.Equal(t, headerHash, blockFromDB2.Hash())
+		assert.Equal(t, headerHash, blockFromDB3.Hash())
+
+		dbm.DeleteBlock(headerHash, num1)
+		dbm.DeleteCanonicalHash(num1)
+
+		assert.False(t, dbm.HasBlock(headerHash, num1))
+		assert.Nil(t, dbm.ReadBlock(headerHash, num1))
+		assert.Nil(t, dbm.ReadBlockByHash(headerHash))
+		assert.Nil(t, dbm.ReadBlockByNumber(num1))
+	}
 }
 
+// TestDBManager_IstanbulSnapshot tests read and write operations of istanbul snapshots.
 func TestDBManager_IstanbulSnapshot(t *testing.T) {
-	// TODO-Klaytn-Database Implement this!
+	for _, dbm := range dbManagers {
+		snapshot, _ := dbm.ReadIstanbulSnapshot(hash3)
+		assert.Nil(t, snapshot)
+
+		dbm.WriteIstanbulSnapshot(hash3, hash2[:])
+		snapshot, _ = dbm.ReadIstanbulSnapshot(hash3)
+		assert.Equal(t, hash2[:], snapshot)
+
+		dbm.WriteIstanbulSnapshot(hash3, hash1[:])
+		snapshot, _ = dbm.ReadIstanbulSnapshot(hash3)
+		assert.Equal(t, hash1[:], snapshot)
+	}
 }
 
 // TestDBManager_DatabaseVersion tests read/write operations of database version.
@@ -310,4 +466,15 @@ func TestDBManager_CliqueSnapshot(t *testing.T) {
 
 func TestDBManager_Governance(t *testing.T) {
 	// TODO-Klaytn-Database Implement this!
+}
+
+func generateReceipt(gasUsed int) *types.Receipt {
+	log := &types.Log{Topics: []common.Hash{}, Data: []uint8{}, BlockNumber: uint64(gasUsed)}
+	log.Topics = append(log.Topics, common.HexToHash(strconv.Itoa(gasUsed)))
+	return &types.Receipt{
+		TxHash:  common.HexToHash(strconv.Itoa(gasUsed)),
+		GasUsed: uint64(gasUsed),
+		Status:  types.ReceiptStatusSuccessful,
+		Logs:    []*types.Log{log},
+	}
 }
