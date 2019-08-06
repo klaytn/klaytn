@@ -154,10 +154,11 @@ func TestBridgeManager(t *testing.T) {
 	assert.NoError(t, err)
 	sim.Commit() // block
 
-	// Register tokens on the bridge
+	// Register tokens on the bridgeInfo
 	bridgeInfo.RegisterToken(tokenAddr, tokenAddr)
 	bridgeInfo.RegisterToken(nftAddr, nftAddr)
 
+	// Register tokens on the bridge
 	bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
 	bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
 	sim.Commit() // block
