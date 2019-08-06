@@ -229,7 +229,7 @@ func (cm *cacheManager) deleteHeaderCache(hash common.Hash) {
 
 // hasHeaderInCache returns if a cachedHeader exists with given headerHash.
 func (cm *cacheManager) hasHeaderInCache(hash common.Hash) bool {
-	if cm.blockNumberCache.Contains(hash) || cm.headerCache.Contains(hash) {
+	if cached, ok := cm.headerCache.Get(hash); ok && cached != nil {
 		return true
 	}
 	return false
@@ -352,7 +352,10 @@ func (cm *cacheManager) readBlockCache(hash common.Hash) *types.Block {
 
 // hasBlockInCache returns if given hash exists in blockCache.
 func (cm *cacheManager) hasBlockInCache(hash common.Hash) bool {
-	return cm.blockCache.Contains(hash)
+	if cachedBlock, ok := cm.blockCache.Get(hash); ok && cachedBlock != nil {
+		return true
+	}
+	return false
 }
 
 // writeBlockCache writes block as a value, blockHash as a key.

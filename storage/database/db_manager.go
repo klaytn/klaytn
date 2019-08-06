@@ -446,25 +446,6 @@ func (dbm *databaseManager) DeleteCanonicalHash(number uint64) {
 	dbm.cm.writeCanonicalHashCache(number, common.Hash{})
 }
 
-// Head Number operations.
-// ReadHeaderNumber returns the header number assigned to a hash.
-func (dbm *databaseManager) ReadHeaderNumber(hash common.Hash) *uint64 {
-	if cachedHeaderNumber := dbm.cm.readBlockNumberCache(hash); cachedHeaderNumber != nil {
-		return cachedHeaderNumber
-	}
-
-	db := dbm.getDatabase(headerDB)
-	data, _ := db.Get(headerNumberKey(hash))
-	if len(data) != 8 {
-		return nil
-	}
-	number := binary.BigEndian.Uint64(data)
-
-	// Write to cache before returning found value.
-	dbm.cm.writeBlockNumberCache(hash, number)
-	return &number
-}
-
 // Head Header Hash operations.
 // ReadHeadHeaderHash retrieves the hash of the current canonical head header.
 func (dbm *databaseManager) ReadHeadHeaderHash() common.Hash {
@@ -625,6 +606,25 @@ func (dbm *databaseManager) DeleteHeader(hash common.Hash, number uint64) {
 
 	// Delete cache at the end of successful delete.
 	dbm.cm.deleteHeaderCache(hash)
+}
+
+// Head Number operations.
+// ReadHeaderNumber returns the header number assigned to a hash.
+func (dbm *databaseManager) ReadHeaderNumber(hash common.Hash) *uint64 {
+	if cachedHeaderNumber := dbm.cm.readBlockNumberCache(hash); cachedHeaderNumber != nil {
+		return cachedHeaderNumber
+	}
+
+	db := dbm.getDatabase(headerDB)
+	data, _ := db.Get(headerNumberKey(hash))
+	if len(data) != 8 {
+		return nil
+	}
+	number := binary.BigEndian.Uint64(data)
+
+	// Write to cache before returning found value.
+	dbm.cm.writeBlockNumberCache(hash, number)
+	return &number
 }
 
 // (Block)Body operations.
