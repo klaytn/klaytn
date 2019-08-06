@@ -22,7 +22,7 @@ Prometheus. Different types of metrics have different characteristics.
 
   - Registries: hold references to a set of metrics by name and can iterate over them.
 
-  - Timers capture the duration and rate of events.
+  - Timers: capture the duration and the rate of events.
 
 */
 package metrics
