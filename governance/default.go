@@ -609,7 +609,7 @@ func newGovernanceCache() common.Cache {
 
 func (g *Governance) initializeCache() error {
 	// get last n governance change block number
-	indices, err := g.db.ReadRecentGovernanceIdx(params.GovernanceCacheLimit)
+	indices, err := g.db.ReadRecentGovernanceIdx(params.GovernanceIdxCacheLimit)
 	if err != nil {
 		return ErrNotInitialized
 	}
@@ -617,9 +617,10 @@ func (g *Governance) initializeCache() error {
 
 	// Put governance items into the itemCache
 	for _, v := range indices {
-		if num, data, err := g.ReadGovernance(v); err == nil {
-			g.itemCache.Add(getGovernanceCacheKey(num), data)
-			atomic.StoreUint64(&g.actualGovernanceBlock, num)
+		if data, err := g.db.ReadGovernance(v); err == nil {
+			data = adjustDecodedSet(data)
+			g.itemCache.Add(getGovernanceCacheKey(v), data)
+			atomic.StoreUint64(&g.actualGovernanceBlock, v)
 		} else {
 			logger.Crit("Couldn't read governance cache from database. Check database consistency", "index", v, "err", err)
 		}
@@ -666,6 +667,14 @@ func getGovernanceCacheKey(num uint64) common.GovernanceCacheKey {
 
 // Store new governance data on DB. This updates Governance cache too.
 func (g *Governance) WriteGovernance(num uint64, data GovernanceSet, delta GovernanceSet) error {
+	g.idxCacheLock.RLock()
+	indices := make([]uint64, 0, len(g.idxCache))
+	copy(indices, g.idxCache)
+	g.idxCacheLock.RUnlock()
+
+	if len(indices) > 0 && num <= indices[len(indices)-1] {
+		return nil
+	}
 
 	new := NewGovernanceSet()
 	new.Import(data.Items())
