@@ -35,7 +35,7 @@ Source Files
 
 Each file provides following features
  - completion.go	: Provides functions for keyword completion
- - jsre.go	: Wraps otto Javascript interpreter and provides an event loop
+ - jsre.go	: Wraps otto JavaScript interpreter and provides an event loop
  - pretty.go	: Prints result to the standard output in more readable way
 */
 package jsre
