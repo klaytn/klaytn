@@ -271,7 +271,6 @@ func TestMultiBridgeKLAYTransfer1(t *testing.T) {
 			t.Fatal("Contract Event Loop Running Stop by timeout")
 		}
 	}
-	t.Fatal("fail to check event result")
 }
 
 // TestMultiBridgeKLAYTransfer2 checks the following:
@@ -308,7 +307,6 @@ func TestMultiBridgeKLAYTransfer2(t *testing.T) {
 			return
 		}
 	}
-	t.Fatal("fail to check event result")
 }
 
 // TestMultiBridgeKLAYTransfer3 checks the following:
@@ -353,5 +351,4 @@ func TestMultiBridgeKLAYTransfer3(t *testing.T) {
 			t.Fatal("Contract Event Loop Running Stop by timeout")
 		}
 	}
-	t.Fatal("fail to check event result")
 }
