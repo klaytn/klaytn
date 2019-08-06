@@ -198,7 +198,7 @@ func TestDBManager_Header(t *testing.T) {
 	}
 }
 
-// TestDBManager_Header tests read, write and delete operations of blockchain bodies.
+// TestDBManager_Body tests read, write and delete operations of blockchain bodies.
 func TestDBManager_Body(t *testing.T) {
 	body := &types.Body{Transactions: types.Transactions{}}
 	encodedBody, err := rlp.EncodeToBytes(body)
