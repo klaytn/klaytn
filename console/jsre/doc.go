@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package jsre provides execution environment for JavaScript.
+Package jsre provides an execution environment for JavaScript.
 
 JSRE is a generic JS runtime environment embedding the otto Javascript interpreter. <https://github.com/robertkrimen/otto>
  It provides some helper functions to
