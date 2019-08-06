@@ -263,7 +263,7 @@ func (cm *cacheManager) deleteTdCache(hash common.Hash) {
 // readBlockNumberCache looks for cached headerNumber in blockNumberCache.
 // It returns nil if not found.
 func (cm *cacheManager) readBlockNumberCache(hash common.Hash) *uint64 {
-	if cached, ok := cm.blockNumberCache.Get(hash); ok {
+	if cached, ok := cm.blockNumberCache.Get(hash); ok && cached != nil {
 		cacheGetBlockNumberHitMeter.Mark(1)
 		blockNumber := cached.(uint64)
 		return &blockNumber
@@ -275,6 +275,11 @@ func (cm *cacheManager) readBlockNumberCache(hash common.Hash) *uint64 {
 // writeHeaderCache writes headerNumber as a value, headerHash as a key.
 func (cm *cacheManager) writeBlockNumberCache(hash common.Hash, number uint64) {
 	cm.blockNumberCache.Add(hash, number)
+}
+
+// deleteBlockNumberCache deletes headerNumber with a headerHash as a key.
+func (cm *cacheManager) deleteBlockNumberCache(hash common.Hash) {
+	cm.blockNumberCache.Add(hash, nil)
 }
 
 // readCanonicalHashCache looks for cached canonical hash in canonicalHashCache.

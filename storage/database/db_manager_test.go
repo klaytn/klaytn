@@ -194,7 +194,7 @@ func TestDBManager_Header(t *testing.T) {
 
 		assert.False(t, dbm.HasHeader(headerHash, num1))
 		assert.Nil(t, dbm.ReadHeader(headerHash, num1))
-		assert.Equal(t, num1, *dbm.ReadHeaderNumber(headerHash)) // headerNumber still exists in the cache
+		assert.Nil(t, dbm.ReadHeaderNumber(headerHash))
 	}
 }
 

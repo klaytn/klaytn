@@ -606,6 +606,7 @@ func (dbm *databaseManager) DeleteHeader(hash common.Hash, number uint64) {
 
 	// Delete cache at the end of successful delete.
 	dbm.cm.deleteHeaderCache(hash)
+	dbm.cm.deleteBlockNumberCache(hash)
 }
 
 // Head Number operations.
