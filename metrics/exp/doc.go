@@ -15,5 +15,5 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 // package exp hooks go-metrics into expvar on any /debug/metrics request,
-// load all vars from the registry into expvar, and execute regular expvar handler.
+// loads all vars from the registry into expvar, and executes regular expvar handler.
 package exp
