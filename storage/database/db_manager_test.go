@@ -45,8 +45,11 @@ var baseConfigs = []*DBConfig{
 
 var num1 = uint64(20190815)
 var num2 = uint64(20199999)
+var num3 = uint64(12345678)
+
 var hash1 = common.HexToHash("1341655") // 20190805 in hexadecimal
 var hash2 = common.HexToHash("1343A3F") // 20199999 in hexadecimal
+var hash3 = common.HexToHash("BC614E") // 12345678 in hexadecimal
 
 func init() {
 	for _, bc := range baseConfigs {
@@ -197,7 +200,7 @@ func TestDBManager_Header(t *testing.T) {
 
 // TestDBManager_Header tests read, write and delete operations of blockchain bodies.
 func TestDBManager_Body(t *testing.T) {
-	body := &types.Body{Transactions:types.Transactions{}}
+	body := &types.Body{Transactions: types.Transactions{}}
 	encodedBody, err := rlp.EncodeToBytes(body)
 	if err != nil {
 		t.Fatal("Failed to encode body!", "err", err)
@@ -325,15 +328,15 @@ func TestDBManager_Block(t *testing.T) {
 // TestDBManager_IstanbulSnapshot tests read and write operations of istanbul snapshots.
 func TestDBManager_IstanbulSnapshot(t *testing.T) {
 	for _, dbm := range dbManagers {
-		snapshot, _ := dbm.ReadIstanbulSnapshot(hash1)
+		snapshot, _ := dbm.ReadIstanbulSnapshot(hash3)
 		assert.Nil(t, snapshot)
 
-		dbm.WriteIstanbulSnapshot(hash1, hash2[:])
-		snapshot, _ = dbm.ReadIstanbulSnapshot(hash1)
+		dbm.WriteIstanbulSnapshot(hash3, hash2[:])
+		snapshot, _ = dbm.ReadIstanbulSnapshot(hash3)
 		assert.Equal(t, hash2[:], snapshot)
 
-		dbm.WriteIstanbulSnapshot(hash1, hash1[:])
-		snapshot, _ = dbm.ReadIstanbulSnapshot(hash1)
+		dbm.WriteIstanbulSnapshot(hash3, hash1[:])
+		snapshot, _ = dbm.ReadIstanbulSnapshot(hash3)
 		assert.Equal(t, hash1[:], snapshot)
 	}
 }
