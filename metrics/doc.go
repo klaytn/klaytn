@@ -24,5 +24,5 @@ Prometheus. Different types of metrics have different characteristics.
 
   - Timers capture the duration and rate of events.
 
- */
+*/
 package metrics
