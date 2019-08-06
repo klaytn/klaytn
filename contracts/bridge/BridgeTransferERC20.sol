@@ -7,7 +7,7 @@ import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.s
 import "../sc_erc20/IERC20BridgeReceiver.sol";
 import "./BridgeTransferCommon.sol";
 
-contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransferCommon{
+contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransferCommon {
     // handleERC20Transfer sends the token by the request.
     function handleERC20Transfer(
         bytes32 _requestTxHash,
@@ -83,7 +83,7 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransferCommon{
         requestNonce++;
     }
 
-    // Receiver function of ERC20 token for 1-step deposits to the Bridge
+    // Receiver function of ERC20 token for 1-step deposits to the Bridge.
     function onERC20Received(
         address _from,
         uint256 _value,
@@ -111,7 +111,7 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransferCommon{
     }
 
 
-    // setERC20Fee set the fee of the token transfer
+    // setERC20Fee sets the fee of the token transfer.
     function setERC20Fee(address _token, uint256 _fee, uint64 _requestNonce)
         external
         onlyOperators

@@ -41,16 +41,16 @@ contract BridgeTransferCommon is BridgeHandledRequests, BridgeFee, BridgeOperato
 
     // registerToken can update the allowed token with the counterpart token.
     function registerToken(address _token, address _cToken)
-    external
-    onlyOwner
+        external
+        onlyOwner
     {
         allowedTokens[_token] = _cToken;
     }
 
     // deregisterToken can remove the token in allowedToken list.
     function deregisterToken(address _token)
-    external
-    onlyOwner
+        external
+        onlyOwner
     {
         delete allowedTokens[_token];
     }
@@ -64,6 +64,8 @@ contract BridgeTransferCommon is BridgeHandledRequests, BridgeFee, BridgeOperato
      * @param valueOrTokenId is the value of KLAY/ERC20 or token ID of ERC721.
      * @param requestNonce is the order number of the request value transfer.
      * @param uri is uri of ERC721 token.
+     * @param fee is fee of value transfer.
+     * @param extraData is additional data for specific purpose of a service provider.
      */
     event RequestValueTransfer(
         TokenType tokenType,
@@ -86,6 +88,7 @@ contract BridgeTransferCommon is BridgeHandledRequests, BridgeFee, BridgeOperato
      * @param tokenAddress Address of token contract the token belong to.
      * @param valueOrTokenId is the value of KLAY/ERC20 or token ID of ERC721.
      * @param handleNonce is the order number of the handle value transfer.
+     * @param extraData is additional data for specific purpose of a service provider.
      */
     event HandleValueTransfer(
         bytes32 requestTxHash,
@@ -99,6 +102,7 @@ contract BridgeTransferCommon is BridgeHandledRequests, BridgeFee, BridgeOperato
 
     );
 
+    // updateHandleNonce increases sequential handle nonce after the _requestedNonce is handled.
     function updateHandleNonce(uint64 _requestedNonce) internal {
         uint64 i;
         handledNonces[_requestedNonce] = true;
@@ -112,8 +116,8 @@ contract BridgeTransferCommon is BridgeHandledRequests, BridgeFee, BridgeOperato
 
     // setFeeReceiver set fee receiver.
     function setFeeReceiver(address _feeReceiver)
-    external
-    onlyOwner
+        external
+        onlyOwner
     {
         _setFeeReceiver(_feeReceiver);
     }
