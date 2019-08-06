@@ -260,18 +260,15 @@ func TestMultiBridgeKLAYTransfer1(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-loop:
 	for {
 		select {
 		case ev := <-info.handleCh:
 			assert.Equal(t, nonceOffset, ev.HandleNonce)
 			return
 		case err := <-info.handleSub.Err():
-			t.Log("Contract Event Loop Running Stop by sub.Err()", "err", err)
-			break loop
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
 		case <-time.After(timeOut):
-			t.Log("Contract Event Loop Running Stop by timeout")
-			break loop
+			t.Fatal("Contract Event Loop Running Stop by timeout")
 		}
 	}
 	t.Fatal("fail to check event result")
@@ -300,14 +297,12 @@ func TestMultiBridgeKLAYTransfer2(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-loop:
 	for {
 		select {
 		case _ = <-info.handleCh:
-			break loop
+			t.Fatal("unexpected handling of value transfer")
 		case err := <-info.handleSub.Err():
-			t.Log("Contract Event Loop Running Stop by sub.Err()", "err", err)
-			break loop
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
 		case <-time.After(timeOut):
 			// expected timeout
 			return
@@ -344,7 +339,6 @@ func TestMultiBridgeKLAYTransfer3(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-loop:
 	for {
 		select {
 		case _ = <-info.handleCh:
@@ -354,11 +348,9 @@ loop:
 			assert.Error(t, bind.CheckWaitMined(info.sim, tx))
 			return
 		case err := <-info.handleSub.Err():
-			t.Log("Contract Event Loop Running Stop by sub.Err()", "err", err)
-			break loop
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
 		case <-time.After(timeOut):
-			t.Log("Contract Event Loop Running Stop by timeout")
-			break loop
+			t.Fatal("Contract Event Loop Running Stop by timeout")
 		}
 	}
 	t.Fatal("fail to check event result")
