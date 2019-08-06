@@ -198,8 +198,8 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 				Payload:  payload,
 			}
 
-			//go p.Send(istanbulMsg, payload)
-			go p.Send(istanbulMsg, cmsg)
+			//go p.Send(IstanbulMsg, payload)
+			go p.Send(IstanbulMsg, cmsg)
 		}
 	}
 	return nil
@@ -240,7 +240,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 				Payload:  payload,
 			}
 
-			go p.Send(istanbulMsg, cmsg)
+			go p.Send(IstanbulMsg, cmsg)
 		}
 	}
 	return nil

@@ -21,51 +21,56 @@
 package cn
 
 import (
+	"github.com/klaytn/klaytn/consensus/istanbul/backend"
 	"github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/networks/p2p"
 )
 
 var (
-	propTxnInPacketsMeter     = metrics.NewRegisteredMeter("klay/prop/txns/in/packets", nil)
-	propTxnInTrafficMeter     = metrics.NewRegisteredMeter("klay/prop/txns/in/traffic", nil)
-	propTxnOutPacketsMeter    = metrics.NewRegisteredMeter("klay/prop/txns/out/packets", nil)
-	propTxnOutTrafficMeter    = metrics.NewRegisteredMeter("klay/prop/txns/out/traffic", nil)
-	propTxPeersGauge          = metrics.NewRegisteredGauge("klay/prop/tx/peers/gauge", nil)
-	propHashInPacketsMeter    = metrics.NewRegisteredMeter("klay/prop/hashes/in/packets", nil)
-	propHashInTrafficMeter    = metrics.NewRegisteredMeter("klay/prop/hashes/in/traffic", nil)
-	propHashOutPacketsMeter   = metrics.NewRegisteredMeter("klay/prop/hashes/out/packets", nil)
-	propHashOutTrafficMeter   = metrics.NewRegisteredMeter("klay/prop/hashes/out/traffic", nil)
-	propBlockInPacketsMeter   = metrics.NewRegisteredMeter("klay/prop/blocks/in/packets", nil)
-	propBlockInTrafficMeter   = metrics.NewRegisteredMeter("klay/prop/blocks/in/traffic", nil)
-	propBlockOutPacketsMeter  = metrics.NewRegisteredMeter("klay/prop/blocks/out/packets", nil)
-	propBlockOutTrafficMeter  = metrics.NewRegisteredMeter("klay/prop/blocks/out/traffic", nil)
-	reqHeaderInPacketsMeter   = metrics.NewRegisteredMeter("klay/req/headers/in/packets", nil)
-	reqHeaderInTrafficMeter   = metrics.NewRegisteredMeter("klay/req/headers/in/traffic", nil)
-	reqHeaderOutPacketsMeter  = metrics.NewRegisteredMeter("klay/req/headers/out/packets", nil)
-	reqHeaderOutTrafficMeter  = metrics.NewRegisteredMeter("klay/req/headers/out/traffic", nil)
-	reqBodyInPacketsMeter     = metrics.NewRegisteredMeter("klay/req/bodies/in/packets", nil)
-	reqBodyInTrafficMeter     = metrics.NewRegisteredMeter("klay/req/bodies/in/traffic", nil)
-	reqBodyOutPacketsMeter    = metrics.NewRegisteredMeter("klay/req/bodies/out/packets", nil)
-	reqBodyOutTrafficMeter    = metrics.NewRegisteredMeter("klay/req/bodies/out/traffic", nil)
-	reqStateInPacketsMeter    = metrics.NewRegisteredMeter("klay/req/states/in/packets", nil)
-	reqStateInTrafficMeter    = metrics.NewRegisteredMeter("klay/req/states/in/traffic", nil)
-	reqStateOutPacketsMeter   = metrics.NewRegisteredMeter("klay/req/states/out/packets", nil)
-	reqStateOutTrafficMeter   = metrics.NewRegisteredMeter("klay/req/states/out/traffic", nil)
-	reqReceiptInPacketsMeter  = metrics.NewRegisteredMeter("klay/req/receipts/in/packets", nil)
-	reqReceiptInTrafficMeter  = metrics.NewRegisteredMeter("klay/req/receipts/in/traffic", nil)
-	reqReceiptOutPacketsMeter = metrics.NewRegisteredMeter("klay/req/receipts/out/packets", nil)
-	reqReceiptOutTrafficMeter = metrics.NewRegisteredMeter("klay/req/receipts/out/traffic", nil)
-	miscInPacketsMeter        = metrics.NewRegisteredMeter("klay/misc/in/packets", nil)
-	miscInTrafficMeter        = metrics.NewRegisteredMeter("klay/misc/in/traffic", nil)
-	miscOutPacketsMeter       = metrics.NewRegisteredMeter("klay/misc/out/packets", nil)
-	miscOutTrafficMeter       = metrics.NewRegisteredMeter("klay/misc/out/traffic", nil)
-	txReceiveCounter          = metrics.NewRegisteredCounter("klay/tx/recv/counter", nil)
-	txResendCounter           = metrics.NewRegisteredCounter("klay/tx/resend/counter", nil)
-	txSendCounter             = metrics.NewRegisteredCounter("klay/tx/send/counter", nil)
-	txResendRoutineGauge      = metrics.NewRegisteredGauge("klay/tx/resend/routine/gauge", nil)
-	cnPeerCountGauge          = metrics.NewRegisteredGauge("p2p/CNPeerCountGauge", nil)
-	pnPeerCountGauge          = metrics.NewRegisteredGauge("p2p/PNPeerCountGauge", nil)
-	enPeerCountGauge          = metrics.NewRegisteredGauge("p2p/ENPeerCountGauge", nil)
+	propTxnInPacketsMeter                = metrics.NewRegisteredMeter("klay/prop/txns/in/packets", nil)
+	propTxnInTrafficMeter                = metrics.NewRegisteredMeter("klay/prop/txns/in/traffic", nil)
+	propTxnOutPacketsMeter               = metrics.NewRegisteredMeter("klay/prop/txns/out/packets", nil)
+	propTxnOutTrafficMeter               = metrics.NewRegisteredMeter("klay/prop/txns/out/traffic", nil)
+	propTxPeersGauge                     = metrics.NewRegisteredGauge("klay/prop/tx/peers/gauge", nil)
+	propHashInPacketsMeter               = metrics.NewRegisteredMeter("klay/prop/hashes/in/packets", nil)
+	propHashInTrafficMeter               = metrics.NewRegisteredMeter("klay/prop/hashes/in/traffic", nil)
+	propHashOutPacketsMeter              = metrics.NewRegisteredMeter("klay/prop/hashes/out/packets", nil)
+	propHashOutTrafficMeter              = metrics.NewRegisteredMeter("klay/prop/hashes/out/traffic", nil)
+	propBlockInPacketsMeter              = metrics.NewRegisteredMeter("klay/prop/blocks/in/packets", nil)
+	propBlockInTrafficMeter              = metrics.NewRegisteredMeter("klay/prop/blocks/in/traffic", nil)
+	propBlockOutPacketsMeter             = metrics.NewRegisteredMeter("klay/prop/blocks/out/packets", nil)
+	propBlockOutTrafficMeter             = metrics.NewRegisteredMeter("klay/prop/blocks/out/traffic", nil)
+	reqHeaderInPacketsMeter              = metrics.NewRegisteredMeter("klay/req/headers/in/packets", nil)
+	reqHeaderInTrafficMeter              = metrics.NewRegisteredMeter("klay/req/headers/in/traffic", nil)
+	reqHeaderOutPacketsMeter             = metrics.NewRegisteredMeter("klay/req/headers/out/packets", nil)
+	reqHeaderOutTrafficMeter             = metrics.NewRegisteredMeter("klay/req/headers/out/traffic", nil)
+	reqBodyInPacketsMeter                = metrics.NewRegisteredMeter("klay/req/bodies/in/packets", nil)
+	reqBodyInTrafficMeter                = metrics.NewRegisteredMeter("klay/req/bodies/in/traffic", nil)
+	reqBodyOutPacketsMeter               = metrics.NewRegisteredMeter("klay/req/bodies/out/packets", nil)
+	reqBodyOutTrafficMeter               = metrics.NewRegisteredMeter("klay/req/bodies/out/traffic", nil)
+	reqStateInPacketsMeter               = metrics.NewRegisteredMeter("klay/req/states/in/packets", nil)
+	reqStateInTrafficMeter               = metrics.NewRegisteredMeter("klay/req/states/in/traffic", nil)
+	reqStateOutPacketsMeter              = metrics.NewRegisteredMeter("klay/req/states/out/packets", nil)
+	reqStateOutTrafficMeter              = metrics.NewRegisteredMeter("klay/req/states/out/traffic", nil)
+	reqReceiptInPacketsMeter             = metrics.NewRegisteredMeter("klay/req/receipts/in/packets", nil)
+	reqReceiptInTrafficMeter             = metrics.NewRegisteredMeter("klay/req/receipts/in/traffic", nil)
+	reqReceiptOutPacketsMeter            = metrics.NewRegisteredMeter("klay/req/receipts/out/packets", nil)
+	reqReceiptOutTrafficMeter            = metrics.NewRegisteredMeter("klay/req/receipts/out/traffic", nil)
+	miscInPacketsMeter                   = metrics.NewRegisteredMeter("klay/misc/in/packets", nil)
+	miscInTrafficMeter                   = metrics.NewRegisteredMeter("klay/misc/in/traffic", nil)
+	miscOutPacketsMeter                  = metrics.NewRegisteredMeter("klay/misc/out/packets", nil)
+	miscOutTrafficMeter                  = metrics.NewRegisteredMeter("klay/misc/out/traffic", nil)
+	txReceiveCounter                     = metrics.NewRegisteredCounter("klay/tx/recv/counter", nil)
+	txResendCounter                      = metrics.NewRegisteredCounter("klay/tx/resend/counter", nil)
+	txSendCounter                        = metrics.NewRegisteredCounter("klay/tx/send/counter", nil)
+	txResendRoutineGauge                 = metrics.NewRegisteredGauge("klay/tx/resend/routine/gauge", nil)
+	cnPeerCountGauge                     = metrics.NewRegisteredGauge("p2p/CNPeerCountGauge", nil)
+	pnPeerCountGauge                     = metrics.NewRegisteredGauge("p2p/PNPeerCountGauge", nil)
+	enPeerCountGauge                     = metrics.NewRegisteredGauge("p2p/ENPeerCountGauge", nil)
+	propConsensusIstanbulInPacketsMeter  = metrics.NewRegisteredMeter("klay/prop/consensus/istanbul/in/packets", nil)
+	propConsensusIstanbulInTrafficMeter  = metrics.NewRegisteredMeter("klay/prop/consensus/istanbul/in/traffic", nil)
+	propConsensusIstanbulOutPacketsMeter = metrics.NewRegisteredMeter("klay/prop/consensus/istanbul/out/packets", nil)
+	propConsensusIstanbulOutTrafficMeter = metrics.NewRegisteredMeter("klay/prop/consensus/istanbul/out/traffic", nil)
 )
 
 // meteredMsgReadWriter is a wrapper around a p2p.MsgReadWriter, capable of
@@ -115,6 +120,8 @@ func (rw *meteredMsgReadWriter) ReadMsg() (p2p.Msg, error) {
 		packets, traffic = propBlockInPacketsMeter, propBlockInTrafficMeter
 	case msg.Code == TxMsg:
 		packets, traffic = propTxnInPacketsMeter, propTxnInTrafficMeter
+	case msg.Code == backend.IstanbulMsg:
+		packets, traffic = propConsensusIstanbulInPacketsMeter, propConsensusIstanbulInTrafficMeter
 	}
 	packets.Mark(1)
 	traffic.Mark(int64(msg.Size))
@@ -142,6 +149,8 @@ func (rw *meteredMsgReadWriter) WriteMsg(msg p2p.Msg) error {
 		packets, traffic = propBlockOutPacketsMeter, propBlockOutTrafficMeter
 	case msg.Code == TxMsg:
 		packets, traffic = propTxnOutPacketsMeter, propTxnOutTrafficMeter
+	case msg.Code == backend.IstanbulMsg:
+		packets, traffic = propConsensusIstanbulOutPacketsMeter, propConsensusIstanbulOutTrafficMeter
 	}
 	packets.Mark(1)
 	traffic.Mark(int64(msg.Size))

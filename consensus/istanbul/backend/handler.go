@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	istanbulMsg = 0x11
+	IstanbulMsg = 0x11
 )
 
 var (
@@ -55,7 +55,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
 
-	if msg.Code == istanbulMsg {
+	if msg.Code == IstanbulMsg {
 		if !sb.coreStarted {
 			return true, istanbul.ErrStoppedEngine
 		}
@@ -119,7 +119,7 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster, nodetype p2
 
 // RegisterConsensusMsgCode registers the channel of consensus msg.
 func (sb *backend) RegisterConsensusMsgCode(peer consensus.Peer) {
-	peer.RegisterConsensusMsgCode(istanbulMsg)
+	peer.RegisterConsensusMsgCode(IstanbulMsg)
 }
 
 func (sb *backend) NewChainHead() error {
