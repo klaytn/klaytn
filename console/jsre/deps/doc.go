@@ -21,7 +21,7 @@
 /*
 Package deps contains the console's dependencies of Javascript libraries to be embedded in Go source code.
 
-Klaytn console provides functions of bignumber.js and web3.js which are included in the source tree. To make those available, deps is using go-bindata<https://github.com/jteeuwen/go-bindata> to make those javascript source files into assets which can be used by go environment.
+Klaytn console provides functions of bignumber.js and web3.js which are included in the source tree. deps is using go-bindata<https://github.com/jteeuwen/go-bindata> to make those javascript source files into assets which can be used by go environment.
 
 Source Files
 
