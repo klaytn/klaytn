@@ -109,7 +109,7 @@ func (sm *StakingManager) handleChainHeadEvent() {
 	}
 }
 
-// UnSubscribe can unsubscribe a subscription to listen chain head event.
+// Unsubscribe can unsubscribe a subscription to listen chain head event.
 func (sm *StakingManager) Unsubscribe() {
 	sm.chainHeadSub.Unsubscribe()
 }
