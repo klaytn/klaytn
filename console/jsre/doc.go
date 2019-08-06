@@ -28,7 +28,7 @@ JSRE is a generic JS runtime environment embedding the otto Javascript interpret
  - require libraries
  - bind native go objects
 
-Because of JSRE, an user can utilize Javascript in the console as needed.
+Because of JSRE, an user can utilize JavaScript in the console as needed.
 JSRE also provides two JavaScript libraries, bignumber.js and web3.js, for users to easily access Klaytn.
 
 Source Files
