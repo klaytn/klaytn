@@ -115,8 +115,5 @@ func (sm *StakingManager) Unsubscribe() {
 }
 
 func (sm *StakingManager) IsSubscribing() bool {
-	if sm.chainHeadSub != nil {
-		return true
-	}
-	return false
+	return sm.chainHeadSub != nil
 }
