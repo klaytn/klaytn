@@ -668,7 +668,7 @@ func TestMultiBridgeErrInvalTx(t *testing.T) {
 }
 
 // TestMultiBridgeErrOverSign checks the following:
-// - set threshold to 3.
+// - set threshold to 2.
 // - two operators succeed to handle value transfer.
 // - the last operator fails to handle value transfer because of vote closing.
 func TestMultiBridgeErrOverSign(t *testing.T) {
