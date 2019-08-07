@@ -268,6 +268,9 @@ func TestMultiBridgeKLAYTransfer1(t *testing.T) {
 		select {
 		case ev := <-info.handleCh:
 			assert.Equal(t, nonceOffset, ev.HandleNonce)
+			balance, err := info.sim.BalanceAt(nil, to, nil)
+			assert.NoError(t, err)
+			assert.Equal(t, big.NewInt(int64(transferAmount)).String(), balance.String())
 			return
 		case err := <-info.handleSub.Err():
 			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
@@ -413,6 +416,9 @@ func TestMultiBridgeERC20Transfer(t *testing.T) {
 		select {
 		case ev := <-info.handleCh:
 			assert.Equal(t, nonceOffset, ev.HandleNonce)
+			balance, err := erc20.BalanceOf(nil, to)
+			assert.NoError(t, err)
+			assert.Equal(t, big.NewInt(amount).String(), balance.String())
 			return
 		case err := <-info.handleSub.Err():
 			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
@@ -473,6 +479,9 @@ func TestMultiBridgeERC721Transfer(t *testing.T) {
 		select {
 		case ev := <-info.handleCh:
 			assert.Equal(t, nonceOffset, ev.HandleNonce)
+			owner, err := erc721.OwnerOf(nil, big.NewInt(amount))
+			assert.NoError(t, err)
+			assert.Equal(t, to, owner)
 			return
 		case err := <-info.handleSub.Err():
 			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
