@@ -4,10 +4,12 @@ import "../bridge/BridgeTransferERC20.sol";
 import "../bridge/BridgeTransferERC721.sol";
 import "./callback.sol";
 
+// ExtBridge is an extended bridge contract example inherited by BridgeTransferERC20 and BridgeTransferERC721.
+// This contract overrides handleERC20Transfer and handleERC721Transfer to make an internal call to callback contract.
 contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
     address public callback = address(0);
 
-    constructor(bool _modeMintBurn) BridgeTransferCommon(_modeMintBurn) public payable {
+    constructor(bool _modeMintBurn) BridgeTransfer(_modeMintBurn) public payable {
     }
 
     function setCallback(address _addr) public onlyOwner {

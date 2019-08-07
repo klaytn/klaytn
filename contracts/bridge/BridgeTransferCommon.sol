@@ -6,7 +6,7 @@ import "./BridgeHandledRequests.sol";
 import "./BridgeFee.sol";
 import "./BridgeOperator.sol";
 
-contract BridgeTransferCommon is BridgeHandledRequests, BridgeFee, BridgeOperator {
+contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     bool public modeMintBurn = false;
     bool public isRunning;
 

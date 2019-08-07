@@ -2,7 +2,7 @@ pragma solidity ^0.4.24;
 
 import "./BridgeTransferCommon.sol";
 
-contract BridgeTransferKLAY is BridgeTransferCommon {
+contract BridgeTransferKLAY is BridgeTransfer {
     // handleKLAYTransfer sends the KLAY by the request.
     function handleKLAYTransfer(
         bytes32 _requestTxHash,

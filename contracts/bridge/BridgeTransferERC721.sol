@@ -8,7 +8,7 @@ import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable
 import "../sc_erc721/IERC721BridgeReceiver.sol";
 import "./BridgeTransferCommon.sol";
 
-contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransferCommon{
+contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
     // handleERC721Transfer sends the ERC721 by the request.
     function handleERC721Transfer(
         bytes32 _requestTxHash,
