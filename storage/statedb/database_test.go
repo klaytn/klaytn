@@ -71,11 +71,15 @@ func TestDatabase_DeReference(t *testing.T) {
 	assert.Equal(t, 3, len(db.nodes))
 	assert.Equal(t, uint64(1), child.parents)
 	assert.Equal(t, uint64(1), parent.children[childHash])
+	assert.Equal(t, uint64(0), db.gcnodes)
+	assert.Equal(t, common.StorageSize(0), db.gcsize)
 
 	db.Dereference(parentHash)
 	assert.Equal(t, 1, len(db.nodes))
 	assert.Equal(t, uint64(0), child.parents)
 	assert.Equal(t, uint64(0), parent.children[childHash])
+	assert.Equal(t, uint64(2), db.gcnodes)
+	assert.Equal(t, common.StorageSize(64), db.gcsize)
 }
 
 func TestDatabase_Size(t *testing.T) {
