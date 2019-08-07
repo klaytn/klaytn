@@ -723,8 +723,10 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	case !ctx.GlobalIsSet(NetworkIdFlag.Name):
-		logger.Info("Cypress bootnodes are set")
-		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
+		if NodeTypeFlag.Value != "scn" && NodeTypeFlag.Value != "spn" && NodeTypeFlag.Value != "sen" {
+			logger.Info("Cypress bootnodes are set")
+			urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
+		}
 	}
 
 	cfg.BootstrapNodes = make([]*discover.Node, 0, len(urls))
@@ -955,13 +957,6 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 			log.Fatalf("Option %q: %v", NetrestrictFlag.Name, err)
 		}
 		cfg.NetRestrict = list
-	}
-
-	if ctx.GlobalIsSet(ListenPortFlag.Name) && (NodeTypeFlag.Value == "spn" || NodeTypeFlag.Value == "sen") {
-		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			log.Fatalf("Missing network id for the nodetype: %v", NodeTypeFlag.Value)
-		}
-		cfg.NoDiscovery = true
 	}
 
 	cfg.NetworkID, _ = getNetworkId(ctx)
@@ -1326,6 +1321,10 @@ func getNetworkId(ctx *cli.Context) (uint64, bool) {
 		logger.Info("A private network ID is set", "networkid", networkId)
 		return networkId, true
 	default:
+		if NodeTypeFlag.Value == "scn" || NodeTypeFlag.Value == "spn" || NodeTypeFlag.Value == "sen" {
+			logger.Info("A Service Chain default network ID is set", "networkid", params.ServiceChainDefaultNetworkId)
+			return params.ServiceChainDefaultNetworkId, true
+		}
 		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
 		return params.CypressNetworkId, false
 	}
