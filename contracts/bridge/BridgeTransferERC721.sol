@@ -90,7 +90,7 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransferCommon{
         address _to,
         uint256[] _extraData
     )
-    public
+        public
     {
         _requestERC721Transfer(msg.sender, _from, _to, _tokenId, _extraData);
     }

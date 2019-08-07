@@ -13,8 +13,8 @@ contract BridgeTransferKLAY is BridgeTransferCommon {
         uint64 _requestedBlockNumber,
         uint256[] _extraData
     )
-    public
-    onlyOperators
+        public
+        onlyOperators
     {
         if (!voteValueTransfer(_requestedNonce)) {
             return;
