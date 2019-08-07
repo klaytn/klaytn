@@ -74,10 +74,10 @@ contract BridgeTransferKLAY is BridgeTransferCommon {
     // the withdrawal limit.
     function chargeWithoutEvent() external payable {}
 
-    // setKLAYFee set the fee of KLAY tranfser
+    // setKLAYFee set the fee of KLAY transfer.
     function setKLAYFee(uint256 _fee, uint64 _requestNonce)
-    external
-    onlyOperators
+        external
+        onlyOperators
     {
         if (!voteConfiguration(_requestNonce)) {
             return;
