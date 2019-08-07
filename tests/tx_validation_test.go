@@ -1880,9 +1880,6 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 		reservoir.AddNonce()
 	}
 
-	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
-
 	// transfer KLAY to fee payer
 	{
 		var txs types.Transactions
@@ -1909,6 +1906,9 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 		}
 		reservoir.AddNonce()
 	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
 
 	// state changing tx which will invalidate other txs when it is contained in a block.
 	var txs types.Transactions
