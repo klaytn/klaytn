@@ -41,11 +41,13 @@ func TestDatabase_Reference(t *testing.T) {
 	db.nodes[childHash] = child
 	db.nodes[parentHash] = parent
 
+	// Call Reference after updating db.nodes
 	db.Reference(childHash, parentHash)
 	assert.Equal(t, 3, len(db.nodes))
 	assert.Equal(t, uint64(1), child.parents)
 	assert.Equal(t, uint64(1), parent.children[childHash])
 
+	// Just calling Reference does not have effect
 	db.Reference(childHash, parentHash)
 	assert.Equal(t, 3, len(db.nodes))
 	assert.Equal(t, uint64(1), child.parents)
