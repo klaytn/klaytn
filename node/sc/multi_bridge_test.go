@@ -851,8 +851,7 @@ func TestMultiBridgeKLAYTransferParallel(t *testing.T) {
 		case err := <-info.handleSub.Err():
 			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
 		case <-time.After(timeOut):
-			// expected timeout
-			return
+			t.Fatal("Contract Event Loop Running Stop by timeout")
 		}
 	}
 }
