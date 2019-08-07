@@ -394,8 +394,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 func TestDBManager_TxLookupEntry(t *testing.T) {
 	tx, err := genTransaction(num1)
 	assert.NoError(t, err, "Failed to generate a transaction")
-		t.Fatal("Failed to generate a transaction", "err", err)
-	}
+
 	body := &types.Body{Transactions: types.Transactions{tx}}
 	for _, dbm := range dbManagers {
 		blockHash, blockIndex, entryIndex := dbm.ReadTxLookupEntry(tx.Hash())
