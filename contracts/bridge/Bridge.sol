@@ -23,11 +23,12 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     address public counterpartBridge;
     bool public isRunning;
 
+
     uint64 public requestNonce;
     uint64 public lastHandledRequestBlockNumber;
     uint64 public sequentialHandleNonce;
     uint64 public maxHandledRequestedNonce;
-    mapping(uint64 => bool) public handledNonces;  // <handled nonce> history
+    mapping(uint64 => uint64) public handledHistory;  // <request nonce> => <request blockNum>
 
     mapping(address => address) public allowedTokens; // <token, counterpart token>
 
@@ -121,15 +122,16 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         delete allowedTokens[_token];
     }
 
-    function updateHandleNonce(uint64 _requestedNonce) internal {
+    function updateHandleNonce(uint64 _requestedNonce, uint64 _requestedBlockNumber) internal {
         uint64 i;
-        handledNonces[_requestedNonce] = true;
+        handledHistory[_requestedNonce] = _requestedBlockNumber;
 
         if (_requestedNonce > maxHandledRequestedNonce) {
             maxHandledRequestedNonce = _requestedNonce;
         }
-        for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledNonces[i]; i++) { }
+        for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledHistory[i] > 0; i++) { }
         sequentialHandleNonce = i;
+        lastHandledRequestBlockNumber = handledHistory[i-1];
     }
 
     // handleERC20Transfer sends the token by the request.
@@ -161,9 +163,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
             _extraData
         );
         _setHandledRequestTxHash(_requestTxHash);
-        lastHandledRequestBlockNumber = _requestedBlockNumber;
 
-        updateHandleNonce(_requestedNonce);
+        updateHandleNonce(_requestedNonce, _requestedBlockNumber);
 
         if (modeMintBurn) {
             ERC20Mintable(_tokenAddress).mint(_to, _value);
@@ -200,9 +201,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
             _extraData
         );
         _setHandledRequestTxHash(_requestTxHash);
-        lastHandledRequestBlockNumber = _requestedBlockNumber;
 
-        updateHandleNonce(_requestedNonce);
+        updateHandleNonce(_requestedNonce, _requestedBlockNumber);
         _to.transfer(_value);
     }
 
@@ -236,9 +236,8 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
             _extraData
         );
         _setHandledRequestTxHash(_requestTxHash);
-        lastHandledRequestBlockNumber = _requestedBlockNumber;
 
-        updateHandleNonce(_requestedNonce);
+        updateHandleNonce(_requestedNonce, _requestedBlockNumber);
 
         if (modeMintBurn) {
             ERC721MetadataMintable(_tokenAddress).mintWithTokenURI(_to, _tokenId, _tokenURI);
