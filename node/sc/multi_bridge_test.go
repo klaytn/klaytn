@@ -751,7 +751,7 @@ func TestMultiBridgeSetKLAYFeeErrNonce(t *testing.T) {
 
 // TestMultiBridgeKLAYTransferNonceJump checks the following:
 // - set threshold to 2.
-// - first tx is failed since one operator does not vote.
+// - first request is not executed yet since one operator does not vote.
 // - jump 100 nonce and successfully handle value transfer.
 func TestMultiBridgeKLAYTransferNonceJump(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
