@@ -473,8 +473,6 @@ func TestMultiBridgeERC721Transfer(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-	acc = info.accounts[1]
-
 	for {
 		select {
 		case ev := <-info.handleCh:
