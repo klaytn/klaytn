@@ -91,7 +91,7 @@ func TestRewardDistributor_getTotalTxFee(t *testing.T) {
 		{9236192, 50000, big.NewInt(461809600000)},
 		{12936418927364923, 0, big.NewInt(0)},
 	}
-	rewardManager := NewRewardDistributor(newTestBlockChain(), newDefaultTestGovernance())
+	rewardDistributor := NewRewardDistributor(newDefaultTestGovernance())
 	rewardConfig := &rewardConfig{}
 
 	header := &types.Header{}
@@ -101,7 +101,7 @@ func TestRewardDistributor_getTotalTxFee(t *testing.T) {
 		header.GasUsed = testCase.gasUsed
 		rewardConfig.unitPrice = unitPrice.SetUint64(testCase.unitPrice)
 
-		result := rewardManager.getTotalTxFee(header, rewardConfig)
+		result := rewardDistributor.getTotalTxFee(header, rewardConfig)
 
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), result.Uint64())
 	}
@@ -113,9 +113,9 @@ func TestRewardDistributor_MintKLAY(t *testing.T) {
 	header.Number = big.NewInt(0)
 	header.Rewardbase = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
 	governance := newDefaultTestGovernance()
-	rewardManager := NewRewardDistributor(newTestBlockChain(), governance)
+	rewardDistributor := NewRewardDistributor(governance)
 
-	err := rewardManager.MintKLAY(BalanceAdder, header)
+	err := rewardDistributor.MintKLAY(BalanceAdder, header)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -173,8 +173,8 @@ func TestRewardDistributor_distributeBlockReward(t *testing.T) {
 
 	for _, testCase := range testCases {
 		BalanceAdder := newTestBalanceAdder()
-		rewardManager := NewRewardDistributor(newTestBlockChain(), governance)
-		rewardManager.distributeBlockReward(BalanceAdder, header, testCase.totalTxFee, testCase.rewardConfig, pocAddress, kirAddress)
+		rewardDistributor := NewRewardDistributor(governance)
+		rewardDistributor.distributeBlockReward(BalanceAdder, header, testCase.totalTxFee, testCase.rewardConfig, pocAddress, kirAddress)
 
 		assert.Equal(t, testCase.expectedCnBalance.Uint64(), BalanceAdder.GetBalance(header.Rewardbase).Uint64())
 		assert.Equal(t, testCase.expectedPocBalance.Uint64(), BalanceAdder.GetBalance(pocAddress).Uint64())
@@ -232,9 +232,9 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 		BalanceAdder := newTestBalanceAdder()
 		governance.setTestGovernance(testCase.epoch, testCase.mintingAmount, testCase.ratio, testCase.unitprice, testCase.useGiniCoeff, testCase.deferredTxFee)
 		header.GasUsed = testCase.gasUsed
-		rewardManager := NewRewardDistributor(newTestBlockChain(), governance)
+		rewardDistributor := NewRewardDistributor(governance)
 
-		err := rewardManager.DistributeBlockReward(BalanceAdder, header, pocAddress, kirAddress)
+		err := rewardDistributor.DistributeBlockReward(BalanceAdder, header, pocAddress, kirAddress)
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}

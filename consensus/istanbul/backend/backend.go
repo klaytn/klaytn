@@ -36,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 	"math/big"
 	"sync"
@@ -56,22 +57,23 @@ func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.P
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 	backend := &backend{
-		config:           config,
-		istanbulEventMux: new(event.TypeMux),
-		privateKey:       privateKey,
-		address:          crypto.PubkeyToAddress(privateKey.PublicKey),
-		logger:           logger.NewWith(),
-		db:               db,
-		commitCh:         make(chan *types.Result, 1),
-		recents:          recents,
-		candidates:       make(map[common.Address]bool),
-		coreStarted:      false,
-		recentMessages:   recentMessages,
-		knownMessages:    knownMessages,
-		rewardbase:       rewardbase,
-		governance:       governance,
-		GovernanceCache:  newGovernanceCache(),
-		nodetype:         nodetype,
+		config:            config,
+		istanbulEventMux:  new(event.TypeMux),
+		privateKey:        privateKey,
+		address:           crypto.PubkeyToAddress(privateKey.PublicKey),
+		logger:            logger.NewWith(),
+		db:                db,
+		commitCh:          make(chan *types.Result, 1),
+		recents:           recents,
+		candidates:        make(map[common.Address]bool),
+		coreStarted:       false,
+		recentMessages:    recentMessages,
+		knownMessages:     knownMessages,
+		rewardbase:        rewardbase,
+		governance:        governance,
+		GovernanceCache:   newGovernanceCache(),
+		nodetype:          nodetype,
+		rewardDistributor: reward.NewRewardDistributor(governance),
 	}
 	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
 	backend.core = istanbulCore.New(backend, backend.config)
@@ -121,6 +123,9 @@ type backend struct {
 	// Last Block Number which has current Governance Config
 	lastGovernanceBlock uint64
 
+	rewardDistributor *reward.RewardDistributor
+	stakingManager    *reward.StakingManager
+
 	// Node type
 	nodetype p2p.ConnType
 }
@@ -154,6 +159,14 @@ func (sb *backend) Address() common.Address {
 // Validators implements istanbul.Backend.Validators
 func (sb *backend) Validators(proposal istanbul.Proposal) istanbul.ValidatorSet {
 	return sb.getValidators(proposal.Number().Uint64(), proposal.Hash())
+}
+
+func (sb *backend) SetStakingManager(manager *reward.StakingManager) {
+	sb.stakingManager = manager
+}
+
+func (sb *backend) GetStakingManager() *reward.StakingManager {
+	return sb.stakingManager
 }
 
 // Broadcast implements istanbul.Backend.Broadcast
