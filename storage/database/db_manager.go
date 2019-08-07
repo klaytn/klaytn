@@ -77,6 +77,7 @@ type DBManager interface {
 	WriteTd(hash common.Hash, number uint64, td *big.Int)
 	DeleteTd(hash common.Hash, number uint64)
 
+	ReadReceipt(txHash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
 	ReadReceipts(hash common.Hash, number uint64) types.Receipts
 	ReadReceiptsByBlockHash(hash common.Hash) types.Receipts
 	WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts)
@@ -115,8 +116,6 @@ type DBManager interface {
 	NewSenderTxHashToTxHashBatch() Batch
 	PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) error
 	ReadTxHashFromSenderTxHash(senderTxHash common.Hash) common.Hash
-
-	ReadReceipt(hash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
 
 	ReadBloomBits(bloomBitsKey []byte) ([]byte, error)
 	WriteBloomBits(bloomBitsKey []byte, bits []byte) error
@@ -813,18 +812,32 @@ func (dbm *databaseManager) DeleteTd(hash common.Hash, number uint64) {
 }
 
 // Receipts operations.
+// ReadReceipt retrieves a receipt, blockHash, blockNumber and receiptIndex found by the given txHash.
+func (dbm *databaseManager) ReadReceipt(txHash common.Hash) (*types.Receipt, common.Hash, uint64, uint64) {
+	blockHash, blockNumber, receiptIndex := dbm.ReadTxLookupEntry(txHash)
+	if blockHash == (common.Hash{}) {
+		return nil, common.Hash{}, 0, 0
+	}
+	receipts := dbm.ReadReceipts(blockHash, blockNumber)
+	if len(receipts) <= int(receiptIndex) {
+		logger.Error("Receipt refereced missing", "number", blockNumber, "txHash", blockHash, "index", receiptIndex)
+		return nil, common.Hash{}, 0, 0
+	}
+	return receipts[receiptIndex], blockHash, blockNumber, receiptIndex
+}
+
 // ReadReceipts retrieves all the transaction receipts belonging to a block.
-func (dbm *databaseManager) ReadReceipts(hash common.Hash, number uint64) types.Receipts {
+func (dbm *databaseManager) ReadReceipts(blockHash common.Hash, number uint64) types.Receipts {
 	db := dbm.getDatabase(ReceiptsDB)
 	// Retrieve the flattened receipt slice
-	data, _ := db.Get(blockReceiptsKey(number, hash))
+	data, _ := db.Get(blockReceiptsKey(number, blockHash))
 	if len(data) == 0 {
 		return nil
 	}
 	// Convert the revceipts from their database form to their internal representation
 	storageReceipts := []*types.ReceiptForStorage{}
 	if err := rlp.DecodeBytes(data, &storageReceipts); err != nil {
-		logger.Error("Invalid receipt array RLP", "hash", hash, "err", err)
+		logger.Error("Invalid receipt array RLP", "blockHash", blockHash, "err", err)
 		return nil
 	}
 	receipts := make(types.Receipts, len(storageReceipts))
@@ -1189,21 +1202,6 @@ func (dbm *databaseManager) ReadTxHashFromSenderTxHash(senderTxHash common.Hash)
 	txHash := common.BytesToHash(data)
 	dbm.cm.writeSenderTxHashToTxHashCache(senderTxHash, txHash)
 	return txHash
-}
-
-// Receipt read operation.
-// Directly copied rawdb operation because it uses two different databases.
-func (dbm *databaseManager) ReadReceipt(hash common.Hash) (*types.Receipt, common.Hash, uint64, uint64) {
-	blockHash, blockNumber, receiptIndex := dbm.ReadTxLookupEntry(hash)
-	if blockHash == (common.Hash{}) {
-		return nil, common.Hash{}, 0, 0
-	}
-	receipts := dbm.ReadReceipts(blockHash, blockNumber)
-	if len(receipts) <= int(receiptIndex) {
-		logger.Error("Receipt refereced missing", "number", blockNumber, "hash", blockHash, "index", receiptIndex)
-		return nil, common.Hash{}, 0, 0
-	}
-	return receipts[receiptIndex], blockHash, blockNumber, receiptIndex
 }
 
 // BloomBits operations.
