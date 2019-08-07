@@ -22,6 +22,8 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
+	sc_token "github.com/klaytn/klaytn/contracts/sc_erc20"
+	sc_nft "github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
@@ -65,7 +67,7 @@ func prepareMultiBridgeTest(t *testing.T) *bridgeTestInfo {
 }
 
 func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
-	const maxAccounts = 3
+	const maxAccounts = 4
 	var res = multiBridgeTestInfo{}
 
 	accountMap := make(map[common.Address]blockchain.GenesisAccount)
@@ -266,6 +268,9 @@ func TestMultiBridgeKLAYTransfer1(t *testing.T) {
 		select {
 		case ev := <-info.handleCh:
 			assert.Equal(t, nonceOffset, ev.HandleNonce)
+			balance, err := info.sim.BalanceAt(nil, to, nil)
+			assert.NoError(t, err)
+			assert.Equal(t, big.NewInt(int64(transferAmount)).String(), balance.String())
 			return
 		case err := <-info.handleSub.Err():
 			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
@@ -346,6 +351,653 @@ func TestMultiBridgeKLAYTransfer3(t *testing.T) {
 			tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
 			info.sim.Commit()
 			assert.Error(t, bind.CheckWaitMined(info.sim, tx))
+			return
+		case err := <-info.handleSub.Err():
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
+		case <-time.After(timeOut):
+			t.Fatal("Contract Event Loop Running Stop by timeout")
+		}
+	}
+}
+
+// TestMultiBridgeERC20Transfer checks the following:
+// - successful value transfer with proper transaction counts.
+func TestMultiBridgeERC20Transfer(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	to := common.Address{100}
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	// Deploy token
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	erc20Addr, tx, erc20, err := sc_token.DeployServiceChainToken(opts, info.sim, info.bAddr)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	// Register token
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.RegisterToken(opts, erc20Addr, erc20Addr)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	// Give minter role to bridge contract
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = erc20.AddMinter(opts, info.bAddr)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	amount := int64(100)
+	sentBlockNumber := uint64(100000)
+
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.HandleERC20Transfer(opts, common.Hash{10}, to, to, erc20Addr, big.NewInt(amount), sentNonce, sentBlockNumber, nil)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.HandleERC20Transfer(opts, common.Hash{10}, to, to, erc20Addr, big.NewInt(amount), sentNonce, sentBlockNumber, nil)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	for {
+		select {
+		case ev := <-info.handleCh:
+			assert.Equal(t, nonceOffset, ev.HandleNonce)
+			balance, err := erc20.BalanceOf(nil, to)
+			assert.NoError(t, err)
+			assert.Equal(t, big.NewInt(amount).String(), balance.String())
+			return
+		case err := <-info.handleSub.Err():
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
+		case <-time.After(timeOut):
+			t.Fatal("Contract Event Loop Running Stop by timeout")
+		}
+	}
+}
+
+// TestMultiBridgeERC721Transfer checks the following:
+// - successful value transfer with proper transaction counts.
+func TestMultiBridgeERC721Transfer(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	to := common.Address{100}
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 1)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	// Deploy token
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	erc721Addr, tx, erc721, err := sc_nft.DeployServiceChainNFT(opts, info.sim, info.bAddr)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	// Register token
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.RegisterToken(opts, erc721Addr, erc721Addr)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	// Give minter role to bridge contract
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = erc721.AddMinter(opts, info.bAddr)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	amount := int64(100)
+	sentBlockNumber := uint64(100000)
+
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.HandleERC721Transfer(opts, common.Hash{10}, to, to, erc721Addr, big.NewInt(amount), sentNonce, sentBlockNumber, "", nil)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	for {
+		select {
+		case ev := <-info.handleCh:
+			assert.Equal(t, nonceOffset, ev.HandleNonce)
+			owner, err := erc721.OwnerOf(nil, big.NewInt(amount))
+			assert.NoError(t, err)
+			assert.Equal(t, to, owner)
+			return
+		case err := <-info.handleSub.Err():
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
+		case <-time.After(timeOut):
+			t.Fatal("Contract Event Loop Running Stop by timeout")
+		}
+	}
+}
+
+// TestMultiBridgeSetKLAYFee checks the following:
+// - successfully setting KLAY fee
+func TestMultiBridgeSetKLAYFee(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	const confThreshold = uint8(2)
+	const fee = 1000
+	requestNonce := uint64(0)
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeConfiguration, confThreshold)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	ret, err := info.b.FeeOfKLAY(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, big.NewInt(0).String(), ret.String())
+
+	acc = info.accounts[1]
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	ret, err = info.b.FeeOfKLAY(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, big.NewInt(fee).String(), ret.String())
+}
+
+// TestMultiBridgeSetERC20Fee checks the following:
+// - successfully setting ERC20 fee
+func TestMultiBridgeSetERC20Fee(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	const confThreshold = uint8(2)
+	const fee = 1000
+	tokenAddr := common.Address{10}
+	requestNonce := uint64(0)
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeConfiguration, confThreshold)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetERC20Fee(opts, tokenAddr, big.NewInt(fee), requestNonce)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	ret, err := info.b.FeeOfERC20(nil, tokenAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, big.NewInt(0).String(), ret.String())
+
+	acc = info.accounts[1]
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetERC20Fee(opts, tokenAddr, big.NewInt(fee), requestNonce)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	ret, err = info.b.FeeOfERC20(nil, tokenAddr)
+	assert.NoError(t, err)
+	assert.Equal(t, big.NewInt(fee).String(), ret.String())
+}
+
+// TestSetFeeReceiver checks the following:
+// - the bridge contract method SetFeeReceiver.
+func TestSetFeeReceiver(t *testing.T) {
+	info := prepareMultiBridgeTest(t)
+	dummy := common.Address{10}
+
+	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetFeeReceiver(opts, dummy)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	cBridge, err := info.b.FeeReceiver(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, dummy, cBridge)
+}
+
+// TestMultiBridgeErrNotOperator1 checks the following:
+// - set threshold to 1.
+// - non-operator failed to handle value transfer.
+func TestMultiBridgeErrNotOperator1(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	to := common.Address{100}
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	accKey, _ := crypto.GenerateKey()
+	acc := bind.NewKeyedTransactor(accKey)
+
+	tx := SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
+}
+
+// TestMultiBridgeErrNotOperator2 checks the following:
+// - set threshold to 2.
+// - operator succeeds to handle value transfer.
+// - non-operator fails to handle value transfer.
+func TestMultiBridgeErrNotOperator2(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	to := common.Address{100}
+	acc := info.accounts[0]
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	accKey, _ := crypto.GenerateKey()
+	acc = bind.NewKeyedTransactor(accKey)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
+}
+
+// TestMultiBridgeErrInvalTx checks the following:
+// - set threshold to 2.
+// - first operator succeeds to handle value transfer.
+// - second operator fails to handle value transfer with invalid tx.
+func TestMultiBridgeErrInvalTx(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	to := common.Address{100}
+	acc := info.accounts[0]
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce+1, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	for {
+		select {
+		case _ = <-info.handleCh:
+			t.Fatal("Failure is expected")
+		case err := <-info.handleSub.Err():
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
+		case <-time.After(timeOut):
+			return
+		}
+	}
+}
+
+// TestMultiBridgeErrOverSign checks the following:
+// - set threshold to 2.
+// - two operators succeed to handle value transfer.
+// - the last operator fails to handle value transfer because of vote closing.
+func TestMultiBridgeErrOverSign(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	to := common.Address{100}
+	acc := info.accounts[0]
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[2]
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
+}
+
+// TestMultiBridgeSetKLAYFeeErrNonce checks the following:
+// - failed to set KLAY fee because of the wrong nonce.
+func TestMultiBridgeSetKLAYFeeErrNonce(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	const confThreshold = uint8(2)
+	const fee = 1000
+	requestNonce := uint64(0)
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeConfiguration, confThreshold)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	ret, err := info.b.FeeOfKLAY(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, big.NewInt(0).String(), ret.String())
+
+	acc = info.accounts[1]
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce+1)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce-1)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
+}
+
+// TestMultiBridgeKLAYTransferNonceJump checks the following:
+// - set threshold to 2.
+// - first request is not executed yet since one operator does not vote.
+// - jump 100 nonce and successfully handle value transfer.
+func TestMultiBridgeKLAYTransferNonceJump(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	to := common.Address{100}
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	sentNonce = sentNonce + 100
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	for {
+		select {
+		case ev := <-info.handleCh:
+			assert.Equal(t, sentNonce, ev.HandleNonce)
+			return
+		case err := <-info.handleSub.Err():
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
+		case <-time.After(timeOut):
+			t.Fatal("Contract Event Loop Running Stop by timeout")
+		}
+	}
+}
+
+// TestMultiBridgeKLAYTransferParallel checks the following:
+// - set threshold to 2.
+// - two different value transfers succeed to handle the value transfer.
+func TestMultiBridgeKLAYTransferParallel(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	to := common.Address{100}
+	acc := info.accounts[0]
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	go func() {
+		acc := info.accounts[0]
+		tx := SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+		info.sim.Commit()
+		assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+		acc = info.accounts[1]
+		tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+		info.sim.Commit()
+		assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+	}()
+
+	go func() {
+		acc := info.accounts[2]
+		sentNonce := sentNonce + 20
+		tx := SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+		info.sim.Commit()
+		assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+		acc = info.accounts[3]
+		tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+		info.sim.Commit()
+		assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+	}()
+
+	handleCounter := 0
+	for {
+		select {
+		case _ = <-info.handleCh:
+			handleCounter++
+			if handleCounter == 2 {
+				return
+			}
+		case err := <-info.handleSub.Err():
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
+		case <-time.After(timeOut):
+			t.Fatal("Contract Event Loop Running Stop by timeout")
+		}
+	}
+}
+
+// TestMultiBridgeKLAYTransferMixConfig1 checks the following:
+// - set threshold to 2.
+// - the first tx is done.
+// - set threshold to 1.
+// - the second operator successfully handles the value transfer.
+func TestMultiBridgeKLAYTransferMixConfig1(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	to := common.Address{100}
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 1)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	for {
+		select {
+		case ev := <-info.handleCh:
+			assert.Equal(t, nonceOffset, ev.HandleNonce)
+			return
+		case err := <-info.handleSub.Err():
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
+		case <-time.After(timeOut):
+			t.Fatal("Contract Event Loop Running Stop by timeout")
+		}
+	}
+}
+
+// TestMultiBridgeKLAYTransferMixConfig2 checks the following:
+// - set threshold to 2.
+// - The first tx is done.
+// - set threshold to 3.
+// - remain operators successfully handle the value transfer.
+func TestMultiBridgeKLAYTransferMixConfig2(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	to := common.Address{100}
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 3)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[2]
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	for {
+		select {
+		case ev := <-info.handleCh:
+			assert.Equal(t, nonceOffset, ev.HandleNonce)
+			return
+		case err := <-info.handleSub.Err():
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
+		case <-time.After(timeOut):
+			t.Fatal("Contract Event Loop Running Stop by timeout")
+		}
+	}
+}
+
+// TestMultiBridgeKLAYTransferMixConfig1 checks the following:
+// - set threshold to 2.
+// - the first tx is done.
+// - set threshold to 1.
+// - the first operator successfully handles the value transfer if retry.
+func TestMultiBridgeKLAYTransferMixConfig3(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	to := common.Address{100}
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 1)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	for {
+		select {
+		case ev := <-info.handleCh:
+			assert.Equal(t, nonceOffset, ev.HandleNonce)
 			return
 		case err := <-info.handleSub.Err():
 			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)

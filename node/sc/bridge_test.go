@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	gasLimit uint64 = 200000          // gasLimit for contract transaction.
+	gasLimit uint64 = 2000000         // gasLimit for contract transaction.
 	timeOut         = 3 * time.Second // timeout of context and event loop for simulated backend.
 )
 
