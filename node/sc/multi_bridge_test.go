@@ -733,6 +733,13 @@ func TestMultiBridgeSetKLAYFeeErrNonce(t *testing.T) {
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce-1)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
 }
 
 // TestMultiBridgeKLAYTransferNonceJump checks the following:
