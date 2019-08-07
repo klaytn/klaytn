@@ -17,8 +17,10 @@
 package database
 
 import (
+	"crypto/ecdsa"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/stretchr/testify/assert"
@@ -46,12 +48,22 @@ var baseConfigs = []*DBConfig{
 var num1 = uint64(20190815)
 var num2 = uint64(20199999)
 var num3 = uint64(12345678)
+var num4 = uint64(87654321)
 
 var hash1 = common.HexToHash("1341655") // 20190805 in hexadecimal
 var hash2 = common.HexToHash("1343A3F") // 20199999 in hexadecimal
 var hash3 = common.HexToHash("BC614E")  // 12345678 in hexadecimal
+var hash4 = common.HexToHash("5397FB1") // 87654321 in hexadecimal
+
+var key *ecdsa.PrivateKey
+var addr common.Address
+var signer types.EIP155Signer
 
 func init() {
+	key, _ = crypto.GenerateKey()
+	addr = crypto.PubkeyToAddress(key.PublicKey)
+	signer = types.NewEIP155Signer(big.NewInt(18))
+
 	for _, bc := range baseConfigs {
 		badgerConfig := *bc
 		badgerConfig.DBType = BadgerDB
@@ -271,7 +283,7 @@ func TestDBManager_Td(t *testing.T) {
 func TestDBManager_Receipts(t *testing.T) {
 	header := &types.Header{Number: big.NewInt(int64(num1))}
 	headerHash := header.Hash()
-	receipts := types.Receipts{generateReceipt(111)}
+	receipts := types.Receipts{genReceipt(111)}
 
 	for _, dbm := range dbManagers {
 		assert.Nil(t, dbm.ReadReceipts(headerHash, num1))
@@ -338,6 +350,153 @@ func TestDBManager_IstanbulSnapshot(t *testing.T) {
 		dbm.WriteIstanbulSnapshot(hash3, hash1[:])
 		snapshot, _ = dbm.ReadIstanbulSnapshot(hash3)
 		assert.Equal(t, hash1[:], snapshot)
+	}
+}
+
+// TestDBManager_TrieNode tests read and write operations of state trie nodes.
+func TestDBManager_TrieNode(t *testing.T) {
+	for _, dbm := range dbManagers {
+		cachedNode, _ := dbm.ReadCachedTrieNode(hash1)
+		assert.Nil(t, cachedNode)
+		hasStateTrieNode, _ := dbm.HasStateTrieNode(hash1[:])
+		assert.False(t, hasStateTrieNode)
+
+		batch := dbm.NewBatch(StateTrieDB)
+		if err := batch.Put(hash1[:], hash2[:]); err != nil {
+			t.Fatal("Failed putting a row into the batch", "err", err)
+		}
+		if _, err := WriteBatches(batch); err != nil {
+			t.Fatal("Failed writing batch", "err", err)
+		}
+
+		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
+		assert.Equal(t, hash2[:], cachedNode)
+
+		if err := batch.Put(hash1[:], hash1[:]); err != nil {
+			t.Fatal("Failed putting a row into the batch", "err", err)
+		}
+		if _, err := WriteBatches(batch); err != nil {
+			t.Fatal("Failed writing batch", "err", err)
+		}
+
+		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
+		assert.Equal(t, hash1[:], cachedNode)
+
+		stateTrieNode, _ := dbm.ReadStateTrieNode(hash1[:])
+		assert.Equal(t, hash1[:], stateTrieNode)
+
+		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
+		assert.True(t, hasStateTrieNode)
+	}
+}
+
+// TestDBManager_TxLookupEntry tests read, write and delete operations of TxLookupEntries.
+func TestDBManager_TxLookupEntry(t *testing.T) {
+	tx, err := genTransaction(num1)
+	assert.NoError(t, err, "Failed to generate a transaction")
+
+	body := &types.Body{Transactions: types.Transactions{tx}}
+	for _, dbm := range dbManagers {
+		blockHash, blockIndex, entryIndex := dbm.ReadTxLookupEntry(tx.Hash())
+		assert.Equal(t, common.Hash{}, blockHash)
+		assert.Equal(t, uint64(0), blockIndex)
+		assert.Equal(t, uint64(0), entryIndex)
+
+		header := &types.Header{Number: big.NewInt(int64(num1))}
+		block := types.NewBlockWithHeader(header)
+		block = block.WithBody(body.Transactions)
+
+		dbm.WriteTxLookupEntries(block)
+
+		blockHash, blockIndex, entryIndex = dbm.ReadTxLookupEntry(tx.Hash())
+		assert.Equal(t, block.Hash(), blockHash)
+		assert.Equal(t, block.NumberU64(), blockIndex)
+		assert.Equal(t, uint64(0), entryIndex)
+
+		dbm.DeleteTxLookupEntry(tx.Hash())
+
+		blockHash, blockIndex, entryIndex = dbm.ReadTxLookupEntry(tx.Hash())
+		assert.Equal(t, common.Hash{}, blockHash)
+		assert.Equal(t, uint64(0), blockIndex)
+		assert.Equal(t, uint64(0), entryIndex)
+
+		dbm.WriteAndCacheTxLookupEntries(block)
+		blockHash, blockIndex, entryIndex = dbm.ReadTxLookupEntry(tx.Hash())
+		assert.Equal(t, block.Hash(), blockHash)
+		assert.Equal(t, block.NumberU64(), blockIndex)
+		assert.Equal(t, uint64(0), entryIndex)
+
+		batch := dbm.NewSenderTxHashToTxHashBatch()
+		if err := dbm.PutSenderTxHashToTxHashToBatch(batch, hash1, hash2); err != nil {
+			t.Fatal("Failed while calling PutSenderTxHashToTxHashToBatch", "err", err)
+		}
+
+		if err := batch.Write(); err != nil {
+			t.Fatal("Failed writing SenderTxHashToTxHashToBatch", "err", err)
+		}
+
+		assert.Equal(t, hash2, dbm.ReadTxHashFromSenderTxHash(hash1))
+	}
+}
+
+// TestDBManager_BloomBits tests read, write and delete operations of bloom bits
+func TestDBManager_BloomBits(t *testing.T) {
+	for _, dbm := range dbManagers {
+		hash1 := common.HexToHash("123456")
+		hash2 := common.HexToHash("654321")
+
+		sh, _ := dbm.ReadBloomBits(hash1[:])
+		assert.Nil(t, sh)
+
+		err := dbm.WriteBloomBits(hash1[:], hash1[:])
+		if err != nil {
+			t.Fatal("Failed to write bloom bits", "err", err)
+		}
+
+		sh, err = dbm.ReadBloomBits(hash1[:])
+		if err != nil {
+			t.Fatal("Failed to read bloom bits", "err", err)
+		}
+		assert.Equal(t, hash1[:], sh)
+
+		err = dbm.WriteBloomBits(hash1[:], hash2[:])
+		if err != nil {
+			t.Fatal("Failed to write bloom bits", "err", err)
+		}
+
+		sh, err = dbm.ReadBloomBits(hash1[:])
+		if err != nil {
+			t.Fatal("Failed to read bloom bits", "err", err)
+		}
+		assert.Equal(t, hash2[:], sh)
+	}
+}
+
+// TestDBManager_Sections tests read, write and delete operations of ValidSections and SectionHead.
+func TestDBManager_Sections(t *testing.T) {
+	for _, dbm := range dbManagers {
+		// ValidSections
+		vs, _ := dbm.ReadValidSections()
+		assert.Nil(t, vs)
+
+		dbm.WriteValidSections(hash1[:])
+
+		vs, _ = dbm.ReadValidSections()
+		assert.Equal(t, hash1[:], vs)
+
+		// SectionHead
+		sh, _ := dbm.ReadSectionHead(hash1[:])
+		assert.Nil(t, sh)
+
+		dbm.WriteSectionHead(hash1[:], hash1)
+
+		sh, _ = dbm.ReadSectionHead(hash1[:])
+		assert.Equal(t, hash1[:], sh)
+
+		dbm.DeleteSectionHead(hash1[:])
+
+		sh, _ = dbm.ReadSectionHead(hash1[:])
+		assert.Nil(t, sh)
 	}
 }
 
@@ -443,7 +602,7 @@ func TestDBManager_ChildChain(t *testing.T) {
 	}
 }
 
-// TestDBManager_FastTrieProgress tests read and write operations of clique snapshots.
+// TestDBManager_CliqueSnapshot tests read and write operations of clique snapshots.
 func TestDBManager_CliqueSnapshot(t *testing.T) {
 	for _, dbm := range dbManagers {
 		data, err := dbm.ReadCliqueSnapshot(hash1)
@@ -468,7 +627,7 @@ func TestDBManager_Governance(t *testing.T) {
 	// TODO-Klaytn-Database Implement this!
 }
 
-func generateReceipt(gasUsed int) *types.Receipt {
+func genReceipt(gasUsed int) *types.Receipt {
 	log := &types.Log{Topics: []common.Hash{}, Data: []uint8{}, BlockNumber: uint64(gasUsed)}
 	log.Topics = append(log.Topics, common.HexToHash(strconv.Itoa(gasUsed)))
 	return &types.Receipt{
@@ -477,4 +636,10 @@ func generateReceipt(gasUsed int) *types.Receipt {
 		Status:  types.ReceiptStatusSuccessful,
 		Logs:    []*types.Log{log},
 	}
+}
+
+func genTransaction(val uint64) (*types.Transaction, error) {
+	return types.SignTx(
+		types.NewTransaction(0, addr,
+			big.NewInt(int64(val)), 0, big.NewInt(int64(val)), nil), signer, key)
 }

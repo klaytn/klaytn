@@ -86,6 +86,7 @@ func WriteBatches(batches ...Batch) (int, error) {
 			if err := batch.Write(); err != nil {
 				return 0, err
 			}
+			batch.Reset()
 		}
 	}
 	return bytes, nil
