@@ -390,10 +390,10 @@ func TestDBManager_TrieNode(t *testing.T) {
 	}
 }
 
-// TestDBManager_TxLookupEntry read, write and delete operations of TxLookupEntries.
+// TestDBManager_TxLookupEntry tests read, write and delete operations of TxLookupEntries.
 func TestDBManager_TxLookupEntry(t *testing.T) {
 	tx, err := genTransaction(num1)
-	if err != nil {
+	assert.NoError(t, err, "Failed to generate a transaction")
 		t.Fatal("Failed to generate a transaction", "err", err)
 	}
 	body := &types.Body{Transactions: types.Transactions{tx}}
