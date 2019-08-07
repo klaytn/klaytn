@@ -114,7 +114,7 @@ contract BridgeTransferCommon is BridgeHandledRequests, BridgeFee, BridgeOperato
         sequentialHandleNonce = i;
     }
 
-    // setFeeReceiver set fee receiver.
+    // setFeeReceivers set fee receiver.
     function setFeeReceiver(address _feeReceiver)
         external
         onlyOwner

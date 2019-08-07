@@ -86,8 +86,8 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransferCommon {
     // Receiver function of ERC20 token for 1-step deposits to the Bridge.
     function onERC20Received(
         address _from,
-        uint256 _value,
         address _to,
+        uint256 _value,
         uint256 _feeLimit,
         uint256[] _extraData
     )
