@@ -78,7 +78,7 @@ type DBManager interface {
 	DeleteTd(hash common.Hash, number uint64)
 
 	ReadReceipt(txHash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
-	ReadReceipts(hash common.Hash, number uint64) types.Receipts
+	ReadReceipts(blockHash common.Hash, number uint64) types.Receipts
 	ReadReceiptsByBlockHash(hash common.Hash) types.Receipts
 	WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts)
 	PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts)
