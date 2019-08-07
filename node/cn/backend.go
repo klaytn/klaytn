@@ -283,9 +283,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		cn.protocolManager.SetRewardbase(cn.rewardbase)
 	}
 
-	cn.stakingManager = reward.NewStakingManager(cn.blockchain, governance)
-	if handler, ok := cn.engine.(StakingHandler); ok {
-		handler.SetStakingManager(cn.stakingManager)
+	if governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
+		cn.stakingManager = reward.NewStakingManager(cn.blockchain, governance)
+		if handler, ok := cn.engine.(StakingHandler); ok {
+			handler.SetStakingManager(cn.stakingManager)
+		}
 	}
 
 	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN

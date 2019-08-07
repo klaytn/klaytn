@@ -20,8 +20,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/governance"
-	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
@@ -345,10 +343,7 @@ func TestWeightedCouncil_RefreshWithNonZeroWeight(t *testing.T) {
 func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
-	config.ChainID = big.NewInt(1)
-	config.Governance.Reward.UseGiniCoeff = false
-	valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
+	runRefreshForTest(valSet)
 
 	for _, val := range validators {
 
@@ -383,10 +378,7 @@ func TestWeightedCouncil_RemoveValidator(t *testing.T) {
 func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
 	validators := makeTestValidators(testNonZeroWeights)
 	valSet := makeTestWeightedCouncil(testNonZeroWeights)
-	config := &params.ChainConfig{Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul)}
-	config.Governance.Reward.UseGiniCoeff = false
-	config.ChainID = big.NewInt(1)
-	valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
+	runRefreshForTest(valSet)
 
 	for _, val := range validators {
 
@@ -406,7 +398,7 @@ func TestWeightedCouncil_RefreshAfterRemoveValidator(t *testing.T) {
 			}
 		}
 
-		valSet.Refresh(testPrevHash, 1, config.ChainID.Uint64())
+		runRefreshForTest(valSet)
 
 		// check whether removedVal is excluded as expected when refreshing proposers
 		for _, p := range valSet.proposers {
