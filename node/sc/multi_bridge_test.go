@@ -959,3 +959,51 @@ func TestMultiBridgeKLAYTransferMixConfig2(t *testing.T) {
 		}
 	}
 }
+
+// TestMultiBridgeKLAYTransferMixConfig1 checks the following:
+// - set threshold to 2.
+// - the first tx is done.
+// - set threshold to 1.
+// - the first operator successfully handles the value transfer if retry.
+func TestMultiBridgeKLAYTransferMixConfig3(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	to := common.Address{100}
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 1)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	for {
+		select {
+		case ev := <-info.handleCh:
+			assert.Equal(t, nonceOffset, ev.HandleNonce)
+			return
+		case err := <-info.handleSub.Err():
+			t.Fatal("Contract Event Loop Running Stop by sub.Err()", "err", err)
+		case <-time.After(timeOut):
+			t.Fatal("Contract Event Loop Running Stop by timeout")
+		}
+	}
+}
