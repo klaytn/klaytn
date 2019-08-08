@@ -220,11 +220,22 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 
 // Broadcast implements istanbul.Backend.Gossip
 func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.ValidatorSet, payload []byte) error {
+	isInSubList := false
+	for _, val := range valSet.SubList(prevHash, sb.currentView.Load().(*istanbul.View)) {
+		if val.Address() == sb.Address() {
+			isInSubList = true
+			break
+		}
+	}
+	if !isInSubList {
+		return nil
+	}
+
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
 	targets := make(map[common.Address]bool)
-	for _, val := range valSet.SubList(prevHash, sb.currentView.Load().(*istanbul.View)) {
+	for _, val := range valSet.List() {
 		if val.Address() != sb.Address() {
 			targets[val.Address()] = true
 		}
