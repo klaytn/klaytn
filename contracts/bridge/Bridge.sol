@@ -23,7 +23,6 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
     address public counterpartBridge;
     bool public isRunning;
 
-
     uint64 public requestNonce;
     uint64 public sequentialHandledRequestBlockNumber;
     uint64 public sequentialHandleNonce;
