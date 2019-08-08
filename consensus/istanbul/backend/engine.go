@@ -381,13 +381,11 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			}
 		}
 
-		err := sb.rewardDistributor.DistributeBlockReward(state, header, pocAddr, kirAddr)
-		if err != nil {
+		if err := sb.rewardDistributor.DistributeBlockReward(state, header, pocAddr, kirAddr); err != nil {
 			return nil, err
 		}
 	} else {
-		err := sb.rewardDistributor.MintKLAY(state, header)
-		if err != nil {
+		if err := sb.rewardDistributor.MintKLAY(state, header); err != nil {
 			return nil, err
 		}
 	}
