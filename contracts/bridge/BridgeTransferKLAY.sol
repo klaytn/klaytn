@@ -32,12 +32,10 @@ contract BridgeTransferKLAY is BridgeTransfer {
             _extraData
         );
         _setHandledRequestTxHash(_requestTxHash);
-        lastHandledRequestBlockNumber = _requestedBlockNumber;
 
-        updateHandleNonce(_requestedNonce);
+        updateHandleNonce(_requestedNonce, _requestedBlockNumber);
         _to.transfer(_value);
     }
-
 
     // _requestKLAYTransfer requests transfer KLAY to _to on relative chain.
     function _requestKLAYTransfer(address _to, uint256 _feeLimit,  uint256[] _extraData) internal {

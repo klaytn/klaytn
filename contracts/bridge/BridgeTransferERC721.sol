@@ -40,9 +40,8 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
             _extraData
         );
         _setHandledRequestTxHash(_requestTxHash);
-        lastHandledRequestBlockNumber = _requestedBlockNumber;
 
-        updateHandleNonce(_requestedNonce);
+        updateHandleNonce(_requestedNonce, _requestedBlockNumber);
 
         if (modeMintBurn) {
             ERC721MetadataMintable(_tokenAddress).mintWithTokenURI(_to, _tokenId, _tokenURI);
