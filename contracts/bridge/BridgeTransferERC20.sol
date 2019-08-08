@@ -7,6 +7,7 @@ import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.s
 import "../sc_erc20/IERC20BridgeReceiver.sol";
 import "./BridgeTransferCommon.sol";
 
+
 contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransfer {
     // handleERC20Transfer sends the token by the request.
     function handleERC20Transfer(

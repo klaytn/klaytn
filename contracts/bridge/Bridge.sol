@@ -5,6 +5,7 @@ import "./BridgeTransferERC20.sol";
 import "./BridgeTransferERC721.sol";
 import "./BridgeCounterPart.sol";
 
+
 contract Bridge is BridgeCounterPart, BridgeTransferKLAY, BridgeTransferERC20, BridgeTransferERC721 {
     uint64 public constant VERSION = 1;
 

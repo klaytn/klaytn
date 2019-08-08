@@ -5,6 +5,7 @@ import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.s
 import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
+
 contract BridgeOperator is Ownable {
     mapping(address => bool) public operators;
     mapping(bytes32 => mapping(address => bool)) public votes; // <sha3(type, args, nonce), <operator, vote>>
@@ -29,7 +30,7 @@ contract BridgeOperator is Ownable {
 
     modifier onlyOperators()
     {
-        require(operators[msg.sender]);
+        require(operators[msg.sender], "msg.sender is not an operator");
         _;
     }
 
@@ -40,7 +41,7 @@ contract BridgeOperator is Ownable {
     {
         if (!votes[_voteKey][msg.sender]) {
             votes[_voteKey][msg.sender] = true;
-            require(votesCounts[_voteKey] < votesCounts[_voteKey] + 1);
+            require(votesCounts[_voteKey] < votesCounts[_voteKey] + 1, "votesCounts overflow");
             votesCounts[_voteKey]++;
         }
         if (votesCounts[_voteKey] >= operatorThresholds[uint8(voteType)]) {

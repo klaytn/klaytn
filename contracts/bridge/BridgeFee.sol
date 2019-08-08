@@ -4,6 +4,7 @@ import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
 import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
+
 contract BridgeFee {
     using SafeMath for uint256;
 
@@ -22,7 +23,7 @@ contract BridgeFee {
     function _payKLAYFeeAndRefundChange(uint256 _feeLimit) internal returns(uint256) {
         uint256 fee = feeOfKLAY;
 
-        if(feeReceiver != address(0) && fee > 0) {
+        if (feeReceiver != address(0) && fee > 0) {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
             feeReceiver.transfer(fee);
@@ -35,7 +36,7 @@ contract BridgeFee {
         return 0;
     }
 
-    function _payERC20FeeAndRefundChange(address from, address _token, uint256 _feeLimit) internal returns(uint256){
+    function _payERC20FeeAndRefundChange(address from, address _token, uint256 _feeLimit) internal returns(uint256) {
         uint256 fee = feeOfERC20[_token];
 
         if (feeReceiver != address(0) && fee > 0) {
