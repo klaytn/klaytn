@@ -38,9 +38,8 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransfer {
             _extraData
         );
         _setHandledRequestTxHash(_requestTxHash);
-        lastHandledRequestBlockNumber = _requestedBlockNumber;
 
-        updateHandleNonce(_requestedNonce);
+        updateHandleNonce(_requestedNonce, _requestedBlockNumber);
 
         if (modeMintBurn) {
             ERC20Mintable(_tokenAddress).mint(_to, _value);
