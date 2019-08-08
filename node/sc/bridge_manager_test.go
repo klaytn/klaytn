@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/big"
@@ -106,6 +107,7 @@ func TestBridgeManager(t *testing.T) {
 	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
+		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
 		config:         config,
 		peers:          newBridgePeerSet(),
 		bridgeAccounts: bacc,
@@ -151,6 +153,10 @@ func TestBridgeManager(t *testing.T) {
 	_, err = bridge.RegisterOperator(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
 	assert.NoError(t, err)
 	sim.Commit() // block
+
+	// Register tokens on the bridgeInfo
+	bridgeInfo.RegisterToken(tokenAddr, tokenAddr)
+	bridgeInfo.RegisterToken(nftAddr, nftAddr)
 
 	// Register tokens on the bridge
 	bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
@@ -201,42 +207,13 @@ func TestBridgeManager(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, false, done)
 
-				switch ev.TokenType {
-				case KLAY:
-					tx, err := bridge.HandleKLAYTransfer(
-						&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit},
-						ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
-					if err != nil {
-						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
-					}
-					fmt.Println("WithdrawKLAY Transaction by event ", tx.Hash().Hex())
-					sim.Commit() // block
+				// insert the value transfer request event to the bridge info's event list.
+				bridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
 
-				case ERC20:
-					tx, err := bridge.HandleERC20Transfer(
-						&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit},
-						ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
-					if err != nil {
-						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
-					}
-					fmt.Println("HandleERC20Transfer Transaction by event ", tx.Hash().Hex())
-					sim.Commit() // block
+				// handle the value transfer request event in the event list.
+				bridgeInfo.processingPendingRequestEvents()
 
-				case ERC721:
-					owner, err := nft.OwnerOf(&bind.CallOpts{From: pAuth.From}, big.NewInt(int64(nftTokenID)))
-					assert.Equal(t, nil, err)
-					fmt.Println("NFT owner before HandleERC721Transfer: ", owner.String())
-
-					tx, err := bridge.HandleERC721Transfer(
-						&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit},
-						ev.Raw.TxHash, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri, ev.ExtraData)
-					if err != nil {
-						log.Fatalf("Failed to HandleERC721Transfer: %v", err)
-					}
-					fmt.Println("HandleERC721Transfer Transaction by event ", tx.Hash().Hex())
-					sim.Commit() // block
-				}
-
+				sim.Commit() // block
 				wg.Done()
 				done, err = bridge.HandledRequestTx(nil, ev.Raw.TxHash)
 				assert.NoError(t, err)
@@ -373,6 +350,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
+		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
 		config:         config,
 		peers:          newBridgePeerSet(),
 		bridgeAccounts: bacc,
@@ -452,6 +430,9 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, ERC20Fee, fee.Int64())
 	}
 
+	// Register tokens on the bridgeInfo
+	pBridgeInfo.RegisterToken(tokenAddr, tokenAddr)
+
 	// Register tokens on the bridge
 	pBridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
 	sim.Commit() // block
@@ -488,32 +469,13 @@ func TestBridgeManagerWithFee(t *testing.T) {
 					"requestNonce", ev.RequestNonce,
 					"fee", ev.Fee.String())
 
-				switch ev.TokenType {
-				case KLAY:
-					assert.Equal(t, common.Address{}, ev.TokenAddress)
-					assert.Equal(t, KLAYFee, ev.Fee.Int64())
+				// insert the value transfer request event to the bridge info's event list.
+				pBridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
 
-					// HandleKLAYTransfer by Event
-					tx, err := pBridge.HandleKLAYTransfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
-					if err != nil {
-						log.Fatalf("Failed to HandleKLAYTransfer: %v", err)
-					}
-					fmt.Println("HandleKLAYTransfer Transaction by event ", tx.Hash().Hex())
-					sim.Commit() // block
+				// handle the value transfer request event in the event list.
+				pBridgeInfo.processingPendingRequestEvents()
 
-				case ERC20:
-					assert.Equal(t, tokenAddr, ev.TokenAddress)
-					assert.Equal(t, ERC20Fee, ev.Fee.Int64())
-
-					// HandleERC20Transfer by Event
-					tx, err := pBridge.HandleERC20Transfer(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
-					if err != nil {
-						log.Fatalf("Failed to HandleERC20Transfer: %v", err)
-					}
-					fmt.Println("HandleERC20Transfer Transaction by event ", tx.Hash().Hex())
-					sim.Commit() // block
-				}
-
+				sim.Commit() // block
 				wg.Done()
 
 			case ev := <-handleValueTransferEventCh:
