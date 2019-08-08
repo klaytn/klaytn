@@ -6,6 +6,7 @@ import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata
 import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./IERC721BridgeReceiver.sol";
 
+
 /**
  * @title ERC721ServiceChain
  * @dev ERC721 service chain value transfer logic for 1-step transfer.

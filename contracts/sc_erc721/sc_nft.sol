@@ -10,12 +10,12 @@ import "./ERC721ServiceChain.sol";
 
 
 contract ServiceChainNFT is ERC721Full("ServiceChainNFT", "SCN"), ERC721Burnable, ERC721MetadataMintable, ERC721ServiceChain {
-    constructor (address _bridge) ERC721ServiceChain(_bridge) public {
+    constructor(address _bridge) ERC721ServiceChain(_bridge) public {
     }
 
     // registerBulk registers (startID, endID-1) tokens to the user once.
     // This is only for load test.
-    function registerBulk(address _user, uint256 _startID, uint256 _endID) onlyOwner external {
+    function registerBulk(address _user, uint256 _startID, uint256 _endID) external onlyOwner {
         for (uint256 uid = _startID; uid < _endID; uid++) {
             mintWithTokenURI(_user, uid, "testURI");
         }

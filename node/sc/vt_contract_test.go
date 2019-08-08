@@ -56,15 +56,15 @@ func TestTokenPublicVariables(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "1000000000000000000000000000", balance.String())
 
-	decimal, err := info.tokenLocalBridge.Decimals(nil)
+	decimal, err := info.tokenLocalBridge.DECIMALS(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, uint8(0x12), decimal)
 
-	name, err := info.tokenLocalBridge.Name(nil)
+	name, err := info.tokenLocalBridge.NAME(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "ServiceChainToken", name)
 
-	symbol, err := info.tokenLocalBridge.Symbol(nil)
+	symbol, err := info.tokenLocalBridge.SYMBOL(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "SCT", symbol)
 

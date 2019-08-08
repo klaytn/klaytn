@@ -1,12 +1,16 @@
 pragma solidity ^0.4.24;
 
-import "../bridge/Bridge.sol";
+import "../bridge/BridgeTransferERC20.sol";
+import "../bridge/BridgeTransferERC721.sol";
 import "./callback.sol";
 
-contract ExtBridge is Bridge {
+
+// ExtBridge is an extended bridge contract example inherited by BridgeTransferERC20 and BridgeTransferERC721.
+// This contract overrides handleERC20Transfer and handleERC721Transfer to make an internal call to callback contract.
+contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
     address public callback = address(0);
 
-    constructor (bool _modeMintBurn) Bridge(_modeMintBurn) public payable {
+    constructor(bool _modeMintBurn) BridgeTransfer(_modeMintBurn) public payable {
     }
 
     function setCallback(address _addr) public onlyOwner {
@@ -30,12 +34,21 @@ contract ExtBridge is Bridge {
             uint256 offerPrice = _extraData[0];
             if (offerPrice > 0 && callback != address(0)) {
                 super.handleERC20Transfer(_requestTxHash, _from, callback, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
-                Callback(callback).RegisterOffer(_to, _value, _tokenAddress, offerPrice);
+                Callback(callback).registerOffer(_to, _value, _tokenAddress, offerPrice);
                 return;
             }
         }
 
-        super.handleERC20Transfer(_requestTxHash, _from, _to, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
+        super.handleERC20Transfer(
+            _requestTxHash,
+            _from,
+            _to,
+            _tokenAddress,
+            _value,
+            _requestNonce,
+            _requestBlockNumber,
+            _extraData
+        );
     }
 
     // handleERC721Transfer sends the ERC721 token by the request and processes the extended feature.
@@ -56,11 +69,21 @@ contract ExtBridge is Bridge {
             uint256 offerPrice = _extraData[0];
             if (offerPrice > 0 && callback != address(0)) {
                 super.handleERC721Transfer(_requestTxHash, _from, callback, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
-                Callback(callback).RegisterOffer(_to, _tokenId, _tokenAddress, offerPrice);
+                Callback(callback).registerOffer(_to, _tokenId, _tokenAddress, offerPrice);
                 return;
             }
         }
 
-        super.handleERC721Transfer(_requestTxHash, _from, _to, _tokenAddress,  _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
+        super.handleERC721Transfer(
+            _requestTxHash,
+            _from,
+            _to,
+            _tokenAddress,
+            _tokenId,
+            _requestNonce,
+            _requestBlockNumber,
+            _tokenURI,
+            _extraData
+        );
     }
 }
