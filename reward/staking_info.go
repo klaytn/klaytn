@@ -134,26 +134,28 @@ func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) (uint64, e
 	return s.CouncilStakingAmounts[i], nil
 }
 
-type uint64Slice []uint64
+type float64Slice []float64
 
-func (p uint64Slice) Len() int           { return len(p) }
-func (p uint64Slice) Less(i, j int) bool { return p[i] < p[j] }
-func (p uint64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p float64Slice) Len() int           { return len(p) }
+func (p float64Slice) Less(i, j int) bool { return p[i] < p[j] }
+func (p float64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
-func CalcGiniCoefficient(stakingAmount uint64Slice) float64 {
-	sort.Sort(stakingAmount)
+func CalcGiniCoefficient(stakingAmount float64Slice) float64 {
+	tempStakingAmount := make(float64Slice, len(stakingAmount))
+	copy(tempStakingAmount, stakingAmount)
+	sort.Sort(tempStakingAmount)
 
 	// calculate gini coefficient
-	sumOfAbsoluteDifferences := uint64(0)
-	subSum := uint64(0)
+	sumOfAbsoluteDifferences := float64(0)
+	subSum := float64(0)
 
-	for i, x := range stakingAmount {
-		temp := x*uint64(i) - subSum
+	for i, x := range tempStakingAmount {
+		temp := x*float64(i) - subSum
 		sumOfAbsoluteDifferences = sumOfAbsoluteDifferences + temp
 		subSum = subSum + x
 	}
 
-	result := float64(sumOfAbsoluteDifferences) / float64(subSum) / float64(len(stakingAmount))
+	result := float64(sumOfAbsoluteDifferences) / float64(subSum) / float64(len(tempStakingAmount))
 	result = math.Round(result*100) / 100
 
 	return result
