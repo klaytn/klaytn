@@ -10,7 +10,7 @@ import "./ERC721ServiceChain.sol";
 
 
 contract ServiceChainNFT is ERC721Full("ServiceChainNFT", "SCN"), ERC721Burnable, ERC721MetadataMintable, ERC721ServiceChain {
-    constructor (address _bridge) ERC721ServiceChain(_bridge) public {
+    constructor(address _bridge) ERC721ServiceChain(_bridge) public {
     }
 
     // registerBulk registers (startID, endID-1) tokens to the user once.

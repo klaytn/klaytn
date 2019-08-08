@@ -84,7 +84,7 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         requestNonce++;
     }
 
-    // Receiver function of ERC721 token for 1-step deposits to the Bridge
+    // onERC721Received function of ERC721 token for 1-step deposits to the Bridge
     function onERC721Received(
         address _from,
         uint256 _tokenId,
