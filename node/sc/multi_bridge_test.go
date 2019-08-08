@@ -962,7 +962,7 @@ func TestMultiBridgeKLAYTransferMixConfig2(t *testing.T) {
 // TestMultiBridgeKLAYTransferMixConfig1 checks the following:
 // - set threshold to 2.
 // - the first tx is done.
-// - set threshold to 1 .
+// - set threshold to 1.
 // - the first operator successfully handles the value transfer if retry.
 func TestMultiBridgeKLAYTransferMixConfig3(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
