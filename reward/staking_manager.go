@@ -45,8 +45,8 @@ func NewStakingManager(bc *blockchain.BlockChain, gh governanceHelper) *StakingM
 	}
 }
 
-// GetStakingInfoFromStakingCache returns a corresponding stakingInfo for a blockNum.
-func (sm *StakingManager) getStakingInfo(blockNum uint64) *StakingInfo {
+// GetStakingInfo returns a corresponding stakingInfo for a blockNum.
+func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
 
 	if cachedStakingInfo := sm.sic.get(stakingBlockNumber); cachedStakingInfo != nil {

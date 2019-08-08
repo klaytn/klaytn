@@ -26,8 +26,8 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/contracts/reward"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"math"
 	"math/rand"
 	"reflect"
@@ -551,10 +551,10 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 // It returns an error if it can't make up-to-date proposers
 //   (1) due toe wrong parameters
 //   (2) due to lack of staking information
-// It return no error when weightedCouncil
+// It returns no error when weightedCouncil:
 //   (1) already has up-do-date proposers
 //   (2) successfully calculated up-do-date proposers
-func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainId uint64) error {
+func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakingManager *reward.StakingManager) error {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 
@@ -578,7 +578,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 		return err
 	}
 
-	newStakingInfo := reward.GetStakingInfoFromStakingCache(blockNum + 1)
+	newStakingInfo := stakingManager.GetStakingInfo(blockNum + 1)
 
 	valSet.stakingInfo = newStakingInfo
 	if valSet.stakingInfo == nil {
@@ -590,8 +590,8 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 	//   1. Need to use the Gini coefficient
 	//   2. Gini coefficient has not yet been calculated
 	//   3. stakingInfo has node info from address book (address book has been activated)
-	if newStakingInfo.UseGini && newStakingInfo.Gini == reward.DefaultGiniCoefficient && len(newStakingInfo.CouncilNodeIds) != 0 {
-		newStakingInfo.CalcGiniCoefficientOfValidators(valSet.validators)
+	if newStakingInfo.UseGini && newStakingInfo.Gini == reward.DefaultGiniCoefficient && len(newStakingInfo.CouncilNodeAddrs) != 0 {
+		calcGiniCoefficientOfValidators(valSet.validators, newStakingInfo)
 	}
 
 	// Adjust each validator's staking amount by applying the Gini coefficient if necessary.
@@ -606,8 +606,8 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, chainI
 		}
 		weightedValidators[vIdx] = weightedVal
 
-		i := newStakingInfo.GetIndexByNodeId(weightedVal.address)
-		if i != reward.AddrNotFoundInCouncilNodes {
+		i, err := newStakingInfo.GetIndexByNodeId(weightedVal.address)
+		if err == nil {
 			weightedVal.SetRewardAddress(newStakingInfo.CouncilRewardAddrs[i])
 			tempStakingAmount := float64(newStakingInfo.CouncilStakingAmounts[i])
 			if newStakingInfo.UseGini {
@@ -697,4 +697,15 @@ func (valSet *weightedCouncil) TotalVotingPower() uint64 {
 		sum += v.VotingPower()
 	}
 	return sum
+}
+
+func calcGiniCoefficientOfValidators(validators []istanbul.Validator, stakingInfo *reward.StakingInfo) {
+	var stakingAmounts []uint64
+	for _, val := range validators {
+		i, err := stakingInfo.GetIndexByNodeId(val.Address())
+		if err == nil {
+			stakingAmounts = append(stakingAmounts, stakingInfo.CouncilStakingAmounts[i])
+		}
+	}
+	stakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
 }

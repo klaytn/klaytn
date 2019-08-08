@@ -33,7 +33,6 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
-	"github.com/klaytn/klaytn/contracts/reward"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
@@ -375,17 +374,18 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		}
 
 		if proposer.Weight() != 0 {
-			stakingInfo := reward.GetStakingInfoFromStakingCache(header.Number.Uint64())
+			stakingInfo := sb.GetStakingManager().GetStakingInfo(header.Number.Uint64())
 			if stakingInfo != nil {
 				kirAddr = stakingInfo.KIRAddr
 				pocAddr = stakingInfo.PoCAddr
 			}
 		}
 
-		reward.DistributeBlockReward(state, header, pocAddr, kirAddr, sb.governance)
+		if err := sb.rewardDistributor.DistributeBlockReward(state, header, pocAddr, kirAddr); err != nil {
+			return nil, err
+		}
 	} else {
-		err := reward.MintKLAY(state, header, sb.governance)
-		if err != nil {
+		if err := sb.rewardDistributor.MintKLAY(state, header); err != nil {
 			return nil, err
 		}
 	}
@@ -640,7 +640,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		// Let's refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
 		pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(snap.Number + 1))
 		if pHeader != nil {
-			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), sb.governance.ChainId()); err != nil {
+			if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), sb.GetStakingManager()); err != nil {
 				// There are three error cases and they just don't refresh proposers
 				// (1) no validator at all
 				// (2) invalid formatted hash

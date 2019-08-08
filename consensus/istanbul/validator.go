@@ -22,6 +22,7 @@ package istanbul
 
 import (
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/reward"
 	"strings"
 )
 
@@ -92,7 +93,7 @@ type ValidatorSet interface {
 	IsSubSet() bool
 
 	// Refreshes a list of candidate proposers with given hash and blockNum
-	Refresh(hash common.Hash, blockNum uint64, chainId uint64) error
+	Refresh(hash common.Hash, blockNum uint64, stakingManager *reward.StakingManager) error
 
 	SetBlockNum(blockNum uint64)
 
