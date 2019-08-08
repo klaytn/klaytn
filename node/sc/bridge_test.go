@@ -294,14 +294,14 @@ loop:
 			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce, sentBlockNumber, t)
 			backend.Commit()
 
-			resultBlockNumber, err := b.LastHandledRequestBlockNumber(nil)
+			resultBlockNumber, err := b.SequentialHandledRequestBlockNumber(nil)
 			assert.NoError(t, err)
 
 			resultHandleNonce, err := b.MaxHandledRequestedNonce(nil)
 			assert.NoError(t, err)
 
 			assert.Equal(t, sentNonce, resultHandleNonce)
-			assert.Equal(t, sentBlockNumber, resultBlockNumber)
+			assert.Equal(t, uint64(0), resultBlockNumber)
 
 		case err := <-handleSub.Err():
 			t.Log("Contract Event Loop Running Stop by handleSub.Err()", "err", err)
@@ -366,7 +366,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	isRunning, err := b.IsRunning(nil)
 	assert.Equal(t, true, isRunning)
 
-	lastBN, err := b.LastHandledRequestBlockNumber(nil)
+	lastBN, err := b.SequentialHandledRequestBlockNumber(nil)
 	assert.Equal(t, uint64(0x0), lastBN)
 
 	bridgeOwner, err := b.Owner(nil)

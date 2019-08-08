@@ -25,7 +25,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
 
 
     uint64 public requestNonce;
-    uint64 public lastHandledRequestBlockNumber;
+    uint64 public sequentialHandledRequestBlockNumber;
     uint64 public sequentialHandleNonce;
     uint64 public maxHandledRequestedNonce;
     mapping(uint64 => uint64) public handledHistory;  // <request nonce> => <request blockNum>
@@ -131,7 +131,7 @@ contract Bridge is IERC20BridgeReceiver, IERC721BridgeReceiver, BridgeFee, Bridg
         }
         for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledHistory[i] > 0; i++) { }
         sequentialHandleNonce = i;
-        lastHandledRequestBlockNumber = handledHistory[i-1];
+        sequentialHandledRequestBlockNumber = handledHistory[i-1];
     }
 
     // handleERC20Transfer sends the token by the request.
