@@ -551,7 +551,7 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 // It returns an error if it can't make up-to-date proposers
 //   (1) due toe wrong parameters
 //   (2) due to lack of staking information
-// It return no error when weightedCouncil
+// It returns no error when weightedCouncil:
 //   (1) already has up-do-date proposers
 //   (2) successfully calculated up-do-date proposers
 func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakingManager *reward.StakingManager) error {
