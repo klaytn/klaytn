@@ -15,7 +15,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     uint64 public sequentialHandledRequestBlockNumber;
     uint64 public sequentialHandleNonce;
     uint64 public maxHandledRequestedNonce;
-    mapping(uint64 => uint64) public handledHistory;  // <request nonce> => <request blockNum>
+    mapping(uint64 => uint64) public handledNoncesToBlockNumbers;  // <request nonce> => <request blockNum>
 
     using SafeMath for uint256;
 
@@ -106,14 +106,14 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     // updateHandleNonce increases sequential handle nonce after the _requestedNonce is handled.
     function updateHandleNonce(uint64 _requestedNonce, uint64 _requestBlockNumber) internal {
         uint64 i;
-        handledHistory[_requestedNonce] = _requestBlockNumber;
+        handledNoncesToBlockNumbers[_requestedNonce] = _requestBlockNumber;
 
         if (_requestedNonce > maxHandledRequestedNonce) {
             maxHandledRequestedNonce = _requestedNonce;
         }
-        for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledHistory[i] > 0; i++) { }
+        for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledNoncesToBlockNumbers[i] > 0; i++) { }
         sequentialHandleNonce = i;
-        sequentialHandledRequestBlockNumber = handledHistory[i-1];
+        sequentialHandledRequestBlockNumber = handledNoncesToBlockNumbers[i-1];
     }
 
     // setFeeReceivers sets fee receiver.
