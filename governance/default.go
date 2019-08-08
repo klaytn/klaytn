@@ -171,7 +171,7 @@ type Governance struct {
 	idxCacheLock *sync.RWMutex
 
 	// The block number when current governance information was changed
-	actualGovernanceBlock uint64
+	actualGovernanceBlock atomic.Value //uint64
 
 	// The last block number at governance state was stored (used not to replay old votes)
 	lastGovernanceStateBlock uint64
@@ -620,14 +620,14 @@ func (g *Governance) initializeCache() error {
 		if data, err := g.db.ReadGovernance(v); err == nil {
 			data = adjustDecodedSet(data)
 			g.itemCache.Add(getGovernanceCacheKey(v), data)
-			atomic.StoreUint64(&g.actualGovernanceBlock, v)
+			g.actualGovernanceBlock.Store(v)
 		} else {
 			logger.Crit("Couldn't read governance cache from database. Check database consistency", "index", v, "err", err)
 		}
 	}
 
 	// the last one is the one to be used now
-	ret, _ := g.itemCache.Get(getGovernanceCacheKey(atomic.LoadUint64(&g.actualGovernanceBlock)))
+	ret, _ := g.itemCache.Get(getGovernanceCacheKey(g.actualGovernanceBlock.Load().(uint64)))
 	g.currentSet.Import(ret.(map[string]interface{}))
 	return nil
 }
@@ -779,8 +779,8 @@ func (gov *Governance) removeDuplicatedVote(vote *GovernanceVote, number uint64)
 func (gov *Governance) UpdateCurrentGovernance(num uint64) {
 	newNumber, newGovernanceSet, _ := gov.ReadGovernance(num)
 	// Do the change only when the governance actually changed
-	if newGovernanceSet != nil && newNumber > atomic.LoadUint64(&gov.actualGovernanceBlock) {
-		atomic.StoreUint64(&gov.actualGovernanceBlock, newNumber)
+	if newGovernanceSet != nil && newNumber > gov.actualGovernanceBlock.Load().(uint64) {
+		gov.actualGovernanceBlock.Store(newNumber)
 		gov.currentSet.Import(newGovernanceSet)
 		gov.triggerChange(newGovernanceSet)
 	}
