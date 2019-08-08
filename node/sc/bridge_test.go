@@ -301,7 +301,7 @@ loop:
 			assert.NoError(t, err)
 
 			assert.Equal(t, sentNonce, resultHandleNonce)
-			assert.Equal(t, uint64(0), resultBlockNumber)
+			assert.Equal(t, uint64(1), resultBlockNumber)
 
 		case err := <-handleSub.Err():
 			t.Log("Contract Event Loop Running Stop by handleSub.Err()", "err", err)
