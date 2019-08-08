@@ -1,5 +1,6 @@
 pragma solidity ^0.4.24;
 
+
 contract Callback {
     event RegisteredOffer(
         address owner,
@@ -8,7 +9,7 @@ contract Callback {
         uint256 price
     );
 
-    function RegisterOffer(
+    function registerOffer(
         address _owner,
         uint256 _valueOrID,
         address _tokenAddress,
