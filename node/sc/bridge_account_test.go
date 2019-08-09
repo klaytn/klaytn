@@ -41,8 +41,8 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 	config.DataDir = tempDir
 	bAcc, err := NewBridgeAccounts(config.DataDir)
 	assert.NoError(t, err)
-	assert.Equal(t, false, bAcc.cAccount.IsLockAccount())
-	assert.Equal(t, false, bAcc.pAccount.IsLockAccount())
+	assert.Equal(t, false, bAcc.cAccount.IsLockedAccount())
+	assert.Equal(t, false, bAcc.pAccount.IsLockedAccount())
 
 	pPwdFilePath := path.Join(tempDir, "parent_bridge_account", bAcc.pAccount.address.String())
 	pPwdStr, err := ioutil.ReadFile(pPwdFilePath)
@@ -56,36 +56,36 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 	{
 		err := bAcc.cAccount.LockAccount()
 		assert.NoError(t, err)
-		assert.Equal(t, true, bAcc.cAccount.IsLockAccount())
+		assert.Equal(t, true, bAcc.cAccount.IsLockedAccount())
 	}
 	{
 		err := bAcc.pAccount.LockAccount()
 		assert.NoError(t, err)
-		assert.Equal(t, true, bAcc.pAccount.IsLockAccount())
+		assert.Equal(t, true, bAcc.pAccount.IsLockedAccount())
 	}
 
 	// Fail to UnLock Account
 	{
 		err := bAcc.cAccount.UnLockAccount(string(cPwdStr)[3:])
 		assert.EqualError(t, err, keystore.ErrDecrypt.Error())
-		assert.Equal(t, true, bAcc.cAccount.IsLockAccount())
+		assert.Equal(t, true, bAcc.cAccount.IsLockedAccount())
 	}
 	{
 		err := bAcc.pAccount.UnLockAccount(string(pPwdStr)[3:])
 		assert.EqualError(t, err, keystore.ErrDecrypt.Error())
-		assert.Equal(t, true, bAcc.pAccount.IsLockAccount())
+		assert.Equal(t, true, bAcc.pAccount.IsLockedAccount())
 	}
 
 	// Succeed to UnLock Account
 	{
 		err := bAcc.cAccount.UnLockAccount(string(cPwdStr))
 		assert.NoError(t, err)
-		assert.Equal(t, false, bAcc.cAccount.IsLockAccount())
+		assert.Equal(t, false, bAcc.cAccount.IsLockedAccount())
 	}
 	{
 		err := bAcc.pAccount.UnLockAccount(string(pPwdStr))
 		assert.NoError(t, err)
-		assert.Equal(t, false, bAcc.pAccount.IsLockAccount())
+		assert.Equal(t, false, bAcc.pAccount.IsLockedAccount())
 	}
 }
 
@@ -104,8 +104,8 @@ func TestBridgeAccountInformation(t *testing.T) {
 	config.DataDir = tempDir
 	bAcc, err := NewBridgeAccounts(config.DataDir)
 	assert.NoError(t, err)
-	assert.Equal(t, false, bAcc.cAccount.IsLockAccount())
-	assert.Equal(t, false, bAcc.pAccount.IsLockAccount())
+	assert.Equal(t, false, bAcc.cAccount.IsLockedAccount())
+	assert.Equal(t, false, bAcc.pAccount.IsLockedAccount())
 
 	bAcc.pAccount.gasPrice = big.NewInt(100)
 	bAcc.pAccount.nonce = 10
@@ -127,12 +127,12 @@ func TestBridgeAccountInformation(t *testing.T) {
 	assert.Equal(t, pRes["chainID"].(*big.Int).String(), bAcc.pAccount.chainID.String())
 	assert.Equal(t, pRes["gasPrice"].(*big.Int).String(), bAcc.pAccount.gasPrice.String())
 	assert.Equal(t, pRes["isNonceSynced"], bAcc.pAccount.isNonceSynced)
-	assert.Equal(t, pRes["isLocked"], bAcc.pAccount.IsLockAccount())
+	assert.Equal(t, pRes["isLocked"], bAcc.pAccount.IsLockedAccount())
 
 	assert.Equal(t, cRes["address"], bAcc.cAccount.address)
 	assert.Equal(t, cRes["nonce"], bAcc.cAccount.nonce)
 	assert.Equal(t, cRes["chainID"].(*big.Int).String(), bAcc.cAccount.chainID.String())
 	assert.Equal(t, cRes["gasPrice"].(*big.Int).String(), bAcc.cAccount.gasPrice.String())
 	assert.Equal(t, cRes["isNonceSynced"], bAcc.cAccount.isNonceSynced)
-	assert.Equal(t, cRes["isLocked"], bAcc.cAccount.IsLockAccount())
+	assert.Equal(t, cRes["isLocked"], bAcc.cAccount.IsLockedAccount())
 }
