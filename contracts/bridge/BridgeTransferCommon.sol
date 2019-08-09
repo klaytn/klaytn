@@ -111,12 +111,11 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         if (_requestedNonce > upperHandleNonce) {
             upperHandleNonce = _requestedNonce;
         }
-        for (i = lowerHandleNonce; i <= upperHandleNonce && handleNoncesToBlockNums[i] > 0; i++) {
-            if (handleNoncesToBlockNums[i] > recoveryBlockNumber) {
-                recoveryBlockNumber = handleNoncesToBlockNums[i];
-            }
-        }
+        for (i = lowerHandleNonce; i <= upperHandleNonce && handleNoncesToBlockNums[i] > 0; i++) { }
         lowerHandleNonce = i;
+        if (i != 0) {
+            recoveryBlockNumber = handleNoncesToBlockNums[i-1];
+        }
     }
 
     // setFeeReceivers sets fee receiver.
