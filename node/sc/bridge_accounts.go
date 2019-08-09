@@ -154,7 +154,7 @@ func (acc *accountInfo) GetAccountInfo() map[string]interface{} {
 	res["address"] = acc.address
 	res["nonce"] = acc.nonce
 	res["isNonceSynced"] = acc.isNonceSynced
-	res["isLocked"] = acc.IsLockedAccount()
+	res["isUnlocked"] = acc.IsUnlockedAccount()
 	res["chainID"] = acc.chainID
 	res["gasPrice"] = acc.gasPrice
 
@@ -241,9 +241,9 @@ func (acc *accountInfo) UnLockAccount(passphrase string) error {
 	return nil
 }
 
-// IsLockedAccount can return if the account is lock or not.
-func (acc *accountInfo) IsLockedAccount() bool {
+// IsUnlockedAccount can return if the account is unlocked or not.
+func (acc *accountInfo) IsUnlockedAccount() bool {
 	acc.mu.Lock()
 	defer acc.mu.Unlock()
-	return acc.keystore.IsLocked(acc.address)
+	return acc.keystore.IsUnlocked(acc.address)
 }
