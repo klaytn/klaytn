@@ -11,10 +11,10 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     bool public modeMintBurn = false;
     bool public isRunning;
 
-    uint64 public requestNonce;
-    uint64 public sequentialHandledRequestBlockNumber = 1;
-    uint64 public sequentialHandleNonce;
-    uint64 public maxHandledRequestedNonce;
+    uint64 public requestNonce; // value transfer nonce increasing by 1 for each request.
+    uint64 public maxHandledRequestedNonce; // maximum handled requested nonce used for checking nonce update.
+    uint64 public sequentialHandleNonce; // the largest sequential handle nonce used for recovery.
+    uint64 public sequentialHandledRequestBlockNumber = 1; // the largest sequential block number used for recovery.
     mapping(uint64 => uint64) public handledNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
     using SafeMath for uint256;
