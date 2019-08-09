@@ -117,7 +117,7 @@ func TestBridgeAccountInformation(t *testing.T) {
 	res := bAcc.GetBridgeOperators()
 	assert.Equal(t, 2, len(res))
 
-	pRes := (res["parentOperator"]).(map[string]interface{})
+	pRes := res["parentOperator"].(map[string]interface{})
 	cRes := res["childOperator"].(map[string]interface{})
 	assert.Equal(t, 6, len(pRes))
 	assert.Equal(t, 6, len(cRes))
