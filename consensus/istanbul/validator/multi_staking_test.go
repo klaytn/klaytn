@@ -123,8 +123,52 @@ func TestCalcTotalAmount(t *testing.T) {
 	}
 }
 
-func TestWeightedCouncil_calcWeight(t *testing.T) {
-
+func TestCalcWeight(t *testing.T) {
+	testCases := []struct {
+		weightedValidators []*weightedValidator
+		stakingAmounts     []float64
+		totalStaking       float64
+		expectedWeights    []int64
+	}{
+		{
+			[]*weightedValidator{
+				&weightedValidator{}, &weightedValidator{}, &weightedValidator{},
+			},
+			[]float64{0, 0, 0},
+			0,
+			[]int64{0, 0, 0},
+		},
+		{
+			[]*weightedValidator{
+				&weightedValidator{}, &weightedValidator{}, &weightedValidator{},
+			},
+			[]float64{5000000, 5000000, 5000000},
+			15000000,
+			[]int64{33, 33, 33},
+		},
+		{
+			[]*weightedValidator{
+				&weightedValidator{}, &weightedValidator{}, &weightedValidator{}, &weightedValidator{},
+			},
+			[]float64{5000000, 10000000, 5000000, 5000000},
+			25000000,
+			[]int64{20, 40, 20, 20},
+		},
+		{
+			[]*weightedValidator{
+				&weightedValidator{}, &weightedValidator{}, &weightedValidator{}, &weightedValidator{}, &weightedValidator{},
+			},
+			[]float64{324946, 560845, 771786, 967997, 1153934},
+			3779508,
+			[]int64{9, 15, 20, 26, 31},
+		},
+	}
+	for _, testCase := range testCases {
+		calcWeight(testCase.weightedValidators, testCase.stakingAmounts, testCase.totalStaking)
+		for i, weight := range testCase.expectedWeights {
+			assert.Equal(t, weight, testCase.weightedValidators[i].Weight())
+		}
+	}
 }
 
 func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
