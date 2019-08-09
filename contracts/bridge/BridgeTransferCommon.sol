@@ -103,7 +103,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
 
     );
 
-    // updateHandleNonce increases sequential handle nonce after the _requestedNonce is handled.
+    // updateHandleNonce increases lower and upper handle nonce after the _requestedNonce is handled.
     function updateHandleNonce(uint64 _requestedNonce, uint64 _requestBlockNumber) internal {
         uint64 i;
         handleNoncesToBlockNums[_requestedNonce] = _requestBlockNumber;

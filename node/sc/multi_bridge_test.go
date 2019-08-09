@@ -1040,9 +1040,9 @@ func TestNoncesAndBlockNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, sentNonce, hMaxNonce)
 
-	hSequentialNonce, err := info.b.LowerHandleNonce(nil)
+	lowerHandleNonce, err := info.b.LowerHandleNonce(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, sentNonce+1, hSequentialNonce)
+	assert.Equal(t, sentNonce+1, lowerHandleNonce)
 
 	hBlkNum, err := info.b.RecoveryBlockNumber(nil)
 	assert.NoError(t, err)
@@ -1065,9 +1065,9 @@ func TestNoncesAndBlockNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, sentNonce, hMaxNonce)
 
-	hSequentialNonce, err = info.b.LowerHandleNonce(nil)
+	lowerHandleNonce, err = info.b.LowerHandleNonce(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, sentNonce+1, hSequentialNonce)
+	assert.Equal(t, sentNonce+1, lowerHandleNonce)
 
 	hBlkNum, err = info.b.RecoveryBlockNumber(nil)
 	assert.NoError(t, err)
