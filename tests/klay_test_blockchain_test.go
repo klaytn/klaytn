@@ -28,12 +28,12 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/contracts/reward"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
@@ -65,6 +65,7 @@ type BCData struct {
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
 	governance         *governance.Governance
+	rewardDistributor  *reward.RewardDistributor
 }
 
 var dir = "chaindata"
@@ -119,10 +120,11 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	}
 
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
+	rewardDistributor := reward.NewRewardDistributor(gov)
 
 	return &BCData{bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov}, nil
+		validatorPrivKeys, engine, genesis, gov, rewardDistributor}, nil
 }
 
 func (bcdata *BCData) Shutdown() {
@@ -303,7 +305,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Apply reward
 	start = time.Now()
-	if err := reward.MintKLAY(accountMap, header, bcdata.governance); err != nil {
+	if err := bcdata.rewardDistributor.MintKLAY(accountMap, header); err != nil {
 		return err
 	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
@@ -356,7 +358,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Apply reward
 	start = time.Now()
-	if err := reward.MintKLAY(accountMap, b.Header(), bcdata.governance); err != nil {
+	if err := bcdata.rewardDistributor.MintKLAY(accountMap, b.Header()); err != nil {
 		return err
 	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
