@@ -1095,14 +1095,15 @@ func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 	}
 
 	testCases := []testParams{
-		{2, 100, 2, 0, 1},
+		{2, 300, 2, 0, 1},
 		{1, 200, 2, 0, 1},
-		{0, 300, 2, 3, 300},
+		{0, 100, 2, 3, 300},
 	}
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < len(testCases); i++ {
 		sentNonce := testCases[i].requestNonce
 		sentBlockNumber := testCases[i].requestBlkNum
+		t.Log("test round", "i", i, "nonce", sentNonce, "blk", sentBlockNumber)
 		tx := SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
 		info.sim.Commit()
 		assert.NoError(t, bind.CheckWaitMined(info.sim, tx))

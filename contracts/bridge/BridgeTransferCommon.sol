@@ -111,11 +111,12 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         if (_requestedNonce > maxHandledRequestedNonce) {
             maxHandledRequestedNonce = _requestedNonce;
         }
-        for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledNoncesToBlockNums[i] > 0; i++) { }
-        sequentialHandleNonce = i;
-        if (sequentialHandleNonce != 0) {
-            sequentialHandledRequestBlockNumber = handledNoncesToBlockNums[i-1];
+        for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledNoncesToBlockNums[i] > 0; i++) {
+            if (handledNoncesToBlockNums[i] > sequentialHandledRequestBlockNumber) {
+                sequentialHandledRequestBlockNumber = handledNoncesToBlockNums[i];
+            }
         }
+        sequentialHandleNonce = i;
     }
 
     // setFeeReceivers sets fee receiver.
