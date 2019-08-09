@@ -590,8 +590,8 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 	if err != nil {
 		return err
 	}
-	totalStaking := valSet.calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
-	valSet.calcWeight(weightedValidators, stakingAmounts, totalStaking)
+	totalStaking := calcTotalAmount(newStakingInfo, stakingAmounts)
+	calcWeight(weightedValidators, stakingAmounts, totalStaking)
 
 	valSet.refreshProposers(seed, blockNum)
 
@@ -631,16 +631,16 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 	return weightedValidators, stakingAmounts, nil
 }
 
-func (valSet *weightedCouncil) calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *reward.StakingInfo, stakingAmounts []float64) float64 {
+func calcTotalAmount(stakingInfo *reward.StakingInfo, stakingAmounts []float64) float64 {
 	totalStaking := float64(0)
 	if stakingInfo.UseGini && len(stakingInfo.CouncilNodeAddrs) != 0 {
 		if stakingInfo.Gini == reward.DefaultGiniCoefficient {
 			stakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
 		}
 
-		for vIdx, _ := range weightedValidators {
-			stakingAmounts[vIdx] = math.Round(math.Pow(stakingAmounts[vIdx], 1.0/(1+stakingInfo.Gini)))
-			totalStaking += stakingAmounts[vIdx]
+		for i, _ := range stakingAmounts {
+			stakingAmounts[i] = math.Round(math.Pow(stakingAmounts[i], 1.0/(1+stakingInfo.Gini)))
+			totalStaking += stakingAmounts[i]
 		}
 	} else {
 		for _, stakingAmount := range stakingAmounts {
@@ -653,7 +653,7 @@ func (valSet *weightedCouncil) calcTotalAmount(weightedValidators []*weightedVal
 }
 
 // Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
-func (valSet *weightedCouncil) calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64) {
+func calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64) {
 	localLogger := logger.NewWith()
 	if totalStaking > 0 {
 		for i, weightedVal := range weightedValidators {

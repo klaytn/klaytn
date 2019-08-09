@@ -70,8 +70,57 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 	}
 }
 
-func TestWeightedCouncil_calcTotalAmount(t *testing.T) {
+func TestCalcTotalAmount(t *testing.T) {
+	testCases := []struct {
+		stakingInfo            *reward.StakingInfo
+		stakingAmounts         []float64
+		expectedGini           float64
+		expectedTotalAmount    float64
+		expectedStakingAmounts []float64
+	}{
+		{
+			&reward.StakingInfo{
+				CouncilNodeAddrs: []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103))},
+				UseGini:          false,
+				Gini:             reward.DefaultGiniCoefficient,
+			},
+			[]float64{5000000, 5000000, 5000000},
+			reward.DefaultGiniCoefficient,
+			15000000,
+			[]float64{5000000, 5000000, 5000000},
+		},
+		{
+			&reward.StakingInfo{
+				CouncilNodeAddrs: []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103))},
+				UseGini:          true,
+				Gini:             reward.DefaultGiniCoefficient,
+			},
+			[]float64{5000000, 5000000, 5000000},
+			0,
+			15000000,
+			[]float64{5000000, 5000000, 5000000},
+		},
 
+		{
+			&reward.StakingInfo{
+				CouncilNodeAddrs: []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(105))},
+				UseGini:          true,
+				Gini:             reward.DefaultGiniCoefficient,
+			},
+			[]float64{10000000, 20000000, 30000000, 40000000, 50000000},
+			0.27,
+			3779508,
+			[]float64{324946, 560845, 771786, 967997, 1153934},
+		},
+	}
+	for _, testCase := range testCases {
+		stakingAmounts := testCase.stakingAmounts
+		totalAmount := calcTotalAmount(testCase.stakingInfo, stakingAmounts)
+
+		assert.Equal(t, testCase.expectedGini, testCase.stakingInfo.Gini)
+		assert.Equal(t, testCase.expectedTotalAmount, totalAmount)
+		assert.Equal(t, testCase.expectedStakingAmounts, stakingAmounts)
+	}
 }
 
 func TestWeightedCouncil_calcWeight(t *testing.T) {
