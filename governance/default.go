@@ -1067,7 +1067,7 @@ func (gov *Governance) IdxCache() []uint64 {
 	gov.idxCacheLock.RLock()
 	defer gov.idxCacheLock.RUnlock()
 
-	copiedCache := make([]uint64, 0, len(gov.idxCache))
+	copiedCache := make([]uint64, len(gov.idxCache))
 	copy(copiedCache, gov.idxCache)
 	return copiedCache
 }
