@@ -329,8 +329,8 @@ func (ks *KeyStore) Lock(addr common.Address) error {
 	return nil
 }
 
-// IsLock returns if the account is locked or not.
-func (ks *KeyStore) IsLock(addr common.Address) bool {
+// IsLocked returns if the account is locked or not.
+func (ks *KeyStore) IsLocked(addr common.Address) bool {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 	if _, found := ks.unlocked[addr]; found {

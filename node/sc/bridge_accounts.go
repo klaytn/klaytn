@@ -245,5 +245,5 @@ func (acc *accountInfo) UnLockAccount(passphrase string) error {
 func (acc *accountInfo) IsLockAccount() bool {
 	acc.mu.Lock()
 	defer acc.mu.Unlock()
-	return acc.keystore.IsLock(acc.address)
+	return acc.keystore.IsLocked(acc.address)
 }
