@@ -367,7 +367,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	assert.Equal(t, true, isRunning)
 
 	lastBN, err := b.SequentialHandledRequestBlockNumber(nil)
-	assert.Equal(t, uint64(0x0), lastBN)
+	assert.Equal(t, uint64(0x1), lastBN)
 
 	bridgeOwner, err := b.Owner(nil)
 	assert.Equal(t, bridgeAccount.From, bridgeOwner)

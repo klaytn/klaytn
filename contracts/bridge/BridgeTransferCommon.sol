@@ -12,7 +12,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     bool public isRunning;
 
     uint64 public requestNonce;
-    uint64 public sequentialHandledRequestBlockNumber;
+    uint64 public sequentialHandledRequestBlockNumber = 1;
     uint64 public sequentialHandleNonce;
     uint64 public maxHandledRequestedNonce;
     mapping(uint64 => uint64) public handledNoncesToBlockNums;  // <request nonce> => <request blockNum>
@@ -113,10 +113,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         }
         for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledNoncesToBlockNums[i] > 0; i++) { }
         sequentialHandleNonce = i;
-        // edge case: requestNonce zero is not yet handled.
-        if (sequentialHandleNonce == 0) {
-            sequentialHandledRequestBlockNumber = 1; // skip genesis block
-        } else {
+        if (sequentialHandleNonce != 0) {
             sequentialHandledRequestBlockNumber = handledNoncesToBlockNums[i-1];
         }
     }
