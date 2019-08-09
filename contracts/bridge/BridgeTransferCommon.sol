@@ -12,10 +12,10 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     bool public isRunning;
 
     uint64 public requestNonce; // the number of value transfer request that this contract received.
-    uint64 public minUnhandledRequestNonce; // a minimum nonce of a value transfer request that will be handled.
-    uint64 public maxHandledRequestedNonce; // maximum nonce of the counterpart bridge's value transfer request that is handled.
+    uint64 public lowerHandleNonce; // the nonce + 1 of a value transfer request surely processed by the counterpart bridge.
+    uint64 public upperHandleNonce; // the nonce of a value transfer request probably processed by the counterpart bridge.
     uint64 public recoveryBlockNumber = 1; // the block number that recovery start to filter log from.
-    mapping(uint64 => uint64) public handledNoncesToBlockNums;  // <request nonce> => <request blockNum>
+    mapping(uint64 => uint64) public handleNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
     using SafeMath for uint256;
 
@@ -106,17 +106,17 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     // updateHandleNonce increases sequential handle nonce after the _requestedNonce is handled.
     function updateHandleNonce(uint64 _requestedNonce, uint64 _requestBlockNumber) internal {
         uint64 i;
-        handledNoncesToBlockNums[_requestedNonce] = _requestBlockNumber;
+        handleNoncesToBlockNums[_requestedNonce] = _requestBlockNumber;
 
-        if (_requestedNonce > maxHandledRequestedNonce) {
-            maxHandledRequestedNonce = _requestedNonce;
+        if (_requestedNonce > upperHandleNonce) {
+            upperHandleNonce = _requestedNonce;
         }
-        for (i = minUnhandledRequestNonce; i <= maxHandledRequestedNonce && handledNoncesToBlockNums[i] > 0; i++) {
-            if (handledNoncesToBlockNums[i] > recoveryBlockNumber) {
-                recoveryBlockNumber = handledNoncesToBlockNums[i];
+        for (i = lowerHandleNonce; i <= upperHandleNonce && handleNoncesToBlockNums[i] > 0; i++) {
+            if (handleNoncesToBlockNums[i] > recoveryBlockNumber) {
+                recoveryBlockNumber = handleNoncesToBlockNums[i];
             }
         }
-        minUnhandledRequestNonce = i;
+        lowerHandleNonce = i;
     }
 
     // setFeeReceivers sets fee receiver.

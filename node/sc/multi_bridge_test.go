@@ -1036,11 +1036,11 @@ func TestNoncesAndBlockNumber(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-	hMaxNonce, err := info.b.MaxHandledRequestedNonce(nil)
+	hMaxNonce, err := info.b.UpperHandleNonce(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, sentNonce, hMaxNonce)
 
-	hSequentialNonce, err := info.b.MinUnhandledRequestNonce(nil)
+	hSequentialNonce, err := info.b.LowerHandleNonce(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, sentNonce+1, hSequentialNonce)
 
@@ -1061,11 +1061,11 @@ func TestNoncesAndBlockNumber(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-	hMaxNonce, err = info.b.MaxHandledRequestedNonce(nil)
+	hMaxNonce, err = info.b.UpperHandleNonce(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, sentNonce, hMaxNonce)
 
-	hSequentialNonce, err = info.b.MinUnhandledRequestNonce(nil)
+	hSequentialNonce, err = info.b.LowerHandleNonce(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, sentNonce+1, hSequentialNonce)
 
@@ -1108,11 +1108,11 @@ func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 		info.sim.Commit()
 		assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-		hMaxNonce, err := info.b.MaxHandledRequestedNonce(nil)
+		hMaxNonce, err := info.b.UpperHandleNonce(nil)
 		assert.NoError(t, err)
 		assert.Equal(t, testCases[i].maxHandledRequestedNonce, hMaxNonce)
 
-		minUnhandledNonce, err := info.b.MinUnhandledRequestNonce(nil)
+		minUnhandledNonce, err := info.b.LowerHandleNonce(nil)
 		assert.NoError(t, err)
 		assert.Equal(t, testCases[i].minUnhandledRequestNonce, minUnhandledNonce)
 

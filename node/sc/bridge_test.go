@@ -283,7 +283,7 @@ loop:
 				assert.NoError(t, err)
 				assert.Equal(t, bal, big.NewInt(int64(transferAmount*(testCount-nonceOffset+1))))
 
-				sequentialHandleNonce, err := b.MinUnhandledRequestNonce(nil)
+				sequentialHandleNonce, err := b.LowerHandleNonce(nil)
 				assert.NoError(t, err)
 				assert.Equal(t, sequentialHandleNonce, uint64(0))
 				return
@@ -297,7 +297,7 @@ loop:
 			resultBlockNumber, err := b.RecoveryBlockNumber(nil)
 			assert.NoError(t, err)
 
-			resultHandleNonce, err := b.MaxHandledRequestedNonce(nil)
+			resultHandleNonce, err := b.UpperHandleNonce(nil)
 			assert.NoError(t, err)
 
 			assert.Equal(t, sentNonce, resultHandleNonce)
@@ -354,7 +354,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	counterpartBridge, err := b.CounterpartBridge(nil)
 	assert.Equal(t, common.Address{2}, counterpartBridge)
 
-	hnonce, err := b.MinUnhandledRequestNonce(nil)
+	hnonce, err := b.LowerHandleNonce(nil)
 	assert.Equal(t, uint64(0), hnonce)
 
 	owner, err := b.IsOwner(&bind.CallOpts{From: bridgeAccount.From})
