@@ -1040,11 +1040,11 @@ func TestNoncesAndBlockNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, sentNonce, hMaxNonce)
 
-	hSequentialNonce, err := info.b.SequentialHandleNonce(nil)
+	hSequentialNonce, err := info.b.MinUnhandledRequestNonce(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, sentNonce+1, hSequentialNonce)
 
-	hBlkNum, err := info.b.SequentialHandledRequestBlockNumber(nil)
+	hBlkNum, err := info.b.RecoveryBlockNumber(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, sentBlockNumber, hBlkNum)
 
@@ -1065,11 +1065,11 @@ func TestNoncesAndBlockNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, sentNonce, hMaxNonce)
 
-	hSequentialNonce, err = info.b.SequentialHandleNonce(nil)
+	hSequentialNonce, err = info.b.MinUnhandledRequestNonce(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, sentNonce+1, hSequentialNonce)
 
-	hBlkNum, err = info.b.SequentialHandledRequestBlockNumber(nil)
+	hBlkNum, err = info.b.RecoveryBlockNumber(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, sentBlockNumber, hBlkNum)
 }
@@ -1090,8 +1090,8 @@ func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 		requestBlkNum uint64
 		// expected result
 		maxHandledRequestedNonce uint64
-		sequentialHandleNonce    uint64
-		sequentialHandleBlkNum   uint64
+		minUnhandledRequestNonce uint64
+		recoveryBlockNumber      uint64
 	}
 
 	testCases := []testParams{
@@ -1112,12 +1112,12 @@ func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, testCases[i].maxHandledRequestedNonce, hMaxNonce)
 
-		hSequentialNonce, err := info.b.SequentialHandleNonce(nil)
+		minUnhandledNonce, err := info.b.MinUnhandledRequestNonce(nil)
 		assert.NoError(t, err)
-		assert.Equal(t, testCases[i].sequentialHandleNonce, hSequentialNonce)
+		assert.Equal(t, testCases[i].minUnhandledRequestNonce, minUnhandledNonce)
 
-		hBlkNum, err := info.b.SequentialHandledRequestBlockNumber(nil)
+		blkNum, err := info.b.RecoveryBlockNumber(nil)
 		assert.NoError(t, err)
-		assert.Equal(t, testCases[i].sequentialHandleBlkNum, hBlkNum)
+		assert.Equal(t, testCases[i].recoveryBlockNumber, blkNum)
 	}
 }

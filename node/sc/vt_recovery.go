@@ -192,7 +192,7 @@ func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *BridgeInfo)
 		logger.Trace("recovery prevHint", "rnonce", prevHint.requestNonce, "hnonce", prevHint.handleNonce, "phnonce", prevHint.prevHandleNonce, "cand", prevHint.candidate)
 	}
 
-	hint.blockNumber, err = to.bridge.SequentialHandledRequestBlockNumber(nil)
+	hint.blockNumber, err = to.bridge.RecoveryBlockNumber(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *BridgeInfo)
 	}
 	hint.requestNonce = requestNonce
 
-	handleNonce, err := to.bridge.SequentialHandleNonce(nil)
+	handleNonce, err := to.bridge.MinUnhandledRequestNonce(nil)
 	if err != nil {
 		return nil, err
 	}

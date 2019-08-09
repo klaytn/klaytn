@@ -283,7 +283,7 @@ loop:
 				assert.NoError(t, err)
 				assert.Equal(t, bal, big.NewInt(int64(transferAmount*(testCount-nonceOffset+1))))
 
-				sequentialHandleNonce, err := b.SequentialHandleNonce(nil)
+				sequentialHandleNonce, err := b.MinUnhandledRequestNonce(nil)
 				assert.NoError(t, err)
 				assert.Equal(t, sequentialHandleNonce, uint64(0))
 				return
@@ -294,7 +294,7 @@ loop:
 			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce, sentBlockNumber, t)
 			backend.Commit()
 
-			resultBlockNumber, err := b.SequentialHandledRequestBlockNumber(nil)
+			resultBlockNumber, err := b.RecoveryBlockNumber(nil)
 			assert.NoError(t, err)
 
 			resultHandleNonce, err := b.MaxHandledRequestedNonce(nil)
@@ -354,7 +354,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	counterpartBridge, err := b.CounterpartBridge(nil)
 	assert.Equal(t, common.Address{2}, counterpartBridge)
 
-	hnonce, err := b.SequentialHandleNonce(nil)
+	hnonce, err := b.MinUnhandledRequestNonce(nil)
 	assert.Equal(t, uint64(0), hnonce)
 
 	owner, err := b.IsOwner(&bind.CallOpts{From: bridgeAccount.From})
@@ -366,7 +366,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	isRunning, err := b.IsRunning(nil)
 	assert.Equal(t, true, isRunning)
 
-	lastBN, err := b.SequentialHandledRequestBlockNumber(nil)
+	lastBN, err := b.RecoveryBlockNumber(nil)
 	assert.Equal(t, uint64(0x1), lastBN)
 
 	bridgeOwner, err := b.Owner(nil)

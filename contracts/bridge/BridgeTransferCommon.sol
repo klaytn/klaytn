@@ -11,10 +11,10 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     bool public modeMintBurn = false;
     bool public isRunning;
 
-    uint64 public requestNonce; // value transfer nonce increasing by 1 for each request.
-    uint64 public maxHandledRequestedNonce; // maximum handled requested nonce used for checking nonce update.
-    uint64 public sequentialHandleNonce; // the largest sequential handle nonce used for recovery.
-    uint64 public sequentialHandledRequestBlockNumber = 1; // the largest sequential block number used for recovery.
+    uint64 public requestNonce; // the number of value transfer request that this contract received.
+    uint64 public minUnhandledRequestNonce; // a minimum nonce of a value transfer request that will be handled.
+    uint64 public maxHandledRequestedNonce; // maximum nonce of the counterpart bridge's value transfer request that is handled.
+    uint64 public recoveryBlockNumber = 1; // the block number that recovery start to filter log from.
     mapping(uint64 => uint64) public handledNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
     using SafeMath for uint256;
@@ -111,12 +111,12 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         if (_requestedNonce > maxHandledRequestedNonce) {
             maxHandledRequestedNonce = _requestedNonce;
         }
-        for (i = sequentialHandleNonce; i <= maxHandledRequestedNonce && handledNoncesToBlockNums[i] > 0; i++) {
-            if (handledNoncesToBlockNums[i] > sequentialHandledRequestBlockNumber) {
-                sequentialHandledRequestBlockNumber = handledNoncesToBlockNums[i];
+        for (i = minUnhandledRequestNonce; i <= maxHandledRequestedNonce && handledNoncesToBlockNums[i] > 0; i++) {
+            if (handledNoncesToBlockNums[i] > recoveryBlockNumber) {
+                recoveryBlockNumber = handledNoncesToBlockNums[i];
             }
         }
-        sequentialHandleNonce = i;
+        minUnhandledRequestNonce = i;
     }
 
     // setFeeReceivers sets fee receiver.
