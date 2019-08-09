@@ -329,6 +329,16 @@ func (ks *KeyStore) Lock(addr common.Address) error {
 	return nil
 }
 
+// IsLock returns if the account is locked or not.
+func (ks *KeyStore) IsLock(addr common.Address) bool {
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+	if _, found := ks.unlocked[addr]; found {
+		return false
+	}
+	return true
+}
+
 // TimedUnlock unlocks the given account with the passphrase. The account
 // stays unlocked for the duration of timeout. A timeout of 0 unlocks the account
 // until the program exits. The account must match a unique key file.

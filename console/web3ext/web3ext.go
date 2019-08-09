@@ -1048,6 +1048,24 @@ web3._extend({
 			call: 'subbridge_getFeeReceiver',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'lockParentOperator',
+			call: 'subbridge_lockParentOperator'
+		}),
+		new web3._extend.Method({
+			name: 'lockChildOperator',
+			call: 'subbridge_lockChildOperator'
+		}),
+		new web3._extend.Method({
+			name: 'unlockParentOperator',
+			call: 'subbridge_unlockParentOperator',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'unlockChildOperator',
+			call: 'subbridge_unlockChildOperator',
+			params: 1
+		}),
 	],
     properties: [
 		new web3._extend.Property({
@@ -1065,6 +1083,10 @@ web3._extend({
 			new web3._extend.Property({
 			name: 'serviceChainAccount',
 			getter: 'subbridge_getServiceChainAccountAddr'
+		}),
+		new web3._extend.Property({
+			name: 'operators',
+			getter: 'subbridge_getOperators'
 		}),
 		new web3._extend.Property({
 			name: 'anchoringPeriod',

@@ -464,6 +464,31 @@ func (sbapi *SubBridgeAPI) GetServiceChainAccountNonce() uint64 {
 	return sbapi.sc.handler.getServiceChainAccountNonce()
 }
 
+// GetBridgeOperators returns the information of bridge operators.
+func (sbapi *SubBridgeAPI) GetOperators() map[string]interface{} {
+	return sbapi.sc.bridgeAccounts.GetBridgeOperators()
+}
+
+// LockParentOperator can lock the parent bridge operator.
+func (sbapi *SubBridgeAPI) LockParentOperator() error {
+	return sbapi.sc.bridgeAccounts.pAccount.LockAccount()
+}
+
+// LockParentOperator can lock the child bridge operator.
+func (sbapi *SubBridgeAPI) LockChildOperator() error {
+	return sbapi.sc.bridgeAccounts.cAccount.LockAccount()
+}
+
+// LockParentOperator can unlock the parent bridge operator.
+func (sbapi *SubBridgeAPI) UnlockParentOperator(passphrase string) error {
+	return sbapi.sc.bridgeAccounts.pAccount.UnLockAccount(passphrase)
+}
+
+// LockParentOperator can unlock the child bridge operator.
+func (sbapi *SubBridgeAPI) UnlockChildOperator(passphrase string) error {
+	return sbapi.sc.bridgeAccounts.cAccount.UnLockAccount(passphrase)
+}
+
 func (sbapi *SubBridgeAPI) GetAnchoringPeriod() uint64 {
 	return sbapi.sc.config.AnchoringPeriod
 }

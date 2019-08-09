@@ -62,9 +62,9 @@ func NewKeyedTransactor(key *ecdsa.PrivateKey) *TransactOpts {
 	}
 }
 
-// NewKeyedTransactorWithWallet is a utility method to easily create a transaction signer
+// NewKeyedTransactorWithKeystore is a utility method to easily create a transaction signer
 // from a keystore wallet.
-func NewKeyedTransactorWithWallet(address common.Address, wallet accounts.Wallet, chainID *big.Int) *TransactOpts {
+func NewKeyedTransactorWithKeystore(address common.Address, ks *keystore.KeyStore, chainID *big.Int) *TransactOpts {
 	keyAddr := address
 	return &TransactOpts{
 		From: keyAddr,
@@ -73,7 +73,7 @@ func NewKeyedTransactorWithWallet(address common.Address, wallet accounts.Wallet
 				return nil, errors.New("not authorized to sign this account")
 			}
 			account := accounts.Account{Address: address}
-			return wallet.SignTx(account, tx, chainID)
+			return ks.SignTx(account, tx, chainID)
 		},
 	}
 }
@@ -91,12 +91,12 @@ func MakeTransactOpts(accountKey *ecdsa.PrivateKey, nonce *big.Int, gasLimit uin
 }
 
 // MakeTransactOptsWithKeystore creates a transaction signer with nonce, gasLimit, and gasPrice from a keystore wallet.
-func MakeTransactOptsWithKeystore(wallet accounts.Wallet, from common.Address, nonce *big.Int, chainID *big.Int, gasLimit uint64, gasPrice *big.Int) *TransactOpts {
-	if wallet == nil {
+func MakeTransactOptsWithKeystore(ks *keystore.KeyStore, from common.Address, nonce *big.Int, chainID *big.Int, gasLimit uint64, gasPrice *big.Int) *TransactOpts {
+	if ks == nil {
 		return nil
 	}
 
-	auth := NewKeyedTransactorWithWallet(from, wallet, chainID)
+	auth := NewKeyedTransactorWithKeystore(from, ks, chainID)
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 	auth.Nonce = nonce

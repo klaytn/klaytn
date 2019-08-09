@@ -37,7 +37,7 @@ const (
 
 // accountInfo has bridge account's information to make and sign a transaction.
 type accountInfo struct {
-	wallet   accounts.Wallet
+	keystore *keystore.KeyStore
 	address  common.Address
 	nonce    uint64
 	chainID  *big.Int
@@ -53,9 +53,19 @@ type BridgeAccounts struct {
 	cAccount *accountInfo
 }
 
+// GetBridgeOperators returns the information of bridgeOperator.
+func (ba *BridgeAccounts) GetBridgeOperators() map[string]interface{} {
+	res := make(map[string]interface{})
+
+	res["parentOperator"] = ba.pAccount.GetAccountInfo()
+	res["childOperator"] = ba.cAccount.GetAccountInfo()
+
+	return res
+}
+
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
 func NewBridgeAccounts(dataDir string) (*BridgeAccounts, error) {
-	pWallet, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "parent_bridge_account"))
+	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "parent_bridge_account"))
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +74,7 @@ func NewBridgeAccounts(dataDir string) (*BridgeAccounts, error) {
 		logger.Warn("parent_bridge_account is locked. Please unlock the account manually for Service Chain")
 	}
 
-	cWallet, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "child_bridge_account"))
+	cKS, cAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "child_bridge_account"))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +86,7 @@ func NewBridgeAccounts(dataDir string) (*BridgeAccounts, error) {
 	logger.Info("bridge account is loaded", "parent", pAccAddr.String(), "child", cAccAddr.String())
 
 	pAccInfo := &accountInfo{
-		wallet:   pWallet,
+		keystore: pKS,
 		address:  pAccAddr,
 		nonce:    0,
 		chainID:  nil,
@@ -84,7 +94,7 @@ func NewBridgeAccounts(dataDir string) (*BridgeAccounts, error) {
 	}
 
 	cAccInfo := &accountInfo{
-		wallet:   cWallet,
+		keystore: cKS,
 		address:  cAccAddr,
 		nonce:    0,
 		chainID:  nil,
@@ -99,7 +109,7 @@ func NewBridgeAccounts(dataDir string) (*BridgeAccounts, error) {
 
 // InitializeBridgeAccountKeystore initializes a keystore, imports existing keys, and tries to unlock the bridge account.
 // This returns the 1st account of the wallet, its address, the lock status and the error.
-func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, common.Address, bool, error) {
+func InitializeBridgeAccountKeystore(keystorePath string) (*keystore.KeyStore, common.Address, bool, error) {
 	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	// If there is no keystore file, this creates a random account and the corresponded password file.
@@ -118,7 +128,7 @@ func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, comm
 			return nil, common.Address{}, true, err
 		}
 
-		return ks.Wallets()[0], acc.Address, false, nil
+		return ks, acc.Address, false, nil
 	}
 
 	// Try to unlock 1st account if valid password file exist. (optional behavior)
@@ -129,12 +139,26 @@ func InitializeBridgeAccountKeystore(keystorePath string) (accounts.Wallet, comm
 	if err == nil {
 		if err := ks.Unlock(acc, string(pwdStr)); err != nil {
 			logger.Warn("bridge account wallet unlock is failed by exist password file.", "address", acc.Address, "err", err)
-			return ks.Wallets()[0], acc.Address, true, nil
+			return ks, acc.Address, true, nil
 		}
-		return ks.Wallets()[0], acc.Address, false, nil
+		return ks, acc.Address, false, nil
 	}
 
-	return ks.Wallets()[0], acc.Address, true, nil
+	return ks, acc.Address, true, nil
+}
+
+// GetAccountInfo returns the information of the account.
+func (acc *accountInfo) GetAccountInfo() map[string]interface{} {
+	res := make(map[string]interface{})
+
+	res["address"] = acc.address
+	res["nonce"] = acc.nonce
+	res["isNonceSynced"] = acc.isNonceSynced
+	res["isLocked"] = acc.IsLockAccount()
+	res["chainID"] = acc.chainID
+	res["gasPrice"] = acc.gasPrice
+
+	return res
 }
 
 // GetTransactOpts returns a transactOpts for transact on local/remote backend.
@@ -146,12 +170,13 @@ func (acc *accountInfo) GetTransactOpts() *bind.TransactOpts {
 	if acc.isNonceSynced {
 		nonce = new(big.Int).SetUint64(acc.nonce)
 	}
-	return bind.MakeTransactOptsWithKeystore(acc.wallet, acc.address, nonce, acc.chainID, DefaultBridgeTxGasLimit, acc.gasPrice)
+
+	return bind.MakeTransactOptsWithKeystore(acc.keystore, acc.address, nonce, acc.chainID, DefaultBridgeTxGasLimit, acc.gasPrice)
 }
 
 // SignTx signs a transaction with the accountInfo.
 func (acc *accountInfo) SignTx(tx *types.Transaction) (*types.Transaction, error) {
-	return acc.wallet.SignTx(accounts.Account{Address: acc.address}, tx, acc.chainID)
+	return acc.keystore.SignTx(accounts.Account{Address: acc.address}, tx, acc.chainID)
 }
 
 // SetChainID sets the chain ID of the chain of the account.
@@ -188,4 +213,37 @@ func (acc *accountInfo) GetNonce() uint64 {
 // IncNonce can increase the nonce of the account.
 func (acc *accountInfo) IncNonce() {
 	acc.nonce++
+}
+
+// LockAccount can lock the account keystore.
+func (acc *accountInfo) LockAccount() error {
+	acc.mu.Lock()
+	defer acc.mu.Unlock()
+
+	if err := acc.keystore.Lock(acc.address); err != nil {
+		logger.Error("Failed to lock the account", "account", acc.address)
+		return err
+	}
+	logger.Info("Succeed to lock the account", "account", acc.address)
+	return nil
+}
+
+// UnLockAccount can unlock the account keystore.
+func (acc *accountInfo) UnLockAccount(passphrase string) error {
+	acc.mu.Lock()
+	defer acc.mu.Unlock()
+
+	if err := acc.keystore.Unlock(acc.keystore.Accounts()[0], passphrase); err != nil {
+		logger.Error("Failed to unlock the account", "account", acc.address)
+		return err
+	}
+	logger.Info("Succeed to unlock the account", "account", acc.address)
+	return nil
+}
+
+// IsLockAccount can return if the account is lock or not.
+func (acc *accountInfo) IsLockAccount() bool {
+	acc.mu.Lock()
+	defer acc.mu.Unlock()
+	return acc.keystore.IsLock(acc.address)
 }
