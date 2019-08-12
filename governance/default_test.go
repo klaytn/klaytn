@@ -547,11 +547,13 @@ func TestWriteGovernance_idxCache(t *testing.T) {
 	delta := NewGovernanceSet()
 	src.Import(tstMap)
 
-	gov.WriteGovernance(30, src, delta)
-	gov.WriteGovernance(30, src, delta)
-	gov.WriteGovernance(60, src, delta)
-	gov.WriteGovernance(60, src, delta)
-	gov.WriteGovernance(50, src, delta)
+	blockNum := []uint64{30, 30, 60, 60, 50}
+
+	for _, num := range blockNum {
+		if ret := gov.WriteGovernance(num, src, delta); ret != nil {
+			t.Errorf("Error in testing WriteGovernance, %v", ret)
+		}
+	}
 
 	// idxCache should have 0, 30 and 60
 	if len(gov.idxCache) != 3 && gov.idxCache[len(gov.idxCache)-1] != 60 {
