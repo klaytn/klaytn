@@ -83,7 +83,7 @@ type ProtocolManager struct {
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      txPool
-	blockchain  *blockchain.BlockChain
+	blockchain  blockChain
 	chainconfig *params.ChainConfig
 	maxPeers    int
 
