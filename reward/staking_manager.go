@@ -113,7 +113,3 @@ func (sm *StakingManager) handleChainHeadEvent() {
 func (sm *StakingManager) Unsubscribe() {
 	sm.chainHeadSub.Unsubscribe()
 }
-
-func (sm *StakingManager) IsSubscribing() bool {
-	return sm.chainHeadSub != nil
-}
