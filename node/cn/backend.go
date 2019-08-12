@@ -537,7 +537,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
-	if s.governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
+	if s.stakingManager != nil {
 		s.stakingManager.Subscribe()
 	}
 	return nil
@@ -546,7 +546,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Klaytn protocol.
 func (s *CN) Stop() error {
-	if s.stakingManager.IsSubscribing() {
+	if s.stakingManager != nil {
 		s.stakingManager.Unsubscribe()
 	}
 	s.bloomIndexer.Close()
