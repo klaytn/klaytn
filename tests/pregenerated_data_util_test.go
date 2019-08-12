@@ -32,6 +32,7 @@ import (
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -398,9 +399,11 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		return nil, err
 	}
 
+	rewardDistributor := reward.NewRewardDistributor(gov)
+
 	return &BCData{bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov}, nil
+		validatorPrivKeys, engine, genesis, gov, rewardDistributor}, nil
 }
 
 // genAspenOptions returns database configurations of Aspen network.
