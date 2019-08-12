@@ -368,11 +368,6 @@ func (s *CN) APIs() []rpc.API {
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
-	dl, ok := s.protocolManager.downloader.(*downloader.Downloader)
-	if !ok {
-		logger.Crit("Failed to covert protocolManager.downlader to *downloader.Downloader")
-	}
-
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
@@ -388,7 +383,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   downloader.NewPublicDownloaderAPI(dl, s.eventMux),
+			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
 		}, {
 			Namespace: "miner",
