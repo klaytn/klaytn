@@ -12,8 +12,8 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     bool public isRunning;
 
     uint64 public requestNonce; // the number of value transfer request that this contract received.
-    uint64 public lowerHandleNonce; // the nonce + 1 of a value transfer request surely processed by the counterpart bridge.
-    uint64 public upperHandleNonce; // the nonce of a value transfer request probably processed by the counterpart bridge.
+    uint64 public lowerHandleNonce; // a minimum nonce of a value transfer request that will be handled.
+    uint64 public upperHandleNonce; // a maximum nonce of the counterpart bridge's value transfer request that is handled.
     uint64 public recoveryBlockNumber = 1; // the block number that recovery start to filter log from.
     mapping(uint64 => uint64) public handleNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
