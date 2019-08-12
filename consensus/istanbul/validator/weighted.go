@@ -602,14 +602,11 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 }
 
 func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
-	stakingAmountsMap := make(map[string]uint64)
-	for sIdx, rewardAddr := range stakingInfo.CouncilRewardAddrs {
-		stakingAmountsMap[rewardAddr.String()] += stakingInfo.CouncilStakingAmounts[sIdx]
-	}
-
 	numValidators := len(valSet.validators)
 	weightedValidators := make([]*weightedValidator, numValidators)
 	stakingAmounts := make([]float64, numValidators)
+	addedStaking := make([]bool, len(stakingInfo.CouncilNodeAddrs))
+
 	for vIdx, val := range valSet.validators {
 		weightedVal, ok := val.(*weightedValidator)
 		if !ok {
@@ -621,13 +618,25 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 		if err == nil {
 			rewardAddr := stakingInfo.CouncilRewardAddrs[sIdx]
 			weightedVal.SetRewardAddress(rewardAddr)
-			stakingAmounts[vIdx] = float64(stakingAmountsMap[rewardAddr.String()])
+			stakingAmounts[vIdx] = float64(stakingInfo.CouncilStakingAmounts[sIdx])
+			addedStaking[sIdx] = true
 		} else {
 			weightedVal.SetRewardAddress(common.Address{})
 		}
 	}
 
-	logger.Debug("stakingAmounts of validators", "stakingAmountsMap", stakingAmountsMap, "validators", weightedValidators, "stakingAmounts", stakingAmounts)
+	for sIdx, isAdded := range addedStaking {
+		if isAdded == false {
+			for vIdx, val := range weightedValidators {
+				if val.RewardAddress() == stakingInfo.CouncilRewardAddrs[sIdx] {
+					stakingAmounts[vIdx] += float64(stakingInfo.CouncilStakingAmounts[sIdx])
+					break
+				}
+			}
+		}
+	}
+
+	logger.Debug("stakingAmounts of validators", "validators", weightedValidators, "stakingAmounts", stakingAmounts)
 	return weightedValidators, stakingAmounts, nil
 }
 
