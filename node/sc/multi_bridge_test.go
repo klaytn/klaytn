@@ -1006,3 +1006,118 @@ func TestMultiBridgeKLAYTransferMixConfig3(t *testing.T) {
 		}
 	}
 }
+
+// TestNoncesAndBlockNumber checks the following:
+// - set threshold to 2.
+// - the first transfer is done and check nonces and block number (req 0, blk 100000)
+// - the second transfer is done and check nonces and block number (req 1, blk 100100)
+func TestNoncesAndBlockNumber(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	to := common.Address{100}
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	// First value transfer.
+	sentNonce := uint64(0)
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	hMaxNonce, err := info.b.UpperHandleNonce(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, sentNonce, hMaxNonce)
+
+	lowerHandleNonce, err := info.b.LowerHandleNonce(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, sentNonce+1, lowerHandleNonce)
+
+	hBlkNum, err := info.b.RecoveryBlockNumber(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, sentBlockNumber, hBlkNum)
+
+	// Second value transfer.
+	sentNonce++
+	sentBlockNumber = sentBlockNumber + 100
+	acc = info.accounts[0]
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	hMaxNonce, err = info.b.UpperHandleNonce(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, sentNonce, hMaxNonce)
+
+	lowerHandleNonce, err = info.b.LowerHandleNonce(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, sentNonce+1, lowerHandleNonce)
+
+	hBlkNum, err = info.b.RecoveryBlockNumber(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, sentBlockNumber, hBlkNum)
+}
+
+// TestNoncesAndBlockNumberUnordered checks the following:
+// - default threshold (1).
+// - check reversed request nonce from 2 to 0.
+func TestNoncesAndBlockNumberUnordered(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	acc := info.accounts[0]
+	to := common.Address{100}
+
+	transferAmount := uint64(100)
+
+	type testParams struct {
+		// test input
+		requestNonce  uint64
+		requestBlkNum uint64
+		// expected result
+		maxHandledRequestedNonce uint64
+		minUnhandledRequestNonce uint64
+		recoveryBlockNumber      uint64
+	}
+
+	testCases := []testParams{
+		{2, 300, 2, 0, 1},
+		{1, 200, 2, 0, 1},
+		{0, 100, 2, 3, 300},
+	}
+
+	for i := 0; i < len(testCases); i++ {
+		sentNonce := testCases[i].requestNonce
+		sentBlockNumber := testCases[i].requestBlkNum
+		t.Log("test round", "i", i, "nonce", sentNonce, "blk", sentBlockNumber)
+		tx := SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+		info.sim.Commit()
+		assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+		hMaxNonce, err := info.b.UpperHandleNonce(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, testCases[i].maxHandledRequestedNonce, hMaxNonce)
+
+		minUnhandledNonce, err := info.b.LowerHandleNonce(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, testCases[i].minUnhandledRequestNonce, minUnhandledNonce)
+
+		blkNum, err := info.b.RecoveryBlockNumber(nil)
+		assert.NoError(t, err)
+		assert.Equal(t, testCases[i].recoveryBlockNumber, blkNum)
+	}
+}

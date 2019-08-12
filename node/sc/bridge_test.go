@@ -219,7 +219,7 @@ loop:
 
 // TestBridgeHandleValueTransferNonceAndBlockNumber checks the following:
 // - the bridge allows the handle value transfer with an arbitrary nonce.
-// - the bridge keeps sequential handle nonce for the recovery.
+// - the bridge keeps lower handle nonce for the recovery.
 // - the bridge correctly stores and returns the block number.
 func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
@@ -283,9 +283,9 @@ loop:
 				assert.NoError(t, err)
 				assert.Equal(t, bal, big.NewInt(int64(transferAmount*(testCount-nonceOffset+1))))
 
-				sequentialHandleNonce, err := b.SequentialHandleNonce(nil)
+				lowerHandleNonce, err := b.LowerHandleNonce(nil)
 				assert.NoError(t, err)
-				assert.Equal(t, sequentialHandleNonce, uint64(0))
+				assert.Equal(t, lowerHandleNonce, uint64(0))
 				return
 			}
 			sentNonce++
@@ -294,14 +294,14 @@ loop:
 			SendHandleKLAYTransfer(b, bridgeAccount, testAcc.From, transferAmount, sentNonce, sentBlockNumber, t)
 			backend.Commit()
 
-			resultBlockNumber, err := b.SequentialHandledRequestBlockNumber(nil)
+			resultBlockNumber, err := b.RecoveryBlockNumber(nil)
 			assert.NoError(t, err)
 
-			resultHandleNonce, err := b.MaxHandledRequestedNonce(nil)
+			resultHandleNonce, err := b.UpperHandleNonce(nil)
 			assert.NoError(t, err)
 
 			assert.Equal(t, sentNonce, resultHandleNonce)
-			assert.Equal(t, uint64(0), resultBlockNumber)
+			assert.Equal(t, uint64(1), resultBlockNumber)
 
 		case err := <-handleSub.Err():
 			t.Log("Contract Event Loop Running Stop by handleSub.Err()", "err", err)
@@ -354,7 +354,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	counterpartBridge, err := b.CounterpartBridge(nil)
 	assert.Equal(t, common.Address{2}, counterpartBridge)
 
-	hnonce, err := b.SequentialHandleNonce(nil)
+	hnonce, err := b.LowerHandleNonce(nil)
 	assert.Equal(t, uint64(0), hnonce)
 
 	owner, err := b.IsOwner(&bind.CallOpts{From: bridgeAccount.From})
@@ -366,8 +366,8 @@ func TestBridgePublicVariables(t *testing.T) {
 	isRunning, err := b.IsRunning(nil)
 	assert.Equal(t, true, isRunning)
 
-	lastBN, err := b.SequentialHandledRequestBlockNumber(nil)
-	assert.Equal(t, uint64(0x0), lastBN)
+	lastBN, err := b.RecoveryBlockNumber(nil)
+	assert.Equal(t, uint64(0x1), lastBN)
 
 	bridgeOwner, err := b.Owner(nil)
 	assert.Equal(t, bridgeAccount.From, bridgeOwner)
