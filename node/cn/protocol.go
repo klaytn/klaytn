@@ -157,7 +157,7 @@ type blockChain interface {
 	Config() *params.ChainConfig
 }
 
-// blockChain is an interface of downloader.Downloader used by ProtocolManager.
+// protocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
 type protocolManagerDownloader interface {
 	RegisterPeer(id string, version int, peer downloader.Peer) error
 	UnregisterPeer(id string) error
@@ -172,7 +172,7 @@ type protocolManagerDownloader interface {
 	Progress() klaytn.SyncProgress
 }
 
-// blockChain is an interface of fetcher.Fetcher used by ProtocolManager.
+// protocolManagerFetcher is an interface of fetcher.Fetcher used by ProtocolManager.
 type protocolManagerFetcher interface {
 	Enqueue(peer string, block *types.Block) error
 	FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction
