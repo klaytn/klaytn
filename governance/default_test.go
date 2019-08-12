@@ -556,7 +556,7 @@ func TestWriteGovernance_idxCache(t *testing.T) {
 	}
 
 	// idxCache should have 0, 30 and 60
-	if len(gov.idxCache) != 3 && gov.idxCache[len(gov.idxCache)-1] != 60 {
+	if len(gov.idxCache) != 3 || gov.idxCache[len(gov.idxCache)-1] != 60 {
 		t.Errorf("idxCache has wrong value")
 	}
 }
