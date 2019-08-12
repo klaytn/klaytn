@@ -23,7 +23,7 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 			[]common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103))},
 			&reward.StakingInfo{
 				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103))},
-				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302)), common.BigToAddress(big.NewInt(303))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203))},
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000},
 			},
 			[]float64{5000000, 5000000, 5000000},
@@ -32,7 +32,7 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 			[]common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103))},
 			&reward.StakingInfo{
 				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103))},
-				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302)), common.BigToAddress(big.NewInt(303))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203))},
 				CouncilStakingAmounts: []uint64{7000000, 5000000, 10000000},
 			},
 			[]float64{7000000, 5000000, 10000000},
@@ -41,7 +41,7 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 			[]common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104))},
 			&reward.StakingInfo{
 				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(901))},
-				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302)), common.BigToAddress(big.NewInt(303)), common.BigToAddress(big.NewInt(304)), common.BigToAddress(big.NewInt(301))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203)), common.BigToAddress(big.NewInt(204)), common.BigToAddress(big.NewInt(201))},
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
 			},
 			[]float64{10000000, 5000000, 5000000, 5000000},
@@ -50,7 +50,7 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 			[]common.Address{common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(101))},
 			&reward.StakingInfo{
 				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(901)), common.BigToAddress(big.NewInt(902))},
-				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302)), common.BigToAddress(big.NewInt(303)), common.BigToAddress(big.NewInt(304)), common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203)), common.BigToAddress(big.NewInt(204)), common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202))},
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000, 5000000},
 			},
 			[]float64{10000000, 10000000, 5000000, 5000000},
@@ -181,7 +181,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 			[]common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103))},
 			&reward.StakingInfo{
 				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103))},
-				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302)), common.BigToAddress(big.NewInt(303))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203))},
 				UseGini:               false,
 				Gini:                  reward.DefaultGiniCoefficient,
 				CouncilStakingAmounts: []uint64{0, 0, 0},
@@ -192,7 +192,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 			[]common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104))},
 			&reward.StakingInfo{
 				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104))},
-				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302)), common.BigToAddress(big.NewInt(303)), common.BigToAddress(big.NewInt(304))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203)), common.BigToAddress(big.NewInt(204))},
 				UseGini:               true,
 				Gini:                  reward.DefaultGiniCoefficient,
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000},
@@ -203,7 +203,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 			[]common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(105))},
 			&reward.StakingInfo{
 				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(105))},
-				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302)), common.BigToAddress(big.NewInt(303)), common.BigToAddress(big.NewInt(304)), common.BigToAddress(big.NewInt(305))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203)), common.BigToAddress(big.NewInt(204)), common.BigToAddress(big.NewInt(205))},
 				UseGini:               true,
 				Gini:                  reward.DefaultGiniCoefficient,
 				CouncilStakingAmounts: []uint64{10000000, 20000000, 30000000, 40000000, 50000000},
@@ -214,7 +214,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 			[]common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104))},
 			&reward.StakingInfo{
 				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(901))},
-				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302)), common.BigToAddress(big.NewInt(303)), common.BigToAddress(big.NewInt(304)), common.BigToAddress(big.NewInt(301))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203)), common.BigToAddress(big.NewInt(204)), common.BigToAddress(big.NewInt(201))},
 				UseGini:               false,
 				Gini:                  reward.DefaultGiniCoefficient,
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
@@ -225,7 +225,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 			[]common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104))},
 			&reward.StakingInfo{
 				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(901))},
-				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302)), common.BigToAddress(big.NewInt(303)), common.BigToAddress(big.NewInt(304)), common.BigToAddress(big.NewInt(301))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203)), common.BigToAddress(big.NewInt(204)), common.BigToAddress(big.NewInt(201))},
 				UseGini:               true,
 				Gini:                  reward.DefaultGiniCoefficient,
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
@@ -236,12 +236,23 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 			[]common.Address{common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(101))},
 			&reward.StakingInfo{
 				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(901)), common.BigToAddress(big.NewInt(902))},
-				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302)), common.BigToAddress(big.NewInt(303)), common.BigToAddress(big.NewInt(304)), common.BigToAddress(big.NewInt(301)), common.BigToAddress(big.NewInt(302))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203)), common.BigToAddress(big.NewInt(204)), common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202))},
 				UseGini:               true,
 				Gini:                  reward.DefaultGiniCoefficient,
 				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
 			},
 			[]int64{29, 21, 37, 12},
+		},
+		{
+			[]common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(105))},
+			&reward.StakingInfo{
+				CouncilNodeAddrs:      []common.Address{common.BigToAddress(big.NewInt(101)), common.BigToAddress(big.NewInt(102)), common.BigToAddress(big.NewInt(103)), common.BigToAddress(big.NewInt(104)), common.BigToAddress(big.NewInt(901)), common.BigToAddress(big.NewInt(902))},
+				CouncilRewardAddrs:    []common.Address{common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202)), common.BigToAddress(big.NewInt(203)), common.BigToAddress(big.NewInt(204)), common.BigToAddress(big.NewInt(201)), common.BigToAddress(big.NewInt(202))},
+				UseGini:               true,
+				Gini:                  reward.DefaultGiniCoefficient,
+				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
+			},
+			[]int64{29, 22, 36, 13, 1},
 		},
 	}
 	for _, testCase := range testCases {
