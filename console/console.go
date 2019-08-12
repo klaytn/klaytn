@@ -191,6 +191,28 @@ func (c *Console) init(preload []string) error {
 			obj.Set("newAccount", bridge.NewAccount)
 			obj.Set("sign", bridge.Sign)
 		}
+
+		// Retrieve the account management object to instrument
+		subBridge, err := c.jsre.Get("subbridge")
+		if err != nil {
+			return err
+		}
+		// Override the unlockParentOperator, and unlockChildOperator methods since
+		// these require user interaction. Assign these method in the Console the
+		// original web3 callbacks. These will be called by the jeth.* methods after
+		// they got the password from the user and send the original web3 request to
+		// the backend.
+		if obj := subBridge.Object(); obj != nil { // make sure the subBridge api is enabled over the interface
+			if _, err = c.jsre.Run(`jeth.unlockParentOperator = subbridge.unlockParentOperator;`); err != nil {
+				return fmt.Errorf("subBridge.unlockParentOperator: %v", err)
+			}
+			obj.Set("unlockParentOperator", bridge.UnlockParentOperator)
+
+			if _, err = c.jsre.Run(`jeth.unlockChildOperator = subbridge.unlockChildOperator;`); err != nil {
+				return fmt.Errorf("subBridge.unlockChildOperator: %v", err)
+			}
+			obj.Set("unlockChildOperator", bridge.UnlockChildOperator)
+		}
 	}
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.
 	admin, err := c.jsre.Get("admin")

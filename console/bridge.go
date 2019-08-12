@@ -172,6 +172,53 @@ func (b *bridge) UnlockAccount(call otto.FunctionCall) (response otto.Value) {
 	return val
 }
 
+// passwdByPrompt returns the password from a non-echoing password prompt.
+func (b *bridge) passwdByPrompt(call otto.FunctionCall, msg string) otto.Value {
+	// If password is not given or is the null value, prompt the user for it
+	var passwd otto.Value
+
+	if call.Argument(1).IsUndefined() || call.Argument(1).IsNull() {
+		fmt.Fprintln(b.printer, msg)
+		if input, err := b.prompter.PromptPassword("Passphrase: "); err != nil {
+			throwJSException(err.Error())
+		} else {
+			passwd, _ = otto.ToValue(input)
+		}
+	} else {
+		if !call.Argument(1).IsString() {
+			throwJSException("password must be a string")
+		}
+		passwd = call.Argument(1)
+	}
+	return passwd
+}
+
+// UnlockParentOperator is a wrapper around the subbridge.unlockParentOperator RPC method that
+// uses a non-echoing password prompt to acquire the passphrase and executes the
+// original RPC method (saved in jeth.unlockParentOperator) with it to actually execute
+// the RPC call.
+func (b *bridge) UnlockParentOperator(call otto.FunctionCall) (response otto.Value) {
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.unlockParentOperator", nil, b.passwdByPrompt(call, "Unlock parent operator account"))
+	if err != nil {
+		throwJSException(err.Error())
+	}
+	return val
+}
+
+// UnlockChildOperator is a wrapper around the subbridge.unlockChildOperator RPC method that
+// uses a non-echoing password prompt to acquire the passphrase and executes the
+// original RPC method (saved in jeth.unlockChildOperator) with it to actually execute
+// the RPC call.
+func (b *bridge) UnlockChildOperator(call otto.FunctionCall) (response otto.Value) {
+	// Send the request to the backend and return
+	val, err := call.Otto.Call("jeth.unlockChildOperator", nil, b.passwdByPrompt(call, "Unlock child operator account"))
+	if err != nil {
+		throwJSException(err.Error())
+	}
+	return val
+}
+
 // Sign is a wrapper around the personal.sign RPC method that uses a non-echoing password
 // prompt to acquire the passphrase and executes the original RPC method (saved in
 // jeth.sign) with it to actually execute the RPC call.
