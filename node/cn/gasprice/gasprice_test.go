@@ -64,9 +64,11 @@ func (mock *backendMock) SetHead(number uint64) {}
 func (mock *backendMock) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	return nil, nil
 }
+
 func (mock *backendMock) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	return nil, nil
 }
+
 func (mock *backendMock) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	return nil, nil, nil
 }
@@ -74,6 +76,7 @@ func (mock *backendMock) StateAndHeaderByNumber(ctx context.Context, blockNr rpc
 func (mock *backendMock) GetBlock(ctx context.Context, blockHash common.Hash) (*types.Block, error) {
 	return nil, nil
 }
+
 func (mock *backendMock) GetBlockReceipts(ctx context.Context, blockHash common.Hash) types.Receipts {
 	return nil
 }
@@ -126,6 +129,7 @@ func (mock *backendMock) SendTx(ctx context.Context, signedTx *types.Transaction
 func (mock *backendMock) GetPoolTransactions() (types.Transactions, error) {
 	return nil, nil
 }
+
 func (mock *backendMock) GetPoolTransaction(txHash common.Hash) *types.Transaction {
 	return nil
 }

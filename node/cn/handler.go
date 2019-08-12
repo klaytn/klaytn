@@ -87,8 +87,8 @@ type ProtocolManager struct {
 	chainconfig *params.ChainConfig
 	maxPeers    int
 
-	downloader *downloader.Downloader
-	fetcher    *fetcher.Fetcher
+	downloader protocolManagerDownloader
+	fetcher    protocolManagerFetcher
 	peers      *peerSet
 
 	SubProtocols []p2p.Protocol

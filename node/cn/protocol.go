@@ -22,14 +22,18 @@ package cn
 
 import (
 	"fmt"
+	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/datasync/downloader"
+	"github.com/klaytn/klaytn/datasync/fetcher"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"math/big"
+	"time"
 )
 
 // Constants to match up protocol versions and messages
@@ -110,6 +114,7 @@ var errorToString = map[int]string{
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
 }
 
+// txPool is an interface of blockchain.TxPool used by ProtocolManager.
 type txPool interface {
 	// HandleTxMsg should add the given transactions to the pool.
 	HandleTxMsg(types.Transactions)
@@ -125,6 +130,7 @@ type txPool interface {
 	SubscribeNewTxsEvent(chan<- blockchain.NewTxsEvent) event.Subscription
 }
 
+// blockChain is an interface of blockchain.BlockChain used by ProtocolManager.
 type blockChain interface {
 	Genesis() *types.Block
 
@@ -149,6 +155,31 @@ type blockChain interface {
 	InsertChain(chain types.Blocks) (int, error)
 	TrieNode(hash common.Hash) ([]byte, error)
 	Config() *params.ChainConfig
+}
+
+// blockChain is an interface of downloader.Downloader used by ProtocolManager.
+type protocolManagerDownloader interface {
+	RegisterPeer(id string, version int, peer downloader.Peer) error
+	UnregisterPeer(id string) error
+
+	DeliverBodies(id string, transactions [][]*types.Transaction) error
+	DeliverHeaders(id string, headers []*types.Header) error
+	DeliverNodeData(id string, data [][]byte) error
+	DeliverReceipts(id string, receipts [][]*types.Receipt) error
+
+	Terminate()
+	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error
+	Progress() klaytn.SyncProgress
+}
+
+// blockChain is an interface of fetcher.Fetcher used by ProtocolManager.
+type protocolManagerFetcher interface {
+	Enqueue(peer string, block *types.Block) error
+	FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction
+	FilterHeaders(peer string, headers []*types.Header, time time.Time) []*types.Header
+	Notify(peer string, hash common.Hash, number uint64, time time.Time, headerFetcher fetcher.HeaderRequesterFn, bodyFetcher fetcher.BodyRequesterFn) error
+	Start()
+	Stop()
 }
 
 // statusData is the network packet for the status message.

@@ -368,6 +368,11 @@ func (s *CN) APIs() []rpc.API {
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
+	dl, ok := s.protocolManager.downloader.(*downloader.Downloader)
+	if !ok {
+		logger.Crit("Failed to covert protocolManager.downlader to *downloader.Downloader")
+	}
+
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
@@ -383,7 +388,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
+			Service:   downloader.NewPublicDownloaderAPI(dl, s.eventMux),
 			Public:    true,
 		}, {
 			Namespace: "miner",
@@ -507,7 +512,13 @@ func (s *CN) ChainDB() database.DBManager        { return s.chainDB }
 func (s *CN) IsListening() bool                  { return true } // Always listening
 func (s *CN) ProtocolVersion() int               { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *CN) NetVersion() uint64                 { return s.networkId }
-func (s *CN) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *CN) Downloader() *downloader.Downloader {
+	dl, ok := s.protocolManager.downloader.(*downloader.Downloader)
+	if !ok {
+		logger.Crit("Failed to covert protocolManager.downlader to *downloader.Downloader")
+	}
+	return dl
+}
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
 }
