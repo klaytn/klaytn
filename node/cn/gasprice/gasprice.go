@@ -23,7 +23,6 @@ package gasprice
 import (
 	"context"
 	"github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
 	"math/big"
@@ -156,19 +155,20 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	*/
 }
 
-type getBlockPricesResult struct {
-	price *big.Int
-	err   error
-}
-
-type transactionsByGasPrice []*types.Transaction
-
-func (t transactionsByGasPrice) Len() int           { return len(t) }
-func (t transactionsByGasPrice) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
-func (t transactionsByGasPrice) Less(i, j int) bool { return t[i].GasPrice().Cmp(t[j].GasPrice()) < 0 }
-
-type bigIntArray []*big.Int
-
-func (s bigIntArray) Len() int           { return len(s) }
-func (s bigIntArray) Less(i, j int) bool { return s[i].Cmp(s[j]) < 0 }
-func (s bigIntArray) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+// TODO-Klaytn-RemoveLater Later remove below obsolete code if we don't need them anymore.
+//type getBlockPricesResult struct {
+//	price *big.Int
+//	err   error
+//}
+//
+//type transactionsByGasPrice []*types.Transaction
+//
+//func (t transactionsByGasPrice) Len() int           { return len(t) }
+//func (t transactionsByGasPrice) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
+//func (t transactionsByGasPrice) Less(i, j int) bool { return t[i].GasPrice().Cmp(t[j].GasPrice()) < 0 }
+//
+//type bigIntArray []*big.Int
+//
+//func (s bigIntArray) Len() int           { return len(s) }
+//func (s bigIntArray) Less(i, j int) bool { return s[i].Cmp(s[j]) < 0 }
+//func (s bigIntArray) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }

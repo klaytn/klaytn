@@ -26,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"math/big"
@@ -122,6 +123,32 @@ type txPool interface {
 	// SubscribeNewTxsEvent should return an event subscription of
 	// NewTxsEvent and send events to the given channel.
 	SubscribeNewTxsEvent(chan<- blockchain.NewTxsEvent) event.Subscription
+}
+
+type blockChain interface {
+	Genesis() *types.Block
+
+	CurrentBlock() *types.Block
+	CurrentFastBlock() *types.Block
+	HasBlock(hash common.Hash, number uint64) bool
+	GetBlock(hash common.Hash, number uint64) *types.Block
+	GetBlockHashesFromHash(hash common.Hash, max uint64) []common.Hash
+
+	CurrentHeader() *types.Header
+	GetHeader(hash common.Hash, number uint64) *types.Header
+	GetHeaderByHash(hash common.Hash) *types.Header
+	GetHeaderByNumber(number uint64) *types.Header
+
+	GetTd(hash common.Hash, number uint64) *big.Int
+	GetTdByHash(hash common.Hash) *big.Int
+
+	GetBodyRLP(hash common.Hash) rlp.RawValue
+
+	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
+
+	InsertChain(chain types.Blocks) (int, error)
+	TrieNode(hash common.Hash) ([]byte, error)
+	Config() *params.ChainConfig
 }
 
 // statusData is the network packet for the status message.
