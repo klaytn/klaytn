@@ -173,10 +173,8 @@ func (b *bridge) UnlockAccount(call otto.FunctionCall) (response otto.Value) {
 }
 
 // passwdByPrompt returns the password from a non-echoing password prompt.
-func (b *bridge) passwdByPrompt(call otto.FunctionCall, msg string) otto.Value {
-	// If password is not given or is the null value, prompt the user for it
-	var passwd otto.Value
-
+func (b *bridge) passwdByPrompt(call otto.FunctionCall, msg string) (passwd otto.Value) {
+	// If password is not given or is the null value, prompt the user for i
 	if call.Argument(1).IsUndefined() || call.Argument(1).IsNull() {
 		fmt.Fprintln(b.printer, msg)
 		if input, err := b.prompter.PromptPassword("Passphrase: "); err != nil {
@@ -190,7 +188,7 @@ func (b *bridge) passwdByPrompt(call otto.FunctionCall, msg string) otto.Value {
 		}
 		passwd = call.Argument(1)
 	}
-	return passwd
+	return
 }
 
 // UnlockParentOperator is a wrapper around the subbridge.unlockParentOperator RPC method that
@@ -199,11 +197,11 @@ func (b *bridge) passwdByPrompt(call otto.FunctionCall, msg string) otto.Value {
 // the RPC call.
 func (b *bridge) UnlockParentOperator(call otto.FunctionCall) (response otto.Value) {
 	// Send the request to the backend and return
-	val, err := call.Otto.Call("jeth.unlockParentOperator", nil, b.passwdByPrompt(call, "Unlock parent operator account"))
+	response, err := call.Otto.Call("jeth.unlockParentOperator", nil, b.passwdByPrompt(call, "Unlock parent operator account"))
 	if err != nil {
 		throwJSException(err.Error())
 	}
-	return val
+	return
 }
 
 // UnlockChildOperator is a wrapper around the subbridge.unlockChildOperator RPC method that
@@ -212,11 +210,11 @@ func (b *bridge) UnlockParentOperator(call otto.FunctionCall) (response otto.Val
 // the RPC call.
 func (b *bridge) UnlockChildOperator(call otto.FunctionCall) (response otto.Value) {
 	// Send the request to the backend and return
-	val, err := call.Otto.Call("jeth.unlockChildOperator", nil, b.passwdByPrompt(call, "Unlock child operator account"))
+	response, err := call.Otto.Call("jeth.unlockChildOperator", nil, b.passwdByPrompt(call, "Unlock child operator account"))
 	if err != nil {
 		throwJSException(err.Error())
 	}
-	return val
+	return
 }
 
 // Sign is a wrapper around the personal.sign RPC method that uses a non-echoing password

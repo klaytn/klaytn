@@ -206,11 +206,10 @@ func (c *Console) init(preload []string) error {
 			if _, err = c.jsre.Run(`jeth.unlockParentOperator = subbridge.unlockParentOperator;`); err != nil {
 				return fmt.Errorf("subBridge.unlockParentOperator: %v", err)
 			}
-			obj.Set("unlockParentOperator", bridge.UnlockParentOperator)
-
 			if _, err = c.jsre.Run(`jeth.unlockChildOperator = subbridge.unlockChildOperator;`); err != nil {
 				return fmt.Errorf("subBridge.unlockChildOperator: %v", err)
 			}
+			obj.Set("unlockParentOperator", bridge.UnlockParentOperator)
 			obj.Set("unlockChildOperator", bridge.UnlockChildOperator)
 		}
 	}
