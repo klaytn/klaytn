@@ -23,6 +23,7 @@ package cn
 import (
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
@@ -507,13 +508,8 @@ func (s *CN) ChainDB() database.DBManager        { return s.chainDB }
 func (s *CN) IsListening() bool                  { return true } // Always listening
 func (s *CN) ProtocolVersion() int               { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *CN) NetVersion() uint64                 { return s.networkId }
-func (s *CN) Downloader() *downloader.Downloader {
-	dl, ok := s.protocolManager.downloader.(*downloader.Downloader)
-	if !ok {
-		logger.Crit("Failed to covert protocolManager.downlader to *downloader.Downloader")
-	}
-	return dl
-}
+func (s *CN) Progress() klaytn.SyncProgress      { return s.protocolManager.downloader.Progress() }
+
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
 }
