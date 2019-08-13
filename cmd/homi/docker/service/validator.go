@@ -90,8 +90,6 @@ func (v Validator) String() string {
 var validatorTemplate = `{{ .Name }}:
     hostname: {{ .Name }}
     image: {{ .DockerImageId }}
-    tty: true
-    stdin_open: true
     ports:
       - '{{ .Port }}:32323'
       - '{{ .RPCPort }}:8551'
