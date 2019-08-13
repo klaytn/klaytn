@@ -131,7 +131,6 @@ var validatorTemplate = `{{ .Name }}:
         echo 'RPC_API="db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'NETWORK_ID="{{ .NetworkId }}"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'NO_DISCOVER=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
-        echo 'SYNCMODE="full"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'ADDITIONAL="$$ADDITIONAL --identity \"{{ .Name }}\""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'ADDITIONAL="$$ADDITIONAL --nodekeyhex {{ .NodeKey }}"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- if .AddPrivKey}}
