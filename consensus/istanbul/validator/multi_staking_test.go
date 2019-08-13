@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+
 /*
 Multiple Staking Contracts
 
@@ -47,8 +48,8 @@ func newTestWeightedCouncil(nodeAddrs []common.Address) *weightedCouncil {
 
 // the function getStakingAmountsOfValidators(*stakingInfo) returns weightedValidators and stakingAmounts of weightedValidators
 // validator and stakingInfo is matched by a nodeAddress.
-// The result of weightedValidator is sorted by address
-// stakingAmount for multi additional contracts will be added to validator which has the same reward address
+// weightedValidators are sorted by nodeAddress
+// stakingAmounts for additional staking contracts will be added to validators which have the same reward address
 func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 	testCases := []struct {
 		validators             []common.Address
