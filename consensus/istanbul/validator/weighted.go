@@ -643,9 +643,7 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 func calcTotalAmount(stakingInfo *reward.StakingInfo, stakingAmounts []float64) float64 {
 	totalStaking := float64(0)
 	if stakingInfo.UseGini && len(stakingInfo.CouncilNodeAddrs) != 0 {
-		if stakingInfo.Gini == reward.DefaultGiniCoefficient {
-			stakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
-		}
+		stakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
 
 		for i, _ := range stakingAmounts {
 			stakingAmounts[i] = math.Round(math.Pow(stakingAmounts[i], 1.0/(1+stakingInfo.Gini)))
