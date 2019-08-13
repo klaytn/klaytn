@@ -155,7 +155,7 @@ func CalcGiniCoefficient(stakingAmount float64Slice) float64 {
 		subSum = subSum + x
 	}
 
-	result := float64(sumOfAbsoluteDifferences) / float64(subSum) / float64(len(tempStakingAmount))
+	result := sumOfAbsoluteDifferences / subSum / float64(len(tempStakingAmount))
 	result = math.Round(result*100) / 100
 
 	return result
