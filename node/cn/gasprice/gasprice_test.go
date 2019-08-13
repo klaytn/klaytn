@@ -18,13 +18,13 @@ package gasprice
 
 import (
 	"context"
+	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
@@ -36,8 +36,8 @@ import (
 
 type backendMock struct{}
 
-func (mock *backendMock) Downloader() *downloader.Downloader {
-	return nil
+func (mock *backendMock) Progress() klaytn.SyncProgress {
+	return klaytn.SyncProgress{}
 }
 
 func (mock *backendMock) ProtocolVersion() int {
