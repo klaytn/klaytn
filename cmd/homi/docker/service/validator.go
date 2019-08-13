@@ -100,7 +100,7 @@ var validatorTemplate = `{{ .Name }}:
       - '50506:50506'
 {{- end }}
     entrypoint:
-      - /bin/bash
+      - /bin/sh
       - -c
       - |
         mkdir -p /klaytn
