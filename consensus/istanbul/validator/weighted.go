@@ -645,7 +645,7 @@ func calcTotalAmount(stakingInfo *reward.StakingInfo, stakingAmounts []float64) 
 	if stakingInfo.UseGini && len(stakingInfo.CouncilNodeAddrs) != 0 {
 		stakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
 
-		for i, _ := range stakingAmounts {
+		for i := range stakingAmounts {
 			stakingAmounts[i] = math.Round(math.Pow(stakingAmounts[i], 1.0/(1+stakingInfo.Gini)))
 			totalStaking += stakingAmounts[i]
 		}

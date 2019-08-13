@@ -148,7 +148,7 @@ func TestCalcWeight(t *testing.T) {
 	}{
 		{
 			[]*weightedValidator{
-				&weightedValidator{}, &weightedValidator{}, &weightedValidator{},
+				{}, {}, {},
 			},
 			[]float64{0, 0, 0},
 			0,
@@ -156,7 +156,7 @@ func TestCalcWeight(t *testing.T) {
 		},
 		{
 			[]*weightedValidator{
-				&weightedValidator{}, &weightedValidator{}, &weightedValidator{},
+				{}, {}, {},
 			},
 			[]float64{5000000, 5000000, 5000000},
 			15000000,
@@ -164,7 +164,7 @@ func TestCalcWeight(t *testing.T) {
 		},
 		{
 			[]*weightedValidator{
-				&weightedValidator{}, &weightedValidator{}, &weightedValidator{}, &weightedValidator{},
+				{}, {}, {}, {},
 			},
 			[]float64{5000000, 10000000, 5000000, 5000000},
 			25000000,
@@ -172,7 +172,7 @@ func TestCalcWeight(t *testing.T) {
 		},
 		{
 			[]*weightedValidator{
-				&weightedValidator{}, &weightedValidator{}, &weightedValidator{}, &weightedValidator{}, &weightedValidator{},
+				{}, {}, {}, {}, {},
 			},
 			[]float64{324946, 560845, 771786, 967997, 1153934},
 			3779508,
