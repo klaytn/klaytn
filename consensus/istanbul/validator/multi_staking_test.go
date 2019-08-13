@@ -13,7 +13,23 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+/*
+Multiple Staking Contracts
 
+Validators can deploy multiple staking contracts.
+If a validator want to deploy additional staking contracts, a rewardAddress of staking contracts should be same.
+StakingAmounts of staking contracts with a same rewardAddress will be added and it is reflected to a probability of becoming a block proposer.
+
+Testing
+
+A StakingInfo has list of addresses and stakingAmount.
+They are matched by an index. Values of the lists with a same index are from a same staking contract.
+
+All addresses used in tests are made by 3 digits number.
+NodeAddress : begin with 1
+rewardAddress : begin with 2
+NodeAddress of additional staking contract : begin with 9
+*/
 package validator
 
 import (
@@ -29,6 +45,10 @@ func newTestWeightedCouncil(nodeAddrs []common.Address) *weightedCouncil {
 	return NewWeightedCouncil(nodeAddrs, nil, make([]uint64, len(nodeAddrs)), nil, istanbul.WeightedRandom, 0, 0, 0, nil)
 }
 
+// the function getStakingAmountsOfValidators(*stakingInfo) returns weightedValidators and stakingAmounts of weightedValidators
+// validator and stakingInfo is matched by a nodeAddress.
+// The result of weightedValidator is sorted by address
+// stakingAmount for multi additional contracts will be added to validator which has the same reward address
 func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 	testCases := []struct {
 		validators             []common.Address
@@ -86,6 +106,8 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 	}
 }
 
+// calcTotalAmount calculates totalAmount of stakingAmounts and gini coefficient if UseGini is true.
+// if UseGini is true, gini is calculated and reflected to stakingAmounts.
 func TestCalcTotalAmount(t *testing.T) {
 	testCases := []struct {
 		stakingInfo            *reward.StakingInfo
@@ -139,6 +161,8 @@ func TestCalcTotalAmount(t *testing.T) {
 	}
 }
 
+// calcWeight calculates weights and saves them to validators.
+// weights are the ratio of each stakingAmount to totalStaking
 func TestCalcWeight(t *testing.T) {
 	testCases := []struct {
 		weightedValidators []*weightedValidator
@@ -187,6 +211,8 @@ func TestCalcWeight(t *testing.T) {
 	}
 }
 
+// The test is union of above tests.
+// Weight should be calculated exactly by a validator list and a stakingInfo given
 func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 	testCases := []struct {
 		validators      []common.Address
