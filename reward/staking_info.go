@@ -72,7 +72,7 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 	return stakingInfo
 }
 
-func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum uint64, nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*StakingInfo, error) {
+func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum uint64, nodeAddrs []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*StakingInfo, error) {
 	intervalBlock := bc.GetBlockByNumber(blockNum)
 	if intervalBlock == nil {
 		logger.Trace("Failed to get the block by the given number", "blockNum", blockNum)
@@ -105,7 +105,7 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
-		CouncilNodeAddrs:      nodeIds,
+		CouncilNodeAddrs:      nodeAddrs,
 		CouncilStakingAddrs:   stakingAddrs,
 		CouncilRewardAddrs:    rewardAddrs,
 		KIRAddr:               KIRAddr,
@@ -117,17 +117,17 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 	return stakingInfo, nil
 }
 
-func (s *StakingInfo) GetIndexByNodeAddress(nodeId common.Address) (int, error) {
+func (s *StakingInfo) GetIndexByNodeAddress(nodeAddress common.Address) (int, error) {
 	for i, addr := range s.CouncilNodeAddrs {
-		if addr == nodeId {
+		if addr == nodeAddress {
 			return i, nil
 		}
 	}
 	return AddrNotFoundInCouncilNodes, ErrAddrNotInStakingInfo
 }
 
-func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) (uint64, error) {
-	i, err := s.GetIndexByNodeAddress(nodeId)
+func (s *StakingInfo) GetStakingAmountByNodeId(nodeAddress common.Address) (uint64, error) {
+	i, err := s.GetIndexByNodeAddress(nodeAddress)
 	if err != nil {
 		return 0, err
 	}
