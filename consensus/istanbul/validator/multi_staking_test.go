@@ -46,7 +46,7 @@ func newTestWeightedCouncil(nodeAddrs []common.Address) *weightedCouncil {
 	return NewWeightedCouncil(nodeAddrs, nil, make([]uint64, len(nodeAddrs)), nil, istanbul.WeightedRandom, 0, 0, 0, nil)
 }
 
-// TestWeightedCouncil_getStakingAmountsOfValidators checks if validators and stakingAmount from stakingInfo is matched well.
+// TestWeightedCouncil_getStakingAmountsOfValidators checks if validators and stakingAmounts from a stakingInfo are matched well.
 // stakingAmounts of additional staking contracts will be added to stakingAmounts of validators which have the same reward address.
 // input
 //  - validator and stakingInfo is matched by a nodeAddress.
