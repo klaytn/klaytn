@@ -18,7 +18,7 @@
 Multiple Staking Contracts
 
 Validators can deploy multiple staking contracts.
-If a validator want to deploy additional staking contracts, a rewardAddress of staking contracts should be same.
+If a validator wants to deploy additional staking contracts, those staking contracts should have same rewardAddress.
 StakingAmounts of staking contracts with a same rewardAddress will be added and it is reflected to a probability of becoming a block proposer.
 
 Testing
