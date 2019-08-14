@@ -31,17 +31,21 @@ import (
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.
 // It offers only methods that operates on data that can be available to anyone without security risks.
 type PublicDownloaderAPI struct {
-	d                         *Downloader
+	d                         downloadProgress
 	mux                       *event.TypeMux
 	installSyncSubscription   chan chan interface{}
 	uninstallSyncSubscription chan *uninstallSyncSubscriptionRequest
 }
 
-// NewPublicDownloaderAPI create a new PublicDownloaderAPI. The API has an internal event loop that
+type downloadProgress interface {
+	Progress() klaytn.SyncProgress
+}
+
+// NewPublicDownloaderAPI creates a new PublicDownloaderAPI. The API has an internal event loop that
 // listens for events from the downloader through the global event mux. In case it receives one of
 // these events it broadcasts it to all syncing subscriptions that are installed through the
 // installSyncSubscription channel.
-func NewPublicDownloaderAPI(d *Downloader, m *event.TypeMux) *PublicDownloaderAPI {
+func NewPublicDownloaderAPI(d downloadProgress, m *event.TypeMux) *PublicDownloaderAPI {
 	api := &PublicDownloaderAPI{
 		d:                         d,
 		mux:                       m,
