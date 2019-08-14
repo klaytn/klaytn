@@ -110,7 +110,7 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 	}
 }
 
-// calcTotalAmount calculates totalAmount of stakingAmounts and gini coefficient if UseGini is true.
+// TestCalcTotalAmount tests calcTotalAmount that calculates totalAmount of stakingAmounts and gini coefficient if UseGini is true.
 // if UseGini is true, gini is calculated and reflected to stakingAmounts.
 func TestCalcTotalAmount(t *testing.T) {
 	testCases := []struct {
@@ -165,7 +165,7 @@ func TestCalcTotalAmount(t *testing.T) {
 	}
 }
 
-// calcWeight calculates weights and saves them to validators.
+// TestCalcWeight tests calcWeight that calculates weights and saves them to validators.
 // weights are the ratio of each stakingAmount to totalStaking
 func TestCalcWeight(t *testing.T) {
 	testCases := []struct {
