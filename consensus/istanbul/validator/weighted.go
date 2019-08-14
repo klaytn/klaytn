@@ -601,8 +601,8 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 	return nil
 }
 
-// calculate stakingAmounts of validators.
-// if validators have multiple staking contracts, stakingAmounts will be a sum of stakingAmounts with same rewardAddress.
+// getStakingAmountsOfValidators calculates stakingAmounts of validators.
+// If validators have multiple staking contracts, stakingAmounts will be a sum of stakingAmounts with same rewardAddress.
 //  - []*weightedValidator : list of validators which type is converted to weightedValidator
 //  - []float64 : list of stakingAmounts.
 func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
@@ -645,8 +645,8 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 	return weightedValidators, stakingAmounts, nil
 }
 
-// calculate totalAmount of stakingAmounts
-// if UseGini is true, gini is reflected to stakingAmounts
+// calcTotalAmount calculates totalAmount of stakingAmounts
+// If UseGini is true, gini is reflected to stakingAmounts
 func calcTotalAmount(stakingInfo *reward.StakingInfo, stakingAmounts []float64) float64 {
 	totalStaking := float64(0)
 	if stakingInfo.UseGini && len(stakingInfo.CouncilNodeAddrs) != 0 {
@@ -666,7 +666,7 @@ func calcTotalAmount(stakingInfo *reward.StakingInfo, stakingAmounts []float64) 
 	return totalStaking
 }
 
-// Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
+// calcWeight updates each validator's weight based on the ratio of its staking amount vs. the total staking amount.
 func calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64) {
 	localLogger := logger.NewWith()
 	if totalStaking > 0 {
