@@ -188,7 +188,7 @@ func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (
 		return nil, errors.New(fmt.Sprintf("failed to call AddressBook contract. root err: %s", err))
 	}
 
-	nodeIds, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err := ac.parseAllAddresses(res)
+	nodeAddrs, stakingAddrs, rewardAddrs, PoCAddr, KIRAddr, err := ac.parseAllAddresses(res)
 	if err != nil {
 		if err == errAddressBookIncomplete {
 			// This is an expected behavior when the addressBook contract is not activated yet.
@@ -199,5 +199,5 @@ func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (
 		return newEmptyStakingInfo(blockNum), nil
 	}
 
-	return newStakingInfo(ac.bc, ac.gh, blockNum, nodeIds, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
+	return newStakingInfo(ac.bc, ac.gh, blockNum, nodeAddrs, stakingAddrs, rewardAddrs, KIRAddr, PoCAddr)
 }

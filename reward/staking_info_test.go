@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
+func TestStakingInfo_GetIndexByNodeAddress(t *testing.T) {
 	testdata := []common.Address{
 		common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"),
 		common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"),
@@ -46,7 +46,7 @@ func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
 	stakingInfo.CouncilNodeAddrs = testdata
 
 	for i := 0; i < len(testCases); i++ {
-		result, err := stakingInfo.GetIndexByNodeId(testCases[i].address)
+		result, err := stakingInfo.GetIndexByNodeAddress(testCases[i].address)
 		assert.Equal(t, testCases[i].index, result)
 		assert.Equal(t, testCases[i].err, err)
 	}
@@ -92,12 +92,12 @@ func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
 
 func TestCalcGiniCoefficient(t *testing.T) {
 	testCase := []struct {
-		testdata []uint64
+		testdata []float64
 		result   float64
 	}{
-		{[]uint64{1, 1, 1}, 0.0},
-		{[]uint64{0, 8, 0, 0, 0}, 0.8},
-		{[]uint64{5, 4, 3, 2, 1}, 0.27},
+		{[]float64{1, 1, 1}, 0.0},
+		{[]float64{0, 8, 0, 0, 0}, 0.8},
+		{[]float64{5, 4, 3, 2, 1}, 0.27},
 	}
 
 	for i := 0; i < len(testCase); i++ {
@@ -108,12 +108,12 @@ func TestCalcGiniCoefficient(t *testing.T) {
 
 func TestGiniReflectToExpectedCCO(t *testing.T) {
 	testCase := []struct {
-		ccoToken        []uint64
+		ccoToken        []float64
 		beforeReflected []float64
 		adjustment      []float64
 		afterReflected  []float64
 	}{
-		{[]uint64{66666667, 233333333, 5000000, 5000000, 5000000,
+		{[]float64{66666667, 233333333, 5000000, 5000000, 5000000,
 			77777778, 5000000, 33333333, 20000000, 16666667,
 			10000000, 5000000, 5000000, 5000000, 5000000,
 			5000000, 5000000, 5000000, 5000000, 5000000,
@@ -123,7 +123,7 @@ func TestGiniReflectToExpectedCCO(t *testing.T) {
 			[]float64{42612, 89426, 9202, 9202, 9202, 46682, 9202, 28275, 20900, 18762, 13868, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202, 9202},
 			[]float64{11, 23, 2, 2, 2, 12, 2, 7, 5, 5, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
 		},
-		{[]uint64{400000000, 233333333, 233333333, 150000000, 108333333,
+		{[]float64{400000000, 233333333, 233333333, 150000000, 108333333,
 			83333333, 66666667, 33333333, 20000000, 16666667,
 			10000000, 5000000, 5000000, 5000000, 5000000,
 			5000000, 5000000, 5000000, 5000000, 5000000,
@@ -138,7 +138,7 @@ func TestGiniReflectToExpectedCCO(t *testing.T) {
 		stakingInfo := newEmptyStakingInfo(uint64(1))
 
 		weights := make([]float64, len(testCase[i].ccoToken))
-		tokenListToCalcGini := make([]uint64, len(testCase[i].ccoToken))
+		tokenListToCalcGini := make([]float64, len(testCase[i].ccoToken))
 		totalAmount := 0.0
 		for j := 0; j < len(testCase[i].ccoToken); j++ {
 			totalAmount += float64(testCase[i].ccoToken[j])
