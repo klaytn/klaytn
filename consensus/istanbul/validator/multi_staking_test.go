@@ -47,7 +47,7 @@ func newTestWeightedCouncil(nodeAddrs []common.Address) *weightedCouncil {
 	return NewWeightedCouncil(nodeAddrs, nil, make([]uint64, len(nodeAddrs)), nil, istanbul.WeightedRandom, 0, 0, 0, nil)
 }
 
-// check if validators and stakingAmount from stakingInfo is matched well.
+// TestWeightedCouncil_getStakingAmountsOfValidators checks if validators and stakingAmount from stakingInfo is matched well.
 // stakingAmounts of additional staking contracts will be added to stakingAmounts of validators which have the same reward address.
 // input
 //  - validator and stakingInfo is matched by a nodeAddress.
@@ -216,7 +216,7 @@ func TestCalcWeight(t *testing.T) {
 	}
 }
 
-// The test is union of above tests.
+// TestWeightedCouncil_validatorWeightWithStakingInfo is union of above tests.
 // Weight should be calculated exactly by a validator list and a stakingInfo given
 func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 	testCases := []struct {

@@ -602,9 +602,9 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 }
 
 // getStakingAmountsOfValidators calculates stakingAmounts of validators.
-// If validators have multiple staking contracts, stakingAmounts will be a sum of stakingAmounts with same rewardAddress.
-//  - []*weightedValidator : list of validators which type is converted to weightedValidator
-//  - []float64 : list of stakingAmounts.
+// If validators have multiple staking contracts, stakingAmounts will be a sum of stakingAmounts with the same rewardAddress.
+//  - []*weightedValidator : a list of validators which type is converted to weightedValidator
+//  - []float64 : a list of stakingAmounts.
 func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
 	numValidators := len(valSet.validators)
 	weightedValidators := make([]*weightedValidator, numValidators)
