@@ -646,7 +646,7 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 }
 
 // calcTotalAmount calculates totalAmount of stakingAmounts.
-// If UseGini is true, gini is reflected to stakingAmounts
+// If UseGini is true, gini is reflected to stakingAmounts.
 func calcTotalAmount(stakingInfo *reward.StakingInfo, stakingAmounts []float64) float64 {
 	totalStaking := float64(0)
 	if stakingInfo.UseGini && len(stakingInfo.CouncilNodeAddrs) != 0 {
