@@ -23,7 +23,8 @@ StakingAmounts of staking contracts with a same rewardAddress will be added and 
 
 Testing
 
-A StakingInfo has list of addresses and stakingAmount.
+StakingInfos are data from addressBook.
+A StakingInfo has lists of addresses and stakingAmount.
 They are matched by an index. Values of the lists with a same index are from a same staking contract.
 
 All addresses used in tests are made by 3 digits number.
@@ -46,10 +47,13 @@ func newTestWeightedCouncil(nodeAddrs []common.Address) *weightedCouncil {
 	return NewWeightedCouncil(nodeAddrs, nil, make([]uint64, len(nodeAddrs)), nil, istanbul.WeightedRandom, 0, 0, 0, nil)
 }
 
-// the function getStakingAmountsOfValidators(*stakingInfo) returns weightedValidators and stakingAmounts of weightedValidators
-// validator and stakingInfo is matched by a nodeAddress.
-// weightedValidators are sorted by nodeAddress
-// stakingAmounts for additional staking contracts will be added to validators which have the same reward address
+// check if validators and stakingAmount from stakingInfo is matched well.
+// stakingAmounts of additional staking contracts will be added to stakingAmounts of validators which have the same reward address.
+// input
+//  - validator and stakingInfo is matched by a nodeAddress.
+// output
+//  - weightedValidators are sorted by nodeAddress
+//  - stakingAmounts should be same as expectedStakingAmounts
 func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 	testCases := []struct {
 		validators             []common.Address
