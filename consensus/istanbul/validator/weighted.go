@@ -630,12 +630,13 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 	}
 
 	for sIdx, isAdded := range addedStaking {
-		if isAdded == false {
-			for vIdx, val := range weightedValidators {
-				if val.RewardAddress() == stakingInfo.CouncilRewardAddrs[sIdx] {
-					stakingAmounts[vIdx] += float64(stakingInfo.CouncilStakingAmounts[sIdx])
-					break
-				}
+		if isAdded {
+			continue
+		}
+		for vIdx, val := range weightedValidators {
+			if val.RewardAddress() == stakingInfo.CouncilRewardAddrs[sIdx] {
+				stakingAmounts[vIdx] += float64(stakingInfo.CouncilStakingAmounts[sIdx])
+				break
 			}
 		}
 	}
