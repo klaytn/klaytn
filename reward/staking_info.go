@@ -117,7 +117,7 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 	return stakingInfo, nil
 }
 
-func (s *StakingInfo) GetIndexByNodeId(nodeId common.Address) (int, error) {
+func (s *StakingInfo) GetIndexByNodeAddress(nodeId common.Address) (int, error) {
 	for i, addr := range s.CouncilNodeAddrs {
 		if addr == nodeId {
 			return i, nil
@@ -127,7 +127,7 @@ func (s *StakingInfo) GetIndexByNodeId(nodeId common.Address) (int, error) {
 }
 
 func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) (uint64, error) {
-	i, err := s.GetIndexByNodeId(nodeId)
+	i, err := s.GetIndexByNodeAddress(nodeId)
 	if err != nil {
 		return 0, err
 	}

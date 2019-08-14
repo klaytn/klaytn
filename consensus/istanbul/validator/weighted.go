@@ -618,7 +618,7 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 		}
 		weightedValidators[vIdx] = weightedVal
 
-		sIdx, err := stakingInfo.GetIndexByNodeId(weightedVal.address)
+		sIdx, err := stakingInfo.GetIndexByNodeAddress(weightedVal.address)
 		if err == nil {
 			rewardAddr := stakingInfo.CouncilRewardAddrs[sIdx]
 			weightedVal.SetRewardAddress(rewardAddr)

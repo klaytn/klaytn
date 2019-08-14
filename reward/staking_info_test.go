@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
+func TestStakingInfo_GetIndexByNodeAddress(t *testing.T) {
 	testdata := []common.Address{
 		common.StringToAddress("0xB55e5986b972Be438b4A91d6e8726aA50AD55EDc"),
 		common.StringToAddress("0xaDfc427080B4a66b5a629cd633d48C5d734572cA"),
@@ -46,7 +46,7 @@ func TestStakingInfo_GetIndexByNodeId(t *testing.T) {
 	stakingInfo.CouncilNodeAddrs = testdata
 
 	for i := 0; i < len(testCases); i++ {
-		result, err := stakingInfo.GetIndexByNodeId(testCases[i].address)
+		result, err := stakingInfo.GetIndexByNodeAddress(testCases[i].address)
 		assert.Equal(t, testCases[i].index, result)
 		assert.Equal(t, testCases[i].err, err)
 	}
