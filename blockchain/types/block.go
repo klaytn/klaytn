@@ -153,7 +153,7 @@ type Result struct {
 	Round int64
 }
 
-// "external" block encoding. used for Klaytn protocol, etc.
+// extblock represents external block encoding used for Klaytn protocol, etc.
 type extblock struct {
 	Header *Header
 	Txs    []*Transaction
