@@ -926,8 +926,8 @@ web3._extend({
 			call: 'mainbridge_getChildChainIndexingEnabled'
 		}),
 		new web3._extend.Method({
-			name: 'convertServiceChainBlockHashToMainChainTxHash',
-			call: 'mainbridge_convertServiceChainBlockHashToMainChainTxHash',
+			name: 'convertChildChainBlockHashToParentChainTxHash',
+			call: 'mainbridge_convertChildChainBlockHashToParentChainTxHash',
 			params: 1
 		}),
 	],
@@ -1077,12 +1077,12 @@ web3._extend({
 			getter: 'subbridge_peers'
 		}),
 		new web3._extend.Property({
-			name: 'mainChainAccount',
-			getter: 'subbridge_getMainChainAccountAddr'
+			name: 'parentOperator',
+			getter: 'subbridge_getParentOperatorAddr'
 		}),
 			new web3._extend.Property({
-			name: 'serviceChainAccount',
-			getter: 'subbridge_getServiceChainAccountAddr'
+			name: 'childOperator',
+			getter: 'subbridge_getChildOperatorAddr'
 		}),
 		new web3._extend.Property({
 			name: 'operators',
@@ -1097,12 +1097,12 @@ web3._extend({
 			getter: 'subbridge_getSentChainTxsLimit'
 		}),
 		new web3._extend.Property({
-			name: 'mainChainAccountNonce',
-			getter: 'subbridge_getMainChainAccountNonce'
+			name: 'parentOperatorNonce',
+			getter: 'subbridge_getParentOperatorNonce'
 		}),
 		new web3._extend.Property({
-			name: 'serviceChainAccountNonce',
-			getter: 'subbridge_getServiceChainAccountNonce'
+			name: 'childOperatorNonce',
+			getter: 'subbridge_getChildOperatorNonce'
 		}),
 		new web3._extend.Property({
 			name: 'listBridge',

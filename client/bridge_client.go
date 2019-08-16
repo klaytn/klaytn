@@ -80,11 +80,11 @@ func (ec *Client) BridgeGetChildChainIndexingEnabled(ctx context.Context) (bool,
 	return result, err
 }
 
-// BridgeConvertServiceChainBlockHashToMainChainTxHash can convert service chain block hash to
+// BridgeConvertChildChainBlockHashToParentChainTxHash can convert child chain block hash to
 // anchoring tx hash which contains anchored data.
-func (ec *Client) BridgeConvertServiceChainBlockHashToMainChainTxHash(ctx context.Context, scBlockHash common.Hash) (common.Hash, error) {
+func (ec *Client) BridgeConvertChildChainBlockHashToParentChainTxHash(ctx context.Context, scBlockHash common.Hash) (common.Hash, error) {
 	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "mainbridge_convertServiceChainBlockHashToMainChainTxHash", scBlockHash)
+	err := ec.c.CallContext(ctx, &txHash, "mainbridge_convertChildChainBlockHashToParentChainTxHash", scBlockHash)
 	return txHash, err
 }
 
@@ -106,31 +106,31 @@ func (ec *Client) BridgeGetReceiptFromParentChain(ctx context.Context, hash comm
 	return result, err
 }
 
-// BridgeGetMainChainAccountAddr can get a main chain bridge account address.
-func (ec *Client) BridgeGetMainChainAccountAddr(ctx context.Context) (common.Address, error) {
+// BridgeGetParentOperatorAddr can get a parent chain operator address.
+func (ec *Client) BridgeGetParentOperatorAddr(ctx context.Context) (common.Address, error) {
 	var result common.Address
-	err := ec.c.CallContext(ctx, &result, "subbridge_getMainChainAccountAddr")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getParentOperatorAddr")
 	return result, err
 }
 
-// BridgeGetServiceChainAccountAddr can get a service chain bridge account address.
-func (ec *Client) BridgeGetServiceChainAccountAddr(ctx context.Context) (common.Address, error) {
+// BridgeGetChildOperatorAddr can get a child chain operator address.
+func (ec *Client) BridgeGetChildOperatorAddr(ctx context.Context) (common.Address, error) {
 	var result common.Address
-	err := ec.c.CallContext(ctx, &result, "subbridge_getServiceChainAccountAddr")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getChildOperatorAddr")
 	return result, err
 }
 
-// BridgeGetMainChainAccountNonce can get a main chain bridge account nonce.
-func (ec *Client) BridgeGetMainChainAccountNonce(ctx context.Context) (uint64, error) {
+// BridgeGetParentOperatorNonce can get a parent chain operator nonce.
+func (ec *Client) BridgeGetParentOperatorNonce(ctx context.Context) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "subbridge_getMainChainAccountNonce")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getParentOperatorNonce")
 	return result, err
 }
 
-// BridgeGetServiceChainAccountAddr can get a service chain bridge account nonce.
-func (ec *Client) BridgeGetServiceChainAccountNonce(ctx context.Context) (uint64, error) {
+// BridgeGetChildOperatorAddr can get a child chain operator nonce.
+func (ec *Client) BridgeGetChildOperatorNonce(ctx context.Context) (uint64, error) {
 	var result uint64
-	err := ec.c.CallContext(ctx, &result, "subbridge_getServiceChainAccountNonce")
+	err := ec.c.CallContext(ctx, &result, "subbridge_getChildOperatorNonce")
 	return result, err
 }
 
@@ -189,23 +189,23 @@ func (ec *Client) BridgeDeployBridge(ctx context.Context) (common.Address, commo
 }
 
 // BridgeRegisterBridge can register the given pair of deployed child/parent bridges.
-func (ec *Client) BridgeRegisterBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) (bool, error) {
+func (ec *Client) BridgeRegisterBridge(ctx context.Context, cBridge common.Address, pBridge common.Address) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "subbridge_registerBridge", scBridge, mcBridge)
+	err := ec.c.CallContext(ctx, &result, "subbridge_registerBridge", cBridge, pBridge)
 	return result, err
 }
 
 // BridgeDeregisterBridge can deregister the given pair of deployed child/parent bridges.
-func (ec *Client) BridgeDeregisterBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) (bool, error) {
+func (ec *Client) BridgeDeregisterBridge(ctx context.Context, cBridge common.Address, pBridge common.Address) (bool, error) {
 	var result bool
-	err := ec.c.CallContext(ctx, &result, "subbridge_deregisterBridge", scBridge, mcBridge)
+	err := ec.c.CallContext(ctx, &result, "subbridge_deregisterBridge", cBridge, pBridge)
 	return result, err
 }
 
 // TODO-Klaytn if client pkg is removed in sc pkg, this will be replaced origin struct.
 type BridgeJournal struct {
-	LocalAddress  common.Address `json:"localAddress"`
-	RemoteAddress common.Address `json:"remoteAddress"`
+	ChildAddress  common.Address `json:"childAddress"`
+	ParentAddress common.Address `json:"parentAddress"`
 	Subscribed    bool           `json:"subscribed"`
 }
 
@@ -216,28 +216,28 @@ func (ec *Client) BridgeListBridge(ctx context.Context) ([]*BridgeJournal, error
 	return result, err
 }
 
-// BridgeSubscribeBridge can enable for service chain bridge to subscribe the event of given service/main chain bridges.
+// BridgeSubscribeBridge can enable for service chain bridge to subscribe the event of given child/parent chain bridges.
 // If the subscribing is failed, it returns an error.
-func (ec *Client) BridgeSubscribeBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) error {
-	return ec.c.CallContext(ctx, nil, "subbridge_subscribeBridge", scBridge, mcBridge)
+func (ec *Client) BridgeSubscribeBridge(ctx context.Context, cBridge common.Address, pBridge common.Address) error {
+	return ec.c.CallContext(ctx, nil, "subbridge_subscribeBridge", cBridge, pBridge)
 }
 
-// BridgeUnsubscribeBridge disables the event subscription of the given service/main chain bridges.
+// BridgeUnsubscribeBridge disables the event subscription of the given child/parent chain bridges.
 // If the unsubscribing is failed, it returns an error.
-func (ec *Client) BridgeUnsubscribeBridge(ctx context.Context, scBridge common.Address, mcBridge common.Address) error {
-	return ec.c.CallContext(ctx, nil, "subbridge_unsubscribeBridge", scBridge, mcBridge)
+func (ec *Client) BridgeUnsubscribeBridge(ctx context.Context, cBridge common.Address, pBridge common.Address) error {
+	return ec.c.CallContext(ctx, nil, "subbridge_unsubscribeBridge", cBridge, pBridge)
 }
 
-// BridgeRegisterTokenContract can register the given pair of deployed service/main chain token contracts.
+// BridgeRegisterTokenContract can register the given pair of deployed child/parent chain token contracts.
 // If the registering is failed, it returns an error.
-func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, scBridge, mcBridge, scToken, mcToken common.Address) error {
-	return ec.c.CallContext(ctx, nil, "subbridge_registerToken", scBridge, mcBridge, scToken, mcToken)
+func (ec *Client) BridgeRegisterTokenContract(ctx context.Context, cBridge, pBridge, cToken, pToken common.Address) error {
+	return ec.c.CallContext(ctx, nil, "subbridge_registerToken", cBridge, pBridge, cToken, pToken)
 }
 
-// BridgeDeregisterTokenContract can deregister the given pair of deployed service/main chain token contracts.
+// BridgeDeregisterTokenContract can deregister the given pair of deployed child/parent chain token contracts.
 // If the registering is failed, it returns an error.
-func (ec *Client) BridgeDeregisterTokenContract(ctx context.Context, scBridge, mcBridge, scToken, mcToken common.Address) error {
-	return ec.c.CallContext(ctx, nil, "subbridge_deregisterToken", scBridge, mcBridge, scToken, mcToken)
+func (ec *Client) BridgeDeregisterTokenContract(ctx context.Context, cBridge, pBridge, cToken, pToken common.Address) error {
+	return ec.c.CallContext(ctx, nil, "subbridge_deregisterToken", cBridge, pBridge, cToken, pToken)
 }
 
 // BridgeTxPendingCount can return the count of the pend tx in bridge txpool.

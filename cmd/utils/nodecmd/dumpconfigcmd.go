@@ -243,7 +243,7 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 	if utils.NetworkTypeFlag.Value == SCNNetworkType && scfg.EnabledSubBridge {
 		cfg.CN.NoAccountCreation = !ctx.GlobalBool(utils.ServiceChainNewAccountFlag.Name)
 		if !cfg.CN.NoAccountCreation {
-			logger.Warn("generated accounts can't be synced with the main chain since account creation is enabled")
+			logger.Warn("generated accounts can't be synced with the parent chain since account creation is enabled")
 		}
 
 		switch scfg.ServiceChainConsensus {

@@ -67,7 +67,7 @@ func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Dur
 
 // TestBridgeManager tests the event/method of Token/NFT/Bridge contracts.
 // TODO-Klaytn-Servicechain needs to refine this test.
-// - consider main/service chain simulated backend.
+// - consider parent/child chain simulated backend.
 // - separate each test
 func TestBridgeManager(t *testing.T) {
 	tempDir := os.TempDir() + "sc"
