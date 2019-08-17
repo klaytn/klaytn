@@ -439,6 +439,110 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 	assert.Equal(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
 }
 
+// TestMultiOperatorRequestRecovery tests value transfer recovery for the multi-operator.
+func TestMultiOperatorRequestRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	// 1. Init dummy chain and do some value transfers.
+	info := prepare(t, func(info *testInfo) {
+		for i := 0; i < testTxCount; i++ {
+			ops[KLAY].request(info, info.localInfo)
+		}
+	})
+
+	// 2. Set multi-operator.
+	cAcc := info.nodeAuth
+	pAcc := info.chainAuth
+	opts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
+	_, err := info.localInfo.bridge.RegisterOperator(opts, pAcc.From)
+	assert.NoError(t, err)
+	opts = &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
+	_, err = info.remoteInfo.bridge.RegisterOperator(opts, cAcc.From)
+	assert.NoError(t, err)
+	info.sim.Commit()
+
+	// 3. Set operator threshold.
+	opts = &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
+	_, err = info.localInfo.bridge.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	opts = &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
+	_, err = info.remoteInfo.bridge.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+
+	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
+
+	// 4. Update recovery hint.
+	err = vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	t.Log("value transfer hint", vtr.service2mainHint)
+	assert.Equal(t, uint64(testTxCount), vtr.service2mainHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.service2mainHint.handleNonce)
+
+	// 5. Request events by using the hint.
+	err = vtr.retrievePendingEvents()
+	if err != nil {
+		t.Fatal("fail to retrieve pending events from the bridge contract")
+	}
+
+	// 6. Check pending events.
+	t.Log("check pending tx", "len", len(vtr.serviceChainEvents))
+	var count = 0
+	for _, ev := range vtr.serviceChainEvents {
+		assert.Equal(t, info.nodeAuth.From, ev.From)
+		assert.Equal(t, info.aliceAuth.From, ev.To)
+		assert.Equal(t, big.NewInt(testAmount), ev.ValueOrTokenId)
+		assert.Condition(t, func() bool {
+			return uint64(testBlockOffset) <= ev.Raw.BlockNumber
+		})
+		count++
+	}
+	assert.Equal(t, testPendingCount, count)
+
+	// 7. Recover pending events
+	info.recoveryCh <- true
+	assert.Equal(t, nil, vtr.recoverPendingEvents())
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
+
+	// 8. Recover from the other operator (value transfer is not recovered yet).
+	err = vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	t.Log("value transfer hint", vtr.service2mainHint)
+	assert.Equal(t, uint64(testTxCount), vtr.service2mainHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.service2mainHint.handleNonce)
+
+	err = vtr.retrievePendingEvents()
+	if err != nil {
+		t.Fatal("fail to retrieve pending events from the bridge contract")
+	}
+	assert.Equal(t, testPendingCount, len(vtr.serviceChainEvents))
+	assert.Equal(t, nil, vtr.recoverPendingEvents())
+	info.remoteInfo.account = info.localInfo.account // other operator
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
+
+	// 9. Check results.
+	err = vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	err = vtr.retrievePendingEvents()
+	if err != nil {
+		t.Fatal("fail to retrieve pending events from the bridge contract")
+	}
+	assert.Equal(t, 0, len(vtr.serviceChainEvents))
+	assert.Equal(t, nil, vtr.Recover()) // nothing to recover
+}
+
 // prepare generates dummy blocks for testing value transfer recovery.
 func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	// Setup configuration.

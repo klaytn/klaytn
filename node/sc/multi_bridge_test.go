@@ -709,6 +709,35 @@ func TestMultiBridgeErrOverSign(t *testing.T) {
 	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
 }
 
+// TestMultiOperatorKLAYTransferDup checks the following:
+// - set threshold to 1.
+// - an operator succeed to handle value transfer.
+// - the operator fails to handle value transfer because of vote closing (duplicated).
+func TestMultiOperatorKLAYTransferDup(t *testing.T) {
+	info := prepareMultiBridgeEventTest(t)
+	to := common.Address{100}
+	acc := info.accounts[0]
+
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 1)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	nonceOffset := uint64(17)
+	sentNonce := nonceOffset
+	transferAmount := uint64(100)
+	sentBlockNumber := uint64(100000)
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
+
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
+}
+
 // TestMultiBridgeSetKLAYFeeErrNonce checks the following:
 // - failed to set KLAY fee because of the wrong nonce.
 func TestMultiBridgeSetKLAYFeeErrNonce(t *testing.T) {
