@@ -74,7 +74,7 @@ func (mce *MainChainEventHandler) WriteLastIndexedBlockNumber(blockNum uint64) {
 }
 
 // ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
-// ChainHashes, with the key made with given service chain block hash.
+// ChainHashes, with the key made with given child chain block hash.
 // Index is built when service chain indexing is enabled.
 func (mce *MainChainEventHandler) ConvertChildChainBlockHashToParentChainTxHash(scBlockHash common.Hash) common.Hash {
 	return mce.mainbridge.chainDB.ConvertChildChainBlockHashToParentChainTxHash(scBlockHash)

@@ -216,7 +216,7 @@ func (ec *Client) BridgeListBridge(ctx context.Context) ([]*BridgeJournal, error
 	return result, err
 }
 
-// BridgeSubscribeBridge can enable for service chain bridge to subscribe the event of given child/parent chain bridges.
+// BridgeSubscribeBridge can enable for subbridge to subscribe the event of given child/parent chain bridges.
 // If the subscribing is failed, it returns an error.
 func (ec *Client) BridgeSubscribeBridge(ctx context.Context, cBridge common.Address, pBridge common.Address) error {
 	return ec.c.CallContext(ctx, nil, "subbridge_subscribeBridge", cBridge, pBridge)

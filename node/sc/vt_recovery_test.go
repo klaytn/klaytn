@@ -364,7 +364,7 @@ func TestAlreadyStartedVTRecovery(t *testing.T) {
 	vtr.Stop()
 }
 
-// TestScenarioMainChainRecovery tests the value transfer recovery of the parent chain to service chain value transfers.
+// TestScenarioMainChainRecovery tests the value transfer recovery of the parent chain to child chain value transfers.
 func TestScenarioMainChainRecovery(t *testing.T) {
 	tempDir := os.TempDir() + "sc"
 	os.MkdirAll(tempDir, os.ModePerm)
@@ -719,7 +719,7 @@ func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	defer bi.account.UnLock()
 
 	opts := bi.account.GetTransactOpts()
-	// TODO-Klaytn need to separate service / parent chain nftIndex.
+	// TODO-Klaytn need to separate child / parent chain nftIndex.
 	nftIndex := new(big.Int).SetInt64(info.nftIndex)
 
 	var err error
