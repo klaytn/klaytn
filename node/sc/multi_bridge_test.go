@@ -712,7 +712,8 @@ func TestMultiBridgeErrOverSign(t *testing.T) {
 // TestMultiOperatorKLAYTransferDup checks the following:
 // - set threshold to 1.
 // - an operator succeed to handle value transfer.
-// - the operator fails to handle value transfer because of vote closing (duplicated).
+// - the operator (same auth) fails to handle value transfer because of vote closing (duplicated).
+// - another operator (different auth) fails to handle value transfer because of vote closing (duplicated).
 func TestMultiOperatorKLAYTransferDup(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
 	to := common.Address{100}
@@ -733,6 +734,11 @@ func TestMultiOperatorKLAYTransferDup(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
+	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+	info.sim.Commit()
+	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
+
+	acc = info.accounts[1]
 	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
 	info.sim.Commit()
 	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
