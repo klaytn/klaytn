@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.6;
 
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.6;
 
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata.sol";
@@ -35,8 +35,8 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         uint256 _tokenId,
         uint64 _requestedNonce,
         uint64 _requestedBlockNumber,
-        string _tokenURI,
-        uint256[] _extraData
+        string memory _tokenURI,
+        uint256[] memory _extraData
     )
         public
         onlyOperators
@@ -72,7 +72,7 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         address _from,
         address _to,
         uint256 _tokenId,
-        uint256[] _extraData
+        uint256[] memory _extraData
     )
         internal
     {
@@ -104,7 +104,7 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         address _from,
         uint256 _tokenId,
         address _to,
-        uint256[] _extraData
+        uint256[] memory _extraData
     )
         public
     {
@@ -116,7 +116,7 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         address _tokenAddress,
         address _to,
         uint256 _tokenId,
-        uint256[] _extraData
+        uint256[] calldata _extraData
     )
         external
     {

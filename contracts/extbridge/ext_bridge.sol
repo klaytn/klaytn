@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.6;
 
 import "../bridge/BridgeTransferERC20.sol";
 import "../bridge/BridgeTransferERC721.sol";
@@ -42,7 +42,7 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         uint256 _value,
         uint64 _requestNonce,
         uint64 _requestBlockNumber,
-        uint256[] _extraData
+        uint256[] memory _extraData
     )
         public
     {
@@ -76,8 +76,8 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         uint256 _tokenId,
         uint64 _requestNonce,
         uint64 _requestBlockNumber,
-        string _tokenURI,
-        uint256[] _extraData
+        string memory _tokenURI,
+        uint256[] memory _extraData
     )
         public
     {
