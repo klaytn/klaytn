@@ -25,9 +25,9 @@ Klaytn nodes achieve a consensus of the global state by processing the same tran
 
 Transaction is an atomic operation originated from an Externally Owned Account (EOA) transiting the global state of Klaytn.
 Klaytn supports multiple transaction types to efficiently trigger Klay transfer or contract execution.
-LegacyTransaction, the Ethereum compatible transaction, could be sent to both of EOA and SC.
+LegacyTransaction, the Ethereum compatible transaction, could be sent to both of EOA and Smart Contract (SC).
 However, it cannot support advanced features of Klaytn such as multi-sig or fee-delegation.
-All transaction types except LegacyTransaction are enforced to be sent to either of EOA or Smart Contract (SC).
+All transaction types except LegacyTransaction are enforced to be sent to either of EOA or SC.
 With a slice of transaction signatures signed by multiple accounts, they can support a multi-sig account to transact.
 Some transaction types support full or partial fee-delegation feature as well as basic transaction features.
 Fee-delegation transactions have additional field(s) to charge some amount of transaction fee to a fee payer's account.
@@ -55,28 +55,28 @@ Functions and variables related to Block and Transaction are defined in the file
   - transaction.go : defines transaction
   - transaction_signing.go : interfaces signer and implements transaction signing/verification functions
   - tx_internal_data.go : defines internal data of transaction supporting various transaction types
-  - tx_internal_data_account_creation.go : implements internal data of the transaction creating an EOA account
-  - tx_internal_data_account_update.go : implements internal data of the transaction updating account key of an account
-  - tx_internal_data_cancel.go : implements internal data of the transaction canceling a transaction in the txpool
-  - tx_internal_data_chain_data_anchoring.go : implements internal data of the transaction transfering data to service chain
-  - tx_internal_data_fee_delegated_account_update.go : implements internal data of the fee-delegated version of account update transaction
-  - tx_internal_data_fee_delegated_account_update_with_ratio.go : implements internal data of the partially fee-delegated version of account update transaction
-  - tx_internal_data_fee_delegated_smart_contract_deploy.go : implements internal data of the fee-delegated version of contract deploy transaction
-  - tx_internal_data_fee_delegated_smart_contract_deploy_with_ratio.go : implements internal data of the partially fee-delegated version of contract deploy transaction
-  - tx_internal_data_fee_delegated_smart_contract_execution.go : implements internal data of the fee-delegated version of contract execution transaction
-  - tx_internal_data_fee_delegated_smart_contract_execution_with_ratio.go : implements internal data of the partially fee-delegated version of contract execution transaction
-  - tx_internal_data_fee_delegated_value_transfer.go: implements internal data of the fee-delegated version of value transfer transaction
-  - tx_internal_data_fee_delegated_value_transfer_memo.go: implements internal data of the fee-delegated version of value transfer with memo transaction
-  - tx_internal_data_fee_delegated_value_transfer_memo_with_ratio.go: implements internal data of the partially fee-delegated version of value transfer with memo transaction
-  - tx_internal_data_fee_delegated_value_transfer_with_ratio.go :implements internal data of the partially fee-delegated version of value transfer transaction
-  - tx_internal_data_legacy.go: implements internal data of the legacy transaction compatible with Ethereum
+  - tx_internal_data_account_creation.go : implements the transaction creating an EOA account
+  - tx_internal_data_account_update.go : implements the transaction updating account key of an account
+  - tx_internal_data_cancel.go : implements the transaction canceling a transaction in the txpool
+  - tx_internal_data_chain_data_anchoring.go : implements the transaction transfering data to service chain
+  - tx_internal_data_fee_delegated_account_update.go : implements the fee-delegated version of account update transaction
+  - tx_internal_data_fee_delegated_account_update_with_ratio.go : implements the partially fee-delegated version of account update transaction
+  - tx_internal_data_fee_delegated_smart_contract_deploy.go : implements the fee-delegated version of contract deploy transaction
+  - tx_internal_data_fee_delegated_smart_contract_deploy_with_ratio.go : implements the partially fee-delegated version of contract deploy transaction
+  - tx_internal_data_fee_delegated_smart_contract_execution.go : implements the fee-delegated version of contract execution transaction
+  - tx_internal_data_fee_delegated_smart_contract_execution_with_ratio.go : implements the partially fee-delegated version of contract execution transaction
+  - tx_internal_data_fee_delegated_value_transfer.go: implements the fee-delegated version of value transfer transaction
+  - tx_internal_data_fee_delegated_value_transfer_memo.go: implements the fee-delegated version of value transfer with memo transaction
+  - tx_internal_data_fee_delegated_value_transfer_memo_with_ratio.go: implements the partially fee-delegated version of value transfer with memo transaction
+  - tx_internal_data_fee_delegated_value_transfer_with_ratio.go :implements the partially fee-delegated version of value transfer transaction
+  - tx_internal_data_legacy.go: implements the legacy transaction compatible with Ethereum
   - tx_internal_data_serializer.go: implements serialization functions of transaction internal data
-  - tx_internal_data_smart_contract_deploy.go: implements internal data of the transaction deploying a smart contract
-  - tx_internal_data_smart_contract_execution.go: implements internal data of the transaction executing a smart contract
-  - tx_internal_data_value_transfer.go: implements internal data of the transaction sending Klay to an EOA
-  - tx_internal_data_value_transfer_memo.go: implements internal data of the transaction sending Klay to an EOA with data
-  - tx_internal_fee_delegated_data_cancel.go: implements internal data of the fee-delegated version of cancel transaction
-  - tx_internal_fee_delegated_data_cancel_with_ratio.go: implements internal data of the partially fee-delegated version of cancel transaction
+  - tx_internal_data_smart_contract_deploy.go: implements the transaction deploying a smart contract
+  - tx_internal_data_smart_contract_execution.go: implements the transaction executing a smart contract
+  - tx_internal_data_value_transfer.go: implements the transaction sending Klay to an EOA
+  - tx_internal_data_value_transfer_memo.go: implements the transaction sending Klay to an EOA with data
+  - tx_internal_fee_delegated_data_cancel.go: implements the fee-delegated version of cancel transaction
+  - tx_internal_fee_delegated_data_cancel_with_ratio.go: implements the partially fee-delegated version of cancel transaction
   - tx_signature.go : implements transaction signature (V, R, S)
   - tx_signatures.go : implements a slice of transaction signature to support multi-sig accounts
 
