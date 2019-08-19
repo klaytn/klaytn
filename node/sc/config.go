@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	datadirMainChainBridgeNodes = "parentchain-bridges.json" // Path within the datadir to the static node list
+	datadirMainChainBridgeNodes = "main-bridges.json" // Path within the datadir to the static node list
 )
 
 var logger = log.NewModuleLogger(log.ServiceChain)
