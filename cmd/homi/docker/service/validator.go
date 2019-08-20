@@ -115,7 +115,7 @@ var validatorTemplate = `{{ .Name }}:
 {{- end }}
         echo '{{ .StaticNodes }}' > /klaytn/static-nodes.json
 {{- if .BridgeNodes }}
-        echo '{{ .BridgeNodes }}' > /klaytn/parentchain-bridges.json
+        echo '{{ .BridgeNodes }}' > /klaytn/main-bridges.json
 {{- end }}
         k{{ .NodeType }} --datadir "/klaytn" init "/klaytn/genesis.json"
 
