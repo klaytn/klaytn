@@ -22,6 +22,8 @@ jobs:
     docker:
       - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
+    environment:
+      GO111MODULE: "on"
     steps:
       - checkout
       - run:
@@ -37,6 +39,8 @@ jobs:
     docker:
       - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
+    environment:
+      GO111MODULE: "on"
     steps:
       - checkout
       - run:
@@ -52,6 +56,8 @@ jobs:
     docker:
       - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
+    environment:
+      GO111MODULE: "on"
     steps:
       - checkout
       - run:
@@ -68,6 +74,8 @@ jobs:
     docker:
       - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
+    environment:
+      GO111MODULE: "on"
     steps:
       - checkout
       - run:
