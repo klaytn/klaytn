@@ -483,9 +483,9 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update value transfer hint")
 	}
-	t.Log("value transfer hint", vtr.service2mainHint)
-	assert.Equal(t, uint64(testTxCount), vtr.service2mainHint.requestNonce)
-	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.service2mainHint.handleNonce)
+	t.Log("value transfer hint", vtr.child2parentHint)
+	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.child2parentHint.handleNonce)
 
 	// 5. Request events by using the hint.
 	err = vtr.retrievePendingEvents()
@@ -494,9 +494,9 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 	}
 
 	// 6. Check pending events.
-	t.Log("check pending tx", "len", len(vtr.serviceChainEvents))
+	t.Log("check pending tx", "len", len(vtr.childEvents))
 	var count = 0
-	for _, ev := range vtr.serviceChainEvents {
+	for _, ev := range vtr.childEvents {
 		assert.Equal(t, info.nodeAuth.From, ev.From)
 		assert.Equal(t, info.aliceAuth.From, ev.To)
 		assert.Equal(t, big.NewInt(testAmount), ev.ValueOrTokenId)
@@ -517,15 +517,15 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update value transfer hint")
 	}
-	t.Log("value transfer hint", vtr.service2mainHint)
-	assert.Equal(t, uint64(testTxCount), vtr.service2mainHint.requestNonce)
-	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.service2mainHint.handleNonce)
+	t.Log("value transfer hint", vtr.child2parentHint)
+	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.child2parentHint.handleNonce)
 
 	err = vtr.retrievePendingEvents()
 	if err != nil {
 		t.Fatal("fail to retrieve pending events from the bridge contract")
 	}
-	assert.Equal(t, testPendingCount, len(vtr.serviceChainEvents))
+	assert.Equal(t, testPendingCount, len(vtr.childEvents))
 	assert.Equal(t, nil, vtr.recoverPendingEvents())
 	info.remoteInfo.account = info.localInfo.account // other operator
 	ops[KLAY].dummyHandle(info, info.remoteInfo)
@@ -539,7 +539,7 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to retrieve pending events from the bridge contract")
 	}
-	assert.Equal(t, 0, len(vtr.serviceChainEvents))
+	assert.Equal(t, 0, len(vtr.childEvents))
 	assert.Equal(t, nil, vtr.Recover()) // nothing to recover
 }
 
