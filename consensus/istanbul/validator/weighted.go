@@ -590,7 +590,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 	if err != nil {
 		return err
 	}
-	totalStaking := calcTotalAmount(newStakingInfo, stakingAmounts)
+	totalStaking := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
 	calcWeight(weightedValidators, stakingAmounts, totalStaking)
 
 	valSet.refreshProposers(seed, blockNum)
@@ -647,13 +647,20 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 
 // calcTotalAmount calculates totalAmount of stakingAmounts.
 // If UseGini is true, gini is reflected to stakingAmounts.
-func calcTotalAmount(stakingInfo *reward.StakingInfo, stakingAmounts []float64) float64 {
+func calcTotalAmount(weightedValidators []*weightedValidator, stakingInfo *reward.StakingInfo, stakingAmounts []float64) float64 {
 	if len(stakingInfo.CouncilNodeAddrs) == 0 {
 		return 0
 	}
 	totalStaking := float64(0)
 	if stakingInfo.UseGini {
-		stakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
+		var tempStakingAmounts []float64
+		for vIdx, val := range weightedValidators {
+			_, err := stakingInfo.GetIndexByNodeAddress(val.address)
+			if err == nil {
+				tempStakingAmounts = append(tempStakingAmounts, stakingAmounts[vIdx])
+			}
+		}
+		stakingInfo.Gini = reward.CalcGiniCoefficient(tempStakingAmounts)
 
 		for i := range stakingAmounts {
 			stakingAmounts[i] = math.Round(math.Pow(stakingAmounts[i], 1.0/(1+stakingInfo.Gini)))
