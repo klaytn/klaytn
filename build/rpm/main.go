@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/klaytn/klaytn/params"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 	"os"
 	"strings"
 	"text/template"
