@@ -735,25 +735,6 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 	return logs
 }
 
-// GetBlocksFromHash returns the block corresponding to hash and up to n-1 ancestors.
-// [deprecated by klay/62]
-func (bc *BlockChain) GetBlocksFromHash(hash common.Hash, n int) (blocks []*types.Block) {
-	number := bc.GetBlockNumber(hash)
-	if number == nil {
-		return nil
-	}
-	for i := 0; i < n; i++ {
-		block := bc.GetBlock(hash, *number)
-		if block == nil {
-			break
-		}
-		blocks = append(blocks, block)
-		hash = block.ParentHash()
-		*number--
-	}
-	return
-}
-
 // TrieNode retrieves a blob of data associated with a trie node (or code hash)
 // either from ephemeral in-memory cache, or from persistent storage.
 func (bc *BlockChain) TrieNode(hash common.Hash) ([]byte, error) {
