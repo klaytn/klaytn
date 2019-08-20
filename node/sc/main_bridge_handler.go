@@ -134,7 +134,7 @@ func (mbh *MainBridgeHandler) handleServiceChainParentChainInfoRequestMsg(p Brid
 	nonce := mbh.mainbridge.txPool.GetPendingNonce(addr)
 	pcInfo := parentChainInfo{nonce, mbh.mainbridge.blockchain.Config().UnitPrice}
 	p.SendServiceChainInfoResponse(&pcInfo)
-	logger.Info("SendServiceChainInfoResponse", "mcBridgeAccoount", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
+	logger.Info("SendServiceChainInfoResponse", "pBridgeAccoount", addr, "nonce", pcInfo.Nonce, "gasPrice", pcInfo.GasPrice)
 	return nil
 }
 

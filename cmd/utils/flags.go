@@ -477,7 +477,7 @@ var (
 	}
 	AnchoringPeriodFlag = cli.Uint64Flag{
 		Name:  "chaintxperiod",
-		Usage: "The period to make and send a chain transaction to the main chain",
+		Usage: "The period to make and send a chain transaction to the parent chain",
 		Value: 1,
 	}
 	SentChainTxsLimit = cli.Uint64Flag{
@@ -566,7 +566,7 @@ var (
 	}
 	ServiceChainNewAccountFlag = cli.BoolFlag{
 		Name:  "scnewaccount",
-		Usage: "Enable account creation for the service chain (default: false). If set true, generated account can't be synced with the main chain.",
+		Usage: "Enable account creation for the service chain (default: false). If set true, generated account can't be synced with the parent chain.",
 	}
 	ServiceChainConsensusFlag = cli.StringFlag{
 		Name:  "scconsensus",

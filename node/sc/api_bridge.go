@@ -35,21 +35,21 @@ var (
 
 // MainBridgeAPI Implementation for main-bridge node
 type MainBridgeAPI struct {
-	sc *MainBridge
+	mainBridge *MainBridge
 }
 
-func (mbapi *MainBridgeAPI) GetChildChainIndexingEnabled() bool {
-	return mbapi.sc.eventhandler.GetChildChainIndexingEnabled()
+func (mb *MainBridgeAPI) GetChildChainIndexingEnabled() bool {
+	return mb.mainBridge.eventhandler.GetChildChainIndexingEnabled()
 }
 
-func (mbapi *MainBridgeAPI) ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash common.Hash) common.Hash {
-	return mbapi.sc.eventhandler.ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash)
+func (mb *MainBridgeAPI) ConvertChildChainBlockHashToParentChainTxHash(scBlockHash common.Hash) common.Hash {
+	return mb.mainBridge.eventhandler.ConvertChildChainBlockHashToParentChainTxHash(scBlockHash)
 }
 
 // Peers retrieves all the information we know about each individual peer at the
 // protocol granularity.
-func (mbapi *MainBridgeAPI) Peers() ([]*p2p.PeerInfo, error) {
-	server := mbapi.sc.bridgeServer
+func (mb *MainBridgeAPI) Peers() ([]*p2p.PeerInfo, error) {
+	server := mb.mainBridge.bridgeServer
 	if server == nil {
 		return nil, node.ErrNodeStopped
 	}
@@ -58,8 +58,8 @@ func (mbapi *MainBridgeAPI) Peers() ([]*p2p.PeerInfo, error) {
 
 // NodeInfo retrieves all the information we know about the host node at the
 // protocol granularity.
-func (mbapi *MainBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
-	server := mbapi.sc.bridgeServer
+func (mb *MainBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
+	server := mb.mainBridge.bridgeServer
 	if server == nil {
 		return nil, node.ErrNodeStopped
 	}
@@ -68,47 +68,47 @@ func (mbapi *MainBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
 
 // SubBridgeAPI Implementation for sub-bridge node
 type SubBridgeAPI struct {
-	sc *SubBridge
+	subBridge *SubBridge
 }
 
-func (sbapi *SubBridgeAPI) ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash common.Hash) common.Hash {
-	return sbapi.sc.eventhandler.ConvertServiceChainBlockHashToMainChainTxHash(scBlockHash)
+func (sb *SubBridgeAPI) ConvertChildChainBlockHashToParentChainTxHash(cBlockHash common.Hash) common.Hash {
+	return sb.subBridge.eventhandler.ConvertChildChainBlockHashToParentChainTxHash(cBlockHash)
 }
 
-func (sbapi *SubBridgeAPI) GetLatestAnchoredBlockNumber() uint64 {
-	return sbapi.sc.handler.GetLatestAnchoredBlockNumber()
+func (sb *SubBridgeAPI) GetLatestAnchoredBlockNumber() uint64 {
+	return sb.subBridge.handler.GetLatestAnchoredBlockNumber()
 }
 
-func (sbapi *SubBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
-	return sbapi.sc.handler.GetReceiptFromParentChain(blockHash)
+func (sb *SubBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *types.Receipt {
+	return sb.subBridge.handler.GetReceiptFromParentChain(blockHash)
 }
 
-func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
-	cBridge, cBridgeAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.localBackend, true)
+func (sb *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
+	cBridge, cBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(sb.subBridge.localBackend, true)
 	if err != nil {
-		logger.Error("Failed to deploy service chain bridge.", "err", err)
+		logger.Error("Failed to deploy child bridge.", "err", err)
 		return nil, err
 	}
-	pBridge, pBridgeAddr, err := sbapi.sc.bridgeManager.DeployBridge(sbapi.sc.remoteBackend, false)
+	pBridge, pBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(sb.subBridge.remoteBackend, false)
 	if err != nil {
-		logger.Error("Failed to deploy main chain bridge.", "err", err)
-		return nil, err
-	}
-
-	pAcc := sbapi.sc.bridgeAccounts.pAccount
-	cAcc := sbapi.sc.bridgeAccounts.cAccount
-
-	err = sbapi.sc.bridgeManager.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, cAcc, true, false)
-	if err != nil {
+		logger.Error("Failed to deploy parent bridge.", "err", err)
 		return nil, err
 	}
 
-	err = sbapi.sc.bridgeManager.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridge, pAcc, false, false)
+	pAcc := sb.subBridge.bridgeAccounts.pAccount
+	cAcc := sb.subBridge.bridgeAccounts.cAccount
+
+	err = sb.subBridge.bridgeManager.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, cAcc, true, false)
 	if err != nil {
 		return nil, err
 	}
 
-	err = sbapi.sc.bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
+	err = sb.subBridge.bridgeManager.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridge, pAcc, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sb.subBridge.bridgeManager.SetJournal(cBridgeAddr, pBridgeAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -116,76 +116,76 @@ func (sbapi *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 	return []common.Address{cBridgeAddr, pBridgeAddr}, nil
 }
 
-// SubscribeBridge enables the given service/main chain bridges to subscribe the events.
-func (sbapi *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
-	if !sbapi.sc.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
+// SubscribeBridge enables the given child/parent chain bridges to subscribe the events.
+func (sb *SubBridgeAPI) SubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
+	if !sb.subBridge.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
 
-	err := sbapi.sc.bridgeManager.SubscribeEvent(cBridgeAddr)
+	err := sb.subBridge.bridgeManager.SubscribeEvent(cBridgeAddr)
 	if err != nil {
 		logger.Error("Failed to SubscribeEvent child bridge", "addr", cBridgeAddr, "err", err)
 		return err
 	}
 
-	err = sbapi.sc.bridgeManager.SubscribeEvent(pBridgeAddr)
+	err = sb.subBridge.bridgeManager.SubscribeEvent(pBridgeAddr)
 	if err != nil {
 		logger.Error("Failed to SubscribeEvent parent bridge", "addr", pBridgeAddr, "err", err)
-		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
+		sb.subBridge.bridgeManager.UnsubscribeEvent(cBridgeAddr)
 		return err
 	}
 
-	sbapi.sc.bridgeManager.journal.cache[cBridgeAddr].Subscribed = true
+	sb.subBridge.bridgeManager.journal.cache[cBridgeAddr].Subscribed = true
 
 	// Update the journal's subscribed flag.
-	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
+	sb.subBridge.bridgeManager.journal.rotate(sb.subBridge.bridgeManager.GetAllBridge())
 
-	err = sbapi.sc.bridgeManager.AddRecovery(cBridgeAddr, pBridgeAddr)
+	err = sb.subBridge.bridgeManager.AddRecovery(cBridgeAddr, pBridgeAddr)
 	if err != nil {
-		sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
-		sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)
+		sb.subBridge.bridgeManager.UnsubscribeEvent(cBridgeAddr)
+		sb.subBridge.bridgeManager.UnsubscribeEvent(pBridgeAddr)
 		return err
 	}
 	return nil
 }
 
-// UnsubscribeBridge disables the event subscription of the given service/main chain bridges.
-func (sbapi *SubBridgeAPI) UnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
-	if !sbapi.sc.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
+// UnsubscribeBridge disables the event subscription of the given child/parent chain bridges.
+func (sb *SubBridgeAPI) UnsubscribeBridge(cBridgeAddr, pBridgeAddr common.Address) error {
+	if !sb.subBridge.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
 
-	sbapi.sc.bridgeManager.UnsubscribeEvent(cBridgeAddr)
-	sbapi.sc.bridgeManager.UnsubscribeEvent(pBridgeAddr)
+	sb.subBridge.bridgeManager.UnsubscribeEvent(cBridgeAddr)
+	sb.subBridge.bridgeManager.UnsubscribeEvent(pBridgeAddr)
 
-	sbapi.sc.bridgeManager.journal.cache[cBridgeAddr].Subscribed = false
+	sb.subBridge.bridgeManager.journal.cache[cBridgeAddr].Subscribed = false
 
-	sbapi.sc.bridgeManager.journal.rotate(sbapi.sc.bridgeManager.GetAllBridge())
+	sb.subBridge.bridgeManager.journal.rotate(sb.subBridge.bridgeManager.GetAllBridge())
 	return nil
 }
 
-func (sbapi *SubBridgeAPI) ConvertRequestTxHashToHandleTxHash(hash common.Hash) common.Hash {
-	return sbapi.sc.chainDB.ReadHandleTxHashFromRequestTxHash(hash)
+func (sb *SubBridgeAPI) ConvertRequestTxHashToHandleTxHash(hash common.Hash) common.Hash {
+	return sb.subBridge.chainDB.ReadHandleTxHashFromRequestTxHash(hash)
 }
 
-func (sbapi *SubBridgeAPI) TxPendingCount() int {
-	return sbapi.sc.GetBridgeTxPool().Stats()
+func (sb *SubBridgeAPI) TxPendingCount() int {
+	return sb.subBridge.GetBridgeTxPool().Stats()
 }
 
-func (sbapi *SubBridgeAPI) TxPending() map[common.Address]types.Transactions {
-	return sbapi.sc.GetBridgeTxPool().Pending()
+func (sb *SubBridgeAPI) TxPending() map[common.Address]types.Transactions {
+	return sb.subBridge.GetBridgeTxPool().Pending()
 }
 
-func (sbapi *SubBridgeAPI) ListBridge() []*BridgeJournal {
-	return sbapi.sc.bridgeManager.GetAllBridge()
+func (sb *SubBridgeAPI) ListBridge() []*BridgeJournal {
+	return sb.subBridge.bridgeManager.GetAllBridge()
 }
 
-func (sbapi *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[string]interface{}, error) {
-	if ctBridge := sbapi.sc.bridgeManager.GetCounterPartBridgeAddr(bridgeAddr); ctBridge == (common.Address{}) {
+func (sb *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[string]interface{}, error) {
+	if ctBridge := sb.subBridge.bridgeManager.GetCounterPartBridgeAddr(bridgeAddr); ctBridge == (common.Address{}) {
 		return nil, ErrInvalidBridgePair
 	}
 
-	bi, ok := sbapi.sc.bridgeManager.GetBridgeInfo(bridgeAddr)
+	bi, ok := sb.subBridge.bridgeManager.GetBridgeInfo(bridgeAddr)
 	if !ok {
 		return nil, ErrNoBridgeInfo
 	}
@@ -197,36 +197,36 @@ func (sbapi *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[
 		"requestNonce":     bi.requestNonceFromCounterPart,
 		"handleNonce":      bi.handleNonce,
 		"counterPart":      bi.counterpartAddress,
-		"onServiceChain":   bi.onServiceChain,
+		"onServiceChain":   bi.onChildChain,
 		"isSubscribed":     bi.subscribed,
 		"pendingEventSize": bi.pendingRequestEvent.Len(),
 	}, nil
 }
 
-func (sbapi *SubBridgeAPI) Anchoring(flag bool) bool {
-	return sbapi.sc.SetAnchoringTx(flag)
+func (sb *SubBridgeAPI) Anchoring(flag bool) bool {
+	return sb.subBridge.SetAnchoringTx(flag)
 }
 
-func (sbapi *SubBridgeAPI) GetAnchoring() bool {
-	return sbapi.sc.GetAnchoringTx()
+func (sb *SubBridgeAPI) GetAnchoring() bool {
+	return sb.subBridge.GetAnchoringTx()
 }
 
-func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
-	cBridge, err := bridge.NewBridge(cBridgeAddr, sbapi.sc.localBackend)
+func (sb *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
+	cBridge, err := bridge.NewBridge(cBridgeAddr, sb.subBridge.localBackend)
 	if err != nil {
 		return err
 	}
-	pBridge, err := bridge.NewBridge(pBridgeAddr, sbapi.sc.remoteBackend)
+	pBridge, err := bridge.NewBridge(pBridgeAddr, sb.subBridge.remoteBackend)
 	if err != nil {
 		return err
 	}
 
-	bm := sbapi.sc.bridgeManager
-	err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, sbapi.sc.bridgeAccounts.cAccount, true, false)
+	bm := sb.subBridge.bridgeManager
+	err = bm.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, sb.subBridge.bridgeAccounts.cAccount, true, false)
 	if err != nil {
 		return err
 	}
-	err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridge, sbapi.sc.bridgeAccounts.pAccount, false, false)
+	err = bm.SetBridgeInfo(pBridgeAddr, pBridge, cBridgeAddr, cBridge, sb.subBridge.bridgeAccounts.pAccount, false, false)
 	if err != nil {
 		bm.DeleteBridgeInfo(cBridgeAddr)
 		return err
@@ -240,17 +240,17 @@ func (sbapi *SubBridgeAPI) RegisterBridge(cBridgeAddr common.Address, pBridgeAdd
 	return nil
 }
 
-func (sbapi *SubBridgeAPI) DeregisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
-	if !sbapi.sc.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
+func (sb *SubBridgeAPI) DeregisterBridge(cBridgeAddr common.Address, pBridgeAddr common.Address) error {
+	if !sb.subBridge.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
 
-	bm := sbapi.sc.bridgeManager
+	bm := sb.subBridge.bridgeManager
 	journal := bm.journal.cache[cBridgeAddr]
 
 	if journal.Subscribed {
-		bm.UnsubscribeEvent(journal.LocalAddress)
-		bm.UnsubscribeEvent(journal.RemoteAddress)
+		bm.UnsubscribeEvent(journal.ChildAddress)
+		bm.UnsubscribeEvent(journal.ParentAddress)
 
 		bm.DeleteRecovery(cBridgeAddr, pBridgeAddr)
 	}
@@ -258,27 +258,27 @@ func (sbapi *SubBridgeAPI) DeregisterBridge(cBridgeAddr common.Address, pBridgeA
 	delete(bm.journal.cache, cBridgeAddr)
 
 	if err := bm.journal.rotate(bm.GetAllBridge()); err != nil {
-		logger.Warn("failed to rotate bridge journal", "err", err, "scBridge", cBridgeAddr.String(), "mcBridge", pBridgeAddr.String())
+		logger.Warn("failed to rotate bridge journal", "err", err, "cBridge", cBridgeAddr.String(), "pBridge", pBridgeAddr.String())
 	}
 
 	if err := bm.DeleteBridgeInfo(cBridgeAddr); err != nil {
-		logger.Warn("failed to Delete service chain bridge info", "err", err, "bridge", cBridgeAddr.String())
+		logger.Warn("failed to Delete child chain bridge info", "err", err, "bridge", cBridgeAddr.String())
 	}
 
 	if err := bm.DeleteBridgeInfo(pBridgeAddr); err != nil {
-		logger.Warn("failed to Delete main chain bridge info", "err", err, "bridge", pBridgeAddr.String())
+		logger.Warn("failed to Delete parent chain bridge info", "err", err, "bridge", pBridgeAddr.String())
 	}
 
 	return nil
 }
 
-func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
-	if !sbapi.sc.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
+func (sb *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
+	if !sb.subBridge.bridgeManager.IsValidBridgePair(cBridgeAddr, pBridgeAddr) {
 		return ErrInvalidBridgePair
 	}
 
-	cBi, cExist := sbapi.sc.bridgeManager.GetBridgeInfo(cBridgeAddr)
-	pBi, pExist := sbapi.sc.bridgeManager.GetBridgeInfo(pBridgeAddr)
+	cBi, cExist := sb.subBridge.bridgeManager.GetBridgeInfo(cBridgeAddr)
+	pBi, pExist := sb.subBridge.bridgeManager.GetBridgeInfo(pBridgeAddr)
 
 	if !cExist || !pExist {
 		return errors.New("bridge does not exist")
@@ -302,7 +302,7 @@ func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, p
 	}
 	cBi.account.IncNonce()
 	cBi.account.UnLock()
-	logger.Debug("scBridge registered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
+	logger.Debug("cBridge registered token", "txHash", tx.Hash().String(), "cToken", cTokenAddr.String(), "pToken", pTokenAddr.String())
 
 	pBi.account.Lock()
 	tx, err = pBi.bridge.RegisterToken(pBi.account.GetTransactOpts(), pTokenAddr, cTokenAddr)
@@ -312,44 +312,44 @@ func (sbapi *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, p
 	}
 	pBi.account.IncNonce()
 	pBi.account.UnLock()
-	logger.Debug("mcBridge registered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
+	logger.Debug("pBridge registered token", "txHash", tx.Hash().String(), "cToken", cTokenAddr.String(), "pToken", pTokenAddr.String())
 
-	logger.Info("Register token", "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
+	logger.Info("Register token", "cToken", cTokenAddr.String(), "pToken", pTokenAddr.String())
 	return nil
 }
 
-func (sbapi *SubBridgeAPI) GetParentTransactionReceipt(txHash common.Hash) (map[string]interface{}, error) {
+func (sb *SubBridgeAPI) GetParentTransactionReceipt(txHash common.Hash) (map[string]interface{}, error) {
 	ctx := context.Background()
-	return sbapi.sc.remoteBackend.(RemoteBackendInterface).TransactionReceiptRpcOutput(ctx, txHash)
+	return sb.subBridge.remoteBackend.(RemoteBackendInterface).TransactionReceiptRpcOutput(ctx, txHash)
 }
 
-func (sbapi *SubBridgeAPI) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *big.Int) (common.Hash, error) {
-	return sbapi.sc.bridgeManager.SetERC20Fee(bridgeAddr, tokenAddr, fee)
+func (sb *SubBridgeAPI) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *big.Int) (common.Hash, error) {
+	return sb.subBridge.bridgeManager.SetERC20Fee(bridgeAddr, tokenAddr, fee)
 }
 
-func (sbapi *SubBridgeAPI) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (common.Hash, error) {
-	return sbapi.sc.bridgeManager.SetKLAYFee(bridgeAddr, fee)
+func (sb *SubBridgeAPI) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (common.Hash, error) {
+	return sb.subBridge.bridgeManager.SetKLAYFee(bridgeAddr, fee)
 }
 
-func (sbapi *SubBridgeAPI) SetFeeReceiver(bridgeAddr, receiver common.Address) (common.Hash, error) {
-	return sbapi.sc.bridgeManager.SetFeeReceiver(bridgeAddr, receiver)
+func (sb *SubBridgeAPI) SetFeeReceiver(bridgeAddr, receiver common.Address) (common.Hash, error) {
+	return sb.subBridge.bridgeManager.SetFeeReceiver(bridgeAddr, receiver)
 }
 
-func (sbapi *SubBridgeAPI) GetERC20Fee(bridgeAddr, tokenAddr common.Address) (*big.Int, error) {
-	return sbapi.sc.bridgeManager.GetERC20Fee(bridgeAddr, tokenAddr)
+func (sb *SubBridgeAPI) GetERC20Fee(bridgeAddr, tokenAddr common.Address) (*big.Int, error) {
+	return sb.subBridge.bridgeManager.GetERC20Fee(bridgeAddr, tokenAddr)
 }
 
-func (sbapi *SubBridgeAPI) GetKLAYFee(bridgeAddr common.Address) (*big.Int, error) {
-	return sbapi.sc.bridgeManager.GetKLAYFee(bridgeAddr)
+func (sb *SubBridgeAPI) GetKLAYFee(bridgeAddr common.Address) (*big.Int, error) {
+	return sb.subBridge.bridgeManager.GetKLAYFee(bridgeAddr)
 }
 
-func (sbapi *SubBridgeAPI) GetFeeReceiver(bridgeAddr common.Address) (common.Address, error) {
-	return sbapi.sc.bridgeManager.GetFeeReceiver(bridgeAddr)
+func (sb *SubBridgeAPI) GetFeeReceiver(bridgeAddr common.Address) (common.Address, error) {
+	return sb.subBridge.bridgeManager.GetFeeReceiver(bridgeAddr)
 }
 
-func (sbapi *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
-	cBi, cExist := sbapi.sc.bridgeManager.GetBridgeInfo(cBridgeAddr)
-	pBi, pExist := sbapi.sc.bridgeManager.GetBridgeInfo(pBridgeAddr)
+func (sb *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTokenAddr common.Address) error {
+	cBi, cExist := sb.subBridge.bridgeManager.GetBridgeInfo(cBridgeAddr)
+	pBi, pExist := sb.subBridge.bridgeManager.GetBridgeInfo(pBridgeAddr)
 
 	if !cExist || !pExist {
 		return errors.New("bridge does not exist")
@@ -372,7 +372,7 @@ func (sbapi *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr,
 		return err
 	}
 	cBi.account.IncNonce()
-	logger.Debug("scBridge deregistered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
+	logger.Debug("cBridge deregistered token", "txHash", tx.Hash().String(), "cToken", cTokenAddr.String(), "pToken", pTokenAddr.String())
 
 	pBi.account.Lock()
 	defer pBi.account.UnLock()
@@ -381,15 +381,15 @@ func (sbapi *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr,
 		return err
 	}
 	pBi.account.IncNonce()
-	logger.Debug("mcBridge deregistered token", "txHash", tx.Hash().String(), "scToken", cTokenAddr.String(), "mcToken", pTokenAddr.String())
+	logger.Debug("pBridge deregistered token", "txHash", tx.Hash().String(), "cToken", cTokenAddr.String(), "pToken", pTokenAddr.String())
 	return err
 }
 
 // AddPeer requests connecting to a remote node, and also maintaining the new
 // connection at all times, even reconnecting if it is lost.
-func (sbapi *SubBridgeAPI) AddPeer(url string) (bool, error) {
+func (sb *SubBridgeAPI) AddPeer(url string) (bool, error) {
 	// Make sure the server is running, fail otherwise
-	server := sbapi.sc.bridgeServer
+	server := sb.subBridge.bridgeServer
 	if server == nil {
 		return false, node.ErrNodeStopped
 	}
@@ -413,9 +413,9 @@ func addPeerInternal(server p2p.Server, url string) (*discover.Node, error) {
 }
 
 // RemovePeer disconnects from a a remote node if the connection exists
-func (sbapi *SubBridgeAPI) RemovePeer(url string) (bool, error) {
+func (sb *SubBridgeAPI) RemovePeer(url string) (bool, error) {
 	// Make sure the server is running, fail otherwise
-	server := sbapi.sc.bridgeServer
+	server := sb.subBridge.bridgeServer
 	if server == nil {
 		return false, node.ErrNodeStopped
 	}
@@ -430,8 +430,8 @@ func (sbapi *SubBridgeAPI) RemovePeer(url string) (bool, error) {
 
 // Peers retrieves all the information we know about each individual peer at the
 // protocol granularity.
-func (sbapi *SubBridgeAPI) Peers() ([]*p2p.PeerInfo, error) {
-	server := sbapi.sc.bridgeServer
+func (sb *SubBridgeAPI) Peers() ([]*p2p.PeerInfo, error) {
+	server := sb.subBridge.bridgeServer
 	if server == nil {
 		return nil, node.ErrNodeStopped
 	}
@@ -440,59 +440,59 @@ func (sbapi *SubBridgeAPI) Peers() ([]*p2p.PeerInfo, error) {
 
 // NodeInfo retrieves all the information we know about the host node at the
 // protocol granularity.
-func (sbapi *SubBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
-	server := sbapi.sc.bridgeServer
+func (sb *SubBridgeAPI) NodeInfo() (*p2p.NodeInfo, error) {
+	server := sb.subBridge.bridgeServer
 	if server == nil {
 		return nil, node.ErrNodeStopped
 	}
 	return server.NodeInfo(), nil
 }
 
-func (sbapi *SubBridgeAPI) GetMainChainAccountAddr() string {
-	return sbapi.sc.bridgeAccounts.pAccount.address.String()
+func (sb *SubBridgeAPI) GetParentOperatorAddr() common.Address {
+	return sb.subBridge.bridgeAccounts.pAccount.address
 }
 
-func (sbapi *SubBridgeAPI) GetServiceChainAccountAddr() string {
-	return sbapi.sc.bridgeAccounts.cAccount.address.String()
+func (sb *SubBridgeAPI) GetChildOperatorAddr() common.Address {
+	return sb.subBridge.bridgeAccounts.cAccount.address
 }
 
-func (sbapi *SubBridgeAPI) GetMainChainAccountNonce() uint64 {
-	return sbapi.sc.handler.getMainChainAccountNonce()
+func (sb *SubBridgeAPI) GetParentOperatorNonce() uint64 {
+	return sb.subBridge.handler.getParentOperatorNonce()
 }
 
-func (sbapi *SubBridgeAPI) GetServiceChainAccountNonce() uint64 {
-	return sbapi.sc.handler.getServiceChainAccountNonce()
+func (sb *SubBridgeAPI) GetChildOperatorNonce() uint64 {
+	return sb.subBridge.handler.getChildOperatorNonce()
 }
 
 // GetOperators returns the information of bridge operators.
-func (sbapi *SubBridgeAPI) GetOperators() map[string]interface{} {
-	return sbapi.sc.bridgeAccounts.GetBridgeOperators()
+func (sb *SubBridgeAPI) GetOperators() map[string]interface{} {
+	return sb.subBridge.bridgeAccounts.GetBridgeOperators()
 }
 
 // LockParentOperator can lock the parent bridge operator.
-func (sbapi *SubBridgeAPI) LockParentOperator() error {
-	return sbapi.sc.bridgeAccounts.pAccount.LockAccount()
+func (sb *SubBridgeAPI) LockParentOperator() error {
+	return sb.subBridge.bridgeAccounts.pAccount.LockAccount()
 }
 
 // LockChildOperator can lock the child bridge operator.
-func (sbapi *SubBridgeAPI) LockChildOperator() error {
-	return sbapi.sc.bridgeAccounts.cAccount.LockAccount()
+func (sb *SubBridgeAPI) LockChildOperator() error {
+	return sb.subBridge.bridgeAccounts.cAccount.LockAccount()
 }
 
 // UnlockParentOperator can unlock the parent bridge operator.
-func (sbapi *SubBridgeAPI) UnlockParentOperator(passphrase string) error {
-	return sbapi.sc.bridgeAccounts.pAccount.UnLockAccount(passphrase)
+func (sb *SubBridgeAPI) UnlockParentOperator(passphrase string) error {
+	return sb.subBridge.bridgeAccounts.pAccount.UnLockAccount(passphrase)
 }
 
 // UnlockChildOperator can unlock the child bridge operator.
-func (sbapi *SubBridgeAPI) UnlockChildOperator(passphrase string) error {
-	return sbapi.sc.bridgeAccounts.cAccount.UnLockAccount(passphrase)
+func (sb *SubBridgeAPI) UnlockChildOperator(passphrase string) error {
+	return sb.subBridge.bridgeAccounts.cAccount.UnLockAccount(passphrase)
 }
 
-func (sbapi *SubBridgeAPI) GetAnchoringPeriod() uint64 {
-	return sbapi.sc.config.AnchoringPeriod
+func (sb *SubBridgeAPI) GetAnchoringPeriod() uint64 {
+	return sb.subBridge.config.AnchoringPeriod
 }
 
-func (sbapi *SubBridgeAPI) GetSentChainTxsLimit() uint64 {
-	return sbapi.sc.config.SentChainTxsLimit
+func (sb *SubBridgeAPI) GetSentChainTxsLimit() uint64 {
+	return sb.subBridge.config.SentChainTxsLimit
 }

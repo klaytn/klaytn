@@ -47,7 +47,7 @@ type accountInfo struct {
 	mu            sync.RWMutex
 }
 
-// BridgeAccounts manages bridge account for main/service chain.
+// BridgeAccounts manages bridge account for parent/child chain.
 type BridgeAccounts struct {
 	pAccount *accountInfo
 	cAccount *accountInfo

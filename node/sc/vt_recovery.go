@@ -39,14 +39,14 @@ type valueTransferRecovery struct {
 	isRunning bool           // to check duplicated start
 	wg        sync.WaitGroup // wait group to handle the Stop() sync
 
-	service2mainHint   *valueTransferHint
-	main2serviceHint   *valueTransferHint
-	serviceChainEvents []*RequestValueTransferEvent
-	mainChainEvents    []*RequestValueTransferEvent
+	child2parentHint *valueTransferHint
+	parent2childHint *valueTransferHint
+	childEvents      []*RequestValueTransferEvent
+	parentEvents     []*RequestValueTransferEvent
 
-	config       *SCConfig
-	scBridgeInfo *BridgeInfo
-	mcBridgeInfo *BridgeInfo
+	config      *SCConfig
+	cBridgeInfo *BridgeInfo
+	pBridgeInfo *BridgeInfo
 }
 
 var (
@@ -55,18 +55,18 @@ var (
 )
 
 // NewValueTransferRecovery creates a new value transfer recovery structure.
-func NewValueTransferRecovery(config *SCConfig, scBridgeInfo, mcBridgeInfo *BridgeInfo) *valueTransferRecovery {
+func NewValueTransferRecovery(config *SCConfig, cBridgeInfo, pBridgeInfo *BridgeInfo) *valueTransferRecovery {
 	return &valueTransferRecovery{
-		stopCh:             make(chan interface{}),
-		isRunning:          false,
-		wg:                 sync.WaitGroup{},
-		service2mainHint:   &valueTransferHint{},
-		main2serviceHint:   &valueTransferHint{},
-		serviceChainEvents: []*RequestValueTransferEvent{},
-		mainChainEvents:    []*RequestValueTransferEvent{},
-		config:             config,
-		scBridgeInfo:       scBridgeInfo,
-		mcBridgeInfo:       mcBridgeInfo,
+		stopCh:           make(chan interface{}),
+		isRunning:        false,
+		wg:               sync.WaitGroup{},
+		child2parentHint: &valueTransferHint{},
+		parent2childHint: &valueTransferHint{},
+		childEvents:      []*RequestValueTransferEvent{},
+		parentEvents:     []*RequestValueTransferEvent{},
+		config:           config,
+		cBridgeInfo:      cBridgeInfo,
+		pBridgeInfo:      pBridgeInfo,
 	}
 }
 
@@ -150,33 +150,33 @@ func (vtr *valueTransferRecovery) Recover() error {
 }
 
 // updateRecoveryHint updates hints for value transfers on the both side.
-// One is from service chain to main chain, the other is from main chain to service chain value transfers.
+// One is from child chain to parent chain, the other is from parent chain to child chain value transfers.
 // The hint includes a block number to begin search, request nonce and handle nonce.
 func (vtr *valueTransferRecovery) updateRecoveryHint() error {
-	if vtr.scBridgeInfo == nil {
-		return errors.New("service chain bridge is nil")
+	if vtr.cBridgeInfo == nil {
+		return errors.New("child chain bridge is nil")
 	}
-	if vtr.mcBridgeInfo == nil {
-		return errors.New("main chain bridge is nil")
+	if vtr.pBridgeInfo == nil {
+		return errors.New("parent chain bridge is nil")
 	}
 
 	var err error
-	vtr.service2mainHint, err = updateRecoveryHintFromTo(vtr.service2mainHint, vtr.scBridgeInfo, vtr.mcBridgeInfo)
+	vtr.child2parentHint, err = updateRecoveryHintFromTo(vtr.child2parentHint, vtr.cBridgeInfo, vtr.pBridgeInfo)
 	if err != nil {
 		return err
 	}
 
-	vtr.main2serviceHint, err = updateRecoveryHintFromTo(vtr.main2serviceHint, vtr.mcBridgeInfo, vtr.scBridgeInfo)
+	vtr.parent2childHint, err = updateRecoveryHintFromTo(vtr.parent2childHint, vtr.pBridgeInfo, vtr.cBridgeInfo)
 	if err != nil {
 		return err
 	}
 
 	// Update the hint for the initial status.
 	if !vtr.isRunning {
-		vtr.service2mainHint.prevHandleNonce = vtr.service2mainHint.handleNonce
-		vtr.main2serviceHint.prevHandleNonce = vtr.main2serviceHint.handleNonce
-		vtr.service2mainHint.candidate = true
-		vtr.main2serviceHint.candidate = true
+		vtr.child2parentHint.prevHandleNonce = vtr.child2parentHint.handleNonce
+		vtr.parent2childHint.prevHandleNonce = vtr.parent2childHint.handleNonce
+		vtr.child2parentHint.candidate = true
+		vtr.parent2childHint.candidate = true
 	}
 
 	return nil
@@ -218,19 +218,19 @@ func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *BridgeInfo)
 	return &hint, nil
 }
 
-// retrievePendingEvents retrieves pending events on the service chain or main chain.
+// retrievePendingEvents retrieves pending events on the child chain or parent chain.
 // The pending event is the value transfer without processing HandleValueTransfer.
 func (vtr *valueTransferRecovery) retrievePendingEvents() error {
-	if vtr.scBridgeInfo.bridge == nil {
+	if vtr.cBridgeInfo.bridge == nil {
 		return errors.New("bridge is nil")
 	}
 
 	var err error
-	vtr.serviceChainEvents, err = retrievePendingEventsFrom(vtr.service2mainHint, vtr.scBridgeInfo.bridge)
+	vtr.childEvents, err = retrievePendingEventsFrom(vtr.child2parentHint, vtr.cBridgeInfo.bridge)
 	if err != nil {
 		return err
 	}
-	vtr.mainChainEvents, err = retrievePendingEventsFrom(vtr.main2serviceHint, vtr.mcBridgeInfo.bridge)
+	vtr.parentEvents, err = retrievePendingEventsFrom(vtr.parent2childHint, vtr.pBridgeInfo.bridge)
 	if err != nil {
 		return err
 	}
@@ -301,25 +301,25 @@ func checkRecoveryCondition(hint *valueTransferHint) bool {
 // recoverPendingEvents recovers all pending events by resending them.
 func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	defer func() {
-		vtr.serviceChainEvents = []*RequestValueTransferEvent{}
-		vtr.mainChainEvents = []*RequestValueTransferEvent{}
+		vtr.childEvents = []*RequestValueTransferEvent{}
+		vtr.parentEvents = []*RequestValueTransferEvent{}
 	}()
 
-	if len(vtr.serviceChainEvents) > 0 {
-		logger.Warn("try to recover service chain's request events", "scBridge", vtr.scBridgeInfo.address.String(), "events", len(vtr.serviceChainEvents))
+	if len(vtr.childEvents) > 0 {
+		logger.Warn("try to recover child chain's request events", "cBridge", vtr.cBridgeInfo.address.String(), "events", len(vtr.childEvents))
 	}
 
-	vtRequestEventMeter.Mark(int64(len(vtr.serviceChainEvents)))
-	vtRecoveredRequestEventMeter.Mark(int64(len(vtr.serviceChainEvents)))
+	vtRequestEventMeter.Mark(int64(len(vtr.childEvents)))
+	vtRecoveredRequestEventMeter.Mark(int64(len(vtr.childEvents)))
 
-	vtr.mcBridgeInfo.AddRequestValueTransferEvents(vtr.serviceChainEvents)
+	vtr.pBridgeInfo.AddRequestValueTransferEvents(vtr.childEvents)
 
-	if len(vtr.mainChainEvents) > 0 {
-		logger.Warn("try to recover main chain's request events", "mcBridge", vtr.mcBridgeInfo.address.String(), "events", len(vtr.mainChainEvents))
+	if len(vtr.parentEvents) > 0 {
+		logger.Warn("try to recover parent chain's request events", "pBridge", vtr.pBridgeInfo.address.String(), "events", len(vtr.parentEvents))
 	}
 
-	vtHandleEventMeter.Mark(int64(len(vtr.mainChainEvents)))
-	vtr.scBridgeInfo.AddRequestValueTransferEvents(vtr.mainChainEvents)
+	vtHandleEventMeter.Mark(int64(len(vtr.parentEvents)))
+	vtr.cBridgeInfo.AddRequestValueTransferEvents(vtr.parentEvents)
 
 	return nil
 }
