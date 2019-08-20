@@ -73,7 +73,7 @@ Functions and variables related to Block and Transaction are defined in the file
   - tx_internal_data_serializer.go: implements serialization functions of transaction internal data
   - tx_internal_data_smart_contract_deploy.go: implements the transaction deploying a smart contract
   - tx_internal_data_smart_contract_execution.go: implements the transaction executing a smart contract
-  - tx_internal_data_value_transfer.go: implements the transaction sending Klay to an EOA
+  - tx_internal_data_value_transfer.go: implements the transaction sending KLAY to an EOA
   - tx_internal_data_value_transfer_memo.go: implements the transaction sending Klay to an EOA with data
   - tx_internal_fee_delegated_data_cancel.go: implements the fee-delegated version of cancel transaction
   - tx_internal_fee_delegated_data_cancel_with_ratio.go: implements the partially fee-delegated version of cancel transaction
