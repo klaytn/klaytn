@@ -504,6 +504,8 @@ workflows:
                 - master
     jobs:
       - coverage
+      - build:
+          resource_class: xlarge
 
   nightly-linters:
     triggers:
