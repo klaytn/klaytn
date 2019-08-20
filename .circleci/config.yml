@@ -25,6 +25,10 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "go get"
+          command: |
+            go get
+      - run:
           name: "Run test datasync"
           command: |
             make test-datasync
@@ -35,6 +39,10 @@ jobs:
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - run:
+          name: "go get"
+          command: |
+            go get
       - run:
           name: "Run test networks"
           command: |
@@ -47,6 +55,10 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "go get"
+          command: |
+            go get
+      - run:
           name: "Run test tests"
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
@@ -58,6 +70,10 @@ jobs:
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - run:
+          name: "go get"
+          command: |
+            go get
       - run:
           name: "Run test others"
           command: |
