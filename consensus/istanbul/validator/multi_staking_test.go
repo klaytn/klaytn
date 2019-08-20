@@ -114,6 +114,7 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 // if UseGini is true, gini is calculated and reflected to stakingAmounts.
 func TestCalcTotalAmount(t *testing.T) {
 	testCases := []struct {
+		weightedValidators     []*weightedValidator
 		stakingInfo            *reward.StakingInfo
 		stakingAmounts         []float64
 		expectedGini           float64
@@ -121,6 +122,9 @@ func TestCalcTotalAmount(t *testing.T) {
 		expectedStakingAmounts []float64
 	}{
 		{
+			[]*weightedValidator{
+				{address: common.StringToAddress("101")}, {address: common.StringToAddress("102")}, {address: common.StringToAddress("103")},
+			},
 			&reward.StakingInfo{
 				CouncilNodeAddrs: []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
 				UseGini:          false,
@@ -132,6 +136,9 @@ func TestCalcTotalAmount(t *testing.T) {
 			[]float64{5000000, 5000000, 5000000},
 		},
 		{
+			[]*weightedValidator{
+				{address: common.StringToAddress("101")}, {address: common.StringToAddress("102")}, {address: common.StringToAddress("103")},
+			},
 			&reward.StakingInfo{
 				CouncilNodeAddrs: []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
 				UseGini:          true,
@@ -144,6 +151,9 @@ func TestCalcTotalAmount(t *testing.T) {
 		},
 
 		{
+			[]*weightedValidator{
+				{address: common.StringToAddress("101")}, {address: common.StringToAddress("102")}, {address: common.StringToAddress("103")}, {address: common.StringToAddress("104")}, {address: common.StringToAddress("105")},
+			},
 			&reward.StakingInfo{
 				CouncilNodeAddrs: []common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
 				UseGini:          true,
@@ -157,7 +167,7 @@ func TestCalcTotalAmount(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		stakingAmounts := testCase.stakingAmounts
-		totalAmount := calcTotalAmount(testCase.stakingInfo, stakingAmounts)
+		totalAmount := calcTotalAmount(testCase.weightedValidators, testCase.stakingInfo, stakingAmounts)
 
 		assert.Equal(t, testCase.expectedGini, testCase.stakingInfo.Gini)
 		assert.Equal(t, testCase.expectedTotalAmount, totalAmount)
@@ -291,7 +301,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				UseGini:               true,
 				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
 			},
-			[]int64{29, 22, 36, 13, 1},
+			[]int64{29, 21, 37, 12, 1},
 		},
 	}
 	for _, testCase := range testCases {
@@ -299,7 +309,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 
 		weightedValidators, stakingAmounts, err := council.getStakingAmountsOfValidators(testCase.stakingInfo)
 		assert.NoError(t, err)
-		totalStaking := calcTotalAmount(testCase.stakingInfo, stakingAmounts)
+		totalStaking := calcTotalAmount(weightedValidators, testCase.stakingInfo, stakingAmounts)
 		calcWeight(weightedValidators, stakingAmounts, totalStaking)
 
 		for i, weight := range testCase.expectedWeights {
