@@ -24,7 +24,7 @@ Package types contains data types related to Klatyn consensus.
 Klaytn nodes achieve a consensus of the global state by processing the same transactions in the same order.
 
 Transaction is an atomic operation originated from an Externally Owned Account (EOA) transiting the global state of Klaytn.
-Klaytn supports multiple transaction types to efficiently trigger Klay transfer or contract execution.
+Klaytn supports multiple transaction types to efficiently trigger KLAY transfer or contract execution.
 LegacyTransaction, the Ethereum compatible transaction, could be sent to both of EOA and Smart Contract (SC).
 However, it cannot support advanced features of Klaytn such as multi-sig or fee-delegation.
 All transaction types except LegacyTransaction are enforced to be sent to either of EOA or SC.
