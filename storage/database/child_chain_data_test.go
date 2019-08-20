@@ -41,18 +41,18 @@ func TestChildChainData_ReadAndWrite_ChildChainTxHash(t *testing.T) {
 	ccTxHash := common.HexToHash("0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f")
 
 	// Before writing the data into DB, nil should be returned.
-	ccTxHashFromDB := dbm.ConvertServiceChainBlockHashToMainChainTxHash(ccBlockHash)
+	ccTxHashFromDB := dbm.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
 	assert.Equal(t, common.Hash{}, ccTxHashFromDB)
 
 	// After writing the data into DB, data should be returned.
 	dbm.WriteChildChainTxHash(ccBlockHash, ccTxHash)
-	ccTxHashFromDB = dbm.ConvertServiceChainBlockHashToMainChainTxHash(ccBlockHash)
+	ccTxHashFromDB = dbm.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHash)
 	assert.NotNil(t, ccTxHashFromDB)
 	assert.Equal(t, ccTxHash, ccTxHashFromDB)
 
 	ccBlockHashFake := common.HexToHash("0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a")
 	// Invalid information should not return the data.
-	ccTxHashFromDB = dbm.ConvertServiceChainBlockHashToMainChainTxHash(ccBlockHashFake)
+	ccTxHashFromDB = dbm.ConvertChildChainBlockHashToParentChainTxHash(ccBlockHashFake)
 	assert.Equal(t, common.Hash{}, ccTxHashFromDB)
 }
 

@@ -557,13 +557,13 @@ func TestDBManager_Preimage(t *testing.T) {
 func TestDBManager_ParentChain(t *testing.T) {
 	for _, dbm := range dbManagers {
 		// 1. Read/Write SerivceChainTxHash
-		assert.Equal(t, common.Hash{}, dbm.ConvertServiceChainBlockHashToMainChainTxHash(hash1))
+		assert.Equal(t, common.Hash{}, dbm.ConvertChildChainBlockHashToParentChainTxHash(hash1))
 
 		dbm.WriteChildChainTxHash(hash1, hash1)
-		assert.Equal(t, hash1, dbm.ConvertServiceChainBlockHashToMainChainTxHash(hash1))
+		assert.Equal(t, hash1, dbm.ConvertChildChainBlockHashToParentChainTxHash(hash1))
 
 		dbm.WriteChildChainTxHash(hash1, hash2)
-		assert.Equal(t, hash2, dbm.ConvertServiceChainBlockHashToMainChainTxHash(hash1))
+		assert.Equal(t, hash2, dbm.ConvertChildChainBlockHashToParentChainTxHash(hash1))
 
 		// 2. Read/Write LastIndexedBlockNumber
 		assert.Equal(t, uint64(0), dbm.GetLastIndexedBlockNumber())

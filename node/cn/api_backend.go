@@ -23,6 +23,7 @@ package cn
 import (
 	"context"
 	"fmt"
+	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
@@ -31,7 +32,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
@@ -224,8 +224,8 @@ func (b *CNAPIBackend) SubscribeNewTxsEvent(ch chan<- blockchain.NewTxsEvent) ev
 	return b.cn.TxPool().SubscribeNewTxsEvent(ch)
 }
 
-func (b *CNAPIBackend) Downloader() *downloader.Downloader {
-	return b.cn.Downloader()
+func (b *CNAPIBackend) Progress() klaytn.SyncProgress {
+	return b.cn.Progress()
 }
 
 func (b *CNAPIBackend) ProtocolVersion() int {

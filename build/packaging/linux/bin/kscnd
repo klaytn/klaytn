@@ -55,12 +55,6 @@ start() {
         mkdir -p $LOG_DIR
     fi
 
-    if [ -z $SCSIGNER_PASSWD_FILE ] || [ ! -f $SCSIGNER_PASSWD_FILE ]; then
-        echo
-        echo "  [ERROR] : The service chain signer wallet password file is not exist. [conf/kscnd.conf - SCSIGNER_PASSWD_FILE=$SCSIGNER_PASSWD_FILE ]"
-        exit 1
-    fi
-
     set -f
     OPTIONS="--nodiscover"
 

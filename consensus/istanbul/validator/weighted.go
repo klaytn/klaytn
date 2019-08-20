@@ -586,41 +586,92 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 		return errors.New("skip refreshing proposers due to no staking info")
 	}
 
-	// Calculate the Gini coefficient when the following conditions meet.
-	//   1. Need to use the Gini coefficient
-	//   2. Gini coefficient has not yet been calculated
-	//   3. stakingInfo has node info from address book (address book has been activated)
-	if newStakingInfo.UseGini && newStakingInfo.Gini == reward.DefaultGiniCoefficient && len(newStakingInfo.CouncilNodeAddrs) != 0 {
-		calcGiniCoefficientOfValidators(valSet.validators, newStakingInfo)
+	weightedValidators, stakingAmounts, err := valSet.getStakingAmountsOfValidators(newStakingInfo)
+	if err != nil {
+		return err
 	}
+	totalStaking := calcTotalAmount(newStakingInfo, stakingAmounts)
+	calcWeight(weightedValidators, stakingAmounts, totalStaking)
 
-	// Adjust each validator's staking amount by applying the Gini coefficient if necessary.
-	// Also calculate the total staking amount by summing up the staking amount of each validator.
+	valSet.refreshProposers(seed, blockNum)
+
+	logger.Info("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
+	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
+
+	return nil
+}
+
+// getStakingAmountsOfValidators calculates stakingAmounts of validators.
+// If validators have multiple staking contracts, stakingAmounts will be a sum of stakingAmounts with the same rewardAddress.
+//  - []*weightedValidator : a list of validators which type is converted to weightedValidator
+//  - []float64 : a list of stakingAmounts.
+func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
+	numValidators := len(valSet.validators)
 	weightedValidators := make([]*weightedValidator, numValidators)
 	stakingAmounts := make([]float64, numValidators)
-	totalStaking := float64(0)
+	addedStaking := make([]bool, len(stakingInfo.CouncilNodeAddrs))
+
 	for vIdx, val := range valSet.validators {
 		weightedVal, ok := val.(*weightedValidator)
 		if !ok {
-			return errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
+			return nil, nil, errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
 		}
 		weightedValidators[vIdx] = weightedVal
 
-		i, err := newStakingInfo.GetIndexByNodeId(weightedVal.address)
+		sIdx, err := stakingInfo.GetIndexByNodeAddress(weightedVal.address)
 		if err == nil {
-			weightedVal.SetRewardAddress(newStakingInfo.CouncilRewardAddrs[i])
-			tempStakingAmount := float64(newStakingInfo.CouncilStakingAmounts[i])
-			if newStakingInfo.UseGini {
-				tempStakingAmount = math.Round(math.Pow(tempStakingAmount, 1.0/(1+newStakingInfo.Gini)))
-			}
-			stakingAmounts[vIdx] = tempStakingAmount
-			totalStaking += tempStakingAmount
+			rewardAddr := stakingInfo.CouncilRewardAddrs[sIdx]
+			weightedVal.SetRewardAddress(rewardAddr)
+			stakingAmounts[vIdx] = float64(stakingInfo.CouncilStakingAmounts[sIdx])
+			addedStaking[sIdx] = true
 		} else {
 			weightedVal.SetRewardAddress(common.Address{})
 		}
 	}
 
-	// Update each validator's weight based on the ratio of its staking amount vs. the total staking amount.
+	for sIdx, isAdded := range addedStaking {
+		if isAdded {
+			continue
+		}
+		for vIdx, val := range weightedValidators {
+			if val.RewardAddress() == stakingInfo.CouncilRewardAddrs[sIdx] {
+				stakingAmounts[vIdx] += float64(stakingInfo.CouncilStakingAmounts[sIdx])
+				break
+			}
+		}
+	}
+
+	logger.Debug("stakingAmounts of validators", "validators", weightedValidators, "stakingAmounts", stakingAmounts)
+	return weightedValidators, stakingAmounts, nil
+}
+
+// calcTotalAmount calculates totalAmount of stakingAmounts.
+// If UseGini is true, gini is reflected to stakingAmounts.
+func calcTotalAmount(stakingInfo *reward.StakingInfo, stakingAmounts []float64) float64 {
+	if len(stakingInfo.CouncilNodeAddrs) == 0 {
+		return 0
+	}
+	totalStaking := float64(0)
+	if stakingInfo.UseGini {
+		stakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
+
+		for i := range stakingAmounts {
+			stakingAmounts[i] = math.Round(math.Pow(stakingAmounts[i], 1.0/(1+stakingInfo.Gini)))
+			totalStaking += stakingAmounts[i]
+		}
+	} else {
+		for _, stakingAmount := range stakingAmounts {
+			totalStaking += stakingAmount
+		}
+	}
+
+	logger.Debug("calculate totalStaking", "UseGini", stakingInfo.UseGini, "Gini", stakingInfo.Gini, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
+	return totalStaking
+}
+
+// calcWeight updates each validator's weight based on the ratio of its staking amount vs. the total staking amount.
+func calcWeight(weightedValidators []*weightedValidator, stakingAmounts []float64, totalStaking float64) {
+	localLogger := logger.NewWith()
 	if totalStaking > 0 {
 		for i, weightedVal := range weightedValidators {
 			weight := int64(math.Round(stakingAmounts[i] * 100 / totalStaking))
@@ -629,19 +680,15 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 				weight = 1
 			}
 			atomic.StoreInt64(&weightedVal.weight, weight)
+			localLogger = localLogger.NewWith(weightedVal.String(), weight)
 		}
 	} else {
 		for _, weightedVal := range weightedValidators {
 			atomic.StoreInt64(&weightedVal.weight, 0)
+			localLogger = localLogger.NewWith(weightedVal.String(), 0)
 		}
 	}
-
-	valSet.refreshProposers(seed, blockNum)
-
-	logger.Info("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
-	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
-
-	return nil
+	localLogger.Debug("calculation weight finished")
 }
 
 func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
@@ -697,15 +744,4 @@ func (valSet *weightedCouncil) TotalVotingPower() uint64 {
 		sum += v.VotingPower()
 	}
 	return sum
-}
-
-func calcGiniCoefficientOfValidators(validators []istanbul.Validator, stakingInfo *reward.StakingInfo) {
-	var stakingAmounts []uint64
-	for _, val := range validators {
-		i, err := stakingInfo.GetIndexByNodeId(val.Address())
-		if err == nil {
-			stakingAmounts = append(stakingAmounts, stakingInfo.CouncilStakingAmounts[i])
-		}
-	}
-	stakingInfo.Gini = reward.CalcGiniCoefficient(stakingAmounts)
 }

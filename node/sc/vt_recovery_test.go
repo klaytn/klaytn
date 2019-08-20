@@ -120,9 +120,9 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update value transfer hint")
 	}
-	t.Log("value transfer hint", vtr.service2mainHint)
-	assert.Equal(t, uint64(testTxCount), vtr.service2mainHint.requestNonce)
-	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.service2mainHint.handleNonce)
+	t.Log("value transfer hint", vtr.child2parentHint)
+	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.child2parentHint.handleNonce)
 
 	// 3. Request events by using the hint.
 	err = vtr.retrievePendingEvents()
@@ -131,9 +131,9 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	}
 
 	// 4. Check pending events.
-	t.Log("check pending tx", "len", len(vtr.serviceChainEvents))
+	t.Log("check pending tx", "len", len(vtr.childEvents))
 	var count = 0
-	for _, ev := range vtr.serviceChainEvents {
+	for _, ev := range vtr.childEvents {
 		assert.Equal(t, info.nodeAuth.From, ev.From)
 		assert.Equal(t, info.aliceAuth.From, ev.To)
 		assert.Equal(t, big.NewInt(testAmount), ev.ValueOrTokenId)
@@ -158,7 +158,7 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to retrieve pending events from the bridge contract")
 	}
-	assert.Equal(t, 0, len(vtr.serviceChainEvents))
+	assert.Equal(t, 0, len(vtr.childEvents))
 
 	assert.Equal(t, nil, vtr.Recover()) // nothing to recover
 }
@@ -184,8 +184,8 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.NotEqual(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
-	t.Log("token transfer hint", vtr.service2mainHint)
+	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
+	t.Log("token transfer hint", vtr.child2parentHint)
 
 	info.recoveryCh <- true
 	err = vtr.Recover()
@@ -198,7 +198,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.Equal(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
+	assert.Equal(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
 }
 
 // TestBasicNFTTransferRecovery tests the NFT transfer recovery.
@@ -223,8 +223,8 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.NotEqual(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
-	t.Log("token transfer hint", vtr.service2mainHint)
+	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
+	t.Log("token transfer hint", vtr.child2parentHint)
 
 	info.recoveryCh <- true
 	err = vtr.Recover()
@@ -237,7 +237,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.Equal(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
+	assert.Equal(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
 }
 
 // TestMethodRecover tests the valueTransferRecovery.Recover() method.
@@ -260,7 +260,7 @@ func TestMethodRecover(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.NotEqual(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
+	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
 
 	info.recoveryCh <- true
 	err = vtr.Recover()
@@ -273,7 +273,7 @@ func TestMethodRecover(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.Equal(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
+	assert.Equal(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
 }
 
 // TestMethodStop tests the Stop method for stop the internal goroutine.
@@ -296,7 +296,7 @@ func TestMethodStop(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.NotEqual(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
+	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
 
 	info.recoveryCh <- true
 	err = vtr.Start()
@@ -364,7 +364,7 @@ func TestAlreadyStartedVTRecovery(t *testing.T) {
 	vtr.Stop()
 }
 
-// TestScenarioMainChainRecovery tests the value transfer recovery of the main chain to service chain value transfers.
+// TestScenarioMainChainRecovery tests the value transfer recovery of the parent chain to child chain value transfers.
 func TestScenarioMainChainRecovery(t *testing.T) {
 	tempDir := os.TempDir() + "sc"
 	os.MkdirAll(tempDir, os.ModePerm)
@@ -385,7 +385,7 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.NotEqual(t, vtr.main2serviceHint.requestNonce, vtr.main2serviceHint.handleNonce)
+	assert.NotEqual(t, vtr.parent2childHint.requestNonce, vtr.parent2childHint.handleNonce)
 
 	info.recoveryCh <- true
 	err = vtr.Recover()
@@ -398,7 +398,7 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.Equal(t, vtr.main2serviceHint.requestNonce, vtr.main2serviceHint.handleNonce)
+	assert.Equal(t, vtr.parent2childHint.requestNonce, vtr.parent2childHint.handleNonce)
 }
 
 // TestScenarioAutomaticRecovery tests the recovery of the internal goroutine.
@@ -421,7 +421,7 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.NotEqual(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
+	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
 
 	info.recoveryCh <- true
 	err = vtr.Start()
@@ -436,7 +436,111 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 		t.Fatal("fail to update a value transfer hint")
 	}
 	vtr.Stop()
-	assert.Equal(t, vtr.service2mainHint.requestNonce, vtr.service2mainHint.handleNonce)
+	assert.Equal(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
+}
+
+// TestMultiOperatorRequestRecovery tests value transfer recovery for the multi-operator.
+func TestMultiOperatorRequestRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	// 1. Init dummy chain and do some value transfers.
+	info := prepare(t, func(info *testInfo) {
+		for i := 0; i < testTxCount; i++ {
+			ops[KLAY].request(info, info.localInfo)
+		}
+	})
+
+	// 2. Set multi-operator.
+	cAcc := info.nodeAuth
+	pAcc := info.chainAuth
+	opts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
+	_, err := info.localInfo.bridge.RegisterOperator(opts, pAcc.From)
+	assert.NoError(t, err)
+	opts = &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
+	_, err = info.remoteInfo.bridge.RegisterOperator(opts, cAcc.From)
+	assert.NoError(t, err)
+	info.sim.Commit()
+
+	// 3. Set operator threshold.
+	opts = &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
+	_, err = info.localInfo.bridge.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	opts = &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
+	_, err = info.remoteInfo.bridge.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+
+	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
+
+	// 4. Update recovery hint.
+	err = vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	t.Log("value transfer hint", vtr.service2mainHint)
+	assert.Equal(t, uint64(testTxCount), vtr.service2mainHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.service2mainHint.handleNonce)
+
+	// 5. Request events by using the hint.
+	err = vtr.retrievePendingEvents()
+	if err != nil {
+		t.Fatal("fail to retrieve pending events from the bridge contract")
+	}
+
+	// 6. Check pending events.
+	t.Log("check pending tx", "len", len(vtr.serviceChainEvents))
+	var count = 0
+	for _, ev := range vtr.serviceChainEvents {
+		assert.Equal(t, info.nodeAuth.From, ev.From)
+		assert.Equal(t, info.aliceAuth.From, ev.To)
+		assert.Equal(t, big.NewInt(testAmount), ev.ValueOrTokenId)
+		assert.Condition(t, func() bool {
+			return uint64(testBlockOffset) <= ev.Raw.BlockNumber
+		})
+		count++
+	}
+	assert.Equal(t, testPendingCount, count)
+
+	// 7. Recover pending events
+	info.recoveryCh <- true
+	assert.Equal(t, nil, vtr.recoverPendingEvents())
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
+
+	// 8. Recover from the other operator (value transfer is not recovered yet).
+	err = vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	t.Log("value transfer hint", vtr.service2mainHint)
+	assert.Equal(t, uint64(testTxCount), vtr.service2mainHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.service2mainHint.handleNonce)
+
+	err = vtr.retrievePendingEvents()
+	if err != nil {
+		t.Fatal("fail to retrieve pending events from the bridge contract")
+	}
+	assert.Equal(t, testPendingCount, len(vtr.serviceChainEvents))
+	assert.Equal(t, nil, vtr.recoverPendingEvents())
+	info.remoteInfo.account = info.localInfo.account // other operator
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
+
+	// 9. Check results.
+	err = vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	err = vtr.retrievePendingEvents()
+	if err != nil {
+		t.Fatal("fail to retrieve pending events from the bridge contract")
+	}
+	assert.Equal(t, 0, len(vtr.serviceChainEvents))
+	assert.Equal(t, nil, vtr.Recover()) // nothing to recover
 }
 
 // prepare generates dummy blocks for testing value transfer recovery.
@@ -681,7 +785,7 @@ func requestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 	opts := bi.account.GetTransactOpts()
 
 	var err error
-	if bi.onServiceChain {
+	if bi.onChildChain {
 		_, err = info.tokenLocalBridge.RequestValueTransfer(opts, testToken, info.chainAuth.From, big.NewInt(0), nil)
 	} else {
 		_, err = info.tokenRemoteBridge.RequestValueTransfer(opts, testToken, info.nodeAuth.From, big.NewInt(0), nil)
@@ -719,11 +823,11 @@ func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	defer bi.account.UnLock()
 
 	opts := bi.account.GetTransactOpts()
-	// TODO-Klaytn need to separate service / main chain nftIndex.
+	// TODO-Klaytn need to separate child / parent chain nftIndex.
 	nftIndex := new(big.Int).SetInt64(info.nftIndex)
 
 	var err error
-	if bi.onServiceChain {
+	if bi.onChildChain {
 		_, err = info.nftLocalBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From, nil)
 	} else {
 		_, err = info.nftRemoteBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From, nil)
@@ -742,7 +846,7 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferE
 
 	var nftAddr common.Address
 
-	if bi.onServiceChain {
+	if bi.onChildChain {
 		nftAddr = info.nftLocalAddr
 	} else {
 		nftAddr = info.nftRemoteAddr

@@ -34,8 +34,8 @@ func TestBridgeJournal(t *testing.T) {
 
 	journal := newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"))
 	if err := journal.load(func(journal BridgeJournal) error {
-		t.Log("Local address ", journal.LocalAddress.Hex())
-		t.Log("Remote address ", journal.RemoteAddress.Hex())
+		t.Log("Local address ", journal.ChildAddress.Hex())
+		t.Log("Remote address ", journal.ParentAddress.Hex())
 		t.Log("Subscribed", journal.Subscribed)
 		return nil
 	}); err != nil {
@@ -65,17 +65,17 @@ func TestBridgeJournal(t *testing.T) {
 	journal = newBridgeAddrJournal(path.Join(os.TempDir(), "test.rlp"))
 
 	if err := journal.load(func(journal BridgeJournal) error {
-		switch address := journal.LocalAddress.Hex(); address {
+		switch address := journal.ChildAddress.Hex(); address {
 		case "0x0000000000000000000000000000007465737431":
-			if journal.RemoteAddress.Hex() != "0x0000000000000000000000000000007465737432" {
+			if journal.ParentAddress.Hex() != "0x0000000000000000000000000000007465737432" {
 				t.Fatalf("unknown remoteAddress")
 			}
 		case "0x0000000000000000000000000000007465737432":
-			if journal.RemoteAddress.Hex() != "0x0000000000000000000000000000007465737433" {
+			if journal.ParentAddress.Hex() != "0x0000000000000000000000000000007465737433" {
 				t.Fatalf("unknown remoteAddress")
 			}
 		case "0x0000000000000000000000000000007465737433":
-			if journal.RemoteAddress.Hex() != "0x0000000000000000000000000000007465737431" {
+			if journal.ParentAddress.Hex() != "0x0000000000000000000000000000007465737431" {
 				t.Fatalf("unknown remoteAddress")
 			}
 		default:
@@ -115,7 +115,7 @@ func TestBridgeJournalCache(t *testing.T) {
 
 	assert.Equal(t, 1, len(journals.cache))
 	for _, journal := range journals.cache {
-		assert.Equal(t, localAddr, journal.LocalAddress)
-		assert.Equal(t, remoteAddr, journal.RemoteAddress)
+		assert.Equal(t, localAddr, journal.ChildAddress)
+		assert.Equal(t, remoteAddr, journal.ParentAddress)
 	}
 }

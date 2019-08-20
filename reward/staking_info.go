@@ -72,7 +72,7 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 	return stakingInfo
 }
 
-func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum uint64, nodeIds []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*StakingInfo, error) {
+func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum uint64, nodeAddrs []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KIRAddr common.Address, PoCAddr common.Address) (*StakingInfo, error) {
 	intervalBlock := bc.GetBlockByNumber(blockNum)
 	if intervalBlock == nil {
 		logger.Trace("Failed to get the block by the given number", "blockNum", blockNum)
@@ -105,7 +105,7 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
-		CouncilNodeAddrs:      nodeIds,
+		CouncilNodeAddrs:      nodeAddrs,
 		CouncilStakingAddrs:   stakingAddrs,
 		CouncilRewardAddrs:    rewardAddrs,
 		KIRAddr:               KIRAddr,
@@ -117,43 +117,45 @@ func newStakingInfo(bc *blockchain.BlockChain, helper governanceHelper, blockNum
 	return stakingInfo, nil
 }
 
-func (s *StakingInfo) GetIndexByNodeId(nodeId common.Address) (int, error) {
+func (s *StakingInfo) GetIndexByNodeAddress(nodeAddress common.Address) (int, error) {
 	for i, addr := range s.CouncilNodeAddrs {
-		if addr == nodeId {
+		if addr == nodeAddress {
 			return i, nil
 		}
 	}
 	return AddrNotFoundInCouncilNodes, ErrAddrNotInStakingInfo
 }
 
-func (s *StakingInfo) GetStakingAmountByNodeId(nodeId common.Address) (uint64, error) {
-	i, err := s.GetIndexByNodeId(nodeId)
+func (s *StakingInfo) GetStakingAmountByNodeId(nodeAddress common.Address) (uint64, error) {
+	i, err := s.GetIndexByNodeAddress(nodeAddress)
 	if err != nil {
 		return 0, err
 	}
 	return s.CouncilStakingAmounts[i], nil
 }
 
-type uint64Slice []uint64
+type float64Slice []float64
 
-func (p uint64Slice) Len() int           { return len(p) }
-func (p uint64Slice) Less(i, j int) bool { return p[i] < p[j] }
-func (p uint64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p float64Slice) Len() int           { return len(p) }
+func (p float64Slice) Less(i, j int) bool { return p[i] < p[j] }
+func (p float64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
-func CalcGiniCoefficient(stakingAmount uint64Slice) float64 {
-	sort.Sort(stakingAmount)
+func CalcGiniCoefficient(stakingAmount float64Slice) float64 {
+	tempStakingAmount := make(float64Slice, len(stakingAmount))
+	copy(tempStakingAmount, stakingAmount)
+	sort.Sort(tempStakingAmount)
 
 	// calculate gini coefficient
-	sumOfAbsoluteDifferences := uint64(0)
-	subSum := uint64(0)
+	sumOfAbsoluteDifferences := float64(0)
+	subSum := float64(0)
 
-	for i, x := range stakingAmount {
-		temp := x*uint64(i) - subSum
+	for i, x := range tempStakingAmount {
+		temp := x*float64(i) - subSum
 		sumOfAbsoluteDifferences = sumOfAbsoluteDifferences + temp
 		subSum = subSum + x
 	}
 
-	result := float64(sumOfAbsoluteDifferences) / float64(subSum) / float64(len(stakingAmount))
+	result := sumOfAbsoluteDifferences / subSum / float64(len(tempStakingAmount))
 	result = math.Round(result*100) / 100
 
 	return result

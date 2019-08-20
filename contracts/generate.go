@@ -22,4 +22,6 @@ package contracts
 //go:generate abigen --sol ./sc_erc721/sc_nft.sol --pkg scnft --out ./sc_erc721/sc_nft.go
 //go:generate abigen --sol ./sc_erc20/sc_token.sol --pkg sctoken --out ./sc_erc20/sc_token.go
 
-//go:generate abigen --sol ./cypress/credit.sol --pkg cypress --out ./cypress/credit.go
+//`credit.sol` was compiled by solidity@0.4.24.
+// This code data was included in cypress genesis file.
+////go:generate abigen --sol ./cypress/credit.sol --pkg cypress --out ./cypress/credit.go

@@ -545,7 +545,7 @@ func (sc *SubBridge) resetBridgeLoop() {
 			peerCount--
 			if peerCount == 0 {
 				needResetSubscription = true
-				sc.handler.setMainChainAccountNonceSynced(false)
+				sc.handler.setParentOperatorNonceSynced(false)
 			}
 		case <-ticker.C:
 			if needResetSubscription && peerCount > 0 {

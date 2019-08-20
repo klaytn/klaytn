@@ -76,8 +76,8 @@ type HandleValueTransferEvent struct {
 }
 
 type BridgeJournal struct {
-	LocalAddress  common.Address `json:"localAddress"`
-	RemoteAddress common.Address `json:"remoteAddress"`
+	ChildAddress  common.Address `json:"childAddress"`
+	ParentAddress common.Address `json:"parentAddress"`
 	Subscribed    bool           `json:"subscribed"`
 }
 
@@ -89,7 +89,7 @@ type BridgeInfo struct {
 	account            *accountInfo
 	bridge             *bridgecontract.Bridge
 	counterpartBridge  *bridgecontract.Bridge
-	onServiceChain     bool
+	onChildChain       bool
 	subscribed         bool
 
 	counterpartToken map[common.Address]common.Address
@@ -141,7 +141,7 @@ func (bi *BridgeInfo) loop() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	logger.Info("start bridge loop", "addr", bi.address.String(), "onServiceChain", bi.onServiceChain)
+	logger.Info("start bridge loop", "addr", bi.address.String(), "onChildChain", bi.onChildChain)
 
 	for {
 		select {
@@ -152,7 +152,7 @@ func (bi *BridgeInfo) loop() {
 			bi.processingPendingRequestEvents()
 
 		case <-bi.closed:
-			logger.Info("stop bridge loop", "addr", bi.address.String(), "onServiceChain", bi.onServiceChain)
+			logger.Info("stop bridge loop", "addr", bi.address.String(), "onChildChain", bi.onChildChain)
 			return
 		}
 	}
@@ -207,7 +207,7 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 
 	diff := bi.requestNonceFromCounterPart - bi.handleNonce
 	if diff > errorDiffRequestHandleNonce {
-		logger.Error("Value transfer requested/handled nonce gap is too much.", "toSC", bi.onServiceChain, "diff", diff, "requestedNonce", bi.requestNonceFromCounterPart, "handledNonce", bi.handleNonce)
+		logger.Error("Value transfer requested/handled nonce gap is too much.", "toSC", bi.onChildChain, "diff", diff, "requestedNonce", bi.requestNonceFromCounterPart, "handledNonce", bi.handleNonce)
 		// TODO-Klaytn need to consider starting value transfer recovery.
 	}
 
@@ -383,21 +383,21 @@ func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&elem); err != nil {
 		return err
 	}
-	b.LocalAddress, b.RemoteAddress, b.Subscribed = elem.LocalAddress, elem.RemoteAddress, elem.Paired
+	b.ChildAddress, b.ParentAddress, b.Subscribed = elem.LocalAddress, elem.RemoteAddress, elem.Paired
 	return nil
 }
 
 // EncodeRLP serializes a BridgeJournal into the Klaytn RLP BridgeJournal format.
 func (b *BridgeJournal) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
-		b.LocalAddress,
-		b.RemoteAddress,
+		b.ChildAddress,
+		b.ParentAddress,
 		b.Subscribed,
 	})
 }
 
 // BridgeManager manages Bridge SmartContracts
-// for value transfer between service chain and parent chain
+// for value transfer between child chain and parent chain
 type BridgeManager struct {
 	subBridge *SubBridge
 
@@ -433,8 +433,8 @@ func NewBridgeManager(main *SubBridge) (*BridgeManager, error) {
 
 	if err := bridgeManager.journal.load(func(gwjournal BridgeJournal) error {
 		logger.Info("Load Bridge Address from JournalFiles ",
-			"local address", gwjournal.LocalAddress.Hex(), "remote address", gwjournal.RemoteAddress.Hex())
-		bridgeManager.journal.cache[gwjournal.LocalAddress] = &gwjournal
+			"local address", gwjournal.ChildAddress.Hex(), "remote address", gwjournal.ParentAddress.Hex())
+		bridgeManager.journal.cache[gwjournal.ChildAddress] = &gwjournal
 		return nil
 	}); err != nil {
 		logger.Error("fail to load bridge address", "err", err)
@@ -485,29 +485,29 @@ func (bm *BridgeManager) LogBridgeStatus() {
 		return
 	}
 
-	m2sTotalRequestNonce, m2sTotalHandleNonce := uint64(0), uint64(0)
-	s2mTotalRequestNonce, s2mTotalHandleNonce := uint64(0), uint64(0)
+	p2cTotalRequestNonce, p2cTotalHandleNonce := uint64(0), uint64(0)
+	c2pTotalRequestNonce, c2pTotalHandleNonce := uint64(0), uint64(0)
 
 	for bAddr, b := range bm.bridges {
 		diffNonce := b.requestNonceFromCounterPart - b.handleNonce
 
 		if b.subscribed {
 			var headStr string
-			if b.onServiceChain {
-				headStr = "Bridge(Main -> Service Chain)"
-				m2sTotalRequestNonce += b.requestNonceFromCounterPart
-				m2sTotalHandleNonce += b.handleNonce
+			if b.onChildChain {
+				headStr = "Bridge(Parent -> Child Chain)"
+				p2cTotalRequestNonce += b.requestNonceFromCounterPart
+				p2cTotalHandleNonce += b.handleNonce
 			} else {
-				headStr = "Bridge(Service -> Main Chain)"
-				s2mTotalRequestNonce += b.requestNonceFromCounterPart
-				s2mTotalHandleNonce += b.handleNonce
+				headStr = "Bridge(Child -> Parent Chain)"
+				c2pTotalRequestNonce += b.requestNonceFromCounterPart
+				c2pTotalHandleNonce += b.handleNonce
 			}
 			logger.Debug(headStr, "bridge", bAddr.String(), "requestNonce", b.requestNonceFromCounterPart, "handleNonce", b.handleNonce, "pending", diffNonce)
 		}
 	}
 
-	logger.Info("VT : Main -> Service Chain", "request", m2sTotalRequestNonce, "handle", m2sTotalHandleNonce, "pending", m2sTotalRequestNonce-m2sTotalHandleNonce)
-	logger.Info("VT : Service -> Main Chain", "request", s2mTotalRequestNonce, "handle", s2mTotalHandleNonce, "pending", s2mTotalRequestNonce-s2mTotalHandleNonce)
+	logger.Info("VT : Parent -> Child Chain", "request", p2cTotalRequestNonce, "handle", p2cTotalHandleNonce, "pending", p2cTotalRequestNonce-p2cTotalHandleNonce)
+	logger.Info("VT : Child -> Parent Chain", "request", c2pTotalRequestNonce, "handle", c2pTotalHandleNonce, "pending", c2pTotalRequestNonce-c2pTotalHandleNonce)
 }
 
 // SubscribeRequestEvent registers a subscription of RequestValueTransferEvent.
@@ -579,8 +579,8 @@ func (bm *BridgeManager) RestoreBridges() error {
 	bm.stopAllRecoveries()
 
 	for _, journal := range bm.journal.cache {
-		cBridgeAddr := journal.LocalAddress
-		pBridgeAddr := journal.RemoteAddress
+		cBridgeAddr := journal.ChildAddress
+		pBridgeAddr := journal.ParentAddress
 		bacc := bm.subBridge.bridgeAccounts
 
 		// Set bridge info
@@ -785,26 +785,26 @@ func (bm *BridgeManager) ResetAllSubscribedEvents() error {
 
 	for _, journal := range bm.journal.cache {
 		if journal.Subscribed {
-			bm.UnsubscribeEvent(journal.LocalAddress)
-			bm.UnsubscribeEvent(journal.RemoteAddress)
+			bm.UnsubscribeEvent(journal.ChildAddress)
+			bm.UnsubscribeEvent(journal.ParentAddress)
 
-			bridgeInfo, ok := bm.GetBridgeInfo(journal.LocalAddress)
+			bridgeInfo, ok := bm.GetBridgeInfo(journal.ChildAddress)
 			if !ok {
-				logger.Error("ResetAllSubscribedEvents failed to GetBridgeInfo", "localBridge", journal.LocalAddress.String())
+				logger.Error("ResetAllSubscribedEvents failed to GetBridgeInfo", "localBridge", journal.ChildAddress.String())
 				return ErrNoBridgeInfo
 			}
-			err := bm.subscribeEvent(journal.LocalAddress, bridgeInfo.bridge)
+			err := bm.subscribeEvent(journal.ChildAddress, bridgeInfo.bridge)
 			if err != nil {
 				return err
 			}
 
-			bridgeInfo, ok = bm.GetBridgeInfo(journal.RemoteAddress)
+			bridgeInfo, ok = bm.GetBridgeInfo(journal.ParentAddress)
 			if !ok {
-				logger.Error("ResetAllSubscribedEvents failed to GetBridgeInfo", "remoteBridge", journal.RemoteAddress.String())
-				bm.UnsubscribeEvent(journal.LocalAddress)
+				logger.Error("ResetAllSubscribedEvents failed to GetBridgeInfo", "remoteBridge", journal.ParentAddress.String())
+				bm.UnsubscribeEvent(journal.ChildAddress)
 				return ErrNoBridgeInfo
 			}
-			err = bm.subscribeEvent(journal.RemoteAddress, bridgeInfo.bridge)
+			err = bm.subscribeEvent(journal.ParentAddress, bridgeInfo.bridge)
 			if err != nil {
 				return err
 			}

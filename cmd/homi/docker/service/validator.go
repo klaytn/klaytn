@@ -115,7 +115,7 @@ var validatorTemplate = `{{ .Name }}:
 {{- end }}
         echo '{{ .StaticNodes }}' > /klaytn/static-nodes.json
 {{- if .BridgeNodes }}
-        echo '{{ .BridgeNodes }}' > /klaytn/mainchain-bridges.json
+        echo '{{ .BridgeNodes }}' > /klaytn/main-bridges.json
 {{- end }}
         k{{ .NodeType }} --datadir "/klaytn" init "/klaytn/genesis.json"
 
@@ -123,51 +123,48 @@ var validatorTemplate = `{{ .Name }}:
         echo '{"address":"75a59b94889a05c03c66c3c84e9d2f8308ca4abd","crypto":{"cipher":"aes-128-ctr","ciphertext":"347fef8ab9aaf9d41b6114dfc0d9fd6ecab9d660fa86f687dc7aa1e094b76184","cipherparams":{"iv":"5070268dfc64ced716cf407bee943def"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"2cf44cb912515c5de2aacf4d133fd97a56efece5a8fc691381296300b42fb6c8"},"mac":"ea20c0019321f2a91f1ca51bc99d58c8f7cf1f37cff5cc47ae17ad747c060046"},"id":"a122a8da-a787-4d3d-a627-02034553e674","version":1}' > /klaytn/keystore/mykey
         echo "SuperSecret1231" > /klaytn/password.txt
 {{- end}}
-        k{{ .NodeType }} \
-        --identity "{{ .Name }}" \
-        --rpc \
-        --rpcaddr "0.0.0.0" \
-        --rpcport "8551" \
-        --rpccorsdomain "*" \
-        --datadir "/klaytn" \
-        --port "32323" \
-        --rpcapi "db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge" \
-        --networkid "{{ .NetworkId }}" \
-        --nat "any" \
-        --nodekeyhex "{{ .NodeKey }}" \
-        --nodiscover \
-        --debug \
-        --metrics \
-        --prometheus \
-        --syncmode "full" \
+        echo "# docker-compose" >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'NETWORK=""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'DATA_DIR="/klaytn"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'LOG_DIR="$$DATA_DIR/log"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'RPC_ENABLE=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'RPC_API="db,klay,net,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'NETWORK_ID="{{ .NetworkId }}"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'NO_DISCOVER=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'ADDITIONAL="$$ADDITIONAL --identity \"{{ .Name }}\""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'ADDITIONAL="$$ADDITIONAL --nodekeyhex {{ .NodeKey }}"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- if .AddPrivKey}}
-        --unlock "75a59b94889a05c03c66c3c84e9d2f8308ca4abd" \
-        --password "/klaytn/password.txt" \
+        echo 'ADDITIONAL="$$ADDITIONAL --unlock \"75a59b94889a05c03c66c3c84e9d2f8308ca4abd\""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'ADDITIONAL="$$ADDITIONAL --password "/klaytn/password.txt"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- end}}
 {{- if eq .NodeType "scn" }}
-        --scconsensus "istanbul" \
+        echo 'PORT=32323' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'ADDITIONAL="$$ADDITIONAL --scconsensus "istanbul""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- else if eq .NodeType "spn" }}
-        --scconsensus "istanbul" \
+        echo 'ADDITIONAL="$$ADDITIONAL --scconsensus "istanbul""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- else if eq .NodeType "sen" }}
-        --scconsensus "istanbul" \
+        echo 'ADDITIONAL="$$ADDITIONAL --scconsensus "istanbul""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- end}}
 {{- if .ParentChainId }}
-        --parentchainid {{ .ParentChainId }} \
-        --subbridge \
-        --subbridgeport 50506 \
+        echo 'ADDITIONAL="$$ADDITIONAL --parentchainid {{ .ParentChainId }}"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'SC_SUB_BRIDGE=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'SC_SUB_BRIDGE_PORT=50506' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- end}}
 {{- if .UseFastHttp}}
-        --srvtype fasthttp \
+        echo 'SERVER_TYPE=fasthttp' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- end}}
 {{- if eq .NodeType "cn" }}
-        --rewardbase {{ .Address }}
+        echo 'REWARDBASE={{ .Address }}' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- else if eq .NodeType "pn" }}
-        --txpool.nolocals
+        echo 'ADDITIONAL="$$ADDITIONAL --txpool.nolocals"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- else if eq .Name "EN-0" }}
-        --mainbridge \
-        --mainbridgeport 50505
+        echo 'SC_MAIN_BRIDGE=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'SC_MAIN_BRIDGE_PORT=50505' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'SC_MAIN_BRIDGE_INDEXING=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- end }}
-
+        echo 'ADDITIONAL="$$ADDITIONAL --debug --metrics --prometheus"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        /klaytn-docker-pkg/bin/k{{ .NodeType }}d start
+        while true; do sleep 1; done
     networks:
       app_net:
         ipv4_address: {{ .IP }}

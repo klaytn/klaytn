@@ -22,6 +22,7 @@ package cn
 
 import (
 	"fmt"
+	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
@@ -323,7 +324,7 @@ func (s *ServiceChain) ChainDB() database.DBManager        { return s.chainDB }
 func (s *ServiceChain) IsListening() bool                  { return true } // Always listening
 func (s *ServiceChain) ProtocolVersion() int               { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *ServiceChain) NetVersion() uint64                 { return s.networkId }
-func (s *ServiceChain) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *ServiceChain) Progress() klaytn.SyncProgress      { return s.protocolManager.downloader.Progress() }
 func (s *ServiceChain) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
 }

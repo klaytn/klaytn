@@ -52,11 +52,11 @@ var (
 // blockRetrievalFn is a callback type for retrieving a block from the local chain.
 type blockRetrievalFn func(common.Hash) *types.Block
 
-// headerRequesterFn is a callback type for sending a header retrieval request.
-type headerRequesterFn func(common.Hash) error
+// HeaderRequesterFn is a callback type for sending a header retrieval request.
+type HeaderRequesterFn func(common.Hash) error
 
-// bodyRequesterFn is a callback type for sending a body retrieval request.
-type bodyRequesterFn func([]common.Hash) error
+// BodyRequesterFn is a callback type for sending a body retrieval request.
+type BodyRequesterFn func([]common.Hash) error
 
 // headerVerifierFn is a callback type to verify a block's header for fast propagation.
 type headerVerifierFn func(header *types.Header) error
@@ -86,8 +86,8 @@ type announce struct {
 
 	origin string // Identifier of the peer originating the notification
 
-	fetchHeader headerRequesterFn // Fetcher function to retrieve the header of an announced block
-	fetchBodies bodyRequesterFn   // Fetcher function to retrieve the body of an announced block
+	fetchHeader HeaderRequesterFn // Fetcher function to retrieve the header of an announced block
+	fetchBodies BodyRequesterFn   // Fetcher function to retrieve the body of an announced block
 }
 
 // headerFilterTask represents a batch of headers needing fetcher filtering.
@@ -204,7 +204,7 @@ func (f *Fetcher) Stop() {
 // Notify announces the fetcher of the potential availability of a new block in
 // the network.
 func (f *Fetcher) Notify(peer string, hash common.Hash, number uint64, time time.Time,
-	headerFetcher headerRequesterFn, bodyFetcher bodyRequesterFn) error {
+	headerFetcher HeaderRequesterFn, bodyFetcher BodyRequesterFn) error {
 	block := &announce{
 		hash:        hash,
 		number:      number,

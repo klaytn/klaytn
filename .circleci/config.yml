@@ -67,6 +67,7 @@ jobs:
     docker:
       - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
+    resource_class: xlarge
     steps:
       - checkout
       - run:
