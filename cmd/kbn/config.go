@@ -25,7 +25,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"os"
 	"path/filepath"
 	"runtime"

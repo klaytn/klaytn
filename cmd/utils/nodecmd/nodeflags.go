@@ -22,7 +22,7 @@ package nodecmd
 
 import (
 	"github.com/klaytn/klaytn/cmd/utils"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 )
 
 // Common flags that configure the node

@@ -30,7 +30,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"net"
 	"os"
 	"os/signal"

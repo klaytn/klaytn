@@ -26,7 +26,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/klaytn/klaytn/common/math"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"math/big"
 	"os"
 	"os/user"

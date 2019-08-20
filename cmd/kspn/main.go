@@ -32,7 +32,7 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"net/http"
 	"os"
 	"runtime"

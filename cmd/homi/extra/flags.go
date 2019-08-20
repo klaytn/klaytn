@@ -18,7 +18,7 @@
 package extra
 
 import (
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"strings"
 )
 

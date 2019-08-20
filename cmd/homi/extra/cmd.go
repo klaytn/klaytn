@@ -19,7 +19,7 @@ package extra
 
 import (
 	"fmt"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"os"
 
 	"github.com/klaytn/klaytn/common"

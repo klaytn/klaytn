@@ -19,7 +19,7 @@ package setup
 
 import (
 	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 )
 
 var fundingAddr string

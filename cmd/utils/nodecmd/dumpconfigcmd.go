@@ -31,7 +31,7 @@ import (
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"os"
 	"reflect"
 	"strings"

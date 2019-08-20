@@ -28,7 +28,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"io/ioutil"
 	"math/big"
 	"math/rand"

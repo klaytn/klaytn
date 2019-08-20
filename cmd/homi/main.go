@@ -22,7 +22,7 @@ import (
 	"github.com/klaytn/klaytn/cmd/homi/extra"
 	"github.com/klaytn/klaytn/cmd/homi/setup"
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"os"
 	"path/filepath"
 )

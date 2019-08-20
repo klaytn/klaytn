@@ -23,7 +23,7 @@
 package utils
 
 import (
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"io"
 	"strings"
 )

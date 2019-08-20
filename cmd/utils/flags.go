@@ -42,7 +42,7 @@ import (
 	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"io/ioutil"
 	"os"
 	"path/filepath"

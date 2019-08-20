@@ -27,7 +27,7 @@ import (
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/log"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"os"
 	"sort"
 )

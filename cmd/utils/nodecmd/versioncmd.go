@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 )
 
 var (

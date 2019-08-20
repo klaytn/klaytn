@@ -24,7 +24,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli"
 )
 
 // NewApp creates an app with sane defaults.
