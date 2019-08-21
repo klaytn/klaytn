@@ -39,7 +39,7 @@ type AccountRef common.Address
 func (ar AccountRef) Address() common.Address  { return (common.Address)(ar) }
 func (ar AccountRef) FeePayer() common.Address { return ar.Address() }
 
-// Contract represents an ethereum contract in the state database. It contains
+// Contract represents a smart contract in the state database. It contains
 // the contract code, calling arguments. Contract implements ContractRef
 type Contract struct {
 	// CallerAddress is the result of the caller which initialised this
