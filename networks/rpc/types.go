@@ -118,6 +118,9 @@ type ServerCodec interface {
 	Close()
 	// Closed when underlying connection is closed
 	Closed() <-chan interface{}
+	Add(delta int)
+	Done()
+	Wait()
 }
 
 type BlockNumber int64

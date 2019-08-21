@@ -85,6 +85,7 @@ type jsonCodec struct {
 	encMu  sync.Mutex                // guards the encoder
 	encode func(v interface{}) error // encoder to allow multiple transports
 	rw     io.ReadWriteCloser        // connection
+	wg     sync.WaitGroup            // waiting for connection to be terminated
 }
 
 func (err *jsonError) Error() string {
@@ -106,6 +107,7 @@ func NewCodec(rwc io.ReadWriteCloser, encode, decode func(v interface{}) error) 
 		encode: encode,
 		decode: decode,
 		rw:     rwc,
+		wg:     sync.WaitGroup{},
 	}
 }
 
@@ -120,6 +122,7 @@ func NewJSONCodec(rwc io.ReadWriteCloser) ServerCodec {
 		encode: enc.Encode,
 		decode: dec.Decode,
 		rw:     rwc,
+		wg:     sync.WaitGroup{},
 	}
 }
 
@@ -133,6 +136,21 @@ func isBatch(msg json.RawMessage) bool {
 		return c == '['
 	}
 	return false
+}
+
+// Wait is a wrapper method of wg.Wait.
+func (c *jsonCodec) Wait() {
+	c.wg.Wait()
+}
+
+// Wait is a wrapper method of wg.Add.
+func (c *jsonCodec) Add(delta int) {
+	c.wg.Add(delta)
+}
+
+// Wait is a wrapper method of wg.Done.
+func (c *jsonCodec) Done() {
+	c.wg.Done()
 }
 
 // ReadRequestHeaders will read new requests without parsing the arguments. It will
