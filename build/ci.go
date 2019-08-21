@@ -24,7 +24,6 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"github.com/klaytn/klaytn/utils/build"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
@@ -37,9 +36,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/golangci/golangci-lint/pkg/commands"
+	"github.com/klaytn/klaytn/utils/build"
 )
 
 var (
+	// for vendoring golangci-lint
+	_ = commands.Executor{}
+
 	// Files that end up in the klay*.zip archive.
 	klayArchiveFiles = []string{
 		"COPYING",
