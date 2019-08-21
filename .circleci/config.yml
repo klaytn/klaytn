@@ -4,17 +4,16 @@
 version: 2.1
 jobs:
   build:
-    machine: true
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    docker:
+      - image: golang:1.12
+    working_directory: /go/src/github.com/klaytn/klaytn
+    environment:
+      GO111MODULE: "on"
     steps:
       - checkout
       - run:
           name: "Build"
           command: |
-            curl -O https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz
-            mkdir $HOME/go1.12.5
-            tar -C $HOME/go1.12.5 -xzf go1.12.5.linux-amd64.tar.gz
-            export PATH=$HOME/go1.12.5/go/bin:$PATH
             make fmt
             make all
 
@@ -26,10 +25,6 @@ jobs:
       GO111MODULE: "on"
     steps:
       - checkout
-      - run:
-          name: "go get"
-          command: |
-            go get
       - run:
           name: "Run test datasync"
           command: |
@@ -44,10 +39,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: "go get"
-          command: |
-            go get
-      - run:
           name: "Run test networks"
           command: |
             make test-networks
@@ -60,10 +51,6 @@ jobs:
       GO111MODULE: "on"
     steps:
       - checkout
-      - run:
-          name: "go get"
-          command: |
-            go get
       - run:
           name: "Run test tests"
           command: |
@@ -78,10 +65,6 @@ jobs:
       GO111MODULE: "on"
     steps:
       - checkout
-      - run:
-          name: "go get"
-          command: |
-            go get
       - run:
           name: "Run test others"
           command: |
