@@ -12,6 +12,11 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Run package commands
+          command: |
+            go mod tidy
+            go mod vendor
+      - run:
           name: "Build"
           command: |
             make fmt
@@ -26,6 +31,11 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Run package commands
+          command: |
+            go mod tidy
+            go mod vendor
+      - run:
           name: "Run test datasync"
           command: |
             make test-datasync
@@ -38,6 +48,11 @@ jobs:
       GO111MODULE: "on"
     steps:
       - checkout
+      - run:
+          name: Run package commands
+          command: |
+            go mod tidy
+            go mod vendor
       - run:
           name: "Run test networks"
           command: |
@@ -52,6 +67,11 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Run package commands
+          command: |
+            go mod tidy
+            go mod vendor
+      - run:
           name: "Run test tests"
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
@@ -65,6 +85,11 @@ jobs:
       GO111MODULE: "on"
     steps:
       - checkout
+      - run:
+          name: Run package commands
+          command: |
+            go mod tidy
+            go mod vendor
       - run:
           name: "Run test others"
           command: |
