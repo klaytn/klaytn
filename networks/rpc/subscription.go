@@ -139,5 +139,8 @@ func (n *Notifier) unsubscribe() {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
 
-	n.active = make(map[ID]*Subscription)
+	for _, s := range n.active {
+		close(s.err)
+		delete(n.active, s.ID)
+	}
 }
