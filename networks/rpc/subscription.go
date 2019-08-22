@@ -134,7 +134,7 @@ func (n *Notifier) activate(id ID, namespace string) {
 	}
 }
 
-// unsubscribeAll unsubscribe every subscriptions.
+// unsubscribeAll unsubscribes every subscriptions.
 func (n *Notifier) unsubscribeAll() {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
