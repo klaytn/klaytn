@@ -91,9 +91,6 @@ func (n *Notifier) Notify(id ID, data interface{}) error {
 	n.subMu.RLock()
 	defer n.subMu.RUnlock()
 
-	n.codec.Add(1)
-	defer n.codec.Done()
-
 	sub, active := n.active[id]
 	if active {
 		notification := n.codec.CreateNotification(string(id), sub.namespace, data)

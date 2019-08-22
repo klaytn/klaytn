@@ -158,7 +158,6 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		if supported { // interface doesn't support subscriptions (e.g. http)
 			notifier.unsubscribe()
 		}
-		codec.Wait()
 	}()
 	// if the codec supports notification include a notifier that callbacks can use
 	// to send notification to clients. It is thight to the codec/connection. If the
