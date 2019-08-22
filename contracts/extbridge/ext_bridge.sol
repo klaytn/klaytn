@@ -33,6 +33,42 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         callback = _addr;
     }
 
+    // requestSellERC20 requests transfer/Swap ERC20 and to _to on relative chain.
+    function requestSellERC20(
+        address _tokenAddress,
+        address _to,
+        uint256 _value,
+        uint256 _feeLimit,
+        uint256 _price
+    )
+    external
+    {
+        requestERC20Transfer(
+            _tokenAddress,
+            _to,
+            _value,
+            _feeLimit,
+            abi.encode(_price)
+        );
+    }
+
+    // requestERC721Transfer requests transfer ERC721 to _to on relative chain.
+    function requestSellERC721(
+        address _tokenAddress,
+        address _to,
+        uint256 _tokenId,
+        uint256 _price
+    )
+    external
+    {
+        requestERC721Transfer(
+            _tokenAddress,
+            _to,
+            _tokenId,
+            abi.encode(_price)
+        );
+    }
+
     // handleERC20Transfer sends the ERC20 token by the request and processes the extended feature.
     function handleERC20Transfer(
         bytes32 _requestTxHash,
@@ -42,12 +78,12 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         uint256 _value,
         uint64 _requestNonce,
         uint64 _requestBlockNumber,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         public
     {
         if (_extraData.length > 0) {
-            uint256 offerPrice = _extraData[0];
+            uint256 offerPrice = abi.decode(_extraData, (uint256));
             if (offerPrice > 0 && callback != address(0)) {
                 super.handleERC20Transfer(_requestTxHash, _from, callback, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
                 Callback(callback).registerOffer(_to, _value, _tokenAddress, offerPrice);
@@ -77,12 +113,12 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         uint64 _requestNonce,
         uint64 _requestBlockNumber,
         string memory _tokenURI,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         public
     {
         if (_extraData.length > 0) {
-            uint256 offerPrice = _extraData[0];
+            uint256 offerPrice = abi.decode(_extraData, (uint256));
             if (offerPrice > 0 && callback != address(0)) {
                 super.handleERC721Transfer(_requestTxHash, _from, callback, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
                 Callback(callback).registerOffer(_to, _tokenId, _tokenAddress, offerPrice);
