@@ -156,7 +156,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 	defer func() {
 		notifier, supported := NotifierFromContext(ctx)
 		if supported { // interface doesn't support subscriptions (e.g. http)
-			notifier.unsubscribe()
+			notifier.unsubscribeAll()
 		}
 	}()
 	// if the codec supports notification include a notifier that callbacks can use
@@ -311,7 +311,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 			}
 
 			subid := ID(req.args[0].String())
-			if err := notifier.unsubscribeWithID(subid); err != nil {
+			if err := notifier.unsubscribe(subid); err != nil {
 				return codec.CreateErrorResponse(&req.id, &callbackError{err.Error()}), nil
 			}
 

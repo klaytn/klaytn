@@ -107,9 +107,9 @@ func (n *Notifier) Closed() <-chan interface{} {
 	return n.codec.Closed()
 }
 
-// unsubscribeWithID a subscription.
+// unsubscribe a subscription.
 // If the subscription could not be found ErrSubscriptionNotFound is returned.
-func (n *Notifier) unsubscribeWithID(id ID) error {
+func (n *Notifier) unsubscribe(id ID) error {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
 	if s, found := n.active[id]; found {
@@ -134,8 +134,8 @@ func (n *Notifier) activate(id ID, namespace string) {
 	}
 }
 
-// unsubscribe unsubscribe every subscriptions.
-func (n *Notifier) unsubscribe() {
+// unsubscribeAll unsubscribe every subscriptions.
+func (n *Notifier) unsubscribeAll() {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
 
