@@ -33,7 +33,7 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         callback = _addr;
     }
 
-    // requestSellERC20 requests transfer/Swap ERC20 and to _to on relative chain.
+    // requestSellERC20 requests transfer ERC20 to _to on relative chain to sell it.
     function requestSellERC20(
         address _tokenAddress,
         address _to,
@@ -52,7 +52,7 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         );
     }
 
-    // requestERC721Transfer requests transfer ERC721 to _to on relative chain.
+    // requestSellERC721 requests transfer ERC721 to _to on relative chain to sell it.
     function requestSellERC721(
         address _tokenAddress,
         address _to,
