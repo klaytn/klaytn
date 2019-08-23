@@ -376,36 +376,9 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 }
 
 func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
-	startBlkNum := sbh.GetNextAnchoringBlockNumber()
-
-	var successCnt, cnt, blkNum uint64
-	latestBlkNum := block.Number().Uint64()
-
-	// TODO-Klaytn-Servicechain remove this code or define right confirmation block count.
-	// To consider a non-absolute finality consensus like PoA (Clique), this code anchors past blocks.
-	const confirmCnt = uint64(10)
-	if latestBlkNum > confirmCnt {
-		latestBlkNum = latestBlkNum - confirmCnt
-	} else {
-		return
-	}
-
-	for cnt, blkNum = 0, startBlkNum; cnt <= sbh.sentServiceChainTxsLimit && blkNum <= latestBlkNum; cnt, blkNum = cnt+1, blkNum+1 {
-		block := sbh.subbridge.blockchain.GetBlockByNumber(blkNum)
-		if block == nil {
-			logger.Warn("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool by the missed block", "missedBlockNumber", blkNum)
-			break
-		}
-		if err := sbh.generateAndAddAnchoringTxIntoTxPool(block); err == nil {
-			sbh.UpdateLatestAnchoredBlockNumber(blkNum)
-			successCnt++
-		} else {
-			logger.Trace("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool", "cnt", cnt, "startBlockNumber", startBlkNum, "FailedBlockNumber", blkNum, "latestBlockNum", block.NumberU64())
-			break
-		}
-	}
-	if successCnt > 0 {
-		logger.Info("Generate anchoring txs", "txCount", successCnt, "startBlockNumber", startBlkNum, "endBlockNumber", blkNum-1)
+	if err := sbh.generateAndAddAnchoringTxIntoTxPool(block); err == nil {
+		sbh.UpdateLatestAnchoredBlockNumber(block.NumberU64())
+		logger.Info("Generate anchoring txs", "blockNumber", block.NumberU64())
 	}
 }
 
@@ -451,25 +424,6 @@ func (scpm *SubBridgeHandler) SyncNonceAndGasPrice() {
 // GetLatestAnchoredBlockNumber returns the latest block number whose data has been anchored to the parent chain.
 func (sbh *SubBridgeHandler) GetLatestAnchoredBlockNumber() uint64 {
 	return sbh.subbridge.ChainDB().ReadAnchoredBlockNumber()
-}
-
-// GetNextAnchoringBlockNumber returns the next block number which is needed to be anchored.
-func (sbh *SubBridgeHandler) GetNextAnchoringBlockNumber() uint64 {
-	if sbh.latestAnchoredBlockNumber == 0 {
-		sbh.latestAnchoredBlockNumber = sbh.subbridge.ChainDB().ReadAnchoredBlockNumber()
-	}
-
-	// If latestAnchoredBlockNumber == 0, there are two cases below.
-	// 1) The last block number anchored is 0 block(genesis block).
-	// 2) There is no block anchored, so this is the 1st time. (If there is no value in DB, it returns 0.)
-	// To cover all cases without complex DB routine, the condition below is added.
-	// Even if genesis block can be anchored more than 2 times,
-	// this routine can guarantee anchoring genesis block.
-	if sbh.latestAnchoredBlockNumber == 0 {
-		return sbh.latestAnchoredBlockNumber
-	}
-
-	return sbh.latestAnchoredBlockNumber + 1
 }
 
 // UpdateLatestAnchoredBlockNumber set the latestAnchoredBlockNumber to the block number of the last anchoring tx which was added into bridge txPool.
