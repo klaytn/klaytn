@@ -234,14 +234,22 @@ func (sbh *SubBridgeHandler) handleParentChainReceiptResponseMsg(p BridgePeer, m
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 	// Stores receipt and remove tx from sentServiceChainTxs only if the tx is successfully executed.
-	sbh.writeServiceChainTxReceipts(sbh.subbridge.blockchain, receipts)
+	sbh.writeChildChainTxReceipts(sbh.subbridge.blockchain, receipts)
 	return nil
+}
+
+func (sbh *SubBridgeHandler) getWindowTxCounts() *big.Int {
+	// TODO-Klaytn-ServiceChain: implement this method.
+	return big.NewInt(70)
 }
 
 // genUnsignedChainDataAnchoringTx generates an unsigned transaction, which type is TxTypeChainDataAnchoring.
 // Nonce of account used for service chain transaction will be increased after the signing.
 func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block) (*types.Transaction, error) {
-	chainHashes := types.NewChainHashes(block)
+	chainHashes, err := types.NewChainHashesType0(block, sbh.getWindowTxCounts())
+	if err != nil {
+		return nil, err
+	}
 	encodedCCTxData, err := rlp.EncodeToBytes(chainHashes)
 	if err != nil {
 		return nil, err
@@ -307,7 +315,7 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 }
 
 // writeServiceChainTxReceipt writes the received receipts of service chain transactions.
-func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockChain, receipts []*types.ReceiptForStorage) {
+func (sbh *SubBridgeHandler) writeChildChainTxReceipts(bc *blockchain.BlockChain, receipts []*types.ReceiptForStorage) {
 	for _, receipt := range receipts {
 		txHash := receipt.TxHash
 		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
@@ -322,9 +330,19 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 					logger.Error("failed to RLP decode ChainHashes", "txHash", txHash.String())
 					return
 				}
-				sbh.WriteReceiptFromParentChain(chainHashes.BlockHash, (*types.Receipt)(receipt))
-				sbh.WriteAnchoredBlockNumber(chainHashes.BlockNumber.Uint64())
-				logger.Debug("received anchoring tx receipt", "blockNum", chainHashes.BlockNumber.String(), "blcokHash", chainHashes.BlockHash.String(), "txHash", txHash.String())
+				if chainHashes.Type == 0 {
+					chainHashesInternal := new(types.ChainHashesInternalType0)
+					if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
+						logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
+						continue
+					}
+					sbh.WriteReceiptFromParentChain(chainHashesInternal.BlockHash, (*types.Receipt)(receipt))
+					sbh.WriteAnchoredBlockNumber(chainHashesInternal.BlockNumber.Uint64())
+					logger.Trace("received anchoring tx receipt", "blockNum", chainHashesInternal.BlockNumber.String(), "blcokHash", chainHashesInternal.BlockHash.String(), "txHash", txHash.String(), "txCounts", chainHashesInternal.TxCounts)
+				} else {
+					logger.Error("writeChildChainTxReceipts : failed to decode anchoring data. unknown type", "type", chainHashes.Type)
+					return
+				}
 			}
 
 			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
