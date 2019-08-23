@@ -725,6 +725,7 @@ func (f *Fetcher) insertWorker() {
 		case task := <-f.insertTasks:
 			f.insertWork(task.peer, task.block)
 		case <-f.quit:
+			logger.Info("Terminated insertWorker")
 			return
 		}
 	}
