@@ -520,6 +520,7 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 			s2 := strings.Split(fd.LocalAddr().String(), ":") // string format example, 123.123.123.123:30303
 			if s1[len(s1)-1] == s2[len(s2)-1] {
 				c.portOrder = PortOrder(i)
+				break
 			}
 		}
 	}
