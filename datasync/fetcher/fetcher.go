@@ -308,6 +308,7 @@ func (f *Fetcher) loop() {
 		}
 		// Import any queued blocks that could potentially fit
 		height := f.chainHeight()
+	insertFailed:
 		for !f.queue.Empty() {
 			op := f.queue.PopItem().(*inject)
 			if f.queueChangeHook != nil {
@@ -331,7 +332,6 @@ func (f *Fetcher) loop() {
 
 			block := op.block
 			peer := op.origin
-			insertFailed := false
 			select {
 			case f.insertTasks <- insertTask{peer, block}:
 				logger.Debug("Importing propagated block", "peer", peer, "number", number, "hash", hash)
@@ -341,10 +341,7 @@ func (f *Fetcher) loop() {
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(hash, true)
 				}
-				insertFailed = true
-			}
-			if insertFailed {
-				break
+				break insertFailed
 			}
 		}
 		// Wait for an outside event to occur
