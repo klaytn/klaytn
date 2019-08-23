@@ -101,15 +101,25 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 		return err
 	}
 
-	// Once we received f+1 ROUND CHANGE messages, those messages form a weak certificate.
-	// If our round number is smaller than the certificate's round number, we would
-	// try to catch up the round number.
-	if num == int(2*c.valSet.F()+1) && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
+	var numCatchUp, numStartNewRound int
+	if c.valSet.Size() < 4 {
+		numStartNewRound = int(c.valSet.Size())
+		numCatchUp = numStartNewRound - 1
+	} else {
+		fValue := c.valSet.F()
+		numStartNewRound = int(2*fValue + 1)
+		numCatchUp = int(fValue + 1)
+	}
+
+	if num == numStartNewRound && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
 		// We've received 2f+1 ROUND CHANGE messages, start a new round immediately.
 		logger.Warn("[RC] Received 2f+1 Round Change Messages. Starting new round")
 		c.startNewRound(roundView.Round)
 		return nil
-	} else if c.waitingForRoundChange && num == int(c.valSet.F()+1) {
+	} else if c.waitingForRoundChange && num == numCatchUp {
+		// Once we received f+1 ROUND CHANGE messages, those messages form a weak certificate.
+		// If our round number is smaller than the certificate's round number, we would
+		// try to catch up the round number.
 		if cv.Round.Cmp(roundView.Round) < 0 {
 			logger.Warn("[RC] Send round change because we have F+1 roundchange messages")
 			c.sendRoundChange(roundView.Round)
