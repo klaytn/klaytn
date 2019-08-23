@@ -331,6 +331,7 @@ func (f *Fetcher) loop() {
 
 			block := op.block
 			peer := op.origin
+			insertFailed := false
 			select {
 			case f.insertTasks <- insertTask{peer, block}:
 				logger.Debug("Importing propagated block", "peer", peer, "number", number, "hash", hash)
@@ -340,6 +341,9 @@ func (f *Fetcher) loop() {
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(hash, true)
 				}
+				insertFailed = true
+			}
+			if insertFailed {
 				break
 			}
 		}
