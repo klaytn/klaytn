@@ -49,7 +49,9 @@ type SubBridgeHandler struct {
 	chainTxPeriod         uint64
 
 	// This is the block number of the latest anchoring tx which is added into bridge txPool.
-	latestAnchoredBlockNumber uint64
+	latestAnchoredBlockNumber   uint64
+	anchoringEnabledBlockNumber uint64
+	txCounts                    uint64 // accumulated tx counts in blocks for each anchoring period.
 
 	// TODO-Klaytn-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
 	sentServiceChainTxsLimit uint64
@@ -238,18 +240,14 @@ func (sbh *SubBridgeHandler) handleParentChainReceiptResponseMsg(p BridgePeer, m
 	return nil
 }
 
-func (sbh *SubBridgeHandler) getWindowTxCounts() *big.Int {
-	// TODO-Klaytn-ServiceChain: implement this method.
-	return big.NewInt(70)
-}
-
 // genUnsignedChainDataAnchoringTx generates an unsigned transaction, which type is TxTypeChainDataAnchoring.
 // Nonce of account used for service chain transaction will be increased after the signing.
 func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block) (*types.Transaction, error) {
-	chainHashes, err := types.NewChainHashesType0(block, sbh.getWindowTxCounts())
+	chainHashes, err := types.NewChainHashesType0(block, new(big.Int).SetUint64(sbh.txCounts))
 	if err != nil {
 		return nil, err
 	}
+	sbh.txCounts = 0 // reset for the next anchoring period
 	encodedCCTxData, err := rlp.EncodeToBytes(chainHashes)
 	if err != nil {
 		return nil, err
@@ -375,7 +373,21 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 	}
 }
 
+func (sbh *SubBridgeHandler) updateTxCounts(block *types.Block) {
+	if sbh.anchoringEnabledBlockNumber == 0 {
+		sbh.anchoringEnabledBlockNumber = block.NumberU64()
+	}
+	// Skip the first remnant period.
+	remnant := block.NumberU64() - sbh.anchoringEnabledBlockNumber
+	if remnant > 0 && remnant < sbh.chainTxPeriod {
+		return
+	}
+
+	sbh.txCounts += uint64(block.Transactions().Len())
+}
+
 func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
+	sbh.updateTxCounts(block)
 	if err := sbh.generateAndAddAnchoringTxIntoTxPool(block); err == nil {
 		sbh.UpdateLatestAnchoredBlockNumber(block.NumberU64())
 		logger.Info("Generate anchoring txs", "blockNumber", block.NumberU64())
