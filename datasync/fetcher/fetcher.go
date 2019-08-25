@@ -308,6 +308,7 @@ func (f *Fetcher) loop() {
 		}
 		// Import any queued blocks that could potentially fit
 		height := f.chainHeight()
+	insertFailed:
 		for !f.queue.Empty() {
 			op := f.queue.PopItem().(*inject)
 			if f.queueChangeHook != nil {
@@ -340,7 +341,7 @@ func (f *Fetcher) loop() {
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(hash, true)
 				}
-				break
+				break insertFailed
 			}
 		}
 		// Wait for an outside event to occur
@@ -721,6 +722,7 @@ func (f *Fetcher) insertWorker() {
 		case task := <-f.insertTasks:
 			f.insertWork(task.peer, task.block)
 		case <-f.quit:
+			logger.Info("Terminated insertWorker")
 			return
 		}
 	}
