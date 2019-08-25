@@ -133,3 +133,14 @@ func (n *Notifier) activate(id ID, namespace string) {
 		delete(n.inactive, id)
 	}
 }
+
+// unsubscribeAll unsubscribes every subscriptions.
+func (n *Notifier) unsubscribeAll() {
+	n.subMu.Lock()
+	defer n.subMu.Unlock()
+
+	for _, s := range n.active {
+		close(s.err)
+		delete(n.active, s.ID)
+	}
+}

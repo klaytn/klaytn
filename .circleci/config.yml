@@ -113,6 +113,7 @@ jobs:
           shell: /bin/bash
           name: "Run coverage tests"
           command: |
+            set -e
             export GOPATH=/go
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
             make cover
