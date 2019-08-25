@@ -28,12 +28,15 @@ import (
 	"github.com/klaytn/klaytn/contracts/sc_erc20"
 	"github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/big"
 	"os"
+	"path"
 	"sync"
 	"testing"
 	"time"
@@ -1257,6 +1260,293 @@ func TestErrorDupSubscription(t *testing.T) {
 	assert.NotEqual(t, nil, err)
 
 	bm.Stop()
+}
+
+// TestAnchoringBasic tests the following:
+// 1. generate anchoring tx
+// 2. decode anchoring tx
+// 3. start anchoring from the current block
+// 4. accumulated tx counts
+func TestAnchoringBasic(t *testing.T) {
+	const (
+		startBlkNum   = 10
+		startTxCounts = 100
+	)
+	tempDir := os.TempDir() + "anchoring"
+	os.MkdirAll(tempDir, os.ModePerm)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	config := &SCConfig{AnchoringPeriod: 1}
+	config.DataDir = tempDir
+	config.VTRecovery = true
+
+	bAcc, _ := NewBridgeAccounts(tempDir)
+	bAcc.pAccount.chainID = big.NewInt(0)
+	bAcc.cAccount.chainID = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	sc := &SubBridge{
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bAcc,
+	}
+
+	var err error
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+	sc.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgepool.BridgeTxPoolConfig{
+		Journal:     path.Join(tempDir, "bridge_transactions.rlp"),
+		GlobalQueue: 1024,
+	})
+
+	assert.Equal(t, uint64(0), sc.handler.txCountsEnabledBlockNumber)
+	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
+
+	// Encoding anchoring tx
+	body := generateBody(t)
+	curBlk := types.NewBlock(&types.Header{Number: big.NewInt(startBlkNum)}, body.Transactions, nil)
+
+	// Generate anchoring tx again for only the curBlk.
+	sc.handler.txCounts = startTxCounts
+	sc.handler.txCountsEnabledBlockNumber = curBlk.NumberU64()
+	sc.handler.blockAnchoringManager(curBlk)
+	assert.Equal(t, uint64(0), sc.handler.txCounts)
+	pending := sc.GetBridgeTxPool().Pending()
+	assert.Equal(t, 1, len(pending))
+	var tx *types.Transaction
+	for _, v := range pending {
+		assert.Equal(t, 1, len(v))
+		tx = v[0]
+	}
+
+	// Decoding the anchoring tx.
+	assert.Equal(t, types.TxTypeChainDataAnchoring, tx.Type())
+	chainHashes := new(types.ChainHashes)
+	data, err := tx.AnchoredData()
+	assert.NoError(t, err)
+
+	err = rlp.DecodeBytes(data, chainHashes)
+	assert.NoError(t, err)
+	assert.Equal(t, uint8(0), chainHashes.Type)
+	chainHashesInternal := new(types.ChainHashesInternalType0)
+	if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
+		logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
+	}
+
+	// Check the current block is anchored.
+	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), chainHashesInternal.BlockNumber.String())
+	assert.Equal(t, curBlk.Hash(), chainHashesInternal.BlockHash)
+	assert.Equal(t, big.NewInt(startTxCounts+1), chainHashesInternal.TxCounts)
+}
+
+// TestAnchoringPeriod tests the following:
+// 1. set anchoring period to 1, 2, 3 and check txCountsEnabledBlockNumber
+func TestAnchoringUpdateTxCounts(t *testing.T) {
+	const (
+		startBlkNum   = 9
+		startTxCounts = 100
+	)
+	tempDir := os.TempDir() + "anchoring"
+	os.MkdirAll(tempDir, os.ModePerm)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	config := &SCConfig{AnchoringPeriod: 3}
+	config.DataDir = tempDir
+	config.VTRecovery = true
+
+	bAcc, _ := NewBridgeAccounts(tempDir)
+	bAcc.pAccount.chainID = big.NewInt(0)
+	bAcc.cAccount.chainID = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	sc := &SubBridge{
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bAcc,
+	}
+
+	var err error
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	assert.Equal(t, uint64(0), sc.handler.txCountsEnabledBlockNumber)
+
+	// Check tx counting is started as expected.
+	type testParams struct {
+		period   uint64 // chainTxPeriod
+		enabled  int64  // block number where anchoring is enabled
+		expected uint64 // txCountsEnabledBlockNumber
+	}
+
+	testCases := []testParams{
+		{1, 1, 1},
+		{1, 2, 2},
+		{2, 1, 1},
+		{2, 2, 3},
+		{2, 3, 3},
+		{2, 4, 5},
+		{3, 6, 7},
+		{3, 7, 7},
+		{3, 8, 10},
+		{3, 9, 10},
+		{3, 10, 10},
+	}
+
+	body := generateBody(t)
+
+	for i := 0; i < len(testCases); i++ {
+		curBlk := types.NewBlock(&types.Header{Number: big.NewInt(testCases[i].enabled)}, body.Transactions, nil)
+		sc.handler.txCountsEnabledBlockNumber = 0
+		sc.handler.chainTxPeriod = testCases[i].period
+		sc.handler.updateTxCounts(curBlk)
+		assert.Equal(t, testCases[i].expected, sc.handler.txCountsEnabledBlockNumber)
+	}
+}
+
+// TestAnchoringPeriod tests the following:
+// 1. set anchoring period 2
+// 2. accumulate tx counts
+func TestAnchoringPeriod(t *testing.T) {
+	const (
+		startBlkNum   = 9
+		startTxCounts = 100
+	)
+	tempDir := os.TempDir() + "anchoringPeriod"
+	os.MkdirAll(tempDir, os.ModePerm)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	config := &SCConfig{AnchoringPeriod: 2}
+	config.DataDir = tempDir
+	config.VTRecovery = true
+
+	bAcc, _ := NewBridgeAccounts(tempDir)
+	bAcc.pAccount.chainID = big.NewInt(0)
+	bAcc.cAccount.chainID = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	sc := &SubBridge{
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bAcc,
+	}
+
+	var err error
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+	sc.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgepool.BridgeTxPoolConfig{
+		Journal:     path.Join(tempDir, "bridge_transactions.rlp"),
+		GlobalQueue: 1024,
+	})
+
+	assert.Equal(t, uint64(0), sc.handler.txCountsEnabledBlockNumber)
+	assert.Equal(t, uint64(2), sc.handler.chainTxPeriod)
+
+	body := generateBody(t)
+
+	// Try to generate anchoring tx again for only the curBlk (but failed)
+	curBlk := types.NewBlock(&types.Header{Number: big.NewInt(startBlkNum)}, body.Transactions, nil)
+	sc.handler.txCounts = startTxCounts
+	sc.handler.txCountsEnabledBlockNumber = curBlk.NumberU64()
+	sc.handler.blockAnchoringManager(curBlk)
+	assert.Equal(t, uint64(startTxCounts+1), sc.handler.txCounts)
+	pending := sc.GetBridgeTxPool().Pending()
+	assert.Equal(t, 0, len(pending))
+
+	// Generate anchoring tx again for only the curBlk.
+	curBlk = types.NewBlock(&types.Header{Number: big.NewInt(startBlkNum + 1)}, body.Transactions, nil)
+	sc.handler.blockAnchoringManager(curBlk)
+	assert.Equal(t, uint64(0), sc.handler.txCounts)
+	pending = sc.GetBridgeTxPool().Pending()
+	assert.Equal(t, 1, len(pending))
+
+	var tx *types.Transaction
+	for _, v := range pending {
+		assert.Equal(t, 1, len(v))
+		tx = v[0]
+	}
+
+	// Decoding the anchoring tx.
+	assert.Equal(t, types.TxTypeChainDataAnchoring, tx.Type())
+	chainHashes := new(types.ChainHashes)
+	data, err := tx.AnchoredData()
+	assert.NoError(t, err)
+
+	err = rlp.DecodeBytes(data, chainHashes)
+	assert.NoError(t, err)
+	assert.Equal(t, uint8(0), chainHashes.Type)
+	chainHashesInternal := new(types.ChainHashesInternalType0)
+	if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
+		logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
+	}
+
+	// Check the current block is anchored.
+	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), chainHashesInternal.BlockNumber.String())
+	assert.Equal(t, curBlk.Hash(), chainHashesInternal.BlockHash)
+	assert.Equal(t, big.NewInt(startTxCounts+2), chainHashesInternal.TxCounts)
+}
+
+func generateBody(t *testing.T) *types.Body {
+	body := &types.Body{}
+
+	tx := generateTx(t)
+	txs := types.Transactions{tx}
+	body.Transactions = txs
+
+	return body
+}
+
+func generateTx(t *testing.T) *types.Transaction {
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+
+	signer := types.NewEIP155Signer(big.NewInt(18))
+	tx1, err := types.SignTx(types.NewTransaction(0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tx1
 }
 
 // for TestMethod

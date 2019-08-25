@@ -49,9 +49,9 @@ type SubBridgeHandler struct {
 	chainTxPeriod         uint64
 
 	// This is the block number of the latest anchoring tx which is added into bridge txPool.
-	latestAnchoredBlockNumber   uint64
-	anchoringEnabledBlockNumber uint64
-	txCounts                    uint64 // accumulated tx counts in blocks for each anchoring period.
+	latestAnchoredBlockNumber  uint64
+	txCountsEnabledBlockNumber uint64
+	txCounts                   uint64 // accumulated tx counts in blocks for each anchoring period.
 
 	// TODO-Klaytn-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
 	sentServiceChainTxsLimit uint64
@@ -373,17 +373,23 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 	}
 }
 
+// updateTxCounts update txCounts to insert into anchoring tx. It skips first remnant txCounts.
 func (sbh *SubBridgeHandler) updateTxCounts(block *types.Block) {
-	if sbh.anchoringEnabledBlockNumber == 0 {
-		sbh.anchoringEnabledBlockNumber = block.NumberU64()
-	}
-	// Skip the first remnant period.
-	remnant := block.NumberU64() - sbh.anchoringEnabledBlockNumber
-	if remnant > 0 && remnant < sbh.chainTxPeriod {
-		return
+	if sbh.txCountsEnabledBlockNumber == 0 {
+		sbh.txCountsEnabledBlockNumber = block.NumberU64()
+		if sbh.chainTxPeriod > 1 {
+			remnant := block.NumberU64() % sbh.chainTxPeriod
+			if remnant < 2 {
+				sbh.txCountsEnabledBlockNumber += 1 - remnant
+			} else {
+				sbh.txCountsEnabledBlockNumber += (sbh.chainTxPeriod - remnant) + 1
+			}
+		}
 	}
 
-	sbh.txCounts += uint64(block.Transactions().Len())
+	if block.NumberU64() >= sbh.txCountsEnabledBlockNumber {
+		sbh.txCounts += uint64(block.Transactions().Len())
+	}
 }
 
 func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
