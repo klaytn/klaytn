@@ -651,13 +651,20 @@ func BenchmarkRPCOutput(t *testing.B) {
 
 	// TxTypeChainDataAnchoring
 	{
-		blockTxData := &types.ChainHashes{
+		data := &types.ChainHashesInternalType0{
 			BlockHash:     common.HexToHash("0"),
 			TxHash:        common.HexToHash("1"),
 			ParentHash:    common.HexToHash("2"),
 			ReceiptHash:   common.HexToHash("3"),
 			StateRootHash: common.HexToHash("4"),
-			BlockNumber:   big.NewInt(5)}
+			BlockNumber:   big.NewInt(5),
+			TxCounts:      big.NewInt(6),
+		}
+		encodedCCTxData, err := rlp.EncodeToBytes(data)
+		if err != nil {
+			panic(err)
+		}
+		blockTxData := &types.ChainHashes{Type: 0, Data: encodedCCTxData}
 
 		anchoredData, err := rlp.EncodeToBytes(blockTxData)
 		if err != nil {

@@ -1875,7 +1875,10 @@ func TestValidateSender(t *testing.T) {
 	{
 		dummyBlock := types.NewBlock(&types.Header{}, nil, nil)
 
-		scData := types.NewChainHashes(dummyBlock)
+		scData, err := types.NewChainHashesType0(dummyBlock, big.NewInt(int64(dummyBlock.Transactions().Len())))
+		if err != nil {
+			t.Fatal(err)
+		}
 		dataAnchoredRLP, _ := rlp.EncodeToBytes(scData)
 
 		values := map[types.TxValueKeyType]interface{}{
