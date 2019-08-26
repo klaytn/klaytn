@@ -1875,7 +1875,7 @@ func TestValidateSender(t *testing.T) {
 	{
 		dummyBlock := types.NewBlock(&types.Header{}, nil, nil)
 
-		scData, err := types.NewChainHashesType0(dummyBlock, big.NewInt(int64(dummyBlock.Transactions().Len())))
+		scData, err := types.NewChainHashesType0(dummyBlock, big.NewInt(0), big.NewInt(int64(dummyBlock.Transactions().Len())))
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -1350,7 +1350,8 @@ func TestAnchoringBasic(t *testing.T) {
 	// Check the current block is anchored.
 	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), chainHashesInternal.BlockNumber.String())
 	assert.Equal(t, curBlk.Hash(), chainHashesInternal.BlockHash)
-	assert.Equal(t, big.NewInt(startTxCounts+1), chainHashesInternal.TxCounts)
+	assert.Equal(t, big.NewInt(1).String(), chainHashesInternal.Period.String())
+	assert.Equal(t, big.NewInt(startTxCounts+1).String(), chainHashesInternal.TxCounts.String())
 }
 
 // TestAnchoringPeriod tests the following:
@@ -1524,7 +1525,8 @@ func TestAnchoringPeriod(t *testing.T) {
 	// Check the current block is anchored.
 	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), chainHashesInternal.BlockNumber.String())
 	assert.Equal(t, curBlk.Hash(), chainHashesInternal.BlockHash)
-	assert.Equal(t, big.NewInt(startTxCounts+2), chainHashesInternal.TxCounts)
+	assert.Equal(t, big.NewInt(2).String(), chainHashesInternal.Period.String())
+	assert.Equal(t, big.NewInt(startTxCounts+2).String(), chainHashesInternal.TxCounts.String())
 }
 
 func generateBody(t *testing.T) *types.Body {

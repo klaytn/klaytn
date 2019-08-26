@@ -243,7 +243,7 @@ func (sbh *SubBridgeHandler) handleParentChainReceiptResponseMsg(p BridgePeer, m
 // genUnsignedChainDataAnchoringTx generates an unsigned transaction, which type is TxTypeChainDataAnchoring.
 // Nonce of account used for service chain transaction will be increased after the signing.
 func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block) (*types.Transaction, error) {
-	chainHashes, err := types.NewChainHashesType0(block, new(big.Int).SetUint64(sbh.txCounts))
+	chainHashes, err := types.NewChainHashesType0(block, new(big.Int).SetUint64(sbh.chainTxPeriod), new(big.Int).SetUint64(sbh.txCounts))
 	if err != nil {
 		return nil, err
 	}

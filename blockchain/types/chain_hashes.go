@@ -34,13 +34,14 @@ type ChainHashesInternalType0 struct {
 	ReceiptHash   common.Hash
 	StateRootHash common.Hash
 	BlockNumber   *big.Int
+	Period        *big.Int
 	TxCounts      *big.Int
 }
 
-func NewChainHashesType0(block *Block, txCounts *big.Int) (*ChainHashes, error) {
+func NewChainHashesType0(block *Block, period *big.Int, txCounts *big.Int) (*ChainHashes, error) {
 	data := &ChainHashesInternalType0{block.Hash(), block.Header().TxHash,
 		block.Header().ParentHash, block.Header().ReceiptHash,
-		block.Header().Root, block.Header().Number, txCounts}
+		block.Header().Root, block.Header().Number, period, txCounts}
 	encodedCCTxData, err := rlp.EncodeToBytes(data)
 	if err != nil {
 		return nil, err
