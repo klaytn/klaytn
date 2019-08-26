@@ -311,8 +311,8 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 	logger.Debug("broadcastServiceChainTx ServiceChainTxData", "len(txs)", len(txs), "len(peers)", len(peers))
 }
 
-// writeServiceChainTxReceipt writes the received receipts of service chain transactions.
-func (sbh *SubBridgeHandler) writeChildChainTxReceipts(bc *blockchain.BlockChain, receipts []*types.ReceiptForStorage) {
+// writeServiceChainTxReceipts writes the received receipts of service chain transactions.
+func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockChain, receipts []*types.ReceiptForStorage) {
 	for _, receipt := range receipts {
 		txHash := receipt.TxHash
 		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
@@ -342,6 +342,7 @@ func (sbh *SubBridgeHandler) writeChildChainTxReceipts(bc *blockchain.BlockChain
 				}
 			}
 
+			// TODO-Klaytn-ServiceChain: implement WriteReceiptFromParentChain if receipt is needed.
 			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
 		} else {
 			logger.Trace("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
