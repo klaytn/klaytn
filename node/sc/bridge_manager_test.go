@@ -1301,6 +1301,7 @@ func TestAnchoringBasic(t *testing.T) {
 		remoteBackend:  sim,
 		bridgeAccounts: bAcc,
 	}
+	sc.blockchain = sim.BlockChain()
 
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -1317,8 +1318,10 @@ func TestAnchoringBasic(t *testing.T) {
 	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
 
 	// Encoding anchoring tx
-	body := generateBody(t)
-	curBlk := types.NewBlock(&types.Header{Number: big.NewInt(startBlkNum)}, body.Transactions, nil)
+	auth := bAcc.pAccount.GetTransactOpts()
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	sim.Commit()
+	curBlk := sim.BlockChain().CurrentBlock()
 
 	// Generate anchoring tx again for only the curBlk.
 	sc.handler.txCounts = startTxCounts
@@ -1356,10 +1359,6 @@ func TestAnchoringBasic(t *testing.T) {
 // TestAnchoringPeriod tests the following:
 // 1. set anchoring period to 1, 2, 3 and check txCountsEnabledBlockNumber
 func TestAnchoringUpdateTxCounts(t *testing.T) {
-	const (
-		startBlkNum   = 9
-		startTxCounts = 100
-	)
 	tempDir := os.TempDir() + "anchoring"
 	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
@@ -1389,6 +1388,7 @@ func TestAnchoringUpdateTxCounts(t *testing.T) {
 		remoteBackend:  sim,
 		bridgeAccounts: bAcc,
 	}
+	sc.blockchain = sim.BlockChain()
 
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -1436,7 +1436,6 @@ func TestAnchoringUpdateTxCounts(t *testing.T) {
 // 2. accumulate tx counts
 func TestAnchoringPeriod(t *testing.T) {
 	const (
-		startBlkNum   = 9
 		startTxCounts = 100
 	)
 	tempDir := os.TempDir() + "anchoringPeriod"
@@ -1468,6 +1467,7 @@ func TestAnchoringPeriod(t *testing.T) {
 		remoteBackend:  sim,
 		bridgeAccounts: bAcc,
 	}
+	sc.blockchain = sim.BlockChain()
 
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
@@ -1483,10 +1483,12 @@ func TestAnchoringPeriod(t *testing.T) {
 	assert.Equal(t, uint64(0), sc.handler.txCountsEnabledBlockNumber)
 	assert.Equal(t, uint64(2), sc.handler.chainTxPeriod)
 
-	body := generateBody(t)
-
 	// Try to generate anchoring tx again for only the curBlk (but failed)
-	curBlk := types.NewBlock(&types.Header{Number: big.NewInt(startBlkNum)}, body.Transactions, nil)
+	auth := bAcc.pAccount.GetTransactOpts()
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	sim.Commit()
+	curBlk := sim.BlockChain().CurrentBlock()
+
 	sc.handler.txCounts = startTxCounts
 	sc.handler.txCountsEnabledBlockNumber = curBlk.NumberU64()
 	sc.handler.blockAnchoringManager(curBlk)
@@ -1495,7 +1497,12 @@ func TestAnchoringPeriod(t *testing.T) {
 	assert.Equal(t, 0, len(pending))
 
 	// Generate anchoring tx again for only the curBlk.
-	curBlk = types.NewBlock(&types.Header{Number: big.NewInt(startBlkNum + 1)}, body.Transactions, nil)
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	sim.Commit()
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	sim.Commit()
+	curBlk = sim.BlockChain().CurrentBlock()
 	sc.handler.blockAnchoringManager(curBlk)
 	pending = sc.GetBridgeTxPool().Pending()
 	assert.Equal(t, 1, len(pending))
@@ -1524,7 +1531,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), chainHashesInternal.BlockNumber.String())
 	assert.Equal(t, curBlk.Hash(), chainHashesInternal.BlockHash)
 	assert.Equal(t, big.NewInt(2).String(), chainHashesInternal.Period.String())
-	assert.Equal(t, big.NewInt(startTxCounts+2).String(), chainHashesInternal.TxCounts.String())
+	assert.Equal(t, big.NewInt(startTxCounts+4).String(), chainHashesInternal.TxCounts.String())
 }
 
 func generateBody(t *testing.T) *types.Body {

@@ -236,7 +236,7 @@ func (sbh *SubBridgeHandler) handleParentChainReceiptResponseMsg(p BridgePeer, m
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 	// Stores receipt and remove tx from sentServiceChainTxs only if the tx is successfully executed.
-	sbh.writeChildChainTxReceipts(sbh.subbridge.blockchain, receipts)
+	sbh.writeServiceChainTxReceipts(sbh.subbridge.blockchain, receipts)
 	return nil
 }
 
@@ -388,8 +388,22 @@ func (sbh *SubBridgeHandler) updateTxCounts(block *types.Block) {
 		}
 	}
 
-	if block.NumberU64() >= sbh.txCountsEnabledBlockNumber {
-		sbh.txCounts += uint64(block.Transactions().Len())
+	var startBlkNum uint64
+	if sbh.latestAnchoredBlockNumber == 0 {
+		startBlkNum = block.NumberU64()
+	} else {
+		startBlkNum = sbh.latestAnchoredBlockNumber + 1
+	}
+
+	for i := startBlkNum; i <= block.NumberU64(); i++ {
+		b := sbh.subbridge.blockchain.GetBlockByNumber(i)
+		if b == nil {
+			logger.Warn("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool by the missed block", "missedBlockNumber", i)
+			break
+		}
+		if b.NumberU64() >= sbh.txCountsEnabledBlockNumber {
+			sbh.txCounts += uint64(b.Transactions().Len())
+		}
 	}
 }
 
