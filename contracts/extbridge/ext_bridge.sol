@@ -82,7 +82,7 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
     )
         public
     {
-        if (_extraData.length > 0) {
+        if (_extraData.length == 32) { // size check of uint256
             uint256 offerPrice = abi.decode(_extraData, (uint256));
             if (offerPrice > 0 && callback != address(0)) {
                 super.handleERC20Transfer(_requestTxHash, _from, callback, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
@@ -117,7 +117,7 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
     )
         public
     {
-        if (_extraData.length > 0) {
+        if (_extraData.length == 32) { // size check of uint256
             uint256 offerPrice = abi.decode(_extraData, (uint256));
             if (offerPrice > 0 && callback != address(0)) {
                 super.handleERC721Transfer(_requestTxHash, _from, callback, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
