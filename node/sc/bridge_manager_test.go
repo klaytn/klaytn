@@ -1502,6 +1502,10 @@ func TestAnchoringPeriod(t *testing.T) {
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	sim.Commit()
 	curBlk = sim.BlockChain().CurrentBlock()
 	sc.handler.blockAnchoringManager(curBlk)
 	pending = sc.GetBridgeTxPool().Pending()
@@ -1531,7 +1535,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), chainHashesInternal.BlockNumber.String())
 	assert.Equal(t, curBlk.Hash(), chainHashesInternal.BlockHash)
 	assert.Equal(t, big.NewInt(2).String(), chainHashesInternal.Period.String())
-	assert.Equal(t, big.NewInt(startTxCounts+4).String(), chainHashesInternal.TxCounts.String())
+	assert.Equal(t, big.NewInt(startTxCounts+7).String(), chainHashesInternal.TxCounts.String())
 }
 
 func generateBody(t *testing.T) *types.Body {
