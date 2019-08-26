@@ -375,7 +375,7 @@ func genFeeDelegatedSmartContractDeployWithRatioTransaction() TxInternalData {
 func genChainDataTransaction() TxInternalData {
 	data := &ChainHashesInternalType0{common.HexToHash("0"), common.HexToHash("1"),
 		common.HexToHash("2"), common.HexToHash("3"),
-		common.HexToHash("4"), big.NewInt(5), big.NewInt(6)}
+		common.HexToHash("4"), big.NewInt(5), big.NewInt(6), big.NewInt(7)}
 	encodedCCTxData, err := rlp.EncodeToBytes(data)
 	if err != nil {
 		panic(err)
