@@ -114,19 +114,19 @@ func (mce *MainChainEventHandler) writeChildChainTxHashFromBlock(block *types.Bl
 				continue
 			}
 			if err := rlp.DecodeBytes(data, chainHashes); err != nil {
-				logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
+				logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data", "txHash", tx.Hash().String())
 				continue
 			}
 			if chainHashes.Type == 0 {
 				chainHashesInternal := new(types.AnchoringDataInternalType0)
 				if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
-					logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
+					logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data", "txHash", tx.Hash().String())
 					continue
 				}
 				mce.mainbridge.chainDB.WriteChildChainTxHash(chainHashesInternal.BlockHash, tx.Hash())
 				logger.Trace("Write anchoring data on chainDB", "blockHash", chainHashesInternal.BlockHash.String(), "txHash", tx.Hash().String())
 			} else {
-				logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data. unknown type", "type", chainHashes.Type)
+				logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data. unknown type", "type", chainHashes.Type, "txHash", tx.Hash().String())
 				return
 			}
 		}
