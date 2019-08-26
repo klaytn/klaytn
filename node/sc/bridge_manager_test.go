@@ -1432,7 +1432,7 @@ func TestAnchoringUpdateTxCounts(t *testing.T) {
 }
 
 // TestAnchoringPeriod tests the following:
-// 1. set anchoring period 2
+// 1. set anchoring period 4
 // 2. accumulate tx counts
 func TestAnchoringPeriod(t *testing.T) {
 	const (
@@ -1449,7 +1449,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	config := &SCConfig{AnchoringPeriod: 2}
+	config := &SCConfig{AnchoringPeriod: 4}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
@@ -1481,7 +1481,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	})
 
 	assert.Equal(t, uint64(0), sc.handler.txCountsEnabledBlockNumber)
-	assert.Equal(t, uint64(2), sc.handler.chainTxPeriod)
+	assert.Equal(t, uint64(4), sc.handler.chainTxPeriod)
 
 	// Try to generate anchoring tx again for only the curBlk (but failed)
 	auth := bAcc.pAccount.GetTransactOpts()
@@ -1534,7 +1534,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	// Check the current block is anchored.
 	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), chainHashesInternal.BlockNumber.String())
 	assert.Equal(t, curBlk.Hash(), chainHashesInternal.BlockHash)
-	assert.Equal(t, big.NewInt(2).String(), chainHashesInternal.Period.String())
+	assert.Equal(t, big.NewInt(4).String(), chainHashesInternal.Period.String())
 	assert.Equal(t, big.NewInt(startTxCounts+7).String(), chainHashesInternal.TxCounts.String())
 }
 
