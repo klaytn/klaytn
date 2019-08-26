@@ -1335,14 +1335,14 @@ func TestAnchoringBasic(t *testing.T) {
 
 	// Decoding the anchoring tx.
 	assert.Equal(t, types.TxTypeChainDataAnchoring, tx.Type())
-	chainHashes := new(types.ChainHashes)
+	chainHashes := new(types.AnchoringData)
 	data, err := tx.AnchoredData()
 	assert.NoError(t, err)
 
 	err = rlp.DecodeBytes(data, chainHashes)
 	assert.NoError(t, err)
 	assert.Equal(t, uint8(0), chainHashes.Type)
-	chainHashesInternal := new(types.ChainHashesInternalType0)
+	chainHashesInternal := new(types.AnchoringDataInternalType0)
 	if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
 		logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
 	}
@@ -1510,14 +1510,14 @@ func TestAnchoringPeriod(t *testing.T) {
 
 	// Decoding the anchoring tx.
 	assert.Equal(t, types.TxTypeChainDataAnchoring, tx.Type())
-	chainHashes := new(types.ChainHashes)
+	chainHashes := new(types.AnchoringData)
 	data, err := tx.AnchoredData()
 	assert.NoError(t, err)
 
 	err = rlp.DecodeBytes(data, chainHashes)
 	assert.NoError(t, err)
 	assert.Equal(t, uint8(0), chainHashes.Type)
-	chainHashesInternal := new(types.ChainHashesInternalType0)
+	chainHashesInternal := new(types.AnchoringDataInternalType0)
 	if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
 		logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
 	}

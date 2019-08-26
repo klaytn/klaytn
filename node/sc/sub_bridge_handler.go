@@ -318,18 +318,18 @@ func (sbh *SubBridgeHandler) writeChildChainTxReceipts(bc *blockchain.BlockChain
 		txHash := receipt.TxHash
 		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
 			if tx.Type() == types.TxTypeChainDataAnchoring {
-				chainHashes := new(types.ChainHashes)
+				chainHashes := new(types.AnchoringData)
 				data, err := tx.AnchoredData()
 				if err != nil {
 					logger.Error("failed to get anchoring tx type from the tx", "txHash", txHash.String())
 					return
 				}
 				if err := rlp.DecodeBytes(data, chainHashes); err != nil {
-					logger.Error("failed to RLP decode ChainHashes", "txHash", txHash.String())
+					logger.Error("failed to RLP decode AnchoringData", "txHash", txHash.String())
 					return
 				}
 				if chainHashes.Type == 0 {
-					chainHashesInternal := new(types.ChainHashesInternalType0)
+					chainHashesInternal := new(types.AnchoringDataInternalType0)
 					if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
 						logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
 						continue

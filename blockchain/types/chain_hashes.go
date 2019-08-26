@@ -22,12 +22,12 @@ import (
 	"math/big"
 )
 
-type ChainHashes struct {
+type AnchoringData struct {
 	Type uint8
 	Data []byte
 }
 
-type ChainHashesInternalType0 struct {
+type AnchoringDataInternalType0 struct {
 	BlockHash     common.Hash
 	TxHash        common.Hash
 	ParentHash    common.Hash
@@ -38,13 +38,13 @@ type ChainHashesInternalType0 struct {
 	TxCounts      *big.Int
 }
 
-func NewChainHashesType0(block *Block, period *big.Int, txCounts *big.Int) (*ChainHashes, error) {
-	data := &ChainHashesInternalType0{block.Hash(), block.Header().TxHash,
+func NewChainHashesType0(block *Block, period *big.Int, txCounts *big.Int) (*AnchoringData, error) {
+	data := &AnchoringDataInternalType0{block.Hash(), block.Header().TxHash,
 		block.Header().ParentHash, block.Header().ReceiptHash,
 		block.Header().Root, block.Header().Number, period, txCounts}
 	encodedCCTxData, err := rlp.EncodeToBytes(data)
 	if err != nil {
 		return nil, err
 	}
-	return &ChainHashes{0, encodedCCTxData}, nil
+	return &AnchoringData{0, encodedCCTxData}, nil
 }

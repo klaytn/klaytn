@@ -102,7 +102,7 @@ func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEve
 }
 
 // ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
-// ChainHashes, with the key made with given child chain block hash.
+// AnchoringData, with the key made with given child chain block hash.
 // Index is built when child chain indexing is enabled.
 func (cce *ChildChainEventHandler) ConvertChildChainBlockHashToParentChainTxHash(scBlockHash common.Hash) common.Hash {
 	return cce.subbridge.chainDB.ConvertChildChainBlockHashToParentChainTxHash(scBlockHash)
