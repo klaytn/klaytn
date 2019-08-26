@@ -330,14 +330,14 @@ func (sbh *SubBridgeHandler) writeChildChainTxReceipts(bc *blockchain.BlockChain
 				if chainHashes.Type == 0 {
 					chainHashesInternal := new(types.AnchoringDataInternalType0)
 					if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
-						logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
+						logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data", "txHash", txHash.String())
 						continue
 					}
 					sbh.WriteReceiptFromParentChain(chainHashesInternal.BlockHash, (*types.Receipt)(receipt))
 					sbh.WriteAnchoredBlockNumber(chainHashesInternal.BlockNumber.Uint64())
 					logger.Trace("received anchoring tx receipt", "blockNum", chainHashesInternal.BlockNumber.String(), "blcokHash", chainHashesInternal.BlockHash.String(), "txHash", txHash.String(), "txCounts", chainHashesInternal.TxCounts)
 				} else {
-					logger.Error("writeChildChainTxReceipts : failed to decode anchoring data. unknown type", "type", chainHashes.Type)
+					logger.Error("writeChildChainTxReceipts : failed to decode anchoring data. unknown type", "type", chainHashes.Type, "txHash", txHash.String())
 					return
 				}
 			}
