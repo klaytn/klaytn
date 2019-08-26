@@ -247,7 +247,6 @@ func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block)
 	if err != nil {
 		return nil, err
 	}
-	sbh.txCounts = 0 // reset for the next anchoring period
 	encodedCCTxData, err := rlp.EncodeToBytes(chainHashes)
 	if err != nil {
 		return nil, err
@@ -376,6 +375,7 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 // updateTxCounts update txCounts to insert into anchoring tx. It skips first remnant txCounts.
 func (sbh *SubBridgeHandler) updateTxCounts(block *types.Block) {
 	if sbh.txCountsEnabledBlockNumber == 0 {
+		sbh.txCounts = 0 // reset for the next anchoring period
 		sbh.txCountsEnabledBlockNumber = block.NumberU64()
 		if sbh.chainTxPeriod > 1 {
 			remnant := block.NumberU64() % sbh.chainTxPeriod

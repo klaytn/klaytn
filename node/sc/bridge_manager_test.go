@@ -1324,7 +1324,6 @@ func TestAnchoringBasic(t *testing.T) {
 	sc.handler.txCounts = startTxCounts
 	sc.handler.txCountsEnabledBlockNumber = curBlk.NumberU64()
 	sc.handler.blockAnchoringManager(curBlk)
-	assert.Equal(t, uint64(0), sc.handler.txCounts)
 	pending := sc.GetBridgeTxPool().Pending()
 	assert.Equal(t, 1, len(pending))
 	var tx *types.Transaction
@@ -1498,7 +1497,6 @@ func TestAnchoringPeriod(t *testing.T) {
 	// Generate anchoring tx again for only the curBlk.
 	curBlk = types.NewBlock(&types.Header{Number: big.NewInt(startBlkNum + 1)}, body.Transactions, nil)
 	sc.handler.blockAnchoringManager(curBlk)
-	assert.Equal(t, uint64(0), sc.handler.txCounts)
 	pending = sc.GetBridgeTxPool().Pending()
 	assert.Equal(t, 1, len(pending))
 
