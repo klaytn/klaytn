@@ -109,7 +109,7 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 				// N - 1 ROUND CHANGE messages can catch up the round.
 				numCatchUp = n - 1
 	} else {
-		fValue := c.valSet.F()
+		f := int(c.valSet.F())
 		numStartNewRound = int(2*fValue + 1)
 		numCatchUp = int(fValue + 1)
 	}
