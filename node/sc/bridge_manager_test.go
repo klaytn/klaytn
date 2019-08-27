@@ -1315,6 +1315,7 @@ func TestAnchoringBasic(t *testing.T) {
 	})
 
 	assert.Equal(t, uint64(0), sc.handler.txCountsEnabledBlockNumber)
+	assert.Equal(t, uint64(0), sc.handler.latestTxCountsAddedBlockNumber)
 	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
 
 	// Encoding anchoring tx
@@ -1337,23 +1338,24 @@ func TestAnchoringBasic(t *testing.T) {
 
 	// Decoding the anchoring tx.
 	assert.Equal(t, types.TxTypeChainDataAnchoring, tx.Type())
-	chainHashes := new(types.AnchoringData)
+	anchoringData := new(types.AnchoringData)
 	data, err := tx.AnchoredData()
 	assert.NoError(t, err)
 
-	err = rlp.DecodeBytes(data, chainHashes)
+	err = rlp.DecodeBytes(data, anchoringData)
 	assert.NoError(t, err)
-	assert.Equal(t, uint8(0), chainHashes.Type)
-	chainHashesInternal := new(types.AnchoringDataInternalType0)
-	if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
+	assert.Equal(t, uint8(0), anchoringData.Type)
+	anchoringDataInternal := new(types.AnchoringDataInternalType0)
+	if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
 		logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
 	}
 
 	// Check the current block is anchored.
-	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), chainHashesInternal.BlockNumber.String())
-	assert.Equal(t, curBlk.Hash(), chainHashesInternal.BlockHash)
-	assert.Equal(t, big.NewInt(1).String(), chainHashesInternal.Period.String())
-	assert.Equal(t, big.NewInt(startTxCounts+1).String(), chainHashesInternal.TxCounts.String())
+	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), anchoringDataInternal.BlockNumber.String())
+	assert.Equal(t, curBlk.NumberU64(), sc.handler.latestTxCountsAddedBlockNumber)
+	assert.Equal(t, curBlk.Hash(), anchoringDataInternal.BlockHash)
+	assert.Equal(t, big.NewInt(1).String(), anchoringDataInternal.Period.String())
+	assert.Equal(t, big.NewInt(startTxCounts+1).String(), anchoringDataInternal.TxCounts.String())
 }
 
 // TestAnchoringPeriod tests the following:
@@ -1519,23 +1521,23 @@ func TestAnchoringPeriod(t *testing.T) {
 
 	// Decoding the anchoring tx.
 	assert.Equal(t, types.TxTypeChainDataAnchoring, tx.Type())
-	chainHashes := new(types.AnchoringData)
+	anchoringData := new(types.AnchoringData)
 	data, err := tx.AnchoredData()
 	assert.NoError(t, err)
 
-	err = rlp.DecodeBytes(data, chainHashes)
+	err = rlp.DecodeBytes(data, anchoringData)
 	assert.NoError(t, err)
-	assert.Equal(t, uint8(0), chainHashes.Type)
-	chainHashesInternal := new(types.AnchoringDataInternalType0)
-	if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
+	assert.Equal(t, uint8(0), anchoringData.Type)
+	anchoringDataInternal := new(types.AnchoringDataInternalType0)
+	if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
 		logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
 	}
 
 	// Check the current block is anchored.
-	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), chainHashesInternal.BlockNumber.String())
-	assert.Equal(t, curBlk.Hash(), chainHashesInternal.BlockHash)
-	assert.Equal(t, big.NewInt(4).String(), chainHashesInternal.Period.String())
-	assert.Equal(t, big.NewInt(startTxCounts+7).String(), chainHashesInternal.TxCounts.String())
+	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), anchoringDataInternal.BlockNumber.String())
+	assert.Equal(t, curBlk.Hash(), anchoringDataInternal.BlockHash)
+	assert.Equal(t, big.NewInt(4).String(), anchoringDataInternal.Period.String())
+	assert.Equal(t, big.NewInt(startTxCounts+7).String(), anchoringDataInternal.TxCounts.String())
 }
 
 func generateBody(t *testing.T) *types.Body {

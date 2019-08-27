@@ -38,7 +38,7 @@ type AnchoringDataInternalType0 struct {
 	TxCounts      *big.Int
 }
 
-func NewChainHashesType0(block *Block, period *big.Int, txCounts *big.Int) (*AnchoringData, error) {
+func NewAnchoringDataType0(block *Block, period *big.Int, txCounts *big.Int) (*AnchoringData, error) {
 	data := &AnchoringDataInternalType0{block.Hash(), block.Header().TxHash,
 		block.Header().ParentHash, block.Header().ReceiptHash,
 		block.Header().Root, block.Header().Number, period, txCounts}

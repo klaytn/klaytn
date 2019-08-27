@@ -48,10 +48,9 @@ type SubBridgeHandler struct {
 	nonceSynced           bool
 	chainTxPeriod         uint64
 
-	// This is the block number of the latest anchoring tx which is added into bridge txPool.
-	latestAnchoredBlockNumber  uint64
-	txCountsEnabledBlockNumber uint64
-	txCounts                   uint64 // accumulated tx counts in blocks for each anchoring period.
+	latestTxCountsAddedBlockNumber uint64
+	txCountsEnabledBlockNumber     uint64
+	txCounts                       uint64 // accumulated tx counts in blocks for each anchoring period.
 
 	// TODO-Klaytn-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
 	sentServiceChainTxsLimit uint64
@@ -61,14 +60,14 @@ type SubBridgeHandler struct {
 
 func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, error) {
 	return &SubBridgeHandler{
-		subbridge:                 main,
-		parentChainID:             new(big.Int).SetUint64(scc.ParentChainID),
-		remoteGasPrice:            uint64(0),
-		mainChainAccountNonce:     uint64(0),
-		nonceSynced:               false,
-		chainTxPeriod:             scc.AnchoringPeriod,
-		latestAnchoredBlockNumber: uint64(0),
-		sentServiceChainTxsLimit:  scc.SentChainTxsLimit,
+		subbridge:                      main,
+		parentChainID:                  new(big.Int).SetUint64(scc.ParentChainID),
+		remoteGasPrice:                 uint64(0),
+		mainChainAccountNonce:          uint64(0),
+		nonceSynced:                    false,
+		chainTxPeriod:                  scc.AnchoringPeriod,
+		latestTxCountsAddedBlockNumber: uint64(0),
+		sentServiceChainTxsLimit:       scc.SentChainTxsLimit,
 	}, nil
 }
 
@@ -243,11 +242,11 @@ func (sbh *SubBridgeHandler) handleParentChainReceiptResponseMsg(p BridgePeer, m
 // genUnsignedChainDataAnchoringTx generates an unsigned transaction, which type is TxTypeChainDataAnchoring.
 // Nonce of account used for service chain transaction will be increased after the signing.
 func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block) (*types.Transaction, error) {
-	chainHashes, err := types.NewChainHashesType0(block, new(big.Int).SetUint64(sbh.chainTxPeriod), new(big.Int).SetUint64(sbh.txCounts))
+	anchoringData, err := types.NewAnchoringDataType0(block, new(big.Int).SetUint64(sbh.chainTxPeriod), new(big.Int).SetUint64(sbh.txCounts))
 	if err != nil {
 		return nil, err
 	}
-	encodedCCTxData, err := rlp.EncodeToBytes(chainHashes)
+	encodedCCTxData, err := rlp.EncodeToBytes(anchoringData)
 	if err != nil {
 		return nil, err
 	}
@@ -317,28 +316,28 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 		txHash := receipt.TxHash
 		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
 			if tx.Type() == types.TxTypeChainDataAnchoring {
-				chainHashes := new(types.AnchoringData)
+				anchoringData := new(types.AnchoringData)
 				data, err := tx.AnchoredData()
 				if err != nil {
 					logger.Error("failed to get anchoring tx type from the tx", "txHash", txHash.String())
-					return
+					continue
 				}
-				if err := rlp.DecodeBytes(data, chainHashes); err != nil {
+				if err := rlp.DecodeBytes(data, anchoringData); err != nil {
 					logger.Error("failed to RLP decode AnchoringData", "txHash", txHash.String())
-					return
+					continue
 				}
-				if chainHashes.Type == 0 {
-					chainHashesInternal := new(types.AnchoringDataInternalType0)
-					if err := rlp.DecodeBytes(chainHashes.Data, chainHashesInternal); err != nil {
+				if anchoringData.Type == 0 {
+					anchoringDataInternal := new(types.AnchoringDataInternalType0)
+					if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
 						logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data", "txHash", txHash.String())
 						continue
 					}
-					sbh.WriteReceiptFromParentChain(chainHashesInternal.BlockHash, (*types.Receipt)(receipt))
-					sbh.WriteAnchoredBlockNumber(chainHashesInternal.BlockNumber.Uint64())
-					logger.Trace("received anchoring tx receipt", "blockNum", chainHashesInternal.BlockNumber.String(), "blcokHash", chainHashesInternal.BlockHash.String(), "txHash", txHash.String(), "txCounts", chainHashesInternal.TxCounts)
+					sbh.WriteReceiptFromParentChain(anchoringDataInternal.BlockHash, (*types.Receipt)(receipt))
+					sbh.WriteAnchoredBlockNumber(anchoringDataInternal.BlockNumber.Uint64())
+					logger.Trace("received anchoring tx receipt", "blockNum", anchoringDataInternal.BlockNumber.String(), "blcokHash", anchoringDataInternal.BlockHash.String(), "txHash", txHash.String(), "txCounts", anchoringDataInternal.TxCounts)
 				} else {
-					logger.Error("writeChildChainTxReceipts : failed to decode anchoring data. unknown type", "type", chainHashes.Type, "txHash", txHash.String())
-					return
+					logger.Error("writeChildChainTxReceipts : failed to decode anchoring data. unknown type", "type", anchoringData.Type, "txHash", txHash.String())
+					continue
 				}
 			}
 
@@ -389,28 +388,28 @@ func (sbh *SubBridgeHandler) updateTxCounts(block *types.Block) {
 	}
 
 	var startBlkNum uint64
-	if sbh.latestAnchoredBlockNumber == 0 {
+	if sbh.latestTxCountsAddedBlockNumber == 0 {
 		startBlkNum = block.NumberU64()
 	} else {
-		startBlkNum = sbh.latestAnchoredBlockNumber + 1
+		startBlkNum = sbh.latestTxCountsAddedBlockNumber + 1
 	}
 
 	for i := startBlkNum; i <= block.NumberU64(); i++ {
-		b := sbh.subbridge.blockchain.GetBlockByNumber(i)
-		if b == nil {
-			logger.Warn("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool by the missed block", "missedBlockNumber", i)
-			break
-		}
-		if b.NumberU64() >= sbh.txCountsEnabledBlockNumber {
+		if i >= sbh.txCountsEnabledBlockNumber {
+			b := sbh.subbridge.blockchain.GetBlockByNumber(i)
+			if b == nil {
+				logger.Warn("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool by the missed block", "missedBlockNumber", i)
+				break
+			}
 			sbh.txCounts += uint64(b.Transactions().Len())
 		}
 	}
+	sbh.UpdateLatestTxCountsAddedBlockNumber(block.NumberU64())
 }
 
 func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
 	sbh.updateTxCounts(block)
 	if err := sbh.generateAndAddAnchoringTxIntoTxPool(block); err == nil {
-		sbh.UpdateLatestAnchoredBlockNumber(block.NumberU64())
 		logger.Info("Generate anchoring txs", "blockNumber", block.NumberU64())
 	}
 }
@@ -459,16 +458,15 @@ func (sbh *SubBridgeHandler) GetLatestAnchoredBlockNumber() uint64 {
 	return sbh.subbridge.ChainDB().ReadAnchoredBlockNumber()
 }
 
-// UpdateLatestAnchoredBlockNumber set the latestAnchoredBlockNumber to the block number of the last anchoring tx which was added into bridge txPool.
-func (sbh *SubBridgeHandler) UpdateLatestAnchoredBlockNumber(newLatestAnchoredBN uint64) {
-	if sbh.latestAnchoredBlockNumber < newLatestAnchoredBN {
-		sbh.latestAnchoredBlockNumber = newLatestAnchoredBN
+// UpdateLatestTxCountsAddedBlockNumber set the latestTxCountsAddedBlockNumber to the block number of the last anchoring tx which was added into bridge txPool.
+func (sbh *SubBridgeHandler) UpdateLatestTxCountsAddedBlockNumber(newLatestAnchoredBN uint64) {
+	if sbh.latestTxCountsAddedBlockNumber < newLatestAnchoredBN {
+		sbh.latestTxCountsAddedBlockNumber = newLatestAnchoredBN
 	}
 }
 
 // WriteAnchoredBlockNumber writes the block number whose data has been anchored to the parent chain.
 func (sbh *SubBridgeHandler) WriteAnchoredBlockNumber(blockNum uint64) {
-	sbh.UpdateLatestAnchoredBlockNumber(blockNum)
 	if sbh.GetLatestAnchoredBlockNumber() < blockNum {
 		sbh.subbridge.chainDB.WriteAnchoredBlockNumber(blockNum)
 		lastAnchoredBlockNumGauge.Update(int64(blockNum))
