@@ -402,9 +402,9 @@ func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
 				break
 			}
 			sbh.txCount += uint64(b.Transactions().Len())
+			sbh.UpdateLatestTxCountAddedBlockNumber(i)
 		}
 	}
-	sbh.UpdateLatestTxCountAddedBlockNumber(block.NumberU64())
 }
 
 func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
