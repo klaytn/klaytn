@@ -117,7 +117,7 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 		c.startNewRound(roundView.Round)
 		return nil
 	} else if c.waitingForRoundChange && num == numCatchUp {
-		// Once we received f+1 ROUND CHANGE messages, those messages form a weak certificate.
+		// Once we received enough ROUND CHANGE messages, those messages form a weak certificate.
 		// If our round number is smaller than the certificate's round number, we would
 		// try to catch up the round number.
 		if cv.Round.Cmp(roundView.Round) < 0 {
