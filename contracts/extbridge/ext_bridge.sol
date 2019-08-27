@@ -43,13 +43,26 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
     )
     external
     {
-        requestERC20Transfer(
+        super.requestERC20Transfer(
             _tokenAddress,
             _to,
             _value,
             _feeLimit,
             abi.encode(_price)
         );
+    }
+
+    // requestERC20Transfer requests transfer ERC20 to _to on relative chain.
+    function requestERC20Transfer(
+        address _tokenAddress,
+        address _to,
+        uint256 _value,
+        uint256 _feeLimit,
+        bytes memory _extraData
+    )
+    public
+    {
+        revert("not support");
     }
 
     // requestSellERC721 requests transfer ERC721 to _to on relative chain to sell it.
@@ -61,12 +74,24 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
     )
     external
     {
-        requestERC721Transfer(
+        super.requestERC721Transfer(
             _tokenAddress,
             _to,
             _tokenId,
             abi.encode(_price)
         );
+    }
+
+    // requestERC721Transfer requests transfer ERC721 to _to on relative chain.
+    function requestERC721Transfer(
+        address _tokenAddress,
+        address _to,
+        uint256 _tokenId,
+        bytes memory _extraData
+    )
+    public
+    {
+        revert("not support");
     }
 
     // handleERC20Transfer sends the ERC20 token by the request and processes the extended feature.
@@ -82,25 +107,15 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
     )
         public
     {
-        if (_extraData.length == 32) { // size check of uint256
-            uint256 offerPrice = abi.decode(_extraData, (uint256));
-            if (offerPrice > 0 && callback != address(0)) {
-                super.handleERC20Transfer(_requestTxHash, _from, callback, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
-                Callback(callback).registerOffer(_to, _value, _tokenAddress, offerPrice);
-                return;
-            }
-        }
+        require(_extraData.length == 32, "extraData size error");
 
-        super.handleERC20Transfer(
-            _requestTxHash,
-            _from,
-            _to,
-            _tokenAddress,
-            _value,
-            _requestNonce,
-            _requestBlockNumber,
-            _extraData
-        );
+        require(callback != address(0), "callback address error");
+
+        uint256 offerPrice = abi.decode(_extraData, (uint256));
+        require(offerPrice > 0, "offerPrice error");
+
+        super.handleERC20Transfer(_requestTxHash, _from, callback, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
+        Callback(callback).registerOffer(_to, _value, _tokenAddress, offerPrice);
     }
 
     // handleERC721Transfer sends the ERC721 token by the request and processes the extended feature.
@@ -117,25 +132,14 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
     )
         public
     {
-        if (_extraData.length == 32) { // size check of uint256
-            uint256 offerPrice = abi.decode(_extraData, (uint256));
-            if (offerPrice > 0 && callback != address(0)) {
-                super.handleERC721Transfer(_requestTxHash, _from, callback, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
-                Callback(callback).registerOffer(_to, _tokenId, _tokenAddress, offerPrice);
-                return;
-            }
-        }
+        require(_extraData.length == 32, "extraData size error");
 
-        super.handleERC721Transfer(
-            _requestTxHash,
-            _from,
-            _to,
-            _tokenAddress,
-            _tokenId,
-            _requestNonce,
-            _requestBlockNumber,
-            _tokenURI,
-            _extraData
-        );
+        require(callback != address(0), "callback address error");
+
+        uint256 offerPrice = abi.decode(_extraData, (uint256));
+        require(offerPrice > 0, "offerPrice error");
+
+        super.handleERC721Transfer(_requestTxHash, _from, callback, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
+        Callback(callback).registerOffer(_to, _tokenId, _tokenAddress, offerPrice);
     }
 }

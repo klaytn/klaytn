@@ -385,6 +385,7 @@ func TestExtendedBridgeAndCallbackERC20(t *testing.T) {
 
 	aliceKey, _ := crypto.GenerateKey()
 	aliceAcc := bind.NewKeyedTransactor(aliceKey)
+	aliceAcc.GasLimit = gasLimit
 
 	bobKey, _ := crypto.GenerateKey()
 	bobAcc := bind.NewKeyedTransactor(bobKey)
@@ -470,6 +471,13 @@ func TestExtendedBridgeAndCallbackERC20(t *testing.T) {
 	backend.Commit()
 	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
+	// Fail case
+	tx, err = eb.RequestERC20Transfer(aliceAcc, erc20Addr, bobAcc.From, amount, common.Big0, nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Error(t, bind.CheckWaitMined(backend, tx))
+
+	// Success case
 	tx, err = eb.RequestSellERC20(aliceAcc, erc20Addr, bobAcc.From, amount, common.Big0, offerPrice)
 	assert.NoError(t, err)
 	backend.Commit()
@@ -527,6 +535,7 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 
 	aliceKey, _ := crypto.GenerateKey()
 	aliceAcc := bind.NewKeyedTransactor(aliceKey)
+	aliceAcc.GasLimit = gasLimit
 
 	bobKey, _ := crypto.GenerateKey()
 	bobAcc := bind.NewKeyedTransactor(bobKey)
@@ -611,6 +620,13 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 	backend.Commit()
 	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
+	// Fail case
+	tx, err = eb.RequestERC721Transfer(aliceAcc, erc721Addr, bobAcc.From, testToken, nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Error(t, bind.CheckWaitMined(backend, tx))
+
+	// Success case
 	tx, err = eb.RequestSellERC721(aliceAcc, erc721Addr, bobAcc.From, testToken, offerPrice)
 	assert.NoError(t, err)
 	backend.Commit()
