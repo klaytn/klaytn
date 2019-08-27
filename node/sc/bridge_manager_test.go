@@ -1269,8 +1269,8 @@ func TestErrorDupSubscription(t *testing.T) {
 // 4. accumulated tx counts
 func TestAnchoringBasic(t *testing.T) {
 	const (
-		startBlkNum   = 10
-		startTxCounts = 100
+		startBlkNum  = 10
+		startTxCount = 100
 	)
 	tempDir := os.TempDir() + "anchoring"
 	os.MkdirAll(tempDir, os.ModePerm)
@@ -1314,8 +1314,8 @@ func TestAnchoringBasic(t *testing.T) {
 		GlobalQueue: 1024,
 	})
 
-	assert.Equal(t, uint64(0), sc.handler.txCountsEnabledBlockNumber)
-	assert.Equal(t, uint64(0), sc.handler.latestTxCountsAddedBlockNumber)
+	assert.Equal(t, uint64(0), sc.handler.txCountEnabledBlockNumber)
+	assert.Equal(t, uint64(0), sc.handler.latestTxCountAddedBlockNumber)
 	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
 
 	// Encoding anchoring tx
@@ -1325,8 +1325,8 @@ func TestAnchoringBasic(t *testing.T) {
 	curBlk := sim.BlockChain().CurrentBlock()
 
 	// Generate anchoring tx again for only the curBlk.
-	sc.handler.txCounts = startTxCounts
-	sc.handler.txCountsEnabledBlockNumber = curBlk.NumberU64()
+	sc.handler.txCount = startTxCount
+	sc.handler.txCountEnabledBlockNumber = curBlk.NumberU64()
 	sc.handler.blockAnchoringManager(curBlk)
 	pending := sc.GetBridgeTxPool().Pending()
 	assert.Equal(t, 1, len(pending))
@@ -1352,15 +1352,16 @@ func TestAnchoringBasic(t *testing.T) {
 
 	// Check the current block is anchored.
 	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), anchoringDataInternal.BlockNumber.String())
-	assert.Equal(t, curBlk.NumberU64(), sc.handler.latestTxCountsAddedBlockNumber)
+	assert.Equal(t, curBlk.NumberU64(), sc.handler.latestTxCountAddedBlockNumber)
 	assert.Equal(t, curBlk.Hash(), anchoringDataInternal.BlockHash)
 	assert.Equal(t, big.NewInt(1).String(), anchoringDataInternal.Period.String())
-	assert.Equal(t, big.NewInt(startTxCounts+1).String(), anchoringDataInternal.TxCounts.String())
+	assert.Equal(t, big.NewInt(startTxCount+1).String(), anchoringDataInternal.TxCount.String())
 }
 
-// TestAnchoringPeriod tests the following:
-// 1. set anchoring period to 1, 2, 3 and check txCountsEnabledBlockNumber
-func TestAnchoringUpdateTxCounts(t *testing.T) {
+// TestAnchoringUpdateTxCount tests the following:
+// 1. set anchoring period to 1, 2, 3
+// 2. check txCountEnabledBlockNumber
+func TestAnchoringUpdateTxCount(t *testing.T) {
 	tempDir := os.TempDir() + "anchoring"
 	os.MkdirAll(tempDir, os.ModePerm)
 	defer func() {
@@ -1399,13 +1400,13 @@ func TestAnchoringUpdateTxCounts(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, uint64(0), sc.handler.txCountsEnabledBlockNumber)
+	assert.Equal(t, uint64(0), sc.handler.txCountEnabledBlockNumber)
 
 	// Check tx counting is started as expected.
 	type testParams struct {
 		period   uint64 // chainTxPeriod
 		enabled  int64  // block number where anchoring is enabled
-		expected uint64 // txCountsEnabledBlockNumber
+		expected uint64 // txCountEnabledBlockNumber
 	}
 
 	testCases := []testParams{
@@ -1426,10 +1427,10 @@ func TestAnchoringUpdateTxCounts(t *testing.T) {
 
 	for i := 0; i < len(testCases); i++ {
 		curBlk := types.NewBlock(&types.Header{Number: big.NewInt(testCases[i].enabled)}, body.Transactions, nil)
-		sc.handler.txCountsEnabledBlockNumber = 0
+		sc.handler.txCountEnabledBlockNumber = 0
 		sc.handler.chainTxPeriod = testCases[i].period
-		sc.handler.updateTxCounts(curBlk)
-		assert.Equal(t, testCases[i].expected, sc.handler.txCountsEnabledBlockNumber)
+		sc.handler.updateTxCount(curBlk)
+		assert.Equal(t, testCases[i].expected, sc.handler.txCountEnabledBlockNumber)
 	}
 }
 
@@ -1438,7 +1439,7 @@ func TestAnchoringUpdateTxCounts(t *testing.T) {
 // 2. accumulate tx counts
 func TestAnchoringPeriod(t *testing.T) {
 	const (
-		startTxCounts = 100
+		startTxCount = 100
 	)
 	tempDir := os.TempDir() + "anchoringPeriod"
 	os.MkdirAll(tempDir, os.ModePerm)
@@ -1482,7 +1483,7 @@ func TestAnchoringPeriod(t *testing.T) {
 		GlobalQueue: 1024,
 	})
 
-	assert.Equal(t, uint64(0), sc.handler.txCountsEnabledBlockNumber)
+	assert.Equal(t, uint64(0), sc.handler.txCountEnabledBlockNumber)
 	assert.Equal(t, uint64(4), sc.handler.chainTxPeriod)
 
 	// Try to generate anchoring tx again for only the curBlk (but failed)
@@ -1491,10 +1492,10 @@ func TestAnchoringPeriod(t *testing.T) {
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
 
-	sc.handler.txCounts = startTxCounts
-	sc.handler.txCountsEnabledBlockNumber = curBlk.NumberU64()
+	sc.handler.txCount = startTxCount
+	sc.handler.txCountEnabledBlockNumber = curBlk.NumberU64()
 	sc.handler.blockAnchoringManager(curBlk)
-	assert.Equal(t, uint64(startTxCounts+1), sc.handler.txCounts)
+	assert.Equal(t, uint64(startTxCount+1), sc.handler.txCount)
 	pending := sc.GetBridgeTxPool().Pending()
 	assert.Equal(t, 0, len(pending))
 
@@ -1537,7 +1538,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), anchoringDataInternal.BlockNumber.String())
 	assert.Equal(t, curBlk.Hash(), anchoringDataInternal.BlockHash)
 	assert.Equal(t, big.NewInt(4).String(), anchoringDataInternal.Period.String())
-	assert.Equal(t, big.NewInt(startTxCounts+7).String(), anchoringDataInternal.TxCounts.String())
+	assert.Equal(t, big.NewInt(startTxCount+7).String(), anchoringDataInternal.TxCount.String())
 }
 
 func generateBody(t *testing.T) *types.Body {

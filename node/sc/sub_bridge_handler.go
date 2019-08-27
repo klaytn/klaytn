@@ -48,9 +48,9 @@ type SubBridgeHandler struct {
 	nonceSynced           bool
 	chainTxPeriod         uint64
 
-	latestTxCountsAddedBlockNumber uint64
-	txCountsEnabledBlockNumber     uint64
-	txCounts                       uint64 // accumulated tx counts in blocks for each anchoring period.
+	latestTxCountAddedBlockNumber uint64
+	txCountEnabledBlockNumber     uint64
+	txCount                       uint64 // accumulated tx counts in blocks for each anchoring period.
 
 	// TODO-Klaytn-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
 	sentServiceChainTxsLimit uint64
@@ -60,14 +60,14 @@ type SubBridgeHandler struct {
 
 func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, error) {
 	return &SubBridgeHandler{
-		subbridge:                      main,
-		parentChainID:                  new(big.Int).SetUint64(scc.ParentChainID),
-		remoteGasPrice:                 uint64(0),
-		mainChainAccountNonce:          uint64(0),
-		nonceSynced:                    false,
-		chainTxPeriod:                  scc.AnchoringPeriod,
-		latestTxCountsAddedBlockNumber: uint64(0),
-		sentServiceChainTxsLimit:       scc.SentChainTxsLimit,
+		subbridge:                     main,
+		parentChainID:                 new(big.Int).SetUint64(scc.ParentChainID),
+		remoteGasPrice:                uint64(0),
+		mainChainAccountNonce:         uint64(0),
+		nonceSynced:                   false,
+		chainTxPeriod:                 scc.AnchoringPeriod,
+		latestTxCountAddedBlockNumber: uint64(0),
+		sentServiceChainTxsLimit:      scc.SentChainTxsLimit,
 	}, nil
 }
 
@@ -242,7 +242,7 @@ func (sbh *SubBridgeHandler) handleParentChainReceiptResponseMsg(p BridgePeer, m
 // genUnsignedChainDataAnchoringTx generates an unsigned transaction, which type is TxTypeChainDataAnchoring.
 // Nonce of account used for service chain transaction will be increased after the signing.
 func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block) (*types.Transaction, error) {
-	anchoringData, err := types.NewAnchoringDataType0(block, new(big.Int).SetUint64(sbh.chainTxPeriod), new(big.Int).SetUint64(sbh.txCounts))
+	anchoringData, err := types.NewAnchoringDataType0(block, new(big.Int).SetUint64(sbh.chainTxPeriod), new(big.Int).SetUint64(sbh.txCount))
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +334,7 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 					}
 					sbh.WriteReceiptFromParentChain(anchoringDataInternal.BlockHash, (*types.Receipt)(receipt))
 					sbh.WriteAnchoredBlockNumber(anchoringDataInternal.BlockNumber.Uint64())
-					logger.Trace("received anchoring tx receipt", "blockNum", anchoringDataInternal.BlockNumber.String(), "blcokHash", anchoringDataInternal.BlockHash.String(), "txHash", txHash.String(), "txCounts", anchoringDataInternal.TxCounts)
+					logger.Trace("received anchoring tx receipt", "blockNum", anchoringDataInternal.BlockNumber.String(), "blcokHash", anchoringDataInternal.BlockHash.String(), "txHash", txHash.String(), "txCount", anchoringDataInternal.TxCount)
 				} else {
 					logger.Error("writeChildChainTxReceipts : failed to decode anchoring data. unknown type", "type", anchoringData.Type, "txHash", txHash.String())
 					continue
@@ -372,43 +372,43 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 	}
 }
 
-// updateTxCounts update txCounts to insert into anchoring tx. It skips first remnant txCounts.
-func (sbh *SubBridgeHandler) updateTxCounts(block *types.Block) {
-	if sbh.txCountsEnabledBlockNumber == 0 {
-		sbh.txCounts = 0 // reset for the next anchoring period
-		sbh.txCountsEnabledBlockNumber = block.NumberU64()
+// updateTxCount update txCount to insert into anchoring tx. It skips first remnant txCount.
+func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
+	if sbh.txCountEnabledBlockNumber == 0 {
+		sbh.txCount = 0 // reset for the next anchoring period
+		sbh.txCountEnabledBlockNumber = block.NumberU64()
 		if sbh.chainTxPeriod > 1 {
 			remnant := block.NumberU64() % sbh.chainTxPeriod
 			if remnant < 2 {
-				sbh.txCountsEnabledBlockNumber += 1 - remnant
+				sbh.txCountEnabledBlockNumber += 1 - remnant
 			} else {
-				sbh.txCountsEnabledBlockNumber += (sbh.chainTxPeriod - remnant) + 1
+				sbh.txCountEnabledBlockNumber += (sbh.chainTxPeriod - remnant) + 1
 			}
 		}
 	}
 
 	var startBlkNum uint64
-	if sbh.latestTxCountsAddedBlockNumber == 0 {
+	if sbh.latestTxCountAddedBlockNumber == 0 {
 		startBlkNum = block.NumberU64()
 	} else {
-		startBlkNum = sbh.latestTxCountsAddedBlockNumber + 1
+		startBlkNum = sbh.latestTxCountAddedBlockNumber + 1
 	}
 
 	for i := startBlkNum; i <= block.NumberU64(); i++ {
-		if i >= sbh.txCountsEnabledBlockNumber {
+		if i >= sbh.txCountEnabledBlockNumber {
 			b := sbh.subbridge.blockchain.GetBlockByNumber(i)
 			if b == nil {
 				logger.Warn("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool by the missed block", "missedBlockNumber", i)
 				break
 			}
-			sbh.txCounts += uint64(b.Transactions().Len())
+			sbh.txCount += uint64(b.Transactions().Len())
 		}
 	}
-	sbh.UpdateLatestTxCountsAddedBlockNumber(block.NumberU64())
+	sbh.UpdateLatestTxCountAddedBlockNumber(block.NumberU64())
 }
 
 func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
-	sbh.updateTxCounts(block)
+	sbh.updateTxCount(block)
 	if err := sbh.generateAndAddAnchoringTxIntoTxPool(block); err == nil {
 		logger.Info("Generate anchoring txs", "blockNumber", block.NumberU64())
 	}
@@ -458,10 +458,10 @@ func (sbh *SubBridgeHandler) GetLatestAnchoredBlockNumber() uint64 {
 	return sbh.subbridge.ChainDB().ReadAnchoredBlockNumber()
 }
 
-// UpdateLatestTxCountsAddedBlockNumber set the latestTxCountsAddedBlockNumber to the block number of the last anchoring tx which was added into bridge txPool.
-func (sbh *SubBridgeHandler) UpdateLatestTxCountsAddedBlockNumber(newLatestAnchoredBN uint64) {
-	if sbh.latestTxCountsAddedBlockNumber < newLatestAnchoredBN {
-		sbh.latestTxCountsAddedBlockNumber = newLatestAnchoredBN
+// UpdateLatestTxCountAddedBlockNumber set the latestTxCountAddedBlockNumber to the block number of the last anchoring tx which was added into bridge txPool.
+func (sbh *SubBridgeHandler) UpdateLatestTxCountAddedBlockNumber(newLatestAnchoredBN uint64) {
+	if sbh.latestTxCountAddedBlockNumber < newLatestAnchoredBN {
+		sbh.latestTxCountAddedBlockNumber = newLatestAnchoredBN
 	}
 }
 

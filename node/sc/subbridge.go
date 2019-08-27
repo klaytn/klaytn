@@ -270,7 +270,7 @@ func (sb *SubBridge) GetAnchoringTx() bool {
 
 func (sb *SubBridge) SetAnchoringTx(flag bool) bool {
 	if sb.onAnchoringTx != flag && flag {
-		sb.handler.txCountsEnabledBlockNumber = 0
+		sb.handler.txCountEnabledBlockNumber = 0
 	}
 	sb.onAnchoringTx = flag
 	return sb.GetAnchoringTx()

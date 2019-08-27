@@ -658,7 +658,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 			ReceiptHash:   common.HexToHash("3"),
 			StateRootHash: common.HexToHash("4"),
 			BlockNumber:   big.NewInt(5),
-			TxCounts:      big.NewInt(6),
+			TxCount:       big.NewInt(6),
 		}
 		encodedCCTxData, err := rlp.EncodeToBytes(data)
 		if err != nil {
