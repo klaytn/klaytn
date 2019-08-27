@@ -23,10 +23,16 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
 contract BridgeOperator is Ownable {
+    struct VotesData {
+        mapping(bytes32 => mapping(address => bool)) voted; // <sha3(type, args, nonce), <operator, vote>>
+        mapping(bytes32 => uint8) voteCounts; // <sha3(type, args, nonce)>
+    }
+
     mapping(address => bool) public operators;
     address[] public operatorList;
-    mapping(bytes32 => mapping(address => bool)) public votes; // <sha3(type, args, nonce), <operator, vote>>
-    mapping(bytes32 => uint8) public votesCounts; // <sha3(type, args, nonce)>
+
+    mapping(uint8 => mapping (uint64 => VotesData) ) private votes;
+
     mapping(uint64 => bool) public closedValueTransferVotes; // nonce
     mapping(uint8 => uint8) public operatorThresholds; // <vote type>
     uint64 public configurationNonce;
@@ -57,19 +63,29 @@ contract BridgeOperator is Ownable {
     }
 
     // voteCommon handles common functionality for voting.
-    function voteCommon(VoteType voteType, bytes32 _voteKey)
+    function voteCommon(VoteType _voteType, uint64 _nonce, bytes32 _voteKey)
         internal
         returns(bool)
     {
-        if (!votes[_voteKey][msg.sender]) {
-            votes[_voteKey][msg.sender] = true;
-            require(votesCounts[_voteKey] < votesCounts[_voteKey] + 1, "votesCounts overflow");
-            votesCounts[_voteKey]++;
+        VotesData storage vote = votes[uint8(_voteType)][_nonce];
+
+        if (!vote.voted[_voteKey][msg.sender]) {
+            vote.voted[_voteKey][msg.sender] = true;
+
+            require(vote.voteCounts[_voteKey] < vote.voteCounts[_voteKey] + 1, "voteCounts overflow");
+            vote.voteCounts[_voteKey]++;
         }
-        if (votesCounts[_voteKey] >= operatorThresholds[uint8(voteType)]) {
+        if (vote.voteCounts[_voteKey] >= operatorThresholds[uint8(_voteType)]) {
             return true;
         }
         return false;
+    }
+
+    // removeVoteData removes a vote data according to voteType and nonce.
+    function removeVoteData(VoteType _voteType, uint64 _nonce)
+        internal
+    {
+        delete votes[uint8(_voteType)][_nonce];
     }
 
     // voteValueTransfer votes value transfer transaction with the operator.
@@ -79,7 +95,8 @@ contract BridgeOperator is Ownable {
     {
         require(!closedValueTransferVotes[_requestNonce], "closed vote");
 
-        if (voteCommon(VoteType.ValueTransfer, keccak256(msg.data))) {
+        bytes32 voteKey = keccak256(msg.data);
+        if (voteCommon(VoteType.ValueTransfer, _requestNonce, voteKey)) {
             closedValueTransferVotes[_requestNonce] = true;
             return true;
         }
@@ -94,8 +111,10 @@ contract BridgeOperator is Ownable {
     {
         require(configurationNonce == _requestNonce, "nonce mismatch");
 
-        if (voteCommon(VoteType.Configuration, keccak256(msg.data))) {
+        bytes32 voteKey = keccak256(msg.data);
+        if (voteCommon(VoteType.Configuration, _requestNonce, voteKey)) {
             configurationNonce++;
+            removeVoteData(VoteType.Configuration, _requestNonce);
             return true;
         }
 
