@@ -103,14 +103,14 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 
 	var numCatchUp, numStartNewRound int
 	if c.valSet.Size() < 4 {
-		n := c.valSet.Size()
+		n := int(c.valSet.Size())
 		// N ROUND CHANGE messages can start new round.
 		numStartNewRound = n
-				// N - 1 ROUND CHANGE messages can catch up the round.
-				numCatchUp = n - 1
+		// N - 1 ROUND CHANGE messages can catch up the round.
+		numCatchUp = n - 1
 	} else {
 		f := int(c.valSet.F())
-		// 2*f + 1 ROUND CHANGE messages can start new round.	
+		// 2*f + 1 ROUND CHANGE messages can start new round.
 		numStartNewRound = 2*f + 1
 		// F + 1 ROUND CHANGE messages can start catch up the round.
 		numCatchUp = f + 1
