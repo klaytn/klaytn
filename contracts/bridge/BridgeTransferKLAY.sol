@@ -28,7 +28,7 @@ contract BridgeTransferKLAY is BridgeTransfer {
         uint256 _value,
         uint64 _requestedNonce,
         uint64 _requestedBlockNumber,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         public
         onlyOperators
@@ -54,7 +54,7 @@ contract BridgeTransferKLAY is BridgeTransfer {
     }
 
     // _requestKLAYTransfer requests transfer KLAY to _to on relative chain.
-    function _requestKLAYTransfer(address _to, uint256 _feeLimit,  uint256[] memory _extraData) internal {
+    function _requestKLAYTransfer(address _to, uint256 _feeLimit,  bytes memory _extraData) internal {
         require(isRunning, "stopped bridge");
         require(msg.value > _feeLimit, "insufficient amount");
 
@@ -76,11 +76,11 @@ contract BridgeTransferKLAY is BridgeTransfer {
 
     // () requests transfer KLAY to msg.sender address on relative chain.
     function () external payable {
-        _requestKLAYTransfer(msg.sender, feeOfKLAY, new uint256[](0));
+        _requestKLAYTransfer(msg.sender, feeOfKLAY, new bytes(0));
     }
 
     // requestKLAYTransfer requests transfer KLAY to _to on relative chain.
-    function requestKLAYTransfer(address _to, uint256 _value, uint256[] calldata _extraData) external payable {
+    function requestKLAYTransfer(address _to, uint256 _value, bytes calldata _extraData) external payable {
         uint256 feeLimit = msg.value.sub(_value);
         _requestKLAYTransfer(_to, feeLimit, _extraData);
     }
