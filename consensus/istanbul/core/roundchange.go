@@ -112,7 +112,7 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 	}
 
 	if num == numStartNewRound && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
-		// We've received 2f+1 ROUND CHANGE messages, start a new round immediately.
+		// We've received enough ROUND CHANGE messages, start a new round immediately.
 		logger.Warn("[RC] Received 2f+1 Round Change Messages. Starting new round")
 		c.startNewRound(roundView.Round)
 		return nil
