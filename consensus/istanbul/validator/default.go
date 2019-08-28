@@ -62,6 +62,12 @@ func (val *defaultValidator) RewardAddress() common.Address { return common.Addr
 func (val *defaultValidator) VotingPower() uint64           { return 1000 }
 func (val *defaultValidator) Weight() uint64                { return 0 }
 
+func (val *defaultValidator) Copy() istanbul.Validator {
+	return &defaultValidator{
+		address: val.address,
+	}
+}
+
 type defaultSet struct {
 	subSize uint64
 
