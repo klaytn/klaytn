@@ -71,8 +71,6 @@ contract BridgeOperator is Ownable {
 
         if (!vote.voted[_voteKey][msg.sender]) {
             vote.voted[_voteKey][msg.sender] = true;
-
-            require(vote.voteCounts[_voteKey] < vote.voteCounts[_voteKey] + 1, "voteCounts overflow");
             vote.voteCounts[_voteKey]++;
         }
         if (vote.voteCounts[_voteKey] >= operatorThresholds[uint8(_voteType)]) {
@@ -98,6 +96,7 @@ contract BridgeOperator is Ownable {
         bytes32 voteKey = keccak256(msg.data);
         if (voteCommon(VoteType.ValueTransfer, _requestNonce, voteKey)) {
             closedValueTransferVotes[_requestNonce] = true;
+            removeVoteData(VoteType.ValueTransfer, _requestNonce);
             return true;
         }
 

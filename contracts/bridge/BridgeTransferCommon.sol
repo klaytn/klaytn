@@ -147,7 +147,6 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
             recoveryBlockNumber = handleNoncesToBlockNums[i];
             delete handleNoncesToBlockNums[i];
             delete closedValueTransferVotes[i];
-            removeVoteData(VoteType.ValueTransfer, i);
         }
         lowerHandleNonce = i;
     }
