@@ -178,7 +178,7 @@ type Config struct {
 // NewServer returns a new Server interface.
 func NewServer(config Config) Server {
 	bServer := &BaseServer{
-		Config:            config,
+		Config: config,
 	}
 
 	if config.EnableMultiChannelServer {
@@ -954,14 +954,14 @@ const (
 type conn struct {
 	fd net.Conn
 	transport
-	flags         connFlag
-	conntype      ConnType        // valid after the encryption handshake at the inbound connection case
-	cont          chan error      // The run loop uses cont to signal errors to SetupConn.
-	id            discover.NodeID // valid after the encryption handshake
-	caps          []Cap           // valid after the protocol handshake
-	name          string          // valid after the protocol handshake
-	portOrder     PortOrder       // portOrder is the order of the ports that should be connected in multi-channel.
-	multiChannel  bool            // multiChannel is whether the peer is using multi-channel.
+	flags        connFlag
+	conntype     ConnType        // valid after the encryption handshake at the inbound connection case
+	cont         chan error      // The run loop uses cont to signal errors to SetupConn.
+	id           discover.NodeID // valid after the encryption handshake
+	caps         []Cap           // valid after the protocol handshake
+	name         string          // valid after the protocol handshake
+	portOrder    PortOrder       // portOrder is the order of the ports that should be connected in multi-channel.
+	multiChannel bool            // multiChannel is whether the peer is using multi-channel.
 }
 
 type transport interface {
