@@ -15,14 +15,14 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package core implements core functionality of istanbul consensus engine.
+Package core implements the core functionality of Istanbul consensus engine.
 The package defines `core` struct which stores all current consensus status such as validator set and round status.
 It also has accompanying methods to handle and broadcast messages between nodes.
 
-In istanbul consensus, there are 3 phases including Preprepare, Prepare and Commit.
+In Istanbul consensus, there are 3 phases including Preprepare, Prepare and Commit.
 Each phase has its own message and by handling these messages the consensus can be made.
 
-When a consensus is made for a given block, core communicate with the istanbul backend to proceed.
+When a consensus is made for a given block, core communicates with the Istanbul backend to proceed.
 
 Source Files
 
