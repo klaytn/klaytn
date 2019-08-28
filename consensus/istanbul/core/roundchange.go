@@ -101,19 +101,34 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 		return err
 	}
 
-	// Once we received f+1 ROUND CHANGE messages, those messages form a weak certificate.
-	// If our round number is smaller than the certificate's round number, we would
-	// try to catch up the round number.
-	if c.waitingForRoundChange && num == int(c.valSet.F()+1) {
+	var numCatchUp, numStartNewRound int
+	if c.valSet.Size() < 4 {
+		n := int(c.valSet.Size())
+		// N ROUND CHANGE messages can start new round.
+		numStartNewRound = n
+		// N - 1 ROUND CHANGE messages can catch up the round.
+		numCatchUp = n - 1
+	} else {
+		f := int(c.valSet.F())
+		// 2*F + 1 ROUND CHANGE messages can start new round.
+		numStartNewRound = 2*f + 1
+		// F + 1 ROUND CHANGE messages can start catch up the round.
+		numCatchUp = f + 1
+	}
+
+	if num == numStartNewRound && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
+		// We've received enough ROUND CHANGE messages, start a new round immediately.
+		logger.Warn("[RC] Received 2f+1 Round Change Messages. Starting new round")
+		c.startNewRound(roundView.Round)
+		return nil
+	} else if c.waitingForRoundChange && num == numCatchUp {
+		// Once we received enough ROUND CHANGE messages, those messages form a weak certificate.
+		// If our round number is smaller than the certificate's round number, we would
+		// try to catch up the round number.
 		if cv.Round.Cmp(roundView.Round) < 0 {
 			logger.Warn("[RC] Send round change because we have F+1 roundchange messages")
 			c.sendRoundChange(roundView.Round)
 		}
-		return nil
-	} else if num == int(2*c.valSet.F()+1) && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
-		// We've received 2f+1 ROUND CHANGE messages, start a new round immediately.
-		logger.Warn("[RC] Received 2f+1 Round Change Messages. Starting new round")
-		c.startNewRound(roundView.Round)
 		return nil
 	} else if cv.Round.Cmp(roundView.Round) < 0 {
 		// Only gossip the message with current round to other validators.
