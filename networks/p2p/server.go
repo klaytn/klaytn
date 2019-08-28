@@ -179,7 +179,6 @@ type Config struct {
 func NewServer(config Config) Server {
 	bServer := &BaseServer{
 		Config:            config,
-		peerOnParentChain: make(map[*discover.Node]bool),
 	}
 
 	if config.EnableMultiChannelServer {
@@ -247,7 +246,7 @@ type Server interface {
 	// AddPeer connects to the given node and maintains the connection until the
 	// server is shut down. If the connection fails for any reason, the server will
 	// attempt to reconnect the peer.
-	AddPeer(node *discover.Node, onParentChain bool)
+	AddPeer(node *discover.Node)
 
 	// RemovePeer disconnects from the given node.
 	RemovePeer(node *discover.Node)
@@ -511,8 +510,6 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 
 	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: ConnTypeUndefined, cont: make(chan error), portOrder: PortOrderUndefined}
 	if dialDest != nil {
-		// Outbound connection, check if dialDest is on the parent chain.
-		c.onParentChain = srv.checkIfNodeIsOnParentChain(dialDest)
 		c.portOrder = PortOrder(dialDest.PortOrder)
 	} else {
 		for i, addr := range srv.ListenAddrs {
@@ -591,7 +588,7 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 		for _, listenPort := range phs.ListenPort {
 			dialDest.TCPs = append(dialDest.TCPs, uint16(listenPort))
 		}
-		srv.AddPeer(dialDest, false)
+		srv.AddPeer(dialDest)
 		logger.Info("[Dial] Try to update dial candidate with a multichannel peer", "id", dialDest.ID, "addr", dialDest.IP, "port", dialDest.TCPs)
 		return nil
 	}
@@ -921,8 +918,6 @@ type BaseServer struct {
 	loopWG        sync.WaitGroup // loop, listenLoop
 	peerFeed      event.Feed
 	logger        log.Logger
-
-	peerOnParentChain map[*discover.Node]bool
 }
 
 type peerOpFunc func(map[discover.NodeID]*Peer)
@@ -965,7 +960,6 @@ type conn struct {
 	id            discover.NodeID // valid after the encryption handshake
 	caps          []Cap           // valid after the protocol handshake
 	name          string          // valid after the protocol handshake
-	onParentChain bool            // The run loop uses this to check parent/child chain node.
 	portOrder     PortOrder       // portOrder is the order of the ports that should be connected in multi-channel.
 	multiChannel  bool            // multiChannel is whether the peer is using multi-channel.
 }
@@ -1091,30 +1085,10 @@ func (srv *BaseServer) PeerCountByType() map[string]uint {
 	return pc
 }
 
-// checkIfNodeIsOnParentChain returns the node is on parent chain.
-func (srv *BaseServer) checkIfNodeIsOnParentChain(node *discover.Node) bool {
-	_, exist := srv.peerOnParentChain[node]
-	return exist
-}
-
-// addNodeOnParentChain adds the node in the parent node list.
-func (srv *BaseServer) addNodeOnParentChain(node *discover.Node) {
-	srv.peerOnParentChain[node] = true
-}
-
-// removeNodeOnParentChain removes the node in the parent node list.
-func (srv *BaseServer) removeNodeOnParentChain(node *discover.Node) {
-	delete(srv.peerOnParentChain, node)
-}
-
 // AddPeer connects to the given node and maintains the connection until the
 // server is shut down. If the connection fails for any reason, the server will
 // attempt to reconnect the peer.
-func (srv *BaseServer) AddPeer(node *discover.Node, onParentChain bool) {
-	if onParentChain {
-		srv.addNodeOnParentChain(node)
-	}
-
+func (srv *BaseServer) AddPeer(node *discover.Node) {
 	select {
 	case srv.addstatic <- node:
 	case <-srv.quit:
@@ -1123,8 +1097,6 @@ func (srv *BaseServer) AddPeer(node *discover.Node, onParentChain bool) {
 
 // RemovePeer disconnects from the given node.
 func (srv *BaseServer) RemovePeer(node *discover.Node) {
-	srv.removeNodeOnParentChain(node)
-
 	select {
 	case srv.removestatic <- node:
 	case <-srv.quit:
@@ -1684,11 +1656,6 @@ func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover
 	}
 
 	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: ConnTypeUndefined, cont: make(chan error), portOrder: ConnDefault}
-	if dialDest != nil {
-		// Outbound connection, check if dialDest is on the parent chain.
-		c.onParentChain = srv.checkIfNodeIsOnParentChain(dialDest)
-	}
-
 	err := srv.setupConn(c, flags, dialDest)
 	if err != nil {
 		c.close(err)
