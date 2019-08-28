@@ -82,6 +82,16 @@ func (val *weightedValidator) Weight() uint64 {
 	return atomic.LoadUint64(&val.weight)
 }
 
+func (val *weightedValidator) Copy() istanbul.Validator {
+	weightedValidator := &weightedValidator{
+		address:     val.address,
+		votingPower: val.votingPower,
+		weight:      val.weight,
+	}
+	weightedValidator.SetRewardAddress(val.RewardAddress())
+	return weightedValidator
+}
+
 func newWeightedValidator(addr common.Address, reward common.Address, votingpower uint64, weight uint64) istanbul.Validator {
 	weightedValidator := &weightedValidator{
 		address:     addr,
@@ -529,7 +539,9 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 		blockNum:          valSet.blockNum,
 	}
 	newWeightedCouncil.validators = make([]istanbul.Validator, len(valSet.validators))
-	copy(newWeightedCouncil.validators, valSet.validators)
+	for i := 0; i < len(valSet.validators); i++ {
+		newWeightedCouncil.validators[i] = valSet.validators[i].Copy()
+	}
 
 	newWeightedCouncil.proposers = make([]istanbul.Validator, len(valSet.proposers))
 	copy(newWeightedCouncil.proposers, valSet.proposers)

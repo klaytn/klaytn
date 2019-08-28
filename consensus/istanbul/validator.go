@@ -36,6 +36,7 @@ type Validator interface {
 	RewardAddress() common.Address
 	VotingPower() uint64
 	Weight() uint64
+	Copy() Validator
 }
 
 // ----------------------------------------------------------------------------

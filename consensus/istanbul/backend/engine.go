@@ -354,7 +354,6 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		kirAddr := common.Address{}
 		lastHeader := chain.CurrentHeader()
 		valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
-		proposer := valSet.GetProposer()
 
 		// Determine and update Rewardbase when mining. When mining, state root is not yet determined and will be determined at the end of this Finalize below.
 		if common.EmptyHash(header.Root) {
@@ -373,12 +372,10 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		if proposer.Weight() != 0 {
-			stakingInfo := sb.GetStakingManager().GetStakingInfo(header.Number.Uint64())
-			if stakingInfo != nil {
-				kirAddr = stakingInfo.KIRAddr
-				pocAddr = stakingInfo.PoCAddr
-			}
+		stakingInfo := sb.GetStakingManager().GetStakingInfo(header.Number.Uint64())
+		if stakingInfo != nil {
+			kirAddr = stakingInfo.KIRAddr
+			pocAddr = stakingInfo.PoCAddr
 		}
 
 		if err := sb.rewardDistributor.DistributeBlockReward(state, header, pocAddr, kirAddr); err != nil {
