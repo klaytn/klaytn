@@ -31,7 +31,7 @@ contract BridgeOperator is Ownable {
     mapping(address => bool) public operators;
     address[] public operatorList;
 
-    mapping(uint8 => mapping (uint64 => VotesData) ) private votes;
+    mapping(uint8 => mapping (uint64 => VotesData)) private votes;
 
     mapping(uint64 => bool) public closedValueTransferVotes; // nonce
     mapping(uint8 => uint8) public operatorThresholds; // <vote type>
