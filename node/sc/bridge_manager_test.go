@@ -1280,9 +1280,6 @@ func TestAnchoringBasic(t *testing.T) {
 		}
 	}()
 
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
 	config := &SCConfig{AnchoringPeriod: 1}
 	config.DataDir = tempDir
 	config.VTRecovery = true
@@ -1370,9 +1367,6 @@ func TestAnchoringUpdateTxCount(t *testing.T) {
 		}
 	}()
 
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
 	config := &SCConfig{AnchoringPeriod: 3}
 	config.DataDir = tempDir
 	config.VTRecovery = true
@@ -1448,9 +1442,6 @@ func TestAnchoringPeriod(t *testing.T) {
 			t.Fatalf("fail to delete file %v", err)
 		}
 	}()
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
 
 	config := &SCConfig{AnchoringPeriod: 4}
 	config.DataDir = tempDir
