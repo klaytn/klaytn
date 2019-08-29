@@ -407,6 +407,7 @@ func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
 	}
 }
 
+// blockAnchoringManager generates anchoring transactions and updates transaction count.
 func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
 	sbh.updateTxCount(block)
 	if err := sbh.generateAndAddAnchoringTxIntoTxPool(block); err == nil {
