@@ -1341,7 +1341,7 @@ func TestAnchoringBasic(t *testing.T) {
 
 	err = rlp.DecodeBytes(data, anchoringData)
 	assert.NoError(t, err)
-	assert.Equal(t, uint8(0), anchoringData.Type)
+	assert.Equal(t, types.AnchoringDataType0, anchoringData.Type)
 	anchoringDataInternal := new(types.AnchoringDataInternalType0)
 	if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
 		logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")
@@ -1519,7 +1519,7 @@ func TestAnchoringPeriod(t *testing.T) {
 
 	err = rlp.DecodeBytes(data, anchoringData)
 	assert.NoError(t, err)
-	assert.Equal(t, uint8(0), anchoringData.Type)
+	assert.Equal(t, types.AnchoringDataType0, anchoringData.Type)
 	anchoringDataInternal := new(types.AnchoringDataInternalType0)
 	if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
 		logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data")

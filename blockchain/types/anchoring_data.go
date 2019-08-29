@@ -22,6 +22,10 @@ import (
 	"math/big"
 )
 
+const (
+	AnchoringDataType0 uint8 = 0
+)
+
 type AnchoringData struct {
 	Type uint8
 	Data []byte
@@ -46,5 +50,5 @@ func NewAnchoringDataType0(block *Block, period *big.Int, txCount *big.Int) (*An
 	if err != nil {
 		return nil, err
 	}
-	return &AnchoringData{0, encodedCCTxData}, nil
+	return &AnchoringData{AnchoringDataType0, encodedCCTxData}, nil
 }

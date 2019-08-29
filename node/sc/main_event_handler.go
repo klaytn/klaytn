@@ -117,7 +117,7 @@ func (mce *MainChainEventHandler) writeChildChainTxHashFromBlock(block *types.Bl
 				logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data", "txHash", tx.Hash().String())
 				continue
 			}
-			if anchoringData.Type == 0 {
+			if anchoringData.Type == types.AnchoringDataType0 {
 				anchoringDataInternal := new(types.AnchoringDataInternalType0)
 				if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
 					logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data", "txHash", tx.Hash().String())
