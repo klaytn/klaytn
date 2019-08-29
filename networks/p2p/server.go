@@ -516,14 +516,11 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 		c.portOrder = PortOrder(dialDest.PortOrder)
 	} else {
 		for i, addr := range srv.ListenAddrs {
-			s1 := strings.Split(addr, ":")                    // string format example, [::]:30303
+			s1 := strings.Split(addr, ":")                    // string format example, [::]:30303 or 123.123.123.123:30303
 			s2 := strings.Split(fd.LocalAddr().String(), ":") // string format example, 123.123.123.123:30303
-			if len(s1) != 4 || len(s2) != 2 {
-				srv.logger.Error("Address format is incorrect", "srv.ListenAddr", addr, "fd.LocalAddr().String()", fd.LocalAddr().String())
-				return errors.New("incorrect Address")
-			}
-			if s1[3] == s2[1] {
+			if s1[len(s1)-1] == s2[len(s2)-1] {
 				c.portOrder = PortOrder(i)
+				break
 			}
 		}
 	}
