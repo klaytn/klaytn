@@ -45,14 +45,14 @@ func NewPrivateAdminAPI(node *Node) *PrivateAdminAPI {
 	return &PrivateAdminAPI{node: node}
 }
 
-// addPeerInternal does common part for AddPeer and AddPeerOnParentChain.
+// addPeerInternal does common part for AddPeer.
 func addPeerInternal(server p2p.Server, url string, onParentChain bool) (*discover.Node, error) {
 	// Try to add the url as a static peer and return
 	node, err := discover.ParseNode(url)
 	if err != nil {
 		return nil, fmt.Errorf("invalid kni: %v", err)
 	}
-	server.AddPeer(node, onParentChain)
+	server.AddPeer(node)
 	return node, nil
 }
 
