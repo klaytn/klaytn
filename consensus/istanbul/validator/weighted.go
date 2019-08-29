@@ -539,9 +539,7 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 		blockNum:          valSet.blockNum,
 	}
 	newWeightedCouncil.validators = make([]istanbul.Validator, len(valSet.validators))
-	for i := 0; i < len(valSet.validators); i++ {
-		newWeightedCouncil.validators[i] = valSet.validators[i].Copy()
-	}
+	copy(newWeightedCouncil.validators, valSet.validators)
 
 	newWeightedCouncil.proposers = make([]istanbul.Validator, len(valSet.proposers))
 	copy(newWeightedCouncil.proposers, valSet.proposers)
@@ -597,6 +595,12 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 		// Just return without updating proposer
 		return errors.New("skip refreshing proposers due to no staking info")
 	}
+
+	validators := make([]istanbul.Validator, len(valSet.validators))
+	for i := 0; i < len(valSet.validators); i++ {
+		validators[i] = valSet.validators[i].Copy()
+	}
+	valSet.validators = validators
 
 	weightedValidators, stakingAmounts, err := valSet.getStakingAmountsOfValidators(newStakingInfo)
 	if err != nil {
