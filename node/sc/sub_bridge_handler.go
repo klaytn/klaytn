@@ -459,7 +459,7 @@ func (sbh *SubBridgeHandler) GetLatestAnchoredBlockNumber() uint64 {
 	return sbh.subbridge.ChainDB().ReadAnchoredBlockNumber()
 }
 
-// UpdateLatestTxCountAddedBlockNumber set the latestTxCountAddedBlockNumber to the block number of the last anchoring tx which was added into bridge txPool.
+// UpdateLatestTxCountAddedBlockNumber sets the latestTxCountAddedBlockNumber to the block number of the last anchoring tx which was added into bridge txPool.
 func (sbh *SubBridgeHandler) UpdateLatestTxCountAddedBlockNumber(newLatestAnchoredBN uint64) {
 	if sbh.latestTxCountAddedBlockNumber < newLatestAnchoredBN {
 		sbh.latestTxCountAddedBlockNumber = newLatestAnchoredBN
