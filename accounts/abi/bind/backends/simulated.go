@@ -83,6 +83,10 @@ func NewSimulatedBackend(alloc blockchain.GenesisAlloc) *SimulatedBackend {
 	return backend
 }
 
+func (b *SimulatedBackend) BlockChain() *blockchain.BlockChain {
+	return b.blockchain
+}
+
 // Commit imports all the pending transactions as a single block and starts a
 // fresh new state.
 func (b *SimulatedBackend) Commit() {

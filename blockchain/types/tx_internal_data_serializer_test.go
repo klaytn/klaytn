@@ -373,13 +373,14 @@ func genFeeDelegatedSmartContractDeployWithRatioTransaction() TxInternalData {
 }
 
 func genChainDataTransaction() TxInternalData {
-	blockTxData := &ChainHashes{
-		common.HexToHash("0"),
-		common.HexToHash("1"),
-		common.HexToHash("2"),
-		common.HexToHash("3"),
-		common.HexToHash("4"),
-		big.NewInt(5)}
+	data := &AnchoringDataInternalType0{common.HexToHash("0"), common.HexToHash("1"),
+		common.HexToHash("2"), common.HexToHash("3"),
+		common.HexToHash("4"), big.NewInt(5), big.NewInt(6), big.NewInt(7)}
+	encodedCCTxData, err := rlp.EncodeToBytes(data)
+	if err != nil {
+		panic(err)
+	}
+	blockTxData := &AnchoringData{0, encodedCCTxData}
 
 	anchoredData, err := rlp.EncodeToBytes(blockTxData)
 	if err != nil {
