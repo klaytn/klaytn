@@ -20,7 +20,7 @@ Istanbul engine was inspired by Clique POA, Hyperledger's SBFT, Tendermint, Hydr
 
 Istanbul engine is using 3-phase consensus and it can tolerate F faulty nodes where N = 3F + 1
 
-In Klaytn, it is being used as a main consensus engine after modification for supports of Committee, Reward and Governance.
+In Klaytn, it is being used as the main consensus engine after modification for supports of Committee, Reward and Governance.
 Package Istanbul has three sub packages, core, backend, and validator. Please refer to each package's doc.go for more information.
 
 Source Files
