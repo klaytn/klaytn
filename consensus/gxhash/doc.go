@@ -18,5 +18,10 @@
 // This file is derived from consensus/ethash/consensus.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package gxhash implements the gxhash proof-of-work consensus engine.
+/*
+Package gxhash implements the gxhash proof-of-work consensus engine.
+gxhash is a renamed version of ethash in Ethereum which implements consensus/Engine interface.
+
+gxhash is no longer used in Klaytn except for some test codes which uses gxhash's fakemode.
+*/
 package gxhash
