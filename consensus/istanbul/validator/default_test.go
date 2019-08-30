@@ -25,6 +25,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"reflect"
 	"strings"
@@ -38,6 +39,20 @@ var (
 	testAddress4 = "b37866a925bccd69cfa98d43b510f1d23d78a853"
 	testAddress5 = "b37866a925bccd69cfa98d43b510f1d23d78a854"
 )
+
+func TestDefaultValidator_Copy(t *testing.T) {
+	testAddresses := []common.Address{
+		common.Address{},
+		common.StringToAddress("address"),
+	}
+	for _, testAddress := range testAddresses {
+		validator := &defaultValidator{testAddress}
+		copiedValidator := validator.Copy()
+
+		assert.Equal(t, validator, copiedValidator)
+		assert.NotEqual(t, fmt.Sprintf("%p", &validator), fmt.Sprintf("%p", &copiedValidator))
+	}
+}
 
 func TestNewValidatorSet(t *testing.T) {
 	var validators []istanbul.Validator
