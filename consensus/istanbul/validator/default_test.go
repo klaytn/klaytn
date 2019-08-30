@@ -42,7 +42,7 @@ var (
 
 func TestDefaultValidator_Copy(t *testing.T) {
 	testAddresses := []common.Address{
-		common.Address{},
+		{},
 		common.StringToAddress("address"),
 	}
 	for _, testAddress := range testAddresses {
