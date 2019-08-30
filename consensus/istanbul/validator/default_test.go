@@ -40,6 +40,20 @@ var (
 	testAddress5 = "dd197E88fd97aF3877023cf20d69543fc72e6298"
 )
 
+func TestDefaultValidator_Copy(t *testing.T) {
+	testAddresses := []common.Address{
+		common.Address{},
+		common.StringToAddress("address"),
+	}
+	for _, testAddress := range testAddresses {
+		validator := &defaultValidator{testAddress}
+		copiedValidator := validator.Copy()
+
+		assert.Equal(t, validator, copiedValidator)
+		assert.NotEqual(t, fmt.Sprintf("%p", &validator), fmt.Sprintf("%p", &copiedValidator))
+	}
+}
+
 func TestNewValidatorSet(t *testing.T) {
 	var validators []istanbul.Validator
 	const ValCnt = 100

@@ -17,6 +17,7 @@
 package validator
 
 import (
+	"fmt"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
@@ -126,6 +127,35 @@ func makeTestWeightedCouncil(weights []uint64) (valSet *weightedCouncil) {
 	// prepare weighted council
 	valSet = NewWeightedCouncil(testAddrs, testRewardAddrs, testVotingPowers, weights, istanbul.WeightedRandom, 21, 0, 0, nil)
 	return
+}
+
+func TestWeightedValidator_Copy(t *testing.T) {
+	testCases := []struct {
+		addr        common.Address
+		reward      common.Address
+		votingpower uint64
+		weight      int64
+	}{
+		{
+			common.Address{},
+			common.Address{},
+			1000,
+			0,
+		},
+		{
+			common.StringToAddress("address"),
+			common.StringToAddress("reward address"),
+			1000,
+			10,
+		},
+	}
+	for _, testCase := range testCases {
+		validator := newWeightedValidator(testCase.addr, testCase.reward, testCase.votingpower, testCase.weight)
+		copiedValidator := validator.Copy()
+
+		assert.Equal(t, validator, copiedValidator)
+		assert.NotEqual(t, fmt.Sprintf("%p", &validator), fmt.Sprintf("%p", &copiedValidator))
+	}
 }
 
 func TestWeightedCouncil_List(t *testing.T) {
