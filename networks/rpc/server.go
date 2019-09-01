@@ -153,7 +153,12 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 	//	ctx, cancel := context.WithCancel(context.Background())
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
+	defer func() {
+		notifier, supported := NotifierFromContext(ctx)
+		if supported { // interface doesn't support subscriptions (e.g. http)
+			notifier.unsubscribeAll()
+		}
+	}()
 	// if the codec supports notification include a notifier that callbacks can use
 	// to send notification to clients. It is thight to the codec/connection. If the
 	// connection is closed the notifier will stop and cancels all active subscriptions.

@@ -93,7 +93,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         uint64 requestNonce,
         string uri,
         uint256 fee,
-        uint256[] extraData
+        bytes extraData
     );
 
     /**
@@ -115,7 +115,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         address tokenAddress,
         uint256 valueOrTokenId,
         uint64 handleNonce,
-        uint256[] extraData
+        bytes extraData
 
     );
 

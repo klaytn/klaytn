@@ -408,7 +408,7 @@ func addPeerInternal(server p2p.Server, url string) (*discover.Node, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid kni: %v", err)
 	}
-	server.AddPeer(node, false)
+	server.AddPeer(node)
 	return node, nil
 }
 

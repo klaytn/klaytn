@@ -33,6 +33,67 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         callback = _addr;
     }
 
+    // requestSellERC20 requests transfer ERC20 to _to on relative chain to sell it.
+    function requestSellERC20(
+        address _tokenAddress,
+        address _to,
+        uint256 _value,
+        uint256 _feeLimit,
+        uint256 _price
+    )
+    external
+    {
+        super.requestERC20Transfer(
+            _tokenAddress,
+            _to,
+            _value,
+            _feeLimit,
+            abi.encode(_price)
+        );
+    }
+
+    // requestERC20Transfer requests transfer ERC20 to _to on relative chain.
+    function requestERC20Transfer(
+        address _tokenAddress,
+        address _to,
+        uint256 _value,
+        uint256 _feeLimit,
+        bytes memory _extraData
+    )
+    public
+    {
+        revert("not support");
+    }
+
+    // requestSellERC721 requests transfer ERC721 to _to on relative chain to sell it.
+    function requestSellERC721(
+        address _tokenAddress,
+        address _to,
+        uint256 _tokenId,
+        uint256 _price
+    )
+    external
+    {
+        super.requestERC721Transfer(
+            _tokenAddress,
+            _to,
+            _tokenId,
+            abi.encode(_price)
+        );
+    }
+
+    // requestERC721Transfer requests transfer ERC721 to _to on relative chain.
+    function requestERC721Transfer(
+        address _tokenAddress,
+        address _to,
+        uint256 _tokenId,
+        bytes memory _extraData
+    )
+    public
+    {
+        revert("not support");
+    }
+
     // handleERC20Transfer sends the ERC20 token by the request and processes the extended feature.
     function handleERC20Transfer(
         bytes32 _requestTxHash,
@@ -42,29 +103,19 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         uint256 _value,
         uint64 _requestNonce,
         uint64 _requestBlockNumber,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         public
     {
-        if (_extraData.length > 0) {
-            uint256 offerPrice = _extraData[0];
-            if (offerPrice > 0 && callback != address(0)) {
-                super.handleERC20Transfer(_requestTxHash, _from, callback, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
-                Callback(callback).registerOffer(_to, _value, _tokenAddress, offerPrice);
-                return;
-            }
-        }
+        require(_extraData.length == 32, "extraData size error");
 
-        super.handleERC20Transfer(
-            _requestTxHash,
-            _from,
-            _to,
-            _tokenAddress,
-            _value,
-            _requestNonce,
-            _requestBlockNumber,
-            _extraData
-        );
+        require(callback != address(0), "callback address error");
+
+        uint256 offerPrice = abi.decode(_extraData, (uint256));
+        require(offerPrice > 0, "offerPrice error");
+
+        super.handleERC20Transfer(_requestTxHash, _from, callback, _tokenAddress, _value, _requestNonce, _requestBlockNumber, _extraData);
+        Callback(callback).registerOffer(_to, _value, _tokenAddress, offerPrice);
     }
 
     // handleERC721Transfer sends the ERC721 token by the request and processes the extended feature.
@@ -77,29 +128,18 @@ contract ExtBridge is BridgeTransferERC20, BridgeTransferERC721 {
         uint64 _requestNonce,
         uint64 _requestBlockNumber,
         string memory _tokenURI,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         public
     {
-        if (_extraData.length > 0) {
-            uint256 offerPrice = _extraData[0];
-            if (offerPrice > 0 && callback != address(0)) {
-                super.handleERC721Transfer(_requestTxHash, _from, callback, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
-                Callback(callback).registerOffer(_to, _tokenId, _tokenAddress, offerPrice);
-                return;
-            }
-        }
+        require(_extraData.length == 32, "extraData size error");
 
-        super.handleERC721Transfer(
-            _requestTxHash,
-            _from,
-            _to,
-            _tokenAddress,
-            _tokenId,
-            _requestNonce,
-            _requestBlockNumber,
-            _tokenURI,
-            _extraData
-        );
+        require(callback != address(0), "callback address error");
+
+        uint256 offerPrice = abi.decode(_extraData, (uint256));
+        require(offerPrice > 0, "offerPrice error");
+
+        super.handleERC721Transfer(_requestTxHash, _from, callback, _tokenAddress, _tokenId, _requestNonce, _requestBlockNumber, _tokenURI, _extraData);
+        Callback(callback).registerOffer(_to, _tokenId, _tokenAddress, offerPrice);
     }
 }

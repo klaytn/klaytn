@@ -34,7 +34,7 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransfer {
         uint256 _value,
         uint64 _requestedNonce,
         uint64 _requestedBlockNumber,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         public
         onlyOperators
@@ -71,7 +71,7 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransfer {
         address _to,
         uint256 _value,
         uint256 _feeLimit,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         internal
     {
@@ -105,7 +105,7 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransfer {
         address _to,
         uint256 _value,
         uint256 _feeLimit,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         public
     {
@@ -118,9 +118,9 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransfer {
         address _to,
         uint256 _value,
         uint256 _feeLimit,
-        uint256[] calldata _extraData
+        bytes memory _extraData
     )
-        external
+        public
     {
         IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _value.add(_feeLimit));
         _requestERC20Transfer(_tokenAddress, msg.sender, _to, _value, _feeLimit, _extraData);

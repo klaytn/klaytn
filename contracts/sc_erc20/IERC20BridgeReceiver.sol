@@ -17,5 +17,5 @@
 pragma solidity ^0.5.6;
 
 contract IERC20BridgeReceiver {
-    function onERC20Received(address _from, address _to, uint256 _amount, uint256 _feeLimit, uint256[] memory _extraData) public;
+    function onERC20Received(address _from, address _to, uint256 _amount, uint256 _feeLimit, bytes memory _extraData) public;
 }

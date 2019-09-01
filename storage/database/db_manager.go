@@ -1319,7 +1319,7 @@ func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.H
 }
 
 // WriteChildChainTxHash writes stores a transaction hash of a transaction which contains
-// ChainHashes, with the key made with given child chain block hash.
+// AnchoringData, with the key made with given child chain block hash.
 func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
 	key := childChainTxHashKey(ccBlockHash)
 	db := dbm.getDatabase(bridgeServiceDB)
@@ -1329,7 +1329,7 @@ func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxH
 }
 
 // ConvertChildChainBlockHashToParentChainTxHash returns a transaction hash of a transaction which contains
-// ChainHashes, with the key made with given child chain block hash.
+// AnchoringData, with the key made with given child chain block hash.
 func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(scBlockHash common.Hash) common.Hash {
 	key := childChainTxHashKey(scBlockHash)
 	db := dbm.getDatabase(bridgeServiceDB)
