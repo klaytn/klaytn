@@ -41,6 +41,7 @@ jobs:
       - save_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
           paths:
+            - "/go/pkg/mod"
       - run:
           name: "Run test datasync"
           command: |
@@ -62,6 +63,7 @@ jobs:
       - save_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
           paths:
+            - "/go/pkg/mod"
       - run:
           name: "Run test networks"
           command: |
@@ -83,6 +85,7 @@ jobs:
       - save_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
           paths:
+            - "/go/pkg/mod"
       - run:
           name: "Run test tests"
           command: |
@@ -105,6 +108,7 @@ jobs:
       - save_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
           paths:
+            - "/go/pkg/mod"
       - run:
           name: "Run test others"
           command: |
