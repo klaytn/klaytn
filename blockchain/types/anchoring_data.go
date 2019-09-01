@@ -18,20 +18,37 @@ package types
 
 import (
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/ser/rlp"
 	"math/big"
 )
 
-type ChainHashes struct {
+const (
+	AnchoringDataType0 uint8 = 0
+)
+
+type AnchoringData struct {
+	Type uint8
+	Data []byte
+}
+
+type AnchoringDataInternalType0 struct {
 	BlockHash     common.Hash
 	TxHash        common.Hash
 	ParentHash    common.Hash
 	ReceiptHash   common.Hash
 	StateRootHash common.Hash
 	BlockNumber   *big.Int
+	Period        *big.Int
+	TxCount       *big.Int
 }
 
-func NewChainHashes(block *Block) *ChainHashes {
-	return &ChainHashes{block.Hash(), block.Header().TxHash,
+func NewAnchoringDataType0(block *Block, period *big.Int, txCount *big.Int) (*AnchoringData, error) {
+	data := &AnchoringDataInternalType0{block.Hash(), block.Header().TxHash,
 		block.Header().ParentHash, block.Header().ReceiptHash,
-		block.Header().Root, block.Header().Number}
+		block.Header().Root, block.Header().Number, period, txCount}
+	encodedCCTxData, err := rlp.EncodeToBytes(data)
+	if err != nil {
+		return nil, err
+	}
+	return &AnchoringData{AnchoringDataType0, encodedCCTxData}, nil
 }

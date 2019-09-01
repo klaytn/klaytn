@@ -159,16 +159,6 @@ func (p *Peer) LocalAddr() net.Addr {
 	return p.rws[ConnDefault].fd.LocalAddr()
 }
 
-// OnParentChain returns if the peer is on the parent chain or not.
-func (p *Peer) OnParentChain() bool {
-	return p.rws[ConnDefault].onParentChain
-}
-
-// SetOnParentChain sets the peer is on the parent chain or not.
-func (p *Peer) SetOnParentChain(onParentChain bool) {
-	p.rws[ConnDefault].onParentChain = onParentChain
-}
-
 // Disconnect terminates the peer connection with the given reason.
 // It returns immediately and does not wait until the connection is closed.
 func (p *Peer) Disconnect(reason DiscReason) {

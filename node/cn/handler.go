@@ -461,7 +461,7 @@ func (pm *ProtocolManager) processConsensusMsg(msgCh <-chan p2p.Msg, p Peer, add
 			_, err := handler.HandleMsg(addr, msg)
 			// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
 			if err != nil {
-				p.GetP2PPeer().Log().Error("ProtocolManager failed to handle consensus message", "msg", msg, "err", err)
+				p.GetP2PPeer().Log().Warn("ProtocolManager failed to handle consensus message. This can happen during block synchronization.", "msg", msg, "err", err)
 				errCh <- err
 				return
 			}

@@ -36,7 +36,7 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         uint64 _requestedNonce,
         uint64 _requestedBlockNumber,
         string memory _tokenURI,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         public
         onlyOperators
@@ -72,7 +72,7 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         address _from,
         address _to,
         uint256 _tokenId,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         internal
     {
@@ -104,7 +104,7 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         address _from,
         uint256 _tokenId,
         address _to,
-        uint256[] memory _extraData
+        bytes memory _extraData
     )
         public
     {
@@ -116,9 +116,9 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         address _tokenAddress,
         address _to,
         uint256 _tokenId,
-        uint256[] calldata _extraData
+        bytes memory _extraData
     )
-        external
+        public
     {
         IERC721(_tokenAddress).transferFrom(msg.sender, address(this), _tokenId);
         _requestERC721Transfer(_tokenAddress, msg.sender, _to, _tokenId, _extraData);
