@@ -4,8 +4,10 @@
 version: 2.1
 jobs:
   build:
-    docker:
-      - image: circleci/golang:1.12
+    machine: true
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    environment:
+      GO111MODULE: "on"
     steps:
       - checkout
       - restore_cache:
@@ -15,20 +17,28 @@ jobs:
           name: "Get dependencies"
           command: |
             go get
+      - run:
+          name: "Build"
+          command: |
+            curl -O https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz
+            mkdir $HOME/go1.12.5
+            tar -C $HOME/go1.12.5 -xzf go1.12.5.linux-amd64.tar.gz
+            export PATH=$HOME/go1.12.5/go/bin:$PATH
+            export GOPATH=$HOME/go
+
+            make fmt
+            make all
       - save_cache:
           key: go-mod-v1-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg/mod"
-      - run:
-          name: "Build"
-          command: |
-            make fmt
-            make all
 
   test-datasync:
     docker:
       - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
+    environment:
+      GO111MODULE: "on"
     steps:
       - checkout
       - restore_cache:
@@ -38,19 +48,21 @@ jobs:
           name: "Get dependencies"
           command: |
             go get
-      - save_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
       - run:
           name: "Run test datasync"
           command: |
             make test-datasync
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
 
   test-networks:
     docker:
       - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
+    environment:
+      GO111MODULE: "on"
     steps:
       - checkout
       - restore_cache:
@@ -60,19 +72,21 @@ jobs:
           name: "Get dependencies"
           command: |
             go get
-      - save_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
       - run:
           name: "Run test networks"
           command: |
             make test-networks
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
 
   test-tests:
     docker:
       - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
+    environment:
+      GO111MODULE: "on"
     steps:
       - checkout
       - restore_cache:
@@ -82,20 +96,22 @@ jobs:
           name: "Get dependencies"
           command: |
             go get
-      - save_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
       - run:
           name: "Run test tests"
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
             make test-tests
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
 
   test-others:
     docker:
       - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
+    environment:
+      GO111MODULE: "on"
     steps:
       - checkout
       - restore_cache:
@@ -105,14 +121,14 @@ jobs:
           name: "Get dependencies"
           command: |
             go get
-      - save_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
       - run:
           name: "Run test others"
           command: |
             make test-others
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
 
   coverage:
     docker:
