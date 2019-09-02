@@ -122,11 +122,9 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, e
 	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
-		bcVersion := chainDB.ReadDatabaseVersion()
-		if bcVersion != blockchain.BlockChainVersion && bcVersion != 0 {
-			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d).\n", bcVersion, blockchain.BlockChainVersion)
+		if err := blockchain.CheckBlockChainVersion(chainDB); err != nil {
+			return nil, err
 		}
-		chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
 	}
 	var (
 		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}

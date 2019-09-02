@@ -137,13 +137,6 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 	}
 
 	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
-
-	bcVersion := chainDB.ReadDatabaseVersion()
-	if bcVersion != blockchain.BlockChainVersion && bcVersion != 0 {
-		return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d).\n", bcVersion, blockchain.BlockChainVersion)
-	}
-	chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
-
 	sc.APIBackend = &MainBridgeAPI{sc}
 
 	var err error

@@ -188,13 +188,6 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	}
 
 	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
-
-	bcVersion := chainDB.ReadDatabaseVersion()
-	if bcVersion != blockchain.BlockChainVersion && bcVersion != 0 {
-		return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d).\n", bcVersion, blockchain.BlockChainVersion)
-	}
-	chainDB.WriteDatabaseVersion(blockchain.BlockChainVersion)
-
 	sc.APIBackend = &SubBridgeAPI{sc}
 
 	sc.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)

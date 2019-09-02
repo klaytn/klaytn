@@ -502,18 +502,17 @@ func TestDBManager_Sections(t *testing.T) {
 
 // TestDBManager_DatabaseVersion tests read/write operations of database version.
 func TestDBManager_DatabaseVersion(t *testing.T) {
-	// TODO-Klaytn-Database DatabaseVersion should be handled carefully.
-	//for i, dbm := range dbManagers {
-	//	c := dbConfigs[i]
-	//
-	//	assert.Equal(t, uint64(0), dbm.ReadDatabaseVersion())
-	//
-	//	dbm.WriteDatabaseVersion(uint64(1))
-	//	assert.Equal(t, uint64(1), dbm.ReadDatabaseVersion())
-	//
-	//	dbm.WriteDatabaseVersion(uint64(2))
-	//	assert.Equal(t, uint64(2), dbm.ReadDatabaseVersion())
-	//}
+	for _, dbm := range dbManagers {
+		assert.Nil(t, dbm.ReadDatabaseVersion())
+
+		dbm.WriteDatabaseVersion(uint64(1))
+		assert.NotNil(t, dbm.ReadDatabaseVersion())
+		assert.Equal(t, uint64(1), *dbm.ReadDatabaseVersion())
+
+		dbm.WriteDatabaseVersion(uint64(2))
+		assert.NotNil(t, dbm.ReadDatabaseVersion())
+		assert.Equal(t, uint64(2), *dbm.ReadDatabaseVersion())
+	}
 }
 
 // TestDBManager_ChainConfig tests read/write operations of chain configuration.
