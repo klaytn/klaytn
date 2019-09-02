@@ -31,8 +31,8 @@ type AnchoringData struct {
 	Data []byte
 }
 
-// AnchoringDataInternalNoType is an old anchoring type that does not support an data type.
-type AnchoringDataInternalNoType struct {
+// AnchoringDataLegacy is an old anchoring type that does not support an data type.
+type AnchoringDataLegacy struct {
 	BlockHash     common.Hash
 	TxHash        common.Hash
 	ParentHash    common.Hash

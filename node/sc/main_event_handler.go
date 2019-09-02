@@ -92,13 +92,13 @@ func (mce *MainChainEventHandler) decodeAndWriteChildChainTxHash(tx *types.Trans
 	anchoringData := new(types.AnchoringData)
 	if err := rlp.DecodeBytes(data, anchoringData); err != nil {
 		// Try to decode old type without a type support for compatibility.
-		anchoringDataNoType := new(types.AnchoringDataInternalNoType)
-		if err := rlp.DecodeBytes(data, anchoringDataNoType); err != nil {
+		anchoringDataLegacy := new(types.AnchoringDataLegacy)
+		if err := rlp.DecodeBytes(data, anchoringDataLegacy); err != nil {
 			logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data", "txHash", tx.Hash().String())
 			return
 		}
-		mce.mainbridge.chainDB.WriteChildChainTxHash(anchoringDataNoType.BlockHash, tx.Hash())
-		logger.Trace("Write type0 anchoring data on chainDB", "blockHash", anchoringDataNoType.BlockHash.String(), "txHash", tx.Hash().String())
+		mce.mainbridge.chainDB.WriteChildChainTxHash(anchoringDataLegacy.BlockHash, tx.Hash())
+		logger.Trace("Write type0 anchoring data on chainDB", "blockHash", anchoringDataLegacy.BlockHash.String(), "txHash", tx.Hash().String())
 		return
 	}
 	if anchoringData.Type == types.AnchoringDataType0 {

@@ -1532,10 +1532,10 @@ func TestAnchoringPeriod(t *testing.T) {
 	assert.Equal(t, big.NewInt(startTxCount+7).String(), anchoringDataInternal.TxCount.String())
 }
 
-// TestDecodingAnchoringTxWithNoType tests the following:
-// 1. generate AnchoringDataInternalNoType anchoring tx
-// 2. decode AnchoringDataInternalNoType with a decoding method of a sub-bridge handler.
-func TestDecodingAnchoringTxWithNoType(t *testing.T) {
+// TestDecodingLegacyAnchoringTx tests the following:
+// 1. generate AnchoringDataLegacy anchoring tx
+// 2. decode AnchoringDataLegacy with a decoding method of a sub-bridge handler.
+func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	const (
 		startBlkNum  = 10
 		startTxCount = 100
@@ -1581,7 +1581,7 @@ func TestDecodingAnchoringTxWithNoType(t *testing.T) {
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
 
-	anchoringData := &types.AnchoringDataInternalNoType{
+	anchoringData := &types.AnchoringDataLegacy{
 		BlockHash:     curBlk.Hash(),
 		TxHash:        curBlk.Header().TxHash,
 		ParentHash:    curBlk.Header().ParentHash,

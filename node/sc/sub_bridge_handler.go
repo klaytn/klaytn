@@ -319,19 +319,19 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 func (sbh *SubBridgeHandler) decodeAnchoringTx(data []byte) (common.Hash, *big.Int, error) {
 	anchoringData := new(types.AnchoringData)
 	if err := rlp.DecodeBytes(data, anchoringData); err != nil {
-		anchoringDataNoType := new(types.AnchoringDataInternalNoType)
-		if err := rlp.DecodeBytes(data, anchoringDataNoType); err != nil {
+		anchoringDataLegacy := new(types.AnchoringDataLegacy)
+		if err := rlp.DecodeBytes(data, anchoringDataLegacy); err != nil {
 			return common.Hash{}, nil, err
 		}
-		logger.Trace("decoded type0 anchoring tx", "blockNum", anchoringDataNoType.BlockNumber.String(), "blockHash", anchoringDataNoType.BlockHash.String(), "txHash", anchoringDataNoType.TxHash.String())
-		return anchoringDataNoType.BlockHash, anchoringDataNoType.BlockNumber, nil
+		logger.Trace("decoded legacy anchoring tx", "blockNum", anchoringDataLegacy.BlockNumber.String(), "blockHash", anchoringDataLegacy.BlockHash.String(), "txHash", anchoringDataLegacy.TxHash.String())
+		return anchoringDataLegacy.BlockHash, anchoringDataLegacy.BlockNumber, nil
 	}
 	if anchoringData.Type == types.AnchoringDataType0 {
 		anchoringDataInternal := new(types.AnchoringDataInternalType0)
 		if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
 			return common.Hash{}, nil, err
 		}
-		logger.Trace("decoded type1 anchoring tx", "blockNum", anchoringDataInternal.BlockNumber.String(), "blockHash", anchoringDataInternal.BlockHash.String(), "txHash", anchoringDataInternal.TxHash.String(), "txCount", anchoringDataInternal.TxCount)
+		logger.Trace("decoded type0 anchoring tx", "blockNum", anchoringDataInternal.BlockNumber.String(), "blockHash", anchoringDataInternal.BlockHash.String(), "txHash", anchoringDataInternal.TxHash.String(), "txCount", anchoringDataInternal.TxCount)
 		return anchoringDataInternal.BlockHash, anchoringDataInternal.BlockNumber, nil
 	} else {
 		return common.Hash{}, nil, errUnknownAnchoringTxType
