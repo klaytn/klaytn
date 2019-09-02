@@ -102,12 +102,10 @@ contract BridgeOperator is Ownable {
         for (uint8 i = 0; i < vote.voters.length; i++) {
             delete vote.voted[vote.voters[i]];
         }
-        delete vote.voters;
 
         for (uint8 i = 0; i < vote.voteKeys.length; i++) {
             delete vote.voteCounts[vote.voteKeys[i]];
         }
-        delete vote.voteKeys;
 
         delete votes[uint8(_voteType)][_nonce];
     }
