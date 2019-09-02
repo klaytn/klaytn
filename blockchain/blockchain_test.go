@@ -1423,18 +1423,18 @@ func TestCheckBlockChainVersion(t *testing.T) {
 	// 1. If DatabaseVersion is not stored yet,
 	// calling CheckBlockChainVersion stores BlockChainVersion to DatabaseVersion.
 	assert.Nil(t, memDB.ReadDatabaseVersion())
-	assert.Nil(t, CheckBlockChainVersion(memDB))
+	assert.NoError(t, CheckBlockChainVersion(memDB))
 	assert.Equal(t, uint64(BlockChainVersion), *memDB.ReadDatabaseVersion())
 
 	// 2. If DatabaseVersion is stored but less than BlockChainVersion,
 	// calling CheckBlockChainVersion stores BlockChainVersion to DatabaseVersion.
 	memDB.WriteDatabaseVersion(BlockChainVersion - 1)
-	assert.Nil(t, CheckBlockChainVersion(memDB))
+	assert.NoError(t, CheckBlockChainVersion(memDB))
 	assert.Equal(t, uint64(BlockChainVersion), *memDB.ReadDatabaseVersion())
 
 	// 3. If DatabaseVersion is stored but greater than BlockChainVersion,
 	// calling CheckBlockChainVersion returns an error and does not change the value.
 	memDB.WriteDatabaseVersion(BlockChainVersion + 1)
-	assert.NoError(t, CheckBlockChainVersion(memDB))
+	assert.Error(t, CheckBlockChainVersion(memDB))
 	assert.Equal(t, uint64(BlockChainVersion+1), *memDB.ReadDatabaseVersion())
 }
