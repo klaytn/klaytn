@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package Istanbul is a BFT based consensus engine which implements consensus/Engine interface.
+Package istanbul is a BFT based consensus engine which implements consensus/Engine interface.
 Istanbul engine was inspired by Clique POA, Hyperledger's SBFT, Tendermint, HydraChain and NCCU BFT.
 
 Istanbul engine is using 3-phase consensus and it can tolerate F faulty nodes where N = 3F + 1
