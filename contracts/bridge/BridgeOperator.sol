@@ -24,17 +24,17 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract BridgeOperator is Ownable {
     struct VotesData {
-        mapping(bytes32 => mapping(address => bool)) voted; // <sha3(type, args, nonce), <operator, vote>>
-        mapping(bytes32 => uint8) voteCounts; // <sha3(type, args, nonce)>
+        mapping(bytes32 => mapping(address => bool)) voted; // <sha3(type, args, nonce), <operator, bool>>
+        mapping(bytes32 => uint8) voteCounts; // <sha3(type, args, nonce), uint8>
     }
 
     mapping(address => bool) public operators;
     address[] public operatorList;
 
-    mapping(uint8 => mapping (uint64 => VotesData)) private votes;
+    mapping(uint8 => mapping (uint64 => VotesData)) private votes; // <voteType, <nonce, VotesData>
+    mapping(uint64 => bool) public closedValueTransferVotes; // <nonce, bool>
+    mapping(uint8 => uint8) public operatorThresholds; // <vote type, uint8>
 
-    mapping(uint64 => bool) public closedValueTransferVotes; // nonce
-    mapping(uint8 => uint8) public operatorThresholds; // <vote type>
     uint64 public configurationNonce;
 
     enum VoteType {
