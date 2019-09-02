@@ -204,7 +204,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	if err != nil {
 		return nil, err
 	}
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		return nil, err
 	}

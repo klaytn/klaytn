@@ -116,7 +116,7 @@ func TestBridgeManager(t *testing.T) {
 		bridgeAccounts: bacc,
 	}
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
@@ -359,7 +359,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		bridgeAccounts: bacc,
 	}
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
@@ -761,7 +761,7 @@ func TestBasicJournal(t *testing.T) {
 		bridgeAccounts: bacc,
 	}
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
@@ -842,7 +842,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 	}
 
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
@@ -1066,7 +1066,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	}
 
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
@@ -1131,7 +1131,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 	}
 
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
@@ -1236,7 +1236,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	}
 
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
@@ -1301,7 +1301,7 @@ func TestAnchoringBasic(t *testing.T) {
 	sc.blockchain = sim.BlockChain()
 
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
@@ -1388,7 +1388,7 @@ func TestAnchoringUpdateTxCount(t *testing.T) {
 	sc.blockchain = sim.BlockChain()
 
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
@@ -1464,7 +1464,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	sc.blockchain = sim.BlockChain()
 
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
