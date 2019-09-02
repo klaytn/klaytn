@@ -16,7 +16,7 @@
 
 /*
 Package backend defines backend struct which implements Backend interface of Istanbul consensus engine.
-backend struct work as a backbone of the consensus engine having Istanbul core,
+backend struct works as a backbone of the consensus engine having Istanbul core,
 required objects to get information for making a consensus, recent messages and a broadcaster to send its message to peer nodes.
 
 Source Files
