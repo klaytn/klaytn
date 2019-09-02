@@ -24,7 +24,10 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract BridgeOperator is Ownable {
     struct VotesData {
+        address[] voters;   // voter list for deleting voted map
         mapping(address => bytes32) voted; // <operator, sha3(type, args, nonce)>
+
+        bytes32[] voteKeys; // voteKey list for deleting voteCounts map
         mapping(bytes32 => uint8) voteCounts; // <sha3(type, args, nonce), uint8>
     }
 
@@ -69,15 +72,21 @@ contract BridgeOperator is Ownable {
     {
         VotesData storage vote = votes[uint8(_voteType)][_nonce];
 
-        bytes32 oldVoteKey = vote.voted[msg.sender];
-        if (oldVoteKey != bytes32(0)) {
-            vote.voteCounts[oldVoteKey]--;
+        bytes32 oldVoteKeyOfVoter = vote.voted[msg.sender];
+        if (oldVoteKeyOfVoter == bytes32(0)) {
+            vote.voters.push(msg.sender);
+        } else {
         }
 
         vote.voted[msg.sender] = _voteKey;
+
+        if (vote.voteCounts[_voteKey] == 0) {
+            vote.voteKeys.push(_voteKey);
+        }
         vote.voteCounts[_voteKey]++;
 
         if (vote.voteCounts[_voteKey] >= operatorThresholds[uint8(_voteType)]) {
+            removeVoteData(_voteType, _nonce);
             return true;
         }
         return false;
@@ -87,6 +96,18 @@ contract BridgeOperator is Ownable {
     function removeVoteData(VoteType _voteType, uint64 _nonce)
         internal
     {
+        VotesData storage vote = votes[uint8(_voteType)][_nonce];
+
+        for (uint8 i = 0; i < vote.voters.length; i++) {
+            delete vote.voted[vote.voters[i]];
+        }
+        delete vote.voters;
+
+        for (uint8 i = 0; i < vote.voteKeys.length; i++) {
+            delete vote.voteCounts[vote.voteKeys[i]];
+        }
+        delete vote.voteKeys;
+
         delete votes[uint8(_voteType)][_nonce];
     }
 
@@ -100,7 +121,6 @@ contract BridgeOperator is Ownable {
         bytes32 voteKey = keccak256(msg.data);
         if (voteCommon(VoteType.ValueTransfer, _requestNonce, voteKey)) {
             closedValueTransferVotes[_requestNonce] = true;
-            removeVoteData(VoteType.ValueTransfer, _requestNonce);
             return true;
         }
 
@@ -117,7 +137,6 @@ contract BridgeOperator is Ownable {
         bytes32 voteKey = keccak256(msg.data);
         if (voteCommon(VoteType.Configuration, _requestNonce, voteKey)) {
             configurationNonce++;
-            removeVoteData(VoteType.Configuration, _requestNonce);
             return true;
         }
 
