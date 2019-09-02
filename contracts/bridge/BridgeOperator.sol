@@ -24,7 +24,7 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract BridgeOperator is Ownable {
     struct VotesData {
-        mapping(bytes32 => mapping(address => bool)) voted; // <sha3(type, args, nonce), <operator, bool>>
+        mapping(address => bytes32) voted; // <operator, sha3(type, args, nonce)>
         mapping(bytes32 => uint8) voteCounts; // <sha3(type, args, nonce), uint8>
     }
 
@@ -69,10 +69,14 @@ contract BridgeOperator is Ownable {
     {
         VotesData storage vote = votes[uint8(_voteType)][_nonce];
 
-        if (!vote.voted[_voteKey][msg.sender]) {
-            vote.voted[_voteKey][msg.sender] = true;
-            vote.voteCounts[_voteKey]++;
+        bytes32 oldVoteKey = vote.voted[msg.sender];
+        if (oldVoteKey != bytes32(0)) {
+            vote.voteCounts[oldVoteKey]--;
         }
+
+        vote.voted[msg.sender] = _voteKey;
+        vote.voteCounts[_voteKey]++;
+
         if (vote.voteCounts[_voteKey] >= operatorThresholds[uint8(_voteType)]) {
             return true;
         }
