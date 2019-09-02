@@ -134,7 +134,7 @@ func TestWeightedValidator_Copy(t *testing.T) {
 		addr        common.Address
 		reward      common.Address
 		votingpower uint64
-		weight      int64
+		weight      uint64
 	}{
 		{
 			common.Address{},
