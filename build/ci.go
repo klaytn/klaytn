@@ -293,6 +293,11 @@ func doCover(cmdline []string) {
 		"/metric",
 		"/build",
 		"/client",
+		"/contracts",
+		"/simulations",
+		"/api",
+		"/fork",
+		"/mocks",
 	}
 	coverPackages = build.ExpandPackagesNoVendor(coverPackages)
 	coverPackages = build.ExcludePackages(coverPackages, coverExcludes)
