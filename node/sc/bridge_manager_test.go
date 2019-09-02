@@ -740,7 +740,7 @@ func TestBasicJournal(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc, _ := NewBridgeAccounts(tempDir)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -820,7 +820,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 	config.VTRecovery = true
 	config.VTRecoveryInterval = 60
 
-	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc, _ := NewBridgeAccounts(tempDir)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1044,7 +1044,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc, _ := NewBridgeAccounts(tempDir)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1109,7 +1109,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc, _ := NewBridgeAccounts(tempDir)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1214,7 +1214,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(os.TempDir())
+	bacc, _ := NewBridgeAccounts(tempDir)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
