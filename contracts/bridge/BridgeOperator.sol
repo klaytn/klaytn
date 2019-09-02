@@ -76,6 +76,7 @@ contract BridgeOperator is Ownable {
         if (oldVoteKeyOfVoter == bytes32(0)) {
             vote.voters.push(msg.sender);
         } else {
+            vote.voteCounts[oldVoteKeyOfVoter]--;
         }
 
         vote.voted[msg.sender] = _voteKey;
