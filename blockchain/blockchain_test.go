@@ -22,6 +22,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
 	"sync"
@@ -1413,4 +1414,27 @@ func BenchmarkBlockChain_1x1000Executions(b *testing.B) {
 	}
 
 	benchmarkLargeNumberOfValueToNonexisting(b, numTxs, numBlocks, recipientFn, dataFn)
+}
+
+// TestCheckBlockChainVersion tests the functionality of CheckBlockChainVersion function.
+func TestCheckBlockChainVersion(t *testing.T) {
+	memDB := database.NewMemoryDBManager()
+
+	// 1. If DatabaseVersion is not stored yet,
+	// calling CheckBlockChainVersion stores BlockChainVersion to DatabaseVersion.
+	assert.Nil(t, memDB.ReadDatabaseVersion())
+	assert.Nil(t, CheckBlockChainVersion(memDB))
+	assert.Equal(t, uint64(BlockChainVersion), *memDB.ReadDatabaseVersion())
+
+	// 2. If DatabaseVersion is stored but less than BlockChainVersion,
+	// calling CheckBlockChainVersion stores BlockChainVersion to DatabaseVersion.
+	memDB.WriteDatabaseVersion(BlockChainVersion - 1)
+	assert.Nil(t, CheckBlockChainVersion(memDB))
+	assert.Equal(t, uint64(BlockChainVersion), *memDB.ReadDatabaseVersion())
+
+	// 2. If DatabaseVersion is stored but greater than BlockChainVersion,
+	// calling CheckBlockChainVersion returns an error and does not change the value.
+	memDB.WriteDatabaseVersion(BlockChainVersion + 1)
+	assert.NotNil(t, CheckBlockChainVersion(memDB))
+	assert.Equal(t, uint64(BlockChainVersion+1), *memDB.ReadDatabaseVersion())
 }

@@ -43,6 +43,7 @@ import (
 	"math/big"
 	mrand "math/rand"
 	"reflect"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1975,4 +1976,20 @@ func (bc *BlockChain) GetNonceInCache(addr common.Address) (uint64, bool) {
 		}
 	}
 	return 0, false
+}
+
+// CheckBlockChainVersion checks the version of the current database and upgrade if possible.
+func CheckBlockChainVersion(chainDB database.DBManager) error {
+	bcVersion := chainDB.ReadDatabaseVersion()
+	if bcVersion != nil && *bcVersion > BlockChainVersion {
+		return fmt.Errorf("database version is v%d, Klaytn %s only supports v%d", *bcVersion, params.Version, BlockChainVersion)
+	} else if bcVersion == nil || *bcVersion < BlockChainVersion {
+		bcVersionStr := "N/A"
+		if bcVersion != nil {
+			bcVersionStr = strconv.Itoa(int(*bcVersion))
+		}
+		logger.Warn("Upgrade database version", "from", bcVersionStr, "to", BlockChainVersion)
+		chainDB.WriteDatabaseVersion(BlockChainVersion)
+	}
+	return nil
 }

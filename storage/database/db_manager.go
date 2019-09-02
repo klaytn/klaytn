@@ -128,8 +128,8 @@ type DBManager interface {
 	DeleteSectionHead(encodedSection []byte)
 
 	// from accessors_metadata.go
-	ReadDatabaseVersion() int
-	WriteDatabaseVersion(version int)
+	ReadDatabaseVersion() *uint64
+	WriteDatabaseVersion(version uint64)
 
 	ReadChainConfig(hash common.Hash) *params.ChainConfig
 	WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
@@ -1247,20 +1247,30 @@ func (dbm *databaseManager) DeleteSectionHead(encodedSection []byte) {
 }
 
 // ReadDatabaseVersion retrieves the version number of the database.
-func (dbm *databaseManager) ReadDatabaseVersion() int {
+func (dbm *databaseManager) ReadDatabaseVersion() *uint64 {
 	db := dbm.getDatabase(MiscDB)
-	var version int
+	var version uint64
 
 	enc, _ := db.Get(databaseVerisionKey)
-	rlp.DecodeBytes(enc, &version)
+	if len(enc) == 0 {
+		return nil
+	}
 
-	return version
+	if err := rlp.DecodeBytes(enc, &version); err != nil {
+		logger.Error("Failed to decode database version", "err", err)
+		return nil
+	}
+
+	return &version
 }
 
 // WriteDatabaseVersion stores the version number of the database
-func (dbm *databaseManager) WriteDatabaseVersion(version int) {
+func (dbm *databaseManager) WriteDatabaseVersion(version uint64) {
 	db := dbm.getDatabase(MiscDB)
-	enc, _ := rlp.EncodeToBytes(version)
+	enc, err := rlp.EncodeToBytes(version)
+	if err != nil {
+		logger.Crit("Failed to encode database version", "err", err)
+	}
 	if err := db.Put(databaseVerisionKey, enc); err != nil {
 		logger.Crit("Failed to store the database version", "err", err)
 	}
