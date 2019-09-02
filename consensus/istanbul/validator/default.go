@@ -60,7 +60,7 @@ func (val *defaultValidator) Hash() int64 {
 
 func (val *defaultValidator) RewardAddress() common.Address { return common.Address{} }
 func (val *defaultValidator) VotingPower() uint64           { return 1000 }
-func (val *defaultValidator) Weight() int64                 { return 0 }
+func (val *defaultValidator) Weight() uint64                { return 0 }
 
 type defaultSet struct {
 	subSize uint64

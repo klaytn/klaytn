@@ -81,13 +81,13 @@ func TestNormalWeightedCouncil(t *testing.T) {
 	votingPower1 := uint64(1)
 	votingPower2 := uint64(2)
 
-	weight1 := int64(1)
-	weight2 := int64(2)
+	weight1 := uint64(1)
+	weight2 := uint64(2)
 
 	val1 := newWeightedValidator(addr1, rewardAddr1, votingPower1, weight1)
 	val2 := newWeightedValidator(addr2, rewardAddr2, votingPower2, weight2)
 
-	valSet := NewWeightedCouncil([]common.Address{addr1, addr2}, []common.Address{rewardAddr1, rewardAddr2}, []uint64{votingPower1, votingPower2}, []int64{weight1, weight2}, istanbul.WeightedRandom, 21, 0, 0, nil)
+	valSet := NewWeightedCouncil([]common.Address{addr1, addr2}, []common.Address{rewardAddr1, rewardAddr2}, []uint64{votingPower1, votingPower2}, []uint64{weight1, weight2}, istanbul.WeightedRandom, 21, 0, 0, nil)
 	if valSet == nil {
 		t.Errorf("the format of validator set is invalid")
 		t.FailNow()
@@ -180,7 +180,7 @@ func TestNewWeightedCouncil_IncompleteParams(t *testing.T) {
 	var validators []istanbul.Validator
 	var rewardAddrs []common.Address
 	var votingPowers []uint64
-	var weights []int64
+	var weights []uint64
 
 	// Create 3 validators with random addresses
 	b := []byte{}
@@ -196,7 +196,7 @@ func TestNewWeightedCouncil_IncompleteParams(t *testing.T) {
 		rewardAddrs = append(rewardAddrs, rewardAddr)
 
 		votingPowers = append(votingPowers, uint64(1))
-		weights = append(weights, int64(1))
+		weights = append(weights, uint64(1))
 	}
 
 	// No validator address
@@ -214,7 +214,7 @@ func TestNewWeightedCouncil_IncompleteParams(t *testing.T) {
 	assert.Equal(t, (*weightedCouncil)(nil), valSet)
 
 	// Incomplete rewardAddrs
-	incompleteWeights := make([]int64, 1)
+	incompleteWeights := make([]uint64, 1)
 	valSet = NewWeightedCouncil(ExtractValidators(b), nil, nil, incompleteWeights, istanbul.WeightedRandom, 0, 0, 0, &blockchain.BlockChain{})
 	assert.Equal(t, (*weightedCouncil)(nil), valSet)
 }

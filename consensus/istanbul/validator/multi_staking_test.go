@@ -182,7 +182,7 @@ func TestCalcWeight(t *testing.T) {
 		weightedValidators []*weightedValidator
 		stakingAmounts     []float64
 		totalStaking       float64
-		expectedWeights    []int64
+		expectedWeights    []uint64
 	}{
 		{
 			[]*weightedValidator{
@@ -190,7 +190,7 @@ func TestCalcWeight(t *testing.T) {
 			},
 			[]float64{0, 0, 0},
 			0,
-			[]int64{0, 0, 0},
+			[]uint64{0, 0, 0},
 		},
 		{
 			[]*weightedValidator{
@@ -198,7 +198,7 @@ func TestCalcWeight(t *testing.T) {
 			},
 			[]float64{5000000, 5000000, 5000000},
 			15000000,
-			[]int64{33, 33, 33},
+			[]uint64{33, 33, 33},
 		},
 		{
 			[]*weightedValidator{
@@ -206,7 +206,7 @@ func TestCalcWeight(t *testing.T) {
 			},
 			[]float64{5000000, 10000000, 5000000, 5000000},
 			25000000,
-			[]int64{20, 40, 20, 20},
+			[]uint64{20, 40, 20, 20},
 		},
 		{
 			[]*weightedValidator{
@@ -214,7 +214,7 @@ func TestCalcWeight(t *testing.T) {
 			},
 			[]float64{324946, 560845, 771786, 967997, 1153934},
 			3779508,
-			[]int64{9, 15, 20, 26, 31},
+			[]uint64{9, 15, 20, 26, 31},
 		},
 	}
 	for _, testCase := range testCases {
@@ -231,7 +231,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 	testCases := []struct {
 		validators      []common.Address
 		stakingInfo     *reward.StakingInfo
-		expectedWeights []int64
+		expectedWeights []uint64
 	}{
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
@@ -241,7 +241,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				UseGini:               false,
 				CouncilStakingAmounts: []uint64{0, 0, 0},
 			},
-			[]int64{0, 0, 0},
+			[]uint64{0, 0, 0},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
@@ -251,7 +251,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				UseGini:               true,
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000},
 			},
-			[]int64{25, 25, 25, 25},
+			[]uint64{25, 25, 25, 25},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
@@ -261,7 +261,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				UseGini:               true,
 				CouncilStakingAmounts: []uint64{10000000, 20000000, 30000000, 40000000, 50000000},
 			},
-			[]int64{9, 15, 20, 26, 31},
+			[]uint64{9, 15, 20, 26, 31},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
@@ -271,7 +271,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				UseGini:               false,
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
 			},
-			[]int64{40, 20, 20, 20},
+			[]uint64{40, 20, 20, 20},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
@@ -281,7 +281,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				UseGini:               true,
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
 			},
-			[]int64{38, 21, 21, 21},
+			[]uint64{38, 21, 21, 21},
 		},
 		{
 			[]common.Address{common.StringToAddress("104"), common.StringToAddress("103"), common.StringToAddress("102"), common.StringToAddress("101")},
@@ -291,7 +291,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				UseGini:               true,
 				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
 			},
-			[]int64{29, 21, 37, 12},
+			[]uint64{29, 21, 37, 12},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104"), common.StringToAddress("105")},
@@ -301,7 +301,7 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 				UseGini:               true,
 				CouncilStakingAmounts: []uint64{10000000, 5000000, 20000000, 5000000, 5000000, 5000000},
 			},
-			[]int64{29, 21, 37, 12, 1},
+			[]uint64{29, 21, 37, 12, 1},
 		},
 	}
 	for _, testCase := range testCases {
