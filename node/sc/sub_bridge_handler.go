@@ -58,16 +58,16 @@ type SubBridgeHandler struct {
 	skipSyncBlockCount int32
 }
 
-func NewSubBridgeHandler(scc *SCConfig, main *SubBridge) (*SubBridgeHandler, error) {
+func NewSubBridgeHandler(main *SubBridge) (*SubBridgeHandler, error) {
 	return &SubBridgeHandler{
 		subbridge:                     main,
-		parentChainID:                 new(big.Int).SetUint64(scc.ParentChainID),
+		parentChainID:                 new(big.Int).SetUint64(main.config.ParentChainID),
 		remoteGasPrice:                uint64(0),
 		mainChainAccountNonce:         uint64(0),
 		nonceSynced:                   false,
-		chainTxPeriod:                 scc.AnchoringPeriod,
+		chainTxPeriod:                 main.config.AnchoringPeriod,
 		latestTxCountAddedBlockNumber: uint64(0),
-		sentServiceChainTxsLimit:      scc.SentChainTxsLimit,
+		sentServiceChainTxsLimit:      main.config.SentChainTxsLimit,
 	}, nil
 }
 

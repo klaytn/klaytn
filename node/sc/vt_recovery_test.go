@@ -575,7 +575,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 		peers:          newBridgePeerSet(),
 		bridgeAccounts: bacc,
 	}
-	handler, err := NewSubBridgeHandler(sc.config, sc)
+	handler, err := NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize the bridgeHandler : %v", err)
 		return nil
