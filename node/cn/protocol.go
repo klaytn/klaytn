@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
@@ -138,9 +139,11 @@ type blockChain interface {
 	CurrentFastBlock() *types.Block
 	HasBlock(hash common.Hash, number uint64) bool
 	GetBlock(hash common.Hash, number uint64) *types.Block
+	GetBlockByHash(hash common.Hash) *types.Block
 	GetBlockHashesFromHash(hash common.Hash, max uint64) []common.Hash
 
 	CurrentHeader() *types.Header
+	HasHeader(hash common.Hash, number uint64) bool
 	GetHeader(hash common.Hash, number uint64) *types.Header
 	GetHeaderByHash(hash common.Hash) *types.Header
 	GetHeaderByNumber(number uint64) *types.Header
@@ -155,6 +158,11 @@ type blockChain interface {
 	InsertChain(chain types.Blocks) (int, error)
 	TrieNode(hash common.Hash) ([]byte, error)
 	Config() *params.ChainConfig
+	State() (*state.StateDB, error)
+	Rollback(chain []common.Hash)
+	InsertReceiptChain(blockChain types.Blocks, receiptChain []types.Receipts) (int, error)
+	InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error)
+	FastSyncCommitHead(hash common.Hash) error
 }
 
 // protocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
