@@ -1533,6 +1533,72 @@ func TestAnchoringPeriod(t *testing.T) {
 	assert.Equal(t, big.NewInt(startTxCount+7).String(), anchoringDataInternal.TxCount.String())
 }
 
+// TestDecodingLegacyAnchoringTx tests the following:
+// 1. generate AnchoringDataLegacy anchoring tx
+// 2. decode AnchoringDataLegacy with a decoding method of a sub-bridge handler.
+func TestDecodingLegacyAnchoringTx(t *testing.T) {
+	const (
+		startBlkNum  = 10
+		startTxCount = 100
+	)
+	tempDir := os.TempDir() + "anchoring"
+	os.MkdirAll(tempDir, os.ModePerm)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	config := &SCConfig{AnchoringPeriod: 1}
+	config.DataDir = tempDir
+	config.VTRecovery = true
+
+	bAcc, _ := NewBridgeAccounts(tempDir)
+	bAcc.pAccount.chainID = big.NewInt(0)
+	bAcc.cAccount.chainID = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	sc := &SubBridge{
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bAcc,
+	}
+	sc.blockchain = sim.BlockChain()
+
+	var err error
+	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	// Encoding anchoring tx.
+	auth := bAcc.pAccount.GetTransactOpts()
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	sim.Commit()
+	curBlk := sim.BlockChain().CurrentBlock()
+
+	anchoringData := &types.AnchoringDataLegacy{
+		BlockHash:     curBlk.Hash(),
+		TxHash:        curBlk.Header().TxHash,
+		ParentHash:    curBlk.Header().ParentHash,
+		ReceiptHash:   curBlk.Header().ReceiptHash,
+		StateRootHash: curBlk.Header().Root,
+		BlockNumber:   curBlk.Header().Number,
+	}
+	data, err := rlp.EncodeToBytes(anchoringData)
+	assert.NoError(t, err)
+
+	// Decoding the anchoring tx.
+	blockHash, blockNumber, err := sc.handler.decodeAnchoringTx(data)
+	assert.Equal(t, curBlk.Hash(), blockHash)
+	assert.Equal(t, curBlk.Header().Number.String(), blockNumber.String())
+}
+
 func generateBody(t *testing.T) *types.Body {
 	body := &types.Body{}
 

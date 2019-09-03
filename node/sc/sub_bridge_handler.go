@@ -17,6 +17,7 @@
 package sc
 
 import (
+	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -28,6 +29,10 @@ import (
 
 const (
 	SyncRequestInterval = 10
+)
+
+var (
+	errUnknownAnchoringTxType = errors.New("unknown anchoring tx type")
 )
 
 // parentChainInfo handles the information of parent chain, which is needed from child chain.
@@ -310,43 +315,53 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 	logger.Debug("broadcastServiceChainTx ServiceChainTxData", "len(txs)", len(txs), "len(peers)", len(peers))
 }
 
+// decodeAnchoringTx decodes an anchoring transaction.
+func (sbh *SubBridgeHandler) decodeAnchoringTx(data []byte) (common.Hash, *big.Int, error) {
+	anchoringData := new(types.AnchoringData)
+	if err := rlp.DecodeBytes(data, anchoringData); err != nil {
+		anchoringDataLegacy := new(types.AnchoringDataLegacy)
+		if err := rlp.DecodeBytes(data, anchoringDataLegacy); err != nil {
+			return common.Hash{}, nil, err
+		}
+		logger.Trace("decoded legacy anchoring tx", "blockNum", anchoringDataLegacy.BlockNumber.String(), "blockHash", anchoringDataLegacy.BlockHash.String(), "txHash", anchoringDataLegacy.TxHash.String())
+		return anchoringDataLegacy.BlockHash, anchoringDataLegacy.BlockNumber, nil
+	}
+	if anchoringData.Type == types.AnchoringDataType0 {
+		anchoringDataInternal := new(types.AnchoringDataInternalType0)
+		if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
+			return common.Hash{}, nil, err
+		}
+		logger.Trace("decoded type0 anchoring tx", "blockNum", anchoringDataInternal.BlockNumber.String(), "blockHash", anchoringDataInternal.BlockHash.String(), "txHash", anchoringDataInternal.TxHash.String(), "txCount", anchoringDataInternal.TxCount)
+		return anchoringDataInternal.BlockHash, anchoringDataInternal.BlockNumber, nil
+	} else {
+		return common.Hash{}, nil, errUnknownAnchoringTxType
+	}
+}
+
 // writeServiceChainTxReceipts writes the received receipts of service chain transactions.
 func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockChain, receipts []*types.ReceiptForStorage) {
 	for _, receipt := range receipts {
 		txHash := receipt.TxHash
 		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
 			if tx.Type() == types.TxTypeChainDataAnchoring {
-				anchoringData := new(types.AnchoringData)
 				data, err := tx.AnchoredData()
 				if err != nil {
-					logger.Error("failed to get anchoring tx type from the tx", "txHash", txHash.String())
+					logger.Error("failed to get anchoring data", "txHash", txHash.String(), "err", err)
 					continue
 				}
-				if err := rlp.DecodeBytes(data, anchoringData); err != nil {
-					logger.Error("failed to RLP decode AnchoringData", "txHash", txHash.String())
+				blockHash, blockNumber, err := sbh.decodeAnchoringTx(data)
+				if err != nil {
+					logger.Error("failed to decode anchoring tx", "txHash", txHash.String(), "err", err)
 					continue
 				}
-				if anchoringData.Type == types.AnchoringDataType0 {
-					anchoringDataInternal := new(types.AnchoringDataInternalType0)
-					if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
-						logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data", "txHash", txHash.String())
-						continue
-					}
-					sbh.WriteReceiptFromParentChain(anchoringDataInternal.BlockHash, (*types.Receipt)(receipt))
-					sbh.WriteAnchoredBlockNumber(anchoringDataInternal.BlockNumber.Uint64())
-					logger.Trace("received anchoring tx receipt", "blockNum", anchoringDataInternal.BlockNumber.String(), "blcokHash", anchoringDataInternal.BlockHash.String(), "txHash", txHash.String(), "txCount", anchoringDataInternal.TxCount)
-				} else {
-					logger.Error("writeChildChainTxReceipts : failed to decode anchoring data. unknown type", "type", anchoringData.Type, "txHash", txHash.String())
-					continue
-				}
+				sbh.WriteReceiptFromParentChain(blockHash, (*types.Receipt)(receipt))
+				sbh.WriteAnchoredBlockNumber(blockNumber.Uint64())
 			}
-
-			// TODO-Klaytn-ServiceChain: implement WriteReceiptFromParentChain if receipt is needed.
+			// TODO-Klaytn-ServiceChain: support other tx types if needed.
 			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
 		} else {
 			logger.Trace("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
 		}
-
 		logger.Trace("received service chain transaction receipt", "txHash", txHash.String())
 	}
 }
