@@ -167,7 +167,6 @@ func (ps *peerSet) Unregister(id string) error {
 	return nil
 }
 
-// istanbul BFT
 func (ps *peerSet) Peers() map[string]Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
