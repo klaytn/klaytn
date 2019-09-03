@@ -1506,13 +1506,34 @@ func TestAnchoringPeriod(t *testing.T) {
 	pending = sc.GetBridgeTxPool().Pending()
 	assert.Equal(t, 1, len(pending))
 
-	var tx *types.Transaction
 	for _, v := range pending {
 		assert.Equal(t, 1, len(v))
-		tx = v[0]
+		decodeAndCheckAnchoringTx(t, v[0], curBlk, testTxCount+7)
 	}
 
-	// Decoding the anchoring tx.
+	// Check next period: Generate anchoring tx again for only the curBlk.
+	assert.Equal(t, uint64(0), sc.handler.txCount)
+
+	// Generate anchoring tx again for only the curBlk.
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	sim.Commit()
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	sim.Commit()
+	sim.Commit()
+	sim.Commit()
+
+	curBlk = sim.BlockChain().CurrentBlock()
+	sc.handler.blockAnchoringManager(curBlk)
+	pending = sc.GetBridgeTxPool().Pending()
+	for _, v := range pending {
+		fmt.Println("DDD:", v)
+		decodeAndCheckAnchoringTx(t, v[1], curBlk, 3)
+	}
+}
+
+// decodeAndCheckAnchoringTx decodes anchoring tx and check with a block.
+func decodeAndCheckAnchoringTx(t *testing.T, tx *types.Transaction, blk *types.Block, txCounts int64) {
 	assert.Equal(t, types.TxTypeChainDataAnchoring, tx.Type())
 	anchoringData := new(types.AnchoringData)
 	data, err := tx.AnchoredData()
@@ -1527,10 +1548,10 @@ func TestAnchoringPeriod(t *testing.T) {
 	}
 
 	// Check the current block is anchored.
-	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), anchoringDataInternal.BlockNumber.String())
-	assert.Equal(t, curBlk.Hash(), anchoringDataInternal.BlockHash)
+	assert.Equal(t, new(big.Int).SetUint64(blk.NumberU64()).String(), anchoringDataInternal.BlockNumber.String())
+	assert.Equal(t, blk.Hash(), anchoringDataInternal.BlockHash)
 	assert.Equal(t, big.NewInt(4).String(), anchoringDataInternal.Period.String())
-	assert.Equal(t, big.NewInt(startTxCount+7).String(), anchoringDataInternal.TxCount.String())
+	assert.Equal(t, big.NewInt(txCounts).String(), anchoringDataInternal.TxCount.String())
 }
 
 func generateBody(t *testing.T) *types.Body {
