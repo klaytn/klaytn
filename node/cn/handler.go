@@ -89,7 +89,7 @@ type ProtocolManager struct {
 
 	downloader protocolManagerDownloader
 	fetcher    protocolManagerFetcher
-	peers      *peerSet
+	peers      PeerSet
 
 	SubProtocols []p2p.Protocol
 
@@ -258,8 +258,8 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 }
 
 // istanbul BFT
-func (pm *ProtocolManager) RegisterValidator(conType p2p.ConnType, validator p2p.PeerTypeValidator) {
-	pm.peers.validator[conType] = validator
+func (pm *ProtocolManager) RegisterValidator(connType p2p.ConnType, validator p2p.PeerTypeValidator) {
+	pm.peers.RegisterValidator(connType, validator)
 }
 
 func (pm *ProtocolManager) getWSEndPoint() string {
