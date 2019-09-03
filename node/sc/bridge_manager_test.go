@@ -1478,7 +1478,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	assert.Equal(t, uint64(0), sc.handler.txCountEnabledBlockNumber)
 	assert.Equal(t, uint64(4), sc.handler.chainTxPeriod)
 
-	// Try to generate anchoring tx again for only the curBlk (but failed)
+	// Period 1
 	auth := bAcc.pAccount.GetTransactOpts()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
@@ -1489,9 +1489,9 @@ func TestAnchoringPeriod(t *testing.T) {
 	sc.handler.blockAnchoringManager(curBlk)
 	assert.Equal(t, uint64(startTxCount+1), sc.handler.txCount)
 	pending := sc.GetBridgeTxPool().Pending()
-	assert.Equal(t, 0, len(pending))
+	assert.Equal(t, 0, len(pending)) // the anchoring period has not yet been reached.
 
-	// Generate anchoring tx again for only the curBlk.
+	// Generate anchoring tx for the curBlk.
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
@@ -1507,14 +1507,14 @@ func TestAnchoringPeriod(t *testing.T) {
 	assert.Equal(t, 1, len(pending))
 
 	for _, v := range pending {
-		assert.Equal(t, 1, len(v))
-		decodeAndCheckAnchoringTx(t, v[0], curBlk, testTxCount+7)
+		decodeAndCheckAnchoringTx(t, v[0], curBlk, startTxCount+7)
+		break
 	}
 
-	// Check next period: Generate anchoring tx again for only the curBlk.
+	// Period 2:
 	assert.Equal(t, uint64(0), sc.handler.txCount)
 
-	// Generate anchoring tx again for only the curBlk.
+	// Generate anchoring tx.
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
@@ -1527,8 +1527,8 @@ func TestAnchoringPeriod(t *testing.T) {
 	sc.handler.blockAnchoringManager(curBlk)
 	pending = sc.GetBridgeTxPool().Pending()
 	for _, v := range pending {
-		fmt.Println("DDD:", v)
 		decodeAndCheckAnchoringTx(t, v[1], curBlk, 3)
+		break
 	}
 }
 
