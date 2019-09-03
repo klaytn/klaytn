@@ -431,6 +431,7 @@ func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Bl
 		logger.Error("Failed to generate service chain transaction", "blockNum", block.NumberU64(), "err", err)
 		return err
 	}
+	sbh.txCount = 0 // reset for the next anchoring period
 
 	signedTx, err := sbh.subbridge.bridgeAccounts.pAccount.SignTx(unsignedTx)
 	if err != nil {

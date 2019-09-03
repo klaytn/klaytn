@@ -1332,6 +1332,7 @@ func TestAnchoringBasic(t *testing.T) {
 		assert.Equal(t, 1, len(v))
 		tx = v[0]
 	}
+	assert.Equal(t, uint64(0), sc.handler.txCount)
 
 	// Decoding the anchoring tx.
 	assert.Equal(t, types.TxTypeChainDataAnchoring, tx.Type())
