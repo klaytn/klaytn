@@ -41,6 +41,8 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         public
         onlyOperators
     {
+        lowerHandleNonceCheck(_requestedNonce);
+
         if (!voteValueTransfer(_requestedNonce)) {
             return;
         }

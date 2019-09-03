@@ -143,11 +143,16 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         if (_requestedNonce > upperHandleNonce) {
             upperHandleNonce = _requestedNonce;
         }
-        for (i = lowerHandleNonce; i <= upperHandleNonce && handleNoncesToBlockNums[i] > 0; i++) { }
-        lowerHandleNonce = i;
-        if (i != 0) {
-            recoveryBlockNumber = handleNoncesToBlockNums[i-1];
+        for (i = lowerHandleNonce; i <= upperHandleNonce && handleNoncesToBlockNums[i] > 0; i++) {
+            recoveryBlockNumber = handleNoncesToBlockNums[i];
+            delete handleNoncesToBlockNums[i];
+            delete closedValueTransferVotes[i];
         }
+        lowerHandleNonce = i;
+    }
+
+    function lowerHandleNonceCheck(uint64 _requestedNonce) internal {
+        require(lowerHandleNonce <= _requestedNonce, "removed vote");
     }
 
     // setFeeReceivers sets fee receiver.

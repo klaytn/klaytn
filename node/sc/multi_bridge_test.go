@@ -1157,7 +1157,8 @@ func TestNoncesAndBlockNumber(t *testing.T) {
 
 // TestNoncesAndBlockNumberUnordered checks the following:
 // - default threshold (1).
-// - check reversed request nonce from 2 to 0.
+// - check if reversed request nonce from 2 to 0 success.
+// - check if reversed request nonce from 2 to 0 fail.
 func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
 	acc := info.accounts[0]
@@ -1179,6 +1180,7 @@ func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 		{2, 300, 2, 0, 1},
 		{1, 200, 2, 0, 1},
 		{0, 100, 2, 3, 300},
+		{3, 400, 3, 4, 400},
 	}
 
 	for i := 0; i < len(testCases); i++ {
@@ -1200,5 +1202,17 @@ func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 		blkNum, err := info.b.RecoveryBlockNumber(nil)
 		assert.NoError(t, err)
 		assert.Equal(t, testCases[i].recoveryBlockNumber, blkNum)
+	}
+
+	lowerHandleNonce, _ := info.b.LowerHandleNonce(nil)
+	assert.Equal(t, uint64(4), lowerHandleNonce)
+
+	for i := 0; i < len(testCases); i++ {
+		sentNonce := testCases[i].requestNonce
+		sentBlockNumber := testCases[i].requestBlkNum
+		t.Log("test round", "i", i, "nonce", sentNonce, "blk", sentBlockNumber)
+		tx := SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
+		info.sim.Commit()
+		assert.Error(t, bind.CheckWaitMined(info.sim, tx))
 	}
 }

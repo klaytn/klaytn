@@ -33,6 +33,8 @@ contract BridgeTransferKLAY is BridgeTransfer {
         public
         onlyOperators
     {
+        lowerHandleNonceCheck(_requestedNonce);
+
         if (!voteValueTransfer(_requestedNonce)) {
             return;
         }

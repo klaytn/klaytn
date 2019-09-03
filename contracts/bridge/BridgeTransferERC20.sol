@@ -39,6 +39,8 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransfer {
         public
         onlyOperators
     {
+        lowerHandleNonceCheck(_requestedNonce);
+
         if (!voteValueTransfer(_requestedNonce)) {
             return;
         }
