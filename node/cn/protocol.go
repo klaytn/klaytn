@@ -115,8 +115,9 @@ var errorToString = map[int]string{
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
 }
 
-// txPool is an interface of blockchain.TxPool used by ProtocolManager.
-type txPool interface {
+//go:generate mockgen -destination=node/cn/mocks/txpool_mock.go -package=mocks github.com/klaytn/klaytn/node/cn TxPool
+// TxPool is an interface of blockchain.TxPool used by ProtocolManager.
+type TxPool interface {
 	// HandleTxMsg should add the given transactions to the pool.
 	HandleTxMsg(types.Transactions)
 
@@ -131,8 +132,9 @@ type txPool interface {
 	SubscribeNewTxsEvent(chan<- blockchain.NewTxsEvent) event.Subscription
 }
 
-// blockChain is an interface of blockchain.BlockChain used by ProtocolManager.
-type blockChain interface {
+//go:generate mockgen -destination=node/cn/mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/node/cn BlockChain
+// BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
+type BlockChain interface {
 	Genesis() *types.Block
 
 	CurrentBlock() *types.Block
