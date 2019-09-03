@@ -380,6 +380,7 @@ func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
 		if sbh.chainTxPeriod > 1 {
 			remnant := block.NumberU64() % sbh.chainTxPeriod
 			if remnant < 2 {
+				// A small trick to start tx counting quickly.
 				sbh.txCountEnabledBlockNumber += 1 - remnant
 			} else {
 				sbh.txCountEnabledBlockNumber += (sbh.chainTxPeriod - remnant) + 1
@@ -394,16 +395,18 @@ func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
 		startBlkNum = sbh.latestTxCountAddedBlockNumber + 1
 	}
 
+	if startBlkNum < sbh.txCountEnabledBlockNumber {
+		startBlkNum = sbh.txCountEnabledBlockNumber
+	}
+
 	for i := startBlkNum; i <= block.NumberU64(); i++ {
-		if i >= sbh.txCountEnabledBlockNumber {
-			b := sbh.subbridge.blockchain.GetBlockByNumber(i)
-			if b == nil {
-				logger.Warn("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool by the missed block", "missedBlockNumber", i)
-				break
-			}
-			sbh.txCount += uint64(b.Transactions().Len())
-			sbh.UpdateLatestTxCountAddedBlockNumber(i)
+		b := sbh.subbridge.blockchain.GetBlockByNumber(i)
+		if b == nil {
+			logger.Warn("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool by the missed block", "missedBlockNumber", i)
+			break
 		}
+		sbh.txCount += uint64(b.Transactions().Len())
+		sbh.UpdateLatestTxCountAddedBlockNumber(i)
 	}
 }
 
