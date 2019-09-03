@@ -23,51 +23,76 @@ import (
 	"testing"
 )
 
-// TestChannelManager tests registering and retrieving of message channels.
-func TestChannelManager(t *testing.T) {
-	cm := NewChannelManager(1)
+// TestChannelManager_ChannelSize_1 tests registering and retrieving of
+// message channels with the channel size 1.
+func TestChannelManager_ChannelSize_1(t *testing.T) {
+	testChannelManager(t, 1)
+}
+
+// TestChannelManager_ChannelSize_3 tests registering and retrieving of
+// message channels with the channel size 3.
+func TestChannelManager_ChannelSize_3(t *testing.T) {
+	testChannelManager(t, 3)
+}
+
+// TestChannelManager_ChannelSize_5 tests registering and retrieving of
+// message channels with the channel size 5.
+func TestChannelManager_ChannelSize_5(t *testing.T) {
+	testChannelManager(t, 5)
+}
+
+// testChannelManager tests registering and retrieving of
+// message channels with the given channel size.
+func testChannelManager(t *testing.T, chSize int) {
+	cm := NewChannelManager(chSize)
 	cm.RegisterMsgCode(ConsensusChannel, backend.IstanbulMsg)
 
 	channel := make(chan p2p.Msg, channelSizePerPeer)
 	consensusChannel := make(chan p2p.Msg, channelSizePerPeer)
 
-	// Before calling RegisterChannelWithIndex,
-	// calling GetChannelWithMsgCode with registered MsgCode should return no channel and no error.
-	for i := NewBlockHashesMsg; i < MsgCodeEnd; i++ {
-		ch, err := cm.GetChannelWithMsgCode(0, uint64(i))
+	for chIdx := 0; chIdx < chSize; chIdx++ {
+		// Before calling RegisterChannelWithIndex,
+		// calling GetChannelWithMsgCode with registered MsgCode should return no channel and no error.
+		for i := NewBlockHashesMsg; i < MsgCodeEnd; i++ {
+			ch, err := cm.GetChannelWithMsgCode(chIdx, uint64(i))
+			assert.Nil(t, ch)
+			assert.NoError(t, err)
+		}
+		ch, err := cm.GetChannelWithMsgCode(chIdx, backend.IstanbulMsg)
 		assert.Nil(t, ch)
 		assert.NoError(t, err)
-	}
-	ch, err := cm.GetChannelWithMsgCode(0, backend.IstanbulMsg)
-	assert.Nil(t, ch)
-	assert.NoError(t, err)
 
-	// Before calling RegisterChannelWithIndex,
-	// calling GetChannelWithMsgCode with not-registered MsgCode should return no channel but an error.
-	ch, err = cm.GetChannelWithMsgCode(0, 0xff)
-	assert.Nil(t, ch)
-	assert.Error(t, err)
+		// Before calling RegisterChannelWithIndex,
+		// calling GetChannelWithMsgCode with not-registered MsgCode should return no channel but an error.
+		ch, err = cm.GetChannelWithMsgCode(chIdx, 0xff)
+		assert.Nil(t, ch)
+		assert.Error(t, err)
+	}
 
 	// Register channels with the port index.
-	cm.RegisterChannelWithIndex(0, BlockChannel, channel)
-	cm.RegisterChannelWithIndex(0, TxChannel, channel)
-	cm.RegisterChannelWithIndex(0, MiscChannel, channel)
-	cm.RegisterChannelWithIndex(0, ConsensusChannel, consensusChannel)
-
-	// After calling RegisterChannelWithIndex,
-	// calling GetChannelWithMsgCode with registered MsgCode should return a channel but no error.
-	for i := NewBlockHashesMsg; i < MsgCodeEnd; i++ {
-		ch, err := cm.GetChannelWithMsgCode(0, uint64(i))
-		assert.Equal(t, channel, ch)
-		assert.NoError(t, err)
+	for chIdx := 0; chIdx < chSize; chIdx++ {
+		cm.RegisterChannelWithIndex(chIdx, BlockChannel, channel)
+		cm.RegisterChannelWithIndex(chIdx, TxChannel, channel)
+		cm.RegisterChannelWithIndex(chIdx, MiscChannel, channel)
+		cm.RegisterChannelWithIndex(chIdx, ConsensusChannel, consensusChannel)
 	}
-	ch, err = cm.GetChannelWithMsgCode(0, backend.IstanbulMsg)
-	assert.Equal(t, consensusChannel, ch)
-	assert.NoError(t, err)
 
-	// After calling RegisterChannelWithIndex,
-	// calling GetChannelWithMsgCode with not-registered MsgCode should return no channel but an error.
-	ch, err = cm.GetChannelWithMsgCode(0, 0xff)
-	assert.Nil(t, ch)
-	assert.Error(t, err)
+	for chIdx := 0; chIdx < chSize; chIdx++ {
+		// After calling RegisterChannelWithIndex,
+		// calling GetChannelWithMsgCode with registered MsgCode should return a channel but no error.
+		for i := NewBlockHashesMsg; i < MsgCodeEnd; i++ {
+			ch, err := cm.GetChannelWithMsgCode(chIdx, uint64(i))
+			assert.Equal(t, channel, ch)
+			assert.NoError(t, err)
+		}
+		ch, err := cm.GetChannelWithMsgCode(chIdx, backend.IstanbulMsg)
+		assert.Equal(t, consensusChannel, ch)
+		assert.NoError(t, err)
+
+		// After calling RegisterChannelWithIndex,
+		// calling GetChannelWithMsgCode with not-registered MsgCode should return no channel but an error.
+		ch, err = cm.GetChannelWithMsgCode(0, 0xff)
+		assert.Nil(t, ch)
+		assert.Error(t, err)
+	}
 }
