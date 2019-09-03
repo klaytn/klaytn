@@ -29,7 +29,7 @@ import (
 	"sync"
 )
 
-//go:generate mockgen -destination=node/cn/mocks/peerset_mock.go -package=mocks github.com/klaytn/klaytn/node/cn PeerSet
+//go:generate mockgen -destination=node/cn/peer_set_mock.go -package=cn github.com/klaytn/klaytn/node/cn PeerSet
 type PeerSet interface {
 	Register(p Peer) error
 	Unregister(id string) error
