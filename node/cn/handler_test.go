@@ -58,3 +58,14 @@ func TestNewProtocolManager(t *testing.T) {
 		assert.Equal(t, errIncompatibleConfig, err)
 	}
 }
+
+func TestSampleSize(t *testing.T) {
+	peers := make([]Peer, minNumPeersToSendBlock-1)
+	assert.Equal(t, len(peers), sampleSize(peers))
+
+	peers = make([]Peer, 4)
+	assert.Equal(t, minNumPeersToSendBlock, sampleSize(peers))
+
+	peers = make([]Peer, 16)
+	assert.Equal(t, 4, sampleSize(peers))
+}
