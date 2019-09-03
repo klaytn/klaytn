@@ -36,6 +36,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     using SafeMath for uint256;
 
     mapping(address => address) public allowedTokens; // <token, counterpart token>
+    address[] public allowedTokenList;
 
     enum TokenType {
         KLAY,
@@ -46,6 +47,10 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     constructor(bool _modeMintBurn) BridgeFee(address(0)) internal {
         modeMintBurn = _modeMintBurn;
         isRunning = true;
+    }
+
+    function getAllowedTokenList() external view returns(address[] memory) {
+        return allowedTokenList;
     }
 
     // start can allow or disallow the value transfer request.
@@ -61,7 +66,9 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         external
         onlyOwner
     {
+        require(allowedTokens[_token] == address(0));
         allowedTokens[_token] = _cToken;
+        allowedTokenList.push(_token);
     }
 
     // deregisterToken can remove the token in allowedToken list.
@@ -69,7 +76,16 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         external
         onlyOwner
     {
+        require(allowedTokens[_token] != address(0));
         delete allowedTokens[_token];
+
+        for (uint i = 0; i < allowedTokenList.length; i++) {
+            if (allowedTokenList[i] == _token) {
+                allowedTokenList[i] = allowedTokenList[allowedTokenList.length-1];
+                allowedTokenList.length--;
+                break;
+            }
+        }
     }
 
     /**

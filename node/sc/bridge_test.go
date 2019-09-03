@@ -436,11 +436,6 @@ func TestExtendedBridgeAndCallbackERC20(t *testing.T) {
 	backend.Commit()
 	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 
-	tx, err = eb.RegisterOperator(bridgeAccount, bridgeAccount.From)
-	assert.NoError(t, err)
-	backend.Commit()
-	assert.Nil(t, bind.CheckWaitMined(backend, tx))
-
 	// Subscribe callback contract event
 	registerOfferEventCh := make(chan *extbridge.CallbackRegisteredOffer, 10)
 	registerOfferEventSub, err := cb.WatchRegisteredOffer(nil, registerOfferEventCh)
@@ -582,11 +577,6 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 
 	// Set callback address to ExtBridge contract
 	tx, err = eb.SetCallback(bridgeAccount, callbackAddr)
-	assert.NoError(t, err)
-	backend.Commit()
-	assert.Nil(t, bind.CheckWaitMined(backend, tx))
-
-	tx, err = eb.RegisterOperator(bridgeAccount, bridgeAccount.From)
 	assert.NoError(t, err)
 	backend.Commit()
 	assert.Nil(t, bind.CheckWaitMined(backend, tx))

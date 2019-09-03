@@ -24,6 +24,7 @@ import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract BridgeOperator is Ownable {
     mapping(address => bool) public operators;
+    address[] public operatorList;
     mapping(bytes32 => mapping(address => bool)) public votes; // <sha3(type, args, nonce), <operator, vote>>
     mapping(bytes32 => uint8) public votesCounts; // <sha3(type, args, nonce)>
     mapping(uint64 => bool) public closedValueTransferVotes; // nonce
@@ -42,12 +43,17 @@ contract BridgeOperator is Ownable {
         }
 
         operators[msg.sender] = true;
+        operatorList.push(msg.sender);
     }
 
     modifier onlyOperators()
     {
         require(operators[msg.sender], "msg.sender is not an operator");
         _;
+    }
+
+    function getOperatorList() external view returns(address[] memory) {
+        return operatorList;
     }
 
     // voteCommon handles common functionality for voting.
@@ -101,7 +107,9 @@ contract BridgeOperator is Ownable {
     external
     onlyOwner
     {
+        require(!operators[_operator]);
         operators[_operator] = true;
+        operatorList.push(_operator);
     }
 
     // deregisterOperator deregisters the operator.
@@ -109,10 +117,19 @@ contract BridgeOperator is Ownable {
     external
     onlyOwner
     {
+        require(operators[_operator]);
         delete operators[_operator];
+
+        for (uint i = 0; i < operatorList.length; i++) {
+           if (operatorList[i] == _operator) {
+               operatorList[i] = operatorList[operatorList.length-1];
+               operatorList.length--;
+               break;
+           }
+        }
     }
 
-    // setOperatorThreshold sets the operator threshold.
+// setOperatorThreshold sets the operator threshold.
     function setOperatorThreshold(VoteType _voteType, uint8 _threshold)
     external
     onlyOwner
