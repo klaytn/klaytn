@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
@@ -114,8 +115,9 @@ var errorToString = map[int]string{
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
 }
 
-// txPool is an interface of blockchain.TxPool used by ProtocolManager.
-type txPool interface {
+//go:generate mockgen -destination=node/cn/mocks/txpool_mock.go -package=mocks github.com/klaytn/klaytn/node/cn TxPool
+// TxPool is an interface of blockchain.TxPool used by ProtocolManager.
+type TxPool interface {
 	// HandleTxMsg should add the given transactions to the pool.
 	HandleTxMsg(types.Transactions)
 
@@ -130,17 +132,20 @@ type txPool interface {
 	SubscribeNewTxsEvent(chan<- blockchain.NewTxsEvent) event.Subscription
 }
 
-// blockChain is an interface of blockchain.BlockChain used by ProtocolManager.
-type blockChain interface {
+//go:generate mockgen -destination=node/cn/mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/node/cn BlockChain
+// BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
+type BlockChain interface {
 	Genesis() *types.Block
 
 	CurrentBlock() *types.Block
 	CurrentFastBlock() *types.Block
 	HasBlock(hash common.Hash, number uint64) bool
 	GetBlock(hash common.Hash, number uint64) *types.Block
+	GetBlockByHash(hash common.Hash) *types.Block
 	GetBlockHashesFromHash(hash common.Hash, max uint64) []common.Hash
 
 	CurrentHeader() *types.Header
+	HasHeader(hash common.Hash, number uint64) bool
 	GetHeader(hash common.Hash, number uint64) *types.Header
 	GetHeaderByHash(hash common.Hash) *types.Header
 	GetHeaderByNumber(number uint64) *types.Header
@@ -155,6 +160,11 @@ type blockChain interface {
 	InsertChain(chain types.Blocks) (int, error)
 	TrieNode(hash common.Hash) ([]byte, error)
 	Config() *params.ChainConfig
+	State() (*state.StateDB, error)
+	Rollback(chain []common.Hash)
+	InsertReceiptChain(blockChain types.Blocks, receiptChain []types.Receipts) (int, error)
+	InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error)
+	FastSyncCommitHead(hash common.Hash) error
 }
 
 // protocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
