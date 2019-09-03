@@ -29,7 +29,7 @@ import (
 	"testing"
 )
 
-var num1 = 20190902
+var blockNum1 = 20190902
 
 func newMocks(t *testing.T) (*gomock.Controller, *mocks2.MockEngine, *mocks.MockBlockChain, *mocks.MockTxPool) {
 	mockCtrl := gomock.NewController(t)
@@ -52,7 +52,7 @@ func TestNewProtocolManager(t *testing.T) {
 		mockCtrl, mockEngine, mockBlockChain, mockTxPool := newMocks(t)
 		defer mockCtrl.Finish()
 
-		block := newBlock(num1)
+		block := newBlock(blockNum1)
 		mockBlockChain.EXPECT().CurrentBlock().Return(block).Times(1)
 		mockEngine.EXPECT().Protocol().Return(consensus.Protocol{}).Times(1)
 
@@ -80,7 +80,7 @@ func TestSamplePeersToSendBlock(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	block := newBlock(123)
+	block := newBlock(blockNum1)
 	hash := block.Hash()
 
 	// 1. When the given node is a consensus node.
@@ -171,7 +171,7 @@ func TestSamplingPeers(t *testing.T) {
 func TestBroadcastBlock_NoParentExists(t *testing.T) {
 	pm := &ProtocolManager{}
 	pm.nodetype = node.ENDPOINTNODE
-	block := newBlock(123)
+	block := newBlock(blockNum1)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -185,7 +185,7 @@ func TestBroadcastBlock_NoParentExists(t *testing.T) {
 func TestBroadcastBlock_ParentExists(t *testing.T) {
 	pm := &ProtocolManager{}
 	pm.nodetype = node.ENDPOINTNODE
-	block := newBlock(123)
+	block := newBlock(blockNum1)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -207,7 +207,7 @@ func TestBroadcastBlock_ParentExists(t *testing.T) {
 func TestBroadcastBlockHash(t *testing.T) {
 	pm := &ProtocolManager{}
 	pm.nodetype = node.ENDPOINTNODE
-	block := newBlock(123)
+	block := newBlock(blockNum1)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

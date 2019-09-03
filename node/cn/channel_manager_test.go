@@ -53,7 +53,7 @@ func testChannelManager(t *testing.T, chSize int) {
 	for chIdx := 0; chIdx < chSize; chIdx++ {
 		// Before calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with registered MsgCode should return no channel and no error.
-		for i := NewBlockHashesMsg; i < MsgCodeEnd; i++ {
+		for i := StatusMsg; i < MsgCodeEnd; i++ {
 			ch, err := cm.GetChannelWithMsgCode(chIdx, uint64(i))
 			assert.Nil(t, ch)
 			assert.NoError(t, err)
@@ -64,7 +64,7 @@ func testChannelManager(t *testing.T, chSize int) {
 
 		// Before calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with not-registered MsgCode should return no channel but an error.
-		ch, err = cm.GetChannelWithMsgCode(chIdx, 0xff)
+		ch, err = cm.GetChannelWithMsgCode(chIdx, MsgCodeEnd)
 		assert.Nil(t, ch)
 		assert.Error(t, err)
 	}
@@ -80,7 +80,7 @@ func testChannelManager(t *testing.T, chSize int) {
 	for chIdx := 0; chIdx < chSize; chIdx++ {
 		// After calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with registered MsgCode should return a channel but no error.
-		for i := NewBlockHashesMsg; i < MsgCodeEnd; i++ {
+		for i := StatusMsg; i < MsgCodeEnd; i++ {
 			ch, err := cm.GetChannelWithMsgCode(chIdx, uint64(i))
 			assert.Equal(t, channel, ch)
 			assert.NoError(t, err)
@@ -91,7 +91,7 @@ func testChannelManager(t *testing.T, chSize int) {
 
 		// After calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with not-registered MsgCode should return no channel but an error.
-		ch, err = cm.GetChannelWithMsgCode(0, 0xff)
+		ch, err = cm.GetChannelWithMsgCode(0, MsgCodeEnd)
 		assert.Nil(t, ch)
 		assert.Error(t, err)
 	}
