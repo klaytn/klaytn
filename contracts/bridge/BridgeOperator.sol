@@ -36,6 +36,7 @@ contract BridgeOperator is Ownable {
 
     mapping(uint8 => mapping (uint64 => VotesData)) private votes; // <voteType, <nonce, VotesData>
     mapping(uint64 => bool) public closedValueTransferVotes; // <nonce, bool>
+
     mapping(uint8 => uint8) public operatorThresholds; // <vote type, uint8>
 
     uint64 public configurationNonce;
