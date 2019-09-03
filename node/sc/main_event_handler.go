@@ -108,7 +108,7 @@ func (mce *MainChainEventHandler) decodeAndWriteChildChainTxHash(tx *types.Trans
 			return
 		}
 		mce.mainbridge.chainDB.WriteChildChainTxHash(anchoringDataInternal.BlockHash, tx.Hash())
-		logger.Trace("Write type1 anchoring data on chainDB", "blockHash", anchoringDataInternal.BlockHash.String(), "txHash", tx.Hash().String())
+		logger.Trace("Write type0 anchoring data on chainDB", "blockHash", anchoringDataInternal.BlockHash.String(), "txHash", tx.Hash().String())
 	} else {
 		logger.Error("writeChildChainTxHashFromBlock : failed to decode anchoring data. unknown type", "type", anchoringData.Type, "txHash", tx.Hash().String())
 		return
