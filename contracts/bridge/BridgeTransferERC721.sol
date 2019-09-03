@@ -17,7 +17,6 @@
 pragma solidity ^0.5.6;
 
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
 
@@ -81,8 +80,6 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         require(isRunning, "stopped bridge");
         require(allowedTokens[_tokenAddress] != address(0), "invalid token");
 
-        string memory uri = ERC721Metadata(_tokenAddress).tokenURI(_tokenId);
-
         if (modeMintBurn) {
             ERC721Burnable(_tokenAddress).burn(_tokenId);
         }
@@ -94,7 +91,6 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
             _tokenAddress,
             _tokenId,
             requestNonce,
-            uri,
             0,
             _extraData
         );

@@ -69,7 +69,6 @@ contract BridgeTransferKLAY is BridgeTransfer {
             address(0),
             msg.value.sub(_feeLimit),
             requestNonce,
-            "",
             fee,
             _extraData
         );

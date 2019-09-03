@@ -23,6 +23,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
+	scnft "github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/ser/rlp"
@@ -82,8 +83,8 @@ type BridgeJournal struct {
 }
 
 type BridgeInfo struct {
-	bridgeDB database.DBManager
-
+	bridgeDB           database.DBManager
+	counterpartBackend Backend
 	address            common.Address
 	counterpartAddress common.Address // TODO-Klaytn need to set counterpart
 	account            *accountInfo
@@ -106,9 +107,11 @@ type BridgeInfo struct {
 	closed   chan struct{}
 }
 
-func NewBridgeInfo(db database.DBManager, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool) (*BridgeInfo, error) {
+func NewBridgeInfo(db database.DBManager, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address,
+	cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool, cpBackend Backend) (*BridgeInfo, error) {
 	bi := &BridgeInfo{
 		db,
+		cpBackend,
 		addr,
 		cpAddr,
 		account,
@@ -311,7 +314,19 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		}
 		logger.Trace("Bridge succeeded to HandleERC20Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 	case ERC721:
-		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.Uri, ev.ExtraData)
+		// get URI of the ERC721
+		var uri string
+		erc721, err := scnft.NewERC721Metadata(ev.TokenAddress, bi.counterpartBackend)
+		if err != nil {
+			logger.Warn("Failed to get erc721 token instance", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain)
+		} else {
+			uri, err = erc721.TokenURI(nil, ev.ValueOrTokenId)
+			if err != nil {
+				logger.Warn("Failed to get URI of the ERC721 token", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain, "tokenId", ev.ValueOrTokenId.String())
+			}
+		}
+
+		handleTx, err = bi.bridge.HandleERC721Transfer(auth, ev.Raw.TxHash, ev.From, ev.To, tokenAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, uri, ev.ExtraData)
 		if err != nil {
 			return err
 		}
@@ -563,8 +578,16 @@ func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontra
 	if bm.bridges[addr] != nil {
 		return ErrDuplicatedBridgeInfo
 	}
+
+	var counterpartBackend Backend
+	if local {
+		counterpartBackend = bm.subBridge.remoteBackend
+	} else {
+		counterpartBackend = bm.subBridge.localBackend
+	}
+
 	var err error
-	bm.bridges[addr], err = NewBridgeInfo(bm.subBridge.chainDB, addr, bridge, cpAddr, cpBridge, account, local, subscribed)
+	bm.bridges[addr], err = NewBridgeInfo(bm.subBridge.chainDB, addr, bridge, cpAddr, cpBridge, account, local, subscribed, counterpartBackend)
 	return err
 }
 
