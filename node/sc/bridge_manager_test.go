@@ -1570,7 +1570,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	sc.blockchain = sim.BlockChain()
 
 	var err error
-	sc.handler, err = NewSubBridgeHandler(sc.config, sc)
+	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
 		return
