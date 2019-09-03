@@ -18,5 +18,166 @@
 // This file is derived from cmd/geth/main.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// ken is the command-line client for Klaytn Endpoint Node.
+/*
+ken is the command-line client for Klaytn Endpoint Node.
+
+ken has the node type of "en" internally and following commands and options are available.
+
+COMMANDS:
+   account     Manage accounts
+   attach      Start an interactive JavaScript environment (connect to node)
+   console     Start an interactive JavaScript environment
+   dumpconfig  Show configuration values
+   init        Bootstrap and initialize a new genesis block
+   version     Show version number
+   help, h     Shows a list of commands or help for one command
+
+KLAY OPTIONS:
+  --dbtype value                          Blockchain storage database type ("leveldb", "badger") (default: "leveldb")
+  --datadir "/Users/andylee/Library/KEN"  Data directory for the databases and keystore
+  --keystore                              Directory for the keystore (default = inside the datadir)
+  --identity value                        Custom node name
+  --syncmode "full"                       Blockchain sync mode (only "full" is supported)
+  --gcmode value                          Blockchain garbage collection mode ("full", "archive") (default: "full")
+  --lightkdf                              Reduce key-derivation RAM & CPU usage at some expense of KDF strength
+  --srvtype value                         json rpc server type ("http", "fasthttp") (default: "fasthttp")
+  --extradata value                       Block extra data set by the work (default = client version)
+  --config value                          TOML configuration file
+
+SERVICECHAIN OPTIONS:
+  --childchainindexing    Enables storing transaction hash of child chain transaction for fast access to child chain data
+  --mainbridge            Enable main bridge service for service chain
+  --mainbridgeport value  main bridge listen port (default: 50505)
+
+ACCOUNT OPTIONS:
+  --unlock value    Comma separated list of accounts to unlock
+  --password value  Password file to use for non-interactive password input
+
+TXPOOL OPTIONS:
+  --txpool.nolocals                     Disables price exemptions for locally submitted transactions
+  --txpool.journal value                Disk journal for local transaction to survive node restarts (default: "transactions.rlp")
+  --txpool.journal-interval value       Time interval to regenerate the local transaction journal (default: 1h0m0s)
+  --txpool.pricelimit value             Minimum gas price limit to enforce for acceptance into the pool (default: 1)
+  --txpool.pricebump value              Price bump percentage to replace an already existing transaction (default: 10)
+  --txpool.exec-slots.account value     Number of executable transaction slots guaranteed per account (default: 16)
+  --txpool.exec-slots.all value         Maximum number of executable transaction slots for all accounts (default: 4096)
+  --txpool.nonexec-slots.account value  Maximum number of non-executable transaction slots permitted per account (default: 64)
+  --txpool.nonexec-slots.all value      Maximum number of non-executable transaction slots for all accounts (default: 1024)
+  --txpool.lifetime value               Maximum amount of time non-executable transaction are queued (default: 5m0s)
+  --txresend.interval value             Set the transaction resend interval in seconds (default: 4)
+  --txresend.max-count value            Set the max count of resending transactions (default: 1000)
+  --txresend.use-legacy                 Enable the legacy transaction resend logic (For testing only)
+
+DATABASE OPTIONS:
+  --db.leveldb.cache-size value        Size of in-memory cache in LevelDB (MiB) (default: 768)
+  --db.no-partitioning                 Disable partitioned databases for persistent storage
+  --db.num-statetrie-partitions value  Number of internal partitions of state trie partition. Should be power of 2 (default: 4)
+  --db.leveldb.compression value       Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression (default: 0)
+  --db.leveldb.no-buffer-pool          Disables using buffer pool for LevelDB's block allocation
+  --db.no-parallel-write               Disables parallel writes of block data to persistent database
+  --sendertxhashindexing               Enables storing mapping information of senderTxHash to txHash
+
+STATE OPTIONS:
+  --statedb.use-cache           Enables caching of state objects in stateDB
+  --state.cache-size value      Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk (default: 512)
+  --state.block-interval value  An interval in terms of block number to commit the global state to disk (default: 128)
+
+CACHE OPTIONS:
+  --cache.type value              Cache Type: 0=LRUCache, 1=LRUShardCache, 2=FIFOCache (default: 2)
+  --cache.scale value             Scale of cache (cache size = preset size * scale of cache(%)) (default: 0)
+  --cache.level value             Set the cache usage level ('saving', 'normal', 'extreme')
+  --cache.memory value            Set the physical RAM size (GB, Default: 16GB) (default: 0)
+  --cache.writethrough            Enables write-through writing to database and cache for certain types of cache.
+  --statedb.use-txpool-cache      Enables caching of nonce and balance for txpool.
+  --state.trie-cache-limit value  Memory allowance (MB) to use for caching trie nodes in memory (default: 4096)
+
+CONSENSUS OPTIONS:
+  --scsigner value  Public address for signing blocks in the service chain (default = first account created) (default: "0")
+
+NETWORKING OPTIONS:
+  --bootnodes value        Comma separated kni URLs for P2P discovery bootstrap
+  --port value             Network listening port (default: 32323)
+  --subport value          Network sub listening port (default: 32324)
+  --multichannel           Create a dedicated channel for block propagation
+  --maxconnections value   Maximum number of physical connections. All single channel peers can be maxconnections peers. All multi channel peers can be maxconnections/2 peers. (network disabled if set to 0) (default: 10)
+  --maxpendpeers value     Maximum number of pending connection attempts (defaults used if set to 0) (default: 0)
+  --targetgaslimit value   Target gas limit sets the artificial target gas floor for the blocks to mine (default: 4712388)
+  --nat value              NAT port mapping mechanism (any|none|upnp|pmp|extip:<IP>) (default: "any")
+  --nodiscover             Disables the peer discovery mechanism (manual peer addition)
+  --rwtimerwaittime value  Wait time the rw timer waits for message writing (default: 15s)
+  --rwtimerinterval value  Interval of using rw timer to check if it works well (default: 1000)
+  --netrestrict value      Restricts network communication to the given IP network (CIDR masks)
+  --nodekey value          P2P node key file
+  --nodekeyhex value       P2P node key as hex (for testing)
+  --networkid value        Network identifier (integer, 1=MainNet (Not yet launched), 1000=Aspen, 1001=Baobab) (default: 8217)
+  --baobab                 Pre-configured Klaytn baobab network
+  --cypress                Pre-configured Klaytn Cypress network
+
+METRICS OPTIONS:
+  --metrics               Enable metrics collection and reporting
+  --prometheus            Enable prometheus exporter
+  --prometheusport value  Prometheus exporter listening port (default: 61001)
+
+VIRTUAL MACHINE OPTIONS:
+  --vmdebug      Record information useful for VM and contract debugging
+  --vmlog value  Set the output target of vmlog precompiled contract (0: no output, 1: file, 2: stdout, 3: both) (default: 0)
+
+API AND CONSOLE OPTIONS:
+  --rpc                  Enable the HTTP-RPC server
+  --rpcaddr value        HTTP-RPC server listening interface (default: "localhost")
+  --rpcport value        HTTP-RPC server listening port (default: 8551)
+  --rpccorsdomain value  Comma separated list of domains from which to accept cross origin requests (browser enforced)
+  --rpcvhosts value      Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard. (default: "localhost")
+  --rpcapi value         API's offered over the HTTP-RPC interface
+  --ipcdisable           Disable the IPC-RPC server
+  --ipcpath              Filename for IPC socket/pipe within the datadir (explicit paths escape it)
+  --ws                   Enable the WS-RPC server
+  --wsaddr value         WS-RPC server listening interface (default: "localhost")
+  --wsport value         WS-RPC server listening port (default: 8552)
+  --wsapi value          API's offered over the WS-RPC interface
+  --wsorigins value      Origins from which to accept websockets requests
+  --grpc                 Enable the gRPC server
+  --grpcaddr value       gRPC server listening interface (default: "localhost")
+  --grpcport value       gRPC server listening port (default: 8553)
+  --jspath loadScript    JavaScript root path for loadScript (default: ".")
+  --exec value           Execute JavaScript statement
+  --preload value        Comma separated list of JavaScript files to preload into the console
+
+LOGGING AND DEBUGGING OPTIONS:
+  --verbosity value         Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail (default: 3)
+  --vmodule value           Per-module verbosity: comma-separated list of <pattern>=<level> (e.g. klay/*=5,p2p=4)
+  --backtrace value         Request a stack trace at a specific logging statement (e.g. "block.go:271")
+  --debug                   Prepends log messages with call-site location (file and line number)
+  --pprof                   Enable the pprof HTTP server
+  --pprofaddr value         pprof HTTP server listening interface (default: "127.0.0.1")
+  --pprofport value         pprof HTTP server listening port (default: 6060)
+  --memprofile value        Write memory profile to the given file
+  --memprofilerate value    Turn on memory profiling with the given rate (default: 524288)
+  --blockprofilerate value  Turn on block profiling with the given rate (default: 0)
+  --cpuprofile value        Write CPU profile to the given file
+  --trace value             Write execution trace to the given file
+
+MISC OPTIONS:
+  --genkey value                       generate a node private key and write to given filename
+  --writeaddress                       write out the node's public key which is given by "--nodekeyfile" or "--nodekeyhex"
+  --dbsyncer                           Enable the DBSyncer
+  --dbsyncer.db.host value             db.host in dbsyncer
+  --dbsyncer.db.port value             db.port in dbsyncer (default: "3306")
+  --dbsyncer.db.name value             db.name in dbsyncer
+  --dbsyncer.db.user value             db.user in dbsyncer
+  --dbsyncer.db.password value         db.password in dbsyncer
+  --dbsyncer.logmode                   Enable the dbsyncer logmode
+  --dbsyncer.db.max.idle value         The maximum number of connections in the idle connection pool (default: 50)
+  --dbsyncer.db.max.open value         The maximum number of open connections to the database (default: 30)
+  --dbsyncer.db.max.lifetime value     The maximum amount of time a connection may be reused (default : 1h), ex: 300ms, 2h45m, 60s, ... (default: 1h0m0s)
+  --dbsyncer.block.channel.size value  Block received channel size (default: 5)
+  --dbsyncer.mode value                The mode of dbsyncer is way which handle block/tx data to insert db (multi, single, context) (default: "multi")
+  --dbsyncer.genquery.th value         The amount of thread of generation query in multi mode (default: 50)
+  --dbsyncer.insert.th value           The amount of thread of insert operation in multi mode (default: 30)
+  --dbsyncer.bulk.size value           The amount of row for bulk-insert (default: 200)
+  --dbsyncer.event.mode value          The way how to sync all block or last block (block, head) (default: "head")
+  --dbsyncer.max.block.diff value      The maximum difference between current block and event block. 0 means off (default: 0)
+  --help, -h                           show help
+
+*/
 package main
