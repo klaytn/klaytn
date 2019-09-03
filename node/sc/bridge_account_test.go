@@ -20,10 +20,12 @@ import (
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"os"
 	"path"
 	"testing"
+	"time"
 )
 
 // TestBridgeAccountLockUnlock checks the lock/unlock functionality.
@@ -64,27 +66,102 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 		assert.Equal(t, false, bAcc.pAccount.IsUnlockedAccount())
 	}
 
-	// Fail to UnLock Account
+	// Fail to UnLock Account with wrong password
+	duration := uint64(0)
 	{
-		err := bAcc.cAccount.UnLockAccount(string(cPwdStr)[3:])
+		err := bAcc.cAccount.UnLockAccount(&duration, string(cPwdStr)[3:])
 		assert.EqualError(t, err, keystore.ErrDecrypt.Error())
 		assert.Equal(t, false, bAcc.cAccount.IsUnlockedAccount())
 	}
 	{
-		err := bAcc.pAccount.UnLockAccount(string(pPwdStr)[3:])
+		err := bAcc.pAccount.UnLockAccount(&duration, string(pPwdStr)[3:])
 		assert.EqualError(t, err, keystore.ErrDecrypt.Error())
 		assert.Equal(t, false, bAcc.pAccount.IsUnlockedAccount())
 	}
 
-	// Succeed to UnLock Account
+	// Fail to UnLock Account with invalid timeout
+	duration = uint64(time.Duration(math.MaxInt64)/time.Second) + 1
 	{
-		err := bAcc.cAccount.UnLockAccount(string(cPwdStr))
+		err := bAcc.cAccount.UnLockAccount(&duration, string(cPwdStr)[3:])
+		assert.EqualError(t, err, errUnlockDurationTooLarge.Error())
+		assert.Equal(t, false, bAcc.cAccount.IsUnlockedAccount())
+	}
+	{
+		err := bAcc.pAccount.UnLockAccount(&duration, string(pPwdStr)[3:])
+		assert.EqualError(t, err, errUnlockDurationTooLarge.Error())
+		assert.Equal(t, false, bAcc.pAccount.IsUnlockedAccount())
+	}
+
+	// Succeed to UnLock Account
+	duration = uint64(0)
+	{
+		err := bAcc.cAccount.UnLockAccount(&duration, string(cPwdStr))
 		assert.NoError(t, err)
 		assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
 	}
 	{
-		err := bAcc.pAccount.UnLockAccount(string(pPwdStr))
+		err := bAcc.pAccount.UnLockAccount(&duration, string(pPwdStr))
 		assert.NoError(t, err)
+		assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
+	}
+
+	// Lock Account
+	{
+		err := bAcc.cAccount.LockAccount()
+		assert.NoError(t, err)
+		assert.Equal(t, false, bAcc.cAccount.IsUnlockedAccount())
+	}
+	{
+		err := bAcc.pAccount.LockAccount()
+		assert.NoError(t, err)
+		assert.Equal(t, false, bAcc.pAccount.IsUnlockedAccount())
+	}
+
+	// Succeed to UnLock Account with timeout
+	duration = uint64(5)
+	{
+		err := bAcc.cAccount.UnLockAccount(&duration, string(cPwdStr))
+		assert.NoError(t, err)
+
+		err = bAcc.pAccount.UnLockAccount(&duration, string(pPwdStr))
+		assert.NoError(t, err)
+
+		assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
+		assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
+
+		time.Sleep(time.Duration(duration+1) * time.Second)
+
+		assert.Equal(t, false, bAcc.cAccount.IsUnlockedAccount())
+		assert.Equal(t, false, bAcc.pAccount.IsUnlockedAccount())
+	}
+
+	// Lock Account
+	{
+		err := bAcc.cAccount.LockAccount()
+		assert.NoError(t, err)
+		assert.Equal(t, false, bAcc.cAccount.IsUnlockedAccount())
+	}
+	{
+		err := bAcc.pAccount.LockAccount()
+		assert.NoError(t, err)
+		assert.Equal(t, false, bAcc.pAccount.IsUnlockedAccount())
+	}
+
+	// Succeed to UnLock Account with default timeout
+	duration = uint64(0)
+	{
+		err := bAcc.cAccount.UnLockAccount(nil, string(cPwdStr))
+		assert.NoError(t, err)
+
+		err = bAcc.pAccount.UnLockAccount(nil, string(pPwdStr))
+		assert.NoError(t, err)
+
+		assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
+		assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
+
+		time.Sleep(time.Duration(duration+1) * time.Second)
+
+		assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
 		assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
 	}
 }

@@ -196,8 +196,17 @@ func (b *bridge) passwdByPrompt(call otto.FunctionCall, msg string) (passwd otto
 // original RPC method (saved in jeth.unlockParentOperator) with it to actually execute
 // the RPC call.
 func (b *bridge) UnlockParentOperator(call otto.FunctionCall) (response otto.Value) {
+	//  argument is the duration how long the account must be unlocked.
+	duration := otto.NullValue()
+	if call.Argument(0).IsDefined() && !call.Argument(0).IsNull() {
+		if !call.Argument(0).IsNumber() {
+			throwJSException("unlock duration must be a number")
+		}
+		duration = call.Argument(0)
+	}
+
 	// Send the request to the backend and return
-	response, err := call.Otto.Call("jeth.unlockParentOperator", nil, b.passwdByPrompt(call, "Unlock parent operator account"))
+	response, err := call.Otto.Call("jeth.unlockParentOperator", nil, duration, b.passwdByPrompt(call, "Unlock parent operator account"))
 	if err != nil {
 		throwJSException(err.Error())
 	}
@@ -209,8 +218,17 @@ func (b *bridge) UnlockParentOperator(call otto.FunctionCall) (response otto.Val
 // original RPC method (saved in jeth.unlockChildOperator) with it to actually execute
 // the RPC call.
 func (b *bridge) UnlockChildOperator(call otto.FunctionCall) (response otto.Value) {
+	//  argument is the duration how long the account must be unlocked.
+	duration := otto.NullValue()
+	if call.Argument(0).IsDefined() && !call.Argument(0).IsNull() {
+		if !call.Argument(0).IsNumber() {
+			throwJSException("unlock duration must be a number")
+		}
+		duration = call.Argument(0)
+	}
+
 	// Send the request to the backend and return
-	response, err := call.Otto.Call("jeth.unlockChildOperator", nil, b.passwdByPrompt(call, "Unlock child operator account"))
+	response, err := call.Otto.Call("jeth.unlockChildOperator", nil, duration, b.passwdByPrompt(call, "Unlock child operator account"))
 	if err != nil {
 		throwJSException(err.Error())
 	}
