@@ -66,9 +66,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         external
         onlyOwner
     {
-        if (allowedTokens[_token] != address(0)) {
-            return;
-        }
+        require(allowedTokens[_token] == address(0));
         allowedTokens[_token] = _cToken;
         allowedTokenList.push(_token);
     }
@@ -78,10 +76,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         external
         onlyOwner
     {
-        if (allowedTokens[_token] == address(0)) {
-            return;
-        }
-
+        require(allowedTokens[_token] != address(0));
         delete allowedTokens[_token];
 
         for (uint i = 0; i < allowedTokenList.length; i++) {

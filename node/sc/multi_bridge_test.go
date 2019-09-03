@@ -94,10 +94,8 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 	for i := 0; i < maxAccounts; i++ {
 		acc := res.accounts[i]
 		opts := &bind.TransactOpts{From: owner.From, Signer: owner.Signer, GasLimit: gasLimit}
-		tx, err := b.RegisterOperator(opts, acc.From)
-		assert.NoError(t, err)
+		_, _ = b.RegisterOperator(opts, acc.From)
 		res.sim.Commit()
-		assert.Nil(t, bind.CheckWaitMined(res.sim, tx))
 	}
 
 	res.requestCh = make(chan *bridge.BridgeRequestValueTransfer, 100)
@@ -118,17 +116,13 @@ func TestRegisterDeregisterOperator(t *testing.T) {
 	testAddrs := []common.Address{{10}, {20}}
 
 	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
-	tx, err := info.b.RegisterOperator(opts, info.acc.From)
-	assert.NoError(t, err)
-	info.sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
 	// info.acc.From is duplicated because it is an owner. ignored.
 	operatorList, err := info.b.GetOperatorList(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(operatorList))
 
-	tx, err = info.b.RegisterOperator(opts, testAddrs[0])
+	tx, err := info.b.RegisterOperator(opts, testAddrs[0])
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
@@ -235,7 +229,7 @@ func TestRegisterDeregisterToken(t *testing.T) {
 	tx, err = info.b.RegisterToken(opts, dummy1, dummy2)
 	assert.NoError(t, err)
 	info.sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
 
 	res, err := info.b.AllowedTokens(nil, dummy1)
 	assert.NoError(t, err)

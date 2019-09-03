@@ -107,9 +107,7 @@ contract BridgeOperator is Ownable {
     external
     onlyOwner
     {
-        if (operators[_operator]) {
-            return;
-        }
+        require(!operators[_operator]);
         operators[_operator] = true;
         operatorList.push(_operator);
     }
@@ -119,10 +117,7 @@ contract BridgeOperator is Ownable {
     external
     onlyOwner
     {
-        if (!operators[_operator]) {
-            return;
-        }
-
+        require(operators[_operator]);
         delete operators[_operator];
 
         for (uint i = 0; i < operatorList.length; i++) {
