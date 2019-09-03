@@ -115,7 +115,7 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 // - the specified operator is deregistered by the contract method DeregisterOperator.
 func TestRegisterDeregisterOperator(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
-	testAddrs := []common.Address{common.Address{10}, common.Address{20}}
+	testAddrs := []common.Address{{10}, {20}}
 
 	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
 	tx, err := info.b.RegisterOperator(opts, info.acc.From)
