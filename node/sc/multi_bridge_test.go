@@ -115,6 +115,7 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 // - the specified operator is deregistered by the contract method DeregisterOperator.
 func TestRegisterDeregisterOperator(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
+	testAddrs := []common.Address{common.Address{10}, common.Address{20}}
 
 	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
 	tx, err := info.b.RegisterOperator(opts, info.acc.From)
@@ -122,19 +123,55 @@ func TestRegisterDeregisterOperator(t *testing.T) {
 	info.sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
-	isOperator, err := info.b.Operators(nil, info.acc.From)
+	// info.acc.From is duplicated because it is an owner. ignored.
+	operatorList, err := info.b.GetOperatorList(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, true, isOperator)
+	assert.Equal(t, 1, len(operatorList))
 
-	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
-	tx, err = info.b.DeregisterOperator(opts, info.acc.From)
+	tx, err = info.b.RegisterOperator(opts, testAddrs[0])
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
-	isOperator, err = info.b.Operators(nil, info.acc.From)
+	tx, err = info.b.RegisterOperator(opts, testAddrs[1])
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	// Check operators
+	isOperator, err := info.b.Operators(nil, info.acc.From)
+	assert.NoError(t, err)
+	assert.Equal(t, true, isOperator)
+
+	isOperator, err = info.b.Operators(nil, testAddrs[0])
+	assert.NoError(t, err)
+	assert.Equal(t, true, isOperator)
+
+	isOperator, err = info.b.Operators(nil, testAddrs[1])
+	assert.NoError(t, err)
+	assert.Equal(t, true, isOperator)
+
+	operatorList, err = info.b.GetOperatorList(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(operatorList))
+
+	// Deregister an operator
+	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	tx, err = info.b.DeregisterOperator(opts, testAddrs[0])
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
+	// Check operators
+	isOperator, err = info.b.Operators(nil, testAddrs[0])
 	assert.NoError(t, err)
 	assert.Equal(t, false, isOperator)
+
+	operatorList, err = info.b.GetOperatorList(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(operatorList))
+	assert.Equal(t, info.acc.From, operatorList[0])
+	assert.Equal(t, testAddrs[1], operatorList[1])
 }
 
 // TestStartStop checks the following:
@@ -194,9 +231,20 @@ func TestRegisterDeregisterToken(t *testing.T) {
 	info.sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
+	// Try duplicated insertion.
+	tx, err = info.b.RegisterToken(opts, dummy1, dummy2)
+	assert.NoError(t, err)
+	info.sim.Commit()
+	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
+
 	res, err := info.b.AllowedTokens(nil, dummy1)
 	assert.NoError(t, err)
 	assert.Equal(t, dummy2, res)
+
+	allowedTokenList, err := info.b.GetAllowedTokenList(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(allowedTokenList))
+	assert.Equal(t, dummy1, allowedTokenList[0])
 
 	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
 	tx, err = info.b.DeregisterToken(opts, dummy1)
@@ -207,6 +255,10 @@ func TestRegisterDeregisterToken(t *testing.T) {
 	res, err = info.b.AllowedTokens(nil, dummy1)
 	assert.NoError(t, err)
 	assert.Equal(t, common.Address{0}, res)
+
+	allowedTokenList, err = info.b.GetAllowedTokenList(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(allowedTokenList))
 }
 
 // TestOperatorThreshold checks the following:
