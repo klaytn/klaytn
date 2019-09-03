@@ -96,7 +96,6 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
      * @param tokenAddress Address of token contract the token belong to.
      * @param valueOrTokenId is the value of KLAY/ERC20 or token ID of ERC721.
      * @param requestNonce is the order number of the request value transfer.
-     * @param uri is uri of ERC721 token.
      * @param fee is fee of value transfer.
      * @param extraData is additional data for specific purpose of a service provider.
      */
@@ -107,7 +106,6 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         address tokenAddress,
         uint256 valueOrTokenId,
         uint64 requestNonce,
-        string uri,
         uint256 fee,
         bytes extraData
     );

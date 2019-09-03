@@ -114,6 +114,8 @@ func TestBridgeManager(t *testing.T) {
 		config:         config,
 		peers:          newBridgePeerSet(),
 		bridgeAccounts: bacc,
+		localBackend:   sim,
+		remoteBackend:  sim,
 	}
 	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
@@ -281,6 +283,9 @@ func TestBridgeManager(t *testing.T) {
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		uri, err := nft.TokenURI(nil, big.NewInt(int64(nftTokenID)))
+		assert.NoError(t, err)
+		assert.Equal(t, "testURI", uri)
 	}
 
 	// Wait a few second for wait group
@@ -1251,7 +1256,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true)
+	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true, sim)
 
 	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
 
