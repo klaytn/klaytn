@@ -98,7 +98,7 @@ func (mce *MainChainEventHandler) decodeAndWriteChildChainTxHash(tx *types.Trans
 			return
 		}
 		mce.mainbridge.chainDB.WriteChildChainTxHash(anchoringDataLegacy.BlockHash, tx.Hash())
-		logger.Trace("Write type0 anchoring data on chainDB", "blockHash", anchoringDataLegacy.BlockHash.String(), "txHash", tx.Hash().String())
+		logger.Trace("Write legacy anchoring data on chainDB", "blockHash", anchoringDataLegacy.BlockHash.String(), "txHash", tx.Hash().String())
 		return
 	}
 	if anchoringData.Type == types.AnchoringDataType0 {
