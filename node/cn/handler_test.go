@@ -31,13 +31,13 @@ import (
 
 var num1 = 20190902
 
-func newMocks(t *testing.T) (*mocks2.MockEngine, *mocks.MockBlockChain, *mocks.MockTxPool) {
+func newMocks(t *testing.T) (*gomock.Controller, *mocks2.MockEngine, *mocks.MockBlockChain, *mocks.MockTxPool) {
 	mockCtrl := gomock.NewController(t)
 	mockEngine := mocks2.NewMockEngine(mockCtrl)
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
 	mockTxPool := mocks.NewMockTxPool(mockCtrl)
 
-	return mockEngine, mockBlockChain, mockTxPool
+	return mockCtrl, mockEngine, mockBlockChain, mockTxPool
 }
 
 func newBlock(blockNum int) *types.Block {
@@ -49,10 +49,11 @@ func newBlock(blockNum int) *types.Block {
 func TestNewProtocolManager(t *testing.T) {
 	//1. If consensus.Engine returns an empty Protocol, NewProtocolManager throws an error.
 	{
-		mockEngine, mockBlockChain, mockTxPool := newMocks(t)
+		mockCtrl, mockEngine, mockBlockChain, mockTxPool := newMocks(t)
+		defer mockCtrl.Finish()
 
 		block := newBlock(num1)
-		mockBlockChain.EXPECT().CurrentBlock().Return(block).Times(2)
+		mockBlockChain.EXPECT().CurrentBlock().Return(block).Times(1)
 		mockEngine.EXPECT().Protocol().Return(consensus.Protocol{}).Times(1)
 
 		pm, err := NewProtocolManager(nil, downloader.FastSync, 0, nil, mockTxPool,
@@ -77,6 +78,7 @@ func TestSampleSize(t *testing.T) {
 func TestSamplePeersToSendBlock(t *testing.T) {
 	pm := &ProtocolManager{}
 	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
 	block := newBlock(123)
 	hash := block.Hash()
@@ -171,6 +173,7 @@ func TestBroadcastBlock_NoParentExists(t *testing.T) {
 	pm.nodetype = node.ENDPOINTNODE
 	block := newBlock(123)
 	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
 	mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(nil).Times(1)
@@ -184,6 +187,7 @@ func TestBroadcastBlock_ParentExists(t *testing.T) {
 	pm.nodetype = node.ENDPOINTNODE
 	block := newBlock(123)
 	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
 	mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(block).Times(1)
@@ -194,7 +198,7 @@ func TestBroadcastBlock_ParentExists(t *testing.T) {
 	pm.peers = mockPeers
 
 	mockPeer := NewMockPeer(mockCtrl)
-	mockPeers.EXPECT().ENWithoutBlock(block.Hash()).Return([]Peer{mockPeer}).Times(3)
+	mockPeers.EXPECT().ENWithoutBlock(block.Hash()).Return([]Peer{mockPeer}).Times(1)
 	mockPeer.EXPECT().AsyncSendNewBlock(block, new(big.Int).Add(block.BlockScore(), big.NewInt(100)))
 
 	pm.BroadcastBlock(block)
@@ -205,6 +209,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 	pm.nodetype = node.ENDPOINTNODE
 	block := newBlock(123)
 	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
 	{
 		mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
@@ -215,7 +220,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 	{
 		mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
-		mockBlockChain.EXPECT().HasBlock(block.Hash(), block.NumberU64()).Return(true).Times(1)
+		mockBlockChain.EXPECT().HasBlock(block.Hash(), block.NumberU64()).Return(true) //.MinTimes(100)
 		pm.blockchain = mockBlockChain
 
 		mockPeer := NewMockPeer(mockCtrl)
