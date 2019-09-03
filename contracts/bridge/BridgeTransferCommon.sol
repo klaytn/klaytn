@@ -83,18 +83,14 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         }
 
         delete allowedTokens[_token];
-        address[] memory newAllowedTokenList;
-        if (allowedTokenList.length > 1) {
-            newAllowedTokenList = new address[](allowedTokenList.length-1);
-        }
 
-        uint j = 0;
         for (uint i = 0; i < allowedTokenList.length; i++) {
-            if (allowedTokenList[i] != _token) {
-                newAllowedTokenList[j++] = allowedTokenList[i];
+            if (allowedTokenList[i] == _token) {
+                allowedTokenList[i] = allowedTokenList[allowedTokenList.length-1];
+                allowedTokenList.length--;
+                break;
             }
         }
-        allowedTokenList = newAllowedTokenList;
     }
 
     /**

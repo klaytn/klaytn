@@ -124,21 +124,17 @@ contract BridgeOperator is Ownable {
         }
 
         delete operators[_operator];
-        address[] memory newOperatorList;
-        if (operatorList.length > 1) {
-            newOperatorList = new address[](operatorList.length-1);
-        }
 
-        uint j = 0;
         for (uint i = 0; i < operatorList.length; i++) {
-           if (operatorList[i] != _operator) {
-               newOperatorList[j++] = operatorList[i];
+           if (operatorList[i] == _operator) {
+               operatorList[i] = operatorList[operatorList.length-1];
+               operatorList.length--;
+               break;
            }
         }
-        operatorList = newOperatorList;
     }
 
-    // setOperatorThreshold sets the operator threshold.
+// setOperatorThreshold sets the operator threshold.
     function setOperatorThreshold(VoteType _voteType, uint8 _threshold)
     external
     onlyOwner
