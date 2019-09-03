@@ -243,7 +243,7 @@ func (acc *accountInfo) UnLockAccount(duration *uint64, passphrase string) error
 	const max = uint64(time.Duration(math.MaxInt64) / time.Second)
 	var d time.Duration
 	if duration == nil {
-		d = 0 // 300 * time.Second
+		d = 0
 	} else if *duration > max {
 		return errUnlockDurationTooLarge
 	} else {
