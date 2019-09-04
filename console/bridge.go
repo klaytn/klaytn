@@ -196,7 +196,7 @@ func (b *bridge) passwdByPrompt(call otto.FunctionCall, msg string) (passwd otto
 // original RPC method (saved in jeth.unlockParentOperator) with it to actually execute
 // the RPC call.
 func (b *bridge) UnlockParentOperator(call otto.FunctionCall) (response otto.Value) {
-	//  argument is the duration how long the account must be unlocked.
+	//  The argument is the duration how long the account must be unlocked.
 	duration := otto.NullValue()
 	if call.Argument(0).IsDefined() && !call.Argument(0).IsNull() {
 		if !call.Argument(0).IsNumber() {
@@ -218,7 +218,7 @@ func (b *bridge) UnlockParentOperator(call otto.FunctionCall) (response otto.Val
 // original RPC method (saved in jeth.unlockChildOperator) with it to actually execute
 // the RPC call.
 func (b *bridge) UnlockChildOperator(call otto.FunctionCall) (response otto.Value) {
-	//  argument is the duration how long the account must be unlocked.
+	//  The argument is the duration how long the account must be unlocked.
 	duration := otto.NullValue()
 	if call.Argument(0).IsDefined() && !call.Argument(0).IsNull() {
 		if !call.Argument(0).IsNumber() {
