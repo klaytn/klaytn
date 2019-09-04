@@ -1276,10 +1276,7 @@ func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common
 				continue
 			}
 			addr = crypto.PubkeyToAddress(*pubKey)
-		} else {
-			addr = p.GetAddr()
 		}
-
 		if targets[addr] {
 			m[addr] = p
 		}
@@ -1323,8 +1320,6 @@ func (pm *ProtocolManager) GetPeers() []common.Address {
 				continue
 			}
 			addr = crypto.PubkeyToAddress(*pubKey)
-		} else {
-			addr = p.GetAddr()
 		}
 		addrs = append(addrs, addr)
 	}

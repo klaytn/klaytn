@@ -17,19 +17,51 @@
 package cn
 
 import (
+	"crypto/ecdsa"
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	mocks2 "github.com/klaytn/klaytn/consensus/mocks"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/downloader"
+	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn/mocks"
+	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 )
 
 var blockNum1 = 20190902
+var td1 = big.NewInt(123)
+
+var addr1 common.Address
+var addr2 common.Address
+var addr3 common.Address
+
+var key1 *ecdsa.PrivateKey
+var key2 *ecdsa.PrivateKey
+var key3 *ecdsa.PrivateKey
+
+var nodeID1 discover.NodeID
+var nodeID2 discover.NodeID
+var nodeID3 discover.NodeID
+
+func init() {
+	key1, _ = crypto.GenerateKey()
+	key2, _ = crypto.GenerateKey()
+	key3, _ = crypto.GenerateKey()
+
+	addr1 = crypto.PubkeyToAddress(key1.PublicKey)
+	addr2 = crypto.PubkeyToAddress(key2.PublicKey)
+	addr3 = crypto.PubkeyToAddress(key3.PublicKey)
+
+	nodeID1 = discover.PubkeyID(&key1.PublicKey)
+	nodeID2 = discover.PubkeyID(&key2.PublicKey)
+	nodeID3 = discover.PubkeyID(&key3.PublicKey)
+}
 
 func newMocks(t *testing.T) (*gomock.Controller, *mocks2.MockEngine, *mocks.MockBlockChain, *mocks.MockTxPool) {
 	mockCtrl := gomock.NewController(t)
@@ -157,4 +189,313 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 		pm.BroadcastBlockHash(block)
 	}
+}
+
+func TestBroadcastCNTx_CN_NotExists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+
+	peers.cnpeers[addr1] = cnPeer
+	peers.pnpeers[addr2] = pnPeer
+	peers.enpeers[addr3] = enPeer
+
+	tx := types.NewTransaction(111, addr1, big.NewInt(111), 111, big.NewInt(111), nil)
+	txs := types.Transactions{tx}
+
+	// Using gomock.Any() for AsyncSendTransactions calls,
+	// since transactions are put into a new list inside broadcastCNTx.
+	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
+	cnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+	pnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+	enPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+
+	pm.broadcastCNTx(txs)
+}
+
+func TestBroadcastCNTx_CN_Exists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+
+	peers.cnpeers[addr1] = cnPeer
+	peers.pnpeers[addr2] = pnPeer
+	peers.enpeers[addr3] = enPeer
+
+	tx := types.NewTransaction(111, addr1, big.NewInt(111), 111, big.NewInt(111), nil)
+	txs := types.Transactions{tx}
+
+	// Using gomock.Any() for AsyncSendTransactions calls,
+	// since transactions are put into a new list inside broadcastCNTx.
+	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	cnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(1)
+	pnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+	enPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+
+	pm.broadcastCNTx(txs)
+}
+
+func TestUseTxResend(t *testing.T) {
+	testSet := [...]struct {
+		pm     *ProtocolManager
+		result bool
+	}{
+		{&ProtocolManager{nodetype: node.CONSENSUSNODE, txResendUseLegacy: true}, false},
+		{&ProtocolManager{nodetype: node.ENDPOINTNODE, txResendUseLegacy: true}, false},
+		{&ProtocolManager{nodetype: node.PROXYNODE, txResendUseLegacy: true}, false},
+		{&ProtocolManager{nodetype: node.BOOTNODE, txResendUseLegacy: true}, false},
+		{&ProtocolManager{nodetype: node.UNKNOWNNODE, txResendUseLegacy: true}, false},
+
+		{&ProtocolManager{nodetype: node.CONSENSUSNODE, txResendUseLegacy: false}, false},
+		{&ProtocolManager{nodetype: node.ENDPOINTNODE, txResendUseLegacy: false}, true},
+		{&ProtocolManager{nodetype: node.PROXYNODE, txResendUseLegacy: false}, true},
+		{&ProtocolManager{nodetype: node.BOOTNODE, txResendUseLegacy: false}, true},
+		{&ProtocolManager{nodetype: node.UNKNOWNNODE, txResendUseLegacy: false}, true},
+	}
+
+	for _, tc := range testSet {
+		assert.Equal(t, tc.result, tc.pm.useTxResend())
+	}
+}
+
+func TestNodeInfo(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+	pm.blockchain = mockBlockChain
+
+	genesis := newBlock(0)
+	block := newBlock(blockNum1)
+	config := &params.ChainConfig{ChainID: td1}
+
+	pm.networkId = 1234
+	mockBlockChain.EXPECT().CurrentBlock().Return(block).Times(1)
+	mockBlockChain.EXPECT().GetTd(block.Hash(), block.NumberU64()).Return(td1).Times(1)
+	mockBlockChain.EXPECT().Genesis().Return(genesis).Times(1)
+	mockBlockChain.EXPECT().Config().Return(config).Times(1)
+
+	expected := &NodeInfo{
+		Network:    pm.networkId,
+		BlockScore: td1,
+		Genesis:    genesis.Hash(),
+		Config:     config,
+		Head:       block.Hash(),
+	}
+
+	assert.Equal(t, *expected, *pm.NodeInfo())
+}
+
+func TestGetCNPeersAndGetENPeers(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+
+	peers.cnpeers[addr1] = cnPeer
+	peers.pnpeers[addr2] = pnPeer
+	peers.enpeers[addr3] = enPeer
+
+	cnPeers := pm.GetCNPeers()
+	enPeers := pm.GetENPeers()
+
+	assert.Equal(t, 1, len(cnPeers))
+	assert.Equal(t, 1, len(enPeers))
+
+	assert.Equal(t, cnPeer, cnPeers[addr1])
+	assert.Equal(t, enPeer, enPeers[addr3])
+}
+
+func TestFindPeers_AddrExists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := NewMockPeerSet(mockCtrl)
+	pm.peers = peers
+
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+
+	peersResult := map[string]Peer{"cnPeer": cnPeer, "pnPeer": pnPeer, "enPeer": enPeer}
+
+	peers.EXPECT().Peers().Return(peersResult).Times(1)
+	cnPeer.EXPECT().GetAddr().Return(addr1).Times(1)
+	pnPeer.EXPECT().GetAddr().Return(addr2).Times(1)
+	enPeer.EXPECT().GetAddr().Return(addr3).Times(1)
+
+	targets := make(map[common.Address]bool)
+	targets[addr1] = true
+	targets[addr2] = true
+	targets[addr3] = false
+
+	foundPeers := pm.FindPeers(targets)
+
+	assert.Equal(t, 2, len(foundPeers))
+	assert.EqualValues(t, cnPeer, foundPeers[addr1])
+	assert.EqualValues(t, pnPeer, foundPeers[addr2])
+	assert.Nil(t, foundPeers[addr3])
+}
+
+func TestFindPeers_AddrNotExists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := NewMockPeerSet(mockCtrl)
+	pm.peers = peers
+
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+
+	peersResult := map[string]Peer{"cnPeer": cnPeer, "pnPeer": pnPeer, "enPeer": enPeer}
+
+	peers.EXPECT().Peers().Return(peersResult).Times(1)
+	cnPeer.EXPECT().GetAddr().Return(common.Address{}).Times(1)
+	pnPeer.EXPECT().GetAddr().Return(common.Address{}).Times(1)
+	enPeer.EXPECT().GetAddr().Return(common.Address{}).Times(1)
+
+	cnPeer.EXPECT().GetP2PPeerID().Return(nodeID1).Times(1)
+	pnPeer.EXPECT().GetP2PPeerID().Return(nodeID2).Times(1)
+	enPeer.EXPECT().GetP2PPeerID().Return(nodeID3).Times(1)
+
+	targets := make(map[common.Address]bool)
+	targets[addr1] = true
+	targets[addr2] = true
+	targets[addr3] = false
+
+	foundPeers := pm.FindPeers(targets)
+
+	assert.Equal(t, 2, len(foundPeers))
+	assert.EqualValues(t, cnPeer, foundPeers[addr1])
+	assert.EqualValues(t, pnPeer, foundPeers[addr2])
+	assert.Nil(t, foundPeers[addr3])
+}
+
+func TestFindCNPeers(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+
+	cnPeer1 := NewMockPeer(mockCtrl)
+	cnPeer2 := NewMockPeer(mockCtrl)
+	cnPeer3 := NewMockPeer(mockCtrl)
+
+	peers.cnpeers[addr1] = cnPeer1
+	peers.cnpeers[addr2] = cnPeer2
+	peers.cnpeers[addr3] = cnPeer3
+
+	targets := make(map[common.Address]bool)
+	targets[addr1] = true
+	targets[addr2] = true
+	targets[addr3] = false
+
+	foundCNPeers := pm.FindCNPeers(targets)
+
+	assert.Equal(t, 2, len(foundCNPeers))
+	assert.EqualValues(t, cnPeer1, foundCNPeers[addr1])
+	assert.EqualValues(t, cnPeer2, foundCNPeers[addr2])
+	assert.Nil(t, foundCNPeers[addr3])
+}
+
+func TestGetPeers_AddrExists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := NewMockPeerSet(mockCtrl)
+	pm.peers = peers
+
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+
+	peersResult := map[string]Peer{"cnPeer": cnPeer, "pnPeer": pnPeer, "enPeer": enPeer}
+
+	peers.EXPECT().Peers().Return(peersResult).Times(1)
+	cnPeer.EXPECT().GetAddr().Return(addr1).Times(1)
+	pnPeer.EXPECT().GetAddr().Return(addr2).Times(1)
+	enPeer.EXPECT().GetAddr().Return(addr3).Times(1)
+
+	foundAddrs := pm.GetPeers()
+
+	assert.Equal(t, 3, len(foundAddrs))
+	assert.True(t, contains(foundAddrs, addr1))
+	assert.True(t, contains(foundAddrs, addr2))
+	assert.True(t, contains(foundAddrs, addr3))
+}
+
+func TestGetPeers_AddrNotExists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := NewMockPeerSet(mockCtrl)
+	pm.peers = peers
+
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+
+	peersResult := map[string]Peer{"cnPeer": cnPeer, "pnPeer": pnPeer, "enPeer": enPeer}
+
+	peers.EXPECT().Peers().Return(peersResult).Times(1)
+	cnPeer.EXPECT().GetAddr().Return(common.Address{}).Times(1)
+	pnPeer.EXPECT().GetAddr().Return(common.Address{}).Times(1)
+	enPeer.EXPECT().GetAddr().Return(common.Address{}).Times(1)
+
+	cnPeer.EXPECT().GetP2PPeerID().Return(nodeID1).Times(1)
+	pnPeer.EXPECT().GetP2PPeerID().Return(nodeID2).Times(1)
+	enPeer.EXPECT().GetP2PPeerID().Return(nodeID3).Times(1)
+
+	foundAddrs := pm.GetPeers()
+
+	assert.Equal(t, 3, len(foundAddrs))
+	assert.True(t, contains(foundAddrs, addr1))
+	assert.True(t, contains(foundAddrs, addr2))
+	assert.True(t, contains(foundAddrs, addr3))
+}
+
+func contains(addrs []common.Address, item common.Address) bool {
+	for _, a := range addrs {
+		if a == item {
+			return true
+		}
+	}
+	return false
 }
