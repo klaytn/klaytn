@@ -14,5 +14,15 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package ecies implements the Elliptic Curve Integrated Encryption Scheme.
+/*
+Package ecies implements the Elliptic Curve Integrated Encryption Scheme.
+
+Package ecies provides functions to Encrypt / Decrypt messages using ECIES which are used in RLPx transport protocol in Klaytn.
+
+Source Files
+
+Each file contains following contents
+ - ecies.go  : Provide encryption / decryption related functions used for exchanging messages in RLPx protocol
+ - params.go : Contains parameters for ECIES encryption, specifying the symmetric encryption and HMAC parameters
+*/
 package ecies

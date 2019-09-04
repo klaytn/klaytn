@@ -18,5 +18,19 @@
 // This file is derived from crypto/secp256k1/secp256.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package secp256k1 wraps the bitcoin secp256k1 C library.
+/*
+Package secp256k1 wraps the bitcoin secp256k1 C library.
+
+secp256k1 refers to the parameters of the elliptic curve used in Bitcoin's public-key cryptography, and is defined in Standards for Efficient Cryptography (SEC)(Certicom Research, http://www.secg.org/sec2-v2.pdf).
+
+Package secp256k1 provides wrapper functions to utilize the library functions in Go.
+
+Source Files
+
+Each source file has following contents
+ - secp256.go  : Provides wrapper functions to utilize the secp256k1 library written in C
+ - curve.go    : Implements Koblitz elliptic curves
+ - panic_cb.go : Provide callbacks for converting libsecp256k1 internal faults into recoverable Go panics
+ - schnorr.go  : Implements Schnorr signature algorithm. It is planned to be used in Klaytn
+*/
 package secp256k1

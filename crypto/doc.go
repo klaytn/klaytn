@@ -14,5 +14,15 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package crypto contains several cryptography modules used in Klaytn.
+/*
+Package crypto contains several cryptography modules used in Klaytn.
+
+crypto package provides various crypto related functions such as key generation, ECDSA conversion, signature verification and so on.
+
+Source Files
+
+Each source file contains following contents.
+	- crypto.go        : Provides functions for private key generation and conversion, Keccak hash functions and address generation
+	- signature_cgo.go : Provides functions for public key and signature related functions. These functions depends on secp256k1 package which utilizes C library libsecp256k1
+*/
 package crypto
