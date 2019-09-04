@@ -75,93 +75,6 @@ func TestSampleSize(t *testing.T) {
 	assert.Equal(t, 4, sampleSize(peers))
 }
 
-func TestSamplePeersToSendBlock(t *testing.T) {
-	pm := &ProtocolManager{}
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	block := newBlock(blockNum1)
-	hash := block.Hash()
-
-	// 1. When the given node is a consensus node.
-	{
-		// len(pnsWithoutBlock) <= blockReceivingPNLimit
-		mockPeers := NewMockPeerSet(mockCtrl)
-		pm.nodetype = node.CONSENSUSNODE
-		pm.peers = mockPeers
-
-		mockCN := NewMockPeer(mockCtrl)
-		mockPN := NewMockPeer(mockCtrl)
-
-		mockPeers.EXPECT().CNWithoutBlock(hash).Return([]Peer{mockCN}).Times(1)
-		mockPeers.EXPECT().PNWithoutBlock(hash).Return([]Peer{mockPN}).Times(1)
-
-		sampledPeers := pm.samplePeersToSendBlock(block)
-		assert.Equal(t, 2, len(sampledPeers))
-		assert.Equal(t, mockCN, sampledPeers[0])
-		assert.Equal(t, mockPN, sampledPeers[1])
-
-		// len(pnsWithoutBlock) > blockReceivingPNLimit
-		mockPeers = NewMockPeerSet(mockCtrl)
-		pm.peers = mockPeers
-
-		mockCN = NewMockPeer(mockCtrl)
-		mockPN = NewMockPeer(mockCtrl)
-
-		var pnWithoutBlock []Peer
-		for i := 0; i <= blockReceivingPNLimit; i++ {
-			pnWithoutBlock = append(pnWithoutBlock, mockPN)
-		}
-
-		mockPeers.EXPECT().CNWithoutBlock(hash).Return([]Peer{mockCN}).Times(1)
-		mockPeers.EXPECT().PNWithoutBlock(hash).Return(pnWithoutBlock).Times(1)
-
-		sampledPeers = pm.samplePeersToSendBlock(block)
-		assert.Equal(t, 1+blockReceivingPNLimit, len(sampledPeers))
-		assert.Equal(t, mockCN, sampledPeers[0])
-	}
-
-	// 2. When the given node is a proxy node.
-	{
-		mockPeers := NewMockPeerSet(mockCtrl)
-		pm.nodetype = node.PROXYNODE
-		pm.peers = mockPeers
-
-		mockPeer := NewMockPeer(mockCtrl)
-		mockPeers.EXPECT().PeersWithoutBlockExceptCN(hash).Return([]Peer{mockPeer}).Times(1)
-
-		sampledPeers := pm.samplePeersToSendBlock(block)
-		assert.Equal(t, 1, len(sampledPeers))
-		assert.Equal(t, mockPeer, sampledPeers[0])
-	}
-
-	// 3. When the given node is an end point node.
-	{
-		mockPeers := NewMockPeerSet(mockCtrl)
-		pm.nodetype = node.ENDPOINTNODE
-		pm.peers = mockPeers
-
-		mockPeer := NewMockPeer(mockCtrl)
-		mockPeers.EXPECT().ENWithoutBlock(hash).Return([]Peer{mockPeer}).Times(1)
-
-		sampledPeers := pm.samplePeersToSendBlock(block)
-		assert.Equal(t, 1, len(sampledPeers))
-		assert.Equal(t, mockPeer, sampledPeers[0])
-	}
-
-	// 4. When the given node is a boot node.
-	{
-		pm.nodetype = node.BOOTNODE
-		assert.Equal(t, []Peer{}, pm.samplePeersToSendBlock(block))
-	}
-
-	// 5. When the given node is an unknown node.
-	{
-		pm.nodetype = node.UNKNOWNNODE
-		assert.Equal(t, []Peer{}, pm.samplePeersToSendBlock(block))
-	}
-}
-
 func TestSamplingPeers(t *testing.T) {
 	peers := make([]Peer, 10)
 	assert.Equal(t, peers, samplingPeers(peers, 20))
@@ -175,10 +88,19 @@ func TestBroadcastBlock_NoParentExists(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	td := int64(100)
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
 	mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(nil).Times(1)
-
+	mockBlockChain.EXPECT().GetTd(block.ParentHash(), block.NumberU64()-1).Return(big.NewInt(td)).Times(0)
 	pm.blockchain = mockBlockChain
+
+	mockPeers := NewMockPeerSet(mockCtrl)
+	pm.peers = mockPeers
+
+	mockPeer := NewMockPeer(mockCtrl)
+	mockPeers.EXPECT().SamplePeersToSendBlock(block, pm.nodetype).Return([]Peer{mockPeer}).Times(0)
+	mockPeer.EXPECT().AsyncSendNewBlock(block, new(big.Int).Add(block.BlockScore(), big.NewInt(td))).Times(0)
+
 	pm.BroadcastBlock(block)
 }
 
@@ -189,17 +111,18 @@ func TestBroadcastBlock_ParentExists(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	td := int64(100)
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
 	mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(block).Times(1)
-	mockBlockChain.EXPECT().GetTd(block.ParentHash(), block.NumberU64()-1).Return(big.NewInt(100)).Times(1)
+	mockBlockChain.EXPECT().GetTd(block.ParentHash(), block.NumberU64()-1).Return(big.NewInt(td)).Times(1)
 	pm.blockchain = mockBlockChain
 
 	mockPeers := NewMockPeerSet(mockCtrl)
 	pm.peers = mockPeers
 
 	mockPeer := NewMockPeer(mockCtrl)
-	mockPeers.EXPECT().ENWithoutBlock(block.Hash()).Return([]Peer{mockPeer}).Times(1)
-	mockPeer.EXPECT().AsyncSendNewBlock(block, new(big.Int).Add(block.BlockScore(), big.NewInt(100)))
+	mockPeers.EXPECT().SamplePeersToSendBlock(block, pm.nodetype).Return([]Peer{mockPeer}).Times(1)
+	mockPeer.EXPECT().AsyncSendNewBlock(block, new(big.Int).Add(block.BlockScore(), big.NewInt(td))).Times(1)
 
 	pm.BroadcastBlock(block)
 }
@@ -211,6 +134,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
+	// When the given block doesn't exist.
 	{
 		mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
 		mockBlockChain.EXPECT().HasBlock(block.Hash(), block.NumberU64()).Return(false).Times(1)
@@ -218,6 +142,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 		pm.BroadcastBlockHash(block)
 	}
 
+	// When the given block exists.
 	{
 		mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
 		mockBlockChain.EXPECT().HasBlock(block.Hash(), block.NumberU64()).Return(true) //.MinTimes(100)
