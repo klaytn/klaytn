@@ -1015,48 +1015,6 @@ func sampleSize(peers []Peer) int {
 	}
 }
 
-// samplePeersToSendBlock samples peers from peers without block.
-// It uses different sampling policy for different node type.
-func (pm *ProtocolManager) samplePeersToSendBlock(block *types.Block) []Peer {
-	var peersWithoutBlock []Peer
-	hash := block.Hash()
-
-	switch pm.nodetype {
-	case node.CONSENSUSNODE:
-		// If currNode is CN, sends block to sampled peers from (CN + PN), not to EN.
-		cnsWithoutBlock := pm.peers.CNWithoutBlock(hash)
-		sampledCNsWithoutBlock := samplingPeers(cnsWithoutBlock, sampleSize(cnsWithoutBlock))
-
-		// CN always broadcasts a block to its PN peers, unless the number of PN peers exceeds the limit.
-		pnsWithoutBlock := pm.peers.PNWithoutBlock(hash)
-		if len(pnsWithoutBlock) > blockReceivingPNLimit {
-			pnsWithoutBlock = samplingPeers(pnsWithoutBlock, blockReceivingPNLimit)
-		}
-
-		logger.Trace("Propagated block", "hash", hash,
-			"CN recipients", len(sampledCNsWithoutBlock), "PN recipients", len(pnsWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
-
-		return append(cnsWithoutBlock, pnsWithoutBlock...)
-	case node.PROXYNODE:
-		// If currNode is PN, sends block to sampled peers from (PN + EN), not to CN.
-		peersWithoutBlock = pm.peers.PeersWithoutBlockExceptCN(hash)
-
-	case node.ENDPOINTNODE:
-		// If currNode is EN, sends block to sampled EN peers, not to EN nor CN.
-		peersWithoutBlock = pm.peers.ENWithoutBlock(hash)
-
-	default:
-		logger.Error("Undefined nodeType of protocolManager! nodeType: %v", pm.nodetype)
-		return []Peer{}
-	}
-
-	sampledPeersWithoutBlock := samplingPeers(peersWithoutBlock, sampleSize(peersWithoutBlock))
-	logger.Trace("Propagated block", "hash", hash,
-		"recipients", len(sampledPeersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
-
-	return sampledPeersWithoutBlock
-}
-
 // BroadcastBlock will propagate a block to a subset of its peers.
 // If current node is CN, it will send block to all PN peers + sampled CN peers without block.
 // However, if there are more than 5 PN peers, it will sample 5 PN peers.
@@ -1071,7 +1029,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block) {
 
 	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
 	td := new(big.Int).Add(block.BlockScore(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
-	peersToSendBlock := pm.samplePeersToSendBlock(block)
+	peersToSendBlock := pm.peers.SamplePeersToSendBlock(block, pm.nodetype)
 	for _, peer := range peersToSendBlock {
 		peer.AsyncSendNewBlock(block, td)
 	}
@@ -1138,36 +1096,13 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 	}
 }
 
-func (pm *ProtocolManager) sampleResendPeersByType(nodetype p2p.ConnType) []Peer {
-	// TODO-Klaytn Need to tune pickSize. Currently use 2 for availability and efficiency.
-	var peers []Peer
-	switch nodetype {
-	case node.ENDPOINTNODE:
-		peers = pm.peers.TypePeers(node.PROXYNODE)
-		if len(peers) == 0 {
-			peers = pm.peers.TypePeers(node.ENDPOINTNODE)
-		}
-		peers = samplingPeers(peers, 2)
-	case node.PROXYNODE:
-		peers = pm.peers.TypePeers(node.CONSENSUSNODE)
-		if len(peers) == 0 {
-			peers = pm.peers.TypePeers(node.PROXYNODE)
-		}
-		peers = samplingPeers(peers, 2)
-	default:
-		logger.Warn("Not supported nodetype", "nodetype", nodetype)
-		return nil
-	}
-	return peers
-}
-
 func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) {
 	var cntxset = make(map[Peer]types.Transactions)
 	var txset = make(map[Peer]types.Transactions)
 	for _, tx := range txs {
 		// TODO-Klaytn drop or missing tx
 		if resend {
-			peers := pm.sampleResendPeersByType(pm.nodetype)
+			peers := pm.peers.SampleResendPeersByType(pm.nodetype)
 			for _, peer := range peers {
 				txset[peer] = append(txset[peer], tx)
 			}

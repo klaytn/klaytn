@@ -76,6 +76,8 @@ const (
 	NodeDataMsg        = 0x0d
 	ReceiptsRequestMsg = 0x0e
 	ReceiptsMsg        = 0x0f
+
+	MsgCodeEnd = 0x10
 )
 
 type errCode int

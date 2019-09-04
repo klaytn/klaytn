@@ -79,7 +79,7 @@ func (cm *ChannelManager) RegisterMsgCode(channelId uint, msgCode uint64) {
 	cm.msgCodes[msgCode] = channelId
 }
 
-//GetChannelWithMsgCode returns the channel corresponding to msgCode.
+// GetChannelWithMsgCode returns the channel corresponding to msgCode.
 func (cm *ChannelManager) GetChannelWithMsgCode(idx int, msgCode uint64) (chan p2p.Msg, error) {
 	if channelID, ok := cm.msgCodes[msgCode]; ok {
 		return cm.msgChannels[idx][channelID], nil
