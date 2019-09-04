@@ -145,7 +145,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 	// When the given block exists.
 	{
 		mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
-		mockBlockChain.EXPECT().HasBlock(block.Hash(), block.NumberU64()).Return(true) //.MinTimes(100)
+		mockBlockChain.EXPECT().HasBlock(block.Hash(), block.NumberU64()).Return(true).Times(1)
 		pm.blockchain = mockBlockChain
 
 		mockPeer := NewMockPeer(mockCtrl)
