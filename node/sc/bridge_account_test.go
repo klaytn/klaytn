@@ -68,7 +68,9 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 	}
 
 	unlockAccountsWithCheck := func(t *testing.T, bAcc *BridgeAccounts, duration *uint64, expectedErr error, expectedIsUnLock bool) {
-		if expectedErr == nil { // duration error is higher priority than wrong password error.
+		// Because the duration error has higher priority than wrong password error.
+		// In normal case, this wrong password case will be checked.
+		if expectedErr == nil {
 			// Wrong password
 			{
 				err := bAcc.cAccount.UnLockAccount(duration, string(cPwdStr)[3:])
