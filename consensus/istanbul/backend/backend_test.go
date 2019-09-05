@@ -34,7 +34,7 @@ import (
 	"testing"
 )
 
-const (
+var (
 	// testing node's private key
 	PRIVKEY = "ce7671a2880493dfb8d04218707a16b1532dfcac97f0289d770a919d5ff7b068"
 	// testing node should be in a committee in these blocks
