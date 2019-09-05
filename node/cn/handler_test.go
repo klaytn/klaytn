@@ -34,7 +34,7 @@ import (
 	"testing"
 )
 
-var blockNum1 = 20190902
+const blockNum1 = 20190902
 var td1 = big.NewInt(123)
 
 var addr1 common.Address
