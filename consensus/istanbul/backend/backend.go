@@ -218,7 +218,7 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 	return nil
 }
 
-// checkInSubList check if the node is in a sublist
+// checkInSubList checks if the node is in a sublist
 func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.ValidatorSet) bool {
 	for _, val := range valSet.SubList(prevHash, sb.currentView.Load().(*istanbul.View)) {
 		if val.Address() == sb.Address() {
@@ -240,7 +240,7 @@ func (sb *backend) getTargetReceivers(valSet istanbul.ValidatorSet) map[common.A
 	return targets
 }
 
-// Broadcast implements istanbul.Backend.Gossip
+// GossipSubPeer implements istanbul.Backend.Gossip
 func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.ValidatorSet, payload []byte) map[common.Address]bool {
 	if !sb.checkInSubList(prevHash, valSet) {
 		return nil

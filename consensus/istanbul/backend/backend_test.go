@@ -34,7 +34,7 @@ import (
 	"testing"
 )
 
-var (
+const (
 	// testing node's private key
 	PRIVKEY = "ce7671a2880493dfb8d04218707a16b1532dfcac97f0289d770a919d5ff7b068"
 	// testing node should be in a committee in these blocks
@@ -273,7 +273,7 @@ func getGovernance(dbm database.DBManager) *governance.Governance {
 	return governance.NewGovernance(config, dbm)
 }
 
-// Test_GossipSubPeerTargets test the gossiping targets are same as council members
+// Test_GossipSubPeerTargets checks if the gossiping targets are same as council members
 func Test_GossipSubPeerTargets(t *testing.T) {
 	// Create ValidatorSet
 	council := getTestCouncil()
