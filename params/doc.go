@@ -22,7 +22,7 @@ Source Files
 Each file contains following parameters.
 
 	- bootnodes.go			: Provides boot nodes information for Cypress and Baobab
-	- computation_cost_params.go	: Defines computation codes for each opcode
+	- computation_cost_params.go	: Defines computation costs for each opcode
 	- config.go			: Defines various structs for different settings of a network. Also provides getters for those settings
 	- denomination.go		: Defines units of KLAY
 	- gas_table.go			: Organizes gas prices for different Klaytn phases. Currently prices for Cypress is defined
