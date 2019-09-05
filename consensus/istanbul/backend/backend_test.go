@@ -254,8 +254,8 @@ func getTestRewards() []common.Address {
 }
 
 func getTestVotingPowers(num int) []uint64 {
-	vps := make([]uint64, 0, 100)
-	for i := 0; i < 100; i++ {
+	vps := make([]uint64, 0, num)
+	for i := 0; i < num; i++ {
 		vps = append(vps, 1)
 	}
 	return vps
