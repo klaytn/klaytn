@@ -388,6 +388,10 @@ func TestFindPeers_AddrNotExists(t *testing.T) {
 	pnPeer.EXPECT().GetP2PPeerID().Return(nodeID2).Times(1)
 	enPeer.EXPECT().GetP2PPeerID().Return(nodeID3).Times(1)
 
+	cnPeer.EXPECT().SetAddr(addr1).Times(1)
+	pnPeer.EXPECT().SetAddr(addr2).Times(1)
+	enPeer.EXPECT().SetAddr(addr3).Times(1)
+
 	targets := make(map[common.Address]bool)
 	targets[addr1] = true
 	targets[addr2] = true
@@ -482,6 +486,10 @@ func TestGetPeers_AddrNotExists(t *testing.T) {
 	cnPeer.EXPECT().GetP2PPeerID().Return(nodeID1).Times(1)
 	pnPeer.EXPECT().GetP2PPeerID().Return(nodeID2).Times(1)
 	enPeer.EXPECT().GetP2PPeerID().Return(nodeID3).Times(1)
+
+	cnPeer.EXPECT().SetAddr(addr1).Times(1)
+	pnPeer.EXPECT().SetAddr(addr2).Times(1)
+	enPeer.EXPECT().SetAddr(addr3).Times(1)
 
 	foundAddrs := pm.GetPeers()
 
