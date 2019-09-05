@@ -78,6 +78,8 @@ Args :
 			cypressFlag,
 			baobabTestFlag,
 			baobabFlag,
+			serviceChainFlag,
+			serviceChainTestFlag,
 			cliqueFlag,
 			numOfCNsFlag,
 			numOfValidatorsFlag,
@@ -325,6 +327,56 @@ func genCypressGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesi
 	return genesisJson
 }
 
+func genServiceChainCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	mintingAmount, _ := new(big.Int).SetString("0", 10)
+	genesisJson := &blockchain.Genesis{
+		Timestamp:  uint64(time.Now().Unix()),
+		BlockScore: big.NewInt(genesis.InitBlockScore),
+		Alloc:      make(blockchain.GenesisAlloc),
+		Config: &params.ChainConfig{
+			ChainID:       big.NewInt(1000),
+			DeriveShaImpl: 2,
+			Governance: &params.GovernanceConfig{
+				GoverningNode:  nodeAddrs[0],
+				GovernanceMode: "single",
+				Reward: &params.RewardConfig{
+					MintingAmount: mintingAmount,
+					Ratio:         "100/0/0",
+					UseGiniCoeff:  false,
+					DeferredTxFee: false,
+				},
+			},
+			Istanbul: &params.IstanbulConfig{
+				ProposerPolicy: 0,
+				SubGroupSize:   22,
+			},
+			UnitPrice: 0,
+		},
+	}
+	assignExtraData := genesis.Validators(nodeAddrs...)
+	assignExtraData(genesisJson)
+
+	return genesisJson
+}
+
+func genServiceChainGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	genesisJson := genCypressCommonGenesis(nodeAddrs, testAddrs)
+	genesisJson.Config.Istanbul.Epoch = 3600
+	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
+	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
+	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
+	return genesisJson
+}
+
+func genServiceChainTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	genesisJson := genCypressCommonGenesis(nodeAddrs, testAddrs)
+	genesisJson.Config.Istanbul.Epoch = 30
+	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 60
+	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 30
+	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
+	return genesisJson
+}
+
 func genCypressTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	testGenesis := genCypressCommonGenesis(nodeAddrs, testAddrs)
 	testGenesis.Config.Istanbul.Epoch = 30
@@ -420,6 +472,8 @@ func gen(ctx *cli.Context) error {
 	baobabTest := ctx.Bool(baobabTestFlag.Name)
 	cypress := ctx.Bool(cypressFlag.Name)
 	cypressTest := ctx.Bool(cypressTestFlag.Name)
+	serviceChain := ctx.Bool(serviceChainFlag.Name)
+	serviceChainTest := ctx.Bool(serviceChainTestFlag.Name)
 	chainid := ctx.Uint64(chainIDFlag.Name)
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
 
@@ -448,6 +502,10 @@ func gen(ctx *cli.Context) error {
 		genesisJsonBytes, _ = json.MarshalIndent(genBaobabGenesis(validatorNodeAddrs, testAddrs), "", "    ")
 	} else if cliqueFlag {
 		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid), "", "    ")
+	} else if serviceChain {
+		genesisJsonBytes, _ = json.MarshalIndent(genServiceChainGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+	} else if serviceChainTest {
+		genesisJsonBytes, _ = json.MarshalIndent(genServiceChainTestGenesis(validatorNodeAddrs, testAddrs), "", "    ")
 	} else {
 		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid), "", "    ")
 	}

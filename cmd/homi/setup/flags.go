@@ -47,6 +47,16 @@ var (
 		Usage: "Generate genesis.json similar to the one used for Baobab",
 	}
 
+	serviceChainFlag = cli.BoolFlag{
+		Name:  "servicechain",
+		Usage: "Generate genesis.json similar to the one used for Serivce Chain",
+	}
+
+	serviceChainTestFlag = cli.BoolFlag{
+		Name:  "servicechain-test",
+		Usage: "Generate genesis.json similar to the one used for Serivce Chain with shorter intervals for testing",
+	}
+
 	cliqueFlag = cli.BoolFlag{
 		Name:  "clique",
 		Usage: "Use Clique consensus",
