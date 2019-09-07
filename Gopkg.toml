@@ -29,11 +29,6 @@
   go-tests = true
   unused-packages = true
 
-[[prune.project]]
-  name = "github.com/klaytn/klaytn"
-  non-go = false
-  unused-packages = false
-
 [[constraint]]
   name = "github.com/rjeczalik/notify"
   revision = "0f065fa99b48b842c3fd3e2c8b194c6f2b69f6b8"
