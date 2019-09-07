@@ -32,6 +32,7 @@
 [[prune.project]]
   name = "github.com/klaytn/klaytn"
   non-go = false
+  unused-packages = false
 
 [[constraint]]
   name = "github.com/rjeczalik/notify"
