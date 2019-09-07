@@ -56,3 +56,11 @@
 [[constraint]]
   name = "github.com/golang/mock"
   version = "1.3.1"
+
+[[constraint]]
+  name = "gopkg.in/fatih/set.v0"
+  version = "v0.1.0"
+
+[[constraint]]
+  name = "github.com/dgraph-io/badger"
+  revision = "99233d725dbdd26d156c61b2f42ae1671b794656"
