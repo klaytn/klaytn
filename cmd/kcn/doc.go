@@ -26,6 +26,6 @@ kcn has the node type of "cn" internally. Please try `kcn -h` to see commands an
 Source Files
 
 Each file contains following contents
- - main.go : Defines available options and initialize the application with given options
+ - main.go : Defines available options and initializes the application with given options
 */
 package main

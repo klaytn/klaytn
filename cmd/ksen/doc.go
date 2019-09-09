@@ -26,6 +26,6 @@ ksen has the node type of "en" internally. Please try `ksen -h` to see commands 
 Source Files
 
 Each file contains following contents
- - main.go : Defines available options and initialize the application with given options
+ - main.go : Defines available options and initializes the application with given options
 */
 package main
