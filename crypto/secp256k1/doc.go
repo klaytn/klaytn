@@ -30,7 +30,7 @@ Source Files
 Each source file has the following contents
  - secp256.go  : Provides wrapper functions to utilize the secp256k1 library written in C
  - curve.go    : Implements Koblitz elliptic curves
- - panic_cb.go : Provide callbacks for converting libsecp256k1 internal faults into recoverable Go panics
+ - panic_cb.go : Provides callbacks for converting libsecp256k1 internal faults into recoverable Go panics
  - schnorr.go  : Implements Schnorr signature algorithm. It is planned to be used in Klaytn
 */
 package secp256k1

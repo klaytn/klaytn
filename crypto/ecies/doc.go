@@ -22,7 +22,7 @@ Package ecies provides functions to Encrypt / Decrypt messages using ECIES which
 Source Files
 
 Each file contains following contents
- - ecies.go  : Provide encryption / decryption related functions used for exchanging messages in RLPx protocol
+ - ecies.go  : Provides encryption / decryption related functions used for exchanging messages in RLPx protocol
  - params.go : Contains parameters for ECIES encryption, specifying the symmetric encryption and HMAC parameters
 */
 package ecies

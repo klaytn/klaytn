@@ -17,8 +17,8 @@ Initial package from google is deprecated due to its weakened security and Klayt
 Source Files
 
 Each file contains following contents
- - bn256_fast.go : Provide PairingCheck function for amd64 and arm64 architecture
- - bn256_fuzz.go : Provide functions to check if google's library and cloudflare's library are giving same results
- - bn256_slow.go : Provide PairingCheck function for non-amd64 and non-arm64 architecture
+ - bn256_fast.go : Provides PairingCheck function for amd64 and arm64 architecture
+ - bn256_fuzz.go : Provides functions to check if google's library and cloudflare's library are giving the same results
+ - bn256_slow.go : Provides PairingCheck function for non-amd64 and non-arm64 architecture
 */
 package bn256
