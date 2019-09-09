@@ -12,7 +12,7 @@ This package specifically implements the Optimal Ate pairing over a 256-bit Barr
 
 This package previously claimed to operate at a 128-bit security level. However, recent improvements in attacks mean that is no longer true. See https://moderncrypto.org/mail-archive/curves/2016/000740.html.
 
-Initial package from google is deprecated due to its weakened security and Klaytn is using more complete implementation from cloudflare
+Initial package from google is deprecated due to its weakened security and Klaytn is using the more complete implementation from cloudflare
 
 Source Files
 
