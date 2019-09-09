@@ -365,6 +365,8 @@ func genServiceChainGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.G
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
 	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
+	allocationFunction := genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(10), nil))
+	allocationFunction(genesisJson)
 	return genesisJson
 }
 
@@ -374,6 +376,8 @@ func genServiceChainTestGenesis(nodeAddrs, testAddrs []common.Address) *blockcha
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 60
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 30
 	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
+	allocationFunction := genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction(genesisJson)
 	return genesisJson
 }
 
