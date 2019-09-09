@@ -360,7 +360,7 @@ func genServiceChainCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockc
 }
 
 func genServiceChainGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	genesisJson := genCypressCommonGenesis(nodeAddrs, testAddrs)
+	genesisJson := genServiceChainCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 3600
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
@@ -369,7 +369,7 @@ func genServiceChainGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.G
 }
 
 func genServiceChainTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	genesisJson := genCypressCommonGenesis(nodeAddrs, testAddrs)
+	genesisJson := genServiceChainCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 30
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 60
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 30
