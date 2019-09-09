@@ -139,11 +139,6 @@ var validatorTemplate = `{{ .Name }}:
 {{- end}}
 {{- if eq .NodeType "scn" }}
         echo 'PORT=32323' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
-        echo 'ADDITIONAL="$$ADDITIONAL --scconsensus "istanbul""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
-{{- else if eq .NodeType "spn" }}
-        echo 'ADDITIONAL="$$ADDITIONAL --scconsensus "istanbul""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
-{{- else if eq .NodeType "sen" }}
-        echo 'ADDITIONAL="$$ADDITIONAL --scconsensus "istanbul""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- end}}
 {{- if .ParentChainId }}
         echo 'ADDITIONAL="$$ADDITIONAL --parentchainid {{ .ParentChainId }}"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
