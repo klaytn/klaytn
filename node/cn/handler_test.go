@@ -210,12 +210,12 @@ func TestBroadcastTxsFromCN_CN_NotExists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	// Using gomock.Any() for AsyncSendTransactions calls,
+	// Using gomock.Eq(txs) for AsyncSendTransactions calls,
 	// since transactions are put into a new list inside broadcastCNTx.
 	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
-	cnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
-	pnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
-	enPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+	cnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+	pnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
 
 	pm.BroadcastTxs(txs)
 }
@@ -230,12 +230,13 @@ func TestBroadcastTxsFromCN_CN_Exists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	// Using gomock.Any() for AsyncSendTransactions calls,
+	// Using gomock.Eq(txs) for AsyncSendTransactions calls,
 	// since transactions are put into a new list inside broadcastCNTx.
 	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	// TODO-Klaytn Using gomock.Eq(txs) fails here but it should not. Needs to be investigated.
 	cnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(1)
-	pnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
-	enPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+	pnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
 
 	pm.BroadcastTxs(txs)
 }
@@ -258,9 +259,9 @@ func TestBroadcastTxsFromPN_PN_NotExists(t *testing.T) {
 
 	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
 
-	cnPeer.EXPECT().SendTransactions(gomock.Any()).Times(1)
-	pnPeer.EXPECT().SendTransactions(gomock.Any()).Times(0)
-	enPeer.EXPECT().SendTransactions(gomock.Any()).Times(0)
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
 
 	pm.BroadcastTxs(txs)
 }
@@ -283,9 +284,9 @@ func TestBroadcastTxsFromPN_PN_Exists(t *testing.T) {
 
 	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
 
-	cnPeer.EXPECT().SendTransactions(gomock.Any()).Times(1)
-	pnPeer.EXPECT().SendTransactions(gomock.Any()).Times(1)
-	enPeer.EXPECT().SendTransactions(gomock.Any()).Times(0)
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
 
 	pm.BroadcastTxs(txs)
 }
@@ -307,9 +308,9 @@ func TestBroadcastTxsFromEN_EN_NotExists(t *testing.T) {
 	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
 	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
 
-	cnPeer.EXPECT().SendTransactions(gomock.Any()).Times(0)
-	pnPeer.EXPECT().SendTransactions(gomock.Any()).Times(1)
-	enPeer.EXPECT().SendTransactions(gomock.Any()).Times(0)
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
 
 	pm.BroadcastTxs(txs)
 }
@@ -331,9 +332,9 @@ func TestBroadcastTxsFromEN_EN_Exists(t *testing.T) {
 	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
 	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
 
-	cnPeer.EXPECT().SendTransactions(gomock.Any()).Times(0)
-	pnPeer.EXPECT().SendTransactions(gomock.Any()).Times(1)
-	enPeer.EXPECT().SendTransactions(gomock.Any()).Times(1)
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
 	pm.BroadcastTxs(txs)
 }
@@ -355,9 +356,9 @@ func TestBroadcastTxsFromEN_PN_NotExists(t *testing.T) {
 	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
 	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
 
-	cnPeer.EXPECT().SendTransactions(gomock.Any()).Times(0)
-	pnPeer.EXPECT().SendTransactions(gomock.Any()).Times(0)
-	enPeer.EXPECT().SendTransactions(gomock.Any()).Times(1)
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
 	pm.BroadcastTxs(txs)
 }

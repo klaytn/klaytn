@@ -1087,9 +1087,9 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 
 	propTxPeersGauge.Update(int64(len(cnPeersWithoutTxs)))
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
-	for peer, txs := range cnPeersWithoutTxs {
+	for peer, txs2 := range cnPeersWithoutTxs {
 		//peer.SendTransactions(txs)
-		peer.AsyncSendTransactions(txs)
+		peer.AsyncSendTransactions(txs2)
 	}
 }
 
