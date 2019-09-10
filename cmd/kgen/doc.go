@@ -14,5 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// kgen can be used to generate the associated nodekey information.
+/*
+kgen can be used to generate a nodekey and a derived address and kni information.
+
+By providing some options in the command line, a user can assign IP and port for kni.
+
+Options
+
+All available options are as follows.
+   --file        Generate a nodekey and a Klaytn node information as files
+   --ip value    Specify an IP address (default: "0.0.0.0")
+   --port value  Specify a tcp port number (default: 32323)
+   --help, -h    Show help
+*/
 package main
