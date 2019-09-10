@@ -12,6 +12,7 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -37,39 +38,15 @@ func TestCreateDB(t *testing.T) {
 	sConfig := &SCConfig{}
 	name := "testDB"
 
-	testKey := []byte{0x33}
-	testValue := []byte{44}
-
-	// Create DB
+	// Create a DB Manager
 	dbManager := CreateDB(sCtx, sConfig, name)
 	defer dbManager.Close()
 	assert.NotNil(t, dbManager)
 
-	// Check the type of DB
-	db := dbManager.GetDB()
-	assert.Equal(t, database.LevelDB, db.Type())
-
-	// Check existence of a key
-	hasKey, err := db.Has(testKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, false, hasKey)
-
-	// Put the key and check existence of the key again
-	db.Put(testKey, testValue)
-	hasKey, err = db.Has(testKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, true, hasKey)
-
-	// Get the value of the key
-	val, err := db.Get(testKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, testValue, val)
+	// Check initial DBConfig of `CreateDB()`
+	dbConfig := dbManager.GetDBConfig()
+	assert.True(t, strings.HasSuffix(dbConfig.Dir, name))
+	assert.Equal(t, database.LevelDB, dbConfig.DBType)
 }
 
 // TestMainBridge tests some getters and basic operation of MainBridge.

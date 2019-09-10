@@ -38,7 +38,7 @@ type DBManager interface {
 	Close()
 	NewBatch(dbType DBEntryType) Batch
 	GetMemDB() *MemDB
-	GetDB() Database
+	GetDBConfig() *DBConfig
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -389,8 +389,8 @@ func (dbm *databaseManager) GetMemDB() *MemDB {
 }
 
 // GetDB returns a header database in the database manager.
-func (dbm *databaseManager) GetDB() Database {
-	return dbm.dbs[headerDB]
+func (dbm *databaseManager) GetDBConfig() *DBConfig {
+	return dbm.config
 }
 
 func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
