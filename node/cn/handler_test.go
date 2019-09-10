@@ -233,7 +233,6 @@ func TestBroadcastTxsFromCN_CN_Exists(t *testing.T) {
 	// Using gomock.Eq(txs) for AsyncSendTransactions calls,
 	// since transactions are put into a new list inside broadcastCNTx.
 	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
-	// TODO-Klaytn Using gomock.Eq(txs) fails here but it should not. Needs to be investigated.
 	cnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(1)
 	pnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
 	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
