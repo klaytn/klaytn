@@ -1099,12 +1099,13 @@ func (pm *ProtocolManager) broadcastTxsFromPN(txs types.Transactions) {
 	for _, tx := range txs {
 		// TODO-Klaytn drop or missing tx
 		cnPeers := pm.peers.CNWithoutTx(tx.Hash())
-		cnPeers = samplingPeers(cnPeers, 2) // TODO-Klaytn optimize pickSize or propagation way
-		for _, peer := range cnPeers {
-			cnPeersWithoutTxs[peer] = append(cnPeersWithoutTxs[peer], tx)
+		if len(cnPeers) > 0 {
+			cnPeers = samplingPeers(cnPeers, 2) // TODO-Klaytn optimize pickSize or propagation way
+			for _, peer := range cnPeers {
+				cnPeersWithoutTxs[peer] = append(cnPeersWithoutTxs[peer], tx)
+			}
+			logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(cnPeers))
 		}
-		logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(cnPeers))
-
 		pm.peers.UpdateTypePeersWithoutTxs(tx, node.PROXYNODE, peersWithoutTxs)
 		txSendCounter.Inc(1)
 	}
