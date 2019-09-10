@@ -1105,7 +1105,7 @@ func (pm *ProtocolManager) broadcastTxsFromPN(txs types.Transactions) {
 		}
 		logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(cnPeers))
 
-		pm.peers.UpdateTypePeersWithoutTxs(tx, pm.nodetype, peersWithoutTxs)
+		pm.peers.UpdateTypePeersWithoutTxs(tx, node.PROXYNODE, peersWithoutTxs)
 		txSendCounter.Inc(1)
 	}
 
@@ -1118,7 +1118,7 @@ func (pm *ProtocolManager) broadcastTxsFromEN(txs types.Transactions) {
 	peersWithoutTxs := make(map[Peer]types.Transactions)
 	for _, tx := range txs {
 		pm.peers.UpdateTypePeersWithoutTxs(tx, node.PROXYNODE, peersWithoutTxs)
-		pm.peers.UpdateTypePeersWithoutTxs(tx, pm.nodetype, peersWithoutTxs)
+		pm.peers.UpdateTypePeersWithoutTxs(tx, node.ENDPOINTNODE, peersWithoutTxs)
 		txSendCounter.Inc(1)
 	}
 
