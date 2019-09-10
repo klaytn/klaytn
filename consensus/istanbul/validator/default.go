@@ -163,7 +163,7 @@ func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View) []i
 	subset := make([]istanbul.Validator, valSet.subSize)
 	subset[0] = valSet.GetProposer()
 	// next proposer
-	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64()+1)
+	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64())
 
 	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
 	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
@@ -222,7 +222,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	subset := make([]istanbul.Validator, valSet.subSize)
 	subset[0] = New(proposer)
 	// next proposer
-	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64()+1)
+	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64())
 
 	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
 	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
@@ -383,7 +383,10 @@ func (valSet *defaultSet) Copy() istanbul.ValidatorSet {
 	for _, v := range valSet.validators {
 		addresses = append(addresses, v.Address())
 	}
-	return NewSubSet(addresses, valSet.policy, valSet.subSize)
+
+	newValSet := NewSubSet(addresses, valSet.policy, valSet.subSize).(*defaultSet)
+	newValSet.proposer = valSet.proposer
+	return newValSet
 }
 
 func (valSet *defaultSet) F() int {
