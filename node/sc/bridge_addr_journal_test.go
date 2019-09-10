@@ -18,7 +18,6 @@ package sc
 
 import (
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/node"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
@@ -26,7 +25,7 @@ import (
 )
 
 func TestBridgeJournal(t *testing.T) {
-	aa := node.ServiceContext{}
+
 	defer func() {
 		if err := os.Remove(path.Join(os.TempDir(), "test.rlp")); err != nil {
 			t.Fatalf("fail to delete file %v", err)
