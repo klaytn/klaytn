@@ -1054,7 +1054,6 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 // BroadcastTxs propagates a batch of transactions to its peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
-	// Broadcast transactions to a batch of peers not knowing about it
 	switch pm.nodetype {
 	case node.CONSENSUSNODE:
 		pm.broadcastTxsFromCN(txs)
