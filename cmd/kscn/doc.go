@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-kscn is the command-line client for Klaytn ServiceChain Node.
+kscn is the command-line client for Klaytn ServiceChain Consensus Node.
 
 kscn has the node type of "cn" internally. Please try `kscn -h` to see commands and options list.
 
