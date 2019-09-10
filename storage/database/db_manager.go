@@ -388,7 +388,7 @@ func (dbm *databaseManager) GetMemDB() *MemDB {
 	return nil
 }
 
-// GetDB returns a header database in the database manager.
+// GetDBConfig returns DBConfig of the DB manager.
 func (dbm *databaseManager) GetDBConfig() *DBConfig {
 	return dbm.config
 }
