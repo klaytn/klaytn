@@ -389,7 +389,7 @@ func (dbm *databaseManager) GetMemDB() *MemDB {
 }
 
 // GetDB returns a header database in the database manager.
-func (dbm *databaseManager) GetDB() Database{
+func (dbm *databaseManager) GetDB() Database {
 	return dbm.dbs[headerDB]
 }
 

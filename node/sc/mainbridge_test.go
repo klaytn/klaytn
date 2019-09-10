@@ -16,12 +16,13 @@ import (
 )
 
 const testNetVersion = uint64(8888)
+
 var testProtocolVersion = int(SCProtocolVersion[0])
 
 // testNewMainBridge returns a test MainBridge.
 func testNewMainBridge(t *testing.T) *MainBridge {
 	sCtx := node.NewServiceContext(&node.DefaultConfig, map[reflect.Type]node.Service{}, &event.TypeMux{}, &accounts.Manager{})
-	mBridge, err := NewMainBridge(sCtx, &SCConfig{NetworkId:testNetVersion})
+	mBridge, err := NewMainBridge(sCtx, &SCConfig{NetworkId: testNetVersion})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +69,7 @@ func TestCreateDB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, testValue,val)
+	assert.Equal(t, testValue, val)
 }
 
 // TestMainBridge tests some getters and basic operation of MainBridge.

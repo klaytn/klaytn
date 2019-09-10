@@ -81,7 +81,7 @@ func (s *RPCService) Modules() map[string]string {
 	return modules
 }
 
-func (s *Server) GetServices() serviceRegistry{
+func (s *Server) GetServices() serviceRegistry {
 	return s.services
 }
 
