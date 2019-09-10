@@ -40,17 +40,9 @@ const blockNum1 = 20190902
 
 var td1 = big.NewInt(123)
 
-var addr1 common.Address
-var addr2 common.Address
-var addr3 common.Address
-
-var key1 *ecdsa.PrivateKey
-var key2 *ecdsa.PrivateKey
-var key3 *ecdsa.PrivateKey
-
-var nodeID1 discover.NodeID
-var nodeID2 discover.NodeID
-var nodeID3 discover.NodeID
+var addr1, addr2, addr3, addr4 common.Address
+var key1, key2, key3, key4 *ecdsa.PrivateKey
+var nodeID1, nodeID2, nodeID3, nodeID4 discover.NodeID
 
 var tx *types.Transaction
 var txs types.Transactions
@@ -59,14 +51,17 @@ func init() {
 	key1, _ = crypto.GenerateKey()
 	key2, _ = crypto.GenerateKey()
 	key3, _ = crypto.GenerateKey()
+	key4, _ = crypto.GenerateKey()
 
 	addr1 = crypto.PubkeyToAddress(key1.PublicKey)
 	addr2 = crypto.PubkeyToAddress(key2.PublicKey)
 	addr3 = crypto.PubkeyToAddress(key3.PublicKey)
+	addr4 = crypto.PubkeyToAddress(key4.PublicKey)
 
 	nodeID1 = discover.PubkeyID(&key1.PublicKey)
 	nodeID2 = discover.PubkeyID(&key2.PublicKey)
 	nodeID3 = discover.PubkeyID(&key3.PublicKey)
+	nodeID4 = discover.PubkeyID(&key4.PublicKey)
 
 	tx = types.NewTransaction(111, addr1, big.NewInt(111), 111, big.NewInt(111), nil)
 	txs = types.Transactions{tx}

@@ -204,6 +204,9 @@ type Peer interface {
 	// GetP2PPeer returns the p2p.
 	GetP2PPeer() *p2p.Peer
 
+	// DisconnectP2PPeer disconnects the p2p peer with the given reason.
+	DisconnectP2PPeer(discReason p2p.DiscReason)
+
 	// GetRW returns the MsgReadWriter of the peer.
 	GetRW() p2p.MsgReadWriter
 
@@ -702,6 +705,11 @@ func (p *basePeer) KnowsTx(hash common.Hash) bool {
 // GetP2PPeer returns the p2p.Peer.
 func (p *basePeer) GetP2PPeer() *p2p.Peer {
 	return p.Peer
+}
+
+// DisconnectP2PPeer disconnects the p2p peer with the given reason.
+func (p *basePeer) DisconnectP2PPeer(discReason p2p.DiscReason) {
+	p.GetP2PPeer().Disconnect(discReason)
 }
 
 // GetRW returns the MsgReadWriter of the peer.
