@@ -279,12 +279,7 @@ func (n *Node) Start() error {
 func (n *Node) initService(serviceFunc []ServiceConstructor, services map[reflect.Type]Service) error {
 	for _, constructor := range serviceFunc {
 		// Create a new context for the particular service
-		ctx := &ServiceContext{
-			config:         n.config,
-			services:       make(map[reflect.Type]Service),
-			EventMux:       n.eventmux,
-			AccountManager: n.accman,
-		}
+		ctx := NewServiceContext(n.config, make(map[reflect.Type]Service), n.eventmux, n.accman)
 		for kind, s := range services { // copy needed for threaded access
 			ctx.services[kind] = s
 		}
