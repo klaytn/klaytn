@@ -76,7 +76,7 @@ func TestMainBridge_basic(t *testing.T) {
 	assert.Equal(t, "mainbridge", apis[0].Namespace)
 	assert.Equal(t, "mainbridge", apis[1].Namespace)
 
-	// Getters for elements of MainBridge
+	// Test getters for elements of MainBridge
 	assert.Equal(t, true, mBridge.IsListening()) // Always returns `true`
 	assert.Equal(t, testProtocolVersion, mBridge.ProtocolVersion())
 	assert.Equal(t, testNetVersion, mBridge.NetVersion())
@@ -98,8 +98,8 @@ func TestMainBridge_basic(t *testing.T) {
 	comp = append(comp, compAPIs)
 
 	// Check initial status of components
-	assert.NotEqual(t, bc, mBridge.blockchain)
-	assert.NotEqual(t, txPool, mBridge.txPool)
+	assert.Nil(t, mBridge.blockchain)
+	assert.Nil(t, mBridge.txPool)
 	assert.Nil(t, mBridge.rpcServer.GetServices()["klay"])
 
 	// Update and check MainBridge components
@@ -114,5 +114,5 @@ func TestMainBridge_basic(t *testing.T) {
 	}
 	defer mBridge.Stop()
 
-	//TODO more test code
+	//TODO more test
 }
