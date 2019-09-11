@@ -88,7 +88,7 @@ type ProtocolManager struct {
 	maxPeers    int
 
 	downloader protocolManagerDownloader
-	fetcher    protocolManagerFetcher
+	fetcher    ProtocolManagerFetcher
 	peers      PeerSet
 
 	SubProtocols []p2p.Protocol
