@@ -27,36 +27,41 @@ import (
 	"testing"
 )
 
+func setMockPeers(mockPeers []*MockPeer) {
+	for i, mp := range mockPeers {
+		mp.EXPECT().GetAddr().Return(addrs[i]).AnyTimes()
+		mp.EXPECT().GetID().Return(nodeids[i].String()).AnyTimes()
+		mp.EXPECT().Broadcast().AnyTimes()
+	}
+}
+
+func setMockPeersConnType(cnPeer, pnPeer, enPeer *MockPeer) {
+	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).AnyTimes()
+	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).AnyTimes()
+	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).AnyTimes()
+}
+
 func TestPeerSet_Register(t *testing.T) {
 	peerSet := newPeerSet()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(3)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
-
 	pnPeer := NewMockPeer(mockCtrl)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-	pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(3)
-	pnPeer.EXPECT().Broadcast().AnyTimes()
-
 	enPeer := NewMockPeer(mockCtrl)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(3)
-	enPeer.EXPECT().GetID().Return(nodeID3.String()).Times(3)
-	enPeer.EXPECT().Broadcast().AnyTimes()
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
 	assert.NoError(t, peerSet.Register(cnPeer))
 	assert.NoError(t, peerSet.Register(pnPeer))
 	assert.NoError(t, peerSet.Register(enPeer))
+	assert.Equal(t, 3, len(peerSet.peers))
 
 	assert.Equal(t, errAlreadyRegistered, peerSet.Register(cnPeer))
 	assert.Equal(t, errAlreadyRegistered, peerSet.Register(pnPeer))
 	assert.Equal(t, errAlreadyRegistered, peerSet.Register(enPeer))
+	assert.Equal(t, 3, len(peerSet.peers))
 
 	peerSet.closed = true
 	assert.Equal(t, errClosed, peerSet.Register(cnPeer))
@@ -70,37 +75,28 @@ func TestPeerSet_Unregister(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(2)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(4)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
-	cnPeer.EXPECT().Close().Times(1)
-
 	pnPeer := NewMockPeer(mockCtrl)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(4)
-	pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-	pnPeer.EXPECT().Broadcast().AnyTimes()
-	pnPeer.EXPECT().Close().Times(1)
-
 	enPeer := NewMockPeer(mockCtrl)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(4)
-	enPeer.EXPECT().GetID().Return(nodeID3.String()).Times(2)
-	enPeer.EXPECT().Broadcast().AnyTimes()
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
+
+	cnPeer.EXPECT().Close().Times(1)
+	pnPeer.EXPECT().Close().Times(1)
 	enPeer.EXPECT().Close().Times(1)
 
-	assert.Equal(t, errNotRegistered, peerSet.Unregister(nodeID1.String()))
-	assert.Equal(t, errNotRegistered, peerSet.Unregister(nodeID2.String()))
-	assert.Equal(t, errNotRegistered, peerSet.Unregister(nodeID3.String()))
+	assert.Equal(t, errNotRegistered, peerSet.Unregister(nodeids[0].String()))
+	assert.Equal(t, errNotRegistered, peerSet.Unregister(nodeids[1].String()))
+	assert.Equal(t, errNotRegistered, peerSet.Unregister(nodeids[2].String()))
 
 	assert.NoError(t, peerSet.Register(cnPeer))
 	assert.NoError(t, peerSet.Register(pnPeer))
 	assert.NoError(t, peerSet.Register(enPeer))
+	assert.Equal(t, 3, len(peerSet.peers))
 
-	assert.NoError(t, peerSet.Unregister(nodeID1.String()))
-	assert.NoError(t, peerSet.Unregister(nodeID2.String()))
-	assert.NoError(t, peerSet.Unregister(nodeID3.String()))
+	assert.NoError(t, peerSet.Unregister(nodeids[0].String()))
+	assert.NoError(t, peerSet.Unregister(nodeids[1].String()))
+	assert.NoError(t, peerSet.Unregister(nodeids[2].String()))
 }
 
 func TestPeerSet_Peers(t *testing.T) {
@@ -109,29 +105,18 @@ func TestPeerSet_Peers(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
-
 	pnPeer := NewMockPeer(mockCtrl)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-	pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-	pnPeer.EXPECT().Broadcast().AnyTimes()
-
 	enPeer := NewMockPeer(mockCtrl)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(3)
-	enPeer.EXPECT().GetID().Return(nodeID3.String()).Times(2)
-	enPeer.EXPECT().Broadcast().AnyTimes()
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
 	assert.NoError(t, peerSet.Register(cnPeer))
 	assert.NoError(t, peerSet.Register(pnPeer))
 	assert.NoError(t, peerSet.Register(enPeer))
 
 	peers := peerSet.Peers()
-	expectedPeers := map[string]Peer{nodeID1.String(): cnPeer, nodeID2.String(): pnPeer, nodeID3.String(): enPeer}
+	expectedPeers := map[string]Peer{nodeids[0].String(): cnPeer, nodeids[1].String(): pnPeer, nodeids[2].String(): enPeer}
 	assert.EqualValues(t, expectedPeers, peers)
 }
 
@@ -142,13 +127,11 @@ func TestPeerSet_CNPeers(t *testing.T) {
 
 	cnPeer := NewMockPeer(mockCtrl)
 	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
+	setMockPeers([]*MockPeer{cnPeer})
 
 	assert.EqualValues(t, map[common.Address]Peer{}, peerSet.CNPeers())
 	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.EqualValues(t, map[common.Address]Peer{addr1: cnPeer}, peerSet.CNPeers())
+	assert.EqualValues(t, map[common.Address]Peer{addrs[0]: cnPeer}, peerSet.CNPeers())
 }
 
 func TestPeerSet_PNPeers(t *testing.T) {
@@ -156,15 +139,13 @@ func TestPeerSet_PNPeers(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
+	pnPeer := NewMockPeer(mockCtrl)
+	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
+	setMockPeers([]*MockPeer{pnPeer})
 
 	assert.EqualValues(t, map[common.Address]Peer{}, peerSet.PNPeers())
-	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.EqualValues(t, map[common.Address]Peer{addr1: cnPeer}, peerSet.PNPeers())
+	assert.NoError(t, peerSet.Register(pnPeer))
+	assert.EqualValues(t, map[common.Address]Peer{addrs[0]: pnPeer}, peerSet.PNPeers())
 }
 
 func TestPeerSet_ENPeers(t *testing.T) {
@@ -172,15 +153,13 @@ func TestPeerSet_ENPeers(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
+	enPeer := NewMockPeer(mockCtrl)
+	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
+	setMockPeers([]*MockPeer{enPeer})
 
 	assert.EqualValues(t, map[common.Address]Peer{}, peerSet.ENPeers())
-	assert.NoError(t, peerSet.Register(cnPeer))
-	assert.EqualValues(t, map[common.Address]Peer{addr1: cnPeer}, peerSet.ENPeers())
+	assert.NoError(t, peerSet.Register(enPeer))
+	assert.EqualValues(t, map[common.Address]Peer{addrs[0]: enPeer}, peerSet.ENPeers())
 }
 
 func TestPeerSet_Peer_And_Len(t *testing.T) {
@@ -189,22 +168,11 @@ func TestPeerSet_Peer_And_Len(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
-
 	pnPeer := NewMockPeer(mockCtrl)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-	pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-	pnPeer.EXPECT().Broadcast().AnyTimes()
-
 	enPeer := NewMockPeer(mockCtrl)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(3)
-	enPeer.EXPECT().GetID().Return(nodeID3.String()).Times(2)
-	enPeer.EXPECT().Broadcast().AnyTimes()
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
 	assert.Equal(t, 0, peerSet.Len())
 	assert.NoError(t, peerSet.Register(cnPeer))
@@ -214,9 +182,9 @@ func TestPeerSet_Peer_And_Len(t *testing.T) {
 	assert.NoError(t, peerSet.Register(enPeer))
 	assert.Equal(t, 3, peerSet.Len())
 
-	assert.Equal(t, cnPeer, peerSet.Peer(nodeID1.String()))
-	assert.Equal(t, pnPeer, peerSet.Peer(nodeID2.String()))
-	assert.Equal(t, enPeer, peerSet.Peer(nodeID3.String()))
+	assert.Equal(t, cnPeer, peerSet.Peer(nodeids[0].String()))
+	assert.Equal(t, pnPeer, peerSet.Peer(nodeids[1].String()))
+	assert.Equal(t, enPeer, peerSet.Peer(nodeids[2].String()))
 }
 
 func TestPeerSet_PeersWithoutBlock(t *testing.T) {
@@ -227,25 +195,15 @@ func TestPeerSet_PeersWithoutBlock(t *testing.T) {
 	block := newBlock(blockNum1)
 
 	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
-	cnPeer.EXPECT().KnowsBlock(block.Hash()).Return(false).Times(2)
-
 	pnPeer := NewMockPeer(mockCtrl)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-	pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-	pnPeer.EXPECT().Broadcast().AnyTimes()
-	pnPeer.EXPECT().KnowsBlock(block.Hash()).Return(true).Times(2)
-
 	enPeer := NewMockPeer(mockCtrl)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(3)
-	enPeer.EXPECT().GetID().Return(nodeID3.String()).Times(2)
-	enPeer.EXPECT().Broadcast().AnyTimes()
-	enPeer.EXPECT().KnowsBlock(block.Hash()).Return(false).Times(2)
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
+
+	cnPeer.EXPECT().KnowsBlock(block.Hash()).Return(false).AnyTimes()
+	pnPeer.EXPECT().KnowsBlock(block.Hash()).Return(true).AnyTimes()
+	enPeer.EXPECT().KnowsBlock(block.Hash()).Return(false).AnyTimes()
 
 	assert.NoError(t, peerSet.Register(cnPeer))
 	assert.NoError(t, peerSet.Register(pnPeer))
@@ -272,28 +230,18 @@ func TestPeerSet_PeersWithoutTx(t *testing.T) {
 	peerSet := newPeerSet()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	tx := types.NewTransaction(111, addr1, big.NewInt(111), 111, big.NewInt(111), nil)
+	tx := types.NewTransaction(111, addrs[0], big.NewInt(111), 111, big.NewInt(111), nil)
 
 	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
-	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
-
 	pnPeer := NewMockPeer(mockCtrl)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-	pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-	pnPeer.EXPECT().Broadcast().AnyTimes()
-	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
-
 	enPeer := NewMockPeer(mockCtrl)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(3)
-	enPeer.EXPECT().GetID().Return(nodeID3.String()).Times(2)
-	enPeer.EXPECT().Broadcast().AnyTimes()
-	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
+
+	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).AnyTimes()
+	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).AnyTimes()
+	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).AnyTimes()
 
 	assert.EqualValues(t, []Peer{}, peerSet.PeersWithoutTx(tx.Hash()))
 
@@ -311,28 +259,18 @@ func TestPeerSet_TypePeersWithoutTx(t *testing.T) {
 	peerSet := newPeerSet()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	tx := types.NewTransaction(111, addr1, big.NewInt(111), 111, big.NewInt(111), nil)
+	tx := types.NewTransaction(111, addrs[0], big.NewInt(111), 111, big.NewInt(111), nil)
 
 	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(4)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
-	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
-
 	pnPeer := NewMockPeer(mockCtrl)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(4)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-	pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-	pnPeer.EXPECT().Broadcast().AnyTimes()
-	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
-
 	enPeer := NewMockPeer(mockCtrl)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(4)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(3)
-	enPeer.EXPECT().GetID().Return(nodeID3.String()).Times(2)
-	enPeer.EXPECT().Broadcast().AnyTimes()
-	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+
+	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).AnyTimes()
+	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).AnyTimes()
+	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).AnyTimes()
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
 	assert.EqualValues(t, []Peer{}, peerSet.TypePeersWithoutTx(tx.Hash(), node.CONSENSUSNODE))
 	assert.EqualValues(t, []Peer{}, peerSet.TypePeersWithoutTx(tx.Hash(), node.PROXYNODE))
@@ -351,14 +289,12 @@ func TestPeerSet_CNWithoutTx(t *testing.T) {
 	peerSet := newPeerSet()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	tx := types.NewTransaction(111, addr1, big.NewInt(111), 111, big.NewInt(111), nil)
+	tx := types.NewTransaction(111, addrs[0], big.NewInt(111), 111, big.NewInt(111), nil)
 
 	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
+	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).AnyTimes()
 	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	setMockPeers([]*MockPeer{cnPeer})
 
 	assert.EqualValues(t, []Peer{}, peerSet.CNWithoutTx(tx.Hash()))
 	assert.NoError(t, peerSet.Register(cnPeer))
@@ -371,26 +307,19 @@ func TestPeerSet_BestPeer(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
-	cnPeer.EXPECT().Head().Return(common.Hash{}, big.NewInt(111)).Times(2)
-
 	pnPeer := NewMockPeer(mockCtrl)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-	pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-	pnPeer.EXPECT().Broadcast().AnyTimes()
-	pnPeer.EXPECT().Head().Return(common.Hash{}, big.NewInt(222)).Times(2)
-
 	enPeer := NewMockPeer(mockCtrl)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(4)
-	enPeer.EXPECT().GetID().Return(nodeID3.String()).Times(2)
-	enPeer.EXPECT().Broadcast().AnyTimes()
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
+
+	cnPeer.EXPECT().Head().Return(common.Hash{}, big.NewInt(111)).Times(2)
+	pnPeer.EXPECT().Head().Return(common.Hash{}, big.NewInt(222)).Times(2)
 	enPeer.EXPECT().Head().Return(common.Hash{}, big.NewInt(333)).Times(1)
 	enPeer.EXPECT().Close().Times(1)
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
 	assert.Nil(t, peerSet.BestPeer())
 
@@ -400,7 +329,7 @@ func TestPeerSet_BestPeer(t *testing.T) {
 
 	assert.Equal(t, enPeer, peerSet.BestPeer())
 
-	assert.NoError(t, peerSet.Unregister(nodeID3.String()))
+	assert.NoError(t, peerSet.Unregister(nodeids[2].String()))
 
 	assert.Equal(t, pnPeer, peerSet.BestPeer())
 }
@@ -411,25 +340,15 @@ func TestPeerSet_Close(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	cnPeer := NewMockPeer(mockCtrl)
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-	cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-	cnPeer.EXPECT().Broadcast().AnyTimes()
-	cnPeer.EXPECT().DisconnectP2PPeer(p2p.DiscQuitting).Times(1)
-
 	pnPeer := NewMockPeer(mockCtrl)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-	pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-	pnPeer.EXPECT().Broadcast().AnyTimes()
-	pnPeer.EXPECT().DisconnectP2PPeer(p2p.DiscQuitting).Times(1)
-
 	enPeer := NewMockPeer(mockCtrl)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(3)
-	enPeer.EXPECT().GetID().Return(nodeID3.String()).Times(2)
-	enPeer.EXPECT().Broadcast().AnyTimes()
+
+	cnPeer.EXPECT().DisconnectP2PPeer(p2p.DiscQuitting).Times(1)
+	pnPeer.EXPECT().DisconnectP2PPeer(p2p.DiscQuitting).Times(1)
 	enPeer.EXPECT().DisconnectP2PPeer(p2p.DiscQuitting).Times(1)
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
 
 	assert.NoError(t, peerSet.Register(cnPeer))
 	assert.NoError(t, peerSet.Register(pnPeer))
@@ -448,9 +367,7 @@ func TestPeerSet_SampleResendPeersByType_PN(t *testing.T) {
 
 		cnPeer := NewMockPeer(mockCtrl)
 		cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(2)
-		cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-		cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-		cnPeer.EXPECT().Broadcast().AnyTimes()
+		setMockPeers([]*MockPeer{cnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(node.PROXYNODE))
 		assert.NoError(t, peerSet.Register(cnPeer))
@@ -465,9 +382,7 @@ func TestPeerSet_SampleResendPeersByType_PN(t *testing.T) {
 
 		pnPeer := NewMockPeer(mockCtrl)
 		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(3)
-		pnPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-		pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-		pnPeer.EXPECT().Broadcast().AnyTimes()
+		setMockPeers([]*MockPeer{pnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(node.PROXYNODE))
 		assert.NoError(t, peerSet.Register(pnPeer))
@@ -481,16 +396,12 @@ func TestPeerSet_SampleResendPeersByType_PN(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
 		cnPeer := NewMockPeer(mockCtrl)
-		cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(2)
-		cnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-		cnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-		cnPeer.EXPECT().Broadcast().AnyTimes()
-
 		pnPeer := NewMockPeer(mockCtrl)
-		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
-		pnPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-		pnPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-		pnPeer.EXPECT().Broadcast().AnyTimes()
+
+		cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).AnyTimes()
+		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).AnyTimes()
+
+		setMockPeers([]*MockPeer{cnPeer, pnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(node.PROXYNODE))
 		assert.NoError(t, peerSet.Register(cnPeer))
@@ -505,28 +416,16 @@ func TestPeerSet_SampleResendPeersByType_PN(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
 		cnPeer1 := NewMockPeer(mockCtrl)
-		cnPeer1.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(2)
-		cnPeer1.EXPECT().GetAddr().Return(addr1).Times(3)
-		cnPeer1.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-		cnPeer1.EXPECT().Broadcast().AnyTimes()
-
 		cnPeer2 := NewMockPeer(mockCtrl)
-		cnPeer2.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(2)
-		cnPeer2.EXPECT().GetAddr().Return(addr2).Times(3)
-		cnPeer2.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-		cnPeer2.EXPECT().Broadcast().AnyTimes()
-
 		cnPeer3 := NewMockPeer(mockCtrl)
-		cnPeer3.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(2)
-		cnPeer3.EXPECT().GetAddr().Return(addr3).Times(3)
-		cnPeer3.EXPECT().GetID().Return(nodeID3.String()).Times(2)
-		cnPeer3.EXPECT().Broadcast().AnyTimes()
-
 		pnPeer := NewMockPeer(mockCtrl)
-		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
-		pnPeer.EXPECT().GetAddr().Return(addr4).Times(3)
-		pnPeer.EXPECT().GetID().Return(nodeID4.String()).Times(2)
-		pnPeer.EXPECT().Broadcast().AnyTimes()
+
+		cnPeer1.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).AnyTimes()
+		cnPeer2.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).AnyTimes()
+		cnPeer3.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).AnyTimes()
+		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).AnyTimes()
+
+		setMockPeers([]*MockPeer{cnPeer1, cnPeer2, cnPeer3, pnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(node.PROXYNODE))
 		assert.NoError(t, peerSet.Register(cnPeer1))
@@ -550,9 +449,7 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 
 		pnPeer := NewMockPeer(mockCtrl)
 		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
-		pnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-		pnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-		pnPeer.EXPECT().Broadcast().AnyTimes()
+		setMockPeers([]*MockPeer{pnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(node.ENDPOINTNODE))
 		assert.NoError(t, peerSet.Register(pnPeer))
@@ -567,9 +464,7 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 
 		enPeer := NewMockPeer(mockCtrl)
 		enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(3)
-		enPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-		enPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-		enPeer.EXPECT().Broadcast().AnyTimes()
+		setMockPeers([]*MockPeer{enPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(node.ENDPOINTNODE))
 		assert.NoError(t, peerSet.Register(enPeer))
@@ -583,16 +478,12 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
 		pnPeer := NewMockPeer(mockCtrl)
-		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
-		pnPeer.EXPECT().GetAddr().Return(addr1).Times(3)
-		pnPeer.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-		pnPeer.EXPECT().Broadcast().AnyTimes()
-
 		enPeer := NewMockPeer(mockCtrl)
+
+		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
 		enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
-		enPeer.EXPECT().GetAddr().Return(addr2).Times(3)
-		enPeer.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-		enPeer.EXPECT().Broadcast().AnyTimes()
+
+		setMockPeers([]*MockPeer{pnPeer, enPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(node.ENDPOINTNODE))
 		assert.NoError(t, peerSet.Register(pnPeer))
@@ -607,28 +498,16 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
 		pnPeer1 := NewMockPeer(mockCtrl)
-		pnPeer1.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
-		pnPeer1.EXPECT().GetAddr().Return(addr1).Times(3)
-		pnPeer1.EXPECT().GetID().Return(nodeID1.String()).Times(2)
-		pnPeer1.EXPECT().Broadcast().AnyTimes()
-
 		pnPeer2 := NewMockPeer(mockCtrl)
-		pnPeer2.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
-		pnPeer2.EXPECT().GetAddr().Return(addr2).Times(3)
-		pnPeer2.EXPECT().GetID().Return(nodeID2.String()).Times(2)
-		pnPeer2.EXPECT().Broadcast().AnyTimes()
-
 		pnPeer3 := NewMockPeer(mockCtrl)
-		pnPeer3.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
-		pnPeer3.EXPECT().GetAddr().Return(addr3).Times(3)
-		pnPeer3.EXPECT().GetID().Return(nodeID3.String()).Times(2)
-		pnPeer3.EXPECT().Broadcast().AnyTimes()
-
 		enPeer := NewMockPeer(mockCtrl)
-		enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
-		enPeer.EXPECT().GetAddr().Return(addr4).Times(3)
-		enPeer.EXPECT().GetID().Return(nodeID4.String()).Times(2)
-		enPeer.EXPECT().Broadcast().AnyTimes()
+
+		pnPeer1.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).AnyTimes()
+		pnPeer2.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).AnyTimes()
+		pnPeer3.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).AnyTimes()
+		enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).AnyTimes()
+
+		setMockPeers([]*MockPeer{pnPeer1, pnPeer2, pnPeer3, enPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(node.ENDPOINTNODE))
 		assert.NoError(t, peerSet.Register(pnPeer1))

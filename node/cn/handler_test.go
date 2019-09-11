@@ -40,30 +40,26 @@ const blockNum1 = 20190902
 
 var td1 = big.NewInt(123)
 
-var addr1, addr2, addr3, addr4 common.Address
-var key1, key2, key3, key4 *ecdsa.PrivateKey
-var nodeID1, nodeID2, nodeID3, nodeID4 discover.NodeID
+var numVals = 4
+var addrs []common.Address
+var keys []*ecdsa.PrivateKey
+var nodeids []discover.NodeID
 
 var tx *types.Transaction
 var txs types.Transactions
 
 func init() {
-	key1, _ = crypto.GenerateKey()
-	key2, _ = crypto.GenerateKey()
-	key3, _ = crypto.GenerateKey()
-	key4, _ = crypto.GenerateKey()
+	addrs = make([]common.Address, numVals)
+	keys = make([]*ecdsa.PrivateKey, numVals)
+	nodeids = make([]discover.NodeID, numVals)
 
-	addr1 = crypto.PubkeyToAddress(key1.PublicKey)
-	addr2 = crypto.PubkeyToAddress(key2.PublicKey)
-	addr3 = crypto.PubkeyToAddress(key3.PublicKey)
-	addr4 = crypto.PubkeyToAddress(key4.PublicKey)
+	for i := range keys {
+		keys[i], _ = crypto.GenerateKey()
+		addrs[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
+		nodeids[i] = discover.PubkeyID(&keys[i].PublicKey)
+	}
 
-	nodeID1 = discover.PubkeyID(&key1.PublicKey)
-	nodeID2 = discover.PubkeyID(&key2.PublicKey)
-	nodeID3 = discover.PubkeyID(&key3.PublicKey)
-	nodeID4 = discover.PubkeyID(&key4.PublicKey)
-
-	tx = types.NewTransaction(111, addr1, big.NewInt(111), 111, big.NewInt(111), nil)
+	tx = types.NewTransaction(111, addrs[0], big.NewInt(111), 111, big.NewInt(111), nil)
 	txs = types.Transactions{tx}
 }
 
@@ -441,9 +437,9 @@ func TestGetCNPeersAndGetENPeers(t *testing.T) {
 	pnPeer := NewMockPeer(mockCtrl)
 	enPeer := NewMockPeer(mockCtrl)
 
-	peers.cnpeers[addr1] = cnPeer
-	peers.pnpeers[addr2] = pnPeer
-	peers.enpeers[addr3] = enPeer
+	peers.cnpeers[addrs[0]] = cnPeer
+	peers.pnpeers[addrs[1]] = pnPeer
+	peers.enpeers[addrs[2]] = enPeer
 
 	cnPeers := pm.GetCNPeers()
 	enPeers := pm.GetENPeers()
@@ -451,8 +447,8 @@ func TestGetCNPeersAndGetENPeers(t *testing.T) {
 	assert.Equal(t, 1, len(cnPeers))
 	assert.Equal(t, 1, len(enPeers))
 
-	assert.Equal(t, cnPeer, cnPeers[addr1])
-	assert.Equal(t, enPeer, enPeers[addr3])
+	assert.Equal(t, cnPeer, cnPeers[addrs[0]])
+	assert.Equal(t, enPeer, enPeers[addrs[2]])
 }
 
 func TestFindPeers_AddrExists(t *testing.T) {
@@ -471,21 +467,21 @@ func TestFindPeers_AddrExists(t *testing.T) {
 	peersResult := map[string]Peer{"cnPeer": cnPeer, "pnPeer": pnPeer, "enPeer": enPeer}
 
 	peers.EXPECT().Peers().Return(peersResult).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(1)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(1)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(1)
+	cnPeer.EXPECT().GetAddr().Return(addrs[0]).Times(1)
+	pnPeer.EXPECT().GetAddr().Return(addrs[1]).Times(1)
+	enPeer.EXPECT().GetAddr().Return(addrs[2]).Times(1)
 
 	targets := make(map[common.Address]bool)
-	targets[addr1] = true
-	targets[addr2] = true
-	targets[addr3] = false
+	targets[addrs[0]] = true
+	targets[addrs[1]] = true
+	targets[addrs[2]] = false
 
 	foundPeers := pm.FindPeers(targets)
 
 	assert.Equal(t, 2, len(foundPeers))
-	assert.EqualValues(t, cnPeer, foundPeers[addr1])
-	assert.EqualValues(t, pnPeer, foundPeers[addr2])
-	assert.Nil(t, foundPeers[addr3])
+	assert.EqualValues(t, cnPeer, foundPeers[addrs[0]])
+	assert.EqualValues(t, pnPeer, foundPeers[addrs[1]])
+	assert.Nil(t, foundPeers[addrs[2]])
 }
 
 func TestFindPeers_AddrNotExists(t *testing.T) {
@@ -508,25 +504,25 @@ func TestFindPeers_AddrNotExists(t *testing.T) {
 	pnPeer.EXPECT().GetAddr().Return(common.Address{}).Times(1)
 	enPeer.EXPECT().GetAddr().Return(common.Address{}).Times(1)
 
-	cnPeer.EXPECT().GetP2PPeerID().Return(nodeID1).Times(1)
-	pnPeer.EXPECT().GetP2PPeerID().Return(nodeID2).Times(1)
-	enPeer.EXPECT().GetP2PPeerID().Return(nodeID3).Times(1)
+	cnPeer.EXPECT().GetP2PPeerID().Return(nodeids[0]).Times(1)
+	pnPeer.EXPECT().GetP2PPeerID().Return(nodeids[1]).Times(1)
+	enPeer.EXPECT().GetP2PPeerID().Return(nodeids[2]).Times(1)
 
-	cnPeer.EXPECT().SetAddr(addr1).Times(1)
-	pnPeer.EXPECT().SetAddr(addr2).Times(1)
-	enPeer.EXPECT().SetAddr(addr3).Times(1)
+	cnPeer.EXPECT().SetAddr(addrs[0]).Times(1)
+	pnPeer.EXPECT().SetAddr(addrs[1]).Times(1)
+	enPeer.EXPECT().SetAddr(addrs[2]).Times(1)
 
 	targets := make(map[common.Address]bool)
-	targets[addr1] = true
-	targets[addr2] = true
-	targets[addr3] = false
+	targets[addrs[0]] = true
+	targets[addrs[1]] = true
+	targets[addrs[2]] = false
 
 	foundPeers := pm.FindPeers(targets)
 
 	assert.Equal(t, 2, len(foundPeers))
-	assert.EqualValues(t, cnPeer, foundPeers[addr1])
-	assert.EqualValues(t, pnPeer, foundPeers[addr2])
-	assert.Nil(t, foundPeers[addr3])
+	assert.EqualValues(t, cnPeer, foundPeers[addrs[0]])
+	assert.EqualValues(t, pnPeer, foundPeers[addrs[1]])
+	assert.Nil(t, foundPeers[addrs[2]])
 }
 
 func TestFindCNPeers(t *testing.T) {
@@ -542,21 +538,21 @@ func TestFindCNPeers(t *testing.T) {
 	cnPeer2 := NewMockPeer(mockCtrl)
 	cnPeer3 := NewMockPeer(mockCtrl)
 
-	peers.cnpeers[addr1] = cnPeer1
-	peers.cnpeers[addr2] = cnPeer2
-	peers.cnpeers[addr3] = cnPeer3
+	peers.cnpeers[addrs[0]] = cnPeer1
+	peers.cnpeers[addrs[1]] = cnPeer2
+	peers.cnpeers[addrs[2]] = cnPeer3
 
 	targets := make(map[common.Address]bool)
-	targets[addr1] = true
-	targets[addr2] = true
-	targets[addr3] = false
+	targets[addrs[0]] = true
+	targets[addrs[1]] = true
+	targets[addrs[2]] = false
 
 	foundCNPeers := pm.FindCNPeers(targets)
 
 	assert.Equal(t, 2, len(foundCNPeers))
-	assert.EqualValues(t, cnPeer1, foundCNPeers[addr1])
-	assert.EqualValues(t, cnPeer2, foundCNPeers[addr2])
-	assert.Nil(t, foundCNPeers[addr3])
+	assert.EqualValues(t, cnPeer1, foundCNPeers[addrs[0]])
+	assert.EqualValues(t, cnPeer2, foundCNPeers[addrs[1]])
+	assert.Nil(t, foundCNPeers[addrs[2]])
 }
 
 func TestGetPeers_AddrExists(t *testing.T) {
@@ -575,16 +571,16 @@ func TestGetPeers_AddrExists(t *testing.T) {
 	peersResult := map[string]Peer{"cnPeer": cnPeer, "pnPeer": pnPeer, "enPeer": enPeer}
 
 	peers.EXPECT().Peers().Return(peersResult).Times(1)
-	cnPeer.EXPECT().GetAddr().Return(addr1).Times(1)
-	pnPeer.EXPECT().GetAddr().Return(addr2).Times(1)
-	enPeer.EXPECT().GetAddr().Return(addr3).Times(1)
+	cnPeer.EXPECT().GetAddr().Return(addrs[0]).Times(1)
+	pnPeer.EXPECT().GetAddr().Return(addrs[1]).Times(1)
+	enPeer.EXPECT().GetAddr().Return(addrs[2]).Times(1)
 
 	foundAddrs := pm.GetPeers()
 
 	assert.Equal(t, 3, len(foundAddrs))
-	assert.True(t, contains(foundAddrs, addr1))
-	assert.True(t, contains(foundAddrs, addr2))
-	assert.True(t, contains(foundAddrs, addr3))
+	assert.True(t, contains(foundAddrs, addrs[0]))
+	assert.True(t, contains(foundAddrs, addrs[1]))
+	assert.True(t, contains(foundAddrs, addrs[2]))
 }
 
 func TestGetPeers_AddrNotExists(t *testing.T) {
@@ -607,20 +603,20 @@ func TestGetPeers_AddrNotExists(t *testing.T) {
 	pnPeer.EXPECT().GetAddr().Return(common.Address{}).Times(1)
 	enPeer.EXPECT().GetAddr().Return(common.Address{}).Times(1)
 
-	cnPeer.EXPECT().GetP2PPeerID().Return(nodeID1).Times(1)
-	pnPeer.EXPECT().GetP2PPeerID().Return(nodeID2).Times(1)
-	enPeer.EXPECT().GetP2PPeerID().Return(nodeID3).Times(1)
+	cnPeer.EXPECT().GetP2PPeerID().Return(nodeids[0]).Times(1)
+	pnPeer.EXPECT().GetP2PPeerID().Return(nodeids[1]).Times(1)
+	enPeer.EXPECT().GetP2PPeerID().Return(nodeids[2]).Times(1)
 
-	cnPeer.EXPECT().SetAddr(addr1).Times(1)
-	pnPeer.EXPECT().SetAddr(addr2).Times(1)
-	enPeer.EXPECT().SetAddr(addr3).Times(1)
+	cnPeer.EXPECT().SetAddr(addrs[0]).Times(1)
+	pnPeer.EXPECT().SetAddr(addrs[1]).Times(1)
+	enPeer.EXPECT().SetAddr(addrs[2]).Times(1)
 
 	foundAddrs := pm.GetPeers()
 
 	assert.Equal(t, 3, len(foundAddrs))
-	assert.True(t, contains(foundAddrs, addr1))
-	assert.True(t, contains(foundAddrs, addr2))
-	assert.True(t, contains(foundAddrs, addr3))
+	assert.True(t, contains(foundAddrs, addrs[0]))
+	assert.True(t, contains(foundAddrs, addrs[1]))
+	assert.True(t, contains(foundAddrs, addrs[2]))
 }
 
 func contains(addrs []common.Address, item common.Address) bool {
@@ -637,13 +633,13 @@ func createAndRegisterPeers(mockCtrl *gomock.Controller, peers *peerSet) (*MockP
 	pnPeer := NewMockPeer(mockCtrl)
 	enPeer := NewMockPeer(mockCtrl)
 
-	peers.cnpeers[addr1] = cnPeer
-	peers.pnpeers[addr2] = pnPeer
-	peers.enpeers[addr3] = enPeer
+	peers.cnpeers[addrs[0]] = cnPeer
+	peers.pnpeers[addrs[1]] = pnPeer
+	peers.enpeers[addrs[2]] = enPeer
 
-	peers.peers[fmt.Sprintf("%x", nodeID1[:8])] = cnPeer
-	peers.peers[fmt.Sprintf("%x", nodeID2[:8])] = pnPeer
-	peers.peers[fmt.Sprintf("%x", nodeID3[:8])] = enPeer
+	peers.peers[fmt.Sprintf("%x", nodeids[0][:8])] = cnPeer
+	peers.peers[fmt.Sprintf("%x", nodeids[1][:8])] = pnPeer
+	peers.peers[fmt.Sprintf("%x", nodeids[2][:8])] = enPeer
 
 	return cnPeer, pnPeer, enPeer
 }

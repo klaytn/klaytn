@@ -147,6 +147,9 @@ func (ps *peerSet) Unregister(id string) error {
 	if !ok {
 		return errNotRegistered
 	}
+	delete(ps.peers, id)
+	p.Close()
+
 	switch p.ConnType() {
 	case node.CONSENSUSNODE:
 		delete(ps.cnpeers, p.GetAddr())
@@ -155,10 +158,8 @@ func (ps *peerSet) Unregister(id string) error {
 	case node.ENDPOINTNODE:
 		delete(ps.enpeers, p.GetAddr())
 	default:
-		logger.Error("Trying to delete unexpected nodeType", "nodeType", p.ConnType())
+		return errUnexpectedNodeType
 	}
-	delete(ps.peers, id)
-	p.Close()
 
 	cnPeerCountGauge.Update(int64(len(ps.cnpeers)))
 	pnPeerCountGauge.Update(int64(len(ps.pnpeers)))
