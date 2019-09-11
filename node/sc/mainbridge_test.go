@@ -22,6 +22,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
@@ -115,4 +116,80 @@ func TestMainBridge_basic(t *testing.T) {
 	defer mBridge.Stop()
 
 	//TODO more test
+}
+
+// TestMainBridge_removePeer tests correct removal of a peer from `MainBridge.peers`.
+func TestMainBridge_removePeer(t *testing.T) {
+	// Create a MainBridge (it may have 0 peers)
+	mBridge := testNewMainBridge(t)
+	defer mBridge.chainDB.Close()
+
+	// Prepare a bridgePeer to be added and removed
+	nodeID := "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d"
+	peer := p2p.NewPeer(discover.MustHexID(nodeID), "name", []p2p.Cap{})
+	bridgePeer := mBridge.newPeer(1, peer, &p2p.MsgPipeRW{})
+
+	// Add the bridgePeer
+	mBridge.peers.Register(bridgePeer)
+	peerNum := mBridge.peers.Len()
+
+	// Try to remove a non-registered bridgePeer, and nothing happen
+	mBridge.removePeer("0x11111111")
+	assert.Equal(t, peerNum, mBridge.peers.Len())
+
+	// Remove the registered bridgePeer
+	mBridge.removePeer(bridgePeer.GetID())
+	assert.Equal(t, peerNum-1, mBridge.peers.Len())
+}
+
+// TestMainBridge_handleMsg fails when a bridgePeer fails to read a message or reads a too long message.
+func TestMainBridge_handleMsg(t *testing.T) {
+	// Create a MainBridge
+	mBridge := testNewMainBridge(t)
+	defer mBridge.chainDB.Close()
+
+	// Elements for a bridgePeer
+	nodeID := "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d"
+	peer := p2p.NewPeer(discover.MustHexID(nodeID), "name", []p2p.Cap{})
+	pipe1, pipe2 := p2p.MsgPipe()
+
+	// bridgePeer will receive a message through rw1
+	bridgePeer := newBridgePeer(testProtocolVersion, peer, pipe1)
+
+	// Case1. Send a valid message and handle it successfully
+	{
+		data := "valid message"
+		go func() {
+			if err := p2p.Send(pipe2, StatusMsg, data); err != nil {
+				t.Fatal(t)
+			}
+		}()
+
+		if err := mBridge.handleMsg(bridgePeer); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Case2. Send an invalid message having large size and fail to handle
+	{
+		data := strings.Repeat("a", ProtocolMaxMsgSize+1)
+		go func() {
+			if err := p2p.Send(pipe2, StatusMsg, data); err != nil {
+				t.Fatal(t)
+			}
+		}()
+
+		err := mBridge.handleMsg(bridgePeer)
+		assert.True(t, strings.HasPrefix(err.Error(), "Message too long"))
+	}
+
+	// Case3. Return an error when it fails to read a message
+	{
+		_ = pipe2.Close()
+
+		err := mBridge.handleMsg(bridgePeer)
+		assert.Equal(t, p2p.ErrPipeClosed, err)
+
+	}
+	_ = pipe1.Close()
 }
