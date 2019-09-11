@@ -18,6 +18,7 @@ package cn
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -25,6 +26,7 @@ import (
 	mocks2 "github.com/klaytn/klaytn/consensus/mocks"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/downloader"
+	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn/mocks"
@@ -50,6 +52,9 @@ var nodeID1 discover.NodeID
 var nodeID2 discover.NodeID
 var nodeID3 discover.NodeID
 
+var tx *types.Transaction
+var txs types.Transactions
+
 func init() {
 	key1, _ = crypto.GenerateKey()
 	key2, _ = crypto.GenerateKey()
@@ -62,6 +67,9 @@ func init() {
 	nodeID1 = discover.PubkeyID(&key1.PublicKey)
 	nodeID2 = discover.PubkeyID(&key2.PublicKey)
 	nodeID3 = discover.PubkeyID(&key3.PublicKey)
+
+	tx = types.NewTransaction(111, addr1, big.NewInt(111), 111, big.NewInt(111), nil)
+	txs = types.Transactions{tx}
 }
 
 func newMocks(t *testing.T) (*gomock.Controller, *mocks2.MockEngine, *mocks.MockBlockChain, *mocks.MockTxPool) {
@@ -192,37 +200,97 @@ func TestBroadcastBlockHash(t *testing.T) {
 	}
 }
 
-func TestBroadcastCNTx_CN_NotExists(t *testing.T) {
+func TestBroadcastTxsFromCN_CN_NotExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = node.ENDPOINTNODE
+	pm.nodetype = node.CONSENSUSNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	peers := newPeerSet()
 	pm.peers = peers
+	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer := NewMockPeer(mockCtrl)
-	pnPeer := NewMockPeer(mockCtrl)
-	enPeer := NewMockPeer(mockCtrl)
-
-	peers.cnpeers[addr1] = cnPeer
-	peers.pnpeers[addr2] = pnPeer
-	peers.enpeers[addr3] = enPeer
-
-	tx := types.NewTransaction(111, addr1, big.NewInt(111), 111, big.NewInt(111), nil)
-	txs := types.Transactions{tx}
-
-	// Using gomock.Any() for AsyncSendTransactions calls,
+	// Using gomock.Eq(txs) for AsyncSendTransactions calls,
 	// since transactions are put into a new list inside broadcastCNTx.
 	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
-	cnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
-	pnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
-	enPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+	cnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+	pnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
 
-	pm.broadcastCNTx(txs)
+	pm.BroadcastTxs(txs)
 }
 
-func TestBroadcastCNTx_CN_Exists(t *testing.T) {
+func TestBroadcastTxsFromCN_CN_Exists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.CONSENSUSNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
+
+	// Using gomock.Eq(txs) for AsyncSendTransactions calls,
+	// since transactions are put into a new list inside broadcastCNTx.
+	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	cnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(1)
+	pnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+
+	pm.BroadcastTxs(txs)
+}
+
+func TestBroadcastTxsFromPN_PN_NotExists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.PROXYNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
+
+	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+
+	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
+	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
+	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
+
+	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
+
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+
+	pm.BroadcastTxs(txs)
+}
+
+func TestBroadcastTxsFromPN_PN_Exists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.PROXYNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
+
+	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+
+	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
+	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
+	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
+
+	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+
+	pm.BroadcastTxs(txs)
+}
+
+func TestBroadcastTxsFromEN_EN_NotExists(t *testing.T) {
 	pm := &ProtocolManager{}
 	pm.nodetype = node.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
@@ -230,26 +298,86 @@ func TestBroadcastCNTx_CN_Exists(t *testing.T) {
 
 	peers := newPeerSet()
 	pm.peers = peers
+	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer := NewMockPeer(mockCtrl)
-	pnPeer := NewMockPeer(mockCtrl)
-	enPeer := NewMockPeer(mockCtrl)
+	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(2)
+	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
+	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
 
-	peers.cnpeers[addr1] = cnPeer
-	peers.pnpeers[addr2] = pnPeer
-	peers.enpeers[addr3] = enPeer
+	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
 
-	tx := types.NewTransaction(111, addr1, big.NewInt(111), 111, big.NewInt(111), nil)
-	txs := types.Transactions{tx}
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
 
-	// Using gomock.Any() for AsyncSendTransactions calls,
-	// since transactions are put into a new list inside broadcastCNTx.
-	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
-	cnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(1)
-	pnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
-	enPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+	pm.BroadcastTxs(txs)
+}
 
-	pm.broadcastCNTx(txs)
+func TestBroadcastTxsFromEN_EN_Exists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
+
+	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(2)
+	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
+	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
+
+	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+
+	pm.BroadcastTxs(txs)
+}
+
+func TestBroadcastTxsFromEN_PN_NotExists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.ENDPOINTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
+
+	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(2)
+	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
+	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
+
+	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
+	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+
+	pm.BroadcastTxs(txs)
+}
+
+func TestBroadcastTxsFrom_DefaultCase(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.BOOTNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	createAndRegisterPeers(mockCtrl, peers)
+
+	// There are no expected calls for the mocks.
+	pm.nodetype = node.BOOTNODE
+	pm.BroadcastTxs(txs)
+
+	pm.nodetype = node.UNKNOWNNODE
+	pm.BroadcastTxs(txs)
 }
 
 func TestUseTxResend(t *testing.T) {
@@ -507,4 +635,20 @@ func contains(addrs []common.Address, item common.Address) bool {
 		}
 	}
 	return false
+}
+
+func createAndRegisterPeers(mockCtrl *gomock.Controller, peers *peerSet) (*MockPeer, *MockPeer, *MockPeer) {
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+
+	peers.cnpeers[addr1] = cnPeer
+	peers.pnpeers[addr2] = pnPeer
+	peers.enpeers[addr3] = enPeer
+
+	peers.peers[fmt.Sprintf("%x", nodeID1[:8])] = cnPeer
+	peers.peers[fmt.Sprintf("%x", nodeID2[:8])] = pnPeer
+	peers.peers[fmt.Sprintf("%x", nodeID3[:8])] = enPeer
+
+	return cnPeer, pnPeer, enPeer
 }

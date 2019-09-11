@@ -268,3 +268,15 @@ func (mr *MockPeerSetMockRecorder) Unregister(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unregister", reflect.TypeOf((*MockPeerSet)(nil).Unregister), arg0)
 }
+
+// UpdateTypePeersWithoutTxs mocks base method
+func (m *MockPeerSet) UpdateTypePeersWithoutTxs(arg0 *types.Transaction, arg1 p2p.ConnType, arg2 map[Peer]types.Transactions) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateTypePeersWithoutTxs", arg0, arg1, arg2)
+}
+
+// UpdateTypePeersWithoutTxs indicates an expected call of UpdateTypePeersWithoutTxs
+func (mr *MockPeerSetMockRecorder) UpdateTypePeersWithoutTxs(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTypePeersWithoutTxs", reflect.TypeOf((*MockPeerSet)(nil).UpdateTypePeersWithoutTxs), arg0, arg1, arg2)
+}

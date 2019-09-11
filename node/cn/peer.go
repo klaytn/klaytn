@@ -118,7 +118,7 @@ type Peer interface {
 	ReSendTransactions(txs types.Transactions) error
 
 	// AsyncSendTransactions sends transactions asynchronously to the peer.
-	AsyncSendTransactions(txs []*types.Transaction)
+	AsyncSendTransactions(txs types.Transactions)
 
 	// SendNewBlockHashes announces the availability of a number of blocks through
 	// a hash notification.
@@ -438,7 +438,7 @@ func (p *basePeer) ReSendTransactions(txs types.Transactions) error {
 	return p2p.Send(p.rw, TxMsg, txs)
 }
 
-func (p *basePeer) AsyncSendTransactions(txs []*types.Transaction) {
+func (p *basePeer) AsyncSendTransactions(txs types.Transactions) {
 	select {
 	case p.queuedTxs <- txs:
 		for _, tx := range txs {

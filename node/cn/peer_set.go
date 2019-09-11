@@ -51,6 +51,7 @@ type PeerSet interface {
 	PeersWithoutTx(hash common.Hash) []Peer
 	TypePeersWithoutTx(hash common.Hash, nodetype p2p.ConnType) []Peer
 	CNWithoutTx(hash common.Hash) []Peer
+	UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType p2p.ConnType, peersWithoutTxsMap map[Peer]types.Transactions)
 
 	BestPeer() Peer
 	RegisterValidator(connType p2p.ConnType, validator p2p.PeerTypeValidator)
@@ -452,4 +453,12 @@ func (peers *peerSet) SampleResendPeersByType(nodeType p2p.ConnType) []Peer {
 		return nil
 	}
 	return sampledPeers
+}
+
+func (peers *peerSet) UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType p2p.ConnType, peersWithoutTxsMap map[Peer]types.Transactions) {
+	typePeers := peers.TypePeersWithoutTx(tx.Hash(), nodeType)
+	for _, peer := range typePeers {
+		peersWithoutTxsMap[peer] = append(peersWithoutTxsMap[peer], tx)
+	}
+	logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(typePeers))
 }

@@ -87,7 +87,7 @@ func (mr *MockPeerMockRecorder) AsyncSendNewBlockHash(arg0 interface{}) *gomock.
 }
 
 // AsyncSendTransactions mocks base method
-func (m *MockPeer) AsyncSendTransactions(arg0 []*types.Transaction) {
+func (m *MockPeer) AsyncSendTransactions(arg0 types.Transactions) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AsyncSendTransactions", arg0)
 }
