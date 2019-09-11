@@ -51,7 +51,7 @@ const (
 	rpcBufferSize       = 1024
 )
 
-// NodeInfo represents a short summary of the Klaytn sub-protocol metadata
+// MainBridgeInfo represents a short summary of the Klaytn sub-protocol metadata
 // known about the host peer.
 type MainBridgeInfo struct {
 	Network    uint64              `json:"network"`    // Klaytn network ID
@@ -61,12 +61,12 @@ type MainBridgeInfo struct {
 	Head       common.Hash         `json:"head"`       // SHA3 hash of the host's best owned block
 }
 
-// CN implements the Klaytn consensus node service.
+// MainBridge implements the main bridge of service chain.
 type MainBridge struct {
 	config *SCConfig
 
 	// DB interfaces
-	chainDB database.DBManager // Block chain database
+	chainDB database.DBManager // Blockchain database
 
 	eventMux       *event.TypeMux
 	accountManager *accounts.Manager
@@ -113,8 +113,8 @@ type MainBridge struct {
 	rpcResponseCh chan []byte
 }
 
-// New creates a new CN object (including the
-// initialisation of the common CN object)
+// NewMainBridge creates a new MainBridge object (including the
+// initialisation of the common MainBridge object)
 func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, error) {
 	chainDB := CreateDB(ctx, config, "scchaindata")
 
@@ -187,12 +187,12 @@ func CreateDB(ctx *node.ServiceContext, config *SCConfig, name string) database.
 	return ctx.OpenDatabase(dbc)
 }
 
-// implement PeerSetManager
+// BridgePeerSet implements PeerSetManager
 func (mb *MainBridge) BridgePeerSet() *bridgePeerSet {
 	return mb.peers
 }
 
-// APIs returns the collection of RPC services the ethereum package offers.
+// APIs returns the collection of RPC services the Klaytn sc package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *MainBridge) APIs() []rpc.API {
 	// Append all the local APIs and return
