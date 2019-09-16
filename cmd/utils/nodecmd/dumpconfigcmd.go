@@ -228,8 +228,7 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	cfg.ParentChainID = ctx.GlobalUint64(utils.ParentChainIDFlag.Name)
 	cfg.VTRecovery = ctx.GlobalBool(utils.VTRecoveryFlag.Name)
 	cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
-	cfg.ServiceChainConsensus = ctx.GlobalString(utils.ServiceChainConsensusFlag.Name)
-	utils.ServiceChainConsensusFlag.Value = cfg.ServiceChainConsensus
+	cfg.ServiceChainConsensus = utils.ServiceChainConsensusFlag.Value
 
 	return cfg
 }

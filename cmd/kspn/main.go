@@ -71,7 +71,6 @@ var spnHelpFlagGroups = []utils.FlagGroup{
 	{
 		Name: "SERVICECHAIN",
 		Flags: []cli.Flag{
-			utils.ServiceChainConsensusFlag,
 			utils.ChildChainIndexingFlag,
 			utils.MainBridgeFlag,
 			utils.MainBridgeListenPortFlag,
