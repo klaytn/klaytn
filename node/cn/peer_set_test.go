@@ -97,6 +97,7 @@ func TestPeerSet_Unregister(t *testing.T) {
 	assert.NoError(t, peerSet.Unregister(nodeids[0].String()))
 	assert.NoError(t, peerSet.Unregister(nodeids[1].String()))
 	assert.NoError(t, peerSet.Unregister(nodeids[2].String()))
+	assert.Equal(t, 0, len(peerSet.peers))
 }
 
 func TestPeerSet_Peers(t *testing.T) {
