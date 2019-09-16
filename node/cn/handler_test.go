@@ -380,6 +380,105 @@ func TestBroadcastTxsFrom_DefaultCase(t *testing.T) {
 	pm.BroadcastTxs(txs)
 }
 
+func TestReBroadcastTxs_CN(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = node.CONSENSUSNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	createAndRegisterPeers(mockCtrl, peers)
+
+	pm.ReBroadcastTxs(txs)
+}
+
+func TestReBroadcastTxs_PN(t *testing.T) {
+	// CN Peer=0, PN Peer=1
+	{
+		pm := &ProtocolManager{}
+		pm.nodetype = node.PROXYNODE
+		mockCtrl := gomock.NewController(t)
+
+		peers := newPeerSet()
+		pm.peers = peers
+
+		enPeer := NewMockPeer(mockCtrl)
+		enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
+		enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+
+		peers.enpeers[addr3] = enPeer
+		peers.peers[fmt.Sprintf("%x", nodeID3[:8])] = enPeer
+
+		pm.ReBroadcastTxs(txs)
+
+		mockCtrl.Finish()
+	}
+	// CN Peer=1, PN Peer=0
+	{
+		pm := &ProtocolManager{}
+		pm.nodetype = node.PROXYNODE
+		mockCtrl := gomock.NewController(t)
+
+		peers := newPeerSet()
+		pm.peers = peers
+
+		pnPeer := NewMockPeer(mockCtrl)
+		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
+		pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+
+		peers.pnpeers[addr3] = pnPeer
+		peers.peers[fmt.Sprintf("%x", nodeID3[:8])] = pnPeer
+
+		pm.ReBroadcastTxs(txs)
+
+		mockCtrl.Finish()
+	}
+}
+
+func TestReBroadcastTxs_EN(t *testing.T) {
+	// PN Peer=0, EN Peer=1
+	{
+		pm := &ProtocolManager{}
+		pm.nodetype = node.ENDPOINTNODE
+		mockCtrl := gomock.NewController(t)
+
+		peers := newPeerSet()
+		pm.peers = peers
+
+		enPeer := NewMockPeer(mockCtrl)
+		enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
+		enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+
+		peers.enpeers[addr3] = enPeer
+		peers.peers[fmt.Sprintf("%x", nodeID3[:8])] = enPeer
+
+		pm.ReBroadcastTxs(txs)
+
+		mockCtrl.Finish()
+	}
+	// PN Peer=1, EN Peer=0
+	{
+		pm := &ProtocolManager{}
+		pm.nodetype = node.ENDPOINTNODE
+		mockCtrl := gomock.NewController(t)
+
+		peers := newPeerSet()
+		pm.peers = peers
+
+		pnPeer := NewMockPeer(mockCtrl)
+		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
+		pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+
+		peers.pnpeers[addr3] = pnPeer
+		peers.peers[fmt.Sprintf("%x", nodeID3[:8])] = pnPeer
+
+		pm.ReBroadcastTxs(txs)
+
+		mockCtrl.Finish()
+	}
+}
+
 func TestUseTxResend(t *testing.T) {
 	testSet := [...]struct {
 		pm     *ProtocolManager
@@ -626,6 +725,21 @@ func TestGetPeers_AddrNotExists(t *testing.T) {
 	assert.True(t, contains(foundAddrs, addr1))
 	assert.True(t, contains(foundAddrs, addr2))
 	assert.True(t, contains(foundAddrs, addr3))
+}
+
+func TestEnqueue(t *testing.T) {
+	pm := &ProtocolManager{}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	fetcherMock := mocks.NewMockProtocolManagerFetcher(mockCtrl)
+	pm.fetcher = fetcherMock
+
+	block := newBlock(blockNum1)
+	id := nodeID1.String()
+
+	fetcherMock.EXPECT().Enqueue(id, block).Times(1)
+	pm.Enqueue(id, block)
 }
 
 func contains(addrs []common.Address, item common.Address) bool {
