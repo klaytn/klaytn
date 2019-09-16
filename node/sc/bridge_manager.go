@@ -21,6 +21,7 @@ import (
 	"errors"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
 	scnft "github.com/klaytn/klaytn/contracts/sc_erc721"
@@ -322,7 +323,11 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		} else {
 			uri, err = erc721.TokenURI(nil, ev.ValueOrTokenId)
 			if err != nil {
-				logger.Warn("Failed to get URI of the ERC721 token", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain, "tokenId", ev.ValueOrTokenId.String())
+				if err == vm.ErrExecutionReverted {
+					logger.Warn("The ERC721 token does not support URI", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain, "tokenId", ev.ValueOrTokenId.String())
+				} else {
+					return err
+				}
 			}
 		}
 
