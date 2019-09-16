@@ -192,13 +192,10 @@ func (b *bridge) passwdByPromptWithDuration(call otto.FunctionCall, msg string) 
 	case 0:
 		passwd = b.passwdByPrompt(msg)
 	case 1:
-		if call.Argument(0).IsNumber() {
-			duration = call.Argument(0)
-			passwd = b.passwdByPrompt(msg)
-		} else if call.Argument(0).IsString() {
+		if call.Argument(0).IsString() {
 			passwd = call.Argument(0)
 		} else {
-			throwJSException("invalid arguments")
+			throwJSException("password must be a string")
 		}
 	case 2:
 		if call.Argument(0).IsString() && call.Argument(1).IsNumber() {
