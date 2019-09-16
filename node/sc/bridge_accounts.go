@@ -236,7 +236,7 @@ func (acc *accountInfo) LockAccount() error {
 }
 
 // UnLockAccount can unlock the account keystore.
-func (acc *accountInfo) UnLockAccount(duration *uint64, passphrase string) error {
+func (acc *accountInfo) UnLockAccount(passphrase string, duration *uint64) error {
 	acc.mu.Lock()
 	defer acc.mu.Unlock()
 
