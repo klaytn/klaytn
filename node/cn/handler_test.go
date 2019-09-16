@@ -398,8 +398,8 @@ func TestReBroadcastTxs_PN(t *testing.T) {
 		enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
 		enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
-		peers.enpeers[addr3] = enPeer
-		peers.peers[fmt.Sprintf("%x", nodeID3[:8])] = enPeer
+		peers.enpeers[addrs[2]] = enPeer
+		peers.peers[fmt.Sprintf("%x", nodeids[2][:8])] = enPeer
 
 		pm.ReBroadcastTxs(txs)
 
@@ -418,8 +418,8 @@ func TestReBroadcastTxs_PN(t *testing.T) {
 		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
 		pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
-		peers.pnpeers[addr3] = pnPeer
-		peers.peers[fmt.Sprintf("%x", nodeID3[:8])] = pnPeer
+		peers.pnpeers[addrs[2]] = pnPeer
+		peers.peers[fmt.Sprintf("%x", nodeids[2][:8])] = pnPeer
 
 		pm.ReBroadcastTxs(txs)
 
@@ -441,8 +441,8 @@ func TestReBroadcastTxs_EN(t *testing.T) {
 		enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
 		enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
-		peers.enpeers[addr3] = enPeer
-		peers.peers[fmt.Sprintf("%x", nodeID3[:8])] = enPeer
+		peers.enpeers[addrs[2]] = enPeer
+		peers.peers[fmt.Sprintf("%x", nodeids[2][:8])] = enPeer
 
 		pm.ReBroadcastTxs(txs)
 
@@ -461,8 +461,8 @@ func TestReBroadcastTxs_EN(t *testing.T) {
 		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
 		pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
-		peers.pnpeers[addr3] = pnPeer
-		peers.peers[fmt.Sprintf("%x", nodeID3[:8])] = pnPeer
+		peers.pnpeers[addrs[2]] = pnPeer
+		peers.peers[fmt.Sprintf("%x", nodeids[2][:8])] = pnPeer
 
 		pm.ReBroadcastTxs(txs)
 
@@ -727,7 +727,7 @@ func TestEnqueue(t *testing.T) {
 	pm.fetcher = fetcherMock
 
 	block := newBlock(blockNum1)
-	id := nodeID1.String()
+	id := nodeids[0].String()
 
 	fetcherMock.EXPECT().Enqueue(id, block).Times(1)
 	pm.Enqueue(id, block)
