@@ -162,6 +162,9 @@ fi
 if [[ ! -z $SC_SUB_BRIDGE ]] && [[ $SC_SUB_BRIDGE -eq 1 ]]; then
     OPTIONS="$OPTIONS --subbridge --subbridgeport $SC_SUB_BRIDGE_PORT --chaintxperiod $SC_ANCHORING_PERIOD --chaintxlimit $SC_TX_LIMIT "
     OPTIONS="$OPTIONS --parentchainid $SC_PARENT_CHAIN_ID"
+    if [[ ! -z $SC_ANCHORING ]] && [[ $SC_ANCHORING -eq 1 ]]; then
+            OPTIONS="$OPTIONS --anchoring"
+    fi
 fi
 
 if [[ ! -z $VTRECOVERY ]] && [[ $VTRECOVERY -eq 1 ]]; then

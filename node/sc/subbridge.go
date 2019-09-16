@@ -175,7 +175,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		handleEventCh:  make(chan *HandleValueTransferEvent, handleEventChanSize),
 		quitSync:       make(chan struct{}),
 		maxPeers:       config.MaxPeer,
-		onAnchoringTx:  false,
+		onAnchoringTx:  config.Anchoring,
 		bootFail:       false,
 		rpcSendCh:      make(chan []byte),
 	}

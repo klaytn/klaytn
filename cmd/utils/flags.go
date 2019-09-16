@@ -573,6 +573,10 @@ var (
 		Usage: "Set the service chain consensus (\"istanbul\", \"clique\")",
 		Value: "istanbul",
 	}
+	ServiceChainAnchoringFlag = cli.BoolFlag{
+		Name:  "anchoring",
+		Usage: "Enable anchoring for service chain",
+	}
 	// DBSyncer
 	EnableDBSyncerFlag = cli.BoolFlag{
 		Name:  "dbsyncer",

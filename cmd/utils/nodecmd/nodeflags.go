@@ -165,12 +165,26 @@ var KSCNFlags = []cli.Flag{
 	utils.VTRecoveryFlag,
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainNewAccountFlag,
+	utils.ServiceChainAnchoringFlag,
 }
 
 var KSPNFlags = []cli.Flag{
 	utils.TxResendIntervalFlag,
 	utils.TxResendCountFlag,
 	utils.TxResendUseLegacyFlag,
+	utils.ServiceChainSignerFlag,
+	utils.AnchoringPeriodFlag,
+	utils.SentChainTxsLimit,
+	utils.MainBridgeFlag,
+	utils.MainBridgeListenPortFlag,
+	utils.ChildChainIndexingFlag,
+	utils.SubBridgeFlag,
+	utils.SubBridgeListenPortFlag,
+	utils.ParentChainIDFlag,
+	utils.VTRecoveryFlag,
+	utils.VTRecoveryIntervalFlag,
+	utils.ServiceChainNewAccountFlag,
+	utils.ServiceChainAnchoringFlag,
 }
 
 var KSENFlags = []cli.Flag{
@@ -185,6 +199,7 @@ var KSENFlags = []cli.Flag{
 	utils.ParentChainIDFlag,
 	utils.VTRecoveryFlag,
 	utils.VTRecoveryIntervalFlag,
+	utils.ServiceChainAnchoringFlag,
 	// DBSyncer
 	utils.EnableDBSyncerFlag,
 	utils.DBHostFlag,

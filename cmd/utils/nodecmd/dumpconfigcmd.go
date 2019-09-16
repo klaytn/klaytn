@@ -222,6 +222,10 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 		cfg.SubBridgePort = fmt.Sprintf(":%d", ctx.GlobalInt(utils.SubBridgeListenPortFlag.Name))
 	}
 
+	if ctx.GlobalBool(utils.ServiceChainAnchoringFlag.Name) {
+		cfg.Anchoring = true
+	}
+
 	cfg.ChildChainIndexing = ctx.GlobalIsSet(utils.ChildChainIndexingFlag.Name)
 	cfg.AnchoringPeriod = ctx.GlobalUint64(utils.AnchoringPeriodFlag.Name)
 	cfg.SentChainTxsLimit = ctx.GlobalUint64(utils.SentChainTxsLimit.Name)
