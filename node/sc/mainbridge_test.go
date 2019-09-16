@@ -20,6 +20,7 @@ import (
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
@@ -149,8 +150,9 @@ func TestMainBridge_handleMsg(t *testing.T) {
 	defer mBridge.chainDB.Close()
 
 	// Elements for a bridgePeer
-	nodeID := "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d"
-	peer := p2p.NewPeer(discover.MustHexID(nodeID), "name", []p2p.Cap{})
+	key, _ := crypto.GenerateKey()
+	nodeID := discover.PubkeyID(&key.PublicKey)
+	peer := p2p.NewPeer(nodeID, "name", []p2p.Cap{})
 	pipe1, pipe2 := p2p.MsgPipe()
 
 	// bridgePeer will receive a message through rw1
