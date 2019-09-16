@@ -17,33 +17,21 @@
 pragma solidity ^0.5.6;
 
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Mintable.sol";
+import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
 
 import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "./IERC721BridgeReceiver.sol";
+import "../sc_erc721/ERC721ServiceChain.sol";
 
+contract ServiceChainNFT_NoURI is ERC721, ERC721Mintable, ERC721Burnable, ERC721ServiceChain {
+    constructor(address _bridge) ERC721ServiceChain(_bridge) public {
+    }
 
-/**
- * @title ERC721ServiceChain
- * @dev ERC721 service chain value transfer logic for 1-step transfer.
- */
-contract ERC721ServiceChain is ERC721, Ownable {
-    address public bridge;
-
-    constructor(address _bridge) internal {
-        if (!_bridge.isContract()) {
-            revert("bridge is not a contract");
+    // registerBulk registers (startID, endID-1) tokens to the user once.
+    // This is only for load test.
+    function registerBulk(address _user, uint256 _startID, uint256 _endID) external onlyOwner {
+        for (uint256 uid = _startID; uid < _endID; uid++) {
+            mint(_user, uid);
         }
-
-        bridge = _bridge;
-    }
-
-    function setBridge(address _bridge) public onlyOwner {
-        bridge = _bridge;
-    }
-
-    function requestValueTransfer(uint256 _uid, address _to, bytes calldata _extraData) external {
-        transferFrom(msg.sender, bridge, _uid);
-
-        IERC721BridgeReceiver(bridge).onERC721Received(msg.sender, _uid, _to, _extraData);
     }
 }
