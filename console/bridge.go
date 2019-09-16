@@ -172,43 +172,44 @@ func (b *bridge) UnlockAccount(call otto.FunctionCall) (response otto.Value) {
 	return val
 }
 
+// passwdByPrompt returns the password from a non-echoing password prompt.
+func (b *bridge) passwdByPrompt(msg string) (passwd otto.Value) {
+	fmt.Fprintln(b.printer, msg)
+	if input, err := b.prompter.PromptPassword("Passphrase: "); err != nil {
+		throwJSException(err.Error())
+	} else {
+		passwd, _ = otto.ToValue(input)
+	}
+	return
+}
+
 // passwdByPromptWithDuration returns the password and the duration from a non-echoing password prompt.
 func (b *bridge) passwdByPromptWithDuration(call otto.FunctionCall, msg string) (passwd, duration otto.Value) {
 	duration = otto.NullValue()
 	passwd = otto.NullValue()
 
-	lenArgs := len(call.ArgumentList)
-
-	if lenArgs > 2 {
+	switch len(call.ArgumentList) {
+	case 0:
+		passwd = b.passwdByPrompt(msg)
+	case 1:
+		if call.Argument(0).IsNumber() {
+			duration = call.Argument(0)
+			passwd = b.passwdByPrompt(msg)
+		} else if call.Argument(0).IsString() {
+			passwd = call.Argument(0)
+		} else {
+			throwJSException("invalid arguments")
+		}
+	case 2:
+		if call.Argument(0).IsString() && call.Argument(1).IsNumber() {
+			passwd = call.Argument(0)
+			duration = call.Argument(1)
+		} else {
+			throwJSException("invalid arguments")
+		}
+	default:
 		throwJSException("invalid arguments")
 	}
-
-	if lenArgs <= 1 {
-		if lenArgs == 1 {
-			if call.Argument(0).IsNumber() {
-				duration = call.Argument(0)
-			} else if call.Argument(0).IsString() {
-				passwd = call.Argument(0)
-			} else {
-				throwJSException("invalid arguments")
-			}
-		}
-
-		if lenArgs == 0 || call.Argument(0).IsNumber() {
-			fmt.Fprintln(b.printer, msg)
-			if input, err := b.prompter.PromptPassword("Passphrase: "); err != nil {
-				throwJSException(err.Error())
-			} else {
-				passwd, _ = otto.ToValue(input)
-			}
-		}
-	} else if call.Argument(0).IsString() && call.Argument(1).IsNumber() {
-		passwd = call.Argument(0)
-		duration = call.Argument(1)
-	} else {
-		throwJSException("invalid arguments")
-	}
-
 	return
 }
 
