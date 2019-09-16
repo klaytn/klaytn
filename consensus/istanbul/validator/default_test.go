@@ -21,6 +21,7 @@
 package validator
 
 import (
+	"fmt"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
@@ -245,4 +246,38 @@ func TestDefaultSet_SubList(t *testing.T) {
 
 		valSet.CalcProposer(currentProposer.Address(), view.Round.Uint64())
 	}
+}
+
+func TestDefaultSet_Copy(t *testing.T) {
+	b1 := common.Hex2Bytes(testAddress)
+	b2 := common.Hex2Bytes(testAddress2)
+	b3 := common.Hex2Bytes(testAddress3)
+	b4 := common.Hex2Bytes(testAddress4)
+	b5 := common.Hex2Bytes(testAddress5)
+	addr1 := common.BytesToAddress(b1)
+	addr2 := common.BytesToAddress(b2)
+	addr3 := common.BytesToAddress(b3)
+	addr4 := common.BytesToAddress(b4)
+	addr5 := common.BytesToAddress(b5)
+	testAddresses := []common.Address{addr1, addr2, addr3, addr4, addr5}
+
+	valSet := NewSet(testAddresses, istanbul.RoundRobin)
+	copiedValSet := valSet.Copy()
+
+	assert.NotEqual(t, fmt.Sprintf("%p", &valSet), fmt.Sprintf("%p", &copiedValSet))
+
+	assert.Equal(t, valSet.List(), copiedValSet.List())
+	assert.NotEqual(t, fmt.Sprintf("%p", valSet.List()), fmt.Sprintf("%p", copiedValSet.List()))
+
+	for i := uint64(0); i < valSet.Size(); i++ {
+		assert.Equal(t, valSet.List()[i], copiedValSet.List()[i])
+		assert.NotEqual(t, fmt.Sprintf("%p", valSet.List()[i]), fmt.Sprintf("%p", copiedValSet.List())[i])
+	}
+
+	assert.Equal(t, valSet.GetProposer(), copiedValSet.GetProposer())
+	assert.NotEqual(t, fmt.Sprintf("%p", valSet.GetProposer()), fmt.Sprintf("%p", copiedValSet.GetProposer()))
+
+	assert.Equal(t, valSet.Policy(), copiedValSet.Policy())
+	assert.Equal(t, valSet.SubGroupSize(), copiedValSet.SubGroupSize())
+	assert.Equal(t, valSet.TotalVotingPower(), copiedValSet.TotalVotingPower())
 }
