@@ -147,15 +147,19 @@ func (ps *peerSet) Unregister(id string) error {
 	if !ok {
 		return errNotRegistered
 	}
-	if p.ConnType() == node.CONSENSUSNODE {
-		delete(ps.cnpeers, p.GetAddr())
-	} else if p.ConnType() == node.PROXYNODE {
-		delete(ps.pnpeers, p.GetAddr())
-	} else if p.ConnType() == node.ENDPOINTNODE {
-		delete(ps.enpeers, p.GetAddr())
-	}
 	delete(ps.peers, id)
 	p.Close()
+
+	switch p.ConnType() {
+	case node.CONSENSUSNODE:
+		delete(ps.cnpeers, p.GetAddr())
+	case node.PROXYNODE:
+		delete(ps.pnpeers, p.GetAddr())
+	case node.ENDPOINTNODE:
+		delete(ps.enpeers, p.GetAddr())
+	default:
+		return errUnexpectedNodeType
+	}
 
 	cnPeerCountGauge.Update(int64(len(ps.cnpeers)))
 	pnPeerCountGauge.Update(int64(len(ps.pnpeers)))
@@ -362,12 +366,12 @@ func (ps *peerSet) BestPeer() Peer {
 	defer ps.lock.RUnlock()
 
 	var (
-		bestPeer Peer
-		bestTd   *big.Int
+		bestPeer       Peer
+		bestBlockScore *big.Int
 	)
 	for _, p := range ps.peers {
-		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
-			bestPeer, bestTd = p, td
+		if _, currBlockScore := p.Head(); bestPeer == nil || currBlockScore.Cmp(bestBlockScore) > 0 {
+			bestPeer, bestBlockScore = p, currBlockScore
 		}
 	}
 	return bestPeer
@@ -385,7 +389,7 @@ func (ps *peerSet) Close() {
 	defer ps.lock.Unlock()
 
 	for _, p := range ps.peers {
-		p.GetP2PPeer().Disconnect(p2p.DiscQuitting)
+		p.DisconnectP2PPeer(p2p.DiscQuitting)
 	}
 	ps.closed = true
 }

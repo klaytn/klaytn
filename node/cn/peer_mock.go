@@ -136,6 +136,18 @@ func (mr *MockPeerMockRecorder) ConnType() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConnType", reflect.TypeOf((*MockPeer)(nil).ConnType))
 }
 
+// DisconnectP2PPeer mocks base method
+func (m *MockPeer) DisconnectP2PPeer(arg0 p2p.DiscReason) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "DisconnectP2PPeer", arg0)
+}
+
+// DisconnectP2PPeer indicates an expected call of DisconnectP2PPeer
+func (mr *MockPeerMockRecorder) DisconnectP2PPeer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisconnectP2PPeer", reflect.TypeOf((*MockPeer)(nil).DisconnectP2PPeer), arg0)
+}
+
 // FetchBlockBodies mocks base method
 func (m *MockPeer) FetchBlockBodies(arg0 []common.Hash) error {
 	m.ctrl.T.Helper()
