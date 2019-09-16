@@ -385,7 +385,8 @@ func (valSet *defaultSet) Copy() istanbul.ValidatorSet {
 	}
 
 	newValSet := NewSubSet(addresses, valSet.policy, valSet.subSize).(*defaultSet)
-	newValSet.proposer = valSet.proposer
+	_, proposer := newValSet.GetByAddress(valSet.proposer.Address())
+	newValSet.proposer = proposer
 	return newValSet
 }
 
