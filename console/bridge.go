@@ -177,11 +177,11 @@ func (b *bridge) passwdByPromptWithDuration(call otto.FunctionCall, msg string) 
 	duration = otto.NullValue()
 	passwd = otto.NullValue()
 
-	if len(call.ArgumentList) > 2 {
+	lenArgs := len(call.ArgumentList)
+
+	if lenArgs > 2 {
 		throwJSException("invalid arguments")
 	}
-
-	lenArgs := len(call.ArgumentList)
 
 	if lenArgs <= 1 {
 		if lenArgs == 1 {
