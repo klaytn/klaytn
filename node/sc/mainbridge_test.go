@@ -163,7 +163,7 @@ func TestMainBridge_handleMsg(t *testing.T) {
 		data := "valid message"
 		go func() {
 			if err := p2p.Send(pipe2, StatusMsg, data); err != nil {
-				t.Fatal(t)
+				t.Fatal(err)
 			}
 		}()
 
@@ -177,7 +177,7 @@ func TestMainBridge_handleMsg(t *testing.T) {
 		data := strings.Repeat("a", ProtocolMaxMsgSize+1)
 		go func() {
 			if err := p2p.Send(pipe2, StatusMsg, data); err != nil {
-				t.Fatal(t)
+				t.Fatal(err)
 			}
 		}()
 
