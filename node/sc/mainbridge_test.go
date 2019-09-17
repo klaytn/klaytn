@@ -17,18 +17,27 @@
 package sc
 
 import (
+	"fmt"
+	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/consensus/istanbul/backend"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
@@ -48,6 +57,41 @@ func testNewMainBridge(t *testing.T) *MainBridge {
 	assert.NotNil(t, mBridge)
 
 	return mBridge
+}
+
+// testBlockChain returns a test BlockChain with initial values
+func testBlockChain() (*blockchain.BlockChain, error) {
+	db := database.NewMemoryDBManager()
+	defer db.Close()
+
+	gov := governance.NewGovernance(&params.ChainConfig{
+		ChainID:       big.NewInt(2018),
+		UnitPrice:     25000000000,
+		DeriveShaImpl: 0,
+		Istanbul: &params.IstanbulConfig{
+			Epoch:          istanbul.DefaultConfig.Epoch,
+			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
+			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
+		},
+		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
+	}, db)
+
+	prvKey, _ := crypto.GenerateKey()
+	engine := backend.New(common.Address{}, istanbul.DefaultConfig, prvKey, db, gov, node.CONSENSUSNODE)
+
+	var genesis *blockchain.Genesis
+	genesis = blockchain.DefaultGenesisBlock()
+	genesis.BlockScore = big.NewInt(1)
+	genesis.Config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
+	genesis.Config.Istanbul = governance.GetDefaultIstanbulConfig()
+	genesis.Config.UnitPrice = 25 * params.Ston
+
+	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false)
+	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
+		return nil, err
+	}
+
+	return blockchain.NewBlockChain(db, nil, chainConfig, engine, vm.Config{})
 }
 
 // TestCreateDB tests creation of chain database and proper working of database operation.
@@ -194,4 +238,78 @@ func TestMainBridge_handleMsg(t *testing.T) {
 
 	}
 	_ = pipe1.Close()
+}
+
+// TestMainBridge_handle tests the fail cases of `handle` function.
+// There are no success cases in this test since `handle` has a infinite loop inside.
+func TestMainBridge_handle(t *testing.T) {
+	// Create a MainBridge
+	mBridge := testNewMainBridge(t)
+	defer mBridge.chainDB.Close()
+
+	// Set testBlockChain to MainBridge.blockchain
+	bc, err := testBlockChain()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mBridge.blockchain = bc
+
+	// Variables will be used as return values of mockBridgePeer
+	key, _ := crypto.GenerateKey()
+	nodeID := discover.PubkeyID(&key.PublicKey)
+	peer := p2p.NewPeer(nodeID, "name", []p2p.Cap{})
+	peerID := peer.ID()
+	bridgePeerID := fmt.Sprintf("%x", peerID[:8])
+	pipe, _ := p2p.MsgPipe()
+
+	// mockBridgePeer mocks BridgePeer
+	mockCtrl := gomock.NewController(t)
+	mockBridgePeer := NewMockBridgePeer(mockCtrl)
+	mockBridgePeer.EXPECT().GetID().Return(bridgePeerID).AnyTimes()
+	mockBridgePeer.EXPECT().GetP2PPeer().Return(peer).AnyTimes()
+	mockBridgePeer.EXPECT().GetP2PPeerID().Return(peerID).AnyTimes()
+	mockBridgePeer.EXPECT().GetRW().Return(pipe).AnyTimes()
+	mockBridgePeer.EXPECT().Close().Return().AnyTimes()
+
+	// Case 1 - Error if `mBridge.peers.Len()` was equal or bigger than `mBridge.maxPeers`
+	{
+		// Set maxPeers to make the test fail
+		mBridge.maxPeers = mBridge.peers.Len()
+
+		err = mBridge.handle(mockBridgePeer)
+		assert.Equal(t, p2p.DiscTooManyPeers, err)
+	}
+	// Resolve the above failure condition by increasing maxPeers
+	mBridge.maxPeers += 5
+
+	// Case 2 - Error if handshake of BridgePeer failed
+	{
+		// Make handshake fail
+		mockBridgePeer.EXPECT().Handshake(uint64(8888), big.NewInt(8217), big.NewInt(1), bc.CurrentHeader().Hash()).Return(p2p.ErrPipeClosed).Times(1)
+
+		err = mBridge.handle(mockBridgePeer)
+		assert.Equal(t, p2p.ErrPipeClosed, err)
+	}
+	// Resolve the above failure condition by making handshake success
+	mockBridgePeer.EXPECT().Handshake(uint64(8888), big.NewInt(8217), big.NewInt(1), bc.CurrentHeader().Hash()).Return(nil).AnyTimes()
+
+	// Case 3 - Error when the same peer was registered before
+	{
+		// Pre-register a peer which will be added again
+		mBridge.peers.peers[bridgePeerID] = &baseBridgePeer{}
+
+		err = mBridge.handle(mockBridgePeer)
+		assert.Equal(t, errAlreadyRegistered, err)
+	}
+	// Resolve the above failure condition by deleting the registered peer
+	delete(mBridge.peers.peers, bridgePeerID)
+
+	// Case 4 - Error if `mBridge.handleMsg` failed
+	{
+		// Close of the peer's pipe make `mBridge.handleMsg` fail
+		_ = pipe.Close()
+
+		err = mBridge.handle(mockBridgePeer)
+		assert.Equal(t, p2p.ErrPipeClosed, err)
+	}
 }
