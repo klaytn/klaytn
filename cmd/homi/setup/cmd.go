@@ -342,8 +342,8 @@ func genServiceChainCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockc
 				Reward: &params.RewardConfig{
 					MintingAmount: mintingAmount,
 					Ratio:         "100/0/0",
-					UseGiniCoeff:  false,
-					DeferredTxFee: false,
+					UseGiniCoeff:  true,
+					DeferredTxFee: true,
 				},
 			},
 			Istanbul: &params.IstanbulConfig{
@@ -376,7 +376,7 @@ func genServiceChainTestGenesis(nodeAddrs, testAddrs []common.Address) *blockcha
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 60
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 30
 	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithBaobabContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithPrecypressContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
 }
