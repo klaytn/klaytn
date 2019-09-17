@@ -81,6 +81,7 @@ var spnHelpFlagGroups = []utils.FlagGroup{
 			utils.ParentChainIDFlag,
 			utils.VTRecoveryFlag,
 			utils.VTRecoveryIntervalFlag,
+			utils.ServiceChainAnchoringFlag,
 		},
 	},
 	{

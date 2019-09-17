@@ -93,6 +93,7 @@ type SCConfig struct {
 	ParentChainID      uint64
 	VTRecovery         bool
 	VTRecoveryInterval uint64
+	Anchoring          bool
 }
 
 // NodeName returns the devp2p node identifier.

@@ -428,9 +428,7 @@ func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
 // blockAnchoringManager generates anchoring transactions and updates transaction count.
 func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
 	sbh.updateTxCount(block)
-	if err := sbh.generateAndAddAnchoringTxIntoTxPool(block); err == nil {
-		logger.Info("Generate anchoring txs", "blockNumber", block.NumberU64())
-	}
+	sbh.generateAndAddAnchoringTxIntoTxPool(block)
 }
 
 func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Block) error {
@@ -446,6 +444,7 @@ func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Bl
 		logger.Error("Failed to generate service chain transaction", "blockNum", block.NumberU64(), "err", err)
 		return err
 	}
+	txCount := sbh.txCount
 	sbh.txCount = 0 // reset for the next anchoring period
 
 	signedTx, err := sbh.subbridge.bridgeAccounts.pAccount.SignTx(unsignedTx)
@@ -460,7 +459,7 @@ func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Bl
 		return err
 	}
 
-	logger.Trace("blockAnchoringManager: Success to generate anchoring tx", "blockNum", block.NumberU64(), "blockhash", block.Hash().String(), "txHash", signedTx.Hash().String())
+	logger.Info("generate an anchoring tx", "blockNum", block.NumberU64(), "blockhash", block.Hash().String(), "txCount", txCount, "txHash", signedTx.Hash().String())
 
 	return nil
 }
