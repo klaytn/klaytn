@@ -313,3 +313,39 @@ func TestMainBridge_handle(t *testing.T) {
 		assert.Equal(t, p2p.ErrPipeClosed, err)
 	}
 }
+
+// TestMainBridge_SendRPCResponseData tests SendRPCResponseData function of MainBridge.
+// The function sends RPC response data to MainBridge's peers.
+func TestMainBridge_SendRPCResponseData(t *testing.T) {
+	// Create a MainBridge
+	mBridge := testNewMainBridge(t)
+	defer mBridge.chainDB.Close()
+
+	// Test data used as a parameter of SendResponseRPC function
+	data := []byte{0x11, 0x22, 0x33}
+
+	// mockBridgePeer mocks BridgePeer
+	mockCtrl := gomock.NewController(t)
+	mockBridgePeer := NewMockBridgePeer(mockCtrl)
+
+	// Add mockBridgePeer as a peer of `mBridge.BridgePeerSet`
+	mBridge.BridgePeerSet().peers["testID"] = mockBridgePeer
+
+	// Case 1 - Error if SendResponseRPC of mockBridgePeer failed
+	{
+		// Make mockBridgePeer returns an error
+		mockBridgePeer.EXPECT().SendResponseRPC(data).Return(p2p.ErrPipeClosed).Times(1)
+
+		err := mBridge.SendRPCResponseData(data)
+		assert.Equal(t, p2p.ErrPipeClosed, err)
+	}
+
+	// Case 2 - Success if SendResponseRPC of mockBridgePeer succeeded
+	{
+		// Make mockBridgePeer returns an error
+		mockBridgePeer.EXPECT().SendResponseRPC(data).Return(nil).Times(1)
+
+		err := mBridge.SendRPCResponseData(data)
+		assert.Equal(t, nil, err)
+	}
+}
