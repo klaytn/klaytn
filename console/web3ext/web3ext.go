@@ -1059,12 +1059,12 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'unlockParentOperator',
 			call: 'subbridge_unlockParentOperator',
-			params: 1
+			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'unlockChildOperator',
 			call: 'subbridge_unlockChildOperator',
-			params: 1
+			params: 2
 		}),
 	],
     properties: [

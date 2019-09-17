@@ -20,10 +20,12 @@ import (
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"os"
 	"path"
 	"testing"
+	"time"
 )
 
 // TestBridgeAccountLockUnlock checks the lock/unlock functionality.
@@ -45,48 +47,106 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 	assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
 
 	pPwdFilePath := path.Join(tempDir, "parent_bridge_account", bAcc.pAccount.address.String())
-	pPwdStr, err := ioutil.ReadFile(pPwdFilePath)
+	pPwd, err := ioutil.ReadFile(pPwdFilePath)
+	pPwdStr := string(pPwd)
 	assert.NoError(t, err)
 
 	cPwdFilePath := path.Join(tempDir, "child_bridge_account", bAcc.cAccount.address.String())
-	cPwdStr, err := ioutil.ReadFile(cPwdFilePath)
+	cPwd, err := ioutil.ReadFile(cPwdFilePath)
+	cPwdStr := string(cPwd)
 	assert.NoError(t, err)
 
-	// Lock Account
-	{
-		err := bAcc.cAccount.LockAccount()
-		assert.NoError(t, err)
-		assert.Equal(t, false, bAcc.cAccount.IsUnlockedAccount())
+	lockAccountsWithCheck := func(t *testing.T, bAcc *BridgeAccounts) {
+		{
+			err := bAcc.cAccount.LockAccount()
+			assert.NoError(t, err)
+			assert.Equal(t, false, bAcc.cAccount.IsUnlockedAccount())
+		}
+		{
+			err := bAcc.pAccount.LockAccount()
+			assert.NoError(t, err)
+			assert.Equal(t, false, bAcc.pAccount.IsUnlockedAccount())
+		}
 	}
-	{
-		err := bAcc.pAccount.LockAccount()
-		assert.NoError(t, err)
+
+	unlockParentAccountWithCheck := func(t *testing.T, bAcc *BridgeAccounts, passwd string, duration *uint64, expectedErr error) {
+		expectedIsUnLock := false
+		if expectedErr == nil {
+			expectedIsUnLock = true
+		}
+
+		err := bAcc.pAccount.UnLockAccount(passwd, duration)
+		assert.Equal(t, expectedErr, err)
+
+		time.Sleep(time.Second)
+
+		if duration == nil || *duration == 0 {
+			assert.Equal(t, expectedIsUnLock, bAcc.pAccount.IsUnlockedAccount())
+			return
+		}
+
+		time.Sleep(time.Duration(*duration) * time.Second)
 		assert.Equal(t, false, bAcc.pAccount.IsUnlockedAccount())
 	}
 
-	// Fail to UnLock Account
-	{
-		err := bAcc.cAccount.UnLockAccount(string(cPwdStr)[3:])
-		assert.EqualError(t, err, keystore.ErrDecrypt.Error())
+	unlockChildAccountWithCheck := func(t *testing.T, bAcc *BridgeAccounts, passwd string, duration *uint64, expectedErr error) {
+		expectedIsUnLock := false
+		if expectedErr == nil {
+			expectedIsUnLock = true
+		}
+
+		err := bAcc.cAccount.UnLockAccount(passwd, duration)
+		assert.Equal(t, expectedErr, err)
+
+		time.Sleep(time.Second)
+
+		if duration == nil || *duration == 0 {
+			assert.Equal(t, expectedIsUnLock, bAcc.cAccount.IsUnlockedAccount())
+			return
+		}
+
+		time.Sleep(time.Duration(*duration) * time.Second)
 		assert.Equal(t, false, bAcc.cAccount.IsUnlockedAccount())
 	}
-	{
-		err := bAcc.pAccount.UnLockAccount(string(pPwdStr)[3:])
-		assert.EqualError(t, err, keystore.ErrDecrypt.Error())
-		assert.Equal(t, false, bAcc.pAccount.IsUnlockedAccount())
-	}
+
+	// Double time Lock Account
+	lockAccountsWithCheck(t, bAcc)
+	lockAccountsWithCheck(t, bAcc)
+
+	// Fail to UnLock Account with invalid timeout
+	lockAccountsWithCheck(t, bAcc)
+	duration := uint64(time.Duration(math.MaxInt64)/time.Second) + 1
+	unlockParentAccountWithCheck(t, bAcc, pPwdStr, &duration, errUnlockDurationTooLarge)
+	unlockChildAccountWithCheck(t, bAcc, cPwdStr, &duration, errUnlockDurationTooLarge)
+
+	// Fail to UnLock Account with wrong password
+	lockAccountsWithCheck(t, bAcc)
+	duration = uint64(0)
+	unlockParentAccountWithCheck(t, bAcc, pPwdStr[:3], &duration, keystore.ErrDecrypt)
+	unlockChildAccountWithCheck(t, bAcc, cPwdStr[:3], &duration, keystore.ErrDecrypt)
 
 	// Succeed to UnLock Account
-	{
-		err := bAcc.cAccount.UnLockAccount(string(cPwdStr))
-		assert.NoError(t, err)
-		assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
-	}
-	{
-		err := bAcc.pAccount.UnLockAccount(string(pPwdStr))
-		assert.NoError(t, err)
-		assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
-	}
+	lockAccountsWithCheck(t, bAcc)
+	duration = uint64(0)
+	unlockParentAccountWithCheck(t, bAcc, pPwdStr, &duration, nil)
+	unlockChildAccountWithCheck(t, bAcc, cPwdStr, &duration, nil)
+
+	// Succeed to UnLock Account with timeout
+	lockAccountsWithCheck(t, bAcc)
+	duration = uint64(5)
+	unlockParentAccountWithCheck(t, bAcc, pPwdStr, &duration, nil)
+	unlockChildAccountWithCheck(t, bAcc, cPwdStr, &duration, nil)
+
+	// Fail to UnLock Account with wrong password
+	lockAccountsWithCheck(t, bAcc)
+	duration = uint64(5)
+	unlockParentAccountWithCheck(t, bAcc, pPwdStr[:3], &duration, keystore.ErrDecrypt)
+	unlockChildAccountWithCheck(t, bAcc, cPwdStr[:3], &duration, keystore.ErrDecrypt)
+
+	// Succeed to UnLock Account with nil timeout
+	lockAccountsWithCheck(t, bAcc)
+	unlockParentAccountWithCheck(t, bAcc, pPwdStr, nil, nil)
+	unlockChildAccountWithCheck(t, bAcc, cPwdStr, nil, nil)
 }
 
 // TestBridgeAccountInformation checks if the information result is right or not.
