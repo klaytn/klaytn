@@ -17,6 +17,7 @@
 package sc
 
 import (
+	"errors"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/keystore"
@@ -25,14 +26,20 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"os"
 	"path"
 	"sync"
+	"time"
 )
 
 const (
 	DefaultBridgeTxGasLimit = 5000000
+)
+
+var (
+	errUnlockDurationTooLarge = errors.New("unlock duration too large")
 )
 
 // accountInfo has bridge account's information to make and sign a transaction.
@@ -229,11 +236,21 @@ func (acc *accountInfo) LockAccount() error {
 }
 
 // UnLockAccount can unlock the account keystore.
-func (acc *accountInfo) UnLockAccount(passphrase string) error {
+func (acc *accountInfo) UnLockAccount(passphrase string, duration *uint64) error {
 	acc.mu.Lock()
 	defer acc.mu.Unlock()
 
-	if err := acc.keystore.Unlock(acc.keystore.Accounts()[0], passphrase); err != nil {
+	const max = uint64(time.Duration(math.MaxInt64) / time.Second)
+	var d time.Duration
+	if duration == nil {
+		d = 0
+	} else if *duration > max {
+		return errUnlockDurationTooLarge
+	} else {
+		d = time.Duration(*duration) * time.Second
+	}
+
+	if err := acc.keystore.TimedUnlock(acc.keystore.Accounts()[0], passphrase, d); err != nil {
 		logger.Error("Failed to unlock the account", "account", acc.address)
 		return err
 	}

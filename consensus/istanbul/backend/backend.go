@@ -218,28 +218,38 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 	return nil
 }
 
-// Broadcast implements istanbul.Backend.Gossip
-func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.ValidatorSet, payload []byte) error {
-	isInSubList := false
+// checkInSubList checks if the node is in a sublist
+func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.ValidatorSet) bool {
 	for _, val := range valSet.SubList(prevHash, sb.currentView.Load().(*istanbul.View)) {
 		if val.Address() == sb.Address() {
-			isInSubList = true
-			break
+			return true
 		}
 	}
-	if !isInSubList {
+	return false
+}
+
+// getTargetReceivers returns a map of nodes which need to receive a message
+func (sb *backend) getTargetReceivers(valSet istanbul.ValidatorSet) map[common.Address]bool {
+	targets := make(map[common.Address]bool)
+
+	for _, val := range valSet.List() {
+		if val.Address() != sb.Address() {
+			targets[val.Address()] = true
+		}
+	}
+	return targets
+}
+
+// GossipSubPeer implements istanbul.Backend.Gossip
+func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.ValidatorSet, payload []byte) map[common.Address]bool {
+	if !sb.checkInSubList(prevHash, valSet) {
 		return nil
 	}
 
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
-	targets := make(map[common.Address]bool)
-	for _, val := range valSet.List() {
-		if val.Address() != sb.Address() {
-			targets[val.Address()] = true
-		}
-	}
+	targets := sb.getTargetReceivers(valSet)
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
@@ -267,7 +277,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 			go p.Send(IstanbulMsg, cmsg)
 		}
 	}
-	return nil
+	return targets
 }
 
 // Commit implements istanbul.Backend.Commit

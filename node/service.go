@@ -37,6 +37,10 @@ type ServiceContext struct {
 	AccountManager *accounts.Manager
 }
 
+func NewServiceContext(conf *Config, srv map[reflect.Type]Service, mux *event.TypeMux, am *accounts.Manager) *ServiceContext {
+	return &ServiceContext{conf, srv, mux, am}
+}
+
 // OpenDatabase opens an existing database with the given name (or creates one
 // if no previous can be found) from within the node's data directory. If the
 // node is an ephemeral one, a memory database is returned.

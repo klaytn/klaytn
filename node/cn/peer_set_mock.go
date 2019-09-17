@@ -6,6 +6,7 @@ package cn
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	p2p "github.com/klaytn/klaytn/networks/p2p"
 	reflect "reflect"
@@ -34,34 +35,6 @@ func (m *MockPeerSet) EXPECT() *MockPeerSetMockRecorder {
 	return m.recorder
 }
 
-// AnotherTypePeersWithTx mocks base method
-func (m *MockPeerSet) AnotherTypePeersWithTx(arg0 common.Hash, arg1 p2p.ConnType) []Peer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AnotherTypePeersWithTx", arg0, arg1)
-	ret0, _ := ret[0].([]Peer)
-	return ret0
-}
-
-// AnotherTypePeersWithTx indicates an expected call of AnotherTypePeersWithTx
-func (mr *MockPeerSetMockRecorder) AnotherTypePeersWithTx(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnotherTypePeersWithTx", reflect.TypeOf((*MockPeerSet)(nil).AnotherTypePeersWithTx), arg0, arg1)
-}
-
-// AnotherTypePeersWithoutTx mocks base method
-func (m *MockPeerSet) AnotherTypePeersWithoutTx(arg0 common.Hash, arg1 p2p.ConnType) []Peer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AnotherTypePeersWithoutTx", arg0, arg1)
-	ret0, _ := ret[0].([]Peer)
-	return ret0
-}
-
-// AnotherTypePeersWithoutTx indicates an expected call of AnotherTypePeersWithoutTx
-func (mr *MockPeerSetMockRecorder) AnotherTypePeersWithoutTx(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnotherTypePeersWithoutTx", reflect.TypeOf((*MockPeerSet)(nil).AnotherTypePeersWithoutTx), arg0, arg1)
-}
-
 // BestPeer mocks base method
 func (m *MockPeerSet) BestPeer() Peer {
 	m.ctrl.T.Helper()
@@ -88,20 +61,6 @@ func (m *MockPeerSet) CNPeers() map[common.Address]Peer {
 func (mr *MockPeerSetMockRecorder) CNPeers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CNPeers", reflect.TypeOf((*MockPeerSet)(nil).CNPeers))
-}
-
-// CNWithoutBlock mocks base method
-func (m *MockPeerSet) CNWithoutBlock(arg0 common.Hash) []Peer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CNWithoutBlock", arg0)
-	ret0, _ := ret[0].([]Peer)
-	return ret0
-}
-
-// CNWithoutBlock indicates an expected call of CNWithoutBlock
-func (mr *MockPeerSetMockRecorder) CNWithoutBlock(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CNWithoutBlock", reflect.TypeOf((*MockPeerSet)(nil).CNWithoutBlock), arg0)
 }
 
 // CNWithoutTx mocks base method
@@ -144,20 +103,6 @@ func (mr *MockPeerSetMockRecorder) ENPeers() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ENPeers", reflect.TypeOf((*MockPeerSet)(nil).ENPeers))
 }
 
-// ENWithoutBlock mocks base method
-func (m *MockPeerSet) ENWithoutBlock(arg0 common.Hash) []Peer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ENWithoutBlock", arg0)
-	ret0, _ := ret[0].([]Peer)
-	return ret0
-}
-
-// ENWithoutBlock indicates an expected call of ENWithoutBlock
-func (mr *MockPeerSetMockRecorder) ENWithoutBlock(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ENWithoutBlock", reflect.TypeOf((*MockPeerSet)(nil).ENWithoutBlock), arg0)
-}
-
 // Len mocks base method
 func (m *MockPeerSet) Len() int {
 	m.ctrl.T.Helper()
@@ -184,20 +129,6 @@ func (m *MockPeerSet) PNPeers() map[common.Address]Peer {
 func (mr *MockPeerSetMockRecorder) PNPeers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PNPeers", reflect.TypeOf((*MockPeerSet)(nil).PNPeers))
-}
-
-// PNWithoutBlock mocks base method
-func (m *MockPeerSet) PNWithoutBlock(arg0 common.Hash) []Peer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PNWithoutBlock", arg0)
-	ret0, _ := ret[0].([]Peer)
-	return ret0
-}
-
-// PNWithoutBlock indicates an expected call of PNWithoutBlock
-func (mr *MockPeerSetMockRecorder) PNWithoutBlock(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PNWithoutBlock", reflect.TypeOf((*MockPeerSet)(nil).PNWithoutBlock), arg0)
 }
 
 // Peer mocks base method
@@ -242,20 +173,6 @@ func (mr *MockPeerSetMockRecorder) PeersWithoutBlock(arg0 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PeersWithoutBlock", reflect.TypeOf((*MockPeerSet)(nil).PeersWithoutBlock), arg0)
 }
 
-// PeersWithoutBlockExceptCN mocks base method
-func (m *MockPeerSet) PeersWithoutBlockExceptCN(arg0 common.Hash) []Peer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PeersWithoutBlockExceptCN", arg0)
-	ret0, _ := ret[0].([]Peer)
-	return ret0
-}
-
-// PeersWithoutBlockExceptCN indicates an expected call of PeersWithoutBlockExceptCN
-func (mr *MockPeerSetMockRecorder) PeersWithoutBlockExceptCN(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PeersWithoutBlockExceptCN", reflect.TypeOf((*MockPeerSet)(nil).PeersWithoutBlockExceptCN), arg0)
-}
-
 // PeersWithoutTx mocks base method
 func (m *MockPeerSet) PeersWithoutTx(arg0 common.Hash) []Peer {
 	m.ctrl.T.Helper()
@@ -296,46 +213,32 @@ func (mr *MockPeerSetMockRecorder) RegisterValidator(arg0, arg1 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterValidator", reflect.TypeOf((*MockPeerSet)(nil).RegisterValidator), arg0, arg1)
 }
 
-// TypePeers mocks base method
-func (m *MockPeerSet) TypePeers(arg0 p2p.ConnType) []Peer {
+// SamplePeersToSendBlock mocks base method
+func (m *MockPeerSet) SamplePeersToSendBlock(arg0 *types.Block, arg1 p2p.ConnType) []Peer {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TypePeers", arg0)
+	ret := m.ctrl.Call(m, "SamplePeersToSendBlock", arg0, arg1)
 	ret0, _ := ret[0].([]Peer)
 	return ret0
 }
 
-// TypePeers indicates an expected call of TypePeers
-func (mr *MockPeerSetMockRecorder) TypePeers(arg0 interface{}) *gomock.Call {
+// SamplePeersToSendBlock indicates an expected call of SamplePeersToSendBlock
+func (mr *MockPeerSetMockRecorder) SamplePeersToSendBlock(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TypePeers", reflect.TypeOf((*MockPeerSet)(nil).TypePeers), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SamplePeersToSendBlock", reflect.TypeOf((*MockPeerSet)(nil).SamplePeersToSendBlock), arg0, arg1)
 }
 
-// TypePeersWithTx mocks base method
-func (m *MockPeerSet) TypePeersWithTx(arg0 common.Hash, arg1 p2p.ConnType) []Peer {
+// SampleResendPeersByType mocks base method
+func (m *MockPeerSet) SampleResendPeersByType(arg0 p2p.ConnType) []Peer {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TypePeersWithTx", arg0, arg1)
+	ret := m.ctrl.Call(m, "SampleResendPeersByType", arg0)
 	ret0, _ := ret[0].([]Peer)
 	return ret0
 }
 
-// TypePeersWithTx indicates an expected call of TypePeersWithTx
-func (mr *MockPeerSetMockRecorder) TypePeersWithTx(arg0, arg1 interface{}) *gomock.Call {
+// SampleResendPeersByType indicates an expected call of SampleResendPeersByType
+func (mr *MockPeerSetMockRecorder) SampleResendPeersByType(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TypePeersWithTx", reflect.TypeOf((*MockPeerSet)(nil).TypePeersWithTx), arg0, arg1)
-}
-
-// TypePeersWithoutBlock mocks base method
-func (m *MockPeerSet) TypePeersWithoutBlock(arg0 common.Hash, arg1 p2p.ConnType) []Peer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TypePeersWithoutBlock", arg0, arg1)
-	ret0, _ := ret[0].([]Peer)
-	return ret0
-}
-
-// TypePeersWithoutBlock indicates an expected call of TypePeersWithoutBlock
-func (mr *MockPeerSetMockRecorder) TypePeersWithoutBlock(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TypePeersWithoutBlock", reflect.TypeOf((*MockPeerSet)(nil).TypePeersWithoutBlock), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SampleResendPeersByType", reflect.TypeOf((*MockPeerSet)(nil).SampleResendPeersByType), arg0)
 }
 
 // TypePeersWithoutTx mocks base method
@@ -364,4 +267,16 @@ func (m *MockPeerSet) Unregister(arg0 string) error {
 func (mr *MockPeerSetMockRecorder) Unregister(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unregister", reflect.TypeOf((*MockPeerSet)(nil).Unregister), arg0)
+}
+
+// UpdateTypePeersWithoutTxs mocks base method
+func (m *MockPeerSet) UpdateTypePeersWithoutTxs(arg0 *types.Transaction, arg1 p2p.ConnType, arg2 map[Peer]types.Transactions) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateTypePeersWithoutTxs", arg0, arg1, arg2)
+}
+
+// UpdateTypePeersWithoutTxs indicates an expected call of UpdateTypePeersWithoutTxs
+func (mr *MockPeerSetMockRecorder) UpdateTypePeersWithoutTxs(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTypePeersWithoutTxs", reflect.TypeOf((*MockPeerSet)(nil).UpdateTypePeersWithoutTxs), arg0, arg1, arg2)
 }

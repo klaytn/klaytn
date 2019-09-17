@@ -138,6 +138,7 @@ func startKlaytnAuxiliaryService(ctx *cli.Context, stack *node.Node) {
 	}
 }
 
+// TODO-Klaytn-ServiceChain: remove clique or fix clique for finality support.
 func startServiceChainService(ctx *cli.Context, stack *node.Node) {
 	var scn *cn.ServiceChain
 	if err := stack.Service(&scn); err != nil {

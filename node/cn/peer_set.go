@@ -22,11 +22,13 @@ package cn
 
 import (
 	"fmt"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/node"
 	"math/big"
 	"sync"
+	"time"
 )
 
 //go:generate mockgen -destination=node/cn/peer_set_mock.go -package=cn github.com/klaytn/klaytn/node/cn PeerSet
@@ -42,20 +44,14 @@ type PeerSet interface {
 	Len() int
 
 	PeersWithoutBlock(hash common.Hash) []Peer
-	TypePeersWithoutBlock(hash common.Hash, nodetype p2p.ConnType) []Peer
-	PeersWithoutBlockExceptCN(hash common.Hash) []Peer
 
-	CNWithoutBlock(hash common.Hash) []Peer
-	PNWithoutBlock(hash common.Hash) []Peer
-	ENWithoutBlock(hash common.Hash) []Peer
-	TypePeers(nodetype p2p.ConnType) []Peer
+	SamplePeersToSendBlock(block *types.Block, nodeType p2p.ConnType) []Peer
+	SampleResendPeersByType(nodeType p2p.ConnType) []Peer
 
 	PeersWithoutTx(hash common.Hash) []Peer
 	TypePeersWithoutTx(hash common.Hash, nodetype p2p.ConnType) []Peer
-	TypePeersWithTx(hash common.Hash, nodetype p2p.ConnType) []Peer
-	AnotherTypePeersWithoutTx(hash common.Hash, nodetype p2p.ConnType) []Peer
-	AnotherTypePeersWithTx(hash common.Hash, nodetype p2p.ConnType) []Peer
 	CNWithoutTx(hash common.Hash) []Peer
+	UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType p2p.ConnType, peersWithoutTxsMap map[Peer]types.Transactions)
 
 	BestPeer() Peer
 	RegisterValidator(connType p2p.ConnType, validator p2p.PeerTypeValidator)
@@ -151,15 +147,19 @@ func (ps *peerSet) Unregister(id string) error {
 	if !ok {
 		return errNotRegistered
 	}
-	if p.ConnType() == node.CONSENSUSNODE {
-		delete(ps.cnpeers, p.GetAddr())
-	} else if p.ConnType() == node.PROXYNODE {
-		delete(ps.pnpeers, p.GetAddr())
-	} else if p.ConnType() == node.ENDPOINTNODE {
-		delete(ps.enpeers, p.GetAddr())
-	}
 	delete(ps.peers, id)
 	p.Close()
+
+	switch p.ConnType() {
+	case node.CONSENSUSNODE:
+		delete(ps.cnpeers, p.GetAddr())
+	case node.PROXYNODE:
+		delete(ps.pnpeers, p.GetAddr())
+	case node.ENDPOINTNODE:
+		delete(ps.enpeers, p.GetAddr())
+	default:
+		return errUnexpectedNodeType
+	}
 
 	cnPeerCountGauge.Update(int64(len(ps.cnpeers)))
 	pnPeerCountGauge.Update(int64(len(ps.pnpeers)))
@@ -242,7 +242,7 @@ func (ps *peerSet) PeersWithoutBlock(hash common.Hash) []Peer {
 	return list
 }
 
-func (ps *peerSet) TypePeersWithoutBlock(hash common.Hash, nodetype p2p.ConnType) []Peer {
+func (ps *peerSet) typePeersWithoutBlock(hash common.Hash, nodetype p2p.ConnType) []Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -307,7 +307,7 @@ func (ps *peerSet) ENWithoutBlock(hash common.Hash) []Peer {
 	return list
 }
 
-func (ps *peerSet) TypePeers(nodetype p2p.ConnType) []Peer {
+func (ps *peerSet) typePeers(nodetype p2p.ConnType) []Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 	list := make([]Peer, 0, len(ps.peers))
@@ -347,46 +347,6 @@ func (ps *peerSet) TypePeersWithoutTx(hash common.Hash, nodetype p2p.ConnType) [
 	return list
 }
 
-func (ps *peerSet) TypePeersWithTx(hash common.Hash, nodetype p2p.ConnType) []Peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]Peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if p.ConnType() == nodetype && p.KnowsTx(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
-func (ps *peerSet) AnotherTypePeersWithoutTx(hash common.Hash, nodetype p2p.ConnType) []Peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]Peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if p.ConnType() != nodetype && !p.KnowsTx(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
-// TODO-Klaytn drop or missing tx
-func (ps *peerSet) AnotherTypePeersWithTx(hash common.Hash, nodetype p2p.ConnType) []Peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]Peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if p.ConnType() != nodetype && p.KnowsTx(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
 func (ps *peerSet) CNWithoutTx(hash common.Hash) []Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
@@ -406,12 +366,12 @@ func (ps *peerSet) BestPeer() Peer {
 	defer ps.lock.RUnlock()
 
 	var (
-		bestPeer Peer
-		bestTd   *big.Int
+		bestPeer       Peer
+		bestBlockScore *big.Int
 	)
 	for _, p := range ps.peers {
-		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
-			bestPeer, bestTd = p, td
+		if _, currBlockScore := p.Head(); bestPeer == nil || currBlockScore.Cmp(bestBlockScore) > 0 {
+			bestPeer, bestBlockScore = p, currBlockScore
 		}
 	}
 	return bestPeer
@@ -429,7 +389,80 @@ func (ps *peerSet) Close() {
 	defer ps.lock.Unlock()
 
 	for _, p := range ps.peers {
-		p.GetP2PPeer().Disconnect(p2p.DiscQuitting)
+		p.DisconnectP2PPeer(p2p.DiscQuitting)
 	}
 	ps.closed = true
+}
+
+// samplePeersToSendBlock samples peers from peers without block.
+// It uses different sampling policy for different node type.
+func (peers *peerSet) SamplePeersToSendBlock(block *types.Block, nodeType p2p.ConnType) []Peer {
+	var peersWithoutBlock []Peer
+	hash := block.Hash()
+
+	switch nodeType {
+	case node.CONSENSUSNODE:
+		// If currNode is CN, sends block to sampled peers from (CN + PN), not to EN.
+		cnsWithoutBlock := peers.CNWithoutBlock(hash)
+		sampledCNsWithoutBlock := samplingPeers(cnsWithoutBlock, sampleSize(cnsWithoutBlock))
+
+		// CN always broadcasts a block to its PN peers, unless the number of PN peers exceeds the limit.
+		pnsWithoutBlock := peers.PNWithoutBlock(hash)
+		if len(pnsWithoutBlock) > blockReceivingPNLimit {
+			pnsWithoutBlock = samplingPeers(pnsWithoutBlock, blockReceivingPNLimit)
+		}
+
+		logger.Trace("Propagated block", "hash", hash,
+			"CN recipients", len(sampledCNsWithoutBlock), "PN recipients", len(pnsWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+
+		return append(cnsWithoutBlock, pnsWithoutBlock...)
+	case node.PROXYNODE:
+		// If currNode is PN, sends block to sampled peers from (PN + EN), not to CN.
+		peersWithoutBlock = peers.PeersWithoutBlockExceptCN(hash)
+
+	case node.ENDPOINTNODE:
+		// If currNode is EN, sends block to sampled EN peers, not to EN nor CN.
+		peersWithoutBlock = peers.ENWithoutBlock(hash)
+
+	default:
+		logger.Error("Undefined nodeType of protocolManager! nodeType: %v", nodeType)
+		return []Peer{}
+	}
+
+	sampledPeersWithoutBlock := samplingPeers(peersWithoutBlock, sampleSize(peersWithoutBlock))
+	logger.Trace("Propagated block", "hash", hash,
+		"recipients", len(sampledPeersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+
+	return sampledPeersWithoutBlock
+}
+
+func (peers *peerSet) SampleResendPeersByType(nodeType p2p.ConnType) []Peer {
+	// TODO-Klaytn Need to tune pickSize. Currently use 2 for availability and efficiency.
+	var sampledPeers []Peer
+	switch nodeType {
+	case node.ENDPOINTNODE:
+		sampledPeers = peers.typePeers(node.PROXYNODE)
+		if len(sampledPeers) == 0 {
+			sampledPeers = peers.typePeers(node.ENDPOINTNODE)
+		}
+		sampledPeers = samplingPeers(sampledPeers, 2)
+	case node.PROXYNODE:
+		sampledPeers = peers.typePeers(node.CONSENSUSNODE)
+		if len(sampledPeers) == 0 {
+			sampledPeers = peers.typePeers(node.PROXYNODE)
+		}
+		sampledPeers = samplingPeers(sampledPeers, 2)
+	default:
+		logger.Warn("Not supported nodeType", "nodeType", nodeType)
+		return nil
+	}
+	return sampledPeers
+}
+
+func (peers *peerSet) UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType p2p.ConnType, peersWithoutTxsMap map[Peer]types.Transactions) {
+	typePeers := peers.TypePeersWithoutTx(tx.Hash(), nodeType)
+	for _, peer := range typePeers {
+		peersWithoutTxsMap[peer] = append(peersWithoutTxsMap[peer], tx)
+	}
+	logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(typePeers))
 }

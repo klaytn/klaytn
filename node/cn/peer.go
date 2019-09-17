@@ -39,9 +39,10 @@ import (
 )
 
 var (
-	errClosed            = errors.New("peer set is closed")
-	errAlreadyRegistered = errors.New("peer is already registered")
-	errNotRegistered     = errors.New("peer is not registered")
+	errClosed             = errors.New("peer set is closed")
+	errAlreadyRegistered  = errors.New("peer is already registered")
+	errNotRegistered      = errors.New("peer is not registered")
+	errUnexpectedNodeType = errors.New("unexpected node type of peer")
 )
 
 const (
@@ -82,6 +83,7 @@ type propEvent struct {
 	td    *big.Int
 }
 
+//go:generate mockgen -destination=node/cn/peer_mock.go -package=cn github.com/klaytn/klaytn/node/cn Peer
 type Peer interface {
 	// Broadcast is a write loop that multiplexes block propagations, announcements
 	// and transaction broadcasts into the remote peer. The goal is to have an async
@@ -117,7 +119,7 @@ type Peer interface {
 	ReSendTransactions(txs types.Transactions) error
 
 	// AsyncSendTransactions sends transactions asynchronously to the peer.
-	AsyncSendTransactions(txs []*types.Transaction)
+	AsyncSendTransactions(txs types.Transactions)
 
 	// SendNewBlockHashes announces the availability of a number of blocks through
 	// a hash notification.
@@ -202,6 +204,9 @@ type Peer interface {
 
 	// GetP2PPeer returns the p2p.
 	GetP2PPeer() *p2p.Peer
+
+	// DisconnectP2PPeer disconnects the p2p peer with the given reason.
+	DisconnectP2PPeer(discReason p2p.DiscReason)
 
 	// GetRW returns the MsgReadWriter of the peer.
 	GetRW() p2p.MsgReadWriter
@@ -437,7 +442,7 @@ func (p *basePeer) ReSendTransactions(txs types.Transactions) error {
 	return p2p.Send(p.rw, TxMsg, txs)
 }
 
-func (p *basePeer) AsyncSendTransactions(txs []*types.Transaction) {
+func (p *basePeer) AsyncSendTransactions(txs types.Transactions) {
 	select {
 	case p.queuedTxs <- txs:
 		for _, tx := range txs {
@@ -701,6 +706,11 @@ func (p *basePeer) KnowsTx(hash common.Hash) bool {
 // GetP2PPeer returns the p2p.Peer.
 func (p *basePeer) GetP2PPeer() *p2p.Peer {
 	return p.Peer
+}
+
+// DisconnectP2PPeer disconnects the p2p peer with the given reason.
+func (p *basePeer) DisconnectP2PPeer(discReason p2p.DiscReason) {
+	p.GetP2PPeer().Disconnect(discReason)
 }
 
 // GetRW returns the MsgReadWriter of the peer.

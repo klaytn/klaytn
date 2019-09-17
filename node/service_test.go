@@ -22,10 +22,13 @@ package node
 
 import (
 	"fmt"
+	"github.com/klaytn/klaytn/accounts"
+	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/storage/database"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -43,7 +46,7 @@ func TestContextDatabases(t *testing.T) {
 		t.Fatalf("non-created database already exists")
 	}
 	// Request the opening/creation of a database and ensure it persists to disk
-	ctx := &ServiceContext{config: &Config{Name: "unit-test", DataDir: dir}}
+	ctx := NewServiceContext(&Config{Name: "unit-test", DataDir: dir}, map[reflect.Type]Service{}, &event.TypeMux{}, &accounts.Manager{})
 	dbc := &database.DBConfig{Dir: "persistent", DBType: database.LevelDB,
 		LevelDBCacheSize: 0, OpenFilesLimit: 0}
 	db := ctx.OpenDatabase(dbc)
@@ -53,7 +56,7 @@ func TestContextDatabases(t *testing.T) {
 		t.Fatalf("persistent database doesn't exists: %v", err)
 	}
 	// Request th opening/creation of an ephemeral database and ensure it's not persisted
-	ctx = &ServiceContext{config: &Config{DataDir: ""}}
+	ctx = NewServiceContext(&Config{DataDir: ""}, map[reflect.Type]Service{}, &event.TypeMux{}, &accounts.Manager{})
 	dbc = &database.DBConfig{Dir: "ephemeral", DBType: database.LevelDB,
 		LevelDBCacheSize: 0, OpenFilesLimit: 0}
 

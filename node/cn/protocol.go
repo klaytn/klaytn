@@ -76,6 +76,8 @@ const (
 	NodeDataMsg        = 0x0d
 	ReceiptsRequestMsg = 0x0e
 	ReceiptsMsg        = 0x0f
+
+	MsgCodeEnd = 0x10
 )
 
 type errCode int
@@ -182,8 +184,9 @@ type protocolManagerDownloader interface {
 	Progress() klaytn.SyncProgress
 }
 
-// protocolManagerFetcher is an interface of fetcher.Fetcher used by ProtocolManager.
-type protocolManagerFetcher interface {
+//go:generate mockgen -destination=node/cn/mocks/fetcher_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerFetcher
+// ProtocolManagerFetcher is an interface of fetcher.Fetcher used by ProtocolManager.
+type ProtocolManagerFetcher interface {
 	Enqueue(peer string, block *types.Block) error
 	FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction
 	FilterHeaders(peer string, headers []*types.Header, time time.Time) []*types.Header

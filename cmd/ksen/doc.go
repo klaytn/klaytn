@@ -18,5 +18,14 @@
 // This file is derived from cmd/geth/main.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// ksen is the command-line client for Klaytn ServiceChain Endpoint Node.
+/*
+ksen is the command-line client for Klaytn ServiceChain Endpoint Node.
+
+ksen has the node type of "en" internally. Please try `ksen -h` to see commands and options list.
+
+Source Files
+
+Each file contains following contents
+ - main.go : Defines available options and initializes the application with given options
+*/
 package main

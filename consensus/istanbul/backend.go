@@ -45,7 +45,7 @@ type Backend interface {
 	// Gossip sends a message to all validators (exclude self)
 	Gossip(valSet ValidatorSet, payload []byte) error
 
-	GossipSubPeer(prevHash common.Hash, valSet ValidatorSet, payload []byte) error
+	GossipSubPeer(prevHash common.Hash, valSet ValidatorSet, payload []byte) map[common.Address]bool
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.

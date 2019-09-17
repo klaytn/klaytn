@@ -480,13 +480,13 @@ func (sb *SubBridgeAPI) LockChildOperator() error {
 }
 
 // UnlockParentOperator can unlock the parent bridge operator.
-func (sb *SubBridgeAPI) UnlockParentOperator(passphrase string) error {
-	return sb.subBridge.bridgeAccounts.pAccount.UnLockAccount(passphrase)
+func (sb *SubBridgeAPI) UnlockParentOperator(passphrase string, duration *uint64) error {
+	return sb.subBridge.bridgeAccounts.pAccount.UnLockAccount(passphrase, duration)
 }
 
 // UnlockChildOperator can unlock the child bridge operator.
-func (sb *SubBridgeAPI) UnlockChildOperator(passphrase string) error {
-	return sb.subBridge.bridgeAccounts.cAccount.UnLockAccount(passphrase)
+func (sb *SubBridgeAPI) UnlockChildOperator(passphrase string, duration *uint64) error {
+	return sb.subBridge.bridgeAccounts.cAccount.UnLockAccount(passphrase, duration)
 }
 
 func (sb *SubBridgeAPI) GetAnchoringPeriod() uint64 {

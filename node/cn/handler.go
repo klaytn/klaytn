@@ -88,7 +88,7 @@ type ProtocolManager struct {
 	maxPeers    int
 
 	downloader protocolManagerDownloader
-	fetcher    protocolManagerFetcher
+	fetcher    ProtocolManagerFetcher
 	peers      PeerSet
 
 	SubProtocols []p2p.Protocol
@@ -1015,48 +1015,6 @@ func sampleSize(peers []Peer) int {
 	}
 }
 
-// samplePeersToSendBlock samples peers from peers without block.
-// It uses different sampling policy for different node type.
-func (pm *ProtocolManager) samplePeersToSendBlock(block *types.Block) []Peer {
-	var peersWithoutBlock []Peer
-	hash := block.Hash()
-
-	switch pm.nodetype {
-	case node.CONSENSUSNODE:
-		// If currNode is CN, sends block to sampled peers from (CN + PN), not to EN.
-		cnsWithoutBlock := pm.peers.CNWithoutBlock(hash)
-		sampledCNsWithoutBlock := samplingPeers(cnsWithoutBlock, sampleSize(cnsWithoutBlock))
-
-		// CN always broadcasts a block to its PN peers, unless the number of PN peers exceeds the limit.
-		pnsWithoutBlock := pm.peers.PNWithoutBlock(hash)
-		if len(pnsWithoutBlock) > blockReceivingPNLimit {
-			pnsWithoutBlock = samplingPeers(pnsWithoutBlock, blockReceivingPNLimit)
-		}
-
-		logger.Trace("Propagated block", "hash", hash,
-			"CN recipients", len(sampledCNsWithoutBlock), "PN recipients", len(pnsWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
-
-		return append(cnsWithoutBlock, pnsWithoutBlock...)
-	case node.PROXYNODE:
-		// If currNode is PN, sends block to sampled peers from (PN + EN), not to CN.
-		peersWithoutBlock = pm.peers.PeersWithoutBlockExceptCN(hash)
-
-	case node.ENDPOINTNODE:
-		// If currNode is EN, sends block to sampled EN peers, not to EN nor CN.
-		peersWithoutBlock = pm.peers.ENWithoutBlock(hash)
-
-	default:
-		logger.Error("Undefined nodeType of protocolManager! nodeType: %v", pm.nodetype)
-		return []Peer{}
-	}
-
-	sampledPeersWithoutBlock := samplingPeers(peersWithoutBlock, sampleSize(peersWithoutBlock))
-	logger.Trace("Propagated block", "hash", hash,
-		"recipients", len(sampledPeersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
-
-	return sampledPeersWithoutBlock
-}
-
 // BroadcastBlock will propagate a block to a subset of its peers.
 // If current node is CN, it will send block to all PN peers + sampled CN peers without block.
 // However, if there are more than 5 PN peers, it will sample 5 PN peers.
@@ -1071,7 +1029,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block) {
 
 	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
 	td := new(big.Int).Add(block.BlockScore(), pm.blockchain.GetTd(block.ParentHash(), block.NumberU64()-1))
-	peersToSendBlock := pm.samplePeersToSendBlock(block)
+	peersToSendBlock := pm.peers.SamplePeersToSendBlock(block, pm.nodetype)
 	for _, peer := range peersToSendBlock {
 		peer.AsyncSendNewBlock(block, td)
 	}
@@ -1093,26 +1051,23 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 		"recipients", len(peersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 }
 
-// BroadcastTxs will propagate a batch of transactions to all peers which are not known to
+// BroadcastTxs propagates a batch of transactions to its peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
-	// Broadcast transactions to a batch of peers not knowing about it
 	switch pm.nodetype {
 	case node.CONSENSUSNODE:
-		pm.broadcastCNTx(txs)
+		pm.broadcastTxsFromCN(txs)
+	case node.PROXYNODE:
+		pm.broadcastTxsFromPN(txs)
+	case node.ENDPOINTNODE:
+		pm.broadcastTxsFromEN(txs)
 	default:
-		pm.broadcastNoCNTx(txs, false)
+		logger.Error("Unexpected nodeType of ProtocolManager", "nodeType", pm.nodetype)
 	}
 }
 
-func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
-	if pm.nodetype != node.CONSENSUSNODE {
-		pm.broadcastNoCNTx(txs, true)
-	}
-}
-
-func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
-	var txset = make(map[Peer]types.Transactions)
+func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
+	cnPeersWithoutTxs := make(map[Peer]types.Transactions)
 	for _, tx := range txs {
 		peers := pm.peers.CNWithoutTx(tx.Hash())
 		if len(peers) == 0 {
@@ -1125,103 +1080,80 @@ func (pm *ProtocolManager) broadcastCNTx(txs types.Transactions) {
 		half := (len(peers) / 2) + 2
 		peers = samplingPeers(peers, half)
 		for _, peer := range peers {
-			txset[peer] = append(txset[peer], tx)
+			cnPeersWithoutTxs[peer] = append(cnPeersWithoutTxs[peer], tx)
 		}
 		logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
 
-	propTxPeersGauge.Update(int64(len(txset)))
+	propTxPeersGauge.Update(int64(len(cnPeersWithoutTxs)))
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
-	for peer, txs := range txset {
+	for peer, txs2 := range cnPeersWithoutTxs {
 		//peer.SendTransactions(txs)
-		peer.AsyncSendTransactions(txs)
+		peer.AsyncSendTransactions(txs2)
 	}
 }
 
-func (pm *ProtocolManager) sampleResendPeersByType(nodetype p2p.ConnType) []Peer {
-	// TODO-Klaytn Need to tune pickSize. Currently use 2 for availability and efficiency.
-	var peers []Peer
-	switch nodetype {
-	case node.ENDPOINTNODE:
-		peers = pm.peers.TypePeers(node.PROXYNODE)
-		if len(peers) == 0 {
-			peers = pm.peers.TypePeers(node.ENDPOINTNODE)
-		}
-		peers = samplingPeers(peers, 2)
-	case node.PROXYNODE:
-		peers = pm.peers.TypePeers(node.CONSENSUSNODE)
-		if len(peers) == 0 {
-			peers = pm.peers.TypePeers(node.PROXYNODE)
-		}
-		peers = samplingPeers(peers, 2)
-	default:
-		logger.Warn("Not supported nodetype", "nodetype", nodetype)
-		return nil
-	}
-	return peers
-}
-
-func (pm *ProtocolManager) broadcastNoCNTx(txs types.Transactions, resend bool) {
-	var cntxset = make(map[Peer]types.Transactions)
-	var txset = make(map[Peer]types.Transactions)
+func (pm *ProtocolManager) broadcastTxsFromPN(txs types.Transactions) {
+	cnPeersWithoutTxs := make(map[Peer]types.Transactions)
+	peersWithoutTxs := make(map[Peer]types.Transactions)
 	for _, tx := range txs {
 		// TODO-Klaytn drop or missing tx
-		if resend {
-			peers := pm.sampleResendPeersByType(pm.nodetype)
-			for _, peer := range peers {
-				txset[peer] = append(txset[peer], tx)
+		cnPeers := pm.peers.CNWithoutTx(tx.Hash())
+		if len(cnPeers) > 0 {
+			cnPeers = samplingPeers(cnPeers, 2) // TODO-Klaytn optimize pickSize or propagation way
+			for _, peer := range cnPeers {
+				cnPeersWithoutTxs[peer] = append(cnPeersWithoutTxs[peer], tx)
 			}
-			txResendCounter.Inc(1)
-		} else {
-			peers := pm.peers.CNWithoutTx(tx.Hash())
-			if len(peers) > 0 {
-				// TODO-Klaytn optimize pickSize or propagation way
-				peers = samplingPeers(peers, 2)
-				for _, peer := range peers {
-					cntxset[peer] = append(cntxset[peer], tx)
-				}
-				logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
-			}
-			if pm.nodetype == node.ENDPOINTNODE {
-				peers = pm.peers.TypePeersWithoutTx(tx.Hash(), node.PROXYNODE)
-				for _, peer := range peers {
-					txset[peer] = append(txset[peer], tx)
-				}
-			}
-			peers = pm.peers.TypePeersWithoutTx(tx.Hash(), pm.nodetype)
-
-			for _, peer := range peers {
-				txset[peer] = append(txset[peer], tx)
-			}
-			logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
-			txSendCounter.Inc(1)
+			logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(cnPeers))
 		}
+		pm.peers.UpdateTypePeersWithoutTxs(tx, node.PROXYNODE, peersWithoutTxs)
+		txSendCounter.Inc(1)
 	}
 
-	propTxPeersGauge.Update(int64(len(txset) + len(cntxset)))
+	propTxPeersGauge.Update(int64(len(peersWithoutTxs) + len(cnPeersWithoutTxs)))
+	sendTransactions(cnPeersWithoutTxs)
+	sendTransactions(peersWithoutTxs)
+}
 
-	if resend {
-		for peer, txs := range txset {
-			err := peer.ReSendTransactions(txs)
-			if err != nil {
-				logger.Error("peer.ReSendTransactions", "peer", peer.GetAddr(), "numTxs", len(txs), "err", err)
-			}
+func (pm *ProtocolManager) broadcastTxsFromEN(txs types.Transactions) {
+	peersWithoutTxs := make(map[Peer]types.Transactions)
+	for _, tx := range txs {
+		pm.peers.UpdateTypePeersWithoutTxs(tx, node.PROXYNODE, peersWithoutTxs)
+		pm.peers.UpdateTypePeersWithoutTxs(tx, node.ENDPOINTNODE, peersWithoutTxs)
+		txSendCounter.Inc(1)
+	}
+
+	propTxPeersGauge.Update(int64(len(peersWithoutTxs)))
+	sendTransactions(peersWithoutTxs)
+}
+
+// ReBroadcastTxs sends transactions, not considering whether the peer has the transaction or not.
+// Only PN and EN rebroadcast transactions to its peers, a CN does not rebroadcast transactions.
+func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
+	// A consensus node does not rebroadcast transactions, hence return here.
+	if pm.nodetype == node.CONSENSUSNODE {
+		return
+	}
+
+	peersWithoutTxs := make(map[Peer]types.Transactions)
+	for _, tx := range txs {
+		peers := pm.peers.SampleResendPeersByType(pm.nodetype)
+		for _, peer := range peers {
+			peersWithoutTxs[peer] = append(peersWithoutTxs[peer], tx)
 		}
-	} else {
-		for peer, txs := range cntxset {
-			// TODO-Klaytn Handle network-failed txs
-			//peer.AsyncSendTransactions(txs)
-			err := peer.SendTransactions(txs)
-			if err != nil {
-				logger.Error("peer.SendTransactions (cntxset)", "peer", peer.GetAddr(), "numTxs", len(txs), "err", err)
-			}
-		}
-		for peer, txs := range txset {
-			err := peer.SendTransactions(txs)
-			if err != nil {
-				logger.Error("peer.SendTransactions", "peer", peer.GetAddr(), "numTxs", len(txs), "err", err)
-			}
-			//peer.AsyncSendTransactions(txs)
+		txResendCounter.Inc(1)
+	}
+
+	propTxPeersGauge.Update(int64(len(peersWithoutTxs)))
+	sendTransactions(peersWithoutTxs)
+}
+
+// sendTransactions iterates the given map with the key-value pair of Peer and Transactions
+// and sends the paired transactions to the peer in synchronised way.
+func sendTransactions(txsSet map[Peer]types.Transactions) {
+	for peer, txs := range txsSet {
+		if err := peer.SendTransactions(txs); err != nil {
+			logger.Error("Failed to send txs", "peer", peer.GetAddr(), "peerType", peer.ConnType(), "numTxs", len(txs), "err", err)
 		}
 	}
 }
@@ -1326,7 +1258,8 @@ func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 	}
 }
 
-// istanbul BFT
+// Below functions are used in Istanbul BFT consensus.
+// Enqueue wraps fetcher's Enqueue function to insert the given block.
 func (pm *ProtocolManager) Enqueue(id string, block *types.Block) {
 	pm.fetcher.Enqueue(id, block)
 }
@@ -1341,10 +1274,8 @@ func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common
 				continue
 			}
 			addr = crypto.PubkeyToAddress(*pubKey)
-		} else {
-			addr = p.GetAddr()
+			p.SetAddr(addr)
 		}
-
 		if targets[addr] {
 			m[addr] = p
 		}
@@ -1388,8 +1319,7 @@ func (pm *ProtocolManager) GetPeers() []common.Address {
 				continue
 			}
 			addr = crypto.PubkeyToAddress(*pubKey)
-		} else {
-			addr = p.GetAddr()
+			p.SetAddr(addr)
 		}
 		addrs = append(addrs, addr)
 	}
