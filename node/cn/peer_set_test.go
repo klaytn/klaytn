@@ -524,6 +524,126 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 	}
 }
 
+func TestPeerSet_SampleResendPeersByType_Default(t *testing.T) {
+	peerSet := newPeerSet()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	cnPeer1 := NewMockPeer(mockCtrl)
+	cnPeer2 := NewMockPeer(mockCtrl)
+	pnPeer1 := NewMockPeer(mockCtrl)
+	pnPeer2 := NewMockPeer(mockCtrl)
+	enPeer1 := NewMockPeer(mockCtrl)
+	enPeer2 := NewMockPeer(mockCtrl)
+
+	setMockPeersConnType(cnPeer1, pnPeer1, enPeer1)
+	setMockPeersConnType(cnPeer2, pnPeer2, enPeer2)
+	setMockPeers([]*MockPeer{cnPeer1, pnPeer1, enPeer1, cnPeer2, pnPeer2, enPeer2})
+
+	assert.NoError(t, peerSet.Register(cnPeer1))
+	assert.NoError(t, peerSet.Register(pnPeer1))
+	assert.NoError(t, peerSet.Register(enPeer1))
+
+	assert.NoError(t, peerSet.Register(cnPeer2))
+	assert.NoError(t, peerSet.Register(pnPeer2))
+	assert.NoError(t, peerSet.Register(enPeer2))
+
+	assert.Nil(t, peerSet.SampleResendPeersByType(node.UNKNOWNNODE))
+	assert.Nil(t, peerSet.SampleResendPeersByType(node.BOOTNODE))
+}
+
+func TestPeerSet_PeersWithoutBlockExceptCN(t *testing.T) {
+	peerSet := newPeerSet()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	cnPeer1 := NewMockPeer(mockCtrl)
+	cnPeer2 := NewMockPeer(mockCtrl)
+	pnPeer1 := NewMockPeer(mockCtrl)
+	pnPeer2 := NewMockPeer(mockCtrl)
+	enPeer1 := NewMockPeer(mockCtrl)
+	enPeer2 := NewMockPeer(mockCtrl)
+
+	setMockPeersConnType(cnPeer1, pnPeer1, enPeer1)
+	setMockPeersConnType(cnPeer2, pnPeer2, enPeer2)
+	setMockPeers([]*MockPeer{cnPeer1, pnPeer1, enPeer1, cnPeer2, pnPeer2, enPeer2})
+
+	assert.NoError(t, peerSet.Register(cnPeer1))
+	assert.NoError(t, peerSet.Register(pnPeer1))
+	assert.NoError(t, peerSet.Register(enPeer1))
+
+	assert.NoError(t, peerSet.Register(cnPeer2))
+	assert.NoError(t, peerSet.Register(pnPeer2))
+	assert.NoError(t, peerSet.Register(enPeer2))
+
+	block := newBlock(blockNum1)
+	pnPeer1.EXPECT().KnowsBlock(block.Hash()).Return(true).AnyTimes()
+	pnPeer2.EXPECT().KnowsBlock(block.Hash()).Return(false).AnyTimes()
+
+	enPeer1.EXPECT().KnowsBlock(block.Hash()).Return(false).AnyTimes()
+	enPeer2.EXPECT().KnowsBlock(block.Hash()).Return(true).AnyTimes()
+
+	result := peerSet.PeersWithoutBlockExceptCN(block.Hash())
+	assert.Equal(t, 2, len(result))
+	assert.False(t, containsPeer(pnPeer1, result))
+	assert.True(t, containsPeer(pnPeer2, result))
+	assert.True(t, containsPeer(enPeer1, result))
+	assert.False(t, containsPeer(enPeer2, result))
+}
+
+func TestPeerSet_TypePeersWithoutBlock(t *testing.T) {
+	peerSet := newPeerSet()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	cnPeer1 := NewMockPeer(mockCtrl)
+	cnPeer2 := NewMockPeer(mockCtrl)
+	pnPeer1 := NewMockPeer(mockCtrl)
+	pnPeer2 := NewMockPeer(mockCtrl)
+	enPeer1 := NewMockPeer(mockCtrl)
+	enPeer2 := NewMockPeer(mockCtrl)
+
+	setMockPeersConnType(cnPeer1, pnPeer1, enPeer1)
+	setMockPeersConnType(cnPeer2, pnPeer2, enPeer2)
+	setMockPeers([]*MockPeer{cnPeer1, pnPeer1, enPeer1, cnPeer2, pnPeer2, enPeer2})
+
+	assert.NoError(t, peerSet.Register(cnPeer1))
+	assert.NoError(t, peerSet.Register(pnPeer1))
+	assert.NoError(t, peerSet.Register(enPeer1))
+
+	assert.NoError(t, peerSet.Register(cnPeer2))
+	assert.NoError(t, peerSet.Register(pnPeer2))
+	assert.NoError(t, peerSet.Register(enPeer2))
+
+	block := newBlock(blockNum1)
+	cnPeer1.EXPECT().KnowsBlock(block.Hash()).Return(false).AnyTimes()
+	cnPeer2.EXPECT().KnowsBlock(block.Hash()).Return(true).AnyTimes()
+
+	pnPeer1.EXPECT().KnowsBlock(block.Hash()).Return(true).AnyTimes()
+	pnPeer2.EXPECT().KnowsBlock(block.Hash()).Return(false).AnyTimes()
+
+	enPeer1.EXPECT().KnowsBlock(block.Hash()).Return(false).AnyTimes()
+	enPeer2.EXPECT().KnowsBlock(block.Hash()).Return(true).AnyTimes()
+
+	result := peerSet.typePeersWithoutBlock(block.Hash(), p2p.CONSENSUSNODE)
+	assert.Equal(t, 1, len(result))
+	assert.True(t, containsPeer(cnPeer1, result))
+	assert.False(t, containsPeer(cnPeer2, result))
+
+	result = peerSet.typePeersWithoutBlock(block.Hash(), p2p.PROXYNODE)
+	assert.Equal(t, 1, len(result))
+	assert.False(t, containsPeer(pnPeer1, result))
+	assert.True(t, containsPeer(pnPeer2, result))
+
+	result = peerSet.typePeersWithoutBlock(block.Hash(), p2p.ENDPOINTNODE)
+	assert.Equal(t, 1, len(result))
+	assert.True(t, containsPeer(enPeer1, result))
+	assert.False(t, containsPeer(enPeer2, result))
+
+	assert.Equal(t, 0, len(peerSet.typePeersWithoutBlock(block.Hash(), p2p.BOOTNODE)))
+	assert.Equal(t, 0, len(peerSet.typePeersWithoutBlock(block.Hash(), p2p.UNKNOWNNODE)))
+}
+
 func containsPeer(target Peer, peers []Peer) bool {
 	for _, peer := range peers {
 		if target == peer {
