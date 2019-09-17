@@ -219,6 +219,18 @@ func TestRewardDistributor_DistributeBlockReward(t *testing.T) {
 			expectedPocBalance: big.NewInt(0).SetUint64(5184000000000000000),
 			expectedKirBalance: big.NewInt(0).SetUint64(1152000000000000000),
 		},
+		{
+			gasUsed:            0,
+			epoch:              3600,
+			mintingAmount:      "0",
+			ratio:              "100/0/0",
+			unitprice:          0,
+			useGiniCoeff:       true,
+			deferredTxFee:      true,
+			expectedCnBalance:  big.NewInt(0).SetUint64(0),
+			expectedPocBalance: big.NewInt(0).SetUint64(0),
+			expectedKirBalance: big.NewInt(0).SetUint64(0),
+		},
 	}
 
 	header := &types.Header{}
