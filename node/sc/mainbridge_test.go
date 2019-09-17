@@ -264,6 +264,8 @@ func TestMainBridge_handle(t *testing.T) {
 
 	// mockBridgePeer mocks BridgePeer
 	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
 	mockBridgePeer := NewMockBridgePeer(mockCtrl)
 	mockBridgePeer.EXPECT().GetID().Return(bridgePeerID).AnyTimes()
 	mockBridgePeer.EXPECT().GetP2PPeer().Return(peer).AnyTimes()
@@ -326,14 +328,19 @@ func TestMainBridge_SendRPCResponseData(t *testing.T) {
 
 	// mockBridgePeer mocks BridgePeer
 	mockCtrl := gomock.NewController(t)
-	mockBridgePeer := NewMockBridgePeer(mockCtrl)
+	defer mockCtrl.Finish()
 
-	// Add mockBridgePeer as a peer of `mBridge.BridgePeerSet`
-	mBridge.BridgePeerSet().peers["testID"] = mockBridgePeer
+	mockBridgePeer := NewMockBridgePeer(mockCtrl)
+	mockBridgePeer.EXPECT().GetID().Return("testID").AnyTimes() // for `mBridge.BridgePeerSet().Register(mockBridgePeer)`
+
+	// Register mockBridgePeer as a peer of `mBridge.BridgePeerSet`
+	if err := mBridge.BridgePeerSet().Register(mockBridgePeer); err != nil {
+		t.Fatal(err)
+	}
 
 	// Case 1 - Error if SendResponseRPC of mockBridgePeer failed
 	{
-		// Make mockBridgePeer returns an error
+		// Make mockBridgePeer return an error
 		mockBridgePeer.EXPECT().SendResponseRPC(data).Return(p2p.ErrPipeClosed).Times(1)
 
 		err := mBridge.SendRPCResponseData(data)
@@ -342,7 +349,7 @@ func TestMainBridge_SendRPCResponseData(t *testing.T) {
 
 	// Case 2 - Success if SendResponseRPC of mockBridgePeer succeeded
 	{
-		// Make mockBridgePeer returns an error
+		// Make mockBridgePeer return an error
 		mockBridgePeer.EXPECT().SendResponseRPC(data).Return(nil).Times(1)
 
 		err := mBridge.SendRPCResponseData(data)
