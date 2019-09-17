@@ -118,7 +118,7 @@ type MainBridge struct {
 func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, error) {
 	chainDB := CreateDB(ctx, config, "scchaindata")
 
-	sc := &MainBridge{
+	mb := &MainBridge{
 		config:         config,
 		chainDB:        chainDB,
 		peers:          newBridgePeerSet(),
@@ -137,27 +137,27 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 	}
 
 	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
-	sc.APIBackend = &MainBridgeAPI{sc}
+	mb.APIBackend = &MainBridgeAPI{mb}
 
 	var err error
-	sc.handler, err = NewMainBridgeHandler(sc.config, sc)
+	mb.handler, err = NewMainBridgeHandler(mb.config, mb)
 	if err != nil {
 		return nil, err
 	}
-	sc.eventhandler, err = NewMainChainEventHandler(sc, sc.handler)
+	mb.eventhandler, err = NewMainChainEventHandler(mb, mb.handler)
 	if err != nil {
 		return nil, err
 	}
 
-	sc.rpcServer = rpc.NewServer()
+	mb.rpcServer = rpc.NewServer()
 	p1, p2 := net.Pipe()
-	sc.rpcConn = p1
-	go sc.rpcServer.ServeCodec(rpc.NewJSONCodec(p2), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
+	mb.rpcConn = p1
+	go mb.rpcServer.ServeCodec(rpc.NewJSONCodec(p2), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
 
 	go func() {
 		for {
 			data := make([]byte, rpcBufferSize)
-			rlen, err := sc.rpcConn.Read(data)
+			rlen, err := mb.rpcConn.Read(data)
 			if err != nil {
 				if err == io.EOF {
 					logger.Trace("EOF from the rpc server pipe")
@@ -170,14 +170,14 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 				}
 			}
 			logger.Trace("mainbridge message from rpc server pipe", "rlen", rlen)
-			err = sc.SendRPCResponseData(data[:rlen])
+			err = mb.SendRPCResponseData(data[:rlen])
 			if err != nil {
 				logger.Error("failed to send response data from RPC server pipe", err)
 			}
 		}
 	}()
 
-	return sc, nil
+	return mb, nil
 }
 
 // CreateDB creates the chain database.
