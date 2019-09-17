@@ -296,7 +296,14 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call klaytn.CallMsg
 	vmenv := vm.NewEVM(evmContext, statedb, b.config, &vm.Config{})
 
 	ret, usedGas, kerr := blockchain.NewStateTransition(vmenv, msg).TransitionDb()
-	return ret, usedGas, kerr.Status != types.ReceiptStatusSuccessful, kerr.ErrTxInvalid
+
+	// Propagate error of Receipt
+	err := kerr.ErrTxInvalid
+	if err == nil {
+		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
+	}
+
+	return ret, usedGas, kerr.Status != types.ReceiptStatusSuccessful, err
 }
 
 // SendTransaction updates the pending block to include the given transaction.
