@@ -550,6 +550,7 @@ func TestPeerSet_SampleResendPeersByType_Default(t *testing.T) {
 
 	assert.Nil(t, peerSet.SampleResendPeersByType(node.UNKNOWNNODE))
 	assert.Nil(t, peerSet.SampleResendPeersByType(node.BOOTNODE))
+	assert.Nil(t, peerSet.SampleResendPeersByType(node.CONSENSUSNODE))
 }
 
 func TestPeerSet_PeersWithoutBlockExceptCN(t *testing.T) {
