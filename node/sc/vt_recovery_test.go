@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -99,8 +100,8 @@ var (
 
 // TestBasicKLAYTransferRecovery tests each methods of the value transfer recovery.
 func TestBasicKLAYTransferRecovery(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -116,7 +117,7 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 
 	// 2. Update recovery hint.
-	err := vtr.updateRecoveryHint()
+	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update value transfer hint")
 	}
@@ -165,8 +166,8 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 
 // TestBasicTokenTransferRecovery tests the token transfer recovery.
 func TestBasicTokenTransferRecovery(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -180,7 +181,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 	})
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
-	err := vtr.updateRecoveryHint()
+	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
@@ -204,8 +205,8 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 // TestBasicNFTTransferRecovery tests the NFT transfer recovery.
 // TODO-Klaytn-ServiceChain: implement NFT transfer.
 func TestBasicNFTTransferRecovery(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -219,7 +220,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 	})
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
-	err := vtr.updateRecoveryHint()
+	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
@@ -242,8 +243,8 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 
 // TestMethodRecover tests the valueTransferRecovery.Recover() method.
 func TestMethodRecover(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -256,7 +257,7 @@ func TestMethodRecover(t *testing.T) {
 		}
 	})
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
-	err := vtr.updateRecoveryHint()
+	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
@@ -278,8 +279,8 @@ func TestMethodRecover(t *testing.T) {
 
 // TestMethodStop tests the Stop method for stop the internal goroutine.
 func TestMethodStop(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -292,7 +293,7 @@ func TestMethodStop(t *testing.T) {
 		}
 	})
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 1}, info.localInfo, info.remoteInfo)
-	err := vtr.updateRecoveryHint()
+	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
@@ -313,8 +314,8 @@ func TestMethodStop(t *testing.T) {
 
 // TestFlagVTRecovery tests the disabled vtrecovery option.
 func TestFlagVTRecovery(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -333,15 +334,15 @@ func TestFlagVTRecovery(t *testing.T) {
 	vtr.Stop()
 
 	vtr = NewValueTransferRecovery(&SCConfig{VTRecovery: false}, info.localInfo, info.remoteInfo)
-	err := vtr.Start()
+	err = vtr.Start()
 	assert.Equal(t, ErrVtrDisabled, err)
 	vtr.Stop()
 }
 
 // TestAlreadyStartedVTRecovery tests the already started VTR error cases.
 func TestAlreadyStartedVTRecovery(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -354,7 +355,7 @@ func TestAlreadyStartedVTRecovery(t *testing.T) {
 	})
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 60}, info.localInfo, info.remoteInfo)
-	err := vtr.Start()
+	err = vtr.Start()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, nil, vtr.WaitRunningStatus(true, 5*time.Second))
 
@@ -366,8 +367,8 @@ func TestAlreadyStartedVTRecovery(t *testing.T) {
 
 // TestScenarioMainChainRecovery tests the value transfer recovery of the parent chain to child chain value transfers.
 func TestScenarioMainChainRecovery(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -381,7 +382,7 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 	})
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
-	err := vtr.updateRecoveryHint()
+	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
@@ -403,8 +404,8 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 
 // TestScenarioAutomaticRecovery tests the recovery of the internal goroutine.
 func TestScenarioAutomaticRecovery(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -417,7 +418,7 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 		}
 	})
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 1}, info.localInfo, info.remoteInfo)
-	err := vtr.updateRecoveryHint()
+	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
@@ -441,8 +442,8 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 
 // TestMultiOperatorRequestRecovery tests value transfer recovery for the multi-operator.
 func TestMultiOperatorRequestRecovery(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -460,7 +461,7 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 	cAcc := info.nodeAuth
 	pAcc := info.chainAuth
 	opts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
-	_, err := info.localInfo.bridge.RegisterOperator(opts, pAcc.From)
+	_, err = info.localInfo.bridge.RegisterOperator(opts, pAcc.From)
 	assert.NoError(t, err)
 	opts = &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
 	_, err = info.remoteInfo.bridge.RegisterOperator(opts, cAcc.From)
@@ -547,7 +548,14 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	// Setup configuration.
 	config := &SCConfig{}
-	config.DataDir = os.TempDir() + "sc"
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+	config.DataDir = tempDir
 	config.VTRecovery = true
 
 	bacc, err := NewBridgeAccounts(config.DataDir)

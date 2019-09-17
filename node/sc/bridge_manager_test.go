@@ -33,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -73,8 +74,8 @@ func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Dur
 // - consider parent/child chain simulated backend.
 // - separate each test
 func TestBridgeManager(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -115,7 +116,6 @@ func TestBridgeManager(t *testing.T) {
 		peers:          newBridgePeerSet(),
 		bridgeAccounts: bacc,
 	}
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
@@ -312,8 +312,8 @@ func TestBridgeManager(t *testing.T) {
 
 // TestBridgeManagerWithFee tests the KLAY/ERC20 transfer with fee.
 func TestBridgeManagerWithFee(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -358,7 +358,6 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		peers:          newBridgePeerSet(),
 		bridgeAccounts: bacc,
 	}
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
@@ -715,8 +714,8 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 // TestBasicJournal tests basic journal functionality.
 func TestBasicJournal(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -760,7 +759,6 @@ func TestBasicJournal(t *testing.T) {
 		remoteBackend:  sim,
 		bridgeAccounts: bacc,
 	}
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
@@ -795,8 +793,8 @@ func TestBasicJournal(t *testing.T) {
 
 // TestMethodRestoreBridges tests restoring bridges from the journal.
 func TestMethodRestoreBridges(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -841,7 +839,6 @@ func TestMethodRestoreBridges(t *testing.T) {
 		bridgeAccounts: bacc,
 	}
 
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
@@ -912,8 +909,8 @@ func TestMethodRestoreBridges(t *testing.T) {
 
 // TestMethodGetAllBridge tests a method GetAllBridge.
 func TestMethodGetAllBridge(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -943,8 +940,8 @@ func TestMethodGetAllBridge(t *testing.T) {
 
 // TestErrorDuplication tests if duplication of journal insertion is ignored or not.
 func TestErrorDuplication(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -983,8 +980,8 @@ func TestErrorDuplication(t *testing.T) {
 
 // TestMethodSetJournal tests if duplication of journal insertion is ignored or not.
 func TestMethodSetJournal(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -1020,8 +1017,8 @@ func TestMethodSetJournal(t *testing.T) {
 
 // TestErrorDuplicatedSetBridgeInfo tests if duplication of bridge info insertion.
 func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -1065,7 +1062,6 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 		bridgeAccounts: bacc,
 	}
 
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
@@ -1085,8 +1081,8 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 
 // TestScenarioSubUnsub tests subscription and unsubscription scenario.
 func TestScenarioSubUnsub(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -1130,7 +1126,6 @@ func TestScenarioSubUnsub(t *testing.T) {
 		bridgeAccounts: bacc,
 	}
 
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
@@ -1159,8 +1154,8 @@ func TestScenarioSubUnsub(t *testing.T) {
 
 // TestErrorEmptyAccount tests empty account error in case of journal insertion.
 func TestErrorEmptyAccount(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -1190,8 +1185,8 @@ func TestErrorEmptyAccount(t *testing.T) {
 
 // TestErrorDupSubscription tests duplicated subscription error.
 func TestErrorDupSubscription(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -1235,7 +1230,6 @@ func TestErrorDupSubscription(t *testing.T) {
 		bridgeAccounts: bacc,
 	}
 
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
@@ -1272,8 +1266,8 @@ func TestAnchoringBasic(t *testing.T) {
 		startBlkNum  = 10
 		startTxCount = 100
 	)
-	tempDir := os.TempDir() + "anchoring"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoring")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -1300,7 +1294,6 @@ func TestAnchoringBasic(t *testing.T) {
 	}
 	sc.blockchain = sim.BlockChain()
 
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
@@ -1360,8 +1353,8 @@ func TestAnchoringBasic(t *testing.T) {
 // 1. set anchoring period to 1, 2, 3
 // 2. check txCountEnabledBlockNumber
 func TestAnchoringUpdateTxCount(t *testing.T) {
-	tempDir := os.TempDir() + "anchoring"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoring")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -1388,7 +1381,6 @@ func TestAnchoringUpdateTxCount(t *testing.T) {
 	}
 	sc.blockchain = sim.BlockChain()
 
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
@@ -1436,8 +1428,8 @@ func TestAnchoringPeriod(t *testing.T) {
 	const (
 		startTxCount = 100
 	)
-	tempDir := os.TempDir() + "anchoringPeriod"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoringPeriod")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -1464,7 +1456,6 @@ func TestAnchoringPeriod(t *testing.T) {
 	}
 	sc.blockchain = sim.BlockChain()
 
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
@@ -1562,8 +1553,8 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 		startBlkNum  = 10
 		startTxCount = 100
 	)
-	tempDir := os.TempDir() + "anchoring"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoring")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -1590,7 +1581,6 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	}
 	sc.blockchain = sim.BlockChain()
 
-	var err error
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)

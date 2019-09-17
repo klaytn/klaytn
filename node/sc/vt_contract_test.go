@@ -22,6 +22,7 @@ import (
 	"github.com/klaytn/klaytn/contracts/sc_erc20"
 	"github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"strconv"
@@ -30,8 +31,8 @@ import (
 
 // TestTokenPublicVariables checks the results of the public variables.
 func TestTokenPublicVariables(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -76,8 +77,8 @@ func TestTokenPublicVariables(t *testing.T) {
 
 // TestTokenPublicVariables checks the results of the public variables.
 func TestNFTPublicVariables(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)

@@ -30,8 +30,8 @@ import (
 
 // TestBridgeAccountLockUnlock checks the lock/unlock functionality.
 func TestBridgeAccountLockUnlock(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -151,8 +151,8 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 
 // TestBridgeAccountInformation checks if the information result is right or not.
 func TestBridgeAccountInformation(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
