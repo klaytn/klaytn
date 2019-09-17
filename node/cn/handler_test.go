@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/params"
+	mocks3 "github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
@@ -63,11 +64,11 @@ func init() {
 	txs = types.Transactions{tx}
 }
 
-func newMocks(t *testing.T) (*gomock.Controller, *mocks2.MockEngine, *mocks.MockBlockChain, *mocks.MockTxPool) {
+func newMocks(t *testing.T) (*gomock.Controller, *mocks2.MockEngine, *mocks.MockBlockChain, *mocks3.MockTxPool) {
 	mockCtrl := gomock.NewController(t)
 	mockEngine := mocks2.NewMockEngine(mockCtrl)
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
-	mockTxPool := mocks.NewMockTxPool(mockCtrl)
+	mockTxPool := mocks3.NewMockTxPool(mockCtrl)
 
 	return mockCtrl, mockEngine, mockBlockChain, mockTxPool
 }

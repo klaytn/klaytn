@@ -34,16 +34,43 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
+	"math/big"
 	"sync/atomic"
 )
 
 var logger = log.NewModuleLogger(log.Work)
 
+//go:generate mockgen -destination=work/mocks/txpool_mock.go -package=mocks github.com/klaytn/klaytn/work TxPool
+// TxPool is an interface of blockchain.TxPool used by ProtocolManager.
+type TxPool interface {
+	// HandleTxMsg should add the given transactions to the pool.
+	HandleTxMsg(types.Transactions)
+
+	// Pending should return pending transactions.
+	// The slice should be modifiable by the caller.
+	Pending() (map[common.Address]types.Transactions, error)
+
+	CachedPendingTxsByCount(count int) types.Transactions
+
+	// SubscribeNewTxsEvent should return an event subscription of
+	// NewTxsEvent and send events to the given channel.
+	SubscribeNewTxsEvent(chan<- blockchain.NewTxsEvent) event.Subscription
+
+	GetPendingNonce(addr common.Address) uint64
+	AddLocal(tx *types.Transaction) error
+	GasPrice() *big.Int
+	SetGasPrice(price *big.Int)
+	Stop()
+	Get(hash common.Hash) *types.Transaction
+	Stats() (int, int)
+	Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
+}
+
 // Backend wraps all methods required for mining.
 type Backend interface {
 	AccountManager() *accounts.Manager
 	BlockChain() *blockchain.BlockChain
-	TxPool() *blockchain.TxPool
+	TxPool() TxPool
 	ChainDB() database.DBManager
 	ReBroadcastTxs(transactions types.Transactions)
 }

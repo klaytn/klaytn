@@ -152,6 +152,10 @@ type VoteMap struct {
 	mu    *sync.RWMutex
 }
 
+type txPool interface {
+	SetGasPrice(price *big.Int)
+}
+
 type Governance struct {
 	ChainConfig *params.ChainConfig
 
@@ -179,7 +183,7 @@ type Governance struct {
 	currentSet GovernanceSet
 	changeSet  GovernanceSet
 
-	TxPool *blockchain.TxPool
+	TxPool txPool
 
 	blockChain *blockchain.BlockChain
 }
@@ -937,7 +941,7 @@ func (gov *Governance) SetBlockchain(bc *blockchain.BlockChain) {
 	gov.blockChain = bc
 }
 
-func (gov *Governance) SetTxPool(txpool *blockchain.TxPool) {
+func (gov *Governance) SetTxPool(txpool txPool) {
 	gov.TxPool = txpool
 }
 

@@ -76,7 +76,7 @@ type CN struct {
 	shutdownChan chan bool // Channel for shutting down the CN
 
 	// Handlers
-	txPool          *blockchain.TxPool
+	txPool          work.TxPool
 	blockchain      *blockchain.BlockChain
 	protocolManager *ProtocolManager
 	lesServer       LesServer
@@ -247,7 +247,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-	// TODO-Klaytn-ServiceChain: add account creation prevention in the TxPool if TxTypeAccountCreation is supported.
+	// TODO-Klaytn-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
 	governance.SetTxPool(cn.txPool)
@@ -499,7 +499,7 @@ func (s *CN) Miner() *work.Miner { return s.miner }
 
 func (s *CN) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *CN) BlockChain() *blockchain.BlockChain { return s.blockchain }
-func (s *CN) TxPool() *blockchain.TxPool         { return s.txPool }
+func (s *CN) TxPool() work.TxPool                { return s.txPool }
 func (s *CN) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *CN) Engine() consensus.Engine           { return s.engine }
 func (s *CN) ChainDB() database.DBManager        { return s.chainDB }
