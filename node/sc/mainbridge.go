@@ -370,7 +370,6 @@ func (mb *MainBridge) handle(p BridgePeer) error {
 	err := p.Handshake(mb.networkId, mb.getChainID(), td, hash)
 	if err != nil {
 		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
-		fmt.Println(err)
 		return err
 	}
 
@@ -378,7 +377,6 @@ func (mb *MainBridge) handle(p BridgePeer) error {
 	if err := mb.peers.Register(p); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
 		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
-		fmt.Println(err)
 		return err
 	}
 	defer mb.removePeer(p.GetID())
