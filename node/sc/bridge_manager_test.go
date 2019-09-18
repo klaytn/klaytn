@@ -319,8 +319,8 @@ func TestBridgeManager(t *testing.T) {
 
 // TestBridgeManagerERC721_notSupportURI tests if bridge can handle an ERC721 which does not support URI.
 func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			t.Fatalf("fail to delete file %v", err)
@@ -363,7 +363,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 		localBackend:   sim,
 		remoteBackend:  sim,
 	}
-	var err error
+
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
 		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
