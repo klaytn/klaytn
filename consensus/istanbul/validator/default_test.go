@@ -25,6 +25,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"reflect"
 	"strings"
@@ -32,11 +33,11 @@ import (
 )
 
 var (
-	testAddress  = "70524d664ffe731100208a0154e556f9bb679ae6"
-	testAddress2 = "b37866a925bccd69cfa98d43b510f1d23d78a851"
-	testAddress3 = "b37866a925bccd69cfa98d43b510f1d23d78a852"
-	testAddress4 = "b37866a925bccd69cfa98d43b510f1d23d78a853"
-	testAddress5 = "b37866a925bccd69cfa98d43b510f1d23d78a854"
+	testAddress  = "136807B12327a8AfF9831F09617dA1B9D398cda2"
+	testAddress2 = "4dd324F9821485caE941640B32c3Bcf1fA6E93E6"
+	testAddress3 = "62E47d858bf8513fc401886B94E33e7DCec2Bfb7"
+	testAddress4 = "8aD8F547fa00f58A8c4fb3B671Ee5f1A75bA028a"
+	testAddress5 = "dd197E88fd97aF3877023cf20d69543fc72e6298"
 )
 
 func TestNewValidatorSet(t *testing.T) {
@@ -207,7 +208,7 @@ func TestStickyProposer(t *testing.T) {
 	}
 }
 
-func TestSubSetList(t *testing.T) {
+func TestDefaultSet_SubList(t *testing.T) {
 	b1 := common.Hex2Bytes(testAddress)
 	b2 := common.Hex2Bytes(testAddress2)
 	b3 := common.Hex2Bytes(testAddress3)
@@ -218,24 +219,65 @@ func TestSubSetList(t *testing.T) {
 	addr3 := common.BytesToAddress(b3)
 	addr4 := common.BytesToAddress(b4)
 	addr5 := common.BytesToAddress(b5)
+	testAddresses := []common.Address{addr1, addr2, addr3, addr4, addr5}
 
-	valSet := NewSet([]common.Address{addr1, addr2, addr3, addr4, addr5}, istanbul.RoundRobin)
+	valSet := NewSet(testAddresses, istanbul.RoundRobin)
 	if valSet == nil {
 		t.Errorf("the format of validator set is invalid")
 		t.FailNow()
 	}
+	valSet.SetSubGroupSize(3)
 
-	fmt.Printf("%v\n", valSet.GetProposer())
-
+	hash := istanbul.RLPHash("This is a test hash")
 	view := &istanbul.View{
 		Sequence: new(big.Int).SetInt64(1),
 		Round:    new(big.Int).SetInt64(0),
 	}
 
-	hash := istanbul.RLPHash("sfsfdsfd")
-	vallist := valSet.SubList(hash, view)
+	lenAddress := len(testAddresses)
+	for i := 0; i < lenAddress*2; i++ {
+		currentProposer := valSet.GetProposer()
+		assert.Equal(t, testAddresses[i%lenAddress], currentProposer.Address())
 
-	for idx, val := range vallist {
-		fmt.Printf("validator %d, %v\n", idx, val)
+		committee := valSet.SubList(hash, view)
+
+		assert.Equal(t, testAddresses[i%lenAddress].String(), committee[0].String())
+		assert.Equal(t, testAddresses[(i+1)%lenAddress].String(), committee[1].String())
+
+		valSet.CalcProposer(currentProposer.Address(), view.Round.Uint64())
 	}
+}
+
+func TestDefaultSet_Copy(t *testing.T) {
+	b1 := common.Hex2Bytes(testAddress)
+	b2 := common.Hex2Bytes(testAddress2)
+	b3 := common.Hex2Bytes(testAddress3)
+	b4 := common.Hex2Bytes(testAddress4)
+	b5 := common.Hex2Bytes(testAddress5)
+	addr1 := common.BytesToAddress(b1)
+	addr2 := common.BytesToAddress(b2)
+	addr3 := common.BytesToAddress(b3)
+	addr4 := common.BytesToAddress(b4)
+	addr5 := common.BytesToAddress(b5)
+	testAddresses := []common.Address{addr1, addr2, addr3, addr4, addr5}
+
+	valSet := NewSet(testAddresses, istanbul.RoundRobin)
+	copiedValSet := valSet.Copy()
+
+	assert.NotEqual(t, fmt.Sprintf("%p", &valSet), fmt.Sprintf("%p", &copiedValSet))
+
+	assert.Equal(t, valSet.List(), copiedValSet.List())
+	assert.NotEqual(t, fmt.Sprintf("%p", valSet.List()), fmt.Sprintf("%p", copiedValSet.List()))
+
+	for i := uint64(0); i < valSet.Size(); i++ {
+		assert.Equal(t, valSet.List()[i], copiedValSet.List()[i])
+		assert.NotEqual(t, fmt.Sprintf("%p", valSet.List()[i]), fmt.Sprintf("%p", copiedValSet.List())[i])
+	}
+
+	assert.Equal(t, valSet.GetProposer(), copiedValSet.GetProposer())
+	assert.NotEqual(t, fmt.Sprintf("%p", valSet.GetProposer()), fmt.Sprintf("%p", copiedValSet.GetProposer()))
+
+	assert.Equal(t, valSet.Policy(), copiedValSet.Policy())
+	assert.Equal(t, valSet.SubGroupSize(), copiedValSet.SubGroupSize())
+	assert.Equal(t, valSet.TotalVotingPower(), copiedValSet.TotalVotingPower())
 }
