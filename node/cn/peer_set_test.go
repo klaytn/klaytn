@@ -586,6 +586,8 @@ func TestPeerSet_PeersWithoutBlockExceptCN(t *testing.T) {
 
 	result := peerSet.PeersWithoutBlockExceptCN(block.Hash())
 	assert.Equal(t, 2, len(result))
+	assert.False(t, containsPeer(cnPeer1, result))
+	assert.False(t, containsPeer(cnPeer2, result))
 	assert.False(t, containsPeer(pnPeer1, result))
 	assert.True(t, containsPeer(pnPeer2, result))
 	assert.True(t, containsPeer(enPeer1, result))
