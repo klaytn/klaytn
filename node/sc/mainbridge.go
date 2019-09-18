@@ -118,7 +118,7 @@ type MainBridge struct {
 func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, error) {
 	chainDB := CreateDB(ctx, config, "scchaindata")
 
-	sc := &MainBridge{
+	mb := &MainBridge{
 		config:         config,
 		chainDB:        chainDB,
 		peers:          newBridgePeerSet(),
@@ -137,27 +137,27 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 	}
 
 	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
-	sc.APIBackend = &MainBridgeAPI{sc}
+	mb.APIBackend = &MainBridgeAPI{mb}
 
 	var err error
-	sc.handler, err = NewMainBridgeHandler(sc.config, sc)
+	mb.handler, err = NewMainBridgeHandler(mb.config, mb)
 	if err != nil {
 		return nil, err
 	}
-	sc.eventhandler, err = NewMainChainEventHandler(sc, sc.handler)
+	mb.eventhandler, err = NewMainChainEventHandler(mb, mb.handler)
 	if err != nil {
 		return nil, err
 	}
 
-	sc.rpcServer = rpc.NewServer()
+	mb.rpcServer = rpc.NewServer()
 	p1, p2 := net.Pipe()
-	sc.rpcConn = p1
-	go sc.rpcServer.ServeCodec(rpc.NewJSONCodec(p2), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
+	mb.rpcConn = p1
+	go mb.rpcServer.ServeCodec(rpc.NewJSONCodec(p2), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
 
 	go func() {
 		for {
 			data := make([]byte, rpcBufferSize)
-			rlen, err := sc.rpcConn.Read(data)
+			rlen, err := mb.rpcConn.Read(data)
 			if err != nil {
 				if err == io.EOF {
 					logger.Trace("EOF from the rpc server pipe")
@@ -170,14 +170,14 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 				}
 			}
 			logger.Trace("mainbridge message from rpc server pipe", "rlen", rlen)
-			err = sc.SendRPCResponseData(data[:rlen])
+			err = mb.SendRPCResponseData(data[:rlen])
 			if err != nil {
 				logger.Error("failed to send response data from RPC server pipe", err)
 			}
 		}
 	}()
 
-	return sc, nil
+	return mb, nil
 }
 
 // CreateDB creates the chain database.
@@ -194,53 +194,53 @@ func (mb *MainBridge) BridgePeerSet() *bridgePeerSet {
 
 // APIs returns the collection of RPC services the Klaytn sc package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
-func (s *MainBridge) APIs() []rpc.API {
+func (mb *MainBridge) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return []rpc.API{
 		{
 			Namespace: "mainbridge",
 			Version:   "1.0",
-			Service:   s.APIBackend,
+			Service:   mb.APIBackend,
 			Public:    true,
 		},
 		{
 			Namespace: "mainbridge",
 			Version:   "1.0",
-			Service:   s.netRPCService,
+			Service:   mb.netRPCService,
 			Public:    true,
 		},
 	}
 }
 
-func (s *MainBridge) AccountManager() *accounts.Manager { return s.accountManager }
-func (s *MainBridge) EventMux() *event.TypeMux          { return s.eventMux }
-func (s *MainBridge) ChainDB() database.DBManager       { return s.chainDB }
-func (s *MainBridge) IsListening() bool                 { return true } // Always listening
-func (s *MainBridge) ProtocolVersion() int              { return int(s.SCProtocol().Versions[0]) }
-func (s *MainBridge) NetVersion() uint64                { return s.networkId }
+func (mb *MainBridge) AccountManager() *accounts.Manager { return mb.accountManager }
+func (mb *MainBridge) EventMux() *event.TypeMux          { return mb.eventMux }
+func (mb *MainBridge) ChainDB() database.DBManager       { return mb.chainDB }
+func (mb *MainBridge) IsListening() bool                 { return true } // Always listening
+func (mb *MainBridge) ProtocolVersion() int              { return int(mb.SCProtocol().Versions[0]) }
+func (mb *MainBridge) NetVersion() uint64                { return mb.networkId }
 
-func (s *MainBridge) Components() []interface{} {
+func (mb *MainBridge) Components() []interface{} {
 	return nil
 }
 
-func (sc *MainBridge) SetComponents(components []interface{}) {
+func (mb *MainBridge) SetComponents(components []interface{}) {
 	for _, component := range components {
 		switch v := component.(type) {
 		case *blockchain.BlockChain:
-			sc.blockchain = v
+			mb.blockchain = v
 			// event from core-service
-			sc.chainHeadSub = sc.blockchain.SubscribeChainHeadEvent(sc.chainHeadCh)
-			sc.logsSub = sc.blockchain.SubscribeLogsEvent(sc.logsCh)
+			mb.chainHeadSub = mb.blockchain.SubscribeChainHeadEvent(mb.chainHeadCh)
+			mb.logsSub = mb.blockchain.SubscribeLogsEvent(mb.logsCh)
 		case *blockchain.TxPool:
-			sc.txPool = v
+			mb.txPool = v
 			// event from core-service
-			sc.txSub = sc.txPool.SubscribeNewTxsEvent(sc.txCh)
+			mb.txSub = mb.txPool.SubscribeNewTxsEvent(mb.txCh)
 		case []rpc.API:
 			logger.Debug("p2p rpc registered", "len(v)", len(v))
 			for _, api := range v {
 				if api.Public && api.Namespace == "klay" {
 					logger.Error("p2p rpc registered", "namespace", api.Namespace)
-					if err := sc.rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
+					if err := mb.rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
 						logger.Error("pRPC failed to register", "namespace", api.Namespace)
 					}
 				}
@@ -248,17 +248,17 @@ func (sc *MainBridge) SetComponents(components []interface{}) {
 		}
 	}
 
-	sc.pmwg.Add(1)
-	go sc.loop()
+	mb.pmwg.Add(1)
+	go mb.loop()
 }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
-func (s *MainBridge) Protocols() []p2p.Protocol {
+func (mb *MainBridge) Protocols() []p2p.Protocol {
 	return []p2p.Protocol{}
 }
 
-func (s *MainBridge) SCProtocol() SCProtocol {
+func (mb *MainBridge) SCProtocol() SCProtocol {
 	return SCProtocol{
 		Name:     SCProtocolName,
 		Versions: SCProtocolVersion,
@@ -267,110 +267,107 @@ func (s *MainBridge) SCProtocol() SCProtocol {
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
-func (pm *MainBridge) NodeInfo() *MainBridgeInfo {
-	currentBlock := pm.blockchain.CurrentBlock()
+func (mb *MainBridge) NodeInfo() *MainBridgeInfo {
+	currentBlock := mb.blockchain.CurrentBlock()
 	return &MainBridgeInfo{
-		Network:    pm.networkId,
-		BlockScore: pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
-		Genesis:    pm.blockchain.Genesis().Hash(),
-		Config:     pm.blockchain.Config(),
+		Network:    mb.networkId,
+		BlockScore: mb.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()),
+		Genesis:    mb.blockchain.Genesis().Hash(),
+		Config:     mb.blockchain.Config(),
 		Head:       currentBlock.Hash(),
 	}
 }
 
 // getChainID returns the current chain id.
-func (pm *MainBridge) getChainID() *big.Int {
-	return pm.blockchain.Config().ChainID
+func (mb *MainBridge) getChainID() *big.Int {
+	return mb.blockchain.Config().ChainID
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
 // Klaytn protocol implementation.
-func (s *MainBridge) Start(srvr p2p.Server) error {
+func (mb *MainBridge) Start(srvr p2p.Server) error {
 
 	serverConfig := p2p.Config{}
-	serverConfig.PrivateKey = s.ctx.NodeKey()
-	serverConfig.Name = s.ctx.NodeType().String()
+	serverConfig.PrivateKey = mb.ctx.NodeKey()
+	serverConfig.Name = mb.ctx.NodeType().String()
 	serverConfig.Logger = logger
-	serverConfig.ListenAddr = s.config.MainBridgePort
-	serverConfig.MaxPhysicalConnections = s.maxPeers
+	serverConfig.ListenAddr = mb.config.MainBridgePort
+	serverConfig.MaxPhysicalConnections = mb.maxPeers
 	serverConfig.NoDiscovery = true
 	serverConfig.EnableMultiChannelServer = false
 	serverConfig.NoDial = true
 
-	p2pServer := p2p.NewServer(serverConfig)
-
-	s.bridgeServer = p2pServer
-
-	scprotocols := make([]p2p.Protocol, 0, len(s.SCProtocol().Versions))
-	for i, version := range s.SCProtocol().Versions {
+	scprotocols := make([]p2p.Protocol, 0, len(mb.SCProtocol().Versions))
+	for i, version := range mb.SCProtocol().Versions {
 		// Compatible; initialise the sub-protocol
 		version := version
 		scprotocols = append(scprotocols, p2p.Protocol{
-			Name:    s.SCProtocol().Name,
+			Name:    mb.SCProtocol().Name,
 			Version: version,
-			Length:  s.SCProtocol().Lengths[i],
+			Length:  mb.SCProtocol().Lengths[i],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
-				peer := s.newPeer(int(version), p, rw)
+				peer := mb.newPeer(int(version), p, rw)
 				pubKey, _ := p.ID().Pubkey()
 				addr := crypto.PubkeyToAddress(*pubKey)
 				peer.SetAddr(addr)
 				select {
-				case s.newPeerCh <- peer:
-					s.wg.Add(1)
-					defer s.wg.Done()
-					return s.handle(peer)
-				case <-s.quitSync:
+				case mb.newPeerCh <- peer:
+					mb.wg.Add(1)
+					defer mb.wg.Done()
+					return mb.handle(peer)
+				case <-mb.quitSync:
 					return p2p.DiscQuitting
 				}
 			},
 			NodeInfo: func() interface{} {
-				return s.NodeInfo()
+				return mb.NodeInfo()
 			},
 			PeerInfo: func(id discover.NodeID) interface{} {
-				if p := s.peers.Peer(fmt.Sprintf("%x", id[:8])); p != nil {
+				if p := mb.peers.Peer(fmt.Sprintf("%x", id[:8])); p != nil {
 					return p.Info()
 				}
 				return nil
 			},
 		})
 	}
-	s.bridgeServer.AddProtocols(scprotocols)
+	mb.bridgeServer = p2p.NewServer(serverConfig)
+	mb.bridgeServer.AddProtocols(scprotocols)
 
-	if err := p2pServer.Start(); err != nil {
+	if err := mb.bridgeServer.Start(); err != nil {
 		return errors.New("fail to bridgeserver start")
 	}
 
 	// Start the RPC service
-	s.netRPCService = api.NewPublicNetAPI(s.bridgeServer, s.NetVersion())
+	mb.netRPCService = api.NewPublicNetAPI(mb.bridgeServer, mb.NetVersion())
 
 	// Figure out a max peers count based on the server limits
 	//s.maxPeers = s.bridgeServer.MaxPhysicalConnections()
 
-	go s.syncer()
+	go mb.syncer()
 
 	return nil
 }
 
-func (pm *MainBridge) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
+func (mb *MainBridge) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
 	return newBridgePeer(pv, p, newMeteredMsgWriter(rw))
 }
 
-func (pm *MainBridge) handle(p BridgePeer) error {
+func (mb *MainBridge) handle(p BridgePeer) error {
 	// Ignore maxPeers if this is a trusted peer
-	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
+	if mb.peers.Len() >= mb.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
 	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
 
 	// Execute the handshake
 	var (
-		head   = pm.blockchain.CurrentHeader()
+		head   = mb.blockchain.CurrentHeader()
 		hash   = head.Hash()
 		number = head.Number.Uint64()
-		td     = pm.blockchain.GetTd(hash, number)
+		td     = mb.blockchain.GetTd(hash, number)
 	)
 
-	err := p.Handshake(pm.networkId, pm.getChainID(), td, hash)
+	err := p.Handshake(mb.networkId, mb.getChainID(), td, hash)
 	if err != nil {
 		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
 		fmt.Println(err)
@@ -378,33 +375,27 @@ func (pm *MainBridge) handle(p BridgePeer) error {
 	}
 
 	// Register the peer locally
-	if err := pm.peers.Register(p); err != nil {
+	if err := mb.peers.Register(p); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
 		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
 		fmt.Println(err)
 		return err
 	}
-	defer pm.removePeer(p.GetID())
+	defer mb.removePeer(p.GetID())
 
 	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
 
-	//pubKey, err := p.GetP2PPeerID().Pubkey()
-	//if err != nil {
-	//	return err
-	//}
-	//addr := crypto.PubkeyToAddress(*pubKey)
-
 	// main loop. handle incoming messages.
 	for {
-		if err := pm.handleMsg(p); err != nil {
+		if err := mb.handleMsg(p); err != nil {
 			p.GetP2PPeer().Log().Debug("Klaytn message handling failed", "err", err)
 			return err
 		}
 	}
 }
 
-func (sb *MainBridge) SendRPCResponseData(data []byte) error {
-	peers := sb.BridgePeerSet().peers
+func (mb *MainBridge) SendRPCResponseData(data []byte) error {
+	peers := mb.BridgePeerSet().peers
 	logger.Trace("mainbridge send rpc response data to peers", "data len", len(data), "peers", len(peers))
 	for _, peer := range peers {
 		err := peer.SendResponseRPC(data)
@@ -417,8 +408,8 @@ func (sb *MainBridge) SendRPCResponseData(data []byte) error {
 	return nil
 }
 
-func (sc *MainBridge) loop() {
-	defer sc.pmwg.Done()
+func (mb *MainBridge) loop() {
+	defer mb.pmwg.Done()
 
 	report := time.NewTicker(1 * time.Second)
 	defer report.Stop()
@@ -427,35 +418,35 @@ func (sc *MainBridge) loop() {
 	for {
 		select {
 		// Handle ChainHeadEvent
-		case ev := <-sc.chainHeadCh:
+		case ev := <-mb.chainHeadCh:
 			if ev.Block != nil {
-				sc.eventhandler.HandleChainHeadEvent(ev.Block)
+				mb.eventhandler.HandleChainHeadEvent(ev.Block)
 			} else {
 				logger.Error("mainbridge block event is nil")
 			}
 		// Handle NewTxsEvent
-		case ev := <-sc.txCh:
+		case ev := <-mb.txCh:
 			if ev.Txs != nil {
-				sc.eventhandler.HandleTxsEvent(ev.Txs)
+				mb.eventhandler.HandleTxsEvent(ev.Txs)
 			} else {
 				logger.Error("mainbridge tx event is nil")
 			}
 		// Handle ChainLogsEvent
-		case logs := <-sc.logsCh:
-			sc.eventhandler.HandleLogsEvent(logs)
+		case logs := <-mb.logsCh:
+			mb.eventhandler.HandleLogsEvent(logs)
 		case <-report.C:
 			// report status
-		case err := <-sc.chainHeadSub.Err():
+		case err := <-mb.chainHeadSub.Err():
 			if err != nil {
 				logger.Error("mainbridge block subscription ", "err", err)
 			}
 			return
-		case err := <-sc.txSub.Err():
+		case err := <-mb.txSub.Err():
 			if err != nil {
 				logger.Error("mainbridge tx subscription ", "err", err)
 			}
 			return
-		case err := <-sc.logsSub.Err():
+		case err := <-mb.logsSub.Err():
 			if err != nil {
 				logger.Error("mainbridge log subscription ", "err", err)
 			}
@@ -464,15 +455,15 @@ func (sc *MainBridge) loop() {
 	}
 }
 
-func (pm *MainBridge) removePeer(id string) {
+func (mb *MainBridge) removePeer(id string) {
 	// Short circuit if the peer was already removed
-	peer := pm.peers.Peer(id)
+	peer := mb.peers.Peer(id)
 	if peer == nil {
 		return
 	}
 	logger.Debug("Removing Klaytn peer", "peer", id)
 
-	if err := pm.peers.Unregister(id); err != nil {
+	if err := mb.peers.Unregister(id); err != nil {
 		logger.Error("Peer removal failed", "peer", id, "err", err)
 	}
 	// Hard disconnect at the networking layer
@@ -483,7 +474,7 @@ func (pm *MainBridge) removePeer(id string) {
 
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
-func (pm *MainBridge) handleMsg(p BridgePeer) error {
+func (mb *MainBridge) handleMsg(p BridgePeer) error {
 	//Below message size checking is done by handle().
 	//Read the next message from the remote peer, and ensure it's fully consumed
 	msg, err := p.GetRW().ReadMsg()
@@ -498,10 +489,10 @@ func (pm *MainBridge) handleMsg(p BridgePeer) error {
 	}
 	defer msg.Discard()
 
-	return pm.handler.HandleSubMsg(p, msg)
+	return mb.handler.HandleSubMsg(p, msg)
 }
 
-func (pm *MainBridge) syncer() {
+func (mb *MainBridge) syncer() {
 	// Start and ensure cleanup of sync mechanisms
 	//pm.fetcher.Start()
 	//defer pm.fetcher.Stop()
@@ -513,36 +504,36 @@ func (pm *MainBridge) syncer() {
 
 	for {
 		select {
-		case peer := <-pm.newPeerCh:
-			go pm.synchronise(peer)
+		case peer := <-mb.newPeerCh:
+			go mb.synchronise(peer)
 
 		case <-forceSync.C:
 			// Force a sync even if not enough peers are present
-			go pm.synchronise(pm.peers.BestPeer())
+			go mb.synchronise(mb.peers.BestPeer())
 
-		case <-pm.noMorePeers:
+		case <-mb.noMorePeers:
 			return
 		}
 	}
 }
 
-func (pm *MainBridge) synchronise(peer BridgePeer) {
+func (mb *MainBridge) synchronise(peer BridgePeer) {
 	// @TODO Klaytn ServiceChain Sync
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Klaytn protocol.
-func (s *MainBridge) Stop() error {
+func (mb *MainBridge) Stop() error {
 
-	close(s.quitSync)
+	close(mb.quitSync)
 
-	s.chainHeadSub.Unsubscribe()
-	s.txSub.Unsubscribe()
-	s.logsSub.Unsubscribe()
-	s.eventMux.Stop()
-	s.chainDB.Close()
+	mb.chainHeadSub.Unsubscribe()
+	mb.txSub.Unsubscribe()
+	mb.logsSub.Unsubscribe()
+	mb.eventMux.Stop()
+	mb.chainDB.Close()
 
-	s.bridgeServer.Stop()
+	mb.bridgeServer.Stop()
 
 	return nil
 }
