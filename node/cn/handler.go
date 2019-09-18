@@ -84,7 +84,7 @@ type ProtocolManager struct {
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      work.TxPool
-	blockchain  BlockChain
+	blockchain  work.BlockChain
 	chainconfig *params.ChainConfig
 	maxPeers    int
 
@@ -124,7 +124,7 @@ type ProtocolManager struct {
 // NewProtocolManager returns a new Klaytn sub protocol manager. The Klaytn sub protocol manages peers capable
 // with the Klaytn network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
-	txpool work.TxPool, engine consensus.Engine, blockchain BlockChain, chainDB database.DBManager,
+	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager,
 	nodetype p2p.ConnType, cnconfig *Config) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{

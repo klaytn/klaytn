@@ -59,7 +59,7 @@ func testNewMainBridge(t *testing.T) *MainBridge {
 	return mBridge
 }
 
-// testBlockChain returns a test BlockChain with initial values
+// testBlockChain returns a test blockChain with initial values
 func testBlockChain() (*blockchain.BlockChain, error) {
 	db := database.NewMemoryDBManager()
 	defer db.Close()

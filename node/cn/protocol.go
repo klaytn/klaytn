@@ -23,12 +23,10 @@ package cn
 import (
 	"fmt"
 	"github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/datasync/fetcher"
-	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"math/big"
@@ -113,41 +111,6 @@ var errorToString = map[int]string{
 	ErrSuspendedPeer:           "Suspended peer",
 	ErrUnexpectedTxType:        "Unexpected tx type",
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
-}
-
-//go:generate mockgen -destination=node/cn/mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/node/cn BlockChain
-// BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
-type BlockChain interface {
-	Genesis() *types.Block
-
-	CurrentBlock() *types.Block
-	CurrentFastBlock() *types.Block
-	HasBlock(hash common.Hash, number uint64) bool
-	GetBlock(hash common.Hash, number uint64) *types.Block
-	GetBlockByHash(hash common.Hash) *types.Block
-	GetBlockHashesFromHash(hash common.Hash, max uint64) []common.Hash
-
-	CurrentHeader() *types.Header
-	HasHeader(hash common.Hash, number uint64) bool
-	GetHeader(hash common.Hash, number uint64) *types.Header
-	GetHeaderByHash(hash common.Hash) *types.Header
-	GetHeaderByNumber(number uint64) *types.Header
-
-	GetTd(hash common.Hash, number uint64) *big.Int
-	GetTdByHash(hash common.Hash) *big.Int
-
-	GetBodyRLP(hash common.Hash) rlp.RawValue
-
-	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
-
-	InsertChain(chain types.Blocks) (int, error)
-	TrieNode(hash common.Hash) ([]byte, error)
-	Config() *params.ChainConfig
-	State() (*state.StateDB, error)
-	Rollback(chain []common.Hash)
-	InsertReceiptChain(blockChain types.Blocks, receiptChain []types.Receipts) (int, error)
-	InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error)
-	FastSyncCommitHead(hash common.Hash) error
 }
 
 // protocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.

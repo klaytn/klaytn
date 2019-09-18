@@ -18,7 +18,6 @@ package governance
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
@@ -44,10 +43,10 @@ func NewGovernanceAPI(gov *Governance) *PublicGovernanceAPI {
 
 type GovernanceKlayAPI struct {
 	governance *Governance
-	chain      *blockchain.BlockChain
+	chain      blockChain
 }
 
-func NewGovernanceKlayAPI(gov *Governance, chain *blockchain.BlockChain) *GovernanceKlayAPI {
+func NewGovernanceKlayAPI(gov *Governance, chain blockChain) *GovernanceKlayAPI {
 	return &GovernanceKlayAPI{governance: gov, chain: chain}
 }
 

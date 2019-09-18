@@ -58,7 +58,7 @@ type ServiceChain struct {
 
 	// Handlers
 	txPool          work.TxPool
-	blockchain      *blockchain.BlockChain
+	blockchain      work.BlockChain
 	protocolManager *ProtocolManager
 
 	// DB interfaces
@@ -130,11 +130,11 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, e
 		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching, ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval}
 	)
-	var err error
-	cn.blockchain, err = blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
+	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
+	cn.blockchain = bc
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		logger.Error("Rewinding chain to upgrade configuration", "err", compat)
@@ -148,7 +148,7 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, e
 	}
 	// TODO-Klaytn-ServiceChain: add account creation prevention in the TxPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
-	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
+	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
 
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, ctx.NodeType(), config); err != nil {
 		return nil, err
@@ -314,7 +314,7 @@ func (s *ServiceChain) IsMining() bool     { return s.miner.Mining() }
 func (s *ServiceChain) Miner() *work.Miner { return s.miner }
 
 func (s *ServiceChain) AccountManager() *accounts.Manager  { return s.accountManager }
-func (s *ServiceChain) BlockChain() *blockchain.BlockChain { return s.blockchain }
+func (s *ServiceChain) BlockChain() work.BlockChain        { return s.blockchain }
 func (s *ServiceChain) TxPool() work.TxPool                { return s.txPool }
 func (s *ServiceChain) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *ServiceChain) Engine() consensus.Engine           { return s.engine }
@@ -323,6 +323,7 @@ func (s *ServiceChain) IsListening() bool                  { return true } // Al
 func (s *ServiceChain) ProtocolVersion() int               { return int(s.protocolManager.SubProtocols[0].Version) }
 func (s *ServiceChain) NetVersion() uint64                 { return s.networkId }
 func (s *ServiceChain) Progress() klaytn.SyncProgress      { return s.protocolManager.downloader.Progress() }
+
 func (s *ServiceChain) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
 }

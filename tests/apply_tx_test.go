@@ -19,7 +19,6 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -336,7 +335,7 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 	// Execute ApplyTransaction to measure performance of the given transaction type.
 	for i := 0; i < b.N; i++ {
 		usedGas := uint64(0)
-		_, _, err = blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, state, header, txs[i], &usedGas, vmConfig)
+		_, _, err = bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, txs[i], &usedGas, vmConfig)
 		assert.Equal(b, nil, err)
 	}
 	b.StopTimer()
@@ -464,7 +463,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 	// Execute ApplyTransaction to measure performance of the given transaction type.
 	for i := 0; i < b.N; i++ {
 		usedGas := uint64(0)
-		_, _, err = blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, state, header, txs[i], &usedGas, vmConfig)
+		_, _, err = bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, txs[i], &usedGas, vmConfig)
 		assert.Equal(b, nil, err)
 	}
 	b.StopTimer()
@@ -584,7 +583,7 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 	// Execute ApplyTransaction to measure performance of the given transaction type.
 	for i := 0; i < b.N; i++ {
 		usedGas := uint64(0)
-		_, _, err = blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, state, header, txs[i], &usedGas, vmConfig)
+		_, _, err = bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, txs[i], &usedGas, vmConfig)
 		assert.Equal(b, nil, err)
 	}
 	b.StopTimer()
