@@ -152,11 +152,12 @@ type VoteMap struct {
 	mu    *sync.RWMutex
 }
 
+// txPool is an interface for blockchain.TxPool used in governance package.
 type txPool interface {
 	SetGasPrice(price *big.Int)
 }
 
-// blockChain is an interface of blockchain.Blockchain used in governance package.
+// blockChain is an interface for blockchain.Blockchain used in governance package.
 type blockChain interface {
 	CurrentHeader() *types.Header
 	SetProposerPolicy(val uint64)

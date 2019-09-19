@@ -29,6 +29,7 @@ const (
 	chainHeadChanSize = 100
 )
 
+// blockChain is an interface for blockchain.Blockchain used in reward package.
 type blockChain interface {
 	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription
 	GetBlockByNumber(number uint64) *types.Block

@@ -378,7 +378,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	engine := istanbulBackend.New(genesisAddr, istanbul.DefaultConfig, validatorPrivKeys[0], chainDB, gov, node.CONSENSUSNODE)
 
 	////////////////////////////////////////////////////////////////////////////////
-	// Make a BlockChain
+	// Make a blockChain
 	// 1) If generating test, call initBlockChain
 	// 2) If executing test, call blockchain.NewBlockChain
 	var bc *blockchain.BlockChain
