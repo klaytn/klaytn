@@ -511,10 +511,7 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 		setMockPeers([]*MockPeer{pnPeer1, pnPeer2, pnPeer3, enPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(node.ENDPOINTNODE))
-		assert.NoError(t, peerSet.Register(pnPeer1))
-		assert.NoError(t, peerSet.Register(pnPeer2))
-		assert.NoError(t, peerSet.Register(pnPeer3))
-		assert.NoError(t, peerSet.Register(enPeer))
+		registerPeers(t, peerSet, []Peer{pnPeer1, pnPeer2, pnPeer3, enPeer})
 		resendPeers := peerSet.SampleResendPeersByType(node.ENDPOINTNODE)
 
 		assert.Equal(t, 2, len(resendPeers))
@@ -539,14 +536,7 @@ func TestPeerSet_SampleResendPeersByType_Default(t *testing.T) {
 	setMockPeersConnType(cnPeer1, pnPeer1, enPeer1)
 	setMockPeersConnType(cnPeer2, pnPeer2, enPeer2)
 	setMockPeers([]*MockPeer{cnPeer1, pnPeer1, enPeer1, cnPeer2, pnPeer2, enPeer2})
-
-	assert.NoError(t, peerSet.Register(cnPeer1))
-	assert.NoError(t, peerSet.Register(pnPeer1))
-	assert.NoError(t, peerSet.Register(enPeer1))
-
-	assert.NoError(t, peerSet.Register(cnPeer2))
-	assert.NoError(t, peerSet.Register(pnPeer2))
-	assert.NoError(t, peerSet.Register(enPeer2))
+	registerPeers(t, peerSet, []Peer{cnPeer1, pnPeer1, enPeer1, cnPeer2, pnPeer2, enPeer2})
 
 	assert.Nil(t, peerSet.SampleResendPeersByType(node.UNKNOWNNODE))
 	assert.Nil(t, peerSet.SampleResendPeersByType(node.BOOTNODE))
@@ -568,14 +558,7 @@ func TestPeerSet_PeersWithoutBlockExceptCN(t *testing.T) {
 	setMockPeersConnType(cnPeer1, pnPeer1, enPeer1)
 	setMockPeersConnType(cnPeer2, pnPeer2, enPeer2)
 	setMockPeers([]*MockPeer{cnPeer1, pnPeer1, enPeer1, cnPeer2, pnPeer2, enPeer2})
-
-	assert.NoError(t, peerSet.Register(cnPeer1))
-	assert.NoError(t, peerSet.Register(pnPeer1))
-	assert.NoError(t, peerSet.Register(enPeer1))
-
-	assert.NoError(t, peerSet.Register(cnPeer2))
-	assert.NoError(t, peerSet.Register(pnPeer2))
-	assert.NoError(t, peerSet.Register(enPeer2))
+	registerPeers(t, peerSet, []Peer{cnPeer1, pnPeer1, enPeer1, cnPeer2, pnPeer2, enPeer2})
 
 	block := newBlock(blockNum1)
 	pnPeer1.EXPECT().KnowsBlock(block.Hash()).Return(true).AnyTimes()
@@ -609,14 +592,7 @@ func TestPeerSet_TypePeersWithoutBlock(t *testing.T) {
 	setMockPeersConnType(cnPeer1, pnPeer1, enPeer1)
 	setMockPeersConnType(cnPeer2, pnPeer2, enPeer2)
 	setMockPeers([]*MockPeer{cnPeer1, pnPeer1, enPeer1, cnPeer2, pnPeer2, enPeer2})
-
-	assert.NoError(t, peerSet.Register(cnPeer1))
-	assert.NoError(t, peerSet.Register(pnPeer1))
-	assert.NoError(t, peerSet.Register(enPeer1))
-
-	assert.NoError(t, peerSet.Register(cnPeer2))
-	assert.NoError(t, peerSet.Register(pnPeer2))
-	assert.NoError(t, peerSet.Register(enPeer2))
+	registerPeers(t, peerSet, []Peer{cnPeer1, pnPeer1, enPeer1, cnPeer2, pnPeer2, enPeer2})
 
 	block := newBlock(blockNum1)
 	cnPeer1.EXPECT().KnowsBlock(block.Hash()).Return(false).AnyTimes()
@@ -654,4 +630,12 @@ func containsPeer(target Peer, peers []Peer) bool {
 		}
 	}
 	return false
+}
+
+func registerPeers(t *testing.T, ps *peerSet, peers []Peer) {
+	for i, p := range peers {
+		if err := ps.Register(p); err != nil {
+			t.Fatalf("Failed to register peer to peerSet. index: %v, peer: %v", i, p)
+		}
+	}
 }
