@@ -17,6 +17,7 @@
 package types
 
 import (
+	"errors"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"math/big"
@@ -24,6 +25,10 @@ import (
 
 const (
 	AnchoringDataType0 uint8 = 0
+)
+
+var (
+	errUnknownAnchoringTxType = errors.New("unknown anchoring tx type")
 )
 
 type AnchoringData struct {
@@ -61,4 +66,27 @@ func NewAnchoringDataType0(block *Block, period *big.Int, txCount *big.Int) (*An
 		return nil, err
 	}
 	return &AnchoringData{AnchoringDataType0, encodedCCTxData}, nil
+}
+
+// DecodeAnchoringTx decodes an anchoring transaction used by main and sub bridges.
+func DecodeAnchoringTx(data []byte) (common.Hash, *big.Int, error) {
+	anchoringData := new(AnchoringData)
+	if err := rlp.DecodeBytes(data, anchoringData); err != nil {
+		anchoringDataLegacy := new(AnchoringDataLegacy)
+		if err := rlp.DecodeBytes(data, anchoringDataLegacy); err != nil {
+			return common.Hash{}, nil, err
+		}
+		logger.Trace("decoded legacy anchoring tx", "blockNum", anchoringDataLegacy.BlockNumber.String(), "blockHash", anchoringDataLegacy.BlockHash.String(), "txHash", anchoringDataLegacy.TxHash.String())
+		return anchoringDataLegacy.BlockHash, anchoringDataLegacy.BlockNumber, nil
+	}
+	if anchoringData.Type == AnchoringDataType0 {
+		anchoringDataInternal := new(AnchoringDataInternalType0)
+		if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
+			return common.Hash{}, nil, err
+		}
+		logger.Trace("decoded type0 anchoring tx", "blockNum", anchoringDataInternal.BlockNumber.String(), "blockHash", anchoringDataInternal.BlockHash.String(), "txHash", anchoringDataInternal.TxHash.String(), "txCount", anchoringDataInternal.TxCount)
+		return anchoringDataInternal.BlockHash, anchoringDataInternal.BlockNumber, nil
+	} else {
+		return common.Hash{}, nil, errUnknownAnchoringTxType
+	}
 }
