@@ -17,6 +17,7 @@
 package reward
 
 import (
+	"encoding/json"
 	"github.com/klaytn/klaytn/common"
 	"github.com/stretchr/testify/assert"
 	"math"
@@ -87,6 +88,75 @@ func TestStakingInfo_GetStakingAmountByNodeId(t *testing.T) {
 		result, err := stakingInfo.GetStakingAmountByNodeId(testCases[i].address)
 		assert.Equal(t, testCases[i].stakingAmount, result)
 		assert.Equal(t, testCases[i].err, err)
+	}
+}
+
+func TestStakingInfo_String(t *testing.T) {
+	testCases := []*StakingInfo{
+		newEmptyStakingInfo(0),
+		{
+			1,
+			[]common.Address{
+				common.StringToAddress("node address 1"),
+				common.StringToAddress("node address 2"),
+				common.StringToAddress("node address 3"),
+				common.StringToAddress("node address 4"),
+			},
+			[]common.Address{
+				common.StringToAddress("staking address 1"),
+				common.StringToAddress("staking address 2"),
+				common.StringToAddress("staking address 3"),
+				common.StringToAddress("staking address 4"),
+			},
+			[]common.Address{
+				common.StringToAddress("reward address 1"),
+				common.StringToAddress("reward address 2"),
+				common.StringToAddress("reward address 3"),
+				common.StringToAddress("reward address 4"),
+			},
+			common.StringToAddress("kir address"),
+			common.StringToAddress("poc address"),
+			false,
+			0.0,
+			[]uint64{5000000, 5000000, 5000000, 5000000},
+		},
+		{
+			86400,
+			[]common.Address{
+				common.HexToAddress("0x8aD8F547fa00f58A8c4fb3B671Ee5f1A75bA028a"),
+				common.HexToAddress("0xB2AAda7943919e82143324296987f6091F3FDC9e"),
+				common.HexToAddress("0xD95c70710f07A3DaF7ae11cFBa10c789da3564D0"),
+				common.HexToAddress("0xC704765db1d21C2Ea6F7359dcB8FD5233DeD16b5"),
+			},
+			[]common.Address{
+				common.HexToAddress("0x4dd324F9821485caE941640B32c3Bcf1fA6E93E6"),
+				common.HexToAddress("0x0d5Df5086B5f86f748dFaed5779c3f862C075B1f"),
+				common.HexToAddress("0xD3Ff05f00491571E86A3cc8b0c320aA76D7413A5"),
+				common.HexToAddress("0x11EF8e61d10365c2ECAe0E95b5fFa9ed4D68d64f"),
+			},
+			[]common.Address{
+				common.HexToAddress("0x241c793A9AD555f52f6C3a83afe6178408796ab2"),
+				common.HexToAddress("0x79b427Fb77077A9716E08D049B0e8f36Abfc8E2E"),
+				common.HexToAddress("0x62E47d858bf8513fc401886B94E33e7DCec2Bfb7"),
+				common.HexToAddress("0xf275f9f4c0d375F9E3E50370f93b504A1e45dB09"),
+			},
+			common.HexToAddress("0x136807B12327a8AfF9831F09617dA1B9D398cda2"),
+			common.HexToAddress("0x46bA8F7538CD0749e572b2631F9FB4Ce3653AFB8"),
+			true,
+			0.5,
+			[]uint64{10000000, 20000000, 30000000, 40000000},
+		},
+	}
+
+	for _, testStakingInfo := range testCases {
+		resultStr := testStakingInfo.String()
+		t.Logf("%s", resultStr)
+		resultByteArr := []byte(resultStr)
+		resultStakingInfo := &StakingInfo{}
+
+		err := json.Unmarshal(resultByteArr, resultStakingInfo)
+		assert.NoError(t, err)
+		assert.Equal(t, testStakingInfo, resultStakingInfo)
 	}
 }
 

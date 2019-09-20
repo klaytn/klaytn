@@ -17,6 +17,7 @@
 package reward
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/common"
@@ -24,7 +25,6 @@ import (
 	"math"
 	"math/big"
 	"sort"
-	"strings"
 )
 
 const (
@@ -135,55 +135,11 @@ func (s *StakingInfo) GetStakingAmountByNodeId(nodeAddress common.Address) (uint
 }
 
 func (s *StakingInfo) String() string {
-	str := make([]string, 0)
-
-	header := fmt.Sprintf("StakingInfo:{BlockNum:%v", s.BlockNum)
-	str = append(str, header)
-
-	// nodeIds
-	nodeIdsHeader := fmt.Sprintf(" CouncilNodeIds:[")
-	str = append(str, nodeIdsHeader)
-	nodeIds := make([]string, 0)
-	for _, nodeId := range s.CouncilNodeAddrs {
-		nodeIds = append(nodeIds, nodeId.String())
+	j, err := json.Marshal(s)
+	if err != nil {
+		return err.Error()
 	}
-	str = append(str, strings.Join(nodeIds, " "))
-	str = append(str, "]")
-
-	// stakingAddrs
-	stakingAddrsHeader := fmt.Sprintf(", CouncilStakingAddrs:[")
-	str = append(str, stakingAddrsHeader)
-	stakingAddrs := make([]string, 0)
-	for _, stakingAddr := range s.CouncilStakingAddrs {
-		stakingAddrs = append(stakingAddrs, stakingAddr.String())
-	}
-	str = append(str, strings.Join(stakingAddrs, " "))
-	str = append(str, "]")
-
-	// rewardAddrs
-	rewardAddrsHeader := fmt.Sprintf(", CouncilRewardAddrs:[")
-	str = append(str, rewardAddrsHeader)
-	rewardAddrs := make([]string, 0)
-	for _, rewardAddr := range s.CouncilRewardAddrs {
-		rewardAddrs = append(rewardAddrs, rewardAddr.String())
-	}
-	str = append(str, strings.Join(rewardAddrs, " "))
-	str = append(str, "]")
-
-	// pocAddr and kirAddr
-	pocAddr := fmt.Sprintf(", PoCAddr:%v", s.PoCAddr.String())
-	str = append(str, pocAddr)
-	kirAddr := fmt.Sprintf(", KIRAddr:%v", s.KIRAddr.String())
-	str = append(str, kirAddr)
-
-	useGini := fmt.Sprintf(", UseGini:%v ", s.UseGini)
-	str = append(str, useGini)
-
-	// stakingAmounts
-	stakingAmounts := fmt.Sprintf(", CouncilStakingAmounts:%v }", s.CouncilStakingAmounts)
-	str = append(str, stakingAmounts)
-
-	return strings.Join(str, " ")
+	return string(j)
 }
 
 type float64Slice []float64
