@@ -36,8 +36,8 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
 	"io"
+	"math/big"
 	"sync/atomic"
 )
 

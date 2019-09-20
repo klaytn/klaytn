@@ -313,16 +313,16 @@ func (s *ServiceChain) StopMining()        { s.miner.Stop() }
 func (s *ServiceChain) IsMining() bool     { return s.miner.Mining() }
 func (s *ServiceChain) Miner() *work.Miner { return s.miner }
 
-func (s *ServiceChain) AccountManager() *accounts.Manager  { return s.accountManager }
-func (s *ServiceChain) BlockChain() work.BlockChain        { return s.blockchain }
-func (s *ServiceChain) TxPool() work.TxPool                { return s.txPool }
-func (s *ServiceChain) EventMux() *event.TypeMux           { return s.eventMux }
-func (s *ServiceChain) Engine() consensus.Engine           { return s.engine }
-func (s *ServiceChain) ChainDB() database.DBManager        { return s.chainDB }
-func (s *ServiceChain) IsListening() bool                  { return true } // Always listening
-func (s *ServiceChain) ProtocolVersion() int               { return int(s.protocolManager.SubProtocols[0].Version) }
-func (s *ServiceChain) NetVersion() uint64                 { return s.networkId }
-func (s *ServiceChain) Progress() klaytn.SyncProgress      { return s.protocolManager.downloader.Progress() }
+func (s *ServiceChain) AccountManager() *accounts.Manager { return s.accountManager }
+func (s *ServiceChain) BlockChain() work.BlockChain       { return s.blockchain }
+func (s *ServiceChain) TxPool() work.TxPool               { return s.txPool }
+func (s *ServiceChain) EventMux() *event.TypeMux          { return s.eventMux }
+func (s *ServiceChain) Engine() consensus.Engine          { return s.engine }
+func (s *ServiceChain) ChainDB() database.DBManager       { return s.chainDB }
+func (s *ServiceChain) IsListening() bool                 { return true } // Always listening
+func (s *ServiceChain) ProtocolVersion() int              { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *ServiceChain) NetVersion() uint64                { return s.networkId }
+func (s *ServiceChain) Progress() klaytn.SyncProgress     { return s.protocolManager.downloader.Progress() }
 
 func (s *ServiceChain) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
