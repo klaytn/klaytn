@@ -20,7 +20,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
@@ -152,8 +152,16 @@ type VoteMap struct {
 	mu    *sync.RWMutex
 }
 
+// txPool is an interface for blockchain.TxPool used in governance package.
 type txPool interface {
 	SetGasPrice(price *big.Int)
+}
+
+// blockChain is an interface for blockchain.Blockchain used in governance package.
+type blockChain interface {
+	CurrentHeader() *types.Header
+	SetProposerPolicy(val uint64)
+	SetUseGiniCoeff(val bool)
 }
 
 type Governance struct {
@@ -185,7 +193,7 @@ type Governance struct {
 
 	TxPool txPool
 
-	blockChain *blockchain.BlockChain
+	blockChain blockChain
 }
 
 func NewVoteMap() VoteMap {
@@ -937,7 +945,7 @@ func (gov *Governance) ReadGovernanceState() {
 	logger.Info("Successfully loaded governance state from database", "blockNumber", atomic.LoadUint64(&gov.lastGovernanceStateBlock))
 }
 
-func (gov *Governance) SetBlockchain(bc *blockchain.BlockChain) {
+func (gov *Governance) SetBlockchain(bc blockChain) {
 	gov.blockChain = bc
 }
 

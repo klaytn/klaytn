@@ -123,7 +123,7 @@ type worker struct {
 	recv   chan *Result
 
 	backend Backend
-	chain   *blockchain.BlockChain
+	chain   BlockChain
 	proc    blockchain.Validator
 	chainDB database.DBManager
 
@@ -549,7 +549,7 @@ func (self *worker) updateSnapshot() {
 	self.snapshotState = self.current.state.Copy()
 }
 
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *blockchain.BlockChain, rewardbase common.Address) {
+func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) {
 	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
@@ -572,7 +572,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc *blockchain.BlockChain, rewardbase common.Address) []*types.Log {
+func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) []*types.Log {
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block
@@ -711,10 +711,10 @@ CommitTransactionLoop:
 	return coalescedLogs
 }
 
-func (env *Task) commitTransaction(tx *types.Transaction, bc *blockchain.BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, []*types.Log) {
+func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, err := blockchain.ApplyTransaction(env.config, bc, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+	receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
 		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
 			tx.MarkUnexecutable(true)

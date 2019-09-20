@@ -65,10 +65,10 @@ func init() {
 	txs = types.Transactions{tx}
 }
 
-func newMocks(t *testing.T) (*gomock.Controller, *consensusmocks.MockEngine, *mocks.MockBlockChain, *workmocks.MockTxPool) {
+func newMocks(t *testing.T) (*gomock.Controller, *consensusmocks.MockEngine, *workmocks.MockBlockChain, *workmocks.MockTxPool) {
 	mockCtrl := gomock.NewController(t)
 	mockEngine := consensusmocks.NewMockEngine(mockCtrl)
-	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+	mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
 	mockTxPool := workmocks.NewMockTxPool(mockCtrl)
 
 	return mockCtrl, mockEngine, mockBlockChain, mockTxPool
@@ -123,7 +123,7 @@ func TestBroadcastBlock_NoParentExists(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	td := int64(100)
-	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+	mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
 	mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(nil).Times(1)
 	mockBlockChain.EXPECT().GetTd(block.ParentHash(), block.NumberU64()-1).Return(big.NewInt(td)).Times(0)
 	pm.blockchain = mockBlockChain
@@ -146,7 +146,7 @@ func TestBroadcastBlock_ParentExists(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	td := int64(100)
-	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+	mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
 	mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(block).Times(1)
 	mockBlockChain.EXPECT().GetTd(block.ParentHash(), block.NumberU64()-1).Return(big.NewInt(td)).Times(1)
 	pm.blockchain = mockBlockChain
@@ -170,7 +170,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 	// When the given block doesn't exist.
 	{
-		mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+		mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
 		mockBlockChain.EXPECT().HasBlock(block.Hash(), block.NumberU64()).Return(false).Times(1)
 		pm.blockchain = mockBlockChain
 		pm.BroadcastBlockHash(block)
@@ -178,7 +178,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 	// When the given block exists.
 	{
-		mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+		mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
 		mockBlockChain.EXPECT().HasBlock(block.Hash(), block.NumberU64()).Return(true).Times(1)
 		pm.blockchain = mockBlockChain
 
@@ -501,7 +501,7 @@ func TestNodeInfo(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+	mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
 	pm.blockchain = mockBlockChain
 
 	genesis := newBlock(0)

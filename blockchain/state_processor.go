@@ -24,7 +24,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/params"
 )
@@ -71,7 +70,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		receipt, _, err := ApplyTransaction(p.config, p.bc, &author, statedb, header, tx, usedGas, &cfg)
+		receipt, _, err := p.bc.ApplyTransaction(p.config, &author, statedb, header, tx, usedGas, &cfg)
 		if err != nil {
 			return nil, nil, 0, err
 		}
@@ -85,55 +84,4 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	}
 
 	return receipts, allLogs, *usedGas, nil
-}
-
-// ApplyTransaction attempts to apply a transaction to the given state database
-// and uses the input parameters for its environment. It returns the receipt
-// for the transaction, gas used and an error if the transaction failed,
-// indicating the block was invalid.
-func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, uint64, error) {
-
-	// TODO-Klaytn We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
-	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
-	/*
-		// istanbul BFT
-		if tx.GasPrice() != nil && tx.GasPrice().Cmp(common.Big0) > 0 {
-			return nil, uint64(0), ErrInvalidGasPrice
-		}
-	*/
-
-	blockNumber := header.Number.Uint64()
-
-	// validation for each transaction before execution
-	if err := tx.Validate(statedb, blockNumber); err != nil {
-		return nil, 0, err
-	}
-
-	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(config, header.Number), statedb, blockNumber)
-	if err != nil {
-		return nil, 0, err
-	}
-	// Create a new context to be used in the EVM environment
-	context := NewEVMContext(msg, header, bc, author)
-	// Create a new environment which holds all relevant information
-	// about the transaction and calling mechanisms.
-	vmenv := vm.NewEVM(context, statedb, config, cfg)
-	// Apply the transaction to the current state (included in the env)
-	_, gas, kerr := ApplyMessage(vmenv, msg)
-	err = kerr.ErrTxInvalid
-	if err != nil {
-		return nil, 0, err
-	}
-	// Update the state with pending changes
-	statedb.Finalise(true)
-	*usedGas += gas
-
-	receipt := types.NewReceipt(kerr.Status, tx.Hash(), gas)
-	// if the transaction created a contract, store the creation address in the receipt.
-	msg.FillContractAddress(vmenv.Context.Origin, receipt)
-	// Set the receipt logs and create a bloom for filtering
-	receipt.Logs = statedb.GetLogs(tx.Hash())
-	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-
-	return receipt, gas, err
 }

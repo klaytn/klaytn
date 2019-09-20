@@ -26,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/datasync/downloader"
@@ -33,7 +34,9 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"io"
 	"math/big"
 	"sync/atomic"
 )
@@ -69,7 +72,7 @@ type TxPool interface {
 // Backend wraps all methods required for mining.
 type Backend interface {
 	AccountManager() *accounts.Manager
-	BlockChain() *blockchain.BlockChain
+	BlockChain() BlockChain
 	TxPool() TxPool
 	ChainDB() database.DBManager
 	ReBroadcastTxs(transactions types.Transactions)
@@ -211,4 +214,76 @@ func (self *Miner) Pending() (*types.Block, *state.StateDB) {
 // change between multiple method calls
 func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
+}
+
+//go:generate mockgen -destination=work/mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/work BlockChain
+// BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
+type BlockChain interface {
+	Genesis() *types.Block
+
+	CurrentBlock() *types.Block
+	CurrentFastBlock() *types.Block
+	HasBlock(hash common.Hash, number uint64) bool
+	GetBlock(hash common.Hash, number uint64) *types.Block
+	GetBlockByHash(hash common.Hash) *types.Block
+	GetBlockByNumber(number uint64) *types.Block
+	GetBlockHashesFromHash(hash common.Hash, max uint64) []common.Hash
+
+	CurrentHeader() *types.Header
+	HasHeader(hash common.Hash, number uint64) bool
+	GetHeader(hash common.Hash, number uint64) *types.Header
+	GetHeaderByHash(hash common.Hash) *types.Header
+	GetHeaderByNumber(number uint64) *types.Header
+
+	GetTd(hash common.Hash, number uint64) *big.Int
+	GetTdByHash(hash common.Hash) *big.Int
+
+	GetBodyRLP(hash common.Hash) rlp.RawValue
+
+	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
+
+	InsertChain(chain types.Blocks) (int, error)
+	TrieNode(hash common.Hash) ([]byte, error)
+	Config() *params.ChainConfig
+	State() (*state.StateDB, error)
+	Rollback(chain []common.Hash)
+	InsertReceiptChain(blockChain types.Blocks, receiptChain []types.Receipts) (int, error)
+	InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error)
+	FastSyncCommitHead(hash common.Hash) error
+	StateCache() state.Database
+
+	SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription
+	SetHead(head uint64) error
+	Stop()
+
+	SubscribeRemovedLogsEvent(ch chan<- blockchain.RemovedLogsEvent) event.Subscription
+	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription
+	SubscribeChainSideEvent(ch chan<- blockchain.ChainSideEvent) event.Subscription
+	SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription
+	IsParallelDBWrite() bool
+	IsSenderTxHashIndexingEnabled() bool
+
+	// Used in governance pkg
+	SetProposerPolicy(val uint64)
+	SetUseGiniCoeff(val bool)
+
+	Processor() blockchain.Processor
+	BadBlocks() ([]blockchain.BadBlockArgs, error)
+	StateAt(root common.Hash) (*state.StateDB, error)
+	Export(w io.Writer) error
+	Engine() consensus.Engine
+	GetNonceInCache(addr common.Address) (uint64, bool)
+	GetTxLookupInfoAndReceipt(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
+	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
+	GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts
+	GetTxLookupInfoAndReceiptInCache(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
+	GetTxAndLookupInfo(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
+	GetLogsByHash(hash common.Hash) [][]*types.Log
+	ResetWithGenesisBlock(gb *types.Block) error
+	Validator() blockchain.Validator
+	HasBadBlock(hash common.Hash) bool
+	WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (blockchain.WriteStatus, error)
+	PostChainEvents(events []interface{}, logs []*types.Log)
+	TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB, error)
+	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, uint64, error)
 }

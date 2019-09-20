@@ -18,6 +18,9 @@ package reward
 
 import (
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
 )
@@ -26,16 +29,26 @@ const (
 	chainHeadChanSize = 100
 )
 
+// blockChain is an interface for blockchain.Blockchain used in reward package.
+type blockChain interface {
+	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription
+	GetBlockByNumber(number uint64) *types.Block
+	StateAt(root common.Hash) (*state.StateDB, error)
+	Config() *params.ChainConfig
+
+	blockchain.ChainContext
+}
+
 type StakingManager struct {
 	ac           *addressBookConnector
 	sic          *stakingInfoCache
 	gh           governanceHelper
-	bc           *blockchain.BlockChain
+	bc           blockChain
 	chainHeadCh  chan blockchain.ChainHeadEvent
 	chainHeadSub event.Subscription
 }
 
-func NewStakingManager(bc *blockchain.BlockChain, gh governanceHelper) *StakingManager {
+func NewStakingManager(bc blockChain, gh governanceHelper) *StakingManager {
 	return &StakingManager{
 		ac:          newAddressBookConnector(bc, gh),
 		sic:         newStakingInfoCache(),

@@ -239,7 +239,7 @@ func (api *PrivateAdminAPI) ExportChain(file string) (bool, error) {
 	return true, nil
 }
 
-func hasAllBlocks(chain *blockchain.BlockChain, bs []*types.Block) bool {
+func hasAllBlocks(chain work.BlockChain, bs []*types.Block) bool {
 	for _, b := range bs {
 		if !chain.HasBlock(b.Hash(), b.NumberU64()) {
 			return false

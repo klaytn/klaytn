@@ -77,7 +77,7 @@ type CN struct {
 
 	// Handlers
 	txPool          work.TxPool
-	blockchain      *blockchain.BlockChain
+	blockchain      work.BlockChain
 	protocolManager *ProtocolManager
 	lesServer       LesServer
 
@@ -217,10 +217,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	)
 	var err error
 
-	cn.blockchain, err = blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
+	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
 		return nil, err
 	}
+	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
 	// Synchronize proposerpolicy & useGiniCoeff
 	if cn.blockchain.Config().Istanbul != nil {
@@ -249,7 +250,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	// TODO-Klaytn-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
-	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, cn.blockchain)
+	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
 	governance.SetTxPool(cn.txPool)
 	// Synchronize unitprice
 	cn.txPool.SetGasPrice(big.NewInt(0).SetUint64(governance.UnitPrice()))
@@ -497,16 +498,16 @@ func (s *CN) StopMining()        { s.miner.Stop() }
 func (s *CN) IsMining() bool     { return s.miner.Mining() }
 func (s *CN) Miner() *work.Miner { return s.miner }
 
-func (s *CN) AccountManager() *accounts.Manager  { return s.accountManager }
-func (s *CN) BlockChain() *blockchain.BlockChain { return s.blockchain }
-func (s *CN) TxPool() work.TxPool                { return s.txPool }
-func (s *CN) EventMux() *event.TypeMux           { return s.eventMux }
-func (s *CN) Engine() consensus.Engine           { return s.engine }
-func (s *CN) ChainDB() database.DBManager        { return s.chainDB }
-func (s *CN) IsListening() bool                  { return true } // Always listening
-func (s *CN) ProtocolVersion() int               { return int(s.protocolManager.SubProtocols[0].Version) }
-func (s *CN) NetVersion() uint64                 { return s.networkId }
-func (s *CN) Progress() klaytn.SyncProgress      { return s.protocolManager.downloader.Progress() }
+func (s *CN) AccountManager() *accounts.Manager { return s.accountManager }
+func (s *CN) BlockChain() work.BlockChain       { return s.blockchain }
+func (s *CN) TxPool() work.TxPool               { return s.txPool }
+func (s *CN) EventMux() *event.TypeMux          { return s.eventMux }
+func (s *CN) Engine() consensus.Engine          { return s.engine }
+func (s *CN) ChainDB() database.DBManager       { return s.chainDB }
+func (s *CN) IsListening() bool                 { return true } // Always listening
+func (s *CN) ProtocolVersion() int              { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *CN) NetVersion() uint64                { return s.networkId }
+func (s *CN) Progress() klaytn.SyncProgress     { return s.protocolManager.downloader.Progress() }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)

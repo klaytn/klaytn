@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -2016,5 +2015,5 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 		BlockScore: big.NewInt(0),
 	}
 	usedGas := uint64(0)
-	return blockchain.ApplyTransaction(bcdata.bc.Config(), bcdata.bc, author, state, header, tx, &usedGas, vmConfig)
+	return bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, &usedGas, vmConfig)
 }

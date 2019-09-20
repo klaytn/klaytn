@@ -44,14 +44,14 @@ var (
 )
 
 type addressBookConnector struct {
-	bc              *blockchain.BlockChain
+	bc              blockChain
 	gh              governanceHelper
 	abi             string
 	contractAddress common.Address
 }
 
 // create and return addressBookConnector
-func newAddressBookConnector(bc *blockchain.BlockChain, gh governanceHelper) *addressBookConnector {
+func newAddressBookConnector(bc blockChain, gh governanceHelper) *addressBookConnector {
 	return &addressBookConnector{
 		bc:              bc,
 		gh:              gh,

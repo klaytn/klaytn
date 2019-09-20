@@ -1978,6 +1978,57 @@ func (bc *BlockChain) GetNonceInCache(addr common.Address) (uint64, bool) {
 	return 0, false
 }
 
+// ApplyTransaction attempts to apply a transaction to the given state database
+// and uses the input parameters for its environment. It returns the receipt
+// for the transaction, gas used and an error if the transaction failed,
+// indicating the block was invalid.
+func (bc *BlockChain) ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, uint64, error) {
+
+	// TODO-Klaytn We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
+	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
+	/*
+		// istanbul BFT
+		if tx.GasPrice() != nil && tx.GasPrice().Cmp(common.Big0) > 0 {
+			return nil, uint64(0), ErrInvalidGasPrice
+		}
+	*/
+
+	blockNumber := header.Number.Uint64()
+
+	// validation for each transaction before execution
+	if err := tx.Validate(statedb, blockNumber); err != nil {
+		return nil, 0, err
+	}
+
+	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(config, header.Number), statedb, blockNumber)
+	if err != nil {
+		return nil, 0, err
+	}
+	// Create a new context to be used in the EVM environment
+	context := NewEVMContext(msg, header, bc, author)
+	// Create a new environment which holds all relevant information
+	// about the transaction and calling mechanisms.
+	vmenv := vm.NewEVM(context, statedb, config, cfg)
+	// Apply the transaction to the current state (included in the env)
+	_, gas, kerr := ApplyMessage(vmenv, msg)
+	err = kerr.ErrTxInvalid
+	if err != nil {
+		return nil, 0, err
+	}
+	// Update the state with pending changes
+	statedb.Finalise(true)
+	*usedGas += gas
+
+	receipt := types.NewReceipt(kerr.Status, tx.Hash(), gas)
+	// if the transaction created a contract, store the creation address in the receipt.
+	msg.FillContractAddress(vmenv.Context.Origin, receipt)
+	// Set the receipt logs and create a bloom for filtering
+	receipt.Logs = statedb.GetLogs(tx.Hash())
+	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+
+	return receipt, gas, err
+}
+
 // CheckBlockChainVersion checks the version of the current database and upgrade if possible.
 func CheckBlockChainVersion(chainDB database.DBManager) error {
 	bcVersion := chainDB.ReadDatabaseVersion()
