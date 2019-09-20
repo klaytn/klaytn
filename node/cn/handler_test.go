@@ -41,7 +41,8 @@ const blockNum1 = 20190902
 
 var td1 = big.NewInt(123)
 
-var numVals = 4
+const numVals = 6
+
 var addrs []common.Address
 var keys []*ecdsa.PrivateKey
 var nodeids []discover.NodeID
