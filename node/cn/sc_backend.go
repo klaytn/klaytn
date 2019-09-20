@@ -57,7 +57,7 @@ type ServiceChain struct {
 	shutdownChan chan bool // Channel for shutting down the CN
 
 	// Handlers
-	txPool          *blockchain.TxPool
+	txPool          work.TxPool
 	blockchain      *blockchain.BlockChain
 	protocolManager *ProtocolManager
 
@@ -315,7 +315,7 @@ func (s *ServiceChain) Miner() *work.Miner { return s.miner }
 
 func (s *ServiceChain) AccountManager() *accounts.Manager  { return s.accountManager }
 func (s *ServiceChain) BlockChain() *blockchain.BlockChain { return s.blockchain }
-func (s *ServiceChain) TxPool() *blockchain.TxPool         { return s.txPool }
+func (s *ServiceChain) TxPool() work.TxPool                { return s.txPool }
 func (s *ServiceChain) EventMux() *event.TypeMux           { return s.eventMux }
 func (s *ServiceChain) Engine() consensus.Engine           { return s.engine }
 func (s *ServiceChain) ChainDB() database.DBManager        { return s.chainDB }

@@ -23,7 +23,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
-	mocks2 "github.com/klaytn/klaytn/consensus/mocks"
+	consensusmocks "github.com/klaytn/klaytn/consensus/mocks"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/networks/p2p"
@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/params"
+	workmocks "github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
@@ -63,11 +64,11 @@ func init() {
 	txs = types.Transactions{tx}
 }
 
-func newMocks(t *testing.T) (*gomock.Controller, *mocks2.MockEngine, *mocks.MockBlockChain, *mocks.MockTxPool) {
+func newMocks(t *testing.T) (*gomock.Controller, *consensusmocks.MockEngine, *mocks.MockBlockChain, *workmocks.MockTxPool) {
 	mockCtrl := gomock.NewController(t)
-	mockEngine := mocks2.NewMockEngine(mockCtrl)
+	mockEngine := consensusmocks.NewMockEngine(mockCtrl)
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
-	mockTxPool := mocks.NewMockTxPool(mockCtrl)
+	mockTxPool := workmocks.NewMockTxPool(mockCtrl)
 
 	return mockCtrl, mockEngine, mockBlockChain, mockTxPool
 }

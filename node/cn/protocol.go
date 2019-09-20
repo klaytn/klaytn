@@ -23,13 +23,11 @@ package cn
 import (
 	"fmt"
 	"github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/datasync/fetcher"
-	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
@@ -115,23 +113,6 @@ var errorToString = map[int]string{
 	ErrSuspendedPeer:           "Suspended peer",
 	ErrUnexpectedTxType:        "Unexpected tx type",
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
-}
-
-//go:generate mockgen -destination=node/cn/mocks/txpool_mock.go -package=mocks github.com/klaytn/klaytn/node/cn TxPool
-// TxPool is an interface of blockchain.TxPool used by ProtocolManager.
-type TxPool interface {
-	// HandleTxMsg should add the given transactions to the pool.
-	HandleTxMsg(types.Transactions)
-
-	// Pending should return pending transactions.
-	// The slice should be modifiable by the caller.
-	Pending() (map[common.Address]types.Transactions, error)
-
-	CachedPendingTxsByCount(count int) types.Transactions
-
-	// SubscribeNewTxsEvent should return an event subscription of
-	// NewTxsEvent and send events to the given channel.
-	SubscribeNewTxsEvent(chan<- blockchain.NewTxsEvent) event.Subscription
 }
 
 //go:generate mockgen -destination=node/cn/mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/node/cn BlockChain
