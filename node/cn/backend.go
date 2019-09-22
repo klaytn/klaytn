@@ -198,7 +198,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	// istanbul BFT. Derive and set node's address using nodekey
-	if chainConfig.Istanbul != nil {
+	if cn.chainConfig.Istanbul != nil {
 		governance.SetNodeAddress(crypto.PubkeyToAddress(ctx.NodeKey().PublicKey))
 	}
 
@@ -241,7 +241,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		logger.Error("Rewinding chain to upgrade configuration", "err", compat)
 		cn.blockchain.SetHead(compat.RewindTo)
-		chainDB.WriteChainConfig(genesisHash, chainConfig)
+		chainDB.WriteChainConfig(genesisHash, cn.chainConfig)
 	}
 	cn.bloomIndexer.Start(cn.blockchain)
 
@@ -259,28 +259,14 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		return nil, err
 	}
 
-	// Set AcceptTxs flag in 1CN case to receive tx propagation.
-	if chainConfig.Istanbul != nil {
-		istanbulExtra, err := types.ExtractIstanbulExtra(cn.blockchain.Genesis().Header())
-		if err != nil {
-			logger.Error("Failed to decode IstanbulExtra", "err", err)
-		} else {
-			if len(istanbulExtra.Validators) == 1 {
-				atomic.StoreUint32(&cn.protocolManager.acceptTxs, 1)
-			}
-		}
+	if err := cn.setAcceptTxs(); err != nil {
+		logger.Error("Failed to decode IstanbulExtra", "err", err)
 	}
 
 	cn.protocolManager.wsendpoint = config.WsEndpoint
 
-	if cn.protocolManager.nodetype == node.CONSENSUSNODE {
-		wallet, err := cn.RewardbaseWallet()
-		if err != nil {
-			logger.Error("find err", "err", err)
-		} else {
-			cn.protocolManager.SetRewardbaseWallet(wallet)
-		}
-		cn.protocolManager.SetRewardbase(cn.rewardbase)
+	if err := cn.setRewardWallet(); err != nil {
+		logger.Error("find err", "err", err)
 	}
 
 	if governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
@@ -310,6 +296,35 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.APIs())
 
 	return cn, nil
+}
+
+// setAcceptTxs sets AcceptTxs flag in 1CN case to receive tx propagation.
+func (s *CN) setAcceptTxs() error {
+	if s.chainConfig.Istanbul != nil {
+		istanbulExtra, err := types.ExtractIstanbulExtra(s.blockchain.Genesis().Header())
+		if err != nil {
+			return err
+		} else {
+			if len(istanbulExtra.Validators) == 1 {
+				atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
+			}
+		}
+	}
+	return nil
+}
+
+// setRewardWallet sets reward base and reward base wallet if the node is CN.
+func (s *CN) setRewardWallet() error {
+	if s.protocolManager.nodetype == node.CONSENSUSNODE {
+		wallet, err := s.RewardbaseWallet()
+		if err != nil {
+			return err
+		} else {
+			s.protocolManager.SetRewardbaseWallet(wallet)
+		}
+		s.protocolManager.SetRewardbase(s.rewardbase)
+	}
+	return nil
 }
 
 // add component which may be used in another service component
