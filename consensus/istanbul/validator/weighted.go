@@ -532,7 +532,6 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	var newWeightedCouncil = weightedCouncil{
 		subSize:           valSet.subSize,
 		policy:            valSet.policy,
-		proposer:          valSet.proposer,
 		selector:          valSet.selector,
 		stakingInfo:       valSet.stakingInfo,
 		proposersBlockNum: valSet.proposersBlockNum,
