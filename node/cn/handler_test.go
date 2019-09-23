@@ -47,8 +47,12 @@ var addrs []common.Address
 var keys []*ecdsa.PrivateKey
 var nodeids []discover.NodeID
 
-var tx *types.Transaction
+var tx1 *types.Transaction
 var txs types.Transactions
+
+var hash1 common.Hash
+
+var signer types.Signer
 
 func init() {
 	addrs = make([]common.Address, numVals)
@@ -61,8 +65,14 @@ func init() {
 		nodeids[i] = discover.PubkeyID(&keys[i].PublicKey)
 	}
 
-	tx = types.NewTransaction(111, addrs[0], big.NewInt(111), 111, big.NewInt(111), nil)
-	txs = types.Transactions{tx}
+	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(2019))
+	tx1 = types.NewTransaction(111, addrs[0], big.NewInt(111), 111, big.NewInt(111), addrs[0][:])
+
+	tx1.Sign(signer, keys[0])
+	tx1.Size()
+	txs = types.Transactions{tx1}
+
+	hash1 = tx1.Hash()
 }
 
 func newMocks(t *testing.T) (*gomock.Controller, *consensusmocks.MockEngine, *workmocks.MockBlockChain, *workmocks.MockTxPool) {
@@ -75,9 +85,20 @@ func newMocks(t *testing.T) (*gomock.Controller, *consensusmocks.MockEngine, *wo
 }
 
 func newBlock(blockNum int) *types.Block {
-	header := &types.Header{Number: big.NewInt(int64(blockNum))}
+	header := &types.Header{
+		Number:     big.NewInt(int64(blockNum)),
+		BlockScore: big.NewInt(int64(1)),
+		Extra:      addrs[0][:],
+		Governance: addrs[0][:],
+		Vote:       addrs[0][:],
+	}
 	header.Hash()
-	return types.NewBlockWithHeader(header)
+	block := types.NewBlockWithHeader(header)
+	block = block.WithBody(types.Transactions{})
+	block.Hash()
+	block.Size()
+	block.BlockScore()
+	return block
 }
 
 func TestNewProtocolManager(t *testing.T) {
@@ -205,7 +226,7 @@ func TestBroadcastTxsFromCN_CN_NotExists(t *testing.T) {
 
 	// Using gomock.Eq(txs) for AsyncSendTransactions calls,
 	// since transactions are put into a new list inside broadcastCNTx.
-	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
+	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
 	cnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
 	pnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
 	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
@@ -225,7 +246,7 @@ func TestBroadcastTxsFromCN_CN_Exists(t *testing.T) {
 
 	// Using gomock.Eq(txs) for AsyncSendTransactions calls,
 	// since transactions are put into a new list inside broadcastCNTx.
-	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 	cnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(1)
 	pnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
 	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
@@ -243,13 +264,13 @@ func TestBroadcastTxsFromPN_PN_NotExists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 
 	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
 	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
 	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
 
-	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
+	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
 
 	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
@@ -268,13 +289,13 @@ func TestBroadcastTxsFromPN_PN_Exists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 
 	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.CONSENSUSNODE)).Times(1)
 	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(1)
 	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(1)
 
-	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 
 	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
@@ -297,8 +318,8 @@ func TestBroadcastTxsFromEN_EN_NotExists(t *testing.T) {
 	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
 	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
 
-	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
-	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
+	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
+	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
 
 	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
 	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
@@ -321,8 +342,8 @@ func TestBroadcastTxsFromEN_EN_Exists(t *testing.T) {
 	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
 	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
 
-	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
-	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
+	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 
 	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
 	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
@@ -345,8 +366,8 @@ func TestBroadcastTxsFromEN_PN_NotExists(t *testing.T) {
 	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(node.PROXYNODE)).Times(2)
 	enPeer.EXPECT().ConnType().Return(p2p.ConnType(node.ENDPOINTNODE)).Times(2)
 
-	pnPeer.EXPECT().KnowsTx(tx.Hash()).Return(true).Times(1)
-	enPeer.EXPECT().KnowsTx(tx.Hash()).Return(false).Times(1)
+	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
+	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 
 	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
 	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
