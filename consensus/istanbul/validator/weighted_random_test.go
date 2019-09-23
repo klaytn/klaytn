@@ -504,21 +504,12 @@ func TestWeightedCouncil_Copy(t *testing.T) {
 
 	copiedValSet := valSet.Copy().(*weightedCouncil)
 
-	// check each variable is same except selector(function)
-	if valSet.blockNum != copiedValSet.blockNum || valSet.GetProposer() != copiedValSet.GetProposer() ||
-		valSet.subSize != copiedValSet.subSize || valSet.policy != copiedValSet.policy ||
-		valSet.proposersBlockNum != copiedValSet.proposersBlockNum ||
-		!reflect.DeepEqual(valSet.validators, copiedValSet.validators) ||
-		!reflect.DeepEqual(valSet.proposers, copiedValSet.proposers) ||
-		!reflect.DeepEqual(valSet.stakingInfo, copiedValSet.stakingInfo) {
-		t.Errorf("copied weightedCouncil is different from original.")
-		t.Errorf("block number. original : %v, Copied : %v", valSet.blockNum, copiedValSet.blockNum)
-		t.Errorf("proposer. original : %v, Copied : %v", valSet.GetProposer(), copiedValSet.GetProposer())
-		t.Errorf("subSize. original : %v, Copied : %v", valSet.subSize, copiedValSet.subSize)
-		t.Errorf("policy. original : %v, Copied : %v", valSet.policy, copiedValSet.policy)
-		t.Errorf("proposersBlockNum. original : %v, Copied : %v", valSet.proposersBlockNum, copiedValSet.proposersBlockNum)
-		t.Errorf("validators. original : %v, Copied : %v", valSet.validators, copiedValSet.validators)
-		t.Errorf("proposers. original : %v, Copied : %v", valSet.proposers, copiedValSet.proposers)
-		t.Errorf("staking. original : %v, Copied : %v", valSet.stakingInfo, copiedValSet.stakingInfo)
-	}
+	assert.Equal(t, valSet.blockNum, copiedValSet.blockNum)
+	assert.Equal(t, valSet.GetProposer(), copiedValSet.GetProposer())
+	assert.Equal(t, valSet.subSize, copiedValSet.subSize)
+	assert.Equal(t, valSet.policy, copiedValSet.policy)
+	assert.Equal(t, valSet.proposersBlockNum, copiedValSet.proposersBlockNum)
+	assert.Equal(t, valSet.validators, copiedValSet.validators)
+	assert.Equal(t, valSet.proposers, copiedValSet.proposers)
+	assert.Equal(t, valSet.stakingInfo, copiedValSet.stakingInfo)
 }
