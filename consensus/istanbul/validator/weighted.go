@@ -601,12 +601,6 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 		return errors.New("skip refreshing proposers due to no staking info")
 	}
 
-	validators := make([]istanbul.Validator, len(valSet.validators))
-	for i := 0; i < len(valSet.validators); i++ {
-		validators[i] = valSet.validators[i].Copy()
-	}
-	valSet.validators = validators
-
 	weightedValidators, stakingAmounts, err := valSet.getStakingAmountsOfValidators(newStakingInfo)
 	if err != nil {
 		return err
