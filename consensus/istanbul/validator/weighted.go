@@ -539,10 +539,15 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 		blockNum:          valSet.blockNum,
 	}
 	newWeightedCouncil.validators = make([]istanbul.Validator, len(valSet.validators))
-	copy(newWeightedCouncil.validators, valSet.validators)
+	for i := 0; i < len(valSet.validators); i++ {
+		newWeightedCouncil.validators[i] = valSet.validators[i].Copy()
+	}
 
 	newWeightedCouncil.proposers = make([]istanbul.Validator, len(valSet.proposers))
 	copy(newWeightedCouncil.proposers, valSet.proposers)
+
+	_, proposer := newWeightedCouncil.getByAddress(valSet.GetProposer().Address())
+	newWeightedCouncil.proposer.Store(proposer)
 
 	return &newWeightedCouncil
 }
