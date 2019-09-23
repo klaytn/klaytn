@@ -38,12 +38,14 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"math/big"
+	"path"
 	"reflect"
 	"strings"
 	"testing"
 )
 
 const testNetVersion = uint64(8888)
+const testDataDir = "./tmp_bridge_test"
 
 var testProtocolVersion = int(SCProtocolVersion[0])
 
@@ -59,8 +61,8 @@ func testNewMainBridge(t *testing.T) *MainBridge {
 	return mBridge
 }
 
-// testBlockChain returns a test blockChain with initial values
-func testBlockChain() (*blockchain.BlockChain, error) {
+// testBlockChain returns a test BlockChain with initial values
+func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	db := database.NewMemoryDBManager()
 	defer db.Close()
 
@@ -88,10 +90,19 @@ func testBlockChain() (*blockchain.BlockChain, error) {
 
 	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
-		return nil, err
+		t.Fatal(err)
 	}
 
-	return blockchain.NewBlockChain(db, nil, chainConfig, engine, vm.Config{})
+	bc, err := blockchain.NewBlockChain(db, nil, chainConfig, engine, vm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return bc
+}
+
+func testTxPool(bc *blockchain.BlockChain) *blockchain.TxPool {
+	blockchain.DefaultTxPoolConfig.Journal = path.Join(testDataDir, blockchain.DefaultTxPoolConfig.Journal)
+	return blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bc.Config(), bc)
 }
 
 // TestCreateDB tests creation of chain database and proper working of database operation.
@@ -111,7 +122,7 @@ func TestCreateDB(t *testing.T) {
 	assert.Equal(t, database.LevelDB, dbConfig.DBType)
 }
 
-// TestMainBridge tests some getters and basic operation of MainBridge.
+// TestMainBridge_basic tests some getters and basic operation of MainBridge.
 func TestMainBridge_basic(t *testing.T) {
 	// Create a test MainBridge
 	mBridge := testNewMainBridge(t)
@@ -250,11 +261,7 @@ func TestMainBridge_handle(t *testing.T) {
 	defer mBridge.chainDB.Close()
 
 	// Set testBlockChain to MainBridge.blockchain
-	bc, err := testBlockChain()
-	if err != nil {
-		t.Fatal(err)
-	}
-	mBridge.blockchain = bc
+	mBridge.blockchain = testBlockChain(t)
 
 	// Variables will be used as return values of mockBridgePeer
 	key, _ := crypto.GenerateKey()
@@ -280,7 +287,7 @@ func TestMainBridge_handle(t *testing.T) {
 		// Set maxPeers to make the test fail
 		mBridge.maxPeers = mBridge.peers.Len()
 
-		err = mBridge.handle(mockBridgePeer)
+		err := mBridge.handle(mockBridgePeer)
 		assert.Equal(t, p2p.DiscTooManyPeers, err)
 	}
 	// Resolve the above failure condition by increasing maxPeers
@@ -289,20 +296,20 @@ func TestMainBridge_handle(t *testing.T) {
 	// Case 2 - Error if handshake of BridgePeer failed
 	{
 		// Make handshake fail
-		mockBridgePeer.EXPECT().Handshake(uint64(8888), big.NewInt(8217), big.NewInt(1), bc.CurrentHeader().Hash()).Return(p2p.ErrPipeClosed).Times(1)
+		mockBridgePeer.EXPECT().Handshake(uint64(8888), big.NewInt(8217), big.NewInt(1), mBridge.blockchain.CurrentHeader().Hash()).Return(p2p.ErrPipeClosed).Times(1)
 
-		err = mBridge.handle(mockBridgePeer)
+		err := mBridge.handle(mockBridgePeer)
 		assert.Equal(t, p2p.ErrPipeClosed, err)
 	}
 	// Resolve the above failure condition by making handshake success
-	mockBridgePeer.EXPECT().Handshake(uint64(8888), big.NewInt(8217), big.NewInt(1), bc.CurrentHeader().Hash()).Return(nil).AnyTimes()
+	mockBridgePeer.EXPECT().Handshake(uint64(8888), big.NewInt(8217), big.NewInt(1), mBridge.blockchain.CurrentHeader().Hash()).Return(nil).AnyTimes()
 
 	// Case 3 - Error when the same peer was registered before
 	{
 		// Pre-register a peer which will be added again
 		mBridge.peers.peers[bridgePeerID] = &baseBridgePeer{}
 
-		err = mBridge.handle(mockBridgePeer)
+		err := mBridge.handle(mockBridgePeer)
 		assert.Equal(t, errAlreadyRegistered, err)
 	}
 	// Resolve the above failure condition by deleting the registered peer
@@ -313,7 +320,7 @@ func TestMainBridge_handle(t *testing.T) {
 		// Close of the peer's pipe make `mBridge.handleMsg` fail
 		_ = pipe.Close()
 
-		err = mBridge.handle(mockBridgePeer)
+		err := mBridge.handle(mockBridgePeer)
 		assert.Equal(t, p2p.ErrPipeClosed, err)
 	}
 }
