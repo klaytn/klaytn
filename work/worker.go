@@ -67,6 +67,7 @@ var (
 	nonceTooHighTxsGauge    = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
+	blockMiningTimeGauge    = metrics.NewRegisteredGauge("miner/block/mining/time", nil)
 )
 
 // Agent can register themself with the worker
@@ -529,7 +530,9 @@ func (self *worker) commitNewWork() {
 		// We only care about logging if we're actually mining.
 		if atomic.LoadInt32(&self.mining) == 1 {
 			tCountGauge.Update(int64(work.tcount))
-			logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(time.Since(tstart)))
+			blockMiningTime := time.Since(tstart)
+			blockMiningTimeGauge.Update(int64(blockMiningTime))
+			logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(blockMiningTime))
 		}
 	}
 
