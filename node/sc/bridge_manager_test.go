@@ -23,10 +23,12 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
 	"github.com/klaytn/klaytn/contracts/sc_erc20"
 	"github.com/klaytn/klaytn/contracts/sc_erc721"
+	"github.com/klaytn/klaytn/contracts/sc_erc721_no_uri"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/params"
@@ -115,6 +117,8 @@ func TestBridgeManager(t *testing.T) {
 		config:         config,
 		peers:          newBridgePeerSet(),
 		bridgeAccounts: bacc,
+		localBackend:   sim,
+		remoteBackend:  sim,
 	}
 	sc.handler, err = NewSubBridgeHandler(sc)
 	if err != nil {
@@ -281,6 +285,9 @@ func TestBridgeManager(t *testing.T) {
 		sim.Commit() // block
 
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		uri, err := nft.TokenURI(nil, big.NewInt(int64(nftTokenID)))
+		assert.NoError(t, err)
+		assert.Equal(t, "testURI", uri)
 	}
 
 	// Wait a few second for wait group
@@ -301,6 +308,193 @@ func TestBridgeManager(t *testing.T) {
 	}
 
 	// 12. Check NFT owner
+	{
+		owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenID)))
+		assert.Equal(t, nil, err)
+		assert.Equal(t, bob.From, owner)
+	}
+
+	bridgeManager.Stop()
+}
+
+// TestBridgeManagerERC721_notSupportURI tests if bridge can handle an ERC721 which does not support URI.
+func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	// Config Bridge Account Manager
+	config := &SCConfig{}
+	config.DataDir = tempDir
+	bacc, _ := NewBridgeAccounts(config.DataDir)
+	bacc.pAccount.chainID = big.NewInt(0)
+	bacc.cAccount.chainID = big.NewInt(0)
+
+	//pAuth := bacc.cAccount.GetTransactOpts()
+	cAuth := bacc.pAccount.GetTransactOpts()
+
+	// Generate a new random account and a funded simulator
+	aliceKey, _ := crypto.GenerateKey()
+	alice := bind.NewKeyedTransactor(aliceKey)
+
+	bobKey, _ := crypto.GenerateKey()
+	bob := bind.NewKeyedTransactor(bobKey)
+
+	// Create Simulated backend
+	alloc := blockchain.GenesisAlloc{
+		alice.From:            {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	sc := &SubBridge{
+		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
+		config:         config,
+		peers:          newBridgePeerSet(),
+		bridgeAccounts: bacc,
+		localBackend:   sim,
+		remoteBackend:  sim,
+	}
+
+	sc.handler, err = NewSubBridgeHandler(sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+
+	bridgeManager, err := NewBridgeManager(sc)
+
+	// Deploy Bridge Contract
+	addr, err := bridgeManager.DeployBridgeTest(sim, false)
+	if err != nil {
+		log.Fatalf("Failed to deploy new bridge contract: %v", err)
+	}
+	bridgeInfo, _ := bridgeManager.GetBridgeInfo(addr)
+	bridge := bridgeInfo.bridge
+	fmt.Println("===== BridgeContract Addr ", addr.Hex())
+	sim.Commit() // block
+
+	// Deploy NFT Contract
+	nftTokenID := uint64(4438)
+	nftAddr, tx, nft, err := scnft_no_uri.DeployServiceChainNFTNoURI(alice, sim, addr)
+	if err != nil {
+		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
+	}
+
+	nft_uri, err := scnft.NewServiceChainNFT(nftAddr, sim)
+	if err != nil {
+		log.Fatalf("Failed to get NFT object: %v", err)
+	}
+
+	sim.Commit() // block
+
+	// Register the owner as a signer
+	_, err = bridge.RegisterOperator(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
+	assert.NoError(t, err)
+	sim.Commit() // block
+
+	// Register tokens on the bridgeInfo
+	bridgeInfo.RegisterToken(nftAddr, nftAddr)
+
+	// Register tokens on the bridge
+	bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
+	sim.Commit() // block
+
+	cNftAddr, err := bridge.AllowedTokens(nil, nftAddr)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, cNftAddr, nftAddr)
+
+	// Subscribe Bridge Contract
+	bridgeManager.SubscribeEvent(addr)
+
+	requestValueTransferEventCh := make(chan *RequestValueTransferEvent)
+	handleValueTransferEventCh := make(chan *HandleValueTransferEvent)
+	bridgeManager.SubscribeRequestEvent(requestValueTransferEventCh)
+	bridgeManager.SubscribeHandleEvent(handleValueTransferEventCh)
+
+	go func() {
+		for {
+			select {
+			case ev := <-requestValueTransferEventCh:
+				fmt.Println("Request Event",
+					"type", ev.TokenType,
+					"amount", ev.ValueOrTokenId,
+					"from", ev.From.String(),
+					"to", ev.To.String(),
+					"contract", ev.Raw.Address.String(),
+					"token", ev.TokenAddress.String(),
+					"requestNonce", ev.RequestNonce)
+
+				done, err := bridge.HandledRequestTx(nil, ev.Raw.TxHash)
+				assert.NoError(t, err)
+				assert.Equal(t, false, done)
+
+				// insert the value transfer request event to the bridge info's event list.
+				bridgeInfo.AddRequestValueTransferEvents([]*RequestValueTransferEvent{ev})
+
+				// handle the value transfer request event in the event list.
+				bridgeInfo.processingPendingRequestEvents()
+
+				sim.Commit() // block
+				wg.Done()
+				done, err = bridge.HandledRequestTx(nil, ev.Raw.TxHash)
+				assert.NoError(t, err)
+				assert.Equal(t, true, done)
+
+			case ev := <-handleValueTransferEventCh:
+				fmt.Println("Handle value transfer event",
+					"bridgeAddr", ev.Raw.Address.Hex(),
+					"type", ev.TokenType,
+					"amount", ev.ValueOrTokenId,
+					"owner", ev.To.String(),
+					"contract", ev.Raw.Address.String(),
+					"token", ev.TokenAddress.String(),
+					"handleNonce", ev.HandleNonce)
+				wg.Done()
+			}
+		}
+	}()
+
+	// Register (Mint) an NFT to Alice
+	{
+		tx, err = nft.Mint(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenID)))
+		assert.NoError(t, err)
+		fmt.Println("Register NFT Transaction", tx.Hash().Hex())
+		sim.Commit() // block
+
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+		owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenID)))
+		assert.Equal(t, nil, err)
+		assert.Equal(t, alice.From, owner)
+	}
+
+	// Request NFT transfer from Alice to Bob
+	{
+		tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenID)), bob.From, nil)
+		assert.NoError(t, err)
+		fmt.Println("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
+
+		sim.Commit() // block
+
+		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+		uri, err := nft_uri.TokenURI(nil, big.NewInt(int64(nftTokenID)))
+		assert.Equal(t, vm.ErrExecutionReverted, err)
+		assert.Equal(t, "", uri)
+	}
+
+	// Wait a few second for wait group
+	WaitGroupWithTimeOut(&wg, 3*time.Second, t)
+
+	// Check NFT owner
 	{
 		owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenID)))
 		assert.Equal(t, nil, err)
@@ -1245,7 +1439,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true)
+	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true, sim)
 
 	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
 
