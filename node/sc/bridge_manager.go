@@ -319,15 +319,15 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		var uri string
 		erc721, err := scnft.NewERC721Metadata(ev.TokenAddress, bi.counterpartBackend)
 		if err != nil {
-			logger.Warn("Failed to get erc721 token instance", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain)
-		} else {
-			uri, err = erc721.TokenURI(nil, ev.ValueOrTokenId)
-			if err != nil {
-				if err == vm.ErrExecutionReverted {
-					logger.Warn("The ERC721 token does not support URI", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain, "tokenId", ev.ValueOrTokenId.String())
-				} else {
-					return err
-				}
+			return err
+		}
+
+		uri, err = erc721.TokenURI(nil, ev.ValueOrTokenId)
+		if err != nil {
+			if err == vm.ErrExecutionReverted {
+				logger.Warn("The ERC721 token does not support URI", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain, "tokenId", ev.ValueOrTokenId.String())
+			} else {
+				return err
 			}
 		}
 
