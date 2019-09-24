@@ -103,9 +103,9 @@ type SubBridge struct {
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh    chan BridgePeer
 	addPeerCh    chan struct{}
+	noMorePeers  chan struct{}
 	removePeerCh chan struct{}
 	quitSync     chan struct{}
-	noMorePeers  chan struct{}
 
 	// wait group is used for graceful shutdowns during downloading and processing
 	pmwg sync.WaitGroup
@@ -155,7 +155,7 @@ type SubBridge struct {
 func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error) {
 	chainDB := CreateDB(ctx, config, "subbridgedata")
 
-	sc := &SubBridge{
+	sb := &SubBridge{
 		config:         config,
 		chainDB:        chainDB,
 		peers:          newBridgePeerSet(),
@@ -188,26 +188,26 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	}
 
 	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
-	sc.APIBackend = &SubBridgeAPI{sc}
+	sb.APIBackend = &SubBridgeAPI{sb}
 
-	sc.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
+	sb.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
 
 	var err error
-	sc.bridgeAccounts, err = NewBridgeAccounts(config.DataDir)
+	sb.bridgeAccounts, err = NewBridgeAccounts(config.DataDir)
 	if err != nil {
 		return nil, err
 	}
-	sc.handler, err = NewSubBridgeHandler(sc)
+	sb.handler, err = NewSubBridgeHandler(sb)
 	if err != nil {
 		return nil, err
 	}
-	sc.eventhandler, err = NewChildChainEventHandler(sc, sc.handler)
+	sb.eventhandler, err = NewChildChainEventHandler(sb, sb.handler)
 	if err != nil {
 		return nil, err
 	}
-	sc.bridgeAccounts.pAccount.SetChainID(new(big.Int).SetUint64(config.ParentChainID))
+	sb.bridgeAccounts.pAccount.SetChainID(new(big.Int).SetUint64(config.ParentChainID))
 
-	return sc, nil
+	return sb, nil
 }
 
 func (sb *SubBridge) SetRPCConn(conn net.Conn) {
@@ -271,97 +271,97 @@ func (sb *SubBridge) SetAnchoringTx(flag bool) bool {
 
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
-func (s *SubBridge) APIs() []rpc.API {
+func (sb *SubBridge) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return []rpc.API{
 		{
 			Namespace: "subbridge",
 			Version:   "1.0",
-			Service:   s.APIBackend,
+			Service:   sb.APIBackend,
 			Public:    true,
 		},
 		{
 			Namespace: "subbridge",
 			Version:   "1.0",
-			Service:   s.netRPCService,
+			Service:   sb.netRPCService,
 			Public:    true,
 		},
 	}
 }
 
-func (s *SubBridge) AccountManager() *accounts.Manager { return s.accountManager }
-func (s *SubBridge) EventMux() *event.TypeMux          { return s.eventMux }
-func (s *SubBridge) ChainDB() database.DBManager       { return s.chainDB }
-func (s *SubBridge) IsListening() bool                 { return true } // Always listening
-func (s *SubBridge) ProtocolVersion() int              { return int(s.SCProtocol().Versions[0]) }
-func (s *SubBridge) NetVersion() uint64                { return s.networkId }
+func (sb *SubBridge) AccountManager() *accounts.Manager { return sb.accountManager }
+func (sb *SubBridge) EventMux() *event.TypeMux          { return sb.eventMux }
+func (sb *SubBridge) ChainDB() database.DBManager       { return sb.chainDB }
+func (sb *SubBridge) IsListening() bool                 { return true } // Always listening
+func (sb *SubBridge) ProtocolVersion() int              { return int(sb.SCProtocol().Versions[0]) }
+func (sb *SubBridge) NetVersion() uint64                { return sb.networkId }
 
-func (s *SubBridge) Components() []interface{} {
+func (sb *SubBridge) Components() []interface{} {
 	return nil
 }
 
-func (sc *SubBridge) SetComponents(components []interface{}) {
+func (sb *SubBridge) SetComponents(components []interface{}) {
 	for _, component := range components {
 		switch v := component.(type) {
 		case *blockchain.BlockChain:
-			sc.blockchain = v
+			sb.blockchain = v
 			// event from core-service
-			sc.chainHeadSub = sc.blockchain.SubscribeChainHeadEvent(sc.chainHeadCh)
-			sc.logsSub = sc.blockchain.SubscribeLogsEvent(sc.logsCh)
-			sc.bridgeAccounts.cAccount.SetChainID(v.Config().ChainID)
+			sb.chainHeadSub = sb.blockchain.SubscribeChainHeadEvent(sb.chainHeadCh)
+			sb.logsSub = sb.blockchain.SubscribeLogsEvent(sb.logsCh)
+			sb.bridgeAccounts.cAccount.SetChainID(v.Config().ChainID)
 		case *blockchain.TxPool:
-			sc.txPool = v
+			sb.txPool = v
 			// event from core-service
-			// sc.txSub = sc.txPool.SubscribeNewTxsEvent(sc.txCh)
-			// TODO-Klaytn if need pending block, should use miner
+			// sb.txSub = sb.txPool.SubscribeNewTxsEvent(sb.txCh)
+		// TODO-Klaytn if need pending block, should use miner
 		case *work.Miner:
 		}
 	}
 
 	var err error
-	if sc.config.EnabledSubBridge {
-		sc.remoteBackend, err = NewRemoteBackend(sc)
+	if sb.config.EnabledSubBridge {
+		sb.remoteBackend, err = NewRemoteBackend(sb)
 		if err != nil {
 			logger.Error("fail to initialize RemoteBackend", "err", err)
-			sc.bootFail = true
+			sb.bootFail = true
 			return
 		}
 	}
-	sc.localBackend, err = NewLocalBackend(sc)
+	sb.localBackend, err = NewLocalBackend(sb)
 	if err != nil {
 		logger.Error("fail to initialize LocalBackend", "err", err)
-		sc.bootFail = true
+		sb.bootFail = true
 		return
 	}
 
-	sc.bridgeManager, err = NewBridgeManager(sc)
+	sb.bridgeManager, err = NewBridgeManager(sb)
 	if err != nil {
 		logger.Error("fail to initialize BridgeManager", "err", err)
-		sc.bootFail = true
+		sb.bootFail = true
 		return
 	}
-	sc.requestEventSub = sc.bridgeManager.SubscribeRequestEvent(sc.requestEventCh)
-	sc.handleEventSub = sc.bridgeManager.SubscribeHandleEvent(sc.handleEventCh)
+	sb.requestEventSub = sb.bridgeManager.SubscribeRequestEvent(sb.requestEventCh)
+	sb.handleEventSub = sb.bridgeManager.SubscribeHandleEvent(sb.handleEventCh)
 
-	sc.pmwg.Add(1)
-	go sc.restoreBridgeLoop()
+	sb.pmwg.Add(1)
+	go sb.restoreBridgeLoop()
 
-	sc.pmwg.Add(1)
-	go sc.resetBridgeLoop()
+	sb.pmwg.Add(1)
+	go sb.resetBridgeLoop()
 
-	sc.bridgeAccounts.cAccount.SetNonce(sc.txPool.GetPendingNonce(sc.bridgeAccounts.cAccount.address))
+	sb.bridgeAccounts.cAccount.SetNonce(sb.txPool.GetPendingNonce(sb.bridgeAccounts.cAccount.address))
 
-	sc.pmwg.Add(1)
-	go sc.loop()
+	sb.pmwg.Add(1)
+	go sb.loop()
 }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
-func (s *SubBridge) Protocols() []p2p.Protocol {
+func (sb *SubBridge) Protocols() []p2p.Protocol {
 	return []p2p.Protocol{}
 }
 
-func (s *SubBridge) SCProtocol() SCProtocol {
+func (sb *SubBridge) SCProtocol() SCProtocol {
 	return SCProtocol{
 		Name:     SCProtocolName,
 		Versions: SCProtocolVersion,
@@ -370,124 +370,124 @@ func (s *SubBridge) SCProtocol() SCProtocol {
 }
 
 // NodeInfo retrieves some protocol metadata about the running host node.
-func (pm *SubBridge) NodeInfo() *SubBridgeInfo {
-	currentBlock := pm.blockchain.CurrentBlock()
+func (sb *SubBridge) NodeInfo() *SubBridgeInfo {
+	currentBlock := sb.blockchain.CurrentBlock()
 	return &SubBridgeInfo{
-		Network: pm.networkId,
-		Genesis: pm.blockchain.Genesis().Hash(),
-		Config:  pm.blockchain.Config(),
+		Network: sb.networkId,
+		Genesis: sb.blockchain.Genesis().Hash(),
+		Config:  sb.blockchain.Config(),
 		Head:    currentBlock.Hash(),
-		ChainID: pm.blockchain.Config().ChainID,
+		ChainID: sb.blockchain.Config().ChainID,
 	}
 }
 
 // getChainID returns the current chain id.
-func (pm *SubBridge) getChainID() *big.Int {
-	return pm.blockchain.Config().ChainID
+func (sb *SubBridge) getChainID() *big.Int {
+	return sb.blockchain.Config().ChainID
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
 // Klaytn protocol implementation.
-func (s *SubBridge) Start(srvr p2p.Server) error {
+func (sb *SubBridge) Start(srvr p2p.Server) error {
 
-	if s.bootFail {
+	if sb.bootFail {
 		return errors.New("subBridge node fail to start")
 	}
 
 	serverConfig := p2p.Config{}
-	serverConfig.PrivateKey = s.ctx.NodeKey()
-	serverConfig.Name = s.ctx.NodeType().String()
+	serverConfig.PrivateKey = sb.ctx.NodeKey()
+	serverConfig.Name = sb.ctx.NodeType().String()
 	serverConfig.Logger = logger
 	serverConfig.NoListen = true
-	serverConfig.MaxPhysicalConnections = s.maxPeers
+	serverConfig.MaxPhysicalConnections = sb.maxPeers
 	serverConfig.NoDiscovery = true
 	serverConfig.EnableMultiChannelServer = false
 
 	// connect to mainbridge as outbound
-	serverConfig.StaticNodes = s.config.MainBridges()
+	serverConfig.StaticNodes = sb.config.MainBridges()
 
 	p2pServer := p2p.NewServer(serverConfig)
 
-	s.bridgeServer = p2pServer
+	sb.bridgeServer = p2pServer
 
-	scprotocols := make([]p2p.Protocol, 0, len(s.SCProtocol().Versions))
-	for i, version := range s.SCProtocol().Versions {
+	scprotocols := make([]p2p.Protocol, 0, len(sb.SCProtocol().Versions))
+	for i, version := range sb.SCProtocol().Versions {
 		// Compatible; initialise the sub-protocol
 		version := version
 		scprotocols = append(scprotocols, p2p.Protocol{
-			Name:    s.SCProtocol().Name,
+			Name:    sb.SCProtocol().Name,
 			Version: version,
-			Length:  s.SCProtocol().Lengths[i],
+			Length:  sb.SCProtocol().Lengths[i],
 			Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
-				peer := s.newPeer(int(version), p, rw)
+				peer := sb.newPeer(int(version), p, rw)
 				pubKey, _ := p.ID().Pubkey()
 				addr := crypto.PubkeyToAddress(*pubKey)
 				peer.SetAddr(addr)
 				select {
-				case s.newPeerCh <- peer:
-					return s.handle(peer)
-				case <-s.quitSync:
+				case sb.newPeerCh <- peer:
+					return sb.handle(peer)
+				case <-sb.quitSync:
 					return p2p.DiscQuitting
 				}
 			},
 			NodeInfo: func() interface{} {
-				return s.NodeInfo()
+				return sb.NodeInfo()
 			},
 			PeerInfo: func(id discover.NodeID) interface{} {
-				if p := s.peers.Peer(fmt.Sprintf("%x", id[:8])); p != nil {
+				if p := sb.peers.Peer(fmt.Sprintf("%x", id[:8])); p != nil {
 					return p.Info()
 				}
 				return nil
 			},
 		})
 	}
-	s.bridgeServer.AddProtocols(scprotocols)
+	sb.bridgeServer.AddProtocols(scprotocols)
 
 	if err := p2pServer.Start(); err != nil {
 		return errors.New("fail to bridgeserver start")
 	}
 
 	// Start the RPC service
-	s.netRPCService = api.NewPublicNetAPI(s.bridgeServer, s.NetVersion())
+	sb.netRPCService = api.NewPublicNetAPI(sb.bridgeServer, sb.NetVersion())
 
 	// Figure out a max peers count based on the server limits
-	//s.maxPeers = s.bridgeServer.MaxPhysicalConnections()
+	//sb.maxPeers = sb.bridgeServer.MaxPhysicalConnections()
 	//validator := func(header *types.Header) error {
 	//	return nil
 	//}
 	//heighter := func() uint64 {
-	//	return s.blockchain.CurrentBlock().NumberU64()
+	//	return sb.blockchain.CurrentBlock().NumberU64()
 	//}
 	//inserter := func(blocks types.Blocks) (int, error) {
 	//	return 0, nil
 	//}
-	//s.fetcher = fetcher.New(s.GetBlockByHash, validator, s.BroadcastBlock, heighter, inserter, s.removePeer)
+	//sb.fetcher = fetcher.New(sb.GetBlockByHash, validator, sb.BroadcastBlock, heighter, inserter, sb.removePeer)
 
-	go s.syncer()
+	go sb.syncer()
 
 	return nil
 }
 
-func (pm *SubBridge) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
+func (sb *SubBridge) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
 	return newBridgePeer(pv, p, newMeteredMsgWriter(rw))
 }
 
-func (pm *SubBridge) handle(p BridgePeer) error {
+func (sb *SubBridge) handle(p BridgePeer) error {
 	// Ignore maxPeers if this is a trusted peer
-	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
+	if sb.peers.Len() >= sb.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
 	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
 
 	// Execute the handshake
 	var (
-		head   = pm.blockchain.CurrentHeader()
+		head   = sb.blockchain.CurrentHeader()
 		hash   = head.Hash()
 		number = head.Number.Uint64()
-		td     = pm.blockchain.GetTd(hash, number)
+		td     = sb.blockchain.GetTd(hash, number)
 	)
 
-	err := p.Handshake(pm.networkId, pm.getChainID(), td, hash)
+	err := p.Handshake(sb.networkId, sb.getChainID(), td, hash)
 	if err != nil {
 		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
 		fmt.Println(err)
@@ -495,15 +495,15 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 	}
 
 	// Register the peer locally
-	if err := pm.peers.Register(p); err != nil {
+	if err := sb.peers.Register(p); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
 		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
 		fmt.Println(err)
 		return err
 	}
-	defer pm.removePeer(p.GetID())
+	defer sb.removePeer(p.GetID())
 
-	pm.handler.RegisterNewPeer(p)
+	sb.handler.RegisterNewPeer(p)
 
 	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
 
@@ -515,15 +515,15 @@ func (pm *SubBridge) handle(p BridgePeer) error {
 
 	// main loop. handle incoming messages.
 	for {
-		if err := pm.handleMsg(p); err != nil {
+		if err := sb.handleMsg(p); err != nil {
 			p.GetP2PPeer().Log().Debug("Klaytn message handling failed", "err", err)
 			return err
 		}
 	}
 }
 
-func (sc *SubBridge) resetBridgeLoop() {
-	defer sc.pmwg.Done()
+func (sb *SubBridge) resetBridgeLoop() {
+	defer sb.pmwg.Done()
 
 	ticker := time.NewTicker(resetBridgeCycle)
 	defer ticker.Stop()
@@ -533,19 +533,19 @@ func (sc *SubBridge) resetBridgeLoop() {
 
 	for {
 		select {
-		case <-sc.quitSync:
+		case <-sb.quitSync:
 			return
-		case <-sc.addPeerCh:
+		case <-sb.addPeerCh:
 			peerCount++
-		case <-sc.removePeerCh:
+		case <-sb.removePeerCh:
 			peerCount--
 			if peerCount == 0 {
 				needResetSubscription = true
-				sc.handler.setParentOperatorNonceSynced(false)
+				sb.handler.setParentOperatorNonceSynced(false)
 			}
 		case <-ticker.C:
 			if needResetSubscription && peerCount > 0 {
-				err := sc.bridgeManager.ResetAllSubscribedEvents()
+				err := sb.bridgeManager.ResetAllSubscribedEvents()
 				if err == nil {
 					needResetSubscription = false
 				}
@@ -554,19 +554,19 @@ func (sc *SubBridge) resetBridgeLoop() {
 	}
 }
 
-func (sc *SubBridge) restoreBridgeLoop() {
-	defer sc.pmwg.Done()
+func (sb *SubBridge) restoreBridgeLoop() {
+	defer sb.pmwg.Done()
 
 	ticker := time.NewTicker(restoreBridgeCycle)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-sc.quitSync:
+		case <-sb.quitSync:
 			return
 		case <-ticker.C:
-			if err := sc.bridgeManager.RestoreBridges(); err != nil {
-				logger.Error("failed to sc.bridgeManager.RestoreBridges()", "err", err)
+			if err := sb.bridgeManager.RestoreBridges(); err != nil {
+				logger.Error("failed to sb.bridgeManager.RestoreBridges()", "err", err)
 				continue
 			}
 			return
@@ -574,69 +574,69 @@ func (sc *SubBridge) restoreBridgeLoop() {
 	}
 }
 
-func (sc *SubBridge) loop() {
-	defer sc.pmwg.Done()
+func (sb *SubBridge) loop() {
+	defer sb.pmwg.Done()
 
 	// Keep waiting for and reacting to the various events
 	for {
 		select {
-		case sendData := <-sc.rpcSendCh:
-			sc.SendRPCData(sendData)
+		case sendData := <-sb.rpcSendCh:
+			sb.SendRPCData(sendData)
 		// Handle ChainHeadEvent
-		case ev := <-sc.chainHeadCh:
+		case ev := <-sb.chainHeadCh:
 			if ev.Block != nil {
-				if err := sc.eventhandler.HandleChainHeadEvent(ev.Block); err != nil {
+				if err := sb.eventhandler.HandleChainHeadEvent(ev.Block); err != nil {
 					logger.Error("subbridge block event", "err", err)
 				}
 			} else {
 				logger.Error("subbridge block event is nil")
 			}
 		// Handle NewTexsEvent
-		//case ev := <-sc.txCh:
+		//case ev := <-sb.txCh:
 		//	if ev.Txs != nil {
-		//		if err := sc.eventhandler.HandleTxsEvent(ev.Txs); err != nil {
+		//		if err := sb.eventhandler.HandleTxsEvent(ev.Txs); err != nil {
 		//			logger.Error("subbridge tx event", "err", err)
 		//		}
 		//	} else {
 		//		logger.Error("subbridge tx event is nil")
 		//	}
 		// Handle ChainLogsEvent
-		case logs := <-sc.logsCh:
-			if err := sc.eventhandler.HandleLogsEvent(logs); err != nil {
+		case logs := <-sb.logsCh:
+			if err := sb.eventhandler.HandleLogsEvent(logs); err != nil {
 				logger.Error("subbridge log event", "err", err)
 			}
 		// Handle Bridge Event
-		case ev := <-sc.requestEventCh:
+		case ev := <-sb.requestEventCh:
 			vtRequestEventMeter.Mark(1)
-			if err := sc.eventhandler.ProcessRequestEvent(ev); err != nil {
+			if err := sb.eventhandler.ProcessRequestEvent(ev); err != nil {
 				logger.Error("fail to process request value transfer event ", "err", err)
 			}
-		case ev := <-sc.handleEventCh:
+		case ev := <-sb.handleEventCh:
 			vtHandleEventMeter.Mark(1)
-			if err := sc.eventhandler.ProcessHandleEvent(ev); err != nil {
+			if err := sb.eventhandler.ProcessHandleEvent(ev); err != nil {
 				logger.Error("fail to process handle value transfer event ", "err", err)
 			}
-		case err := <-sc.chainHeadSub.Err():
+		case err := <-sb.chainHeadSub.Err():
 			if err != nil {
 				logger.Error("subbridge block subscription ", "err", err)
 			}
 			return
-		//case err := <-sc.txSub.Err():
+		//case err := <-sb.txSub.Err():
 		//	if err != nil {
 		//		logger.Error("subbridge tx subscription ", "err", err)
 		//	}
 		//	return
-		case err := <-sc.logsSub.Err():
+		case err := <-sb.logsSub.Err():
 			if err != nil {
 				logger.Error("subbridge log subscription ", "err", err)
 			}
 			return
-		case err := <-sc.requestEventSub.Err():
+		case err := <-sb.requestEventSub.Err():
 			if err != nil {
 				logger.Error("subbridge token-received subscription ", "err", err)
 			}
 			return
-		case err := <-sc.handleEventSub.Err():
+		case err := <-sb.handleEventSub.Err():
 			if err != nil {
 				logger.Error("subbridge token-transfer subscription ", "err", err)
 			}
@@ -645,17 +645,17 @@ func (sc *SubBridge) loop() {
 	}
 }
 
-func (pm *SubBridge) removePeer(id string) {
-	pm.removePeerCh <- struct{}{}
+func (sb *SubBridge) removePeer(id string) {
+	sb.removePeerCh <- struct{}{}
 
 	// Short circuit if the peer was already removed
-	peer := pm.peers.Peer(id)
+	peer := sb.peers.Peer(id)
 	if peer == nil {
 		return
 	}
 	logger.Debug("Removing Klaytn peer", "peer", id)
 
-	if err := pm.peers.Unregister(id); err != nil {
+	if err := sb.peers.Unregister(id); err != nil {
 		logger.Error("Peer removal failed", "peer", id, "err", err)
 	}
 	// Hard disconnect at the networking layer
@@ -666,7 +666,7 @@ func (pm *SubBridge) removePeer(id string) {
 
 // handleMsg is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
-func (pm *SubBridge) handleMsg(p BridgePeer) error {
+func (sb *SubBridge) handleMsg(p BridgePeer) error {
 	//Below message size checking is done by handle().
 	//Read the next message from the remote peer, and ensure it's fully consumed
 	msg, err := p.GetRW().ReadMsg()
@@ -681,10 +681,10 @@ func (pm *SubBridge) handleMsg(p BridgePeer) error {
 	}
 	defer msg.Discard()
 
-	return pm.handler.HandleMainMsg(p, msg)
+	return sb.handler.HandleMainMsg(p, msg)
 }
 
-func (pm *SubBridge) syncer() {
+func (sb *SubBridge) syncer() {
 	// Start and ensure cleanup of sync mechanisms
 	//pm.fetcher.Start()
 	//defer pm.fetcher.Stop()
@@ -696,41 +696,41 @@ func (pm *SubBridge) syncer() {
 
 	for {
 		select {
-		case peer := <-pm.newPeerCh:
-			go pm.synchronise(peer)
+		case peer := <-sb.newPeerCh:
+			go sb.synchronise(peer)
 
 		case <-forceSync.C:
 			// Force a sync even if not enough peers are present
-			go pm.synchronise(pm.peers.BestPeer())
+			go sb.synchronise(sb.peers.BestPeer())
 
-		case <-pm.noMorePeers:
+		case <-sb.noMorePeers:
 			return
 		}
 	}
 }
 
-func (pm *SubBridge) synchronise(peer BridgePeer) {
+func (sb *SubBridge) synchronise(peer BridgePeer) {
 	// @TODO Klaytn ServiceChain Sync
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Klaytn protocol.
-func (s *SubBridge) Stop() error {
+func (sb *SubBridge) Stop() error {
 
-	close(s.quitSync)
-	s.bridgeManager.stopAllRecoveries()
+	close(sb.quitSync)
+	sb.bridgeManager.stopAllRecoveries()
 
-	s.chainHeadSub.Unsubscribe()
-	//s.txSub.Unsubscribe()
-	s.logsSub.Unsubscribe()
-	s.requestEventSub.Unsubscribe()
-	s.handleEventSub.Unsubscribe()
-	s.eventMux.Stop()
-	s.chainDB.Close()
+	sb.chainHeadSub.Unsubscribe()
+	//sb.txSub.Unsubscribe()
+	sb.logsSub.Unsubscribe()
+	sb.requestEventSub.Unsubscribe()
+	sb.handleEventSub.Unsubscribe()
+	sb.eventMux.Stop()
+	sb.chainDB.Close()
 
-	s.bridgeManager.Stop()
-	s.bridgeTxPool.Stop()
-	s.bridgeServer.Stop()
+	sb.bridgeManager.Stop()
+	sb.bridgeTxPool.Stop()
+	sb.bridgeServer.Stop()
 
 	return nil
 }

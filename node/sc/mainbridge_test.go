@@ -175,7 +175,9 @@ func TestMainBridge_removePeer(t *testing.T) {
 	bridgePeer := mBridge.newPeer(1, peer, &p2p.MsgPipeRW{})
 
 	// Add the bridgePeer
-	mBridge.peers.Register(bridgePeer)
+	if err := mBridge.peers.Register(bridgePeer); err != nil {
+		t.Fatal(err)
+	}
 	peerNum := mBridge.peers.Len()
 
 	// Try to remove a non-registered bridgePeer, and nothing happen
