@@ -254,13 +254,13 @@ func TestSubBridge_handle(t *testing.T) {
 	// Case 2 - Error if handshake of BridgePeer failed
 	{
 		// Make handshake fail
-		mockBridgePeer.EXPECT().Handshake(uint64(8888), big.NewInt(8217), big.NewInt(1), sBridge.blockchain.CurrentHeader().Hash()).Return(p2p.ErrPipeClosed).Times(1)
+		mockBridgePeer.EXPECT().Handshake(sBridge.networkId, sBridge.getChainID(), gomock.Any(), sBridge.blockchain.CurrentHeader().Hash()).Return(p2p.ErrPipeClosed).Times(1)
 
 		err := sBridge.handle(mockBridgePeer)
 		assert.Equal(t, p2p.ErrPipeClosed, err)
 	}
 	// Resolve the above failure condition by making handshake success
-	mockBridgePeer.EXPECT().Handshake(uint64(8888), big.NewInt(8217), big.NewInt(1), sBridge.blockchain.CurrentHeader().Hash()).Return(nil).AnyTimes()
+	mockBridgePeer.EXPECT().Handshake(sBridge.networkId, sBridge.getChainID(), gomock.Any(), sBridge.blockchain.CurrentHeader().Hash()).Return(nil).AnyTimes()
 
 	// Case 3 - Error when the same peer was registered before
 	{
