@@ -1588,7 +1588,6 @@ func (st *insertStats) report(chain []*types.Block, index int, cache common.Stor
 		logger.Info("Imported new chain segment", context...)
 
 		*st = insertStats{startTime: now, lastIndex: index + 1}
-		blockV
 	}
 }
 
