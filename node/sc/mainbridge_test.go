@@ -358,7 +358,7 @@ func TestMainBridge_SendRPCResponseData(t *testing.T) {
 
 	// Case 2 - Success if SendResponseRPC of mockBridgePeer succeeded
 	{
-		// Make mockBridgePeer return an error
+		// Make mockBridgePeer return nil
 		mockBridgePeer.EXPECT().SendResponseRPC(data).Return(nil).Times(1)
 
 		err := mBridge.SendRPCResponseData(data)
