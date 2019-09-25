@@ -1105,6 +1105,16 @@ web3._extend({
 			getter: 'subbridge_getChildOperatorNonce'
 		}),
 		new web3._extend.Property({
+			name: 'parentOperatorBalance',
+			getter: 'subbridge_getParentOperatorBalance',
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+			new web3._extend.Property({
+			name: 'childOperatorBalance',
+			getter: 'subbridge_getChildOperatorBalance',
+			outputFormatter: web3._extend.formatters.outputBigNumberFormatter
+		}),
+		new web3._extend.Property({
 			name: 'listBridge',
 			getter: 'subbridge_listBridge'
 		}),

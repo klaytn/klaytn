@@ -17,6 +17,7 @@
 package sc
 
 import (
+	"context"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -108,6 +109,13 @@ func (sbh *SubBridgeHandler) getParentOperatorNonceSynced() bool {
 	return sbh.nonceSynced
 }
 
+// getParentOperatorBalance returns the parent chain operator balance.
+func (sbh *SubBridgeHandler) getParentOperatorBalance() (*big.Int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return sbh.subbridge.remoteBackend.BalanceAt(ctx, sbh.subbridge.bridgeAccounts.pAccount.address, nil)
+}
+
 // setParentOperatorNonceSynced sets whether the parent chain operator account nonce is synced or not.
 func (sbh *SubBridgeHandler) setParentOperatorNonceSynced(synced bool) {
 	sbh.nonceSynced = synced
@@ -115,6 +123,13 @@ func (sbh *SubBridgeHandler) setParentOperatorNonceSynced(synced bool) {
 
 func (sbh *SubBridgeHandler) getChildOperatorNonce() uint64 {
 	return sbh.subbridge.txPool.GetPendingNonce(sbh.subbridge.bridgeAccounts.cAccount.address)
+}
+
+// getChildOperatorBalance returns the child chain operator balance.
+func (sbh *SubBridgeHandler) getChildOperatorBalance() (*big.Int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return sbh.subbridge.localBackend.BalanceAt(ctx, sbh.subbridge.bridgeAccounts.cAccount.address, nil)
 }
 
 func (sbh *SubBridgeHandler) getRemoteGasPrice() uint64 {
