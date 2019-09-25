@@ -31,6 +31,11 @@ var (
 	errUnknownAnchoringTxType = errors.New("unknown anchoring tx type")
 )
 
+type AnchoringDataInternal interface {
+	GetBlockHash() common.Hash
+	GetBlockNumber() *big.Int
+}
+
 type AnchoringData struct {
 	Type uint8
 	Data []byte
@@ -44,6 +49,15 @@ type AnchoringDataLegacy struct {
 	ReceiptHash   common.Hash
 	StateRootHash common.Hash
 	BlockNumber   *big.Int
+	Period        *big.Int
+}
+
+func (data *AnchoringDataLegacy) GetBlockHash() common.Hash {
+	return data.BlockHash
+}
+
+func (data *AnchoringDataLegacy) GetBlockNumber() *big.Int {
+	return data.BlockNumber
 }
 
 type AnchoringDataInternalType0 struct {
@@ -57,6 +71,14 @@ type AnchoringDataInternalType0 struct {
 	TxCount       *big.Int
 }
 
+func (data *AnchoringDataInternalType0) GetBlockHash() common.Hash {
+	return data.BlockHash
+}
+
+func (data *AnchoringDataInternalType0) GetBlockNumber() *big.Int {
+	return data.BlockNumber
+}
+
 func NewAnchoringDataType0(block *Block, period *big.Int, txCount *big.Int) (*AnchoringData, error) {
 	data := &AnchoringDataInternalType0{block.Hash(), block.Header().TxHash,
 		block.Header().ParentHash, block.Header().ReceiptHash,
@@ -68,25 +90,24 @@ func NewAnchoringDataType0(block *Block, period *big.Int, txCount *big.Int) (*An
 	return &AnchoringData{AnchoringDataType0, encodedCCTxData}, nil
 }
 
-// DecodeAnchoringTx decodes an anchoring transaction used by main and sub bridges.
-func DecodeAnchoringTx(data []byte) (common.Hash, *big.Int, error) {
+// DecodeAnchoringData decodes an anchoring transaction used by main and sub bridges.
+func DecodeAnchoringData(data []byte) (AnchoringDataInternal, error) {
 	anchoringData := new(AnchoringData)
 	if err := rlp.DecodeBytes(data, anchoringData); err != nil {
 		anchoringDataLegacy := new(AnchoringDataLegacy)
 		if err := rlp.DecodeBytes(data, anchoringDataLegacy); err != nil {
-			return common.Hash{}, nil, err
+			return nil, err
 		}
-		logger.Trace("decoded legacy anchoring tx", "blockNum", anchoringDataLegacy.BlockNumber.String(), "blockHash", anchoringDataLegacy.BlockHash.String(), "txHash", anchoringDataLegacy.TxHash.String())
-		return anchoringDataLegacy.BlockHash, anchoringDataLegacy.BlockNumber, nil
+		logger.Trace("decoded legacy anchoring tx", "blockNum", anchoringDataLegacy.GetBlockNumber().String(), "blockHash", anchoringDataLegacy.GetBlockHash().String(), "txHash", anchoringDataLegacy.TxHash.String())
+		return anchoringDataLegacy, nil
 	}
 	if anchoringData.Type == AnchoringDataType0 {
 		anchoringDataInternal := new(AnchoringDataInternalType0)
 		if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
-			return common.Hash{}, nil, err
+			return nil, err
 		}
 		logger.Trace("decoded type0 anchoring tx", "blockNum", anchoringDataInternal.BlockNumber.String(), "blockHash", anchoringDataInternal.BlockHash.String(), "txHash", anchoringDataInternal.TxHash.String(), "txCount", anchoringDataInternal.TxCount)
-		return anchoringDataInternal.BlockHash, anchoringDataInternal.BlockNumber, nil
-	} else {
-		return common.Hash{}, nil, errUnknownAnchoringTxType
+		return anchoringDataInternal, nil
 	}
+	return nil, errUnknownAnchoringTxType
 }

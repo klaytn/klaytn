@@ -88,13 +88,13 @@ func (mce *MainChainEventHandler) decodeAndWriteAnchoringTx(tx *types.Transactio
 		logger.Error("failed to get anchoring data", "txHash", tx.Hash().String(), "err", err)
 		return
 	}
-	blockHash, _, err := types.DecodeAnchoringTx(data)
+	decodedData, err := types.DecodeAnchoringData(data)
 	if err != nil {
 		logger.Error("failed to decode anchoring tx", "txHash", tx.Hash().String(), "err", err)
 		return
 	}
-	mce.mainbridge.chainDB.WriteChildChainTxHash(blockHash, tx.Hash())
-	logger.Trace("Write anchoring data on chainDB", "blockHash", blockHash.String(), "anchoring txHash", tx.Hash().String())
+	mce.mainbridge.chainDB.WriteChildChainTxHash(decodedData.GetBlockHash(), tx.Hash())
+	logger.Trace("Write anchoring data on chainDB", "blockHash", decodedData.GetBlockNumber().String(), "anchoring txHash", tx.Hash().String())
 }
 
 // TODO-Klaytn-ServiceChain: remove this method and a related option.

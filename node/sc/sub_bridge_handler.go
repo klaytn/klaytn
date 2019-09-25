@@ -321,13 +321,13 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 					logger.Error("failed to get anchoring data", "txHash", txHash.String(), "err", err)
 					continue
 				}
-				blockHash, blockNumber, err := types.DecodeAnchoringTx(data)
+				decodedData, err := types.DecodeAnchoringData(data)
 				if err != nil {
 					logger.Error("failed to decode anchoring tx", "txHash", txHash.String(), "err", err)
 					continue
 				}
-				sbh.WriteReceiptFromParentChain(blockHash, (*types.Receipt)(receipt))
-				sbh.WriteAnchoredBlockNumber(blockNumber.Uint64())
+				sbh.WriteReceiptFromParentChain(decodedData.GetBlockHash(), (*types.Receipt)(receipt))
+				sbh.WriteAnchoredBlockNumber(decodedData.GetBlockNumber().Uint64())
 			}
 			// TODO-Klaytn-ServiceChain: support other tx types if needed.
 			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
