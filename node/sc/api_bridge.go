@@ -464,6 +464,14 @@ func (sb *SubBridgeAPI) GetChildOperatorNonce() uint64 {
 	return sb.subBridge.handler.getChildOperatorNonce()
 }
 
+func (sb *SubBridgeAPI) GetParentOperatorBalance() (*big.Int, error) {
+	return sb.subBridge.handler.getParentOperatorBalance()
+}
+
+func (sb *SubBridgeAPI) GetChildOperatorBalance() (*big.Int, error) {
+	return sb.subBridge.handler.getChildOperatorBalance()
+}
+
 // GetOperators returns the information of bridge operators.
 func (sb *SubBridgeAPI) GetOperators() map[string]interface{} {
 	return sb.subBridge.bridgeAccounts.GetBridgeOperators()

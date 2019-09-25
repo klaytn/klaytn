@@ -62,12 +62,14 @@ const (
 type RemoteBackendInterface interface {
 	bind.ContractBackend
 	TransactionReceiptRpcOutput(ctx context.Context, txHash common.Hash) (map[string]interface{}, error)
+	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error)
 }
 
 // Backend wraps all methods for local and remote backend
 type Backend interface {
 	bind.ContractBackend
 	CurrentBlockNumber(context.Context) (uint64, error)
+	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error)
 }
 
 // NodeInfo represents a short summary of the ServiceChain sub-protocol metadata
