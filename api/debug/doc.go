@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package debug interfaces Go runtime debugging facilities.
+Package debug provides interfaces for Go runtime debugging facilities.
 
 Overview of debug package
 
