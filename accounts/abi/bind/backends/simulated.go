@@ -402,6 +402,11 @@ func (b *SimulatedBackend) SubscribeFilterLogs(ctx context.Context, query klaytn
 	}), nil
 }
 
+// CurrentBlockNumber returns a current block number.
+func (b *SimulatedBackend) CurrentBlockNumber(ctx context.Context) (uint64, error) {
+	return b.blockchain.CurrentBlock().NumberU64(), nil
+}
+
 // AdjustTime adds a time shift to the simulated clock.
 func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	b.mu.Lock()

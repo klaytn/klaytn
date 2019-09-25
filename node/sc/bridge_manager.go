@@ -84,7 +84,9 @@ type BridgeJournal struct {
 }
 
 type BridgeInfo struct {
-	bridgeDB           database.DBManager
+	subBridge *SubBridge
+	bridgeDB  database.DBManager
+
 	counterpartBackend Backend
 	address            common.Address
 	counterpartAddress common.Address // TODO-Klaytn need to set counterpart
@@ -108,10 +110,10 @@ type BridgeInfo struct {
 	closed   chan struct{}
 }
 
-func NewBridgeInfo(db database.DBManager, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address,
-	cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool, cpBackend Backend) (*BridgeInfo, error) {
+func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool, cpBackend Backend) (*BridgeInfo, error) {
 	bi := &BridgeInfo{
-		db,
+		sb,
+		sb.chainDB,
 		cpBackend,
 		addr,
 		cpAddr,
@@ -393,6 +395,16 @@ func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []*RequestValueTransf
 	return bi.GetPendingRequestEvents(bi.nextHandleNonce)
 }
 
+// GetCurrentBlockNumber returns a current block number for each local and remote backend.
+func (bi *BridgeInfo) GetCurrentBlockNumber() (uint64, error) {
+	if bi.onChildChain {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		return bi.subBridge.localBackend.CurrentBlockNumber(ctx)
+	}
+	return bi.subBridge.remoteBackend.CurrentBlockNumber(context.Background())
+}
+
 // DecodeRLP decodes the Klaytn
 func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
 	var elem struct {
@@ -592,7 +604,7 @@ func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontra
 	}
 
 	var err error
-	bm.bridges[addr], err = NewBridgeInfo(bm.subBridge.chainDB, addr, bridge, cpAddr, cpBridge, account, local, subscribed, counterpartBackend)
+	bm.bridges[addr], err = NewBridgeInfo(bm.subBridge, addr, bridge, cpAddr, cpBridge, account, local, subscribed, counterpartBackend)
 	return err
 }
 

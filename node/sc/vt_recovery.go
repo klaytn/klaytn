@@ -18,10 +18,14 @@ package sc
 
 import (
 	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/contracts/bridge"
 	"github.com/pkg/errors"
 	"sync"
 	"time"
+)
+
+var (
+	filterLogsStride = uint64(100)
+	maxPendingTxs    = 100000
 )
 
 // valueTransferHint stores the last handled block number and nonce (Request or Handle).
@@ -226,11 +230,11 @@ func (vtr *valueTransferRecovery) retrievePendingEvents() error {
 	}
 
 	var err error
-	vtr.childEvents, err = retrievePendingEventsFrom(vtr.child2parentHint, vtr.cBridgeInfo.bridge)
+	vtr.childEvents, err = retrievePendingEventsFrom(vtr.child2parentHint, vtr.cBridgeInfo)
 	if err != nil {
 		return err
 	}
-	vtr.parentEvents, err = retrievePendingEventsFrom(vtr.parent2childHint, vtr.pBridgeInfo.bridge)
+	vtr.parentEvents, err = retrievePendingEventsFrom(vtr.parent2childHint, vtr.pBridgeInfo)
 	if err != nil {
 		return err
 	}
@@ -240,8 +244,8 @@ func (vtr *valueTransferRecovery) retrievePendingEvents() error {
 
 // retrievePendingEventsFrom retrieves pending events from the specified bridge by using the hint provided.
 // The filter uses a hint as a search range. It returns a slice of events that has log details.
-func retrievePendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*RequestValueTransferEvent, error) {
-	if br == nil {
+func retrievePendingEventsFrom(hint *valueTransferHint, bi *BridgeInfo) ([]*RequestValueTransferEvent, error) {
+	if bi.bridge == nil {
 		return nil, errors.New("bridge is nil")
 	}
 	if hint.requestNonce == hint.handleNonce {
@@ -252,19 +256,42 @@ func retrievePendingEventsFrom(hint *valueTransferHint, br *bridge.Bridge) ([]*R
 	}
 
 	var pendingEvents []*RequestValueTransferEvent
-	it, err := br.FilterRequestValueTransfer(&bind.FilterOpts{Start: hint.blockNumber}) // to the current
+
+	curBlkNum, err := bi.GetCurrentBlockNumber()
 	if err != nil {
 		return nil, err
 	}
-	for it.Next() {
-		logger.Trace("pending nonce in the event", "requestNonce", it.Event.RequestNonce)
-		if it.Event.RequestNonce >= hint.handleNonce {
-			logger.Trace("filtered pending nonce", "requestNonce", it.Event.RequestNonce, "handledNonce", hint.handleNonce)
-			pendingEvents = append(pendingEvents, &RequestValueTransferEvent{it.Event})
-		}
-	}
-	logger.Debug("retrieved pending events", "len(pendingEvents)", len(pendingEvents))
 
+	done := false
+	startBlkNum := hint.blockNumber
+	endBlkNum := startBlkNum + filterLogsStride
+
+pendingTxLoop:
+	for !done && startBlkNum <= curBlkNum {
+		if endBlkNum > curBlkNum {
+			endBlkNum = curBlkNum
+			done = true
+		}
+		opts := &bind.FilterOpts{Start: startBlkNum, End: &endBlkNum}
+		it, err := bi.bridge.FilterRequestValueTransfer(opts)
+		if err != nil {
+			return nil, err
+		}
+		for it.Next() {
+			logger.Trace("pending nonce in the event", "requestNonce", it.Event.RequestNonce)
+			if it.Event.RequestNonce >= hint.handleNonce {
+				logger.Trace("filtered pending nonce", "requestNonce", it.Event.RequestNonce, "handledNonce", hint.handleNonce)
+				pendingEvents = append(pendingEvents, &RequestValueTransferEvent{it.Event})
+				if len(pendingEvents) > maxPendingTxs {
+					break pendingTxLoop
+				}
+			}
+		}
+		startBlkNum = endBlkNum + 1
+		endBlkNum = startBlkNum + filterLogsStride
+	}
+
+	logger.Debug("retrieved pending events", "len(pendingEvents)", len(pendingEvents))
 	return pendingEvents, nil
 }
 

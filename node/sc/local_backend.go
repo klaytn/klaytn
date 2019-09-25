@@ -264,6 +264,11 @@ func (lb *LocalBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.Fi
 	}), nil
 }
 
+// CurrentBlockNumber returns a current block number.
+func (lb *LocalBackend) CurrentBlockNumber(ctx context.Context) (uint64, error) {
+	return lb.subbrige.blockchain.CurrentBlock().NumberU64(), nil
+}
+
 type filterLocalBackend struct {
 	subbridge *SubBridge
 }

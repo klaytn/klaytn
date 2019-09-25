@@ -69,7 +69,6 @@ const (
 	testTxCount      = 7
 	testBlockOffset  = 3 // +2 for genesis and bridge contract, +1 by a hardcoded hint
 	testPendingCount = 3
-	testNonceOffset  = testTxCount - testPendingCount
 )
 
 type operations struct {
@@ -162,6 +161,62 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	assert.Equal(t, 0, len(vtr.childEvents))
 
 	assert.Equal(t, nil, vtr.Recover()) // nothing to recover
+}
+
+// TestKLAYTransferLongRangeRecovery tests a long block range recovery.
+func TestKLAYTransferLongRangeRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
+	oldMaxPendingTxs := maxPendingTxs
+	maxPendingTxs = 2
+	defer func() {
+		maxPendingTxs = oldMaxPendingTxs
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	// 1. Init dummy chain and do some value transfers.
+	info := prepare(t, func(info *testInfo) {
+		for i := 0; i < testTxCount; i++ {
+			ops[KLAY].request(info, info.localInfo)
+			for i := uint64(0); i < filterLogsStride; i++ {
+				info.sim.Commit()
+			}
+		}
+	})
+	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
+
+	// 2. Update recovery hint.
+	err := vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	t.Log("value transfer hint", vtr.child2parentHint)
+	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.child2parentHint.handleNonce)
+
+	// 3. Request events by using the hint.
+	err = vtr.retrievePendingEvents()
+	if err != nil {
+		t.Fatal("fail to retrieve pending events from the bridge contract")
+	}
+
+	// 4. Recover pending events
+	info.recoveryCh <- true
+	assert.Equal(t, nil, vtr.recoverPendingEvents())
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
+
+	// 5. Check empty pending events.
+	err = vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	err = vtr.retrievePendingEvents()
+	if err != nil {
+		t.Fatal("fail to retrieve pending events from the bridge contract")
+	}
+	assert.Equal(t, vtr.child2parentHint.handleNonce, vtr.child2parentHint.requestNonce)
 }
 
 // TestBasicTokenTransferRecovery tests the token transfer recovery.
@@ -582,6 +637,8 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 		config:         config,
 		peers:          newBridgePeerSet(),
 		bridgeAccounts: bacc,
+		localBackend:   sim,
+		remoteBackend:  sim,
 	}
 	handler, err := NewSubBridgeHandler(sc)
 	if err != nil {
@@ -589,6 +646,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 		return nil
 	}
 	sc.handler = handler
+	sc.blockchain = sim.BlockChain()
 
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
