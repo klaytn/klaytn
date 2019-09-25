@@ -35,6 +35,7 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
