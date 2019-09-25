@@ -18,8 +18,21 @@
 // This file is derived from internal/debug/api.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package debug interfaces Go runtime debugging facilities.
-// This package is mostly glue code making these facilities available
-// through the CLI and RPC subsystem. If you want to use them from Go code,
-// use package runtime instead.
+/*
+Package debug interfaces Go runtime debugging facilities.
+
+Overview of debug package
+
+This package is mostly glue code making these facilities available through the CLI and RPC subsystem.
+If you want to use them from Go code, use package runtime instead.
+
+Source Files
+
+  - api.go                : defines the global debugging handler implementing debugging APIs.
+  - flags.go              : defines command-line flags enabling debugging APIs.
+  - loudpanic.go          : (deprecated) panics in a way that gets all goroutine stacks printed on stderr.
+  - loudpanic_fallback.go : (deprecated) implements fallback of LoudPanic.
+  - trace.go              : implements start/stop functions of go trace.
+  - trace_fallback.go     : implements fallback of StartGoTrace and StopGoTrace for Go < 1.5.
+*/
 package debug
