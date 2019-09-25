@@ -90,7 +90,7 @@ func NewAnchoringDataType0(block *Block, period *big.Int, txCount *big.Int) (*An
 	return &AnchoringData{AnchoringDataType0, encodedCCTxData}, nil
 }
 
-// DecodeAnchoringData decodes an anchoring transaction used by main and sub bridges.
+// DecodeAnchoringData decodes an anchoring data used by main and sub bridges.
 func DecodeAnchoringData(data []byte) (AnchoringDataInternal, error) {
 	anchoringData := new(AnchoringData)
 	if err := rlp.DecodeBytes(data, anchoringData); err != nil {
