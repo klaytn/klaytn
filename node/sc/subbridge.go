@@ -169,8 +169,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		ctx:            ctx,
 		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		logsCh:         make(chan []*types.Log, chainLogChanSize),
-		//txCh:            make(chan blockchain.NewTxsEvent,
-		// transactionChanSize),
+		// txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
 		requestEventCh: make(chan *RequestValueTransferEvent, requestEventChanSize),
 		handleEventCh:  make(chan *HandleValueTransferEvent, handleEventChanSize),
 		quitSync:       make(chan struct{}),
@@ -506,12 +505,6 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 	sb.handler.RegisterNewPeer(p)
 
 	p.GetP2PPeer().Log().Info("Added a P2P Peer", "peerID", p.GetP2PPeerID())
-
-	//pubKey, err := p.GetP2PPeerID().Pubkey()
-	//if err != nil {
-	//	return err
-	//}
-	//addr := crypto.PubkeyToAddress(*pubKey)
 
 	// main loop. handle incoming messages.
 	for {
