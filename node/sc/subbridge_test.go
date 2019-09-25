@@ -26,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"reflect"
@@ -35,8 +36,13 @@ import (
 
 // testNewSubBridge returns a test SubBridge.
 func testNewSubBridge(t *testing.T) *SubBridge {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "tmp_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	sCtx := node.NewServiceContext(&node.DefaultConfig, map[reflect.Type]node.Service{}, &event.TypeMux{}, &accounts.Manager{})
-	sBridge, err := NewSubBridge(sCtx, &SCConfig{NetworkId: testNetVersion, DataDir: testDataDir})
+	sBridge, err := NewSubBridge(sCtx, &SCConfig{NetworkId: testNetVersion, DataDir: tempDir})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +77,7 @@ func TestSubBridge_basic(t *testing.T) {
 
 	// New components of MainBridge which will update old components
 	bc := testBlockChain(t)
-	txPool := testTxPool(bc)
+	txPool := testTxPool(sBridge.config.DataDir, bc)
 
 	var comp []interface{}
 	comp = append(comp, bc)
@@ -104,7 +110,7 @@ func TestSubBridge_removePeer(t *testing.T) {
 
 	// Set components of SubBridge
 	bc := testBlockChain(t)
-	txPool := testTxPool(bc)
+	txPool := testTxPool(sBridge.config.DataDir, bc)
 
 	var comp []interface{}
 	comp = append(comp, bc)
@@ -211,7 +217,7 @@ func TestSubBridge_handle(t *testing.T) {
 
 	// Set components of SubBridge
 	bc := testBlockChain(t)
-	txPool := testTxPool(bc)
+	txPool := testTxPool(sBridge.config.DataDir, bc)
 
 	var comp []interface{}
 	comp = append(comp, bc)

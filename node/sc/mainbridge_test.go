@@ -45,7 +45,6 @@ import (
 )
 
 const testNetVersion = uint64(8888)
-const testDataDir = "./tmp_bridge_test"
 
 var testProtocolVersion = int(SCProtocolVersion[0])
 
@@ -100,8 +99,8 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	return bc
 }
 
-func testTxPool(bc *blockchain.BlockChain) *blockchain.TxPool {
-	blockchain.DefaultTxPoolConfig.Journal = path.Join(testDataDir, blockchain.DefaultTxPoolConfig.Journal)
+func testTxPool(dataDir string, bc *blockchain.BlockChain) *blockchain.TxPool {
+	blockchain.DefaultTxPoolConfig.Journal = path.Join(dataDir, blockchain.DefaultTxPoolConfig.Journal)
 	return blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bc.Config(), bc)
 }
 
