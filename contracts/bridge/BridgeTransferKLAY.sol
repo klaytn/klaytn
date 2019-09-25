@@ -20,6 +20,43 @@ import "./BridgeTransferCommon.sol";
 
 
 contract BridgeTransferKLAY is BridgeTransfer {
+    bool public isLockedKLAY;
+
+    event KLAYLocked();
+    event KLAYUnlocked();
+
+    modifier lockedKLAY {
+        require(isLockedKLAY == true, "unlocked");
+        _;
+    }
+
+    modifier unlockedKLAY {
+        require(isLockedKLAY == false, "locked");
+        _;
+    }
+
+    // lockKLAY can to prevent request KLAY transferring.
+    function lockKLAY()
+        external
+        onlyOwner
+        unlockedKLAY
+    {
+        isLockedKLAY = true;
+
+        emit KLAYLocked();
+    }
+
+    // unlockToken can allow request KLAY transferring.
+    function unlockKLAY()
+        external
+        onlyOwner
+        lockedKLAY
+    {
+        isLockedKLAY = false;
+
+        emit KLAYUnlocked();
+    }
+
     // handleKLAYTransfer sends the KLAY by the request.
     function handleKLAYTransfer(
         bytes32 _requestTxHash,
@@ -56,7 +93,10 @@ contract BridgeTransferKLAY is BridgeTransfer {
     }
 
     // _requestKLAYTransfer requests transfer KLAY to _to on relative chain.
-    function _requestKLAYTransfer(address _to, uint256 _feeLimit,  bytes memory _extraData) internal {
+    function _requestKLAYTransfer(address _to, uint256 _feeLimit,  bytes memory _extraData)
+        internal
+        unlockedKLAY
+    {
         require(isRunning, "stopped bridge");
         require(msg.value > _feeLimit, "insufficient amount");
 
