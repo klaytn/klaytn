@@ -979,12 +979,12 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		return nil
 	}
 	// Transactions can be processed, parse all of them and deliver to the pool
-	var txs []*types.Transaction
+	var txs types.Transactions
 	if err := msg.Decode(&txs); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 	// Only valid txs should be pushed into the pool.
-	validTxs := make([]*types.Transaction, 0, len(txs))
+	validTxs := make(types.Transactions, 0, len(txs))
 	var err error
 	for i, tx := range txs {
 		// Validate and mark the remote transaction
