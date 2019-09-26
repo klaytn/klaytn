@@ -168,7 +168,7 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 	tempDir := os.TempDir() + "sc"
 	os.MkdirAll(tempDir, os.ModePerm)
 	oldMaxPendingTxs := maxPendingTxs
-	maxPendingTxs = 2
+	maxPendingTxs = 1
 	defer func() {
 		maxPendingTxs = oldMaxPendingTxs
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -187,34 +187,35 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 	})
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 
-	// 2. Update recovery hint.
 	err := vtr.updateRecoveryHint()
 	if err != nil {
-		t.Fatal("fail to update value transfer hint")
+		t.Fatal("fail to update a value transfer hint")
 	}
-	t.Log("value transfer hint", vtr.child2parentHint)
-	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
-	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.child2parentHint.handleNonce)
+	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
 
-	// 3. Request events by using the hint.
-	err = vtr.retrievePendingEvents()
-	if err != nil {
-		t.Fatal("fail to retrieve pending events from the bridge contract")
-	}
-
-	// 4. Recover pending events
+	// 2. first recovery.
 	info.recoveryCh <- true
-	assert.Equal(t, nil, vtr.recoverPendingEvents())
+	err = vtr.Recover()
+	if err != nil {
+		t.Fatal("fail to recover the value transfer")
+	}
+	assert.Equal(t, 2, info.remoteInfo.pendingRequestEvent.Len())
 	ops[KLAY].dummyHandle(info, info.remoteInfo)
+	assert.Equal(t, 0, info.remoteInfo.pendingRequestEvent.Len())
 
-	// 5. Check empty pending events.
+	// 3. second recovery.
+	err = vtr.Recover()
+	if err != nil {
+		t.Fatal("fail to recover the value transfer")
+	}
+	assert.Equal(t, 1, info.remoteInfo.pendingRequestEvent.Len())
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
+	assert.Equal(t, 0, info.remoteInfo.pendingRequestEvent.Len())
+
+	// 4. Check if recovery is done.
 	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update value transfer hint")
-	}
-	err = vtr.retrievePendingEvents()
-	if err != nil {
-		t.Fatal("fail to retrieve pending events from the bridge contract")
 	}
 	assert.Equal(t, vtr.child2parentHint.handleNonce, vtr.child2parentHint.requestNonce)
 }
