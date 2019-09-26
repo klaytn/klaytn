@@ -94,7 +94,6 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransfer {
             _tokenAddress,
             _value,
             requestNonce,
-            "",
             fee,
             _extraData
         );

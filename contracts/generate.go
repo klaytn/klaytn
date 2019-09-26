@@ -20,6 +20,8 @@ package contracts
 //go:generate abigen --sol ./extbridge/ext_bridge.sol --pkg extbridge --out ./extbridge/ext_bridge.go
 
 //go:generate abigen --sol ./sc_erc721/sc_nft.sol --pkg scnft --out ./sc_erc721/sc_nft.go
+//go:generate abigen --sol ./sc_erc721_no_uri/sc_nft_no_uri.sol --pkg scnft_no_uri --out ./sc_erc721_no_uri/sc_nft_no_uri.go
+
 //go:generate abigen --sol ./sc_erc20/sc_token.sol --pkg sctoken --out ./sc_erc20/sc_token.go
 
 //`credit.sol` was compiled by solidity@0.4.24.
