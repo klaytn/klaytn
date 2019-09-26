@@ -17,6 +17,7 @@
 package backend
 
 import (
+	"fmt"
 	"github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -36,8 +37,6 @@ import (
 var (
 	// testing node's private key
 	PRIVKEY = "ce7671a2880493dfb8d04218707a16b1532dfcac97f0289d770a919d5ff7b068"
-	// testing node should be in a committee in these blocks
-	committeeBlocks = []int64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22}
 	// Max blockNum
 	maxBlockNum = int64(100)
 )
@@ -280,9 +279,7 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 
 	// get testing node's address
 	key, _ := crypto.HexToECDSA(PRIVKEY) // This key is to be provided to create backend
-
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
-
 	valSet := validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 
 	recents, _ := lru.NewARC(inmemorySnapshots)
@@ -310,42 +307,59 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 	}
 	backend.core = istanbulCore.New(backend, backend.config)
 
+	// Test for blocks from 0 to maxBlockNum
 	for i := int64(0); i < maxBlockNum; i++ {
-		backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(i), Round: big.NewInt(0)})
-		valSet.SetBlockNum(uint64(i))
-		valSet.CalcProposer(valSet.GetProposer().Address(), 0)
-		targets := backend.GossipSubPeer(common.BigToHash(big.NewInt(i)), valSet, nil)
+		// Test for round 0 to round 14
+		for round := int64(0); round < 15; round++ {
+			backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(i), Round: big.NewInt(round)})
+			valSet.SetBlockNum(uint64(i))
+			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round))
 
-		// Test if the testing node is in the committee in specified blocks and target node list is returned
-		if (checkInCommitteeBlocks(i) && targets == nil) || (!checkInCommitteeBlocks(i) && targets != nil) {
-			t.Errorf("Wrong committee information. Block: %d, Nil targets: %v\n", i, targets == nil)
-		}
+			// Use block number as prevHash. In SubList() only left 15 bytes are being used.
+			hex := fmt.Sprintf("%015d000000000000000000000000000000000000000000000000000", i)
+			prevHash := common.HexToHash(hex)
 
-		if checkInCommitteeBlocks(i) {
-			// targets don't have testing node's address because a target is a receiving node
-			if len(targets) == len(council)-1 {
-				for _, x := range council {
-					// council[0] is testing node and it should be removed from targets
-					if x == council[0] {
-						continue
+			// current and next committee
+			committees := make([][]istanbul.Validator, 2)
+
+			viewCurrent := backend.currentView.Load().(*istanbul.View)
+			committees[0] = valSet.SubList(prevHash, viewCurrent)
+
+			viewCurrent.Round = viewCurrent.Round.Add(viewCurrent.Round, common.Big1)
+			backend.currentView.Store(viewCurrent)
+
+			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round+1))
+			committees[1] = valSet.SubList(prevHash, viewCurrent)
+
+			// Reduce round by 1 to set round to the current round before calling GossipSubPeer
+			viewCurrent.Round = viewCurrent.Round.Sub(viewCurrent.Round, common.Big1)
+			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round))
+			backend.currentView.Store(viewCurrent)
+
+			targets := backend.GossipSubPeer(prevHash, valSet, nil)
+			// Check if the testing node is in a committee
+			if !backend.checkInSubList(prevHash, valSet) {
+				continue
+			}
+			if len(targets) <= len(committees[0])+len(committees[1]) {
+				for n := 0; n < len(committees); n++ {
+					for _, x := range committees[n] {
+						if _, ok := targets[x.Address()]; !ok && x.Address() != backend.Address() {
+							t.Errorf("Block: %d, Round: %d, Committee member %v not found in targets", i, round, x.Address().String())
+						} else {
+							targets[x.Address()] = false
+						}
 					}
+				}
 
-					if _, ok := targets[x]; !ok {
-						t.Errorf("Gossipping target doesn't match")
+				for k, v := range targets {
+					if v == true {
+						t.Errorf("Block: %d, Round: %d, Validator not in committees included %v", i, round, k.String())
 					}
 				}
 			} else {
-				t.Errorf("Gossipping target doesn't match")
+				t.Errorf("Target has too many validators. targets: %d, sum of committees: %d", len(targets), len(committees[0])+len(committees[1]))
 			}
 		}
 	}
-}
-
-func checkInCommitteeBlocks(num int64) bool {
-	for i := range committeeBlocks {
-		if num == int64(i) {
-			return true
-		}
-	}
-	return false
 }

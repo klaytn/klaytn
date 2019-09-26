@@ -231,11 +231,10 @@ func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.Validato
 func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
 	targets := make(map[common.Address]bool)
 
-	r := sb.currentView.Load().(*istanbul.View).Round.Int64()
-	s := sb.currentView.Load().(*istanbul.View).Sequence.Int64()
+	cv := sb.currentView.Load().(*istanbul.View)
 	view := &istanbul.View{
-		Round:    big.NewInt(r),
-		Sequence: big.NewInt(s),
+		Round:    big.NewInt(cv.Round.Int64()),
+		Sequence: big.NewInt(cv.Sequence.Int64()),
 	}
 
 	proposer := valSet.GetProposer()
@@ -246,7 +245,7 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 				targets[val.Address()] = true
 			}
 		}
-		// Check if there is only 1 node in a committee
+		// Don't change a proposer for the next round if there is only one node.
 		if len(vals) > 1 {
 			proposer = vals[1]
 		}
