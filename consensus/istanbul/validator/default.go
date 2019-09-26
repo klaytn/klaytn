@@ -32,6 +32,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 const (
@@ -68,7 +69,7 @@ type defaultSet struct {
 	validators istanbul.Validators
 	policy     istanbul.ProposerPolicy
 
-	proposer    istanbul.Validator
+	proposer    atomic.Value
 	validatorMu sync.RWMutex
 	selector    istanbul.ProposalSelector
 }
@@ -87,7 +88,7 @@ func newDefaultSet(addrs []common.Address, policy istanbul.ProposerPolicy) *defa
 	sort.Sort(valSet.validators)
 	// init proposer
 	if valSet.Size() > 0 {
-		valSet.proposer = valSet.GetByIndex(0)
+		valSet.proposer.Store(valSet.GetByIndex(0))
 	}
 	valSet.selector = roundRobinProposer
 	if policy == istanbul.Sticky {
@@ -111,7 +112,7 @@ func newDefaultSubSet(addrs []common.Address, policy istanbul.ProposerPolicy, su
 	sort.Sort(valSet.validators)
 	// init proposer
 	if valSet.Size() > 0 {
-		valSet.proposer = valSet.GetByIndex(0)
+		valSet.proposer.Store(valSet.GetByIndex(0))
 	}
 	valSet.selector = roundRobinProposer
 	if policy == istanbul.Sticky {
@@ -293,7 +294,7 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, istanbul.Valid
 }
 
 func (valSet *defaultSet) GetProposer() istanbul.Validator {
-	return valSet.proposer
+	return valSet.proposer.Load().(istanbul.Validator)
 }
 
 func (valSet *defaultSet) IsProposer(address common.Address) bool {
@@ -306,11 +307,11 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 	defer valSet.validatorMu.RUnlock()
 
 	if len(valSet.validators) == 0 {
-		valSet.proposer = nil
+		valSet.proposer.Store(nil)
 		return
 	}
 
-	valSet.proposer = valSet.selector(valSet, lastProposer, round)
+	valSet.proposer.Store(valSet.selector(valSet, lastProposer, round))
 }
 
 func calcSeed(valSet istanbul.ValidatorSet, proposer common.Address, round uint64) uint64 {
@@ -385,8 +386,8 @@ func (valSet *defaultSet) Copy() istanbul.ValidatorSet {
 	}
 
 	newValSet := NewSubSet(addresses, valSet.policy, valSet.subSize).(*defaultSet)
-	_, proposer := newValSet.GetByAddress(valSet.proposer.Address())
-	newValSet.proposer = proposer
+	_, proposer := newValSet.GetByAddress(valSet.GetProposer().Address())
+	newValSet.proposer.Store(proposer)
 	return newValSet
 }
 
