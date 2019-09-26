@@ -1799,9 +1799,9 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Decoding the anchoring tx.
-	blockHash, blockNumber, err := sc.handler.decodeAnchoringTx(data)
-	assert.Equal(t, curBlk.Hash(), blockHash)
-	assert.Equal(t, curBlk.Header().Number.String(), blockNumber.String())
+	decodedData, err := types.DecodeAnchoringData(data)
+	assert.Equal(t, curBlk.Hash(), decodedData.GetBlockHash())
+	assert.Equal(t, curBlk.Header().Number.String(), decodedData.GetBlockNumber().String())
 }
 
 func generateBody(t *testing.T) *types.Body {
