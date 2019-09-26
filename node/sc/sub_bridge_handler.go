@@ -17,7 +17,6 @@
 package sc
 
 import (
-	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -29,10 +28,6 @@ import (
 
 const (
 	SyncRequestInterval = 10
-)
-
-var (
-	errUnknownAnchoringTxType = errors.New("unknown anchoring tx type")
 )
 
 // parentChainInfo handles the information of parent chain, which is needed from child chain.
@@ -315,29 +310,6 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 	logger.Debug("broadcastServiceChainTx ServiceChainTxData", "len(txs)", len(txs), "len(peers)", len(peers))
 }
 
-// decodeAnchoringTx decodes an anchoring transaction.
-func (sbh *SubBridgeHandler) decodeAnchoringTx(data []byte) (common.Hash, *big.Int, error) {
-	anchoringData := new(types.AnchoringData)
-	if err := rlp.DecodeBytes(data, anchoringData); err != nil {
-		anchoringDataLegacy := new(types.AnchoringDataLegacy)
-		if err := rlp.DecodeBytes(data, anchoringDataLegacy); err != nil {
-			return common.Hash{}, nil, err
-		}
-		logger.Trace("decoded legacy anchoring tx", "blockNum", anchoringDataLegacy.BlockNumber.String(), "blockHash", anchoringDataLegacy.BlockHash.String(), "txHash", anchoringDataLegacy.TxHash.String())
-		return anchoringDataLegacy.BlockHash, anchoringDataLegacy.BlockNumber, nil
-	}
-	if anchoringData.Type == types.AnchoringDataType0 {
-		anchoringDataInternal := new(types.AnchoringDataInternalType0)
-		if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
-			return common.Hash{}, nil, err
-		}
-		logger.Trace("decoded type0 anchoring tx", "blockNum", anchoringDataInternal.BlockNumber.String(), "blockHash", anchoringDataInternal.BlockHash.String(), "txHash", anchoringDataInternal.TxHash.String(), "txCount", anchoringDataInternal.TxCount)
-		return anchoringDataInternal.BlockHash, anchoringDataInternal.BlockNumber, nil
-	} else {
-		return common.Hash{}, nil, errUnknownAnchoringTxType
-	}
-}
-
 // writeServiceChainTxReceipts writes the received receipts of service chain transactions.
 func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockChain, receipts []*types.ReceiptForStorage) {
 	for _, receipt := range receipts {
@@ -349,20 +321,20 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 					logger.Error("failed to get anchoring data", "txHash", txHash.String(), "err", err)
 					continue
 				}
-				blockHash, blockNumber, err := sbh.decodeAnchoringTx(data)
+				decodedData, err := types.DecodeAnchoringData(data)
 				if err != nil {
 					logger.Error("failed to decode anchoring tx", "txHash", txHash.String(), "err", err)
 					continue
 				}
-				sbh.WriteReceiptFromParentChain(blockHash, (*types.Receipt)(receipt))
-				sbh.WriteAnchoredBlockNumber(blockNumber.Uint64())
+				sbh.WriteReceiptFromParentChain(decodedData.GetBlockHash(), (*types.Receipt)(receipt))
+				sbh.WriteAnchoredBlockNumber(decodedData.GetBlockNumber().Uint64())
 			}
 			// TODO-Klaytn-ServiceChain: support other tx types if needed.
 			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
 		} else {
 			logger.Trace("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
 		}
-		logger.Trace("received service chain transaction receipt", "txHash", txHash.String())
+		logger.Trace("received service chain transaction receipt", "anchoring txHash", txHash.String())
 	}
 }
 
