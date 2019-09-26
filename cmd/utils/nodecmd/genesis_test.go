@@ -34,50 +34,6 @@ var customGenesisTests = []struct {
 }{
 	// Plain genesis file without anything extra
 	{
-		genesis: `{
-			"alloc"      : {},
-			"blockScore" : "0x20000",
-			"extraData"  : "",
-			"gasLimit"   : "0x2fefd8",
-			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
-			"timestamp"  : "0x00"
-		}`,
-		query:  []string{"klay.getBlock(0).parentHash"},
-		result: []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
-	},
-	// Genesis file with an empty chain configuration (ensure missing fields work)
-	{
-		genesis: `{
-			"alloc"      : {},
-			"blockScore" : "0x20000",
-			"extraData"  : "",
-			"gasLimit"   : "0x2fefd8",
-			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
-			"timestamp"  : "0x00",
-			"config"     : {}
-		}`,
-		query:  []string{"klay.getBlock(0).parentHash"},
-		result: []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
-	},
-	// Genesis file with specific chain configurations
-	{
-		genesis: `{
-			"alloc"      : {},
-			"blockScore" : "0x20000",
-			"extraData"  : "",
-			"gasLimit"   : "0x2fefd8",
-			"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
-			"timestamp"  : "0x00",
-			"config"     : {
-				"homesteadBlock" : 314,
-				"daoForkBlock"   : 141,
-				"daoForkSupport" : true
-			}
-		}`,
-		query:  []string{"klay.getBlock(0).parentHash"},
-		result: []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
-	},
-	{
 		genesis: `{"config":{"chainId":2019,"istanbul":{"epoch":30,"policy":2,"sub":13},"unitPrice":25000000000,"deriveShaImpl":2,"governance":{"governingNode":"0xdddfb991127b43e209c2f8ed08b8b3d0b5843d36","governanceMode":"single","reward":{"mintingAmount":9600000000000000000,"ratio":"34/54/12","useGiniCoeff":false,"deferredTxFee":true,"stakingUpdateInterval":60,"proposerUpdateInterval":30,"minimumStake":5000000}}},"timestamp":"0x5ce33d6e","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f89af85494dddfb991127b43e209c2f8ed08b8b3d0b5843d3694195ba9cc787b00796a7ae6356e5b656d4360353794777fd033b5e3bcaad6006bc9f481ffed6b83cf5a94d473284239f704adccd24647c7ca132992a28973b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"195ba9cc787b00796a7ae6356e5b656d43603537":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"777fd033b5e3bcaad6006bc9f481ffed6b83cf5a":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"d473284239f704adccd24647c7ca132992a28973":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"dddfb991127b43e209c2f8ed08b8b3d0b5843d36":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"f4316f69d9522667c0674afcd8638288489f0333":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}`,
 		query:   []string{"klay.getBlock(0).parentHash", "klay.getBlock(0).blockscore", "klay.getBlock(0).extraData", "governance.chainConfig.chainId", "governance.chainConfig.deriveShaImpl", "governance.chainConfig.unitPrice", "governance.chainConfig.governance.governanceMode", "governance.chainConfig.governance.governingNode", "governance.chainConfig.governance.reward.deferredTxFee", "governance.chainConfig.governance.reward.minimumStake", "governance.chainConfig.governance.reward.mintingAmount", "governance.chainConfig.governance.reward.proposerUpdateInterval", "governance.chainConfig.governance.reward.ratio", "governance.chainConfig.governance.reward.stakingUpdateInterval", "governance.chainConfig.governance.reward.useGiniCoeff", "governance.chainConfig.istanbul.epoch", "governance.chainConfig.istanbul.policy", "governance.chainConfig.istanbul.sub"},
 		result:  []string{"0x0000000000000000000000000000000000000000000000000000000000000000", "0x1", "0x0000000000000000000000000000000000000000000000000000000000000000f89af85494dddfb991127b43e209c2f8ed08b8b3d0b5843d3694195ba9cc787b00796a7ae6356e5b656d4360353794777fd033b5e3bcaad6006bc9f481ffed6b83cf5a94d473284239f704adccd24647c7ca132992a28973b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0", "2019", "2", "25000000000", "single", "0xdddfb991127b43e209c2f8ed08b8b3d0b5843d36", "true", "5000000", "9600000000000000000", "30", "34/54/12", "60", "false", "30", "2", "13"},
