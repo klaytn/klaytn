@@ -83,6 +83,18 @@ func (sb *SubBridgeAPI) GetReceiptFromParentChain(blockHash common.Hash) *types.
 	return sb.subBridge.handler.GetReceiptFromParentChain(blockHash)
 }
 
+func (sb *SubBridgeAPI) GetAnchoringTxHashByBlockNumber(bn uint64) common.Hash {
+	block := sb.subBridge.blockchain.GetBlockByNumber(bn)
+	if block == nil {
+		return common.Hash{}
+	}
+	receipt := sb.subBridge.handler.GetReceiptFromParentChain(block.Hash())
+	if receipt == nil {
+		return common.Hash{}
+	}
+	return receipt.TxHash
+}
+
 func (sb *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
 	cBridge, cBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(sb.subBridge.localBackend, true)
 	if err != nil {
