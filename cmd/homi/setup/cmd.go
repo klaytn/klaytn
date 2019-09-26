@@ -328,7 +328,6 @@ func genCypressGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesi
 }
 
 func genServiceChainCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	mintingAmount, _ := new(big.Int).SetString("0", 10)
 	genesisJson := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
 		BlockScore: big.NewInt(genesis.InitBlockScore),
@@ -336,16 +335,6 @@ func genServiceChainCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockc
 		Config: &params.ChainConfig{
 			ChainID:       big.NewInt(1000),
 			DeriveShaImpl: 2,
-			Governance: &params.GovernanceConfig{
-				GoverningNode:  nodeAddrs[0],
-				GovernanceMode: "single",
-				Reward: &params.RewardConfig{
-					MintingAmount: mintingAmount,
-					Ratio:         "100/0/0",
-					UseGiniCoeff:  true,
-					DeferredTxFee: true,
-				},
-			},
 			Istanbul: &params.IstanbulConfig{
 				ProposerPolicy: 0,
 				SubGroupSize:   22,
@@ -362,9 +351,6 @@ func genServiceChainCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockc
 func genServiceChainGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	genesisJson := genServiceChainCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 3600
-	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
-	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
-	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
 	allocationFunction := genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(10), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
@@ -373,9 +359,6 @@ func genServiceChainGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.G
 func genServiceChainTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	genesisJson := genServiceChainCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 30
-	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 60
-	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 30
-	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
 	allocationFunction := genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
