@@ -49,7 +49,6 @@ type AnchoringDataLegacy struct {
 	ReceiptHash   common.Hash
 	StateRootHash common.Hash
 	BlockNumber   *big.Int
-	Period        *big.Int
 }
 
 func (data *AnchoringDataLegacy) GetBlockHash() common.Hash {
@@ -67,7 +66,7 @@ type AnchoringDataInternalType0 struct {
 	ReceiptHash   common.Hash
 	StateRootHash common.Hash
 	BlockNumber   *big.Int
-	Period        *big.Int
+	BlockCount    *big.Int
 	TxCount       *big.Int
 }
 

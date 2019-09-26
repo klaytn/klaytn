@@ -242,7 +242,7 @@ func (sbh *SubBridgeHandler) handleParentChainReceiptResponseMsg(p BridgePeer, m
 // genUnsignedChainDataAnchoringTx generates an unsigned transaction, which type is TxTypeChainDataAnchoring.
 // Nonce of account used for service chain transaction will be increased after the signing.
 func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block) (*types.Transaction, error) {
-	anchoringData, err := types.NewAnchoringDataType0(block, new(big.Int).SetUint64(sbh.chainTxPeriod), new(big.Int).SetUint64(sbh.txCount))
+	anchoringData, err := types.NewAnchoringDataType0(block, new(big.Int).SetUint64(block.NumberU64()-sbh.txCountEnabledBlockNumber+1), new(big.Int).SetUint64(sbh.txCount))
 	if err != nil {
 		return nil, err
 	}
@@ -364,15 +364,6 @@ func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
 	if sbh.txCountEnabledBlockNumber == 0 {
 		sbh.txCount = 0 // reset for the next anchoring period
 		sbh.txCountEnabledBlockNumber = block.NumberU64()
-		if sbh.chainTxPeriod > 1 {
-			remnant := block.NumberU64() % sbh.chainTxPeriod
-			if remnant < 2 {
-				// A small trick to start tx counting quickly.
-				sbh.txCountEnabledBlockNumber += 1 - remnant
-			} else {
-				sbh.txCountEnabledBlockNumber += (sbh.chainTxPeriod - remnant) + 1
-			}
-		}
 	}
 
 	var startBlkNum uint64
@@ -417,7 +408,9 @@ func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Bl
 		return err
 	}
 	txCount := sbh.txCount
-	sbh.txCount = 0 // reset for the next anchoring period
+	// Reset for the next anchoring period.
+	sbh.txCount = 0
+	sbh.txCountEnabledBlockNumber = block.NumberU64() + 1
 
 	signedTx, err := sbh.subbridge.bridgeAccounts.pAccount.SignTx(unsignedTx)
 	if err != nil {
