@@ -228,13 +228,29 @@ func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.Validato
 }
 
 // getTargetReceivers returns a map of nodes which need to receive a message
-func (sb *backend) getTargetReceivers(valSet istanbul.ValidatorSet) map[common.Address]bool {
+func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
 	targets := make(map[common.Address]bool)
 
-	for _, val := range valSet.List() {
-		if val.Address() != sb.Address() {
-			targets[val.Address()] = true
+	r := sb.currentView.Load().(*istanbul.View).Round.Int64()
+	s := sb.currentView.Load().(*istanbul.View).Sequence.Int64()
+	view := &istanbul.View{
+		Round:    big.NewInt(r),
+		Sequence: big.NewInt(s),
+	}
+
+	proposer := valSet.GetProposer()
+	for i := 0; i < 2; i++ {
+		vals := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
+		for _, val := range vals {
+			if val.Address() != sb.Address() {
+				targets[val.Address()] = true
+			}
 		}
+		// Check if there is only 1 node in a committee
+		if len(vals) > 1 {
+			proposer = vals[1]
+		}
+		view.Round = view.Round.Add(view.Round, common.Big1)
 	}
 	return targets
 }
@@ -248,7 +264,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
-	targets := sb.getTargetReceivers(valSet)
+	targets := sb.getTargetReceivers(prevHash, valSet)
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
