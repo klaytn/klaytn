@@ -60,7 +60,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 	rc := &istanbul.Subject{
 		View:     cv,
 		Digest:   common.Hash{},
-		PrevHash: lastProposal.ParentHash(),
+		PrevHash: lastProposal.Hash(),
 	}
 
 	payload, err := Encode(rc)
