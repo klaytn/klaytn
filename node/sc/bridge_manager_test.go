@@ -1494,7 +1494,7 @@ func TestAnchoringBasic(t *testing.T) {
 		GlobalQueue: 1024,
 	})
 
-	assert.Equal(t, uint64(0), sc.handler.txCountEnabledBlockNumber)
+	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
 	assert.Equal(t, uint64(0), sc.handler.latestTxCountAddedBlockNumber)
 	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
 
@@ -1582,7 +1582,7 @@ func TestAnchoringPeriod(t *testing.T) {
 		GlobalQueue: 1024,
 	})
 
-	assert.Equal(t, uint64(0), sc.handler.txCountEnabledBlockNumber)
+	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
 	assert.Equal(t, uint64(4), sc.handler.chainTxPeriod)
 
 	// Period 1
@@ -1592,7 +1592,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
 
-	sc.handler.txCountEnabledBlockNumber = curBlk.NumberU64() - 1
+	sc.handler.txCountStartingBlockNumber = curBlk.NumberU64() - 1
 	sc.handler.txCount = startTxCount
 	sc.handler.blockAnchoringManager(curBlk)
 	assert.Equal(t, uint64(startTxCount+1), sc.handler.txCount)
@@ -1617,7 +1617,7 @@ func TestAnchoringPeriod(t *testing.T) {
 
 	// Period 2:
 	assert.Equal(t, uint64(0), sc.handler.txCount)
-	assert.Equal(t, uint64(5), sc.handler.txCountEnabledBlockNumber)
+	assert.Equal(t, uint64(5), sc.handler.txCountStartingBlockNumber)
 
 	// Generate anchoring tx.
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
