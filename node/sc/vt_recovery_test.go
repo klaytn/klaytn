@@ -68,7 +68,6 @@ const (
 	testTxCount      = 7
 	testBlockOffset  = 3 // +2 for genesis and bridge contract, +1 by a hardcoded hint
 	testPendingCount = 3
-	testNonceOffset  = testTxCount - testPendingCount
 )
 
 type operations struct {
@@ -161,6 +160,67 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 	assert.Equal(t, 0, len(vtr.childEvents))
 
 	assert.Equal(t, nil, vtr.Recover()) // nothing to recover
+}
+
+// TestKLAYTransferLongRangeRecovery tests a long block range recovery.
+func TestKLAYTransferLongRangeRecovery(t *testing.T) {
+	tempDir := os.TempDir() + "sc"
+	os.MkdirAll(tempDir, os.ModePerm)
+	oldMaxPendingTxs := maxPendingTxs
+	maxPendingTxs = 2
+	defer func() {
+		maxPendingTxs = oldMaxPendingTxs
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	// 1. Init dummy chain and do some value transfers.
+	info := prepare(t, func(info *testInfo) {
+		for i := 0; i < testTxCount; i++ {
+			ops[KLAY].request(info, info.localInfo)
+			for i := uint64(0); i < filterLogsStride; i++ {
+				info.sim.Commit()
+			}
+		}
+	})
+	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
+
+	err := vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update a value transfer hint")
+	}
+	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
+
+	// 2. first recovery.
+	info.recoveryCh <- true
+	err = vtr.Recover()
+	if err != nil {
+		t.Fatal("fail to recover the value transfer")
+	}
+	assert.Equal(t, maxPendingTxs, info.remoteInfo.pendingRequestEvent.Len())
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
+	err = vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	assert.Equal(t, uint64(testPendingCount-maxPendingTxs), vtr.child2parentHint.requestNonce-vtr.child2parentHint.handleNonce)
+
+	// 3. second recovery.
+	err = vtr.Recover()
+	if err != nil {
+		t.Fatal("fail to recover the value transfer")
+	}
+	assert.Equal(t, testPendingCount-maxPendingTxs, info.remoteInfo.pendingRequestEvent.Len())
+	ops[KLAY].dummyHandle(info, info.remoteInfo)
+	assert.Equal(t, 0, info.remoteInfo.pendingRequestEvent.Len())
+
+	// 4. Check if recovery is done.
+	err = vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	assert.Equal(t, vtr.child2parentHint.handleNonce, vtr.child2parentHint.requestNonce)
 }
 
 // TestBasicTokenTransferRecovery tests the token transfer recovery.
@@ -574,6 +634,8 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 		config:         config,
 		peers:          newBridgePeerSet(),
 		bridgeAccounts: bacc,
+		localBackend:   sim,
+		remoteBackend:  sim,
 	}
 	handler, err := NewSubBridgeHandler(sc)
 	if err != nil {
@@ -581,6 +643,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 		return nil
 	}
 	sc.handler = handler
+	sc.blockchain = sim.BlockChain()
 
 	// Prepare manager and deploy bridge contract.
 	bm, err := NewBridgeManager(sc)
