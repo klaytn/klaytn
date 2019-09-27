@@ -168,7 +168,7 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 	tempDir := os.TempDir() + "sc"
 	os.MkdirAll(tempDir, os.ModePerm)
 	oldMaxPendingTxs := maxPendingTxs
-	maxPendingTxs = 1
+	maxPendingTxs = 2
 	defer func() {
 		maxPendingTxs = oldMaxPendingTxs
 		if err := os.RemoveAll(tempDir); err != nil {
@@ -199,21 +199,20 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	pendingCount := info.remoteInfo.pendingRequestEvent.Len()
-	assert.Equal(t, maxPendingTxs+1, pendingCount)
+	assert.Equal(t, maxPendingTxs, info.remoteInfo.pendingRequestEvent.Len())
 	ops[KLAY].dummyHandle(info, info.remoteInfo)
 	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update value transfer hint")
 	}
-	assert.Equal(t, uint64(testPendingCount-pendingCount), vtr.child2parentHint.requestNonce-vtr.child2parentHint.handleNonce)
+	assert.Equal(t, uint64(testPendingCount-maxPendingTxs), vtr.child2parentHint.requestNonce-vtr.child2parentHint.handleNonce)
 
 	// 3. second recovery.
 	err = vtr.Recover()
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	assert.Equal(t, 1, info.remoteInfo.pendingRequestEvent.Len())
+	assert.Equal(t, testPendingCount-maxPendingTxs, info.remoteInfo.pendingRequestEvent.Len())
 	ops[KLAY].dummyHandle(info, info.remoteInfo)
 	assert.Equal(t, 0, info.remoteInfo.pendingRequestEvent.Len())
 
