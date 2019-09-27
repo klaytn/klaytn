@@ -67,6 +67,7 @@ type RemoteBackendInterface interface {
 // Backend wraps all methods for local and remote backend
 type Backend interface {
 	bind.ContractBackend
+	CurrentBlockNumber(context.Context) (uint64, error)
 }
 
 // NodeInfo represents a short summary of the ServiceChain sub-protocol metadata

@@ -1446,7 +1446,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	fmt.Println("===== BridgeContract Addr ", addr.Hex())
 	sim.Commit() // block
 
-	bm.bridges[addr], err = NewBridgeInfo(nil, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true, sim)
+	bm.bridges[addr], err = NewBridgeInfo(sc, addr, bridge, common.Address{}, nil, bacc.cAccount, true, true, sim)
 
 	bm.journal.cache[addr] = &BridgeJournal{addr, addr, true}
 
