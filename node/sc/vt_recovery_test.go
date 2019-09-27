@@ -199,9 +199,14 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	assert.Equal(t, 2, info.remoteInfo.pendingRequestEvent.Len())
+	pendingCount := info.remoteInfo.pendingRequestEvent.Len()
+	assert.Equal(t, maxPendingTxs+1, pendingCount)
 	ops[KLAY].dummyHandle(info, info.remoteInfo)
-	assert.Equal(t, 0, info.remoteInfo.pendingRequestEvent.Len())
+	err = vtr.updateRecoveryHint()
+	if err != nil {
+		t.Fatal("fail to update value transfer hint")
+	}
+	assert.Equal(t, uint64(testPendingCount-pendingCount), vtr.child2parentHint.requestNonce-vtr.child2parentHint.handleNonce)
 
 	// 3. second recovery.
 	err = vtr.Recover()
