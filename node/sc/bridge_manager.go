@@ -750,17 +750,16 @@ func (bm *BridgeManager) SetValueTransferOperatorThreshold(bridgeAddr common.Add
 	bi, exist := bm.GetBridgeInfo(bridgeAddr)
 
 	if !exist {
-		return common.Hash{}, errors.New("bridge does not exist")
+		return common.Hash{}, ErrNoBridgeInfo
 	}
 
 	bi.account.Lock()
+	defer bi.account.UnLock()
 	tx, err := bi.bridge.SetOperatorThreshold(bi.account.GetTransactOpts(), voteTypeValueTransfer, threshold)
 	if err != nil {
-		bi.account.UnLock()
 		return common.Hash{}, err
 	}
 	bi.account.IncNonce()
-	bi.account.UnLock()
 
 	return tx.Hash(), nil
 }
@@ -769,7 +768,7 @@ func (bm *BridgeManager) GetValueTransferOperatorThreshold(bridgeAddr common.Add
 	bi, exist := bm.GetBridgeInfo(bridgeAddr)
 
 	if !exist {
-		return 0, errors.New("bridge does not exist")
+		return 0, ErrNoBridgeInfo
 	}
 
 	threshold, err := bi.bridge.OperatorThresholds(nil, voteTypeValueTransfer)

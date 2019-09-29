@@ -301,7 +301,7 @@ func (sb *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTok
 	pBi, pExist := sb.subBridge.bridgeManager.GetBridgeInfo(pBridgeAddr)
 
 	if !cExist || !pExist {
-		return errors.New("bridge does not exist")
+		return ErrNoBridgeInfo
 	}
 
 	err := cBi.RegisterToken(cTokenAddr, pTokenAddr)
@@ -372,7 +372,7 @@ func (sb *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pT
 	pBi, pExist := sb.subBridge.bridgeManager.GetBridgeInfo(pBridgeAddr)
 
 	if !cExist || !pExist {
-		return errors.New("bridge does not exist")
+		return ErrNoBridgeInfo
 	}
 
 	pTokenAddrCheck := cBi.GetCounterPartToken(cTokenAddr)
