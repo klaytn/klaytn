@@ -1537,6 +1537,85 @@ func TestAnchoringBasic(t *testing.T) {
 	assert.Equal(t, big.NewInt(1).String(), anchoringDataInternal.TxCount.String())
 }
 
+// TestAnchoringStart tests the following:
+// 1. set anchoring period 4
+// 2. check if tx counting started immediately and accumulated correctly
+func TestAnchoringStart(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoringPeriod")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	config := &SCConfig{AnchoringPeriod: 4}
+	config.DataDir = tempDir
+	config.VTRecovery = true
+
+	bAcc, _ := NewBridgeAccounts(tempDir)
+	bAcc.pAccount.chainID = big.NewInt(0)
+	bAcc.cAccount.chainID = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	sc := &SubBridge{
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bAcc,
+	}
+	sc.blockchain = sim.BlockChain()
+
+	sc.handler, err = NewSubBridgeHandler(sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+		return
+	}
+	sc.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgepool.BridgeTxPoolConfig{
+		Journal:     path.Join(tempDir, "bridge_transactions.rlp"),
+		GlobalQueue: 1024,
+	})
+
+	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
+	assert.Equal(t, uint64(4), sc.handler.chainTxPeriod)
+
+	sim.Commit() // start with arbitrary block number.
+
+	// 1. Fresh start with dummy tx and check tx count
+	auth := bAcc.pAccount.GetTransactOpts()
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	sim.Commit()
+	curBlk := sim.BlockChain().CurrentBlock()
+	sc.handler.blockAnchoringManager(curBlk)
+	assert.Equal(t, uint64(1), sc.handler.txCount)
+	pending := sc.GetBridgeTxPool().Pending()
+	assert.Equal(t, 0, len(pending)) // the anchoring period has not yet been reached.
+
+	// 2. Generate dummy txs and check tx count
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
+	sim.Commit()
+	curBlk = sim.BlockChain().CurrentBlock()
+	sc.handler.blockAnchoringManager(curBlk)
+	assert.Equal(t, uint64(3), sc.handler.txCount)
+	assert.Equal(t, 0, len(pending)) // the anchoring period has not yet been reached.
+
+	// 3. Generate dummy blocks and check anchoring tx
+	sim.Commit() // block number 4
+	curBlk = sim.BlockChain().CurrentBlock()
+	sc.handler.blockAnchoringManager(curBlk)
+	assert.Equal(t, uint64(0), sc.handler.txCount)
+	pending = sc.GetBridgeTxPool().Pending()
+	assert.Equal(t, 1, len(pending))
+	for _, v := range pending {
+		decodeAndCheckAnchoringTx(t, v[0], curBlk, 3, 3)
+		break
+	}
+}
+
 // TestAnchoringPeriod tests the following:
 // 1. set anchoring period 4
 // 2. accumulate tx counts
@@ -1611,7 +1690,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	assert.Equal(t, 1, len(pending))
 
 	for _, v := range pending {
-		decodeAndCheckAnchoringTx(t, v[0], curBlk, startTxCount+4)
+		decodeAndCheckAnchoringTx(t, v[0], curBlk, 4, startTxCount+4)
 		break
 	}
 
@@ -1632,13 +1711,13 @@ func TestAnchoringPeriod(t *testing.T) {
 	sc.handler.blockAnchoringManager(curBlk)
 	pending = sc.GetBridgeTxPool().Pending()
 	for _, v := range pending {
-		decodeAndCheckAnchoringTx(t, v[1], curBlk, 3)
+		decodeAndCheckAnchoringTx(t, v[1], curBlk, 4, 3)
 		break
 	}
 }
 
 // decodeAndCheckAnchoringTx decodes anchoring tx and check with a block.
-func decodeAndCheckAnchoringTx(t *testing.T, tx *types.Transaction, blk *types.Block, txCounts int64) {
+func decodeAndCheckAnchoringTx(t *testing.T, tx *types.Transaction, blk *types.Block, blockCount, txCounts int64) {
 	assert.Equal(t, types.TxTypeChainDataAnchoring, tx.Type())
 	anchoringData := new(types.AnchoringData)
 	data, err := tx.AnchoredData()
@@ -1655,7 +1734,7 @@ func decodeAndCheckAnchoringTx(t *testing.T, tx *types.Transaction, blk *types.B
 	// Check the current block is anchored.
 	assert.Equal(t, new(big.Int).SetUint64(blk.NumberU64()).String(), anchoringDataInternal.BlockNumber.String())
 	assert.Equal(t, blk.Hash(), anchoringDataInternal.BlockHash)
-	assert.Equal(t, big.NewInt(4).String(), anchoringDataInternal.BlockCount.String())
+	assert.Equal(t, big.NewInt(blockCount).String(), anchoringDataInternal.BlockCount.String())
 	assert.Equal(t, big.NewInt(txCounts).String(), anchoringDataInternal.TxCount.String())
 }
 
