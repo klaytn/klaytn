@@ -189,17 +189,13 @@ func (ec *Client) BridgeDeployBridge(ctx context.Context) (common.Address, commo
 }
 
 // BridgeRegisterBridge can register the given pair of deployed child/parent bridges.
-func (ec *Client) BridgeRegisterBridge(ctx context.Context, cBridge common.Address, pBridge common.Address) (bool, error) {
-	var result bool
-	err := ec.c.CallContext(ctx, &result, "subbridge_registerBridge", cBridge, pBridge)
-	return result, err
+func (ec *Client) BridgeRegisterBridge(ctx context.Context, cBridge common.Address, pBridge common.Address) error {
+	return ec.c.CallContext(ctx, nil, "subbridge_registerBridge", cBridge, pBridge)
 }
 
 // BridgeDeregisterBridge can deregister the given pair of deployed child/parent bridges.
-func (ec *Client) BridgeDeregisterBridge(ctx context.Context, cBridge common.Address, pBridge common.Address) (bool, error) {
-	var result bool
-	err := ec.c.CallContext(ctx, &result, "subbridge_deregisterBridge", cBridge, pBridge)
-	return result, err
+func (ec *Client) BridgeDeregisterBridge(ctx context.Context, cBridge common.Address, pBridge common.Address) error {
+	return ec.c.CallContext(ctx, nil, "subbridge_deregisterBridge", cBridge, pBridge)
 }
 
 // TODO-Klaytn if client pkg is removed in sc pkg, this will be replaced origin struct.
