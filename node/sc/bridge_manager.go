@@ -746,6 +746,34 @@ func (bm *BridgeManager) stopAllRecoveries() {
 	bm.recoveries = make(map[common.Address]*valueTransferRecovery)
 }
 
+func (bm *BridgeManager) RegisterOperator(bridgeAddr, operatorAddr common.Address) (common.Hash, error) {
+	bi, exist := bm.GetBridgeInfo(bridgeAddr)
+
+	if !exist {
+		return common.Hash{}, ErrNoBridgeInfo
+	}
+
+	bi.account.Lock()
+	defer bi.account.UnLock()
+	tx, err := bi.bridge.RegisterOperator(bi.account.GetTransactOpts(), operatorAddr)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	bi.account.IncNonce()
+
+	return tx.Hash(), nil
+}
+
+func (bm *BridgeManager) GetOperators(bridgeAddr common.Address) ([]common.Address, error) {
+	bi, exist := bm.GetBridgeInfo(bridgeAddr)
+
+	if !exist {
+		return nil, ErrNoBridgeInfo
+	}
+
+	return bi.bridge.GetOperatorList(nil)
+}
+
 func (bm *BridgeManager) SetValueTransferOperatorThreshold(bridgeAddr common.Address, threshold uint8) (common.Hash, error) {
 	bi, exist := bm.GetBridgeInfo(bridgeAddr)
 
