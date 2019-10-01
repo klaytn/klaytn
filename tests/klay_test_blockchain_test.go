@@ -69,6 +69,7 @@ type BCData struct {
 }
 
 var dir = "chaindata"
+var nodeAddr = common.StringToAddress("nodeAddr")
 
 func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	if numValidators > maxAccounts {
@@ -92,7 +93,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a governance
 	gov := generateGovernaceDataForTest()
-
+	gov.SetNodeAddress(nodeAddr)
 	////////////////////////////////////////////////////////////////////////////////
 	// Create accounts as many as maxAccounts
 	addrs, privKeys, err := createAccounts(maxAccounts)
@@ -382,7 +383,9 @@ func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 	if dir == "" {
 		return database.NewMemoryDBManager()
 	} else {
-		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 16, OpenFilesLimit: 16}
+		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 768,
+			OpenFilesLimit: 1024, Partitioned: true, NumStateTriePartitions: 4, ParallelDBWrite: true,
+			LevelDBCompression: database.AllNoCompression, LevelDBBufferPool: true}
 		return database.NewDBManager(dbc)
 	}
 }

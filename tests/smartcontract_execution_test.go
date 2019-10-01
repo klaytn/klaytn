@@ -18,6 +18,7 @@ package tests
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -27,6 +28,9 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
 	"math/big"
+	"math/rand"
+	"os"
+	"runtime/pprof"
 	"strings"
 	"testing"
 	"time"
@@ -325,4 +329,157 @@ func BenchmarkSmartContractExecute(b *testing.B) {
 	if testing.Verbose() {
 		prof.PrintProfileInfo()
 	}
+}
+
+func BenchmarkStorageTrieStore(b *testing.B) {
+	//enableLog()
+	prof := profile.NewProfiler()
+
+	benchOption := ContractExecutionOption{
+		"StorageTrieStore",
+		"../contracts/storagetrie/StorageTrieStoreTest.sol",
+		makeStorageTrieTransactions,
+		nil,
+	}
+
+	executeSmartContractForStorageTrie(b, &benchOption, prof)
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+func executeSmartContractForStorageTrie(b *testing.B, opt *ContractExecutionOption, prof *profile.Profiler) {
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(2000, 4)
+	if err != nil {
+		b.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+
+	defer bcdata.db.Close()
+	defer bcdata.bc.Stop()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		b.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	start = time.Now()
+	contracts, err := deployContract(opt.filepath, bcdata, accountMap, prof)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	if len(contracts) != 1 {
+		b.Fatalf("contracts length should be 1 but %v!!", len(contracts))
+	}
+
+	prof.Profile("main_deployContract", time.Now().Sub(start))
+
+	b.StopTimer()
+	b.ResetTimer()
+
+	timeNow := time.Now()
+	f, err := os.Create(opt.name + "_" + timeNow.Format("2006-01-02-1504") + ".cpu.out")
+	if err != nil {
+		b.Fatalf("failed to create file for cpu profiling, err: %v", err)
+	}
+
+	totalRuns := 1
+
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+	txPool := makeTxPool(bcdata, txPoolSize)
+	for _, c := range contracts {
+		start = time.Now()
+		for run := 1; run <= totalRuns; run++ {
+			fmt.Printf("run %v started \n", run)
+			transactions, err := opt.makeTx(c, accountMap, bcdata, 20000)
+			if err != nil {
+				b.Fatal(err)
+			}
+			fmt.Printf("run %v tx generated \n", run)
+
+			state, _ := bcdata.bc.State()
+			for _, tx := range transactions {
+				tx.AsMessageWithAccountKeyPicker(signer, state, bcdata.bc.CurrentBlock().NumberU64())
+			}
+			fmt.Printf("run %v tx validated \n", run)
+
+			start = time.Now()
+			b.StartTimer()
+
+			if run == totalRuns {
+				pprof.StartCPUProfile(f)
+			}
+
+			if err := executeTxs(bcdata, txPool, transactions); err != nil {
+				b.Fatal(err)
+			}
+
+			b.StopTimer()
+			if run == totalRuns {
+				pprof.StopCPUProfile()
+			}
+		}
+	}
+}
+
+func makeStorageTrieTransactions(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
+	numTransactions int) (types.Transactions, error) {
+	abii, err := abi.JSON(strings.NewReader(c.abi))
+	if err != nil {
+		return nil, err
+	}
+
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+
+	transactions := make(types.Transactions, numTransactions)
+
+	stateDB, _ := bcdata.bc.State()
+
+	numAddrs := len(bcdata.addrs)
+	fromNonces := make([]uint64, numAddrs)
+	for i, addr := range bcdata.addrs {
+		fromNonces[i] = stateDB.GetNonce(*addr)
+	}
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < numTransactions; i++ {
+		idx := i % numAddrs
+
+		// function insertIdentity(string _serialNumber, string _publicKey, string _hash)
+		data, err := abii.Pack("insertIdentity", randomString(39, r), randomString(814, r), randomString(40, r))
+		if err != nil {
+			return nil, err
+		}
+
+		tx := types.NewTransaction(fromNonces[idx], c.address, nil, 10000000, big.NewInt(25000000000), data)
+		signedTx, err := types.SignTx(tx, signer, bcdata.privKeys[idx])
+		if err != nil {
+			return nil, err
+		}
+
+		transactions[i] = signedTx
+		fromNonces[idx]++
+	}
+
+	return transactions, nil
+}
+
+func randomBytes(n int, rand *rand.Rand) []byte {
+	r := make([]byte, n)
+	if _, err := rand.Read(r); err != nil {
+		panic("rand.Read failed: " + err.Error())
+	}
+	return r
+}
+
+func randomString(n int, rand *rand.Rand) string {
+	b := randomBytes(n, rand)
+	return string(b)
 }
