@@ -964,6 +964,11 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getAnchoringTxHashByBlockNumber',
+			call: 'subbridge_getAnchoringTxHashByBlockNumber',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'deployBridge',
 			call: 'subbridge_deployBridge',
 			params: 0
