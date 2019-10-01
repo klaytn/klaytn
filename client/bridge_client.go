@@ -172,6 +172,34 @@ func (ec *Client) BridgeGetSentChainTxsLimit(ctx context.Context) (uint64, error
 	return result, err
 }
 
+// BridgeRegisteredOperators registers an operator.
+func (ec *Client) BridgeRegisterOperator(ctx context.Context, bridge, operator common.Address) (common.Hash, error) {
+	var result common.Hash
+	err := ec.c.CallContext(ctx, &result, "subbridge_registerOperator", bridge, operator)
+	return result, err
+}
+
+// BridgeGetRegisteredOperators returns the list of operators.
+func (ec *Client) BridgeGetRegisteredOperators(ctx context.Context, bridge common.Address) ([]common.Address, error) {
+	var result []common.Address
+	err := ec.c.CallContext(ctx, &result, "subbridge_getRegisteredOperators", bridge)
+	return result, err
+}
+
+// BridgeSetValueTransferOperatorThreshold can set the operator threshold of the bridge contract.
+func (ec *Client) BridgeSetValueTransferOperatorThreshold(ctx context.Context, bridge common.Address, threshold uint8) (common.Hash, error) {
+	var result common.Hash
+	err := ec.c.CallContext(ctx, &result, "subbridge_setValueTransferOperatorThreshold", bridge, threshold)
+	return result, err
+}
+
+// BridgeGetValueTransferOperatorThreshold can get the operator threshold of the bridge contract.
+func (ec *Client) BridgeGetValueTransferOperatorThreshold(ctx context.Context, bridge common.Address) (uint8, error) {
+	var result uint8
+	err := ec.c.CallContext(ctx, &result, "subbridge_getValueTransferOperatorThreshold", bridge)
+	return result, err
+}
+
 // BridgeDeployBridge can deploy the pair of bridge for parent/child chain.
 func (ec *Client) BridgeDeployBridge(ctx context.Context) (common.Address, common.Address, error) {
 	var result []common.Address
