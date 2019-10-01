@@ -50,7 +50,7 @@ type SubBridgeHandler struct {
 	chainTxPeriod         uint64
 
 	latestTxCountAddedBlockNumber uint64
-	txCountEnabledBlockNumber     uint64
+	txCountStartingBlockNumber    uint64
 	txCount                       uint64 // accumulated tx counts in blocks for each anchoring period.
 
 	// TODO-Klaytn-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
@@ -257,7 +257,7 @@ func (sbh *SubBridgeHandler) handleParentChainReceiptResponseMsg(p BridgePeer, m
 // genUnsignedChainDataAnchoringTx generates an unsigned transaction, which type is TxTypeChainDataAnchoring.
 // Nonce of account used for service chain transaction will be increased after the signing.
 func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block) (*types.Transaction, error) {
-	anchoringData, err := types.NewAnchoringDataType0(block, new(big.Int).SetUint64(sbh.chainTxPeriod), new(big.Int).SetUint64(sbh.txCount))
+	anchoringData, err := types.NewAnchoringDataType0(block, new(big.Int).SetUint64(block.NumberU64()-sbh.txCountStartingBlockNumber+1), new(big.Int).SetUint64(sbh.txCount))
 	if err != nil {
 		return nil, err
 	}
@@ -293,6 +293,7 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 
 		sbh.skipSyncBlockCount = 0
 	} else {
+		sbh.txCountStartingBlockNumber = 0
 		if sbh.skipSyncBlockCount%SyncRequestInterval == 0 {
 			// TODO-Klaytn too many request while sync main-net
 			sbh.SyncNonceAndGasPrice()
@@ -374,20 +375,11 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 	}
 }
 
-// updateTxCount update txCount to insert into anchoring tx. It skips first remnant txCount.
+// updateTxCount update txCount to insert into anchoring tx.
 func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
-	if sbh.txCountEnabledBlockNumber == 0 {
+	if sbh.txCountStartingBlockNumber == 0 {
 		sbh.txCount = 0 // reset for the next anchoring period
-		sbh.txCountEnabledBlockNumber = block.NumberU64()
-		if sbh.chainTxPeriod > 1 {
-			remnant := block.NumberU64() % sbh.chainTxPeriod
-			if remnant < 2 {
-				// A small trick to start tx counting quickly.
-				sbh.txCountEnabledBlockNumber += 1 - remnant
-			} else {
-				sbh.txCountEnabledBlockNumber += (sbh.chainTxPeriod - remnant) + 1
-			}
-		}
+		sbh.txCountStartingBlockNumber = block.NumberU64()
 	}
 
 	var startBlkNum uint64
@@ -397,8 +389,8 @@ func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
 		startBlkNum = sbh.latestTxCountAddedBlockNumber + 1
 	}
 
-	if startBlkNum < sbh.txCountEnabledBlockNumber {
-		startBlkNum = sbh.txCountEnabledBlockNumber
+	if startBlkNum < sbh.txCountStartingBlockNumber {
+		startBlkNum = sbh.txCountStartingBlockNumber
 	}
 
 	for i := startBlkNum; i <= block.NumberU64(); i++ {
@@ -432,7 +424,9 @@ func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Bl
 		return err
 	}
 	txCount := sbh.txCount
-	sbh.txCount = 0 // reset for the next anchoring period
+	// Reset for the next anchoring period.
+	sbh.txCount = 0
+	sbh.txCountStartingBlockNumber = block.NumberU64() + 1
 
 	signedTx, err := sbh.subbridge.bridgeAccounts.pAccount.SignTx(unsignedTx)
 	if err != nil {
