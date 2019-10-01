@@ -77,6 +77,20 @@ func (rb *RemoteBackend) CodeAt(ctx context.Context, contract common.Address, bl
 	return result, err
 }
 
+func (rb *RemoteBackend) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+	if !rb.checkParentPeer() {
+		return nil, NoParentPeerErr
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	var hex hexutil.Big
+	err := rb.rpcClient.CallContext(ctx, &hex, "klay_getBalance", account, toBlockNumArg(blockNumber))
+	if err != nil {
+		return nil, err
+	}
+	return (*big.Int)(&hex), nil
+}
+
 func (rb *RemoteBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
