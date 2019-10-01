@@ -360,7 +360,7 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 	}
 }
 
- // updateTxCount update txCount to insert into anchoring tx. 
+// updateTxCount update txCount to insert into anchoring tx.
 func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
 	if sbh.txCountStartingBlockNumber == 0 {
 		sbh.txCount = 0 // reset for the next anchoring period
