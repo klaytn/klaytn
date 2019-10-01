@@ -969,6 +969,16 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getValueTransferOperatorThreshold',
+			call: 'subbridge_getValueTransferOperatorThreshold',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'setValueTransferOperatorThreshold',
+			call: 'subbridge_setValueTransferOperatorThreshold',
+			params: 2
+		}),
+		new web3._extend.Method({
 			name: 'deployBridge',
 			call: 'subbridge_deployBridge',
 			params: 0
