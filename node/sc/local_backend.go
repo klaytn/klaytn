@@ -70,6 +70,14 @@ func (lb *LocalBackend) CodeAt(ctx context.Context, contract common.Address, blo
 	return statedb.GetCode(contract), nil
 }
 
+func (lb *LocalBackend) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+	if blockNumber != nil && blockNumber.Cmp(lb.subbrige.blockchain.CurrentBlock().Number()) != 0 {
+		return nil, errBlockNumberUnsupported
+	}
+	statedb, _ := lb.subbrige.blockchain.State()
+	return statedb.GetBalance(account), nil
+}
+
 func (lb *LocalBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	if blockNumber != nil && blockNumber.Cmp(lb.subbrige.blockchain.CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
