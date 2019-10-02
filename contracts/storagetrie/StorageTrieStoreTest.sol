@@ -1,7 +1,6 @@
 pragma solidity 0.4.24;
 
 contract StorageTrieStoreTest {
-
     struct Identity {
         string publicKey;
         string hash;
