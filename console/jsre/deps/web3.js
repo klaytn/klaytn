@@ -5443,6 +5443,12 @@ var methods = function () {
         outputFormatter: formatters.outputTransactionFormatter
     });
 
+    var getDecodedAnchoringTransactionByHash = new Method({
+        name: 'getDecodedAnchoringTransactionByHash',
+        call: 'klay_getDecodedAnchoringTransactionByHash',
+        params: 1
+    });
+
     var getTransactionFromBlock = new Method({
         name: 'getTransactionFromBlock',
         call: transactionFromBlockCall,
@@ -5547,6 +5553,7 @@ var methods = function () {
         getCompilers,
         getBlockTransactionCount,
         getTransaction,
+        getDecodedAnchoringTransactionByHash,
         getTransactionFromBlock,
         getTransactionReceipt,
         getTransactionCount,

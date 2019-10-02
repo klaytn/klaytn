@@ -23,6 +23,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/accounts"
@@ -147,6 +148,48 @@ func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, has
 	}
 	// Transaction unknown, return as such
 	return nil
+}
+
+// GetDecodedAnchoringTransactionByHash returns the decoded anchoring data of anchoring transaction for the given hash
+func (s *PublicTransactionPoolAPI) GetDecodedAnchoringTransactionByHash(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+	var tx *types.Transaction
+
+	// Try to return an already finalized transaction
+	if tx, _, _, _ = s.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
+		goto decode
+	}
+
+	// No finalized transaction, try to retrieve it from the pool
+	if tx = s.b.GetPoolTransaction(hash); tx != nil {
+		goto decode
+	}
+	return nil, errors.New("can't find the transaction")
+
+decode:
+
+	if tx.Type() != types.TxTypeChainDataAnchoring {
+		return nil, errors.New("invalid transaction type")
+	}
+
+	data, err := tx.AnchoredData()
+	if err != nil {
+		return nil, err
+	}
+
+	anchoringDataInternal, err := types.DecodeAnchoringData(data)
+	if err != nil {
+		return nil, err
+	}
+
+	str, err := json.Marshal(anchoringDataInternal)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string]interface{}
+	json.Unmarshal(str, &result)
+
+	return result, nil
 }
 
 // GetRawTransactionByHash returns the bytes of the transaction for the given hash.
