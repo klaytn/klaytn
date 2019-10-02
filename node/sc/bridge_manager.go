@@ -277,7 +277,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 	// TODO-Klaytn-Servicechain Add counterpart token address in requestValueTransferEvent
 	if tokenType != KLAY && tokenAddr == (common.Address{}) {
 		logger.Warn("Unregistered counter part token address.", "addr", tokenAddr.Hex())
-		ctTokenAddr, err := bi.counterpartBridge.AllowedTokens(nil, ev.TokenAddress)
+		ctTokenAddr, err := bi.counterpartBridge.RegisteredTokens(nil, ev.TokenAddress)
 		if err != nil {
 			return err
 		}

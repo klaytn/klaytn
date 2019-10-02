@@ -24,7 +24,7 @@ import "../sc_erc721/IERC721BridgeReceiver.sol";
 import "./BridgeTransferCommon.sol";
 
 
-contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
+contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTransfer {
     // handleERC721Transfer sends the ERC721 by the request.
     function handleERC721Transfer(
         bytes32 _requestTxHash,
@@ -76,9 +76,10 @@ contract BridgeTransferERC721 is IERC721BridgeReceiver, BridgeTransfer {
         bytes memory _extraData
     )
         internal
+        onlyRegisteredToken(_tokenAddress)
+        onlyUnlockedToken(_tokenAddress)
     {
         require(isRunning, "stopped bridge");
-        require(allowedTokens[_tokenAddress] != address(0), "invalid token");
 
         if (modeMintBurn) {
             ERC721Burnable(_tokenAddress).burn(_tokenId);

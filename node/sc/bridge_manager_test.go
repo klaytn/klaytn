@@ -170,10 +170,10 @@ func TestBridgeManager(t *testing.T) {
 	bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
 	sim.Commit() // block
 
-	cTokenAddr, err := bridge.AllowedTokens(nil, tokenAddr)
+	cTokenAddr, err := bridge.RegisteredTokens(nil, tokenAddr)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, cTokenAddr, tokenAddr)
-	cNftAddr, err := bridge.AllowedTokens(nil, nftAddr)
+	cNftAddr, err := bridge.RegisteredTokens(nil, nftAddr)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, cNftAddr, nftAddr)
 
@@ -408,7 +408,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	bridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, nftAddr, nftAddr)
 	sim.Commit() // block
 
-	cNftAddr, err := bridge.AllowedTokens(nil, nftAddr)
+	cNftAddr, err := bridge.RegisteredTokens(nil, nftAddr)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, cNftAddr, nftAddr)
 
@@ -633,7 +633,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	pBridge.RegisterToken(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, tokenAddr)
 	sim.Commit() // block
 
-	cTokenAddr, err := pBridge.AllowedTokens(nil, tokenAddr)
+	cTokenAddr, err := pBridge.RegisteredTokens(nil, tokenAddr)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, cTokenAddr, tokenAddr)
 

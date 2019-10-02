@@ -24,7 +24,7 @@ import "../sc_erc20/IERC20BridgeReceiver.sol";
 import "./BridgeTransferCommon.sol";
 
 
-contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransfer {
+contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransfer {
     // handleERC20Transfer sends the token by the request.
     function handleERC20Transfer(
         bytes32 _requestTxHash,
@@ -76,10 +76,11 @@ contract BridgeTransferERC20 is IERC20BridgeReceiver, BridgeTransfer {
         bytes memory _extraData
     )
         internal
+        onlyRegisteredToken(_tokenAddress)
+        onlyUnlockedToken(_tokenAddress)
     {
         require(isRunning, "stopped bridge");
         require(_value > 0, "zero msg.value");
-        require(allowedTokens[_tokenAddress] != address(0), "invalid token");
 
         uint256 fee = _payERC20FeeAndRefundChange(_from, _tokenAddress, _feeLimit);
 
