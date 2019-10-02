@@ -38,8 +38,7 @@ import (
 )
 
 const (
-	gasLimit uint64 = 3000000         // gasLimit for contract transaction.
-	timeOut         = 3 * time.Second // timeout of context and event loop for simulated backend.
+	timeOut = 3 * time.Second // timeout of context and event loop for simulated backend.
 )
 
 // WaitMined waits the tx receipt until the timeout.
@@ -81,7 +80,7 @@ func TransferSignedTx(auth *bind.TransactOpts, backend *backends.SimulatedBacken
 		nonce,
 		to,
 		value,
-		gasLimit,
+		DefaultBridgeTxGasLimit,
 		gasPrice,
 		nil)
 
@@ -109,7 +108,7 @@ func TransferSignedTx(auth *bind.TransactOpts, backend *backends.SimulatedBacken
 
 // RequestKLAYTransfer sends a requestValueTransfer transaction to the bridge contract.
 func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, t *testing.T) {
-	_, err := b.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit, Value: new(big.Int).SetUint64(value)}, to, new(big.Int).SetUint64(value), nil)
+	_, err := b.RequestKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: DefaultBridgeTxGasLimit, Value: new(big.Int).SetUint64(value)}, to, new(big.Int).SetUint64(value), nil)
 	if err != nil {
 		t.Fatalf("fail to RequestKLAYTransfer %v", err)
 	}
@@ -117,7 +116,7 @@ func RequestKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Ad
 
 // SendHandleKLAYTransfer send a handleValueTransfer transaction to the bridge contract.
 func SendHandleKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common.Address, value uint64, nonce uint64, blockNum uint64, t *testing.T) *types.Transaction {
-	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: gasLimit}, common.Hash{10}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum, nil)
+	tx, err := b.HandleKLAYTransfer(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: DefaultBridgeTxGasLimit}, common.Hash{10}, common.Address{0}, to, big.NewInt(int64(value)), nonce, blockNum, nil)
 	if err != nil {
 		t.Fatalf("fail to SendHandleKLAYTransfer %v", err)
 		return nil
@@ -242,7 +241,7 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	WaitMined(tx, backend, t)
 	t.Log("1. Bridge is deployed.", "bridgeAddress=", bridgeAddress.String(), "txHash=", tx.Hash().String())
 
-	tx, err = b.RegisterOperator(&bind.TransactOpts{From: bridgeAccount.From, Signer: bridgeAccount.Signer, GasLimit: gasLimit}, bridgeAccount.From)
+	tx, err = b.RegisterOperator(&bind.TransactOpts{From: bridgeAccount.From, Signer: bridgeAccount.Signer, GasLimit: DefaultBridgeTxGasLimit}, bridgeAccount.From)
 	assert.NoError(t, err)
 	backend.Commit()
 	WaitMined(tx, backend, t)
@@ -339,7 +338,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	ctx := context.Background()
 	nonce, err := backend.NonceAt(ctx, bridgeAccount.From, nil)
 	gasPrice, err := backend.SuggestGasPrice(ctx)
-	opts := bind.MakeTransactOpts(bridgeAccountKey, big.NewInt(int64(nonce)), gasLimit, gasPrice)
+	opts := bind.MakeTransactOpts(bridgeAccountKey, big.NewInt(int64(nonce)), DefaultBridgeTxGasLimit, gasPrice)
 
 	tx, err = b.SetCounterPartBridge(opts, common.Address{2})
 	assert.NoError(t, err)
@@ -349,7 +348,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	version, err := b.VERSION(nil)
 	assert.Equal(t, uint64(0x1), version)
 
-	allowedTokens, err := b.AllowedTokens(nil, common.Address{1})
+	allowedTokens, err := b.RegisteredTokens(nil, common.Address{1})
 	assert.Equal(t, common.Address{0}, allowedTokens)
 
 	counterpartBridge, err := b.CounterpartBridge(nil)
@@ -385,7 +384,7 @@ func TestExtendedBridgeAndCallbackERC20(t *testing.T) {
 
 	aliceKey, _ := crypto.GenerateKey()
 	aliceAcc := bind.NewKeyedTransactor(aliceKey)
-	aliceAcc.GasLimit = gasLimit
+	aliceAcc.GasLimit = DefaultBridgeTxGasLimit
 
 	bobKey, _ := crypto.GenerateKey()
 	bobAcc := bind.NewKeyedTransactor(bobKey)
@@ -530,7 +529,7 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 
 	aliceKey, _ := crypto.GenerateKey()
 	aliceAcc := bind.NewKeyedTransactor(aliceKey)
-	aliceAcc.GasLimit = gasLimit
+	aliceAcc.GasLimit = DefaultBridgeTxGasLimit
 
 	bobKey, _ := crypto.GenerateKey()
 	bobAcc := bind.NewKeyedTransactor(bobKey)
@@ -664,4 +663,450 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatalf("registerOfferEvent was not found.")
 	}
+}
+
+type bridgeTokenTestENV struct {
+	backend    *backends.SimulatedBackend
+	operator   *bind.TransactOpts
+	tester     *bind.TransactOpts
+	bridge     *bridge.Bridge
+	erc20      *sctoken.ServiceChainToken
+	erc721     *scnft.ServiceChainNFT
+	erc20Addr  common.Address
+	erc721Addr common.Address
+}
+
+func generateBridgeTokenTestEnv(t *testing.T) *bridgeTokenTestENV {
+	key, _ := crypto.GenerateKey()
+	operator := bind.NewKeyedTransactor(key)
+	operator.GasLimit = DefaultBridgeTxGasLimit
+
+	testKey, _ := crypto.GenerateKey()
+	tester := bind.NewKeyedTransactor(testKey)
+	tester.GasLimit = DefaultBridgeTxGasLimit
+
+	alloc := blockchain.GenesisAlloc{operator.From: {Balance: big.NewInt(params.KLAY)}, tester.From: {Balance: big.NewInt(params.KLAY)}}
+	backend := backends.NewSimulatedBackend(alloc)
+
+	// Deploy Bridge
+	bridgeAddr, tx, b, err := bridge.DeployBridge(operator, backend, true)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	// Deploy ERC20
+	erc20Addr, tx, erc20, err := sctoken.DeployServiceChainToken(operator, backend, bridgeAddr)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	// Register ERC20
+	tx, err = b.RegisterToken(operator, erc20Addr, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	// Charge token to tester
+	tx, err = erc20.Transfer(operator, tester.From, big.NewInt(100))
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	// Deploy ERC721
+	erc721Addr, tx, erc721, err := scnft.DeployServiceChainNFT(operator, backend, bridgeAddr)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	// Register ERC721
+	tx, err = b.RegisterToken(operator, erc721Addr, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	// Mint token to tester
+	tx, err = erc721.RegisterBulk(operator, tester.From, big.NewInt(0), big.NewInt(10))
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	return &bridgeTokenTestENV{
+		backend,
+		operator,
+		tester,
+		b,
+		erc20,
+		erc721,
+		erc20Addr,
+		erc721Addr,
+	}
+}
+
+// TestBridgeContract_RegisterToken checks belows.
+// - RegisterToken works well
+// - DeregisterToken works well
+func TestBridgeContract_RegisterToken(t *testing.T) {
+	env := generateBridgeTokenTestEnv(t)
+	backend := env.backend
+	operator := env.operator
+	b := env.bridge
+	erc20Addr := env.erc20Addr
+	erc721Addr := env.erc721Addr
+
+	// Deregister erc20
+	tx, err := b.DeregisterToken(operator, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	cpToken, err := b.RegisteredTokens(nil, erc20Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, common.Address{}, cpToken)
+
+	cpToken, err = b.RegisteredTokens(nil, erc721Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, erc721Addr, cpToken)
+
+	// Deregister erc721Addr
+	tx, err = b.DeregisterToken(operator, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	cpToken, err = b.RegisteredTokens(nil, erc721Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, common.Address{}, cpToken)
+
+	tokens, err := b.GetRegisteredTokenList(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(tokens))
+
+	// Register erc20
+	tx, err = b.RegisterToken(operator, erc20Addr, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	cpToken, err = b.RegisteredTokens(nil, erc20Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, erc20Addr, cpToken)
+
+	tx, err = b.RegisterToken(operator, erc20Addr, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	// Register erc721
+	tx, err = b.RegisterToken(operator, erc721Addr, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	cpToken, err = b.RegisteredTokens(nil, erc721Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, erc721Addr, cpToken)
+
+	tx, err = b.RegisterToken(operator, erc721Addr, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	// Deregister erc721Addr
+	tx, err = b.DeregisterToken(operator, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	cpToken, err = b.RegisteredTokens(nil, erc721Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, common.Address{}, cpToken)
+}
+
+// TestBridgeContract_InitStatus checks initial lock status.
+func TestBridgeContract_InitStatus(t *testing.T) {
+	env := generateBridgeTokenTestEnv(t)
+	b := env.bridge
+	erc20Addr := env.erc20Addr
+	erc721Addr := env.erc721Addr
+
+	// initial value check
+	isLocked, err := b.LockedTokens(nil, erc20Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, false, isLocked)
+
+	isLocked, err = b.LockedTokens(nil, erc721Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, false, isLocked)
+
+	isLocked, err = b.IsLockedKLAY(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, false, isLocked)
+}
+
+// TestBridgeContract_InitRequest checks the following:
+// - the request value transfer can be allowed after registering it.
+func TestBridgeContract_InitRequest(t *testing.T) {
+	env := generateBridgeTokenTestEnv(t)
+	backend := env.backend
+	operator := env.operator
+	tester := env.tester
+	b := env.bridge
+	erc20 := env.erc20
+	erc721 := env.erc721
+
+	// check to allow value transfer
+	tx, err := erc20.RequestValueTransfer(tester, big.NewInt(1), operator.From, big.NewInt(0), nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	tx, err = erc721.RequestValueTransfer(tester, big.NewInt(1), operator.From, nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	tester.Value = big.NewInt(1)
+	tx, err = b.RequestKLAYTransfer(tester, tester.From, big.NewInt(1), nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+	tester.Value = nil
+}
+
+// TestBridgeContract_TokenLock checks the following:
+// - the token can be lock to prevent value transfer requests.
+func TestBridgeContract_TokenLock(t *testing.T) {
+	env := generateBridgeTokenTestEnv(t)
+	backend := env.backend
+	operator := env.operator
+	tester := env.tester
+	b := env.bridge
+	erc20 := env.erc20
+	erc721 := env.erc721
+	erc20Addr := env.erc20Addr
+	erc721Addr := env.erc721Addr
+
+	// lock token
+	tx, err := b.LockToken(operator, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = b.LockToken(operator, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = b.LockKLAY(operator)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	// check value after locking
+	isLocked, err := b.LockedTokens(nil, erc20Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, true, isLocked)
+
+	isLocked, err = b.LockedTokens(nil, erc721Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, true, isLocked)
+
+	isLocked, err = b.IsLockedKLAY(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, true, isLocked)
+
+	// check to prevent value transfer
+	tx, err = erc20.RequestValueTransfer(tester, big.NewInt(1), operator.From, big.NewInt(0), nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.NotNil(t, bind.CheckWaitMined(backend, tx))
+
+	tx, err = erc721.RequestValueTransfer(tester, big.NewInt(1), operator.From, nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.NotNil(t, bind.CheckWaitMined(backend, tx))
+
+	tester.Value = big.NewInt(1)
+	tx, err = b.RequestKLAYTransfer(tester, tester.From, big.NewInt(1), nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.NotNil(t, bind.CheckWaitMined(backend, tx))
+	tester.Value = nil
+}
+
+// TestBridgeContract_TokenLockFail checks the following:
+// - testing the case locking token is fail.
+func TestBridgeContract_TokenLockFail(t *testing.T) {
+	env := generateBridgeTokenTestEnv(t)
+	backend := env.backend
+	operator := env.operator
+	tester := env.tester
+	b := env.bridge
+	erc20Addr := env.erc20Addr
+	erc721Addr := env.erc721Addr
+
+	// fail locking token by invalid owner.
+	tx, err := b.LockToken(tester, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	tx, err = b.LockToken(tester, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	tx, err = b.LockKLAY(tester)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	// fail locking unregistered token.
+	testAddr := common.BytesToAddress([]byte("unregistered"))
+	tx, err = b.LockToken(operator, testAddr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	// fail locking token if it is already locked.
+	tx, err = b.LockToken(operator, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = b.LockToken(operator, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = b.LockKLAY(operator)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = b.LockToken(operator, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	tx, err = b.LockToken(operator, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	tx, err = b.LockKLAY(operator)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+}
+
+// TestBridgeContract_TokenUnlockFail checks the following:
+// - testing the case unlocking token is fail.
+func TestBridgeContract_TokenUnlockFail(t *testing.T) {
+	env := generateBridgeTokenTestEnv(t)
+	backend := env.backend
+	operator := env.operator
+	b := env.bridge
+	erc20Addr := env.erc20Addr
+	erc721Addr := env.erc721Addr
+
+	// fail locking unregistered token.
+	testAddr := common.BytesToAddress([]byte("unregistered"))
+	tx, err := b.UnlockToken(operator, testAddr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	// fail locking token if it is already unlocked.
+	tx, err = b.UnlockToken(operator, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	tx, err = b.UnlockToken(operator, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+
+	tx, err = b.UnlockKLAY(operator)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
+}
+
+// TestBridgeContract_CheckValueTransferAfterUnLock checks the following:
+// - the token can be unlock to allow value transfer requests.
+func TestBridgeContract_CheckValueTransferAfterUnLock(t *testing.T) {
+	env := generateBridgeTokenTestEnv(t)
+	backend := env.backend
+	operator := env.operator
+	tester := env.tester
+	b := env.bridge
+	erc20 := env.erc20
+	erc721 := env.erc721
+	erc20Addr := env.erc20Addr
+	erc721Addr := env.erc721Addr
+
+	// lock token
+	tx, err := b.LockToken(operator, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = b.LockToken(operator, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = b.LockKLAY(operator)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	// unlock token
+	tx, err = b.UnlockToken(operator, erc20Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = b.UnlockToken(operator, erc721Addr)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = b.UnlockKLAY(operator)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	// check value after unlocking
+	isLocked, err := b.LockedTokens(nil, erc20Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, false, isLocked)
+
+	isLocked, err = b.LockedTokens(nil, erc721Addr)
+	assert.NoError(t, err)
+	assert.Equal(t, false, isLocked)
+
+	isLocked, err = b.IsLockedKLAY(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, false, isLocked)
+
+	// check to allow value transfer
+	tx, err = erc20.RequestValueTransfer(tester, big.NewInt(1), operator.From, big.NewInt(0), nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	tx, err = erc721.RequestValueTransfer(tester, big.NewInt(1), operator.From, nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+
+	tester.Value = big.NewInt(1)
+	tx, err = b.RequestKLAYTransfer(tester, tester.From, big.NewInt(1), nil)
+	assert.NoError(t, err)
+	backend.Commit()
+	assert.Nil(t, bind.CheckWaitMined(backend, tx))
+	tester.Value = nil
 }

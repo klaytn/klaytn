@@ -21,7 +21,7 @@ import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./BridgeHandledRequests.sol";
 import "./BridgeFee.sol";
 import "./BridgeOperator.sol";
-
+import "./BridgeTokens.sol";
 
 contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     bool public modeMintBurn = false;
@@ -35,9 +35,6 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
 
     using SafeMath for uint256;
 
-    mapping(address => address) public allowedTokens; // <token, counterpart token>
-    address[] public allowedTokenList;
-
     enum TokenType {
         KLAY,
         ERC20,
@@ -49,43 +46,12 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         isRunning = true;
     }
 
-    function getAllowedTokenList() external view returns(address[] memory) {
-        return allowedTokenList;
-    }
-
     // start can allow or disallow the value transfer request.
     function start(bool _status)
         external
         onlyOwner
     {
         isRunning = _status;
-    }
-
-    // registerToken can update the allowed token with the counterpart token.
-    function registerToken(address _token, address _cToken)
-        external
-        onlyOwner
-    {
-        require(allowedTokens[_token] == address(0));
-        allowedTokens[_token] = _cToken;
-        allowedTokenList.push(_token);
-    }
-
-    // deregisterToken can remove the token in allowedToken list.
-    function deregisterToken(address _token)
-        external
-        onlyOwner
-    {
-        require(allowedTokens[_token] != address(0));
-        delete allowedTokens[_token];
-
-        for (uint i = 0; i < allowedTokenList.length; i++) {
-            if (allowedTokenList[i] == _token) {
-                allowedTokenList[i] = allowedTokenList[allowedTokenList.length-1];
-                allowedTokenList.length--;
-                break;
-            }
-        }
     }
 
     /**

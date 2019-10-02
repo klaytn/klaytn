@@ -93,7 +93,7 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 	owner := res.accounts[0]
 	for i := 0; i < maxAccounts; i++ {
 		acc := res.accounts[i]
-		opts := &bind.TransactOpts{From: owner.From, Signer: owner.Signer, GasLimit: gasLimit}
+		opts := &bind.TransactOpts{From: owner.From, Signer: owner.Signer, GasLimit: DefaultBridgeTxGasLimit}
 		_, _ = b.RegisterOperator(opts, acc.From)
 		res.sim.Commit()
 	}
@@ -115,7 +115,7 @@ func TestRegisterDeregisterOperator(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
 	testAddrs := []common.Address{{10}, {20}}
 
-	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 
 	// info.acc.From is duplicated because it is an owner. ignored.
 	operatorList, err := info.b.GetOperatorList(nil)
@@ -150,7 +150,7 @@ func TestRegisterDeregisterOperator(t *testing.T) {
 	assert.Equal(t, 3, len(operatorList))
 
 	// Deregister an operator
-	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.DeregisterOperator(opts, testAddrs[0])
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -174,7 +174,7 @@ func TestRegisterDeregisterOperator(t *testing.T) {
 func TestStartStop(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
 
-	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.Start(opts, true)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -184,7 +184,7 @@ func TestStartStop(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, true, isRunning)
 
-	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.Start(opts, false)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -201,7 +201,7 @@ func TestSetCounterPartBridge(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
 	dummy := common.Address{10}
 
-	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetCounterPartBridge(opts, dummy)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -219,7 +219,7 @@ func TestRegisterDeregisterToken(t *testing.T) {
 	dummy1 := common.Address{10}
 	dummy2 := common.Address{20}
 
-	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.RegisterToken(opts, dummy1, dummy2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -231,26 +231,26 @@ func TestRegisterDeregisterToken(t *testing.T) {
 	info.sim.Commit()
 	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
 
-	res, err := info.b.AllowedTokens(nil, dummy1)
+	res, err := info.b.RegisteredTokens(nil, dummy1)
 	assert.NoError(t, err)
 	assert.Equal(t, dummy2, res)
 
-	allowedTokenList, err := info.b.GetAllowedTokenList(nil)
+	allowedTokenList, err := info.b.GetRegisteredTokenList(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(allowedTokenList))
 	assert.Equal(t, dummy1, allowedTokenList[0])
 
-	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.DeregisterToken(opts, dummy1)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
-	res, err = info.b.AllowedTokens(nil, dummy1)
+	res, err = info.b.RegisteredTokens(nil, dummy1)
 	assert.NoError(t, err)
 	assert.Equal(t, common.Address{0}, res)
 
-	allowedTokenList, err = info.b.GetAllowedTokenList(nil)
+	allowedTokenList, err = info.b.GetRegisteredTokenList(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(allowedTokenList))
 }
@@ -262,13 +262,13 @@ func TestOperatorThreshold(t *testing.T) {
 	const vtThreshold = uint8(128)
 	const confThreshold = uint8(255)
 
-	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, vtThreshold)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
-	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetOperatorThreshold(opts, voteTypeConfiguration, confThreshold)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -290,7 +290,7 @@ func TestMultiBridgeKLAYTransfer1(t *testing.T) {
 	acc := info.accounts[0]
 	to := common.Address{100}
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -334,7 +334,7 @@ func TestMultiBridgeKLAYTransfer2(t *testing.T) {
 	acc := info.accounts[0]
 	to := common.Address{100}
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -370,7 +370,7 @@ func TestMultiBridgeKLAYTransfer3(t *testing.T) {
 	acc := info.accounts[0]
 	to := common.Address{100}
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -413,28 +413,28 @@ func TestMultiBridgeERC20Transfer(t *testing.T) {
 	acc := info.accounts[0]
 	to := common.Address{100}
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
 	// Deploy token
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	erc20Addr, tx, erc20, err := sc_token.DeployServiceChainToken(opts, info.sim, info.bAddr)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
 	// Register token
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.RegisterToken(opts, erc20Addr, erc20Addr)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
 	// Give minter role to bridge contract
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = erc20.AddMinter(opts, info.bAddr)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -445,14 +445,14 @@ func TestMultiBridgeERC20Transfer(t *testing.T) {
 	amount := int64(100)
 	sentBlockNumber := uint64(100000)
 
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.HandleERC20Transfer(opts, common.Hash{10}, to, to, erc20Addr, big.NewInt(amount), sentNonce, sentBlockNumber, nil)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
 	acc = info.accounts[1]
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.HandleERC20Transfer(opts, common.Hash{10}, to, to, erc20Addr, big.NewInt(amount), sentNonce, sentBlockNumber, nil)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -481,28 +481,28 @@ func TestMultiBridgeERC721Transfer(t *testing.T) {
 	acc := info.accounts[0]
 	to := common.Address{100}
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 1)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
 	// Deploy token
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	erc721Addr, tx, erc721, err := sc_nft.DeployServiceChainNFT(opts, info.sim, info.bAddr)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
 	// Register token
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.RegisterToken(opts, erc721Addr, erc721Addr)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
 	// Give minter role to bridge contract
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = erc721.AddMinter(opts, info.bAddr)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -513,7 +513,7 @@ func TestMultiBridgeERC721Transfer(t *testing.T) {
 	amount := int64(100)
 	sentBlockNumber := uint64(100000)
 
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.HandleERC721Transfer(opts, common.Hash{10}, to, to, erc721Addr, big.NewInt(amount), sentNonce, sentBlockNumber, "", nil)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -544,13 +544,13 @@ func TestMultiBridgeSetKLAYFee(t *testing.T) {
 	const fee = 1000
 	requestNonce := uint64(0)
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeConfiguration, confThreshold)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -561,7 +561,7 @@ func TestMultiBridgeSetKLAYFee(t *testing.T) {
 	assert.Equal(t, big.NewInt(0).String(), ret.String())
 
 	acc = info.accounts[1]
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -582,13 +582,13 @@ func TestMultiBridgeSetERC20Fee(t *testing.T) {
 	tokenAddr := common.Address{10}
 	requestNonce := uint64(0)
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeConfiguration, confThreshold)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetERC20Fee(opts, tokenAddr, big.NewInt(fee), requestNonce)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -599,7 +599,7 @@ func TestMultiBridgeSetERC20Fee(t *testing.T) {
 	assert.Equal(t, big.NewInt(0).String(), ret.String())
 
 	acc = info.accounts[1]
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetERC20Fee(opts, tokenAddr, big.NewInt(fee), requestNonce)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -616,7 +616,7 @@ func TestSetFeeReceiver(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
 	dummy := common.Address{10}
 
-	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetFeeReceiver(opts, dummy)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -656,7 +656,7 @@ func TestMultiBridgeErrNotOperator2(t *testing.T) {
 	to := common.Address{100}
 	acc := info.accounts[0]
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -688,7 +688,7 @@ func TestMultiBridgeErrInvalTx(t *testing.T) {
 	to := common.Address{100}
 	acc := info.accounts[0]
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -729,7 +729,7 @@ func TestMultiBridgeErrOverSign(t *testing.T) {
 	to := common.Address{100}
 	acc := info.accounts[0]
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -765,7 +765,7 @@ func TestMultiOperatorKLAYTransferDup(t *testing.T) {
 	to := common.Address{100}
 	acc := info.accounts[0]
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 1)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -799,13 +799,13 @@ func TestMultiBridgeSetKLAYFeeErrNonce(t *testing.T) {
 	const fee = 1000
 	requestNonce := uint64(0)
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeConfiguration, confThreshold)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
 
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -816,14 +816,14 @@ func TestMultiBridgeSetKLAYFeeErrNonce(t *testing.T) {
 	assert.Equal(t, big.NewInt(0).String(), ret.String())
 
 	acc = info.accounts[1]
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce+1)
 	assert.NoError(t, err)
 	info.sim.Commit()
 	assert.Error(t, bind.CheckWaitMined(info.sim, tx))
 
 	acc = info.accounts[1]
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetKLAYFee(opts, big.NewInt(fee), requestNonce-1)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -839,7 +839,7 @@ func TestMultiBridgeKLAYTransferNonceJump(t *testing.T) {
 	acc := info.accounts[0]
 	to := common.Address{100}
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -885,7 +885,7 @@ func TestMultiBridgeKLAYTransferParallel(t *testing.T) {
 	to := common.Address{100}
 	acc := info.accounts[0]
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -947,7 +947,7 @@ func TestMultiBridgeKLAYTransferMixConfig1(t *testing.T) {
 	acc := info.accounts[0]
 	to := common.Address{100}
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -962,7 +962,7 @@ func TestMultiBridgeKLAYTransferMixConfig1(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 1)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -996,7 +996,7 @@ func TestMultiBridgeKLAYTransferMixConfig2(t *testing.T) {
 	acc := info.accounts[0]
 	to := common.Address{100}
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -1011,7 +1011,7 @@ func TestMultiBridgeKLAYTransferMixConfig2(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 3)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -1050,7 +1050,7 @@ func TestMultiBridgeKLAYTransferMixConfig3(t *testing.T) {
 	acc := info.accounts[0]
 	to := common.Address{100}
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -1065,7 +1065,7 @@ func TestMultiBridgeKLAYTransferMixConfig3(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts = &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err = info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 1)
 	assert.NoError(t, err)
 	info.sim.Commit()
@@ -1097,7 +1097,7 @@ func TestNoncesAndBlockNumber(t *testing.T) {
 	acc := info.accounts[0]
 	to := common.Address{100}
 
-	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: gasLimit}
+	opts := &bind.TransactOpts{From: acc.From, Signer: acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, 2)
 	assert.NoError(t, err)
 	info.sim.Commit()
