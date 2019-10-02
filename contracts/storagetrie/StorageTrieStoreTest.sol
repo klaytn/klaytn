@@ -23,7 +23,8 @@ contract StorageTrieStoreTest {
     }
 
     function insertIdentity(string _serialNumber, string _publicKey, string _hash)
-    public {
+        public 
+    {
         require(bytes(_serialNumber).length > 0);
         require(bytes(_publicKey).length > 0);
         require(bytes(_hash).length > 0);
@@ -32,9 +33,10 @@ contract StorageTrieStoreTest {
     }
 
     function getIdentity(string _serialNumber)
-    public
-    view
-    returns (string, string) {
+        public
+        view
+        returns (string, string) 
+    {
         require(bytes(_serialNumber).length > 0);
 
         Identity memory identity = identites[_serialNumber];
@@ -42,16 +44,18 @@ contract StorageTrieStoreTest {
     }
 
     function deleteIdentity(string _serialNumber)
-    public
-    onlyOwner {
+        public
+        onlyOwner 
+    {
         require(bytes(_serialNumber).length > 0);
 
         delete identites[_serialNumber];
     }
 
     function insertCaCertificate(string _caKey, string _caCert)
-    public
-    onlyOwner {
+        public
+        onlyOwner 
+    {
         require(bytes(_caKey).length > 0);
         require(bytes(_caCert).length > 0);
 
@@ -59,17 +63,19 @@ contract StorageTrieStoreTest {
     }
 
     function getCaCertificate(string _caKey)
-    public
-    view
-    returns (string) {
+        public
+        view
+        returns (string) 
+    {
         require(bytes(_caKey).length > 0);
 
         return caCertificates[_caKey];
     }
 
     function deleteCaCertificate(string _caKey)
-    public
-    onlyOwner {
+        public
+        onlyOwner 
+    {
         require(bytes(_caKey).length > 0);
 
         delete caCertificates[_caKey];
