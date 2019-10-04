@@ -717,12 +717,15 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 			hex := fmt.Sprintf("%015d000000000000000000000000000000000000000000000000000", i)
 			prevHash := common.HexToHash(hex)
 
-			// current and next committee
+			// committees[0]: current committee
+			// committees[1]: next committee
 			committees := make([][]istanbul.Validator, 2)
 
+			// Getting the current round's committee
 			viewCurrent := backend.currentView.Load().(*istanbul.View)
 			committees[0] = valSet.SubList(prevHash, viewCurrent)
 
+			// Getting the next round's committee
 			viewCurrent.Round = viewCurrent.Round.Add(viewCurrent.Round, common.Big1)
 			backend.currentView.Store(viewCurrent)
 
@@ -734,43 +737,48 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round))
 			backend.currentView.Store(viewCurrent)
 
+			// Receiving the receiver list of a message
 			targets := backend.GossipSubPeer(prevHash, valSet, nil)
 
 			// Check if the testing node is in a committee
-			check1 := backend.checkInSubList(prevHash, valSet)
-			check2 := checkInCommitteeBlocks(i, round)
+			isInSubList := backend.checkInSubList(prevHash, valSet)
+			isInCommitteeBlocks := checkInCommitteeBlocks(i, round)
 
-			if check1 != check2 {
+			// Check if the result of checkInSubList is same as expected. It is to detect an unexpected change in SubList logic
+			if isInSubList != isInCommitteeBlocks {
 				t.Errorf("Difference in expected data and calculated one. Changed committee selection? HARD FORK may happen!! Sequence: %d, Round: %d", i, round)
 			} else {
-				if check1 == false {
+				if isInSubList == false {
 					continue
 				}
 			}
 
-			if len(targets) <= len(committees[0])+len(committees[1]) {
-				for n := 0; n < len(committees); n++ {
-					for _, x := range committees[n] {
-						if _, ok := targets[x.Address()]; !ok && x.Address() != backend.Address() {
-							t.Errorf("Block: %d, Round: %d, Committee member %v not found in targets", i, round, x.Address().String())
-						} else {
-							targets[x.Address()] = false
-						}
-					}
-				}
-
-				for k, v := range targets {
-					if v == true {
-						t.Errorf("Block: %d, Round: %d, Validator not in committees included %v", i, round, k.String())
-					}
-				}
-			} else {
+			// number of message receivers have to be smaller than or equal to the number of the current committee and the next committee
+			if len(targets) > len(committees[0])+len(committees[1]) {
 				t.Errorf("Target has too many validators. targets: %d, sum of committees: %d", len(targets), len(committees[0])+len(committees[1]))
 			}
 
+			// Check all nodes in the current and the next round are included in the target list
+			for n := 0; n < len(committees); n++ {
+				for _, x := range committees[n] {
+					if _, ok := targets[x.Address()]; !ok && x.Address() != backend.Address() {
+						t.Errorf("Block: %d, Round: %d, Committee member %v not found in targets", i, round, x.Address().String())
+					} else {
+						// Mark the target is in the current or in the next committee
+						targets[x.Address()] = false
+					}
+				}
+			}
+
+			// Check if a validator not in the current/next committee is included in target list
+			for k, v := range targets {
+				if v == true {
+					t.Errorf("Block: %d, Round: %d, Validator not in committees included %v", i, round, k.String())
+				}
+			}
 		}
 	}
-	// Check if the node is in all committees that it is supposed to be
+	// Check if the testing node is in all committees that it is supposed to be
 	for k, v := range committeeBlocks {
 		if !v {
 			fmt.Printf("The node is missing in committee that it should be included in. Sequence %d, Round %d\n", k.Sequence, k.Round)
