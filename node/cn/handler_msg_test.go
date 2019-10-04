@@ -119,3 +119,90 @@ func TestHandleTxMsg(t *testing.T) {
 		assert.NoError(t, handleTxMsg(pm, mockPeer, msg))
 	}
 }
+
+func prepareTestHandleBlockHeaderFetchRequestMsg(t *testing.T) (*gomock.Controller, *MockPeer, *mocks.MockBlockChain, *ProtocolManager) {
+	mockCtrl := gomock.NewController(t)
+	mockPeer := NewMockPeer(mockCtrl)
+	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+
+	return mockCtrl, mockPeer, mockBlockChain, &ProtocolManager{blockchain: mockBlockChain}
+}
+
+func TestHandleBlockHeaderFetchRequestMsg(t *testing.T) {
+	// Decoding the message failed, an error is returned.
+	{
+		mockCtrl, mockPeer, _, pm := prepareTestHandleBlockHeaderFetchRequestMsg(t)
+
+		msg := generateMsg(t, BlockHeaderFetchRequestMsg, newBlock(blockNum1)) // use message data as a block, not a hash
+
+		assert.Error(t, handleBlockHeaderFetchRequestMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	// GetHeaderByHash returns nil, an error is returned.
+	{
+		mockCtrl, mockPeer, mockBlockChain, pm := prepareTestHandleBlockHeaderFetchRequestMsg(t)
+		mockBlockChain.EXPECT().GetHeaderByHash(hash1).Return(nil).Times(1)
+		mockPeer.EXPECT().GetID().Return(nodeids[0].String()).Times(1)
+
+		msg := generateMsg(t, BlockHeaderFetchRequestMsg, hash1)
+
+		assert.Error(t, handleBlockHeaderFetchRequestMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	// GetHeaderByHash returns a header, p.SendFetchedBlockHeader(header) should be called.
+	{
+		mockCtrl, mockPeer, mockBlockChain, pm := prepareTestHandleBlockHeaderFetchRequestMsg(t)
+
+		header := newBlock(blockNum1).Header()
+
+		mockBlockChain.EXPECT().GetHeaderByHash(hash1).Return(header).Times(1)
+		mockPeer.EXPECT().SendFetchedBlockHeader(header).Times(1)
+
+		msg := generateMsg(t, BlockHeaderFetchRequestMsg, hash1)
+		assert.NoError(t, handleBlockHeaderFetchRequestMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+}
+
+func prepareTestHandleBlockHeaderFetchResponseMsg(t *testing.T) (*gomock.Controller, *MockPeer, *mocks2.MockProtocolManagerFetcher, *ProtocolManager) {
+	mockCtrl := gomock.NewController(t)
+	mockPeer := NewMockPeer(mockCtrl)
+
+	mockFetcher := mocks2.NewMockProtocolManagerFetcher(mockCtrl)
+	pm := &ProtocolManager{fetcher: mockFetcher}
+
+	return mockCtrl, mockPeer, mockFetcher, pm
+}
+
+func TestHandleBlockHeaderFetchResponseMsg(t *testing.T) {
+	header := newBlock(blockNum1).Header()
+	// Decoding the message failed, an error is returned.
+	{
+		mockCtrl := gomock.NewController(t)
+		mockPeer := NewMockPeer(mockCtrl)
+		pm := &ProtocolManager{}
+		msg := generateMsg(t, BlockHeaderFetchResponseMsg, newBlock(blockNum1)) // use message data as a block, not a header
+		assert.Error(t, handleBlockHeaderFetchResponseMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	// FilterHeaders returns nil, error is not returned.
+	{
+		mockCtrl, mockPeer, mockFetcher, pm := prepareTestHandleBlockHeaderFetchResponseMsg(t)
+		mockPeer.EXPECT().GetID().Return(nodeids[0].String()).Times(1)
+		mockFetcher.EXPECT().FilterHeaders(nodeids[0].String(), gomock.Eq([]*types.Header{header}), gomock.Any()).Return(nil).Times(1)
+
+		msg := generateMsg(t, BlockHeaderFetchResponseMsg, header)
+		assert.NoError(t, handleBlockHeaderFetchResponseMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	// FilterHeaders returns not-nil, peer.GetID() is called twice to leave a log.
+	{
+		mockCtrl, mockPeer, mockFetcher, pm := prepareTestHandleBlockHeaderFetchResponseMsg(t)
+		mockPeer.EXPECT().GetID().Return(nodeids[0].String()).Times(2)
+		mockFetcher.EXPECT().FilterHeaders(nodeids[0].String(), gomock.Eq([]*types.Header{header}), gomock.Any()).Return([]*types.Header{header}).Times(1)
+
+		msg := generateMsg(t, BlockHeaderFetchResponseMsg, header)
+		assert.NoError(t, handleBlockHeaderFetchResponseMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+}
