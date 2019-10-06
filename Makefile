@@ -89,7 +89,7 @@ cover:
 	@echo "Two coverage reports coverage_report.txt and coverage_report.html are generated."
 
 fmt:
-	build/env.sh go run build/ci.go fmt
+	build/env.sh env GOFLAGS= go run build/ci.go fmt
 
 lint:
 	build/env.sh go run build/ci.go lint
@@ -99,17 +99,18 @@ lint-try:
 
 clean:
 	./build/clean_go_build_cache.sh
+	chmod -R +w ./build/_workspace/pkg/
 	rm -fr build/_workspace/pkg/ $(GOBIN)/* build/_workspace/src/
 
 # The devtools target installs tools required for 'go generate'.
 # You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
 devtools:
-	env GOBIN= go get -u golang.org/x/tools/cmd/stringer
-	env GOBIN= go get -u github.com/kevinburke/go-bindata/go-bindata
-	env GOBIN= go get -u github.com/fjl/gencodec
-	env GOBIN= go get -u github.com/golang/protobuf/protoc-gen-go
-	env GOBIN= go install ./cmd/abigen
+	env GOFLAGS= GOBIN= go get -u golang.org/x/tools/cmd/stringer
+	env GOFLAGS= GOBIN= go get -u github.com/kevinburke/go-bindata/go-bindata
+	env GOFLAGS= GOBIN= go get -u github.com/fjl/gencodec
+	env GOFLAGS= GOBIN= go get -u github.com/golang/protobuf/protoc-gen-go
+	env GOFLAGS= GOBIN= go install ./cmd/abigen
 	@type "npm" 2> /dev/null || echo 'Please install node.js and npm'
 	@type "solc" 2> /dev/null || echo 'Please install solc'
 	@type "protoc" 2> /dev/null || echo 'Please install protoc'
