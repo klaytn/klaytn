@@ -99,7 +99,7 @@ type BridgeInfo struct {
 	counterpartToken map[common.Address]common.Address
 
 	pendingRequestEvent *bridgepool.ItemSortedMap
-	nextHandleNonce     uint64                    // This nonce will be used for getting pending request value transfer events.
+	nextHandleNonce     uint64 // This nonce will be used for getting pending request value transfer events.
 
 	isRunning                   bool
 	handleNonce                 uint64 // the nonce from the handle value transfer event from the bridge.
