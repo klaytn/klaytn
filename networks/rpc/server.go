@@ -192,6 +192,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 	}
 	s.codecsMu.Lock()
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
+		rpcErrorResponsesCounter.Inc(1)
 		s.codecsMu.Unlock()
 		return &shutdownError{}
 	}
@@ -201,9 +202,11 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
 		reqs, batch, err := s.readRequest(codec)
+		rpcTotalRequestsCounter.Inc(int64(len(reqs)))
 		if err != nil {
 			// If a parsing error occurred, send an error
 			if err.Error() != "EOF" {
+				rpcErrorResponsesCounter.Inc(int64(len(reqs)))
 				logger.Debug(fmt.Sprintf("read error %v\n", err))
 				codec.Write(codec.CreateErrorResponse(nil, err))
 			}
@@ -213,6 +216,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		}
 
 		if atomic.LoadInt64(&pendingRequestCount) > pendingRequestLimit {
+			rpcErrorResponsesCounter.Inc(int64(len(reqs)))
 			err := &invalidRequestError{"server requests exceed the limit"}
 			logger.Debug(fmt.Sprintf("request error %v\n", err))
 			codec.Write(codec.CreateErrorResponse(nil, err))
@@ -224,6 +228,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		// check if server is ordered to shutdown and return an error
 		// telling the client that his request failed.
 		if atomic.LoadInt32(&s.run) != 1 {
+			rpcErrorResponsesCounter.Inc(int64(len(reqs)))
 			err = &shutdownError{}
 			if batch {
 				resps := make([]interface{}, len(reqs))
@@ -254,6 +259,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		// For multi-shot connections, start a goroutine to serve and loop back
 		pend.Add(1)
 		atomic.AddInt64(&pendingRequestCount, 1)
+		rpcPendingRequestCount.Inc(int64(len(reqs)))
 		go func(reqs []*serverRequest, batch bool) {
 			defer func() {
 				atomic.AddInt64(&pendingRequestCount, -1)
@@ -325,6 +331,7 @@ var callSendTx = 0
 // handle executes a request and returns the response from the callback.
 func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
 	if req.err != nil {
+		rpcErrorResponsesCounter.Inc(1)
 		return codec.CreateErrorResponse(&req.id, req.err), nil
 	}
 
@@ -332,22 +339,27 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 		if len(req.args) >= 1 && req.args[0].Kind() == reflect.String {
 			notifier, supported := NotifierFromContext(ctx)
 			if !supported { // interface doesn't support subscriptions (e.g. http)
+				rpcErrorResponsesCounter.Inc(1)
 				return codec.CreateErrorResponse(&req.id, &callbackError{ErrNotificationsUnsupported.Error()}), nil
 			}
 
 			subid := ID(req.args[0].String())
 			if err := notifier.unsubscribe(subid); err != nil {
+				rpcErrorResponsesCounter.Inc(1)
 				return codec.CreateErrorResponse(&req.id, &callbackError{err.Error()}), nil
 			}
 
+			rpcSuccessResponsesCounter.Inc(1)
 			return codec.CreateResponse(req.id, true), nil
 		}
+		rpcErrorResponsesCounter.Inc(1)
 		return codec.CreateErrorResponse(&req.id, &invalidParamsError{"Expected subscription id as first argument"}), nil
 	}
 
 	if req.callb.isSubscribe {
 		subid, err := s.createSubscription(ctx, codec, req)
 		if err != nil {
+			rpcErrorResponsesCounter.Inc(1)
 			return codec.CreateErrorResponse(&req.id, &callbackError{err.Error()}), nil
 		}
 
@@ -356,6 +368,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 			notifier, _ := NotifierFromContext(ctx)
 			notifier.activate(subid, req.svcname)
 		}
+		rpcSuccessResponsesCounter.Inc(1)
 		return codec.CreateResponse(req.id, subid), activateSub
 	}
 
@@ -364,6 +377,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 		rpcErr := &invalidParamsError{fmt.Sprintf("%s%s%s expects %d parameters, got %d",
 			req.svcname, serviceMethodSeparator, req.callb.method.Name,
 			len(req.callb.argTypes), len(req.args))}
+		rpcErrorResponsesCounter.Inc(1)
 		return codec.CreateErrorResponse(&req.id, rpcErr), nil
 	}
 
@@ -386,17 +400,20 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	// execute RPC method and return result
 	reply := req.callb.method.Func.Call(arguments)
 	if len(reply) == 0 {
+		rpcSuccessResponsesCounter.Inc(1)
 		return codec.CreateResponse(req.id, nil), nil
 	}
 
 	if req.callb.errPos >= 0 { // test if method returned an error
 		if !reply[req.callb.errPos].IsNil() {
 			e := reply[req.callb.errPos].Interface().(error)
+			rpcErrorResponsesCounter.Inc(1)
 			res := codec.CreateErrorResponse(&req.id, &callbackError{e.Error()})
 			return res, nil
 		}
 	}
 
+	rpcSuccessResponsesCounter.Inc(1)
 	return codec.CreateResponse(req.id, reply[0].Interface()), nil
 }
 
@@ -405,6 +422,7 @@ func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest
 	var response interface{}
 	var callback func()
 	if req.err != nil {
+		rpcErrorResponsesCounter.Inc(1)
 		response = codec.CreateErrorResponse(&req.id, req.err)
 	} else {
 		response, callback = s.handle(ctx, codec, req)
@@ -428,6 +446,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 	var callbacks []func()
 	for i, req := range requests {
 		if req.err != nil {
+			rpcErrorResponsesCounter.Inc(1)
 			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
 		} else {
 			var callback func()
