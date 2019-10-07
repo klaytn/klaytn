@@ -94,8 +94,8 @@ func TestBridgeManager(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	pAuth := bacc.cAccount.GetTransactOpts()
-	cAuth := bacc.pAccount.GetTransactOpts()
+	pAuth := bacc.cAccount.GenerateTransactOpts()
+	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
 	aliceKey, _ := crypto.GenerateKey()
@@ -337,8 +337,8 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	//pAuth := bacc.cAccount.GetTransactOpts()
-	cAuth := bacc.pAccount.GetTransactOpts()
+	//pAuth := bacc.cAccount.GenerateTransactOpts()
+	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
 	aliceKey, _ := crypto.GenerateKey()
@@ -534,8 +534,8 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	pAuth := bacc.cAccount.GetTransactOpts()
-	cAuth := bacc.pAccount.GetTransactOpts()
+	pAuth := bacc.cAccount.GenerateTransactOpts()
+	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Create Simulated backend
 	initialValue := int64(10000000000)
@@ -1499,7 +1499,7 @@ func TestAnchoringBasic(t *testing.T) {
 	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
 
 	// Encoding anchoring tx
-	auth := bAcc.pAccount.GetTransactOpts()
+	auth := bAcc.pAccount.GenerateTransactOpts()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
@@ -1585,7 +1585,7 @@ func TestAnchoringStart(t *testing.T) {
 	sim.Commit() // start with arbitrary block number.
 
 	// 1. Fresh start with dummy tx and check tx count
-	auth := bAcc.pAccount.GetTransactOpts()
+	auth := bAcc.pAccount.GenerateTransactOpts()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
@@ -1666,7 +1666,7 @@ func TestAnchoringPeriod(t *testing.T) {
 
 	// Period 1
 	sim.Commit()
-	auth := bAcc.pAccount.GetTransactOpts()
+	auth := bAcc.pAccount.GenerateTransactOpts()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
@@ -1781,7 +1781,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	}
 
 	// Encoding anchoring tx.
-	auth := bAcc.pAccount.GetTransactOpts()
+	auth := bAcc.pAccount.GenerateTransactOpts()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
@@ -1825,7 +1825,7 @@ func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, lo
 		acc = bm.subBridge.bridgeAccounts.pAccount
 	}
 
-	auth := acc.GetTransactOpts()
+	auth := acc.GenerateTransactOpts()
 	auth.Value = big.NewInt(10000)
 
 	// Deploy a bridge contract

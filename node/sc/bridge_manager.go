@@ -297,7 +297,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 	bridgeAcc.Lock()
 	defer bridgeAcc.UnLock()
 
-	auth := bridgeAcc.GetTransactOpts()
+	auth := bridgeAcc.GenerateTransactOpts()
 
 	var handleTx *types.Transaction
 	var err error
@@ -755,7 +755,7 @@ func (bm *BridgeManager) SetValueTransferOperatorThreshold(bridgeAddr common.Add
 
 	bi.account.Lock()
 	defer bi.account.UnLock()
-	tx, err := bi.bridge.SetOperatorThreshold(bi.account.GetTransactOpts(), voteTypeValueTransfer, threshold)
+	tx, err := bi.bridge.SetOperatorThreshold(bi.account.GenerateTransactOpts(), voteTypeValueTransfer, threshold)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -1003,7 +1003,7 @@ func (bm *BridgeManager) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *
 		return common.Hash{}, err
 	}
 
-	tx, err := bi.bridge.SetERC20Fee(auth.GetTransactOpts(), tokenAddr, fee, rn)
+	tx, err := bi.bridge.SetERC20Fee(auth.GenerateTransactOpts(), tokenAddr, fee, rn)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -1029,7 +1029,7 @@ func (bm *BridgeManager) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (co
 		return common.Hash{}, err
 	}
 
-	tx, err := bi.bridge.SetKLAYFee(auth.GetTransactOpts(), fee, rn)
+	tx, err := bi.bridge.SetKLAYFee(auth.GenerateTransactOpts(), fee, rn)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -1050,7 +1050,7 @@ func (bm *BridgeManager) SetFeeReceiver(bridgeAddr, receiver common.Address) (co
 	auth.Lock()
 	defer auth.UnLock()
 
-	tx, err := bi.bridge.SetFeeReceiver(auth.GetTransactOpts(), receiver)
+	tx, err := bi.bridge.SetFeeReceiver(auth.GenerateTransactOpts(), receiver)
 	if err != nil {
 		return common.Hash{}, err
 	}
