@@ -98,7 +98,7 @@ type BridgeInfo struct {
 
 	counterpartToken map[common.Address]common.Address
 
-	pendingRequestEvent *bridgepool.ItemSortedMap // TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
+	pendingRequestEvent *bridgepool.ItemSortedMap
 	nextHandleNonce     uint64                    // This nonce will be used for getting pending request value transfer events.
 
 	isRunning                   bool
@@ -374,8 +374,11 @@ func (bi *BridgeInfo) UpdateHandledNonce(nonce uint64) {
 
 // AddRequestValueTransferEvents adds events into the pendingRequestEvent.
 func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferEvent) {
-	// TODO-Klaytn Need to consider the nonce overflow(priority queue?) and the size overflow.
-	// - If the size is full and received event has the omitted nonce, it can be allowed.
+	if bi.pendingRequestEvent.Len() > maxPendingNonceDiff {
+		logger.Trace("adding request value transfer events is ignored", "len", bi.pendingRequestEvent.Len(), "limit", maxPendingNonceDiff)
+		return
+	}
+
 	for _, ev := range evs {
 		bi.UpdateRequestNonceFromCounterpart(ev.RequestNonce + 1)
 		bi.pendingRequestEvent.Put(ev)
