@@ -833,11 +833,12 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfer
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testAmount), ev.ValueOrTokenId)
 	opts := bi.account.GetTransactOpts()
-	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
+	tx, err := bi.bridge.HandleKLAYTransfer(opts, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 	if err != nil {
 		log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 	}
 	info.sim.Commit()
+	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler

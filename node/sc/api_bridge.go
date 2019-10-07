@@ -104,19 +104,19 @@ func (sb *SubBridgeAPI) GetValueTransferOperatorThreshold(bridgeAddr common.Addr
 }
 
 func (sb *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
-	cBridge, cBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(sb.subBridge.localBackend, true)
+	cAcc := sb.subBridge.bridgeAccounts.cAccount
+	pAcc := sb.subBridge.bridgeAccounts.pAccount
+
+	cBridge, cBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(cAcc.GetTransactOpts(), sb.subBridge.localBackend, true)
 	if err != nil {
 		logger.Error("Failed to deploy child bridge.", "err", err)
 		return nil, err
 	}
-	pBridge, pBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(sb.subBridge.remoteBackend, false)
+	pBridge, pBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(pAcc.GetTransactOpts(), sb.subBridge.remoteBackend, false)
 	if err != nil {
 		logger.Error("Failed to deploy parent bridge.", "err", err)
 		return nil, err
 	}
-
-	pAcc := sb.subBridge.bridgeAccounts.pAccount
-	cAcc := sb.subBridge.bridgeAccounts.cAccount
 
 	err = sb.subBridge.bridgeManager.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, cAcc, true, false)
 	if err != nil {

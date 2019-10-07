@@ -780,7 +780,7 @@ func (bm *BridgeManager) GetValueTransferOperatorThreshold(bridgeAddr common.Add
 }
 
 // Deploy Bridge SmartContract on same node or remote node
-func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) (*bridgecontract.Bridge, common.Address, error) {
+func (bm *BridgeManager) DeployBridge(auth *bind.TransactOpts, backend bind.ContractBackend, local bool) (*bridgecontract.Bridge, common.Address, error) {
 	var acc *accountInfo
 	var modeMintBurn bool
 
@@ -792,7 +792,7 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 		modeMintBurn = false
 	}
 
-	addr, bridge, err := bm.deployBridge(acc, backend, modeMintBurn)
+	addr, bridge, err := bm.deployBridge(acc, auth, backend, modeMintBurn)
 	if err != nil {
 		return nil, common.Address{}, err
 	}
@@ -803,9 +803,8 @@ func (bm *BridgeManager) DeployBridge(backend bind.ContractBackend, local bool) 
 // DeployBridge handles actual smart contract deployment.
 // To create contract, the chain ID, nonce, account key, private key, contract binding and gas price are used.
 // The deployed contract address, transaction are returned. An error is also returned if any.
-func (bm *BridgeManager) deployBridge(acc *accountInfo, backend bind.ContractBackend, modeMintBurn bool) (common.Address, *bridgecontract.Bridge, error) {
+func (bm *BridgeManager) deployBridge(acc *accountInfo, auth *bind.TransactOpts, backend bind.ContractBackend, modeMintBurn bool) (common.Address, *bridgecontract.Bridge, error) {
 	acc.Lock()
-	auth := acc.GetTransactOpts()
 	addr, tx, contract, err := bridgecontract.DeployBridge(auth, backend, modeMintBurn)
 	if err != nil {
 		logger.Error("Failed to deploy contract.", "err", err)
