@@ -61,6 +61,8 @@ Functions and variables related to Block and Transaction are defined in the file
   - tx_internal_data_chain_data_anchoring.go : implements the transaction transfering data to service chain
   - tx_internal_data_fee_delegated_account_update.go : implements the fee-delegated version of account update transaction
   - tx_internal_data_fee_delegated_account_update_with_ratio.go : implements the partially fee-delegated version of account update transaction
+  - tx_internal_data_fee_delegated_cancel.go: implements the fee-delegated version of cancel transaction
+  - tx_internal_data_fee_delegated_cancel_with_ratio.go: implements the partially fee-delegated version of cancel transaction
   - tx_internal_data_fee_delegated_smart_contract_deploy.go : implements the fee-delegated version of contract deploy transaction
   - tx_internal_data_fee_delegated_smart_contract_deploy_with_ratio.go : implements the partially fee-delegated version of contract deploy transaction
   - tx_internal_data_fee_delegated_smart_contract_execution.go : implements the fee-delegated version of contract execution transaction
@@ -75,8 +77,6 @@ Functions and variables related to Block and Transaction are defined in the file
   - tx_internal_data_smart_contract_execution.go: implements the transaction executing a smart contract
   - tx_internal_data_value_transfer.go: implements the transaction sending KLAY to an EOA
   - tx_internal_data_value_transfer_memo.go: implements the transaction sending KLAY to an EOA with data
-  - tx_internal_fee_delegated_data_cancel.go: implements the fee-delegated version of cancel transaction
-  - tx_internal_fee_delegated_data_cancel_with_ratio.go: implements the partially fee-delegated version of cancel transaction
   - tx_signature.go : implements transaction signature (V, R, S)
   - tx_signatures.go : implements a slice of transaction signature to support multi-sig accounts
 
