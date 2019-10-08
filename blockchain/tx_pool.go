@@ -518,6 +518,8 @@ func (pool *TxPool) stats() (int, int) {
 func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
+	pool.txMu.Lock()
+	defer pool.txMu.Unlock()
 
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
