@@ -14,5 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// abigen implements command line interface for ABI.
+/*
+abigen is a command line interface to generate a Go binding from a contract's ABI or bytecode.
+*/
 package main
