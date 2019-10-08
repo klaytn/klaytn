@@ -1803,7 +1803,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	assert.Equal(t, curBlk.Header().Number.String(), decodedData.GetBlockNumber().String())
 }
 
-// DeployBridgeTest is test-only function which deploy a bridge contract with some amount of KLAY.
+// DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KLAY.
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
 	var acc *accountInfo
 
