@@ -41,7 +41,9 @@ func TestTransactionSenderTxHash(t *testing.T) {
 		{"ValueTransferMemo", genValueTransferMemoTransaction()},
 		{"FeeDelegatedValueTransferMemo", genFeeDelegatedValueTransferMemoTransaction()},
 		{"FeeDelegatedValueTransferMemoWithRatio", genFeeDelegatedValueTransferMemoWithRatioTransaction()},
-		{"ChainDataTx", genChainDataTransaction()},
+		{"ChainDataAnchoring", genChainDataTransaction()},
+		{"FeeDelegatedChainDataAnchoring", genFeeDelegatedChainDataTransaction()},
+		{"FeeDelegatedChainDataAnchoringWithRatio", genFeeDelegatedChainDataWithRatioTransaction()},
 		{"AccountUpdate", genAccountUpdateTransaction()},
 		{"FeeDelegatedAccountUpdate", genFeeDelegatedAccountUpdateTransaction()},
 		{"FeeDelegatedAccountUpdateWithRatio", genFeeDelegatedAccountUpdateWithRatioTransaction()},
@@ -376,6 +378,43 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 	case *TxInternalDataChainDataAnchoring:
 		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
 		assert.Equal(t, rawTx.Hash(), senderTxHash)
+
+	case *TxInternalDataFeeDelegatedChainDataAnchoring:
+		hw := sha3.NewKeccak256()
+		rlp.Encode(hw, rawTx.Type())
+		rlp.Encode(hw, []interface{}{
+			v.AccountNonce,
+			v.Price,
+			v.GasLimit,
+			v.From,
+			v.Payload,
+			v.TxSignatures,
+		})
+
+		h := common.Hash{}
+
+		hw.Sum(h[:0])
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
+
+	case *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio:
+		hw := sha3.NewKeccak256()
+		rlp.Encode(hw, rawTx.Type())
+		rlp.Encode(hw, []interface{}{
+			v.AccountNonce,
+			v.Price,
+			v.GasLimit,
+			v.From,
+			v.Payload,
+			v.FeeRatio,
+			v.TxSignatures,
+		})
+
+		h := common.Hash{}
+
+		hw.Sum(h[:0])
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
 
 	default:
 		t.Fatal("Undefined tx type.")

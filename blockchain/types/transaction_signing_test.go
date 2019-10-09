@@ -199,6 +199,8 @@ func TestValidateTransaction(t *testing.T) {
 		testValidateFeeDelegatedCancel,
 		testValidateFeeDelegatedCancelWithRatio,
 		testValidateChainDataAnchoring,
+		testValidateFeeDelegatedChainDataAnchoring,
+		testValidateFeeDelegatedChainDataAnchoringWithRatio,
 	}
 
 	for _, fn := range testfns {
@@ -1675,6 +1677,178 @@ func testValidateChainDataAnchoring(t *testing.T) {
 	_, err = tx.ValidateSender(signer, p, 0)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, from, tx.ValidatedSender())
+}
+
+func testValidateFeeDelegatedChainDataAnchoring(t *testing.T) {
+	// Transaction generation
+	internalTx := genFeeDelegatedChainDataTransaction().(*TxInternalDataFeeDelegatedChainDataAnchoring)
+	tx := &Transaction{data: internalTx}
+
+	chainid := big.NewInt(1)
+	signer := NewEIP155Signer(chainid)
+
+	prv, from := defaultTestKey()
+	internalTx.From = from
+
+	feePayerPrv, err := crypto.HexToECDSA("b9d5558443585bca6f225b935950e3f6e69f9da8a5809a83f51c3365dff53936")
+	assert.Equal(t, nil, err)
+	feePayer := crypto.PubkeyToAddress(feePayerPrv.PublicKey)
+	internalTx.FeePayer = feePayer
+
+	// Sign
+	// encode([ encode([type, nonce, gasPrice, gas, to, value, from, anchoredData]), chainid, 0, 0 ])
+	b, err := rlp.EncodeToBytes([]interface{}{
+		internalTx.Type(),
+		internalTx.AccountNonce,
+		internalTx.Price,
+		internalTx.GasLimit,
+		internalTx.From,
+		internalTx.Payload,
+	})
+	assert.Equal(t, nil, err)
+
+	h := rlpHash([]interface{}{
+		b,
+		chainid,
+		uint(0),
+		uint(0),
+	})
+
+	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	assert.Equal(t, nil, err)
+
+	tx.SetSignature(sig)
+
+	// Sign fee payer
+	// encode([ encode([type, nonce, gasPrice, gas, to, value, from, anchoredData]), feePayer, chainid, 0, 0 ])
+	b, err = rlp.EncodeToBytes([]interface{}{
+		internalTx.Type(),
+		internalTx.AccountNonce,
+		internalTx.Price,
+		internalTx.GasLimit,
+		internalTx.From,
+		internalTx.Payload,
+	})
+	assert.Equal(t, nil, err)
+
+	h = rlpHash([]interface{}{
+		b,
+		feePayer,
+		chainid,
+		uint(0),
+		uint(0),
+	})
+
+	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	assert.Equal(t, nil, err)
+
+	tx.SetFeePayerSignatures(feePayerSig)
+
+	// AccountKeyPicker initialization
+	p := &AccountKeyPickerForTest{
+		AddrKeyMap: make(map[common.Address]accountkey.AccountKey),
+	}
+	key := accountkey.NewAccountKeyPublicWithValue(&prv.PublicKey)
+	p.SetKey(from, key)
+	feePayerKey := accountkey.NewAccountKeyPublicWithValue(&feePayerPrv.PublicKey)
+	p.SetKey(feePayer, feePayerKey)
+
+	// Validate
+	_, err = tx.ValidateSender(signer, p, 0)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, from, tx.ValidatedSender())
+
+	// Validate fee payer
+	_, err = tx.ValidateFeePayer(signer, p, 0)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, feePayer, tx.ValidatedFeePayer())
+}
+
+func testValidateFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
+	// Transaction generation
+	internalTx := genFeeDelegatedChainDataWithRatioTransaction().(*TxInternalDataFeeDelegatedChainDataAnchoringWithRatio)
+	tx := &Transaction{data: internalTx}
+
+	chainid := big.NewInt(1)
+	signer := NewEIP155Signer(chainid)
+
+	prv, from := defaultTestKey()
+	internalTx.From = from
+
+	feePayerPrv, err := crypto.HexToECDSA("b9d5558443585bca6f225b935950e3f6e69f9da8a5809a83f51c3365dff53936")
+	assert.Equal(t, nil, err)
+	feePayer := crypto.PubkeyToAddress(feePayerPrv.PublicKey)
+	internalTx.FeePayer = feePayer
+
+	// Sign
+	// encode([ encode([type, nonce, gasPrice, gas, to, value, from, anchoredData, FeeRatio]), chainid, 0, 0 ])
+	b, err := rlp.EncodeToBytes([]interface{}{
+		internalTx.Type(),
+		internalTx.AccountNonce,
+		internalTx.Price,
+		internalTx.GasLimit,
+		internalTx.From,
+		internalTx.Payload,
+		internalTx.FeeRatio,
+	})
+	assert.Equal(t, nil, err)
+
+	h := rlpHash([]interface{}{
+		b,
+		chainid,
+		uint(0),
+		uint(0),
+	})
+
+	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	assert.Equal(t, nil, err)
+
+	tx.SetSignature(sig)
+
+	// Sign fee payer
+	// encode([ encode([type, nonce, gasPrice, gas, to, value, from, anchoredData, FeeRatio]), feePayer, chainid, 0, 0 ])
+	b, err = rlp.EncodeToBytes([]interface{}{
+		internalTx.Type(),
+		internalTx.AccountNonce,
+		internalTx.Price,
+		internalTx.GasLimit,
+		internalTx.From,
+		internalTx.Payload,
+		internalTx.FeeRatio,
+	})
+	assert.Equal(t, nil, err)
+
+	h = rlpHash([]interface{}{
+		b,
+		feePayer,
+		chainid,
+		uint(0),
+		uint(0),
+	})
+
+	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	assert.Equal(t, nil, err)
+
+	tx.SetFeePayerSignatures(feePayerSig)
+
+	// AccountKeyPicker initialization
+	p := &AccountKeyPickerForTest{
+		AddrKeyMap: make(map[common.Address]accountkey.AccountKey),
+	}
+	key := accountkey.NewAccountKeyPublicWithValue(&prv.PublicKey)
+	p.SetKey(from, key)
+	feePayerKey := accountkey.NewAccountKeyPublicWithValue(&feePayerPrv.PublicKey)
+	p.SetKey(feePayer, feePayerKey)
+
+	// Validate
+	_, err = tx.ValidateSender(signer, p, 0)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, from, tx.ValidatedSender())
+
+	// Validate fee payer
+	_, err = tx.ValidateFeePayer(signer, p, 0)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, feePayer, tx.ValidatedFeePayer())
 }
 
 func getFunctionName(i interface{}) string {

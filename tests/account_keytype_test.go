@@ -308,6 +308,21 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = gasPrice
 		values[types.TxValueKeyAnchoredData] = dataAnchor
+	case types.TxTypeFeeDelegatedChainDataAnchoring:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyAnchoredData] = dataAnchor
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+	case types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyAnchoredData] = dataAnchor
+		values[types.TxValueKeyFeePayer] = recipient.Addr
+		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
 	}
 
 	tx, err := types.NewTransactionWithMap(txType, values)
@@ -459,32 +474,12 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 		accountkey.AccountKeyTypeRoleBased,
 	}
 
-	// select txtypes to be tested
-	txTypes := []types.TxType{
-		types.TxTypeLegacyTransaction,
-
-		types.TxTypeValueTransfer,
-		types.TxTypeValueTransferMemo,
-		types.TxTypeSmartContractDeploy,
-		types.TxTypeSmartContractExecution,
-		types.TxTypeAccountUpdate,
-		types.TxTypeCancel,
-
-		types.TxTypeFeeDelegatedValueTransfer,
-		types.TxTypeFeeDelegatedValueTransferMemo,
-		types.TxTypeFeeDelegatedSmartContractDeploy,
-		types.TxTypeFeeDelegatedSmartContractExecution,
-		types.TxTypeFeeDelegatedAccountUpdate,
-		types.TxTypeFeeDelegatedCancel,
-
-		types.TxTypeFeeDelegatedValueTransferWithRatio,
-		types.TxTypeFeeDelegatedValueTransferMemoWithRatio,
-		types.TxTypeFeeDelegatedSmartContractDeployWithRatio,
-		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
-		types.TxTypeFeeDelegatedAccountUpdateWithRatio,
-		types.TxTypeFeeDelegatedCancelWithRatio,
-
-		types.TxTypeChainDataAnchoring,
+	txTypes := []types.TxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			txTypes = append(txTypes, i)
+		}
 	}
 
 	// tests for all accountKeyTypes
@@ -1854,31 +1849,15 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 
-	txTypes := []types.TxType{
-		//types.TxTypeLegacyTransaction, // accounts with role-based key cannot a send legacy tx.
-
-		types.TxTypeValueTransfer,
-		types.TxTypeValueTransferMemo,
-		types.TxTypeSmartContractDeploy,
-		types.TxTypeSmartContractExecution,
-		types.TxTypeAccountUpdate,
-		types.TxTypeCancel,
-
-		types.TxTypeFeeDelegatedValueTransfer,
-		types.TxTypeFeeDelegatedValueTransferMemo,
-		types.TxTypeFeeDelegatedSmartContractDeploy,
-		types.TxTypeFeeDelegatedSmartContractExecution,
-		types.TxTypeFeeDelegatedAccountUpdate,
-		types.TxTypeFeeDelegatedCancel,
-
-		types.TxTypeFeeDelegatedValueTransferWithRatio,
-		types.TxTypeFeeDelegatedValueTransferMemoWithRatio,
-		types.TxTypeFeeDelegatedSmartContractDeployWithRatio,
-		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
-		types.TxTypeFeeDelegatedAccountUpdateWithRatio,
-		types.TxTypeFeeDelegatedCancelWithRatio,
-
-		types.TxTypeChainDataAnchoring,
+	txTypes := []types.TxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+		if i == types.TxTypeLegacyTransaction {
+			continue // accounts with role-based key cannot a send legacy tx.
+		}
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			txTypes = append(txTypes, i)
+		}
 	}
 
 	// deploy a contract to test smart contract execution.

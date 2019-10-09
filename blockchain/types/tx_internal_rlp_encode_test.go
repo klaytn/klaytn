@@ -65,6 +65,8 @@ func TestTxRLPEncode(t *testing.T) {
 		testTxRLPEncodeFeeDelegatedCancelWithRatio,
 
 		testTxRLPEncodeChainDataAnchoring,
+		testTxRLPEncodeFeeDelegatedChainDataAnchoring,
+		testTxRLPEncodeFeeDelegatedChainDataAnchoringWithRatio,
 	}
 
 	for _, f := range funcs {
@@ -864,6 +866,69 @@ func testTxRLPEncodeFeeDelegatedCancel(t *testing.T) {
 	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
 }
 
+func testTxRLPEncodeFeeDelegatedChainDataAnchoring(t *testing.T) {
+	tx := genFeeDelegatedChainDataTransaction().(*TxInternalDataFeeDelegatedChainDataAnchoring)
+
+	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	chainId := params.BFTTestChainConfig.ChainID
+	rawTx := &Transaction{data: tx}
+	rawTx.Sign(signer, key)
+	rawTx.SignFeePayer(signer, payerKey)
+
+	sigRLP := new(bytes.Buffer)
+
+	err := rlp.Encode(sigRLP, []interface{}{
+		tx.SerializeForSignToBytes(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+	assert.Equal(t, nil, err)
+
+	feePayerSigRLP := new(bytes.Buffer)
+
+	err = rlp.Encode(feePayerSigRLP, []interface{}{
+		tx.SerializeForSignToBytes(),
+		tx.FeePayer,
+		chainId,
+		uint(0),
+		uint(0),
+	})
+	assert.Equal(t, nil, err)
+
+	txHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(txHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(txHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		tx.Payload,
+		tx.TxSignatures,
+		tx.FeePayer,
+		tx.FeePayerSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		tx.Payload,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
+}
+
 func testTxRLPEncodeFeeDelegatedValueTransferWithRatio(t *testing.T) {
 	tx := genFeeDelegatedValueTransferWithRatioTransaction().(*TxInternalDataFeeDelegatedValueTransferWithRatio)
 
@@ -1264,6 +1329,71 @@ func testTxRLPEncodeFeeDelegatedCancelWithRatio(t *testing.T) {
 		tx.Price,
 		tx.GasLimit,
 		tx.From,
+		tx.FeeRatio,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printFeeDelegatedRLPEncode(t, chainId, signer, sigRLP, feePayerSigRLP, txHashRLP, senderTxHashRLP, rawTx)
+}
+
+func testTxRLPEncodeFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
+	tx := genFeeDelegatedChainDataWithRatioTransaction().(*TxInternalDataFeeDelegatedChainDataAnchoringWithRatio)
+
+	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	chainId := params.BFTTestChainConfig.ChainID
+	rawTx := &Transaction{data: tx}
+	rawTx.Sign(signer, key)
+	rawTx.SignFeePayer(signer, payerKey)
+
+	sigRLP := new(bytes.Buffer)
+
+	err := rlp.Encode(sigRLP, []interface{}{
+		tx.SerializeForSignToBytes(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+	assert.Equal(t, nil, err)
+
+	feePayerSigRLP := new(bytes.Buffer)
+
+	err = rlp.Encode(feePayerSigRLP, []interface{}{
+		tx.SerializeForSignToBytes(),
+		tx.FeePayer,
+		chainId,
+		uint(0),
+		uint(0),
+	})
+	assert.Equal(t, nil, err)
+
+	txHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(txHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(txHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		tx.Payload,
+		tx.FeeRatio,
+		tx.TxSignatures,
+		tx.FeePayer,
+		tx.FeePayerSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	senderTxHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(senderTxHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(senderTxHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		tx.Payload,
 		tx.FeeRatio,
 		tx.TxSignatures,
 	})
