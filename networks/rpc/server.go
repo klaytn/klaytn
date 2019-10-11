@@ -465,14 +465,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 		}
 
 		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available
-
-			for name, sr := range s.services {
-				fmt.Printf("service %s \n", name)
-				for cname, callback := range sr.callbacks {
-					fmt.Printf("		callback %s  method %s\n", cname, callback.method.Name)
-				}
-			}
-
+			logger.Trace("rpc: got request from unsupported API namespace", "requestedNamespaces", r.service)
 			requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
 			continue
 		}
