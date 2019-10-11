@@ -23,7 +23,7 @@ Package api implements the general Klaytn API functions.
 
 Overview of api package
 
-This package provides various APIs to access data of the Klaytn node.
+This package provides various APIs to access the data of the Klaytn node.
 Remote users can interact with Klyatn by calling these APIs instead of IPC.
 APIs are grouped by access modifiers (public or private) and namespaces (klay, txpool, debug and personal).
 
