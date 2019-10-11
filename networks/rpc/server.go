@@ -460,8 +460,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 		}
 
 		// for ethereum compatibility. convert ethereum namespace to klay namespace.
-		// TODO-Klaytn Deprecate supporting the `gxp` namespace
-		if r.service == "eth" || r.service == "gxp" {
+		if r.service == "eth" {
 			r.service = "klay"
 		}
 
