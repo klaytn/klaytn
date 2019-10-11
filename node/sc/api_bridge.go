@@ -95,6 +95,14 @@ func (sb *SubBridgeAPI) GetAnchoringTxHashByBlockNumber(bn uint64) common.Hash {
 	return receipt.TxHash
 }
 
+func (sb *SubBridgeAPI) RegisterOperator(bridgeAddr, operatorAddr common.Address) (common.Hash, error) {
+	return sb.subBridge.bridgeManager.RegisterOperator(bridgeAddr, operatorAddr)
+}
+
+func (sb *SubBridgeAPI) GetRegisteredOperators(bridgeAddr common.Address) ([]common.Address, error) {
+	return sb.subBridge.bridgeManager.GetOperators(bridgeAddr)
+}
+
 func (sb *SubBridgeAPI) SetValueTransferOperatorThreshold(bridgeAddr common.Address, threshold uint8) (common.Hash, error) {
 	return sb.subBridge.bridgeManager.SetValueTransferOperatorThreshold(bridgeAddr, threshold)
 }
