@@ -141,8 +141,8 @@ func TestHandleBlockHeaderFetchRequestMsg(t *testing.T) {
 	// GetHeaderByHash returns nil, an error is returned.
 	{
 		mockCtrl, mockPeer, mockBlockChain, pm := prepareTestHandleBlockHeaderFetchRequestMsg(t)
-		mockBlockChain.EXPECT().GetHeaderByHash(hash1).Return(nil).Times(1)
-		mockPeer.EXPECT().GetID().Return(nodeids[0].String()).Times(1)
+		mockBlockChain.EXPECT().GetHeaderByHash(hash1).Return(nil).AnyTimes()
+		mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
 
 		msg := generateMsg(t, BlockHeaderFetchRequestMsg, hash1)
 
@@ -155,8 +155,8 @@ func TestHandleBlockHeaderFetchRequestMsg(t *testing.T) {
 
 		header := newBlock(blockNum1).Header()
 
-		mockBlockChain.EXPECT().GetHeaderByHash(hash1).Return(header).Times(1)
-		mockPeer.EXPECT().SendFetchedBlockHeader(header).Times(1)
+		mockBlockChain.EXPECT().GetHeaderByHash(hash1).Return(header).AnyTimes()
+		mockPeer.EXPECT().SendFetchedBlockHeader(header).AnyTimes()
 
 		msg := generateMsg(t, BlockHeaderFetchRequestMsg, hash1)
 		assert.NoError(t, handleBlockHeaderFetchRequestMsg(pm, mockPeer, msg))
@@ -188,8 +188,8 @@ func TestHandleBlockHeaderFetchResponseMsg(t *testing.T) {
 	// FilterHeaders returns nil, error is not returned.
 	{
 		mockCtrl, mockPeer, mockFetcher, pm := prepareTestHandleBlockHeaderFetchResponseMsg(t)
-		mockPeer.EXPECT().GetID().Return(nodeids[0].String()).Times(1)
-		mockFetcher.EXPECT().FilterHeaders(nodeids[0].String(), gomock.Eq([]*types.Header{header}), gomock.Any()).Return(nil).Times(1)
+		mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+		mockFetcher.EXPECT().FilterHeaders(nodeids[0].String(), gomock.Eq([]*types.Header{header}), gomock.Any()).Return(nil).AnyTimes()
 
 		msg := generateMsg(t, BlockHeaderFetchResponseMsg, header)
 		assert.NoError(t, handleBlockHeaderFetchResponseMsg(pm, mockPeer, msg))
@@ -198,8 +198,8 @@ func TestHandleBlockHeaderFetchResponseMsg(t *testing.T) {
 	// FilterHeaders returns not-nil, peer.GetID() is called twice to leave a log.
 	{
 		mockCtrl, mockPeer, mockFetcher, pm := prepareTestHandleBlockHeaderFetchResponseMsg(t)
-		mockPeer.EXPECT().GetID().Return(nodeids[0].String()).Times(2)
-		mockFetcher.EXPECT().FilterHeaders(nodeids[0].String(), gomock.Eq([]*types.Header{header}), gomock.Any()).Return([]*types.Header{header}).Times(1)
+		mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+		mockFetcher.EXPECT().FilterHeaders(nodeids[0].String(), gomock.Eq([]*types.Header{header}), gomock.Any()).Return([]*types.Header{header}).AnyTimes()
 
 		msg := generateMsg(t, BlockHeaderFetchResponseMsg, header)
 		assert.NoError(t, handleBlockHeaderFetchResponseMsg(pm, mockPeer, msg))
