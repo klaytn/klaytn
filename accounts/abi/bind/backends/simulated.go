@@ -87,6 +87,10 @@ func (b *SimulatedBackend) BlockChain() *blockchain.BlockChain {
 	return b.blockchain
 }
 
+func (b *SimulatedBackend) PendingBlock() *types.Block {
+	return b.pendingBlock
+}
+
 // Commit imports all the pending transactions as a single block and starts a
 // fresh new state.
 func (b *SimulatedBackend) Commit() {

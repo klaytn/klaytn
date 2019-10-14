@@ -94,8 +94,8 @@ func TestBridgeManager(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	pAuth := bacc.cAccount.GetTransactOpts()
-	cAuth := bacc.pAccount.GetTransactOpts()
+	pAuth := bacc.cAccount.GenerateTransactOpts()
+	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
 	aliceKey, _ := crypto.GenerateKey()
@@ -337,8 +337,8 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	//pAuth := bacc.cAccount.GetTransactOpts()
-	cAuth := bacc.pAccount.GetTransactOpts()
+	//pAuth := bacc.cAccount.GenerateTransactOpts()
+	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
 	aliceKey, _ := crypto.GenerateKey()
@@ -534,8 +534,8 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	pAuth := bacc.cAccount.GetTransactOpts()
-	cAuth := bacc.pAccount.GetTransactOpts()
+	pAuth := bacc.cAccount.GenerateTransactOpts()
+	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Create Simulated backend
 	initialValue := int64(10000000000)
@@ -1499,7 +1499,7 @@ func TestAnchoringBasic(t *testing.T) {
 	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
 
 	// Encoding anchoring tx
-	auth := bAcc.pAccount.GetTransactOpts()
+	auth := bAcc.pAccount.GenerateTransactOpts()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
@@ -1585,7 +1585,7 @@ func TestAnchoringStart(t *testing.T) {
 	sim.Commit() // start with arbitrary block number.
 
 	// 1. Fresh start with dummy tx and check tx count
-	auth := bAcc.pAccount.GetTransactOpts()
+	auth := bAcc.pAccount.GenerateTransactOpts()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
@@ -1666,7 +1666,7 @@ func TestAnchoringPeriod(t *testing.T) {
 
 	// Period 1
 	sim.Commit()
-	auth := bAcc.pAccount.GetTransactOpts()
+	auth := bAcc.pAccount.GenerateTransactOpts()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
@@ -1781,7 +1781,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	}
 
 	// Encoding anchoring tx.
-	auth := bAcc.pAccount.GetTransactOpts()
+	auth := bAcc.pAccount.GenerateTransactOpts()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
@@ -1803,55 +1803,41 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	assert.Equal(t, curBlk.Header().Number.String(), decodedData.GetBlockNumber().String())
 }
 
-// for TestMethod
+// DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KLAY.
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, local bool) (common.Address, error) {
+	var acc *accountInfo
+
+	// When the pending block of backend is updated, commit it
+	// bm.DeployBridge will be waiting until the block is committed
+	pendingBlock := backend.PendingBlock()
+	go func() {
+		for pendingBlock == backend.PendingBlock() {
+			time.Sleep(100 * time.Millisecond)
+		}
+		backend.Commit()
+		return
+	}()
+
+	// Set transfer value of the bridge account
 	if local {
-		acc := bm.subBridge.bridgeAccounts.cAccount
-		addr, bridge, err := bm.deployBridgeTest(acc, backend, true)
-		if err != nil {
-			return common.Address{}, err
-		}
-		err = bm.SetBridgeInfo(addr, bridge, common.Address{}, nil, acc, local, false)
-		if err != nil {
-			return common.Address{}, err
-		}
-		return addr, err
+		acc = bm.subBridge.bridgeAccounts.cAccount
 	} else {
-		acc := bm.subBridge.bridgeAccounts.pAccount
-		addr, bridge, err := bm.deployBridgeTest(acc, backend, false)
-		if err != nil {
-			return common.Address{}, err
-		}
-		err = bm.SetBridgeInfo(addr, bridge, common.Address{}, nil, acc, local, false)
-		if err != nil {
-			return common.Address{}, err
-		}
-		return addr, err
+		acc = bm.subBridge.bridgeAccounts.pAccount
 	}
-}
 
-func (bm *BridgeManager) deployBridgeTest(acc *accountInfo, backend *backends.SimulatedBackend, modeMintBurn bool) (common.Address, *bridge.Bridge, error) {
-	auth := acc.GetTransactOpts()
+	auth := acc.GenerateTransactOpts()
 	auth.Value = big.NewInt(10000)
-	addr, tx, contract, err := bridge.DeployBridge(auth, backend, modeMintBurn)
+
+	// Deploy a bridge contract
+	deployedBridge, addr, err := bm.DeployBridge(auth, backend, local)
 	if err != nil {
-		logger.Error("", "err", err)
-		return common.Address{}, nil, err
+		return common.Address{}, err
 	}
-	logger.Info("Bridge is deploying on CurrentChain", "addr", addr, "txHash", tx.Hash().String())
 
-	backend.Commit()
-
-	// TODO-Klaytn-Servicechain needs to support WaitMined
-	//timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), 10*time.Second)
-	//defer cancelTimeout()
-	//
-	//receipt, err := bind.WaitMined(timeoutContext, backend, tx)
-	//if err != nil {
-	//	log.Fatal("Failed to deploy.", "err", err, "txHash", tx.Hash().String(), "status", receipt.Status)
-	//	return common.Address{}, nil, err
-	//}
-	//fmt.Println("deployBridge is executed.", "addr", addr.String(), "txHash", tx.Hash().String())
-
-	return addr, contract, nil
+	// Set the bridge contract information to the BridgeManager
+	err = bm.SetBridgeInfo(addr, deployedBridge, common.Address{}, nil, acc, local, false)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return addr, err
 }

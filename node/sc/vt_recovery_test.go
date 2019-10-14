@@ -20,6 +20,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/contracts/sc_erc20"
@@ -623,8 +624,8 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
-	cAcc := bacc.cAccount.GetTransactOpts()
-	pAcc := bacc.pAccount.GetTransactOpts()
+	cAcc := bacc.cAccount.GenerateTransactOpts()
+	pAcc := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator.
 	aliceKey, _ := crypto.GenerateKey()
@@ -817,7 +818,7 @@ func requestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
-	opts := bi.account.GetTransactOpts()
+	opts := bi.account.GenerateTransactOpts()
 	opts.Value = big.NewInt(testAmount)
 	tx, err := bi.bridge.RequestKLAYTransfer(opts, info.aliceAuth.From, big.NewInt(testAmount), nil)
 	if err != nil {
@@ -832,12 +833,13 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfer
 	defer bi.account.UnLock()
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testAmount), ev.ValueOrTokenId)
-	opts := bi.account.GetTransactOpts()
-	_, err := bi.bridge.HandleKLAYTransfer(opts, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
+	opts := bi.account.GenerateTransactOpts()
+	tx, err := bi.bridge.HandleKLAYTransfer(opts, ev.Raw.TxHash, ev.From, ev.To, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 	if err != nil {
 		log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 	}
 	info.sim.Commit()
+	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
@@ -852,20 +854,23 @@ func requestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
+	var tx *types.Transaction
+
 	testToken := big.NewInt(testToken)
-	opts := bi.account.GetTransactOpts()
+	opts := bi.account.GenerateTransactOpts()
 
 	var err error
 	if bi.onChildChain {
-		_, err = info.tokenLocalBridge.RequestValueTransfer(opts, testToken, info.chainAuth.From, big.NewInt(0), nil)
+		tx, err = info.tokenLocalBridge.RequestValueTransfer(opts, testToken, info.chainAuth.From, big.NewInt(0), nil)
 	} else {
-		_, err = info.tokenRemoteBridge.RequestValueTransfer(opts, testToken, info.nodeAuth.From, big.NewInt(0), nil)
+		tx, err = info.tokenRemoteBridge.RequestValueTransfer(opts, testToken, info.nodeAuth.From, big.NewInt(0), nil)
 	}
 
 	if err != nil {
 		log.Fatalf("Failed to RequestValueTransfer for charging: %v", err)
 	}
 	info.sim.Commit()
+	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
 func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferEvent) {
@@ -873,12 +878,13 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 	defer bi.account.UnLock()
 
 	assert.Equal(info.t, new(big.Int).SetUint64(testToken), ev.ValueOrTokenId)
-	_, err := bi.bridge.HandleERC20Transfer(
-		bi.account.GetTransactOpts(), ev.Raw.TxHash, ev.From, ev.To, info.tokenRemoteAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
+	tx, err := bi.bridge.HandleERC20Transfer(
+		bi.account.GenerateTransactOpts(), ev.Raw.TxHash, ev.From, ev.To, info.tokenRemoteAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, ev.ExtraData)
 	if err != nil {
 		log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 	}
 	info.sim.Commit()
+	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
@@ -893,15 +899,17 @@ func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	bi.account.Lock()
 	defer bi.account.UnLock()
 
-	opts := bi.account.GetTransactOpts()
+	var tx *types.Transaction
+
+	opts := bi.account.GenerateTransactOpts()
 	// TODO-Klaytn need to separate child / parent chain nftIndex.
 	nftIndex := new(big.Int).SetInt64(info.nftIndex)
 
 	var err error
 	if bi.onChildChain {
-		_, err = info.nftLocalBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From, nil)
+		tx, err = info.nftLocalBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From, nil)
 	} else {
-		_, err = info.nftRemoteBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From, nil)
+		tx, err = info.nftRemoteBridge.RequestValueTransfer(opts, nftIndex, info.aliceAuth.From, nil)
 	}
 
 	if err != nil {
@@ -909,6 +917,7 @@ func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	}
 	info.nftIndex++
 	info.sim.Commit()
+	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
 func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferEvent) {
@@ -923,13 +932,14 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferE
 		nftAddr = info.nftRemoteAddr
 	}
 
-	_, err := bi.bridge.HandleERC721Transfer(
-		bi.account.GetTransactOpts(),
+	tx, err := bi.bridge.HandleERC721Transfer(
+		bi.account.GenerateTransactOpts(),
 		ev.Raw.TxHash, ev.From, ev.To, nftAddr, ev.ValueOrTokenId, ev.RequestNonce, ev.Raw.BlockNumber, "", ev.ExtraData)
 	if err != nil {
 		log.Fatalf("Failed to handleERC721Transfer: %v", err)
 	}
 	info.sim.Commit()
+	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler

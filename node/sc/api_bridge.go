@@ -104,19 +104,19 @@ func (sb *SubBridgeAPI) GetValueTransferOperatorThreshold(bridgeAddr common.Addr
 }
 
 func (sb *SubBridgeAPI) DeployBridge() ([]common.Address, error) {
-	cBridge, cBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(sb.subBridge.localBackend, true)
+	cAcc := sb.subBridge.bridgeAccounts.cAccount
+	pAcc := sb.subBridge.bridgeAccounts.pAccount
+
+	cBridge, cBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(cAcc.GenerateTransactOpts(), sb.subBridge.localBackend, true)
 	if err != nil {
 		logger.Error("Failed to deploy child bridge.", "err", err)
 		return nil, err
 	}
-	pBridge, pBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(sb.subBridge.remoteBackend, false)
+	pBridge, pBridgeAddr, err := sb.subBridge.bridgeManager.DeployBridge(pAcc.GenerateTransactOpts(), sb.subBridge.remoteBackend, false)
 	if err != nil {
 		logger.Error("Failed to deploy parent bridge.", "err", err)
 		return nil, err
 	}
-
-	pAcc := sb.subBridge.bridgeAccounts.pAccount
-	cAcc := sb.subBridge.bridgeAccounts.cAccount
 
 	err = sb.subBridge.bridgeManager.SetBridgeInfo(cBridgeAddr, cBridge, pBridgeAddr, pBridge, cAcc, true, false)
 	if err != nil {
@@ -315,7 +315,7 @@ func (sb *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTok
 	}
 
 	cBi.account.Lock()
-	tx, err := cBi.bridge.RegisterToken(cBi.account.GetTransactOpts(), cTokenAddr, pTokenAddr)
+	tx, err := cBi.bridge.RegisterToken(cBi.account.GenerateTransactOpts(), cTokenAddr, pTokenAddr)
 	if err != nil {
 		cBi.account.UnLock()
 		return err
@@ -325,7 +325,7 @@ func (sb *SubBridgeAPI) RegisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pTok
 	logger.Debug("cBridge registered token", "txHash", tx.Hash().String(), "cToken", cTokenAddr.String(), "pToken", pTokenAddr.String())
 
 	pBi.account.Lock()
-	tx, err = pBi.bridge.RegisterToken(pBi.account.GetTransactOpts(), pTokenAddr, cTokenAddr)
+	tx, err = pBi.bridge.RegisterToken(pBi.account.GenerateTransactOpts(), pTokenAddr, cTokenAddr)
 	if err != nil {
 		pBi.account.UnLock()
 		return err
@@ -387,7 +387,7 @@ func (sb *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pT
 
 	cBi.account.Lock()
 	defer cBi.account.UnLock()
-	tx, err := cBi.bridge.DeregisterToken(cBi.account.GetTransactOpts(), cTokenAddr)
+	tx, err := cBi.bridge.DeregisterToken(cBi.account.GenerateTransactOpts(), cTokenAddr)
 	if err != nil {
 		return err
 	}
@@ -396,7 +396,7 @@ func (sb *SubBridgeAPI) DeregisterToken(cBridgeAddr, pBridgeAddr, cTokenAddr, pT
 
 	pBi.account.Lock()
 	defer pBi.account.UnLock()
-	tx, err = pBi.bridge.DeregisterToken(pBi.account.GetTransactOpts(), pTokenAddr)
+	tx, err = pBi.bridge.DeregisterToken(pBi.account.GenerateTransactOpts(), pTokenAddr)
 	if err != nil {
 		return err
 	}
