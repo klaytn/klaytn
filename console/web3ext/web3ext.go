@@ -969,6 +969,16 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'registerOperator',
+			call: 'subbridge_registerOperator',
+			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'getOperators',
+			call: 'subbridge_getRegisteredOperators',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getValueTransferOperatorThreshold',
 			call: 'subbridge_getValueTransferOperatorThreshold',
 			params: 1
