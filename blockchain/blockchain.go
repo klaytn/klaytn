@@ -159,7 +159,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		cacheConfig = &CacheConfig{
 			StateDBCaching: false,
 			ArchiveMode:    false,
-			CacheSize:      512 * 1024 * 1024,
+			CacheSize:      512,
 			BlockInterval:  DefaultBlockInterval,
 			TrieCacheLimit: 0,
 		}

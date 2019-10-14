@@ -38,8 +38,8 @@ var (
 	logger = log.NewModuleLogger(log.StorageStateDB)
 
 	memcacheFlushTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/flush/time", nil)
-	memcacheFlushNodesMeter = metrics.NewRegisteredMeter("trie/memcache/flush/nodes", nil)
-	memcacheFlushSizeMeter  = metrics.NewRegisteredMeter("trie/memcache/flush/size", nil)
+	memcacheFlushNodesGauge = metrics.NewRegisteredGauge("trie/memcache/flush/nodes", nil)
+	memcacheFlushSizeGauge  = metrics.NewRegisteredGauge("trie/memcache/flush/size", nil)
 
 	memcacheGCTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/gc/time", nil)
 	memcacheGCNodesMeter = metrics.NewRegisteredMeter("trie/memcache/gc/nodes", nil)
@@ -668,8 +668,8 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	db.flushtime += time.Since(start)
 
 	memcacheFlushTimeGauge.Update(int64(time.Since(start)))
-	memcacheFlushSizeMeter.Mark(int64(nodeSize - db.nodesSize))
-	memcacheFlushNodesMeter.Mark(int64(nodes - len(db.nodes)))
+	memcacheFlushSizeGauge.Update(int64(nodeSize - db.nodesSize))
+	memcacheFlushNodesGauge.Update(int64(nodes - len(db.nodes)))
 
 	logger.Debug("Persisted nodes from memory database", "nodes", nodes-len(db.nodes), "size", nodeSize-db.nodesSize, "time", time.Since(start),
 		"flushnodes", db.flushnodes, "flushsize", db.flushsize, "flushtime", db.flushtime, "livenodes", len(db.nodes), "livesize", db.nodesSize)
