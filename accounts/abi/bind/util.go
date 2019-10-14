@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
@@ -73,7 +74,7 @@ func CheckWaitMined(b DeployBackend, tx *types.Transaction) error {
 	}
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
-		return errors.New("not successful receipt")
+		return blockchain.GetVMerrFromReceiptStatus(receipt.Status)
 	}
 	return nil
 }

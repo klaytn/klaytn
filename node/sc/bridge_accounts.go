@@ -168,8 +168,8 @@ func (acc *accountInfo) GetAccountInfo() map[string]interface{} {
 	return res
 }
 
-// GetTransactOpts returns a transactOpts for transact on local/remote backend.
-func (acc *accountInfo) GetTransactOpts() *bind.TransactOpts {
+// GenerateTransactOpts returns a transactOpts for transact on local/remote backend.
+func (acc *accountInfo) GenerateTransactOpts() *bind.TransactOpts {
 	var nonce *big.Int
 
 	// Only for unit test, if the nonce is not synced yet, return transaction option with nil nonce.
