@@ -294,7 +294,12 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, istanbul.Valid
 }
 
 func (valSet *defaultSet) GetProposer() istanbul.Validator {
-	return valSet.proposer.Load().(istanbul.Validator)
+	proposer := valSet.proposer.Load()
+	if proposer == nil {
+		logger.Error("Proposer is nil", "validators", valSet.validators)
+		return nil
+	}
+	return proposer.(istanbul.Validator)
 }
 
 func (valSet *defaultSet) IsProposer(address common.Address) bool {
@@ -307,7 +312,7 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 	defer valSet.validatorMu.RUnlock()
 
 	if len(valSet.validators) == 0 {
-		valSet.proposer.Store(nil)
+		logger.Error("len of validators is 0, Proposer is nil", "validators", valSet.validators)
 		return
 	}
 
