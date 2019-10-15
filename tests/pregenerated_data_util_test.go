@@ -473,7 +473,7 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 		StateDBCaching:   true,
 		TxPoolStateCache: true,
 		ArchiveMode:      false,
-		CacheSize:        512 * 1024 * 1024,
+		CacheSize:        512,
 		BlockInterval:    blockchain.DefaultBlockInterval,
 		TrieCacheLimit:   4096,
 	}
