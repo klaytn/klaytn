@@ -460,20 +460,12 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 		}
 
 		// for ethereum compatibility. convert ethereum namespace to klay namespace.
-		// TODO-Klaytn Deprecate supporting the `gxp` namespace
-		if r.service == "eth" || r.service == "gxp" {
+		if r.service == "eth" {
 			r.service = "klay"
 		}
 
 		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available
-
-			for name, sr := range s.services {
-				fmt.Printf("service %s \n", name)
-				for cname, callback := range sr.callbacks {
-					fmt.Printf("		callback %s  method %s\n", cname, callback.method.Name)
-				}
-			}
-
+			logger.Trace("rpc: got request from unsupported API namespace", "requestedNamespaces", r.service)
 			requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
 			continue
 		}
