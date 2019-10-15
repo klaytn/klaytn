@@ -18,5 +18,13 @@
 // This file is derived from core/vm/runtime/doc.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package runtime provides a basic execution model for executing EVM code.
+/*
+Package runtime provides a basic execution model for executing EVM code.
+
+Source files
+
+Each file provides the following features
+  - env.go     : Implements a function creating the runtime EVM with environment configuration.
+  - runtime.go : Defines runtime configuration structure and implements functions used by the runtime EVM.
+*/
 package runtime
