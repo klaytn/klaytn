@@ -36,6 +36,6 @@ Each file contains following contents
  - keystore_wallet.go 	: Defines `keystoreWallet` struct which implements accounts.Wallet interface. Wallet represents a software or hardware wallet that might contain one or more accounts
  - presale.go 		: Deprecated
  - watch.go 		: Provides a watcher which monitors any changes on the keystore folder
- - watch_fallback.go 	: Provides empty watcher for unsupported platforms
+ - watch_fallback.go 	: Provides an empty watcher for unsupported platforms
 */
 package keystore
