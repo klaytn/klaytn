@@ -88,7 +88,7 @@ type ProtocolManager struct {
 	chainconfig *params.ChainConfig
 	maxPeers    int
 
-	downloader protocolManagerDownloader
+	downloader ProtocolManagerDownloader
 	fetcher    ProtocolManagerFetcher
 	peers      PeerSet
 

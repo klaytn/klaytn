@@ -113,8 +113,9 @@ var errorToString = map[int]string{
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
 }
 
-// protocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
-type protocolManagerDownloader interface {
+//go:generate mockgen -destination=node/cn/mocks/downloader_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerDownloader
+// ProtocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
+type ProtocolManagerDownloader interface {
 	RegisterPeer(id string, version int, peer downloader.Peer) error
 	UnregisterPeer(id string) error
 

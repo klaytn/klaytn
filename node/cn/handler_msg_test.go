@@ -17,6 +17,7 @@
 package cn
 
 import (
+	"errors"
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/networks/p2p"
@@ -28,6 +29,8 @@ import (
 	"sync/atomic"
 	"testing"
 )
+
+var err = errors.New("some error")
 
 // generateMsg creates a message struct for message handling tests.
 func generateMsg(t *testing.T, msgCode uint64, data interface{}) p2p.Msg {
@@ -203,6 +206,89 @@ func TestHandleBlockHeaderFetchResponseMsg(t *testing.T) {
 
 		msg := generateMsg(t, BlockHeaderFetchResponseMsg, header)
 		assert.NoError(t, handleBlockHeaderFetchResponseMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+}
+
+func preparePeerAndDownloader(t *testing.T) (*gomock.Controller, *MockPeer, *mocks2.MockProtocolManagerDownloader, *ProtocolManager) {
+	mockCtrl := gomock.NewController(t)
+	mockPeer := NewMockPeer(mockCtrl)
+	mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+
+	mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
+	pm := &ProtocolManager{downloader: mockDownloader}
+
+	return mockCtrl, mockPeer, mockDownloader, pm
+}
+
+func TestHandleReceiptMsg(t *testing.T) {
+	// Decoding the message failed, an error is returned.
+	{
+		mockCtrl := gomock.NewController(t)
+		mockPeer := NewMockPeer(mockCtrl)
+		pm := &ProtocolManager{}
+		msg := generateMsg(t, ReceiptsMsg, newBlock(blockNum1)) // use message data as a block, not a header
+		assert.Error(t, handleReceiptsMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	// DeliverReceipts returns nil, error is not returned.
+	{
+		receipts := make([][]*types.Receipt, 1)
+		receipts[0] = []*types.Receipt{newReceipt(123)}
+
+		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
+		mockDownloader.EXPECT().DeliverReceipts(nodeids[0].String(), gomock.Eq(receipts)).Times(1).Return(nil)
+
+		msg := generateMsg(t, ReceiptsMsg, receipts)
+		assert.NoError(t, handleReceiptsMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	// DeliverReceipts returns an error, but the error is not returned.
+	{
+		receipts := make([][]*types.Receipt, 1)
+		receipts[0] = []*types.Receipt{newReceipt(123)}
+
+		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
+		mockDownloader.EXPECT().DeliverReceipts(nodeids[0].String(), gomock.Eq(receipts)).Times(1).Return(err)
+
+		msg := generateMsg(t, ReceiptsMsg, receipts)
+		assert.NoError(t, handleReceiptsMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+}
+
+func TestHandleNodeDataMsg(t *testing.T) {
+	// Decoding the message failed, an error is returned.
+	{
+		mockCtrl := gomock.NewController(t)
+		mockPeer := NewMockPeer(mockCtrl)
+		pm := &ProtocolManager{}
+		msg := generateMsg(t, NodeDataMsg, newBlock(blockNum1)) // use message data as a block, not a node data
+		assert.Error(t, handleNodeDataMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	// DeliverNodeData returns nil, error is not returned.
+	{
+		nodeData := make([][]byte, 1)
+		nodeData[0] = hash1[:]
+
+		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
+		mockDownloader.EXPECT().DeliverNodeData(nodeids[0].String(), gomock.Eq(nodeData)).Times(1).Return(nil)
+
+		msg := generateMsg(t, ReceiptsMsg, nodeData)
+		assert.NoError(t, handleNodeDataMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	// DeliverNodeData returns an error, but the error is not returned.
+	{
+		nodeData := make([][]byte, 1)
+		nodeData[0] = hash1[:]
+
+		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
+		mockDownloader.EXPECT().DeliverNodeData(nodeids[0].String(), gomock.Eq(nodeData)).Times(1).Return(err)
+
+		msg := generateMsg(t, ReceiptsMsg, nodeData)
+		assert.NoError(t, handleNodeDataMsg(pm, mockPeer, msg))
 		mockCtrl.Finish()
 	}
 }

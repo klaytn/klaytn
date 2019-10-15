@@ -101,6 +101,13 @@ func newBlock(blockNum int) *types.Block {
 	return block
 }
 
+func newReceipt(gasUsed int) *types.Receipt {
+	rct := types.NewReceipt(uint(gasUsed), common.Hash{}, uint64(gasUsed))
+	rct.Logs = []*types.Log{}
+	rct.Bloom = types.Bloom{}
+	return rct
+}
+
 func TestNewProtocolManager(t *testing.T) {
 	//1. If consensus.Engine returns an empty Protocol, NewProtocolManager throws an error.
 	{
