@@ -231,7 +231,11 @@ func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.Validato
 func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
 	targets := make(map[common.Address]bool)
 
-	cv := sb.currentView.Load().(*istanbul.View)
+	cv, ok := sb.currentView.Load().(*istanbul.View)
+	if !ok {
+		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
+		return nil
+	}
 	view := &istanbul.View{
 		Round:    big.NewInt(cv.Round.Int64()),
 		Sequence: big.NewInt(cv.Sequence.Int64()),
@@ -239,15 +243,15 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 
 	proposer := valSet.GetProposer()
 	for i := 0; i < 2; i++ {
-		vals := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
-		for _, val := range vals {
+		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
+		for _, val := range committee {
 			if val.Address() != sb.Address() {
 				targets[val.Address()] = true
 			}
 		}
 		// Don't change a proposer for the next round if there is only one node.
-		if len(vals) > 1 {
-			proposer = vals[1]
+		if len(committee) > 1 {
+			proposer = committee[1]
 		}
 		view.Round = view.Round.Add(view.Round, common.Big1)
 	}
