@@ -58,6 +58,9 @@
 		// If a contract is being self destructed, gather that as a subcall too
 		if (syscall && op == 'SELFDESTRUCT') {
 			var left = this.callstack.length;
+			if (this.callstack[left-1] === undefined) {
+				this.callstack[left-1] = {};
+			}
 			if (this.callstack[left-1].calls === undefined) {
 				this.callstack[left-1].calls = [];
 			}
@@ -148,6 +151,9 @@
 			}
 			// Inject the call into the previous one
 			var left = this.callstack.length;
+			if (this.callstack[left-1] === undefined) {
+				this.callstack[left-1] = {};
+			}
 			if (this.callstack[left-1].calls === undefined) {
 				this.callstack[left-1].calls = [];
 			}
@@ -176,6 +182,9 @@
 		// Flatten the failed call into its parent
 		var left = this.callstack.length;
 		if (left > 0) {
+			if (this.callstack[left-1] === undefined) {
+				this.callstack[left-1] = {}
+			}
 			if (this.callstack[left-1].calls === undefined) {
 				this.callstack[left-1].calls = [];
 			}
@@ -189,6 +198,37 @@
 	// result is invoked when all the opcodes have been iterated over and returns
 	// the final result of the tracing.
 	result: function(ctx, db) {
+		// initialize undefined values
+		if (ctx.type === undefined) {
+			ctx.type = 0
+		}
+		if (ctx.from === undefined) {
+			ctx.from = ""
+		}
+		if (ctx.to === undefined) {
+			ctx.to = ""
+		}
+		if (ctx.value === undefined) {
+			ctx.value = 0
+		}
+		if (ctx.gas === undefined) {
+			ctx.gas = 0
+		}
+		if (ctx.gasUsed === undefined) {
+			ctx.gasUsed = 0
+		}
+		if (ctx.input === undefined) {
+			ctx.input = ""
+		}
+		if (ctx.output === undefined) {
+			ctx.output = ""
+		}
+		if (ctx.time === undefined) {
+			ctx.time = 0
+		}
+		if (this.callstack[0] == undefined) {
+			this.callstack[0] = {}
+		}
 		var result = {
 			type:    ctx.type,
 			from:    toHex(ctx.from),
