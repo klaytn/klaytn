@@ -20,7 +20,7 @@
 //
 
 /*
-docker package contains compose and service packages which are to be used to create a docker-compose.yml with given options
+docker package contains service packages which are to be used to create a docker-compose.yml with given options
 docker support is enabled by default when using `setup` command and can be set explicitly by giving "docker" as a type argument
 */
 package docker
