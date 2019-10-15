@@ -259,7 +259,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		// For multi-shot connections, start a goroutine to serve and loop back
 		pend.Add(1)
 		atomic.AddInt64(&pendingRequestCount, 1)
-		rpcPendingRequestCount.Inc(int64(len(reqs)))
+		rpcPendingRequestsCount.Inc(int64(len(reqs)))
 		go func(reqs []*serverRequest, batch bool) {
 			defer func() {
 				atomic.AddInt64(&pendingRequestCount, -1)

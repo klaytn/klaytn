@@ -6,5 +6,5 @@ var (
 	rpcTotalRequestsCounter    = metrics.NewRegisteredCounter("rpc/counts/total", nil)
 	rpcSuccessResponsesCounter = metrics.NewRegisteredCounter("rpc/counts/success", nil)
 	rpcErrorResponsesCounter   = metrics.NewRegisteredCounter("rpc/counts/errors", nil)
-	rpcPendingRequestCount     = metrics.NewRegisteredCounter("rpc/counts/pending", nil)
+	rpcPendingRequestsCount    = metrics.NewRegisteredCounter("rpc/counts/pending", nil)
 )
