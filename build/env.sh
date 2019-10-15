@@ -22,6 +22,9 @@ fi
 GOPATH="$workspace"
 export GOPATH
 
+export GO111MODULE=on
+export GOFLAGS="-mod=vendor"
+
 # Run the command inside the workspace.
 cd "$orgdir/klaytn"
 PWD="$orgdir/klaytn"
