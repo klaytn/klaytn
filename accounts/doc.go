@@ -22,7 +22,7 @@
 Package accounts implements high level Klaytn account management.
 
 There are several important data structures and their hierarchy is as below
- Manager -- Backend -- Wallet -- Account
+ Manager -> Backend -> Wallet -> Account
 
 Source Files
 
