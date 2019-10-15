@@ -758,7 +758,7 @@ func (bm *BridgeManager) RegisterOperator(bridgeAddr, operatorAddr common.Addres
 
 	bi.account.Lock()
 	defer bi.account.UnLock()
-	tx, err := bi.bridge.RegisterOperator(bi.account.GetTransactOpts(), operatorAddr)
+	tx, err := bi.bridge.RegisterOperator(bi.account.GenerateTransactOpts(), operatorAddr)
 	if err != nil {
 		return common.Hash{}, err
 	}
