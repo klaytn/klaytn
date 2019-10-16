@@ -114,7 +114,7 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 	return hashed, cached
 }
 
-func (h *hasher) hashRoot(n node, db *Database, force bool) (node, node) {
+func (h *hasher) hashRoot(n node, db *Database, force bool, onleaf LeafCallback) (node, node) {
 	// If we're not storing the node, just hashing, use available cached data
 	if hash, dirty := n.cache(); hash != nil {
 		if db == nil {
@@ -130,7 +130,7 @@ func (h *hasher) hashRoot(n node, db *Database, force bool) (node, node) {
 		}
 	}
 	// Trie not processed yet or needs storage, walk the children
-	collapsed, cached := h.hashChildren(n, db)
+	collapsed, cached := h.hashChildrenFromRoot(n, db, onleaf)
 	hashed, lenEncoded := h.store(collapsed, db, force)
 	// Cache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
@@ -193,7 +193,7 @@ type hashResult struct {
 	cached    node
 }
 
-func (h *hasher) hashChildrenFromRoot(original node, db *Database) (node, node) {
+func (h *hasher) hashChildrenFromRoot(original node, db *Database, onleaf LeafCallback) (node, node) {
 	switch n := original.(type) {
 	case *shortNode:
 		// Hash the short node's child, caching the newly hashed subtree
@@ -216,7 +216,9 @@ func (h *hasher) hashChildrenFromRoot(original node, db *Database) (node, node) 
 			if n.Children[i] != nil {
 				numRootChildren++
 				go func(i int, n node) {
-					collapsedFromChild, cachedFromChild := h.hash(n, db, false)
+					childHasher := newHasher(onleaf)
+					defer returnHasherToPool(childHasher)
+					collapsedFromChild, cachedFromChild := childHasher.hash(n, db, false)
 					hashResultCh <- hashResult{i, collapsedFromChild, cachedFromChild}
 				}(i, n.Children[i])
 			}
