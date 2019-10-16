@@ -22,11 +22,11 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/contracts/sc_erc20"
 	"github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"log"
@@ -640,6 +640,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
+		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
 		config:         config,
 		peers:          newBridgePeerSet(),
 		bridgeAccounts: bacc,
@@ -844,7 +845,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfer
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
-	for _, ev := range bi.GetPendingRequestEvents(math.MaxUint64) {
+	for _, ev := range bi.GetPendingRequestEvents() {
 		handleKLAYTransfer(info, bi, ev)
 	}
 	info.sim.Commit()
@@ -889,7 +890,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransfe
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestTokenTransfer(info *testInfo, bi *BridgeInfo) {
-	for _, ev := range bi.GetPendingRequestEvents(math.MaxUint64) {
+	for _, ev := range bi.GetPendingRequestEvents() {
 		handleTokenTransfer(info, bi, ev)
 	}
 	info.sim.Commit()
@@ -944,7 +945,7 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev *RequestValueTransferE
 
 // TODO-Klaytn-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestNFTTransfer(info *testInfo, bi *BridgeInfo) {
-	for _, ev := range bi.GetPendingRequestEvents(math.MaxUint64) {
+	for _, ev := range bi.GetPendingRequestEvents() {
 		handleNFTTransfer(info, bi, ev)
 	}
 	info.sim.Commit()

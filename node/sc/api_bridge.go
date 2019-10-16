@@ -224,6 +224,7 @@ func (sb *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[str
 		"isRunning":        bi.isRunning,
 		"requestNonce":     bi.requestNonceFromCounterPart,
 		"handleNonce":      bi.handleNonce,
+		"lowerHandleNonce": bi.lowerHandleNonce,
 		"counterPart":      bi.counterpartAddress,
 		"onServiceChain":   bi.onChildChain,
 		"isSubscribed":     bi.subscribed,
