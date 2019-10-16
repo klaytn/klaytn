@@ -25,7 +25,7 @@ genesis package provides utility functions to generate new genesis file to init 
 Source Files
 
 Each file contains following contents
- - genesis.go : Provide functions to make a new genesis object
- - options.go : Provide utility functions to generate each part in a genesis file such as a list of validators
+ - genesis.go : Provides functions to make a new genesis object
+ - options.go : Provides utility functions to generate each part in a genesis file such as a list of validators
 */
 package genesis
