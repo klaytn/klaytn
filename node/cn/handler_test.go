@@ -46,6 +46,7 @@ const numVals = 6
 var addrs []common.Address
 var keys []*ecdsa.PrivateKey
 var nodeids []discover.NodeID
+var p2pPeers []*p2p.Peer
 
 var tx1 *types.Transaction
 var txs types.Transactions
@@ -58,11 +59,13 @@ func init() {
 	addrs = make([]common.Address, numVals)
 	keys = make([]*ecdsa.PrivateKey, numVals)
 	nodeids = make([]discover.NodeID, numVals)
+	p2pPeers = make([]*p2p.Peer, numVals)
 
 	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 		addrs[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
 		nodeids[i] = discover.PubkeyID(&keys[i].PublicKey)
+		p2pPeers[i] = p2p.NewPeer(nodeids[i], nodeids[i].String(), []p2p.Cap{})
 	}
 
 	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(2019))
