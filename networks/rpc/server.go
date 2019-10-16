@@ -23,6 +23,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"github.com/klaytn/klaytn/common/fdlimit"
 	"gopkg.in/fatih/set.v0"
 	"reflect"
 	"runtime"
@@ -45,6 +46,12 @@ const (
 
 	// pendingRequestLimit is a limit for concurrent RPC method calls
 	pendingRequestLimit = 200000
+
+	// concurrencyLimit is a limit for the number of concurrency connection for RPC servers
+	concurrencyLimit = 3000
+
+	// minFDLimit is the minimum file descriptor limit for RPC servers (heuristic value. concurrency limit of RPC and WS servers)
+	minFDLimit = concurrencyLimit * 2
 )
 
 // pendingRequestCount is a total number of concurrent RPC method calls
@@ -52,6 +59,20 @@ var pendingRequestCount int64 = 0
 
 // NewServer will create a new server instance with no registered handlers.
 func NewServer() *Server {
+	// increase the file descriptor limit if the process has a small limit
+	limit, err := fdlimit.Current()
+	if err != nil {
+		logger.Warn("fail to read fd limit. you may suffer fd exhaustion", "err", err)
+	} else {
+		if limit < minFDLimit {
+			err := fdlimit.Raise(uint64(limit + minFDLimit))
+			if err != nil {
+				logger.Warn("fail to increase fd limit. you may suffer fd exhaustion", "err", err)
+			}
+			logger.Warn("Increase the file descriptor limit of the process for RPC servers", "oldLimit", limit, "newLimit", limit+minFDLimit)
+		}
+	}
+
 	server := &Server{
 		services: make(serviceRegistry),
 		codecs:   set.New(),
