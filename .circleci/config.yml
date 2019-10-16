@@ -87,7 +87,7 @@ jobs:
 
   linters:
     docker:
-      - image: circleci/golang:1.11.2
+      - image: klaytn/build_base:1.0
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
