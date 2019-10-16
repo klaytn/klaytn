@@ -27,7 +27,7 @@ There are several important data structures and their hierarchy is as below
 Source Files
 
 Each file provides the following features
- - accounts.go	: Provides `Account` struct and Wallet/Backend interfaces. `Account` represents a Klaytn account located at a specific location defined by the optional URL field. `Wallet` represents a software or hardware wallet and `Backend` is a wallet provider that may  contain a batch of accounts they can sign transactions with
+ - accounts.go	: Provides `Account` struct and Wallet/Backend interfaces. `Account` represents a Klaytn account located at a specific location defined by the optional URL field. `Wallet` represents a software or hardware wallet and `Backend` is a wallet provider that may contain a batch of accounts they can sign transactions with
  - errors.go	: Provides various account related error variables and helper functions
  - hd.go		: Defines derivation paths for Klaytn and parser function to derive the path from a path string. Klaytn uses 8217 as its coin type
  - manager.go 	: Provides `Manager` which is an overarching account manager that can communicate with various backends for signing transactions
