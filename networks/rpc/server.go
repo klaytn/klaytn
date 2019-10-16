@@ -62,12 +62,12 @@ func NewServer() *Server {
 	// increase the file descriptor limit if the process has a small limit
 	limit, err := fdlimit.Current()
 	if err != nil {
-		logger.Debug("fail to read fd limit", "err", err)
+		logger.Warn("fail to read fd limit. you may suffer fd exhaustion", "err", err)
 	} else {
 		if limit < minFDLimit {
 			err := fdlimit.Raise(uint64(limit + minFDLimit))
 			if err != nil {
-				logger.Debug("fail to set fd limit", "err", err)
+				logger.Warn("fail to increase fd limit. you may suffer fd exhaustion", "err", err)
 			}
 			logger.Warn("Increase the file descriptor limit of the process for RPC servers", "oldLimit", limit, "newLimit", limit+minFDLimit)
 		}
