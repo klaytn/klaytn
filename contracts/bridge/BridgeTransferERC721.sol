@@ -46,6 +46,11 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
             return;
         }
 
+        _setHandledRequestTxHash(_requestTxHash);
+
+        handleNoncesToBlockNums[_requestedNonce] = _requestedBlockNumber;
+        updateHandleNonce(_requestedNonce);
+
         emit HandleValueTransfer(
             _requestTxHash,
             TokenType.ERC721,
@@ -54,11 +59,9 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
             _tokenAddress,
             _tokenId,
             _requestedNonce,
+            lowerHandleNonce,
             _extraData
         );
-        _setHandledRequestTxHash(_requestTxHash);
-
-        updateHandleNonce(_requestedNonce, _requestedBlockNumber);
 
         if (modeMintBurn) {
             ERC721MetadataMintable(_tokenAddress).mintWithTokenURI(_to, _tokenId, _tokenURI);
