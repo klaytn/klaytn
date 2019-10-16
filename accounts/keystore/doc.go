@@ -18,8 +18,24 @@
 // This file is derived from accounts/keystore/keystore.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package keystore implements encrypted storage of secp256k1 private keys.
-//
-// Keys are stored as encrypted JSON files according to the Web3 Secret Storage specification.
-// See https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition for more information.
+/*
+Package keystore implements encrypted storage of secp256k1 private keys.
+
+Keys are stored as encrypted JSON files according to the Web3 Secret Storage specification.
+See https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition for more information.
+
+Source Files
+
+Each file contains following contents
+ - account_cache.go 	: Provides `accountCache` which contains a live index of all accounts in keystore folder
+ - file_cache.go 	: Provides `fileCache` which contains information of all files in keystore folder
+ - key.go 		: Defines `Key` struct, `keyStore` interface and related functions
+ - keystore.go 		: Defines `KeyStore` which manages a key storage directory on disk and related functions
+ - keystore_passphrase.go: Provides functions to encrypt and decrypt `Key` with a passphrase
+ - keystore_plain.go 	: Deprecated
+ - keystore_wallet.go 	: Defines `keystoreWallet` struct which implements accounts.Wallet interface. Wallet represents a software or hardware wallet that might contain one or more accounts
+ - presale.go 		: Deprecated
+ - watch.go 		: Provides a watcher which monitors any changes on the keystore folder
+ - watch_fallback.go 	: Provides an empty watcher for unsupported platforms
+*/
 package keystore
