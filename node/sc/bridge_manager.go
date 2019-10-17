@@ -39,7 +39,7 @@ import (
 const (
 	TokenEventChanSize  = 10000
 	BridgeAddrJournal   = "bridge_addrs.rlp"
-	maxPendingNonceDiff = 20000 // TODO-Klaytn-ServiceChain: update this limitation. Currently, 2 * 10000 TPS.
+	maxPendingNonceDiff = 1000 // TODO-Klaytn-ServiceChain: update this limitation. Currently, 2 * 500 TPS.
 )
 
 const (
@@ -99,10 +99,10 @@ type BridgeInfo struct {
 	counterpartToken map[common.Address]common.Address
 
 	pendingRequestEvent *bridgepool.ItemSortedMap
-	nextHandleNonce     uint64 // This nonce will be used for getting pending request value transfer events.
 
 	isRunning                   bool
 	handleNonce                 uint64 // the nonce from the handle value transfer event from the bridge.
+	lowerHandleNonce            uint64 // the lower handle nonce from the bridge.
 	requestNonceFromCounterPart uint64 // the nonce from the request value transfer event from the counter part bridge.
 	requestNonce                uint64 // the nonce from the request value transfer event from the counter part bridge.
 
@@ -124,8 +124,8 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 		subscribed,
 		make(map[common.Address]common.Address),
 		bridgepool.NewItemSortedMap(),
-		0,
 		true,
+		0,
 		0,
 		0,
 		0,
@@ -137,7 +137,6 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 		return bi, err
 	}
 
-	bi.nextHandleNonce = bi.handleNonce
 	go bi.loop()
 
 	return bi, nil
@@ -190,53 +189,37 @@ func (bi *BridgeInfo) GetCounterPartToken(token common.Address) common.Address {
 	return cpToken
 }
 
-func (bi *BridgeInfo) GetPendingRequestEvents(start uint64) []*RequestValueTransferEvent {
-	ready := bi.pendingRequestEvent.Ready(start)
+func (bi *BridgeInfo) GetPendingRequestEvents() []*RequestValueTransferEvent {
+	ready := bi.pendingRequestEvent.Pop(maxPendingNonceDiff / 2)
 	var readyEvent []*RequestValueTransferEvent
 	for _, item := range ready {
 		readyEvent = append(readyEvent, item.(*RequestValueTransferEvent))
 	}
+
+	vtPendingRequestEventCounter.Dec((int64)(len(ready)))
 
 	return readyEvent
 }
 
 // processingPendingRequestEvents handles pending request value transfer events of the bridge.
 func (bi *BridgeInfo) processingPendingRequestEvents() error {
-	logger.Trace("Get pending request value transfer event", "nextHandleNonce", bi.nextHandleNonce, "len(pendingEvent)", bi.pendingRequestEvent.Len())
-
 	ReadyEvent := bi.GetReadyRequestValueTransferEvents()
 	if ReadyEvent == nil {
 		return nil
 	}
 
-	logger.Trace("Get ready request value transfer event", "len(readyEvent)", len(ReadyEvent), "nextHandleNonce", bi.nextHandleNonce, "len(pendingEvent)", bi.pendingRequestEvent.Len())
-
-	diff := bi.requestNonceFromCounterPart - bi.handleNonce
-	if diff > errorDiffRequestHandleNonce {
-		logger.Error("Value transfer requested/handled nonce gap is too much.", "toSC", bi.onChildChain, "diff", diff, "requestedNonce", bi.requestNonceFromCounterPart, "handledNonce", bi.handleNonce)
-		// TODO-Klaytn need to consider starting value transfer recovery.
-	}
+	logger.Trace("Get ready request value transfer event", "len(readyEvent)", len(ReadyEvent), "len(pendingEvent)", bi.pendingRequestEvent.Len())
 
 	for idx, ev := range ReadyEvent {
-		if ev.RequestNonce < bi.handleNonce {
-			logger.Trace("past requests are ignored", "RequestNonce", ev.RequestNonce, "handleNonce", bi.handleNonce)
+		if ev.RequestNonce < bi.lowerHandleNonce {
+			logger.Trace("handled requests can be ignored", "RequestNonce", ev.RequestNonce, "lowerHandleNonce", bi.lowerHandleNonce)
 			continue
-		}
-
-		logger.Trace("handle value transfer event", "evt", ev)
-
-		if ev.RequestNonce > bi.handleNonce+maxPendingNonceDiff {
-			logger.Trace("nonce diff is too large", "limitation", maxPendingNonceDiff)
-			return errors.New("nonce diff is too large")
 		}
 
 		if err := bi.handleRequestValueTransferEvent(ev); err != nil {
 			bi.AddRequestValueTransferEvents(ReadyEvent[idx:])
-			logger.Error("Failed handle request value transfer event", "err", err, "len(RePutEvent)", len(ReadyEvent[idx:]))
+			logger.Debug("Failed handle request value transfer event", "err", err, "len(RePutEvent)", len(ReadyEvent[idx:]))
 			return err
-		}
-		if bi.nextHandleNonce <= ev.RequestNonce {
-			bi.nextHandleNonce = ev.RequestNonce + 1
 		}
 	}
 
@@ -258,6 +241,9 @@ func (bi *BridgeInfo) UpdateInfo() error {
 	if err != nil {
 		return err
 	}
+
+	bi.lowerHandleNonce = hn
+
 	bi.UpdateHandledNonce(hn)
 	bi.UpdateRequestNonceFromCounterpart(hn)
 
@@ -372,20 +358,33 @@ func (bi *BridgeInfo) UpdateHandledNonce(nonce uint64) {
 	}
 }
 
+// UpdateLowerHandleNonce updates the lower handle nonce.
+func (bi *BridgeInfo) UpdateLowerHandleNonce(nonce uint64) {
+	if bi.lowerHandleNonce < nonce {
+		vtLowerHandleNonceCount.Inc(int64(nonce - bi.lowerHandleNonce))
+		bi.lowerHandleNonce = nonce
+	}
+}
+
 // AddRequestValueTransferEvents adds events into the pendingRequestEvent.
 func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferEvent) {
-	if bi.pendingRequestEvent.Len() > maxPendingNonceDiff {
-		logger.Trace("adding request value transfer events is ignored", "len", bi.pendingRequestEvent.Len(), "limit", maxPendingNonceDiff)
-		return
-	}
-
 	for _, ev := range evs {
+		if bi.pendingRequestEvent.Len() > maxPendingNonceDiff {
+			flatten := bi.pendingRequestEvent.Flatten()
+			maxNonce := flatten[len(flatten)-1].Nonce()
+			if ev.Nonce() >= maxNonce || bi.pendingRequestEvent.Exist(ev.Nonce()) {
+				continue
+			}
+			bi.pendingRequestEvent.Remove(maxNonce)
+			vtPendingRequestEventCounter.Dec(1)
+			logger.Trace("List is full but add requestValueTransfer ", "newNonce", ev.Nonce(), "removedNonce", maxNonce)
+		}
+
 		bi.UpdateRequestNonceFromCounterpart(ev.RequestNonce + 1)
 		bi.pendingRequestEvent.Put(ev)
+		vtPendingRequestEventCounter.Inc(1)
 	}
 	logger.Trace("added pending request events to the bridge info:", "bi.pendingRequestEvent", bi.pendingRequestEvent.Len())
-
-	vtPendingRequestEventMeter.Inc(int64(len(evs)))
 
 	select {
 	case bi.newEvent <- struct{}{}:
@@ -395,7 +394,7 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferE
 
 // GetReadyRequestValueTransferEvents returns the processable events with the increasing nonce.
 func (bi *BridgeInfo) GetReadyRequestValueTransferEvents() []*RequestValueTransferEvent {
-	return bi.GetPendingRequestEvents(bi.nextHandleNonce)
+	return bi.GetPendingRequestEvents()
 }
 
 // GetCurrentBlockNumber returns a current block number for each local and remote backend.
@@ -520,8 +519,8 @@ func (bm *BridgeManager) LogBridgeStatus() {
 		return
 	}
 
-	p2cTotalRequestNonce, p2cTotalHandleNonce := uint64(0), uint64(0)
-	c2pTotalRequestNonce, c2pTotalHandleNonce := uint64(0), uint64(0)
+	var p2cTotalRequestNonce, p2cTotalHandleNonce, p2cTotalLowerHandleNonce uint64
+	var c2pTotalRequestNonce, c2pTotalHandleNonce, c2pTotalLowerHandleNonce uint64
 
 	for bAddr, b := range bm.bridges {
 		diffNonce := b.requestNonceFromCounterPart - b.handleNonce
@@ -532,17 +531,19 @@ func (bm *BridgeManager) LogBridgeStatus() {
 				headStr = "Bridge(Parent -> Child Chain)"
 				p2cTotalRequestNonce += b.requestNonceFromCounterPart
 				p2cTotalHandleNonce += b.handleNonce
+				p2cTotalLowerHandleNonce += b.lowerHandleNonce
 			} else {
 				headStr = "Bridge(Child -> Parent Chain)"
 				c2pTotalRequestNonce += b.requestNonceFromCounterPart
 				c2pTotalHandleNonce += b.handleNonce
+				c2pTotalLowerHandleNonce += b.lowerHandleNonce
 			}
-			logger.Debug(headStr, "bridge", bAddr.String(), "requestNonce", b.requestNonceFromCounterPart, "handleNonce", b.handleNonce, "pending", diffNonce)
+			logger.Info(headStr, "bridge", bAddr.String(), "requestNonce", b.requestNonceFromCounterPart, "lowerHandleNonce", b.lowerHandleNonce, "handleNonce", b.handleNonce, "pending", diffNonce)
 		}
 	}
 
-	logger.Info("VT : Parent -> Child Chain", "request", p2cTotalRequestNonce, "handle", p2cTotalHandleNonce, "pending", p2cTotalRequestNonce-p2cTotalHandleNonce)
-	logger.Info("VT : Child -> Parent Chain", "request", c2pTotalRequestNonce, "handle", c2pTotalHandleNonce, "pending", c2pTotalRequestNonce-c2pTotalHandleNonce)
+	logger.Info("VT : Parent -> Child Chain", "request", p2cTotalRequestNonce, "handle", p2cTotalHandleNonce, "lowerHandle", p2cTotalLowerHandleNonce, "pending", p2cTotalRequestNonce-p2cTotalLowerHandleNonce)
+	logger.Info("VT : Child -> Parent Chain", "request", c2pTotalRequestNonce, "handle", c2pTotalHandleNonce, "lowerHandle", c2pTotalLowerHandleNonce, "pending", c2pTotalRequestNonce-c2pTotalLowerHandleNonce)
 }
 
 // SubscribeRequestEvent registers a subscription of RequestValueTransferEvent.

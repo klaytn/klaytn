@@ -45,6 +45,11 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
             return;
         }
 
+        _setHandledRequestTxHash(_requestTxHash);
+
+        handleNoncesToBlockNums[_requestedNonce] = _requestedBlockNumber;
+        updateHandleNonce(_requestedNonce);
+
         emit HandleValueTransfer(
             _requestTxHash,
             TokenType.ERC20,
@@ -53,11 +58,9 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
             _tokenAddress,
             _value,
             _requestedNonce,
+            lowerHandleNonce,
             _extraData
         );
-        _setHandledRequestTxHash(_requestTxHash);
-
-        updateHandleNonce(_requestedNonce, _requestedBlockNumber);
 
         if (modeMintBurn) {
             ERC20Mintable(_tokenAddress).mint(_to, _value);

@@ -19,6 +19,7 @@ package sc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
@@ -33,6 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"log"
 	"math/big"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -1109,4 +1111,96 @@ func TestBridgeContract_CheckValueTransferAfterUnLock(t *testing.T) {
 	backend.Commit()
 	assert.Nil(t, bind.CheckWaitMined(backend, tx))
 	tester.Value = nil
+}
+
+// TestBridgeRequestHandleGasUsed tests the gas used of handle function which include a loop.
+func TestBridgeRequestHandleGasUsed(t *testing.T) {
+	// Generate a new random account and a funded simulator
+	authKey, _ := crypto.GenerateKey()
+	auth := bind.NewKeyedTransactor(authKey)
+	auth.GasLimit = DefaultBridgeTxGasLimit
+
+	aliceKey, _ := crypto.GenerateKey()
+	alice := bind.NewKeyedTransactor(aliceKey)
+
+	bobKey, _ := crypto.GenerateKey()
+	bob := bind.NewKeyedTransactor(bobKey)
+
+	// Create Simulated backend
+	alloc := blockchain.GenesisAlloc{
+		alice.From: {Balance: big.NewInt(params.KLAY)},
+		auth.From:  {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	var err error
+
+	// Deploy a bridge contract
+	auth.Value = big.NewInt(100000000000)
+	_, _, b, err := bridge.DeployBridge(auth, sim, false)
+	assert.NoError(t, err)
+	sim.Commit() // block
+	auth.Value = big.NewInt(0)
+
+	// Register the owner as a signer
+	_, err = b.RegisterOperator(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, auth.From)
+	assert.NoError(t, err)
+	sim.Commit() // block
+
+	// Subscribe Bridge Contract
+	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
+	handleValueTransferSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
+	defer handleValueTransferSub.Unsubscribe()
+
+	handleFunc := func(nonce int) {
+		hTx, err := b.HandleKLAYTransfer(auth, common.HexToHash(strconv.Itoa(nonce)), alice.From, bob.From, big.NewInt(1), uint64(nonce), uint64(1+nonce), nil)
+		assert.NoError(t, err)
+		sim.Commit()
+
+		receipt, err := bind.WaitMined(context.Background(), sim, hTx)
+		assert.NoError(t, err)
+		assert.Equal(t, uint(0x1), receipt.Status)
+
+		select {
+		case ev := <-handleValueTransferEventCh:
+			fmt.Println("Handle value transfer event",
+				"handleNonce", ev.HandleNonce,
+				"lowerHandleNonce", ev.LowerHandleNonce,
+				"gasUsed", receipt.GasUsed,
+				"status", receipt.Status)
+		case <-time.After(1 * time.Second):
+			if receipt != nil {
+				t.Log("handle event ommited Tx gas used=", receipt.GasUsed)
+			}
+			t.Fatal("handle event omitted")
+		}
+	}
+
+	// handle 0 ~ 499 nonce
+	for i := 0; i < 500; i++ {
+		handleFunc(i)
+	}
+
+	lowerHandleNonce, _ := b.LowerHandleNonce(nil)
+	assert.Equal(t, uint64(500), lowerHandleNonce)
+	upperHandleNonce, _ := b.UpperHandleNonce(nil)
+	assert.Equal(t, uint64(499), upperHandleNonce)
+
+	// handle 501 ~ 999 nonce
+	for i := 501; i < 1000; i++ {
+		handleFunc(i)
+	}
+
+	lowerHandleNonce, _ = b.LowerHandleNonce(nil)
+	assert.Equal(t, uint64(500), lowerHandleNonce)
+	upperHandleNonce, _ = b.UpperHandleNonce(nil)
+	assert.Equal(t, uint64(999), upperHandleNonce)
+
+	//This 500 nonce handle checks whether the handle transaction which has a loop failed.
+	handleFunc(500)
+
+	lowerHandleNonce, _ = b.LowerHandleNonce(nil)
+	assert.Equal(t, uint64(701), lowerHandleNonce)
+	upperHandleNonce, _ = b.UpperHandleNonce(nil)
+	assert.Equal(t, uint64(999), upperHandleNonce)
 }

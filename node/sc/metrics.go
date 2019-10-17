@@ -43,10 +43,11 @@ var (
 	vtHandleEventMeter  = metrics.NewRegisteredMeter("klay/bridge/vt/event/handle", nil)
 
 	vtRecoveredRequestEventMeter = metrics.NewRegisteredMeter("klay/bridge/vt/event/recovery/request", nil)
-	vtPendingRequestEventMeter   = metrics.NewRegisteredCounter("klay/bridge/vt/event/pend/request", nil)
+	vtPendingRequestEventCounter = metrics.NewRegisteredCounter("klay/bridge/vt/event/pend/request", nil)
 
-	vtRequestNonceCount = metrics.NewRegisteredCounter("klay/bridge/vt/nonce/request", nil)
-	vtHandleNonceCount  = metrics.NewRegisteredCounter("klay/bridge/vt/nonce/handle", nil)
+	vtRequestNonceCount     = metrics.NewRegisteredCounter("klay/bridge/vt/nonce/request", nil)
+	vtHandleNonceCount      = metrics.NewRegisteredCounter("klay/bridge/vt/nonce/handle", nil)
+	vtLowerHandleNonceCount = metrics.NewRegisteredCounter("klay/bridge/vt/nonce/lowerhandle", nil)
 
 	lastAnchoredBlockNumGauge = metrics.NewRegisteredGauge("klay/bridge/anchroing/blocknumber", nil)
 
