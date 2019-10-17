@@ -287,6 +287,7 @@ pendingTxLoop:
 		}
 		startBlkNum = endBlkNum + 1
 		endBlkNum = startBlkNum + filterLogsStride
+		it.Close()
 	}
 
 	if len(pendingEvents) > 0 {
