@@ -51,7 +51,7 @@ const (
 	TxTypeSmartContractExecution, TxTypeFeeDelegatedSmartContractExecution, TxTypeFeeDelegatedSmartContractExecutionWithRatio
 	TxTypeCancel, TxTypeFeeDelegatedCancel, TxTypeFeeDelegatedCancelWithRatio
 	TxTypeBatch, _, _
-	TxTypeChainDataAnchoring, _, _
+	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
 	TxTypeLast, _, _
 )
 
@@ -176,6 +176,10 @@ func (t TxType) String() string {
 		return "TxTypeBatch"
 	case TxTypeChainDataAnchoring:
 		return "TxTypeChainDataAnchoring"
+	case TxTypeFeeDelegatedChainDataAnchoring:
+		return "TxTypeFeeDelegatedChainDataAnchoring"
+	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
+		return "TxTypeFeeDelegatedChainDataAnchoringWithRatio"
 	}
 
 	return "UndefinedTxType"
@@ -211,7 +215,7 @@ func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
 
 // IsRPCExcluded returns true if the submission of such tx type is excluded via RPC.
 func (t TxType) IsRPCExcluded() bool {
-	return t == TxTypeChainDataAnchoring
+	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeChainDataAnchoring
 }
 
 type FeeRatio uint8
@@ -405,6 +409,10 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedCancelWithRatio(), nil
 	case TxTypeChainDataAnchoring:
 		return newTxInternalDataChainDataAnchoring(), nil
+	case TxTypeFeeDelegatedChainDataAnchoring:
+		return newTxInternalDataFeeDelegatedChainDataAnchoring(), nil
+	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
+		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatio(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -454,6 +462,10 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedCancelWithRatioWithMap(values)
 	case TxTypeChainDataAnchoring:
 		return newTxInternalDataChainDataAnchoringWithMap(values)
+	case TxTypeFeeDelegatedChainDataAnchoring:
+		return newTxInternalDataFeeDelegatedChainDataAnchoringWithMap(values)
+	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
+		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatioWithMap(values)
 	}
 
 	return nil, errUndefinedTxType

@@ -59,6 +59,8 @@ func TestGasOverflow(t *testing.T) {
 		{"FeeDelegatedWithRatioCancel", testGasOverflowFeeDelegatedWithRatioCancel},
 
 		{"ChainDataAnchoring", testGasOverflowChainDataAnchoring},
+		{"FeeDelegatedChainDataAnchoring", testGasOverflowFeeDelegatedChainDataAnchoring},
+		{"FeeDelegatedWithRatioChainDataAnchoring", testGasOverflowFeeDelegatedWithRatioChainDataAnchoring},
 	}
 
 	for _, f := range testFunctions {
@@ -274,12 +276,36 @@ func testGasOverflowFeeDelegatedWithRatioCancel(t *testing.T) {
 }
 
 func testGasOverflowChainDataAnchoring(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeCancel)
+	intrinsic := getIntrinsicGas(types.TxTypeChainDataAnchoring)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
 	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
 
 	gas := addUint64(t, intrinsic, senderValidationGas)
+	gas = addUint64(t, gas, maxDataGas)
+}
+
+func testGasOverflowFeeDelegatedChainDataAnchoring(t *testing.T) {
+	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedChainDataAnchoring)
+	senderValidationGas := getMaxValidationKeyGas(t)
+	payerValidationGas := getMaxValidationKeyGas(t)
+
+	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
+
+	gas := addUint64(t, intrinsic, senderValidationGas)
+	gas = addUint64(t, gas, payerValidationGas)
+	gas = addUint64(t, gas, maxDataGas)
+}
+
+func testGasOverflowFeeDelegatedWithRatioChainDataAnchoring(t *testing.T) {
+	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedChainDataAnchoringWithRatio)
+	senderValidationGas := getMaxValidationKeyGas(t)
+	payerValidationGas := getMaxValidationKeyGas(t)
+
+	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
+
+	gas := addUint64(t, intrinsic, senderValidationGas)
+	gas = addUint64(t, gas, payerValidationGas)
 	gas = addUint64(t, gas, maxDataGas)
 }
 

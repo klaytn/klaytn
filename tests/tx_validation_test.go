@@ -93,27 +93,12 @@ func TestValidationPoolInsert(t *testing.T) {
 		enableLog()
 	}
 
-	var testTxTypes = []testTxType{
-		{"LegacyTransaction", types.TxTypeLegacyTransaction},
-		{"ValueTransfer", types.TxTypeValueTransfer},
-		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
-		{"AccountUpdate", types.TxTypeAccountUpdate},
-		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
-		{"SmartContractExecution", types.TxTypeSmartContractExecution},
-		{"Cancel", types.TxTypeCancel},
-		{"ChainDataAnchoring", types.TxTypeChainDataAnchoring},
-		{"FeeDelegatedValueTransfer", types.TxTypeFeeDelegatedValueTransfer},
-		{"FeeDelegatedValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemo},
-		{"FeeDelegatedAccountUpdate", types.TxTypeFeeDelegatedAccountUpdate},
-		{"FeeDelegatedSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeploy},
-		{"FeeDelegatedSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecution},
-		{"FeeDelegatedCancel", types.TxTypeFeeDelegatedCancel},
-		{"FeeDelegatedWithRatioValueTransfer", types.TxTypeFeeDelegatedValueTransferWithRatio},
-		{"FeeDelegatedWithRatioValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemoWithRatio},
-		{"FeeDelegatedWithRatioAccountUpdate", types.TxTypeFeeDelegatedAccountUpdateWithRatio},
-		{"FeeDelegatedWithRatioSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeployWithRatio},
-		{"FeeDelegatedWithRatioSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecutionWithRatio},
-		{"FeeDelegatedWithRatioCancel", types.TxTypeFeeDelegatedCancelWithRatio},
+	var testTxTypes = []testTxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
+		}
 	}
 
 	var invalidCases = []struct {
@@ -233,27 +218,12 @@ func TestValidationBlockTx(t *testing.T) {
 		enableLog()
 	}
 
-	var testTxTypes = []testTxType{
-		{"LegacyTransaction", types.TxTypeLegacyTransaction},
-		{"ValueTransfer", types.TxTypeValueTransfer},
-		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
-		{"AccountUpdate", types.TxTypeAccountUpdate},
-		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
-		{"SmartContractExecution", types.TxTypeSmartContractExecution},
-		{"Cancel", types.TxTypeCancel},
-		{"ChainDataAnchoring", types.TxTypeChainDataAnchoring},
-		{"FeeDelegatedValueTransfer", types.TxTypeFeeDelegatedValueTransfer},
-		{"FeeDelegatedValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemo},
-		{"FeeDelegatedAccountUpdate", types.TxTypeFeeDelegatedAccountUpdate},
-		{"FeeDelegatedSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeploy},
-		{"FeeDelegatedSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecution},
-		{"FeeDelegatedCancel", types.TxTypeFeeDelegatedCancel},
-		{"FeeDelegatedWithRatioValueTransfer", types.TxTypeFeeDelegatedValueTransferWithRatio},
-		{"FeeDelegatedWithRatioValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemoWithRatio},
-		{"FeeDelegatedWithRatioAccountUpdate", types.TxTypeFeeDelegatedAccountUpdateWithRatio},
-		{"FeeDelegatedWithRatioSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeployWithRatio},
-		{"FeeDelegatedWithRatioSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecutionWithRatio},
-		{"FeeDelegatedWithRatioCancel", types.TxTypeFeeDelegatedCancelWithRatio},
+	var testTxTypes = []testTxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
+		}
 	}
 
 	var invalidCases = []struct {
@@ -423,27 +393,12 @@ func invalidCodeFormat(txType types.TxType, values txValueMap, contract common.A
 
 // TestValidationInvalidSig generates txs signed by an invalid sender or a fee payer.
 func TestValidationInvalidSig(t *testing.T) {
-	var testTxTypes = []testTxType{
-		{"LegacyTransaction", types.TxTypeLegacyTransaction},
-		{"ValueTransfer", types.TxTypeValueTransfer},
-		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
-		{"AccountUpdate", types.TxTypeAccountUpdate},
-		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
-		{"SmartContractExecution", types.TxTypeSmartContractExecution},
-		{"Cancel", types.TxTypeCancel},
-		{"ChainDataAnchoring", types.TxTypeChainDataAnchoring},
-		{"FeeDelegatedValueTransfer", types.TxTypeFeeDelegatedValueTransfer},
-		{"FeeDelegatedValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemo},
-		{"FeeDelegatedAccountUpdate", types.TxTypeFeeDelegatedAccountUpdate},
-		{"FeeDelegatedSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeploy},
-		{"FeeDelegatedSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecution},
-		{"FeeDelegatedCancel", types.TxTypeFeeDelegatedCancel},
-		{"FeeDelegatedWithRatioValueTransfer", types.TxTypeFeeDelegatedValueTransferWithRatio},
-		{"FeeDelegatedWithRatioValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemoWithRatio},
-		{"FeeDelegatedWithRatioAccountUpdate", types.TxTypeFeeDelegatedAccountUpdateWithRatio},
-		{"FeeDelegatedWithRatioSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeployWithRatio},
-		{"FeeDelegatedWithRatioSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecutionWithRatio},
-		{"FeeDelegatedWithRatioCancel", types.TxTypeFeeDelegatedCancelWithRatio},
+	var testTxTypes = []testTxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
+		}
 	}
 
 	var invalidCases = []struct {
@@ -656,27 +611,12 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 
 // TestInvalidBalance generates invalid txs which don't have enough KLAY, and will be invalidated during txPool insert process.
 func TestInvalidBalance(t *testing.T) {
-	var testTxTypes = []testTxType{
-		{"LegacyTransaction", types.TxTypeLegacyTransaction},
-		{"ValueTransfer", types.TxTypeValueTransfer},
-		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
-		{"AccountUpdate", types.TxTypeAccountUpdate},
-		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
-		{"SmartContractExecution", types.TxTypeSmartContractExecution},
-		{"Cancel", types.TxTypeCancel},
-		{"ChainDataAnchoring", types.TxTypeChainDataAnchoring},
-		{"FeeDelegatedValueTransfer", types.TxTypeFeeDelegatedValueTransfer},
-		{"FeeDelegatedValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemo},
-		{"FeeDelegatedAccountUpdate", types.TxTypeFeeDelegatedAccountUpdate},
-		{"FeeDelegatedSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeploy},
-		{"FeeDelegatedSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecution},
-		{"FeeDelegatedCancel", types.TxTypeFeeDelegatedCancel},
-		{"FeeDelegatedWithRatioValueTransfer", types.TxTypeFeeDelegatedValueTransferWithRatio},
-		{"FeeDelegatedWithRatioValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemoWithRatio},
-		{"FeeDelegatedWithRatioAccountUpdate", types.TxTypeFeeDelegatedAccountUpdateWithRatio},
-		{"FeeDelegatedWithRatioSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeployWithRatio},
-		{"FeeDelegatedWithRatioSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecutionWithRatio},
-		{"FeeDelegatedWithRatioCancel", types.TxTypeFeeDelegatedCancelWithRatio},
+	var testTxTypes = []testTxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
+		}
 	}
 
 	prof := profile.NewProfiler()
@@ -1059,28 +999,14 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		enableLog()
 	}
 
-	var testTxTypes = []testTxType{
-		{"LegacyTransaction", types.TxTypeLegacyTransaction},
-		{"ValueTransfer", types.TxTypeValueTransfer},
-		{"ValueTransferWithMemo", types.TxTypeValueTransferMemo},
-		{"AccountUpdate", types.TxTypeAccountUpdate},
-		{"SmartContractDeploy", types.TxTypeSmartContractDeploy},
-		{"SmartContractExecution", types.TxTypeSmartContractExecution},
-		{"Cancel", types.TxTypeCancel},
-		{"ChainDataAnchoring", types.TxTypeChainDataAnchoring},
-		{"FeeDelegatedValueTransfer", types.TxTypeFeeDelegatedValueTransfer},
-		{"FeeDelegatedValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemo},
-		{"FeeDelegatedAccountUpdate", types.TxTypeFeeDelegatedAccountUpdate},
-		{"FeeDelegatedSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeploy},
-		{"FeeDelegatedSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecution},
-		{"FeeDelegatedCancel", types.TxTypeFeeDelegatedCancel},
-		{"FeeDelegatedWithRatioValueTransfer", types.TxTypeFeeDelegatedValueTransferWithRatio},
-		{"FeeDelegatedWithRatioValueTransferWithMemo", types.TxTypeFeeDelegatedValueTransferMemoWithRatio},
-		{"FeeDelegatedWithRatioAccountUpdate", types.TxTypeFeeDelegatedAccountUpdateWithRatio},
-		{"FeeDelegatedWithRatioSmartContractDeploy", types.TxTypeFeeDelegatedSmartContractDeployWithRatio},
-		{"FeeDelegatedWithRatioSmartContractExecution", types.TxTypeFeeDelegatedSmartContractExecutionWithRatio},
-		{"FeeDelegatedWithRatioCancel", types.TxTypeFeeDelegatedCancelWithRatio},
+	var testTxTypes = []testTxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
+		}
 	}
+
 	// re-declare errors since those errors are private variables in 'blockchain' package.
 	errInsufficientBalanceForGas := errors.New("insufficient balance of the sender to pay for gas")
 	errInsufficientBalanceForGasFeePayer := errors.New("insufficient balance of the fee payer to pay for gas")
@@ -1480,18 +1406,15 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 // TestValidationTxSizeAfterRLP tests tx size validation during txPool insert process.
 // Since the size is RLP encoded tx size, the test also includes RLP encoding/decoding process which may raise an issue.
 func TestValidationTxSizeAfterRLP(t *testing.T) {
-	var testTxTypes = []types.TxType{
-		types.TxTypeLegacyTransaction,
-		types.TxTypeValueTransferMemo,
-		types.TxTypeSmartContractDeploy,
-		types.TxTypeSmartContractExecution,
-		types.TxTypeChainDataAnchoring,
-		types.TxTypeFeeDelegatedValueTransferMemo,
-		types.TxTypeFeeDelegatedSmartContractDeploy,
-		types.TxTypeFeeDelegatedSmartContractExecution,
-		types.TxTypeFeeDelegatedValueTransferMemoWithRatio,
-		types.TxTypeFeeDelegatedSmartContractDeployWithRatio,
-		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
+	var testTxTypes = []types.TxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+		tx, err := types.NewTxInternalData(i)
+		if err == nil {
+			// Since this test is for payload size, tx types without payload field will not be tested.
+			if _, ok := tx.(types.TxInternalDataPayload); ok {
+				testTxTypes = append(testTxTypes, i)
+			}
+		}
 	}
 
 	prof := profile.NewProfiler()
@@ -1642,31 +1565,12 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 // TestValidationPoolResetAfterSenderKeyChange puts txs in the pending pool and generates a block only with the first tx.
 // Since the tx changes the sender's account key, all rest txs should drop from the pending pool.
 func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
-	txTypes := []types.TxType{
-		types.TxTypeLegacyTransaction,
-
-		types.TxTypeValueTransfer,
-		types.TxTypeValueTransferMemo,
-		types.TxTypeSmartContractDeploy,
-		types.TxTypeSmartContractExecution,
-		types.TxTypeAccountUpdate,
-		types.TxTypeCancel,
-
-		types.TxTypeFeeDelegatedValueTransfer,
-		types.TxTypeFeeDelegatedValueTransferMemo,
-		types.TxTypeFeeDelegatedSmartContractDeploy,
-		types.TxTypeFeeDelegatedSmartContractExecution,
-		types.TxTypeFeeDelegatedAccountUpdate,
-		types.TxTypeFeeDelegatedCancel,
-
-		types.TxTypeFeeDelegatedValueTransferWithRatio,
-		types.TxTypeFeeDelegatedValueTransferMemoWithRatio,
-		types.TxTypeFeeDelegatedSmartContractDeployWithRatio,
-		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
-		types.TxTypeFeeDelegatedAccountUpdateWithRatio,
-		types.TxTypeFeeDelegatedCancelWithRatio,
-
-		types.TxTypeChainDataAnchoring,
+	txTypes := []types.TxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			txTypes = append(txTypes, i)
+		}
 	}
 
 	prof := profile.NewProfiler()
@@ -1799,20 +1703,15 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 // TestValidationPoolResetAfterFeePayerKeyChange puts txs in the pending pool and generates a block only with the first tx.
 // Since the tx changes the fee payer's account key, all rest txs should drop from the pending pool.
 func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
-	txTypes := []types.TxType{
-		types.TxTypeFeeDelegatedValueTransfer,
-		types.TxTypeFeeDelegatedValueTransferMemo,
-		types.TxTypeFeeDelegatedSmartContractDeploy,
-		types.TxTypeFeeDelegatedSmartContractExecution,
-		types.TxTypeFeeDelegatedAccountUpdate,
-		types.TxTypeFeeDelegatedCancel,
-
-		types.TxTypeFeeDelegatedValueTransferWithRatio,
-		types.TxTypeFeeDelegatedValueTransferMemoWithRatio,
-		types.TxTypeFeeDelegatedSmartContractDeployWithRatio,
-		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
-		types.TxTypeFeeDelegatedAccountUpdateWithRatio,
-		types.TxTypeFeeDelegatedCancelWithRatio,
+	txTypes := []types.TxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			// This test is only for fee-delegated tx types
+			if i.IsFeeDelegatedTransaction() {
+				txTypes = append(txTypes, i)
+			}
+		}
 	}
 
 	prof := profile.NewProfiler()

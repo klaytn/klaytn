@@ -55,6 +55,7 @@ func TestGasCalculation(t *testing.T) {
 		genTx genTransaction
 	}{
 		{"LegacyTransaction", genLegacyTransaction},
+
 		{"ValueTransfer", genValueTransfer},
 		{"ValueTransferWithMemo", genValueTransferWithMemo},
 		{"AccountUpdate", genAccountUpdate},
@@ -62,18 +63,22 @@ func TestGasCalculation(t *testing.T) {
 		{"SmartContractExecution", genSmartContractExecution},
 		{"Cancel", genCancel},
 		{"ChainDataAnchoring", genChainDataAnchoring},
+
 		{"FeeDelegatedValueTransfer", genFeeDelegatedValueTransfer},
 		{"FeeDelegatedValueTransferWithMemo", genFeeDelegatedValueTransferWithMemo},
 		{"FeeDelegatedAccountUpdate", genFeeDelegatedAccountUpdate},
 		{"FeeDelegatedSmartContractDeploy", genFeeDelegatedSmartContractDeploy},
 		{"FeeDelegatedSmartContractExecution", genFeeDelegatedSmartContractExecution},
 		{"FeeDelegatedCancel", genFeeDelegatedCancel},
+		{"FeeDelegatedChainDataAnchoring", genFeeDelegatedChainDataAnchoring},
+
 		{"FeeDelegatedWithRatioValueTransfer", genFeeDelegatedWithRatioValueTransfer},
 		{"FeeDelegatedWithRatioValueTransferWithMemo", genFeeDelegatedWithRatioValueTransferWithMemo},
 		{"FeeDelegatedWithRatioAccountUpdate", genFeeDelegatedWithRatioAccountUpdate},
 		{"FeeDelegatedWithRatioSmartContractDeploy", genFeeDelegatedWithRatioSmartContractDeploy},
 		{"FeeDelegatedWithRatioSmartContractExecution", genFeeDelegatedWithRatioSmartContractExecution},
 		{"FeeDelegatedWithRatioCancel", genFeeDelegatedWithRatioCancel},
+		{"FeeDelegatedWithRatioChainDataAnchoring", genFeeDelegatedWithRatioChainDataAnchoring},
 	}
 
 	var accountTypes = []struct {
@@ -589,24 +594,48 @@ func genFeeDelegatedWithRatioCancel(t *testing.T, signer types.Signer, from Test
 }
 
 func genChainDataAnchoring(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	anchoredData := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:        from.GetNonce(),
-		types.TxValueKeyFrom:         from.GetAddr(),
-		types.TxValueKeyGasLimit:     gasLimit,
-		types.TxValueKeyGasPrice:     gasPrice,
-		types.TxValueKeyAnchoredData: anchoredData,
-	})
+	values, intrinsic := genMapForChainDataAnchoring(from, gasPrice, types.TxTypeChainDataAnchoring)
 
+	tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values)
 	assert.Equal(t, nil, err)
 
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
 	assert.Equal(t, nil, err)
 
-	gasAnchoring := params.TxDataGas * (uint64)(len(anchoredData))
-	intrinsic := getIntrinsicGas(types.TxTypeChainDataAnchoring)
+	return tx, intrinsic
+}
 
-	return tx, intrinsic + gasAnchoring
+func genFeeDelegatedChainDataAnchoring(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
+	values, intrinsic := genMapForChainDataAnchoring(from, gasPrice, types.TxTypeFeeDelegatedChainDataAnchoring)
+	values[types.TxValueKeyFeePayer] = payer.GetAddr()
+
+	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedChainDataAnchoring, values)
+	assert.Equal(t, nil, err)
+
+	err = tx.SignWithKeys(signer, from.GetTxKeys())
+	assert.Equal(t, nil, err)
+
+	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
+	assert.Equal(t, nil, err)
+
+	return tx, intrinsic
+}
+
+func genFeeDelegatedWithRatioChainDataAnchoring(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
+	values, intrinsic := genMapForChainDataAnchoring(from, gasPrice, types.TxTypeFeeDelegatedChainDataAnchoringWithRatio)
+	values[types.TxValueKeyFeePayer] = payer.GetAddr()
+	values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
+
+	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedChainDataAnchoringWithRatio, values)
+	assert.Equal(t, nil, err)
+
+	err = tx.SignWithKeys(signer, from.GetTxKeys())
+	assert.Equal(t, nil, err)
+
+	err = tx.SignFeePayerWithKeys(signer, payer.GetFeeKeys())
+	assert.Equal(t, nil, err)
+
+	return tx, intrinsic
 }
 
 // Generate map functions
@@ -964,6 +993,10 @@ func getIntrinsicGas(txType types.TxType) uint64 {
 		intrinsic = params.TxGasContractExecution + params.TxGasFeeDelegatedWithRatio
 	case types.TxTypeChainDataAnchoring:
 		intrinsic = params.TxChainDataAnchoringGas
+	case types.TxTypeFeeDelegatedChainDataAnchoring:
+		intrinsic = params.TxChainDataAnchoringGas + params.TxGasFeeDelegated
+	case types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:
+		intrinsic = params.TxChainDataAnchoringGas + params.TxGasFeeDelegatedWithRatio
 	case types.TxTypeCancel:
 		intrinsic = params.TxGasCancel
 	case types.TxTypeFeeDelegatedCancel:

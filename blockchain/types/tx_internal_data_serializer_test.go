@@ -51,7 +51,9 @@ func TestTransactionSerialization(t *testing.T) {
 		{"ValueTransferMemo", genValueTransferMemoTransaction()},
 		{"FeeDelegatedValueTransferMemo", genFeeDelegatedValueTransferMemoTransaction()},
 		{"FeeDelegatedValueTransferMemoWithRatio", genFeeDelegatedValueTransferMemoWithRatioTransaction()},
-		{"ChainDataTx", genChainDataTransaction()},
+		{"ChainDataAnchoring", genChainDataTransaction()},
+		{"FeeDelegatedChainDataAnchoring", genFeeDelegatedChainDataTransaction()},
+		{"FeeDelegatedChainDataAnchoringWithRatio", genFeeDelegatedChainDataWithRatioTransaction()},
 		{"AccountUpdate", genAccountUpdateTransaction()},
 		{"FeeDelegatedAccountUpdate", genFeeDelegatedAccountUpdateTransaction()},
 		{"FeeDelegatedAccountUpdateWithRatio", genFeeDelegatedAccountUpdateWithRatioTransaction()},
@@ -393,6 +395,71 @@ func genChainDataTransaction() TxInternalData {
 		TxValueKeyGasLimit:     gasLimit,
 		TxValueKeyGasPrice:     gasPrice,
 		TxValueKeyAnchoredData: anchoredData,
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return txdata
+}
+
+func genFeeDelegatedChainDataTransaction() TxInternalData {
+	data := &AnchoringDataInternalType0{common.HexToHash("0"), common.HexToHash("1"),
+		common.HexToHash("2"), common.HexToHash("3"),
+		common.HexToHash("4"), big.NewInt(5), big.NewInt(6), big.NewInt(7)}
+	encodedCCTxData, err := rlp.EncodeToBytes(data)
+	if err != nil {
+		panic(err)
+	}
+	blockTxData := &AnchoringData{0, encodedCCTxData}
+
+	anchoredData, err := rlp.EncodeToBytes(blockTxData)
+	if err != nil {
+		panic(err)
+	}
+
+	txdata, err := NewTxInternalDataWithMap(TxTypeFeeDelegatedChainDataAnchoring, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:        nonce,
+		TxValueKeyFrom:         from,
+		TxValueKeyGasLimit:     gasLimit,
+		TxValueKeyGasPrice:     gasPrice,
+		TxValueKeyAnchoredData: anchoredData,
+		TxValueKeyFeePayer:     feePayer,
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return txdata
+}
+
+func genFeeDelegatedChainDataWithRatioTransaction() TxInternalData {
+	data := &AnchoringDataInternalType0{common.HexToHash("0"), common.HexToHash("1"),
+		common.HexToHash("2"), common.HexToHash("3"),
+		common.HexToHash("4"), big.NewInt(5), big.NewInt(6), big.NewInt(7)}
+	encodedCCTxData, err := rlp.EncodeToBytes(data)
+	if err != nil {
+		panic(err)
+	}
+	blockTxData := &AnchoringData{0, encodedCCTxData}
+
+	anchoredData, err := rlp.EncodeToBytes(blockTxData)
+	if err != nil {
+		panic(err)
+	}
+
+	txdata, err := NewTxInternalDataWithMap(TxTypeFeeDelegatedChainDataAnchoringWithRatio, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:              nonce,
+		TxValueKeyFrom:               from,
+		TxValueKeyGasLimit:           gasLimit,
+		TxValueKeyGasPrice:           gasPrice,
+		TxValueKeyAnchoredData:       anchoredData,
+		TxValueKeyFeePayer:           feePayer,
+		TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
 	})
 
 	if err != nil {

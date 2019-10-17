@@ -31,6 +31,7 @@ type testingF func(t *testing.T)
 func TestTxRLPDecode(t *testing.T) {
 	funcs := []testingF{
 		testTxRLPDecodeLegacy,
+
 		testTxRLPDecodeValueTransfer,
 		testTxRLPDecodeValueTransferMemo,
 		testTxRLPDecodeAccountUpdate,
@@ -38,18 +39,22 @@ func TestTxRLPDecode(t *testing.T) {
 		testTxRLPDecodeSmartContractExecution,
 		testTxRLPDecodeCancel,
 		testTxRLPDecodeChainDataAnchoring,
+
 		testTxRLPDecodeFeeDelegatedValueTransfer,
 		testTxRLPDecodeFeeDelegatedValueTransferMemo,
 		testTxRLPDecodeFeeDelegatedAccountUpdate,
 		testTxRLPDecodeFeeDelegatedSmartContractDeploy,
 		testTxRLPDecodeFeeDelegatedSmartContractExecution,
 		testTxRLPDecodeFeeDelegatedCancel,
+		testTxRLPDecodeFeeDelegatedChainDataAnchoring,
+
 		testTxRLPDecodeFeeDelegatedValueTransferWithRatio,
 		testTxRLPDecodeFeeDelegatedValueTransferMemoWithRatio,
 		testTxRLPDecodeFeeDelegatedAccountUpdateWithRatio,
 		testTxRLPDecodeFeeDelegatedSmartContractDeployWithRatio,
 		testTxRLPDecodeFeeDelegatedSmartContractExecutionWithRatio,
 		testTxRLPDecodeFeeDelegatedCancelWithRatio,
+		testTxRLPDecodeFeeDelegatedChainDataAnchoringWithRatio,
 	}
 
 	for _, f := range funcs {
@@ -524,6 +529,36 @@ func testTxRLPDecodeFeeDelegatedCancel(t *testing.T) {
 	}
 }
 
+func testTxRLPDecodeFeeDelegatedChainDataAnchoring(t *testing.T) {
+	tx := genFeeDelegatedChainDataTransaction().(*TxInternalDataFeeDelegatedChainDataAnchoring)
+
+	buffer := new(bytes.Buffer)
+	err := rlp.Encode(buffer, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(buffer, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		tx.Payload,
+		tx.TxSignatures,
+		tx.FeePayer,
+		tx.FeePayerSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	dec := newTxInternalDataSerializer()
+
+	if err := rlp.DecodeBytes(buffer.Bytes(), &dec); err != nil {
+		panic(err)
+	}
+
+	if !tx.Equal(dec.tx) {
+		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
+	}
+}
+
 func testTxRLPDecodeFeeDelegatedValueTransferWithRatio(t *testing.T) {
 	tx := genFeeDelegatedValueTransferWithRatioTransaction().(*TxInternalDataFeeDelegatedValueTransferWithRatio)
 
@@ -703,6 +738,37 @@ func testTxRLPDecodeFeeDelegatedCancelWithRatio(t *testing.T) {
 		tx.Price,
 		tx.GasLimit,
 		tx.From,
+		tx.FeeRatio,
+		tx.TxSignatures,
+		tx.FeePayer,
+		tx.FeePayerSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	dec := newTxInternalDataSerializer()
+
+	if err := rlp.DecodeBytes(buffer.Bytes(), &dec); err != nil {
+		panic(err)
+	}
+
+	if !tx.Equal(dec.tx) {
+		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
+	}
+}
+
+func testTxRLPDecodeFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
+	tx := genFeeDelegatedChainDataWithRatioTransaction().(*TxInternalDataFeeDelegatedChainDataAnchoringWithRatio)
+
+	buffer := new(bytes.Buffer)
+	err := rlp.Encode(buffer, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(buffer, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		tx.Payload,
 		tx.FeeRatio,
 		tx.TxSignatures,
 		tx.FeePayer,
