@@ -281,6 +281,7 @@ pendingTxLoop:
 				logger.Trace("filtered pending nonce", "requestNonce", it.Event.RequestNonce, "handledNonce", hint.handleNonce)
 				pendingEvents = append(pendingEvents, &RequestValueTransferEvent{it.Event})
 				if len(pendingEvents) >= maxPendingTxs {
+					it.Close()
 					break pendingTxLoop
 				}
 			}
