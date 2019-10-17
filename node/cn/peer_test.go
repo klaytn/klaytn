@@ -61,6 +61,12 @@ func TestBasePeer_Send(t *testing.T) {
 	}
 	assert.Equal(t, expectedMsg.Code, receivedMsg.Code)
 	assert.Equal(t, expectedMsg.Size, receivedMsg.Size)
+
+	var decodedStr string
+	if err := receivedMsg.Decode(&decodedStr); err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, data, decodedStr)
 }
 
 func TestBasePeer_SendTransactions(t *testing.T) {
