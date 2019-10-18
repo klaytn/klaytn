@@ -43,7 +43,7 @@ func NewChildChainEventHandler(bridge *SubBridge, handler *SubBridgeHandler) (*C
 }
 
 func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) error {
-	logger.Debug("bridgeNode block number", "number", block.Number())
+	logger.Trace("bridgeNode block number", "number", block.Number())
 	cce.handler.LocalChainHeadEvent(block)
 
 	// Logging information of value transfer
