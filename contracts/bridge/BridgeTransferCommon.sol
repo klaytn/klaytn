@@ -95,19 +95,23 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         address tokenAddress,
         uint256 valueOrTokenId,
         uint64 handleNonce,
+        uint64 lowerHandleNonce,
         bytes extraData
-
     );
 
     // updateHandleNonce increases lower and upper handle nonce after the _requestedNonce is handled.
-    function updateHandleNonce(uint64 _requestedNonce, uint64 _requestBlockNumber) internal {
-        uint64 i;
-        handleNoncesToBlockNums[_requestedNonce] = _requestBlockNumber;
-
+    function updateHandleNonce(uint64 _requestedNonce) internal {
         if (_requestedNonce > upperHandleNonce) {
             upperHandleNonce = _requestedNonce;
         }
-        for (i = lowerHandleNonce; i <= upperHandleNonce && handleNoncesToBlockNums[i] > 0; i++) {
+
+        uint64 limit = lowerHandleNonce + 200;
+        if (limit > upperHandleNonce) {
+            limit = upperHandleNonce;
+        }
+
+        uint64 i;
+        for (i = lowerHandleNonce; i <= limit && handleNoncesToBlockNums[i] > 0; i++) {
             recoveryBlockNumber = handleNoncesToBlockNums[i];
             delete handleNoncesToBlockNums[i];
             delete closedValueTransferVotes[i];

@@ -283,12 +283,10 @@ type filterLocalBackend struct {
 
 func (fb *filterLocalBackend) ChainDB() database.DBManager {
 	// TODO-Klaytn consider chain's chainDB instead of bridge's chainDB currently.
-	logger.Error("use ChainDB in filterLocalBackend ")
 	return fb.subbridge.chainDB
 }
 func (fb *filterLocalBackend) EventMux() *event.TypeMux {
 	// TODO-Klaytn consider chain's eventMux instead of bridge's eventMux currently.
-	logger.Error("use EventMux in filterLocalBackend ")
 	return fb.subbridge.EventMux()
 }
 

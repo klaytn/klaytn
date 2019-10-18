@@ -76,6 +76,11 @@ contract BridgeTransferKLAY is BridgeTransfer {
             return;
         }
 
+        _setHandledRequestTxHash(_requestTxHash);
+
+        handleNoncesToBlockNums[_requestedNonce] = _requestedBlockNumber;
+        updateHandleNonce(_requestedNonce);
+
         emit HandleValueTransfer(
             _requestTxHash,
             TokenType.KLAY,
@@ -84,11 +89,10 @@ contract BridgeTransferKLAY is BridgeTransfer {
             address(0),
             _value,
             _requestedNonce,
+            lowerHandleNonce,
             _extraData
         );
-        _setHandledRequestTxHash(_requestTxHash);
 
-        updateHandleNonce(_requestedNonce, _requestedBlockNumber);
         _to.transfer(_value);
     }
 

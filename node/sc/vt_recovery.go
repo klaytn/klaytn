@@ -25,7 +25,7 @@ import (
 
 var (
 	filterLogsStride = uint64(100)
-	maxPendingTxs    = 100000
+	maxPendingTxs    = 1000
 )
 
 // valueTransferHint stores the last handled block number and nonce (Request or Handle).
@@ -217,7 +217,7 @@ func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *BridgeInfo)
 	}
 	hint.handleNonce = handleNonce
 
-	logger.Trace("updateRecoveryHintFromTo finish", "rnonce", hint.requestNonce, "hnonce", hint.handleNonce, "phnonce", hint.prevHandleNonce, "cand", hint.candidate)
+	logger.Info("updateRecoveryHintFromTo finish", "rnonce", hint.requestNonce, "hnonce", hint.handleNonce, "phnonce", hint.prevHandleNonce, "cand", hint.candidate)
 
 	return &hint, nil
 }
@@ -281,15 +281,19 @@ pendingTxLoop:
 				logger.Trace("filtered pending nonce", "requestNonce", it.Event.RequestNonce, "handledNonce", hint.handleNonce)
 				pendingEvents = append(pendingEvents, &RequestValueTransferEvent{it.Event})
 				if len(pendingEvents) >= maxPendingTxs {
+					it.Close()
 					break pendingTxLoop
 				}
 			}
 		}
 		startBlkNum = endBlkNum + 1
 		endBlkNum = startBlkNum + filterLogsStride
+		it.Close()
 	}
 
-	logger.Debug("retrieved pending events", "len(pendingEvents)", len(pendingEvents))
+	if len(pendingEvents) > 0 {
+		logger.Info("retrieved pending events", "bridge", bi.address.String(), "len(pendingEvents)", len(pendingEvents), "1st nonce", pendingEvents[0].Nonce())
+	}
 	return pendingEvents, nil
 }
 

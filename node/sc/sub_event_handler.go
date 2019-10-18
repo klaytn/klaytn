@@ -90,6 +90,7 @@ func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEve
 	}
 
 	handleBridgeInfo.UpdateHandledNonce(ev.HandleNonce + 1)
+	handleBridgeInfo.UpdateLowerHandleNonce(ev.LowerHandleNonce)
 
 	logger.Trace("RequestValueTransfer Event",
 		"bridgeAddr", ev.Raw.Address.String(),
