@@ -323,7 +323,7 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 		peer.SendServiceChainTxs(txs)
 		logger.Trace("sent ServiceChainTxData", "peerID", peer.GetID())
 	}
-	logger.Debug("broadcastServiceChainTx ServiceChainTxData", "len(txs)", len(txs), "len(peers)", len(peers))
+	logger.Trace("broadcastServiceChainTx ServiceChainTxData", "len(txs)", len(txs), "len(peers)", len(peers))
 }
 
 // writeServiceChainTxReceipts writes the received receipts of service chain transactions.
@@ -396,7 +396,7 @@ func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
 	for i := startBlkNum; i <= block.NumberU64(); i++ {
 		b := sbh.subbridge.blockchain.GetBlockByNumber(i)
 		if b == nil {
-			logger.Warn("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool by the missed block", "missedBlockNumber", i)
+			logger.Error("blockAnchoringManager: break to generateAndAddAnchoringTxIntoTxPool by the missed block", "missedBlockNumber", i)
 			break
 		}
 		sbh.txCount += uint64(b.Transactions().Len())
@@ -440,7 +440,7 @@ func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Bl
 		return err
 	}
 
-	logger.Info("generate an anchoring tx", "blockNum", block.NumberU64(), "blockhash", block.Hash().String(), "txCount", txCount, "txHash", signedTx.Hash().String())
+	logger.Info("Generate an anchoring tx", "blockNum", block.NumberU64(), "blockhash", block.Hash().String(), "txCount", txCount, "txHash", signedTx.Hash().String())
 
 	return nil
 }
