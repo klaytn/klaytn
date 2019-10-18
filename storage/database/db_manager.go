@@ -28,17 +28,20 @@ import (
 	"github.com/pkg/errors"
 	"math/big"
 	"path/filepath"
+	"strconv"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
 
 type DBManager interface {
 	IsParallelDBWrite() bool
+	InMigration() bool
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
+	SetStateTrieMigrationDB(blockNum uint64)
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -99,11 +102,20 @@ type DBManager interface {
 
 	WriteMerkleProof(key, value []byte)
 
+	// State Trie Database related operations
 	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
-
 	ReadStateTrieNode(key []byte) ([]byte, error)
 	HasStateTrieNode(key []byte) (bool, error)
+	ReadPreimage(hash common.Hash) []byte
+
+	ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error)
+	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
+	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
+	HasStateTrieNodeFromOld(key []byte) (bool, error)
+	ReadPreimageFromOld(hash common.Hash) []byte
+
+	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
@@ -134,9 +146,6 @@ type DBManager interface {
 
 	ReadChainConfig(hash common.Hash) *params.ChainConfig
 	WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
-
-	ReadPreimage(hash common.Hash) []byte
-	WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
 	// below operations are used in parent chain side, not child chain side.
 	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
@@ -244,6 +253,9 @@ type databaseManager struct {
 	config *DBConfig
 	dbs    []Database
 	cm     *cacheManager
+
+	inMigration    bool
+	newStateTrieDB Database
 }
 
 func NewMemoryDBManager() DBManager {
@@ -295,7 +307,7 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 
 // partitionedDatabaseDBManager returns DBManager which handles partitioned Database.
 // Each Database will have its own separated Database.
-func partitionedDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
+func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 	dbm := newDatabaseManager(dbc)
 	var db Database
 	var err error
@@ -357,11 +369,15 @@ func NewDBManager(dbc *DBConfig) DBManager {
 	} else {
 		checkDBEntryConfigRatio()
 		logger.Info("Partitioned database is used for persistent storage", "DBType", dbc.DBType)
-		if dbm, err := partitionedDatabaseDBManager(dbc); err != nil {
+		dbm, err := partitionedDatabaseDBManager(dbc)
+		if err != nil {
 			logger.Crit("Failed to partitioned database", "DBType", dbc.DBType, "err", err)
-		} else {
-			return dbm
 		}
+		if inMigration, migrationDir := dbm.getStateTrieMigrationInfo(); inMigration {
+			dbm.newStateTrieDB = createStateTrieMigrationDB(dbm.config, migrationDir)
+			dbm.inMigration = true
+		}
+		return dbm
 	}
 	logger.Crit("Must not reach here!")
 	return nil
@@ -371,8 +387,83 @@ func (dbm *databaseManager) IsParallelDBWrite() bool {
 	return dbm.config.ParallelDBWrite
 }
 
+func (dbm *databaseManager) InMigration() bool {
+	return dbm.inMigration
+}
+
 func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
+	if dbEntryType == StateTrieDB && dbm.inMigration {
+		return dbm.newStateTrieDB.NewBatch()
+	}
 	return dbm.getDatabase(dbEntryType).NewBatch()
+}
+
+func (dbm *databaseManager) getStateTrieMigrationInfo() (bool, string) {
+	miscDB := dbm.getDatabase(MiscDB)
+
+	enc, _ := miscDB.Get(migrationStatusKey)
+	if len(enc) == 0 {
+		return false, ""
+	}
+
+	var status uint64
+	if err := rlp.DecodeBytes(enc, &status); err != nil {
+		logger.Error("Failed to decode migration status", "err", err)
+		return false, ""
+	}
+
+	if status == 0 {
+		return false, ""
+	}
+
+	enc, _ = miscDB.Get(databaseDirKey(uint64(StateTrieDB)))
+	return true, string(enc)
+}
+
+func createStateTrieMigrationDB(dbc *DBConfig, newDBDir string) Database {
+	oldDBConfig := dbc
+	newDBConfig := getDBEntryConfig(oldDBConfig, StateTrieDB)
+	newDBConfig.Dir = newDBDir
+	var newDB Database
+	var err error
+	if newDBConfig.NumStateTriePartitions > 1 {
+		newDB, err = newPartitionedDB(newDBConfig, StateTrieDB, newDBConfig.NumStateTriePartitions)
+	} else {
+		newDB, err = newDatabase(newDBConfig, StateTrieDB)
+	}
+	if err != nil {
+		logger.Crit("Failed to create a new database for state trie migration", "err", err)
+	}
+	logger.Info("Created a new database for state trie migration", "newStateTrieDB", newDBConfig.Dir)
+	return newDB
+}
+
+func (dbm *databaseManager) SetStateTrieMigrationDB(blockNum uint64) {
+	if !dbm.config.Partitioned {
+		logger.Warn("Setting a new database for state trie migration is allowed for partitioned database only")
+		return
+	}
+
+	logger.Info("Start setting a new database for state trie migration", blockNum, blockNum)
+
+	// Store the directory of the new database first to avoid missing directory name situation
+	newDBDir := dbm.config.Dir + strconv.FormatUint(blockNum, 10)
+	miscDB := dbm.getDatabase(MiscDB)
+	if err := miscDB.Put(databaseDirKey(uint64(StateTrieDB)), []byte(newDBDir)); err != nil {
+		logger.Crit("Failed to store a new database directory", "newDBDir", newDBDir, "err", err)
+	}
+
+	// After storing the directory, create a new database for migration process.
+	newDB := createStateTrieMigrationDB(dbm.config, newDBDir)
+
+	// After creating the database, store migration status to the database.
+	dbm.newStateTrieDB = newDB
+	dbm.inMigration = true
+	if err := miscDB.Put(migrationStatusKey, encodeUint64(1)); err != nil {
+		logger.Crit("Failed to store the migration status", "status", 1, "err", err)
+	}
+
+	logger.Info("Finished setting a new database for state trie migration")
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
@@ -411,6 +502,11 @@ func (dbm *databaseManager) Close() {
 	// If partitioned, close all databases.
 	for _, db := range dbm.dbs {
 		db.Close()
+	}
+
+	// If in migration process, also close new state trie database.
+	if dbm.inMigration {
+		dbm.newStateTrieDB.Close()
 	}
 }
 
@@ -578,7 +674,7 @@ func (dbm *databaseManager) WriteHeader(header *types.Header) {
 	var (
 		hash    = header.Hash()
 		number  = header.Number.Uint64()
-		encoded = encodeBlockNumber(number)
+		encoded = encodeUint64(number)
 	)
 	key := headerNumberKey(hash)
 	if err := db.Put(key, encoded); err != nil {
@@ -1057,20 +1153,32 @@ func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
 
 // Cached Trie Node operation.
 func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
-	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(hash[:])
+	if dbm.inMigration {
+		if val, err := dbm.newStateTrieDB.Get(hash[:]); err == nil {
+			return val, nil
+		}
+	}
+	return dbm.ReadCachedTrieNodeFromOld(hash)
 }
 
 // Cached Trie Node Preimage operation.
 func (dbm *databaseManager) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
-	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(secureKey)
+	if dbm.inMigration {
+		if val, err := dbm.newStateTrieDB.Get(secureKey); err == nil {
+			return val, nil
+		}
+	}
+	return dbm.ReadCachedTrieNodePreimageFromOld(secureKey)
 }
 
 // State Trie Related operations.
 func (dbm *databaseManager) ReadStateTrieNode(key []byte) ([]byte, error) {
-	db := dbm.getDatabase(StateTrieDB)
-	return db.Get(key)
+	if dbm.inMigration {
+		if val, err := dbm.newStateTrieDB.Get(key); err == nil {
+			return val, nil
+		}
+	}
+	return dbm.ReadStateTrieNodeFromOld(key)
 }
 
 func (dbm *databaseManager) HasStateTrieNode(key []byte) (bool, error) {
@@ -1079,6 +1187,70 @@ func (dbm *databaseManager) HasStateTrieNode(key []byte) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// ReadPreimage retrieves a single preimage of the provided hash.
+func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
+	if dbm.inMigration {
+		if val, err := dbm.newStateTrieDB.Get(preimageKey(hash)); err == nil {
+			return val
+		}
+	}
+	return dbm.ReadPreimageFromOld(hash)
+}
+
+func (dbm *databaseManager) ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error) {
+	db := dbm.getDatabase(StateTrieDB)
+	return db.Get(hash[:])
+}
+
+// Cached Trie Node Preimage operation.
+func (dbm *databaseManager) ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error) {
+	db := dbm.getDatabase(StateTrieDB)
+	return db.Get(secureKey)
+}
+
+// State Trie Related operations.
+func (dbm *databaseManager) ReadStateTrieNodeFromOld(key []byte) ([]byte, error) {
+	db := dbm.getDatabase(StateTrieDB)
+	return db.Get(key)
+}
+
+func (dbm *databaseManager) HasStateTrieNodeFromOld(key []byte) (bool, error) {
+	db := dbm.getDatabase(StateTrieDB)
+	val, err := db.Get(key)
+	if val == nil || err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// ReadPreimage retrieves a single preimage of the provided hash.
+func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
+	if dbm.inMigration {
+		if val, err := dbm.newStateTrieDB.Get(preimageKey(hash)); err == nil {
+			return val
+		}
+	}
+	db := dbm.getDatabase(StateTrieDB)
+	data, _ := db.Get(preimageKey(hash))
+	return data
+}
+
+// WritePreimages writes the provided set of preimages to the database. `number` is the
+// current block number, and is used for debug messages only.
+func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
+	batch := dbm.NewBatch(StateTrieDB)
+	for hash, preimage := range preimages {
+		if err := batch.Put(preimageKey(hash), preimage); err != nil {
+			logger.Crit("Failed to store trie preimage", "err", err)
+		}
+	}
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to batch write trie preimage", "err", err, "blockNumber", number)
+	}
+	preimageCounter.Inc(int64(len(preimages)))
+	preimageHitCounter.Inc(int64(len(preimages)))
 }
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction
@@ -1311,29 +1483,6 @@ func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.Chain
 	}
 }
 
-// ReadPreimage retrieves a single preimage of the provided hash.
-func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
-	db := dbm.getDatabase(StateTrieDB)
-	data, _ := db.Get(preimageKey(hash))
-	return data
-}
-
-// WritePreimages writes the provided set of preimages to the database. `number` is the
-// current block number, and is used for debug messages only.
-func (dbm *databaseManager) WritePreimages(number uint64, preimages map[common.Hash][]byte) {
-	batch := dbm.getDatabase(StateTrieDB).NewBatch()
-	for hash, preimage := range preimages {
-		if err := batch.Put(preimageKey(hash), preimage); err != nil {
-			logger.Crit("Failed to store trie preimage", "err", err)
-		}
-	}
-	if err := batch.Write(); err != nil {
-		logger.Crit("Failed to batch write trie preimage", "err", err, "blockNumber", number)
-	}
-	preimageCounter.Inc(int64(len(preimages)))
-	preimageHitCounter.Inc(int64(len(preimages)))
-}
-
 // WriteChildChainTxHash writes stores a transaction hash of a transaction which contains
 // AnchoringData, with the key made with given child chain block hash.
 func (dbm *databaseManager) WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash) {
@@ -1360,7 +1509,7 @@ func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(scBloc
 func (dbm *databaseManager) WriteLastIndexedBlockNumber(blockNum uint64) {
 	key := lastIndexedBlockKey
 	db := dbm.getDatabase(bridgeServiceDB)
-	if err := db.Put(key, encodeBlockNumber(blockNum)); err != nil {
+	if err := db.Put(key, encodeUint64(blockNum)); err != nil {
 		logger.Crit("Failed to store LastIndexedBlockNumber", "blockNumber", blockNum, "err", err)
 	}
 }
@@ -1380,7 +1529,7 @@ func (dbm *databaseManager) GetLastIndexedBlockNumber() uint64 {
 func (dbm *databaseManager) WriteAnchoredBlockNumber(blockNum uint64) {
 	key := lastServiceChainTxReceiptKey
 	db := dbm.getDatabase(bridgeServiceDB)
-	if err := db.Put(key, encodeBlockNumber(blockNum)); err != nil {
+	if err := db.Put(key, encodeUint64(blockNum)); err != nil {
 		logger.Crit("Failed to store LatestServiceChainBlockNum", "blockNumber", blockNum, "err", err)
 	}
 }

@@ -387,6 +387,34 @@ func TestDBManager_TrieNode(t *testing.T) {
 
 		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
 		assert.True(t, hasStateTrieNode)
+
+		dbm.SetStateTrieMigrationDB(123)
+
+		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
+		assert.Equal(t, hash1[:], cachedNode)
+
+		stateTrieNode, _ = dbm.ReadStateTrieNode(hash1[:])
+		assert.Equal(t, hash1[:], stateTrieNode)
+
+		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
+		assert.True(t, hasStateTrieNode)
+
+		batch = dbm.NewBatch(StateTrieDB)
+		if err := batch.Put(hash2[:], hash2[:]); err != nil {
+			t.Fatal("Failed putting a row into the batch", "err", err)
+		}
+		if _, err := WriteBatches(batch); err != nil {
+			t.Fatal("Failed writing batch", "err", err)
+		}
+
+		cachedNode, _ = dbm.ReadCachedTrieNode(hash2)
+		assert.Equal(t, hash2[:], cachedNode)
+
+		stateTrieNode, _ = dbm.ReadStateTrieNode(hash2[:])
+		assert.Equal(t, hash2[:], stateTrieNode)
+
+		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2[:])
+		assert.True(t, hasStateTrieNode)
 	}
 }
 

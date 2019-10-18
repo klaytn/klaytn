@@ -84,6 +84,9 @@ var (
 	governancePrefix     = []byte("governance")
 	governanceHistoryKey = []byte("governanceIdxHistory")
 	governanceStateKey   = []byte("governanceState")
+
+	databaseDirPrefix  = []byte("databaseDirectory")
+	migrationStatusKey = []byte("migrationStatus")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of
@@ -94,8 +97,8 @@ type TxLookupEntry struct {
 	Index      uint64
 }
 
-// encodeBlockNumber encodes a block number as big endian uint64
-func encodeBlockNumber(number uint64) []byte {
+// encodeUint64 encodes a block number as big endian uint64
+func encodeUint64(number uint64) []byte {
 	enc := make([]byte, 8)
 	binary.BigEndian.PutUint64(enc, number)
 	return enc
@@ -103,7 +106,7 @@ func encodeBlockNumber(number uint64) []byte {
 
 // headerKey = headerPrefix + num (uint64 big endian) + hash
 func headerKey(number uint64, hash common.Hash) []byte {
-	return append(append(headerPrefix, encodeBlockNumber(number)...), hash.Bytes()...)
+	return append(append(headerPrefix, encodeUint64(number)...), hash.Bytes()...)
 }
 
 // headerTDKey = headerPrefix + num (uint64 big endian) + hash + headerTDSuffix
@@ -113,7 +116,7 @@ func headerTDKey(number uint64, hash common.Hash) []byte {
 
 // headerHashKey = headerPrefix + num (uint64 big endian) + headerHashSuffix
 func headerHashKey(number uint64) []byte {
-	return append(append(headerPrefix, encodeBlockNumber(number)...), headerHashSuffix...)
+	return append(append(headerPrefix, encodeUint64(number)...), headerHashSuffix...)
 }
 
 // headerNumberKey = headerNumberPrefix + hash
@@ -123,12 +126,12 @@ func headerNumberKey(hash common.Hash) []byte {
 
 // blockBodyKey = blockBodyPrefix + num (uint64 big endian) + hash
 func blockBodyKey(number uint64, hash common.Hash) []byte {
-	return append(append(blockBodyPrefix, encodeBlockNumber(number)...), hash.Bytes()...)
+	return append(append(blockBodyPrefix, encodeUint64(number)...), hash.Bytes()...)
 }
 
 // blockReceiptsKey = blockReceiptsPrefix + num (uint64 big endian) + hash
 func blockReceiptsKey(number uint64, hash common.Hash) []byte {
-	return append(append(blockReceiptsPrefix, encodeBlockNumber(number)...), hash.Bytes()...)
+	return append(append(blockReceiptsPrefix, encodeUint64(number)...), hash.Bytes()...)
 }
 
 // TxLookupKey = txLookupPrefix + hash
@@ -184,4 +187,8 @@ func governanceKey(num uint64) []byte {
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, num)
 	return append(governancePrefix[:], b[:]...)
+}
+
+func databaseDirKey(dbEntryType uint64) []byte {
+	return append(databaseDirPrefix, encodeUint64(dbEntryType)...)
 }
