@@ -128,7 +128,7 @@ func TestBasePeer_AsyncSendTransactions(t *testing.T) {
 	basePeer, _, _ := newBasePeer()
 
 	// To queuedTxs be filled with transactions
-	for i := 0; i < 128; i++ {
+	for i := 0; i < maxQueuedTxs; i++ {
 		basePeer.AsyncSendTransactions(sentTxs)
 	}
 	// lastTxs shouldn't go into the queuedTxs
