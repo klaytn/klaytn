@@ -89,13 +89,14 @@ cover:
 	@echo "Two coverage reports coverage_report.txt and coverage_report.html are generated."
 
 fmt:
-	build/env.sh env GOFLAGS= go run build/ci.go fmt
+	build/env.sh env GOFLAGS= GO111MODULE=off go run build/ci.go fmt
 
-lint:
-	build/env.sh go run build/ci.go lint
+# Not supported. Use lint-try intead of lint
+#lint:
+#	build/env.sh env GOFLAGS= GO111MODULE=off go run build/ci.go lint
 
 lint-try:
-	build/env.sh go run build/ci.go lint-try
+	build/env.sh env GOFLAGS= GO111MODULE=off go run build/ci.go lint-try
 
 clean:
 	./build/clean_go_build_cache.sh
