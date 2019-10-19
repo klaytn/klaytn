@@ -175,7 +175,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) String() string {
 		t.GasLimit,
 		common.Bytes2Hex(t.Payload),
 		t.TxSignatures.string(),
-		t.FeePayer,
+		t.FeePayer.String(),
 		t.FeePayerSignatures.string(),
 		enc)
 }
