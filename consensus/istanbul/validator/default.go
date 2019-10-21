@@ -32,6 +32,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 const (
@@ -68,7 +69,7 @@ type defaultSet struct {
 	validators istanbul.Validators
 	policy     istanbul.ProposerPolicy
 
-	proposer    istanbul.Validator
+	proposer    atomic.Value
 	validatorMu sync.RWMutex
 	selector    istanbul.ProposalSelector
 }
@@ -87,7 +88,7 @@ func newDefaultSet(addrs []common.Address, policy istanbul.ProposerPolicy) *defa
 	sort.Sort(valSet.validators)
 	// init proposer
 	if valSet.Size() > 0 {
-		valSet.proposer = valSet.GetByIndex(0)
+		valSet.proposer.Store(valSet.GetByIndex(0))
 	}
 	valSet.selector = roundRobinProposer
 	if policy == istanbul.Sticky {
@@ -111,7 +112,7 @@ func newDefaultSubSet(addrs []common.Address, policy istanbul.ProposerPolicy, su
 	sort.Sort(valSet.validators)
 	// init proposer
 	if valSet.Size() > 0 {
-		valSet.proposer = valSet.GetByIndex(0)
+		valSet.proposer.Store(valSet.GetByIndex(0))
 	}
 	valSet.selector = roundRobinProposer
 	if policy == istanbul.Sticky {
@@ -163,7 +164,7 @@ func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View) []i
 	subset := make([]istanbul.Validator, valSet.subSize)
 	subset[0] = valSet.GetProposer()
 	// next proposer
-	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64()+1)
+	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64())
 
 	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
 	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
@@ -222,7 +223,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	subset := make([]istanbul.Validator, valSet.subSize)
 	subset[0] = New(proposer)
 	// next proposer
-	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64()+1)
+	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64())
 
 	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
 	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
@@ -293,7 +294,12 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, istanbul.Valid
 }
 
 func (valSet *defaultSet) GetProposer() istanbul.Validator {
-	return valSet.proposer
+	proposer := valSet.proposer.Load()
+	if proposer == nil {
+		logger.Error("Proposer is nil", "validators", valSet.validators)
+		return nil
+	}
+	return proposer.(istanbul.Validator)
 }
 
 func (valSet *defaultSet) IsProposer(address common.Address) bool {
@@ -306,11 +312,11 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 	defer valSet.validatorMu.RUnlock()
 
 	if len(valSet.validators) == 0 {
-		valSet.proposer = nil
+		logger.Error("len of validators is 0, Proposer is nil", "validators", valSet.validators)
 		return
 	}
 
-	valSet.proposer = valSet.selector(valSet, lastProposer, round)
+	valSet.proposer.Store(valSet.selector(valSet, lastProposer, round))
 }
 
 func calcSeed(valSet istanbul.ValidatorSet, proposer common.Address, round uint64) uint64 {
@@ -383,7 +389,11 @@ func (valSet *defaultSet) Copy() istanbul.ValidatorSet {
 	for _, v := range valSet.validators {
 		addresses = append(addresses, v.Address())
 	}
-	return NewSubSet(addresses, valSet.policy, valSet.subSize)
+
+	newValSet := NewSubSet(addresses, valSet.policy, valSet.subSize).(*defaultSet)
+	_, proposer := newValSet.GetByAddress(valSet.GetProposer().Address())
+	newValSet.proposer.Store(proposer)
+	return newValSet
 }
 
 func (valSet *defaultSet) F() int {
