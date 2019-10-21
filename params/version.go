@@ -31,7 +31,7 @@ const (
 
 // Version holds the textual version string.
 var Version = func() string {
-	v := fmt.Sprintf("v%d.%d.%d-rc.1", VersionMajor, VersionMinor, VersionPatch)
+	v := fmt.Sprintf("v%d.%d.%d", VersionMajor, VersionMinor, VersionPatch)
 	return v
 }()
 
