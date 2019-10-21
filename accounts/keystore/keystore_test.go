@@ -393,7 +393,7 @@ func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
 	if encrypted {
 		new = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
 	}
-	return d, new(d)
+	return d, new(string(d))
 }
 
 // testTxs returns sample transactions and private keys of the sender and fee payer.
