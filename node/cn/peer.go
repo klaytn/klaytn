@@ -39,10 +39,11 @@ import (
 )
 
 var (
-	errClosed             = errors.New("peer set is closed")
-	errAlreadyRegistered  = errors.New("peer is already registered")
-	errNotRegistered      = errors.New("peer is not registered")
-	errUnexpectedNodeType = errors.New("unexpected node type of peer")
+	errClosed                 = errors.New("peer set is closed")
+	errAlreadyRegistered      = errors.New("peer is already registered")
+	errNotRegistered          = errors.New("peer is not registered")
+	errUnexpectedNodeType     = errors.New("unexpected node type of peer")
+	errNotSupportedByBasePeer = errors.New("not supported by basePeer")
 )
 
 const (
@@ -222,7 +223,7 @@ type Peer interface {
 	downloader.Peer
 
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
-	RegisterConsensusMsgCode(msgCode uint64)
+	RegisterConsensusMsgCode(msgCode uint64) error
 }
 
 // basePeer is a common data structure used by implementation of Peer.
@@ -732,8 +733,8 @@ func (p *basePeer) UpdateRWImplementationVersion() {
 }
 
 // RegisterConsensusMsgCode is not supported by this peer.
-func (p *basePeer) RegisterConsensusMsgCode(msgCode uint64) {
-	logger.Error("RegisterConsensusMsgCode is not supported by this peer.")
+func (p *basePeer) RegisterConsensusMsgCode(msgCode uint64) error {
+	return fmt.Errorf("%v peerID: %v ", errNotSupportedByBasePeer, p.GetID())
 }
 
 // singleChannelPeer is a peer that uses a single channel.
@@ -755,8 +756,9 @@ func (p *multiChannelPeer) RegisterMsgCode(channelId uint, msgCode uint64) {
 }
 
 // RegisterConsensusMsgCode registers the channel of consensus msg.
-func (p *multiChannelPeer) RegisterConsensusMsgCode(msgCode uint64) {
+func (p *multiChannelPeer) RegisterConsensusMsgCode(msgCode uint64) error {
 	p.chMgr.RegisterMsgCode(ConsensusChannel, msgCode)
+	return nil
 }
 
 // Broadcast is a write loop that multiplexes block propagations, announcements

@@ -73,5 +73,5 @@ type Peer interface {
 	Send(msgcode uint64, data interface{}) error
 
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
-	RegisterConsensusMsgCode(msgCode uint64)
+	RegisterConsensusMsgCode(msgCode uint64) error
 }

@@ -18,9 +18,12 @@ package cn
 
 import (
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/klaytn/klaytn/node"
 	"github.com/stretchr/testify/assert"
 	"math/big"
+	"strings"
 	"testing"
 )
 
@@ -136,4 +139,33 @@ func TestBasePeer_AsyncSendTransactions(t *testing.T) {
 
 	assert.True(t, basePeer.KnowsTx(tx1.Hash()))
 	assert.False(t, basePeer.KnowsTx(lastTxs[0].Hash()))
+}
+
+func TestBasePeer_ConnType(t *testing.T) {
+	basePeer, _, _ := newBasePeer()
+	assert.Equal(t, p2p.ConnType(node.CONSENSUSNODE), basePeer.ConnType())
+}
+
+func TestBasePeer_GetAndSetAddr(t *testing.T) {
+	basePeer, _, _ := newBasePeer()
+	assert.Equal(t, common.Address{}, basePeer.GetAddr())
+	basePeer.SetAddr(addrs[0])
+	assert.Equal(t, addrs[0], basePeer.GetAddr())
+	basePeer.SetAddr(addrs[1])
+	assert.Equal(t, addrs[1], basePeer.GetAddr())
+}
+
+func TestBasePeer_GetVersion(t *testing.T) {
+	basePeer, _, _ := newBasePeer()
+	assert.Equal(t, version, basePeer.GetVersion())
+}
+
+func TestBasePeer_RegisterConsensusMsgCode(t *testing.T) {
+	basePeer, _, _ := newBasePeer()
+	assert.True(t, strings.Contains(basePeer.RegisterConsensusMsgCode(NewBlockHashesMsg).Error(), errNotSupportedByBasePeer.Error()))
+}
+
+func TestBasePeer_GetRW(t *testing.T) {
+	basePeer, pipe1, _ := newBasePeer()
+	assert.Equal(t, pipe1, basePeer.GetRW())
 }

@@ -119,7 +119,9 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster, nodetype p2
 
 // RegisterConsensusMsgCode registers the channel of consensus msg.
 func (sb *backend) RegisterConsensusMsgCode(peer consensus.Peer) {
-	peer.RegisterConsensusMsgCode(IstanbulMsg)
+	if err := peer.RegisterConsensusMsgCode(IstanbulMsg); err != nil {
+		logger.Error("RegisterConsensusMsgCode failed", "err", err)
+	}
 }
 
 func (sb *backend) NewChainHead() error {

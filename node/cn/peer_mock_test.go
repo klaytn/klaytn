@@ -374,9 +374,11 @@ func (mr *MockPeerMockRecorder) ReSendTransactions(arg0 interface{}) *gomock.Cal
 }
 
 // RegisterConsensusMsgCode mocks base method
-func (m *MockPeer) RegisterConsensusMsgCode(arg0 uint64) {
+func (m *MockPeer) RegisterConsensusMsgCode(arg0 uint64) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RegisterConsensusMsgCode", arg0)
+	ret := m.ctrl.Call(m, "RegisterConsensusMsgCode", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // RegisterConsensusMsgCode indicates an expected call of RegisterConsensusMsgCode
