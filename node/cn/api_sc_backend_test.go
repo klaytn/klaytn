@@ -22,6 +22,8 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -357,6 +359,30 @@ func TestServiceChainAPIBackend_Stats(t *testing.T) {
 
 	assert.Equal(t, expectedPending, pending)
 	assert.Equal(t, expectedQueued, queued)
+}
+
+func TestServiceChainAPIBackend_TxPoolContent(t *testing.T) {
+	api, mockCtrl, _, mockTxPool := prepareServiceChainAPIBackendTest(t)
+	defer mockCtrl.Finish()
+
+	expectedPending := map[common.Address]types.Transactions{addrs[0]: {tx1}}
+	expectedQueued := map[common.Address]types.Transactions{addrs[1]: {tx1}}
+
+	mockTxPool.EXPECT().Content().Return(expectedPending, expectedQueued).Times(1)
+
+	returnedPending, returnedQueued := api.TxPoolContent()
+	assert.Equal(t, expectedPending, returnedPending)
+	assert.Equal(t, expectedQueued, returnedQueued)
+}
+
+func TestServiceChainAPIBackend_SubscribeNewTxsEvent(t *testing.T) {
+	api, mockCtrl, _, mockTxPool := prepareServiceChainAPIBackendTest(t)
+	defer mockCtrl.Finish()
+
+	ch := make(chan<- blockchain.NewTxsEvent, 10)
+	sub := &filters.Subscription{ID: rpc.NewID()}
+	mockTxPool.EXPECT().SubscribeNewTxsEvent(ch).Return(sub).Times(1)
+	assert.Equal(t, sub, api.SubscribeNewTxsEvent(ch))
 }
 
 func TestServiceChainAPIBackend_IsParallelDBWrite(t *testing.T) {
