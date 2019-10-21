@@ -132,19 +132,19 @@ func (vtr *valueTransferRecovery) Stop() error {
 
 // Recover implements the whole recovery process of the value transfer recovery.
 func (vtr *valueTransferRecovery) Recover() error {
-	logger.Debug("update value transfer hint")
+	logger.Trace("update value transfer hint")
 	err := vtr.updateRecoveryHint()
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("retrieve pending events")
+	logger.Trace("retrieve pending events")
 	err = vtr.retrievePendingEvents()
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("recover pending events")
+	logger.Trace("recover pending events")
 	err = vtr.recoverPendingEvents()
 	if err != nil {
 		return err
@@ -217,7 +217,7 @@ func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *BridgeInfo)
 	}
 	hint.handleNonce = handleNonce
 
-	logger.Info("updateRecoveryHintFromTo finish", "rnonce", hint.requestNonce, "hnonce", hint.handleNonce, "phnonce", hint.prevHandleNonce, "cand", hint.candidate)
+	logger.Trace("updateRecoveryHintFromTo finish", "rnonce", hint.requestNonce, "hnonce", hint.handleNonce, "phnonce", hint.prevHandleNonce, "cand", hint.candidate)
 
 	return &hint, nil
 }
@@ -335,7 +335,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	}()
 
 	if len(vtr.childEvents) > 0 {
-		logger.Warn("try to recover child chain's request events", "cBridge", vtr.cBridgeInfo.address.String(), "events", len(vtr.childEvents))
+		logger.Warn("VT Recovery : Child -> Parent Chain", "cBridge", vtr.cBridgeInfo.address.String(), "events", len(vtr.childEvents))
 	}
 
 	vtRequestEventMeter.Mark(int64(len(vtr.childEvents)))
@@ -344,7 +344,7 @@ func (vtr *valueTransferRecovery) recoverPendingEvents() error {
 	vtr.pBridgeInfo.AddRequestValueTransferEvents(vtr.childEvents)
 
 	if len(vtr.parentEvents) > 0 {
-		logger.Warn("try to recover parent chain's request events", "pBridge", vtr.pBridgeInfo.address.String(), "events", len(vtr.parentEvents))
+		logger.Warn("VT Recovery : Parent -> Child Chain", "pBridge", vtr.pBridgeInfo.address.String(), "events", len(vtr.parentEvents))
 	}
 
 	vtHandleEventMeter.Mark(int64(len(vtr.parentEvents)))
