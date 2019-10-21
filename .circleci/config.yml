@@ -2,6 +2,32 @@
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2.1
+
+orbs:
+  codecov: codecov/codecov@1.0.5
+
+executors:
+  test-executor:
+    working_directory: /go/src/github.com/klaytn/klaytn
+    docker:
+      - image: klaytn/build_base:1.0
+  rpm-executor:
+    working_directory: /go/src/github.com/klaytn/klaytn
+    docker:
+      - image: klaytndevops/circleci-rpmbuild:1.12.5
+
+commands:
+  install_awscli:
+    description: "Install AWS CLI"
+    steps:
+      - run: 
+          name: "Install AWS CLI"
+          command: |
+            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+            python get-pip.py --user
+            ~/.local/bin/pip install awscli --upgrade --user
+
+
 jobs:
   build:
     machine: true
@@ -19,31 +45,23 @@ jobs:
             make all
 
   test-datasync:
-    docker:
-      - image: klaytn/build_base:1.0
-    working_directory: /go/src/github.com/klaytn/klaytn
+    executor: test-executor
     steps:
       - checkout
       - run:
           name: "Run test datasync"
-          command: |
-            make test-datasync
+          command: make test-datasync
 
   test-networks:
-    docker:
-      - image: klaytn/build_base:1.0
-    working_directory: /go/src/github.com/klaytn/klaytn
+    executor: test-executor
     steps:
       - checkout
       - run:
           name: "Run test networks"
-          command: |
-            make test-networks
+          command: make test-networks
 
   test-tests:
-    docker:
-      - image: klaytn/build_base:1.0
-    working_directory: /go/src/github.com/klaytn/klaytn
+    executor: test-executor
     steps:
       - checkout
       - run:
@@ -53,20 +71,15 @@ jobs:
             make test-tests
 
   test-others:
-    docker:
-      - image: klaytn/build_base:1.0
-    working_directory: /go/src/github.com/klaytn/klaytn
+    executor: test-executor
     steps:
       - checkout
       - run:
           name: "Run test others"
-          command: |
-            make test-others
+          command: make test-others
 
   coverage:
-    docker:
-      - image: klaytn/build_base:1.0
-    working_directory: /go/src/github.com/klaytn/klaytn
+    executor: test-executor
     resource_class: xlarge
     steps:
       - checkout
@@ -86,9 +99,7 @@ jobs:
           path: /tmp/coverage_reports
 
   linters:
-    docker:
-      - image: klaytn/build_base:1.0
-    working_directory: /go/src/github.com/klaytn/klaytn
+    executor: test-executor
     steps:
       - checkout
       - run:
@@ -105,13 +116,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - run:
-          name: "Install awscli"
-          command: |
-            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-            python get-pip.py --user
-            ~/.local/bin/pip install awscli --upgrade --user
-
+      - install_awscli
       - run:
           name: "Build kcn, kpn, ken, kgen, kscn, kbn for linux-amd64"
           command: |
@@ -146,12 +151,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - run:
-          name: "Install awscli"
-          command: |
-            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-            python get-pip.py --user
-            ~/.local/bin/pip install awscli --upgrade --user
+      - install_awscli
 
       - run:
           name: "Build kcn, kpn, ken for linux-amd64"
@@ -182,13 +182,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - run:
-          name: "Install awscli"
-          command: |
-            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-            python get-pip.py --user
-            ~/.local/bin/pip install awscli --upgrade --user
-
+      - install_awscli
       - run:
           name: "Build kcn, kpn, ken, kgen, kscn, kbn for macOS"
           command: |
@@ -223,13 +217,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - run:
-          name: "Install awscli"
-          command: |
-            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-            python get-pip.py --user
-            ~/.local/bin/pip install awscli --upgrade --user
-
+      - install_awscli
       - run:
           name: "Build kcn, kpn, ken for macOS"
           command: |
@@ -259,13 +247,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - run:
-          name: "Install awscli"
-          command: |
-            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-            python get-pip.py --user
-            ~/.local/bin/pip install awscli --upgrade --user
-
+      - install_awscli
       - run:
           name: "Build kcn, kpn, ken, kgen, kscn, kbn for windows"
           command: |
@@ -297,9 +279,7 @@ jobs:
 
 
   rpm-untagged:
-    docker:
-      - image: klaytndevops/circleci-rpmbuild:1.12.5
-    working_directory: /go/src/github.com/klaytn/klaytn
+    executor: rpm-executor
     steps:
       - checkout
       - add_ssh_keys:
@@ -320,9 +300,7 @@ jobs:
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   rpm-tagged:
-    docker:
-      - image: klaytndevops/circleci-rpmbuild:1.12.5
-    working_directory: /go/src/github.com/klaytn/klaytn
+    executor: rpm-executor
     steps:
       - checkout
       - add_ssh_keys:
@@ -352,9 +330,7 @@ jobs:
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   rpm-tagged-baobab:
-    docker:
-      - image: klaytndevops/circleci-rpmbuild:1.12.5
-    working_directory: /go/src/github.com/klaytn/klaytn
+    executor: rpm-executor
     steps:
       - checkout
       - add_ssh_keys:
@@ -384,8 +360,7 @@ jobs:
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   deploy-rpm-private:
-    docker:
-      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    executor: rpm-executor
     steps:
       - add_ssh_keys:
           fingerprints:
@@ -396,8 +371,7 @@ jobs:
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   deploy-rpm-public:
-    docker:
-      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    executor: rpm-executor
     steps:
       - add_ssh_keys:
           fingerprints:
