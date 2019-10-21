@@ -26,6 +26,20 @@ commands:
             curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
             python get-pip.py --user
             ~/.local/bin/pip install awscli --upgrade --user
+  build:
+    description: "Build kcn, kpn, ken, kgen, kscn, kbn for each OS/Network"
+    parameters:
+      os-network:
+        type: string
+        default: "klay-linux-amd64"
+    steps:
+      - run:
+          name: "Build x,x,x,x"
+          command: |
+            export GOPATH=~/go
+            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
+            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+            make << parameters.os-network >>
 
 
 jobs:
@@ -117,14 +131,7 @@ jobs:
     steps:
       - checkout
       - install_awscli
-      - run:
-          name: "Build kcn, kpn, ken, kgen, kscn, kbn for linux-amd64"
-          command: |
-            export GOPATH=~/go
-            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
-            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-            make klay-linux-amd64
-
+      - build
       - run:
           name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for linux-amd64"
           command: |
@@ -152,15 +159,7 @@ jobs:
     steps:
       - checkout
       - install_awscli
-
-      - run:
-          name: "Build kcn, kpn, ken for linux-amd64"
-          command: |
-            export GOPATH=~/go
-            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
-            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-            make klay-linux-amd64
-
+      - build
       - run:
           name: "Packaging baobab versions of kcn, kpn, ken for linux-amd64"
           command: |
@@ -183,14 +182,8 @@ jobs:
     steps:
       - checkout
       - install_awscli
-      - run:
-          name: "Build kcn, kpn, ken, kgen, kscn, kbn for macOS"
-          command: |
-            export GOPATH=~/go
-            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
-            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-            make klay-darwin-amd64
-
+      - build:
+          os-network: "klay-darwin-amd64"
       - run:
           name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for macOS"
           command: |
@@ -218,14 +211,8 @@ jobs:
     steps:
       - checkout
       - install_awscli
-      - run:
-          name: "Build kcn, kpn, ken for macOS"
-          command: |
-            export GOPATH=~/go
-            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
-            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-            make klay-darwin-amd64
-
+      - build:
+          os-network: "klay-darwin-amd64"
       - run:
           name: "Packaging baobab versions of kcn, kpn, ken for macOS"
           command: |
@@ -248,14 +235,8 @@ jobs:
     steps:
       - checkout
       - install_awscli
-      - run:
-          name: "Build kcn, kpn, ken, kgen, kscn, kbn for windows"
-          command: |
-            export GOPATH=~/go
-            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
-            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-            make klay-windows-amd64
-
+      - build:
+          os-network: "klay-windows-amd64"
       - run:
           name: "Packaging kcn, kpn, ken, kgen for windows"
           command: |
