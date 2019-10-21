@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
@@ -67,6 +68,19 @@ type StakingHandler interface {
 	GetStakingManager() *reward.StakingManager
 }
 
+//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/klaytn/klaytn/node/cn Miner
+// Miner is an interface of work.Miner used by ServiceChain.
+type Miner interface {
+	Start()
+	Stop()
+	Register(agent work.Agent)
+	Mining() bool
+	HashRate() (tot int64)
+	SetExtra(extra []byte) error
+	Pending() (*types.Block, *state.StateDB)
+	PendingBlock() *types.Block
+}
+
 // CN implements the Klaytn consensus node service.
 type CN struct {
 	config      *Config
@@ -93,7 +107,7 @@ type CN struct {
 
 	APIBackend *CNAPIBackend
 
-	miner    *work.Miner
+	miner    Miner
 	gasPrice *big.Int
 
 	rewardbase common.Address
@@ -509,9 +523,9 @@ func (s *CN) StartMining(local bool) error {
 	return nil
 }
 
-func (s *CN) StopMining()        { s.miner.Stop() }
-func (s *CN) IsMining() bool     { return s.miner.Mining() }
-func (s *CN) Miner() *work.Miner { return s.miner }
+func (s *CN) StopMining()    { s.miner.Stop() }
+func (s *CN) IsMining() bool { return s.miner.Mining() }
+func (s *CN) Miner() Miner   { return s.miner }
 
 func (s *CN) AccountManager() *accounts.Manager { return s.accountManager }
 func (s *CN) BlockChain() work.BlockChain       { return s.blockchain }
