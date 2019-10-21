@@ -67,6 +67,19 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 	return tx.WithSignature(s, sig)
 }
 
+// SignTxAsFeePayer signs the transaction as a fee payer using the given signer and private key
+func SignTxAsFeePayer(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
+	h, err := s.HashFeePayer(tx)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := crypto.Sign(h[:], prv)
+	if err != nil {
+		return nil, err
+	}
+	return tx.WithFeePayerSignature(s, sig)
+}
+
 // AccountKeyPicker has a function GetKey() to retrieve an account key from statedb.
 type AccountKeyPicker interface {
 	GetKey(address common.Address) accountkey.AccountKey
