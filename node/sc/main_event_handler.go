@@ -37,7 +37,7 @@ func NewMainChainEventHandler(bridge *MainBridge, handler *MainBridgeHandler) (*
 }
 
 func (mce *MainChainEventHandler) HandleChainHeadEvent(block *types.Block) error {
-	logger.Debug("bridgeNode block number", "number", block.Number())
+	logger.Trace("bridgeNode block number", "number", block.Number())
 	mce.writeChildChainTxHashFromBlock(block)
 	return nil
 }
