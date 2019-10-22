@@ -73,7 +73,7 @@ type ServiceChain struct {
 
 	APIBackend *ServiceChainAPIBackend
 
-	miner    *work.Miner
+	miner    Miner
 	gasPrice *big.Int
 	signer   common.Address
 
@@ -309,9 +309,9 @@ func (s *ServiceChain) StartMining(local bool) error {
 	return nil
 }
 
-func (s *ServiceChain) StopMining()        { s.miner.Stop() }
-func (s *ServiceChain) IsMining() bool     { return s.miner.Mining() }
-func (s *ServiceChain) Miner() *work.Miner { return s.miner }
+func (s *ServiceChain) StopMining()    { s.miner.Stop() }
+func (s *ServiceChain) IsMining() bool { return s.miner.Mining() }
+func (s *ServiceChain) Miner() Miner   { return s.miner }
 
 func (s *ServiceChain) AccountManager() *accounts.Manager { return s.accountManager }
 func (s *ServiceChain) BlockChain() work.BlockChain       { return s.blockchain }
