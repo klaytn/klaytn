@@ -388,16 +388,25 @@ func TestDBManager_TrieNode(t *testing.T) {
 		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
 		assert.True(t, hasStateTrieNode)
 
+		if !dbm.IsPartitioned() {
+			continue
+		}
 		dbm.SetStateTrieMigrationDB(123)
 
 		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
+		oldCachedNode, _ := dbm.ReadCachedTrieNodeFromOld(hash1)
 		assert.Equal(t, hash1[:], cachedNode)
+		assert.Equal(t, hash1[:], oldCachedNode)
 
 		stateTrieNode, _ = dbm.ReadStateTrieNode(hash1[:])
+		oldStateTrieNode, _ := dbm.ReadStateTrieNodeFromOld(hash1[:])
 		assert.Equal(t, hash1[:], stateTrieNode)
+		assert.Equal(t, hash1[:], oldStateTrieNode)
 
 		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
+		hasOldStateTrieNode, _ := dbm.HasStateTrieNodeFromOld(hash1[:])
 		assert.True(t, hasStateTrieNode)
+		assert.True(t, hasOldStateTrieNode)
 
 		batch = dbm.NewBatch(StateTrieDB)
 		if err := batch.Put(hash2[:], hash2[:]); err != nil {
@@ -408,13 +417,19 @@ func TestDBManager_TrieNode(t *testing.T) {
 		}
 
 		cachedNode, _ = dbm.ReadCachedTrieNode(hash2)
+		oldCachedNode, _ = dbm.ReadCachedTrieNodeFromOld(hash2)
 		assert.Equal(t, hash2[:], cachedNode)
+		assert.Nil(t, oldCachedNode)
 
 		stateTrieNode, _ = dbm.ReadStateTrieNode(hash2[:])
+		oldStateTrieNode, _ = dbm.ReadStateTrieNodeFromOld(hash2[:])
 		assert.Equal(t, hash2[:], stateTrieNode)
+		assert.Nil(t, oldStateTrieNode)
 
 		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2[:])
+		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2[:])
 		assert.True(t, hasStateTrieNode)
+		assert.False(t, hasOldStateTrieNode)
 	}
 }
 
@@ -652,6 +667,18 @@ func TestDBManager_CliqueSnapshot(t *testing.T) {
 
 func TestDBManager_Governance(t *testing.T) {
 	// TODO-Klaytn-Database Implement this!
+}
+
+func TestDBManager_StateTrieMigration(t *testing.T) {
+	for i, dbm := range dbManagers {
+		if !dbm.IsPartitioned() || dbConfigs[i].DBType == MemoryDB {
+			continue
+		}
+		dbm.SetStateTrieMigrationDB(12345)
+		dbm.Close()
+		dbManagers[i] = NewDBManager(dbConfigs[i])
+		assert.True(t, dbManagers[i].InMigration())
+	}
 }
 
 func genReceipt(gasUsed int) *types.Receipt {

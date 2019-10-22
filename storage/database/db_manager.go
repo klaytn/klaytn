@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/pkg/errors"
 	"math/big"
+	"os"
 	"path/filepath"
 	"strconv"
 )
@@ -35,6 +36,7 @@ var logger = log.NewModuleLogger(log.StorageDatabase)
 
 type DBManager interface {
 	IsParallelDBWrite() bool
+	IsPartitioned() bool
 	InMigration() bool
 
 	Close()
@@ -199,6 +201,9 @@ const (
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
+
+const notInMigration = 0
+const inMigration = 1
 
 var dbDirs = [databaseEntryTypeSize]string{
 	"header",
@@ -387,6 +392,10 @@ func (dbm *databaseManager) IsParallelDBWrite() bool {
 	return dbm.config.ParallelDBWrite
 }
 
+func (dbm *databaseManager) IsPartitioned() bool {
+	return dbm.config.Partitioned
+}
+
 func (dbm *databaseManager) InMigration() bool {
 	return dbm.inMigration
 }
@@ -400,18 +409,11 @@ func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 
 func (dbm *databaseManager) getStateTrieMigrationInfo() (bool, string) {
 	miscDB := dbm.getDatabase(MiscDB)
-
 	enc, _ := miscDB.Get(migrationStatusKey)
-	if len(enc) == 0 {
+	if len(enc) != 8 {
 		return false, ""
 	}
-
-	var status uint64
-	if err := rlp.DecodeBytes(enc, &status); err != nil {
-		logger.Error("Failed to decode migration status", "err", err)
-		return false, ""
-	}
-
+	status := binary.BigEndian.Uint64(enc)
 	if status == 0 {
 		return false, ""
 	}
@@ -457,12 +459,19 @@ func (dbm *databaseManager) SetStateTrieMigrationDB(blockNum uint64) {
 	newDB := createStateTrieMigrationDB(dbm.config, newDBDir)
 
 	// After creating the database, store migration status to the database.
+	// If it fails to store the migration status, remove the new database and kill the process.
 	dbm.newStateTrieDB = newDB
 	dbm.inMigration = true
-	if err := miscDB.Put(migrationStatusKey, encodeUint64(1)); err != nil {
-		logger.Crit("Failed to store the migration status", "status", 1, "err", err)
+	if err := miscDB.Put(migrationStatusKey, encodeUint64(inMigration)); err != nil {
+		logger.Error("Failed to store the migration status, trying to remove the new database for state trie migration", "err", err)
+		newDB.Close()
+		if err := os.RemoveAll(newDBDir); err != nil {
+			logger.Error("Failed to remove the state trie migration database due to an error", "err", err, "dir", newDBDir)
+		} else {
+			logger.Error("Successfully removed the state trie migration database", "dir", newDBDir)
+		}
+		logger.Crit("Killed the process due to the failure of storing the migration status")
 	}
-
 	logger.Info("Finished setting a new database for state trie migration")
 }
 
@@ -1227,11 +1236,6 @@ func (dbm *databaseManager) HasStateTrieNodeFromOld(key []byte) (bool, error) {
 
 // ReadPreimage retrieves a single preimage of the provided hash.
 func (dbm *databaseManager) ReadPreimageFromOld(hash common.Hash) []byte {
-	if dbm.inMigration {
-		if val, err := dbm.newStateTrieDB.Get(preimageKey(hash)); err == nil {
-			return val
-		}
-	}
 	db := dbm.getDatabase(StateTrieDB)
 	data, _ := db.Get(preimageKey(hash))
 	return data
