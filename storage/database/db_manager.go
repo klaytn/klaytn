@@ -1226,8 +1226,7 @@ func (dbm *databaseManager) ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
 }
 
 func (dbm *databaseManager) HasStateTrieNodeFromOld(key []byte) (bool, error) {
-	db := dbm.getDatabase(StateTrieDB)
-	val, err := db.Get(key)
+	val, err := dbm.ReadStateTrieNodeFromOld(key)
 	if val == nil || err != nil {
 		return false, err
 	}
