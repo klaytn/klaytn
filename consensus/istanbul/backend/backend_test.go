@@ -669,6 +669,52 @@ func getGovernance(dbm database.DBManager) *governance.Governance {
 	return governance.NewGovernance(config, dbm)
 }
 
+func Benchmark_getTargetReceivers(b *testing.B) {
+	// Create ValidatorSet
+	council := getTestCouncil()
+	rewards := getTestRewards()
+
+	// get testing node's address
+	key, _ := crypto.HexToECDSA(PRIVKEY) // This key is to be provided to create backend
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	valSet := validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
+
+	recents, _ := lru.NewARC(inmemorySnapshots)
+	recentMessages, _ := lru.NewARC(inmemoryPeers)
+	knownMessages, _ := lru.NewARC(inmemoryMessages)
+	gov := getGovernance(dbm)
+	backend := &backend{
+		config:            istanbul.DefaultConfig,
+		istanbulEventMux:  new(event.TypeMux),
+		privateKey:        key,
+		address:           crypto.PubkeyToAddress(key.PublicKey),
+		logger:            logger.NewWith(),
+		db:                dbm,
+		commitCh:          make(chan *types.Result, 1),
+		recents:           recents,
+		candidates:        make(map[common.Address]bool),
+		coreStarted:       false,
+		recentMessages:    recentMessages,
+		knownMessages:     knownMessages,
+		rewardbase:        rewards[0],
+		governance:        gov,
+		GovernanceCache:   newGovernanceCache(),
+		nodetype:          p2p.CONSENSUSNODE,
+		rewardDistributor: reward.NewRewardDistributor(gov),
+	}
+	backend.core = istanbulCore.New(backend, backend.config)
+
+	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(0)})
+	valSet.SetBlockNum(uint64(1))
+	valSet.CalcProposer(valSet.GetProposer().Address(), uint64(1))
+	hex := fmt.Sprintf("%015d000000000000000000000000000000000000000000000000000", 1)
+	prevHash := common.HexToHash(hex)
+
+	for i := 0; i < b.N; i++ {
+		_ = backend.getTargetReceivers(prevHash, valSet)
+	}
+}
+
 // Test_GossipSubPeerTargets checks if the gossiping targets are same as council members
 func Test_GossipSubPeerTargets(t *testing.T) {
 	// Create ValidatorSet
