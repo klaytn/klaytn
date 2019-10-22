@@ -444,7 +444,7 @@ func (dbm *databaseManager) SetStateTrieMigrationDB(blockNum uint64) {
 		return
 	}
 
-	logger.Info("Start setting a new database for state trie migration", blockNum, blockNum)
+	logger.Info("Start setting a new database for state trie migration", "blockNum", blockNum)
 
 	// Store the directory of the new database first to avoid missing directory name situation
 	newDBDir := dbm.config.Dir + strconv.FormatUint(blockNum, 10)
