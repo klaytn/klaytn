@@ -2,6 +2,14 @@
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2.1
+executors:
+  build_base:
+    docker:
+      - image: klaytn/build_base:1.0-go1.13.3-solc0.4.24
+  rpmbuild:
+    docker:
+      - image: klaytndevops/circleci-rpmbuild:1.13.3
+
 jobs:
   build:
     machine: true
@@ -19,8 +27,7 @@ jobs:
             make all
 
   test-datasync:
-    docker:
-      - image: klaytn/build_base:1.0
+    executor: build_base
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -30,8 +37,7 @@ jobs:
             make test-datasync
 
   test-networks:
-    docker:
-      - image: klaytn/build_base:1.0
+    executor: build_base
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -41,8 +47,7 @@ jobs:
             make test-networks
 
   test-tests:
-    docker:
-      - image: klaytn/build_base:1.0
+    executor: build_base
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -53,8 +58,7 @@ jobs:
             make test-tests
 
   test-others:
-    docker:
-      - image: klaytn/build_base:1.0
+    executor: build_base
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -64,8 +68,7 @@ jobs:
             make test-others
 
   coverage:
-    docker:
-      - image: klaytn/build_base:1.0
+    executor: build_base
     working_directory: /go/src/github.com/klaytn/klaytn
     resource_class: xlarge
     steps:
@@ -86,8 +89,7 @@ jobs:
           path: /tmp/coverage_reports
 
   linters:
-    docker:
-      - image: klaytn/build_base:1.0
+    executor: build_base
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -297,8 +299,7 @@ jobs:
 
 
   rpm-untagged:
-    docker:
-      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    executor: rpmbuild
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -320,8 +321,7 @@ jobs:
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   rpm-tagged:
-    docker:
-      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    executor: rpmbuild
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -352,8 +352,7 @@ jobs:
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   rpm-tagged-baobab:
-    docker:
-      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    executor: rpmbuild
     working_directory: /go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -384,8 +383,7 @@ jobs:
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   deploy-rpm-private:
-    docker:
-      - image: klaytndevops/circleci-rpmbuild:1.12.5
+    executor: rpmbuild
     steps:
       - add_ssh_keys:
           fingerprints:
