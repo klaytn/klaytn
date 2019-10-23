@@ -41,7 +41,7 @@ commands:
         default: "klay-linux-amd64"
     steps:
       - run:
-          name: "Build x,x,x,x"
+          name: "Build kcn, kpn, ken, kgen, kscn, kbn for << parameters.os-network >>"
           command: |
             export GOPATH=~/go
             echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
@@ -55,7 +55,7 @@ commands:
         default: "linux-amd64"
     steps:
       - run: 
-          name: "Packaging kcn, kpn, ken, kgen, kscn, kbn"
+          name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for << parameters.os >>"
           command: |
             for item in kcn kpn ken kgen kscn kbn
             do
@@ -75,7 +75,7 @@ commands:
               #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
   packaging-baobab:
-    description: "Packaging baobab versions of kcn, kpn, ken"
+    description: "Packaging baobab versions of kcn, kpn, ken for << parameters.os >>"
     parameters:
       os:
         type: string
