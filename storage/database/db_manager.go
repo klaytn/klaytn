@@ -202,8 +202,8 @@ const (
 	databaseEntryTypeSize
 )
 
-const notInMigration = 0
-const inMigration = 1
+const notInMigrationFlag = 0
+const inMigrationFlag = 1
 
 var dbDirs = [databaseEntryTypeSize]string{
 	"header",
@@ -462,7 +462,7 @@ func (dbm *databaseManager) SetStateTrieMigrationDB(blockNum uint64) {
 	// If it fails to store the migration status, remove the new database and kill the process.
 	dbm.newStateTrieDB = newDB
 	dbm.inMigration = true
-	if err := miscDB.Put(migrationStatusKey, encodeUint64(inMigration)); err != nil {
+	if err := miscDB.Put(migrationStatusKey, encodeUint64(inMigrationFlag)); err != nil {
 		logger.Error("Failed to store the migration status, trying to remove the new database for state trie migration", "err", err)
 		newDB.Close()
 		if err := os.RemoveAll(newDBDir); err != nil {
