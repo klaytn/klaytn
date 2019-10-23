@@ -390,7 +390,6 @@ jobs:
           command: |
             ssh -o StrictHostKeyChecking=no ec2-user@packages.klaytn.net createrepo --update /data/packages/rhel/7/prod
 
-
 workflows:
   version: 2
   build_n_packaging:
