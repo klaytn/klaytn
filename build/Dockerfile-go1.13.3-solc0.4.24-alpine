@@ -18,7 +18,6 @@ RUN \
   apk del .build-deps
 
 FROM alpine:3.8
-
 RUN apk add --no-cache ca-certificates boost git make gcc libc-dev curl bash
 COPY --from=solc_builder /usr/bin/solc /usr/bin/solc
 COPY --from=go_builder /usr/local/go /usr/local
