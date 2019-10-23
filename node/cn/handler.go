@@ -1326,3 +1326,27 @@ func (pm *ProtocolManager) GetPeers() []common.Address {
 	}
 	return addrs
 }
+
+func (pm *ProtocolManager) Downloader() ProtocolManagerDownloader {
+	return pm.downloader
+}
+
+func (pm *ProtocolManager) SetWsEndPoint(wsep string) {
+	pm.wsendpoint = wsep
+}
+
+func (pm *ProtocolManager) GetSubProtocols() []p2p.Protocol {
+	return pm.SubProtocols
+}
+
+func (pm *ProtocolManager) ProtocolVersion() int {
+	return int(pm.SubProtocols[0].Version)
+}
+
+func (pm *ProtocolManager) SetAcceptTxs() {
+	atomic.StoreUint32(&pm.acceptTxs, 1)
+}
+
+func (pm *ProtocolManager) NodeType() p2p.ConnType {
+	return pm.nodetype
+}
