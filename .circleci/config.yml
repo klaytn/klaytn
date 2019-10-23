@@ -98,7 +98,7 @@ commands:
             done
 
 jobs:
-  build:
+  build_all:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -394,7 +394,7 @@ workflows:
   version: 2
   build_n_packaging:
     jobs:
-      - build:
+      - build_all:
           filters:
             tags:
               only: /.*/
