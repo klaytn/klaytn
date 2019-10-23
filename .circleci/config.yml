@@ -62,10 +62,10 @@ commands:
               PACK_NAME=${item}-<< parameters.os >>
               if [ ${item} = kgen ]; then
                 mkdir -p ${PACK_NAME}/bin
-                cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
               else
                 mkdir -p ${PACK_NAME}/{bin,conf}
-                cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
                 cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
                 cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
               fi
