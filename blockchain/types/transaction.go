@@ -43,7 +43,7 @@ var (
 	ErrInvalidTxTypeForAnchoredData   = errors.New("invalid transaction type for anchored data")
 	errLegacyTransaction              = errors.New("should not be called by a legacy transaction")
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
-	errNotFeePayer                    = errors.New("not a fee delegation type transaction")
+	errNotFeeDelegationTransaction    = errors.New("not a fee delegation type transaction")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
@@ -504,7 +504,7 @@ func (tx *Transaction) SignFeePayerWithKeys(s Signer, prv []*ecdsa.PrivateKey) e
 func (tx *Transaction) SetFeePayerSignatures(s TxSignatures) error {
 	tf, ok := tx.data.(TxInternalDataFeePayer)
 	if !ok {
-		return errNotFeePayer
+		return errNotFeeDelegationTransaction
 	}
 
 	tf.SetFeePayerSignatures(s)
@@ -516,7 +516,7 @@ func (tx *Transaction) SetFeePayerSignatures(s TxSignatures) error {
 func (tx *Transaction) GetFeePayerSignatures() (TxSignatures, error) {
 	tf, ok := tx.data.(TxInternalDataFeePayer)
 	if !ok {
-		return nil, errNotFeePayer
+		return nil, errNotFeeDelegationTransaction
 	}
 	return tf.GetFeePayerRawSignatureValues(), nil
 }

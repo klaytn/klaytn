@@ -273,7 +273,7 @@ func (s EIP155Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error
 
 	tf, ok := tx.data.(TxInternalDataFeePayer)
 	if !ok {
-		return nil, errNotFeePayer
+		return nil, errNotFeeDelegationTransaction
 	}
 
 	hash, err := s.HashFeePayer(tx)
@@ -328,7 +328,7 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 func (s EIP155Signer) HashFeePayer(tx *Transaction) (common.Hash, error) {
 	tf, ok := tx.data.(TxInternalDataFeePayer)
 	if !ok {
-		return common.Hash{}, errNotFeePayer
+		return common.Hash{}, errNotFeeDelegationTransaction
 	}
 
 	// If the data object implements SerializeForSignToByte(), use it.
