@@ -55,6 +55,8 @@ import (
 	"sync"
 )
 
+var errCNLightSync = errors.New("can't run cn.CN in light sync mode")
+
 //go:generate mockgen -destination=node/cn/mocks/lesserver_mock.go -package=mocks github.com/klaytn/klaytn/node/cn LesServer
 type LesServer interface {
 	Start(srvr p2p.Server)
@@ -181,15 +183,32 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 	}
 }
 
+func checkSyncMode(config *Config) error {
+	if !config.SyncMode.IsValid() {
+		return fmt.Errorf("invalid sync mode %d", config.SyncMode)
+	}
+	if config.SyncMode == downloader.LightSync {
+		return errCNLightSync
+	}
+	return nil
+}
+
+func setEngineType(chainConfig *params.ChainConfig) {
+	if chainConfig.Clique != nil {
+		types.EngineType = types.Engine_Clique
+	}
+	if chainConfig.Istanbul != nil {
+		types.EngineType = types.Engine_IBFT
+	}
+}
+
 // New creates a new CN object (including the
 // initialisation of the common CN object)
 func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
-	if config.SyncMode == downloader.LightSync {
-		return nil, errors.New("can't run cn.CN in light sync mode, use les.LightCN")
+	if err := checkSyncMode(config); err != nil {
+		return nil, err
 	}
-	if !config.SyncMode.IsValid() {
-		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
-	}
+
 	chainDB := CreateDB(ctx, config, "chaindata")
 
 	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDB, config.Genesis, config.NetworkId, config.IsPrivate)
@@ -197,12 +216,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		return nil, genesisErr
 	}
 
-	if chainConfig.Clique != nil {
-		types.EngineType = types.Engine_Clique
-	}
-	if chainConfig.Istanbul != nil {
-		types.EngineType = types.Engine_IBFT
-	}
+	setEngineType(chainConfig)
 
 	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json.
 	//         So let's update cn.Config.GasPrice using ChainConfig.UnitPrice.
@@ -245,7 +259,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval,
 			TxPoolStateCache: config.TxPoolStateCache, TrieCacheLimit: config.TrieCacheLimit, SenderTxHashIndexing: config.SenderTxHashIndexing}
 	)
-	var err error
 
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
@@ -296,7 +309,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.protocolManager.SetWsEndPoint(config.WsEndpoint)
 
 	if err := cn.setRewardWallet(); err != nil {
-		logger.Error("find err", "err", err)
+		logger.Error("Error happened while setting the reward wallet", "err", err)
 	}
 
 	if governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
