@@ -512,6 +512,7 @@ func (tx *Transaction) SetFeePayerSignatures(s TxSignatures) error {
 	return nil
 }
 
+// GetFeePayerSignatures returns fee payer signatures of the transaction.
 func (tx *Transaction) GetFeePayerSignatures() (TxSignatures, error) {
 	tf, ok := tx.data.(TxInternalDataFeePayer)
 	if !ok {
