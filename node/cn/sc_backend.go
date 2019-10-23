@@ -45,7 +45,6 @@ import (
 	"github.com/klaytn/klaytn/work"
 	"math/big"
 	"sync"
-	"sync/atomic"
 )
 
 // ServiceChain implements the Klaytn servicechain node service.
@@ -59,7 +58,7 @@ type ServiceChain struct {
 	// Handlers
 	txPool          work.TxPool
 	blockchain      work.BlockChain
-	protocolManager *ProtocolManager
+	protocolManager BackendProtocolManager
 
 	// DB interfaces
 	chainDB database.DBManager // Block chain database
@@ -154,7 +153,7 @@ func NewServiceChain(ctx *node.ServiceContext, config *Config) (*ServiceChain, e
 		return nil, err
 	}
 
-	cn.protocolManager.wsendpoint = config.WsEndpoint
+	cn.protocolManager.SetWsEndPoint(config.WsEndpoint)
 
 	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
 	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), config.ServiceChainSigner, config.TxResendUseLegacy)
@@ -223,7 +222,7 @@ func (s *ServiceChain) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
+			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux),
 			Public:    true,
 		}, {
 			Namespace: "miner",
@@ -303,7 +302,7 @@ func (s *ServiceChain) StartMining(local bool) error {
 		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
 		// so none will ever hit this path, whereas marking sync done on CPU mining
 		// will ensure that private networks work in single miner mode too.
-		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
+		s.protocolManager.SetAcceptTxs()
 	}
 	go s.miner.Start()
 	return nil
@@ -320,9 +319,11 @@ func (s *ServiceChain) EventMux() *event.TypeMux          { return s.eventMux }
 func (s *ServiceChain) Engine() consensus.Engine          { return s.engine }
 func (s *ServiceChain) ChainDB() database.DBManager       { return s.chainDB }
 func (s *ServiceChain) IsListening() bool                 { return true } // Always listening
-func (s *ServiceChain) ProtocolVersion() int              { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *ServiceChain) ProtocolVersion() int              { return s.protocolManager.ProtocolVersion() }
 func (s *ServiceChain) NetVersion() uint64                { return s.networkId }
-func (s *ServiceChain) Progress() klaytn.SyncProgress     { return s.protocolManager.downloader.Progress() }
+func (s *ServiceChain) Progress() klaytn.SyncProgress {
+	return s.protocolManager.Downloader().Progress()
+}
 
 func (s *ServiceChain) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
@@ -331,7 +332,7 @@ func (s *ServiceChain) ReBroadcastTxs(transactions types.Transactions) {
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
 func (s *ServiceChain) Protocols() []p2p.Protocol {
-	return s.protocolManager.SubProtocols
+	return s.protocolManager.GetSubProtocols()
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the

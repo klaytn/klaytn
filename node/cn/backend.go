@@ -53,9 +53,9 @@ import (
 	"math/big"
 	"runtime"
 	"sync"
-	"sync/atomic"
 )
 
+//go:generate mockgen -destination=node/cn/mocks/lesserver_mock.go -package=mocks github.com/klaytn/klaytn/node/cn LesServer
 type LesServer interface {
 	Start(srvr p2p.Server)
 	Stop()
@@ -81,6 +81,22 @@ type Miner interface {
 	PendingBlock() *types.Block
 }
 
+//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/klaytn/klaytn/node/cn BackendProtocolManager
+// BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
+type BackendProtocolManager interface {
+	Downloader() ProtocolManagerDownloader
+	SetWsEndPoint(wsep string)
+	GetSubProtocols() []p2p.Protocol
+	ProtocolVersion() int
+	ReBroadcastTxs(transactions types.Transactions)
+	SetAcceptTxs()
+	SetRewardbase(addr common.Address)
+	SetRewardbaseWallet(wallet accounts.Wallet)
+	NodeType() p2p.ConnType
+	Start(maxPeers int)
+	Stop()
+}
+
 // CN implements the Klaytn consensus node service.
 type CN struct {
 	config      *Config
@@ -92,7 +108,7 @@ type CN struct {
 	// Handlers
 	txPool          work.TxPool
 	blockchain      work.BlockChain
-	protocolManager *ProtocolManager
+	protocolManager BackendProtocolManager
 	lesServer       LesServer
 
 	// DB interfaces
@@ -277,7 +293,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		logger.Error("Failed to decode IstanbulExtra", "err", err)
 	}
 
-	cn.protocolManager.wsendpoint = config.WsEndpoint
+	cn.protocolManager.SetWsEndPoint(config.WsEndpoint)
 
 	if err := cn.setRewardWallet(); err != nil {
 		logger.Error("find err", "err", err)
@@ -320,7 +336,7 @@ func (s *CN) setAcceptTxs() error {
 			return err
 		} else {
 			if len(istanbulExtra.Validators) == 1 {
-				atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
+				s.protocolManager.SetAcceptTxs()
 			}
 		}
 	}
@@ -329,7 +345,7 @@ func (s *CN) setAcceptTxs() error {
 
 // setRewardWallet sets reward base and reward base wallet if the node is CN.
 func (s *CN) setRewardWallet() error {
-	if s.protocolManager.nodetype == node.CONSENSUSNODE {
+	if s.protocolManager.NodeType() == node.CONSENSUSNODE {
 		wallet, err := s.RewardbaseWallet()
 		if err != nil {
 			return err
@@ -412,7 +428,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
+			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux),
 			Public:    true,
 		}, {
 			Namespace: "miner",
@@ -517,7 +533,7 @@ func (s *CN) StartMining(local bool) error {
 		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
 		// so none will ever hit this path, whereas marking sync done on CPU mining
 		// will ensure that private networks work in single miner mode too.
-		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
+		s.protocolManager.SetAcceptTxs()
 	}
 	go s.miner.Start()
 	return nil
@@ -534,9 +550,9 @@ func (s *CN) EventMux() *event.TypeMux          { return s.eventMux }
 func (s *CN) Engine() consensus.Engine          { return s.engine }
 func (s *CN) ChainDB() database.DBManager       { return s.chainDB }
 func (s *CN) IsListening() bool                 { return true } // Always listening
-func (s *CN) ProtocolVersion() int              { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *CN) ProtocolVersion() int              { return s.protocolManager.ProtocolVersion() }
 func (s *CN) NetVersion() uint64                { return s.networkId }
-func (s *CN) Progress() klaytn.SyncProgress     { return s.protocolManager.downloader.Progress() }
+func (s *CN) Progress() klaytn.SyncProgress     { return s.protocolManager.Downloader().Progress() }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
@@ -546,9 +562,9 @@ func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 // network protocols to start.
 func (s *CN) Protocols() []p2p.Protocol {
 	if s.lesServer == nil {
-		return s.protocolManager.SubProtocols
+		return s.protocolManager.GetSubProtocols()
 	}
-	return append(s.protocolManager.SubProtocols, s.lesServer.Protocols()...)
+	return append(s.protocolManager.GetSubProtocols(), s.lesServer.Protocols()...)
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
