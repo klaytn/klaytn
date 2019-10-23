@@ -461,7 +461,7 @@ func TestKeyStore_SignTx(t *testing.T) {
 	}
 
 	// unlock the sender account to sign
-	if err := ks.Unlock(acc, ""); err != nil {
+	if err := ks.Unlock(acc, password); err != nil {
 		t.Fatal(err)
 	}
 
@@ -523,7 +523,7 @@ func TestKeyStore_SignTxAsFeePayer(t *testing.T) {
 	}
 
 	// unlock the fee payer account to sign
-	if err := ks.Unlock(acc, ""); err != nil {
+	if err := ks.Unlock(acc, password); err != nil {
 		t.Fatal(err)
 	}
 
