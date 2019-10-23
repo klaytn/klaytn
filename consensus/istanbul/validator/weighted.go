@@ -752,3 +752,7 @@ func (valSet *weightedCouncil) TotalVotingPower() uint64 {
 	}
 	return sum
 }
+
+func (valSet *weightedCouncil) Selector(valS istanbul.ValidatorSet, lastProposer common.Address, round uint64) istanbul.Validator {
+	return valSet.selector(valS, lastProposer, round)
+}

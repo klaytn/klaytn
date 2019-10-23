@@ -45,7 +45,9 @@ import (
 
 const (
 	// fetcherID is the ID indicates the block is from Istanbul engine
-	fetcherID = "istanbul"
+	fetcherID    = "istanbul"
+	currentRound = 0
+	nextRound    = 1
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
@@ -256,6 +258,32 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 		view.Round = view.Round.Add(view.Round, common.Big1)
 	}
 	return targets
+}
+
+func getCommittee(index int, valSet istanbul.ValidatorSet, round int64, seq int64, prevHash common.Hash, self common.Address, update chan common.Address, done chan struct{}) {
+	v := valSet
+
+	view := &istanbul.View{
+		Round:    big.NewInt(round),
+		Sequence: big.NewInt(seq),
+	}
+
+	var proposer istanbul.Validator
+	if index == 1 {
+		view.Round = big.NewInt(round + 1)
+		proposer = v.Selector(v, common.Address{}, uint64(round))
+	} else {
+		proposer = v.GetProposer()
+	}
+
+	committee := v.SubListWithProposer(prevHash, proposer.Address(), view)
+	//var count int
+	for _, val := range committee {
+		if val.Address() != self {
+			update <- val.Address()
+		}
+	}
+	done <- struct{}{}
 }
 
 // GossipSubPeer implements istanbul.Backend.Gossip

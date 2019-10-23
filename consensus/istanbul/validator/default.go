@@ -418,3 +418,7 @@ func (valSet *defaultSet) TotalVotingPower() uint64 {
 	}
 	return sum
 }
+
+func (valSet *defaultSet) Selector(valS istanbul.ValidatorSet, lastProposer common.Address, round uint64) istanbul.Validator {
+	return valSet.selector(valS, lastProposer, round)
+}
