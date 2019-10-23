@@ -34,14 +34,14 @@ commands:
             python get-pip.py --user
             ~/.local/bin/pip install awscli --upgrade --user
   build:
-    description: "Build kcn, kpn, ken, kgen, kscn, kbn for each OS/Network"
+    description: "Build for each OS/Network"
     parameters:
       os-network:
         type: string
         default: "klay-linux-amd64"
     steps:
       - run:
-          name: "Build kcn, kpn, ken, kgen, kscn, kbn for << parameters.os-network >>"
+          name: "Build for << parameters.os-network >>"
           command: |
             export GOPATH=~/go
             echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
@@ -57,7 +57,7 @@ commands:
       - run: 
           name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for << parameters.os >>"
           command: |
-            for item in kcn kpn ken kgen kscn kbn
+            for item in kcn kpn ken kgen kscn kbn kspn ksen homi
             do
               PACK_NAME=${item}-<< parameters.os >>
               if [ ${item} = kgen ]; then
@@ -88,7 +88,7 @@ commands:
             do
               PACK_NAME=${item}-<< parameters.os >>
               mkdir -p ${PACK_NAME}/{bin,conf}
-              cp build/bin/${PACK_NAME} ${PACK_NAME}/bin/${item}
+              cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
               cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
               cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
               KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-<< parameters.os >>.tar.gz"
@@ -208,27 +208,6 @@ jobs:
           os-network: "klay-darwin-amd64"
       - packaging:
           os: "darwin-amd64"
-      #remove below line after confirm to delete version
-      - run:
-          name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for macOS"
-          command: |
-            for item in kcn kpn ken kgen kscn kbn
-            do
-              PACK_NAME=${item}-darwin-amd64
-              if [ ${item} = kgen ]; then
-                mkdir -p ${PACK_NAME}/bin
-                cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
-              else
-                mkdir -p ${PACK_NAME}/{bin,conf}
-                cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
-                cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
-                cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
-              fi
-              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
-              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-            done
 
   packaging-darwin-baobab:
     machine: true
@@ -240,22 +219,6 @@ jobs:
           os-network: "klay-darwin-amd64"
       - packaging-baobab:
           os: "darwin-amd64"
-      #remove below line after confirm to delete version
-      - run:
-          name: "Packaging baobab versions of kcn, kpn, ken for macOS"
-          command: |
-            for item in kcn kpn ken
-            do
-              PACK_NAME=${item}-darwin-amd64
-              mkdir -p ${PACK_NAME}/{bin,conf}
-              cp build/bin/${item}-darwin-10.10-amd64 ${PACK_NAME}/bin/${item}
-              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
-              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
-              KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-darwin-amd64.tar.gz"
-              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-            done
 
   packaging-windows:
     machine: true
@@ -265,6 +228,8 @@ jobs:
       - install_awscli
       - build:
           os-network: "klay-windows-amd64"
+      - packaging:
+          os: "windows-amd64"
       - run:
           name: "Packaging kcn, kpn, ken, kgen for windows"
           command: |
