@@ -68,6 +68,10 @@ const secureKeyLength = 11 + 32
 // commitResultChSizeLimit limits the size of channel used for commitResult.
 const commitResultChSizeLimit = 100 * 10000
 
+// NoDataArchivingPreparation is used to indicate that certain Database.Commit operations
+// do not need preparation of data archiving.
+const NoDataArchivingPreparation = 0
+
 type DatabaseReader interface {
 	// Get retrieves the value associated with key from the database.
 	Get(key []byte) (value []byte, err error)
@@ -103,6 +107,8 @@ type Database struct {
 	lock sync.RWMutex
 
 	trieNodeCache *bigcache.BigCache // GC friendly memory cache of trie node RLPs
+
+	dataArchivingBlockNum uint64
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -299,13 +305,13 @@ func (t trieNodeHasher) Sum64(key string) uint64 {
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
-	return NewDatabaseWithCache(diskDB, 0)
+	return NewDatabaseWithCache(diskDB, 0, 0)
 }
 
 // NewDatabaseWithCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int) *Database {
+func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int, daBlockNum uint64) *Database {
 	var trieNodeCache *bigcache.BigCache
 	if cacheSize > 0 {
 		trieNodeCache, _ = bigcache.NewBigCache(bigcache.Config{
@@ -318,10 +324,11 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int) *Database {
 		})
 	}
 	return &Database{
-		diskDB:        diskDB,
-		nodes:         map[common.Hash]*cachedNode{{}: {}},
-		preimages:     make(map[common.Hash][]byte),
-		trieNodeCache: trieNodeCache,
+		diskDB:                diskDB,
+		nodes:                 map[common.Hash]*cachedNode{{}: {}},
+		preimages:             make(map[common.Hash][]byte),
+		trieNodeCache:         trieNodeCache,
+		dataArchivingBlockNum: daBlockNum,
 	}
 }
 
@@ -773,7 +780,7 @@ func (db *Database) concurrentCommit(hash common.Hash, resultCh chan<- commitRes
 // to disk, forcefully tearing down all references in both directions.
 //
 // As a side effect, all pre-images accumulated up to this point are also written.
-func (db *Database) Commit(node common.Hash, report bool) error {
+func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error {
 	// Create a database batch to flush persistent data out. It is important that
 	// outside code doesn't see an inconsistent state (referenced data removed from
 	// memory cache during commit but not yet in persistent database). This is ensured
@@ -822,7 +829,20 @@ func (db *Database) Commit(node common.Hash, report bool) error {
 	db.gcnodes, db.gcsize, db.gctime = 0, 0, 0
 	db.flushnodes, db.flushsize, db.flushtime = 0, 0, 0
 
+	if db.settingMigrationDBRequired(blockNum) {
+		db.diskDB.SetStateTrieMigrationDB(blockNum)
+	}
 	return nil
+}
+
+func (db *Database) settingMigrationDBRequired(blockNum uint64) bool {
+	if blockNum == 0 {
+		return false
+	}
+	if blockNum >= db.dataArchivingBlockNum && !db.diskDB.InMigration() {
+		return true
+	}
+	return false
 }
 
 // commit iteratively encodes nodes from parents to child nodes.

@@ -103,6 +103,7 @@ type Config struct {
 	StateDBCaching         bool
 	TxPoolStateCache       bool
 	TrieCacheLimit         int
+	DataArchivingBlockNum  uint64
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`
