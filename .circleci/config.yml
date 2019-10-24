@@ -153,7 +153,7 @@ jobs:
           name: "Run test others"
           command: make test-others
   
-  confirm-tests:
+  pass-tests:
     executor: default
     steps:
       - run: 
@@ -398,7 +398,7 @@ workflows:
             tags:
               only: /.*/
 
-      - confirm-tests:
+      - pass-tests:
           requires:
             - build_all
             - test-datasync
@@ -408,7 +408,7 @@ workflows:
           filters:
             tags:
               only: /.*/
-              
+
       - deploy-rpm-private:
           requires:
             - rpm-tagged
@@ -434,6 +434,8 @@ workflows:
               ignore: /.*/
 
       - packaging-linux:
+          requires:
+            - pass-tests
           filters:
             tags:
               only: /^v.*/
@@ -441,6 +443,8 @@ workflows:
               ignore: /.*/
 
       - packaging-linux-baobab:
+          requires:
+            - pass-tests
           filters:
             tags:
               only: /^v.*/
@@ -448,6 +452,8 @@ workflows:
               ignore: /.*/
 
       - packaging-darwin:
+          requires:
+            - pass-tests
           filters:
             tags:
               only: /^v.*/
@@ -455,6 +461,8 @@ workflows:
               ignore: /.*/
 
       - packaging-darwin-baobab:
+          requires:
+            - pass-tests
           filters:
             tags:
               only: /^v.*/
@@ -462,6 +470,8 @@ workflows:
               ignore: /.*/
 
       - packaging-windows:
+          requires:
+            - pass-tests
           filters:
             tags:
               only: /^v.*/
