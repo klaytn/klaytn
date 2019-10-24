@@ -22,6 +22,10 @@ executors:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytndevops/circleci-rpmbuild:1.13.3
+  default:
+    working_directory: /go/src/github.com/klaytn/klaytn
+    docker:
+      - image: circleci/node:lts
 
 commands:
   install_awscli:
@@ -149,6 +153,13 @@ jobs:
       - run:
           name: "Run test others"
           command: make test-others
+  
+  confirm-tests:
+    executor: default
+    steps:
+      - run: 
+          name: "tests Success!"
+          command: echo "tests pass!"          
 
   coverage:
     executor: test-executor
@@ -387,6 +398,14 @@ workflows:
           filters:
             tags:
               only: /.*/
+
+      - confirm-tests:
+          requires:
+            - build_all
+            - test-datasync
+            - test-networks
+            - test-tests
+            - test-others
 
       - deploy-rpm-private:
           requires:
