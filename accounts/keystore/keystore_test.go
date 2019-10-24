@@ -21,7 +21,13 @@
 package keystore
 
 import (
+	"crypto/ecdsa"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"math/big"
 	"math/rand"
 	"os"
 	"runtime"
@@ -387,5 +393,111 @@ func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
 	if encrypted {
 		new = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
 	}
-	return d, new(d)
+	return d, new(string(d))
+}
+
+// testTx returns a sample transaction and private keys of the sender and fee payer.
+func testTx() (*ecdsa.PrivateKey, *ecdsa.PrivateKey, *types.Transaction) {
+	// For signers
+	senderPrvKey, _ := crypto.HexToECDSA("95a21e86efa290d6665a9dbce06ae56319335540d13540fb1b01e28a5b2c8460")
+	feePayerPrvKey, _ := crypto.HexToECDSA("f45a87856d14357609ce6b99645a1a7889deafbf00848bbdace60d8cd10466fa")
+
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    uint64(0),
+		types.TxValueKeyFrom:     common.HexToAddress("0xa7Eb6992c5FD55F43305B24Ee67150Bf4910d329"),
+		types.TxValueKeyTo:       common.HexToAddress("0xF9Fad0E94B216faFFfEfB99Ef02CE44F994A3DE8"),
+		types.TxValueKeyAmount:   new(big.Int).SetUint64(0),
+		types.TxValueKeyGasLimit: uint64(100000),
+		types.TxValueKeyGasPrice: new(big.Int).SetUint64(25 * params.Ston),
+		types.TxValueKeyFeePayer: common.HexToAddress("0xF9Fad0E94B216faFFfEfB99Ef02CE44F994A3DE8"),
+	}
+
+	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, values)
+	if err != nil {
+		panic("Error to generate a test tx")
+	}
+
+	return senderPrvKey, feePayerPrvKey, tx
+}
+
+// TestKeyStore_SignTx tests the tx signing function of KeyStore.
+func TestKeyStore_SignTx(t *testing.T) {
+	chainID := big.NewInt(1)
+
+	// test transaction and the private key of the sender
+	senderPrvKey, _, tx := testTx()
+
+	// generate a keystore and an active account
+	dir, ks := tmpKeyStore(t, true)
+	defer os.RemoveAll(dir)
+
+	password := ""
+	acc, err := ks.ImportECDSA(senderPrvKey, password)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ks.Unlock(acc, password); err != nil {
+		t.Fatal(err)
+	}
+
+	// get a signature from a signing function in KeyStore
+	tx, err = ks.SignTx(accounts.Account{Address: acc.Address}, tx, chainID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig1 := tx.RawSignatureValues()
+
+	// get another signature from a signing function in types package
+	signer := types.NewEIP155Signer(chainID)
+	if tx.SignWithKeys(signer, []*ecdsa.PrivateKey{senderPrvKey}) != nil {
+		t.Fatal("Error to sign")
+	}
+	sig2 := tx.RawSignatureValues()
+
+	// Two signing functions should return the same signature
+	assert.Equal(t, sig2, sig1)
+}
+
+// TestKeyStore_SignTxAsFeePayer tests the fee payer's tx signing function of KeyStore.
+func TestKeyStore_SignTxAsFeePayer(t *testing.T) {
+	chainID := big.NewInt(1)
+
+	// test transaction and the private key of the sender
+	_, feePayerPrvKey, tx := testTx()
+
+	// generate a keystore and an active account
+	dir, ks := tmpKeyStore(t, true)
+	defer os.RemoveAll(dir)
+
+	password := ""
+	acc, err := ks.ImportECDSA(feePayerPrvKey, password)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ks.Unlock(acc, password); err != nil {
+		t.Fatal(err)
+	}
+
+	// get a signature from a signing function in KeyStore
+	tx, err = ks.SignTxAsFeePayer(accounts.Account{Address: acc.Address}, tx, chainID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig1, err := tx.GetFeePayerSignatures()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// get another signature from a signing function in types package
+	signer := types.NewEIP155Signer(chainID)
+	if tx.SignFeePayerWithKeys(signer, []*ecdsa.PrivateKey{feePayerPrvKey}) != nil {
+		t.Fatal("Error to sign")
+	}
+	sig2, err := tx.GetFeePayerSignatures()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Two signing functions should return the same value
+	assert.Equal(t, sig2, sig1)
 }
