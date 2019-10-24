@@ -71,7 +71,10 @@ commands:
               fi
               KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-<< parameters.os >>.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              #test
+              ls -l ${PACK_NAME}/bin/
+              ls -l ${PACK_NAME}/conf/
+              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
   packaging-baobab:
@@ -93,8 +96,11 @@ commands:
               cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
               KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-<< parameters.os >>.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+              #test
+              ls -l ${PACK_NAME}/bin/
+              ls -l ${PACK_NAME}/conf/
+              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
 
 jobs:
