@@ -420,6 +420,8 @@ workflows:
               ignore: /.*/
 
       - rpm-tagged:
+          requires:
+            - pass-tests
           filters:
             tags:
               only: /^v.*/
@@ -427,6 +429,8 @@ workflows:
               ignore: /.*/
 
       - rpm-tagged-baobab:
+          requires:
+            - pass-tests
           filters:
             tags:
               only: /^v.*/
