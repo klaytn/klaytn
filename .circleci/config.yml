@@ -72,8 +72,9 @@ commands:
               KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-<< parameters.os >>.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
               #test
-              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+              klaytn-packages-repo-dev
             done
   packaging-baobab:
     description: "Packaging baobab versions of kcn, kpn, ken for << parameters.os >>"
@@ -95,7 +96,7 @@ commands:
               KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-<< parameters.os >>.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
               #test
-              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
 
@@ -249,8 +250,9 @@ jobs:
               fi
               KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-windows-amd64.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/$KLAYTN_VERSION/
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+              #test
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
 
  #check below job is needed or not
