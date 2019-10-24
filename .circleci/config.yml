@@ -78,7 +78,6 @@ commands:
               #test
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-              klaytn-packages-repo-dev
             done
   packaging-baobab:
     description: "Packaging baobab versions of kcn, kpn, ken for << parameters.os >>"
