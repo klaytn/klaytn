@@ -48,19 +48,19 @@ commands:
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
             make << parameters.os-network >>
   packaging:
-    description: "Packaging kcn, kpn, ken, kgen, kscn, kbn"
+    description: "Packaging kcn kpn ken kgen kscn kbn kspn ksen"
     parameters:
       os:
         type: string
         default: "linux-amd64"
     steps:
       - run: 
-          name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for << parameters.os >>"
+          name: "Packaging kcn kpn ken kgen kscn kbn kspn ksen for << parameters.os >>"
           command: |
             for item in kcn kpn ken kgen kscn kbn kspn ksen
             do
               PACK_NAME=${item}-<< parameters.os >>
-              if [ ${item} = kgen|homi ]; then
+              if [ ${item} = kgen ]; then
                 mkdir -p ${PACK_NAME}/bin
                 cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
               else
@@ -253,7 +253,7 @@ jobs:
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
 
-
+ #check below job is needed or not
   rpm-untagged:
     executor: rpm-executor
     steps:
@@ -290,7 +290,7 @@ jobs:
             export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
 
-            for item in kcn kpn ken kscn kbn
+            for item in kcn kpn ken kscn kbn kgen
             do
               cd /go/src/github.com/klaytn/klaytn
               go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
