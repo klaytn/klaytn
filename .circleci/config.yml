@@ -23,7 +23,6 @@ executors:
     docker:
       - image: klaytndevops/circleci-rpmbuild:1.13.3
   default:
-    working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: circleci/node:lts
 
