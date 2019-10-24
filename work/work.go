@@ -71,7 +71,7 @@ type TxPool interface {
 
 // Backend wraps all methods required for mining.
 type Backend interface {
-	AccountManager() *accounts.Manager
+	AccountManager() accounts.AccountManager
 	BlockChain() BlockChain
 	TxPool() TxPool
 	ChainDB() database.DBManager

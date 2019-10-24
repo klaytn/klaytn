@@ -244,7 +244,7 @@ func (b *ServiceChainAPIBackend) EventMux() *event.TypeMux {
 	return b.sc.EventMux()
 }
 
-func (b *ServiceChainAPIBackend) AccountManager() *accounts.Manager {
+func (b *ServiceChainAPIBackend) AccountManager() accounts.AccountManager {
 	return b.sc.AccountManager()
 }
 

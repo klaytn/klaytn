@@ -39,7 +39,7 @@ import (
 // It offers methods to create, (un)lock en list accounts. Some methods accept
 // passwords and are therefore considered private by default.
 type PrivateAccountAPI struct {
-	am        *accounts.Manager
+	am        accounts.AccountManager
 	nonceLock *AddrLocker
 	b         Backend
 }
@@ -135,7 +135,7 @@ func (s *PrivateAccountAPI) NewAccount(password string) (common.Address, error) 
 }
 
 // fetchKeystore retrives the encrypted keystore from the account manager.
-func fetchKeystore(am *accounts.Manager) *keystore.KeyStore {
+func fetchKeystore(am accounts.AccountManager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 }
 
