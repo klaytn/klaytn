@@ -405,7 +405,10 @@ workflows:
             - test-networks
             - test-tests
             - test-others
-
+          filters:
+            tags:
+              only: /.*/
+              
       - deploy-rpm-private:
           requires:
             - rpm-tagged
