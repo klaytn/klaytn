@@ -424,7 +424,7 @@ func testTx() (*ecdsa.PrivateKey, *ecdsa.PrivateKey, *types.Transaction) {
 func TestKeyStore_SignTx(t *testing.T) {
 	chainID := big.NewInt(1)
 
-	// test transactions and the private key of the sender
+	// test transaction and the private key of the sender
 	senderPrvKey, _, tx := testTx()
 
 	// generate a keystore and an active account
@@ -440,7 +440,7 @@ func TestKeyStore_SignTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// get a signature signature from a signing function in KeyStore
+	// get a signature from a signing function in KeyStore
 	tx, err = ks.SignTx(accounts.Account{Address: acc.Address}, tx, chainID)
 	if err != nil {
 		t.Fatal(err)
@@ -462,7 +462,7 @@ func TestKeyStore_SignTx(t *testing.T) {
 func TestKeyStore_SignTxAsFeePayer(t *testing.T) {
 	chainID := big.NewInt(1)
 
-	// test transactions and the private key of the sender
+	// test transaction and the private key of the sender
 	_, feePayerPrvKey, tx := testTx()
 
 	// generate a keystore and an active account
