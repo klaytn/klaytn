@@ -57,10 +57,10 @@ commands:
       - run: 
           name: "Packaging kcn, kpn, ken, kgen, kscn, kbn for << parameters.os >>"
           command: |
-            for item in kcn kpn ken kgen kscn kbn kspn ksen homi
+            for item in kcn kpn ken kgen kscn kbn kspn ksen
             do
               PACK_NAME=${item}-<< parameters.os >>
-              if [ ${item} = kgen ]; then
+              if [ ${item} = kgen|homi ]; then
                 mkdir -p ${PACK_NAME}/bin
                 cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
               else
