@@ -44,6 +44,7 @@ var (
 	errLegacyTransaction              = errors.New("should not be called by a legacy transaction")
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
 	errNotFeeDelegationTransaction    = errors.New("not a fee delegation type transaction")
+	errInvalidValueMap                = errors.New("tx fields should be filled with valid values")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
@@ -75,12 +76,21 @@ type Transaction struct {
 	markedUnexecutable int32
 }
 
-func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (*Transaction, error) {
+// NewTransactionWithMap generates a tx from tx field values.
+// One of the return value, retErr, is lastly updated when panic is occurred.
+func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (tx *Transaction, retErr error) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Warn("Got panic and recovered", "panicErr", err)
+			retErr = errInvalidValueMap
+		}
+	}()
 	txdata, err := NewTxInternalDataWithMap(t, values)
 	if err != nil {
 		return nil, err
 	}
-	return &Transaction{data: txdata}, nil
+	tx = &Transaction{data: txdata}
+	return tx, retErr
 }
 
 func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
