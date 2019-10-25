@@ -49,7 +49,7 @@ commands:
             export GOPATH=~/go
             echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-            make << parameters.os-network >>
+            make -j 8 << parameters.os-network >>
   packaging:
     description: "Packaging kcn kpn ken kgen kscn kbn kspn ksen"
     parameters:
@@ -264,28 +264,6 @@ jobs:
               #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
 
- #check below job is needed or not
-  rpm-untagged:
-    executor: rpm-executor
-    steps:
-      - checkout
-      - add_ssh_keys:
-          fingerprints:
-            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
-      - run:
-          name: "Build & Deploy rpm package"
-          command: |
-            export GOPATH=/go
-            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            go run build/rpm/main.go gen_spec --devel --build_num $CIRCLE_BUILD_NUM > /rpmbuild_home/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
-            cd ..
-            mv klaytn klaytn-devel-$KLAYTN_VERSION
-            tar czf klaytn-devel-$KLAYTN_VERSION.tar.gz klaytn-devel-$KLAYTN_VERSION
-            mv klaytn-devel-$KLAYTN_VERSION.tar.gz /rpmbuild_home/SOURCES/
-            rpmbuild -ba /rpmbuild_home/SPECS/klaytn-devel-$KLAYTN_VERSION.spec
-            scp -o StrictHostKeyChecking=no /rpmbuild_home/RPMS/x86_64/klaytn-devel-v*.rpm ec2-user@52.79.114.173:/srv/repo/
-            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
-
   rpm-tagged:
     executor: rpm-executor
     steps:
@@ -293,13 +271,15 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
-
+      - install_awscli
       - run:
           name: "Build & Deploy rpm package"
           command: |
             export GOPATH=/go
             export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
+
+            aws s3 sync s3://klaytn-packages-repo-dev/packages/rhel rhel/
 
             for item in kcn kpn ken kscn kbn kgen
             do
@@ -312,7 +292,9 @@ jobs:
               mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
               rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
+              cp -o $TARGET_RPM rhel/7/prod/
+              createrepo --update rhel/7/prod
+              #scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
             done
             ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
@@ -323,7 +305,7 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
-
+      - install_awscli
       - run:
           name: "Build & Deploy rpm package"
           command: |
