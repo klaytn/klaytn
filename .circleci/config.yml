@@ -278,8 +278,6 @@ jobs:
             export GOPATH=/go
             export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            #check image can install awscli, createrepo / remove below line
-            yum -y install createrepo
 
             for item in kcn kpn ken kscn kbn  #kgen
             do
@@ -293,18 +291,8 @@ jobs:
               rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
-              #cp $TARGET_RPM klaytn/rhel/7/prod/
               echo "${item} tagged !!!"
-              #scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
             done
-
-            echo "create repo"
-            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod klaytn/rhel/7/prod
-            ls -al klaytn/rhel/7/prod/repodata
-            createrepo --update klaytn/rhel/7/prod
-            ls -al klaytn/rhel/7/prod/repodata
-            python -m awscli s3 cp klaytn/rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata --recursive
-            #ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   rpm-tagged-baobab:
     executor: rpm-executor
@@ -317,10 +305,6 @@ jobs:
             export GOPATH=/go
             export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
-
-            #check image can install awscli, createrepo / remove below line
-            yum -y install createrepo
-            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod rhel/7/prod
 
             for item in kcn kpn ken
             do
@@ -338,15 +322,6 @@ jobs:
               echo "${item} tagged !!!"
             done
 
-            echo "create repo"
-            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod klaytn/rhel/7/prod
-            ls -al klaytn/rhel/7/prod/repodata
-            createrepo --update klaytn/rhel/7/prod
-            ls -al klaytn/rhel/7/prod/repodata
-            python -m awscli s3 cp klaytn/rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata --recursive
-            #ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
-
-
   deploy-rpm-public:
     executor: rpm-executor
     steps:
@@ -356,8 +331,6 @@ jobs:
           command: |
             yum -y install createrepo
             python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
-            ls -al rhel/7/prod
-            #createrepo --update klaytn/rhel/7/prod
             createrepo --update rhel/7/prod
             python -m awscli s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
 
@@ -402,41 +375,32 @@ workflows:
               only: /.*/
 
       - deploy-rpm-public:
+          requires:
+            - rpm-tagged
+            - rpm-tagged-baobab
           filters:
             tags:
-              only: /.*/
-          # requires:
-          #   - rpm-tagged
-          #   - rpm-tagged-baobab
-          # filters:
-          #   tags:
-          #     only: /^v.*/
-          #   branches:
-          #     ignore: /.*/
+              only: /^v.*/
+            branches:
+              ignore: /.*/
 
       - rpm-tagged:
+          requires:
+            - pass-tests
           filters:
             tags:
-              only: /.*/
-          # requires:
-          #   - pass-tests
-          # filters:
-          #   tags:
-          #     only: /^v.*/
-          #   branches:
-          #     ignore: /.*/
+              only: /^v.*/
+            branches:
+              ignore: /.*/
 
       - rpm-tagged-baobab:
+          requires:
+            - pass-tests
           filters:
             tags:
-              only: /.*/
-          # requires:
-          #   - pass-tests
-          # filters:
-          #   tags:
-          #     only: /^v.*/
-          #   branches:
-          #     ignore: /.*/
+              only: /^v.*/
+            branches:
+              ignore: /.*/
 
       - packaging-linux:
           requires:
