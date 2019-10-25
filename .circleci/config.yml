@@ -349,6 +349,13 @@ jobs:
     steps:
       - install_awscli
       - createrepo-update
+  
+  success_notify:
+    executor: default
+    steps:
+      - run: |
+          curl --data '{"text": "✅ Nightly job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
+
 
 workflows:
   version: 2
@@ -372,7 +379,7 @@ workflows:
             - test-networks
             - test-tests
             #- test-others
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
 
       - deploy-rpm-public: 
           requires:
