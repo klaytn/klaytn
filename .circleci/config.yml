@@ -298,7 +298,7 @@ jobs:
               #scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
             done
             echo "create repo"
-            createrepo --update rhel/7/prod
+            createrepo --update klaytn/rhel/7/prod
             #ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   rpm-tagged-baobab:
@@ -337,7 +337,7 @@ jobs:
               #scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
             done
             echo "create repo"
-            createrepo --update rhel/7/prod
+            createrepo --update klaytn/rhel/7/prod
             #ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   deploy-rpm-private:
