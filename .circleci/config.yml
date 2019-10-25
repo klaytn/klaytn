@@ -6,7 +6,7 @@ version: 2.1
 aliases:
   - &filter-only-version-tag
     tags:
-      only: /^v.*/
+      only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
       ignore: /.*/
 
@@ -353,29 +353,19 @@ workflows:
   build_n_packaging:
     jobs:
       - build_all:
-          filters:
-            tags:
-              only: /.*/
+          filters: *filter-only-version-tag
 
       - test-datasync:
-          filters:
-            tags:
-              only: /.*/
+          filters: *filter-only-version-tag
 
       - test-networks:
-          filters:
-            tags:
-              only: /.*/
+          filters: *filter-only-version-tag
 
       - test-tests:
-          filters:
-            tags:
-              only: /.*/
+          filters: *filter-only-version-tag
 
       - test-others:
-          filters:
-            tags:
-              only: /.*/
+          filters: *filter-only-version-tag
 
       - pass-tests:
           requires:
@@ -384,9 +374,7 @@ workflows:
             - test-networks
             - test-tests
             - test-others
-          filters:
-            tags:
-              only: /.*/
+          filters: *filter-only-version-tag
 
       - deploy-rpm-public:
           requires:
