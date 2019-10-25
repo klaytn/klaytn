@@ -142,7 +142,7 @@ func TestBasePeer_AsyncSendTransactions(t *testing.T) {
 
 func TestBasePeer_ConnType(t *testing.T) {
 	basePeer, _, _ := newBasePeer()
-	assert.Equal(t, p2p.ConnType(p2p.CONSENSUSNODE), basePeer.ConnType())
+	assert.Equal(t, p2p.ConnTypeUndefined, basePeer.ConnType())
 }
 
 func TestBasePeer_GetAndSetAddr(t *testing.T) {

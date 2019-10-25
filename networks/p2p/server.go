@@ -67,9 +67,6 @@ const (
 	UNKNOWNNODE // For error case
 )
 
-// TODO-Klaytn-Node Below constants are duplicated with node packages. Use it temporarily until fix cycle import problem.
-const ()
-
 var errServerStopped = errors.New("server stopped")
 
 // Config holds Server options.
