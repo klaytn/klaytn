@@ -358,16 +358,12 @@ workflows:
     jobs:
       - build_all:
           filters: *filter-version-tag-branch
-
       - test-datasync:
           filters: *filter-version-tag-branch
-
       - test-networks:
           filters: *filter-version-tag-branch
-
       - test-tests:
           filters: *filter-version-tag-branch
-
       # - test-others:
       #     filters: *filter-only-version-tag
 
@@ -384,74 +380,37 @@ workflows:
           requires:
             - rpm-tagged
             - rpm-tagged-baobab
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+          filters: *filter-only-version-tag
 
       - rpm-tagged:
           requires:
             - pass-tests
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
-
+          filters: *filter-only-version-tag
       - rpm-tagged-baobab:
           requires:
             - pass-tests
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+          filters: *filter-only-version-tag
 
       - packaging-linux:
           requires:
             - pass-tests
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
-
+          filters: *filter-only-version-tag
       - packaging-linux-baobab:
           requires:
             - pass-tests
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
-
+          filters: *filter-only-version-tag
       - packaging-darwin:
           requires:
             - pass-tests
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
-
+          filters: *filter-only-version-tag
       - packaging-darwin-baobab:
           requires:
             - pass-tests
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
-
+          filters: *filter-only-version-tag
       - packaging-windows:
           requires:
             - pass-tests
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+          filters: *filter-only-version-tag
 
   nightly-coverage:
     triggers:
