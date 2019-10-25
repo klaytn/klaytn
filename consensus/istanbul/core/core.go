@@ -28,7 +28,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/metrics"
-	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/networks/p2p"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math"
 	"math/big"
@@ -374,7 +374,7 @@ func (c *core) newRoundChangeTimer() {
 			proposer = c.valSet.GetProposer().String()
 		}
 
-		if c.backend.NodeType() == node.CONSENSUSNODE {
+		if c.backend.NodeType() == p2p.CONSENSUSNODE {
 			// Write log messages for validator activities analysis
 			preparesSize := c.current.Prepares.Size()
 			commitsSize := c.current.Commits.Size()

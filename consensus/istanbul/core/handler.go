@@ -23,7 +23,7 @@ package core
 import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/networks/p2p"
 )
 
 // Start implements core.Engine.Start
@@ -150,7 +150,7 @@ func (c *core) handleMsg(payload []byte) error {
 	// Decode message and check its signature
 	msg := new(message)
 	if err := msg.FromPayload(payload, c.validateFn); err != nil {
-		if c.backend.NodeType() == node.CONSENSUSNODE {
+		if c.backend.NodeType() == p2p.CONSENSUSNODE {
 			logger.Error("Failed to decode message from payload", "err", err)
 		}
 		return err

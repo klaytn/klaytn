@@ -78,7 +78,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	}, db)
 
 	prvKey, _ := crypto.GenerateKey()
-	engine := backend.New(common.Address{}, istanbul.DefaultConfig, prvKey, db, gov, node.CONSENSUSNODE)
+	engine := backend.New(common.Address{}, istanbul.DefaultConfig, prvKey, db, gov, p2p.CONSENSUSNODE)
 
 	var genesis *blockchain.Genesis
 	genesis = blockchain.DefaultGenesisBlock()

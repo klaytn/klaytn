@@ -30,7 +30,6 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"math/big"
@@ -332,7 +331,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			}
 
 			// TODO-Klaytn drop or missing tx
-			if self.nodetype != node.CONSENSUSNODE {
+			if self.nodetype != p2p.CONSENSUSNODE {
 				if !TxResendUseLegacy {
 					continue
 				}
@@ -446,7 +445,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		return err
 	}
 	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), stateDB, header)
-	if self.nodetype != node.CONSENSUSNODE {
+	if self.nodetype != p2p.CONSENSUSNODE {
 		work.Block = parent
 	}
 
@@ -459,7 +458,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 func (self *worker) commitNewWork() {
 	var pending map[common.Address]types.Transactions
 	var err error
-	if self.nodetype == node.CONSENSUSNODE {
+	if self.nodetype == p2p.CONSENSUSNODE {
 		// Check any fork transitions needed
 		pending, err = self.backend.TxPool().Pending()
 		if err != nil {
@@ -478,9 +477,9 @@ func (self *worker) commitNewWork() {
 
 	// TODO-Klaytn drop or missing tx
 	tstamp := tstart.Unix()
-	if self.nodetype == node.CONSENSUSNODE {
+	if self.nodetype == p2p.CONSENSUSNODE {
 		if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
-			//if self.nodetype == node.ENDPOINTNODE {
+			//if self.nodetype == p2p.ENDPOINTNODE {
 			//	tstamp = parent.Time().Int64() + 5
 			//} else {
 			tstamp = parent.Time().Int64() + 1
@@ -518,7 +517,7 @@ func (self *worker) commitNewWork() {
 
 	// Create the current work task
 	work := self.current
-	if self.nodetype == node.CONSENSUSNODE {
+	if self.nodetype == p2p.CONSENSUSNODE {
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
 

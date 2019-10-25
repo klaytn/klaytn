@@ -34,8 +34,6 @@ import (
 	"math/big"
 	"sync"
 	"time"
-
-	"github.com/klaytn/klaytn/node"
 )
 
 var (
@@ -1032,7 +1030,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	var consensusChannel chan p2p.Msg
 	isCN := false
 
-	if _, ok := pm.engine.(consensus.Handler); ok && pm.nodetype == node.CONSENSUSNODE {
+	if _, ok := pm.engine.(consensus.Handler); ok && pm.nodetype == p2p.CONSENSUSNODE {
 		consensusChannel = make(chan p2p.Msg, channelSizePerPeer)
 		defer close(consensusChannel)
 		pm.engine.(consensus.Handler).RegisterConsensusMsgCode(p)

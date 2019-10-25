@@ -27,7 +27,6 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/node"
 )
 
 const (
@@ -112,8 +111,8 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
 func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster, nodetype p2p.ConnType) {
 	sb.broadcaster = broadcaster
-	if nodetype == node.CONSENSUSNODE {
-		sb.broadcaster.RegisterValidator(node.CONSENSUSNODE, sb)
+	if nodetype == p2p.CONSENSUSNODE {
+		sb.broadcaster.RegisterValidator(p2p.CONSENSUSNODE, sb)
 	}
 }
 

@@ -25,7 +25,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/node"
 	"math/big"
 	"sync"
 	"time"
@@ -81,9 +80,9 @@ func newPeerSet() *peerSet {
 		validator: make(map[p2p.ConnType]p2p.PeerTypeValidator),
 	}
 
-	peerSet.validator[node.CONSENSUSNODE] = ByPassValidator{}
-	peerSet.validator[node.PROXYNODE] = ByPassValidator{}
-	peerSet.validator[node.ENDPOINTNODE] = ByPassValidator{}
+	peerSet.validator[p2p.CONSENSUSNODE] = ByPassValidator{}
+	peerSet.validator[p2p.PROXYNODE] = ByPassValidator{}
+	peerSet.validator[p2p.ENDPOINTNODE] = ByPassValidator{}
 
 	return peerSet
 }
@@ -105,15 +104,15 @@ func (ps *peerSet) Register(p Peer) error {
 	var peerTypeValidator p2p.PeerTypeValidator
 
 	switch p.ConnType() {
-	case node.CONSENSUSNODE:
+	case p2p.CONSENSUSNODE:
 		peersByNodeType = ps.cnpeers
-		peerTypeValidator = ps.validator[node.CONSENSUSNODE]
-	case node.PROXYNODE:
+		peerTypeValidator = ps.validator[p2p.CONSENSUSNODE]
+	case p2p.PROXYNODE:
 		peersByNodeType = ps.pnpeers
-		peerTypeValidator = ps.validator[node.PROXYNODE]
-	case node.ENDPOINTNODE:
+		peerTypeValidator = ps.validator[p2p.PROXYNODE]
+	case p2p.ENDPOINTNODE:
 		peersByNodeType = ps.enpeers
-		peerTypeValidator = ps.validator[node.ENDPOINTNODE]
+		peerTypeValidator = ps.validator[p2p.ENDPOINTNODE]
 	default:
 		return fmt.Errorf("undefined peer type entered, p.ConnType(): %v", p.ConnType())
 	}
@@ -151,11 +150,11 @@ func (ps *peerSet) Unregister(id string) error {
 	p.Close()
 
 	switch p.ConnType() {
-	case node.CONSENSUSNODE:
+	case p2p.CONSENSUSNODE:
 		delete(ps.cnpeers, p.GetAddr())
-	case node.PROXYNODE:
+	case p2p.PROXYNODE:
 		delete(ps.pnpeers, p.GetAddr())
-	case node.ENDPOINTNODE:
+	case p2p.ENDPOINTNODE:
 		delete(ps.enpeers, p.GetAddr())
 	default:
 		return errUnexpectedNodeType
@@ -261,7 +260,7 @@ func (ps *peerSet) PeersWithoutBlockExceptCN(hash common.Hash) []Peer {
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if p.ConnType() != node.CONSENSUSNODE && !p.KnowsBlock(hash) {
+		if p.ConnType() != p2p.CONSENSUSNODE && !p.KnowsBlock(hash) {
 			list = append(list, p)
 		}
 	}
@@ -401,7 +400,7 @@ func (peers *peerSet) SamplePeersToSendBlock(block *types.Block, nodeType p2p.Co
 	hash := block.Hash()
 
 	switch nodeType {
-	case node.CONSENSUSNODE:
+	case p2p.CONSENSUSNODE:
 		// If currNode is CN, sends block to sampled peers from (CN + PN), not to EN.
 		cnsWithoutBlock := peers.CNWithoutBlock(hash)
 		sampledCNsWithoutBlock := samplingPeers(cnsWithoutBlock, sampleSize(cnsWithoutBlock))
@@ -416,11 +415,11 @@ func (peers *peerSet) SamplePeersToSendBlock(block *types.Block, nodeType p2p.Co
 			"CN recipients", len(sampledCNsWithoutBlock), "PN recipients", len(pnsWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 
 		return append(cnsWithoutBlock, pnsWithoutBlock...)
-	case node.PROXYNODE:
+	case p2p.PROXYNODE:
 		// If currNode is PN, sends block to sampled peers from (PN + EN), not to CN.
 		peersWithoutBlock = peers.PeersWithoutBlockExceptCN(hash)
 
-	case node.ENDPOINTNODE:
+	case p2p.ENDPOINTNODE:
 		// If currNode is EN, sends block to sampled EN peers, not to EN nor CN.
 		peersWithoutBlock = peers.ENWithoutBlock(hash)
 
@@ -440,16 +439,16 @@ func (peers *peerSet) SampleResendPeersByType(nodeType p2p.ConnType) []Peer {
 	// TODO-Klaytn Need to tune pickSize. Currently use 2 for availability and efficiency.
 	var sampledPeers []Peer
 	switch nodeType {
-	case node.ENDPOINTNODE:
-		sampledPeers = peers.typePeers(node.PROXYNODE)
+	case p2p.ENDPOINTNODE:
+		sampledPeers = peers.typePeers(p2p.PROXYNODE)
 		if len(sampledPeers) == 0 {
-			sampledPeers = peers.typePeers(node.ENDPOINTNODE)
+			sampledPeers = peers.typePeers(p2p.ENDPOINTNODE)
 		}
 		sampledPeers = samplingPeers(sampledPeers, 2)
-	case node.PROXYNODE:
-		sampledPeers = peers.typePeers(node.CONSENSUSNODE)
+	case p2p.PROXYNODE:
+		sampledPeers = peers.typePeers(p2p.CONSENSUSNODE)
 		if len(sampledPeers) == 0 {
-			sampledPeers = peers.typePeers(node.PROXYNODE)
+			sampledPeers = peers.typePeers(p2p.PROXYNODE)
 		}
 		sampledPeers = samplingPeers(sampledPeers, 2)
 	default:

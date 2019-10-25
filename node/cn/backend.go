@@ -345,7 +345,7 @@ func (s *CN) setAcceptTxs() error {
 
 // setRewardWallet sets reward base and reward base wallet if the node is CN.
 func (s *CN) setRewardWallet() error {
-	if s.protocolManager.NodeType() == node.CONSENSUSNODE {
+	if s.protocolManager.NodeType() == p2p.CONSENSUSNODE {
 		wallet, err := s.RewardbaseWallet()
 		if err != nil {
 			return err

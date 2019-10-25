@@ -35,7 +35,6 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -176,7 +175,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 				peer := manager.newPeer(int(version), p, rw)
 				pubKey, err := p.ID().Pubkey()
 				if err != nil {
-					if p.ConnType() == node.CONSENSUSNODE {
+					if p.ConnType() == p2p.CONSENSUSNODE {
 						return err
 					}
 					peer.SetAddr(common.Address{})
@@ -200,7 +199,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 				}
 				pubKey, err := p.ID().Pubkey()
 				if err != nil {
-					if p.ConnType() == node.CONSENSUSNODE {
+					if p.ConnType() == p2p.CONSENSUSNODE {
 						return err
 					}
 					peer.SetAddr(common.Address{})
@@ -1056,11 +1055,11 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	switch pm.nodetype {
-	case node.CONSENSUSNODE:
+	case p2p.CONSENSUSNODE:
 		pm.broadcastTxsFromCN(txs)
-	case node.PROXYNODE:
+	case p2p.PROXYNODE:
 		pm.broadcastTxsFromPN(txs)
-	case node.ENDPOINTNODE:
+	case p2p.ENDPOINTNODE:
 		pm.broadcastTxsFromEN(txs)
 	default:
 		logger.Error("Unexpected nodeType of ProtocolManager", "nodeType", pm.nodetype)
@@ -1107,7 +1106,7 @@ func (pm *ProtocolManager) broadcastTxsFromPN(txs types.Transactions) {
 			}
 			logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(cnPeers))
 		}
-		pm.peers.UpdateTypePeersWithoutTxs(tx, node.PROXYNODE, peersWithoutTxs)
+		pm.peers.UpdateTypePeersWithoutTxs(tx, p2p.PROXYNODE, peersWithoutTxs)
 		txSendCounter.Inc(1)
 	}
 
@@ -1119,8 +1118,8 @@ func (pm *ProtocolManager) broadcastTxsFromPN(txs types.Transactions) {
 func (pm *ProtocolManager) broadcastTxsFromEN(txs types.Transactions) {
 	peersWithoutTxs := make(map[Peer]types.Transactions)
 	for _, tx := range txs {
-		pm.peers.UpdateTypePeersWithoutTxs(tx, node.PROXYNODE, peersWithoutTxs)
-		pm.peers.UpdateTypePeersWithoutTxs(tx, node.ENDPOINTNODE, peersWithoutTxs)
+		pm.peers.UpdateTypePeersWithoutTxs(tx, p2p.PROXYNODE, peersWithoutTxs)
+		pm.peers.UpdateTypePeersWithoutTxs(tx, p2p.ENDPOINTNODE, peersWithoutTxs)
 		txSendCounter.Inc(1)
 	}
 
@@ -1132,7 +1131,7 @@ func (pm *ProtocolManager) broadcastTxsFromEN(txs types.Transactions) {
 // Only PN and EN rebroadcast transactions to its peers, a CN does not rebroadcast transactions.
 func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 	// A consensus node does not rebroadcast transactions, hence return here.
-	if pm.nodetype == node.CONSENSUSNODE {
+	if pm.nodetype == p2p.CONSENSUSNODE {
 		return
 	}
 
@@ -1230,7 +1229,7 @@ func (pm *ProtocolManager) txResend(pending types.Transactions) {
 }
 
 func (pm *ProtocolManager) useTxResend() bool {
-	if pm.nodetype != node.CONSENSUSNODE && !pm.txResendUseLegacy {
+	if pm.nodetype != p2p.CONSENSUSNODE && !pm.txResendUseLegacy {
 		return true
 	}
 	return false

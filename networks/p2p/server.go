@@ -56,14 +56,19 @@ const (
 	frameWriteTimeout = 20 * time.Second
 )
 
-// TODO-Klaytn-Node Below constants are duplicated with node packages. Use it temporarily until fix cycle import problem.
+type ConnType int
+
 const (
-	CONSENSUSNODE = iota
+	ConnTypeUndefined ConnType = iota
+	CONSENSUSNODE
 	ENDPOINTNODE
 	PROXYNODE
 	BOOTNODE
 	UNKNOWNNODE // For error case
 )
+
+// TODO-Klaytn-Node Below constants are duplicated with node packages. Use it temporarily until fix cycle import problem.
+const ()
 
 var errServerStopped = errors.New("server stopped")
 
@@ -932,12 +937,6 @@ const (
 	staticDialedConn
 	inboundConn
 	trustedConn
-)
-
-type ConnType int
-
-const (
-	ConnTypeUndefined ConnType = -1
 )
 
 type PortOrder int

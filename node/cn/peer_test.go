@@ -20,7 +20,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/node"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"strings"
@@ -143,7 +142,7 @@ func TestBasePeer_AsyncSendTransactions(t *testing.T) {
 
 func TestBasePeer_ConnType(t *testing.T) {
 	basePeer, _, _ := newBasePeer()
-	assert.Equal(t, p2p.ConnType(node.CONSENSUSNODE), basePeer.ConnType())
+	assert.Equal(t, p2p.ConnType(p2p.CONSENSUSNODE), basePeer.ConnType())
 }
 
 func TestBasePeer_GetAndSetAddr(t *testing.T) {
