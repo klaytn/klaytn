@@ -317,7 +317,7 @@ jobs:
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
 
             #check image can install awscli, createrepo / remove below line
-            yum install createrepo
+            yum -y install createrepo
             python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel rhel/
 
             for item in kcn kpn ken
