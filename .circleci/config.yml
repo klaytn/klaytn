@@ -293,7 +293,7 @@ jobs:
               mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
               rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              cp -o $TARGET_RPM rhel/7/prod/
+              cp $TARGET_RPM rhel/7/prod/
               
               #scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
             done
@@ -331,7 +331,7 @@ jobs:
               mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
               rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              cp -o $TARGET_RPM rhel/7/prod/
+              cp $TARGET_RPM rhel/7/prod/
               #scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
             done
             echo "create repo"
