@@ -174,6 +174,14 @@ commands:
           command : |
             curl --data '{"text": "✅ Nightly job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_success
+  nofity_failure:
+    steps:
+      - run:
+          name: ""
+          command : |
+            curl --data '{"text": "❌ Nightly job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
+          when: on_fail
+
 jobs:
   build_all:
     machine: true
@@ -252,6 +260,7 @@ jobs:
       - store_artifacts:
           path: /tmp/coverage_reports
       - nofity_success
+      - nofity_failure
 
   linters:
     executor: test-executor
@@ -266,6 +275,7 @@ jobs:
       - store_artifacts:
           path: /tmp/linter_reports
       - nofity_success
+      - nofity_failure
 
   packaging-linux:
     machine: true
@@ -358,13 +368,6 @@ jobs:
     steps:
       - install_awscli
       - createrepo-update
-  
-  success_notify:
-    executor: default
-    steps:
-      - run: |
-          curl --data '{"text": "✅ Nightly job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
-
 
 workflows:
   version: 2
