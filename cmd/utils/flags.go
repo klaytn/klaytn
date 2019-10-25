@@ -661,7 +661,7 @@ var (
 	// TODO-Klaytn-DataArchiving Please note that DataArchivingBlockNumFlag is just for development purpose.
 	DataArchivingBlockNumFlag = cli.Uint64Flag{
 		Name:  "dataarchiving.blocknumber",
-		Usage: "The point when the data archiving starts from. 0 means off",
+		Usage: "The block number when the data archiving starts from. 0 means off",
 		Value: 0,
 	}
 
