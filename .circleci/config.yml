@@ -303,7 +303,7 @@ jobs:
             ls -al klaytn/rhel/7/prod/repodata
             createrepo --update klaytn/rhel/7/prod
             ls -al klaytn/rhel/7/prod/repodata
-            python -m awscli s3 sync klaytn/rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata
+            python -m awscli s3 cp klaytn/rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata --recursive
             #ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   rpm-tagged-baobab:
@@ -342,13 +342,13 @@ jobs:
 
               #scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
             done
-            
+
             echo "create repo"
             python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod klaytn/rhel/7/prod
             ls -al klaytn/rhel/7/prod/repodata
             createrepo --update klaytn/rhel/7/prod
             ls -al klaytn/rhel/7/prod/repodata
-            python -m awscli s3 sync klaytn/rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata
+            python -m awscli s3 cp klaytn/rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata --recursive
             #ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   deploy-rpm-private:
