@@ -364,8 +364,8 @@ workflows:
       - test-tests:
           filters: *filter-only-version-tag
 
-      - test-others:
-          filters: *filter-only-version-tag
+      # - test-others:
+      #     filters: *filter-only-version-tag
 
       - pass-tests:
           requires:
