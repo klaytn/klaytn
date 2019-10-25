@@ -354,6 +354,7 @@ jobs:
       - run:
           name: "Update RPM repository"
           command: |
+            yum -y install createrepo
             python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod rhel/7/prod
             #createrepo --update klaytn/rhel/7/prod
             createrepo --update rhel/7/prod
@@ -400,14 +401,17 @@ workflows:
               only: /.*/
 
       - deploy-rpm-public:
-          requires:
-            - rpm-tagged
-            - rpm-tagged-baobab
           filters:
             tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+              only: /.*/
+          # requires:
+          #   - rpm-tagged
+          #   - rpm-tagged-baobab
+          # filters:
+          #   tags:
+          #     only: /^v.*/
+          #   branches:
+          #     ignore: /.*/
 
       - rpm-tagged:
           filters:
