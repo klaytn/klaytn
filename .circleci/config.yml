@@ -344,6 +344,7 @@ jobs:
             done
             echo "create repo"
             python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod klaytn/rhel/7/prod
+            pwd
             ls -al klaytn/rhel/7/prod/metadata
             createrepo --update klaytn/rhel/7/prod
             ls -al klaytn/rhel/7/prod/metadata
