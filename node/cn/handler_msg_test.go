@@ -20,6 +20,7 @@ import (
 	"errors"
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
 	mocks2 "github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/ser/rlp"
@@ -60,6 +61,146 @@ func prepareTestHandleNewBlockMsg(t *testing.T, mockCtrl *gomock.Controller, blo
 	mockFetcher.EXPECT().Enqueue(nodeids[0].String(), newBlock).Times(1)
 
 	return newBlock, msg, mockPeer, mockFetcher
+}
+
+func prepareDownloader(t *testing.T) (*gomock.Controller, *mocks2.MockProtocolManagerDownloader, *MockPeer, *ProtocolManager) {
+	mockCtrl := gomock.NewController(t)
+	mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
+
+	mockPeer := NewMockPeer(mockCtrl)
+	mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+
+	pm := &ProtocolManager{downloader: mockDownloader}
+
+	return mockCtrl, mockDownloader, mockPeer, pm
+}
+
+func TestHandleBlockHHeadersMsg(t *testing.T) {
+	headers := []*types.Header{blocks[0].Header(), blocks[1].Header()}
+	{
+		mockCtrl, _, mockPeer, pm := prepareDownloader(t)
+		msg := generateMsg(t, BlockHeadersMsg, blocks[0].Header())
+
+		assert.Error(t, handleBlockHeadersMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	{
+		mockCtrl, mockDownloader, mockPeer, pm := prepareDownloader(t)
+		msg := generateMsg(t, BlockHeadersMsg, headers)
+		mockDownloader.EXPECT().DeliverHeaders(nodeids[0].String(), gomock.Eq(headers)).Return(err).Times(1)
+
+		assert.NoError(t, handleBlockHeadersMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	{
+		mockCtrl, mockDownloader, mockPeer, pm := prepareDownloader(t)
+		msg := generateMsg(t, BlockHeadersMsg, headers)
+		mockDownloader.EXPECT().DeliverHeaders(nodeids[0].String(), gomock.Eq(headers)).Return(nil).Times(1)
+
+		assert.NoError(t, handleBlockHeadersMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+}
+
+func prepareBlockChain(t *testing.T) (*gomock.Controller, *mocks.MockBlockChain, *MockPeer, *ProtocolManager) {
+	mockCtrl := gomock.NewController(t)
+	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+
+	mockPeer := NewMockPeer(mockCtrl)
+	mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+
+	pm := &ProtocolManager{blockchain: mockBlockChain}
+
+	return mockCtrl, mockBlockChain, mockPeer, pm
+}
+
+func TestHandleBlockBodiesRequestMsg(t *testing.T) {
+	{
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, BlockBodiesRequestMsg, uint64(123)) // Non-list value to invoke an error
+
+		bodies, err := handleBlockBodiesRequest(pm, mockPeer, msg)
+		assert.Nil(t, bodies)
+		assert.Error(t, err)
+		mockCtrl.Finish()
+	}
+	{
+		requestedHashes := []common.Hash{hashes[0], hashes[1]}
+		returnedData := []rlp.RawValue{hashes[1][:], hashes[0][:]}
+
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, BlockBodiesRequestMsg, requestedHashes)
+
+		mockBlockChain.EXPECT().GetBodyRLP(gomock.Eq(hashes[0])).Return(returnedData[0]).Times(1)
+		mockBlockChain.EXPECT().GetBodyRLP(gomock.Eq(hashes[1])).Return(returnedData[1]).Times(1)
+
+		bodies, err := handleBlockBodiesRequest(pm, mockPeer, msg)
+		assert.Equal(t, returnedData, bodies)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+}
+
+func TestHandleBlockBodiesMsg(t *testing.T) {
+	{
+		mockCtrl, _, mockPeer, pm := prepareDownloader(t)
+		msg := generateMsg(t, BlockBodiesMsg, blocks[0].Header())
+
+		assert.Error(t, handleBlockBodiesMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+}
+
+func TestNodeDataRequestMsg(t *testing.T) {
+	{
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, NodeDataRequestMsg, uint64(123)) // Non-list value to invoke an error
+
+		assert.Error(t, handleNodeDataRequestMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	{
+		requestedHashes := []common.Hash{hashes[0], hashes[1]}
+		returnedData := [][]byte{hashes[1][:], hashes[0][:]}
+
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, NodeDataRequestMsg, requestedHashes)
+
+		mockBlockChain.EXPECT().TrieNode(gomock.Eq(hashes[0])).Return(returnedData[0], nil).Times(1)
+		mockBlockChain.EXPECT().TrieNode(gomock.Eq(hashes[1])).Return(returnedData[1], nil).Times(1)
+
+		mockPeer.EXPECT().SendNodeData(returnedData).Return(nil).Times(1)
+
+		assert.NoError(t, handleNodeDataRequestMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+}
+
+func TestHandleReceiptsRequestMsg(t *testing.T) {
+	{
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, ReceiptsRequestMsg, uint64(123)) // Non-list value to invoke an error
+
+		assert.Error(t, handleReceiptsRequestMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
+	{
+		requestedHashes := []common.Hash{hashes[0], hashes[1]}
+
+		rct1 := newReceipt(123)
+
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, ReceiptsRequestMsg, requestedHashes)
+
+		mockBlockChain.EXPECT().GetReceiptsByBlockHash(gomock.Eq(hashes[0])).Return(types.Receipts{rct1}).Times(1)
+		mockBlockChain.EXPECT().GetReceiptsByBlockHash(gomock.Eq(hashes[1])).Return(nil).Times(1)
+		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[1])).Return(nil).Times(1)
+
+		mockPeer.EXPECT().SendReceiptsRLP(gomock.Any()).Return(nil).Times(1)
+
+		assert.NoError(t, handleReceiptsRequestMsg(pm, mockPeer, msg))
+		mockCtrl.Finish()
+	}
 }
 
 func TestHandleNewBlockMsg_LargeLocalPeerBlockScore(t *testing.T) {
