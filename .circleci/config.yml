@@ -300,9 +300,9 @@ jobs:
 
             echo "create repo"
             python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod klaytn/rhel/7/prod
-            ls -al klaytn/rhel/7/prod/metadata
+            ls -al klaytn/rhel/7/prod/repodata
             createrepo --update klaytn/rhel/7/prod
-            ls -al klaytn/rhel/7/prod/metadata
+            ls -al klaytn/rhel/7/prod/repodata
             python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata klaytn/rhel/7/prod/repodata
             #ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
@@ -345,9 +345,9 @@ jobs:
             echo "create repo"
             python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod klaytn/rhel/7/prod
             pwd
-            ls -al klaytn/rhel/7/prod/metadata
+            ls -al klaytn/rhel/7/prod/repodata
             createrepo --update klaytn/rhel/7/prod
-            ls -al klaytn/rhel/7/prod/metadata
+            ls -al klaytn/rhel/7/prod/repodata
             #ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   deploy-rpm-private:
