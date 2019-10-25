@@ -106,19 +106,19 @@ commands:
     parameters:
       network:
         type: string
-        default: ""
+        default: "d"
       resources:
         type: string
-        default: ""
+        default: "kcn kpn ken kscn kbn"
     steps:
       - run:
-          name: ""
+          name: "rpm tagging"
           command: |
             export GOPATH=/go
             export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
 
-            for item in kcn kpn ken kscn kbn  #kgen
+            for item in << parameters.resources >>  #kgen
             do
               cd /go/src/github.com/klaytn/klaytn
               go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
@@ -131,7 +131,40 @@ commands:
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
               echo "${item} tagged !!!"
-            done              
+            done      
+  rpm-tagged-baobab:
+    description: "rpm tagged baobab"
+    steps:
+      - run:
+          name: "rpm tagging"
+          command : |
+            export GOPATH=/go
+            export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
+            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
+
+            for item in kcn kpn ken
+            do
+              cd /go/src/github.com/klaytn/klaytn
+              go run build/rpm/main.go gen_spec --node_type $item --baobab > /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
+              cd /go/src/github.com/klaytn
+              cp -R klaytn ${item}d-baobab-$KLAYTN_VERSION
+              ls -R ${item}d-baobab-$KLAYTN_VERSION/build/rpm/etc/init.d
+              tar czf ${item}d-baobab-$KLAYTN_VERSION.tar.gz ${item}d-baobab-$KLAYTN_VERSION
+              mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
+              rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
+              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
+              echo "${item} tagged !!!"
+            done 
+  createrepo-update:
+    steps:
+      - run:
+          name: "createrepo update"
+          command: |
+            yum -y install createrepo
+            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
+            createrepo --update rhel/7/prod
+            python -m awscli s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
 
 jobs:
   build_all:
@@ -307,39 +340,13 @@ jobs:
     steps:
       - checkout
       - install_awscli
-      - run:
-          name: "Build & Deploy rpm package"
-          command: |
-            export GOPATH=/go
-            export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
-            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
-
-            for item in kcn kpn ken
-            do
-              cd /go/src/github.com/klaytn/klaytn
-              go run build/rpm/main.go gen_spec --node_type $item --baobab > /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
-              cd /go/src/github.com/klaytn
-              cp -R klaytn ${item}d-baobab-$KLAYTN_VERSION
-              ls -R ${item}d-baobab-$KLAYTN_VERSION/build/rpm/etc/init.d
-              tar czf ${item}d-baobab-$KLAYTN_VERSION.tar.gz ${item}d-baobab-$KLAYTN_VERSION
-              mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
-              rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
-              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
-              echo "${item} tagged !!!"
-            done
+      - rpm-tagged-baobab
 
   deploy-rpm-public:
     executor: rpm-executor
     steps:
       - install_awscli
-      - run:
-          name: "Update RPM repository"
-          command: |
-            yum -y install createrepo
-            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
-            createrepo --update rhel/7/prod
-            python -m awscli s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
+      - createrepo-update
 
 workflows:
   version: 2
