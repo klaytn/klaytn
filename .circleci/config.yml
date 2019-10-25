@@ -339,8 +339,6 @@ jobs:
               python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
               cp $TARGET_RPM klaytn/rhel/7/prod/
               echo "${item} tagged !!!"
-
-              #scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
             done
 
             echo "create repo"
@@ -351,27 +349,19 @@ jobs:
             python -m awscli s3 cp klaytn/rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata --recursive
             #ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
-  deploy-rpm-private:
-    executor: rpm-executor
-    steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
-      - run:
-          name: "Update RPM repository"
-          command: |
-            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   deploy-rpm-public:
     executor: rpm-executor
     steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "8f:f3:85:1d:09:1d:1d:14:72:70:61:94:b5:f3:2f:bc"
       - run:
           name: "Update RPM repository"
           command: |
-            ssh -o StrictHostKeyChecking=no ec2-user@packages.klaytn.net createrepo --update /data/packages/rhel/7/prod
+            echo "create repo"
+            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod klaytn/rhel/7/prod
+            ls -al klaytn/rhel/7/prod/repodata
+            createrepo --update klaytn/rhel/7/prod
+            ls -al klaytn/rhel/7/prod/repodata
+            python -m awscli s3 cp klaytn/rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata --recursive
 
 workflows:
   version: 2
@@ -413,7 +403,7 @@ workflows:
             tags:
               only: /.*/
 
-      - deploy-rpm-private:
+      - deploy-rpm-public:
           requires:
             - rpm-tagged
             - rpm-tagged-baobab
