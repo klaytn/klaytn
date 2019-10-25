@@ -58,9 +58,10 @@ const (
 
 type ConnType int
 
+const ConnTypeUndefined ConnType = -1
+
 const (
-	ConnTypeUndefined ConnType = iota
-	CONSENSUSNODE
+	CONSENSUSNODE ConnType = iota
 	ENDPOINTNODE
 	PROXYNODE
 	BOOTNODE
