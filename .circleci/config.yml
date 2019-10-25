@@ -278,8 +278,9 @@ jobs:
             export GOPATH=/go
             export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
-
-            aws s3 sync s3://klaytn-packages-repo-dev/packages/rhel rhel/
+            #check image can install awscli, createrepo / remove below line
+            yum install createrepo
+            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel rhel/
 
             for item in kcn kpn ken kscn kbn kgen
             do
@@ -293,10 +294,12 @@ jobs:
               rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               cp -o $TARGET_RPM rhel/7/prod/
-              createrepo --update rhel/7/prod
+              
               #scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
             done
-            ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
+            echo "create repo"
+            createrepo --update rhel/7/prod
+            #ssh -o StrictHostKeyChecking=no ec2-user@52.79.114.173 createrepo --update /srv/repo
 
   rpm-tagged-baobab:
     executor: rpm-executor
