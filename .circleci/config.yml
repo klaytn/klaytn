@@ -9,6 +9,10 @@ aliases:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
       ignore: /.*/
+  - &filter-version-tag-branch
+    tags:
+      only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+
 
 orbs:
   codecov: codecov/codecov@1.0.5
@@ -353,16 +357,16 @@ workflows:
   build_n_packaging:
     jobs:
       - build_all:
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
 
       - test-datasync:
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
 
       - test-networks:
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
 
       - test-tests:
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
 
       # - test-others:
       #     filters: *filter-only-version-tag
@@ -374,7 +378,7 @@ workflows:
             - test-networks
             - test-tests
             #- test-others
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
 
       - deploy-rpm-public:
           requires:
