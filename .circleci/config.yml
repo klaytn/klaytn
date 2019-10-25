@@ -310,9 +310,6 @@ jobs:
     executor: rpm-executor
     steps:
       - checkout
-      - add_ssh_keys:
-          fingerprints:
-            - "ba:f9:c7:16:49:74:49:10:78:1e:17:2c:9d:1c:d5:74"
       - install_awscli
       - run:
           name: "Build & Deploy rpm package"
@@ -353,15 +350,14 @@ jobs:
   deploy-rpm-public:
     executor: rpm-executor
     steps:
+      - install_awscli
       - run:
           name: "Update RPM repository"
           command: |
-            echo "create repo"
-            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod klaytn/rhel/7/prod
-            ls -al klaytn/rhel/7/prod/repodata
-            createrepo --update klaytn/rhel/7/prod
-            ls -al klaytn/rhel/7/prod/repodata
-            python -m awscli s3 cp klaytn/rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata --recursive
+            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod rhel/7/prod
+            #createrepo --update klaytn/rhel/7/prod
+            createrepo --update rhel/7/prod
+            python -m awscli s3 cp rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata --recursive
 
 workflows:
   version: 2
