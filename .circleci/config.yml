@@ -373,7 +373,7 @@ workflows:
             - test-datasync
             - test-networks
             - test-tests
-            - test-others
+            #- test-others
           filters: *filter-only-version-tag
 
       - deploy-rpm-public:
