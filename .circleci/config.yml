@@ -355,10 +355,11 @@ jobs:
           name: "Update RPM repository"
           command: |
             yum -y install createrepo
-            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod rhel/7/prod
+            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
+            ls -al rhel/7/prod
             #createrepo --update klaytn/rhel/7/prod
             createrepo --update rhel/7/prod
-            python -m awscli s3 cp rhel/7/prod/repodata s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata --recursive
+            python -m awscli s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
 
 workflows:
   version: 2
