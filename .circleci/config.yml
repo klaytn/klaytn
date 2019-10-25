@@ -281,7 +281,7 @@ jobs:
             #check image can install awscli, createrepo / remove below line
             yum -y install createrepo
 
-            for item in kcn kpn ken kscn kbn kgen
+            for item in kcn kpn ken kscn kbn  #kgen
             do
               cd /go/src/github.com/klaytn/klaytn
               go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
@@ -292,7 +292,7 @@ jobs:
               mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
               rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod
+              python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
               #cp $TARGET_RPM klaytn/rhel/7/prod/
               echo "${item} tagged !!!"
               #scp -o StrictHostKeyChecking=no $TARGET_RPM ec2-user@52.79.114.173:/srv/repo/
@@ -336,7 +336,7 @@ jobs:
               mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
               rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod
+              python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
               cp $TARGET_RPM klaytn/rhel/7/prod/
               echo "${item} tagged !!!"
 
