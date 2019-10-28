@@ -108,7 +108,7 @@ commands:
     steps:
       - run:
           command: |
-            for item in kcn kpn ken kgen kscn kbn kspn ksen
+            for item in kcn kpn ken kgen #kscn kbn kspn ksen
             do
               PACK_NAME=${item}-windows-amd64
               if [ ${item} = kgen ]; then
@@ -128,7 +128,7 @@ commands:
             done
 
   rpm-tagged:
-    description: "rpm tagging for cypress and baobab"
+    description: "rpm tagging for cypress"
     parameters:
       resources:
         type: string
@@ -179,6 +179,7 @@ commands:
               python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
               echo "${item} tagged !!!"
             done 
+
   createrepo-update:
     steps:
       - run:
@@ -193,14 +194,14 @@ commands:
       - run:
           name: "notify slack when job success"
           command : |
-            curl --data '{"text": "✅ Nightly job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
+            curl --data '{"text": ""✅ Nightly job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_success
   nofity_failure:
     steps:
       - run:
           name: "notify slack when job fail"
           command : |
-            curl --data '{"text": "❌ Nightly job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
+            curl --data '{"text": ""❌ Nightly job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
 
 jobs:
@@ -218,6 +219,18 @@ jobs:
             export PATH=$HOME/go1.12.5/go/bin:$PATH
             make fmt
             make all
+
+  build-linux:
+    machine: true
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    steps:
+      - checkout
+      - install_awscli
+      - build
+      - persist_to_workspace:
+          root: /home/circleci/go/src/github.com/klaytn/klaytn
+          paths: 
+            - build
 
   test-datasync:
     executor: test-executor
@@ -305,6 +318,14 @@ jobs:
       - build
       - packaging
 
+  packaging-linux-2:
+    machine: true
+    working_directory: ~/go/src/github.com/klaytn/klaytn
+    steps:
+      - attach_workspace:
+          at: /home/circleci/go/src/github.com/klaytn/klaytn
+      - packaging
+
   packaging-linux-baobab:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
@@ -380,6 +401,8 @@ workflows:
           filters: *filter-version-tag-branch
       # - test-others: 
         #  filters: *filter-version-tag-branch
+      - build-linux:
+          filters: *filter-version-tag-branch
 
       - pass-tests: 
           requires: 
@@ -388,6 +411,7 @@ workflows:
             - test-networks
             - test-tests
             #- test-others
+            - build-linux
           filters: *filter-version-tag-branch
 
       - deploy-rpm-public: 
@@ -422,6 +446,10 @@ workflows:
             - pass-tests
           filters: *filter-only-version-tag
       - packaging-windows: 
+          requires:
+            - pass-tests
+          filters: *filter-only-version-tag
+      - packaging-linux-2:
           requires:
             - pass-tests
           filters: *filter-only-version-tag
