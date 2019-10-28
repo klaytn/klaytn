@@ -839,6 +839,9 @@ func (db *Database) settingMigrationDBRequired(blockNum uint64) bool {
 	if blockNum == NoDataArchivingPreparation {
 		return false
 	}
+	if db.dataArchivingBlockNum == 0 {
+		return false
+	}
 	if blockNum >= db.dataArchivingBlockNum && !db.diskDB.InMigration() {
 		return true
 	}
