@@ -65,7 +65,7 @@ commands:
     steps:
       - run:
           name: "Build for << parameters.os-network >>"
-          command: echo $KLAYTN_VERSION | make -j 8 << parameters.os-network >>
+          command: echo $KLAYTN_VERSION; make -j 8 << parameters.os-network >>
   packaging:
     description: "Packaging by OS except window"
     parameters:
