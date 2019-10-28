@@ -38,14 +38,10 @@ commands:
             curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
             python get-pip.py --user
             ~/.local/bin/pip install awscli --upgrade --user
-  build:
-    description: "Build for each OS/Network"
-    parameters:
-      os-network:
-        type: string
-        default: "klay-linux-amd64"
+  pre-build:
+    description: "before build, set version"
     steps:
-      - run:
+      - run: 
           name: "set variables"
           command: |
             export GOPATH=~/go
@@ -60,6 +56,13 @@ commands:
             fi
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
             echo $KLAYTN_VERSION
+  build:
+    description: "Build for each OS/Network"
+    parameters:
+      os-network:
+        type: string
+        default: "klay-linux-amd64"
+    steps:
       - run:
           name: "Build for << parameters.os-network >>"
           command: echo $KLAYTN_VERSION | make -j 8 << parameters.os-network >>
@@ -223,6 +226,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - pre-build
       - run:
           name: "Build"
           command: |
@@ -239,6 +243,7 @@ jobs:
     steps:
       - checkout
       - install_awscli
+      - pre-build
       - build
       - persist_to_workspace:
           root: /home/circleci/go/src/github.com/klaytn/klaytn
@@ -328,6 +333,7 @@ jobs:
     steps:
       - checkout
       - install_awscli
+      - pre-build
       - build
       - packaging
 
@@ -345,6 +351,7 @@ jobs:
     steps:
       - checkout
       - install_awscli
+      - pre-build
       - build
       - packaging-baobab
 
@@ -354,6 +361,7 @@ jobs:
     steps:
       - checkout
       - install_awscli
+      - pre-build
       - build:
           os-network: "klay-darwin-amd64"
       - packaging:
@@ -365,6 +373,7 @@ jobs:
     steps:
       - checkout
       - install_awscli
+      - pre-build
       - build:
           os-network: "klay-darwin-amd64"
       - packaging-baobab:
@@ -376,6 +385,7 @@ jobs:
     steps:
       - checkout
       - install_awscli
+      - pre-build
       - build:
           os-network: "klay-windows-amd64"
       - packaging-window
@@ -385,6 +395,7 @@ jobs:
     steps:
       - checkout
       - install_awscli
+      - pre-build
       - rpm-tagged
 
   rpm-tagged-baobab:
@@ -392,6 +403,7 @@ jobs:
     steps:
       - checkout
       - install_awscli
+      - pre-build
       - rpm-tagged-baobab
 
   deploy-rpm-public:
