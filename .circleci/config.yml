@@ -60,12 +60,9 @@ commands:
             fi
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
             echo $KLAYTN_VERSION
-      - run: echo $KLAYTN_VERSION
       - run:
           name: "Build for << parameters.os-network >>"
-          command: |            
-            echo $KLAYTN_VERSION
-            make -j 8 << parameters.os-network >>
+          command: echo $KLAYTN_VERSION | make -j 8 << parameters.os-network >>
   packaging:
     description: "Packaging by OS except window"
     parameters:
@@ -179,7 +176,7 @@ commands:
           command : |
 
             ecgi $KLAYTN_VERISON
-            
+
             for item in kcn kpn ken
             do
               cd /go/src/github.com/klaytn/klaytn
@@ -404,7 +401,7 @@ jobs:
       - createrepo-update
 
   tag_verify:
-    executor: default
+    executor: test-executor
     steps:
       - checkout
       - run:
@@ -412,10 +409,10 @@ jobs:
           command: |
             echo "tag version is " $CIRCLE_TAG
 
-            file_version=v$(.circleci/version.sh)
-            echo "file version is " $file_version
+            KLAYTN_VERSION=$(go run build/rpm/main.go version)
+            echo "version on version.go" $KLAYTN_VERSION
 
-            if [ $file_version == ${CIRCLE_TAG%-*} ]; then
+            if [ $KLAYTN_VERSION == ${CIRCLE_TAG%-*} ]; then
               echo "verification pass"
             else
               echo "It's not same version."
@@ -448,6 +445,14 @@ workflows:
             #- test-others
             - build-linux
           filters: *filter-version-tag-branch
+      
+      - tag_verify:
+          filters: *filter-only-version-tag
+
+      - build_all: 
+          filters: *filter-only-version-tag
+          requires:
+            - tag_verify
 
       - deploy-rpm-public: 
           requires:
