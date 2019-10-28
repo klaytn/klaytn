@@ -836,7 +836,7 @@ func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error
 }
 
 func (db *Database) settingMigrationDBRequired(blockNum uint64) bool {
-	if blockNum == 0 {
+	if blockNum == NoDataArchivingPreparation {
 		return false
 	}
 	if blockNum >= db.dataArchivingBlockNum && !db.diskDB.InMigration() {
