@@ -202,7 +202,7 @@ func (mr *MockPeerSetMockRecorder) Register(arg0 interface{}) *gomock.Call {
 }
 
 // RegisterValidator mocks base method
-func (m *MockPeerSet) RegisterValidator(arg0 p2p.ConnType, arg1 p2p.PeerTypeValidator) {
+func (m *MockPeerSet) RegisterValidator(arg0 common.ConnType, arg1 p2p.PeerTypeValidator) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "RegisterValidator", arg0, arg1)
 }
@@ -214,7 +214,7 @@ func (mr *MockPeerSetMockRecorder) RegisterValidator(arg0, arg1 interface{}) *go
 }
 
 // SamplePeersToSendBlock mocks base method
-func (m *MockPeerSet) SamplePeersToSendBlock(arg0 *types.Block, arg1 p2p.ConnType) []Peer {
+func (m *MockPeerSet) SamplePeersToSendBlock(arg0 *types.Block, arg1 common.ConnType) []Peer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SamplePeersToSendBlock", arg0, arg1)
 	ret0, _ := ret[0].([]Peer)
@@ -228,7 +228,7 @@ func (mr *MockPeerSetMockRecorder) SamplePeersToSendBlock(arg0, arg1 interface{}
 }
 
 // SampleResendPeersByType mocks base method
-func (m *MockPeerSet) SampleResendPeersByType(arg0 p2p.ConnType) []Peer {
+func (m *MockPeerSet) SampleResendPeersByType(arg0 common.ConnType) []Peer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SampleResendPeersByType", arg0)
 	ret0, _ := ret[0].([]Peer)
@@ -242,7 +242,7 @@ func (mr *MockPeerSetMockRecorder) SampleResendPeersByType(arg0 interface{}) *go
 }
 
 // TypePeersWithoutTx mocks base method
-func (m *MockPeerSet) TypePeersWithoutTx(arg0 common.Hash, arg1 p2p.ConnType) []Peer {
+func (m *MockPeerSet) TypePeersWithoutTx(arg0 common.Hash, arg1 common.ConnType) []Peer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TypePeersWithoutTx", arg0, arg1)
 	ret0, _ := ret[0].([]Peer)
@@ -270,7 +270,7 @@ func (mr *MockPeerSetMockRecorder) Unregister(arg0 interface{}) *gomock.Call {
 }
 
 // UpdateTypePeersWithoutTxs mocks base method
-func (m *MockPeerSet) UpdateTypePeersWithoutTxs(arg0 *types.Transaction, arg1 p2p.ConnType, arg2 map[Peer]types.Transactions) {
+func (m *MockPeerSet) UpdateTypePeersWithoutTxs(arg0 *types.Transaction, arg1 common.ConnType, arg2 map[Peer]types.Transactions) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "UpdateTypePeersWithoutTxs", arg0, arg1, arg2)
 }

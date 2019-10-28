@@ -26,7 +26,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/governance"
-	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
@@ -306,7 +305,7 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 		rewardbase:        rewards[0],
 		governance:        gov,
 		GovernanceCache:   newGovernanceCache(),
-		nodetype:          p2p.CONSENSUSNODE,
+		nodetype:          common.CONSENSUSNODE,
 		rewardDistributor: reward.NewRewardDistributor(gov),
 	}
 	backend.core = istanbulCore.New(backend, backend.config)

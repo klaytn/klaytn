@@ -64,7 +64,7 @@ type Broadcaster interface {
 
 	GetENPeers() map[common.Address]Peer
 
-	RegisterValidator(conType p2p.ConnType, validator p2p.PeerTypeValidator)
+	RegisterValidator(conType common.ConnType, validator p2p.PeerTypeValidator)
 }
 
 // Peer defines the interface to communicate with peer

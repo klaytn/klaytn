@@ -42,14 +42,6 @@ import (
 
 var logger = log.NewModuleLogger(log.Node)
 
-const (
-	CONSENSUSNODE = iota
-	ENDPOINTNODE
-	PROXYNODE
-	BOOTNODE
-	UNKNOWNNODE // For error case
-)
-
 // Node is a container on which services can be registered.
 type Node struct {
 	eventmux *event.TypeMux

@@ -34,7 +34,6 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
@@ -51,7 +50,7 @@ const (
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
-func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance *governance.Governance, nodetype p2p.ConnType) consensus.Istanbul {
+func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.DBManager, governance *governance.Governance, nodetype common.ConnType) consensus.Istanbul {
 
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -127,10 +126,10 @@ type backend struct {
 	stakingManager    *reward.StakingManager
 
 	// Node type
-	nodetype p2p.ConnType
+	nodetype common.ConnType
 }
 
-func (sb *backend) NodeType() p2p.ConnType {
+func (sb *backend) NodeType() common.ConnType {
 	return sb.nodetype
 }
 

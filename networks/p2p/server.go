@@ -56,15 +56,6 @@ const (
 	frameWriteTimeout = 20 * time.Second
 )
 
-// TODO-Klaytn-Node Below constants are duplicated with node packages. Use it temporarily until fix cycle import problem.
-const (
-	CONSENSUSNODE = iota
-	ENDPOINTNODE
-	PROXYNODE
-	BOOTNODE
-	UNKNOWNNODE // For error case
-)
-
 var errServerStopped = errors.New("server stopped")
 
 // Config holds Server options.
@@ -78,9 +69,9 @@ type Config struct {
 	MaxPhysicalConnections int
 
 	// ConnectionType is a type of connection like Consensus or Normal
-	// described at ConnType
+	// described at common.ConnType
 	// When the connection is established, each peer exchange each connection type
-	ConnectionType ConnType
+	ConnectionType common.ConnType
 
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
@@ -508,7 +499,7 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 		return errors.New("shutdown")
 	}
 
-	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: ConnTypeUndefined, cont: make(chan error), portOrder: PortOrderUndefined}
+	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: common.ConnTypeUndefined, cont: make(chan error), portOrder: PortOrderUndefined}
 	if dialDest != nil {
 		c.portOrder = PortOrder(dialDest.PortOrder)
 	} else {
@@ -934,12 +925,6 @@ const (
 	trustedConn
 )
 
-type ConnType int
-
-const (
-	ConnTypeUndefined ConnType = -1
-)
-
 type PortOrder int
 
 const (
@@ -952,7 +937,7 @@ type conn struct {
 	fd net.Conn
 	transport
 	flags        connFlag
-	conntype     ConnType        // valid after the encryption handshake at the inbound connection case
+	conntype     common.ConnType // valid after the encryption handshake at the inbound connection case
 	cont         chan error      // The run loop uses cont to signal errors to SetupConn.
 	id           discover.NodeID // valid after the encryption handshake
 	caps         []Cap           // valid after the protocol handshake
@@ -962,7 +947,7 @@ type conn struct {
 }
 
 type transport interface {
-	doConnTypeHandshake(myConnType ConnType) (ConnType, error)
+	doConnTypeHandshake(myConnType common.ConnType) (common.ConnType, error)
 	// The two handshakes.
 	doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover.Node) (discover.NodeID, error)
 	doProtoHandshake(our *protoHandshake) (*protoHandshake, error)
@@ -986,13 +971,6 @@ func (c *conn) String() string {
 	return s
 }
 
-func (ct ConnType) Valid() bool {
-	if int(ct) > 255 {
-		return false
-	}
-	return true
-}
-
 func (c *conn) Inbound() bool {
 	return c.flags&inboundConn != 0
 }
@@ -1014,11 +992,6 @@ func (f connFlag) String() string {
 	if s != "" {
 		s = s[1:]
 	}
-	return s
-}
-
-func (c ConnType) String() string {
-	s := fmt.Sprintf("%d", int(c))
 	return s
 }
 
@@ -1542,11 +1515,11 @@ func (srv *BaseServer) maxInboundConns() int {
 
 func (srv *BaseServer) maxDialedConns() int {
 	switch srv.ConnectionType {
-	case CONSENSUSNODE:
+	case common.CONSENSUSNODE:
 		return 0
-	case PROXYNODE:
+	case common.PROXYNODE:
 		return 0
-	case ENDPOINTNODE:
+	case common.ENDPOINTNODE:
 		if srv.NoDiscovery || srv.NoDial {
 			return 0
 		}
@@ -1555,7 +1528,7 @@ func (srv *BaseServer) maxDialedConns() int {
 			r = defaultDialRatio
 		}
 		return srv.Config.MaxPhysicalConnections / r
-	case BOOTNODE:
+	case common.BOOTNODE:
 		return 0 // TODO check the bn for en
 	default:
 		logger.Crit("[p2p.Server] UnSupported Connection Type:", "ConnectionType", srv.ConnectionType)
@@ -1565,19 +1538,19 @@ func (srv *BaseServer) maxDialedConns() int {
 
 func (srv *BaseServer) getTypeStatics() map[dialType]typedStatic {
 	switch srv.ConnectionType {
-	case CONSENSUSNODE:
+	case common.CONSENSUSNODE:
 		tsMap := make(map[dialType]typedStatic)
 		tsMap[DT_CN] = typedStatic{100, 3} // TODO-Klaytn-Node Change to literal to constant (maxNodeCount, MaxTry)
 		return tsMap
-	case PROXYNODE:
+	case common.PROXYNODE:
 		tsMap := make(map[dialType]typedStatic)
 		tsMap[DT_PN] = typedStatic{1, 3} // // TODO-Klaytn-Node Change to literal to constant (maxNodeCount, MaxTry)
 		return tsMap
-	case ENDPOINTNODE:
+	case common.ENDPOINTNODE:
 		tsMap := make(map[dialType]typedStatic)
 		tsMap[DT_PN] = typedStatic{2, 3} // // TODO-Klaytn-Node Change to literal to constant (maxNodeCount, MaxTry)
 		return tsMap
-	case BOOTNODE:
+	case common.BOOTNODE:
 		return nil
 	default:
 		logger.Crit("[p2p.Server] UnSupported Connection Type:", "ConnectionType", srv.ConnectionType)
@@ -1652,7 +1625,7 @@ func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover
 		return errors.New("shutdown")
 	}
 
-	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: ConnTypeUndefined, cont: make(chan error), portOrder: ConnDefault}
+	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, conntype: common.ConnTypeUndefined, cont: make(chan error), portOrder: ConnDefault}
 	err := srv.setupConn(c, flags, dialDest)
 	if err != nil {
 		c.close(err)
@@ -1873,63 +1846,63 @@ func (srv *BaseServer) MaxPeers() int {
 	return srv.Config.MaxPhysicalConnections
 }
 
-func ConvertNodeType(ct ConnType) discover.NodeType {
+func ConvertNodeType(ct common.ConnType) discover.NodeType {
 	switch ct {
-	case CONSENSUSNODE:
+	case common.CONSENSUSNODE:
 		return discover.NodeTypeCN
-	case PROXYNODE:
+	case common.PROXYNODE:
 		return discover.NodeTypePN
-	case ENDPOINTNODE:
+	case common.ENDPOINTNODE:
 		return discover.NodeTypeEN
-	case BOOTNODE:
+	case common.BOOTNODE:
 		return discover.NodeTypeBN
 	default:
 		return discover.NodeTypeUnknown // TODO-Klaytn-Node Maybe, call panic() func or Crit()
 	}
 }
 
-func ConvertConnType(nt discover.NodeType) ConnType {
+func ConvertConnType(nt discover.NodeType) common.ConnType {
 	switch nt {
 	case discover.NodeTypeCN:
-		return CONSENSUSNODE
+		return common.CONSENSUSNODE
 	case discover.NodeTypePN:
-		return PROXYNODE
+		return common.PROXYNODE
 	case discover.NodeTypeEN:
-		return ENDPOINTNODE
+		return common.ENDPOINTNODE
 	case discover.NodeTypeBN:
-		return BOOTNODE
+		return common.BOOTNODE
 	default:
-		return UNKNOWNNODE
+		return common.UNKNOWNNODE
 	}
 }
 
-func ConvertConnTypeToString(ct ConnType) string {
+func ConvertConnTypeToString(ct common.ConnType) string {
 	switch ct {
-	case CONSENSUSNODE:
+	case common.CONSENSUSNODE:
 		return "cn"
-	case PROXYNODE:
+	case common.PROXYNODE:
 		return "pn"
-	case ENDPOINTNODE:
+	case common.ENDPOINTNODE:
 		return "en"
-	case BOOTNODE:
+	case common.BOOTNODE:
 		return "bn"
 	default:
 		return "unknown"
 	}
 }
 
-func ConvertStringToConnType(s string) ConnType {
+func ConvertStringToConnType(s string) common.ConnType {
 	st := strings.ToLower(s)
 	switch st {
 	case "cn":
-		return CONSENSUSNODE
+		return common.CONSENSUSNODE
 	case "pn":
-		return PROXYNODE
+		return common.PROXYNODE
 	case "en":
-		return ENDPOINTNODE
+		return common.ENDPOINTNODE
 	case "bn":
-		return BOOTNODE
+		return common.BOOTNODE
 	default:
-		return UNKNOWNNODE
+		return common.UNKNOWNNODE
 	}
 }

@@ -25,7 +25,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/node"
 	"math/big"
 	"sync"
 	"time"
@@ -45,16 +44,16 @@ type PeerSet interface {
 
 	PeersWithoutBlock(hash common.Hash) []Peer
 
-	SamplePeersToSendBlock(block *types.Block, nodeType p2p.ConnType) []Peer
-	SampleResendPeersByType(nodeType p2p.ConnType) []Peer
+	SamplePeersToSendBlock(block *types.Block, nodeType common.ConnType) []Peer
+	SampleResendPeersByType(nodeType common.ConnType) []Peer
 
 	PeersWithoutTx(hash common.Hash) []Peer
-	TypePeersWithoutTx(hash common.Hash, nodetype p2p.ConnType) []Peer
+	TypePeersWithoutTx(hash common.Hash, nodetype common.ConnType) []Peer
 	CNWithoutTx(hash common.Hash) []Peer
-	UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType p2p.ConnType, peersWithoutTxsMap map[Peer]types.Transactions)
+	UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType common.ConnType, peersWithoutTxsMap map[Peer]types.Transactions)
 
 	BestPeer() Peer
-	RegisterValidator(connType p2p.ConnType, validator p2p.PeerTypeValidator)
+	RegisterValidator(connType common.ConnType, validator p2p.PeerTypeValidator)
 	Close()
 }
 
@@ -68,7 +67,7 @@ type peerSet struct {
 	lock    sync.RWMutex
 	closed  bool
 
-	validator map[p2p.ConnType]p2p.PeerTypeValidator
+	validator map[common.ConnType]p2p.PeerTypeValidator
 }
 
 // newPeerSet creates a new peer set to track the active participants.
@@ -78,12 +77,12 @@ func newPeerSet() *peerSet {
 		cnpeers:   make(map[common.Address]Peer),
 		pnpeers:   make(map[common.Address]Peer),
 		enpeers:   make(map[common.Address]Peer),
-		validator: make(map[p2p.ConnType]p2p.PeerTypeValidator),
+		validator: make(map[common.ConnType]p2p.PeerTypeValidator),
 	}
 
-	peerSet.validator[node.CONSENSUSNODE] = ByPassValidator{}
-	peerSet.validator[node.PROXYNODE] = ByPassValidator{}
-	peerSet.validator[node.ENDPOINTNODE] = ByPassValidator{}
+	peerSet.validator[common.CONSENSUSNODE] = ByPassValidator{}
+	peerSet.validator[common.PROXYNODE] = ByPassValidator{}
+	peerSet.validator[common.ENDPOINTNODE] = ByPassValidator{}
 
 	return peerSet
 }
@@ -105,15 +104,15 @@ func (ps *peerSet) Register(p Peer) error {
 	var peerTypeValidator p2p.PeerTypeValidator
 
 	switch p.ConnType() {
-	case node.CONSENSUSNODE:
+	case common.CONSENSUSNODE:
 		peersByNodeType = ps.cnpeers
-		peerTypeValidator = ps.validator[node.CONSENSUSNODE]
-	case node.PROXYNODE:
+		peerTypeValidator = ps.validator[common.CONSENSUSNODE]
+	case common.PROXYNODE:
 		peersByNodeType = ps.pnpeers
-		peerTypeValidator = ps.validator[node.PROXYNODE]
-	case node.ENDPOINTNODE:
+		peerTypeValidator = ps.validator[common.PROXYNODE]
+	case common.ENDPOINTNODE:
 		peersByNodeType = ps.enpeers
-		peerTypeValidator = ps.validator[node.ENDPOINTNODE]
+		peerTypeValidator = ps.validator[common.ENDPOINTNODE]
 	default:
 		return fmt.Errorf("undefined peer type entered, p.ConnType(): %v", p.ConnType())
 	}
@@ -151,11 +150,11 @@ func (ps *peerSet) Unregister(id string) error {
 	p.Close()
 
 	switch p.ConnType() {
-	case node.CONSENSUSNODE:
+	case common.CONSENSUSNODE:
 		delete(ps.cnpeers, p.GetAddr())
-	case node.PROXYNODE:
+	case common.PROXYNODE:
 		delete(ps.pnpeers, p.GetAddr())
-	case node.ENDPOINTNODE:
+	case common.ENDPOINTNODE:
 		delete(ps.enpeers, p.GetAddr())
 	default:
 		return errUnexpectedNodeType
@@ -242,7 +241,7 @@ func (ps *peerSet) PeersWithoutBlock(hash common.Hash) []Peer {
 	return list
 }
 
-func (ps *peerSet) typePeersWithoutBlock(hash common.Hash, nodetype p2p.ConnType) []Peer {
+func (ps *peerSet) typePeersWithoutBlock(hash common.Hash, nodetype common.ConnType) []Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -261,7 +260,7 @@ func (ps *peerSet) PeersWithoutBlockExceptCN(hash common.Hash) []Peer {
 
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if p.ConnType() != node.CONSENSUSNODE && !p.KnowsBlock(hash) {
+		if p.ConnType() != common.CONSENSUSNODE && !p.KnowsBlock(hash) {
 			list = append(list, p)
 		}
 	}
@@ -307,7 +306,7 @@ func (ps *peerSet) ENWithoutBlock(hash common.Hash) []Peer {
 	return list
 }
 
-func (ps *peerSet) typePeers(nodetype p2p.ConnType) []Peer {
+func (ps *peerSet) typePeers(nodetype common.ConnType) []Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 	list := make([]Peer, 0, len(ps.peers))
@@ -334,7 +333,7 @@ func (ps *peerSet) PeersWithoutTx(hash common.Hash) []Peer {
 	return list
 }
 
-func (ps *peerSet) TypePeersWithoutTx(hash common.Hash, nodetype p2p.ConnType) []Peer {
+func (ps *peerSet) TypePeersWithoutTx(hash common.Hash, nodetype common.ConnType) []Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -378,7 +377,7 @@ func (ps *peerSet) BestPeer() Peer {
 }
 
 // RegisterValidator registers a validator.
-func (ps *peerSet) RegisterValidator(connType p2p.ConnType, validator p2p.PeerTypeValidator) {
+func (ps *peerSet) RegisterValidator(connType common.ConnType, validator p2p.PeerTypeValidator) {
 	ps.validator[connType] = validator
 }
 
@@ -396,12 +395,12 @@ func (ps *peerSet) Close() {
 
 // samplePeersToSendBlock samples peers from peers without block.
 // It uses different sampling policy for different node type.
-func (peers *peerSet) SamplePeersToSendBlock(block *types.Block, nodeType p2p.ConnType) []Peer {
+func (peers *peerSet) SamplePeersToSendBlock(block *types.Block, nodeType common.ConnType) []Peer {
 	var peersWithoutBlock []Peer
 	hash := block.Hash()
 
 	switch nodeType {
-	case node.CONSENSUSNODE:
+	case common.CONSENSUSNODE:
 		// If currNode is CN, sends block to sampled peers from (CN + PN), not to EN.
 		cnsWithoutBlock := peers.CNWithoutBlock(hash)
 		sampledCNsWithoutBlock := samplingPeers(cnsWithoutBlock, sampleSize(cnsWithoutBlock))
@@ -416,11 +415,11 @@ func (peers *peerSet) SamplePeersToSendBlock(block *types.Block, nodeType p2p.Co
 			"CN recipients", len(sampledCNsWithoutBlock), "PN recipients", len(pnsWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 
 		return append(cnsWithoutBlock, pnsWithoutBlock...)
-	case node.PROXYNODE:
+	case common.PROXYNODE:
 		// If currNode is PN, sends block to sampled peers from (PN + EN), not to CN.
 		peersWithoutBlock = peers.PeersWithoutBlockExceptCN(hash)
 
-	case node.ENDPOINTNODE:
+	case common.ENDPOINTNODE:
 		// If currNode is EN, sends block to sampled EN peers, not to EN nor CN.
 		peersWithoutBlock = peers.ENWithoutBlock(hash)
 
@@ -436,20 +435,20 @@ func (peers *peerSet) SamplePeersToSendBlock(block *types.Block, nodeType p2p.Co
 	return sampledPeersWithoutBlock
 }
 
-func (peers *peerSet) SampleResendPeersByType(nodeType p2p.ConnType) []Peer {
+func (peers *peerSet) SampleResendPeersByType(nodeType common.ConnType) []Peer {
 	// TODO-Klaytn Need to tune pickSize. Currently use 2 for availability and efficiency.
 	var sampledPeers []Peer
 	switch nodeType {
-	case node.ENDPOINTNODE:
-		sampledPeers = peers.typePeers(node.PROXYNODE)
+	case common.ENDPOINTNODE:
+		sampledPeers = peers.typePeers(common.PROXYNODE)
 		if len(sampledPeers) == 0 {
-			sampledPeers = peers.typePeers(node.ENDPOINTNODE)
+			sampledPeers = peers.typePeers(common.ENDPOINTNODE)
 		}
 		sampledPeers = samplingPeers(sampledPeers, 2)
-	case node.PROXYNODE:
-		sampledPeers = peers.typePeers(node.CONSENSUSNODE)
+	case common.PROXYNODE:
+		sampledPeers = peers.typePeers(common.CONSENSUSNODE)
 		if len(sampledPeers) == 0 {
-			sampledPeers = peers.typePeers(node.PROXYNODE)
+			sampledPeers = peers.typePeers(common.PROXYNODE)
 		}
 		sampledPeers = samplingPeers(sampledPeers, 2)
 	default:
@@ -459,7 +458,7 @@ func (peers *peerSet) SampleResendPeersByType(nodeType p2p.ConnType) []Peer {
 	return sampledPeers
 }
 
-func (peers *peerSet) UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType p2p.ConnType, peersWithoutTxsMap map[Peer]types.Transactions) {
+func (peers *peerSet) UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType common.ConnType, peersWithoutTxsMap map[Peer]types.Transactions) {
 	typePeers := peers.TypePeersWithoutTx(tx.Hash(), nodeType)
 	for _, peer := range typePeers {
 		peersWithoutTxsMap[peer] = append(peersWithoutTxsMap[peer], tx)

@@ -32,7 +32,6 @@ import (
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -93,7 +92,7 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype p2p.ConnType, rewardbase common.Address, TxResendUseLegacy bool) *Miner {
+func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, rewardbase common.Address, TxResendUseLegacy bool) *Miner {
 	miner := &Miner{
 		backend:  backend,
 		mux:      mux,
@@ -149,7 +148,7 @@ func (self *Miner) Start() {
 	}
 	atomic.StoreInt32(&self.mining, 1)
 
-	if self.worker.nodetype == p2p.CONSENSUSNODE {
+	if self.worker.nodetype == common.CONSENSUSNODE {
 		logger.Info("Starting mining operation")
 	}
 	self.worker.start()

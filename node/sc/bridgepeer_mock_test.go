@@ -62,10 +62,10 @@ func (mr *MockBridgePeerMockRecorder) Close() *gomock.Call {
 }
 
 // ConnType mocks base method
-func (m *MockBridgePeer) ConnType() p2p.ConnType {
+func (m *MockBridgePeer) ConnType() common.ConnType {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ConnType")
-	ret0, _ := ret[0].(p2p.ConnType)
+	ret0, _ := ret[0].(common.ConnType)
 	return ret0
 }
 

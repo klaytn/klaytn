@@ -65,10 +65,10 @@ func (mr *MockBackendProtocolManagerMockRecorder) GetSubProtocols() *gomock.Call
 }
 
 // NodeType mocks base method
-func (m *MockBackendProtocolManager) NodeType() p2p.ConnType {
+func (m *MockBackendProtocolManager) NodeType() common.ConnType {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NodeType")
-	ret0, _ := ret[0].(p2p.ConnType)
+	ret0, _ := ret[0].(common.ConnType)
 	return ret0
 }
 
