@@ -30,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -871,7 +872,7 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
-	config.Lifetime = time.Second
+	config.Lifetime = 5 * time.Second
 	config.NoLocals = nolocals
 	config.KeepLocals = keepLocals
 
@@ -902,26 +903,27 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 	if err := validateTxPoolInternals(pool); err != nil {
 		t.Fatalf("pool internal state corrupted: %v", err)
 	}
+
+	time.Sleep(2 * evictionInterval)
+
+	// Wait a bit for eviction, but queued transactions must remain.
+	pending, queued = pool.Stats()
+	assert.Equal(t, pending, 0)
+	assert.Equal(t, queued, 2)
+
 	// Wait a bit for eviction to run and clean up any leftovers, and ensure only the local remains
 	time.Sleep(2 * config.Lifetime)
 
 	pending, queued = pool.Stats()
-	if pending != 0 {
-		t.Fatalf("pending transactions mismatched: have %d, want %d", pending, 0)
-	}
+	assert.Equal(t, pending, 0)
+
 	if nolocals {
-		if queued != 0 {
-			t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 0)
-		}
+		assert.Equal(t, queued, 0)
 	} else {
 		if keepLocals {
-			if queued != 1 {
-				t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 1)
-			}
+			assert.Equal(t, queued, 1)
 		} else {
-			if queued != 0 {
-				t.Fatalf("queued transactions mismatched: have %d, want %d", queued, 0)
-			}
+			assert.Equal(t, queued, 0)
 		}
 	}
 	if err := validateTxPoolInternals(pool); err != nil {
