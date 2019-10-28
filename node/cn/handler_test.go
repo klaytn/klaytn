@@ -772,6 +772,25 @@ func TestEnqueue(t *testing.T) {
 	pm.Enqueue(id, block)
 }
 
+func TestProtocolManager_Downloader(t *testing.T) {
+	pm := &ProtocolManager{}
+	assert.Nil(t, pm.Downloader())
+
+	downloader := &downloader.Downloader{}
+	pm.downloader = downloader
+
+	assert.Equal(t, downloader, pm.Downloader())
+}
+
+func TestProtocolManager_SetWsEndPoint(t *testing.T) {
+	pm := &ProtocolManager{}
+	assert.Equal(t, "", pm.wsendpoint)
+
+	wsep := "wsep"
+	pm.SetWsEndPoint(wsep)
+	assert.Equal(t, wsep, pm.wsendpoint)
+}
+
 func contains(addrs []common.Address, item common.Address) bool {
 	for _, a := range addrs {
 		if a == item {
