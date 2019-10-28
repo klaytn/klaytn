@@ -58,6 +58,9 @@ commands:
       os:
         type: string
         default: "linux-amd64"
+      window-only:
+        type: string
+        default: "" #.exe
     steps:
       - run: 
           name: "Packaging kcn kpn ken kgen kscn kbn kspn ksen for << parameters.os >>"
@@ -67,10 +70,10 @@ commands:
               PACK_NAME=${item}-<< parameters.os >>
               if [ ${item} = kgen ]; then
                 mkdir -p ${PACK_NAME}/bin
-                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
+                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}<< parameters.window-only >>
               else
                 mkdir -p ${PACK_NAME}/{bin,conf}
-                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
+                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}<< parameters.window-only >>
                 cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
                 cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
               fi
@@ -274,7 +277,7 @@ jobs:
       - nofity_success
       - store_artifacts:
           path: /tmp/linter_reports
-          
+
   packaging-linux:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
@@ -323,8 +326,8 @@ jobs:
       - install_awscli
       - build:
           os-network: "klay-windows-amd64"
-      - packaging:
-          os: "windows-amd64"
+      # - packaging:
+      #     os: "windows-amd64"
       - run:
           name: "Packaging kcn, kpn, ken, kgen for windows"
           command: |
