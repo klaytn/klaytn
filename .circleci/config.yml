@@ -53,8 +53,9 @@ commands:
             if [ -z "$CIRCLE_TAG" ]; then
               echo "this is not RC version"
             else
+              echo "this is rc version $CIRCLE_TAG"
               rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
-              sed -n 's/%d.%d.%d/%d.%d.%d-'$tag'/' params/version.go
+              sed -i 's/%d.%d.%d/%d.%d.%d-'$rc_num'/' params/version.go
               sed -n '/%d.%d.%d/p' params/version.go
             fi
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
@@ -69,7 +70,7 @@ commands:
               echo "this is not RC version"
             else
               rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
-              sed -n 's/%d.%d.%d/%d.%d.%d-'$tag'/' params/version.go
+              sed -n 's/%d.%d.%d/%d.%d.%d-'$rc_num'/' params/version.go
               sed -n '/%d.%d.%d/p' params/version.go
             fi
             
