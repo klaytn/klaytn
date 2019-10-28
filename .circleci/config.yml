@@ -55,6 +55,7 @@ commands:
             else
               rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
               sed -n 's/%d.%d.%d/%d.%d.%d-'$tag'/' params/version.go
+              sed -n '/%d.%d.%d/p' params/version.go
             fi
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
             echo $KLAYTN_VERSION
@@ -69,6 +70,7 @@ commands:
             else
               rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
               sed -n 's/%d.%d.%d/%d.%d.%d-'$tag'/' params/version.go
+              sed -n '/%d.%d.%d/p' params/version.go
             fi
             
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
