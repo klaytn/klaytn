@@ -93,9 +93,9 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-// validateArgs checks the validity of SendTxArgs values.
+// checkArgs checks the validity of SendTxArgs values.
 // The each tx types has its own validation logic to give detailed errors to users.
-func (args *SendTxArgs) validateArgs() error {
+func (args *SendTxArgs) checkArgs() error {
 	if args.TypeInt == nil {
 		return errTxArgNilTxType
 	}
@@ -163,7 +163,7 @@ func (args *SendTxArgs) toTransaction() (*types.Transaction, error) {
 	var input []byte
 
 	// provide detailed error messages to users (optional)
-	if err := args.validateArgs(); err != nil {
+	if err := args.checkArgs(); err != nil {
 		return nil, err
 	}
 
