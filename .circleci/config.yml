@@ -63,18 +63,7 @@ commands:
       - run: echo $KLAYTN_VERSION
       - run:
           name: "Build for << parameters.os-network >>"
-          command: |
-            export GOPATH=~/go
-            #echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
-            if [ -z "$CIRCLE_TAG" ]; then
-              echo "this is not RC version"
-            else
-              rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
-              sed -n 's/%d.%d.%d/%d.%d.%d-'$rc_num'/' params/version.go
-              sed -n '/%d.%d.%d/p' params/version.go
-            fi
-            
-            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+          command: |            
             echo $KLAYTN_VERSION
             make -j 8 << parameters.os-network >>
   packaging:
@@ -165,15 +154,6 @@ commands:
       - run:
           name: "rpm tagging"
           command: |
-            export GOPATH=/go
-            #export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
-            if [ -z "$CIRCLE_TAG" ]; then
-              echo "this is not RC version"
-            else
-              rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
-              sed -n 's/%d.%d.%d/%d.%d.%d-'$tag'/' params/version.go
-            fi
-            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
             echo $KLAYTN_VERSION
 
             for item in << parameters.resources >>
@@ -197,16 +177,9 @@ commands:
       - run:
           name: "rpm tagging"
           command : |
-            export GOPATH=/go
-            #export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
-            if [ -z "$CIRCLE_TAG" ]; then
-              echo "this is not RC version"
-            else
-              rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
-              sed -n 's/%d.%d.%d/%d.%d.%d-'$tag'/' params/version.go
-            fi
-            export KLAYTN_VERSION=$(go run build/rpm/main.go version)
 
+            ecgi $KLAYTN_VERISON
+            
             for item in kcn kpn ken
             do
               cd /go/src/github.com/klaytn/klaytn
