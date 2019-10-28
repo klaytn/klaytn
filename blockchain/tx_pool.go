@@ -318,10 +318,14 @@ func (pool *TxPool) loop() {
 					continue
 				}
 				// Any non-locals old enough should be removed
-				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
-					for _, tx := range pool.queue[addr].Flatten() {
-						pool.removeTx(tx.Hash(), true)
+				if beat, exist := pool.beats[addr]; exist {
+					if time.Since(beat) > pool.config.Lifetime {
+						for _, tx := range pool.queue[addr].Flatten() {
+							pool.removeTx(tx.Hash(), true)
+						}
 					}
+				} else {
+					pool.beats[addr] = time.Now()
 				}
 			}
 			pool.mu.Unlock()
@@ -1099,7 +1103,10 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 			// If no more pending transactions are left, remove the list
 			if pending.Empty() {
 				delete(pool.pending, addr)
-				delete(pool.beats, addr)
+
+				if _, exist := pool.queue[addr]; !exist {
+					delete(pool.beats, addr)
+				}
 			}
 			// Postpone any invalidated transactions
 			for _, tx := range invalids {
@@ -1353,7 +1360,10 @@ func (pool *TxPool) demoteUnexecutables() {
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
 			delete(pool.pending, addr)
-			delete(pool.beats, addr)
+
+			if _, exist := pool.queue[addr]; !exist {
+				delete(pool.beats, addr)
+			}
 		}
 	}
 }
