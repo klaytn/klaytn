@@ -36,7 +36,6 @@ import (
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/klaytn/klaytn/work"
 	"io"
-	"math/big"
 	"os"
 	"strings"
 )
@@ -57,62 +56,6 @@ func (api *PublicKlayAPI) Rewardbase() (common.Address, error) {
 	return api.cn.Rewardbase()
 }
 
-// Hashrate returns the POW hashrate
-func (api *PublicKlayAPI) Hashrate() hexutil.Uint64 {
-	return hexutil.Uint64(api.cn.Miner().HashRate())
-}
-
-// PublicMinerAPI provides an API to control the miner.
-// It offers only methods that operate on data that pose no security risk when it is publicly accessible.
-type PublicMinerAPI struct {
-	cn    *CN
-	agent *work.RemoteAgent
-}
-
-// NewPublicMinerAPI create a new PublicMinerAPI instance.
-func NewPublicMinerAPI(e *CN) *PublicMinerAPI {
-	agent := work.NewRemoteAgent(e.BlockChain(), e.Engine())
-	e.Miner().Register(agent)
-
-	return &PublicMinerAPI{e, agent}
-}
-
-// Mining returns an indication if this node is currently mining.
-func (api *PublicMinerAPI) Mining() bool {
-	return api.cn.IsMining()
-}
-
-// SubmitWork can be used by external miner to submit their POW solution. It returns an indication if the work was
-// accepted. Note, this is not an indication if the provided work was valid!
-func (api *PublicMinerAPI) SubmitWork(solution common.Hash) bool {
-	return api.agent.SubmitWork(solution)
-}
-
-// GetWork returns a work package for external miner. The work package consists of 3 strings
-// result[0], 32 bytes hex encoded current block header pow-hash
-// result[1], 32 bytes hex encoded seed hash used for DAG
-// result[2], 32 bytes hex encoded boundary condition ("target"), 2^256/blockscore
-func (api *PublicMinerAPI) GetWork() ([3]string, error) {
-	if !api.cn.IsMining() {
-		if err := api.cn.StartMining(false); err != nil {
-			return [3]string{}, err
-		}
-	}
-	work, err := api.agent.GetWork()
-	if err != nil {
-		return work, fmt.Errorf("mining not ready: %v", err)
-	}
-	return work, nil
-}
-
-// SubmitHashrate can be used for remote miners to submit their hash rate. This enables the node to report the combined
-// hash rate of all miners which submit work through this node. It accepts the miner hash rate and an identifier which
-// must be unique between nodes.
-func (api *PublicMinerAPI) SubmitHashrate(hashrate hexutil.Uint64, id common.Hash) bool {
-	api.agent.SubmitHashrate(id, uint64(hashrate))
-	return true
-}
-
 // PrivateMinerAPI provides private RPC methods to control the miner.
 // These methods can be abused by external users and must be considered insecure for use by untrusted users.
 type PrivateMinerAPI struct {
@@ -124,85 +67,10 @@ func NewPrivateMinerAPI(e *CN) *PrivateMinerAPI {
 	return &PrivateMinerAPI{e: e}
 }
 
-// Start the miner with the given number of threads. If threads is nil the number
-// of workers started is equal to the number of logical CPUs that are usable by
-// this process. If mining is already running, this method adjust the number of
-// threads allowed to use.
-func (api *PrivateMinerAPI) Start(threads *int) error {
-	// Set the number of threads if the seal engine supports it
-	if threads == nil {
-		threads = new(int)
-	} else if *threads == 0 {
-		*threads = -1 // Disable the work from within
-	}
-	type threaded interface {
-		SetThreads(threads int)
-	}
-	if th, ok := api.e.engine.(threaded); ok {
-		logger.Info("Updated mining threads", "threads", *threads)
-		th.SetThreads(*threads)
-	}
-	// Start the miner and return
-	if !api.e.IsMining() {
-		// Propagate the initial price point to the transaction pool
-		api.e.lock.RLock()
-		price := api.e.gasPrice
-		api.e.lock.RUnlock()
-
-		if price.Cmp(api.e.txPool.GasPrice()) == 0 {
-			return api.e.StartMining(true)
-		} else {
-			logger.Error("PrivateMinerAPI Start: Invalid unit price from API", "TxPool UnitPrice", api.e.txPool.GasPrice(), "API UnitPrice", price)
-			return blockchain.ErrInvalidUnitPrice
-		}
-	}
-	return nil
-}
-
-// Stop the miner
-func (api *PrivateMinerAPI) Stop() bool {
-	type threaded interface {
-		SetThreads(threads int)
-	}
-	if th, ok := api.e.engine.(threaded); ok {
-		th.SetThreads(-1)
-	}
-	api.e.StopMining()
-	return true
-}
-
-// SetExtra sets the extra data string that is included when this miner mines a block.
-func (api *PrivateMinerAPI) SetExtra(extra string) (bool, error) {
-	if err := api.e.Miner().SetExtra([]byte(extra)); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// SetGasPrice sets the minimum accepted gas price for the miner.
-func (api *PrivateMinerAPI) SetGasPrice(gasPrice hexutil.Big) bool {
-	if api.e.txPool.GasPrice().Cmp((*big.Int)(&gasPrice)) != 0 {
-		logger.Debug("PrivateMinerAPI.SetGasPrice", "TxPool UnitPrice", api.e.txPool.GasPrice(), "Given UnitPrice", gasPrice.ToInt())
-		return false
-	}
-
-	api.e.lock.Lock()
-	api.e.gasPrice = (*big.Int)(&gasPrice)
-	api.e.lock.Unlock()
-
-	api.e.txPool.SetGasPrice((*big.Int)(&gasPrice))
-	return true
-}
-
 // SetRewardbase sets the rewardbase of the CN.
 func (api *PrivateMinerAPI) SetRewardbase(rewardbase common.Address) bool {
 	api.e.SetRewardbase(rewardbase)
 	return true
-}
-
-// GetHashrate returns the current hashrate of the miner.
-func (api *PrivateMinerAPI) GetHashrate() uint64 {
-	return uint64(api.e.miner.HashRate())
 }
 
 // PrivateAdminAPI is the collection of CN full node-related APIs
