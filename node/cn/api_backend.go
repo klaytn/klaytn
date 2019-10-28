@@ -244,7 +244,7 @@ func (b *CNAPIBackend) EventMux() *event.TypeMux {
 	return b.cn.EventMux()
 }
 
-func (b *CNAPIBackend) AccountManager() *accounts.Manager {
+func (b *CNAPIBackend) AccountManager() accounts.AccountManager {
 	return b.cn.AccountManager()
 }
 

@@ -118,7 +118,7 @@ type CN struct {
 
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
-	accountManager *accounts.Manager
+	accountManager accounts.AccountManager
 
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *blockchain.ChainIndexer       // Bloom indexer operating during block imports
@@ -556,16 +556,16 @@ func (s *CN) StopMining()    { s.miner.Stop() }
 func (s *CN) IsMining() bool { return s.miner.Mining() }
 func (s *CN) Miner() Miner   { return s.miner }
 
-func (s *CN) AccountManager() *accounts.Manager { return s.accountManager }
-func (s *CN) BlockChain() work.BlockChain       { return s.blockchain }
-func (s *CN) TxPool() work.TxPool               { return s.txPool }
-func (s *CN) EventMux() *event.TypeMux          { return s.eventMux }
-func (s *CN) Engine() consensus.Engine          { return s.engine }
-func (s *CN) ChainDB() database.DBManager       { return s.chainDB }
-func (s *CN) IsListening() bool                 { return true } // Always listening
-func (s *CN) ProtocolVersion() int              { return s.protocolManager.ProtocolVersion() }
-func (s *CN) NetVersion() uint64                { return s.networkId }
-func (s *CN) Progress() klaytn.SyncProgress     { return s.protocolManager.Downloader().Progress() }
+func (s *CN) AccountManager() accounts.AccountManager { return s.accountManager }
+func (s *CN) BlockChain() work.BlockChain             { return s.blockchain }
+func (s *CN) TxPool() work.TxPool                     { return s.txPool }
+func (s *CN) EventMux() *event.TypeMux                { return s.eventMux }
+func (s *CN) Engine() consensus.Engine                { return s.engine }
+func (s *CN) ChainDB() database.DBManager             { return s.chainDB }
+func (s *CN) IsListening() bool                       { return true } // Always listening
+func (s *CN) ProtocolVersion() int                    { return s.protocolManager.ProtocolVersion() }
+func (s *CN) NetVersion() uint64                      { return s.networkId }
+func (s *CN) Progress() klaytn.SyncProgress           { return s.protocolManager.Downloader().Progress() }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)

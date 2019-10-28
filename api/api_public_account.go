@@ -28,11 +28,11 @@ import (
 // PublicAccountAPI provides an API to access accounts managed by this node.
 // It offers only methods that can retrieve accounts.
 type PublicAccountAPI struct {
-	am *accounts.Manager
+	am accounts.AccountManager
 }
 
 // NewPublicAccountAPI creates a new PublicAccountAPI.
-func NewPublicAccountAPI(am *accounts.Manager) *PublicAccountAPI {
+func NewPublicAccountAPI(am accounts.AccountManager) *PublicAccountAPI {
 	return &PublicAccountAPI{am: am}
 }
 

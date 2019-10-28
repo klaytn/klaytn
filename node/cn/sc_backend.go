@@ -65,7 +65,7 @@ type ServiceChain struct {
 
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
-	accountManager *accounts.Manager
+	accountManager accounts.AccountManager
 
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *blockchain.ChainIndexer       // Bloom indexer operating during block imports
@@ -312,15 +312,15 @@ func (s *ServiceChain) StopMining()    { s.miner.Stop() }
 func (s *ServiceChain) IsMining() bool { return s.miner.Mining() }
 func (s *ServiceChain) Miner() Miner   { return s.miner }
 
-func (s *ServiceChain) AccountManager() *accounts.Manager { return s.accountManager }
-func (s *ServiceChain) BlockChain() work.BlockChain       { return s.blockchain }
-func (s *ServiceChain) TxPool() work.TxPool               { return s.txPool }
-func (s *ServiceChain) EventMux() *event.TypeMux          { return s.eventMux }
-func (s *ServiceChain) Engine() consensus.Engine          { return s.engine }
-func (s *ServiceChain) ChainDB() database.DBManager       { return s.chainDB }
-func (s *ServiceChain) IsListening() bool                 { return true } // Always listening
-func (s *ServiceChain) ProtocolVersion() int              { return s.protocolManager.ProtocolVersion() }
-func (s *ServiceChain) NetVersion() uint64                { return s.networkId }
+func (s *ServiceChain) AccountManager() accounts.AccountManager { return s.accountManager }
+func (s *ServiceChain) BlockChain() work.BlockChain             { return s.blockchain }
+func (s *ServiceChain) TxPool() work.TxPool                     { return s.txPool }
+func (s *ServiceChain) EventMux() *event.TypeMux                { return s.eventMux }
+func (s *ServiceChain) Engine() consensus.Engine                { return s.engine }
+func (s *ServiceChain) ChainDB() database.DBManager             { return s.chainDB }
+func (s *ServiceChain) IsListening() bool                       { return true } // Always listening
+func (s *ServiceChain) ProtocolVersion() int                    { return s.protocolManager.ProtocolVersion() }
+func (s *ServiceChain) NetVersion() uint64                      { return s.networkId }
 func (s *ServiceChain) Progress() klaytn.SyncProgress {
 	return s.protocolManager.Downloader().Progress()
 }

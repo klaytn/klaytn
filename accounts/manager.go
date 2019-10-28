@@ -41,6 +41,16 @@ type Manager struct {
 	lock sync.RWMutex
 }
 
+//go:generate mockgen -destination=accounts/mocks/account_manager_mock.go github.com/klaytn/klaytn/accounts AccountManager
+// AccountManager is an interface of accounts.Manager struct.
+type AccountManager interface {
+	Wallet(url string) (Wallet, error)
+	Wallets() []Wallet
+	Find(account Account) (Wallet, error)
+	Backends(kind reflect.Type) []Backend
+	Subscribe(sink chan<- WalletEvent) event.Subscription
+}
+
 // NewManager creates a generic account manager to sign transaction via various
 // supported backends.
 func NewManager(backends ...Backend) *Manager {
