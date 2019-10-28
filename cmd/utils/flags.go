@@ -1192,18 +1192,6 @@ func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 	}
 }
 
-// RegisterServiceChainService adds a ServiceChain node to the stack.
-func RegisterServiceChainService(stack *node.Node, cfg *cn.Config) {
-	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		cfg.WsEndpoint = stack.WSEndpoint()
-		fullNode, err := cn.NewServiceChain(ctx, cfg)
-		return fullNode, err
-	})
-	if err != nil {
-		log.Fatalf("Failed to register the SCN service: %v", err)
-	}
-}
-
 func RegisterService(stack *node.Node, cfg *sc.SCConfig) {
 	if cfg.EnabledMainBridge {
 		err := stack.RegisterSubService(func(ctx *node.ServiceContext) (node.Service, error) {
