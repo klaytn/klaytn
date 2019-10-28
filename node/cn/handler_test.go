@@ -153,7 +153,7 @@ func TestSamplingPeers(t *testing.T) {
 
 func TestBroadcastBlock_NoParentExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	block := newBlock(blockNum1)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -176,7 +176,7 @@ func TestBroadcastBlock_NoParentExists(t *testing.T) {
 
 func TestBroadcastBlock_ParentExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	block := newBlock(blockNum1)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -199,7 +199,7 @@ func TestBroadcastBlock_ParentExists(t *testing.T) {
 
 func TestBroadcastBlockHash(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	block := newBlock(blockNum1)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -231,7 +231,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 func TestBroadcastTxsFromCN_CN_NotExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.CONSENSUSNODE
+	pm.nodetype = common.CONSENSUSNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -251,7 +251,7 @@ func TestBroadcastTxsFromCN_CN_NotExists(t *testing.T) {
 
 func TestBroadcastTxsFromCN_CN_Exists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.CONSENSUSNODE
+	pm.nodetype = common.CONSENSUSNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -271,7 +271,7 @@ func TestBroadcastTxsFromCN_CN_Exists(t *testing.T) {
 
 func TestBroadcastTxsFromPN_PN_NotExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.PROXYNODE
+	pm.nodetype = common.PROXYNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -281,9 +281,9 @@ func TestBroadcastTxsFromPN_PN_NotExists(t *testing.T) {
 
 	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.CONSENSUSNODE)).Times(1)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.PROXYNODE)).Times(1)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.ENDPOINTNODE)).Times(1)
+	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(1)
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(1)
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(1)
 
 	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
 
@@ -296,7 +296,7 @@ func TestBroadcastTxsFromPN_PN_NotExists(t *testing.T) {
 
 func TestBroadcastTxsFromPN_PN_Exists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.PROXYNODE
+	pm.nodetype = common.PROXYNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -306,9 +306,9 @@ func TestBroadcastTxsFromPN_PN_Exists(t *testing.T) {
 
 	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.CONSENSUSNODE)).Times(1)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.PROXYNODE)).Times(1)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.ENDPOINTNODE)).Times(1)
+	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(1)
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(1)
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(1)
 
 	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 
@@ -321,7 +321,7 @@ func TestBroadcastTxsFromPN_PN_Exists(t *testing.T) {
 
 func TestBroadcastTxsFromEN_EN_NotExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -329,9 +329,9 @@ func TestBroadcastTxsFromEN_EN_NotExists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.CONSENSUSNODE)).Times(2)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.PROXYNODE)).Times(2)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.ENDPOINTNODE)).Times(2)
+	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(2)
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(2)
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(2)
 
 	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
@@ -345,7 +345,7 @@ func TestBroadcastTxsFromEN_EN_NotExists(t *testing.T) {
 
 func TestBroadcastTxsFromEN_EN_Exists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -353,9 +353,9 @@ func TestBroadcastTxsFromEN_EN_Exists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.CONSENSUSNODE)).Times(2)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.PROXYNODE)).Times(2)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.ENDPOINTNODE)).Times(2)
+	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(2)
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(2)
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(2)
 
 	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
@@ -369,7 +369,7 @@ func TestBroadcastTxsFromEN_EN_Exists(t *testing.T) {
 
 func TestBroadcastTxsFromEN_PN_NotExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -377,9 +377,9 @@ func TestBroadcastTxsFromEN_PN_NotExists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.CONSENSUSNODE)).Times(2)
-	pnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.PROXYNODE)).Times(2)
-	enPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.ENDPOINTNODE)).Times(2)
+	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(2)
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(2)
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(2)
 
 	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
 	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
@@ -393,7 +393,7 @@ func TestBroadcastTxsFromEN_PN_NotExists(t *testing.T) {
 
 func TestBroadcastTxsFrom_DefaultCase(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.BOOTNODE
+	pm.nodetype = common.BOOTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -402,16 +402,16 @@ func TestBroadcastTxsFrom_DefaultCase(t *testing.T) {
 	createAndRegisterPeers(mockCtrl, peers)
 
 	// There are no expected calls for the mocks.
-	pm.nodetype = p2p.BOOTNODE
+	pm.nodetype = common.BOOTNODE
 	pm.BroadcastTxs(txs)
 
-	pm.nodetype = p2p.UNKNOWNNODE
+	pm.nodetype = common.UNKNOWNNODE
 	pm.BroadcastTxs(txs)
 }
 
 func TestReBroadcastTxs_CN(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.CONSENSUSNODE
+	pm.nodetype = common.CONSENSUSNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -426,14 +426,14 @@ func TestReBroadcastTxs_PN(t *testing.T) {
 	// CN Peer=0, PN Peer=1
 	{
 		pm := &ProtocolManager{}
-		pm.nodetype = p2p.PROXYNODE
+		pm.nodetype = common.PROXYNODE
 		mockCtrl := gomock.NewController(t)
 
 		peers := newPeerSet()
 		pm.peers = peers
 
 		enPeer := NewMockPeer(mockCtrl)
-		enPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.PROXYNODE)).Times(2)
+		enPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(2)
 		enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
 		peers.enpeers[addrs[2]] = enPeer
@@ -446,14 +446,14 @@ func TestReBroadcastTxs_PN(t *testing.T) {
 	// CN Peer=1, PN Peer=0
 	{
 		pm := &ProtocolManager{}
-		pm.nodetype = p2p.PROXYNODE
+		pm.nodetype = common.PROXYNODE
 		mockCtrl := gomock.NewController(t)
 
 		peers := newPeerSet()
 		pm.peers = peers
 
 		pnPeer := NewMockPeer(mockCtrl)
-		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.CONSENSUSNODE)).Times(1)
+		pnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(1)
 		pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
 		peers.pnpeers[addrs[2]] = pnPeer
@@ -469,14 +469,14 @@ func TestReBroadcastTxs_EN(t *testing.T) {
 	// PN Peer=0, EN Peer=1
 	{
 		pm := &ProtocolManager{}
-		pm.nodetype = p2p.ENDPOINTNODE
+		pm.nodetype = common.ENDPOINTNODE
 		mockCtrl := gomock.NewController(t)
 
 		peers := newPeerSet()
 		pm.peers = peers
 
 		enPeer := NewMockPeer(mockCtrl)
-		enPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.ENDPOINTNODE)).Times(2)
+		enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(2)
 		enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
 		peers.enpeers[addrs[2]] = enPeer
@@ -489,14 +489,14 @@ func TestReBroadcastTxs_EN(t *testing.T) {
 	// PN Peer=1, EN Peer=0
 	{
 		pm := &ProtocolManager{}
-		pm.nodetype = p2p.ENDPOINTNODE
+		pm.nodetype = common.ENDPOINTNODE
 		mockCtrl := gomock.NewController(t)
 
 		peers := newPeerSet()
 		pm.peers = peers
 
 		pnPeer := NewMockPeer(mockCtrl)
-		pnPeer.EXPECT().ConnType().Return(p2p.ConnType(p2p.PROXYNODE)).Times(1)
+		pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(1)
 		pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
 		peers.pnpeers[addrs[2]] = pnPeer
@@ -513,17 +513,17 @@ func TestUseTxResend(t *testing.T) {
 		pm     *ProtocolManager
 		result bool
 	}{
-		{&ProtocolManager{nodetype: p2p.CONSENSUSNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: p2p.ENDPOINTNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: p2p.PROXYNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: p2p.BOOTNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: p2p.UNKNOWNNODE, txResendUseLegacy: true}, false},
+		{&ProtocolManager{nodetype: common.CONSENSUSNODE, txResendUseLegacy: true}, false},
+		{&ProtocolManager{nodetype: common.ENDPOINTNODE, txResendUseLegacy: true}, false},
+		{&ProtocolManager{nodetype: common.PROXYNODE, txResendUseLegacy: true}, false},
+		{&ProtocolManager{nodetype: common.BOOTNODE, txResendUseLegacy: true}, false},
+		{&ProtocolManager{nodetype: common.UNKNOWNNODE, txResendUseLegacy: true}, false},
 
-		{&ProtocolManager{nodetype: p2p.CONSENSUSNODE, txResendUseLegacy: false}, false},
-		{&ProtocolManager{nodetype: p2p.ENDPOINTNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: p2p.PROXYNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: p2p.BOOTNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: p2p.UNKNOWNNODE, txResendUseLegacy: false}, true},
+		{&ProtocolManager{nodetype: common.CONSENSUSNODE, txResendUseLegacy: false}, false},
+		{&ProtocolManager{nodetype: common.ENDPOINTNODE, txResendUseLegacy: false}, true},
+		{&ProtocolManager{nodetype: common.PROXYNODE, txResendUseLegacy: false}, true},
+		{&ProtocolManager{nodetype: common.BOOTNODE, txResendUseLegacy: false}, true},
+		{&ProtocolManager{nodetype: common.UNKNOWNNODE, txResendUseLegacy: false}, true},
 	}
 
 	for _, tc := range testSet {
@@ -533,7 +533,7 @@ func TestUseTxResend(t *testing.T) {
 
 func TestNodeInfo(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -563,7 +563,7 @@ func TestNodeInfo(t *testing.T) {
 
 func TestGetCNPeersAndGetENPeers(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -590,7 +590,7 @@ func TestGetCNPeersAndGetENPeers(t *testing.T) {
 
 func TestFindPeers_AddrExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -623,7 +623,7 @@ func TestFindPeers_AddrExists(t *testing.T) {
 
 func TestFindPeers_AddrNotExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -664,7 +664,7 @@ func TestFindPeers_AddrNotExists(t *testing.T) {
 
 func TestFindCNPeers(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -694,7 +694,7 @@ func TestFindCNPeers(t *testing.T) {
 
 func TestGetPeers_AddrExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -722,7 +722,7 @@ func TestGetPeers_AddrExists(t *testing.T) {
 
 func TestGetPeers_AddrNotExists(t *testing.T) {
 	pm := &ProtocolManager{}
-	pm.nodetype = p2p.ENDPOINTNODE
+	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

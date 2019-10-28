@@ -109,10 +109,10 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 }
 
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
-func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster, nodetype p2p.ConnType) {
+func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster, nodetype common.ConnType) {
 	sb.broadcaster = broadcaster
-	if nodetype == p2p.CONSENSUSNODE {
-		sb.broadcaster.RegisterValidator(p2p.CONSENSUSNODE, sb)
+	if nodetype == common.CONSENSUSNODE {
+		sb.broadcaster.RegisterValidator(common.CONSENSUSNODE, sb)
 	}
 }
 

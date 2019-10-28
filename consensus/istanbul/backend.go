@@ -23,7 +23,6 @@ package istanbul
 import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/networks/p2p"
 	"math/big"
 	"time"
 )
@@ -83,5 +82,5 @@ type Backend interface {
 
 	SetCurrentView(view *View)
 
-	NodeType() p2p.ConnType
+	NodeType() common.ConnType
 }

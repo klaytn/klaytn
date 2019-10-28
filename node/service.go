@@ -23,6 +23,7 @@ package node
 import (
 	"crypto/ecdsa"
 	"github.com/klaytn/klaytn/accounts"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/rpc"
@@ -74,7 +75,7 @@ func (ctx *ServiceContext) NodeKey() *ecdsa.PrivateKey {
 	return ctx.config.NodeKey()
 }
 
-func (ctx *ServiceContext) NodeType() p2p.ConnType {
+func (ctx *ServiceContext) NodeType() common.ConnType {
 	return ctx.config.P2P.ConnectionType
 }
 

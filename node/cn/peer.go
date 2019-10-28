@@ -175,7 +175,7 @@ type Peer interface {
 	Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash) error
 
 	// ConnType returns the conntype of the peer.
-	ConnType() p2p.ConnType
+	ConnType() common.ConnType
 
 	// GetID returns the id of the peer.
 	GetID() string
@@ -656,7 +656,7 @@ func (p *basePeer) String() string {
 }
 
 // ConnType returns the conntype of the peer.
-func (p *basePeer) ConnType() p2p.ConnType {
+func (p *basePeer) ConnType() common.ConnType {
 	return p.Peer.ConnType()
 }
 
@@ -1030,7 +1030,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	var consensusChannel chan p2p.Msg
 	isCN := false
 
-	if _, ok := pm.engine.(consensus.Handler); ok && pm.nodetype == p2p.CONSENSUSNODE {
+	if _, ok := pm.engine.(consensus.Handler); ok && pm.nodetype == common.CONSENSUSNODE {
 		consensusChannel = make(chan p2p.Msg, channelSizePerPeer)
 		defer close(consensusChannel)
 		pm.engine.(consensus.Handler).RegisterConsensusMsgCode(p)

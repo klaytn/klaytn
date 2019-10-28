@@ -120,7 +120,7 @@ type Handler interface {
 	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
 
 	// SetBroadcaster sets the broadcaster to send message to peers
-	SetBroadcaster(Broadcaster, p2p.ConnType)
+	SetBroadcaster(Broadcaster, common.ConnType)
 
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
 	RegisterConsensusMsgCode(Peer)

@@ -932,7 +932,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 
 	cfg.ConnectionType = convertNodeType(nodeType)
-	if cfg.ConnectionType == p2p.UNKNOWNNODE {
+	if cfg.ConnectionType == common.UNKNOWNNODE {
 		logger.Crit("Unknown node type", "nodetype", nodeType)
 	}
 	logger.Info("Setting connection type", "nodetype", nodeType, "conntype", cfg.ConnectionType)
@@ -966,16 +966,16 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	cfg.NetworkID, _ = getNetworkId(ctx)
 }
 
-func convertNodeType(nodetype string) p2p.ConnType {
+func convertNodeType(nodetype string) common.ConnType {
 	switch strings.ToLower(nodetype) {
 	case "cn", "scn":
-		return p2p.CONSENSUSNODE
+		return common.CONSENSUSNODE
 	case "pn", "spn":
-		return p2p.PROXYNODE
+		return common.PROXYNODE
 	case "en", "sen":
-		return p2p.ENDPOINTNODE
+		return common.ENDPOINTNODE
 	default:
-		return p2p.UNKNOWNNODE
+		return common.UNKNOWNNODE
 	}
 }
 

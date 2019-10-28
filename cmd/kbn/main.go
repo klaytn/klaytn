@@ -26,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
@@ -142,7 +143,7 @@ func bootnode(ctx *cli.Context) error {
 		Conn:            conn,
 		Addr:            realaddr,
 		Id:              discover.PubkeyID(&bcfg.nodeKey.PublicKey),
-		NodeType:        p2p.ConvertNodeType(p2p.BOOTNODE),
+		NodeType:        p2p.ConvertNodeType(common.BOOTNODE),
 		AuthorizedNodes: bcfg.AuthorizedNodes,
 	}
 

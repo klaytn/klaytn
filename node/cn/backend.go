@@ -92,7 +92,7 @@ type BackendProtocolManager interface {
 	SetAcceptTxs()
 	SetRewardbase(addr common.Address)
 	SetRewardbaseWallet(wallet accounts.Wallet)
-	NodeType() p2p.ConnType
+	NodeType() common.ConnType
 	Start(maxPeers int)
 	Stop()
 }
@@ -345,7 +345,7 @@ func (s *CN) setAcceptTxs() error {
 
 // setRewardWallet sets reward base and reward base wallet if the node is CN.
 func (s *CN) setRewardWallet() error {
-	if s.protocolManager.NodeType() == p2p.CONSENSUSNODE {
+	if s.protocolManager.NodeType() == common.CONSENSUSNODE {
 		wallet, err := s.RewardbaseWallet()
 		if err != nil {
 			return err
@@ -397,7 +397,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a Klaytn service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance, nodetype p2p.ConnType) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)

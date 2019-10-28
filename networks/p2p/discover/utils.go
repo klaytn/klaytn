@@ -36,7 +36,7 @@ func ParseNodeType(nt string) NodeType {
 }
 
 // StringNodeType converts NodeType to string
-func StringNodeType(nType NodeType) string { // TODO-Klaytn-Node Consolidate p2p.NodeType and p2p.ConnType
+func StringNodeType(nType NodeType) string { // TODO-Klaytn-Node Consolidate p2p.NodeType and common.ConnType
 	switch nType {
 	case NodeTypeCN:
 		return "cn"
