@@ -120,7 +120,7 @@ commands:
             export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
             export KLAYTN_VERSION=$(go run build/rpm/main.go version)
 
-            for item in << parameters.resources >>  #kgen
+            for item in << parameters.resources >>
             do
               cd /go/src/github.com/klaytn/klaytn
               go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
@@ -170,14 +170,14 @@ commands:
   nofity_success:
     steps:
       - run:
-          name: ""
+          name: "notify slack when job success"
           command : |
             curl --data '{"text": "✅ Nightly job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_success
   nofity_failure:
     steps:
       - run:
-          name: ""
+          name: "notify slack when job fail"
           command : |
             curl --data '{"text": "❌ Nightly job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
@@ -251,17 +251,15 @@ jobs:
           command: |
             set -e
             export GOPATH=/go
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
-            make cover
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata            
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
             cp coverage_report.html /tmp/coverage_reports/
             bash <(curl -s https://codecov.io/bash)
+      - nofity_failure
+      - nofity_success
       - store_artifacts:
           path: /tmp/coverage_reports
-      - nofity_success
-      - nofity_failure
-
   linters:
     executor: test-executor
     steps:
@@ -272,11 +270,11 @@ jobs:
             make lint-try
             mkdir -p /tmp/linter_reports
             cp linter_report.txt /tmp/linter_reports/
+      - nofity_failure
+      - nofity_success
       - store_artifacts:
           path: /tmp/linter_reports
-      - nofity_success
-      - nofity_failure
-
+          
   packaging-linux:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
@@ -412,22 +410,18 @@ workflows:
           requires:
             - pass-tests
           filters: *filter-only-version-tag
-
       - packaging-linux-baobab: 
           requires:
             - pass-tests
           filters: *filter-only-version-tag
-
       - packaging-darwin: 
           requires:
             - pass-tests
           filters: *filter-only-version-tag
-
       - packaging-darwin-baobab: 
           requires:
             - pass-tests
           filters: *filter-only-version-tag
-
       - packaging-windows: 
           requires:
             - pass-tests
