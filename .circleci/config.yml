@@ -456,15 +456,11 @@ workflows:
             - test-tests
             #- test-others
             - build-linux
+            - tag_verify
           filters: *filter-version-tag-branch
       
       - tag_verify:
           filters: *filter-only-version-tag
-
-      - build_all: 
-          filters: *filter-only-version-tag
-          requires:
-            - tag_verify
 
       - deploy-rpm-public: 
           requires:
