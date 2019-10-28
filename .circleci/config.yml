@@ -53,27 +53,24 @@ commands:
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
             make -j 8 << parameters.os-network >>
   packaging:
-    description: "Packaging kcn kpn ken kgen kscn kbn kspn ksen"
+    description: "Packaging by OS except window"
     parameters:
       os:
         type: string
         default: "linux-amd64"
-      window-only:
-        type: string
-        default: "" #.exe
     steps:
       - run: 
-          name: "Packaging kcn kpn ken kgen kscn kbn kspn ksen for << parameters.os >>"
+          name: "Packaging << parameters.os >>"
           command: |
             for item in kcn kpn ken kgen kscn kbn kspn ksen
             do
               PACK_NAME=${item}-<< parameters.os >>
               if [ ${item} = kgen ]; then
                 mkdir -p ${PACK_NAME}/bin
-                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}<< parameters.window-only >>
+                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
               else
                 mkdir -p ${PACK_NAME}/{bin,conf}
-                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}<< parameters.window-only >>
+                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
                 cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
                 cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
               fi
@@ -106,12 +103,33 @@ commands:
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
+  packaging-window:
+    description: "Packaging window version"
+    steps:
+      - run:
+          command: |
+            for item in kcn kpn ken kgen kscn kbn kspn ksen
+            do
+              PACK_NAME=${item}-windows-amd64
+              if [ ${item} = kgen ]; then
+                mkdir -p ${PACK_NAME}/bin
+                cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
+              else
+                mkdir -p ${PACK_NAME}/{bin,conf}
+                cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
+                cp build/packaging/windows/conf/${item}-conf.cmd ${PACK_NAME}/conf/
+                cp build/packaging/windows/start-${item}.bat ${PACK_NAME}/
+              fi
+              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-windows-amd64.tar.gz"
+              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
+              #test
+              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
+            done
+
   rpm-tagged:
     description: "rpm tagging for cypress and baobab"
     parameters:
-      network:
-        type: string
-        default: "d"
       resources:
         type: string
         default: "kcn kpn ken kscn kbn"
@@ -240,8 +258,7 @@ jobs:
     steps:
       - run: 
           name: "tests Success!"
-          command: echo "tests pass!"   
-      - nofity_success       
+          command: echo "tests pass!"          
 
   coverage:
     executor: test-executor
@@ -263,6 +280,7 @@ jobs:
       - nofity_success
       - store_artifacts:
           path: /tmp/coverage_reports
+
   linters:
     executor: test-executor
     steps:
@@ -326,29 +344,7 @@ jobs:
       - install_awscli
       - build:
           os-network: "klay-windows-amd64"
-      # - packaging:
-      #     os: "windows-amd64"
-      - run:
-          name: "Packaging kcn, kpn, ken, kgen for windows"
-          command: |
-            for item in kcn kpn ken kgen
-            do
-              PACK_NAME=${item}-windows-amd64
-              if [ ${item} = kgen ]; then
-                mkdir -p ${PACK_NAME}/bin
-                cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
-              else
-                mkdir -p ${PACK_NAME}/{bin,conf}
-                cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
-                cp build/packaging/windows/conf/${item}-conf.cmd ${PACK_NAME}/conf/
-                cp build/packaging/windows/start-${item}.bat ${PACK_NAME}/
-              fi
-              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-windows-amd64.tar.gz"
-              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              #test
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-            done
+      - packaging-window
 
   rpm-tagged:
     executor: rpm-executor
