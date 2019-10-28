@@ -257,7 +257,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching,
 			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval,
-			TxPoolStateCache: config.TxPoolStateCache, TrieCacheLimit: config.TrieCacheLimit, SenderTxHashIndexing: config.SenderTxHashIndexing}
+			TxPoolStateCache: config.TxPoolStateCache, TrieCacheLimit: config.TrieCacheLimit,
+			SenderTxHashIndexing: config.SenderTxHashIndexing, DataArchivingBlockNum: config.DataArchivingBlockNum}
 	)
 
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)

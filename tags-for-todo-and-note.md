@@ -55,3 +55,4 @@ Please note that the tag name always
 | gRPC                                           | Related to gRPC.                                          |
 | HF                                             | Related to HardFork.                                      |
 | StateDB                                        | Related to StateDB and stateObject.                       |
+| DataArchiving                                  | Related to Data Archiving feature.                        |

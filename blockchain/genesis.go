@@ -34,6 +34,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"strings"
 )
@@ -245,18 +246,18 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 	if db == nil {
 		db = database.NewMemoryDBManager()
 	}
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
+	stateDB, _ := state.New(common.Hash{}, state.NewDatabase(db))
 	for addr, account := range g.Alloc {
 		if len(account.Code) != 0 {
-			statedb.SetCode(addr, account.Code)
+			stateDB.SetCode(addr, account.Code)
 		}
 		for key, value := range account.Storage {
-			statedb.SetState(addr, key, value)
+			stateDB.SetState(addr, key, value)
 		}
-		statedb.AddBalance(addr, account.Balance)
-		statedb.SetNonce(addr, account.Nonce)
+		stateDB.AddBalance(addr, account.Balance)
+		stateDB.SetNonce(addr, account.Nonce)
 	}
-	root := statedb.IntermediateRoot(false)
+	root := stateDB.IntermediateRoot(false)
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Time:       new(big.Int).SetUint64(g.Timestamp),
@@ -271,8 +272,8 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 	if g.BlockScore == nil {
 		head.BlockScore = params.GenesisBlockScore
 	}
-	statedb.Commit(false)
-	statedb.Database().TrieDB().Commit(root, true)
+	stateDB.Commit(false)
+	stateDB.Database().TrieDB().Commit(root, true, statedb.NoDataArchivingPreparation)
 
 	return types.NewBlock(head, nil, nil)
 }
