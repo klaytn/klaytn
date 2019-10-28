@@ -53,7 +53,7 @@ commands:
             if [ -z "$CIRCLE_TAG" ]; then
               echo "this is not RC version"
             else
-              rc_num=(echo $CIRCLE_TAG | cut -d '-' -f 2)
+              rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
               sed -n 's/%d.%d.%d/%d.%d.%d-'$tag'/' params/version.go
             fi
             
