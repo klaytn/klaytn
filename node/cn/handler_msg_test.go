@@ -75,7 +75,7 @@ func prepareDownloader(t *testing.T) (*gomock.Controller, *mocks2.MockProtocolMa
 	return mockCtrl, mockDownloader, mockPeer, pm
 }
 
-func TestHandleBlockHHeadersMsg(t *testing.T) {
+func TestHandleBlockHeadersMsg(t *testing.T) {
 	headers := []*types.Header{blocks[0].Header(), blocks[1].Header()}
 	{
 		mockCtrl, _, mockPeer, pm := prepareDownloader(t)
