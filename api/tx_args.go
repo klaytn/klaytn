@@ -21,6 +21,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -102,21 +103,6 @@ func (args *SendTxArgs) validateArgs() error {
 	// TODO - Arguments validation will be implemented for each tx type
 	//switch *args.TypeInt {
 	//case types.TxTypeLegacyTransaction:
-	//	if args.Data != nil && args.Input != nil && !bytes.Equal(*args.Data, *args.Input) {
-	//		return errTxArgInvalidInputData
-	//	}
-	//	if args.To == nil {
-	//		// Contract creation
-	//		var input []byte
-	//		if args.Data != nil {
-	//			input = *args.Data
-	//		} else if args.Input != nil {
-	//			input = *args.Input
-	//		}
-	//		if len(input) == 0 {
-	//			return errTxArgNilContractData
-	//		}
-	//	}
 	//case types.TxTypeValueTransfer:
 	//case types.TxTypeFeeDelegatedValueTransfer:
 	//}
@@ -183,6 +169,10 @@ func (args *SendTxArgs) toTransaction() (*types.Transaction, error) {
 
 	// for TxTypeLegacyTransaction
 	if *args.TypeInt == types.TxTypeLegacyTransaction {
+		if args.Data != nil && args.Input != nil && !bytes.Equal(*args.Data, *args.Input) {
+			return nil, errTxArgInvalidInputData
+		}
+
 		if args.Data != nil {
 			input = *args.Data
 		} else if args.Input != nil {
@@ -190,6 +180,9 @@ func (args *SendTxArgs) toTransaction() (*types.Transaction, error) {
 		}
 
 		if args.To == nil {
+			if len(input) == 0 {
+				return nil, errTxArgNilContractData
+			}
 			return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input), nil
 		}
 		return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input), nil
