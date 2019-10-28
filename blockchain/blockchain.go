@@ -1013,7 +1013,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 	// If we're running an archive node, always flush
 	if bc.isArchiveMode() {
-		if err := trieDB.Commit(root, false, block.NumberU64()); err != nil {
+		if err := trieDB.Commit(root, false, statedb.NoDataArchivingPreparation); err != nil {
 			return err
 		}
 	} else {
