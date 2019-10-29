@@ -62,7 +62,7 @@ type SendTxArgs struct {
 	CodeFormat    *params.CodeFormat `json:"codeFormat"`
 	HumanReadable *bool              `json:"humanReadable"`
 
-	AccountKey *accountkey.AccountKey `json:"Key"`
+	AccountKey *hexutil.Bytes `json:"Key"`
 
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
@@ -126,12 +126,11 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	values[types.TxValueKeyGasPrice] = (*big.Int)(args.GasPrice)
 
 	// optional tx fields
-	if args.To != nil {
-		if args.TypeInt.IsContractDeploy() {
-			values[types.TxValueKeyTo] = args.To
-		} else {
-			values[types.TxValueKeyTo] = *args.To
-		}
+	if args.TypeInt.IsContractDeploy() {
+		// contract deploy type allows nil as TxValueKeyTo value
+		values[types.TxValueKeyTo] = (*common.Address)(args.To)
+	} else if args.To != nil {
+		values[types.TxValueKeyTo] = *args.To
 	}
 	if args.FeePayer != nil {
 		values[types.TxValueKeyFeePayer] = *args.FeePayer
@@ -152,7 +151,10 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 		values[types.TxValueKeyHumanReadable] = *args.HumanReadable
 	}
 	if args.AccountKey != nil {
-		values[types.TxValueKeyAccountKey] = *args.AccountKey
+		serializer := accountkey.NewAccountKeySerializer()
+		if err := rlp.DecodeBytes(*args.AccountKey, &serializer); err == nil {
+			values[types.TxValueKeyAccountKey] = serializer.GetKey()
+		}
 	}
 
 	return values
