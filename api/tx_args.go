@@ -37,6 +37,7 @@ var (
 	errTxArgInvalidInputData = errors.New(`Both "data" and "input" are set and not equal. Please use "input" to pass transaction call data.`)
 	errTxArgNilTxType        = errors.New("tx should have a type value")
 	errTxArgNilContractData  = errors.New(`contract creation without any data provided`)
+	errNotForFeeDelegationTx = errors.New("fee-delegation type transactions are not allowed to use this API")
 )
 
 type NewTxArgs interface {
