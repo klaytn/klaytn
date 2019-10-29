@@ -7,7 +7,6 @@ import (
 	"github.com/klaytn/klaytn/accounts/mocks"
 	"github.com/klaytn/klaytn/api/mocks"
 	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
@@ -54,7 +53,7 @@ var (
 	testData          = hexutil.Bytes{0x11, 0x99}
 	testCodeFormat    = params.CodeFormatEVM
 	testHumanReadable = false
-	testAccountKey, _ = accountkey.NewAccountKey(accountkey.AccountKeyTypeLegacy)
+	testAccountKey    = hexutil.Bytes{0x01, 0xc0}
 	testFrom          = common.HexToAddress("0xa7Eb6992c5FD55F43305B24Ee67150Bf4910d329")
 
 	senderPrvKey, _ = crypto.HexToECDSA("95a21e86efa290d6665a9dbce06ae56319335540d13540fb1b01e28a5b2c8460")
@@ -129,8 +128,10 @@ func TestTxTypeSupport(t *testing.T) {
 				args.AccountKey = &testAccountKey
 			}
 		}
-
-		testTxTypeSupport_normalCase(t, api, ctx, args)
+		// tests for non-fee-delegation types
+		if !txType.IsFeeDelegatedTransaction() {
+			testTxTypeSupport_normalCase(t, api, ctx, args)
+		}
 		// TODO - more test cases will be added
 	}
 }
