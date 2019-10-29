@@ -100,7 +100,7 @@ func (args *SendTxArgs) checkArgs() error {
 		return errTxArgNilTxType
 	}
 
-	// TODO - Arguments validation will be implemented for each tx type
+	// TODO-Klaytn Arguments validation will be implemented for each tx type
 	//switch *args.TypeInt {
 	//case types.TxTypeLegacyTransaction:
 	//case types.TxTypeValueTransfer:
@@ -116,7 +116,7 @@ func (args *SendTxArgs) checkArgs() error {
 func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	values := make(map[types.TxValueKeyType]interface{})
 
-	// common tx fields.  They should have values after executing "setDefaults" function.
+	// common tx fields. They should have values after executing "setDefaults" function.
 	if args.TypeInt == nil || args.Nonce == nil || args.Gas == nil || args.GasPrice == nil {
 		return values
 	}
