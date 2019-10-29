@@ -312,7 +312,6 @@ func (pool *TxPool) loop() {
 			// Handle inactive account transaction eviction
 		case <-evict.C:
 			pool.mu.Lock()
-			for addr := range pool.queue {
 			for addr, beat := range pool.beats {
 				if pool.config.KeepLocals && pool.locals.contains(addr) {
 					delete(pool.beats, addr)
