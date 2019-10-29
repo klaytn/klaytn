@@ -867,7 +867,7 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 		pool.priced.Put(tx)
 	}
 
-	pool.checkAndUpdateBeat(from)
+	pool.checkAndSetBeat(from)
 	return old != nil, nil
 }
 
@@ -1085,8 +1085,8 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 	return pool.all[hash]
 }
 
-// checkAndUpdateBeat set the beat of the account if there is no beat of the account.
-func (pool *TxPool) checkAndUpdateBeat(addr common.Address) {
+// checkAndSetBeat sets the beat of the account if there is no beat of the account.
+func (pool *TxPool) checkAndSetBeat(addr common.Address) {
 	_, exist := pool.beats[addr]
 
 	if !exist {
