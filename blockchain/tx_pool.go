@@ -319,8 +319,10 @@ func (pool *TxPool) loop() {
 				}
 
 				if time.Since(beat) > pool.config.Lifetime {
-					for _, tx := range pool.queue[addr].Flatten() {
-						pool.removeTx(tx.Hash(), true)
+					if pool.queue[addr] != nil {
+						for _, tx := range pool.queue[addr].Flatten() {
+							pool.removeTx(tx.Hash(), true)
+						}
 					}
 					delete(pool.beats, addr)
 				}
