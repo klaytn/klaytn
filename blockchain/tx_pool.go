@@ -318,14 +318,15 @@ func (pool *TxPool) loop() {
 					continue
 				}
 				// Any non-locals old enough should be removed
-				if beat, exist := pool.beats[addr]; exist {
-					if time.Since(beat) > pool.config.Lifetime {
-						for _, tx := range pool.queue[addr].Flatten() {
-							pool.removeTx(tx.Hash(), true)
-						}
-					}
-				} else {
+				beat, exist := pool.beats[addr]
+				if !exist {
 					pool.beats[addr] = time.Now()
+					continue
+				}
+				if time.Since(beat) > pool.config.Lifetime {
+					for _, tx := range pool.queue[addr].Flatten() {
+						pool.removeTx(tx.Hash(), true)
+					}
 				}
 			}
 			pool.mu.Unlock()
@@ -1082,6 +1083,16 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 	return pool.all[hash]
 }
 
+// checkAndRemoveBeat removes the beat of the account if there is no transaction of the account in txpool.
+func (pool *TxPool) checkAndRemoveBeat(addr common.Address) {
+	_, pExist := pool.pending[addr]
+	_, qExist := pool.queue[addr]
+
+	if !pExist && !qExist {
+		delete(pool.beats, addr)
+	}
+}
+
 // removeTx removes a single transaction from the queue, moving all subsequent
 // transactions back to the future queue.
 func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
@@ -1103,10 +1114,7 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 			// If no more pending transactions are left, remove the list
 			if pending.Empty() {
 				delete(pool.pending, addr)
-
-				if _, exist := pool.queue[addr]; !exist {
-					delete(pool.beats, addr)
-				}
+				pool.checkAndRemoveBeat(addr)
 			}
 			// Postpone any invalidated transactions
 			for _, tx := range invalids {
@@ -1121,6 +1129,7 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 		future.Remove(tx)
 		if future.Empty() {
 			delete(pool.queue, addr)
+			pool.checkAndRemoveBeat(addr)
 		}
 	}
 }
@@ -1186,6 +1195,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
 			delete(pool.queue, addr)
+			pool.checkAndRemoveBeat(addr)
 		}
 	}
 	// Notify subsystem for new promoted transactions.
@@ -1360,10 +1370,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
 			delete(pool.pending, addr)
-
-			if _, exist := pool.queue[addr]; !exist {
-				delete(pool.beats, addr)
-			}
+			pool.checkAndRemoveBeat(addr)
 		}
 	}
 }
