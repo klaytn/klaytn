@@ -192,7 +192,6 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 	}
 	s.codecsMu.Lock()
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
-		rpcErrorResponsesCounter.Inc(1)
 		s.codecsMu.Unlock()
 		return &shutdownError{}
 	}
