@@ -313,11 +313,13 @@ func (pool *TxPool) loop() {
 		case <-evict.C:
 			pool.mu.Lock()
 			for addr, beat := range pool.beats {
+				// Skip local transactions from the eviction mechanism
 				if pool.config.KeepLocals && pool.locals.contains(addr) {
 					delete(pool.beats, addr)
 					continue
 				}
 
+				// Any non-locals old enough should be removed
 				if time.Since(beat) > pool.config.Lifetime {
 					if pool.queue[addr] != nil {
 						for _, tx := range pool.queue[addr].Flatten() {
