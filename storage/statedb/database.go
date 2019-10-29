@@ -49,10 +49,12 @@ var (
 	memcacheCommitNodesMeter = metrics.NewRegisteredMeter("trie/memcache/commit/nodes", nil)
 	memcacheCommitSizeMeter  = metrics.NewRegisteredMeter("trie/memcache/commit/size", nil)
 
-	memcacheCleanHitMeter   = metrics.NewRegisteredMeter("trie/memcache/clean/hit", nil)
-	memcacheCleanMissMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
-	memcacheCleanReadMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
-	memcacheCleanWriteMeter = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
+	memcacheCleanHitMeter      = metrics.NewRegisteredMeter("trie/memcache/clean/hit", nil)
+	memcacheCleanMissMeter     = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
+	memcacheCleanReadMeter     = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
+	memcacheCleanWriteMeter    = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
+	memcacheCleanLengthGauge   = metrics.NewRegisteredGauge("trie/memcache/clean/length", nil)
+	memcacheCleanCapacityGauge = metrics.NewRegisteredGauge("trie/memcache/clean/capacity", nil)
 
 	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
 
@@ -985,4 +987,8 @@ func (db *Database) getLastNodeHashInFlushList() common.Hash {
 // UpdateMetricNodes updates the size of Database.nodes
 func (db *Database) UpdateMetricNodes() {
 	memcacheNodesGauge.Update(int64(len(db.nodes)))
+	if db.trieNodeCache != nil {
+		memcacheCleanLengthGauge.Update(int64(db.trieNodeCache.Len()))
+		memcacheCleanCapacityGauge.Update(int64(db.trieNodeCache.Capacity()))
+	}
 }
