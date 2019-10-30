@@ -13,6 +13,11 @@ aliases:
       ignore: 
         - /release\/.*/
         - dev
+  - &filter-version-not-release
+    tags:
+      only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+    branches:
+      ignore: /release\/.*/
 
 
 orbs:
@@ -455,17 +460,17 @@ workflows:
   build_n_packaging:
     jobs:
       - build-all: 
-          filters: *filter-version-tag-branch
+          filters: *filter-version-not-release
       - test-datasync: 
-          filters: *filter-version-tag-branch
+          filters: *filter-version-not-release
       - test-networks: 
-          filters: *filter-version-tag-branch
+          filters: *filter-version-not-release
       - test-tests: 
-          filters: *filter-version-tag-branch
+          filters: *filter-version-not-release
       # - test-others: 
-        #  filters: *filter-version-tag-branch
+        #  filters: *filter-version-not-release
       # - build-linux:
-      #     filters: *filter-version-tag-branch
+      #     filters: *filter-version-not-release
 
       - pass-tests: 
           requires: 
