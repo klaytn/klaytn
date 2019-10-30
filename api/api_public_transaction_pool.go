@@ -308,19 +308,6 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-	if args.TypeInt != nil {
-		if args.TypeInt.IsFeeDelegatedTransaction() {
-			return common.Hash{}, errNotForFeeDelegationTx
-		}
-	}
-	// Look up the wallet containing the requested signer
-	account := accounts.Account{Address: args.From}
-
-	wallet, err := s.b.AccountManager().Find(account)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
@@ -328,21 +315,12 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 		defer s.nonceLock.UnlockAddr(args.From)
 	}
 
-	// Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, s.b); err != nil {
-		return common.Hash{}, err
-	}
-	// Assemble the transaction and sign with the wallet
-	tx, err := args.toTransaction()
+	signedTx, err := s.SignTransaction(ctx, args)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	signed, err := wallet.SignTx(account, tx, s.b.ChainConfig().ChainID)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return submitTransaction(ctx, s.b, signed)
+	return submitTransaction(ctx, s.b, signedTx.Tx)
 }
 
 // SendRawTransaction will add the signed transaction to the transaction pool.
@@ -390,6 +368,8 @@ type SignTransactionResult struct {
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
 func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
+	// No need to obtain the noncelock mutex, since we won't be sending this
+	// tx into the transaction pool, but right back to the user
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}

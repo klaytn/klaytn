@@ -233,22 +233,17 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 // tries to sign it with the key associated with args.From. If the given passwd isn't
 // able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
-	if args.TypeInt != nil {
-		if args.TypeInt.IsFeeDelegatedTransaction() {
-			return common.Hash{}, errNotForFeeDelegationTx
-		}
-	}
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
 		s.nonceLock.LockAddr(args.From)
 		defer s.nonceLock.UnlockAddr(args.From)
 	}
-	signed, err := s.signTransaction(ctx, args, passwd)
+	signedTx, err := s.SignTransaction(ctx, args, passwd)
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, s.b, signed)
+	return submitTransaction(ctx, s.b, signedTx.Tx)
 }
 
 func (s *PrivateAccountAPI) signNewTransaction(ctx context.Context, args NewTxArgs, passwd string) (*types.Transaction, error) {
@@ -316,29 +311,27 @@ func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTra
 
 // SignTransaction will create a transaction from the given arguments and
 // tries to sign it with the key associated with args.From. If the given passwd isn't
-// able to decrypt the key it fails. The transaction is returned in RLP-form, not broadcast
+// able to decrypt the key, it fails. The transaction is returned in RLP-form, not broadcast
 // to other nodes
 func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
 	// No need to obtain the noncelock mutex, since we won't be sending this
 	// tx into the transaction pool, but right back to the user
-	if args.Gas == nil {
-		return nil, fmt.Errorf("gas not specified")
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return nil, err
 	}
-	if args.GasPrice == nil {
-		return nil, fmt.Errorf("gasPrice not specified")
-	}
-	if args.Nonce == nil {
-		return nil, fmt.Errorf("nonce not specified")
-	}
-	signed, err := s.signTransaction(ctx, args, passwd)
+	tx, err := args.toTransaction()
 	if err != nil {
 		return nil, err
 	}
-	data, err := rlp.EncodeToBytes(signed)
+	signedTx, err := s.sign(args.From, passwd, tx)
 	if err != nil {
 		return nil, err
 	}
-	return &SignTransactionResult{data, signed}, nil
+	data, err := rlp.EncodeToBytes(signedTx)
+	if err != nil {
+		return nil, err
+	}
+	return &SignTransactionResult{data, signedTx}, nil
 }
 
 // signHash is a helper function that calculates a hash for the given message that can be
@@ -351,6 +344,20 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 func signHash(data []byte) []byte {
 	msg := fmt.Sprintf("\x19Klaytn Signed Message:\n%d%s", len(data), data)
 	return crypto.Keccak256([]byte(msg))
+}
+
+// sign is a helper function that signs a transaction with the private key of the given address.
+// If the given passwd isn't able to decrypt the key, it fails.
+func (s *PrivateAccountAPI) sign(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: addr}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return nil, err
+	}
+	// Request the wallet to sign the transaction
+	return wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
 // Sign calculates a Klaytn ECDSA signature for:
