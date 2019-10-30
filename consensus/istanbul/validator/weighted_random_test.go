@@ -511,5 +511,5 @@ func TestWeightedCouncil_Copy(t *testing.T) {
 	assert.Equal(t, valSet.validators, copiedValSet.validators)
 	assert.Equal(t, valSet.proposers, copiedValSet.proposers)
 	assert.Equal(t, valSet.stakingInfo, copiedValSet.stakingInfo)
-	assert.True(t, &valSet.selector != &copiedValSet.selector)
+	assert.Equal(t, reflect.ValueOf(valSet.selector).Pointer(), reflect.ValueOf(copiedValSet.selector).Pointer())
 }
