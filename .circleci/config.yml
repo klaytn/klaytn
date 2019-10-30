@@ -146,7 +146,8 @@ commands:
               rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
+              python -m awscli s3 cp $TARGET_RPM s3://FRONTEND_BUCKET/packages/rhel/7/prod/
+              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               echo "${item} tagged !!!"
             done      
   rpm-tagged-baobab:
@@ -169,7 +170,8 @@ commands:
               rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
+              python -m awscli s3 cp $TARGET_RPM s3://FRONTEND_BUCKET/packages/rhel/7/prod/
+              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               echo "${item} tagged !!!"
             done 
 
@@ -486,6 +488,10 @@ workflows:
           requires:
             - rpm-tagged
             - rpm-tagged-baobab
+            - packaging-linux
+            - packaging-linux-baobab
+            - packaging-darwin
+            - packaging-darwin-baobab
           filters: *filter-only-version-tag
       - release-PR:
           requires:
