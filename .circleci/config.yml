@@ -121,17 +121,13 @@ commands:
 
   rpm-tagged:
     description: "rpm tagging for cypress"
-    parameters:
-      resources:
-        type: string
-        default: "kcn kpn ken kscn kbn"
     steps:
       - run:
           name: "rpm tagging"
           command: |
             echo $KLAYTN_VERSION
 
-            for item in << parameters.resources >>
+            for item in kcn kpn ken kscn kbn
             do
               cd /go/src/github.com/klaytn/klaytn
               go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
@@ -141,8 +137,8 @@ commands:
               tar czf ${item}d-$KLAYTN_VERSION.tar.gz ${item}d-$KLAYTN_VERSION
               mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
               rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
-              #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION.el7.x86_64.rpm"
+              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION.el7.x86_64.rpm"
               python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
               echo "${item} tagged !!!"
             done      
@@ -152,8 +148,7 @@ commands:
       - run:
           name: "rpm tagging"
           command : |
-
-            ecgi $KLAYTN_VERISON
+            echo $KLAYTN_VERISON
 
             for item in kcn kpn ken
             do
@@ -165,8 +160,8 @@ commands:
               tar czf ${item}d-baobab-$KLAYTN_VERSION.tar.gz ${item}d-baobab-$KLAYTN_VERSION
               mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
               rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
-              #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION.el7.x86_64.rpm"
+              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION.el7.x86_64.rpm"
               python -m awscli s3 cp $TARGET_RPM s3://klaytn-packages-repo-dev/packages/rhel/7/prod/
               echo "${item} tagged !!!"
             done 
