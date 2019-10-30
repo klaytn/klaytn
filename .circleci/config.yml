@@ -439,9 +439,9 @@ jobs:
           command: |
               echo "export version=$(go run build/rpm/main.go version)" >> $BASH_ENV
 
-              echo "git tag v$current_version"
-              git tag v$current_version
-              git push origin v$current_version
+              echo "git tag v$version"
+              git tag v$version
+              git push origin v$version
       - run:
           name: "Delete release branch"
           command: |
@@ -501,28 +501,34 @@ workflows:
       - rpm-tagged: 
           requires:
             - pass-tests
+            - major-tagging
           filters: *filter-only-version-tag
 
       - rpm-tagged-baobab: 
           requires:
             - pass-tests
+            - major-tagging
           filters: *filter-only-version-tag
 
       - packaging-linux: 
           requires:
             - pass-tests
+            - major-tagging
           filters: *filter-only-version-tag
       - packaging-linux-baobab: 
           requires:
             - pass-tests
+            - major-tagging
           filters: *filter-only-version-tag
       - packaging-darwin: 
           requires:
             - pass-tests
+            - major-tagging
           filters: *filter-only-version-tag
       - packaging-darwin-baobab: 
           requires:
             - pass-tests
+            - major-tagging
           filters: *filter-only-version-tag
       # - packaging-linux-2:
       #     requires:
@@ -530,9 +536,11 @@ workflows:
       #     filters: *filter-only-version-tag
 
       - major-tagging:
-          filters:
-            branches:
-              only: master  
+        requires:
+          - pass-tests
+        filters:
+          branches:
+            only: master  
 
   nightly-coverage:
     triggers:
