@@ -323,10 +323,26 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 	defer zeroKey(key.PrivateKey)
 
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
-	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
+	if chainID == nil {
+		return nil, ErrChainIdNil
 	}
-	return nil, ErrChainIdNil
+	return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
+}
+
+// SignTxAsFeePayerWithPassphrase signs the transaction as a fee payer if the private key
+// matching the given address can be decrypted with the given passphrase.
+func (ks *KeyStore) SignTxAsFeePayerWithPassphrase(a accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	_, key, err := ks.getDecryptedKey(a, passphrase)
+	if err != nil {
+		return nil, err
+	}
+	defer zeroKey(key.PrivateKey)
+
+	// Depending on the presence of the chain ID, sign with EIP155 or homestead
+	if chainID == nil {
+		return nil, ErrChainIdNil
+	}
+	return types.SignTxAsFeePayer(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
 }
 
 // Unlock unlocks the given account indefinitely.

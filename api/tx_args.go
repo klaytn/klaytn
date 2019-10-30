@@ -35,8 +35,10 @@ import (
 
 var (
 	errTxArgInvalidInputData = errors.New(`Both "data" and "input" are set and not equal. Please use "input" to pass transaction call data.`)
+	errTxArgInvalidFeePayer  = errors.New("invalid fee payer is set")
 	errTxArgNilTxType        = errors.New("tx should have a type value")
 	errTxArgNilContractData  = errors.New(`contract creation without any data provided`)
+	errTxArgNilSenderSig     = errors.New("sender signature is not set")
 	errNotForFeeDelegationTx = errors.New("fee-delegation type transactions are not allowed to use this API")
 )
 
@@ -67,6 +69,8 @@ type SendTxArgs struct {
 
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
+
+	Signatures types.TxSignaturesJSON `json:"Signatures"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified common tx fields.
