@@ -498,7 +498,12 @@ workflows:
 
       - release-PR:
           requires:
-           - deploy-rpm-public
+            - rpm-tagged
+            - rpm-tagged-baobab
+            - packaging-linux
+            - packaging-linux-baobab
+            - packaging-darwin
+            - packaging-darwin-baobab
           filters: *filter-only-version-tag
 
       - rpm-tagged: 
