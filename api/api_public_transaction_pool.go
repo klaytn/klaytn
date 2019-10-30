@@ -21,14 +21,12 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/rpc"
@@ -277,180 +275,6 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	return wallet.SignTx(account, tx, s.b.ChainConfig().ChainID)
 }
 
-type NewTxArgs interface {
-	setDefaults(context.Context, Backend) error
-	toTransaction() (*types.Transaction, error)
-	from() common.Address
-}
-
-type ValueTransferTxArgs struct {
-	From     common.Address  `json:"from"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Nonce    *hexutil.Uint64 `json:"nonce"`
-	To       common.Address  `json:"to"`
-	Value    *hexutil.Big    `json:"value"`
-}
-
-func (args *ValueTransferTxArgs) from() common.Address {
-	return args.From
-}
-
-// setDefaults is a helper function that fills in default values for unspecified tx fields.
-func (args *ValueTransferTxArgs) setDefaults(ctx context.Context, b Backend) error {
-	if args.Gas == nil {
-		args.Gas = new(hexutil.Uint64)
-		*(*uint64)(args.Gas) = 90000
-	}
-	if args.GasPrice == nil {
-		price, err := b.SuggestPrice(ctx)
-		if err != nil {
-			return err
-		}
-		args.GasPrice = (*hexutil.Big)(price)
-	}
-	if args.Nonce == nil {
-		nonce := b.GetPoolNonce(ctx, args.From)
-		args.Nonce = (*hexutil.Uint64)(&nonce)
-	}
-	return nil
-}
-
-func (args *ValueTransferTxArgs) toTransaction() (*types.Transaction, error) {
-	tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:    (uint64)(*args.Nonce),
-		types.TxValueKeyGasLimit: (uint64)(*args.Gas),
-		types.TxValueKeyGasPrice: (*big.Int)(args.GasPrice),
-		types.TxValueKeyFrom:     args.From,
-		types.TxValueKeyTo:       args.To,
-		types.TxValueKeyAmount:   (*big.Int)(args.Value),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return tx, nil
-}
-
-type AccountUpdateTxArgs struct {
-	From     common.Address  `json:"from"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Nonce    *hexutil.Uint64 `json:"nonce"`
-	Key      *hexutil.Bytes  `json:"key"`
-}
-
-func (args *AccountUpdateTxArgs) from() common.Address {
-	return args.From
-}
-
-// setDefaults is a helper function that fills in default values for unspecified tx fields.
-func (args *AccountUpdateTxArgs) setDefaults(ctx context.Context, b Backend) error {
-	if args.Gas == nil {
-		args.Gas = new(hexutil.Uint64)
-		*(*uint64)(args.Gas) = 90000
-	}
-	if args.GasPrice == nil {
-		price, err := b.SuggestPrice(ctx)
-		if err != nil {
-			return err
-		}
-		args.GasPrice = (*hexutil.Big)(price)
-	}
-	if args.Nonce == nil {
-		nonce := b.GetPoolNonce(ctx, args.From)
-		args.Nonce = (*hexutil.Uint64)(&nonce)
-	}
-	return nil
-}
-
-func (args *AccountUpdateTxArgs) toTransaction() (*types.Transaction, error) {
-	serializer := accountkey.NewAccountKeySerializer()
-
-	if err := rlp.DecodeBytes(*args.Key, &serializer); err != nil {
-		return nil, err
-	}
-	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:      (uint64)(*args.Nonce),
-		types.TxValueKeyGasLimit:   (uint64)(*args.Gas),
-		types.TxValueKeyGasPrice:   (*big.Int)(args.GasPrice),
-		types.TxValueKeyFrom:       args.From,
-		types.TxValueKeyAccountKey: serializer.GetKey(),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return tx, nil
-}
-
-// SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
-type SendTxArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Value    *hexutil.Big    `json:"value"`
-	Nonce    *hexutil.Uint64 `json:"nonce"`
-	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
-	// newer name and should be preferred by clients.
-	Data  *hexutil.Bytes `json:"data"`
-	Input *hexutil.Bytes `json:"input"`
-}
-
-// setDefaults is a helper function that fills in default values for unspecified tx fields.
-func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
-	if args.Gas == nil {
-		args.Gas = new(hexutil.Uint64)
-		*(*uint64)(args.Gas) = 90000
-	}
-	if args.GasPrice == nil {
-		price, err := b.SuggestPrice(ctx)
-		if err != nil {
-			return err
-		}
-		args.GasPrice = (*hexutil.Big)(price)
-	}
-	if args.Value == nil {
-		args.Value = new(hexutil.Big)
-	}
-	if args.Nonce == nil {
-		nonce := b.GetPoolNonce(ctx, args.From)
-		args.Nonce = (*hexutil.Uint64)(&nonce)
-	}
-	if args.Data != nil && args.Input != nil && !bytes.Equal(*args.Data, *args.Input) {
-		return errors.New(`Both "data" and "input" are set and not equal. Please use "input" to pass transaction call data.`)
-	}
-	if args.To == nil {
-		// Contract creation
-		var input []byte
-		if args.Data != nil {
-			input = *args.Data
-		} else if args.Input != nil {
-			input = *args.Input
-		}
-		if len(input) == 0 {
-			return errors.New(`contract creation without any data provided`)
-		}
-	}
-	return nil
-}
-
-func (args *SendTxArgs) toTransaction() *types.Transaction {
-	var input []byte
-	if args.Data != nil {
-		input = *args.Data
-	} else if args.Input != nil {
-		input = *args.Input
-	}
-	if args.To == nil {
-		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
-	}
-	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
-}
-
 var submitTxCount = 0
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
@@ -484,6 +308,11 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	if args.TypeInt != nil {
+		if args.TypeInt.IsFeeDelegatedTransaction() {
+			return common.Hash{}, errNotForFeeDelegationTx
+		}
+	}
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 
@@ -504,7 +333,10 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 		return common.Hash{}, err
 	}
 	// Assemble the transaction and sign with the wallet
-	tx := args.toTransaction()
+	tx, err := args.toTransaction()
+	if err != nil {
+		return common.Hash{}, err
+	}
 
 	signed, err := wallet.SignTx(account, tx, s.b.ChainConfig().ChainID)
 	if err != nil {
@@ -561,15 +393,19 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
-	tx, err := s.sign(args.From, args.toTransaction())
+	tx, err := args.toTransaction()
 	if err != nil {
 		return nil, err
 	}
-	data, err := rlp.EncodeToBytes(tx)
+	signedTx, err := s.sign(args.From, tx)
 	if err != nil {
 		return nil, err
 	}
-	return &SignTransactionResult{data, tx}, nil
+	data, err := rlp.EncodeToBytes(signedTx)
+	if err != nil {
+		return nil, err
+	}
+	return &SignTransactionResult{data, signedTx}, nil
 }
 
 // PendingTransactions returns the transactions that are in the transaction pool and have a from address that is one of
@@ -600,7 +436,10 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	if err := sendArgs.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
-	matchTx := sendArgs.toTransaction()
+	matchTx, err := sendArgs.toTransaction()
+	if err != nil {
+		return common.Hash{}, err
+	}
 	pending, err := s.b.GetPoolTransactions()
 	if err != nil {
 		return common.Hash{}, err
@@ -618,7 +457,11 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 			if gasLimit != nil && *gasLimit != 0 {
 				sendArgs.Gas = gasLimit
 			}
-			signedTx, err := s.sign(sendArgs.From, sendArgs.toTransaction())
+			tx, err := sendArgs.toTransaction()
+			if err != nil {
+				return common.Hash{}, err
+			}
+			signedTx, err := s.sign(sendArgs.From, tx)
 			if err != nil {
 				return common.Hash{}, err
 			}

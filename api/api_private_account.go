@@ -221,7 +221,10 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 		return nil, err
 	}
 	// Assemble the transaction and sign with the wallet
-	tx := args.toTransaction()
+	tx, err := args.toTransaction()
+	if err != nil {
+		return nil, err
+	}
 
 	return wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
@@ -230,6 +233,11 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 // tries to sign it with the key associated with args.From. If the given passwd isn't
 // able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
+	if args.TypeInt != nil {
+		if args.TypeInt.IsFeeDelegatedTransaction() {
+			return common.Hash{}, errNotForFeeDelegationTx
+		}
+	}
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
