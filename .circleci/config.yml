@@ -6,16 +6,13 @@ aliases:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
       ignore: /.*/
-  - &filter-only-major-tag
-    tags:
-      only: /^v[0-9]+\.[0-9]+\.[0-9]+/
-    branches:
-      ignore: /.*/
   - &filter-version-tag-branch
     tags:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
-      ignore: /release\/.*/
+      ignore: 
+        - /release\/.*/
+        - dev
 
 
 orbs:
