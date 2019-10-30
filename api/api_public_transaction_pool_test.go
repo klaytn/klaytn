@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"github.com/golang/mock/gomock"
+	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/accounts/mocks"
 	"github.com/klaytn/klaytn/api/mocks"
@@ -48,7 +49,7 @@ var (
 	testGasPrice      = (*hexutil.Big)(big.NewInt(25 * params.Ston))
 	testValue         = (*hexutil.Big)(big.NewInt(1))
 	testTo            = common.StringToAddress("1234")
-	testFeePayer      = common.StringToAddress("5678")
+	testFeePayer      = common.HexToAddress("0x819104a190255e0cedbdd9d5f59a557633d79db1")
 	testFeeRatio      = types.FeeRatio(30)
 	testData          = hexutil.Bytes{0x11, 0x99}
 	testCodeFormat    = params.CodeFormatEVM
@@ -57,6 +58,7 @@ var (
 	testFrom          = common.HexToAddress("0xa7Eb6992c5FD55F43305B24Ee67150Bf4910d329")
 	testSig           = types.TxSignatures{&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)}}.ToJSON()
 	senderPrvKey, _   = crypto.HexToECDSA("95a21e86efa290d6665a9dbce06ae56319335540d13540fb1b01e28a5b2c8460")
+	feePayerPrvKey, _ = crypto.HexToECDSA("aebb680a5e596c1d1a01bac78a3985b62c685c5e995d780c176138cb2679ba3e")
 )
 
 // TestTxTypeSupport tests tx type support of APIs in PublicTransactionPoolAPI.
@@ -64,7 +66,7 @@ func TestTxTypeSupport(t *testing.T) {
 	var ctx context.Context
 	chainConf := params.ChainConfig{ChainID: big.NewInt(1)}
 
-	// generate a keystore and an active account
+	// generate a keystore and active accounts
 	dir, err := ioutil.TempDir("", "klay-keystore-test")
 	if err != nil {
 		t.Fatal(err)
@@ -79,6 +81,13 @@ func TestTxTypeSupport(t *testing.T) {
 	if err := ks.Unlock(acc, password); err != nil {
 		t.Fatal(err)
 	}
+	accFeePayer, err := ks.ImportECDSA(feePayerPrvKey, password)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ks.Unlock(accFeePayer, password); err != nil {
+		t.Fatal(err)
+	}
 
 	// mock Backend and AccountManager for easy test
 	mockCtrl := gomock.NewController(t)
@@ -90,7 +99,8 @@ func TestTxTypeSupport(t *testing.T) {
 	mockBackend.EXPECT().GetPoolNonce(ctx, gomock.Any()).Return(uint64(testNonce)).AnyTimes()
 	mockBackend.EXPECT().SendTx(ctx, gomock.Any()).Return(nil).AnyTimes()
 	mockBackend.EXPECT().ChainConfig().Return(&chainConf).AnyTimes()
-	mockAccountManager.EXPECT().Find(gomock.Any()).Return(ks.Wallets()[0], nil).AnyTimes()
+	mockAccountManager.EXPECT().Find(accounts.Account{Address: acc.Address}).Return(ks.Wallets()[0], nil).AnyTimes()
+	mockAccountManager.EXPECT().Find(accounts.Account{Address: accFeePayer.Address}).Return(ks.Wallets()[1], nil).AnyTimes()
 
 	// APIs in PublicTransactionPoolAPI will be tested
 	api := PublicTransactionPoolAPI{
@@ -149,7 +159,7 @@ func testTxTypeSupport_normalCase(t *testing.T, api PublicTransactionPoolAPI, ct
 
 		// test APIs for fee delegation txs
 	} else {
-		_, err = api.SignTransactionAsFeePayer(ctx, args)
+		_, err := api.SignTransactionAsFeePayer(ctx, args)
 		assert.Equal(t, nil, err)
 
 		_, err = api.SendTransactionAsFeePayer(ctx, args)
