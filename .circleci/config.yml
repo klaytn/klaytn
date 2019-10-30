@@ -437,7 +437,7 @@ jobs:
       - run:
           name: "Generate tag"
           command: |
-              echo "export version=$(go run build/rpm/main.go version)" >> $BASH_ENV
+              version=$(go run build/rpm/main.go version)
 
               echo "git tag v$version"
               git tag v$version
