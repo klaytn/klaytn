@@ -146,7 +146,7 @@ commands:
               rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://FRONTEND_BUCKET/packages/rhel/7/prod/
+              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               echo "${item} tagged !!!"
             done      
@@ -170,7 +170,7 @@ commands:
               rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://FRONTEND_BUCKET/packages/rhel/7/prod/
+              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               echo "${item} tagged !!!"
             done 
