@@ -56,23 +56,6 @@ func (api *PublicKlayAPI) Rewardbase() (common.Address, error) {
 	return api.cn.Rewardbase()
 }
 
-// PrivateMinerAPI provides private RPC methods to control the miner.
-// These methods can be abused by external users and must be considered insecure for use by untrusted users.
-type PrivateMinerAPI struct {
-	e *CN
-}
-
-// NewPrivateMinerAPI create a new RPC service which controls the miner of this node.
-func NewPrivateMinerAPI(e *CN) *PrivateMinerAPI {
-	return &PrivateMinerAPI{e: e}
-}
-
-// SetRewardbase sets the rewardbase of the CN.
-func (api *PrivateMinerAPI) SetRewardbase(rewardbase common.Address) bool {
-	api.e.SetRewardbase(rewardbase)
-	return true
-}
-
 // PrivateAdminAPI is the collection of CN full node-related APIs
 // exposed over the private admin endpoint.
 type PrivateAdminAPI struct {
