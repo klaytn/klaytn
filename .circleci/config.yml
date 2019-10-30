@@ -6,9 +6,16 @@ aliases:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
       ignore: /.*/
+  - &filter-only-major-tag
+    tags:
+      only: /^v[0-9]+\.[0-9]+\.[0-9]+/
+    branches:
+      ignore: /.*/
   - &filter-version-tag-branch
     tags:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+    branches:
+      ignore: /release\/.*/
 
 
 orbs:
@@ -191,7 +198,7 @@ commands:
           when: on_fail
 
 jobs:
-  build_all:
+  build-all:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -371,7 +378,7 @@ jobs:
       - install_awscli
       - createrepo-update
 
-  tag_verify:
+  tag-verify:
     executor: test-executor
     steps:
       - checkout
@@ -390,7 +397,7 @@ jobs:
               exit 1
             fi
 
-  release_PR:
+  release-PR:
     executor: default
     steps:
       - add_ssh_keys
@@ -420,12 +427,35 @@ jobs:
                 echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
                 echo -e "[Master] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
               fi
+  major-tagging:
+    executor: test-executor
+    steps:
+      - add_ssh_keys
+      - checkout
+      - run:
+          name: "Generate tag"
+          command: |
+              echo "export version=$(go run build/rpm/main.go version)" >> $BASH_ENV
+
+              echo "git tag v$current_version"
+              git tag v$current_version
+              git push origin v$current_version
+      - run:
+          name: "Delete release branch"
+          command: |
+              #delete release branch. it trigger by merge title
+              if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
+                echo "Delete branch release/$version"
+                git push origin --delete release/$version
+              else
+                echo "Need to delete branch manually"
+              fi  
 
 workflows:
   version: 2
   build_n_packaging:
     jobs:
-      - build_all: 
+      - build-all: 
           filters: *filter-version-tag-branch
       - test-datasync: 
           filters: *filter-version-tag-branch
@@ -435,21 +465,21 @@ workflows:
           filters: *filter-version-tag-branch
       # - test-others: 
         #  filters: *filter-version-tag-branch
-      - build-linux:
-          filters: *filter-version-tag-branch
+      # - build-linux:
+      #     filters: *filter-version-tag-branch
 
       - pass-tests: 
           requires: 
-            - build_all
+            - build-all
             - test-datasync
             - test-networks
             - test-tests
             #- test-others
-            - build-linux
-            - tag_verify
+            #- build-linux
+            - tag-verify
           filters: *filter-version-tag-branch
       
-      - tag_verify:
+      - tag-verify:
           filters: *filter-only-version-tag
 
       - deploy-rpm-public: 
@@ -457,7 +487,7 @@ workflows:
             - rpm-tagged
             - rpm-tagged-baobab
           filters: *filter-only-version-tag
-      - release_PR:
+      - release-PR:
           requires:
            - deploy-rpm-public
           filters: *filter-only-version-tag
@@ -488,11 +518,15 @@ workflows:
           requires:
             - pass-tests
           filters: *filter-only-version-tag
-      - packaging-linux-2:
-          requires:
-            - pass-tests
-          filters: *filter-only-version-tag
+      # - packaging-linux-2:
+      #     requires:
+      #       - pass-tests
+      #     filters: *filter-only-version-tag
 
+      - major-tagging:
+          filters:
+            branches:
+              only: master  
 
   nightly-coverage:
     triggers:
