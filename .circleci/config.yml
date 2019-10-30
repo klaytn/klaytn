@@ -536,11 +536,11 @@ workflows:
       #     filters: *filter-only-version-tag
 
       - major-tagging:
-        requires:
-          - pass-tests
-        filters:
-          branches:
-            only: master  
+          requires:
+            - pass-tests
+          filters:
+            branches:
+              only: master  
 
   nightly-coverage:
     triggers:
