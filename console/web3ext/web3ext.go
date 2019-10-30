@@ -706,18 +706,6 @@ const Miner_JS = `
 web3._extend({
 	property: 'miner',
 	methods: [
-		new web3._extend.Method({
-			name: 'setRewardbase',
-			call: 'miner_setRewardbase',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter]
-		}),
-		new web3._extend.Method({
-			name: 'setRewardContract',
-			call: 'miner_setRewardContract',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputAddressFormatter]
-		}),
 	],
 	properties: []
 });
