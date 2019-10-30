@@ -88,6 +88,7 @@ var enHelpFlagGroups = []utils.FlagGroup{
 			utils.TxPoolNonExecSlotsAccountFlag,
 			utils.TxPoolNonExecSlotsAllFlag,
 			utils.TxPoolLifetimeFlag,
+			utils.TxPoolKeepLocalsFlag,
 			utils.TxResendIntervalFlag,
 			utils.TxResendCountFlag,
 			utils.TxResendUseLegacyFlag,

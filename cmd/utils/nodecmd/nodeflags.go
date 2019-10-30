@@ -44,6 +44,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.TxPoolNonExecSlotsAccountFlag,
 	utils.TxPoolNonExecSlotsAllFlag,
 	utils.TxPoolLifetimeFlag,
+	utils.TxPoolKeepLocalsFlag,
 	utils.SyncModeFlag,
 	utils.GCModeFlag,
 	utils.LightKDFFlag,
