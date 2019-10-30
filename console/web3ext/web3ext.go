@@ -702,15 +702,6 @@ web3._extend({
 });
 `
 
-const Miner_JS = `
-web3._extend({
-	property: 'miner',
-	methods: [
-	],
-	properties: []
-});
-`
-
 const Net_JS = `
 web3._extend({
 	property: 'net',
