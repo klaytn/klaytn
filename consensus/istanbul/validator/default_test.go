@@ -47,10 +47,10 @@ func TestDefaultValidator_Copy(t *testing.T) {
 	}
 	for _, testAddress := range testAddresses {
 		validator := &defaultValidator{testAddress}
-		copiedValidator := validator.Copy()
+		copiedValidator := validator.Copy().(*defaultValidator)
 
 		assert.Equal(t, validator, copiedValidator)
-		assert.NotEqual(t, fmt.Sprintf("%p", &validator), fmt.Sprintf("%p", &copiedValidator))
+		assert.True(t, &validator != &copiedValidator)
 	}
 }
 

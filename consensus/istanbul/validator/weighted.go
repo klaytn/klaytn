@@ -529,7 +529,7 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
-	var newWeightedCouncil = weightedCouncil{
+	newWeightedCouncil := weightedCouncil{
 		subSize:           valSet.subSize,
 		policy:            valSet.policy,
 		selector:          valSet.selector,

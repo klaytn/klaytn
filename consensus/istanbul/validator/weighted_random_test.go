@@ -17,7 +17,6 @@
 package validator
 
 import (
-	"fmt"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
@@ -154,7 +153,7 @@ func TestWeightedValidator_Copy(t *testing.T) {
 		copiedValidator := validator.Copy()
 
 		assert.Equal(t, validator, copiedValidator)
-		assert.NotEqual(t, fmt.Sprintf("%p", &validator), fmt.Sprintf("%p", &copiedValidator))
+		assert.True(t, &validator != &copiedValidator)
 	}
 }
 
@@ -512,4 +511,5 @@ func TestWeightedCouncil_Copy(t *testing.T) {
 	assert.Equal(t, valSet.validators, copiedValSet.validators)
 	assert.Equal(t, valSet.proposers, copiedValSet.proposers)
 	assert.Equal(t, valSet.stakingInfo, copiedValSet.stakingInfo)
+	assert.True(t, &valSet.selector != &copiedValSet.selector)
 }
