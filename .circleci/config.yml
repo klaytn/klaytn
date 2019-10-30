@@ -509,43 +509,36 @@ workflows:
       - rpm-tagged: 
           requires:
             - pass-tests
-            - major-tagging
-          filters: *filter-only-version-tag
-
+          filters: *filter-version-tag-branch
       - rpm-tagged-baobab: 
           requires:
             - pass-tests
-            - major-tagging
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
 
       - packaging-linux: 
           requires:
             - pass-tests
-            - major-tagging
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
       - packaging-linux-baobab: 
           requires:
             - pass-tests
-            - major-tagging
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
       - packaging-darwin: 
           requires:
             - pass-tests
-            - major-tagging
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
       - packaging-darwin-baobab: 
           requires:
             - pass-tests
-            - major-tagging
-          filters: *filter-only-version-tag
+          filters: *filter-version-tag-branch
       # - packaging-linux-2:
       #     requires:
       #       - pass-tests
-      #     filters: *filter-only-version-tag
+      #     filters: *filter-version-tag-branch
 
       - major-tagging:
           requires:
-            - pass-tests
+            - deploy-rpm-public
           filters:
             branches:
               only: master  
