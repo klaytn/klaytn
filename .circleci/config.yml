@@ -1,4 +1,3 @@
-
 version: 2.1
 
 aliases:
@@ -51,7 +50,7 @@ commands:
             else
               echo "this is rc version $CIRCLE_TAG"
               rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
-              sed -i 's/%d.%d.%d/%d.%d.%d-'$rc_num'/' params/version.go
+              sed -i 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go
               sed -n '/%d.%d.%d/p' params/version.go
             fi
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
@@ -67,7 +66,7 @@ commands:
           name: "Build for << parameters.os-network >>"
           command: echo $KLAYTN_VERSION; make -j 8 << parameters.os-network >>
   packaging:
-    description: "Packaging by OS except window"
+    description: "Packaging by OS"
     parameters:
       os:
         type: string
@@ -114,30 +113,6 @@ commands:
               cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
               #KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-<< parameters.os >>.tar.gz"
               KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-<< parameters.os >>.tar.gz"
-              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              #test
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-            done
-  packaging-window:
-    description: "Packaging window version"
-    steps:
-      - run:
-          command: |
-            for item in kcn kpn ken kgen #kscn kbn kspn ksen
-            do
-              PACK_NAME=${item}-windows-amd64
-              if [ ${item} = kgen ]; then
-                mkdir -p ${PACK_NAME}/bin
-                cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
-              else
-                mkdir -p ${PACK_NAME}/{bin,conf}
-                cp build/bin/${item}-windows-4.0-amd64.exe ${PACK_NAME}/bin/${item}.exe
-                cp build/packaging/windows/conf/${item}-conf.cmd ${PACK_NAME}/conf/
-                cp build/packaging/windows/start-${item}.bat ${PACK_NAME}/
-              fi
-              #KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-windows-amd64.tar.gz"
-              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-windows-amd64.tar.gz"
               tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
               #test
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
@@ -379,17 +354,6 @@ jobs:
       - packaging-baobab:
           os: "darwin-amd64"
 
-  packaging-windows:
-    machine: true
-    working_directory: ~/go/src/github.com/klaytn/klaytn
-    steps:
-      - checkout
-      - install_awscli
-      - pre-build
-      - build:
-          os-network: "klay-windows-amd64"
-      - packaging-window
-
   rpm-tagged:
     executor: rpm-executor
     steps:
@@ -430,6 +394,43 @@ jobs:
               echo "It's not same version."
               exit 1
             fi
+
+  release_PR:
+    <<: *defaults
+    steps:
+      - add_ssh_keys
+      - checkout
+      - run:
+          name: "Push to release branch"
+          command: |
+              echo "push to release branch: /release/${CIRCLE_TAG%-*}"
+              git checkout -b release/${CIRCLE_TAG%-*}
+              git push origin release/${CIRCLE_TAG%-*}
+      - run:
+          name: "Install hub" 
+          command: |
+              curl -sSLf https://github.com/github/hub/releases/download/v2.12.3/hub-linux-amd64-2.12.3.tgz | \
+                tar zxf - --strip-components=1 -C /tmp && \
+                sudo mv /tmp/bin/hub /usr/local/bin/hub
+              type hub
+      - run:
+          name: "Create pull request" 
+          command: |
+              version=$(hub pr list -s open -L 10 -f "%H%n")
+              echo $version
+
+              if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
+                echo "PR already exist"
+              else
+                echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
+                hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F- <<EOF
+                [Master] release/${CIRCLE_TAG%-*} QA Sign-off
+
+                This PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.
+
+                When this PR is approved by QA team, a new version will be released.
+              EOF
+              fi
 
 workflows:
   version: 2
@@ -490,10 +491,6 @@ workflows:
             - pass-tests
           filters: *filter-only-version-tag
       - packaging-darwin-baobab: 
-          requires:
-            - pass-tests
-          filters: *filter-only-version-tag
-      - packaging-windows: 
           requires:
             - pass-tests
           filters: *filter-only-version-tag
