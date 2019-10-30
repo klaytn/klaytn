@@ -481,7 +481,7 @@ workflows:
             #- test-others
             #- build-linux
             - tag-verify
-          filters: *filter-version-tag-branch
+          filters: *filter-version-not-release
       
       - tag-verify:
           filters: *filter-only-version-tag
