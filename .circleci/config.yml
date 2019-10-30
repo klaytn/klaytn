@@ -396,7 +396,7 @@ jobs:
             fi
 
   release_PR:
-    <<: *default
+    executor: default
     steps:
       - add_ssh_keys
       - checkout
