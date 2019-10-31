@@ -1113,7 +1113,8 @@ func TestBridgeContract_CheckValueTransferAfterUnLock(t *testing.T) {
 	tester.Value = nil
 }
 
-// TestBridgeRequestHandleGasUsed tests the gas used of handle function which include a loop.
+// TestBridgeRequestHandleGasUsed tests the gas used of handle function
+// with the gap of lowerHandle nonce and handle nonce.
 func TestBridgeRequestHandleGasUsed(t *testing.T) {
 	// Generate a new random account and a funded simulator
 	authKey, _ := crypto.GenerateKey()
@@ -1203,4 +1204,81 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 	assert.Equal(t, uint64(701), lowerHandleNonce)
 	upperHandleNonce, _ = b.UpperHandleNonce(nil)
 	assert.Equal(t, uint64(999), upperHandleNonce)
+}
+
+// TestBridgeMaxOperatorHandleTxGasUsed tests the gas used of handle function with max operators.
+func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
+	// Generate a new random account and a funded simulator
+	maxOperator := 12
+
+	var authList []*bind.TransactOpts
+	for i := 0; i < maxOperator; i++ {
+		authKey, _ := crypto.GenerateKey()
+		authList = append(authList, bind.NewKeyedTransactor(authKey))
+		authList[i].GasLimit = DefaultBridgeTxGasLimit
+	}
+	auth := authList[0]
+
+	aliceKey, _ := crypto.GenerateKey()
+	alice := bind.NewKeyedTransactor(aliceKey)
+
+	bobKey, _ := crypto.GenerateKey()
+	bob := bind.NewKeyedTransactor(bobKey)
+
+	// Create Simulated backend
+	alloc := blockchain.GenesisAlloc{
+		alice.From: {Balance: big.NewInt(params.KLAY)},
+		auth.From:  {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	var err error
+
+	// Deploy a bridge contract
+	auth.Value = big.NewInt(100000000000)
+	_, _, b, err := bridge.DeployBridge(auth, sim, false)
+	assert.NoError(t, err)
+	sim.Commit() // block
+	auth.Value = big.NewInt(0)
+
+	// Register the owner as a signer
+	for _, a := range authList {
+		_, err = b.RegisterOperator(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, a.From)
+		assert.NoError(t, err)
+	}
+
+	_, err = b.SetOperatorThreshold(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, voteTypeValueTransfer, uint8(maxOperator))
+	assert.NoError(t, err)
+
+	sim.Commit() // block
+
+	// Subscribe Bridge Contract
+	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
+	handleValueTransferSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
+	defer handleValueTransferSub.Unsubscribe()
+
+	handleFunc := func(a *bind.TransactOpts, nonce int) {
+		hTx, err := b.HandleKLAYTransfer(a, common.HexToHash(strconv.Itoa(nonce)), alice.From, bob.From, big.NewInt(1), uint64(nonce), uint64(1+nonce), nil)
+		assert.NoError(t, err)
+		sim.Commit()
+
+		receipt, err := bind.WaitMined(context.Background(), sim, hTx)
+		assert.NoError(t, err)
+		assert.Equal(t, uint(0x1), receipt.Status)
+
+		fmt.Println("Handle value transfer tx receipt", "gasUsed", receipt.GasUsed, "status", receipt.Status)
+	}
+
+	for i := 0; i < maxOperator; i++ {
+		handleFunc(authList[i], 0)
+	}
+
+	select {
+	case ev := <-handleValueTransferEventCh:
+		fmt.Println("Handle value transfer event",
+			"handleNonce", ev.HandleNonce,
+			"lowerHandleNonce", ev.LowerHandleNonce)
+	case <-time.After(1 * time.Second):
+		t.Fatal("handle event omitted")
+	}
 }

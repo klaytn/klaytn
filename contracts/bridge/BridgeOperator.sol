@@ -34,6 +34,7 @@ contract BridgeOperator is Ownable {
     mapping(uint8 => mapping (uint64 => VotesData)) private votes; // <voteType, <nonce, VotesData>
     mapping(uint64 => bool) public closedValueTransferVotes; // <nonce, bool>
 
+    uint64 public constant MAX_OPERATOR = 12;
     mapping(address => bool) public operators;
     address[] public operatorList;
 
@@ -147,7 +148,8 @@ contract BridgeOperator is Ownable {
     external
     onlyOwner
     {
-        require(!operators[_operator]);
+        require(operatorList.length < MAX_OPERATOR, "max operator limit");
+        require(!operators[_operator], "exist operator");
         operators[_operator] = true;
         operatorList.push(_operator);
     }
@@ -174,6 +176,7 @@ contract BridgeOperator is Ownable {
     external
     onlyOwner
     {
+        require(operatorList.length >= _threshold, "bigger than num of operators");
         operatorThresholds[uint8(_voteType)] = _threshold;
     }
 }
