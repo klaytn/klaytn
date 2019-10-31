@@ -100,9 +100,9 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 
 	res.requestCh = make(chan *bridge.BridgeRequestValueTransfer, 100)
 	res.handleCh = make(chan *bridge.BridgeHandleValueTransfer, 100)
-	res.requestSub, err = b.WatchRequestValueTransfer(nil, res.requestCh)
+	res.requestSub, err = b.WatchRequestValueTransfer(nil, res.requestCh, nil, nil, nil)
 	assert.NoError(t, err)
-	res.handleSub, err = b.WatchHandleValueTransfer(nil, res.handleCh)
+	res.handleSub, err = b.WatchHandleValueTransfer(nil, res.handleCh, nil, nil, nil)
 	assert.NoError(t, err)
 
 	return &res

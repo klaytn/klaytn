@@ -29,7 +29,7 @@ contract BridgeFee {
     mapping (address => uint256) public feeOfERC20;
 
     event KLAYFeeChanged(uint256 indexed fee);
-    event ERC20FeeChanged(address token, uint256 indexed fee);
+    event ERC20FeeChanged(address indexed token, uint256 indexed fee);
     event FeeReceiverChanged(address indexed feeReceiver);
 
     constructor(address payable _feeReceiver) internal {

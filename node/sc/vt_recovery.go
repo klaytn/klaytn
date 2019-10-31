@@ -271,7 +271,7 @@ pendingTxLoop:
 			endBlkNum = curBlkNum
 		}
 		opts := &bind.FilterOpts{Start: startBlkNum, End: &endBlkNum}
-		it, err := bi.bridge.FilterRequestValueTransfer(opts)
+		it, err := bi.bridge.FilterRequestValueTransfer(opts, nil, nil, nil)
 		if err != nil {
 			return nil, err
 		}

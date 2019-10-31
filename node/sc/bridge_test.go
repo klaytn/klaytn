@@ -179,7 +179,7 @@ func TestBridgeRequestValueTransferNonce(t *testing.T) {
 	t.Log("1. Bridge is deployed.", "addr=", addr.String(), "txHash=", tx.Hash().String())
 
 	requestValueTransferEventCh := make(chan *bridge.BridgeRequestValueTransfer, 100)
-	requestSub, err := b.WatchRequestValueTransfer(nil, requestValueTransferEventCh)
+	requestSub, err := b.WatchRequestValueTransfer(nil, requestValueTransferEventCh, nil, nil, nil)
 	defer requestSub.Unsubscribe()
 	if err != nil {
 		t.Fatalf("fail to WatchHandleValueTransfer %v", err)
@@ -249,7 +249,7 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	WaitMined(tx, backend, t)
 
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 100)
-	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
+	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh, nil, nil, nil)
 	assert.NoError(t, err)
 	defer handleSub.Unsubscribe()
 	if err != nil {
@@ -448,12 +448,12 @@ func TestExtendedBridgeAndCallbackERC20(t *testing.T) {
 	assert.NoError(t, err)
 
 	requestValueTransferEventCh := make(chan *bridge.BridgeRequestValueTransfer, 10)
-	requestSub, err := b.WatchRequestValueTransfer(nil, requestValueTransferEventCh)
+	requestSub, err := b.WatchRequestValueTransfer(nil, requestValueTransferEventCh, nil, nil, nil)
 	assert.NoError(t, err)
 	defer requestSub.Unsubscribe()
 
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
-	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
+	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh, nil, nil, nil)
 	assert.NoError(t, err)
 	defer handleSub.Unsubscribe()
 
@@ -593,12 +593,12 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 	assert.NoError(t, err)
 
 	requestValueTransferEventCh := make(chan *bridge.BridgeRequestValueTransfer, 10)
-	requestSub, err := b.WatchRequestValueTransfer(nil, requestValueTransferEventCh)
+	requestSub, err := b.WatchRequestValueTransfer(nil, requestValueTransferEventCh, nil, nil, nil)
 	assert.NoError(t, err)
 	defer requestSub.Unsubscribe()
 
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
-	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
+	handleSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh, nil, nil, nil)
 	assert.NoError(t, err)
 	defer handleSub.Unsubscribe()
 
@@ -1150,7 +1150,7 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 
 	// Subscribe Bridge Contract
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
-	handleValueTransferSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
+	handleValueTransferSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh, nil, nil, nil)
 	defer handleValueTransferSub.Unsubscribe()
 
 	handleFunc := func(nonce int) {
@@ -1206,13 +1206,15 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 	assert.Equal(t, uint64(999), upperHandleNonce)
 }
 
-// TestBridgeMaxOperatorHandleTxGasUsed tests the gas used of handle function with max operators.
+// TestBridgeMaxOperator tests
+// - the gas used of handle function with max operators.
+// - preventing to add more operators than the limit.
 func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 	// Generate a new random account and a funded simulator
 	maxOperator := 12
 
 	var authList []*bind.TransactOpts
-	for i := 0; i < maxOperator; i++ {
+	for i := 0; i <= maxOperator; i++ {
 		authKey, _ := crypto.GenerateKey()
 		authList = append(authList, bind.NewKeyedTransactor(authKey))
 		authList[i].GasLimit = DefaultBridgeTxGasLimit
@@ -1252,9 +1254,20 @@ func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 
 	sim.Commit() // block
 
+	// test preventing more operators than the limit.
+	{
+		tx, err := b.RegisterOperator(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, authList[maxOperator].From)
+		assert.NoError(t, err)
+		sim.Commit() // block
+
+		receipt, err := bind.WaitMined(context.Background(), sim, tx)
+		assert.NoError(t, err)
+		assert.Equal(t, types.ReceiptStatusErrExecutionReverted, receipt.Status)
+	}
+
 	// Subscribe Bridge Contract
 	handleValueTransferEventCh := make(chan *bridge.BridgeHandleValueTransfer, 10)
-	handleValueTransferSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh)
+	handleValueTransferSub, err := b.WatchHandleValueTransfer(nil, handleValueTransferEventCh, nil, nil, nil)
 	defer handleValueTransferSub.Unsubscribe()
 
 	handleFunc := func(a *bind.TransactOpts, nonce int) {
@@ -1280,5 +1293,85 @@ func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 			"lowerHandleNonce", ev.LowerHandleNonce)
 	case <-time.After(1 * time.Second):
 		t.Fatal("handle event omitted")
+	}
+}
+
+// TestBridgeThresholdLimit tests preventing the invalid threshold value.
+func TestBridgeThresholdLimit(t *testing.T) {
+	// Generate a new random account and a funded simulator
+	maxOperator := 12
+
+	var authList []*bind.TransactOpts
+	for i := 0; i < maxOperator; i++ {
+		authKey, _ := crypto.GenerateKey()
+		authList = append(authList, bind.NewKeyedTransactor(authKey))
+		authList[i].GasLimit = DefaultBridgeTxGasLimit
+	}
+	auth := authList[0]
+
+	// Create Simulated backend
+	alloc := blockchain.GenesisAlloc{
+		auth.From: {Balance: big.NewInt(params.KLAY)},
+	}
+	sim := backends.NewSimulatedBackend(alloc)
+
+	var err error
+
+	// Deploy a bridge contract
+	auth.Value = big.NewInt(100000000000)
+	_, _, b, err := bridge.DeployBridge(auth, sim, false)
+	assert.NoError(t, err)
+	sim.Commit() // block
+	auth.Value = big.NewInt(0)
+
+	// Register the owner as a signer
+	for i, a := range authList {
+		_, err = b.RegisterOperator(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, a.From)
+		assert.NoError(t, err)
+		sim.Commit() // block
+
+		// bigger threshold than operators
+		{
+			tx, err := b.SetOperatorThreshold(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, voteTypeValueTransfer, uint8(i+2))
+			assert.NoError(t, err)
+			sim.Commit() // block
+
+			receipt, err := bind.WaitMined(context.Background(), sim, tx)
+			assert.NoError(t, err)
+			assert.Equal(t, types.ReceiptStatusErrExecutionReverted, receipt.Status)
+		}
+
+		// zero threshold
+		{
+			tx, err := b.SetOperatorThreshold(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, voteTypeValueTransfer, uint8(0))
+			assert.NoError(t, err)
+			sim.Commit() // block
+
+			receipt, err := bind.WaitMined(context.Background(), sim, tx)
+			assert.NoError(t, err)
+			assert.Equal(t, types.ReceiptStatusErrExecutionReverted, receipt.Status)
+		}
+
+		// same threshold with operators
+		{
+			tx, err := b.SetOperatorThreshold(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, voteTypeValueTransfer, uint8(i+1))
+			assert.NoError(t, err)
+			sim.Commit() // block
+
+			receipt, err := bind.WaitMined(context.Background(), sim, tx)
+			assert.NoError(t, err)
+			assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+		}
+
+		// lower threshold than operator
+		if i > 0 {
+			tx, err := b.SetOperatorThreshold(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, GasLimit: testGasLimit}, voteTypeValueTransfer, uint8(i))
+			assert.NoError(t, err)
+			sim.Commit() // block
+
+			receipt, err := bind.WaitMined(context.Background(), sim, tx)
+			assert.NoError(t, err)
+			assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+		}
 	}
 }
