@@ -24,7 +24,6 @@ var Modules = map[string]string{
 	"admin":      Admin_JS,
 	"debug":      Debug_JS,
 	"klay":       Klay_JS,
-	"miner":      Miner_JS,
 	"net":        Net_JS,
 	"personal":   Personal_JS,
 	"rpc":        RPC_JS,
