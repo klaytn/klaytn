@@ -19,7 +19,6 @@ aliases:
     branches:
       ignore: /release\/.*/
 
-
 orbs:
   codecov: codecov/codecov@1.0.5
 
@@ -34,7 +33,7 @@ executors:
       - image: klaytndevops/circleci-rpmbuild:1.13.3
   default:
     docker:
-      - image: circleci/node:lts
+      - image: circleci/golang:latest
 
 commands:
   install_awscli:
@@ -186,19 +185,83 @@ commands:
             python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
             createrepo --update rhel/7/prod
             python -m awscli s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
+
+  tag-verify:
+    steps:
+      - run:
+          name: "Verify tag and file verison match"
+          command: |
+            echo "tag version is " $CIRCLE_TAG
+
+            KLAYTN_VERSION=$(go run build/rpm/main.go version)
+            echo "version on version.go" $KLAYTN_VERSION
+
+            if [ $KLAYTN_VERSION == ${CIRCLE_TAG%-*} ]; then
+              echo "verification pass"
+            else
+              echo "It's not same version."
+              exit 1
+            fi
+  make-PR:
+    steps:
+      - run:
+          name: "Push to release branch"
+          command: |
+              echo "push to release branch: /release/${CIRCLE_TAG%-*}"
+              git checkout -b release/${CIRCLE_TAG%-*}
+              git push origin release/${CIRCLE_TAG%-*}
+      - run:
+          name: "Install hub" 
+          command: |
+              curl -sSLf https://github.com/github/hub/releases/download/v2.12.3/hub-linux-amd64-2.12.3.tgz | \
+                tar zxf - --strip-components=1 -C /tmp && \
+                sudo mv /tmp/bin/hub /usr/local/bin/hub
+              type hub
+      - run:
+          name: "Create pull request" 
+          command: |
+              version=$(hub pr list -s open -L 10 -f "%H%n")
+              echo $version
+
+              if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
+                echo "PR already exist"
+              else
+                echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
+                echo -e "[Master] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
+              fi
+  tagging-delete-branch:
+    steps:
+      - run:
+          name: "Generate tag"
+          command: |
+              version=$(go run build/rpm/main.go version)
+
+              echo "git tag v$version"
+              git tag v$version
+              git push origin v$version
+      - run:
+          name: "Delete release branch"
+          command: |
+              #delete release branch. it trigger by merge title
+              if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
+                echo "Delete branch release/$version"
+                git push origin --delete release/$version
+              else
+                echo "Need to delete branch manually"
+              fi  
   nofity_success:
     steps:
       - run:
           name: "notify slack when job success"
           command : |
-            curl --data '{"text": ""✅ Nightly job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
+            curl --data '{"text": "✅ Job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH''$CIRCLE_TAG'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_success
   nofity_failure:
     steps:
       - run:
           name: "notify slack when job fail"
           command : |
-            curl --data '{"text": ""❌ Nightly job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
+            curl --data '{"text": "❌ Job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
 
 jobs:
@@ -386,74 +449,21 @@ jobs:
     executor: test-executor
     steps:
       - checkout
-      - run:
-          name: "Verify tag and file verison match"
-          command: |
-            echo "tag version is " $CIRCLE_TAG
-
-            KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            echo "version on version.go" $KLAYTN_VERSION
-
-            if [ $KLAYTN_VERSION == ${CIRCLE_TAG%-*} ]; then
-              echo "verification pass"
-            else
-              echo "It's not same version."
-              exit 1
-            fi
+      - tag-verify
 
   release-PR:
     executor: default
     steps:
       - add_ssh_keys
       - checkout
-      - run:
-          name: "Push to release branch"
-          command: |
-              echo "push to release branch: /release/${CIRCLE_TAG%-*}"
-              git checkout -b release/${CIRCLE_TAG%-*}
-              git push origin release/${CIRCLE_TAG%-*}
-      - run:
-          name: "Install hub" 
-          command: |
-              curl -sSLf https://github.com/github/hub/releases/download/v2.12.3/hub-linux-amd64-2.12.3.tgz | \
-                tar zxf - --strip-components=1 -C /tmp && \
-                sudo mv /tmp/bin/hub /usr/local/bin/hub
-              type hub
-      - run:
-          name: "Create pull request" 
-          command: |
-              version=$(hub pr list -s open -L 10 -f "%H%n")
-              echo $version
+      - make-PR
 
-              if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
-                echo "PR already exist"
-              else
-                echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
-                echo -e "[Master] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
-              fi
   major-tagging:
     executor: test-executor
     steps:
       - add_ssh_keys
       - checkout
-      - run:
-          name: "Generate tag"
-          command: |
-              version=$(go run build/rpm/main.go version)
-
-              echo "git tag v$version"
-              git tag v$version
-              git push origin v$version
-      - run:
-          name: "Delete release branch"
-          command: |
-              #delete release branch. it trigger by merge title
-              if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
-                echo "Delete branch release/$version"
-                git push origin --delete release/$version
-              else
-                echo "Need to delete branch manually"
-              fi  
+      - tagging-delete-branch
 
 workflows:
   version: 2
