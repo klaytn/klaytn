@@ -30,7 +30,8 @@ executors:
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytndevops/circleci-rpmbuild:1.13.3
+      #- image: klaytndevops/circleci-rpmbuild:1.13.3
+      - image: klaytn/circleci-rpmbuild:1.13.3-2
   default:
     docker:
       - image: circleci/golang:latest
@@ -147,8 +148,10 @@ commands:
               rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              #python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
+              #python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               echo "${item} tagged !!!"
             done      
   rpm-tagged-baobab:
@@ -171,8 +174,10 @@ commands:
               rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
               TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              #python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
+              #python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               echo "${item} tagged !!!"
             done 
 
@@ -181,10 +186,12 @@ commands:
       - run:
           name: "createrepo update"
           command: |
-            yum -y install createrepo
-            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
+            #yum -y install createrepo
+            #python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
+            aws s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
             createrepo --update rhel/7/prod
-            python -m awscli s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
+            #python -m awscli s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
+            aws s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
 
   tag-verify:
     steps:
@@ -286,7 +293,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - build
       - persist_to_workspace:
@@ -376,7 +383,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - build
       - packaging
@@ -394,7 +401,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - build
       - packaging-baobab
@@ -404,7 +411,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - build:
           os-network: "klay-darwin-amd64"
@@ -416,7 +423,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - build:
           os-network: "klay-darwin-amd64"
@@ -427,7 +434,7 @@ jobs:
     executor: rpm-executor
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - rpm-tagged
 
@@ -435,14 +442,14 @@ jobs:
     executor: rpm-executor
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - rpm-tagged-baobab
 
   deploy-rpm-public:
     executor: rpm-executor
     steps:
-      - install_awscli
+      #- install_awscli
       - createrepo-update
 
   tag-verify:
@@ -459,7 +466,7 @@ jobs:
       - make-pr
 
   major-tagging:
-    executor: test-executor
+    executor: default
     steps:
       - add_ssh_keys
       - checkout
