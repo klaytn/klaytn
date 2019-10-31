@@ -236,9 +236,9 @@ commands:
           command: |
               version=$(go run build/rpm/main.go version)
 
-              echo "git tag v$version"
-              git tag v$version
-              git push origin v$version
+              echo "git tag $version"
+              git tag $version
+              git push origin $version
       - run:
           name: "Delete release branch"
           command: |
