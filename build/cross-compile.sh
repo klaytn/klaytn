@@ -1,5 +1,16 @@
 #!/bin/bash
 
+function finish {
+  # Your cleanup code here
+  popd
+}
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+pushd $DIR/..
+
+trap finish EXIT
+
 SUBCOMMAND=$1
 ADDTIONAL_OPTIONS=""
 GO=${GO:-latest}
