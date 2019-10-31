@@ -417,7 +417,7 @@ jobs:
       - pre-build
       - build:
           os-network: "klay-darwin-amd64"
-      - run: ./build/cross-compile.sh klay-darwin-amd64
+      - run: ./build/cross-compile.sh darwin-amd64
       - packaging:
           os: "darwin-amd64"
 
@@ -430,7 +430,7 @@ jobs:
       - pre-build
       - build:
           os-network: "klay-darwin-amd64"
-      - build: ./build/cross-compile.sh klay-darwin-amd64
+      - run: ./build/cross-compile.sh darwin-amd64
       - packaging-baobab:
           os: "darwin-amd64"
 
