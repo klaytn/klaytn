@@ -22,8 +22,10 @@ fi
 GOPATH="$workspace"
 export GOPATH
 
-export GO111MODULE=on
-export GOFLAGS="-mod=vendor"
+GO111MODULE=${GO111MODULE:-on}
+GOFLAGS=${GOFLAGS:-"-mod=vendor"}
+
+export GO111MODULE GOFLAGS
 
 # Run the command inside the workspace.
 cd "$orgdir/klaytn"
