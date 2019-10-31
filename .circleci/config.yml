@@ -202,7 +202,7 @@ commands:
               echo "It's not same version."
               exit 1
             fi
-  make-PR:
+  make-pr:
     steps:
       - run:
           name: "Push to release branch"
@@ -456,7 +456,7 @@ jobs:
     steps:
       - add_ssh_keys
       - checkout
-      - make-PR
+      - make-pr
 
   major-tagging:
     executor: test-executor
