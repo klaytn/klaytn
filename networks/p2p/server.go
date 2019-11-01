@@ -267,7 +267,7 @@ type Server interface {
 	Disconnect(destID discover.NodeID)
 
 	// GetListenAddress returns the listen address list of the server.
-	GetListenAddressList() []string
+	GetListenAddress() []string
 
 	// Peers returns all connected peers.
 	Peers() []*Peer
