@@ -11,15 +11,15 @@ import (
 )
 
 const (
-	CN  = "kcn"
-	PN  = "kpn"
-	EN  = "ken"
-	SCN = "kscn"
-	SPN = "kspn"
-	SEN = "ksen"
-	BN  = "kbn"
+	CN   = "kcn"
+	PN   = "kpn"
+	EN   = "ken"
+	SCN  = "kscn"
+	SPN  = "kspn"
+	SEN  = "ksen"
+	BN   = "kbn"
 	HOMI = "homi"
-	GEN = "kgen"
+	GEN  = "kgen"
 )
 
 type NodeInfo struct {
@@ -28,14 +28,14 @@ type NodeInfo struct {
 }
 
 var BINARY_TYPE = map[string]NodeInfo{
-	CN:  {"kcnd", "kcnd is Klaytn consensus node daemon"},
-	PN:  {"kpnd", "kpnd is Klaytn proxy node daemon"},
-	EN:  {"kend", "kend is Klaytn endpoint node daemon"},
-	SCN: {"kscnd", "kscnd is Klaytn servicechain node daemon"},
-	SPN: {"kspnd", "kspnd is Klaytn servicechain proxy node daemon"},
-	SEN: {"ksend", "ksend is Klaytn servicechain endpoint node daemon"},
-	BN:  {"kbnd", "kbnd is Klaytn boot node daemon"},
-	HOMI:  {"homi", "homi is the generator of genesis.json."},
+	CN:   {"kcnd", "kcnd is Klaytn consensus node daemon"},
+	PN:   {"kpnd", "kpnd is Klaytn proxy node daemon"},
+	EN:   {"kend", "kend is Klaytn endpoint node daemon"},
+	SCN:  {"kscnd", "kscnd is Klaytn servicechain node daemon"},
+	SPN:  {"kspnd", "kspnd is Klaytn servicechain proxy node daemon"},
+	SEN:  {"ksend", "ksend is Klaytn servicechain endpoint node daemon"},
+	BN:   {"kbnd", "kbnd is Klaytn boot node daemon"},
+	HOMI: {"homi", "homi is the generator of genesis.json."},
 	GEN:  {"kgen", "kgen is the generator of private keys."},
 }
 
