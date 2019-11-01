@@ -266,8 +266,8 @@ type Server interface {
 	// Disconnect tries to disconnect peer.
 	Disconnect(destID discover.NodeID)
 
-	// GetListenAddress returns the listen address of the server.
-	GetListenAddress() []string
+	// GetListenAddress returns the listen address list of the server.
+	GetListenAddressList() []string
 
 	// Peers returns all connected peers.
 	Peers() []*Peer
@@ -807,7 +807,7 @@ func (srv *MultiChannelServer) Stop() {
 	srv.loopWG.Wait()
 }
 
-// GetListenAddress returns the listen address of the server.
+// GetListenAddress returns the listen addresses of the server.
 func (srv *MultiChannelServer) GetListenAddress() []string {
 	return srv.ListenAddrs
 }
