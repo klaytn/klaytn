@@ -39,6 +39,7 @@ var (
 	errTxArgNilTxType        = errors.New("tx should have a type value")
 	errTxArgNilContractData  = errors.New(`contract creation without any data provided`)
 	errTxArgNilSenderSig     = errors.New("sender signature is not set")
+	errTxArgNilNonce         = errors.New("nonce of the sender is not set")
 	errNotForFeeDelegationTx = errors.New("fee-delegation type transactions are not allowed to use this API")
 )
 

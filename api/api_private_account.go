@@ -250,11 +250,9 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 // tries to sign it as a fee payer with the key associated with args.From. If the
 // given passwd isn't able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
+	// Don't allow dynamic assign of the nonce value since the sender already signed on a specific nonce value.
 	if args.Nonce == nil {
-		// Hold the addresse's mutex around signing to prevent concurrent assignment of
-		// the same nonce to multiple accounts.
-		s.nonceLock.LockAddr(args.From)
-		defer s.nonceLock.UnlockAddr(args.From)
+		return common.Hash{}, errTxArgNilNonce
 	}
 
 	if args.Signatures == nil {
@@ -362,8 +360,7 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 // passwd isn't able to decrypt the key, it fails. The transaction is returned in RLP-form,
 // not broadcast to other nodes
 func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
-	// No need to obtain the noncelock mutex, since we won't be sending this
-	// tx into the transaction pool, but right back to the user
+	// Allows set a default nonce value of the sender just for the case the fee payer sign a tx earlier than the sender.
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
@@ -371,6 +368,7 @@ func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args 
 	if err != nil {
 		return nil, err
 	}
+	// Don't return errors for nil signature allowing the fee payer sign a tx earlier than the sender.
 	if args.Signatures != nil {
 		tx.SetSignature(args.Signatures.ToTxSignatures())
 	}
