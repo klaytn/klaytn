@@ -790,11 +790,21 @@ running:
 // Stop terminates the server and all active peer connections.
 // It blocks until all active connections are closed.
 func (srv *MultiChannelServer) Stop() {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+	if !srv.running {
+		return
+	}
+	srv.running = false
+	if srv.listener != nil {
+		// this unblocks listener Accept
+		srv.listener.Close()
+	}
 	for _, listener := range srv.listeners {
 		listener.Close()
 	}
-
-	srv.BaseServer.Stop()
+	close(srv.quit)
+	srv.loopWG.Wait()
 }
 
 // GetListenAddress returns the listen address of the server.
