@@ -381,7 +381,7 @@ jobs:
 
   packaging-linux:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -393,7 +393,7 @@ jobs:
 
   packaging-linux-2:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - attach_workspace:
@@ -402,7 +402,7 @@ jobs:
 
   packaging-linux-baobab:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -415,7 +415,7 @@ jobs:
 
   packaging-darwin:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -430,7 +430,7 @@ jobs:
 
   packaging-darwin-baobab:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
