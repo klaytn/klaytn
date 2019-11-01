@@ -120,6 +120,8 @@ func TestTxTypeSupport(t *testing.T) {
 		internalType := reflect.TypeOf(internalData)
 		for i := 0; i < internalType.NumField(); i++ {
 			switch internalType.Field(i).Name {
+			case "AccountNonce":
+				args.Nonce = &testNonce
 			case "Amount":
 				args.Value = testValue
 			case "Recipient":
