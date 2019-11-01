@@ -105,7 +105,7 @@ func (args *SendTxArgs) checkArgs() error {
 		return errTxArgNilTxType
 	}
 
-	// TODO-Klaytn Arguments validation will be implemented for each tx type
+	// TODO-Klaytn-TxType Arguments validation will be implemented for each tx type
 	//switch *args.TypeInt {
 	//case types.TxTypeLegacyTransaction:
 	//case types.TxTypeValueTransfer:

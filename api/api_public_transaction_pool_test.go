@@ -143,14 +143,14 @@ func TestTxTypeSupport(t *testing.T) {
 		}
 
 		testTxTypeSupport_normalCase(t, api, ctx, args)
-		// TODO - more test cases will be added soon
+		// TODO-Klaytn-TxType - more test cases will be added soon
 	}
 }
 
 // testTxTypeSupport_normalCase test APIs with proper SendTxArgs values.
 func testTxTypeSupport_normalCase(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, args SendTxArgs) {
 	var err error
-	// TODO - more test cases will be added soon
+	// TODO-Klaytn-TxType - more test cases will be added soon
 
 	// test APIs for non-fee-delegation txs
 	if !args.TypeInt.IsFeeDelegatedTransaction() {
