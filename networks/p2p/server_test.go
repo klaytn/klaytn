@@ -172,7 +172,7 @@ func TestMultiChannelServerListen(t *testing.T) {
 	// start the test server
 	connected := make(chan *Peer)
 	remid := randomID()
-	config := &Config{ListenAddr : "127.0.0.1:33331", SubListenAddr : []string{"127.0.0.1:33333",}}
+	config := &Config{ListenAddr: "127.0.0.1:33331", SubListenAddr: []string{"127.0.0.1:33333"}}
 	srv := startTestMultiChannelServer(t, remid, func(p *Peer) {
 		if p.ID() != remid {
 			t.Error("peer func called with wrong node id")
