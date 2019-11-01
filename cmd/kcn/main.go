@@ -80,6 +80,7 @@ var cnHelpFlagGroups = []utils.FlagGroup{
 			utils.TxPoolNonExecSlotsAccountFlag,
 			utils.TxPoolNonExecSlotsAllFlag,
 			utils.TxPoolLifetimeFlag,
+			utils.TxPoolKeepLocalsFlag,
 		},
 	},
 	{
