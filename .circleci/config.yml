@@ -165,6 +165,18 @@ commands:
               #aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               echo "${item} tagged !!!"
             done      
+  rpm-tagging:
+    description: "rpm tagging for cypress"
+    steps:
+      - run:
+          name: "rpm tagging"
+          command: make rpm-all
+  rpm-tagging-baobab:
+    description: "rpm tagging for baobab"
+    steps:
+      - run:
+          name: "rpm tagging baobab"
+          command: make rpm-baobab-all
   rpm-tagged-baobab:
     description: "rpm tagged baobab"
     steps:
@@ -449,7 +461,8 @@ jobs:
       - checkout
       - install_awscli
       - pre-build
-      - rpm-tagged
+      - rpm-tagging
+      #- rpm-tagged
 
   rpm-tagged-baobab:
     executor: rpm-executor
@@ -457,7 +470,8 @@ jobs:
       - checkout
       - install_awscli
       - pre-build
-      - rpm-tagged-baobab
+      - rpm-tagging-baobab
+      #- rpm-tagged-baobab
 
   deploy-rpm-public:
     executor: rpm-executor
