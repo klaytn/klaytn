@@ -14,6 +14,7 @@ aliases:
         - /release\/.*/
         - dev
         - old-makefile
+        - packaging
   - &filter-version-not-release
     tags:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
