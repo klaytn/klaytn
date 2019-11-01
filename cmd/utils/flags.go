@@ -172,7 +172,7 @@ var (
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
 		Value: cn.DefaultConfig.TxPool.NonExecSlotsAll,
 	}
-	KeepLocalsFlag = cli.BoolFlag{
+	TxPoolKeepLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.keeplocals",
 		Usage: "Disables removing timed-out local transactions",
 	}
@@ -1041,7 +1041,7 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 		cfg.NonExecSlotsAll = ctx.GlobalUint64(TxPoolNonExecSlotsAllFlag.Name)
 	}
 
-	cfg.KeepLocals = ctx.GlobalIsSet(KeepLocalsFlag.Name)
+	cfg.KeepLocals = ctx.GlobalIsSet(TxPoolKeepLocalsFlag.Name)
 
 	if ctx.GlobalIsSet(TxPoolLifetimeFlag.Name) {
 		cfg.Lifetime = ctx.GlobalDuration(TxPoolLifetimeFlag.Name)
