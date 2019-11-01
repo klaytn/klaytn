@@ -657,6 +657,13 @@ var (
 		Usage: "The maximum difference between current block and event block. 0 means off",
 		Value: 0,
 	}
+	// Data Archiving
+	// TODO-Klaytn-DataArchiving Please note that DataArchivingBlockNumFlag is just for development purpose.
+	DataArchivingBlockNumFlag = cli.Uint64Flag{
+		Name:  "dataarchiving.blocknumber",
+		Usage: "The block number when the data archiving starts from. 0 means off",
+		Value: 0,
+	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
 	// TODO-Klaytn-Bootnode: Implements bootnode's RPC
@@ -932,7 +939,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 
 	cfg.ConnectionType = convertNodeType(nodeType)
-	if cfg.ConnectionType == node.UNKNOWNNODE {
+	if cfg.ConnectionType == common.UNKNOWNNODE {
 		logger.Crit("Unknown node type", "nodetype", nodeType)
 	}
 	logger.Info("Setting connection type", "nodetype", nodeType, "conntype", cfg.ConnectionType)
@@ -966,16 +973,16 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	cfg.NetworkID, _ = getNetworkId(ctx)
 }
 
-func convertNodeType(nodetype string) p2p.ConnType {
+func convertNodeType(nodetype string) common.ConnType {
 	switch strings.ToLower(nodetype) {
 	case "cn", "scn":
-		return node.CONSENSUSNODE
+		return common.CONSENSUSNODE
 	case "pn", "spn":
-		return node.PROXYNODE
+		return common.PROXYNODE
 	case "en", "sen":
-		return node.ENDPOINTNODE
+		return common.ENDPOINTNODE
 	default:
-		return node.UNKNOWNNODE
+		return common.UNKNOWNNODE
 	}
 }
 
@@ -1154,6 +1161,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
 	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
 	cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
+	cfg.DataArchivingBlockNum = ctx.GlobalUint64(DataArchivingBlockNumFlag.Name)
 
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
@@ -1189,18 +1197,6 @@ func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 	})
 	if err != nil {
 		log.Fatalf("Failed to register the CN service: %v", err)
-	}
-}
-
-// RegisterServiceChainService adds a ServiceChain node to the stack.
-func RegisterServiceChainService(stack *node.Node, cfg *cn.Config) {
-	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-		cfg.WsEndpoint = stack.WSEndpoint()
-		fullNode, err := cn.NewServiceChain(ctx, cfg)
-		return fullNode, err
-	})
-	if err != nil {
-		log.Fatalf("Failed to register the SCN service: %v", err)
 	}
 }
 

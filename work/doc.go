@@ -18,5 +18,17 @@
 // This file is derived from miner/miner.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package work implements Klaytn block creation and mining.
+/*
+Package work implements Klaytn block creation and mining.
+
+work package is in charge of generating blocks and it contains `miner`, `worker` and `agents` which performs building blocks with transactions.
+`miner` contains `worker` and a consensus engine, so it controls the worker and passes the result to the consensus engine.
+`worker` contains `agent`s and each `agent` performs mining activity.
+
+Source Files
+ - agent.go		: Provides CpuAgent and accompanying functions which works as an agent of a miner. Agent is in charge of creating a block
+ - remote_agent.go	: Provides RemoteAgent working as an another agent for a miner and can be controlled by RPC calls
+ - work.go		: Provides Miner struct and interfaces through which the miner communicate with other objects
+ - worker.go		: Provides Worker and performs the main part of block creation
+*/
 package work

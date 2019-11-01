@@ -18,9 +18,11 @@ package cn
 
 import (
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/stretchr/testify/assert"
 	"math/big"
+	"strings"
 	"testing"
 )
 
@@ -136,4 +138,208 @@ func TestBasePeer_AsyncSendTransactions(t *testing.T) {
 
 	assert.True(t, basePeer.KnowsTx(tx1.Hash()))
 	assert.False(t, basePeer.KnowsTx(lastTxs[0].Hash()))
+}
+
+func TestBasePeer_ConnType(t *testing.T) {
+	basePeer, _, _ := newBasePeer()
+	assert.Equal(t, common.CONSENSUSNODE, basePeer.ConnType())
+}
+
+func TestBasePeer_GetAndSetAddr(t *testing.T) {
+	basePeer, _, _ := newBasePeer()
+	assert.Equal(t, common.Address{}, basePeer.GetAddr())
+	basePeer.SetAddr(addrs[0])
+	assert.Equal(t, addrs[0], basePeer.GetAddr())
+	basePeer.SetAddr(addrs[1])
+	assert.Equal(t, addrs[1], basePeer.GetAddr())
+}
+
+func TestBasePeer_GetVersion(t *testing.T) {
+	basePeer, _, _ := newBasePeer()
+	assert.Equal(t, version, basePeer.GetVersion())
+}
+
+func TestBasePeer_RegisterConsensusMsgCode(t *testing.T) {
+	basePeer, _, _ := newBasePeer()
+	assert.True(t, strings.Contains(basePeer.RegisterConsensusMsgCode(NewBlockHashesMsg).Error(), errNotSupportedByBasePeer.Error()))
+}
+
+func TestBasePeer_GetRW(t *testing.T) {
+	basePeer, pipe1, _ := newBasePeer()
+	assert.Equal(t, pipe1, basePeer.GetRW())
+}
+
+func TestBasePeer_SendBlockHeaders(t *testing.T) {
+	header1 := blocks[0].Header()
+	header2 := blocks[1].Header()
+
+	sentHeaders := []*types.Header{header1, header2}
+
+	basePeer, _, oppositePipe := newBasePeer()
+	go func(t *testing.T) {
+		if err := basePeer.SendBlockHeaders(sentHeaders); err != nil {
+			t.Fatal(err)
+		}
+	}(t)
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedHeaders []*types.Header
+	if err := receivedMsg.Decode(&receivedHeaders); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, sentHeaders, receivedHeaders)
+}
+
+func TestBasePeer_SendFetchedBlockHeader(t *testing.T) {
+	sentHeader := blocks[0].Header()
+
+	basePeer, _, oppositePipe := newBasePeer()
+	go func(t *testing.T) {
+		if err := basePeer.SendFetchedBlockHeader(sentHeader); err != nil {
+			t.Fatal(err)
+		}
+	}(t)
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedHeader types.Header
+	if err := receivedMsg.Decode(&receivedHeader); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, sentHeader, &receivedHeader)
+}
+
+func TestBasePeer_SendNodeData(t *testing.T) {
+	sentData := [][]byte{hashes[0][:], hashes[1][:]}
+
+	basePeer, _, oppositePipe := newBasePeer()
+	go func(t *testing.T) {
+		if err := basePeer.SendNodeData(sentData); err != nil {
+			t.Fatal(err)
+		}
+	}(t)
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedData [][]byte
+	if err := receivedMsg.Decode(&receivedData); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, sentData, receivedData)
+}
+
+func TestBasePeer_FetchBlockHeader(t *testing.T) {
+	sentHash := hashes[0]
+
+	basePeer, _, oppositePipe := newBasePeer()
+	go func(t *testing.T) {
+		if err := basePeer.FetchBlockHeader(sentHash); err != nil {
+			t.Fatal(err)
+		}
+	}(t)
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedHash common.Hash
+	if err := receivedMsg.Decode(&receivedHash); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, sentHash, receivedHash)
+}
+
+func TestBasePeer_RequestBodies(t *testing.T) {
+	sentHashes := hashes
+	basePeer, _, oppositePipe := newBasePeer()
+	go func(t *testing.T) {
+		if err := basePeer.RequestBodies(sentHashes); err != nil {
+			t.Fatal(err)
+		}
+	}(t)
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedHashes []common.Hash
+	if err := receivedMsg.Decode(&receivedHashes); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, sentHashes, receivedHashes)
+}
+
+func TestBasePeer_FetchBlockBodies(t *testing.T) {
+	sentHashes := hashes
+	basePeer, _, oppositePipe := newBasePeer()
+	go func(t *testing.T) {
+		if err := basePeer.FetchBlockBodies(sentHashes); err != nil {
+			t.Fatal(err)
+		}
+	}(t)
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedHashes []common.Hash
+	if err := receivedMsg.Decode(&receivedHashes); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, sentHashes, receivedHashes)
+}
+
+func TestBasePeer_RequestNodeData(t *testing.T) {
+	sentHashes := hashes
+	basePeer, _, oppositePipe := newBasePeer()
+	go func(t *testing.T) {
+		if err := basePeer.RequestNodeData(sentHashes); err != nil {
+			t.Fatal(err)
+		}
+	}(t)
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedHashes []common.Hash
+	if err := receivedMsg.Decode(&receivedHashes); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, sentHashes, receivedHashes)
+}
+
+func TestBasePeer_RequestReceipts(t *testing.T) {
+	sentHashes := hashes
+	basePeer, _, oppositePipe := newBasePeer()
+	go func(t *testing.T) {
+		if err := basePeer.RequestReceipts(sentHashes); err != nil {
+			t.Fatal(err)
+		}
+	}(t)
+	receivedMsg, err := oppositePipe.ReadMsg()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var receivedHashes []common.Hash
+	if err := receivedMsg.Decode(&receivedHashes); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, sentHashes, receivedHashes)
 }

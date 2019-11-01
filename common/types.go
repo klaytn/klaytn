@@ -290,3 +290,27 @@ func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
 func (a UnprefixedAddress) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(a[:])), nil
 }
+
+type ConnType int
+
+const ConnTypeUndefined ConnType = -1
+
+const (
+	CONSENSUSNODE ConnType = iota
+	ENDPOINTNODE
+	PROXYNODE
+	BOOTNODE
+	UNKNOWNNODE // For error case
+)
+
+func (ct ConnType) Valid() bool {
+	if int(ct) > 255 {
+		return false
+	}
+	return true
+}
+
+func (ct ConnType) String() string {
+	s := fmt.Sprintf("%d", int(ct))
+	return s
+}

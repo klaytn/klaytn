@@ -78,7 +78,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	}, db)
 
 	prvKey, _ := crypto.GenerateKey()
-	engine := backend.New(common.Address{}, istanbul.DefaultConfig, prvKey, db, gov, node.CONSENSUSNODE)
+	engine := backend.New(common.Address{}, istanbul.DefaultConfig, prvKey, db, gov, common.CONSENSUSNODE)
 
 	var genesis *blockchain.Genesis
 	genesis = blockchain.DefaultGenesisBlock()
@@ -144,7 +144,7 @@ func TestMainBridge_basic(t *testing.T) {
 		{
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   api.NewPublicKlayAPI(&cn.ServiceChainAPIBackend{}),
+			Service:   api.NewPublicKlayAPI(&cn.CNAPIBackend{}),
 			Public:    true,
 		},
 	}

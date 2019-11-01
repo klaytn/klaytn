@@ -284,6 +284,23 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	return nil, ErrChainIdNil
 }
 
+// SignTxAsFeePayer signs the given transaction as a fee payer with the requested account.
+func (ks *KeyStore) SignTxAsFeePayer(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	// Look up the key to sign with and abort if it cannot be found
+	ks.mu.RLock()
+	defer ks.mu.RUnlock()
+
+	unlockedKey, found := ks.unlocked[a.Address]
+	if !found {
+		return nil, ErrLocked
+	}
+	// Depending on the presence of the chain ID, sign with EIP155 or homestead
+	if chainID != nil {
+		return types.SignTxAsFeePayer(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
+	}
+	return nil, ErrChainIdNil
+}
+
 // SignHashWithPassphrase signs hash if the private key matching the given address
 // can be decrypted with the given passphrase. The produced signature is in the
 // [R || S || V] format where V is 0 or 1.

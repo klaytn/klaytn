@@ -120,7 +120,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}()
 
 	if utils.NetworkTypeFlag.Value == SCNNetworkType && utils.ServiceChainConsensusFlag.Value == "clique" {
-		startServiceChainService(ctx, stack)
+		logger.Crit("using clique consensus type is not allowed anymore!")
 	} else {
 		startKlaytnAuxiliaryService(ctx, stack)
 	}
@@ -134,19 +134,6 @@ func startKlaytnAuxiliaryService(ctx *cli.Context, stack *node.Node) {
 
 	// TODO-Klaytn-NodeCmd disable accept tx before finishing sync.
 	if err := cn.StartMining(false); err != nil {
-		log.Fatalf("Failed to start mining: %v", err)
-	}
-}
-
-// TODO-Klaytn-ServiceChain: remove clique or fix clique for finality support.
-func startServiceChainService(ctx *cli.Context, stack *node.Node) {
-	var scn *cn.ServiceChain
-	if err := stack.Service(&scn); err != nil {
-		log.Fatalf("Klaytn service not running: %v", err)
-	}
-
-	// TODO-Klaytn-NodeCmd disable accept tx before finishing sync.
-	if err := scn.StartMining(false); err != nil {
 		log.Fatalf("Failed to start mining: %v", err)
 	}
 }

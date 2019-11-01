@@ -71,7 +71,7 @@ func deleteNode(list []*Node, n *Node) []*Node {
 }
 
 // nodeTypeName converts NodeType to string.
-func nodeTypeName(nt NodeType) string { // TODO-Klaytn-Node Consolidate p2p.NodeType and p2p.ConnType
+func nodeTypeName(nt NodeType) string { // TODO-Klaytn-Node Consolidate p2p.NodeType and common.ConnType
 	switch nt {
 	case NodeTypeCN:
 		return "CN"

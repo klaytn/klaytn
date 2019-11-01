@@ -23,6 +23,7 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"errors"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
@@ -63,7 +64,7 @@ func (c *testTransport) doProtoHandshake(our *protoHandshake) (*protoHandshake, 
 	return &protoHandshake{ID: c.id, Name: "test"}, nil
 }
 
-func (c *testTransport) doConnTypeHandshake(myConnType ConnType) (ConnType, error) {
+func (c *testTransport) doConnTypeHandshake(myConnType common.ConnType) (common.ConnType, error) {
 	return 1, nil
 }
 
@@ -94,7 +95,7 @@ func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer), config *C
 
 func makeconn(fd net.Conn, id discover.NodeID) *conn {
 	tx := newTestTransport(id, fd)
-	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: ConnTypeUndefined, id: id, cont: make(chan error)}
+	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error)}
 }
 
 func TestServerListen(t *testing.T) {
@@ -389,7 +390,7 @@ func TestServerAtCap(t *testing.T) {
 	newconn := func(id discover.NodeID) *conn {
 		fd, _ := net.Pipe()
 		tx := newTestTransport(id, fd)
-		return &conn{fd: fd, transport: tx, flags: inboundConn, conntype: ConnTypeUndefined, id: id, cont: make(chan error)}
+		return &conn{fd: fd, transport: tx, flags: inboundConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error)}
 	}
 
 	// Inject a few connections to fill up the peer set.
@@ -442,21 +443,21 @@ func TestServerSetupConn(t *testing.T) {
 		},
 		{
 			tt:           &setupTransport{id: id},
-			dialDest:     &discover.Node{ID: randomID(), NType: ENDPOINTNODE},
+			dialDest:     &discover.Node{ID: randomID(), NType: discover.NodeType(common.ENDPOINTNODE)},
 			flags:        dynDialedConn,
 			wantCalls:    "doEncHandshake,close,",
 			wantCloseErr: DiscUnexpectedIdentity,
 		},
 		{
 			tt:           &setupTransport{id: id, phs: &protoHandshake{ID: randomID()}},
-			dialDest:     &discover.Node{ID: id, NType: ENDPOINTNODE},
+			dialDest:     &discover.Node{ID: id, NType: discover.NodeType(common.ENDPOINTNODE)},
 			flags:        dynDialedConn,
 			wantCalls:    "doEncHandshake,doProtoHandshake,close,",
 			wantCloseErr: DiscUnexpectedIdentity,
 		},
 		{
 			tt:           &setupTransport{id: id, protoHandshakeErr: errors.New("foo")},
-			dialDest:     &discover.Node{ID: id, NType: ENDPOINTNODE},
+			dialDest:     &discover.Node{ID: id, NType: discover.NodeType(common.ENDPOINTNODE)},
 			flags:        dynDialedConn,
 			wantCalls:    "doEncHandshake,doProtoHandshake,close,",
 			wantCloseErr: errors.New("foo"),
@@ -516,7 +517,7 @@ type setupTransport struct {
 	closeErr error
 }
 
-func (c *setupTransport) doConnTypeHandshake(myConnType ConnType) (ConnType, error) {
+func (c *setupTransport) doConnTypeHandshake(myConnType common.ConnType) (common.ConnType, error) {
 	return 1, nil
 }
 

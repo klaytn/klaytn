@@ -1,4 +1,4 @@
-ARG  DOCKER_BASE_IMAGE=kjhman21/dev:go1.11.2-solc0.4.24
+ARG  DOCKER_BASE_IMAGE=klaytn/build_base:1.0-go1.13.3-solc0.4.24
 FROM ${DOCKER_BASE_IMAGE}
 MAINTAINER Jesse Lee jesse.lee@groundx.xyz
 

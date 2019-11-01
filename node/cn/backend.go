@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
@@ -52,9 +53,11 @@ import (
 	"math/big"
 	"runtime"
 	"sync"
-	"sync/atomic"
 )
 
+var errCNLightSync = errors.New("can't run cn.CN in light sync mode")
+
+//go:generate mockgen -destination=node/cn/mocks/lesserver_mock.go -package=mocks github.com/klaytn/klaytn/node/cn LesServer
 type LesServer interface {
 	Start(srvr p2p.Server)
 	Stop()
@@ -65,6 +68,35 @@ type LesServer interface {
 type StakingHandler interface {
 	SetStakingManager(manager *reward.StakingManager)
 	GetStakingManager() *reward.StakingManager
+}
+
+//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/klaytn/klaytn/node/cn Miner
+// Miner is an interface of work.Miner used by ServiceChain.
+type Miner interface {
+	Start()
+	Stop()
+	Register(agent work.Agent)
+	Mining() bool
+	HashRate() (tot int64)
+	SetExtra(extra []byte) error
+	Pending() (*types.Block, *state.StateDB)
+	PendingBlock() *types.Block
+}
+
+//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/klaytn/klaytn/node/cn BackendProtocolManager
+// BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
+type BackendProtocolManager interface {
+	Downloader() ProtocolManagerDownloader
+	SetWsEndPoint(wsep string)
+	GetSubProtocols() []p2p.Protocol
+	ProtocolVersion() int
+	ReBroadcastTxs(transactions types.Transactions)
+	SetAcceptTxs()
+	SetRewardbase(addr common.Address)
+	SetRewardbaseWallet(wallet accounts.Wallet)
+	NodeType() common.ConnType
+	Start(maxPeers int)
+	Stop()
 }
 
 // CN implements the Klaytn consensus node service.
@@ -78,7 +110,7 @@ type CN struct {
 	// Handlers
 	txPool          work.TxPool
 	blockchain      work.BlockChain
-	protocolManager *ProtocolManager
+	protocolManager BackendProtocolManager
 	lesServer       LesServer
 
 	// DB interfaces
@@ -86,14 +118,14 @@ type CN struct {
 
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
-	accountManager *accounts.Manager
+	accountManager accounts.AccountManager
 
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *blockchain.ChainIndexer       // Bloom indexer operating during block imports
 
 	APIBackend *CNAPIBackend
 
-	miner    *work.Miner
+	miner    Miner
 	gasPrice *big.Int
 
 	rewardbase common.Address
@@ -151,15 +183,32 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 	}
 }
 
+func checkSyncMode(config *Config) error {
+	if !config.SyncMode.IsValid() {
+		return fmt.Errorf("invalid sync mode %d", config.SyncMode)
+	}
+	if config.SyncMode == downloader.LightSync {
+		return errCNLightSync
+	}
+	return nil
+}
+
+func setEngineType(chainConfig *params.ChainConfig) {
+	if chainConfig.Clique != nil {
+		types.EngineType = types.Engine_Clique
+	}
+	if chainConfig.Istanbul != nil {
+		types.EngineType = types.Engine_IBFT
+	}
+}
+
 // New creates a new CN object (including the
 // initialisation of the common CN object)
 func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
-	if config.SyncMode == downloader.LightSync {
-		return nil, errors.New("can't run cn.CN in light sync mode, use les.LightCN")
+	if err := checkSyncMode(config); err != nil {
+		return nil, err
 	}
-	if !config.SyncMode.IsValid() {
-		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
-	}
+
 	chainDB := CreateDB(ctx, config, "chaindata")
 
 	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDB, config.Genesis, config.NetworkId, config.IsPrivate)
@@ -167,12 +216,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		return nil, genesisErr
 	}
 
-	if chainConfig.Clique != nil {
-		types.EngineType = types.Engine_Clique
-	}
-	if chainConfig.Istanbul != nil {
-		types.EngineType = types.Engine_IBFT
-	}
+	setEngineType(chainConfig)
 
 	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json.
 	//         So let's update cn.Config.GasPrice using ChainConfig.UnitPrice.
@@ -213,9 +257,9 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		vmConfig    = vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
 		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching,
 			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval,
-			TxPoolStateCache: config.TxPoolStateCache, TrieCacheLimit: config.TrieCacheLimit, SenderTxHashIndexing: config.SenderTxHashIndexing}
+			TxPoolStateCache: config.TxPoolStateCache, TrieCacheLimit: config.TrieCacheLimit,
+			SenderTxHashIndexing: config.SenderTxHashIndexing, DataArchivingBlockNum: config.DataArchivingBlockNum}
 	)
-	var err error
 
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
@@ -263,10 +307,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		logger.Error("Failed to decode IstanbulExtra", "err", err)
 	}
 
-	cn.protocolManager.wsendpoint = config.WsEndpoint
+	cn.protocolManager.SetWsEndPoint(config.WsEndpoint)
 
 	if err := cn.setRewardWallet(); err != nil {
-		logger.Error("find err", "err", err)
+		logger.Error("Error happened while setting the reward wallet", "err", err)
 	}
 
 	if governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
@@ -306,7 +350,7 @@ func (s *CN) setAcceptTxs() error {
 			return err
 		} else {
 			if len(istanbulExtra.Validators) == 1 {
-				atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
+				s.protocolManager.SetAcceptTxs()
 			}
 		}
 	}
@@ -315,7 +359,7 @@ func (s *CN) setAcceptTxs() error {
 
 // setRewardWallet sets reward base and reward base wallet if the node is CN.
 func (s *CN) setRewardWallet() error {
-	if s.protocolManager.nodetype == node.CONSENSUSNODE {
+	if s.protocolManager.NodeType() == common.CONSENSUSNODE {
 		wallet, err := s.RewardbaseWallet()
 		if err != nil {
 			return err
@@ -367,7 +411,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a Klaytn service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance, nodetype p2p.ConnType) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
@@ -398,7 +442,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
+			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux),
 			Public:    true,
 		}, {
 			Namespace: "miner",
@@ -503,26 +547,26 @@ func (s *CN) StartMining(local bool) error {
 		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
 		// so none will ever hit this path, whereas marking sync done on CPU mining
 		// will ensure that private networks work in single miner mode too.
-		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
+		s.protocolManager.SetAcceptTxs()
 	}
 	go s.miner.Start()
 	return nil
 }
 
-func (s *CN) StopMining()        { s.miner.Stop() }
-func (s *CN) IsMining() bool     { return s.miner.Mining() }
-func (s *CN) Miner() *work.Miner { return s.miner }
+func (s *CN) StopMining()    { s.miner.Stop() }
+func (s *CN) IsMining() bool { return s.miner.Mining() }
+func (s *CN) Miner() Miner   { return s.miner }
 
-func (s *CN) AccountManager() *accounts.Manager { return s.accountManager }
-func (s *CN) BlockChain() work.BlockChain       { return s.blockchain }
-func (s *CN) TxPool() work.TxPool               { return s.txPool }
-func (s *CN) EventMux() *event.TypeMux          { return s.eventMux }
-func (s *CN) Engine() consensus.Engine          { return s.engine }
-func (s *CN) ChainDB() database.DBManager       { return s.chainDB }
-func (s *CN) IsListening() bool                 { return true } // Always listening
-func (s *CN) ProtocolVersion() int              { return int(s.protocolManager.SubProtocols[0].Version) }
-func (s *CN) NetVersion() uint64                { return s.networkId }
-func (s *CN) Progress() klaytn.SyncProgress     { return s.protocolManager.downloader.Progress() }
+func (s *CN) AccountManager() accounts.AccountManager { return s.accountManager }
+func (s *CN) BlockChain() work.BlockChain             { return s.blockchain }
+func (s *CN) TxPool() work.TxPool                     { return s.txPool }
+func (s *CN) EventMux() *event.TypeMux                { return s.eventMux }
+func (s *CN) Engine() consensus.Engine                { return s.engine }
+func (s *CN) ChainDB() database.DBManager             { return s.chainDB }
+func (s *CN) IsListening() bool                       { return true } // Always listening
+func (s *CN) ProtocolVersion() int                    { return s.protocolManager.ProtocolVersion() }
+func (s *CN) NetVersion() uint64                      { return s.networkId }
+func (s *CN) Progress() klaytn.SyncProgress           { return s.protocolManager.Downloader().Progress() }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
@@ -532,9 +576,9 @@ func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 // network protocols to start.
 func (s *CN) Protocols() []p2p.Protocol {
 	if s.lesServer == nil {
-		return s.protocolManager.SubProtocols
+		return s.protocolManager.GetSubProtocols()
 	}
-	return append(s.protocolManager.SubProtocols, s.lesServer.Protocols()...)
+	return append(s.protocolManager.GetSubProtocols(), s.lesServer.Protocols()...)
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the

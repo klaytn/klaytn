@@ -313,7 +313,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		uri, err = erc721.TokenURI(nil, ev.ValueOrTokenId)
 		if err != nil {
 			if err == vm.ErrExecutionReverted {
-				logger.Warn("The ERC721 token does not support URI", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain, "tokenId", ev.ValueOrTokenId.String())
+				logger.Debug("Unable to get an ERC721 URI", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain, "tokenId", ev.ValueOrTokenId.String())
 			} else {
 				return err
 			}
@@ -325,7 +325,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 		}
 		logger.Trace("Bridge succeeded to HandleERC721Transfer", "nonce", ev.RequestNonce, "tx", handleTx.Hash().String())
 	default:
-		logger.Warn("Got Unknown Token Type ReceivedEvent", "bridge", ev.Raw.Address, "nonce", ev.RequestNonce, "from", ev.From)
+		logger.Error("Got Unknown Token Type ReceivedEvent", "bridge", ev.Raw.Address, "nonce", ev.RequestNonce, "from", ev.From)
 		return nil
 	}
 
@@ -538,7 +538,7 @@ func (bm *BridgeManager) LogBridgeStatus() {
 				c2pTotalHandleNonce += b.handleNonce
 				c2pTotalLowerHandleNonce += b.lowerHandleNonce
 			}
-			logger.Info(headStr, "bridge", bAddr.String(), "requestNonce", b.requestNonceFromCounterPart, "lowerHandleNonce", b.lowerHandleNonce, "handleNonce", b.handleNonce, "pending", diffNonce)
+			logger.Debug(headStr, "bridge", bAddr.String(), "requestNonce", b.requestNonceFromCounterPart, "lowerHandleNonce", b.lowerHandleNonce, "handleNonce", b.handleNonce, "pending", diffNonce)
 		}
 	}
 

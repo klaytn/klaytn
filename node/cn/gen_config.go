@@ -41,6 +41,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		StateDBCaching          bool
 		TxPoolStateCache        bool
 		TrieCacheLimit          int
+		DataArchivingBlockNum   uint64
 		ServiceChainSigner      common.Address `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -55,6 +56,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		TxResendCount           int
 		TxResendUseLegacy       bool
 		NoAccountCreation       bool
+		IsPrivate               bool
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -78,6 +80,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.StateDBCaching = c.StateDBCaching
 	enc.TxPoolStateCache = c.TxPoolStateCache
 	enc.TrieCacheLimit = c.TrieCacheLimit
+	enc.DataArchivingBlockNum = c.DataArchivingBlockNum
 	enc.ServiceChainSigner = c.ServiceChainSigner
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
@@ -92,6 +95,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.TxResendCount = c.TxResendCount
 	enc.TxResendUseLegacy = c.TxResendUseLegacy
 	enc.NoAccountCreation = c.NoAccountCreation
+	enc.IsPrivate = c.IsPrivate
 	return &enc, nil
 }
 
@@ -119,6 +123,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		StateDBCaching          *bool
 		TxPoolStateCache        *bool
 		TrieCacheLimit          *int
+		DataArchivingBlockNum   *uint64
 		ServiceChainSigner      *common.Address `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -133,6 +138,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		TxResendCount           *int
 		TxResendUseLegacy       *bool
 		NoAccountCreation       *bool
+		IsPrivate               *bool
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -201,6 +207,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.TrieCacheLimit != nil {
 		c.TrieCacheLimit = *dec.TrieCacheLimit
 	}
+	if dec.DataArchivingBlockNum != nil {
+		c.DataArchivingBlockNum = *dec.DataArchivingBlockNum
+	}
 	if dec.ServiceChainSigner != nil {
 		c.ServiceChainSigner = *dec.ServiceChainSigner
 	}
@@ -242,6 +251,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.NoAccountCreation != nil {
 		c.NoAccountCreation = *dec.NoAccountCreation
+	}
+	if dec.IsPrivate != nil {
+		c.IsPrivate = *dec.IsPrivate
 	}
 	return nil
 }

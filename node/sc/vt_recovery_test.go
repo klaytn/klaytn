@@ -186,13 +186,18 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 			}
 		}
 	})
+	// TODO-Klaytn need to remove sleep
+	time.Sleep(1 * time.Second)
+	info.sim.Commit()
+
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 
 	err := vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update a value transfer hint")
 	}
-	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
+	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.child2parentHint.handleNonce)
 
 	// 2. first recovery.
 	info.recoveryCh <- true
@@ -200,29 +205,33 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	assert.Equal(t, maxPendingTxs, info.remoteInfo.pendingRequestEvent.Len())
-	ops[KLAY].dummyHandle(info, info.remoteInfo)
+	// TODO-Klaytn need to remove sleep
+	time.Sleep(1 * time.Second)
+	info.sim.Commit()
+
 	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update value transfer hint")
 	}
-	assert.Equal(t, uint64(testPendingCount-maxPendingTxs), vtr.child2parentHint.requestNonce-vtr.child2parentHint.handleNonce)
+	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount-testPendingCount+maxPendingTxs), vtr.child2parentHint.handleNonce)
 
 	// 3. second recovery.
 	err = vtr.Recover()
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	assert.Equal(t, testPendingCount-maxPendingTxs, info.remoteInfo.pendingRequestEvent.Len())
-	ops[KLAY].dummyHandle(info, info.remoteInfo)
-	assert.Equal(t, 0, info.remoteInfo.pendingRequestEvent.Len())
+	// TODO-Klaytn need to remove sleep
+	time.Sleep(1 * time.Second)
+	info.sim.Commit()
 
 	// 4. Check if recovery is done.
 	err = vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update value transfer hint")
 	}
-	assert.Equal(t, vtr.child2parentHint.handleNonce, vtr.child2parentHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
+	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.handleNonce)
 }
 
 // TestBasicTokenTransferRecovery tests the token transfer recovery.
@@ -780,6 +789,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 			case ev := <-recoveryCh:
 				isRecovery = ev
 			case ev := <-requestVTCh:
+				t.Log("request value transfer", "nonce", ev.RequestNonce)
 				if ev.RequestNonce >= (testTxCount - testPendingCount) {
 					t.Log("missing handle value transfer", "nonce", ev.RequestNonce)
 				} else {
@@ -800,7 +810,8 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 				if !isRecovery {
 					wg.Done()
 				}
-			case _ = <-handleVTCh:
+			case ev := <-handleVTCh:
+				t.Log("handle value transfer", "nonce", ev.HandleNonce)
 				if !isRecovery {
 					wg.Done()
 				}

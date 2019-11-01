@@ -64,7 +64,7 @@ type Broadcaster interface {
 
 	GetENPeers() map[common.Address]Peer
 
-	RegisterValidator(conType p2p.ConnType, validator p2p.PeerTypeValidator)
+	RegisterValidator(conType common.ConnType, validator p2p.PeerTypeValidator)
 }
 
 // Peer defines the interface to communicate with peer
@@ -73,5 +73,5 @@ type Peer interface {
 	Send(msgcode uint64, data interface{}) error
 
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
-	RegisterConsensusMsgCode(msgCode uint64)
+	RegisterConsensusMsgCode(msgCode uint64) error
 }

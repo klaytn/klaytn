@@ -41,5 +41,6 @@ Source Files
   - api_public_transaction_pool.go : provides public APIs having "klay" namespace to access transaction pool data.
   - api_public_tx_pool.go          : provides public APIs having "txpool" namespace to access transaction pool data.
   - backend.go                     : provides the common API services.
+  - tx_args.go                     : provides API argument structures and functions.
 */
 package api

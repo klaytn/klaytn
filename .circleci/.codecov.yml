@@ -14,5 +14,7 @@ coverage:
                 if_ci_failed: error   # if ci fails report status as success, error, or failure
 
 ignore:
-  - blockchain/types/accounts/legacy_account.go           # disabled
+  - blockchain/types/account/legacy_account.go            # disabled
   - blockchain/types/tx_internal_data_account_creation.go # inactivated
+  - .*/metrics.go                                         # test not needed
+  - .*/gen_config.go                                      # test not needed

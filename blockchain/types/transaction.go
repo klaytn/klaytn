@@ -43,7 +43,8 @@ var (
 	ErrInvalidTxTypeForAnchoredData   = errors.New("invalid transaction type for anchored data")
 	errLegacyTransaction              = errors.New("should not be called by a legacy transaction")
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
-	errNotFeePayer                    = errors.New("not implement fee payer interface")
+	errNotFeeDelegationTransaction    = errors.New("not a fee delegation type transaction")
+	errInvalidValueMap                = errors.New("tx fields should be filled with valid values")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
@@ -75,12 +76,21 @@ type Transaction struct {
 	markedUnexecutable int32
 }
 
-func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (*Transaction, error) {
+// NewTransactionWithMap generates a tx from tx field values.
+// One of the return value, retErr, is lastly updated when panic is occurred.
+func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (tx *Transaction, retErr error) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Warn("Got panic and recovered", "panicErr", err)
+			retErr = errInvalidValueMap
+		}
+	}()
 	txdata, err := NewTxInternalDataWithMap(t, values)
 	if err != nil {
 		return nil, err
 	}
-	return &Transaction{data: txdata}, nil
+	tx = &Transaction{data: txdata}
+	return tx, retErr
 }
 
 func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
@@ -417,6 +427,19 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	return cpy, nil
 }
 
+// WithFeePayerSignature returns a new transaction with the given fee payer signature.
+func (tx *Transaction) WithFeePayerSignature(signer Signer, sig []byte) (*Transaction, error) {
+	r, s, v, err := signer.SignatureValues(sig)
+	if err != nil {
+		return nil, err
+	}
+	feePayerSig := TxSignatures{&TxSignature{v, r, s}}
+	if err := tx.SetFeePayerSignatures(feePayerSig); err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
 // Cost returns amount + gasprice * gaslimit.
 func (tx *Transaction) Cost() *big.Int {
 	total := tx.Fee()
@@ -491,12 +514,21 @@ func (tx *Transaction) SignFeePayerWithKeys(s Signer, prv []*ecdsa.PrivateKey) e
 func (tx *Transaction) SetFeePayerSignatures(s TxSignatures) error {
 	tf, ok := tx.data.(TxInternalDataFeePayer)
 	if !ok {
-		return errNotFeePayer
+		return errNotFeeDelegationTransaction
 	}
 
 	tf.SetFeePayerSignatures(s)
 
 	return nil
+}
+
+// GetFeePayerSignatures returns fee payer signatures of the transaction.
+func (tx *Transaction) GetFeePayerSignatures() (TxSignatures, error) {
+	tf, ok := tx.data.(TxInternalDataFeePayer)
+	if !ok {
+		return nil, errNotFeeDelegationTransaction
+	}
+	return tf.GetFeePayerRawSignatureValues(), nil
 }
 
 func (tx *Transaction) SetSignature(signature TxSignatures) {

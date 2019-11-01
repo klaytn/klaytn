@@ -34,15 +34,14 @@ import (
 	"math/big"
 	"sync"
 	"time"
-
-	"github.com/klaytn/klaytn/node"
 )
 
 var (
-	errClosed             = errors.New("peer set is closed")
-	errAlreadyRegistered  = errors.New("peer is already registered")
-	errNotRegistered      = errors.New("peer is not registered")
-	errUnexpectedNodeType = errors.New("unexpected node type of peer")
+	errClosed                 = errors.New("peer set is closed")
+	errAlreadyRegistered      = errors.New("peer is already registered")
+	errNotRegistered          = errors.New("peer is not registered")
+	errUnexpectedNodeType     = errors.New("unexpected node type of peer")
+	errNotSupportedByBasePeer = errors.New("not supported by basePeer")
 )
 
 const (
@@ -176,7 +175,7 @@ type Peer interface {
 	Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash) error
 
 	// ConnType returns the conntype of the peer.
-	ConnType() p2p.ConnType
+	ConnType() common.ConnType
 
 	// GetID returns the id of the peer.
 	GetID() string
@@ -222,7 +221,7 @@ type Peer interface {
 	downloader.Peer
 
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
-	RegisterConsensusMsgCode(msgCode uint64)
+	RegisterConsensusMsgCode(msgCode uint64) error
 }
 
 // basePeer is a common data structure used by implementation of Peer.
@@ -657,7 +656,7 @@ func (p *basePeer) String() string {
 }
 
 // ConnType returns the conntype of the peer.
-func (p *basePeer) ConnType() p2p.ConnType {
+func (p *basePeer) ConnType() common.ConnType {
 	return p.Peer.ConnType()
 }
 
@@ -732,8 +731,8 @@ func (p *basePeer) UpdateRWImplementationVersion() {
 }
 
 // RegisterConsensusMsgCode is not supported by this peer.
-func (p *basePeer) RegisterConsensusMsgCode(msgCode uint64) {
-	logger.Error("RegisterConsensusMsgCode is not supported by this peer.")
+func (p *basePeer) RegisterConsensusMsgCode(msgCode uint64) error {
+	return fmt.Errorf("%v peerID: %v ", errNotSupportedByBasePeer, p.GetID())
 }
 
 // singleChannelPeer is a peer that uses a single channel.
@@ -755,8 +754,9 @@ func (p *multiChannelPeer) RegisterMsgCode(channelId uint, msgCode uint64) {
 }
 
 // RegisterConsensusMsgCode registers the channel of consensus msg.
-func (p *multiChannelPeer) RegisterConsensusMsgCode(msgCode uint64) {
+func (p *multiChannelPeer) RegisterConsensusMsgCode(msgCode uint64) error {
 	p.chMgr.RegisterMsgCode(ConsensusChannel, msgCode)
+	return nil
 }
 
 // Broadcast is a write loop that multiplexes block propagations, announcements
@@ -1030,7 +1030,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	var consensusChannel chan p2p.Msg
 	isCN := false
 
-	if _, ok := pm.engine.(consensus.Handler); ok && pm.nodetype == node.CONSENSUSNODE {
+	if _, ok := pm.engine.(consensus.Handler); ok && pm.nodetype == common.CONSENSUSNODE {
 		consensusChannel = make(chan p2p.Msg, channelSizePerPeer)
 		defer close(consensusChannel)
 		pm.engine.(consensus.Handler).RegisterConsensusMsgCode(p)

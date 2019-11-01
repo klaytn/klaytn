@@ -250,7 +250,7 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 		case "istanbul":
 			utils.RegisterCNService(stack, &cfg.CN)
 		case "clique":
-			utils.RegisterServiceChainService(stack, &cfg.CN)
+			logger.Crit("using clique consensus type is not allowed anymore!")
 		default:
 			logger.Crit("unknown consensus type for the service chain", "consensus", scfg.ServiceChainConsensus)
 		}

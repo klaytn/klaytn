@@ -312,16 +312,21 @@ func (pool *TxPool) loop() {
 			// Handle inactive account transaction eviction
 		case <-evict.C:
 			pool.mu.Lock()
-			for addr := range pool.queue {
+			for addr, beat := range pool.beats {
 				// Skip local transactions from the eviction mechanism
 				if pool.config.KeepLocals && pool.locals.contains(addr) {
+					delete(pool.beats, addr)
 					continue
 				}
+
 				// Any non-locals old enough should be removed
-				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
-					for _, tx := range pool.queue[addr].Flatten() {
-						pool.removeTx(tx.Hash(), true)
+				if time.Since(beat) > pool.config.Lifetime {
+					if pool.queue[addr] != nil {
+						for _, tx := range pool.queue[addr].Flatten() {
+							pool.removeTx(tx.Hash(), true)
+						}
 					}
+					delete(pool.beats, addr)
 				}
 			}
 			pool.mu.Unlock()
@@ -861,6 +866,8 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 		pool.all[hash] = tx
 		pool.priced.Put(tx)
 	}
+
+	pool.checkAndSetBeat(from)
 	return old != nil, nil
 }
 
@@ -1078,6 +1085,15 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 	return pool.all[hash]
 }
 
+// checkAndSetBeat sets the beat of the account if there is no beat of the account.
+func (pool *TxPool) checkAndSetBeat(addr common.Address) {
+	_, exist := pool.beats[addr]
+
+	if !exist {
+		pool.beats[addr] = time.Now()
+	}
+}
+
 // removeTx removes a single transaction from the queue, moving all subsequent
 // transactions back to the future queue.
 func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
@@ -1099,7 +1115,6 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 			// If no more pending transactions are left, remove the list
 			if pending.Empty() {
 				delete(pool.pending, addr)
-				delete(pool.beats, addr)
 			}
 			// Postpone any invalidated transactions
 			for _, tx := range invalids {
@@ -1353,7 +1368,6 @@ func (pool *TxPool) demoteUnexecutables() {
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
 			delete(pool.pending, addr)
-			delete(pool.beats, addr)
 		}
 	}
 }

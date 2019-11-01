@@ -21,9 +21,8 @@
 package work
 
 import (
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/node"
 	"sync"
 	"sync/atomic"
 )
@@ -41,10 +40,10 @@ type CpuAgent struct {
 
 	isMining int32 // isMining indicates whether the agent is currently mining
 
-	nodetype p2p.ConnType
+	nodetype common.ConnType
 }
 
-func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine, nodetype p2p.ConnType) *CpuAgent {
+func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine, nodetype common.ConnType) *CpuAgent {
 	miner := &CpuAgent{
 		chain:    chain,
 		engine:   engine,
@@ -107,7 +106,7 @@ out:
 
 func (self *CpuAgent) mine(work *Task, stop <-chan struct{}) {
 	// TODO-Klaytn drop or missing tx and remove mining on PN and EN
-	if self.nodetype != node.CONSENSUSNODE {
+	if self.nodetype != common.CONSENSUSNODE {
 		ResultChGauge.Update(ResultChGauge.Value() + 1)
 		self.returnCh <- &Result{work, nil}
 		return

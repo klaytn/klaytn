@@ -36,6 +36,7 @@ import (
 	"math/big"
 )
 
+//go:generate mockgen -destination=api/mocks/backend_mock.go github.com/klaytn/klaytn/api Backend
 // Backend interface provides the common API services (that are provided by
 // both full and light clients) with access to necessary functions.
 type Backend interface {
@@ -45,7 +46,7 @@ type Backend interface {
 	SuggestPrice(ctx context.Context) (*big.Int, error)
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
-	AccountManager() *accounts.Manager
+	AccountManager() accounts.AccountManager
 
 	// BlockChain API
 	SetHead(number uint64)
