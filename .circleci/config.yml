@@ -427,7 +427,7 @@ jobs:
       - checkout
       - install_awscli
       - pre-build
-      - build-new
+      - build-packaging
       - upload-repo
 
   packaging-linux-2:
