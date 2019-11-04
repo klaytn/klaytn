@@ -129,5 +129,5 @@ if [ ! -z "$DAEMON" ]; then
 fi
 
 # Compress!
-mkdir packages
+mkdir -p packages
 tar czf packages/$KLAYTN_PACKAGE_NAME $PACK_NAME
