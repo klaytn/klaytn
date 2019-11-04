@@ -13,12 +13,14 @@ function printUsage {
 }
 
 # Parse options.
-BAOBAB=
+BAOBAB_FLAG=
+BAOBAB_PREFIX=
 while getopts "b" opt; do
 	case ${opt} in
 		b)
 			echo "Using baobab configuration..."
-			BAOBAB=" --baobab"
+			BAOBAB_FLAG=" --baobab"
+			BAOBAB_PREFIX="-baobab"
 			;;
 	esac
 done
@@ -50,7 +52,7 @@ PACK_VERSION=
 for b in ${DAEMON_BINARIES[*]}; do
     if [ "$TARGET" == "$b" ]; then
         PACK_NAME=${b}-${PLATFORM_SUFFIX}
-        PACK_VERSION=${b}d-${KLAYTN_VERSION}
+        PACK_VERSION=${b}d${BAOBAB_PREFIX}-${KLAYTN_VERSION}
     fi
 done
 
@@ -58,7 +60,7 @@ done
 for b in ${BINARIES[*]}; do
     if [ "$TARGET" == "$b" ]; then
         PACK_NAME=${b}-${PLATFORM_SUFFIX}
-        PACK_VERSION=${b}-${KLAYTN_VERSION}
+        PACK_VERSION=${b}${BAOBAB_PREFIX}-${KLAYTN_VERSION}
     fi
 done
 
@@ -70,7 +72,7 @@ fi
 
 # Go for packaging!
 mkdir -p ${PACK_NAME}/rpmbuild/{SPECS,SOURCES,BUILDROOT}
-go run build/rpm/main.go gen_spec $BAOBAB --binary_type $TARGET > ${PACK_NAME}/rpmbuild/SPECS/${PACK_VERSION}.spec
+go run build/rpm/main.go gen_spec $BAOBAB_FLAG --binary_type $TARGET > ${PACK_NAME}/rpmbuild/SPECS/${PACK_VERSION}.spec
 git archive --format=tar.gz --prefix=${PACK_VERSION}/ HEAD > ${PACK_NAME}/rpmbuild/SOURCES/${PACK_VERSION}.tar.gz
 echo "rpmbuild --buildroot ${MYDIR}/../${PACK_NAME}/rpmbuild/BUILDROOT -ba ${PACK_NAME}/rpmbuild/SPECS/${PACK_VERSION}.spec"
 HOME=${MYDIR}/../${PACK_NAME}/ rpmbuild --buildroot ${MYDIR}/../${PACK_NAME}/rpmbuild/BUILDROOT -ba ${PACK_NAME}/rpmbuild/SPECS/${PACK_VERSION}.spec
