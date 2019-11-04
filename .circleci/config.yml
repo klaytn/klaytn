@@ -89,10 +89,8 @@ commands:
         default: "tar-linux-amd64-all"
     steps:
       - run:
-        name: "build new"
-        command: |
-            export GOPATH=~/go 
-            make << parameters.os-network >>
+          name: "build new"
+          command: export GOPATH= ~/go ; make << parameters.os-network >>
   packaging:
     description: "Packaging by OS"
     parameters:
