@@ -31,7 +31,7 @@ var BINARY_TYPE = map[string]NodeInfo{
 	CN:   {"kcnd", "kcnd is Klaytn consensus node daemon"},
 	PN:   {"kpnd", "kpnd is Klaytn proxy node daemon"},
 	EN:   {"kend", "kend is Klaytn endpoint node daemon"},
-	SCN:  {"kscnd", "kscnd is Klaytn servicechain node daemon"},
+	SCN:  {"kscnd", "kscnd is Klaytn servicechain consensus node daemon"},
 	SPN:  {"kspnd", "kspnd is Klaytn servicechain proxy node daemon"},
 	SEN:  {"ksend", "ksend is Klaytn servicechain endpoint node daemon"},
 	BN:   {"kbnd", "kbnd is Klaytn boot node daemon"},
