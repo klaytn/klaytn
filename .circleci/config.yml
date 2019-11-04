@@ -26,18 +26,14 @@ orbs:
 
 executors:
   test-executor:
-    #working_directory: /usr/local/go_workspace/src/github.com/klaytn/klaytn
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.0-go1.13.3-solc0.4.24
 
   rpm-executor:
-    #working_directory: /usr/local/go_workspace/src/github.com/klaytn/klaytn
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      #- image: klaytndevops/circleci-rpmbuild:1.12.5
       - image: klaytn/circleci-rpmbuild:1.13.3-4
-      #- image: klaytn/circleci-rpmbuild:1.13.3-2
 
   default:
     docker:
@@ -97,6 +93,9 @@ commands:
       os:
         type: string
         default: "linux-amd64"
+      item:
+        type: string
+        default: "kcn kpn ken kgen kscn kbn kspn ksen"
     steps:
       - run: 
           name: "Packaging << parameters.os >>"
@@ -120,6 +119,17 @@ commands:
               aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
               #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
             done
+  upload-repo:
+    description: "upload packaging tar.gz"
+    parameters:
+      item:
+        type: string
+        default: "kcn kpn ken kgen kscn kbn kspn ksen"
+    steps:
+      - run:
+          name: "upload S3 repo"
+          command: |
+            for item in kcn kpn ken kgen kscn kbn kspn ksen; do aws s3 cp ${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   packaging-baobab:
     description: "Packaging baobab versions of kcn, kpn, ken for << parameters.os >>"
     parameters:
@@ -180,7 +190,11 @@ commands:
     steps:
       - run:
           name: "rpm tagging baobab"
-          command: make rpm-baobab-all
+          command: |
+              make rpm-baobab-kcn
+              make rpm-baobab-kpn
+              make rpm-baobab-ken
+              
   rpm-tagged-baobab:
     description: "rpm tagged baobab"
     steps:
@@ -405,7 +419,8 @@ jobs:
       - pre-build
       - build-new
       #- build
-      - packaging
+      - upload-repo
+      #- packaging
 
   packaging-linux-2:
     machine: true
@@ -427,7 +442,9 @@ jobs:
       - build-new:
           os-network: "tar-baobab-linux-amd64-all"
       #- build
-      - packaging-baobab
+      - upload-repo:
+          item: "kcn kpn ken"
+      #- packaging-baobab
 
   packaging-darwin:
     machine: true
@@ -441,8 +458,10 @@ jobs:
       #    os-network: "klay-darwin-amd64"
       - build-new:
           os-network: "tar-darwin-amd64-all"
-      - packaging:
-          os: "darwin-amd64"
+      - upload-repo
+      # - packaging:
+      #     os: "darwin-amd64"
+      
 
   packaging-darwin-baobab:
     machine: true
@@ -456,8 +475,10 @@ jobs:
       #    os-network: "klay-darwin-amd64"
       - build-new:
           os-network: "tar-baobab-darwin-amd64-all"
-      - packaging-baobab:
-          os: "darwin-amd64"
+      - upload-repo:
+          item: "kcn kpn ken"
+      #- packaging-baobab:
+      #    os: "darwin-amd64"
 
   rpm-tagged:
     executor: rpm-executor
