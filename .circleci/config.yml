@@ -190,7 +190,9 @@ commands:
           command: |
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; 
             do
-              TARGET_RPM="rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+              TARGET_RPM="${item}-$PLATFORM_SUFFIX/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
             done
@@ -209,7 +211,9 @@ commands:
           command: |
             for item in kcn kpn ken; 
             do
-              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+              TARGET_RPM="${item}-$PLATFORM_SUFFIX/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
             done
