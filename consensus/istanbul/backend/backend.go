@@ -251,39 +251,10 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 				targets[val.Address()] = true
 			}
 		}
-		// Don't change a proposer for the next round if there is only one node.
-		if len(committee) > 1 {
-			proposer = committee[1]
-		}
 		view.Round = view.Round.Add(view.Round, common.Big1)
+		proposer = valSet.Selector(valSet, common.Address{}, view.Round.Uint64())
 	}
 	return targets
-}
-
-func getCommittee(index int, valSet istanbul.ValidatorSet, round int64, seq int64, prevHash common.Hash, self common.Address, update chan common.Address, done chan struct{}) {
-	v := valSet
-
-	view := &istanbul.View{
-		Round:    big.NewInt(round),
-		Sequence: big.NewInt(seq),
-	}
-
-	var proposer istanbul.Validator
-	if index == 1 {
-		view.Round = big.NewInt(round + 1)
-		proposer = v.Selector(v, common.Address{}, uint64(round))
-	} else {
-		proposer = v.GetProposer()
-	}
-
-	committee := v.SubListWithProposer(prevHash, proposer.Address(), view)
-	//var count int
-	for _, val := range committee {
-		if val.Address() != self {
-			update <- val.Address()
-		}
-	}
-	done <- struct{}{}
 }
 
 // GossipSubPeer implements istanbul.Backend.Gossip

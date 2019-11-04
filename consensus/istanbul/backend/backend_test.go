@@ -699,7 +699,7 @@ func Benchmark_getTargetReceivers(b *testing.B) {
 		rewardbase:        rewards[0],
 		governance:        gov,
 		GovernanceCache:   newGovernanceCache(),
-		nodetype:          p2p.CONSENSUSNODE,
+		nodetype:          common.CONSENSUSNODE,
 		rewardDistributor: reward.NewRewardDistributor(gov),
 	}
 	backend.core = istanbulCore.New(backend, backend.config)
