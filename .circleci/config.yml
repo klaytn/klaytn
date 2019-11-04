@@ -29,12 +29,10 @@ executors:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.0-go1.13.3-solc0.4.24
-
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/circleci-rpmbuild:1.13.3-4
-
   default:
     docker:
       - image: circleci/golang:latest
@@ -67,17 +65,7 @@ commands:
             fi
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
             echo $KLAYTN_VERSION | echo $KLAYTN_RELEASE_NUM
-  build:
-    description: "Build for each OS/Network"
-    parameters:
-      os-network:
-        type: string
-        default: "klay-linux-amd64"
-    steps:
-      - run:
-          name: "Build for << parameters.os-network >>"
-          command: echo $KLAYTN_VERSION; make << parameters.os-network >>
-  build-new:
+  build-packaging:
     description: "Build for each OS/Network"
     parameters:
       os-network:
@@ -191,7 +179,7 @@ commands:
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; 
             do
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-              TARGET_RPM="${item}-$PLATFORM_SUFFIX/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              TARGET_RPM="${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
@@ -212,7 +200,7 @@ commands:
             for item in kcn kpn ken; 
             do
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-              TARGET_RPM="${item}-$PLATFORM_SUFFIX/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
+              TARGET_RPM="${item}-baobab-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
@@ -440,9 +428,7 @@ jobs:
       - install_awscli
       - pre-build
       - build-new
-      #- build
       - upload-repo
-      #- packaging
 
   packaging-linux-2:
     machine: true
@@ -461,12 +447,10 @@ jobs:
       - checkout
       - install_awscli
       - pre-build
-      - build-new:
+      - build-packaging:
           os-network: "tar-baobab-linux-amd64-all"
-      #- build
       - upload-repo:
           item: "kcn kpn ken"
-      #- packaging-baobab
 
   packaging-darwin:
     machine: true
@@ -476,14 +460,9 @@ jobs:
       - checkout
       - install_awscli
       - pre-build
-      #- build:
-      #    os-network: "klay-darwin-amd64"
-      - build-new:
+      - build-packaging:
           os-network: "tar-darwin-amd64-all"
       - upload-repo
-      # - packaging:
-      #     os: "darwin-amd64"
-      
 
   packaging-darwin-baobab:
     machine: true
@@ -493,37 +472,28 @@ jobs:
       - checkout
       - install_awscli
       - pre-build
-      #- build:
-      #    os-network: "klay-darwin-amd64"
-      - build-new:
+      - build-packaging:
           os-network: "tar-baobab-darwin-amd64-all"
       - upload-repo:
           item: "kcn kpn ken"
-      #- packaging-baobab:
-      #    os: "darwin-amd64"
 
   rpm-tagged:
     executor: rpm-executor
     steps:
       - checkout
-      - install_awscli
       - pre-build
       - rpm-tagging
-      #- rpm-tagged
 
   rpm-tagged-baobab:
     executor: rpm-executor
     steps:
       - checkout
-      - install_awscli
       - pre-build
       - rpm-tagging-baobab
-      #- rpm-tagged-baobab
 
   deploy-rpm-public:
     executor: rpm-executor
     steps:
-      - install_awscli
       - createrepo-update
 
   tag-verify:
