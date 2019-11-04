@@ -437,18 +437,8 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicMinerAPI(s),
-			Public:    true,
-		}, {
-			Namespace: "klay",
-			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux),
 			Public:    true,
-		}, {
-			Namespace: "miner",
-			Version:   "1.0",
-			Service:   NewPrivateMinerAPI(s),
-			Public:    false,
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
