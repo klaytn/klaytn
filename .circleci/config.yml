@@ -27,13 +27,13 @@ orbs:
 executors:
   test-executor:
     #working_directory: /usr/local/go_workspace/src/github.com/klaytn/klaytn
-    working_directory: /go/src/github.com/klaytn/klaytn
+    working_directory: ~/go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.0-go1.13.3-solc0.4.24
 
   rpm-executor:
     #working_directory: /usr/local/go_workspace/src/github.com/klaytn/klaytn
-    working_directory: /go/src/github.com/klaytn/klaytn
+    working_directory: ~/go/src/github.com/klaytn/klaytn
     docker:
       #- image: klaytndevops/circleci-rpmbuild:1.12.5
       - image: klaytn/circleci-rpmbuild:1.13.3-4
@@ -59,7 +59,7 @@ commands:
       - run: 
           name: "set variables"
           command: |
-            export GOPATH=~/go
+            export GOPATH= ~/go
             echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
             if [ -z "$CIRCLE_TAG" ]; then
               echo "this is not RC version"
@@ -88,7 +88,11 @@ commands:
         type: string
         default: "tar-linux-amd64-all"
     steps:
-      - run: export GOPATH=~/go | make << parameters.os-network >>
+      - run:
+        name: "build new"
+        command: |
+            export GOPATH=~/go 
+            make << parameters.os-network >>
   packaging:
     description: "Packaging by OS"
     parameters:
