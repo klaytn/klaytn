@@ -45,9 +45,7 @@ import (
 
 const (
 	// fetcherID is the ID indicates the block is from Istanbul engine
-	fetcherID    = "istanbul"
-	currentRound = 0
-	nextRound    = 1
+	fetcherID = "istanbul"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
