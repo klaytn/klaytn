@@ -26,12 +26,14 @@ orbs:
 
 executors:
   test-executor:
-    working_directory: /usr/local/go_workspace/src/github.com/klaytn/klaytn
+    #working_directory: /usr/local/go_workspace/src/github.com/klaytn/klaytn
+    working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.0-go1.13.3-solc0.4.24
 
   rpm-executor:
-    working_directory: /usr/local/go_workspace/src/github.com/klaytn/klaytn
+    #working_directory: /usr/local/go_workspace/src/github.com/klaytn/klaytn
+    working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       #- image: klaytndevops/circleci-rpmbuild:1.12.5
       - image: klaytn/circleci-rpmbuild:1.13.3-4
@@ -86,7 +88,7 @@ commands:
         type: string
         default: "tar-linux-amd64-all"
     steps:
-      - run: make << parameters.os-network >>
+      - run: export GOPATH=~/go | make << parameters.os-network >>
   packaging:
     description: "Packaging by OS"
     parameters:
