@@ -35,7 +35,7 @@ ${RPM_OBJECTS}:
 	./build/package-rpm.sh ${@:rpm-%=%}
 
 ${RPM_BAOBAB_OBJECTS}:
-	./build/package-rpm.sh -b ${@:rpm-%=%}
+	./build/package-rpm.sh -b ${@:rpm-baobab-%=%}
 
 ${TAR_LINUX_386_OBJECTS}:
 	$(eval BIN := ${@:tar-linux-386-%=%})
