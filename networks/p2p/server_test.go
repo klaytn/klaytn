@@ -222,7 +222,7 @@ func TestMultiChannelServerListen(t *testing.T) {
 			t.Errorf("Peers mismatch: got %v, want %v", peers, []*Peer{peer})
 		}
 	case <-time.After(5 * time.Second):
-		t.Error("server did not accept within one second")
+		t.Error("server did not accept within five second")
 	}
 }
 
