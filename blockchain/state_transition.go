@@ -93,7 +93,7 @@ type Message interface {
 	Value() *big.Int
 
 	Nonce() uint64
-	CheckNonce() bool
+	CheckNonceAndSubBalance() bool
 	Data() []byte
 
 	// IntrinsicGas returns `intrinsic gas` based on the tx type.
@@ -161,32 +161,34 @@ func (st *StateTransition) useGas(amount uint64) error {
 	return nil
 }
 
-func (st *StateTransition) buyGas() error {
-	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+func (st *StateTransition) buyGas(subBalance bool) error {
+	if subBalance {
+		mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 
-	validatedFeePayer := st.msg.ValidatedFeePayer()
-	validatedSender := st.msg.ValidatedSender()
-	feeRatio, isRatioTx := st.msg.FeeRatio()
-	if isRatioTx {
-		feePayer, feeSender := types.CalcFeeWithRatio(feeRatio, mgval)
+		validatedFeePayer := st.msg.ValidatedFeePayer()
+		validatedSender := st.msg.ValidatedSender()
+		feeRatio, isRatioTx := st.msg.FeeRatio()
+		if isRatioTx {
+			feePayer, feeSender := types.CalcFeeWithRatio(feeRatio, mgval)
 
-		if st.state.GetBalance(validatedFeePayer).Cmp(feePayer) < 0 {
-			return errInsufficientBalanceForGasFeePayer
+			if st.state.GetBalance(validatedFeePayer).Cmp(feePayer) < 0 {
+				return errInsufficientBalanceForGasFeePayer
+			}
+
+			if st.state.GetBalance(validatedSender).Cmp(feeSender) < 0 {
+				return errInsufficientBalanceForGas
+			}
+
+			st.state.SubBalance(validatedFeePayer, feePayer)
+			st.state.SubBalance(validatedSender, feeSender)
+		} else {
+			// to make a short circuit, process the special case feeRatio == MaxFeeRatio
+			if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
+				return errInsufficientBalanceForGasFeePayer
+			}
+
+			st.state.SubBalance(validatedFeePayer, mgval)
 		}
-
-		if st.state.GetBalance(validatedSender).Cmp(feeSender) < 0 {
-			return errInsufficientBalanceForGas
-		}
-
-		st.state.SubBalance(validatedFeePayer, feePayer)
-		st.state.SubBalance(validatedSender, feeSender)
-	} else {
-		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
-		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
-			return errInsufficientBalanceForGasFeePayer
-		}
-
-		st.state.SubBalance(validatedFeePayer, mgval)
 	}
 
 	st.gas += st.msg.Gas()
@@ -197,15 +199,16 @@ func (st *StateTransition) buyGas() error {
 
 func (st *StateTransition) preCheck() error {
 	// Make sure this transaction's nonce is correct.
-	if st.msg.CheckNonce() {
+	if st.msg.CheckNonceAndSubBalance() {
 		nonce := st.state.GetNonce(st.msg.ValidatedSender())
 		if nonce < st.msg.Nonce() {
 			return ErrNonceTooHigh
 		} else if nonce > st.msg.Nonce() {
 			return ErrNonceTooLow
 		}
+		return st.buyGas(true)
 	}
-	return st.buyGas()
+	return st.buyGas(false)
 }
 
 // TransitionDb will transition the state by applying the current message and

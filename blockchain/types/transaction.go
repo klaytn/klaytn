@@ -70,8 +70,8 @@ type Transaction struct {
 	// validatedIntrinsicGas represents intrinsic gas of the transaction to be used for ApplyTransaction().
 	// This value is set in AsMessageWithAccountKeyPicker().
 	validatedIntrinsicGas uint64
-	// The account's nonce is checked only if `checkNonce` is true.
-	checkNonce bool
+	// The account's nonce is checked and the gas subtracts from the balance only if `checkNonceAndSubBalance` is true.
+	checkNonceAndSubBalance bool
 	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
 	markedUnexecutable int32
 }
@@ -215,16 +215,16 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Gas() uint64                           { return tx.data.GetGasLimit() }
-func (tx *Transaction) GasPrice() *big.Int                    { return new(big.Int).Set(tx.data.GetPrice()) }
-func (tx *Transaction) Value() *big.Int                       { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64                         { return tx.data.GetAccountNonce() }
-func (tx *Transaction) CheckNonce() bool                      { return tx.checkNonce }
-func (tx *Transaction) Type() TxType                          { return tx.data.Type() }
-func (tx *Transaction) IsLegacyTransaction() bool             { return tx.data.IsLegacyTransaction() }
-func (tx *Transaction) ValidatedSender() common.Address       { return tx.validatedSender }
-func (tx *Transaction) ValidatedFeePayer() common.Address     { return tx.validatedFeePayer }
-func (tx *Transaction) ValidatedIntrinsicGas() uint64         { return tx.validatedIntrinsicGas }
+func (tx *Transaction) Gas() uint64                       { return tx.data.GetGasLimit() }
+func (tx *Transaction) GasPrice() *big.Int                { return new(big.Int).Set(tx.data.GetPrice()) }
+func (tx *Transaction) Value() *big.Int                   { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64                     { return tx.data.GetAccountNonce() }
+func (tx *Transaction) CheckNonceAndSubBalance() bool     { return tx.checkNonceAndSubBalance }
+func (tx *Transaction) Type() TxType                      { return tx.data.Type() }
+func (tx *Transaction) IsLegacyTransaction() bool         { return tx.data.IsLegacyTransaction() }
+func (tx *Transaction) ValidatedSender() common.Address   { return tx.validatedSender }
+func (tx *Transaction) ValidatedFeePayer() common.Address { return tx.validatedFeePayer }
+func (tx *Transaction) ValidatedIntrinsicGas() uint64     { return tx.validatedIntrinsicGas }
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
 func (tx *Transaction) GetTxInternalData() TxInternalData     { return tx.data }
 
@@ -401,7 +401,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	}
 
 	tx.validatedIntrinsicGas = intrinsicGas + gasFrom
-	tx.checkNonce = true
+	tx.checkNonceAndSubBalance = true
 
 	if tx.IsFeeDelegatedTransaction() {
 		gasFeePayer, err := tx.ValidateFeePayer(s, picker, currentBlockNumber)
@@ -770,12 +770,12 @@ func (t *TransactionsByPriceAndNonce) Pop() {
 }
 
 // NewMessage returns a `*Transaction` object with the given arguments.
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64) *Transaction {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonceAndSubBalance bool, intrinsicGas uint64) *Transaction {
 	return &Transaction{
-		data:                  newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data),
-		validatedIntrinsicGas: intrinsicGas,
-		validatedFeePayer:     from,
-		validatedSender:       from,
-		checkNonce:            checkNonce,
+		data:                    newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data),
+		validatedIntrinsicGas:   intrinsicGas,
+		validatedFeePayer:       from,
+		validatedSender:         from,
+		checkNonceAndSubBalance: checkNonceAndSubBalance,
 	}
 }

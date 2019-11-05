@@ -31,7 +31,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
@@ -161,7 +160,6 @@ func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 }
 
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
-	state.SetBalance(msg.ValidatedSender(), math.MaxBig256)
 	vmError := func() error { return nil }
 
 	context := blockchain.NewEVMContext(msg, header, b.cn.BlockChain(), nil)
