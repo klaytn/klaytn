@@ -215,16 +215,16 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Gas() uint64                       { return tx.data.GetGasLimit() }
-func (tx *Transaction) GasPrice() *big.Int                { return new(big.Int).Set(tx.data.GetPrice()) }
-func (tx *Transaction) Value() *big.Int                   { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64                     { return tx.data.GetAccountNonce() }
-func (tx *Transaction) CheckNonceAndSubBalance() bool     { return tx.checkNonceAndSubBalance }
-func (tx *Transaction) Type() TxType                      { return tx.data.Type() }
-func (tx *Transaction) IsLegacyTransaction() bool         { return tx.data.IsLegacyTransaction() }
-func (tx *Transaction) ValidatedSender() common.Address   { return tx.validatedSender }
-func (tx *Transaction) ValidatedFeePayer() common.Address { return tx.validatedFeePayer }
-func (tx *Transaction) ValidatedIntrinsicGas() uint64     { return tx.validatedIntrinsicGas }
+func (tx *Transaction) Gas() uint64                           { return tx.data.GetGasLimit() }
+func (tx *Transaction) GasPrice() *big.Int                    { return new(big.Int).Set(tx.data.GetPrice()) }
+func (tx *Transaction) Value() *big.Int                       { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64                         { return tx.data.GetAccountNonce() }
+func (tx *Transaction) CheckNonceAndSubBalance() bool         { return tx.checkNonceAndSubBalance }
+func (tx *Transaction) Type() TxType                          { return tx.data.Type() }
+func (tx *Transaction) IsLegacyTransaction() bool             { return tx.data.IsLegacyTransaction() }
+func (tx *Transaction) ValidatedSender() common.Address       { return tx.validatedSender }
+func (tx *Transaction) ValidatedFeePayer() common.Address     { return tx.validatedFeePayer }
+func (tx *Transaction) ValidatedIntrinsicGas() uint64         { return tx.validatedIntrinsicGas }
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
 func (tx *Transaction) GetTxInternalData() TxInternalData     { return tx.data }
 
