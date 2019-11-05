@@ -1,14 +1,13 @@
 #!/bin/bash
 
-function finish {
-  # Your cleanup code here
-  popd
-}
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 pushd $DIR/..
 
+function finish {
+  # Your cleanup code here
+  popd
+}
 trap finish EXIT
 
 SUBCOMMAND=$1
@@ -16,11 +15,11 @@ ADDTIONAL_OPTIONS=""
 GO=${GO:-latest}
 
 case "$SUBCOMMAND" in
-    linux-i386)
+    linux-386)
         TARGET="linux/386"
         shift
         ;;
-    linux-x86_64)
+    linux-amd64)
         TARGET="linux/amd64"
         shift
         ;;
@@ -77,7 +76,7 @@ case "$SUBCOMMAND" in
         shift
         ;;
     *)
-        echo "Undefined architecture for cross-compile. Supported architectures: linux-i386, linux-x86_64, linux-arm-5, linux-arm-6, linux-arm-7, linux-arm64, linux-mips, linux-mipsle, linux-mips64, linux-mips64le, darwin-386, darwin-amd64, windows-386, windows-amd64"
+        echo "Undefined architecture for cross-compile. Supported architectures: linux-386, linux-amd64, linux-arm-5, linux-arm-6, linux-arm-7, linux-arm64, linux-mips, linux-mipsle, linux-mips64, linux-mips64le, darwin-386, darwin-amd64, windows-386, windows-amd64"
         echo "Usage: ${0} {arch} [kcn|kpn...]"
         echo "    ${0} linux-386"
         echo "    ${0} darwin-386 kcn"
