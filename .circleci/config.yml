@@ -12,7 +12,7 @@ aliases:
     branches:
       ignore: 
         - /release\/.*/
-        #- master
+        - master
 
 
 orbs:
