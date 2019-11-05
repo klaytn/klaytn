@@ -174,7 +174,7 @@ commands:
               echo " first "
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
               echo " second "
-              TARGET_RPM=$(find ${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E "${item}(d)?-$KLAYTN_VERSION*")
+              TARGET_RPM=$(find $item-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E "$item(d)?-$KLAYTN_VERSION*")
               echo " 3 "
               echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
