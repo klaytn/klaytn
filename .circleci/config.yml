@@ -183,8 +183,7 @@ commands:
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; 
             do
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-              #TARGET_RPM="${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/${item}(d)?-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              TARGET_RPM=$(find ${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E '${item}(d)?-$KLAYTN_VERSION*')
+              TARGET_RPM=$(find ${item}-linux-x86_64/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E '${item}(d)?-$KLAYTN_VERSION*')
               echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
@@ -207,8 +206,8 @@ commands:
               echo " first "
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
               echo " second "
-              #TARGET_RPM="${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               TARGET_RPM=$(find ${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E '${item}(d)?-$KLAYTN_VERSION*')
+              echo " 3 "
               echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
