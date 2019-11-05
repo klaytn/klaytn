@@ -11,13 +11,15 @@ import (
 )
 
 const (
-	CN  = "kcn"
-	PN  = "kpn"
-	EN  = "ken"
-	SCN = "kscn"
-	SPN = "kspn"
-	SEN = "ksen"
-	BN  = "kbn"
+	CN   = "kcn"
+	PN   = "kpn"
+	EN   = "ken"
+	SCN  = "kscn"
+	SPN  = "kspn"
+	SEN  = "ksen"
+	BN   = "kbn"
+	HOMI = "homi"
+	GEN  = "kgen"
 )
 
 type NodeInfo struct {
@@ -25,14 +27,16 @@ type NodeInfo struct {
 	summary string
 }
 
-var NODE_TYPE = map[string]NodeInfo{
-	CN:  {"kcnd", "kcnd is Klaytn consensus node daemon"},
-	PN:  {"kpnd", "kpnd is Klaytn proxy node daemon"},
-	EN:  {"kend", "kend is Klaytn endpoint node daemon"},
-	SCN: {"kscnd", "kscnd is Klaytn servicechain node daemon"},
-	SPN: {"kspnd", "kspnd is Klaytn servicechain proxy node daemon"},
-	SEN: {"ksend", "ksend is Klaytn servicechain endpoint node daemon"},
-	BN:  {"kbnd", "kbnd is Klaytn boot node daemon"},
+var BINARY_TYPE = map[string]NodeInfo{
+	CN:   {"kcnd", "kcnd is Klaytn consensus node daemon"},
+	PN:   {"kpnd", "kpnd is Klaytn proxy node daemon"},
+	EN:   {"kend", "kend is Klaytn endpoint node daemon"},
+	SCN:  {"kscnd", "kscnd is Klaytn servicechain consensus node daemon"},
+	SPN:  {"kspnd", "kspnd is Klaytn servicechain proxy node daemon"},
+	SEN:  {"ksend", "ksend is Klaytn servicechain endpoint node daemon"},
+	BN:   {"kbnd", "kbnd is Klaytn boot node daemon"},
+	HOMI: {"homi", "homi is the generator of genesis.json."},
+	GEN:  {"kgen", "kgen is the generator of private keys."},
 }
 
 type RpmSpec struct {
@@ -73,8 +77,8 @@ func main() {
 			Usage:   "generate rpm spec file",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "node_type",
-					Usage: "Klaytn node type (kcn, kpn, ken, kscn, kbn)",
+					Name:  "binary_type",
+					Usage: "Klaytn node type (kcn, kpn, ken, kscn, kspn, ksen, kbn, kgen, homi)",
 				},
 				cli.BoolFlag{
 					Name:  "devel",
@@ -120,13 +124,13 @@ func main() {
 func genspec(c *cli.Context) error {
 	rpmSpec := new(RpmSpec)
 
-	nodeType := c.String("node_type")
-	if _, ok := NODE_TYPE[nodeType]; ok != true {
-		return fmt.Errorf("node_type[\"%s\"] is not supported. Use --node_type [kcn, kpn, ken, kscn, kbn]", nodeType)
+	binaryType := c.String("binary_type")
+	if _, ok := BINARY_TYPE[binaryType]; ok != true {
+		return fmt.Errorf("binary_type[\"%s\"] is not supported. Use --binary_type [kcn, kpn, ken, kscn, kspn, ksen, kbn, kgen, homi]", binaryType)
 	}
 
-	rpmSpec.ProgramName = strings.ToLower(nodeType)
-	rpmSpec.DaemonName = NODE_TYPE[nodeType].daemon
+	rpmSpec.ProgramName = strings.ToLower(binaryType)
+	rpmSpec.DaemonName = BINARY_TYPE[binaryType].daemon
 	rpmSpec.PostFix = ""
 
 	if c.Bool("devel") {
@@ -136,16 +140,16 @@ func genspec(c *cli.Context) error {
 			os.Exit(1)
 		}
 		rpmSpec.BuildNumber = buildNum
-		rpmSpec.Name = NODE_TYPE[nodeType].daemon + "-devel"
+		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-devel"
 	} else if c.Bool("baobab") {
 		rpmSpec.BuildNumber = params.ReleaseNum
-		rpmSpec.Name = NODE_TYPE[nodeType].daemon + "-baobab"
+		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-baobab"
 		rpmSpec.PostFix = "_baobab"
 	} else {
 		rpmSpec.BuildNumber = params.ReleaseNum
-		rpmSpec.Name = NODE_TYPE[nodeType].daemon
+		rpmSpec.Name = BINARY_TYPE[binaryType].daemon
 	}
-	rpmSpec.Summary = NODE_TYPE[nodeType].summary
+	rpmSpec.Summary = BINARY_TYPE[binaryType].summary
 	rpmSpec.Version = params.Version
 	fmt.Println(rpmSpec)
 	return nil
@@ -171,6 +175,8 @@ BuildRoot:          %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXX
 %build
 make {{ .ProgramName }}
 
+%define is_daemon %( if [ {{ .ProgramName }} != {{ .DaemonName }} ]; then echo "1"; else echo "0"; fi )
+
 %install
 mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/etc/{{ .DaemonName }}/conf
@@ -178,22 +184,31 @@ mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/var/log/{{ .DaemonName }}
 
 cp build/bin/{{ .ProgramName }} $RPM_BUILD_ROOT/usr/bin/{{ .ProgramName }}
+%if %is_daemon
 cp build/rpm/etc/init.d/{{ .DaemonName }} $RPM_BUILD_ROOT/etc/init.d/{{ .DaemonName }}
 cp build/rpm/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}{{ .PostFix }}.conf $RPM_BUILD_ROOT/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
+%endif
 
 %files
 %attr(755, -, -) /usr/bin/{{ .ProgramName }}
-%attr(644, -, -) /etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
+%if %is_daemon
+%config(noreplace) %attr(644, -, -) /etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
 %attr(754, -, -) /etc/init.d/{{ .DaemonName }}
-%config(noreplace) /etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
+%endif
+%exclude /usr/local/var/lib/rpm/*
+%exclude /usr/local/var/lib/rpm/.*
+%exclude /usr/local/var/tmp/*
 
 %pre
+%if %is_daemon
 if [ $1 -eq 2 ]; then
 	# Package upgrade
 	systemctl stop {{ .DaemonName }}.service > /dev/null 2>&1
 fi
+%endif
 
 %post
+%if %is_daemon
 if [ $1 -eq 1 ]; then
 	# Package installation
 	systemctl daemon-reload >/dev/null 2>&1
@@ -202,17 +217,22 @@ if [ $1 -eq 2 ]; then
 	# Package upgrade
 	systemctl daemon-reload >/dev/null 2>&1
 fi
+%endif
 
 %preun
+%if %is_daemon
 if [ $1 -eq 0 ]; then
 	# Package removal, not upgrade
 	systemctl --no-reload disable {{ .DaemonName }}.service > /dev/null 2>&1
 	systemctl stop {{ .DaemonName }}.service > /dev/null 2>&1
 fi
+%endif
 
 %postun
+%if %is_daemon
 if [ $1 -eq 0 ]; then
 	# Package uninstallation
 	systemctl daemon-reload >/dev/null 2>&1
 fi
+%endif
 `

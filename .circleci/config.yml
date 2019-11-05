@@ -7,12 +7,17 @@ aliases:
     branches:
       ignore: /.*/
   - &filter-version-tag-branch
-    tags:
-      only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
-    branches:
-      ignore: 
-        - /release\/.*/
-        - dev
+    requires:
+      - pass-tests
+    filters:
+      tags:
+        only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+      branches:
+        ignore: 
+          - /release\/.*/
+          - dev
+          - old-makefile
+          - packaging
   - &filter-version-not-release
     tags:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
@@ -30,23 +35,12 @@ executors:
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytndevops/circleci-rpmbuild:1.12.5
-      #- image: klaytndevops/circleci-rpmbuild:1.13.3
-      #- image: klaytn/circleci-rpmbuild:1.13.3-2
+      - image: klaytn/circleci-rpmbuild:1.13.3-4
   default:
     docker:
       - image: circleci/golang:latest
 
 commands:
-  install_awscli:
-    description: "Install AWS CLI"
-    steps:
-      - run: 
-          name: "Install AWS CLI"
-          command: |
-            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-            python get-pip.py --user
-            ~/.local/bin/pip install awscli --upgrade --user
   pre-build:
     description: "before build, set version"
     steps:
@@ -64,146 +58,82 @@ commands:
               sed -n '/%d.%d.%d/p' params/version.go
             fi
             echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-            echo $KLAYTN_VERSION
-  build:
+            echo $KLAYTN_VERSION | echo $KLAYTN_RELEASE_NUM
+  build-packaging:
     description: "Build for each OS/Network"
     parameters:
       os-network:
         type: string
-        default: "klay-linux-amd64"
+        default: "tar-linux-amd64-all"
     steps:
       - run:
-          name: "Build for << parameters.os-network >>"
-          command: echo $KLAYTN_VERSION; make -j 8 << parameters.os-network >>
-  packaging:
-    description: "Packaging by OS"
+          name: "build new"
+          command: export GOPATH=~/go ; make << parameters.os-network >>
+  upload-repo:
+    description: "upload packaging tar.gz"
     parameters:
-      os:
+      item:
         type: string
-        default: "linux-amd64"
+        default: "kcn kpn ken kgen kscn kbn kspn ksen homi"
     steps:
-      - run: 
-          name: "Packaging << parameters.os >>"
+      - run:
+          name: "upload S3 repo"
           command: |
-            for item in kcn kpn ken kgen kscn kbn kspn ksen
-            do
-              PACK_NAME=${item}-<< parameters.os >>
-              if [ ${item} = kgen ]; then
-                mkdir -p ${PACK_NAME}/bin
-                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
-              else
-                mkdir -p ${PACK_NAME}/{bin,conf}
-                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
-                cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
-                cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
-              fi
-              #KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-<< parameters.os >>.tar.gz"
-              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-<< parameters.os >>.tar.gz"
-              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              #test
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-            done
-  packaging-baobab:
-    description: "Packaging baobab versions of kcn, kpn, ken for << parameters.os >>"
-    parameters:
-      os:
-        type: string
-        default: "linux-amd64"
-    steps:
-      - run: 
-          name: "Packaging baobab versions of kcn, kpn, ken"
-          command: |
-            for item in kcn kpn ken
-            do
-              PACK_NAME=${item}-<< parameters.os >>
-              mkdir -p ${PACK_NAME}/{bin,conf}
-              cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
-              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
-              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
-              #KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-<< parameters.os >>.tar.gz"
-              KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-<< parameters.os >>.tar.gz"
-              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              #test
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-            done
-
-  rpm-tagged:
+            pwd
+            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done   
+  rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
       - run:
           name: "rpm tagging"
+          command: make rpm-all
+      - run: 
+          name: "upload S3 repo"
           command: |
-            echo $KLAYTN_VERSION
-
-            for item in kcn kpn ken kscn kbn
+            for item in kcn kpn ken kscn kspn ksen kbn kgen homi; 
             do
-              cd /go/src/github.com/klaytn/klaytn
-              go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
-              cd /go/src/github.com/klaytn
-              cp -R klaytn ${item}d-$KLAYTN_VERSION
-              ls -R ${item}d-$KLAYTN_VERSION/build/rpm/etc/init.d
-              tar czf ${item}d-$KLAYTN_VERSION.tar.gz ${item}d-$KLAYTN_VERSION
-              mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
-              rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
-              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              #aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              #aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              echo "${item} tagged !!!"
-            done      
-  rpm-tagged-baobab:
-    description: "rpm tagged baobab"
+              PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+              TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+            done
+
+  rpm-tagging-baobab:
+    description: "rpm tagging for baobab"
     steps:
       - run:
-          name: "rpm tagging"
-          command : |
-            echo $KLAYTN_VERISON
-
-            for item in kcn kpn ken
+          name: "rpm tagging baobab"
+          command: |
+              make rpm-baobab-kcn
+              make rpm-baobab-kpn
+              make rpm-baobab-ken
+      - run: 
+          name: "upload S3 repo"
+          command: |
+            for item in kcn kpn ken; 
             do
-              cd /go/src/github.com/klaytn/klaytn
-              go run build/rpm/main.go gen_spec --node_type $item --baobab > /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
-              cd /go/src/github.com/klaytn
-              cp -R klaytn ${item}d-baobab-$KLAYTN_VERSION
-              ls -R ${item}d-baobab-$KLAYTN_VERSION/build/rpm/etc/init.d
-              tar czf ${item}d-baobab-$KLAYTN_VERSION.tar.gz ${item}d-baobab-$KLAYTN_VERSION
-              mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
-              rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
-              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              #aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              #aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              echo "${item} tagged !!!"
-            done 
-
+              PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+              TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-baobab-v" '$0~pat')
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+            done
   createrepo-update:
     steps:
       - run:
           name: "createrepo update"
           command: |
-            #yum -y install createrepo
-            #python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
-            aws s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
+            yum -y install createrepo
+            python -m awscli s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
             createrepo --update rhel/7/prod
             python -m awscli s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
-            #aws s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
-
   tag-verify:
     steps:
       - run:
           name: "Verify tag and file verison match"
           command: |
             echo "tag version is " $CIRCLE_TAG
-
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
             echo "version on version.go" $KLAYTN_VERSION
-
             if [ $KLAYTN_VERSION == ${CIRCLE_TAG%-*} ]; then
               echo "verification pass"
             else
@@ -230,7 +160,6 @@ commands:
           command: |
               version=$(hub pr list -s open -L 10 -f "%H%n")
               echo $version
-
               if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
                 echo "PR already exist"
               else
@@ -242,14 +171,14 @@ commands:
       - run:
           name: "Generate tag"
           command: |
-              version=$(go run build/rpm/main.go version)
-
+              export version=$(go run build/rpm/main.go version) >> $BASH_ENV
               echo "git tag $version"
               git tag $version
               git push origin $version
       - run:
           name: "Delete release branch"
           command: |
+              export version=$(go run build/rpm/main.go version) >> $BASH_ENV
               #delete release branch. it trigger by merge title
               if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
                 echo "Delete branch release/$version"
@@ -327,7 +256,6 @@ jobs:
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
             make test-tests
-
   test-others:
     executor: test-executor
     steps:
@@ -354,7 +282,8 @@ jobs:
           command: |
             set -e
             export GOPATH=/go
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata            
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata   
+            make cover         
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
             cp coverage_report.html /tmp/coverage_reports/
@@ -381,17 +310,17 @@ jobs:
 
   packaging-linux:
     machine: true
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
       - pre-build
-      - build
-      - run: ./build/cross-compile.sh linux-arm64
-      - packaging
+      - build-packaging
+      - upload-repo
 
   packaging-linux-2:
     machine: true
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - attach_workspace:
@@ -400,61 +329,56 @@ jobs:
 
   packaging-linux-baobab:
     machine: true
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
       - pre-build
-      - build
-      - run: ./build/cross-compile.sh linux-arm64
-      - packaging-baobab
+      - build-packaging:
+          os-network: "tar-baobab-linux-amd64-all"
+      - upload-repo:
+          item: "kcn kpn ken"
 
   packaging-darwin:
     machine: true
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
       - pre-build
-      - build:
-          os-network: "klay-darwin-amd64"
-      - run: ./build/cross-compile.sh darwin-amd64
-      - packaging:
-          os: "darwin-amd64"
+      - build-packaging:
+          os-network: "tar-darwin-amd64-all"
+      - upload-repo
 
   packaging-darwin-baobab:
     machine: true
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
       - pre-build
-      - build:
-          os-network: "klay-darwin-amd64"
-      - run: ./build/cross-compile.sh darwin-amd64
-      - packaging-baobab:
-          os: "darwin-amd64"
+      - build-packaging:
+          os-network: "tar-baobab-darwin-amd64-all"
+      - upload-repo:
+          item: "kcn kpn ken"
 
   rpm-tagged:
     executor: rpm-executor
     steps:
       - checkout
-      - install_awscli
       - pre-build
-      - rpm-tagged
+      - rpm-tagging
 
   rpm-tagged-baobab:
     executor: rpm-executor
     steps:
       - checkout
-      - install_awscli
       - pre-build
-      - rpm-tagged-baobab
+      - rpm-tagging-baobab
 
   deploy-rpm-public:
     executor: rpm-executor
     steps:
-      - install_awscli
       - createrepo-update
 
   tag-verify:
@@ -491,8 +415,6 @@ workflows:
           filters: *filter-version-not-release
       # - test-others: 
         #  filters: *filter-version-not-release
-      # - build-linux:
-      #     filters: *filter-version-not-release
 
       - pass-tests: 
           requires: 
@@ -501,7 +423,6 @@ workflows:
             - test-networks
             - test-tests
             #- test-others
-            #- build-linux
             - tag-verify
           filters: *filter-version-not-release
       
@@ -530,35 +451,13 @@ workflows:
             - packaging-darwin-baobab
           filters: *filter-only-version-tag
 
-      - rpm-tagged: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
-      - rpm-tagged-baobab: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
+      - rpm-tagged: *filter-version-tag-branch
+      - rpm-tagged-baobab: *filter-version-tag-branch
 
-      - packaging-linux: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
-      - packaging-linux-baobab: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
-      - packaging-darwin: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
-      - packaging-darwin-baobab: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
-      # - packaging-linux-2:
-      #     requires:
-      #       - pass-tests
-      #     filters: *filter-version-tag-branch
+      - packaging-linux: *filter-version-tag-branch
+      - packaging-linux-baobab: *filter-version-tag-branch
+      - packaging-darwin: *filter-version-tag-branch
+      - packaging-darwin-baobab: *filter-version-tag-branch
 
       - major-tagging:
           requires:
@@ -573,8 +472,7 @@ workflows:
           cron: "0 18 * * *"
           filters:
             branches:
-              only:
-                - master
+              only: master
     jobs:
       - coverage
 
@@ -584,7 +482,6 @@ workflows:
           cron: "0 19 * * *"
           filters:
             branches:
-              only:
-                - master
+              only: master
     jobs:
       - linters
