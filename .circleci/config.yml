@@ -152,7 +152,7 @@ commands:
             do
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
               #TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E "$item(d)?-$KLAYTN_VERSION*")
-              TARGET_RPM=$(ls -l ${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ | awk '/${item}(d)?-v/{ print $NF }')
+              TARGET_RPM=$(ls -l ${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat)
               echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
@@ -175,7 +175,7 @@ commands:
               echo " first "
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
               echo " second "
-              TARGET_RPM=$(ls -l ${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ | awk '/${item}(d)?-baobab-v/{ print $NF }')
+              TARGET_RPM=$(ls -l ${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-baobab-v" '$0~pat)
               #TARGET_RPM=$(find $item-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E "$item(d)?-$KLAYTN_VERSION*")
               echo " 3 "
               echo $TARGET_RPM
