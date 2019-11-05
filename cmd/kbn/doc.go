@@ -21,7 +21,7 @@
 /*
 kbn runs a bootstrap node for the Klaytn Node Discovery Protocol.
 
-A bootstrap node is a kind of registry service which has every nodes' information and deliver it to a querying node to help the node to join the network.
+A bootstrap node is a kind of registry service which has every nodes' information and delivers it to a querying node to help the node to join the network.
 
 Source Files
 
