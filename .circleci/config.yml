@@ -6,23 +6,13 @@ aliases:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
       ignore: /.*/
-  - &filter-version-tag-branch
-    requires:
-      - pass-tests
-    filters:
-      tags:
-        only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
-      branches:
-        ignore: 
-          - /release\/.*/
-          - dev
-          - old-makefile
-          - packaging
   - &filter-version-not-release
     tags:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
-      ignore: /release\/.*/
+      ignore: 
+        - /release\/.*/
+        - master
 
 orbs:
   codecov: codecov/codecov@1.0.5
@@ -37,6 +27,7 @@ executors:
     docker:
       - image: klaytn/circleci-rpmbuild:1.13.3-4
   default:
+    working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: circleci/golang:latest
 
@@ -78,9 +69,7 @@ commands:
     steps:
       - run:
           name: "upload S3 repo"
-          command: |
-            pwd
-            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done   
+          command: for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done   
   rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
@@ -90,14 +79,13 @@ commands:
       - run: 
           name: "upload S3 repo"
           command: |
+            PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; 
             do
-              PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
             done
-
   rpm-tagging-baobab:
     description: "rpm tagging for baobab"
     steps:
@@ -380,6 +368,8 @@ jobs:
     executor: rpm-executor
     steps:
       - createrepo-update
+      - nofity_failure
+      - nofity_success
 
   tag-verify:
     executor: test-executor
@@ -393,6 +383,8 @@ jobs:
       - add_ssh_keys
       - checkout
       - make-pr
+      - nofity_failure
+      - nofity_success
 
   major-tagging:
     executor: default
@@ -437,9 +429,11 @@ workflows:
             - packaging-linux-baobab
             - packaging-darwin
             - packaging-darwin-baobab
-          filters: 
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+/
             branches:
-              only: master 
+              ignore: /.*/
 
       - release-PR:
           requires:
@@ -449,19 +443,38 @@ workflows:
             - packaging-linux-baobab
             - packaging-darwin
             - packaging-darwin-baobab
+          filters: 
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc.*/
+            branches:
+              ignore: /.*/
+
+      - rpm-tagged: 
           filters: *filter-only-version-tag
-
-      - rpm-tagged: *filter-version-tag-branch
-      - rpm-tagged-baobab: *filter-version-tag-branch
-
-      - packaging-linux: *filter-version-tag-branch
-      - packaging-linux-baobab: *filter-version-tag-branch
-      - packaging-darwin: *filter-version-tag-branch
-      - packaging-darwin-baobab: *filter-version-tag-branch
+          requires:
+            - pass-tests
+      - rpm-tagged-baobab:
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - packaging-linux: 
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - packaging-linux-baobab: 
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - packaging-darwin: 
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - packaging-darwin-baobab: 
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
 
       - major-tagging:
-          requires:
-            - deploy-rpm-public
           filters:
             branches:
               only: master  
@@ -472,7 +485,7 @@ workflows:
           cron: "0 18 * * *"
           filters:
             branches:
-              only: master
+              only: dev
     jobs:
       - coverage
 
@@ -482,6 +495,6 @@ workflows:
           cron: "0 19 * * *"
           filters:
             branches:
-              only: master
+              only: dev
     jobs:
       - linters
