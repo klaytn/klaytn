@@ -532,13 +532,13 @@ workflows:
             - packaging-darwin-baobab
           filters: *filter-only-version-tag
 
-      - rpm-tagged: 
-          filters: *filter-version-not-release
-      - rpm-tagged-baobab: 
-          filters: *filter-version-not-release
+      # - rpm-tagged: 
+      #     filters: *filter-version-not-release
+      # - rpm-tagged-baobab: 
+      #     filters: *filter-version-not-release
       #test
-      # - rpm-tagged: *filter-version-tag-branch
-      # - rpm-tagged-baobab: *filter-version-tag-branch
+      - rpm-tagged: *filter-version-tag-branch
+      - rpm-tagged-baobab: *filter-version-tag-branch
 
       - packaging-linux: *filter-version-tag-branch
       - packaging-linux-baobab: *filter-version-tag-branch
