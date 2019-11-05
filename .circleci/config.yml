@@ -89,56 +89,7 @@ commands:
           name: "upload S3 repo"
           command: |
             pwd
-            for item in kcn kpn ken kgen kscn kbn kspn ksen; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
-  packaging-baobab:
-    description: "Packaging baobab versions of kcn, kpn, ken for << parameters.os >>"
-    parameters:
-      os:
-        type: string
-        default: "linux-amd64"
-    steps:
-      - run: 
-          name: "Packaging baobab versions of kcn, kpn, ken"
-          command: |
-            for item in kcn kpn ken
-            do
-              PACK_NAME=${item}-<< parameters.os >>
-              mkdir -p ${PACK_NAME}/{bin,conf}
-              cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
-              cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
-              cp build/packaging/linux/conf/${item}d_baobab.conf ${PACK_NAME}/conf/${item}d.conf
-              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-<< parameters.os >>.tar.gz"
-              #KLAYTN_PACKAGE_NAME="${item}-baobab-${KLAYTN_VERSION}-<< parameters.os >>.tar.gz"
-              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              #test
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-            done
-  rpm-tagged:
-    description: "rpm tagging for cypress"
-    steps:
-      - run:
-          name: "rpm tagging"
-          command: |
-            echo $KLAYTN_VERSION | echo $KLAYTN_RELEASE_NUM
-            for item in kcn kpn ken kscn kbn
-            do
-              cd /go/src/github.com/klaytn/klaytn
-              go run build/rpm/main.go gen_spec --node_type $item > /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
-              cd /go/src/github.com/klaytn
-              cp -R klaytn ${item}d-$KLAYTN_VERSION
-              ls -R ${item}d-$KLAYTN_VERSION/build/rpm/etc/init.d
-              tar czf ${item}d-$KLAYTN_VERSION.tar.gz ${item}d-$KLAYTN_VERSION
-              mv ${item}d-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
-              rpmbuild -ba /rpmbuild/SPECS/${item}d-$KLAYTN_VERSION.spec
-              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-$KLAYTN_VERSION.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              #aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              #aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              echo "${item} tagged !!!"
-            done      
+            for item in kcn kpn ken kgen kscn kbn kspn ksen; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done   
   rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
@@ -151,9 +102,7 @@ commands:
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; 
             do
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-              #TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E "$item(d)?-$KLAYTN_VERSION*")
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
-              echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
             done
@@ -172,41 +121,11 @@ commands:
           command: |
             for item in kcn kpn ken; 
             do
-              echo " first "
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-              echo " second "
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-baobab-v" '$0~pat')
-              #TARGET_RPM=$(find $item-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E "$item(d)?-$KLAYTN_VERSION*")
-              echo " 3 "
-              echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
             done
-  rpm-tagged-baobab:
-    description: "rpm tagged baobab"
-    steps:
-      - run:
-          name: "rpm tagging"
-          command : |
-            echo $KLAYTN_VERISON | echo $KLAYTN_RELEASE_NUM
-            for item in kcn kpn ken
-            do
-              cd /go/src/github.com/klaytn/klaytn
-              go run build/rpm/main.go gen_spec --node_type $item --baobab > /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
-              cd /go/src/github.com/klaytn
-              cp -R klaytn ${item}d-baobab-$KLAYTN_VERSION
-              ls -R ${item}d-baobab-$KLAYTN_VERSION/build/rpm/etc/init.d
-              tar czf ${item}d-baobab-$KLAYTN_VERSION.tar.gz ${item}d-baobab-$KLAYTN_VERSION
-              mv ${item}d-baobab-$KLAYTN_VERSION.tar.gz /rpmbuild/SOURCES/
-              rpmbuild -ba /rpmbuild/SPECS/${item}d-baobab-$KLAYTN_VERSION.spec
-              TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
-              #TARGET_RPM="/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION.el7.x86_64.rpm"
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              #aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              python -m awscli s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              #aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              echo "${item} tagged !!!"
-            done 
   createrepo-update:
     steps:
       - run:
