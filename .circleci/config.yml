@@ -83,7 +83,7 @@ commands:
     parameters:
       item:
         type: string
-        default: "kcn kpn ken kgen kscn kbn kspn ksen"
+        default: "kcn kpn ken kgen kscn kbn kspn ksen homi"
     steps:
       - run:
           name: "upload S3 repo"
