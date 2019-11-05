@@ -41,15 +41,6 @@ executors:
       - image: circleci/golang:latest
 
 commands:
-  install_awscli:
-    description: "Install AWS CLI"
-    steps:
-      - run: 
-          name: "Install AWS CLI"
-          command: |
-            curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-            python get-pip.py --user
-            ~/.local/bin/pip install awscli --upgrade --user
   pre-build:
     description: "before build, set version"
     steps:
@@ -224,7 +215,7 @@ jobs:
             mkdir $HOME/go1.12.5
             tar -C $HOME/go1.12.5 -xzf go1.12.5.linux-amd64.tar.gz
             export PATH=$HOME/go1.12.5/go/bin:$PATH
-            #make fmt
+            make fmt
             make all
 
   test-datasync:
@@ -310,7 +301,6 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      #- install_awscli
       - pre-build
       - build-packaging
       - upload-repo
@@ -330,7 +320,6 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      #- install_awscli
       - pre-build
       - build-packaging:
           os-network: "tar-baobab-linux-amd64-all"
@@ -343,7 +332,6 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      #- install_awscli
       - pre-build
       - build-packaging:
           os-network: "tar-darwin-amd64-all"
@@ -355,7 +343,6 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      #- install_awscli
       - pre-build
       - build-packaging:
           os-network: "tar-baobab-darwin-amd64-all"
@@ -451,11 +438,6 @@ workflows:
             - packaging-darwin-baobab
           filters: *filter-only-version-tag
 
-      # - rpm-tagged: 
-      #     filters: *filter-version-not-release
-      # - rpm-tagged-baobab: 
-      #     filters: *filter-version-not-release
-      #test
       - rpm-tagged: *filter-version-tag-branch
       - rpm-tagged-baobab: *filter-version-tag-branch
 
