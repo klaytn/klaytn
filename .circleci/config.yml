@@ -207,7 +207,6 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - pre-build
       - run:
           name: "Build"
           command: |
