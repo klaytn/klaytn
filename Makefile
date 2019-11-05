@@ -2,68 +2,75 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: klay-cross all test clean
-.PHONY: klay-linux klay-linux-386 klay-linux-amd64 klay-linux-mips64 klay-linux-mips64le
-.PHONY: klay-linux-arm klay-linux-arm-5 klay-linux-arm-6 klay-linux-arm-7 klay-linux-arm64
-.PHONY: klay-darwin klay-darwin-386 klay-darwin-amd64
-.PHONY: klay-windows klay-windows-386 klay-windows-amd64
-
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
 BUILD_PARAM?=install
 
-kcn:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/kcn
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/kcn\" to launch Consensus Node."
+OBJECTS=kcn kpn ken kscn kspn ksen kbn kgen homi
+RPM_OBJECTS=$(foreach wrd,$(OBJECTS),rpm-$(wrd))
+RPM_BAOBAB_OBJECTS=$(foreach wrd,$(OBJECTS),rpm-baobab-$(wrd))
+TAR_LINUX_386_OBJECTS=$(foreach wrd,$(OBJECTS),tar-linux-386-$(wrd))
+TAR_LINUX_amd64_OBJECTS=$(foreach wrd,$(OBJECTS),tar-linux-amd64-$(wrd))
+TAR_DARWIN_amd64_OBJECTS=$(foreach wrd,$(OBJECTS),tar-darwin-amd64-$(wrd))
+TAR_BAOBAB_LINUX_386_OBJECTS=$(foreach wrd,$(OBJECTS),tar-baobab-linux-386-$(wrd))
+TAR_BAOBAB_LINUX_amd64_OBJECTS=$(foreach wrd,$(OBJECTS),tar-baobab-linux-amd64-$(wrd))
+TAR_BAOBAB_DARWIN_amd64_OBJECTS=$(foreach wrd,$(OBJECTS),tar-baobab-darwin-amd64-$(wrd))
 
-kpn:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/kpn
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/kpn\" to launch Proxy Node."
+.PHONY: all test clean ${OBJECTS} ${RPM_OBJECTS} ${TAR_LINUX_386_OBJECTS} ${TAR_DARWIN_amd64_OBJECTS} ${TAR_LINUX_amd64_OBJECTS}
 
-ken:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/ken
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/ken\" to launch Endpoint Node."
+all: ${OBJECTS}
+rpm-all: ${RPM_OBJECTS}
+rpm-baobab-all: ${RPM_BAOBAB_OBJECTS}
+tar-linux-386-all: ${TAR_LINUX_386_OBJECTS}
+tar-linux-amd64-all: ${TAR_LINUX_amd64_OBJECTS}
+tar-darwin-amd64-all: ${TAR_DARWIN_amd64_OBJECTS}
+tar-baobab-linux-386-all: ${TAR_BAOBAB_LINUX_386_OBJECTS}
+tar-baobab-linux-amd64-all: ${TAR_BAOBAB_LINUX_amd64_OBJECTS}
+tar-baobab-darwin-amd64-all: ${TAR_BAOBAB_DARWIN_amd64_OBJECTS}
 
-kbn:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/kbn
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/kbn\" to launch bootnode."
+${OBJECTS}:
+	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/$@
 
-kscn:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/kscn
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/kscn\" to launch ServiceChain Consensus Node."
+${RPM_OBJECTS}:
+	./build/package-rpm.sh ${@:rpm-%=%}
 
-kspn:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/kspn
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/kspn\" to launch ServiceChain Proxy Node."
+${RPM_BAOBAB_OBJECTS}:
+	./build/package-rpm.sh -b ${@:rpm-baobab-%=%}
 
-ksen:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/ksen
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/ksen\" to launch ServiceChain Endpoint Node."
+${TAR_LINUX_386_OBJECTS}:
+	$(eval BIN := ${@:tar-linux-386-%=%})
+	./build/cross-compile.sh linux-386 ${BIN}
+	./build/package-tar.sh linux-386 ${BIN}
 
-kgen:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/kgen
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/kgen\" to launch kgen."
+${TAR_LINUX_amd64_OBJECTS}:
+	$(eval BIN := ${@:tar-linux-amd64-%=%})
+	./build/cross-compile.sh linux-amd64 ${BIN}
+	./build/package-tar.sh linux-amd64 ${BIN}
 
-homi:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/homi
-	@echo "Done building."
-	@echo "Run \"$(GOBIN)/homi\" to launch homi."
+${TAR_DARWIN_amd64_OBJECTS}:
+	$(eval BIN := ${@:tar-darwin-amd64-%=%})
+	./build/cross-compile.sh darwin-amd64 ${BIN}
+	./build/package-tar.sh darwin-amd64 ${BIN}
+
+${TAR_BAOBAB_LINUX_386_OBJECTS}:
+	$(eval BIN := ${@:tar-baobab-linux-386-%=%})
+	./build/cross-compile.sh linux-386 ${BIN}
+	./build/package-tar.sh -b linux-386 ${BIN}
+
+${TAR_BAOBAB_LINUX_amd64_OBJECTS}:
+	$(eval BIN := ${@:tar-baobab-linux-amd64-%=%})
+	./build/cross-compile.sh linux-amd64 ${BIN}
+	./build/package-tar.sh -b linux-amd64 ${BIN}
+
+${TAR_BAOBAB_DARWIN_amd64_OBJECTS}:
+	$(eval BIN := ${@:tar-baobab-darwin-amd64-%=%})
+	./build/cross-compile.sh darwin-amd64 ${BIN}
+	./build/package-tar.sh -b darwin-amd64 ${BIN}
 
 abigen:
 	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/abigen
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/abigen\" to launch abigen."
-
-all:
-	build/env.sh go run build/ci.go ${BUILD_PARAM}
 
 test:
 	build/env.sh go run build/ci.go test
@@ -92,7 +99,7 @@ cover:
 fmt:
 	GOFLAGS= GO111MODULE=off build/env.sh go run build/ci.go fmt
 
-# Not supported. Use lint-try intead of lint
+# Not supported. Use lint-try instead of lint
 #lint:
 #	build/env.sh env GOFLAGS= GO111MODULE=off go run build/ci.go lint
 
