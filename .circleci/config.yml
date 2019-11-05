@@ -425,19 +425,19 @@ workflows:
             - packaging-darwin-baobab
           filters: *filter-only-version-tag
 
-      - release-PR:
-          requires:
-            - rpm-tagged
-            - rpm-tagged-baobab
-            - packaging-linux
-            - packaging-linux-baobab
-            - packaging-darwin
-            - packaging-darwin-baobab
-          filters:
-            tags:
-              only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc.*/
-            branches:
-              ignore: /.*/
+      # - release-PR:
+      #     requires:
+      #       - rpm-tagged
+      #       - rpm-tagged-baobab
+      #       - packaging-linux
+      #       - packaging-linux-baobab
+      #       - packaging-darwin
+      #       - packaging-darwin-baobab
+      #     filters:
+      #       tags:
+      #         only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc.*/
+      #       branches:
+      #         ignore: /.*/
 
 
       - rpm-tagged: 
