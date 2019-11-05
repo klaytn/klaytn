@@ -12,6 +12,7 @@ aliases:
         - /release\/.*/
         - master
 
+
 orbs:
   codecov: codecov/codecov@1.0.5
 
@@ -415,26 +416,6 @@ workflows:
       - tag-verify:
           filters: *filter-only-version-tag
 
-      - deploy-rpm-public: 
-          requires:
-            - rpm-tagged
-            - rpm-tagged-baobab
-            - packaging-linux
-            - packaging-linux-baobab
-            - packaging-darwin
-            - packaging-darwin-baobab
-          filters: *filter-only-version-tag
-
-      - release-PR:
-          requires:
-            - rpm-tagged
-            - rpm-tagged-baobab
-            - packaging-linux
-            - packaging-linux-baobab
-            - packaging-darwin
-            - packaging-darwin-baobab
-          filters: *filter-only-version-tag
-
       - rpm-tagged: 
           filters: *filter-only-version-tag
           requires:
@@ -459,6 +440,26 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
+
+      - deploy-rpm-public: 
+          requires:
+            - rpm-tagged
+            - rpm-tagged-baobab
+            - packaging-linux
+            - packaging-linux-baobab
+            - packaging-darwin
+            - packaging-darwin-baobab
+          filters: *filter-only-version-tag
+
+      - release-PR:
+          requires:
+            - rpm-tagged
+            - rpm-tagged-baobab
+            - packaging-linux
+            - packaging-linux-baobab
+            - packaging-darwin
+            - packaging-darwin-baobab
+          filters: *filter-only-version-tag
 
       - major-tagging:
           requires:
