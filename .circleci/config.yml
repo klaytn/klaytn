@@ -151,7 +151,7 @@ commands:
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; 
             do
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-              TARGET_RPM=$(find ${item}-linux-x86_64/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E "${item}(d)?-$KLAYTN_VERSION*")
+              TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E "$item(d)?-$KLAYTN_VERSION*")
               echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
