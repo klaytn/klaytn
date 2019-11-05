@@ -78,38 +78,6 @@ commands:
       - run:
           name: "build new"
           command: export GOPATH=~/go ; make << parameters.os-network >>
-  packaging:
-    description: "Packaging by OS"
-    parameters:
-      os:
-        type: string
-        default: "linux-amd64"
-      item:
-        type: string
-        default: "kcn kpn ken kgen kscn kbn kspn ksen"
-    steps:
-      - run: 
-          name: "Packaging << parameters.os >>"
-          command: |
-            for item in kcn kpn ken kgen kscn kbn kspn ksen
-            do
-              PACK_NAME=${item}-<< parameters.os >>
-              if [ ${item} = kgen ]; then
-                mkdir -p ${PACK_NAME}/bin
-                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
-              else
-                mkdir -p ${PACK_NAME}/{bin,conf}
-                cp build/bin/${item}-* ${PACK_NAME}/bin/${item}
-                cp build/packaging/linux/bin/${item}d ${PACK_NAME}/bin/
-                cp build/packaging/linux/conf/${item}d.conf ${PACK_NAME}/conf/
-              fi
-              KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-<< parameters.os >>.tar.gz"
-              #KLAYTN_PACKAGE_NAME="${item}-${KLAYTN_VERSION}-<< parameters.os >>.tar.gz"
-              tar czf $KLAYTN_PACKAGE_NAME $PACK_NAME
-              #test
-              aws s3 cp $KLAYTN_PACKAGE_NAME s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
-              #aws s3 cp $KLAYTN_PACKAGE_NAME s3://klaytn-ops-stuff/releases/klaytn/latest/
-            done
   upload-repo:
     description: "upload packaging tar.gz"
     parameters:
@@ -183,7 +151,7 @@ commands:
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; 
             do
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-              TARGET_RPM=$(find ${item}-linux-x86_64/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E '${item}(d)?-$KLAYTN_VERSION*')
+              TARGET_RPM=$(find ${item}-linux-x86_64/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E "${item}(d)?-$KLAYTN_VERSION*")
               echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
@@ -206,7 +174,7 @@ commands:
               echo " first "
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
               echo " second "
-              TARGET_RPM=$(find ${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E '${item}(d)?-$KLAYTN_VERSION*')
+              TARGET_RPM=$(find ${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E "${item}(d)?-$KLAYTN_VERSION*")
               echo " 3 "
               echo $TARGET_RPM
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
