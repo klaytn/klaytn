@@ -310,7 +310,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - build-packaging
       - upload-repo
@@ -330,7 +330,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - build-packaging:
           os-network: "tar-baobab-linux-amd64-all"
@@ -343,7 +343,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - build-packaging:
           os-network: "tar-darwin-amd64-all"
@@ -355,7 +355,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_awscli
+      #- install_awscli
       - pre-build
       - build-packaging:
           os-network: "tar-baobab-darwin-amd64-all"
@@ -477,8 +477,7 @@ workflows:
           cron: "0 18 * * *"
           filters:
             branches:
-              only:
-                - master
+              only: master
     jobs:
       - coverage
 
@@ -488,7 +487,6 @@ workflows:
           cron: "0 19 * * *"
           filters:
             branches:
-              only:
-                - master
+              only: master
     jobs:
       - linters
