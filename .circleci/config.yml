@@ -7,14 +7,17 @@ aliases:
     branches:
       ignore: /.*/
   - &filter-version-tag-branch
-    tags:
-      only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
-    branches:
-      ignore: 
-        - /release\/.*/
-        - dev
-        - old-makefile
-        - packaging
+    requires:
+      - pass-tests
+    filters:
+      tags:
+        only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+      branches:
+        ignore: 
+          - /release\/.*/
+          - dev
+          - old-makefile
+          - packaging
   - &filter-version-not-release
     tags:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
@@ -201,7 +204,9 @@ commands:
           command: |
             for item in kcn kpn ken; 
             do
+              echo " first "
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+              echo " second "
               #TARGET_RPM="${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/${item}d-baobab-$KLAYTN_VERSION-$KLAYTN_RELEASE_NUM.el7.x86_64.rpm"
               TARGET_RPM=$(find ${item}-$PLATFORM_SUFFIX/rpmbuild/RPMS/x86_64/ -type f -printf "%f\n" | grep -E '${item}(d)?-$KLAYTN_VERSION*')
               echo $TARGET_RPM
@@ -333,18 +338,6 @@ jobs:
             export PATH=$HOME/go1.12.5/go/bin:$PATH
             #make fmt
             make all
-  build-linux:
-    machine: true
-    working_directory: ~/go/src/github.com/klaytn/klaytn
-    steps:
-      - checkout
-      - install_awscli
-      - pre-build
-      - build
-      - persist_to_workspace:
-          root: /home/circleci/go/src/github.com/klaytn/klaytn
-          paths: 
-            - build
 
   test-datasync:
     executor: test-executor
@@ -397,7 +390,8 @@ jobs:
           command: |
             set -e
             export GOPATH=/go
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata            
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata   
+            make cover         
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
             cp coverage_report.html /tmp/coverage_reports/
@@ -533,8 +527,6 @@ workflows:
           filters: *filter-version-not-release
       # - test-others: 
         #  filters: *filter-version-not-release
-      # - build-linux:
-      #     filters: *filter-version-not-release
 
       - pass-tests: 
           requires: 
@@ -543,7 +535,6 @@ workflows:
             - test-networks
             - test-tests
             #- test-others
-            #- build-linux
             - tag-verify
           filters: *filter-version-not-release
       
@@ -572,35 +563,16 @@ workflows:
             - packaging-darwin-baobab
           filters: *filter-only-version-tag
 
-      - rpm-tagged: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
-      - rpm-tagged-baobab: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
+      - rpm-tagged: *filter-version-not-release
+      - rpm-tagged-baobab: *filter-version-not-release
+      #test
+      # - rpm-tagged: *filter-version-tag-branch
+      # - rpm-tagged-baobab: *filter-version-tag-branch
 
-      - packaging-linux: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
-      - packaging-linux-baobab: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
-      - packaging-darwin: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
-      - packaging-darwin-baobab: 
-          requires:
-            - pass-tests
-          filters: *filter-version-tag-branch
-      # - packaging-linux-2:
-      #     requires:
-      #       - pass-tests
-      #     filters: *filter-version-tag-branch
+      - packaging-linux: *filter-version-tag-branch
+      - packaging-linux-baobab: *filter-version-tag-branch
+      - packaging-darwin: *filter-version-tag-branch
+      - packaging-darwin-baobab: *filter-version-tag-branch
 
       - major-tagging:
           requires:
