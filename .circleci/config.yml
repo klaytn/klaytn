@@ -6,18 +6,6 @@ aliases:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
       ignore: /.*/
-  - &filter-version-tag-branch
-    requires:
-      - pass-tests
-    filters:
-      tags:
-        only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
-      branches:
-        ignore: 
-          - /release\/.*/
-          - dev
-          - old-makefile
-          - packaging
   - &filter-version-not-release
     tags:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
@@ -78,9 +66,7 @@ commands:
     steps:
       - run:
           name: "upload S3 repo"
-          command: |
-            pwd
-            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done   
+          command: for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done   
   rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
@@ -437,9 +423,7 @@ workflows:
             - packaging-linux-baobab
             - packaging-darwin
             - packaging-darwin-baobab
-          filters: 
-            branches:
-              only: master 
+          filters: *filter-only-version-tag
 
       - release-PR:
           requires:
@@ -449,15 +433,37 @@ workflows:
             - packaging-linux-baobab
             - packaging-darwin
             - packaging-darwin-baobab
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc.*/
+            branches:
+            ignore: /.*/
+
+
+      - rpm-tagged: 
           filters: *filter-only-version-tag
-
-      - rpm-tagged: *filter-version-tag-branch
-      - rpm-tagged-baobab: *filter-version-tag-branch
-
-      - packaging-linux: *filter-version-tag-branch
-      - packaging-linux-baobab: *filter-version-tag-branch
-      - packaging-darwin: *filter-version-tag-branch
-      - packaging-darwin-baobab: *filter-version-tag-branch
+          requires:
+            - pass-tests
+      - rpm-tagged-baobab:
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - packaging-linux: 
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - packaging-linux-baobab: 
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - packaging-darwin: 
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - packaging-darwin-baobab: 
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
 
       - major-tagging:
           requires:
