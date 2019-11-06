@@ -162,7 +162,7 @@ Summary:            {{ .Summary }}
 
 Group:              Application/blockchain
 License:            GNU
-URL:                http://www.klaytn.com
+URL:                https://www.klaytn.com
 Source0:            %{name}-%{version}.tar.gz
 BuildRoot:          %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
