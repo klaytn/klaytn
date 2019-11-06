@@ -25,18 +25,45 @@ const (
 type NodeInfo struct {
 	daemon  string
 	summary string
+	description string
 }
 
 var BINARY_TYPE = map[string]NodeInfo{
-	CN:   {"kcnd", "kcnd is Klaytn consensus node daemon"},
-	PN:   {"kpnd", "kpnd is Klaytn proxy node daemon"},
-	EN:   {"kend", "kend is Klaytn endpoint node daemon"},
-	SCN:  {"kscnd", "kscnd is Klaytn servicechain consensus node daemon"},
-	SPN:  {"kspnd", "kspnd is Klaytn servicechain proxy node daemon"},
-	SEN:  {"ksend", "ksend is Klaytn servicechain endpoint node daemon"},
-	BN:   {"kbnd", "kbnd is Klaytn boot node daemon"},
-	HOMI: {"homi", "homi is the generator of genesis.json."},
-	GEN:  {"kgen", "kgen is the generator of private keys."},
+	CN:   {"kcnd",
+		"Klaytn consensus node daemon",
+		"kcnd is a daemon for Klaytn consensus node (kcn). For more information, please refer to https://docs.klaytn.com.",
+	},
+	PN:   {"kpnd",
+		"Klaytn proxy node daemon",
+		"kpnd is a daemon for Klaytn proxy node (kpn). For more information, please refer to https://docs.klaytn.com.",
+	},
+	EN:   {"kend",
+		"Klaytn endpoint node daemon",
+		"kend is a daemon for Klaytn endpoint node (ken). For more information, please refer to https://docs.klaytn.com.",
+	},
+	SCN:  {"kscnd",
+		"Klaytn servicechain consensus node daemon",
+		"kscnd is a daemon for Klaytn servicechain consensus node (kscn). For more information, please refer to https://docs.klaytn.com.",
+	},
+	SPN:  {"kspnd",
+		"Klaytn servicechain proxy node daemon",
+		"kspnd is a daemon for Klaytn servicechain proxy node (kspn). For more information, please refer to https://docs.klaytn.com.",
+	},
+	SEN:  {"ksend",
+		"Klaytn servicechain endpoint node daemon",
+		"ksend is a daemon for Klaytn servicechain endpoint node (ksen). For more information, please refer to https://docs.klaytn.com.",
+	},
+	BN:   {"kbnd",
+		"Klaytn boot node daemon",
+		"kbnd is a daemon for Klaytn boot node (kbn). For more information, please refer to https://docs.klaytn.com.",
+	},
+	HOMI: {"homi",
+		"genesis.json generator",
+		"homi is a generator of genesis.json."},
+	GEN:  {"kgen",
+		"private key generator",
+		"kgen is a generator of private keys.",
+	},
 }
 
 type RpmSpec struct {
@@ -48,6 +75,7 @@ type RpmSpec struct {
 	ProgramName string // kcn, kpn, ken, kscn, kspn, ksen, kbn
 	DaemonName  string // kcnd, kpnd, kend, kscnd, kspnd, ksend, kbnd
 	PostFix     string // baobab
+	Description string
 }
 
 func (r RpmSpec) String() string {
@@ -150,6 +178,7 @@ func genspec(c *cli.Context) error {
 		rpmSpec.Name = BINARY_TYPE[binaryType].daemon
 	}
 	rpmSpec.Summary = BINARY_TYPE[binaryType].summary
+	rpmSpec.Description = BINARY_TYPE[binaryType].description
 	rpmSpec.Version = params.Version
 	fmt.Println(rpmSpec)
 	return nil
@@ -167,7 +196,7 @@ Source0:            %{name}-%{version}.tar.gz
 BuildRoot:          %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
- The Klaytn blockchain platform
+  {{ .Description }}
 
 %prep
 %setup -q
