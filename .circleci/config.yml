@@ -27,6 +27,7 @@ executors:
     docker:
       - image: klaytn/circleci-rpmbuild:1.13.3-4
   default:
+    working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: circleci/golang:latest
 
