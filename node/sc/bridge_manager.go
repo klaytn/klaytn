@@ -922,13 +922,13 @@ func (bm *BridgeManager) subscribeEvent(addr common.Address, bridge *bridgecontr
 	tokenReceivedCh := make(chan *bridgecontract.BridgeRequestValueTransfer, TokenEventChanSize)
 	tokenWithdrawCh := make(chan *bridgecontract.BridgeHandleValueTransfer, TokenEventChanSize)
 
-	receivedSub, err := bridge.WatchRequestValueTransfer(nil, tokenReceivedCh)
+	receivedSub, err := bridge.WatchRequestValueTransfer(nil, tokenReceivedCh, nil, nil, nil)
 	if err != nil {
 		logger.Error("Failed to pBridge.WatchERC20Received", "err", err)
 		return err
 	}
 	bm.receivedEvents[addr] = receivedSub
-	withdrawnSub, err := bridge.WatchHandleValueTransfer(nil, tokenWithdrawCh)
+	withdrawnSub, err := bridge.WatchHandleValueTransfer(nil, tokenWithdrawCh, nil, nil, nil)
 	if err != nil {
 		logger.Error("Failed to pBridge.WatchTokenWithdrawn", "err", err)
 		receivedSub.Unsubscribe()

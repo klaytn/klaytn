@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.5.6;
+pragma solidity 0.5.6;
 
 import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
@@ -25,7 +25,7 @@ import "./BridgeTokens.sol";
 
 contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     bool public modeMintBurn = false;
-    bool public isRunning;
+    bool public isRunning = true;
 
     uint64 public requestNonce; // the number of value transfer request that this contract received.
     uint64 public lowerHandleNonce; // a minimum nonce of a value transfer request that will be handled.
@@ -43,7 +43,6 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
 
     constructor(bool _modeMintBurn) BridgeFee(address(0)) internal {
         modeMintBurn = _modeMintBurn;
-        isRunning = true;
     }
 
     // start can allow or disallow the value transfer request.
@@ -67,9 +66,9 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
      */
     event RequestValueTransfer(
         TokenType tokenType,
-        address from,
-        address to,
-        address tokenAddress,
+        address indexed from,
+        address indexed to,
+        address indexed tokenAddress,
         uint256 valueOrTokenId,
         uint64 requestNonce,
         uint256 fee,
@@ -90,17 +89,17 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     event HandleValueTransfer(
         bytes32 requestTxHash,
         TokenType tokenType,
-        address from,
-        address to,
-        address tokenAddress,
+        address indexed from,
+        address indexed to,
+        address indexed tokenAddress,
         uint256 valueOrTokenId,
         uint64 handleNonce,
         uint64 lowerHandleNonce,
         bytes extraData
     );
 
-    // updateHandleNonce increases lower and upper handle nonce after the _requestedNonce is handled.
-    function updateHandleNonce(uint64 _requestedNonce) internal {
+    // _updateHandleNonce increases lower and upper handle nonce after the _requestedNonce is handled.
+    function _updateHandleNonce(uint64 _requestedNonce) internal {
         if (_requestedNonce > upperHandleNonce) {
             upperHandleNonce = _requestedNonce;
         }
@@ -119,7 +118,7 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         lowerHandleNonce = i;
     }
 
-    function lowerHandleNonceCheck(uint64 _requestedNonce) internal {
+    function _lowerHandleNonceCheck(uint64 _requestedNonce) internal {
         require(lowerHandleNonce <= _requestedNonce, "removed vote");
     }
 

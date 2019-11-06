@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.5.6;
+pragma solidity 0.5.6;
 
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
@@ -29,7 +29,7 @@ contract BridgeFee {
     mapping (address => uint256) public feeOfERC20;
 
     event KLAYFeeChanged(uint256 indexed fee);
-    event ERC20FeeChanged(address token, uint256 indexed fee);
+    event ERC20FeeChanged(address indexed token, uint256 indexed fee);
     event FeeReceiverChanged(address indexed feeReceiver);
 
     constructor(address payable _feeReceiver) internal {

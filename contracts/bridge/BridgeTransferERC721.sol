@@ -14,14 +14,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.5.6;
+pragma solidity 0.5.6;
 
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
 
 import "../sc_erc721/IERC721BridgeReceiver.sol";
-import "./BridgeTransferCommon.sol";
+import "./BridgeTransfer.sol";
 
 
 contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTransfer {
@@ -40,16 +40,16 @@ contract BridgeTransferERC721 is BridgeTokens, IERC721BridgeReceiver, BridgeTran
         public
         onlyOperators
     {
-        lowerHandleNonceCheck(_requestedNonce);
+        _lowerHandleNonceCheck(_requestedNonce);
 
-        if (!voteValueTransfer(_requestedNonce)) {
+        if (!_voteValueTransfer(_requestedNonce)) {
             return;
         }
 
         _setHandledRequestTxHash(_requestTxHash);
 
         handleNoncesToBlockNums[_requestedNonce] = _requestedBlockNumber;
-        updateHandleNonce(_requestedNonce);
+        _updateHandleNonce(_requestedNonce);
 
         emit HandleValueTransfer(
             _requestTxHash,

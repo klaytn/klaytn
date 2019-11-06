@@ -14,14 +14,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.5.6;
+pragma solidity 0.5.6;
 
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
 
 import "../sc_erc20/IERC20BridgeReceiver.sol";
-import "./BridgeTransferCommon.sol";
+import "./BridgeTransfer.sol";
 
 
 contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransfer {
@@ -39,16 +39,16 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
         public
         onlyOperators
     {
-        lowerHandleNonceCheck(_requestedNonce);
+        _lowerHandleNonceCheck(_requestedNonce);
 
-        if (!voteValueTransfer(_requestedNonce)) {
+        if (!_voteValueTransfer(_requestedNonce)) {
             return;
         }
 
         _setHandledRequestTxHash(_requestTxHash);
 
         handleNoncesToBlockNums[_requestedNonce] = _requestedBlockNumber;
-        updateHandleNonce(_requestedNonce);
+        _updateHandleNonce(_requestedNonce);
 
         emit HandleValueTransfer(
             _requestTxHash,
@@ -137,7 +137,7 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
         external
         onlyOperators
     {
-        if (!voteConfiguration(_requestNonce)) {
+        if (!_voteConfiguration(_requestNonce)) {
             return;
         }
         _setERC20Fee(_token, _fee);
