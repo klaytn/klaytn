@@ -40,6 +40,8 @@ var (
 	errTxArgNilContractData  = errors.New(`contract creation without any data provided`)
 	errTxArgNilSenderSig     = errors.New("sender signature is not set")
 	errTxArgNilNonce         = errors.New("nonce of the sender is not set")
+	errTxArgNilGas           = errors.New("gas limit is not set")
+	errTxArgNilGasPrice      = errors.New("gas price is not set")
 	errNotForFeeDelegationTx = errors.New("fee-delegation type transactions are not allowed to use this API")
 )
 

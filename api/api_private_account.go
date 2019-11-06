@@ -250,9 +250,18 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 // tries to sign it as a fee payer with the key associated with args.From. If the
 // given passwd isn't able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
-	// Don't allow dynamic assign of the nonce value since the sender already signed on a specific nonce value.
+	// Don't allow dynamic assign of values from the setDefaults function since the sender already signed on specific values.
+	if args.TypeInt == nil {
+		return common.Hash{}, errTxArgNilTxType
+	}
 	if args.Nonce == nil {
 		return common.Hash{}, errTxArgNilNonce
+	}
+	if args.Gas == nil {
+		return common.Hash{}, errTxArgNilGas
+	}
+	if args.GasPrice == nil {
+		return common.Hash{}, errTxArgNilGasPrice
 	}
 
 	if args.Signatures == nil {
@@ -360,7 +369,7 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 // passwd isn't able to decrypt the key, it fails. The transaction is returned in RLP-form,
 // not broadcast to other nodes
 func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
-	// Allows set a default nonce value of the sender just for the case the fee payer sign a tx earlier than the sender.
+	// Allows setting a default nonce value of the sender just for the case the fee payer tries to sign a tx earlier than the sender.
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
@@ -368,7 +377,7 @@ func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args 
 	if err != nil {
 		return nil, err
 	}
-	// Don't return errors for nil signature allowing the fee payer sign a tx earlier than the sender.
+	// Don't return errors for nil signature allowing the fee payer to sign a tx earlier than the sender.
 	if args.Signatures != nil {
 		tx.SetSignature(args.Signatures.ToTxSignatures())
 	}

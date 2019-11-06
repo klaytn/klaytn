@@ -339,9 +339,18 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 // SendTransactionAsFeePayer creates a transaction for the given argument, sign it as a fee payer
 // and submit it to the transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-	// Don't allow dynamic assign of the nonce value since the sender already signed on a specific nonce value.
+	// Don't allow dynamic assign of values from the setDefaults function since the sender already signed on specific values.
+	if args.TypeInt == nil {
+		return common.Hash{}, errTxArgNilTxType
+	}
 	if args.Nonce == nil {
 		return common.Hash{}, errTxArgNilNonce
+	}
+	if args.Gas == nil {
+		return common.Hash{}, errTxArgNilGas
+	}
+	if args.GasPrice == nil {
+		return common.Hash{}, errTxArgNilGasPrice
 	}
 
 	if args.Signatures == nil {
@@ -425,7 +434,7 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 // with the from account. The node needs to have the private key of the account
 // corresponding with the given from address and it needs to be unlocked.
 func (s *PublicTransactionPoolAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
-	// Allows set a default nonce value of the sender just for the case the fee payer sign a tx earlier than the sender.
+	// Allows setting a default nonce value of the sender just for the case the fee payer tries to sign a tx earlier than the sender.
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
 	}
@@ -433,7 +442,7 @@ func (s *PublicTransactionPoolAPI) SignTransactionAsFeePayer(ctx context.Context
 	if err != nil {
 		return nil, err
 	}
-	// Don't return errors for nil signature allowing the fee payer sign a tx earlier than the sender.
+	// Don't return errors for nil signature allowing the fee payer to sign a tx earlier than the sender.
 	if args.Signatures != nil {
 		tx.SetSignature(args.Signatures.ToTxSignatures())
 	}
