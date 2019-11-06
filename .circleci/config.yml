@@ -275,11 +275,12 @@ jobs:
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
             cp coverage_report.html /tmp/coverage_reports/
-            bash <(curl -s https://codecov.io/bash)
       - nofity_failure
       - nofity_success
       - store_artifacts:
           path: /tmp/coverage_reports
+      - codecov/upload:
+          file: /tmp/coverage_reports/coverage_*
 
   linters:
     executor: test-executor
@@ -298,7 +299,7 @@ jobs:
 
   packaging-linux:
     machine: true
-    #resource_class: large
+    resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -308,7 +309,7 @@ jobs:
 
   packaging-linux-2:
     machine: true
-    #resource_class: large
+    resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - attach_workspace:
@@ -317,7 +318,7 @@ jobs:
 
   packaging-linux-baobab:
     machine: true
-    #resource_class: large
+    resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -329,7 +330,7 @@ jobs:
 
   packaging-darwin:
     machine: true
-    #resource_class: large
+    resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -340,7 +341,7 @@ jobs:
 
   packaging-darwin-baobab:
     machine: true
-    #resource_class: large
+    resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
