@@ -133,7 +133,7 @@ commands:
       - run:
           name: "Verify tag and file verison match"
           command: |
-              TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG)
+              TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG | sed 's/ .*//')
               if [ $TAGGER == 'circleci-klaytn' ]; then
                 echo "Pass! Tagger is circleci-klaytn"
               else
