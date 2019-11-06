@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.5.6;
+pragma solidity 0.5.6;
 
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
@@ -34,6 +34,7 @@ contract BridgeOperator is Ownable {
     mapping(uint8 => mapping (uint64 => VotesData)) private votes; // <voteType, <nonce, VotesData>
     mapping(uint64 => bool) public closedValueTransferVotes; // <nonce, bool>
 
+    uint64 public constant MAX_OPERATOR = 12;
     mapping(address => bool) public operators;
     address[] public operatorList;
 
@@ -65,9 +66,9 @@ contract BridgeOperator is Ownable {
         return operatorList;
     }
 
-    // voteCommon handles common functionality for voting.
-    function voteCommon(VoteType _voteType, uint64 _nonce, bytes32 _voteKey)
-        internal
+    // _voteCommon handles common functionality for voting.
+    function _voteCommon(VoteType _voteType, uint64 _nonce, bytes32 _voteKey)
+        private
         returns(bool)
     {
         VotesData storage vote = votes[uint8(_voteType)][_nonce];
@@ -87,14 +88,14 @@ contract BridgeOperator is Ownable {
         vote.voteCounts[_voteKey]++;
 
         if (vote.voteCounts[_voteKey] >= operatorThresholds[uint8(_voteType)]) {
-            removeVoteData(_voteType, _nonce);
+            _removeVoteData(_voteType, _nonce);
             return true;
         }
         return false;
     }
 
-    // removeVoteData removes a vote data according to voteType and nonce.
-    function removeVoteData(VoteType _voteType, uint64 _nonce)
+    // _removeVoteData removes a vote data according to voteType and nonce.
+    function _removeVoteData(VoteType _voteType, uint64 _nonce)
         internal
     {
         VotesData storage vote = votes[uint8(_voteType)][_nonce];
@@ -110,15 +111,15 @@ contract BridgeOperator is Ownable {
         delete votes[uint8(_voteType)][_nonce];
     }
 
-    // voteValueTransfer votes value transfer transaction with the operator.
-    function voteValueTransfer(uint64 _requestNonce)
+    // _voteValueTransfer votes value transfer transaction with the operator.
+    function _voteValueTransfer(uint64 _requestNonce)
         internal
         returns(bool)
     {
         require(!closedValueTransferVotes[_requestNonce], "closed vote");
 
         bytes32 voteKey = keccak256(msg.data);
-        if (voteCommon(VoteType.ValueTransfer, _requestNonce, voteKey)) {
+        if (_voteCommon(VoteType.ValueTransfer, _requestNonce, voteKey)) {
             closedValueTransferVotes[_requestNonce] = true;
             return true;
         }
@@ -126,15 +127,15 @@ contract BridgeOperator is Ownable {
         return false;
     }
 
-    // voteConfiguration votes contract configuration transaction with the operator.
-    function voteConfiguration(uint64 _requestNonce)
+    // _voteConfiguration votes contract configuration transaction with the operator.
+    function _voteConfiguration(uint64 _requestNonce)
         internal
         returns(bool)
     {
         require(configurationNonce == _requestNonce, "nonce mismatch");
 
         bytes32 voteKey = keccak256(msg.data);
-        if (voteCommon(VoteType.Configuration, _requestNonce, voteKey)) {
+        if (_voteCommon(VoteType.Configuration, _requestNonce, voteKey)) {
             configurationNonce++;
             return true;
         }
@@ -147,7 +148,8 @@ contract BridgeOperator is Ownable {
     external
     onlyOwner
     {
-        require(!operators[_operator]);
+        require(operatorList.length < MAX_OPERATOR, "max operator limit");
+        require(!operators[_operator], "exist operator");
         operators[_operator] = true;
         operatorList.push(_operator);
     }
@@ -174,6 +176,8 @@ contract BridgeOperator is Ownable {
     external
     onlyOwner
     {
+        require(_threshold > 0, "zero threshold");
+        require(operatorList.length >= _threshold, "bigger than num of operators");
         operatorThresholds[uint8(_voteType)] = _threshold;
     }
 }

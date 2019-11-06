@@ -41,11 +41,12 @@ func init() {
 type testTransport struct {
 	id discover.NodeID
 	*rlpx
+	mutichannel bool
 
 	closeErr error
 }
 
-func newTestTransport(id discover.NodeID, fd net.Conn) transport {
+func newTestTransport(id discover.NodeID, fd net.Conn, mutichannel bool) transport {
 	wrapped := newRLPX(fd).(*rlpx)
 	wrapped.rw = newRLPXFrameRW(fd, secrets{
 		MAC:        zero16,
@@ -53,7 +54,7 @@ func newTestTransport(id discover.NodeID, fd net.Conn) transport {
 		IngressMAC: sha3.NewKeccak256(),
 		EgressMAC:  sha3.NewKeccak256(),
 	})
-	return &testTransport{id: id, rlpx: wrapped}
+	return &testTransport{id: id, rlpx: wrapped, mutichannel: mutichannel}
 }
 
 func (c *testTransport) doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover.Node) (discover.NodeID, error) {
@@ -61,7 +62,7 @@ func (c *testTransport) doEncHandshake(prv *ecdsa.PrivateKey, dialDest *discover
 }
 
 func (c *testTransport) doProtoHandshake(our *protoHandshake) (*protoHandshake, error) {
-	return &protoHandshake{ID: c.id, Name: "test"}, nil
+	return &protoHandshake{ID: c.id, Name: "test", Multichannel: c.mutichannel}, nil
 }
 
 func (c *testTransport) doConnTypeHandshake(myConnType common.ConnType) (common.ConnType, error) {
@@ -83,7 +84,7 @@ func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer), config *C
 			Config:      *config,
 			newPeerHook: pf,
 			newTransport: func(fd net.Conn) transport {
-				return newTestTransport(id, fd)
+				return newTestTransport(id, fd, false)
 			},
 		},
 	}
@@ -93,9 +94,42 @@ func startTestServer(t *testing.T, id discover.NodeID, pf func(*Peer), config *C
 	return server
 }
 
+func startTestMultiChannelServer(t *testing.T, id discover.NodeID, pf func(*Peer), config *Config) Server {
+	config.Name = "test"
+	config.MaxPhysicalConnections = 10
+	config.PrivateKey = newkey()
+
+	listeners := make([]net.Listener, 0, len(config.SubListenAddr)+1)
+	listenAddrs := make([]string, 0, len(config.SubListenAddr)+1)
+	listenAddrs = append(listenAddrs, config.ListenAddr)
+	listenAddrs = append(listenAddrs, config.SubListenAddr...)
+
+	server := &MultiChannelServer{
+		BaseServer: &BaseServer{
+			Config:      *config,
+			newPeerHook: pf,
+			newTransport: func(fd net.Conn) transport {
+				return newTestTransport(id, fd, true)
+			},
+		},
+		listeners:      listeners,
+		ListenAddrs:    listenAddrs,
+		CandidateConns: make(map[discover.NodeID][]*conn),
+	}
+	if err := server.Start(); err != nil {
+		t.Fatalf("Could not start server: %v", err)
+	}
+	return server
+}
+
 func makeconn(fd net.Conn, id discover.NodeID) *conn {
-	tx := newTestTransport(id, fd)
+	tx := newTestTransport(id, fd, false)
 	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error)}
+}
+
+func makeMultiChannelConn(fd net.Conn, id discover.NodeID) *conn {
+	tx := newTestTransport(id, fd, true)
+	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error), multiChannel: true}
 }
 
 func TestServerListen(t *testing.T) {
@@ -115,7 +149,7 @@ func TestServerListen(t *testing.T) {
 	defer srv.Stop()
 
 	// dial the test server
-	conn, err := net.DialTimeout("tcp", srv.GetListenAddress(), 5*time.Second)
+	conn, err := net.DialTimeout("tcp", srv.GetListenAddress()[ConnDefault], 5*time.Second)
 	if err != nil {
 		t.Fatalf("could not dial: %v", err)
 	}
@@ -140,6 +174,58 @@ func TestServerListen(t *testing.T) {
 	}
 }
 
+func TestMultiChannelServerListen(t *testing.T) {
+	// start the test server
+	connected := make(chan *Peer)
+	remid := randomID()
+	config := &Config{ListenAddr: "127.0.0.1:33331", SubListenAddr: []string{"127.0.0.1:33333"}}
+	srv := startTestMultiChannelServer(t, remid, func(p *Peer) {
+		if p.ID() != remid {
+			t.Error("peer func called with wrong node id")
+		}
+		if p == nil {
+			t.Error("peer func called with nil conn")
+		}
+		connected <- p
+	}, config)
+	defer close(connected)
+	defer srv.Stop()
+
+	// dial the test server
+	var defaultConn net.Conn
+
+	for i, address := range srv.GetListenAddress() {
+		conn, err := net.DialTimeout("tcp", address, 5*time.Second)
+		defer conn.Close()
+
+		if i == ConnDefault {
+			defaultConn = conn
+		}
+
+		if err != nil {
+			t.Fatalf("could not dial: %v", err)
+		}
+
+		c := makeMultiChannelConn(conn, randomID())
+		c.doConnTypeHandshake(c.conntype)
+	}
+
+	select {
+	case peer := <-connected:
+		if peer.LocalAddr().String() != defaultConn.RemoteAddr().String() {
+			t.Errorf("peer started with wrong conn: got %v, want %v",
+				peer.LocalAddr(), defaultConn.RemoteAddr())
+		}
+
+		peers := srv.Peers()
+		if !reflect.DeepEqual(peers, []*Peer{peer}) {
+			t.Errorf("Peers mismatch: got %v, want %v", peers, []*Peer{peer})
+		}
+	case <-time.After(5 * time.Second):
+		t.Error("server did not accept within five second")
+	}
+}
+
 func TestServerNoListen(t *testing.T) {
 	// start the test server
 	connected := make(chan *Peer)
@@ -157,7 +243,7 @@ func TestServerNoListen(t *testing.T) {
 	defer srv.Stop()
 
 	// dial the test server that will be failed
-	_, err := net.DialTimeout("tcp", srv.GetListenAddress(), 10*time.Millisecond)
+	_, err := net.DialTimeout("tcp", srv.GetListenAddress()[ConnDefault], 10*time.Millisecond)
 	if err == nil {
 		t.Fatalf("server started with listening")
 	}
@@ -389,7 +475,7 @@ func TestServerAtCap(t *testing.T) {
 
 	newconn := func(id discover.NodeID) *conn {
 		fd, _ := net.Pipe()
-		tx := newTestTransport(id, fd)
+		tx := newTestTransport(id, fd, false)
 		return &conn{fd: fd, transport: tx, flags: inboundConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error)}
 	}
 

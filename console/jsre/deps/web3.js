@@ -5533,18 +5533,6 @@ var methods = function () {
         params: 1
     });
 
-    var submitWork = new Method({
-        name: 'submitWork',
-        call: 'klay_submitWork',
-        params: 3
-    });
-
-    var getWork = new Method({
-        name: 'getWork',
-        call: 'klay_getWork',
-        params: 0
-    });
-
     return [
         getBalance,
         getStorageAt,
@@ -5565,24 +5553,13 @@ var methods = function () {
         sign,
         compileSolidity,
         compileLLL,
-        compileSerpent,
-        submitWork,
-        getWork
+        compileSerpent
     ];
 };
 
 
 var properties = function () {
     return [
-        new Property({
-            name: 'mining',
-            getter: 'klay_mining'
-        }),
-        new Property({
-            name: 'hashrate',
-            getter: 'klay_hashrate',
-            outputFormatter: utils.toDecimal
-        }),
         new Property({
             name: 'syncing',
             getter: 'klay_syncing',

@@ -266,8 +266,8 @@ type Server interface {
 	// Disconnect tries to disconnect peer.
 	Disconnect(destID discover.NodeID)
 
-	// GetListenAddress returns the listen address of the server.
-	GetListenAddress() string
+	// GetListenAddress returns the listen address list of the server.
+	GetListenAddress() []string
 
 	// Peers returns all connected peers.
 	Peers() []*Peer
@@ -787,6 +787,31 @@ running:
 	}
 }
 
+// Stop terminates the server and all active peer connections.
+// It blocks until all active connections are closed.
+func (srv *MultiChannelServer) Stop() {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+	if !srv.running {
+		return
+	}
+	srv.running = false
+	if srv.listener != nil {
+		// this unblocks listener Accept
+		srv.listener.Close()
+	}
+	for _, listener := range srv.listeners {
+		listener.Close()
+	}
+	close(srv.quit)
+	srv.loopWG.Wait()
+}
+
+// GetListenAddress returns the listen addresses of the server.
+func (srv *MultiChannelServer) GetListenAddress() []string {
+	return srv.ListenAddrs
+}
+
 // decreasesConnectionMetric decreases the metric of the number of peer connections.
 func decreasesConnectionMetric(inboundCount int, outboundCount int, p *Peer) (int, int) {
 	pInbound, pOutbound := p.GetNumberInboundAndOutbound()
@@ -1127,8 +1152,8 @@ func (srv *BaseServer) Stop() {
 }
 
 // GetListenAddress returns the listen address of the server.
-func (srv *BaseServer) GetListenAddress() string {
-	return srv.ListenAddr
+func (srv *BaseServer) GetListenAddress() []string {
+	return []string{srv.ListenAddr}
 }
 
 // sharedUDPConn implements a shared connection. Write sends messages to the underlying connection while read returns

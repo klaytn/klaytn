@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.5.6;
+pragma solidity 0.5.6;
 
-import "./BridgeTransferCommon.sol";
+import "./BridgeTransfer.sol";
 
 
 contract BridgeTransferKLAY is BridgeTransfer {
@@ -70,16 +70,16 @@ contract BridgeTransferKLAY is BridgeTransfer {
         public
         onlyOperators
     {
-        lowerHandleNonceCheck(_requestedNonce);
+        _lowerHandleNonceCheck(_requestedNonce);
 
-        if (!voteValueTransfer(_requestedNonce)) {
+        if (!_voteValueTransfer(_requestedNonce)) {
             return;
         }
 
         _setHandledRequestTxHash(_requestTxHash);
 
         handleNoncesToBlockNums[_requestedNonce] = _requestedBlockNumber;
-        updateHandleNonce(_requestedNonce);
+        _updateHandleNonce(_requestedNonce);
 
         emit HandleValueTransfer(
             _requestTxHash,
@@ -139,7 +139,7 @@ contract BridgeTransferKLAY is BridgeTransfer {
         external
         onlyOperators
     {
-        if (!voteConfiguration(_requestNonce)) {
+        if (!_voteConfiguration(_requestNonce)) {
             return;
         }
         _setKLAYFee(_fee);

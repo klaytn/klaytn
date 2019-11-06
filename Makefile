@@ -4,7 +4,7 @@
 
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
-BUILD_PARAM?=install 
+BUILD_PARAM?=install
 
 OBJECTS=kcn kpn ken kscn kspn ksen kbn kgen homi
 RPM_OBJECTS=$(foreach wrd,$(OBJECTS),rpm-$(wrd))

@@ -78,7 +78,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "binary_type",
-					Usage: "Klaytn node type (kcn, kpn, ken, kscn, kspn, ksen, kbn, kgen, homi)",
+					Usage: "Klaytn binary type (kcn, kpn, ken, kscn, kspn, ksen, kbn, kgen, homi)",
 				},
 				cli.BoolFlag{
 					Name:  "devel",

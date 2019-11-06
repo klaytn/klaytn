@@ -100,9 +100,9 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 
 	res.requestCh = make(chan *bridge.BridgeRequestValueTransfer, 100)
 	res.handleCh = make(chan *bridge.BridgeHandleValueTransfer, 100)
-	res.requestSub, err = b.WatchRequestValueTransfer(nil, res.requestCh)
+	res.requestSub, err = b.WatchRequestValueTransfer(nil, res.requestCh, nil, nil, nil)
 	assert.NoError(t, err)
-	res.handleSub, err = b.WatchHandleValueTransfer(nil, res.handleCh)
+	res.handleSub, err = b.WatchHandleValueTransfer(nil, res.handleCh, nil, nil, nil)
 	assert.NoError(t, err)
 
 	return &res
@@ -253,34 +253,6 @@ func TestRegisterDeregisterToken(t *testing.T) {
 	allowedTokenList, err = info.b.GetRegisteredTokenList(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(allowedTokenList))
-}
-
-// TestOperatorThreshold checks the following:
-// - the bridge contract method SetOperatorThreshold
-func TestOperatorThreshold(t *testing.T) {
-	info := prepareMultiBridgeTest(t)
-	const vtThreshold = uint8(128)
-	const confThreshold = uint8(255)
-
-	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
-	tx, err := info.b.SetOperatorThreshold(opts, voteTypeValueTransfer, vtThreshold)
-	assert.NoError(t, err)
-	info.sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
-
-	opts = &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
-	tx, err = info.b.SetOperatorThreshold(opts, voteTypeConfiguration, confThreshold)
-	assert.NoError(t, err)
-	info.sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(info.sim, tx))
-
-	res, err := info.b.OperatorThresholds(nil, voteTypeValueTransfer)
-	assert.NoError(t, err)
-	assert.Equal(t, vtThreshold, res)
-
-	res, err = info.b.OperatorThresholds(nil, voteTypeConfiguration)
-	assert.NoError(t, err)
-	assert.Equal(t, confThreshold, res)
 }
 
 // TestMultiBridgeKLAYTransfer1 checks the following:
