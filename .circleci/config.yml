@@ -377,14 +377,12 @@ jobs:
       - checkout
       - pre-build
       # - rpm-tagging
-
   rpm-tagged-baobab:
     executor: rpm-executor
     steps:
       - checkout
       - pre-build
       # - rpm-tagging-baobab
-
   deploy-rpm-public:
     executor: rpm-executor
     steps:
