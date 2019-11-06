@@ -317,17 +317,17 @@ jobs:
 
   packaging-linux:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
       - pre-build
-      - build-packaging
-      - upload-repo
+      # - build-packaging
+      # - upload-repo
 
   packaging-linux-2:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - attach_workspace:
@@ -336,52 +336,52 @@ jobs:
 
   packaging-linux-baobab:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
       - pre-build
-      - build-packaging:
-          os-network: "tar-baobab-linux-amd64-all"
-      - upload-repo:
-          item: "kcn kpn ken"
+      # - build-packaging:
+      #     os-network: "tar-baobab-linux-amd64-all"
+      # - upload-repo:
+      #     item: "kcn kpn ken"
 
   packaging-darwin:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
       - pre-build
-      - build-packaging:
-          os-network: "tar-darwin-amd64-all"
-      - upload-repo
+      # - build-packaging:
+      #     os-network: "tar-darwin-amd64-all"
+      # - upload-repo
 
   packaging-darwin-baobab:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
       - pre-build
-      - build-packaging:
-          os-network: "tar-baobab-darwin-amd64-all"
-      - upload-repo:
-          item: "kcn kpn ken"
+      # - build-packaging:
+      #     os-network: "tar-baobab-darwin-amd64-all"
+      # - upload-repo:
+      #     item: "kcn kpn ken"
 
   rpm-tagged:
     executor: rpm-executor
     steps:
       - checkout
       - pre-build
-      - rpm-tagging
+      # - rpm-tagging
 
   rpm-tagged-baobab:
     executor: rpm-executor
     steps:
       - checkout
       - pre-build
-      - rpm-tagging-baobab
+      # - rpm-tagging-baobab
 
   deploy-rpm-public:
     executor: rpm-executor
@@ -432,7 +432,7 @@ workflows:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+/
             branches:
               ignore: /.*/
-              
+
       - pass-tests: 
           requires: 
             - build-all
