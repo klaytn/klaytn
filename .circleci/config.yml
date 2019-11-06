@@ -471,8 +471,6 @@ workflows:
             - pass-tests
 
       - major-tagging:
-          requires:
-            - deploy-rpm-public
           filters:
             branches:
               only: master  
