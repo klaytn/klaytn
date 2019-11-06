@@ -59,7 +59,7 @@ commands:
     steps:
       - run:
           name: "build new"
-          command: export GOPATH=~/go ; make << parameters.os-network >>
+          command: export GOPATH=~/go ; make -j 4 << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
     parameters:
@@ -405,8 +405,8 @@ workflows:
           filters: *filter-version-not-release
       - test-tests: 
           filters: *filter-version-not-release
-      # - test-others: 
-        #  filters: *filter-version-not-release
+      - test-others: 
+         filters: *filter-version-not-release
 
       - pass-tests: 
           requires: 
@@ -414,7 +414,7 @@ workflows:
             - test-datasync
             - test-networks
             - test-tests
-            #- test-others
+            - test-others
             - tag-verify
           filters: *filter-version-not-release
       
