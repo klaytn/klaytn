@@ -421,13 +421,13 @@ func TestCNAPIBackend_SubscribeEvents(t *testing.T) {
 
 	mockTxPool.EXPECT().SubscribeNewTxsEvent(txCh).Return(sub).Times(1)
 
-	api.SubscribeRemovedLogsEvent(rmCh)
-	api.SubscribeChainEvent(ceCh)
-	api.SubscribeChainHeadEvent(chCh)
-	api.SubscribeChainSideEvent(csCh)
-	api.SubscribeLogsEvent(leCh)
+	assert.Equal(t, sub, api.SubscribeRemovedLogsEvent(rmCh))
+	assert.Equal(t, sub, api.SubscribeChainEvent(ceCh))
+	assert.Equal(t, sub, api.SubscribeChainHeadEvent(chCh))
+	assert.Equal(t, sub, api.SubscribeChainSideEvent(csCh))
+	assert.Equal(t, sub, api.SubscribeLogsEvent(leCh))
 
-	api.SubscribeNewTxsEvent(txCh)
+	assert.Equal(t, sub, api.SubscribeNewTxsEvent(txCh))
 }
 
 func TestCNAPIBackend_SendTx(t *testing.T) {
