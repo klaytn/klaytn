@@ -128,6 +128,19 @@ commands:
               echo "It's not same version."
               exit 1
             fi
+  tagger-verify:
+    steps:
+      - run:
+          name: "Verify tag and file verison match"
+          command: |
+              TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG)
+              if [ $TAGGER == 'circleci-klaytn' ]; then
+                echo "Pass! Tagger is circleci-klaytn"
+              else
+                echo "only circleci-klaytn can tagging major version"
+                exit 1
+              fi
+            
   make-pr:
     steps:
       - run:
@@ -161,7 +174,7 @@ commands:
           command: |
               export version=$(go run build/rpm/main.go version) >> $BASH_ENV
               echo "git tag $version"
-              git tag $version
+              git tag -a $version -m "$CIRCLE_STAGE"
               git push origin $version
       - run:
           name: "Delete release branch"
@@ -257,7 +270,12 @@ jobs:
     steps:
       - run: 
           name: "tests Success!"
-          command: echo "tests pass!"          
+          command: echo "tests pass!"
+  tagger-verify:
+    executor: default
+    steps:
+      - checkout
+      - tagger-verify        
 
   coverage:
     executor: test-executor
@@ -408,7 +426,13 @@ workflows:
           filters: *filter-version-not-release
       - test-others: 
          filters: *filter-version-not-release
-
+      - tagger-verify:
+         filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+/
+            branches:
+              ignore: /.*/
+              
       - pass-tests: 
           requires: 
             - build-all
