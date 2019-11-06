@@ -18,7 +18,10 @@ package governance
 
 import (
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -559,4 +562,202 @@ func TestWriteGovernance_idxCache(t *testing.T) {
 	if len(gov.idxCache) != 3 || gov.idxCache[len(gov.idxCache)-1] != 60 {
 		t.Errorf("idxCache has wrong value")
 	}
+}
+
+func getTestCouncil() []common.Address {
+	return []common.Address{
+		common.HexToAddress("0x414790CA82C14A8B975cEBd66098c3dA590bf969"), // Node Address for test
+		common.HexToAddress("0x604973C51f6389dF2782E018000c3AC1257dee90"),
+		common.HexToAddress("0x5Ac1689ae5F521B05145C5Cd15a3E8F6ab39Af19"),
+		common.HexToAddress("0x0688CaC68bbF7c1a0faedA109c668a868BEd855E"),
+	}
+}
+
+func getTestRewards() []common.Address {
+	return []common.Address{
+		common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
+		common.HexToAddress("0xF91B8EBa583C7fa603B400BE17fBaB7629568A4a"),
+		common.HexToAddress("0x240ed27c8bDc9Bb6cA08fa3D239699Fba525d05a"),
+		common.HexToAddress("0x3B980293396Fb0e827929D573e3e42d2EA902502"),
+	}
+}
+
+func getTestVotingPowers(num int) []uint64 {
+	vps := make([]uint64, 0, num)
+	for i := 0; i < num; i++ {
+		vps = append(vps, 1)
+	}
+	return vps
+}
+
+func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
+	// Create ValidatorSet
+	council := getTestCouncil()
+	rewards := getTestRewards()
+
+	blockCounter := common.Big0
+	valSet := validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
+	gov := getGovernance()
+	gov.nodeAddress.Store(council[len(council)-1])
+
+	votes := make([]GovernanceVote, 0)
+	tally := make([]GovernanceTallyItem, 0)
+
+	proposer := council[0]
+	self := council[len(council)-1]
+	header := &types.Header{}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test for "none" mode
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	header.BlockScore = common.Big1
+	gov.AddVote("governance.unitprice", uint64(22000))
+	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
+
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+
+	if _, ok := gov.changeSet.items["governance.unitprice"]; !ok {
+		t.Errorf("Vote had to be applied but it wasn't")
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test for wrong key
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	gov.AddVote("governance.non-existent", true)
+	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
+
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+
+	if _, ok := gov.changeSet.items["governance.non-existent"]; ok {
+		t.Errorf("Vote shouln't be applied but it was")
+	}
+	gov.voteMap.Clear()
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test removing a validator
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	gov.AddVote("governance.removevalidator", council[1].String())
+	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
+
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+	if i, _ := valSet.GetByAddress(council[1]); i != -1 {
+		t.Errorf("Validator removal failed, %d validators remains", valSet.Size())
+	}
+	gov.voteMap.Clear()
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test adding a validator
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	gov.AddVote("governance.addvalidator", council[1].String())
+	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
+
+	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+	if i, _ := valSet.GetByAddress(council[1]); i == -1 {
+		t.Errorf("Validator addition failed, %d validators remains", valSet.Size())
+	}
+	gov.voteMap.Clear()
+}
+
+func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
+	// Create ValidatorSet
+	council := getTestCouncil()
+	rewards := getTestRewards()
+
+	blockCounter := common.Big0
+	var valSet istanbul.ValidatorSet
+	valSet = validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
+
+	config := getTestConfig()
+	config.Governance.GovernanceMode = "ballot"
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	gov := NewGovernance(config, dbm)
+	gov.nodeAddress.Store(council[len(council)-1])
+
+	votes := make([]GovernanceVote, 0)
+	tally := make([]GovernanceTallyItem, 0)
+
+	proposer := council[0]
+	self := council[len(council)-1]
+	header := &types.Header{}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test for "ballot" mode
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	header.BlockScore = common.Big1
+	gov.AddVote("governance.unitprice", uint64(22000))
+
+	header.Vote = gov.GetEncodedVote(council[0], blockCounter.Uint64())
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[0], self)
+
+	header.Vote = gov.GetEncodedVote(council[1], blockCounter.Uint64())
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[1], self)
+
+	if _, ok := gov.changeSet.items["governance.unitprice"]; ok {
+		t.Errorf("Vote shouldn't be applied yet but it was applied")
+	}
+
+	header.Vote = gov.GetEncodedVote(council[2], blockCounter.Uint64())
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[2], self)
+	if _, ok := gov.changeSet.items["governance.unitprice"]; !ok {
+		t.Errorf("Vote should be applied yet but it was not")
+	}
+
+	gov.RemoveVote("governance.unitprice", uint64(22000), blockCounter.Uint64())
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test for wrong key
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	gov.AddVote("governance.non-existent", true)
+	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
+
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
+
+	if _, ok := gov.changeSet.items["governance.non-existent"]; ok {
+		t.Errorf("Vote shouln't be applied but it was")
+	}
+	gov.voteMap.Clear()
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test removing a validator, because there are 4 nodes 3 votes are required to remove a validator
+	gov.AddVote("governance.removevalidator", council[1].String())
+
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	header.Vote = gov.GetEncodedVote(council[0], blockCounter.Uint64())
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[0], self)
+
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	header.Vote = gov.GetEncodedVote(council[2], blockCounter.Uint64())
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[2], self)
+	if i, _ := valSet.GetByAddress(council[1]); i == -1 {
+		t.Errorf("Validator removal shouldn't be done yet, %d validators remains", valSet.Size())
+	}
+
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	header.Vote = gov.GetEncodedVote(council[3], blockCounter.Uint64())
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[3], self)
+
+	if i, _ := valSet.GetByAddress(council[1]); i != -1 {
+		t.Errorf("Validator removal failed, %d validators remains", valSet.Size())
+	}
+	gov.voteMap.Clear()
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Test adding a validator, because there are 3 nodes 2 plus votes are required to add a new validator
+	gov.AddVote("governance.addvalidator", council[1].String())
+
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	header.Vote = gov.GetEncodedVote(council[0], blockCounter.Uint64())
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[0], self)
+	if i, _ := valSet.GetByAddress(council[1]); i != -1 {
+		t.Errorf("Validator addition shouldn't be done yet, %d validators remains", valSet.Size())
+	}
+
+	header.Number = blockCounter.Add(blockCounter, common.Big1)
+	header.Vote = gov.GetEncodedVote(council[2], blockCounter.Uint64())
+	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[2], self)
+
+	if i, _ := valSet.GetByAddress(council[1]); i == -1 {
+		t.Errorf("Validator addition failed, %d validators remains", valSet.Size())
+	}
+	gov.voteMap.Clear()
 }
