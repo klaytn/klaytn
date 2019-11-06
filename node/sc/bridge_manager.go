@@ -312,7 +312,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 
 		uri, err = erc721.TokenURI(nil, ev.ValueOrTokenId)
 		if err != nil {
-			if err == vm.ErrExecutionReverted {
+			if err.Error() == vm.ErrExecutionReverted.Error() {
 				logger.Debug("Unable to get an ERC721 URI", "erc721", ev.TokenAddress.String(), "onParent", bi.onChildChain, "tokenId", ev.ValueOrTokenId.String())
 			} else {
 				return err
