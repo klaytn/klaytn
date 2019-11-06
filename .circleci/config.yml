@@ -443,6 +443,7 @@ workflows:
             - test-tests
             - test-others
             - tag-verify
+            - tagger-verify
           filters: *filter-version-not-release
       
       - tag-verify:
