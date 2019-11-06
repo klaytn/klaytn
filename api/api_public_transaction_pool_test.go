@@ -46,6 +46,7 @@ var internalDataTypes = map[types.TxType]interface{}{
 // test values of tx field.
 var (
 	testNonce         = hexutil.Uint64(0)
+	testGas           = hexutil.Uint64(900000)
 	testGasPrice      = (*hexutil.Big)(big.NewInt(25 * params.Ston))
 	testValue         = (*hexutil.Big)(big.NewInt(1))
 	testTo            = common.StringToAddress("1234")
@@ -130,6 +131,10 @@ func TestTxTypeSupport(t *testing.T) {
 				args.FeePayer = &testFeePayer
 			case "FeeRatio":
 				args.FeeRatio = &testFeeRatio
+			case "GasLimit":
+				args.Gas = &testGas
+			case "Price":
+				args.GasPrice = testGasPrice
 			case "Payload":
 				args.Data = &testData
 			case "CodeFormat":
