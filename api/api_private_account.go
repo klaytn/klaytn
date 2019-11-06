@@ -229,8 +229,8 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 	return wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
-// SendTransaction will create a transaction from the given arguments and
-// tries to sign it with the key associated with args.From. If the given passwd isn't
+// SendTransaction will create a transaction from the given arguments and try to
+// sign it with the key associated with args.From. If the given password isn't
 // able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
 	if args.Nonce == nil {
@@ -247,8 +247,8 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 }
 
 // SendTransactionAsFeePayer will create a transaction from the given arguments and
-// tries to sign it as a fee payer with the key associated with args.From. If the
-// given passwd isn't able to decrypt the key it fails.
+// try to sign it as a fee payer with the key associated with args.From. If the
+// given password isn't able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
 	// Don't allow dynamic assign of values from the setDefaults function since the sender already signed on specific values.
 	if args.TypeInt == nil {
@@ -302,8 +302,8 @@ func (s *PrivateAccountAPI) signNewTransaction(ctx context.Context, args NewTxAr
 }
 
 // SendAccountUpdate will create a TxTypeAccountUpdate transaction from the given arguments and
-// tries to sign it with the key associated with args.From. If the given passwd isn't
-// able to decrypt the key it fails.
+// try to sign it with the key associated with args.From. If the given password isn't able to
+// decrypt the key it fails.
 func (s *PrivateAccountAPI) SendAccountUpdate(ctx context.Context, args AccountUpdateTxArgs, passwd string) (common.Hash, error) {
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
@@ -321,8 +321,8 @@ func (s *PrivateAccountAPI) SendAccountUpdate(ctx context.Context, args AccountU
 }
 
 // SendValueTransfer will create a TxTypeValueTransfer transaction from the given arguments and
-// tries to sign it with the key associated with args.From. If the given passwd isn't
-// able to decrypt the key it fails.
+// try to sign it with the key associated with args.From. If the given password isn't able to
+// decrypt the key it fails.
 func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTransferTxArgs, passwd string) (common.Hash, error) {
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
@@ -340,9 +340,8 @@ func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTra
 }
 
 // SignTransaction will create a transaction from the given arguments and
-// tries to sign it with the key associated with args.From. If the given passwd isn't
-// able to decrypt the key, it fails. The transaction is returned in RLP-form, not broadcast
-// to other nodes
+// try to sign it with the key associated with args.From. If the given password isn't able to
+// decrypt the key, it fails. The transaction is returned in RLP-form, not broadcast to other nodes
 func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
 	// No need to obtain the noncelock mutex, since we won't be sending this
 	// tx into the transaction pool, but right back to the user
@@ -365,8 +364,8 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 }
 
 // SignTransactionAsFeePayer will create a transaction from the given arguments and
-// tries to sign it as a fee payer with the key associated with args.From. If the given
-// passwd isn't able to decrypt the key, it fails. The transaction is returned in RLP-form,
+// try to sign it as a fee payer with the key associated with args.From. If the given
+// password isn't able to decrypt the key, it fails. The transaction is returned in RLP-form,
 // not broadcast to other nodes
 func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
 	// Allows setting a default nonce value of the sender just for the case the fee payer tries to sign a tx earlier than the sender.
@@ -409,7 +408,7 @@ func signHash(data []byte) []byte {
 }
 
 // sign is a helper function that signs a transaction with the private key of the given address.
-// If the given passwd isn't able to decrypt the key, it fails.
+// If the given password isn't able to decrypt the key, it fails.
 func (s *PrivateAccountAPI) sign(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
@@ -423,7 +422,7 @@ func (s *PrivateAccountAPI) sign(addr common.Address, passwd string, tx *types.T
 }
 
 // signAsFeePayer is a helper function that signs a transaction with the private key of the given address.
-// If the given passwd isn't able to decrypt the key, it fails.
+// If the given password isn't able to decrypt the key, it fails.
 func (s *PrivateAccountAPI) signAsFeePayer(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
