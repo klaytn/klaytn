@@ -275,6 +275,19 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	return wallet.SignTx(account, tx, s.b.ChainConfig().ChainID)
 }
 
+// signAsFeePayer is a helper function that signs a transaction as a fee payer with the private key of the given address.
+func (s *PublicTransactionPoolAPI) signAsFeePayer(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: addr}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return nil, err
+	}
+	// Request the wallet to sign the transaction
+	return wallet.SignTxAsFeePayer(account, tx, s.b.ChainConfig().ChainID)
+}
+
 var submitTxCount = 0
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
@@ -321,6 +334,35 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	}
 
 	return submitTransaction(ctx, s.b, signedTx.Tx)
+}
+
+// SendTransactionAsFeePayer creates a transaction for the given argument, sign it as a fee payer
+// and submit it to the transaction pool.
+func (s *PublicTransactionPoolAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	// Don't allow dynamic assign of values from the setDefaults function since the sender already signed on specific values.
+	if args.TypeInt == nil {
+		return common.Hash{}, errTxArgNilTxType
+	}
+	if args.Nonce == nil {
+		return common.Hash{}, errTxArgNilNonce
+	}
+	if args.Gas == nil {
+		return common.Hash{}, errTxArgNilGas
+	}
+	if args.GasPrice == nil {
+		return common.Hash{}, errTxArgNilGasPrice
+	}
+
+	if args.Signatures == nil {
+		return common.Hash{}, errTxArgNilSenderSig
+	}
+
+	feePayerSignedTx, err := s.SignTransactionAsFeePayer(ctx, args)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return submitTransaction(ctx, s.b, feePayerSignedTx.Tx)
 }
 
 // SendRawTransaction will add the signed transaction to the transaction pool.
@@ -386,6 +428,37 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 		return nil, err
 	}
 	return &SignTransactionResult{data, signedTx}, nil
+}
+
+// SignTransactionAsFeePayer will sign the given transaction as a fee payer
+// with the from account. The node needs to have the private key of the account
+// corresponding with the given from address and it needs to be unlocked.
+func (s *PublicTransactionPoolAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
+	// Allows setting a default nonce value of the sender just for the case the fee payer tries to sign a tx earlier than the sender.
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return nil, err
+	}
+	tx, err := args.toTransaction()
+	if err != nil {
+		return nil, err
+	}
+	// Don't return errors for nil signature allowing the fee payer to sign a tx earlier than the sender.
+	if args.Signatures != nil {
+		tx.SetSignature(args.Signatures.ToTxSignatures())
+	}
+	feePayer, err := tx.FeePayer()
+	if err != nil {
+		return nil, errTxArgInvalidFeePayer
+	}
+	feePayerSignedTx, err := s.signAsFeePayer(feePayer, tx)
+	if err != nil {
+		return nil, err
+	}
+	data, err := rlp.EncodeToBytes(feePayerSignedTx)
+	if err != nil {
+		return nil, err
+	}
+	return &SignTransactionResult{data, feePayerSignedTx}, nil
 }
 
 // PendingTransactions returns the transactions that are in the transaction pool and have a from address that is one of

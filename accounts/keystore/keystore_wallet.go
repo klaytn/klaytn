@@ -156,3 +156,17 @@ func (w *keystoreWallet) SignTxWithPassphrase(account accounts.Account, passphra
 	// Account seems valid, request the keystore to sign
 	return w.keystore.SignTxWithPassphrase(account, passphrase, tx, chainID)
 }
+
+// SignTxAsFeePayerWithPassphrase implements accounts.Wallet, attempting to sign the given
+// transaction as a fee payer with the given account using passphrase as extra authentication.
+func (w *keystoreWallet) SignTxAsFeePayerWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	// Make sure the requested account is contained within
+	if account.Address != w.account.Address {
+		return nil, accounts.ErrUnknownAccount
+	}
+	if account.URL != (accounts.URL{}) && account.URL != w.account.URL {
+		return nil, accounts.ErrUnknownAccount
+	}
+	// Account seems valid, request the keystore to sign
+	return w.keystore.SignTxAsFeePayerWithPassphrase(account, passphrase, tx, chainID)
+}

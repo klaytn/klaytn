@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"github.com/golang/mock/gomock"
+	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/accounts/mocks"
 	"github.com/klaytn/klaytn/api/mocks"
@@ -45,18 +46,20 @@ var internalDataTypes = map[types.TxType]interface{}{
 // test values of tx field.
 var (
 	testNonce         = hexutil.Uint64(0)
+	testGas           = hexutil.Uint64(900000)
 	testGasPrice      = (*hexutil.Big)(big.NewInt(25 * params.Ston))
 	testValue         = (*hexutil.Big)(big.NewInt(1))
 	testTo            = common.StringToAddress("1234")
-	testFeePayer      = common.StringToAddress("5678")
+	testFeePayer      = common.HexToAddress("0x819104a190255e0cedbdd9d5f59a557633d79db1")
 	testFeeRatio      = types.FeeRatio(30)
 	testData          = hexutil.Bytes{0x11, 0x99}
 	testCodeFormat    = params.CodeFormatEVM
 	testHumanReadable = false
 	testAccountKey    = hexutil.Bytes{0x01, 0xc0}
 	testFrom          = common.HexToAddress("0xa7Eb6992c5FD55F43305B24Ee67150Bf4910d329")
-
-	senderPrvKey, _ = crypto.HexToECDSA("95a21e86efa290d6665a9dbce06ae56319335540d13540fb1b01e28a5b2c8460")
+	testSig           = types.TxSignatures{&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)}}.ToJSON()
+	senderPrvKey, _   = crypto.HexToECDSA("95a21e86efa290d6665a9dbce06ae56319335540d13540fb1b01e28a5b2c8460")
+	feePayerPrvKey, _ = crypto.HexToECDSA("aebb680a5e596c1d1a01bac78a3985b62c685c5e995d780c176138cb2679ba3e")
 )
 
 // TestTxTypeSupport tests tx type support of APIs in PublicTransactionPoolAPI.
@@ -64,7 +67,7 @@ func TestTxTypeSupport(t *testing.T) {
 	var ctx context.Context
 	chainConf := params.ChainConfig{ChainID: big.NewInt(1)}
 
-	// generate a keystore and an active account
+	// generate a keystore and active accounts
 	dir, err := ioutil.TempDir("", "klay-keystore-test")
 	if err != nil {
 		t.Fatal(err)
@@ -79,6 +82,13 @@ func TestTxTypeSupport(t *testing.T) {
 	if err := ks.Unlock(acc, password); err != nil {
 		t.Fatal(err)
 	}
+	accFeePayer, err := ks.ImportECDSA(feePayerPrvKey, password)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ks.Unlock(accFeePayer, password); err != nil {
+		t.Fatal(err)
+	}
 
 	// mock Backend and AccountManager for easy test
 	mockCtrl := gomock.NewController(t)
@@ -90,7 +100,8 @@ func TestTxTypeSupport(t *testing.T) {
 	mockBackend.EXPECT().GetPoolNonce(ctx, gomock.Any()).Return(uint64(testNonce)).AnyTimes()
 	mockBackend.EXPECT().SendTx(ctx, gomock.Any()).Return(nil).AnyTimes()
 	mockBackend.EXPECT().ChainConfig().Return(&chainConf).AnyTimes()
-	mockAccountManager.EXPECT().Find(gomock.Any()).Return(ks.Wallets()[0], nil).AnyTimes()
+	mockAccountManager.EXPECT().Find(accounts.Account{Address: acc.Address}).Return(ks.Wallets()[0], nil).AnyTimes()
+	mockAccountManager.EXPECT().Find(accounts.Account{Address: accFeePayer.Address}).Return(ks.Wallets()[1], nil).AnyTimes()
 
 	// APIs in PublicTransactionPoolAPI will be tested
 	api := PublicTransactionPoolAPI{
@@ -110,6 +121,8 @@ func TestTxTypeSupport(t *testing.T) {
 		internalType := reflect.TypeOf(internalData)
 		for i := 0; i < internalType.NumField(); i++ {
 			switch internalType.Field(i).Name {
+			case "AccountNonce":
+				args.Nonce = &testNonce
 			case "Amount":
 				args.Value = testValue
 			case "Recipient":
@@ -118,6 +131,10 @@ func TestTxTypeSupport(t *testing.T) {
 				args.FeePayer = &testFeePayer
 			case "FeeRatio":
 				args.FeeRatio = &testFeeRatio
+			case "GasLimit":
+				args.Gas = &testGas
+			case "Price":
+				args.GasPrice = testGasPrice
 			case "Payload":
 				args.Data = &testData
 			case "CodeFormat":
@@ -128,25 +145,35 @@ func TestTxTypeSupport(t *testing.T) {
 				args.AccountKey = &testAccountKey
 			}
 		}
-		// tests for non-fee-delegation types
-		if !txType.IsFeeDelegatedTransaction() {
-			testTxTypeSupport_normalCase(t, api, ctx, args)
+		if txType.IsFeeDelegatedTransaction() {
+			args.Signatures = testSig
 		}
-		// TODO - more test cases will be added
+
+		testTxTypeSupport_normalCase(t, api, ctx, args)
+		// TODO-Klaytn-TxType - more test cases will be added soon
 	}
 }
 
 // testTxTypeSupport_normalCase test APIs with proper SendTxArgs values.
 func testTxTypeSupport_normalCase(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, args SendTxArgs) {
-	// test tx type support of SignTransaction
-	{
-		_, err := api.SignTransaction(ctx, args)
+	var err error
+	// TODO-Klaytn-TxType - more test cases will be added soon
+
+	// test APIs for non-fee-delegation txs
+	if !args.TypeInt.IsFeeDelegatedTransaction() {
+		_, err = api.SendTransaction(ctx, args)
+		assert.Equal(t, nil, err)
+
+		// test APIs for fee delegation txs
+	} else {
+		_, err := api.SignTransactionAsFeePayer(ctx, args)
+		assert.Equal(t, nil, err)
+
+		_, err = api.SendTransactionAsFeePayer(ctx, args)
 		assert.Equal(t, nil, err)
 	}
 
-	// test tx type support of SendTransaction
-	{
-		_, err := api.SendTransaction(ctx, args)
-		assert.Equal(t, nil, err)
-	}
+	// test for all txs
+	_, err = api.SignTransaction(ctx, args)
+	assert.Equal(t, nil, err)
 }

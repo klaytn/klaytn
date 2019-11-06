@@ -206,9 +206,9 @@ func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
 	return fetchKeystore(s.am).Lock(addr) == nil
 }
 
-// signTransactions sets defaults and signs the given transaction
+// signTransactions sets defaults and signs the given transaction.
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
-// and release it after the transaction has been submitted to the tx pool
+// and release it after the transaction has been submitted to the tx pool.
 func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
@@ -229,8 +229,8 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 	return wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
-// SendTransaction will create a transaction from the given arguments and
-// tries to sign it with the key associated with args.From. If the given passwd isn't
+// SendTransaction will create a transaction from the given arguments and try to
+// sign it with the key associated with args.From. If the given password isn't
 // able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
 	if args.Nonce == nil {
@@ -244,6 +244,36 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 		return common.Hash{}, err
 	}
 	return submitTransaction(ctx, s.b, signedTx.Tx)
+}
+
+// SendTransactionAsFeePayer will create a transaction from the given arguments and
+// try to sign it as a fee payer with the key associated with args.From. If the
+// given password isn't able to decrypt the key it fails.
+func (s *PrivateAccountAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
+	// Don't allow dynamic assign of values from the setDefaults function since the sender already signed on specific values.
+	if args.TypeInt == nil {
+		return common.Hash{}, errTxArgNilTxType
+	}
+	if args.Nonce == nil {
+		return common.Hash{}, errTxArgNilNonce
+	}
+	if args.Gas == nil {
+		return common.Hash{}, errTxArgNilGas
+	}
+	if args.GasPrice == nil {
+		return common.Hash{}, errTxArgNilGasPrice
+	}
+
+	if args.Signatures == nil {
+		return common.Hash{}, errTxArgNilSenderSig
+	}
+
+	feePayerSignedTx, err := s.SignTransactionAsFeePayer(ctx, args, passwd)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return submitTransaction(ctx, s.b, feePayerSignedTx.Tx)
 }
 
 func (s *PrivateAccountAPI) signNewTransaction(ctx context.Context, args NewTxArgs, passwd string) (*types.Transaction, error) {
@@ -272,8 +302,8 @@ func (s *PrivateAccountAPI) signNewTransaction(ctx context.Context, args NewTxAr
 }
 
 // SendAccountUpdate will create a TxTypeAccountUpdate transaction from the given arguments and
-// tries to sign it with the key associated with args.From. If the given passwd isn't
-// able to decrypt the key it fails.
+// try to sign it with the key associated with args.From. If the given password isn't able to
+// decrypt the key it fails.
 func (s *PrivateAccountAPI) SendAccountUpdate(ctx context.Context, args AccountUpdateTxArgs, passwd string) (common.Hash, error) {
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
@@ -291,8 +321,8 @@ func (s *PrivateAccountAPI) SendAccountUpdate(ctx context.Context, args AccountU
 }
 
 // SendValueTransfer will create a TxTypeValueTransfer transaction from the given arguments and
-// tries to sign it with the key associated with args.From. If the given passwd isn't
-// able to decrypt the key it fails.
+// try to sign it with the key associated with args.From. If the given password isn't able to
+// decrypt the key it fails.
 func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTransferTxArgs, passwd string) (common.Hash, error) {
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
@@ -310,9 +340,8 @@ func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTra
 }
 
 // SignTransaction will create a transaction from the given arguments and
-// tries to sign it with the key associated with args.From. If the given passwd isn't
-// able to decrypt the key, it fails. The transaction is returned in RLP-form, not broadcast
-// to other nodes
+// try to sign it with the key associated with args.From. If the given password isn't able to
+// decrypt the key, it fails. The transaction is returned in RLP-form, not broadcast to other nodes
 func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
 	// No need to obtain the noncelock mutex, since we won't be sending this
 	// tx into the transaction pool, but right back to the user
@@ -334,6 +363,38 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 	return &SignTransactionResult{data, signedTx}, nil
 }
 
+// SignTransactionAsFeePayer will create a transaction from the given arguments and
+// try to sign it as a fee payer with the key associated with args.From. If the given
+// password isn't able to decrypt the key, it fails. The transaction is returned in RLP-form,
+// not broadcast to other nodes
+func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
+	// Allows setting a default nonce value of the sender just for the case the fee payer tries to sign a tx earlier than the sender.
+	if err := args.setDefaults(ctx, s.b); err != nil {
+		return nil, err
+	}
+	tx, err := args.toTransaction()
+	if err != nil {
+		return nil, err
+	}
+	// Don't return errors for nil signature allowing the fee payer to sign a tx earlier than the sender.
+	if args.Signatures != nil {
+		tx.SetSignature(args.Signatures.ToTxSignatures())
+	}
+	feePayer, err := tx.FeePayer()
+	if err != nil {
+		return nil, errTxArgInvalidFeePayer
+	}
+	feePayerSignedTx, err := s.signAsFeePayer(feePayer, passwd, tx)
+	if err != nil {
+		return nil, err
+	}
+	data, err := rlp.EncodeToBytes(feePayerSignedTx)
+	if err != nil {
+		return nil, err
+	}
+	return &SignTransactionResult{data, feePayerSignedTx}, nil
+}
+
 // signHash is a helper function that calculates a hash for the given message that can be
 // safely used to calculate a signature from.
 //
@@ -347,7 +408,7 @@ func signHash(data []byte) []byte {
 }
 
 // sign is a helper function that signs a transaction with the private key of the given address.
-// If the given passwd isn't able to decrypt the key, it fails.
+// If the given password isn't able to decrypt the key, it fails.
 func (s *PrivateAccountAPI) sign(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
@@ -358,6 +419,20 @@ func (s *PrivateAccountAPI) sign(addr common.Address, passwd string, tx *types.T
 	}
 	// Request the wallet to sign the transaction
 	return wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
+}
+
+// signAsFeePayer is a helper function that signs a transaction with the private key of the given address.
+// If the given password isn't able to decrypt the key, it fails.
+func (s *PrivateAccountAPI) signAsFeePayer(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
+	// Look up the wallet containing the requested signer
+	account := accounts.Account{Address: addr}
+
+	wallet, err := s.b.AccountManager().Find(account)
+	if err != nil {
+		return nil, err
+	}
+	// Request the wallet to sign the transaction
+	return wallet.SignTxAsFeePayerWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
 // Sign calculates a Klaytn ECDSA signature for:

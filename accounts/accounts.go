@@ -115,6 +115,9 @@ type Wallet interface {
 	// the account in a keystore).
 	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 
+	// SignTxAsFeePayer requests the wallet to sign the given transaction as a fee payer.
+	SignTxAsFeePayer(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
+
 	// SignHashWithPassphrase requests the wallet to sign the given hash with the
 	// given passphrase as extra authentication information.
 	//
@@ -128,6 +131,10 @@ type Wallet interface {
 	// It looks up the account specified either solely via its address contained within,
 	// or optionally with the aid of any location metadata from the embedded URL field.
 	SignTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
+
+	// SignTxAsFeePayerWithPassphrase requests the wallet to sign the given transaction
+	// as a fee payer, with the given passphrase as extra authentication information.
+	SignTxAsFeePayerWithPassphrase(account Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 }
 
 // Backend is a "wallet provider" that may contain a batch of accounts they can

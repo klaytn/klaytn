@@ -551,6 +551,18 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'signTransactionAsFeePayer',
+			call: 'klay_signTransactionAsFeePayer',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'sendTransactionAsFeePayer',
+			call: 'klay_sendTransactionAsFeePayer',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getCouncil',
 			call: 'klay_getCouncil',
 			params: 1,
