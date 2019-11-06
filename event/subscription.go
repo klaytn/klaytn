@@ -27,6 +27,7 @@ import (
 	"time"
 )
 
+//go:generate mockgen -destination=event/mocks/subscription_mock.go -package=mocks github.com/klaytn/klaytn/event Subscription
 // Subscription represents a stream of events. The carrier of the events is typically a
 // channel, but isn't part of the interface.
 //
