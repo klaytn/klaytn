@@ -619,18 +619,6 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	if _, ok := gov.changeSet.items["governance.unitprice"]; !ok {
 		t.Errorf("Vote had to be applied but it wasn't")
 	}
-
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Test for wrong key
-	header.Number = blockCounter.Add(blockCounter, common.Big1)
-	gov.AddVote("governance.non-existent", true)
-	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
-
-	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
-
-	if _, ok := gov.changeSet.items["governance.non-existent"]; ok {
-		t.Errorf("Vote shouln't be applied but it was")
-	}
 	gov.voteMap.Clear()
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -676,7 +664,6 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	votes := make([]GovernanceVote, 0)
 	tally := make([]GovernanceTallyItem, 0)
 
-	proposer := council[0]
 	self := council[len(council)-1]
 	header := &types.Header{}
 
@@ -703,19 +690,6 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	}
 
 	gov.RemoveVote("governance.unitprice", uint64(22000), blockCounter.Uint64())
-
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Test for wrong key
-	header.Number = blockCounter.Add(blockCounter, common.Big1)
-	gov.AddVote("governance.non-existent", true)
-	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
-
-	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
-
-	if _, ok := gov.changeSet.items["governance.non-existent"]; ok {
-		t.Errorf("Vote shouln't be applied but it was")
-	}
-	gov.voteMap.Clear()
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Test removing a validator, because there are 4 nodes 3 votes are required to remove a validator
