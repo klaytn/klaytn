@@ -30,6 +30,7 @@ import (
 
 var (
 	errNotS256Curve = errors.New("key is not on the S256 curve")
+	errNoXYValue    = errors.New("X or Y value of the public key is not exist")
 )
 
 // Since ecdsa.PublicKey does not provide RLP/JSON serialization,
@@ -103,7 +104,9 @@ func (p *PublicKeySerializable) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &dec); err != nil {
 		return err
 	}
-
+	if dec.X == nil || dec.Y == nil {
+		return errNoXYValue
+	}
 	p.X = (*big.Int)(dec.X)
 	p.Y = (*big.Int)(dec.Y)
 

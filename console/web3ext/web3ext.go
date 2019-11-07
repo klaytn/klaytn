@@ -686,6 +686,16 @@ web3._extend({
 			params: 1,
 			inputFormatter: [web3._extend.utils.toHex],
 		}),
+		new web3._extend.Method({
+			name: 'encodeAccountKey',
+			call: 'klay_encodeAccountKey',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'decodeAccountKey',
+			call: 'klay_decodeAccountKey',
+			params: 1,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
