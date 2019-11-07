@@ -590,6 +590,10 @@ func getTestVotingPowers(num int) []uint64 {
 	return vps
 }
 
+const (
+	GovernanceModeBallot = "ballot"
+)
+
 func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	// Create ValidatorSet
 	council := getTestCouncil()
@@ -656,7 +660,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	valSet = validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 
 	config := getTestConfig()
-	config.Governance.GovernanceMode = "ballot"
+	config.Governance.GovernanceMode = GovernanceModeBallot
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 	gov := NewGovernance(config, dbm)
 	gov.nodeAddress.Store(council[len(council)-1])
