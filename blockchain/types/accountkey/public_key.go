@@ -30,7 +30,7 @@ import (
 
 var (
 	errNotS256Curve = errors.New("key is not on the S256 curve")
-	errNoXYValue    = errors.New("X or Y value of the public key is not exist")
+	errNoXYValue    = errors.New("X or Y value of the public key does not exist")
 )
 
 // Since ecdsa.PublicKey does not provide RLP/JSON serialization,

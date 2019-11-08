@@ -96,7 +96,7 @@ func (s *PublicKlayAPI) EncodeAccountKey(accKey accountkey.AccountKeyJSON) (hexu
 	}
 	accKeySerializer := accountkey.NewAccountKeySerializerWithAccountKey(key)
 	if err := accKeySerializer.EncodeRLP(buffer); err != nil {
-		return nil, errors.New("fail to rlp encoding. the key probably contains an invalid public key")
+		return nil, errors.New("the key probably contains an invalid public key: " + err.Error())
 	}
 	return (hexutil.Bytes)(buffer.Bytes()), nil
 }
