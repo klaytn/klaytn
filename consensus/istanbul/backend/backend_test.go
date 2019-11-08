@@ -17,6 +17,7 @@
 package backend
 
 import (
+	"fmt"
 	"github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -36,11 +37,407 @@ import (
 var (
 	// testing node's private key
 	PRIVKEY = "ce7671a2880493dfb8d04218707a16b1532dfcac97f0289d770a919d5ff7b068"
-	// testing node should be in a committee in these blocks
-	committeeBlocks = []int64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22}
 	// Max blockNum
-	maxBlockNum = int64(100)
+	maxBlockNum     = int64(100)
+	committeeBlocks = map[Pair]bool{
+		{Sequence: 0, Round: 0}:   false,
+		{Sequence: 0, Round: 1}:   false,
+		{Sequence: 0, Round: 2}:   false,
+		{Sequence: 0, Round: 3}:   false,
+		{Sequence: 0, Round: 4}:   false,
+		{Sequence: 0, Round: 5}:   false,
+		{Sequence: 0, Round: 6}:   false,
+		{Sequence: 0, Round: 7}:   false,
+		{Sequence: 0, Round: 8}:   false,
+		{Sequence: 0, Round: 9}:   false,
+		{Sequence: 0, Round: 10}:  false,
+		{Sequence: 0, Round: 11}:  false,
+		{Sequence: 0, Round: 12}:  false,
+		{Sequence: 0, Round: 13}:  false,
+		{Sequence: 0, Round: 14}:  false,
+		{Sequence: 7, Round: 14}:  false,
+		{Sequence: 8, Round: 13}:  false,
+		{Sequence: 8, Round: 14}:  false,
+		{Sequence: 9, Round: 0}:   false,
+		{Sequence: 9, Round: 1}:   false,
+		{Sequence: 9, Round: 2}:   false,
+		{Sequence: 9, Round: 3}:   false,
+		{Sequence: 9, Round: 4}:   false,
+		{Sequence: 9, Round: 5}:   false,
+		{Sequence: 9, Round: 6}:   false,
+		{Sequence: 9, Round: 7}:   false,
+		{Sequence: 9, Round: 8}:   false,
+		{Sequence: 9, Round: 9}:   false,
+		{Sequence: 9, Round: 10}:  false,
+		{Sequence: 9, Round: 11}:  false,
+		{Sequence: 9, Round: 12}:  false,
+		{Sequence: 9, Round: 13}:  false,
+		{Sequence: 10, Round: 11}: false,
+		{Sequence: 10, Round: 12}: false,
+		{Sequence: 11, Round: 0}:  false,
+		{Sequence: 11, Round: 1}:  false,
+		{Sequence: 11, Round: 2}:  false,
+		{Sequence: 11, Round: 3}:  false,
+		{Sequence: 11, Round: 4}:  false,
+		{Sequence: 11, Round: 5}:  false,
+		{Sequence: 11, Round: 6}:  false,
+		{Sequence: 11, Round: 7}:  false,
+		{Sequence: 11, Round: 8}:  false,
+		{Sequence: 11, Round: 9}:  false,
+		{Sequence: 11, Round: 10}: false,
+		{Sequence: 11, Round: 11}: false,
+		{Sequence: 12, Round: 0}:  false,
+		{Sequence: 12, Round: 1}:  false,
+		{Sequence: 12, Round: 2}:  false,
+		{Sequence: 12, Round: 3}:  false,
+		{Sequence: 12, Round: 4}:  false,
+		{Sequence: 12, Round: 5}:  false,
+		{Sequence: 12, Round: 6}:  false,
+		{Sequence: 12, Round: 7}:  false,
+		{Sequence: 12, Round: 8}:  false,
+		{Sequence: 12, Round: 9}:  false,
+		{Sequence: 12, Round: 10}: false,
+		{Sequence: 13, Round: 8}:  false,
+		{Sequence: 13, Round: 9}:  false,
+		{Sequence: 14, Round: 0}:  false,
+		{Sequence: 14, Round: 1}:  false,
+		{Sequence: 14, Round: 2}:  false,
+		{Sequence: 14, Round: 3}:  false,
+		{Sequence: 14, Round: 4}:  false,
+		{Sequence: 14, Round: 5}:  false,
+		{Sequence: 14, Round: 6}:  false,
+		{Sequence: 14, Round: 7}:  false,
+		{Sequence: 14, Round: 8}:  false,
+		{Sequence: 14, Round: 9}:  false,
+		{Sequence: 14, Round: 10}: false,
+		{Sequence: 14, Round: 11}: false,
+		{Sequence: 14, Round: 12}: false,
+		{Sequence: 14, Round: 13}: false,
+		{Sequence: 14, Round: 14}: false,
+		{Sequence: 15, Round: 6}:  false,
+		{Sequence: 15, Round: 7}:  false,
+		{Sequence: 16, Round: 5}:  false,
+		{Sequence: 16, Round: 6}:  false,
+		{Sequence: 17, Round: 4}:  false,
+		{Sequence: 17, Round: 5}:  false,
+		{Sequence: 17, Round: 6}:  false,
+		{Sequence: 17, Round: 7}:  false,
+		{Sequence: 17, Round: 8}:  false,
+		{Sequence: 17, Round: 9}:  false,
+		{Sequence: 17, Round: 10}: false,
+		{Sequence: 17, Round: 11}: false,
+		{Sequence: 17, Round: 12}: false,
+		{Sequence: 17, Round: 13}: false,
+		{Sequence: 17, Round: 14}: false,
+		{Sequence: 18, Round: 3}:  false,
+		{Sequence: 18, Round: 4}:  false,
+		{Sequence: 19, Round: 2}:  false,
+		{Sequence: 19, Round: 3}:  false,
+		{Sequence: 20, Round: 1}:  false,
+		{Sequence: 20, Round: 2}:  false,
+		{Sequence: 21, Round: 0}:  false,
+		{Sequence: 21, Round: 1}:  false,
+		{Sequence: 22, Round: 0}:  false,
+		{Sequence: 24, Round: 0}:  false,
+		{Sequence: 24, Round: 1}:  false,
+		{Sequence: 24, Round: 2}:  false,
+		{Sequence: 24, Round: 3}:  false,
+		{Sequence: 24, Round: 4}:  false,
+		{Sequence: 24, Round: 5}:  false,
+		{Sequence: 24, Round: 6}:  false,
+		{Sequence: 24, Round: 7}:  false,
+		{Sequence: 24, Round: 8}:  false,
+		{Sequence: 24, Round: 9}:  false,
+		{Sequence: 24, Round: 10}: false,
+		{Sequence: 24, Round: 11}: false,
+		{Sequence: 24, Round: 12}: false,
+		{Sequence: 24, Round: 13}: false,
+		{Sequence: 24, Round: 14}: false,
+		{Sequence: 32, Round: 0}:  false,
+		{Sequence: 32, Round: 1}:  false,
+		{Sequence: 32, Round: 2}:  false,
+		{Sequence: 32, Round: 3}:  false,
+		{Sequence: 32, Round: 4}:  false,
+		{Sequence: 32, Round: 5}:  false,
+		{Sequence: 32, Round: 6}:  false,
+		{Sequence: 32, Round: 7}:  false,
+		{Sequence: 32, Round: 8}:  false,
+		{Sequence: 32, Round: 9}:  false,
+		{Sequence: 32, Round: 10}: false,
+		{Sequence: 32, Round: 11}: false,
+		{Sequence: 32, Round: 12}: false,
+		{Sequence: 32, Round: 13}: false,
+		{Sequence: 32, Round: 14}: false,
+		{Sequence: 33, Round: 0}:  false,
+		{Sequence: 33, Round: 1}:  false,
+		{Sequence: 33, Round: 2}:  false,
+		{Sequence: 33, Round: 3}:  false,
+		{Sequence: 33, Round: 4}:  false,
+		{Sequence: 33, Round: 5}:  false,
+		{Sequence: 33, Round: 6}:  false,
+		{Sequence: 33, Round: 7}:  false,
+		{Sequence: 33, Round: 8}:  false,
+		{Sequence: 33, Round: 9}:  false,
+		{Sequence: 33, Round: 10}: false,
+		{Sequence: 33, Round: 11}: false,
+		{Sequence: 33, Round: 12}: false,
+		{Sequence: 33, Round: 13}: false,
+		{Sequence: 33, Round: 14}: false,
+		{Sequence: 34, Round: 0}:  false,
+		{Sequence: 34, Round: 1}:  false,
+		{Sequence: 34, Round: 2}:  false,
+		{Sequence: 34, Round: 3}:  false,
+		{Sequence: 34, Round: 4}:  false,
+		{Sequence: 34, Round: 5}:  false,
+		{Sequence: 34, Round: 6}:  false,
+		{Sequence: 34, Round: 7}:  false,
+		{Sequence: 34, Round: 8}:  false,
+		{Sequence: 34, Round: 9}:  false,
+		{Sequence: 34, Round: 10}: false,
+		{Sequence: 34, Round: 11}: false,
+		{Sequence: 34, Round: 12}: false,
+		{Sequence: 34, Round: 13}: false,
+		{Sequence: 34, Round: 14}: false,
+		{Sequence: 35, Round: 0}:  false,
+		{Sequence: 35, Round: 1}:  false,
+		{Sequence: 35, Round: 2}:  false,
+		{Sequence: 35, Round: 3}:  false,
+		{Sequence: 35, Round: 4}:  false,
+		{Sequence: 35, Round: 5}:  false,
+		{Sequence: 35, Round: 6}:  false,
+		{Sequence: 35, Round: 7}:  false,
+		{Sequence: 35, Round: 8}:  false,
+		{Sequence: 35, Round: 9}:  false,
+		{Sequence: 35, Round: 10}: false,
+		{Sequence: 35, Round: 11}: false,
+		{Sequence: 35, Round: 12}: false,
+		{Sequence: 35, Round: 13}: false,
+		{Sequence: 35, Round: 14}: false,
+		{Sequence: 37, Round: 0}:  false,
+		{Sequence: 37, Round: 1}:  false,
+		{Sequence: 37, Round: 2}:  false,
+		{Sequence: 37, Round: 3}:  false,
+		{Sequence: 37, Round: 4}:  false,
+		{Sequence: 37, Round: 5}:  false,
+		{Sequence: 37, Round: 6}:  false,
+		{Sequence: 37, Round: 7}:  false,
+		{Sequence: 37, Round: 8}:  false,
+		{Sequence: 37, Round: 9}:  false,
+		{Sequence: 37, Round: 10}: false,
+		{Sequence: 37, Round: 11}: false,
+		{Sequence: 37, Round: 12}: false,
+		{Sequence: 37, Round: 13}: false,
+		{Sequence: 37, Round: 14}: false,
+		{Sequence: 38, Round: 0}:  false,
+		{Sequence: 38, Round: 1}:  false,
+		{Sequence: 38, Round: 2}:  false,
+		{Sequence: 38, Round: 3}:  false,
+		{Sequence: 38, Round: 4}:  false,
+		{Sequence: 38, Round: 5}:  false,
+		{Sequence: 38, Round: 6}:  false,
+		{Sequence: 38, Round: 7}:  false,
+		{Sequence: 38, Round: 8}:  false,
+		{Sequence: 38, Round: 9}:  false,
+		{Sequence: 38, Round: 10}: false,
+		{Sequence: 38, Round: 11}: false,
+		{Sequence: 38, Round: 12}: false,
+		{Sequence: 38, Round: 13}: false,
+		{Sequence: 38, Round: 14}: false,
+		{Sequence: 39, Round: 0}:  false,
+		{Sequence: 39, Round: 1}:  false,
+		{Sequence: 39, Round: 2}:  false,
+		{Sequence: 39, Round: 3}:  false,
+		{Sequence: 39, Round: 4}:  false,
+		{Sequence: 39, Round: 5}:  false,
+		{Sequence: 39, Round: 6}:  false,
+		{Sequence: 39, Round: 7}:  false,
+		{Sequence: 39, Round: 8}:  false,
+		{Sequence: 39, Round: 9}:  false,
+		{Sequence: 39, Round: 10}: false,
+		{Sequence: 39, Round: 11}: false,
+		{Sequence: 39, Round: 12}: false,
+		{Sequence: 39, Round: 13}: false,
+		{Sequence: 39, Round: 14}: false,
+		{Sequence: 43, Round: 0}:  false,
+		{Sequence: 43, Round: 1}:  false,
+		{Sequence: 43, Round: 2}:  false,
+		{Sequence: 43, Round: 3}:  false,
+		{Sequence: 43, Round: 4}:  false,
+		{Sequence: 43, Round: 5}:  false,
+		{Sequence: 43, Round: 6}:  false,
+		{Sequence: 43, Round: 7}:  false,
+		{Sequence: 43, Round: 8}:  false,
+		{Sequence: 43, Round: 9}:  false,
+		{Sequence: 43, Round: 10}: false,
+		{Sequence: 43, Round: 11}: false,
+		{Sequence: 43, Round: 12}: false,
+		{Sequence: 43, Round: 13}: false,
+		{Sequence: 43, Round: 14}: false,
+		{Sequence: 49, Round: 0}:  false,
+		{Sequence: 49, Round: 1}:  false,
+		{Sequence: 49, Round: 2}:  false,
+		{Sequence: 49, Round: 3}:  false,
+		{Sequence: 49, Round: 4}:  false,
+		{Sequence: 49, Round: 5}:  false,
+		{Sequence: 49, Round: 6}:  false,
+		{Sequence: 49, Round: 7}:  false,
+		{Sequence: 49, Round: 8}:  false,
+		{Sequence: 49, Round: 9}:  false,
+		{Sequence: 49, Round: 10}: false,
+		{Sequence: 49, Round: 11}: false,
+		{Sequence: 49, Round: 12}: false,
+		{Sequence: 49, Round: 13}: false,
+		{Sequence: 49, Round: 14}: false,
+		{Sequence: 70, Round: 0}:  false,
+		{Sequence: 70, Round: 1}:  false,
+		{Sequence: 70, Round: 2}:  false,
+		{Sequence: 70, Round: 3}:  false,
+		{Sequence: 70, Round: 4}:  false,
+		{Sequence: 70, Round: 5}:  false,
+		{Sequence: 70, Round: 6}:  false,
+		{Sequence: 70, Round: 7}:  false,
+		{Sequence: 70, Round: 8}:  false,
+		{Sequence: 70, Round: 9}:  false,
+		{Sequence: 70, Round: 10}: false,
+		{Sequence: 70, Round: 11}: false,
+		{Sequence: 70, Round: 12}: false,
+		{Sequence: 70, Round: 13}: false,
+		{Sequence: 70, Round: 14}: false,
+		{Sequence: 71, Round: 0}:  false,
+		{Sequence: 71, Round: 1}:  false,
+		{Sequence: 71, Round: 2}:  false,
+		{Sequence: 71, Round: 3}:  false,
+		{Sequence: 71, Round: 4}:  false,
+		{Sequence: 71, Round: 5}:  false,
+		{Sequence: 71, Round: 6}:  false,
+		{Sequence: 71, Round: 7}:  false,
+		{Sequence: 71, Round: 8}:  false,
+		{Sequence: 71, Round: 9}:  false,
+		{Sequence: 71, Round: 10}: false,
+		{Sequence: 71, Round: 11}: false,
+		{Sequence: 71, Round: 12}: false,
+		{Sequence: 71, Round: 13}: false,
+		{Sequence: 71, Round: 14}: false,
+		{Sequence: 77, Round: 0}:  false,
+		{Sequence: 77, Round: 1}:  false,
+		{Sequence: 77, Round: 2}:  false,
+		{Sequence: 77, Round: 3}:  false,
+		{Sequence: 77, Round: 4}:  false,
+		{Sequence: 77, Round: 5}:  false,
+		{Sequence: 77, Round: 6}:  false,
+		{Sequence: 77, Round: 7}:  false,
+		{Sequence: 77, Round: 8}:  false,
+		{Sequence: 77, Round: 9}:  false,
+		{Sequence: 77, Round: 10}: false,
+		{Sequence: 77, Round: 11}: false,
+		{Sequence: 77, Round: 12}: false,
+		{Sequence: 77, Round: 13}: false,
+		{Sequence: 77, Round: 14}: false,
+		{Sequence: 78, Round: 0}:  false,
+		{Sequence: 78, Round: 1}:  false,
+		{Sequence: 78, Round: 2}:  false,
+		{Sequence: 78, Round: 3}:  false,
+		{Sequence: 78, Round: 4}:  false,
+		{Sequence: 78, Round: 5}:  false,
+		{Sequence: 78, Round: 6}:  false,
+		{Sequence: 78, Round: 7}:  false,
+		{Sequence: 78, Round: 8}:  false,
+		{Sequence: 78, Round: 9}:  false,
+		{Sequence: 78, Round: 10}: false,
+		{Sequence: 78, Round: 11}: false,
+		{Sequence: 78, Round: 12}: false,
+		{Sequence: 78, Round: 13}: false,
+		{Sequence: 78, Round: 14}: false,
+		{Sequence: 79, Round: 0}:  false,
+		{Sequence: 79, Round: 1}:  false,
+		{Sequence: 79, Round: 2}:  false,
+		{Sequence: 79, Round: 3}:  false,
+		{Sequence: 79, Round: 4}:  false,
+		{Sequence: 79, Round: 5}:  false,
+		{Sequence: 79, Round: 6}:  false,
+		{Sequence: 79, Round: 7}:  false,
+		{Sequence: 79, Round: 8}:  false,
+		{Sequence: 79, Round: 9}:  false,
+		{Sequence: 79, Round: 10}: false,
+		{Sequence: 79, Round: 11}: false,
+		{Sequence: 79, Round: 12}: false,
+		{Sequence: 79, Round: 13}: false,
+		{Sequence: 79, Round: 14}: false,
+		{Sequence: 82, Round: 0}:  false,
+		{Sequence: 82, Round: 1}:  false,
+		{Sequence: 82, Round: 2}:  false,
+		{Sequence: 82, Round: 3}:  false,
+		{Sequence: 82, Round: 4}:  false,
+		{Sequence: 82, Round: 5}:  false,
+		{Sequence: 82, Round: 6}:  false,
+		{Sequence: 82, Round: 7}:  false,
+		{Sequence: 82, Round: 8}:  false,
+		{Sequence: 82, Round: 9}:  false,
+		{Sequence: 82, Round: 10}: false,
+		{Sequence: 82, Round: 11}: false,
+		{Sequence: 82, Round: 12}: false,
+		{Sequence: 82, Round: 13}: false,
+		{Sequence: 82, Round: 14}: false,
+		{Sequence: 83, Round: 0}:  false,
+		{Sequence: 83, Round: 1}:  false,
+		{Sequence: 83, Round: 2}:  false,
+		{Sequence: 83, Round: 3}:  false,
+		{Sequence: 83, Round: 4}:  false,
+		{Sequence: 83, Round: 5}:  false,
+		{Sequence: 83, Round: 6}:  false,
+		{Sequence: 83, Round: 7}:  false,
+		{Sequence: 83, Round: 8}:  false,
+		{Sequence: 83, Round: 9}:  false,
+		{Sequence: 83, Round: 10}: false,
+		{Sequence: 83, Round: 11}: false,
+		{Sequence: 83, Round: 12}: false,
+		{Sequence: 83, Round: 13}: false,
+		{Sequence: 83, Round: 14}: false,
+		{Sequence: 85, Round: 14}: false,
+		{Sequence: 86, Round: 13}: false,
+		{Sequence: 88, Round: 11}: false,
+		{Sequence: 89, Round: 0}:  false,
+		{Sequence: 89, Round: 1}:  false,
+		{Sequence: 89, Round: 2}:  false,
+		{Sequence: 89, Round: 3}:  false,
+		{Sequence: 89, Round: 4}:  false,
+		{Sequence: 89, Round: 5}:  false,
+		{Sequence: 89, Round: 6}:  false,
+		{Sequence: 89, Round: 7}:  false,
+		{Sequence: 89, Round: 8}:  false,
+		{Sequence: 89, Round: 9}:  false,
+		{Sequence: 91, Round: 8}:  false,
+		{Sequence: 92, Round: 0}:  false,
+		{Sequence: 92, Round: 1}:  false,
+		{Sequence: 92, Round: 2}:  false,
+		{Sequence: 92, Round: 3}:  false,
+		{Sequence: 92, Round: 4}:  false,
+		{Sequence: 92, Round: 5}:  false,
+		{Sequence: 92, Round: 6}:  false,
+		{Sequence: 92, Round: 7}:  false,
+		{Sequence: 93, Round: 0}:  false,
+		{Sequence: 93, Round: 1}:  false,
+		{Sequence: 93, Round: 2}:  false,
+		{Sequence: 93, Round: 3}:  false,
+		{Sequence: 93, Round: 4}:  false,
+		{Sequence: 93, Round: 5}:  false,
+		{Sequence: 94, Round: 6}:  false,
+		{Sequence: 94, Round: 7}:  false,
+		{Sequence: 94, Round: 8}:  false,
+		{Sequence: 94, Round: 9}:  false,
+		{Sequence: 94, Round: 10}: false,
+		{Sequence: 94, Round: 11}: false,
+		{Sequence: 94, Round: 12}: false,
+		{Sequence: 94, Round: 13}: false,
+		{Sequence: 94, Round: 14}: false,
+		{Sequence: 96, Round: 3}:  false,
+	}
 )
+
+type Pair struct {
+	Sequence int64
+	Round    int64
+}
 
 func getTestCouncil() []common.Address {
 	return []common.Address{
@@ -272,17 +669,14 @@ func getGovernance(dbm database.DBManager) *governance.Governance {
 	return governance.NewGovernance(config, dbm)
 }
 
-// Test_GossipSubPeerTargets checks if the gossiping targets are same as council members
-func Test_GossipSubPeerTargets(t *testing.T) {
+func Benchmark_getTargetReceivers(b *testing.B) {
 	// Create ValidatorSet
 	council := getTestCouncil()
 	rewards := getTestRewards()
 
 	// get testing node's address
 	key, _ := crypto.HexToECDSA(PRIVKEY) // This key is to be provided to create backend
-
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
-
 	valSet := validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 
 	recents, _ := lru.NewARC(inmemorySnapshots)
@@ -310,42 +704,139 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 	}
 	backend.core = istanbulCore.New(backend, backend.config)
 
+	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(0)})
+	valSet.SetBlockNum(uint64(1))
+	valSet.CalcProposer(valSet.GetProposer().Address(), uint64(1))
+	hex := fmt.Sprintf("%015d000000000000000000000000000000000000000000000000000", 1)
+	prevHash := common.HexToHash(hex)
+
+	for i := 0; i < b.N; i++ {
+		_ = backend.getTargetReceivers(prevHash, valSet)
+	}
+}
+
+// Test_GossipSubPeerTargets checks if the gossiping targets are same as council members
+func Test_GossipSubPeerTargets(t *testing.T) {
+	// Create ValidatorSet
+	council := getTestCouncil()
+	rewards := getTestRewards()
+
+	// get testing node's address
+	key, _ := crypto.HexToECDSA(PRIVKEY) // This key is to be provided to create backend
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	valSet := validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
+
+	recents, _ := lru.NewARC(inmemorySnapshots)
+	recentMessages, _ := lru.NewARC(inmemoryPeers)
+	knownMessages, _ := lru.NewARC(inmemoryMessages)
+	gov := getGovernance(dbm)
+	backend := &backend{
+		config:            istanbul.DefaultConfig,
+		istanbulEventMux:  new(event.TypeMux),
+		privateKey:        key,
+		address:           crypto.PubkeyToAddress(key.PublicKey),
+		logger:            logger.NewWith(),
+		db:                dbm,
+		commitCh:          make(chan *types.Result, 1),
+		recents:           recents,
+		candidates:        make(map[common.Address]bool),
+		coreStarted:       false,
+		recentMessages:    recentMessages,
+		knownMessages:     knownMessages,
+		rewardbase:        rewards[0],
+		governance:        gov,
+		GovernanceCache:   newGovernanceCache(),
+		nodetype:          common.CONSENSUSNODE,
+		rewardDistributor: reward.NewRewardDistributor(gov),
+	}
+	backend.core = istanbulCore.New(backend, backend.config)
+
+	// Test for blocks from 0 to maxBlockNum
 	for i := int64(0); i < maxBlockNum; i++ {
-		backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(i), Round: big.NewInt(0)})
-		valSet.SetBlockNum(uint64(i))
-		valSet.CalcProposer(valSet.GetProposer().Address(), 0)
-		targets := backend.GossipSubPeer(common.BigToHash(big.NewInt(i)), valSet, nil)
+		// Test for round 0 to round 14
+		for round := int64(0); round < 15; round++ {
+			backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(i), Round: big.NewInt(round)})
+			valSet.SetBlockNum(uint64(i))
+			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round))
 
-		// Test if the testing node is in the committee in specified blocks and target node list is returned
-		if (checkInCommitteeBlocks(i) && targets == nil) || (!checkInCommitteeBlocks(i) && targets != nil) {
-			t.Errorf("Wrong committee information. Block: %d, Nil targets: %v\n", i, targets == nil)
-		}
+			// Use block number as prevHash. In SubList() only left 15 bytes are being used.
+			hex := fmt.Sprintf("%015d000000000000000000000000000000000000000000000000000", i)
+			prevHash := common.HexToHash(hex)
 
-		if checkInCommitteeBlocks(i) {
-			// targets don't have testing node's address because a target is a receiving node
-			if len(targets) == len(council)-1 {
-				for _, x := range council {
-					// council[0] is testing node and it should be removed from targets
-					if x == council[0] {
-						continue
-					}
+			// committees[0]: current committee
+			// committees[1]: next committee
+			committees := make([][]istanbul.Validator, 2)
 
-					if _, ok := targets[x]; !ok {
-						t.Errorf("Gossipping target doesn't match")
+			// Getting the current round's committee
+			viewCurrent := backend.currentView.Load().(*istanbul.View)
+			committees[0] = valSet.SubList(prevHash, viewCurrent)
+
+			// Getting the next round's committee
+			viewCurrent.Round = viewCurrent.Round.Add(viewCurrent.Round, common.Big1)
+			backend.currentView.Store(viewCurrent)
+
+			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round+1))
+			committees[1] = valSet.SubList(prevHash, viewCurrent)
+
+			// Reduce round by 1 to set round to the current round before calling GossipSubPeer
+			viewCurrent.Round = viewCurrent.Round.Sub(viewCurrent.Round, common.Big1)
+			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round))
+			backend.currentView.Store(viewCurrent)
+
+			// Receiving the receiver list of a message
+			targets := backend.GossipSubPeer(prevHash, valSet, nil)
+
+			// Check if the testing node is in a committee
+			isInSubList := backend.checkInSubList(prevHash, valSet)
+			isInCommitteeBlocks := checkInCommitteeBlocks(i, round)
+
+			// Check if the result of checkInSubList is same as expected. It is to detect an unexpected change in SubList logic
+			if isInSubList != isInCommitteeBlocks {
+				t.Errorf("Difference in expected data and calculated one. Changed committee selection? HARD FORK may happen!! Sequence: %d, Round: %d", i, round)
+			} else {
+				if isInSubList == false {
+					continue
+				}
+			}
+
+			// number of message receivers have to be smaller than or equal to the number of the current committee and the next committee
+			if len(targets) > len(committees[0])+len(committees[1]) {
+				t.Errorf("Target has too many validators. targets: %d, sum of committees: %d", len(targets), len(committees[0])+len(committees[1]))
+			}
+
+			// Check all nodes in the current and the next round are included in the target list
+			for n := 0; n < len(committees); n++ {
+				for _, x := range committees[n] {
+					if _, ok := targets[x.Address()]; !ok && x.Address() != backend.Address() {
+						t.Errorf("Block: %d, Round: %d, Committee member %v not found in targets", i, round, x.Address().String())
+					} else {
+						// Mark the target is in the current or in the next committee
+						targets[x.Address()] = false
 					}
 				}
-			} else {
-				t.Errorf("Gossipping target doesn't match")
 			}
+
+			// Check if a validator not in the current/next committee is included in target list
+			for k, v := range targets {
+				if v == true {
+					t.Errorf("Block: %d, Round: %d, Validator not in committees included %v", i, round, k.String())
+				}
+			}
+		}
+	}
+	// Check if the testing node is in all committees that it is supposed to be
+	for k, v := range committeeBlocks {
+		if !v {
+			fmt.Printf("The node is missing in committee that it should be included in. Sequence %d, Round %d\n", k.Sequence, k.Round)
 		}
 	}
 }
 
-func checkInCommitteeBlocks(num int64) bool {
-	for i := range committeeBlocks {
-		if num == int64(i) {
-			return true
-		}
+func checkInCommitteeBlocks(seq int64, round int64) bool {
+	v := Pair{seq, round}
+	if _, ok := committeeBlocks[v]; ok {
+		committeeBlocks[v] = true
+		return true
 	}
 	return false
 }

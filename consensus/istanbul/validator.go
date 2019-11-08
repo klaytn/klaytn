@@ -100,6 +100,8 @@ type ValidatorSet interface {
 	Proposers() []Validator // TODO-Klaytn-Issue1166 For debugging
 
 	TotalVotingPower() uint64
+
+	Selector(valSet ValidatorSet, lastProposer common.Address, round uint64) Validator
 }
 
 // ----------------------------------------------------------------------------

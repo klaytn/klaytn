@@ -228,13 +228,29 @@ func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.Validato
 }
 
 // getTargetReceivers returns a map of nodes which need to receive a message
-func (sb *backend) getTargetReceivers(valSet istanbul.ValidatorSet) map[common.Address]bool {
+func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
 	targets := make(map[common.Address]bool)
 
-	for _, val := range valSet.List() {
-		if val.Address() != sb.Address() {
-			targets[val.Address()] = true
+	cv, ok := sb.currentView.Load().(*istanbul.View)
+	if !ok {
+		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
+		return nil
+	}
+	view := &istanbul.View{
+		Round:    big.NewInt(cv.Round.Int64()),
+		Sequence: big.NewInt(cv.Sequence.Int64()),
+	}
+
+	proposer := valSet.GetProposer()
+	for i := 0; i < 2; i++ {
+		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
+		for _, val := range committee {
+			if val.Address() != sb.Address() {
+				targets[val.Address()] = true
+			}
 		}
+		view.Round = view.Round.Add(view.Round, common.Big1)
+		proposer = valSet.Selector(valSet, common.Address{}, view.Round.Uint64())
 	}
 	return targets
 }
@@ -248,7 +264,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
-	targets := sb.getTargetReceivers(valSet)
+	targets := sb.getTargetReceivers(prevHash, valSet)
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
