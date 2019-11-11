@@ -206,7 +206,7 @@ commands:
           when: on_fail
 
 jobs:
-  build:
+  build-all:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -291,8 +291,8 @@ jobs:
           command: |
             set -e
             export GOPATH=/go
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
-            make cover
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata   
+            make cover         
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
             cp coverage_report.html /tmp/coverage_reports/
@@ -320,7 +320,7 @@ jobs:
 
   packaging-linux:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -330,7 +330,7 @@ jobs:
 
   packaging-linux-2:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - attach_workspace:
@@ -339,7 +339,7 @@ jobs:
 
   packaging-linux-baobab:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -351,7 +351,7 @@ jobs:
 
   packaging-darwin:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -362,7 +362,7 @@ jobs:
 
   packaging-darwin-baobab:
     machine: true
-    resource_class: large
+    #resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
@@ -417,7 +417,7 @@ workflows:
   version: 2
   build_n_packaging:
     jobs:
-      - build: 
+      - build-all: 
           filters: *filter-version-not-release
       - test-datasync: 
           filters: *filter-version-not-release
@@ -425,24 +425,17 @@ workflows:
           filters: *filter-version-not-release
       - test-tests: 
           filters: *filter-version-not-release
-      - test-others: 
-         filters: *filter-version-not-release
-      - tagger-verify:
-         filters:
-            tags:
-              only: /^v[0-9]+\.[0-9]+\.[0-9]+/
-            branches:
-              ignore: /.*/
+      # - test-others: 
+        #  filters: *filter-version-not-release
 
       - pass-tests: 
           requires: 
-            - build
+            - build-all
             - test-datasync
             - test-networks
             - test-tests
-            - test-others
+            #- test-others
             - tag-verify
-            - tagger-verify
           filters: *filter-version-not-release
       
       - tag-verify:

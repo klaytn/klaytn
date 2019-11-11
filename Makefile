@@ -4,7 +4,7 @@
 
 GOBIN = $(shell pwd)/build/bin
 GO ?= latest
-BUILD_PARAM?=install
+BUILD_PARAM?=install 
 
 OBJECTS=kcn kpn ken kscn kspn ksen kbn kgen homi
 RPM_OBJECTS=$(foreach wrd,$(OBJECTS),rpm-$(wrd))
@@ -123,3 +123,4 @@ devtools:
 	@type "npm" 2> /dev/null || echo 'Please install node.js and npm'
 	@type "solc" 2> /dev/null || echo 'Please install solc'
 	@type "protoc" 2> /dev/null || echo 'Please install protoc'
+	
