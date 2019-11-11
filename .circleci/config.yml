@@ -205,7 +205,7 @@ commands:
           when: on_fail
 
 jobs:
-  build-all:
+  build:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
@@ -416,7 +416,7 @@ workflows:
   version: 2
   build_n_packaging:
     jobs:
-      - build-all: 
+      - build: 
           filters: *filter-version-not-release
       - test-datasync: 
           filters: *filter-version-not-release
@@ -435,7 +435,7 @@ workflows:
 
       - pass-tests: 
           requires: 
-            - build-all
+            - build
             - test-datasync
             - test-networks
             - test-tests
