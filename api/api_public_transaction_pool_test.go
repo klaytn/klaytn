@@ -122,39 +122,39 @@ func TestTxTypeSupport(t *testing.T) {
 		for i := 0; i < internalType.NumField(); i++ {
 			switch internalType.Field(i).Name {
 			case "AccountNonce":
-				args.Nonce = &testNonce
+				args.AccountNonce = &testNonce
 			case "Amount":
-				args.Value = testValue
+				args.Amount = testValue
 			case "Recipient":
-				args.To = &testTo
+				args.Recipient = &testTo
 			case "FeePayer":
 				args.FeePayer = &testFeePayer
 			case "FeeRatio":
 				args.FeeRatio = &testFeeRatio
 			case "GasLimit":
-				args.Gas = &testGas
+				args.GasLimit = &testGas
 			case "Price":
-				args.GasPrice = testGasPrice
+				args.Price = testGasPrice
 			case "Payload":
-				args.Data = &testData
+				args.Payload = &testData
 			case "CodeFormat":
 				args.CodeFormat = &testCodeFormat
 			case "HumanReadable":
 				args.HumanReadable = &testHumanReadable
 			case "Key":
-				args.AccountKey = &testAccountKey
+				args.Key = &testAccountKey
 			}
 		}
 		if txType.IsFeeDelegatedTransaction() {
-			args.Signatures = testSig
+			args.TxSignatures = testSig
 		}
 
 		testTxTypeSupport_normalCase(t, api, ctx, args)
-		// TODO-Klaytn-TxType - more test cases will be added soon
+
 	}
 }
 
-// testTxTypeSupport_normalCase test APIs with proper SendTxArgs values.
+// testTxTypeSupport_normalCase tests APIs with proper SendTxArgs values.
 func testTxTypeSupport_normalCase(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, args SendTxArgs) {
 	var err error
 	// TODO-Klaytn-TxType - more test cases will be added soon
