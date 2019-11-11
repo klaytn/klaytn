@@ -21,7 +21,6 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -78,7 +77,6 @@ func (s *PublicKlayAPI) Syncing() (interface{}, error) {
 
 // EncodeAccountKey gets an account key of JSON format and returns RLP encoded bytes of the key.
 func (s *PublicKlayAPI) EncodeAccountKey(accKey accountkey.AccountKeyJSON) (hexutil.Bytes, error) {
-	buffer := new(bytes.Buffer)
 	if accKey.KeyType == nil {
 		return nil, errors.New("key type is not specified")
 	}
@@ -91,14 +89,15 @@ func (s *PublicKlayAPI) EncodeAccountKey(accKey accountkey.AccountKeyJSON) (hexu
 	}
 	// Invalidate zero values of threshold and weight to prevent users' mistake
 	// JSON unmarshalling sets zero for those values if they are not exist on JSON input
-	if err := checkAccountKeyZeroValues(key); err != nil {
+	if err := checkAccountKeyZeroValues(key, false); err != nil {
 		return nil, err
 	}
 	accKeySerializer := accountkey.NewAccountKeySerializerWithAccountKey(key)
-	if err := accKeySerializer.EncodeRLP(buffer); err != nil {
+	encodedKey, err := rlp.EncodeToBytes(accKeySerializer)
+	if err != nil {
 		return nil, errors.New("the key probably contains an invalid public key: " + err.Error())
 	}
-	return (hexutil.Bytes)(buffer.Bytes()), nil
+	return (hexutil.Bytes)(encodedKey), nil
 }
 
 // DecodeAccountKey gets an RLP encoded bytes of an account key and returns the decoded account key.
@@ -111,7 +110,7 @@ func (s *PublicKlayAPI) DecodeAccountKey(encodedAccKey hexutil.Bytes) (*accountk
 }
 
 // checkAccountKeyZeroValues returns errors if the input account key contains zero values of threshold or weight.
-func checkAccountKeyZeroValues(key accountkey.AccountKey) error {
+func checkAccountKeyZeroValues(key accountkey.AccountKey, isNested bool) error {
 	switch key.Type() {
 	case accountkey.AccountKeyTypeWeightedMultiSig:
 		multiSigKey, _ := key.(*accountkey.AccountKeyWeightedMultiSig)
@@ -124,9 +123,12 @@ func checkAccountKeyZeroValues(key accountkey.AccountKey) error {
 			}
 		}
 	case accountkey.AccountKeyTypeRoleBased:
+		if isNested {
+			return errors.New("roleBasedKey cannot contains a roleBasedKey as a role key")
+		}
 		roleBasedKey, _ := key.(*accountkey.AccountKeyRoleBased)
 		for _, roleKey := range *roleBasedKey {
-			if err := checkAccountKeyZeroValues(roleKey); err != nil {
+			if err := checkAccountKeyZeroValues(roleKey, true); err != nil {
 				return err
 			}
 		}
