@@ -25,7 +25,7 @@ executors:
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/circleci-rpmbuild:1.13.3-4
+      - image: klaytn/circleci-rpmbuild:1.13.3-5
   default:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
@@ -59,7 +59,8 @@ commands:
     steps:
       - run:
           name: "build new"
-          command: export GOPATH=~/go ; make -j 4 << parameters.os-network >>
+          #command: export GOPATH=~/go ; make -j 4 << parameters.os-network >>
+          command: export GOPATH=~/go ; make << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
     parameters:
@@ -271,7 +272,7 @@ jobs:
     executor: default
     steps:
       - run: 
-          name: "tests Success!"
+          name: "tests pass!"
           command: echo "tests pass!"
   tagger-verify:
     executor: default
@@ -290,8 +291,8 @@ jobs:
           command: |
             set -e
             export GOPATH=/go
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata   
-            make cover         
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
+            make cover
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
             cp coverage_report.html /tmp/coverage_reports/
@@ -471,7 +472,7 @@ workflows:
             - packaging-darwin-baobab
           filters: 
             tags:
-              only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc.*/
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*/
             branches:
               ignore: /.*/
 

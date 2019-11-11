@@ -1,0 +1,7 @@
+FROM centos:centos7
+
+RUN curl https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz | tar xzvf - -C /usr/local
+RUN yum install -y make rpm-build git createrepo awscli gcc
+ENV PATH=$PATH:/usr/local/go/bin
+
+CMD ["/bin/sh"]
