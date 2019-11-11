@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"math/big"
+	"reflect"
 )
 
 var (
@@ -44,6 +45,52 @@ var (
 	errTxArgNilGasPrice      = errors.New("gas price is not set")
 	errNotForFeeDelegationTx = errors.New("fee-delegation type transactions are not allowed to use this API")
 )
+
+// isTxField checks whether the string is a field name of the specific txType.
+// isTxField[txType][txFieldName] has true/false.
+var isTxField = func() map[types.TxType]map[string]bool {
+	var mapOfFieldMap = map[types.TxType]map[string]bool{}
+	var internalDataTypes = map[types.TxType]interface{}{
+		types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
+		types.TxTypeValueTransfer:                               types.TxInternalDataValueTransfer{},
+		types.TxTypeFeeDelegatedValueTransfer:                   types.TxInternalDataFeeDelegatedValueTransfer{},
+		types.TxTypeFeeDelegatedValueTransferWithRatio:          types.TxInternalDataFeeDelegatedValueTransferWithRatio{},
+		types.TxTypeValueTransferMemo:                           types.TxInternalDataValueTransferMemo{},
+		types.TxTypeFeeDelegatedValueTransferMemo:               types.TxInternalDataFeeDelegatedValueTransferMemo{},
+		types.TxTypeFeeDelegatedValueTransferMemoWithRatio:      types.TxInternalDataFeeDelegatedValueTransferMemoWithRatio{},
+		types.TxTypeAccountUpdate:                               types.TxInternalDataAccountUpdate{},
+		types.TxTypeFeeDelegatedAccountUpdate:                   types.TxInternalDataFeeDelegatedAccountUpdate{},
+		types.TxTypeFeeDelegatedAccountUpdateWithRatio:          types.TxInternalDataFeeDelegatedAccountUpdateWithRatio{},
+		types.TxTypeSmartContractDeploy:                         types.TxInternalDataSmartContractDeploy{},
+		types.TxTypeFeeDelegatedSmartContractDeploy:             types.TxInternalDataFeeDelegatedSmartContractDeploy{},
+		types.TxTypeFeeDelegatedSmartContractDeployWithRatio:    types.TxInternalDataFeeDelegatedSmartContractDeployWithRatio{},
+		types.TxTypeSmartContractExecution:                      types.TxInternalDataSmartContractExecution{},
+		types.TxTypeFeeDelegatedSmartContractExecution:          types.TxInternalDataFeeDelegatedSmartContractExecution{},
+		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio: types.TxInternalDataFeeDelegatedSmartContractExecutionWithRatio{},
+		types.TxTypeCancel:                                      types.TxInternalDataCancel{},
+		types.TxTypeFeeDelegatedCancel:                          types.TxInternalDataFeeDelegatedCancel{},
+		types.TxTypeFeeDelegatedCancelWithRatio:                 types.TxInternalDataFeeDelegatedCancelWithRatio{},
+	}
+
+	// generate field maps for each tx type
+	for txType, internalData := range internalDataTypes {
+		fieldMap := map[string]bool{}
+		internalDataType := reflect.TypeOf(internalData)
+
+		// key of filedMap is tx field name and value of fieldMap means the existence of field name
+		for i := 0; i < internalDataType.NumField(); i++ {
+			fieldMap[internalDataType.Field(i).Name] = true
+		}
+
+		// additional field of SendTxArgs to support various tx types
+		fieldMap["TypeInt"] = true
+		// additional field of SendTxArgs to support a legacy tx field (skip checking)
+		fieldMap["Data"] = false
+
+		mapOfFieldMap[txType] = fieldMap
+	}
+	return mapOfFieldMap
+}()
 
 type NewTxArgs interface {
 	setDefaults(context.Context, Backend) error
@@ -108,12 +155,26 @@ func (args *SendTxArgs) checkArgs() error {
 		return errTxArgNilTxType
 	}
 
-	// TODO-Klaytn-TxType Arguments validation will be implemented for each tx type
-	//switch *args.TypeInt {
-	//case types.TxTypeLegacyTransaction:
-	//case types.TxTypeValueTransfer:
-	//case types.TxTypeFeeDelegatedValueTransfer:
-	//}
+	argsType := reflect.TypeOf(*args)
+	argsValue := reflect.ValueOf(*args)
+
+	for i := 0; i < argsType.NumField(); i++ {
+		// Skip From since it is an essential field and a non-pointer value
+		// Skip TxSignatures since the value is not considered by all APIs
+		if argsType.Field(i).Name == "From" || argsType.Field(i).Name == "TxSignatures" {
+			continue
+		}
+
+		// An args field doesn't have a value but the field name exist on the tx type
+		if argsValue.Field(i).IsNil() && isTxField[*args.TypeInt][argsType.Field(i).Name] {
+			return errors.New((string)(argsType.Field(i).Tag) + " is required for " + (*args.TypeInt).String())
+		}
+
+		// An args field has a value but the field name doesn't exist on the tx type
+		if !argsValue.Field(i).IsNil() && !isTxField[*args.TypeInt][argsType.Field(i).Name] {
+			return errors.New((string)(argsType.Field(i).Tag) + " is not a field of " + (*args.TypeInt).String())
+		}
+	}
 
 	return nil
 }
