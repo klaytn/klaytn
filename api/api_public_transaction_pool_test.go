@@ -191,6 +191,11 @@ func testTxTypeSupport_setDefault(t *testing.T, api PublicTransactionPoolAPI, ct
 
 // testTxTypeSupport_noFieldValues tests error handling for not assigned field values.
 func testTxTypeSupport_noFieldValues(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, oriArgs SendTxArgs) {
+	// fields of legacy tx will not be checked in the checkArgs function
+	if *oriArgs.TypeInt == types.TxTypeLegacyTransaction {
+		return
+	}
+
 	args := oriArgs
 	if args.Recipient != nil {
 		args.Recipient = nil
@@ -256,8 +261,13 @@ func testTxTypeSupport_noFieldValues(t *testing.T, api PublicTransactionPoolAPI,
 	}
 }
 
-// testTxTypeSupport_noFieldValues tests error handling for not assigned field values.
+// testTxTypeSupport_unnecessaryFieldValues tests error handling for not assigned field values.
 func testTxTypeSupport_unnecessaryFieldValues(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, oriArgs SendTxArgs) {
+	// fields of legacy tx will not be checked in the checkArgs function
+	if *oriArgs.TypeInt == types.TxTypeLegacyTransaction {
+		return
+	}
+
 	args := oriArgs
 	if args.Recipient == nil {
 		args.Recipient = &testTo

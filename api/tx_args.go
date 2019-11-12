@@ -51,7 +51,8 @@ var (
 var isTxField = func() map[types.TxType]map[string]bool {
 	var mapOfFieldMap = map[types.TxType]map[string]bool{}
 	var internalDataTypes = map[types.TxType]interface{}{
-		types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
+		// since legacy tx has optional fields, some fields can be omitted
+		//types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
 		types.TxTypeValueTransfer:                               types.TxInternalDataValueTransfer{},
 		types.TxTypeFeeDelegatedValueTransfer:                   types.TxInternalDataFeeDelegatedValueTransfer{},
 		types.TxTypeFeeDelegatedValueTransferWithRatio:          types.TxInternalDataFeeDelegatedValueTransferWithRatio{},
@@ -153,6 +154,10 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 func (args *SendTxArgs) checkArgs() error {
 	if args.TypeInt == nil {
 		return errTxArgNilTxType
+	}
+	// Skip legacy transaction type since it has optional fields
+	if *args.TypeInt == types.TxTypeLegacyTransaction {
+		return nil
 	}
 
 	argsType := reflect.TypeOf(*args)
