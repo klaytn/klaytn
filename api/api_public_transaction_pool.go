@@ -321,7 +321,7 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
-	if args.Nonce == nil {
+	if args.AccountNonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
 		s.nonceLock.LockAddr(args.From)
@@ -343,17 +343,17 @@ func (s *PublicTransactionPoolAPI) SendTransactionAsFeePayer(ctx context.Context
 	if args.TypeInt == nil {
 		return common.Hash{}, errTxArgNilTxType
 	}
-	if args.Nonce == nil {
+	if args.AccountNonce == nil {
 		return common.Hash{}, errTxArgNilNonce
 	}
-	if args.Gas == nil {
+	if args.GasLimit == nil {
 		return common.Hash{}, errTxArgNilGas
 	}
-	if args.GasPrice == nil {
+	if args.Price == nil {
 		return common.Hash{}, errTxArgNilGasPrice
 	}
 
-	if args.Signatures == nil {
+	if args.TxSignatures == nil {
 		return common.Hash{}, errTxArgNilSenderSig
 	}
 
@@ -443,8 +443,8 @@ func (s *PublicTransactionPoolAPI) SignTransactionAsFeePayer(ctx context.Context
 		return nil, err
 	}
 	// Don't return errors for nil signature allowing the fee payer to sign a tx earlier than the sender.
-	if args.Signatures != nil {
-		tx.SetSignature(args.Signatures.ToTxSignatures())
+	if args.TxSignatures != nil {
+		tx.SetSignature(args.TxSignatures.ToTxSignatures())
 	}
 	feePayer, err := tx.FeePayer()
 	if err != nil {
@@ -483,7 +483,7 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
 func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
-	if sendArgs.Nonce == nil {
+	if sendArgs.AccountNonce == nil {
 		return common.Hash{}, fmt.Errorf("missing transaction nonce in transaction spec")
 	}
 	if err := sendArgs.setDefaults(ctx, s.b); err != nil {
@@ -505,10 +505,10 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 		if pFrom, err := types.Sender(signer, p); err == nil && pFrom == sendArgs.From && signer.Hash(p) == wantSigHash {
 			// Match. Re-sign and send the transaction.
 			if gasPrice != nil && (*big.Int)(gasPrice).Sign() != 0 {
-				sendArgs.GasPrice = gasPrice
+				sendArgs.Price = gasPrice
 			}
 			if gasLimit != nil && *gasLimit != 0 {
-				sendArgs.Gas = gasLimit
+				sendArgs.GasLimit = gasLimit
 			}
 			tx, err := sendArgs.toTransaction()
 			if err != nil {

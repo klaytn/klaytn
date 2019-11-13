@@ -122,42 +122,43 @@ func TestTxTypeSupport(t *testing.T) {
 		for i := 0; i < internalType.NumField(); i++ {
 			switch internalType.Field(i).Name {
 			case "AccountNonce":
-				args.Nonce = &testNonce
+				args.AccountNonce = &testNonce
 			case "Amount":
-				args.Value = testValue
+				args.Amount = testValue
 			case "Recipient":
-				args.To = &testTo
+				args.Recipient = &testTo
 			case "FeePayer":
 				args.FeePayer = &testFeePayer
 			case "FeeRatio":
 				args.FeeRatio = &testFeeRatio
 			case "GasLimit":
-				args.Gas = &testGas
+				args.GasLimit = &testGas
 			case "Price":
-				args.GasPrice = testGasPrice
+				args.Price = testGasPrice
 			case "Payload":
-				args.Data = &testData
+				args.Payload = &testData
 			case "CodeFormat":
 				args.CodeFormat = &testCodeFormat
 			case "HumanReadable":
 				args.HumanReadable = &testHumanReadable
 			case "Key":
-				args.AccountKey = &testAccountKey
+				args.Key = &testAccountKey
 			}
 		}
 		if txType.IsFeeDelegatedTransaction() {
-			args.Signatures = testSig
+			args.TxSignatures = testSig
 		}
 
 		testTxTypeSupport_normalCase(t, api, ctx, args)
-		// TODO-Klaytn-TxType - more test cases will be added soon
+		testTxTypeSupport_setDefault(t, api, ctx, args)
+		testTxTypeSupport_noFieldValues(t, api, ctx, args)
+		testTxTypeSupport_unnecessaryFieldValues(t, api, ctx, args)
 	}
 }
 
-// testTxTypeSupport_normalCase test APIs with proper SendTxArgs values.
+// testTxTypeSupport_normalCase tests APIs with proper SendTxArgs values.
 func testTxTypeSupport_normalCase(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, args SendTxArgs) {
 	var err error
-	// TODO-Klaytn-TxType - more test cases will be added soon
 
 	// test APIs for non-fee-delegation txs
 	if !args.TypeInt.IsFeeDelegatedTransaction() {
@@ -176,4 +177,158 @@ func testTxTypeSupport_normalCase(t *testing.T, api PublicTransactionPoolAPI, ct
 	// test for all txs
 	_, err = api.SignTransaction(ctx, args)
 	assert.Equal(t, nil, err)
+}
+
+// testTxTypeSupport_setDefault tests the setDefault function which auto-assign some values of tx.
+func testTxTypeSupport_setDefault(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, args SendTxArgs) {
+	args.AccountNonce = nil
+	args.GasLimit = nil
+	args.Price = nil
+
+	_, err := api.SignTransaction(ctx, args)
+	assert.Equal(t, nil, err)
+}
+
+// testTxTypeSupport_noFieldValues tests error handling for not assigned field values.
+func testTxTypeSupport_noFieldValues(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, oriArgs SendTxArgs) {
+	// fields of legacy tx will not be checked in the checkArgs function
+	if *oriArgs.TypeInt == types.TxTypeLegacyTransaction {
+		return
+	}
+
+	args := oriArgs
+	if args.Recipient != nil {
+		args.Recipient = nil
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"to\" is required for "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.Payload != nil {
+		args.Payload = nil
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"input\" is required for "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.Amount != nil {
+		args.Amount = nil
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"value\" is required for "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.CodeFormat != nil {
+		args.CodeFormat = nil
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"codeFormat\" is required for "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.HumanReadable != nil {
+		args.HumanReadable = nil
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"humanReadable\" is required for "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.Key != nil {
+		args.Key = nil
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"key\" is required for "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.FeePayer != nil {
+		args.FeePayer = nil
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"feePayer\" is required for "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.FeeRatio != nil {
+		args.FeeRatio = nil
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"feeRatio\" is required for "+(*args.TypeInt).String(), err.Error())
+	}
+}
+
+// testTxTypeSupport_unnecessaryFieldValues tests error handling for not assigned field values.
+func testTxTypeSupport_unnecessaryFieldValues(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, oriArgs SendTxArgs) {
+	// fields of legacy tx will not be checked in the checkArgs function
+	if *oriArgs.TypeInt == types.TxTypeLegacyTransaction {
+		return
+	}
+
+	args := oriArgs
+	if args.Recipient == nil {
+		args.Recipient = &testTo
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"to\" is not a field of "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.Payload == nil {
+		args.Payload = &testData
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"input\" is not a field of "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.Amount == nil {
+		args.Amount = testValue
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"value\" is not a field of "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.CodeFormat == nil {
+		args.CodeFormat = &testCodeFormat
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"codeFormat\" is not a field of "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.HumanReadable == nil {
+		args.HumanReadable = &testHumanReadable
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"humanReadable\" is not a field of "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.Key == nil {
+		args.Key = &testAccountKey
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"key\" is not a field of "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.FeePayer == nil {
+		args.FeePayer = &testFeePayer
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"feePayer\" is not a field of "+(*args.TypeInt).String(), err.Error())
+	}
+
+	args = oriArgs
+	if args.FeeRatio == nil {
+		args.FeeRatio = &testFeeRatio
+
+		_, err := api.SignTransaction(ctx, args)
+		assert.Equal(t, "json:\"feeRatio\" is not a field of "+(*args.TypeInt).String(), err.Error())
+	}
 }
