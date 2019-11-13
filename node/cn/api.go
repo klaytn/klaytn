@@ -272,19 +272,19 @@ func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(startNum uint64, endNum 
 
 	startBlock = api.cn.blockchain.GetBlockByNumber(startNum)
 	if startBlock == nil {
-		return nil, fmt.Errorf("start block %x not found", startNum)
+		return nil, fmt.Errorf("start block number %d not found", startNum)
 	}
 
 	if endNum == nil {
 		endBlock = startBlock
 		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
 		if startBlock == nil {
-			return nil, fmt.Errorf("block %x has no parent", endBlock.Number())
+			return nil, fmt.Errorf("block number %d has no parent", startNum)
 		}
 	} else {
 		endBlock = api.cn.blockchain.GetBlockByNumber(*endNum)
 		if endBlock == nil {
-			return nil, fmt.Errorf("end block %d not found", *endNum)
+			return nil, fmt.Errorf("end block number %d not found", *endNum)
 		}
 	}
 	return api.getModifiedAccounts(startBlock, endBlock)
@@ -306,7 +306,7 @@ func (api *PrivateDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, end
 		endBlock = startBlock
 		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
 		if startBlock == nil {
-			return nil, fmt.Errorf("block %x has no parent", endBlock.Number())
+			return nil, fmt.Errorf("block %x has no parent", startHash)
 		}
 	} else {
 		endBlock = api.cn.blockchain.GetBlockByHash(*endHash)
