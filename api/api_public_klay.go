@@ -22,7 +22,11 @@ package api
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/ser/rlp"
 	"math/big"
 )
 
@@ -42,7 +46,7 @@ func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*big.Int, error) {
 	return s.b.SuggestPrice(ctx)
 }
 
-// ProtocolVersion returns the current Klaytn protocol version this node supports
+// ProtocolVersion returns the current Klaytn protocol version this node supports.
 func (s *PublicKlayAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
 }
@@ -69,4 +73,65 @@ func (s *PublicKlayAPI) Syncing() (interface{}, error) {
 		"pulledStates":  hexutil.Uint64(progress.PulledStates),
 		"knownStates":   hexutil.Uint64(progress.KnownStates),
 	}, nil
+}
+
+// EncodeAccountKey gets an account key of JSON format and returns RLP encoded bytes of the key.
+func (s *PublicKlayAPI) EncodeAccountKey(accKey accountkey.AccountKeyJSON) (hexutil.Bytes, error) {
+	if accKey.KeyType == nil {
+		return nil, errors.New("key type is not specified")
+	}
+	key, err := accountkey.NewAccountKey(*accKey.KeyType)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(accKey.Key, key); err != nil {
+		return nil, err
+	}
+	// Invalidate zero values of threshold and weight to prevent users' mistake
+	// JSON unmarshalling sets zero for those values if they are not exist on JSON input
+	if err := checkAccountKeyZeroValues(key, false); err != nil {
+		return nil, err
+	}
+	accKeySerializer := accountkey.NewAccountKeySerializerWithAccountKey(key)
+	encodedKey, err := rlp.EncodeToBytes(accKeySerializer)
+	if err != nil {
+		return nil, errors.New("the key probably contains an invalid public key: " + err.Error())
+	}
+	return (hexutil.Bytes)(encodedKey), nil
+}
+
+// DecodeAccountKey gets an RLP encoded bytes of an account key and returns the decoded account key.
+func (s *PublicKlayAPI) DecodeAccountKey(encodedAccKey hexutil.Bytes) (*accountkey.AccountKeySerializer, error) {
+	dec := accountkey.NewAccountKeySerializer()
+	if err := rlp.DecodeBytes(encodedAccKey, &dec); err != nil {
+		return nil, err
+	}
+	return dec, nil
+}
+
+// checkAccountKeyZeroValues returns errors if the input account key contains zero values of threshold or weight.
+func checkAccountKeyZeroValues(key accountkey.AccountKey, isNested bool) error {
+	switch key.Type() {
+	case accountkey.AccountKeyTypeWeightedMultiSig:
+		multiSigKey, _ := key.(*accountkey.AccountKeyWeightedMultiSig)
+		if multiSigKey.Threshold == 0 {
+			return errors.New("invalid threshold of the multiSigKey")
+		}
+		for _, weightedKey := range multiSigKey.Keys {
+			if weightedKey.Weight == 0 {
+				return errors.New("invalid weight of the multiSigKey")
+			}
+		}
+	case accountkey.AccountKeyTypeRoleBased:
+		if isNested {
+			return errors.New("roleBasedKey cannot contains a roleBasedKey as a role key")
+		}
+		roleBasedKey, _ := key.(*accountkey.AccountKeyRoleBased)
+		for _, roleKey := range *roleBasedKey {
+			if err := checkAccountKeyZeroValues(roleKey, true); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
