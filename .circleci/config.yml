@@ -62,7 +62,9 @@ commands:
           name: "build new(Cross compile)"
           command: |
             export GOPATH=~/go 
+            go version
             export PATH=$HOME/go1.13.3/go/bin:$PATH 
+            go version
             make -j 4 << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
@@ -474,9 +476,10 @@ workflows:
           requires:
             - pass-tests
       - packaging-linux: 
-          filters: *filter-only-version-tag
-          requires:
-            - pass-tests
+          filters: *filter-version-not-release
+          # filters: *filter-only-version-tag
+          # requires:
+          #   - pass-tests
       - packaging-linux-baobab: 
           filters: *filter-only-version-tag
           requires:
