@@ -353,6 +353,9 @@ loop:
 		case errRW.err = <-p.disc:
 			reason = discReasonForError(errRW.err)
 			break loop
+		case <-p.closed:
+			reason = DiscQuitting
+			break loop
 		}
 	}
 

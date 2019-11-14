@@ -501,14 +501,14 @@ func (ec *Client) SendUnsignedTransaction(ctx context.Context, from common.Addre
 	tInput := hexutil.Bytes(input)
 
 	unsignedTx := api.SendTxArgs{
-		From:     from,
-		To:       &to,
-		Gas:      &tGas,
-		GasPrice: tGasPrice,
-		Value:    hValue,
+		From:      from,
+		Recipient: &to,
+		GasLimit:  &tGas,
+		Price:     tGasPrice,
+		Amount:    hValue,
 		//Nonce : nonce,	Nonce will be determined by Klay node.
-		Data:  &tData,
-		Input: &tInput,
+		Data:    &tData,
+		Payload: &tInput,
 	}
 
 	if err := ec.c.CallContext(ctx, &hex, "klay_sendTransaction", toSendTxArgs(unsignedTx)); err != nil {
@@ -556,22 +556,22 @@ func toCallArg(msg klaytn.CallMsg) interface{} {
 func toSendTxArgs(msg api.SendTxArgs) interface{} {
 	arg := map[string]interface{}{
 		"from": msg.From,
-		"to":   msg.To,
+		"to":   msg.Recipient,
 	}
-	if *msg.Gas != 0 {
-		arg["gas"] = (*hexutil.Uint64)(msg.Gas)
+	if *msg.GasLimit != 0 {
+		arg["gas"] = (*hexutil.Uint64)(msg.GasLimit)
 	}
-	if msg.GasPrice != nil {
-		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
+	if msg.Price != nil {
+		arg["gasPrice"] = (*hexutil.Big)(msg.Price)
 	}
-	if msg.Value != nil {
-		arg["value"] = (*hexutil.Big)(msg.Value)
+	if msg.Amount != nil {
+		arg["value"] = (*hexutil.Big)(msg.Amount)
 	}
 	if len(*msg.Data) > 0 {
 		arg["data"] = (*hexutil.Bytes)(msg.Data)
 	}
-	if len(*msg.Input) > 0 {
-		arg["input"] = (*hexutil.Bytes)(msg.Input)
+	if len(*msg.Payload) > 0 {
+		arg["input"] = (*hexutil.Bytes)(msg.Payload)
 	}
 
 	return arg
