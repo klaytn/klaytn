@@ -59,8 +59,11 @@ commands:
         default: "tar-linux-amd64-all"
     steps:
       - run:
-          name: "build new"
-          command: export GOPATH=~/go ; export PATH=$HOME/go1.13.3/go/bin:$PATH ; make -j 4 << parameters.os-network >>
+          name: "build new(Cross compile)"
+          command: |
+            export GOPATH=~/go 
+            export PATH=$HOME/go1.13.3/go/bin:$PATH 
+            make -j 4 << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
     parameters:
