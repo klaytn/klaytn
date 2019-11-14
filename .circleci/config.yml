@@ -59,8 +59,7 @@ commands:
     steps:
       - run:
           name: "build new"
-          #command: export GOPATH=~/go ; make -j 4 << parameters.os-network >>
-          command: export GOPATH=~/go ; make << parameters.os-network >>
+          command: export GOPATH=~/go ; export PATH=$HOME/go1.13.3/go/bin:$PATH ; make -j 4 << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
     parameters:
@@ -70,7 +69,7 @@ commands:
     steps:
       - run:
           name: "upload S3 repo"
-          command: for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done   
+          command: for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
@@ -204,37 +203,28 @@ commands:
           command : |
             curl --data '{"text": ""❌ Job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
-
+  install_golang:
+    steps:
+      - run:
+          name: "Install golang on machine"
+          command: |
+            curl -O https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz
+            mkdir $HOME/go1.13.3
+            tar -C $HOME/go1.13.3 -xzf go1.13.3.linux-amd64.tar.gz
 jobs:
-  build-all:
+  build:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - install_golang
       - pre-build
       - run:
           name: "Build"
           command: |
-            curl -O https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz
-            mkdir $HOME/go1.12.5
-            tar -C $HOME/go1.12.5 -xzf go1.12.5.linux-amd64.tar.gz
-            export PATH=$HOME/go1.12.5/go/bin:$PATH
+            export PATH=$HOME/go1.13.3/go/bin:$PATH
             make fmt
             make all
-
-  build-linux:
-    machine: true
-    working_directory: ~/go/src/github.com/klaytn/klaytn
-    steps:
-      - checkout
-      - install_awscli
-      - pre-build
-      - build
-      - persist_to_workspace:
-          root: /home/circleci/go/src/github.com/klaytn/klaytn
-          paths: 
-            - build
-
   test-datasync:
     executor: test-executor
     steps:
@@ -278,7 +268,7 @@ jobs:
     executor: default
     steps:
       - checkout
-      - tagger-verify        
+      - tagger-verify
 
   coverage:
     executor: test-executor
@@ -291,8 +281,8 @@ jobs:
           command: |
             set -e
             export GOPATH=/go
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata   
-            make cover         
+            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
+            make cover
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
             cp coverage_report.html /tmp/coverage_reports/
@@ -320,29 +310,22 @@ jobs:
 
   packaging-linux:
     machine: true
-    #resource_class: large
+    resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - install_golang
       - pre-build
       - build-packaging
       - upload-repo
 
-  packaging-linux-2:
-    machine: true
-    #resource_class: large
-    working_directory: ~/go/src/github.com/klaytn/klaytn
-    steps:
-      - attach_workspace:
-          at: /home/circleci/go/src/github.com/klaytn/klaytn
-      - packaging
-
   packaging-linux-baobab:
     machine: true
-    #resource_class: large
+    resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - install_golang
       - pre-build
       - build-packaging:
           os-network: "tar-baobab-linux-amd64-all"
@@ -351,10 +334,11 @@ jobs:
 
   packaging-darwin:
     machine: true
-    #resource_class: large
+    resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - install_golang
       - pre-build
       - build-packaging:
           os-network: "tar-darwin-amd64-all"
@@ -362,10 +346,11 @@ jobs:
 
   packaging-darwin-baobab:
     machine: true
-    #resource_class: large
+    resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
+      - install_golang
       - pre-build
       - build-packaging:
           os-network: "tar-baobab-darwin-amd64-all"
@@ -417,7 +402,7 @@ workflows:
   version: 2
   build_n_packaging:
     jobs:
-      - build-all: 
+      - build: 
           filters: *filter-version-not-release
       - test-datasync: 
           filters: *filter-version-not-release
@@ -425,17 +410,24 @@ workflows:
           filters: *filter-version-not-release
       - test-tests: 
           filters: *filter-version-not-release
-      # - test-others: 
-        #  filters: *filter-version-not-release
+      - test-others: 
+         filters: *filter-version-not-release
+      - tagger-verify:
+         filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+/
+            branches:
+              ignore: /.*/
 
       - pass-tests: 
           requires: 
-            - build-all
+            - build
             - test-datasync
             - test-networks
             - test-tests
-            #- test-others
+            - test-others
             - tag-verify
+            - tagger-verify
           filters: *filter-version-not-release
       
       - tag-verify:
@@ -497,7 +489,7 @@ workflows:
       - major-tagging:
           filters:
             branches:
-              only: master  
+              only: master
 
   nightly-coverage:
     triggers:
