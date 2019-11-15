@@ -64,7 +64,7 @@ commands:
             export GOPATH=~/go 
             export PATH=$HOME/go1.13.3/go/bin:$PATH 
             go version
-            finmake -j 4 << parameters.os-network >>
+            make -j 4 << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
     parameters:
