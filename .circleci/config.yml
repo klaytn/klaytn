@@ -32,6 +32,10 @@ executors:
       - image: circleci/golang:latest
 
 commands:
+  install-ssh-alpine:
+    description: "Install openssh before image update"
+    steps:
+      - run: apk add --no-cache openssh
   git-clone:
     description: "Pull git clone"
     steps:
@@ -228,7 +232,7 @@ jobs:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
       #- checkout
       - git-clone
       - install-golang
@@ -242,7 +246,8 @@ jobs:
   test-datasync:
     executor: test-executor
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - run:
@@ -252,7 +257,8 @@ jobs:
   test-networks:
     executor: test-executor
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - run:
@@ -262,7 +268,8 @@ jobs:
   test-tests:
     executor: test-executor
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - run:
@@ -273,9 +280,10 @@ jobs:
   test-others:
     executor: test-executor
     steps:
-      - add_ssh_keys
-      - checkout
-      #- git-clone
+      #- add_ssh_keys
+      - install-ssh-alpine
+      #- checkout
+      - git-clone
       - run:
           name: "Run test others"
           command: make test-others
@@ -290,7 +298,8 @@ jobs:
   tagger-verify:
     executor: default
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - tagger-verify
@@ -299,7 +308,8 @@ jobs:
     executor: test-executor
     resource_class: xlarge
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - run:
@@ -323,7 +333,8 @@ jobs:
   linters:
     executor: test-executor
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - run:
@@ -342,7 +353,8 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - install-golang
@@ -355,7 +367,8 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - install-golang
@@ -370,7 +383,8 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - install-golang
@@ -384,7 +398,8 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - install-golang
@@ -397,7 +412,8 @@ jobs:
   rpm-tagged:
     executor: rpm-executor
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - pre-build
@@ -405,7 +421,8 @@ jobs:
   rpm-tagged-baobab:
     executor: rpm-executor
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - pre-build
@@ -420,7 +437,8 @@ jobs:
   tag-verify:
     executor: test-executor
     steps:
-      - add_ssh_keys
+      #- add_ssh_keys
+      - install-ssh-alpine
       #- checkout
       - git-clone
       - tag-verify
