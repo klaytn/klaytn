@@ -64,8 +64,7 @@ commands:
             export GOPATH=~/go 
             export PATH=$HOME/go1.13.3/go/bin:$PATH 
             go version
-            #make -j 4 << parameters.os-network >>
-            make << parameters.os-network >>
+            finmake -j 4 << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
     parameters:
@@ -195,21 +194,21 @@ commands:
               else
                 echo "Need to delete branch manually"
               fi  
-  nofity_success:
+  nofity-success:
     steps:
       - run:
           name: "notify slack when job success"
           command : |
             curl --data '{"text": ""✅ Job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH''$CIRCLE_TAG'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_success
-  nofity_failure:
+  nofity-failure:
     steps:
       - run:
           name: "notify slack when job fail"
           command : |
             curl --data '{"text": ""❌ Job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
-  install_golang:
+  install-golang:
     steps:
       - run:
           name: "Install golang on machine"
@@ -223,7 +222,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_golang
+      - install-golang
       - pre-build
       - run:
           name: "Build"
@@ -292,8 +291,8 @@ jobs:
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
             cp coverage_report.html /tmp/coverage_reports/
-      - nofity_failure
-      - nofity_success
+      - nofity-failure
+      - nofity-success
       - store_artifacts:
           path: /tmp/coverage_reports
       - codecov/upload:
@@ -309,8 +308,8 @@ jobs:
             make lint-try
             mkdir -p /tmp/linter_reports
             cp linter_report.txt /tmp/linter_reports/
-      - nofity_failure
-      - nofity_success
+      - nofity-failure
+      - nofity-success
       - store_artifacts:
           path: /tmp/linter_reports
 
@@ -320,7 +319,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_golang
+      - install-golang
       - pre-build
       - build-packaging
       - upload-repo
@@ -331,7 +330,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_golang
+      - install-golang
       - pre-build
       - build-packaging:
           os-network: "tar-baobab-linux-amd64-all"
@@ -344,7 +343,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_golang
+      - install-golang
       - pre-build
       - build-packaging:
           os-network: "tar-darwin-amd64-all"
@@ -356,7 +355,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       - checkout
-      - install_golang
+      - install-golang
       - pre-build
       - build-packaging:
           os-network: "tar-baobab-darwin-amd64-all"
@@ -379,8 +378,8 @@ jobs:
     executor: rpm-executor
     steps:
       - createrepo-update
-      - nofity_failure
-      - nofity_success
+      - nofity-failure
+      - nofity-success
 
   tag-verify:
     executor: test-executor
@@ -394,8 +393,8 @@ jobs:
       - add_ssh_keys
       - checkout
       - make-pr
-      - nofity_failure
-      - nofity_success
+      - nofity-failure
+      - nofity-success
 
   major-tagging:
     executor: default
@@ -476,10 +475,9 @@ workflows:
           requires:
             - pass-tests
       - packaging-linux: 
-          filters: *filter-version-not-release
-          # filters: *filter-only-version-tag
-          # requires:
-          #   - pass-tests
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
       - packaging-linux-baobab: 
           filters: *filter-only-version-tag
           requires:
