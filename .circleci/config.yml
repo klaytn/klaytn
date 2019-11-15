@@ -32,6 +32,20 @@ executors:
       - image: circleci/golang:latest
 
 commands:
+  git-clone:
+    description: "Pull git clone"
+    steps:
+      - run:
+          name: "Using git clone instead of checkout"
+          command: git clone https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
+  install-golang:
+    steps:
+      - run:
+          name: "Install golang on machine"
+          command: |
+            curl -O https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz
+            mkdir $HOME/go1.13.3
+            tar -C $HOME/go1.13.3 -xzf go1.13.3.linux-amd64.tar.gz
   pre-build:
     description: "before build, set version"
     steps:
@@ -145,7 +159,6 @@ commands:
                 echo "only circleci-klaytn can tagging major version"
                 exit 1
               fi
-            
   make-pr:
     steps:
       - run:
@@ -208,20 +221,13 @@ commands:
           command : |
             curl --data '{"text": "❌ Job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
-  install-golang:
-    steps:
-      - run:
-          name: "Install golang on machine"
-          command: |
-            curl -O https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz
-            mkdir $HOME/go1.13.3
-            tar -C $HOME/go1.13.3 -xzf go1.13.3.linux-amd64.tar.gz
+
 jobs:
   build:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      - checkout
+      - git-clone
       - install-golang
       - pre-build
       - run:
@@ -233,7 +239,7 @@ jobs:
   test-datasync:
     executor: test-executor
     steps:
-      - checkout
+      - git-clone
       - run:
           name: "Run test datasync"
           command: make test-datasync
@@ -241,7 +247,7 @@ jobs:
   test-networks:
     executor: test-executor
     steps:
-      - checkout
+      - git-clone
       - run:
           name: "Run test networks"
           command: make test-networks
@@ -249,7 +255,7 @@ jobs:
   test-tests:
     executor: test-executor
     steps:
-      - checkout
+      - git-clone
       - run:
           name: "Run test tests"
           command: |
@@ -258,7 +264,7 @@ jobs:
   test-others:
     executor: test-executor
     steps:
-      - checkout
+      - git-clone
       - run:
           name: "Run test others"
           command: make test-others
@@ -272,14 +278,14 @@ jobs:
   tagger-verify:
     executor: default
     steps:
-      - checkout
+      - git-clone
       - tagger-verify
 
   coverage:
     executor: test-executor
     resource_class: xlarge
     steps:
-      - checkout
+      - git-clone
       - run:
           shell: /bin/bash
           name: "Run coverage tests"
@@ -301,7 +307,7 @@ jobs:
   linters:
     executor: test-executor
     steps:
-      - checkout
+      - git-clone
       - run:
           name: "Run linters"
           command: |
@@ -318,7 +324,7 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      - checkout
+      - git-clone
       - install-golang
       - pre-build
       - build-packaging
@@ -329,7 +335,7 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      - checkout
+      - git-clone
       - install-golang
       - pre-build
       - build-packaging:
@@ -342,7 +348,7 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      - checkout
+      - git-clone
       - install-golang
       - pre-build
       - build-packaging:
@@ -354,7 +360,7 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      - checkout
+      - git-clone
       - install-golang
       - pre-build
       - build-packaging:
@@ -365,13 +371,13 @@ jobs:
   rpm-tagged:
     executor: rpm-executor
     steps:
-      - checkout
+      - git-clone
       - pre-build
       - rpm-tagging
   rpm-tagged-baobab:
     executor: rpm-executor
     steps:
-      - checkout
+      - git-clone
       - pre-build
       - rpm-tagging-baobab
   deploy-rpm-public:
@@ -384,14 +390,14 @@ jobs:
   tag-verify:
     executor: test-executor
     steps:
-      - checkout
+      - git-clone
       - tag-verify
 
   release-PR:
     executor: default
     steps:
       - add_ssh_keys
-      - checkout
+      - git-clone
       - make-pr
       - nofity-failure
       - nofity-success
@@ -400,7 +406,7 @@ jobs:
     executor: default
     steps:
       - add_ssh_keys
-      - checkout
+      - git-clone
       - tagging-delete-branch
 
 workflows:
