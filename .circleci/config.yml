@@ -268,8 +268,8 @@ jobs:
   test-others:
     executor: test-executor
     steps:
-      #- checkout
-      - git-clone
+      - checkout
+      #- git-clone
       - run:
           name: "Run test others"
           command: make test-others
