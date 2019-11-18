@@ -36,16 +36,16 @@ commands:
     description: "Install openssh before image update"
     steps:
       - run: apk add --no-cache openssh
-  git-clone:
-    description: "Pull git clone"
-    steps:
-      - run:
-          name: "Using git clone instead of checkout"
-          command: |
-            mkdir -p ~/.ssh
-            echo "Host github.com
-                StrictHostKeyChecking no" >> ~/.ssh/config
-            git clone $CIRCLE_REPOSITORY_URL .
+  # git-clone:
+  #   description: "Pull git clone"
+  #   steps:
+  #     - run:
+  #         name: "Using git clone instead of checkout"
+  #         command: |
+  #           mkdir -p ~/.ssh
+  #           echo "Host github.com
+  #               StrictHostKeyChecking no" >> ~/.ssh/config
+  #           git clone $CIRCLE_REPOSITORY_URL .
   pre-build:
     description: "before build, set version"
     steps:
