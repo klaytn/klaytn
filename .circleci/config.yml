@@ -235,9 +235,7 @@ jobs:
     machine: true
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      #- add_ssh_keys
       - checkout
-      #- git-clone
       - install-golang
       - pre-build
       - run:
@@ -249,10 +247,8 @@ jobs:
   test-datasync:
     executor: test-executor
     steps:
-      #- add_ssh_keys
       - install-ssh-alpine
       - checkout
-      #- git-clone
       - run:
           name: "Run test datasync"
           command: make test-datasync
@@ -260,10 +256,8 @@ jobs:
   test-networks:
     executor: test-executor
     steps:
-      #- add_ssh_keys
       - install-ssh-alpine
       - checkout
-      #- git-clone
       - run:
           name: "Run test networks"
           command: make test-networks
@@ -271,10 +265,8 @@ jobs:
   test-tests:
     executor: test-executor
     steps:
-      #- add_ssh_keys
       - install-ssh-alpine
       - checkout
-      #- git-clone
       - run:
           name: "Run test tests"
           command: |
@@ -283,10 +275,8 @@ jobs:
   test-others:
     executor: test-executor
     steps:
-      #- add_ssh_keys
       - install-ssh-alpine
       - checkout
-      #- git-clone
       - run:
           name: "Run test others"
           command: make test-others
@@ -301,20 +291,15 @@ jobs:
   tagger-verify:
     executor: default
     steps:
-      #- add_ssh_keys
-      - install-ssh-alpine
       - checkout
-      #- git-clone
       - tagger-verify
 
   coverage:
     executor: test-executor
     resource_class: xlarge
     steps:
-      #- add_ssh_keys
       - install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
       - run:
           shell: /bin/bash
           name: "Run coverage tests"
@@ -336,10 +321,8 @@ jobs:
   linters:
     executor: test-executor
     steps:
-      #- add_ssh_keys
       - install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
       - run:
           name: "Run linters"
           command: |
@@ -356,10 +339,7 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      #- add_ssh_keys
-      #- install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
       - install-golang
       - pre-build
       - build-packaging
@@ -370,10 +350,7 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      #- add_ssh_keys
-      #- install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
       - install-golang
       - pre-build
       - build-packaging:
@@ -386,10 +363,7 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      #- add_ssh_keys
-      #- install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
       - install-golang
       - pre-build
       - build-packaging:
@@ -401,10 +375,7 @@ jobs:
     resource_class: large
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
-      #- add_ssh_keys
-      #- install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
       - install-golang
       - pre-build
       - build-packaging:
@@ -415,19 +386,13 @@ jobs:
   rpm-tagged:
     executor: rpm-executor
     steps:
-      #- add_ssh_keys
-      #- install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
       - pre-build
       - rpm-tagging
   rpm-tagged-baobab:
     executor: rpm-executor
     steps:
-      #- add_ssh_keys
-      #- install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
       - pre-build
       - rpm-tagging-baobab
   deploy-rpm-public:
@@ -440,18 +405,15 @@ jobs:
   tag-verify:
     executor: test-executor
     steps:
-      #- add_ssh_keys
       - install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
       - tag-verify
 
   release-PR:
     executor: default
     steps:
       - add_ssh_keys
-      #- checkout
-      - git-clone
+      - checkout
       - make-pr
       - nofity-failure
       - nofity-success
@@ -460,8 +422,7 @@ jobs:
     executor: default
     steps:
       - add_ssh_keys
-      #- checkout
-      - git-clone
+      - checkout
       - tagging-delete-branch
 
 workflows:
@@ -493,7 +454,7 @@ workflows:
             - test-tests
             - test-others
             - tag-verify
-            - tagger-verify
+            #- tagger-verify
           filters: *filter-version-not-release
       
       - tag-verify:
