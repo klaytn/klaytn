@@ -236,8 +236,8 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       #- add_ssh_keys
-      #- checkout
-      - git-clone
+      - checkout
+      #- git-clone
       - install-golang
       - pre-build
       - run:
@@ -251,8 +251,8 @@ jobs:
     steps:
       #- add_ssh_keys
       - install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
+      #- git-clone
       - run:
           name: "Run test datasync"
           command: make test-datasync
@@ -262,8 +262,8 @@ jobs:
     steps:
       #- add_ssh_keys
       - install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
+      #- git-clone
       - run:
           name: "Run test networks"
           command: make test-networks
@@ -273,8 +273,8 @@ jobs:
     steps:
       #- add_ssh_keys
       - install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
+      #- git-clone
       - run:
           name: "Run test tests"
           command: |
@@ -285,8 +285,8 @@ jobs:
     steps:
       #- add_ssh_keys
       - install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
+      #- git-clone
       - run:
           name: "Run test others"
           command: make test-others
@@ -303,8 +303,8 @@ jobs:
     steps:
       #- add_ssh_keys
       - install-ssh-alpine
-      #- checkout
-      - git-clone
+      - checkout
+      #- git-clone
       - tagger-verify
 
   coverage:
