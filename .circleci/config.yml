@@ -42,6 +42,7 @@ commands:
       - run:
           name: "Using git clone instead of checkout"
           command: |
+            touch ~/.ssh/config
             echo "Host github.com
                 StrictHostKeyChecking no" >> ~/.ssh/config
             git clone $CIRCLE_REPOSITORY_URL .
