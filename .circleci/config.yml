@@ -43,7 +43,7 @@ commands:
           name: "Using git clone instead of checkout"
           command: |
             echo "Host github.com
-                StrictHostKeyChecking no" > ~/.ssh/config
+                StrictHostKeyChecking no" >> ~/.ssh/config
             git clone $CIRCLE_REPOSITORY_URL .
   pre-build:
     description: "before build, set version"
