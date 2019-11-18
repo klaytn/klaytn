@@ -357,7 +357,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       #- add_ssh_keys
-      - install-ssh-alpine
+      #- install-ssh-alpine
       #- checkout
       - git-clone
       - install-golang
@@ -371,7 +371,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       #- add_ssh_keys
-      - install-ssh-alpine
+      #- install-ssh-alpine
       #- checkout
       - git-clone
       - install-golang
@@ -387,7 +387,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       #- add_ssh_keys
-      - install-ssh-alpine
+      #- install-ssh-alpine
       #- checkout
       - git-clone
       - install-golang
@@ -402,7 +402,7 @@ jobs:
     working_directory: ~/go/src/github.com/klaytn/klaytn
     steps:
       #- add_ssh_keys
-      - install-ssh-alpine
+      #- install-ssh-alpine
       #- checkout
       - git-clone
       - install-golang
@@ -416,7 +416,7 @@ jobs:
     executor: rpm-executor
     steps:
       #- add_ssh_keys
-      - install-ssh-alpine
+      #- install-ssh-alpine
       #- checkout
       - git-clone
       - pre-build
@@ -425,7 +425,7 @@ jobs:
     executor: rpm-executor
     steps:
       #- add_ssh_keys
-      - install-ssh-alpine
+      #- install-ssh-alpine
       #- checkout
       - git-clone
       - pre-build
@@ -536,9 +536,10 @@ workflows:
           requires:
             - pass-tests
       - packaging-linux: 
-          filters: *filter-only-version-tag
-          requires:
-            - pass-tests
+          filters: *filter-version-not-release
+          # filters: *filter-only-version-tag
+          # requires:
+          #   - pass-tests
       - packaging-linux-baobab: 
           filters: *filter-only-version-tag
           requires:
