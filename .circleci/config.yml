@@ -41,8 +41,10 @@ commands:
     steps:
       - run:
           name: "Using git clone instead of checkout"
-          #command: git clone https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME.git .
-          command: git clone $CIRCLE_REPOSITORY_URL .
+          command: |
+            echo "Host github.com
+                StrictHostKeyChecking no" > ~/.ssh/config
+            git clone $CIRCLE_REPOSITORY_URL .
   pre-build:
     description: "before build, set version"
     steps:
