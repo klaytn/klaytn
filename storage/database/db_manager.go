@@ -166,6 +166,11 @@ type DBManager interface {
 	WriteHandleTxHashFromRequestTxHash(rTx, hTx common.Hash)
 	ReadHandleTxHashFromRequestTxHash(rTx common.Hash) common.Hash
 
+	WriteParentOperatorFeePayer(feePayer common.Address)
+	WriteChildOperatorFeePayer(feePayer common.Address)
+	ReadParentOperatorFeePayer() common.Address
+	ReadChildOperatorFeePayer() common.Address
+
 	// cacheManager related functions.
 	ClearHeaderChainCache()
 	ClearBlockChainCache()
@@ -1600,6 +1605,48 @@ func (dbm *databaseManager) ReadReceiptFromParentChain(blockHash common.Hash) *t
 		return nil
 	}
 	return (*types.Receipt)(serviceChainTxReceipt)
+}
+
+// WriteParentOperatorFeePayer writes a fee payer of parent operator.
+func (dbm *databaseManager) WriteParentOperatorFeePayer(feePayer common.Address) {
+	key := parentOperatorFeePayerPrefix
+	db := dbm.getDatabase(bridgeServiceDB)
+
+	if err := db.Put(key, feePayer.Bytes()); err != nil {
+		logger.Crit("Failed to store parent operator fee payer", "feePayer", feePayer.String(), "err", err)
+	}
+}
+
+// ReadParentOperatorFeePayer returns a fee payer of parent operator.
+func (dbm *databaseManager) ReadParentOperatorFeePayer() common.Address {
+	key := parentOperatorFeePayerPrefix
+	db := dbm.getDatabase(bridgeServiceDB)
+	data, _ := db.Get(key)
+	if data == nil || len(data) == 0 {
+		return common.Address{}
+	}
+	return common.BytesToAddress(data)
+}
+
+// WriteChildOperatorFeePayer writes a fee payer of child operator.
+func (dbm *databaseManager) WriteChildOperatorFeePayer(feePayer common.Address) {
+	key := childOperatorFeePayerPrefix
+	db := dbm.getDatabase(bridgeServiceDB)
+
+	if err := db.Put(key, feePayer.Bytes()); err != nil {
+		logger.Crit("Failed to store parent operator fee payer", "feePayer", feePayer.String(), "err", err)
+	}
+}
+
+// ReadChildOperatorFeePayer returns a fee payer of child operator.
+func (dbm *databaseManager) ReadChildOperatorFeePayer() common.Address {
+	key := childOperatorFeePayerPrefix
+	db := dbm.getDatabase(bridgeServiceDB)
+	data, _ := db.Get(key)
+	if data == nil || len(data) == 0 {
+		return common.Address{}
+	}
+	return common.BytesToAddress(data)
 }
 
 // ClearHeaderChainCache calls cacheManager.clearHeaderChainCache to flush out caches of HeaderChain.
