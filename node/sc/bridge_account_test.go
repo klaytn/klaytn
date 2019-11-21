@@ -18,6 +18,7 @@ package sc
 
 import (
 	"github.com/klaytn/klaytn/accounts/keystore"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math"
@@ -41,7 +42,7 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bAcc, err := NewBridgeAccounts(config.DataDir)
+	bAcc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	assert.NoError(t, err)
 	assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
 	assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
@@ -162,7 +163,7 @@ func TestBridgeAccountInformation(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bAcc, err := NewBridgeAccounts(config.DataDir)
+	bAcc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	assert.NoError(t, err)
 	assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
 	assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())

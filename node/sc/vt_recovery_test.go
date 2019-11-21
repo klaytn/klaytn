@@ -628,7 +628,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, err := NewBridgeAccounts(config.DataDir)
+	bacc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	assert.NoError(t, err)
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
