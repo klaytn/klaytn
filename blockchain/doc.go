@@ -31,7 +31,7 @@ The cacheSender concurrently recovers and caches an address from a signature in 
 Source files
 
 Each file provides the following features
- - bad_blocks.go : keeps block hashes of bad blocks which usually for hard forks.
+ - bad_blocks.go : keeps block hashes of bad blocks which are usually for hard forks.
  - block_validator.go : implements BlockValidator which is responsible for validation block headers and the processed state.
  - blockchain.go : implements the canonical chain of blocks and managing functions to support imports, reverts and reorganisations.
  - chain_indexer.go : implements ChainIndexer.
