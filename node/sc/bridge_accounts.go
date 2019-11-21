@@ -223,7 +223,23 @@ func (acc *accountInfo) GenerateTransactOpts() *bind.TransactOpts {
 
 // SignTx signs a transaction with the accountInfo.
 func (acc *accountInfo) SignTx(tx *types.Transaction) (*types.Transaction, error) {
-	return acc.keystore.SignTx(accounts.Account{Address: acc.address}, tx, acc.chainID)
+	tx, err := acc.keystore.SignTx(accounts.Account{Address: acc.address}, tx, acc.chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	if tx.Type().IsFeeDelegatedTransaction() {
+		// Look up the wallet containing the requested signer
+		account := accounts.Account{Address: acc.feePayer}
+
+		wallet, err := acc.am.Find(account)
+		if err != nil {
+			return nil, err
+		}
+		// Request the wallet to sign the transaction
+		return wallet.SignTxAsFeePayer(account, tx, acc.chainID)
+	}
+	return tx, nil
 }
 
 // SetChainID sets the chain ID of the chain of the account.

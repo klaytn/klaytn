@@ -274,7 +274,14 @@ func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block)
 		types.TxValueKeyAnchoredData: encodedCCTxData,
 	}
 
-	if tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values); err != nil {
+	txType := types.TxTypeChainDataAnchoring
+
+	if feePayer := sbh.subbridge.bridgeAccounts.GetParentOperatorFeePayer(); feePayer != (common.Address{}) {
+		values[types.TxValueKeyFeePayer] = feePayer
+		txType = types.TxTypeFeeDelegatedChainDataAnchoring
+	}
+
+	if tx, err := types.NewTransactionWithMap(txType, values); err != nil {
 		return nil, err
 	} else {
 		return tx, nil
