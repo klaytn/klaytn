@@ -84,6 +84,7 @@ func NewSimulatedBackendWithGasPrice(alloc blockchain.GenesisAlloc, unitPrice ui
 // newSimulatedBackend creates a new binding backend with the genesis.
 func newSimulatedBackend(genesis blockchain.Genesis) *SimulatedBackend {
 	database := database.NewMemoryDBManager()
+	genesis.MustCommit(database)
 	blockchain, _ := blockchain.NewBlockChain(database, nil, genesis.Config, gxhash.NewFaker(), vm.Config{})
 
 	backend := &SimulatedBackend{
