@@ -448,7 +448,7 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
 		pnPeer := NewMockPeer(mockCtrl)
-		pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(2)
+		pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
 		setMockPeers([]*MockPeer{pnPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
@@ -463,7 +463,7 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
 		enPeer := NewMockPeer(mockCtrl)
-		enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(3)
+		enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
 		setMockPeers([]*MockPeer{enPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
@@ -480,15 +480,15 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 		pnPeer := NewMockPeer(mockCtrl)
 		enPeer := NewMockPeer(mockCtrl)
 
-		pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(2)
-		enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(2)
+		pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
 
 		setMockPeers([]*MockPeer{pnPeer, enPeer})
 
 		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
 		assert.NoError(t, peerSet.Register(pnPeer))
 		assert.NoError(t, peerSet.Register(enPeer))
-		assert.Equal(t, []Peer{pnPeer}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
+		assert.Equal(t, []Peer{pnPeer, enPeer}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
 
 		mockCtrl.Finish()
 	}
@@ -515,6 +515,70 @@ func TestPeerSet_SampleResendPeersByType_EN(t *testing.T) {
 
 		assert.Equal(t, 2, len(resendPeers))
 		assert.False(t, containsPeer(enPeer, resendPeers))
+
+		mockCtrl.Finish()
+	}
+	// CN Peer=1, PN Peer=2, EN Peer=2
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		cnPeer1 := NewMockPeer(mockCtrl)
+		pnPeer1 := NewMockPeer(mockCtrl)
+		pnPeer2 := NewMockPeer(mockCtrl)
+		enPeer1 := NewMockPeer(mockCtrl)
+		enPeer2 := NewMockPeer(mockCtrl)
+
+		cnPeer1.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+
+		pnPeer1.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		pnPeer2.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+
+		enPeer1.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		enPeer2.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+
+		setMockPeers([]*MockPeer{cnPeer1, pnPeer1, pnPeer2, enPeer1, enPeer2})
+
+		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
+		registerPeers(t, peerSet, []Peer{cnPeer1, pnPeer1, pnPeer2, enPeer1, enPeer2})
+		resendPeers := peerSet.SampleResendPeersByType(common.ENDPOINTNODE)
+
+		assert.Equal(t, 2, len(resendPeers))
+		assert.Equal(t, 1, countPeerType(common.CONSENSUSNODE, resendPeers))
+		assert.Equal(t, 1, countPeerType(common.PROXYNODE, resendPeers))
+
+		mockCtrl.Finish()
+	}
+	// CN Peer=2, PN Peer=2, EN Peer=2
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		cnPeer1 := NewMockPeer(mockCtrl)
+		cnPeer2 := NewMockPeer(mockCtrl)
+		pnPeer1 := NewMockPeer(mockCtrl)
+		pnPeer2 := NewMockPeer(mockCtrl)
+		enPeer1 := NewMockPeer(mockCtrl)
+		enPeer2 := NewMockPeer(mockCtrl)
+
+		cnPeer1.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		cnPeer2.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+
+		pnPeer1.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		pnPeer2.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+
+		enPeer1.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		enPeer2.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+
+		setMockPeers([]*MockPeer{cnPeer1, cnPeer2, pnPeer1, pnPeer2, enPeer1, enPeer2})
+
+		assert.Equal(t, []Peer{}, peerSet.SampleResendPeersByType(common.ENDPOINTNODE))
+		registerPeers(t, peerSet, []Peer{cnPeer1, cnPeer2, pnPeer1, pnPeer2, enPeer1, enPeer2})
+		resendPeers := peerSet.SampleResendPeersByType(common.ENDPOINTNODE)
+
+		assert.Equal(t, 2, len(resendPeers))
+		assert.True(t, containsPeer(cnPeer1, resendPeers))
+		assert.True(t, containsPeer(cnPeer2, resendPeers))
 
 		mockCtrl.Finish()
 	}
@@ -629,6 +693,16 @@ func containsPeer(target Peer, peers []Peer) bool {
 		}
 	}
 	return false
+}
+
+func countPeerType(t common.ConnType, peers []Peer) int {
+	cnt := 0
+	for _, peer := range peers {
+		if t == peer.ConnType() {
+			cnt++
+		}
+	}
+	return cnt
 }
 
 func registerPeers(t *testing.T, ps *peerSet, peers []Peer) {

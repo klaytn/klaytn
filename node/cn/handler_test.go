@@ -319,7 +319,7 @@ func TestBroadcastTxsFromPN_PN_Exists(t *testing.T) {
 	pm.BroadcastTxs(txs)
 }
 
-func TestBroadcastTxsFromEN_EN_NotExists(t *testing.T) {
+func TestBroadcastTxsFromEN_ALL_NotExists(t *testing.T) {
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
@@ -329,21 +329,22 @@ func TestBroadcastTxsFromEN_EN_NotExists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(2)
-	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(2)
-	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(2)
+	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(3)
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(3)
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(3)
 
-	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
+	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
+	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
 	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
 
 	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
-	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
+	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
 	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
 
 	pm.BroadcastTxs(txs)
 }
 
-func TestBroadcastTxsFromEN_EN_Exists(t *testing.T) {
+func TestBroadcastTxsFromEN_ALL_Exists(t *testing.T) {
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
 	mockCtrl := gomock.NewController(t)
@@ -353,39 +354,16 @@ func TestBroadcastTxsFromEN_EN_Exists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(2)
-	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(2)
-	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(2)
+	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(3)
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(3)
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(3)
 
+	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 
-	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
+	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
-	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
-
-	pm.BroadcastTxs(txs)
-}
-
-func TestBroadcastTxsFromEN_PN_NotExists(t *testing.T) {
-	pm := &ProtocolManager{}
-	pm.nodetype = common.ENDPOINTNODE
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	peers := newPeerSet()
-	pm.peers = peers
-	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
-
-	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(2)
-	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(2)
-	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(2)
-
-	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
-	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
-
-	cnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
-	pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(0)
 	enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
 	pm.BroadcastTxs(txs)
@@ -476,7 +454,7 @@ func TestReBroadcastTxs_EN(t *testing.T) {
 		pm.peers = peers
 
 		enPeer := NewMockPeer(mockCtrl)
-		enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(2)
+		enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(3)
 		enPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
 		peers.enpeers[addrs[2]] = enPeer
@@ -496,7 +474,7 @@ func TestReBroadcastTxs_EN(t *testing.T) {
 		pm.peers = peers
 
 		pnPeer := NewMockPeer(mockCtrl)
-		pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(1)
+		pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(3)
 		pnPeer.EXPECT().SendTransactions(gomock.Eq(txs)).Times(1)
 
 		peers.pnpeers[addrs[2]] = pnPeer

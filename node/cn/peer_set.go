@@ -442,10 +442,10 @@ func (peers *peerSet) SampleResendPeersByType(nodeType common.ConnType) []Peer {
 	case common.ENDPOINTNODE:
 		sampledPeers = peers.typePeers(common.CONSENSUSNODE)
 		if len(sampledPeers) < 2 {
-			sampledPeers = append(sampledPeers, peers.typePeers(common.PROXYNODE)...)
+			sampledPeers = append(sampledPeers, samplingPeers(peers.typePeers(common.PROXYNODE), 2-len(sampledPeers))...)
 		}
 		if len(sampledPeers) < 2 {
-			sampledPeers = append(sampledPeers, peers.typePeers(common.ENDPOINTNODE)...)
+			sampledPeers = append(sampledPeers, samplingPeers(peers.typePeers(common.ENDPOINTNODE), 2-len(sampledPeers))...)
 		}
 		sampledPeers = samplingPeers(sampledPeers, 2)
 	case common.PROXYNODE:
