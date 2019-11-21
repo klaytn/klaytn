@@ -550,6 +550,6 @@ func (sb *SubBridgeAPI) GetParentOperatorFeePayer() common.Address {
 }
 
 // GetChildOperatorFeePayer can return the child bridge operator's fee payer.
-func (sb *SubBridgeAPI) GetChildOperatorFeePayer(feePayer common.Address) common.Address {
+func (sb *SubBridgeAPI) GetChildOperatorFeePayer() common.Address {
 	return sb.subBridge.bridgeAccounts.GetChildOperatorFeePayer()
 }
