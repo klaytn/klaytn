@@ -74,6 +74,9 @@ var (
 	lastIndexedBlockKey             = []byte("LastIndexedBlockKey")
 	receiptFromParentChainKeyPrefix = []byte("receiptFromParentChain")
 
+	parentOperatorFeePayerPrefix = []byte("parentOperatorFeePayer")
+	childOperatorFeePayerPrefix  = []byte("childOperatorFeePayer")
+
 	valueTransferTxHashPrefix = []byte("vt-tx-hash-key-") // Prefix + hash -> hash
 
 	// bloomBitsPrefix + bit (uint16 big endian) + section (uint64 big endian) + hash -> bloom bits
