@@ -287,9 +287,22 @@ func (tx *Transaction) IsFeeDelegatedTransaction() bool {
 // AnchoredData returns the anchored data of the chain data anchoring transaction.
 // if the tx is not chain data anchoring transaction, it will return error.
 func (tx *Transaction) AnchoredData() ([]byte, error) {
-	txData, ok := tx.data.(*TxInternalDataChainDataAnchoring)
-	if ok {
-		return txData.Payload, nil
+	switch tx.Type() {
+	case TxTypeChainDataAnchoring:
+		txData, ok := tx.data.(*TxInternalDataChainDataAnchoring)
+		if ok {
+			return txData.Payload, nil
+		}
+	case TxTypeFeeDelegatedChainDataAnchoring:
+		txData, ok := tx.data.(*TxInternalDataFeeDelegatedChainDataAnchoring)
+		if ok {
+			return txData.Payload, nil
+		}
+	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
+		txData, ok := tx.data.(*TxInternalDataFeeDelegatedChainDataAnchoringWithRatio)
+		if ok {
+			return txData.Payload, nil
+		}
 	}
 	return []byte{}, ErrInvalidTxTypeForAnchoredData
 }
