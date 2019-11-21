@@ -1066,6 +1066,16 @@ web3._extend({
 			call: 'subbridge_unlockChildOperator',
 			params: 2
 		}),
+		new web3._extend.Method({
+			name: 'setParentOperatorFeePayer',
+			call: 'subbridge_setParentOperatorFeePayer',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'setChildOperatorFeePayer',
+			call: 'subbridge_setChildOperatorFeePayer',
+			params: 1
+		}),
 	],
     properties: [
 		new web3._extend.Property({
@@ -1129,6 +1139,14 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'latestAnchoredBlockNumber',
 			getter: 'subbridge_getLatestAnchoredBlockNumber'
+		}),
+		new web3._extend.Property({
+			name: 'parentOperatorFeePayer',
+			getter: 'subbridge_getParentOperatorFeePayer',
+		}),
+		new web3._extend.Property({
+			name: 'childOperatorFeePayer',
+			getter: 'subbridge_getChildOperatorFeePayer',
 		}),
 	]
 });
