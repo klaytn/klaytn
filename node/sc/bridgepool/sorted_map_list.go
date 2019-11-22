@@ -100,6 +100,23 @@ func (m *ItemSortedMap) Put(event itemWithNonce) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	m.put(event)
+}
+
+// PutWithLimit inserts a new item into the map with size limit of the map.
+func (m *ItemSortedMap) PutWithLimit(event itemWithNonce, limit int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if len(m.items) >= limit {
+		return
+	}
+
+	m.put(event)
+}
+
+// put inserts a new item into the map.
+func (m *ItemSortedMap) put(event itemWithNonce) {
 	nonce := event.Nonce()
 	if m.items[nonce] == nil {
 		heap.Push(m.index, nonce)
@@ -201,6 +218,27 @@ func (m *ItemSortedMap) Remove(nonce uint64) bool {
 	m.cache = nil
 
 	return true
+}
+
+// Forward removes all items from the map with a nonce lower than the
+// provided threshold. Every removed transaction is returned for any post-removal
+// maintenance.
+func (m *ItemSortedMap) Forward(threshold uint64) items {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var removed items
+
+	// Pop off heap items until the threshold is reached
+	for m.index.Len() > 0 && (*m.index)[0] < threshold {
+		nonce := heap.Pop(m.index).(uint64)
+		removed = append(removed, m.items[nonce])
+		delete(m.items, nonce)
+	}
+	// If we had a cached order, shift the front
+	if m.cache != nil {
+		m.cache = m.cache[len(removed):]
+	}
+	return removed
 }
 
 // Len returns the length of the map.

@@ -108,6 +108,16 @@ type BridgeInfo struct {
 
 	newEvent chan struct{}
 	closed   chan struct{}
+
+	handledEvent *bridgepool.ItemSortedMap
+}
+
+type requestEvent struct {
+	nonce uint64
+}
+
+func (ev requestEvent) Nonce() uint64 {
+	return ev.nonce
 }
 
 func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Bridge, cpAddr common.Address, cpBridge *bridgecontract.Bridge, account *accountInfo, local, subscribed bool, cpBackend Backend) (*BridgeInfo, error) {
@@ -131,6 +141,7 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 		0,
 		make(chan struct{}),
 		make(chan struct{}),
+		bridgepool.NewItemSortedMap(),
 	}
 
 	if err := bi.UpdateInfo(); err != nil {
@@ -211,7 +222,7 @@ func (bi *BridgeInfo) processingPendingRequestEvents() error {
 	logger.Trace("Get ready request value transfer event", "len(readyEvent)", len(ReadyEvent), "len(pendingEvent)", bi.pendingRequestEvent.Len())
 
 	for idx, ev := range ReadyEvent {
-		if ev.RequestNonce < bi.lowerHandleNonce {
+		if ev.RequestNonce < bi.lowerHandleNonce || bi.handledEvent.Exist(ev.RequestNonce) {
 			logger.Trace("handled requests can be ignored", "RequestNonce", ev.RequestNonce, "lowerHandleNonce", bi.lowerHandleNonce)
 			continue
 		}
@@ -356,6 +367,8 @@ func (bi *BridgeInfo) UpdateHandledNonce(nonce uint64) {
 		vtHandleNonceCount.Inc(int64(nonce - bi.handleNonce))
 		bi.handleNonce = nonce
 	}
+
+	bi.handledEvent.PutWithLimit(requestEvent{nonce}, 10000000)
 }
 
 // UpdateLowerHandleNonce updates the lower handle nonce.
@@ -363,6 +376,8 @@ func (bi *BridgeInfo) UpdateLowerHandleNonce(nonce uint64) {
 	if bi.lowerHandleNonce < nonce {
 		vtLowerHandleNonceCount.Inc(int64(nonce - bi.lowerHandleNonce))
 		bi.lowerHandleNonce = nonce
+
+		bi.handledEvent.Forward(nonce)
 	}
 }
 
