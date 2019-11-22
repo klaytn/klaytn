@@ -1136,7 +1136,7 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	if bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
+	if bc.HasBlockAndState(block.Hash(), block.NumberU64()) && bc.CurrentBlock().NumberU64() >= block.NumberU64() {
 		return NonStatTy, ErrKnownBlock
 	}
 
@@ -1202,7 +1202,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	if bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
+	if bc.HasBlockAndState(block.Hash(), block.NumberU64()) && bc.CurrentBlock().NumberU64() >= block.NumberU64() {
 		return NonStatTy, ErrKnownBlock
 	}
 
@@ -1514,11 +1514,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Write the block to the chain and get the status.
 		status, err := bc.WriteBlockWithState(block, receipts, stateDB)
 		if err != nil {
-			if err == ErrKnownBlock {
+			if err != ErrKnownBlock {
+				return i, events, coalescedLogs, err
+			}
+			if bc.CurrentBlock().NumberU64() >= block.NumberU64() {
 				logger.Debug("Tried to insert already known block", "num", block.NumberU64(), "hash", block.Hash().String())
 				continue
 			}
-			return i, events, coalescedLogs, err
 		}
 
 		switch status {
