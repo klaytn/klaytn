@@ -1581,8 +1581,8 @@ func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBack
 	initBal := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
 
 	feePayer, err := ks.NewAccount("pwd")
-	ks.TimedUnlock(feePayer, "pwd", 0)
 	assert.NoError(t, err)
+	ks.TimedUnlock(feePayer, "pwd", 0)
 
 	alloc := blockchain.GenesisAlloc{
 		alice.From:             {Balance: initBal},

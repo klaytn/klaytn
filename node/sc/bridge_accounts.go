@@ -95,13 +95,13 @@ func (ba *BridgeAccounts) SetParentOperatorFeePayer(feePayer common.Address) err
 
 // GetChildOperatorFeePayer can return the fee payer of child operator.
 func (ba *BridgeAccounts) GetChildOperatorFeePayer() common.Address {
-	return ba.pAccount.feePayer
+	return ba.cAccount.feePayer
 }
 
 // SetChildOperatorFeePayer can set the fee payer of child operator.
 func (ba *BridgeAccounts) SetChildOperatorFeePayer(feePayer common.Address) error {
-	ba.pAccount.feePayer = feePayer
-	ba.db.WriteParentOperatorFeePayer(feePayer)
+	ba.cAccount.feePayer = feePayer
+	ba.db.WriteChildOperatorFeePayer(feePayer)
 	return nil
 }
 
