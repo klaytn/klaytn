@@ -88,6 +88,8 @@ type Message interface {
 	//FromFrontier() (common.Address, error)
 	To() *common.Address
 
+	Hash() common.Hash
+
 	GasPrice() *big.Int
 	Gas() uint64
 	Value() *big.Int
@@ -233,7 +235,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 	ret, st.gas, errTxFailed = msg.Execute(st.evm, st.state, st.evm.BlockNumber.Uint64(), st.gas, st.value)
 
 	if errTxFailed != nil {
-		logger.Debug("VM returned with error", "err", errTxFailed)
+		logger.Debug("VM returned with error", "err", errTxFailed, "txHash", st.msg.Hash().String())
 		// The only possible consensus-error would be if there wasn't
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.
