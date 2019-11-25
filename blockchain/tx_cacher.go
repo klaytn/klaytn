@@ -26,7 +26,7 @@ import (
 	"runtime"
 )
 
-// senderCacher is a concurrent tranaction sender recoverer anc cacher.
+// senderCacher is a concurrent transaction sender recoverer and cacher.
 var senderCacher = newTxSenderCacher(calcNumSenderCachers())
 
 func calcNumSenderCachers() int {
