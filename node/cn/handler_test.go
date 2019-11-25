@@ -329,9 +329,9 @@ func TestBroadcastTxsFromEN_ALL_NotExists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(3)
-	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(3)
-	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(3)
+	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
 
 	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
 	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
@@ -354,9 +354,9 @@ func TestBroadcastTxsFromEN_ALL_Exists(t *testing.T) {
 	pm.peers = peers
 	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
 
-	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).Times(3)
-	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).Times(3)
-	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).Times(3)
+	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
 
 	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
 	pnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
