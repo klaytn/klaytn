@@ -89,7 +89,7 @@ func (cce *ChildChainEventHandler) ProcessHandleEvent(ev *HandleValueTransferEve
 		return errors.New("there is no bridge")
 	}
 
-	handleBridgeInfo.UpdateHandledNonce(ev.HandleNonce + 1)
+	handleBridgeInfo.MarkHandledNonce(ev.HandleNonce + 1)
 	handleBridgeInfo.UpdateLowerHandleNonce(ev.LowerHandleNonce)
 
 	logger.Trace("RequestValueTransfer Event",

@@ -246,7 +246,7 @@ func (bi *BridgeInfo) UpdateInfo() error {
 	if err != nil {
 		return err
 	}
-	bi.UpdateRequestNonce(rn)
+	bi.SetRequestNonce(rn)
 
 	hn, err := bi.bridge.LowerHandleNonce(nil)
 	if err != nil {
@@ -255,8 +255,8 @@ func (bi *BridgeInfo) UpdateInfo() error {
 
 	bi.lowerHandleNonce = hn
 
-	bi.UpdateHandledNonce(hn)
-	bi.UpdateRequestNonceFromCounterpart(hn)
+	bi.SetHandleNonce(hn)
+	bi.SetRequestNonceFromCounterpart(hn)
 
 	isRunning, err := bi.bridge.IsRunning(nil)
 	if err != nil {
@@ -346,29 +346,33 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev *RequestValueTransferEv
 	return nil
 }
 
-// UpdateRequestNonceFromCounterpart updates the request nonce from counterpart bridge.
-func (bi *BridgeInfo) UpdateRequestNonceFromCounterpart(nonce uint64) {
+// SetRequestNonceFromCounterpart sets the request nonce from counterpart bridge.
+func (bi *BridgeInfo) SetRequestNonceFromCounterpart(nonce uint64) {
 	if bi.requestNonceFromCounterPart < nonce {
 		vtRequestNonceCount.Inc(int64(nonce - bi.requestNonceFromCounterPart))
 		bi.requestNonceFromCounterPart = nonce
 	}
 }
 
-// UpdateRequestNonce updates the request nonce of the bridge.
-func (bi *BridgeInfo) UpdateRequestNonce(nonce uint64) {
+// SetRequestNonce sets the request nonce of the bridge.
+func (bi *BridgeInfo) SetRequestNonce(nonce uint64) {
 	if bi.requestNonce < nonce {
 		bi.requestNonce = nonce
 	}
 }
 
-// UpdateHandledNonce updates the handled nonce with new nonce.
-func (bi *BridgeInfo) UpdateHandledNonce(nonce uint64) {
+// MarkHandledNonce marks the handled nonce and set the handle nonce value.
+func (bi *BridgeInfo) MarkHandledNonce(nonce uint64) {
+	bi.SetHandleNonce(nonce)
+	bi.handledEvent.PutWithLimit(requestEvent{nonce}, 10000000)
+}
+
+// SetHandleNonce sets the handled nonce with new nonce.
+func (bi *BridgeInfo) SetHandleNonce(nonce uint64) {
 	if bi.handleNonce < nonce {
 		vtHandleNonceCount.Inc(int64(nonce - bi.handleNonce))
 		bi.handleNonce = nonce
 	}
-
-	bi.handledEvent.PutWithLimit(requestEvent{nonce}, 10000000)
 }
 
 // UpdateLowerHandleNonce updates the lower handle nonce.
@@ -395,7 +399,7 @@ func (bi *BridgeInfo) AddRequestValueTransferEvents(evs []*RequestValueTransferE
 			logger.Trace("List is full but add requestValueTransfer ", "newNonce", ev.Nonce(), "removedNonce", maxNonce)
 		}
 
-		bi.UpdateRequestNonceFromCounterpart(ev.RequestNonce + 1)
+		bi.SetRequestNonceFromCounterpart(ev.RequestNonce + 1)
 		bi.pendingRequestEvent.Put(ev)
 		vtPendingRequestEventCounter.Inc(1)
 	}
