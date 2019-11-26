@@ -225,8 +225,11 @@ func updateRecoveryHintFromTo(prevHint *valueTransferHint, from, to *BridgeInfo)
 // retrievePendingEvents retrieves pending events on the child chain or parent chain.
 // The pending event is the value transfer without processing HandleValueTransfer.
 func (vtr *valueTransferRecovery) retrievePendingEvents() error {
-	if vtr.cBridgeInfo.bridge == nil {
-		return errors.New("bridge is nil")
+	if vtr.cBridgeInfo == nil {
+		return errors.New("child chain bridge is nil")
+	}
+	if vtr.pBridgeInfo == nil {
+		return errors.New("parent chain bridge is nil")
 	}
 
 	var err error
