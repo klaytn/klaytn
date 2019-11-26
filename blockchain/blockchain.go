@@ -637,6 +637,12 @@ func (bc *BlockChain) HasBlockAndState(hash common.Hash, number uint64) bool {
 	return bc.HasState(block.Root())
 }
 
+// ShouldTryInserting returns the state whether the block should be inserted.
+// If node don't have a block or after it's current state, it should be insert.
+func (bc *BlockChain) ShouldTryInserting(block *types.Block) bool {
+	return !bc.HasBlockAndState(block.Hash(), block.NumberU64()) || bc.CurrentBlock().NumberU64() < block.NumberU64()
+}
+
 // GetBlock retrieves a block from the database by hash and number,
 // caching it if found.
 func (bc *BlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
@@ -1136,7 +1142,7 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	if bc.HasBlockAndState(block.Hash(), block.NumberU64()) && bc.CurrentBlock().NumberU64() >= block.NumberU64() {
+	if !bc.ShouldTryInserting(block) {
 		return NonStatTy, ErrKnownBlock
 	}
 
@@ -1202,7 +1208,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	if bc.HasBlockAndState(block.Hash(), block.NumberU64()) && bc.CurrentBlock().NumberU64() >= block.NumberU64() {
+	if !bc.ShouldTryInserting(block) {
 		return NonStatTy, ErrKnownBlock
 	}
 
