@@ -40,6 +40,8 @@ const (
 	TokenEventChanSize  = 10000
 	BridgeAddrJournal   = "bridge_addrs.rlp"
 	maxPendingNonceDiff = 1000 // TODO-Klaytn-ServiceChain: update this limitation. Currently, 2 * 500 TPS.
+
+	maxHandledEventSize = 10000000
 )
 
 const (
@@ -361,13 +363,13 @@ func (bi *BridgeInfo) SetRequestNonce(nonce uint64) {
 	}
 }
 
-// MarkHandledNonce marks the handled nonce and set the handle nonce value.
+// MarkHandledNonce marks the handled nonce and sets the handle nonce value.
 func (bi *BridgeInfo) MarkHandledNonce(nonce uint64) {
 	bi.SetHandleNonce(nonce + 1)
-	bi.handledEvent.PutWithLimit(requestEvent{nonce}, 10000000)
+	bi.handledEvent.PutWithLimit(requestEvent{nonce}, maxHandledEventSize)
 }
 
-// SetHandleNonce sets the handled nonce with new nonce.
+// SetHandleNonce sets the handled nonce with a new nonce.
 func (bi *BridgeInfo) SetHandleNonce(nonce uint64) {
 	if bi.handleNonce < nonce {
 		vtHandleNonceCount.Inc(int64(nonce - bi.handleNonce))
