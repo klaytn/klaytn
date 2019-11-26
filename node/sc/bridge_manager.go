@@ -135,7 +135,7 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 		local,
 		subscribed,
 		make(map[common.Address]common.Address),
-		bridgepool.NewItemSortedMap(maxHandledEventSize),
+		bridgepool.NewItemSortedMap(0),
 		true,
 		0,
 		0,
@@ -143,7 +143,7 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 		0,
 		make(chan struct{}),
 		make(chan struct{}),
-		bridgepool.NewItemSortedMap(),
+		bridgepool.NewItemSortedMap(maxHandledEventSize),
 	}
 
 	if err := bi.UpdateInfo(); err != nil {
