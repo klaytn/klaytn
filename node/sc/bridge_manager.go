@@ -366,7 +366,7 @@ func (bi *BridgeInfo) SetRequestNonce(nonce uint64) {
 // MarkHandledNonce marks the handled nonce and sets the handle nonce value.
 func (bi *BridgeInfo) MarkHandledNonce(nonce uint64) {
 	bi.SetHandleNonce(nonce + 1)
-	bi.handledEvent.PutWithLimit(requestEvent{nonce}, maxHandledEventSize)
+	bi.handledEvent.Put(requestEvent{nonce})
 }
 
 // SetHandleNonce sets the handled nonce with a new nonce.
