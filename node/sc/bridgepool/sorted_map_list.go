@@ -22,6 +22,7 @@ package bridgepool
 
 import (
 	"container/heap"
+	"errors"
 	"sort"
 	"sync"
 )
@@ -58,21 +59,27 @@ func (s items) Less(i, j int) bool {
 }
 func (s items) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
+var (
+	ErrSizeLimit = errors.New("sorted map size limit")
+)
+
 // ItemSortedMap is a nonce->item map with a heap based index to allow
 // iterating over the contents in a nonce-incrementing way.
 type ItemSortedMap struct {
-	mu    *sync.Mutex
-	items map[uint64]itemWithNonce // Hash map storing the item data
-	index *nonceHeap               // Heap of nonces of all the stored items (non-strict mode)
-	cache items                    // Cache of the items already sorted
+	mu        *sync.Mutex
+	items     map[uint64]itemWithNonce // Hash map storing the item data
+	index     *nonceHeap               // Heap of nonces of all the stored items (non-strict mode)
+	cache     items                    // Cache of the items already sorted
+	sizeLimit int                      // This is sizeLimit of the sorted map.
 }
 
 // NewItemSortedMap creates a new nonce-sorted item map.
-func NewItemSortedMap() *ItemSortedMap {
+func NewItemSortedMap(size int) *ItemSortedMap {
 	return &ItemSortedMap{
-		mu:    new(sync.Mutex),
-		items: make(map[uint64]itemWithNonce),
-		index: new(nonceHeap),
+		mu:        new(sync.Mutex),
+		items:     make(map[uint64]itemWithNonce),
+		index:     new(nonceHeap),
+		sizeLimit: size,
 	}
 }
 
@@ -96,32 +103,21 @@ func (m *ItemSortedMap) Exist(nonce uint64) bool {
 
 // Put inserts a new item into the map, also updating the map's nonce
 // index. If a item already exists with the same nonce, it's overwritten.
-func (m *ItemSortedMap) Put(event itemWithNonce) {
+func (m *ItemSortedMap) Put(event itemWithNonce) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.put(event)
-}
-
-// PutWithLimit inserts a new item into the map with size limit of the map.
-func (m *ItemSortedMap) PutWithLimit(event itemWithNonce, limit int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if len(m.items) >= limit {
-		return
+	if m.sizeLimit != 0 && len(m.items) >= m.sizeLimit {
+		return ErrSizeLimit
 	}
 
-	m.put(event)
-}
-
-// put inserts a new item into the map.
-func (m *ItemSortedMap) put(event itemWithNonce) {
 	nonce := event.Nonce()
 	if m.items[nonce] == nil {
 		heap.Push(m.index, nonce)
 	}
 	m.items[nonce], m.cache = event, nil
+
+	return nil
 }
 
 // Pop removes given count number of minimum nonce items from the map.
