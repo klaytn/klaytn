@@ -1569,7 +1569,6 @@ func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBack
 		ks,
 	}
 	am := accounts.NewManager(back...)
-	am.Wallets()
 	bAcc, _ := NewBridgeAccounts(am, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
