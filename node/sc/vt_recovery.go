@@ -249,7 +249,10 @@ func (vtr *valueTransferRecovery) retrievePendingEvents() error {
 // The filter uses a hint as a search range. It returns a slice of events that has log details.
 func retrievePendingEventsFrom(hint *valueTransferHint, from, to *BridgeInfo) ([]*RequestValueTransferEvent, error) {
 	if from.bridge == nil {
-		return nil, errors.New("bridge is nil")
+		return nil, errors.New("from bridge is nil")
+	}
+	if to.bridge == nil {
+		return nil, errors.New("to bridge is nil")
 	}
 	if hint.requestNonce == hint.handleNonce {
 		return nil, nil
