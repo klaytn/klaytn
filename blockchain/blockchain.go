@@ -638,7 +638,7 @@ func (bc *BlockChain) HasBlockAndState(hash common.Hash, number uint64) bool {
 }
 
 // ShouldTryInserting returns the state whether the block should be inserted.
-// If node don't have a block or after it's current state, it should be insert.
+// If a node doesn't have the given block or the block number of given block is higher than the node's head block, it can try inserting the block.
 func (bc *BlockChain) ShouldTryInserting(block *types.Block) bool {
 	return !bc.HasBlockAndState(block.Hash(), block.NumberU64()) || bc.CurrentBlock().NumberU64() < block.NumberU64()
 }
