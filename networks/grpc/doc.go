@@ -14,5 +14,19 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package grpc implements the gRPC protocol for Klaytn.
+/*
+Package grpc implements the gRPC protocol for Klaytn.
+
+
+This package allows you to use klaytn's RPC API using gRPC.
+See below for gRPC: https://grpc.io/docs/quickstart/go/
+
+Source files
+
+Each file provides the following features
+ - gClient.go : gRPC client implementation.
+ - gServer.go : gRPC server implementation.
+ - klaytn.proto : Define interface and message to use in gRPC server and clieklaytnnt.
+ - klaytn.pb.go : Go file created by compiling klaytn.proto.
+ */
 package grpc
