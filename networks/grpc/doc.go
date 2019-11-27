@@ -17,7 +17,6 @@
 /*
 Package grpc implements the gRPC protocol for Klaytn.
 
-
 This package allows you to use klaytn's RPC API using gRPC.
 See below for gRPC: https://grpc.io/docs/quickstart/go/
 
