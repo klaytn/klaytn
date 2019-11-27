@@ -23,6 +23,7 @@ package bridgepool
 import (
 	"container/heap"
 	"errors"
+	"fmt"
 	"sort"
 	"sync"
 )
@@ -107,11 +108,11 @@ func (m *ItemSortedMap) Put(event itemWithNonce) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.sizeLimit != 0 && len(m.items) >= m.sizeLimit {
-		return ErrSizeLimit
+	nonce := event.Nonce()
+	if m.sizeLimit != 0 && len(m.items) >= m.sizeLimit && m.items[nonce] == nil {
+		return fmt.Errorf("failed to put %v nonce : %w : %v", event.Nonce(), ErrSizeLimit, m.sizeLimit)
 	}
 
-	nonce := event.Nonce()
 	if m.items[nonce] == nil {
 		heap.Push(m.index, nonce)
 	}
