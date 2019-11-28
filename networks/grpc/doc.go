@@ -26,6 +26,6 @@ Each file provides the following features
  - gClient.go : gRPC client implementation.
  - gServer.go : gRPC server implementation.
  - klaytn.proto : Define a interface and messages to use in gRPC server and clients.
- - klaytn.pb.go : Go file created by compiling klaytn.proto.
+ - klaytn.pb.go : the generated Go file from klaytn.proto by protoc-gen-go.
 */
 package grpc
