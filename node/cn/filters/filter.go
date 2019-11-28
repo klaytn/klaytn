@@ -32,6 +32,7 @@ import (
 	"math/big"
 )
 
+//go:generate mockgen -destination=node/cn/filters/mock/backend_mock.go -package=cn github.com/klaytn/klaytn/node/cn/filters Backend
 type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
@@ -52,7 +53,6 @@ type Backend interface {
 type Filter struct {
 	backend Backend
 
-	db         database.DBManager
 	begin, end int64
 	addresses  []common.Address
 	topics     [][]common.Hash
@@ -90,7 +90,6 @@ func New(backend Backend, begin, end int64, addresses []common.Address, topics [
 		end:       end,
 		addresses: addresses,
 		topics:    topics,
-		db:        backend.ChainDB(),
 		matcher:   bloombits.NewMatcher(size, filters),
 	}
 }
