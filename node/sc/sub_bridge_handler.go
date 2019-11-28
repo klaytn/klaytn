@@ -274,7 +274,14 @@ func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block)
 		types.TxValueKeyAnchoredData: encodedCCTxData,
 	}
 
-	if tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values); err != nil {
+	txType := types.TxTypeChainDataAnchoring
+
+	if feePayer := sbh.subbridge.bridgeAccounts.GetParentOperatorFeePayer(); feePayer != (common.Address{}) {
+		values[types.TxValueKeyFeePayer] = feePayer
+		txType = types.TxTypeFeeDelegatedChainDataAnchoring
+	}
+
+	if tx, err := types.NewTransactionWithMap(txType, values); err != nil {
 		return nil, err
 	} else {
 		return tx, nil
@@ -331,7 +338,7 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 	for _, receipt := range receipts {
 		txHash := receipt.TxHash
 		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
-			if tx.Type() == types.TxTypeChainDataAnchoring {
+			if tx.Type().IsChainDataAnchoring() {
 				data, err := tx.AnchoredData()
 				if err != nil {
 					logger.Error("failed to get anchoring data", "txHash", txHash.String(), "err", err)

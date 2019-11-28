@@ -114,7 +114,7 @@ func (mce *MainChainEventHandler) writeChildChainTxHashFromBlock(block *types.Bl
 
 		txs := blk.Transactions()
 		for _, tx := range txs {
-			if tx.Type() == types.TxTypeChainDataAnchoring {
+			if tx.Type().IsChainDataAnchoring() {
 				mce.decodeAndWriteAnchoringTx(tx)
 			}
 		}

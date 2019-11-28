@@ -165,7 +165,7 @@ func (s *PublicTransactionPoolAPI) GetDecodedAnchoringTransactionByHash(ctx cont
 
 decode:
 
-	if tx.Type() != types.TxTypeChainDataAnchoring {
+	if !tx.Type().IsChainDataAnchoring() {
 		return nil, errors.New("invalid transaction type")
 	}
 

@@ -19,8 +19,10 @@ package sc
 import (
 	"context"
 	"fmt"
+	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
+	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -90,7 +92,7 @@ func TestBridgeManager(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(config.DataDir)
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -333,7 +335,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(config.DataDir)
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -530,7 +532,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(config.DataDir)
+	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -933,7 +935,7 @@ func TestBasicJournal(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(tempDir)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1012,7 +1014,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 	config.VTRecovery = true
 	config.VTRecoveryInterval = 60
 
-	bacc, _ := NewBridgeAccounts(tempDir)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1235,7 +1237,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(tempDir)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1299,7 +1301,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(tempDir)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1403,7 +1405,7 @@ func TestErrorDupSubscription(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(tempDir)
+	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bacc.pAccount.chainID = big.NewInt(0)
 	bacc.cAccount.chainID = big.NewInt(0)
 
@@ -1464,35 +1466,7 @@ func TestAnchoringBasic(t *testing.T) {
 		}
 	}()
 
-	config := &SCConfig{AnchoringPeriod: 1}
-	config.DataDir = tempDir
-	config.VTRecovery = true
-
-	bAcc, _ := NewBridgeAccounts(tempDir)
-	bAcc.pAccount.chainID = big.NewInt(0)
-	bAcc.cAccount.chainID = big.NewInt(0)
-
-	alloc := blockchain.GenesisAlloc{}
-	sim := backends.NewSimulatedBackend(alloc)
-
-	sc := &SubBridge{
-		config:         config,
-		peers:          newBridgePeerSet(),
-		localBackend:   sim,
-		remoteBackend:  sim,
-		bridgeAccounts: bAcc,
-	}
-	sc.blockchain = sim.BlockChain()
-
-	sc.handler, err = NewSubBridgeHandler(sc)
-	if err != nil {
-		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
-		return
-	}
-	sc.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgepool.BridgeTxPoolConfig{
-		Journal:     path.Join(tempDir, "bridge_transactions.rlp"),
-		GlobalQueue: 1024,
-	})
+	sim, sc, bAcc, _, _, _ := generateAnchoringEnv(t, tempDir)
 
 	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
 	assert.Equal(t, uint64(0), sc.handler.latestTxCountAddedBlockNumber)
@@ -1515,8 +1489,134 @@ func TestAnchoringBasic(t *testing.T) {
 	}
 	assert.Equal(t, uint64(0), sc.handler.txCount)
 
+	assert.Equal(t, curBlk.NumberU64(), sc.handler.latestTxCountAddedBlockNumber)
+	compareBlockAndAnchoringTx(t, curBlk, tx)
+}
+
+// TestAnchoringBasicWithFeePayer tests the following with feePayer:
+// 1. generate anchoring tx
+// 2. decode anchoring tx
+// 3. start anchoring from the current block
+// 4. accumulated tx counts
+func TestAnchoringBasicWithFeePayer(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoring")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	sim, sc, bAcc, parentOperator, feePayer, tester := generateAnchoringEnv(t, tempDir)
+
+	bAcc.SetParentOperatorFeePayer(feePayer.Address)
+
+	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
+	assert.Equal(t, uint64(0), sc.handler.latestTxCountAddedBlockNumber)
+	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
+
+	// Encoding anchoring tx
+	_, _, _, err = bridge.DeployBridge(tester, sim, true) // dummy tx
+	sim.Commit()
+	curBlk := sim.BlockChain().CurrentBlock()
+
+	// Generate anchoring tx again for only the curBlk.
+	sc.handler.blockAnchoringManager(curBlk)
+	pending := sc.GetBridgeTxPool().Pending()
+	assert.Equal(t, 1, len(pending))
+	var tx *types.Transaction
+	for _, v := range pending {
+		assert.Equal(t, 1, len(v))
+		tx = v[0]
+
+		// Check Balance
+		feePayerBalanceBefore, err := sim.BalanceAt(context.Background(), feePayer.Address, nil)
+		assert.NoError(t, err)
+		parentOperatorBalanceBefore, err := sim.BalanceAt(context.Background(), parentOperator.address, nil)
+		assert.NoError(t, err)
+
+		sim.SendTransaction(context.Background(), tx)
+		sim.Commit()
+
+		// Check Balance
+		feePayerBalanceAfter, err := sim.BalanceAt(context.Background(), feePayer.Address, nil)
+		assert.NoError(t, err)
+		parentOperatorBalanceAfter, err := sim.BalanceAt(context.Background(), parentOperator.address, nil)
+		assert.NoError(t, err)
+
+		receipt, err := sim.TransactionReceipt(context.Background(), tx.Hash())
+		assert.NoError(t, err)
+
+		fee := new(big.Int).SetUint64(receipt.GasUsed * params.DefaultUnitPrice)
+
+		assert.Equal(t, new(big.Int).Sub(feePayerBalanceBefore, fee).String(), feePayerBalanceAfter.String())
+		t.Log("feePayer paid ", fee)
+		assert.Equal(t, parentOperatorBalanceBefore, parentOperatorBalanceAfter)
+	}
+
+	assert.Equal(t, uint64(0), sc.handler.txCount)
+	assert.Equal(t, curBlk.NumberU64(), sc.handler.latestTxCountAddedBlockNumber)
+	compareBlockAndAnchoringTx(t, curBlk, tx)
+}
+
+func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBackend, *SubBridge, *BridgeAccounts, *accountInfo, accounts.Account, *bind.TransactOpts) {
+	config := &SCConfig{AnchoringPeriod: 1}
+	config.DataDir = tempDir
+	config.VTRecovery = true
+
+	ks := keystore.NewKeyStore(tempDir, keystore.StandardScryptN, keystore.StandardScryptP)
+	back := []accounts.Backend{
+		ks,
+	}
+	am := accounts.NewManager(back...)
+	bAcc, _ := NewBridgeAccounts(am, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
+	bAcc.pAccount.chainID = big.NewInt(0)
+	bAcc.cAccount.chainID = big.NewInt(0)
+	parentOperator := bAcc.pAccount
+
+	aliceKey, _ := crypto.GenerateKey()
+	alice := bind.NewKeyedTransactor(aliceKey)
+
+	initBal := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
+
+	feePayer, err := ks.NewAccount("pwd")
+	assert.NoError(t, err)
+	ks.TimedUnlock(feePayer, "pwd", 0)
+
+	alloc := blockchain.GenesisAlloc{
+		alice.From:             {Balance: initBal},
+		feePayer.Address:       {Balance: initBal},
+		parentOperator.address: {Balance: initBal},
+	}
+	sim := backends.NewSimulatedBackendWithGasPrice(alloc, params.DefaultUnitPrice)
+
+	sc := &SubBridge{
+		config:         config,
+		peers:          newBridgePeerSet(),
+		localBackend:   sim,
+		remoteBackend:  sim,
+		bridgeAccounts: bAcc,
+	}
+	sc.blockchain = sim.BlockChain()
+
+	sc.handler, err = NewSubBridgeHandler(sc)
+	if err != nil {
+		log.Fatalf("Failed to initialize bridgeHandler : %v", err)
+	}
+
+	sc.handler.setRemoteGasPrice(params.DefaultUnitPrice)
+
+	sc.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgepool.BridgeTxPoolConfig{
+		Journal:     path.Join(tempDir, "bridge_transactions.rlp"),
+		GlobalQueue: 1024,
+	})
+
+	return sim, sc, bAcc, parentOperator, feePayer, alice
+}
+
+func compareBlockAndAnchoringTx(t *testing.T, block *types.Block, tx *types.Transaction) {
 	// Decoding the anchoring tx.
-	assert.Equal(t, types.TxTypeChainDataAnchoring, tx.Type())
+	assert.Equal(t, true, tx.Type().IsChainDataAnchoring())
 	anchoringData := new(types.AnchoringData)
 	data, err := tx.AnchoredData()
 	assert.NoError(t, err)
@@ -1530,9 +1630,8 @@ func TestAnchoringBasic(t *testing.T) {
 	}
 
 	// Check the current block is anchored.
-	assert.Equal(t, new(big.Int).SetUint64(curBlk.NumberU64()).String(), anchoringDataInternal.BlockNumber.String())
-	assert.Equal(t, curBlk.NumberU64(), sc.handler.latestTxCountAddedBlockNumber)
-	assert.Equal(t, curBlk.Hash(), anchoringDataInternal.BlockHash)
+	assert.Equal(t, new(big.Int).SetUint64(block.NumberU64()).String(), anchoringDataInternal.BlockNumber.String())
+	assert.Equal(t, block.Hash(), anchoringDataInternal.BlockHash)
 	assert.Equal(t, big.NewInt(1).String(), anchoringDataInternal.BlockCount.String())
 	assert.Equal(t, big.NewInt(1).String(), anchoringDataInternal.TxCount.String())
 }
@@ -1553,7 +1652,7 @@ func TestAnchoringStart(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(tempDir)
+	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 
@@ -1635,7 +1734,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(tempDir)
+	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 
@@ -1758,7 +1857,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(tempDir)
+	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}))
 	bAcc.pAccount.chainID = big.NewInt(0)
 	bAcc.cAccount.chainID = big.NewInt(0)
 

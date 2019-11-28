@@ -169,3 +169,52 @@ func TestChildChainData_ReadAndWrite_ValueTransferTxHash(t *testing.T) {
 	hTxHashFromDB = dbm.ReadHandleTxHashFromRequestTxHash(ccBlockHashFake)
 	assert.Equal(t, common.Hash{}, hTxHashFromDB)
 }
+
+func TestChildChainData_ReadAndWrite_OperatorFeePayer(t *testing.T) {
+	dir, err := ioutil.TempDir("", "klaytn-test-child-chain-data")
+	if err != nil {
+		t.Fatalf("cannot create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	firstAddr := common.HexToAddress("0x1")
+	secondAddr := common.HexToAddress("0x2")
+
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, OpenFilesLimit: 32}
+	dbm := NewDBManager(dbc)
+	defer dbm.Close()
+
+	// check initial value
+	{
+		feePayer := dbm.ReadParentOperatorFeePayer()
+		assert.Equal(t, common.Address{}, feePayer)
+	}
+	{
+		feePayer := dbm.ReadChildOperatorFeePayer()
+		assert.Equal(t, common.Address{}, feePayer)
+	}
+
+	// check write/read
+	{
+		dbm.WriteParentOperatorFeePayer(firstAddr)
+		feePayer := dbm.ReadParentOperatorFeePayer()
+		assert.Equal(t, firstAddr, feePayer)
+	}
+	{
+		dbm.WriteChildOperatorFeePayer(secondAddr)
+		feePayer := dbm.ReadChildOperatorFeePayer()
+		assert.Equal(t, secondAddr, feePayer)
+	}
+
+	// check write zero address and read
+	{
+		dbm.WriteParentOperatorFeePayer(common.Address{})
+		feePayer := dbm.ReadParentOperatorFeePayer()
+		assert.Equal(t, common.Address{}, feePayer)
+	}
+	{
+		dbm.WriteChildOperatorFeePayer(common.Address{})
+		feePayer := dbm.ReadChildOperatorFeePayer()
+		assert.Equal(t, common.Address{}, feePayer)
+	}
+}

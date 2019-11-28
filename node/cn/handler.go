@@ -1118,6 +1118,7 @@ func (pm *ProtocolManager) broadcastTxsFromPN(txs types.Transactions) {
 func (pm *ProtocolManager) broadcastTxsFromEN(txs types.Transactions) {
 	peersWithoutTxs := make(map[Peer]types.Transactions)
 	for _, tx := range txs {
+		pm.peers.UpdateTypePeersWithoutTxs(tx, common.CONSENSUSNODE, peersWithoutTxs)
 		pm.peers.UpdateTypePeersWithoutTxs(tx, common.PROXYNODE, peersWithoutTxs)
 		pm.peers.UpdateTypePeersWithoutTxs(tx, common.ENDPOINTNODE, peersWithoutTxs)
 		txSendCounter.Inc(1)

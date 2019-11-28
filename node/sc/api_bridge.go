@@ -533,3 +533,23 @@ func (sb *SubBridgeAPI) GetAnchoringPeriod() uint64 {
 func (sb *SubBridgeAPI) GetSentChainTxsLimit() uint64 {
 	return sb.subBridge.config.SentChainTxsLimit
 }
+
+// SetParentOperatorFeePayer can set the parent bridge operator's fee payer.
+func (sb *SubBridgeAPI) SetParentOperatorFeePayer(feePayer common.Address) error {
+	return sb.subBridge.bridgeAccounts.SetParentOperatorFeePayer(feePayer)
+}
+
+// SetChildOperatorFeePayer can set the child bridge operator's fee payer.
+func (sb *SubBridgeAPI) SetChildOperatorFeePayer(feePayer common.Address) error {
+	return sb.subBridge.bridgeAccounts.SetChildOperatorFeePayer(feePayer)
+}
+
+// GetParentOperatorFeePayer can return the parent bridge operator's fee payer.
+func (sb *SubBridgeAPI) GetParentOperatorFeePayer() common.Address {
+	return sb.subBridge.bridgeAccounts.GetParentOperatorFeePayer()
+}
+
+// GetChildOperatorFeePayer can return the child bridge operator's fee payer.
+func (sb *SubBridgeAPI) GetChildOperatorFeePayer() common.Address {
+	return sb.subBridge.bridgeAccounts.GetChildOperatorFeePayer()
+}

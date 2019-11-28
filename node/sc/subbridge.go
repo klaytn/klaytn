@@ -195,7 +195,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	sb.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
 
 	var err error
-	sb.bridgeAccounts, err = NewBridgeAccounts(config.DataDir)
+	sb.bridgeAccounts, err = NewBridgeAccounts(sb.accountManager, config.DataDir, chainDB)
 	if err != nil {
 		return nil, err
 	}

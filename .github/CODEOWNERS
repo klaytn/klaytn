@@ -24,39 +24,39 @@
 # subdirectories.
 #/build/logs/      @doctocat
 
-/accounts/         @KimKyungup @jeonghonah 
-/api/              @aidan-kwon
-/blockchain/       @ehnuje @nogang @KimKyungup @jeonghonah 
-/blockchain/types  @aidan-kwon @jimni1222
-/build/            @KimKyungup @jeonghonah
-/client/           @KimKyungup @jeonghonah
-/cmd/              @KimKyungup @jeonghonah
-/common/           @andybclee
-/consensus/        @andybclee
-/console/          @andybclee
-/contracts/        @KimKyungup @jeonghonah 
-/crypto/           @aidan-kwon
-/datasync/         @ehnuje @nogang 
-/event/            @ehnuje
-/fork/             @aidan-kwon
-/governance/       @andybclee
-/kerrors/          @aidan-kwon
-/log/              @ehnuje
-/metrics/          @nogang 
-/networks/         @nogang @KimKyungup @jeonghonah
-/node/             @nogang @KimKyungup @jeonghonah
-/params/           @andybclee
+/accounts/         @KimKyungup @jeonghonah @kjhman21
+/api/              @aidan-kwon @kjhman21
+/blockchain/       @ehnuje @nogang @KimKyungup @jeonghonah @kjhman21
+/blockchain/types  @aidan-kwon @jimni1222 @kjhman21
+/build/            @KimKyungup @jeonghonah @kjhman21
+/client/           @KimKyungup @jeonghonah @kjhman21
+/cmd/              @KimKyungup @jeonghonah @kjhman21
+/common/           @andybclee @kjhman21
+/consensus/        @andybclee @kjhman21
+/console/          @andybclee @kjhman21
+/contracts/        @KimKyungup @jeonghonah @kjhman21
+/crypto/           @aidan-kwon @kjhman21
+/datasync/         @ehnuje @nogang @kjhman21
+/event/            @ehnuje @kjhman21
+/fork/             @aidan-kwon @kjhman21
+/governance/       @andybclee @kjhman21
+/kerrors/          @aidan-kwon @kjhman21
+/log/              @ehnuje @kjhman21
+/metrics/          @nogang @kjhman21
+/networks/         @nogang @KimKyungup @jeonghonah @kjhman21
+/node/             @nogang @KimKyungup @jeonghonah @kjhman21
+/params/           @andybclee @kjhman21
 /params/version.go @kjhman21
-/reward/           @laggu
-/ser/              @ehnuje
-/storage/          @ehnuje
-/tests/            @aidan-kwon @jimni1222 
+/reward/           @laggu @kjhman21
+/ser/              @ehnuje @kjhman21
+/storage/          @ehnuje @kjhman21
+/tests/            @aidan-kwon @jimni1222 @kjhman21
 /utils/            @kjhman21
-/vendor/           @ehnuje
-/work/             @ehnuje @nogang
-/Gopkg.lock        @ehnuje
-/Gopkg.toml        @ehnuje
-/tags-for-todo-and-note.md   @ehnuje
+/vendor/           @ehnuje @kjhman21
+/work/             @ehnuje @nogang @kjhman21
+/Gopkg.lock        @ehnuje @kjhman21
+/Gopkg.toml        @ehnuje @kjhman21
+/tags-for-todo-and-note.md   @ehnuje @kjhman21
 
 # The `docs/*` pattern will match files like
 # `docs/getting-started.md` but not further nested files like

@@ -213,9 +213,13 @@ func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
 	return (t & TxTypeFeeDelegatedWithRatioTransactions) != 0x0
 }
 
+func (t TxType) IsChainDataAnchoring() bool {
+	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeChainDataAnchoring
+}
+
 // IsRPCExcluded returns true if the submission of such tx type is excluded via RPC.
 func (t TxType) IsRPCExcluded() bool {
-	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeChainDataAnchoring
+	return t.IsChainDataAnchoring()
 }
 
 type FeeRatio uint8
