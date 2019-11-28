@@ -509,23 +509,3 @@ workflows:
           filters:
             branches:
               only: master
-
-  nightly-coverage:
-    triggers:
-      - schedule:
-          cron: "0 18 * * *"
-          filters:
-            branches:
-              only: dev
-    jobs:
-      - coverage
-
-  nightly-linters:
-    triggers:
-      - schedule:
-          cron: "0 19 * * *"
-          filters:
-            branches:
-              only: dev
-    jobs:
-      - linters
