@@ -60,12 +60,16 @@ func (s items) Less(i, j int) bool {
 }
 func (s items) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
+// ItemSortedMap is a nonce->item map with a heap based index to allow
+// iterating over the contents in a nonce-incrementing way.
+const (
+	UnlimitedItemSortedMap = -1
+)
+
 var (
 	ErrSizeLimit = errors.New("sorted map size limit")
 )
 
-// ItemSortedMap is a nonce->item map with a heap based index to allow
-// iterating over the contents in a nonce-incrementing way.
 type ItemSortedMap struct {
 	mu        *sync.Mutex
 	items     map[uint64]itemWithNonce // Hash map storing the item data
@@ -109,7 +113,7 @@ func (m *ItemSortedMap) Put(event itemWithNonce) error {
 	defer m.mu.Unlock()
 
 	nonce := event.Nonce()
-	if m.sizeLimit != 0 && len(m.items) >= m.sizeLimit && m.items[nonce] == nil {
+	if m.sizeLimit != UnlimitedItemSortedMap && len(m.items) >= m.sizeLimit && m.items[nonce] == nil {
 		return fmt.Errorf("failed to put %v nonce : %w : %v", event.Nonce(), ErrSizeLimit, m.sizeLimit)
 	}
 

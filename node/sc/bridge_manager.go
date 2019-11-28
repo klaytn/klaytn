@@ -135,7 +135,7 @@ func NewBridgeInfo(sb *SubBridge, addr common.Address, bridge *bridgecontract.Br
 		local,
 		subscribed,
 		make(map[common.Address]common.Address),
-		bridgepool.NewItemSortedMap(0),
+		bridgepool.NewItemSortedMap(bridgepool.UnlimitedItemSortedMap),
 		true,
 		0,
 		0,

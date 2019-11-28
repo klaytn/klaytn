@@ -329,7 +329,7 @@ func (pool *BridgeTxPool) add(tx *types.Transaction) error {
 	}
 
 	if pool.queue[from] == nil {
-		pool.queue[from] = NewItemSortedMap(0)
+		pool.queue[from] = NewItemSortedMap(UnlimitedItemSortedMap)
 	} else {
 		if pool.queue[from].Get(tx.Nonce()) != nil {
 			return ErrDuplicatedNonceTx

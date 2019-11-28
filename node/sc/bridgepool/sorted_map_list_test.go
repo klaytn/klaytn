@@ -41,7 +41,7 @@ func (i *item) Nonce() uint64 {
 }
 
 func TestSortedMap_Put(t *testing.T) {
-	sizeOfSortedMap := 0
+	sizeOfSortedMap := UnlimitedItemSortedMap
 	sortedMap := NewItemSortedMap(sizeOfSortedMap)
 
 	// test a sortedMap without a size limit.
