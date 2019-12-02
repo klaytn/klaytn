@@ -14,5 +14,13 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package gasprice contains Oracle type which recommends gas prices based on recent blocks.
+/*
+Package gasprice contains Oracle type which recommends gas prices based on recent blocks.
+However, Klaytn uses invariant ChainConfig.UnitPrice and this value will not be changed
+until ChainConfig.UnitPrice is updated with governance.
+
+Source Files
+
+  - gasprice.go : implements Oracle struct which has a function to suggest appropriate gas price
+*/
 package gasprice
