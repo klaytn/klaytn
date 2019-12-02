@@ -27,7 +27,7 @@ Source Files
   - api_backend.go      : implements CNAPIBackend which is a wrapper of CN to serve API requests
   - api_tracer.go       : provides private debug API related to trace chain, block and state
   - backend.go          : implements CN struct used for the Klaytn consensus node service
-  - bloombits.go        : implements BloomIndexer, a indexer build with bloom bits for fast filtering
+  - bloombits.go        : implements BloomIndexer, an indexer built with bloom bits for fast filtering
   - channel_manager.go  : implements ChannelManager struct, which is used to manage channel for each message
   - config.go           : defines the configuration used by CN struct
   - gen_config.go       : is automatically generated from config.go
