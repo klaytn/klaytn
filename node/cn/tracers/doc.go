@@ -21,6 +21,6 @@ function for each VM execution step.
 Source Files
 
   - tracer.go  : implementation of Tracer
-  - tracers.go : provides managing function of tracers
+  - tracers.go : provides managing functions of tracers
 */
 package tracers
