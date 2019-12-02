@@ -18,6 +18,13 @@
 // This file is derived from eth/filters/filter_system.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package filters implements an ethereum filtering system for block,
-// transactions and log events.
+/*
+Package filters implements an Klaytn filtering system for block, transactions and log events.
+
+Source Files
+
+  - api.go           : provides public filter API functions to generate filters and use them to filter the result
+  - filter.go        : implements basic filtering system based on bloom filter
+  - filter_system.go : provides subscription scheme to register and filter the specific events
+*/
 package filters
