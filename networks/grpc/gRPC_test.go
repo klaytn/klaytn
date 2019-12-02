@@ -11,7 +11,7 @@ const (
 	TEST_BLOCK_NUMBER = float64(123456789)
 )
 
-type APIgRPC struct {}
+type APIgRPC struct{}
 
 func (a APIgRPC) BlockNumber() float64 {
 	return TEST_BLOCK_NUMBER
@@ -28,7 +28,6 @@ func TestCall(t *testing.T) {
 	go listener.Start()
 
 	time.Sleep(1 * time.Second)
-
 
 	kclient, _ := NewgKlaytnClient(addr)
 	defer kclient.Close()
@@ -106,6 +105,6 @@ func TestBiCall(t *testing.T) {
 	})
 
 	select {
-		case <- time.After(3*time.Second):
+	case <-time.After(3 * time.Second):
 	}
 }
