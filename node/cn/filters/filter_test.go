@@ -29,10 +29,12 @@ func TestFilter_New(t *testing.T) {
 
 	newFilter := New(mockBackend, begin, end, addrs, topics)
 	assert.NotNil(t, newFilter)
+	assert.Equal(t, mockBackend, newFilter.backend)
 	assert.Equal(t, begin, newFilter.begin)
 	assert.Equal(t, end, newFilter.end)
 	assert.Equal(t, topics, newFilter.topics)
 	assert.Equal(t, addrs, newFilter.addresses)
+	assert.NotNil(t, newFilter.matcher)
 }
 
 func TestFilter_Logs(t *testing.T) {
