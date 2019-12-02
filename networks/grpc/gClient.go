@@ -23,7 +23,6 @@ package grpc
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"google.golang.org/grpc"
 	"io"
 	"sync"
@@ -61,104 +60,6 @@ func NewgKlaytnClient(addr string) (*gKlaytnClient, error) {
 }
 
 const timeout = 5 * time.Minute
-
-// TODO-Klaytn-gRPC Move the test below to gClient_test.go
-func TestAll() {
-	waitGroup := &sync.WaitGroup{}
-	waitGroup.Add(3)
-
-	address := "127.0.0.1:4000"
-
-	go testCall(address, waitGroup)
-
-	go testSubscribe(address, waitGroup)
-
-	go testBiCall(address, waitGroup)
-
-	waitGroup.Wait()
-}
-
-func testCall(addr string, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	kclient, _ := NewgKlaytnClient(addr)
-	defer kclient.Close()
-
-	knclient, err := kclient.makeKlaytnClient(timeout)
-	if err != nil {
-		fmt.Printf("fail to make klaytnNodeClient: err=%v\n", err)
-		return
-	}
-
-	//params := []interface{}{"klay_blockNumber"}
-	request, err := kclient.makeRPCRequest("klay", "klay_blockNumber", nil)
-	if err != nil {
-		fmt.Printf("fail to make RPCRequest: err=%v\n", err)
-		return
-	}
-
-	response, err := knclient.Call(kclient.ctx, request)
-	if err != nil {
-		fmt.Printf("fail to call: err=%v\n", err)
-		return
-	}
-	if err := kclient.handleRPCResponse(response); err != nil {
-		fmt.Printf("fail to handle RPCResponse: err=%v\n", err)
-		return
-	}
-}
-
-func testSubscribe(addr string, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	kclient, _ := NewgKlaytnClient(addr)
-	defer kclient.Close()
-
-	knclient, err := kclient.makeKlaytnClient(timeout)
-	if err != nil {
-		fmt.Printf("fail to make klaytnNodeClient: err=%v\n", err)
-		return
-	}
-
-	params := []interface{}{"newHeads"}
-	request, err := kclient.makeRPCRequest("klay", "klay_subscribe", params)
-	if err != nil {
-		fmt.Printf("fail to make RPCRequest: err=%v\n", err)
-		return
-	}
-
-	client, _ := knclient.Subscribe(kclient.ctx, request)
-	kclient.handleSubscribe(client, func(response *RPCResponse) error {
-		fmt.Println(response)
-		return nil
-	})
-}
-
-func testBiCall(addr string, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	kclient, _ := NewgKlaytnClient(addr)
-	defer kclient.Close()
-
-	knclient, err := kclient.makeKlaytnClient(timeout)
-	if err != nil {
-		fmt.Printf("fail to make klaytnNodeClient: err=%v\n", err)
-		return
-	}
-
-	stream, _ := knclient.BiCall(kclient.ctx)
-	kclient.handleBiCall(stream, func() (request *RPCRequest, e error) {
-		request, err := kclient.makeRPCRequest("klay", "klay_blockNumber", nil)
-		if err != nil {
-			fmt.Printf("fail to make RPCRequest: err=%v\n", err)
-			return request, err
-		}
-		return request, nil
-	}, func(response *RPCResponse) error {
-		fmt.Println(response)
-		return nil
-	})
-}
 
 func (gkc *gKlaytnClient) makeKlaytnClient(timeout time.Duration) (KlaytnNodeClient, error) {
 	gkc.ctx, gkc.cancel = context.WithTimeout(context.Background(), timeout)
@@ -279,89 +180,6 @@ func (gkc *gKlaytnClient) Close() {
 	if gkc.conn != nil {
 		if err := gkc.conn.Close(); err != nil {
 			logger.Warn("fail to close conn", "err", err)
-		}
-	}
-}
-
-// TODO-Klaytn-gRPC Move the test below to gClient_test.go
-func TestAPI() {
-	// make client
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, ":4000",
-		grpc.WithInsecure(),
-		//grpc.WithDefaultCallOptions(grpc.CallContentSubtype(JSON{}.Name())),
-	)
-	if err != nil {
-		fmt.Printf("failed to dial server: err=%v\n", err)
-	}
-	defer conn.Close()
-
-	c := NewKlaytnNodeClient(conn)
-
-	// call api
-	args := []interface{}{}
-	payload, err := json.Marshal(args)
-	if err != nil {
-		return
-	}
-	id, err := json.Marshal(1)
-	if err != nil {
-		return
-	}
-	arguments := &jsonRequest{"klay_getBlockNumber", "2.0", id, payload}
-	params, err := json.Marshal(arguments)
-	if err != nil {
-		return
-	}
-
-	request := &RPCRequest{Service: "klay", Method: "klay_getBlock", Params: params}
-	response, err := c.Call(ctx, request)
-	if err != nil {
-		fmt.Printf("failed to call: err=%v\n", err)
-		return
-	}
-
-	var out jsonSuccessResponse
-	if err := json.Unmarshal(response.Payload, &out); err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(out.Result)
-	fmt.Println(err)
-
-	// subscribe api
-	args = []interface{}{"newHeads"}
-	payload, err = json.Marshal(args)
-	if err != nil {
-		return
-	}
-	id, err = json.Marshal(1)
-	if err != nil {
-		return
-	}
-	arguments = &jsonRequest{"klay_subscribe", "2.0", id, payload}
-	params, err = json.Marshal(arguments)
-	if err != nil {
-		return
-	}
-	request = &RPCRequest{Service: "klay", Method: "klay_subscribe", Params: params}
-
-	client, _ := c.Subscribe(ctx, request)
-	ticker := time.NewTicker(1 * time.Second)
-
-loop:
-	for {
-		select {
-		case <-ticker.C:
-			rev, err := client.Recv()
-			if err == io.EOF {
-				fmt.Println("close conn")
-				break loop
-			}
-			if rev != nil {
-				fmt.Println(rev)
-			}
 		}
 	}
 }
