@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package filters implements an Klaytn filtering system for block, transactions and log events.
+Package filters implements a Klaytn filtering system for blocks, transactions and log events.
 
 Source Files
 
