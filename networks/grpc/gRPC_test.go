@@ -27,7 +27,7 @@ func TestCall(t *testing.T) {
 	listener.SetRPCServer(handler)
 	go listener.Start()
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	kclient, _ := NewgKlaytnClient(addr)
 	defer kclient.Close()
@@ -73,7 +73,7 @@ func TestBiCall(t *testing.T) {
 	listener.SetRPCServer(handler)
 	go listener.Start()
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	kclient, _ := NewgKlaytnClient(addr)
 	defer kclient.Close()
