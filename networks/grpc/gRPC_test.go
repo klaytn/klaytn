@@ -3,9 +3,9 @@ package grpc
 import (
 	"encoding/json"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"sync"
 	"testing"
 	"time"
-	"sync"
 )
 
 const (
