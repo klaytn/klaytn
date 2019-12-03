@@ -5,6 +5,7 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"testing"
 	"time"
+	"sync"
 )
 
 const (
@@ -17,7 +18,10 @@ func (a APIgRPC) BlockNumber() float64 {
 	return TEST_BLOCK_NUMBER
 }
 
-func TestCall(t *testing.T) {
+func TestGRPC(t *testing.T) {
+	waitGroup := &sync.WaitGroup{}
+	waitGroup.Add(2)
+
 	addr := "127.0.0.1:4000"
 	handler := rpc.NewServer()
 
@@ -27,7 +31,14 @@ func TestCall(t *testing.T) {
 	listener.SetRPCServer(handler)
 	go listener.Start()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
+
+	go testCall(t, addr, waitGroup)
+	go testBiCall(t, addr, waitGroup)
+	waitGroup.Wait()
+}
+func testCall(t *testing.T, addr string, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	kclient, _ := NewgKlaytnClient(addr)
 	defer kclient.Close()
@@ -63,17 +74,8 @@ func TestCall(t *testing.T) {
 	}
 }
 
-func TestBiCall(t *testing.T) {
-	addr := "127.0.0.1:4000"
-	handler := rpc.NewServer()
-
-	handler.RegisterName("klay", &APIgRPC{})
-
-	listener := &Listener{Addr: addr}
-	listener.SetRPCServer(handler)
-	go listener.Start()
-
-	time.Sleep(3 * time.Second)
+func testBiCall(t *testing.T, addr string, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	kclient, _ := NewgKlaytnClient(addr)
 	defer kclient.Close()
