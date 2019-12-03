@@ -257,8 +257,7 @@ func (self *stateObject) updateStorageTrie(db Database) Trie {
 	return tr
 }
 
-// updateStorageRoot calls updateStorageTrie to get the latest root hash of the object's storage trie
-// and sets the storage trie root to the newly updated one.
+// updateStorageRoot sets the storage trie root to the newly updated one.
 func (self *stateObject) updateStorageRoot(db Database) {
 	if acc := account.GetProgramAccount(self.account); acc != nil {
 		acc.SetStorageRoot(self.storageTrie.Hash())
@@ -273,7 +272,7 @@ func (self *stateObject) setStorageRoot(updateStorageRoot bool, objectsToUpdate 
 			acc.SetStorageRoot(self.storageTrie.Hash())
 			return
 		}
-		// If updateStorageRoot == false, it just marks the object and update its storage root later.
+		// If updateStorageRoot == false, it just marks the object and updates its storage root later.
 		objectsToUpdate[self.Address()] = struct{}{}
 	}
 }

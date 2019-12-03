@@ -820,7 +820,7 @@ func (self *StateDB) GetRefund() uint64 {
 // and clears the journal as well as the refunds.
 func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
 	for addr := range stateDB.journal.dirties {
-		stateObject, exist := stateDB.stateObjects[addr]
+		so, exist := stateDB.stateObjects[addr]
 		if !exist {
 			// ripeMD is 'touched' at block 1714175, in tx 0x1237f737031e40bcde4a8b7e717b2d15e3ecadfe49bb1bbc71ee9deb09c6fcf2
 			// That tx goes out of gas, and although the notion of 'touched' does not exist there, the
@@ -831,12 +831,12 @@ func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
 			continue
 		}
 
-		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
-			stateDB.deleteStateObject(stateObject)
+		if so.suicided || (deleteEmptyObjects && so.empty()) {
+			stateDB.deleteStateObject(so)
 		} else {
-			stateObject.updateStorageTrie(stateDB.db)
-			stateObject.setStorageRoot(setStorageRoot, stateDB.stateObjectsDirtyStorage)
-			stateDB.updateStateObject(stateObject)
+			so.updateStorageTrie(stateDB.db)
+			so.setStorageRoot(setStorageRoot, stateDB.stateObjectsDirtyStorage)
+			stateDB.updateStateObject(so)
 		}
 		stateDB.stateObjectsDirty[addr] = struct{}{}
 	}
