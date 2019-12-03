@@ -197,7 +197,7 @@ func testTxTypeSupport_noFieldValues(t *testing.T, api PublicTransactionPoolAPI,
 	}
 
 	args := oriArgs
-	if args.Recipient != nil {
+	if args.Recipient != nil && !(*args.TypeInt).IsContractDeploy() {
 		args.Recipient = nil
 
 		_, err := api.SignTransaction(ctx, args)
