@@ -36,8 +36,8 @@ func (a APIgRPC) BlockNumber() float64 {
 }
 
 func TestGRPC(t *testing.T) {
-	waitGroup := &sync.WaitGroup{}
-	waitGroup.Add(2)
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
 
 	addr := "127.0.0.1:4000"
 	handler := rpc.NewServer()
@@ -50,9 +50,9 @@ func TestGRPC(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	go testCall(t, addr, waitGroup)
-	go testBiCall(t, addr, waitGroup)
-	waitGroup.Wait()
+	go testCall(t, addr, wg)
+	go testBiCall(t, addr, wg)
+	wgd.Wait()
 }
 func testCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 	defer wg.Done()
