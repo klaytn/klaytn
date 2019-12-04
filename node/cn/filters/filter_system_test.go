@@ -575,7 +575,7 @@ func TestPendingLogsSubscription(t *testing.T) {
 			{klaytn.FilterQuery{Addresses: []common.Address{thirdAddress}, Topics: [][]common.Hash{{firstTopic, secondTopic}}}, append(convertLogs(allLogs[3:5]), allLogs[5].Logs[0]), nil, nil},
 			// match logs based on multiple addresses and "or" topics
 			{klaytn.FilterQuery{Addresses: []common.Address{secondAddr, thirdAddress}, Topics: [][]common.Hash{{firstTopic, secondTopic}}}, append(convertLogs(allLogs[2:5]), allLogs[5].Logs[0]), nil, nil},
-			// block numbers are ignored for filters created with NewRangeFilter***Filter, these return all logs that match the given criteria when the state changes
+			// block numbers are ignored for filters created with New***Filter, these return all logs that match the given criteria when the state changes
 			{klaytn.FilterQuery{Addresses: []common.Address{firstAddr}, FromBlock: big.NewInt(2), ToBlock: big.NewInt(3)}, append(convertLogs(allLogs[:2]), allLogs[5].Logs[3]), nil, nil},
 			// multiple pending logs, should match only 2 topics from the logs in block 5
 			{klaytn.FilterQuery{Addresses: []common.Address{thirdAddress}, Topics: [][]common.Hash{{firstTopic, fourthTopic}}}, []*types.Log{allLogs[5].Logs[0], allLogs[5].Logs[2]}, nil, nil},

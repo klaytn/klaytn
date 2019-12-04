@@ -202,7 +202,7 @@ func setEngineType(chainConfig *params.ChainConfig) {
 	}
 }
 
-// NewRangeFilter creates a new CN object (including the
+// New creates a new CN object (including the
 // initialisation of the common CN object)
 func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if err := checkSyncMode(config); err != nil {
