@@ -1,8 +1,25 @@
+// Copyright 2019 The klaytn Authors
+// This file is part of the klaytn library.
+//
+// The klaytn library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The klaytn library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+
 package grpc
 
 import (
 	"encoding/json"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
@@ -44,34 +61,21 @@ func testCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 	defer kclient.Close()
 
 	knclient, err := kclient.makeKlaytnClient(timeout)
-	if err != nil {
-		t.Errorf("fail to make klaytnNodeClient: err=%v\n", err)
-		return
-	}
+	assert.NoError(t, err)
 
 	request, err := kclient.makeRPCRequest("klay", "klay_blockNumber", nil)
-	if err != nil {
-		t.Errorf("fail to make RPCRequest: err=%v\n", err)
-		return
-	}
+	assert.NoError(t, err)
 
 	response, err := knclient.Call(kclient.ctx, request)
-	if err != nil {
-		t.Errorf("fail to call: err=%v\n", err)
-		return
-	}
-	if err := kclient.handleRPCResponse(response); err != nil {
-		t.Errorf("fail to handle RPCResponse: err=%v\n", err)
-		return
-	}
-	var out jsonSuccessResponse
-	if err := json.Unmarshal(response.Payload, &out); err != nil {
-		t.Errorf("fail to handle RPCResponse: err=%v\n", err)
-	}
+	assert.NoError(t, err)
 
-	if out.Result != TEST_BLOCK_NUMBER {
-		t.Errorf("result expected:%f, actual:%f", TEST_BLOCK_NUMBER, out.Result)
-	}
+	err = kclient.handleRPCResponse(response)
+	assert.NoError(t, err)
+
+	var out jsonSuccessResponse
+	json.Unmarshal(response.Payload, &out)
+	assert.NoError(t, err)
+	assert.Equal(t, out.Result, TEST_BLOCK_NUMBER)
 }
 
 func testBiCall(t *testing.T, addr string, wg *sync.WaitGroup) {
@@ -81,32 +85,24 @@ func testBiCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 	defer kclient.Close()
 
 	knclient, err := kclient.makeKlaytnClient(timeout)
-	if err != nil {
-		t.Errorf("fail to make klaytnNodeClient: err=%v\n", err)
-		return
-	}
+	assert.NoError(t, err)
 
 	stream, _ := knclient.BiCall(kclient.ctx)
 	go kclient.handleBiCall(stream, func() (request *RPCRequest, e error) {
 		request, err := kclient.makeRPCRequest("klay", "klay_blockNumber", nil)
-		if err != nil {
-			t.Errorf("fail to make RPCRequest: err=%v\n", err)
+		if assert.NoError(t, err) {
 			return request, err
 		}
+
 		return request, nil
 	}, func(response *RPCResponse) error {
 		var out jsonSuccessResponse
-		if err := json.Unmarshal(response.Payload, &out); err != nil {
-			t.Errorf("fail to handle RPCResponse: err=%v\n", err)
-		}
+		err = json.Unmarshal(response.Payload, &out)
+		assert.NoError(t, err)
+		assert.Equal(t, out.Result, TEST_BLOCK_NUMBER)
 
-		if out.Result != TEST_BLOCK_NUMBER {
-			t.Errorf("result expected:%f, actual:%f", TEST_BLOCK_NUMBER, out.Result)
-		}
 		return nil
 	})
 
-	select {
-	case <-time.After(3 * time.Second):
-	}
+	time.Sleep(3 * time.Second)
 }
