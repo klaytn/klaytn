@@ -144,6 +144,7 @@ var (
 	errRangeNil                = errors.New("range values should not be nil")
 	errExtractIstanbulExtra    = errors.New("extract Istanbul Extra from block header of the given block number")
 	errNoBlockExist            = errors.New("block with the given block number is not existed")
+	errNoBlockNumber           = errors.New("block number is not assigned")
 )
 
 // GetCouncil retrieves the list of authorized validators at the specified block.
@@ -311,8 +312,8 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	var blockNumber uint64
 
 	if number == nil {
-		number = new(rpc.BlockNumber)
-		*number = rpc.LatestBlockNumber
+		logger.Trace("block number is not assigned")
+		return nil, errNoBlockNumber
 	}
 
 	if *number == rpc.PendingBlockNumber {
