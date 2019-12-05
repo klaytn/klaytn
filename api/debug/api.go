@@ -112,7 +112,7 @@ func (h *HandlerT) StartPProf(ptrAddr *string, ptrPort *int) error {
 	// Set the default server address and port if they are not set
 	var (
 		address string
-		port int
+		port    int
 	)
 	if ptrAddr == nil || *ptrAddr == "" {
 		address = pprofAddrFlag.Value
