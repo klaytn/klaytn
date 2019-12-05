@@ -227,7 +227,7 @@ func (lb *LocalBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery
 	to := query.ToBlock.Int64()
 
 	// Construct and execute the filter
-	filter := filters.New(&filterLocalBackend{lb.subbrige}, from, to, query.Addresses, query.Topics)
+	filter := filters.NewRangeFilter(&filterLocalBackend{lb.subbrige}, from, to, query.Addresses, query.Topics)
 
 	logs, err := filter.Logs(ctx)
 	if err != nil {

@@ -371,7 +371,7 @@ func (b *SimulatedBackend) FilterLogs(ctx context.Context, query klaytn.FilterQu
 		to = query.ToBlock.Int64()
 	}
 	// Construct and execute the filter
-	filter := filters.New(&filterBackend{b.database, b.blockchain}, from, to, query.Addresses, query.Topics)
+	filter := filters.NewRangeFilter(&filterBackend{b.database, b.blockchain}, from, to, query.Addresses, query.Topics)
 
 	logs, err := filter.Logs(ctx)
 	if err != nil {
