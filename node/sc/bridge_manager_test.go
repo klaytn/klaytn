@@ -1473,20 +1473,22 @@ func TestAnchoringBasic(t *testing.T) {
 	assert.Equal(t, uint64(0), sc.handler.latestTxCountAddedBlockNumber)
 	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
 
-	// Encoding anchoring tx
 	auth := bAcc.pAccount.GenerateTransactOpts()
 	_, _, _, err = bridge.DeployBridge(auth, sim, true) // dummy tx
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
 
 	// nil block
-	err = sc.handler.blockAnchoringManager(nil)
-	assert.Error(t, errInvalidBlock, err)
+	{
+		err := sc.handler.blockAnchoringManager(nil)
+		assert.Error(t, errInvalidBlock, err)
+	}
 
-	err = sc.handler.generateAndAddAnchoringTxIntoTxPool(nil)
-	assert.Error(t, errInvalidBlock, err)
-
-	// Generate anchoring tx again for only the curBlk.
+	{
+		err := sc.handler.generateAndAddAnchoringTxIntoTxPool(nil)
+		assert.Error(t, errInvalidBlock, err)
+	}
+	// Generate anchoring tx again for the curBlk.
 	err = sc.handler.blockAnchoringManager(curBlk)
 	assert.NoError(t, err)
 
@@ -1549,12 +1551,11 @@ func TestAnchoringBasicWithFeePayer(t *testing.T) {
 		bAcc.SetParentOperatorFeePayer(feePayer.Address)
 	}
 
-	// Encoding anchoring tx
 	_, _, _, err = bridge.DeployBridge(tester, sim, true) // dummy tx
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
 
-	// Generate anchoring tx again for only the curBlk.
+	// Generate anchoring tx again for the curBlk.
 	sc.handler.blockAnchoringManager(curBlk)
 	pending := sc.GetBridgeTxPool().Pending()
 	assert.Equal(t, 1, len(pending))
@@ -1604,13 +1605,16 @@ func TestAnchoringBasicWithBridgeTxPoolMock(t *testing.T) {
 		}
 	}()
 
-	sim, sc, bAcc, _, feePayer, tester := generateAnchoringEnv(t, tempDir)
+	sim, sc, bAcc, _, feePayer, _ := generateAnchoringEnv(t, tempDir)
 
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	mockBridgeTxPool := NewMockBridgeTxPool(mockCtrl)
-	sc.bridgeTxPool = mockBridgeTxPool
-	mockBridgeTxPool.EXPECT().AddLocal(gomock.Any()).Return(bridgepool.ErrKnownTx)
+	// mock BridgeTxPool
+	{
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockBridgeTxPool := NewMockBridgeTxPool(mockCtrl)
+		sc.bridgeTxPool = mockBridgeTxPool
+		mockBridgeTxPool.EXPECT().AddLocal(gomock.Any()).Return(bridgepool.ErrKnownTx)
+	}
 
 	bAcc.SetParentOperatorFeePayer(feePayer.Address)
 
@@ -1618,12 +1622,9 @@ func TestAnchoringBasicWithBridgeTxPoolMock(t *testing.T) {
 	assert.Equal(t, uint64(0), sc.handler.latestTxCountAddedBlockNumber)
 	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
 
-	// Encoding anchoring tx
-	_, _, _, err = bridge.DeployBridge(tester, sim, true) // dummy tx
-	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
 
-	// Generate anchoring tx again for only the curBlk.
+	// Generate anchoring tx with mocked BridgeTxPool returns a error
 	err = sc.handler.blockAnchoringManager(curBlk)
 	assert.Equal(t, bridgepool.ErrKnownTx, err)
 }
