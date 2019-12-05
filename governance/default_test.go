@@ -98,11 +98,11 @@ var tstData = []voteValue{
 	{k: "reward.minimumstake", v: 200000000000000, e: false},
 	{k: "reward.stakingupdateinterval", v: uint64(20), e: false},
 	{k: "reward.proposerupdateinterval", v: uint64(20), e: false},
-	{k: "istanbul.requesttimeout", v: uint64(10000), e: true},
-	{k: "istanbul.requesttimeout", v: uint64(5000), e: true},
-	{k: "istanbul.requesttimeout", v: true, e: false},
-	{k: "istanbul.requesttimeout", v: "10", e: false},
-	{k: "istanbul.requesttimeout", v: 5.3, e: false},
+	{k: "istanbul.roundchangetimer", v: uint64(10000), e: true},
+	{k: "istanbul.roundchangetimer", v: uint64(5000), e: true},
+	{k: "istanbul.roundchangetimer", v: true, e: false},
+	{k: "istanbul.roundchangetimer", v: "10", e: false},
+	{k: "istanbul.roundchangetimer", v: 5.3, e: false},
 }
 
 var goodVotes = []voteValue{
@@ -114,7 +114,7 @@ var goodVotes = []voteValue{
 	{k: "reward.useginicoeff", v: false, e: true},
 	{k: "reward.mintingamount", v: "9600000000000000000", e: true},
 	{k: "reward.ratio", v: "10/10/80", e: true},
-	{k: "istanbul.requesttimeout", v: uint64(5000), e: true},
+	{k: "istanbul.roundchangetimer", v: uint64(5000), e: true},
 }
 
 func getTestConfig() *params.ChainConfig {
@@ -637,7 +637,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	header.BlockScore = common.Big1
 
 	newValue := istanbul.DefaultConfig.RequestTimeout + uint64(10000)
-	gov.AddVote("istanbul.requesttimeout", newValue)
+	gov.AddVote("istanbul.roundchangetimer", newValue)
 	header.Vote = gov.GetEncodedVote(proposer, blockCounter.Uint64())
 
 	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
@@ -718,11 +718,11 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	gov.RemoveVote("governance.unitprice", uint64(22000), blockCounter.Uint64())
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Test for "istanbul.requesttimeout" in "ballot" mode
+	// Test for "istanbul.roundchangetimer" in "ballot" mode
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.BlockScore = common.Big1
 	newValue := istanbul.DefaultConfig.RequestTimeout + uint64(10000)
-	gov.AddVote("istanbul.requesttimeout", newValue)
+	gov.AddVote("istanbul.roundchangetimer", newValue)
 
 	header.Vote = gov.GetEncodedVote(council[0], blockCounter.Uint64())
 	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[0], self)

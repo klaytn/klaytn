@@ -879,7 +879,7 @@ web3._extend({
 			getter: 'istanbul_candidates'
 		}),
 		new web3._extend.Property({
-			name: 'requestTimeout',
+			name: 'roundchangeTimer',
 			getter: 'istanbul_getRequestTimeout'
 		})
 	]

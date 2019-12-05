@@ -63,7 +63,7 @@ var (
 		"governance.addvalidator":       params.AddValidator,
 		"governance.removevalidator":    params.RemoveValidator,
 		"param.txgashumanreadable":      params.ConstTxGasHumanReadable,
-		"istanbul.requesttimeout":       params.RequestTimeout,
+		"istanbul.roundchangetimer":     params.RequestTimeout,
 	}
 
 	GovernanceForbiddenKeyMap = map[string]int{
@@ -90,7 +90,7 @@ var (
 		params.AddValidator:            "governance.addvalidator",
 		params.RemoveValidator:         "governance.removevalidator",
 		params.ConstTxGasHumanReadable: "param.txgashumanreadable",
-		params.RequestTimeout:          "istanbul.requesttimeout",
+		params.RequestTimeout:          "istanbul.roundchangetimer",
 	}
 
 	ProposerPolicyMap = map[string]int{
