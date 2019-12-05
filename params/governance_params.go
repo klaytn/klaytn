@@ -87,6 +87,7 @@ const (
 	ProposerRefreshInterval
 	ConstTxGasHumanReadable
 	CliqueEpoch
+	RequestTimeout
 )
 
 const (

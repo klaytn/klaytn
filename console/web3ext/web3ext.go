@@ -878,6 +878,10 @@ web3._extend({
 			name: 'candidates',
 			getter: 'istanbul_candidates'
 		}),
+		new web3._extend.Property({
+			name: 'requestTimeout',
+			getter: 'istanbul_getRequestTimeout'
+		})
 	]
 });
 `

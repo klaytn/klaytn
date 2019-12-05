@@ -423,3 +423,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 
 	return api.makeRPCOutput(block, proposer, committee, block.Transactions(), receipts), nil
 }
+
+func (api *API) GetRequestTimeout() uint64 {
+	return istanbul.DefaultConfig.RequestTimeout
+}
