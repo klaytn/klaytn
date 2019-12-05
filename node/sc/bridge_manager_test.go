@@ -19,6 +19,7 @@ package sc
 import (
 	"context"
 	"fmt"
+	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
@@ -1478,8 +1479,17 @@ func TestAnchoringBasic(t *testing.T) {
 	sim.Commit()
 	curBlk := sim.BlockChain().CurrentBlock()
 
+	// nil block
+	err = sc.handler.blockAnchoringManager(nil)
+	assert.Error(t, errInvalidBlock, err)
+
+	err = sc.handler.generateAndAddAnchoringTxIntoTxPool(nil)
+	assert.Error(t, errInvalidBlock, err)
+
 	// Generate anchoring tx again for only the curBlk.
-	sc.handler.blockAnchoringManager(curBlk)
+	err = sc.handler.blockAnchoringManager(curBlk)
+	assert.NoError(t, err)
+
 	pending := sc.GetBridgeTxPool().Pending()
 	assert.Equal(t, 1, len(pending))
 	var tx *types.Transaction
@@ -1509,11 +1519,35 @@ func TestAnchoringBasicWithFeePayer(t *testing.T) {
 
 	sim, sc, bAcc, parentOperator, feePayer, tester := generateAnchoringEnv(t, tempDir)
 
+	invalidAccount := common.HexToAddress("0x1")
 	bAcc.SetParentOperatorFeePayer(feePayer.Address)
 
 	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
 	assert.Equal(t, uint64(0), sc.handler.latestTxCountAddedBlockNumber)
 	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
+
+	// fail to generate anchoring tx with invalid parent operator
+	{
+		pAccBackup := bAcc.pAccount.address
+		bAcc.pAccount.address = invalidAccount
+
+		curBlk := sim.BlockChain().CurrentBlock()
+		err = sc.handler.generateAndAddAnchoringTxIntoTxPool(curBlk)
+		assert.Error(t, err, accounts.ErrUnknownAccount)
+
+		bAcc.pAccount.address = pAccBackup
+	}
+
+	// fail to generate anchoring tx with invalid feePayer
+	{
+		bAcc.SetParentOperatorFeePayer(invalidAccount)
+
+		curBlk := sim.BlockChain().CurrentBlock()
+		err = sc.handler.generateAndAddAnchoringTxIntoTxPool(curBlk)
+		assert.Error(t, err, accounts.ErrUnknownAccount)
+
+		bAcc.SetParentOperatorFeePayer(feePayer.Address)
+	}
 
 	// Encoding anchoring tx
 	_, _, _, err = bridge.DeployBridge(tester, sim, true) // dummy tx
@@ -1557,6 +1591,41 @@ func TestAnchoringBasicWithFeePayer(t *testing.T) {
 	assert.Equal(t, uint64(0), sc.handler.txCount)
 	assert.Equal(t, curBlk.NumberU64(), sc.handler.latestTxCountAddedBlockNumber)
 	compareBlockAndAnchoringTx(t, curBlk, tx)
+}
+
+// TestAnchoringBasicWithBridgeTxPoolMock tests the following :
+// - BridgeTxPool addLocal() fail case.
+func TestAnchoringBasicWithBridgeTxPoolMock(t *testing.T) {
+	tempDir, err := ioutil.TempDir(os.TempDir(), "anchoring")
+	assert.NoError(t, err)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Fatalf("fail to delete file %v", err)
+		}
+	}()
+
+	sim, sc, bAcc, _, feePayer, tester := generateAnchoringEnv(t, tempDir)
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockBridgeTxPool := NewMockBridgeTxPool(mockCtrl)
+	sc.bridgeTxPool = mockBridgeTxPool
+	mockBridgeTxPool.EXPECT().AddLocal(gomock.Any()).Return(bridgepool.ErrKnownTx)
+
+	bAcc.SetParentOperatorFeePayer(feePayer.Address)
+
+	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
+	assert.Equal(t, uint64(0), sc.handler.latestTxCountAddedBlockNumber)
+	assert.Equal(t, uint64(1), sc.handler.chainTxPeriod)
+
+	// Encoding anchoring tx
+	_, _, _, err = bridge.DeployBridge(tester, sim, true) // dummy tx
+	sim.Commit()
+	curBlk := sim.BlockChain().CurrentBlock()
+
+	// Generate anchoring tx again for only the curBlk.
+	err = sc.handler.blockAnchoringManager(curBlk)
+	assert.Equal(t, bridgepool.ErrKnownTx, err)
 }
 
 func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBackend, *SubBridge, *BridgeAccounts, *accountInfo, accounts.Account, *bind.TransactOpts) {
