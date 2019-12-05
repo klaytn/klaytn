@@ -108,13 +108,22 @@ func (*HandlerT) GcStats() *debug.GCStats {
 }
 
 // StartPProf starts the pprof server.
-func (h *HandlerT) StartPProf(address string, port int) error {
+func (h *HandlerT) StartPProf(ptrAddr *string, ptrPort *int) error {
 	// Set the default server address and port if they are not set
-	if address == "" {
+	var (
+		address string
+		port int
+	)
+	if ptrAddr == nil || *ptrAddr == "" {
 		address = pprofAddrFlag.Value
+	} else {
+		address = *ptrAddr
 	}
-	if port == 0 {
+
+	if ptrPort == nil || port == 0 {
 		port = pprofPortFlag.Value
+	} else {
+		port = *ptrPort
 	}
 
 	h.mu.Lock()
