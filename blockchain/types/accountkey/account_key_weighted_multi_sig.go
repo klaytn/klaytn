@@ -76,11 +76,6 @@ func (a *AccountKeyWeightedMultiSig) Equal(b AccountKey) bool {
 func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
 	weightedSum := uint(0)
 
-	// To prohibit too much signatures
-	if len(a.Keys) < len(pubkeys) {
-		return false
-	}
-
 	// To prohibit making a signature with the same key, make a map.
 	// TODO-Klaytn: find another way for better performance
 	pMap := make(map[string]*ecdsa.PublicKey)
