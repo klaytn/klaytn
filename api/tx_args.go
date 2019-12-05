@@ -172,6 +172,10 @@ func (args *SendTxArgs) checkArgs() error {
 
 		// An args field doesn't have a value but the field name exist on the tx type
 		if argsValue.Field(i).IsNil() && isTxField[*args.TypeInt][argsType.Field(i).Name] {
+			// Allow only contract deploying txs to set the recipient as nil
+			if (*args.TypeInt).IsContractDeploy() && argsType.Field(i).Name == "Recipient" {
+				continue
+			}
 			return errors.New((string)(argsType.Field(i).Tag) + " is required for " + (*args.TypeInt).String())
 		}
 
