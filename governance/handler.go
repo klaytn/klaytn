@@ -386,7 +386,7 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 				votes = gov.removeVotesFromRemovedNode(votes, target)
 			case params.Timeout:
 				timeout := gVote.Value.(uint64)
-				istanbul.DefaultConfig.Timeout = timeout
+				atomic.StoreUint64(&istanbul.DefaultConfig.Timeout, timeout)
 				if blockNum > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
 					gov.ReflectVotes(*gVote)
 				}
