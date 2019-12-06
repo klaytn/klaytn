@@ -535,10 +535,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 	case params.GovernanceMode, params.Ratio:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(string))
 		return true
-	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize, params.UnitPrice, params.ConstTxGasHumanReadable, params.Timeout:
-		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(uint64))
-		return true
-	case params.Policy:
+	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize, params.UnitPrice, params.ConstTxGasHumanReadable, params.Policy, params.Timeout:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(uint64))
 		return true
 	case params.MintingAmount, params.MinimumStake:

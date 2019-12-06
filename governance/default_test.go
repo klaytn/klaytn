@@ -632,7 +632,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	gov.voteMap.Clear()
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Test for "istanbul.requesttimeout" in "none" mode
+	// Test for "istanbul.timeout" in "none" mode
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.BlockScore = common.Big1
 
@@ -642,9 +642,8 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 
 	gov.HandleGovernanceVote(valSet, votes, tally, header, proposer, self)
 
-	if istanbul.DefaultConfig.Timeout != newValue {
-		t.Errorf("Vote had to be applied but it wasn't")
-	}
+	assert.Equal(t, istanbul.DefaultConfig.Timeout, newValue, "Vote had to be applied but it wasn't")
+
 	gov.voteMap.Clear()
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -718,7 +717,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	gov.RemoveVote("governance.unitprice", uint64(22000), blockCounter.Uint64())
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Test for "istanbul.roundchangetimer" in "ballot" mode
+	// Test for "istanbul.timeout" in "ballot" mode
 	header.Number = blockCounter.Add(blockCounter, common.Big1)
 	header.BlockScore = common.Big1
 	newValue := istanbul.DefaultConfig.Timeout + uint64(10000)
@@ -730,15 +729,12 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	header.Vote = gov.GetEncodedVote(council[1], blockCounter.Uint64())
 	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[1], self)
 
-	if istanbul.DefaultConfig.Timeout == newValue {
-		t.Errorf("Vote shouldn't be applied yet but it was applied")
-	}
+	assert.NotEqual(t, istanbul.DefaultConfig.Timeout, newValue, "Vote shouldn't be applied yet but it was applied")
 
 	header.Vote = gov.GetEncodedVote(council[2], blockCounter.Uint64())
 	valSet, votes, tally = gov.HandleGovernanceVote(valSet, votes, tally, header, council[2], self)
-	if istanbul.DefaultConfig.Timeout != newValue {
-		t.Errorf("Vote should be applied but it was not")
-	}
+
+	assert.Equal(t, istanbul.DefaultConfig.Timeout, newValue, "Vote should be applied but it was not")
 
 	gov.voteMap.Clear()
 
