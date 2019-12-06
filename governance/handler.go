@@ -60,7 +60,7 @@ var GovernanceItems = map[int]check{
 	params.Policy:                  {uint64T, checkUint64andBool, updateProposerPolicy},
 	params.CommitteeSize:           {uint64T, checkUint64andBool, nil},
 	params.ConstTxGasHumanReadable: {uint64T, checkUint64andBool, updateTxGasHumanReadable},
-	params.RequestTimeout:          {uint64T, checkUint64andBool, nil},
+	params.Timeout:                 {uint64T, checkUint64andBool, nil},
 }
 
 func updateTxGasHumanReadable(g *Governance, k string, v interface{}) {
@@ -384,9 +384,9 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 				target := gVote.Value.(common.Address)
 				valset.RemoveValidator(target)
 				votes = gov.removeVotesFromRemovedNode(votes, target)
-			case params.RequestTimeout:
+			case params.Timeout:
 				timeout := gVote.Value.(uint64)
-				istanbul.DefaultConfig.RequestTimeout = timeout
+				istanbul.DefaultConfig.Timeout = timeout
 				if blockNum > atomic.LoadUint64(&gov.lastGovernanceStateBlock) {
 					gov.ReflectVotes(*gVote)
 				}

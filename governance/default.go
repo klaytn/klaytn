@@ -63,7 +63,7 @@ var (
 		"governance.addvalidator":       params.AddValidator,
 		"governance.removevalidator":    params.RemoveValidator,
 		"param.txgashumanreadable":      params.ConstTxGasHumanReadable,
-		"istanbul.roundchangetimer":     params.RequestTimeout,
+		"istanbul.timeout":              params.Timeout,
 	}
 
 	GovernanceForbiddenKeyMap = map[string]int{
@@ -90,7 +90,7 @@ var (
 		params.AddValidator:            "governance.addvalidator",
 		params.RemoveValidator:         "governance.removevalidator",
 		params.ConstTxGasHumanReadable: "param.txgashumanreadable",
-		params.RequestTimeout:          "istanbul.roundchangetimer",
+		params.Timeout:                 "istanbul.timeout",
 	}
 
 	ProposerPolicyMap = map[string]int{
@@ -504,7 +504,7 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		val = string(gVote.Value.([]uint8))
 	case params.GoverningNode, params.AddValidator, params.RemoveValidator:
 		val = common.BytesToAddress(gVote.Value.([]uint8))
-	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.RequestTimeout:
+	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout:
 		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
 		val = binary.BigEndian.Uint64(gVote.Value.([]uint8))
 	case params.UseGiniCoeff, params.DeferredTxFee:
@@ -535,7 +535,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 	case params.GovernanceMode, params.Ratio:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(string))
 		return true
-	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize, params.UnitPrice, params.ConstTxGasHumanReadable, params.RequestTimeout:
+	case params.Epoch, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.CommitteeSize, params.UnitPrice, params.ConstTxGasHumanReadable, params.Timeout:
 		gov.changeSet.SetValue(GovernanceKeyMap[vote.Key], vote.Value.(uint64))
 		return true
 	case params.Policy:
