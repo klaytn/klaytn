@@ -252,7 +252,7 @@ func TestProtocolManager_getChainID(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	cfg := params.ChainConfig{ChainID: big.NewInt(12345)}
+	cfg := &params.ChainConfig{ChainID: big.NewInt(12345)}
 
 	mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
 	mockBlockChain.EXPECT().Config().Return(cfg).AnyTimes()
