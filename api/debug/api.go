@@ -120,7 +120,7 @@ func (h *HandlerT) StartPProf(ptrAddr *string, ptrPort *int) error {
 		address = *ptrAddr
 	}
 
-	if ptrPort == nil || port == 0 {
+	if ptrPort == nil || *ptrPort == 0 {
 		port = pprofPortFlag.Value
 	} else {
 		port = *ptrPort
