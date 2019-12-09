@@ -166,10 +166,10 @@ func TestProtocolManager_getWSEndPoint(t *testing.T) {
 	ws1 := "abc"
 	ws2 := "123"
 
-	pm.wsendpoint = ws1
+	pm.SetWsEndPoint(ws1)
 	assert.Equal(t, ws1, pm.getWSEndPoint())
 
-	pm.wsendpoint = ws2
+	pm.SetWsEndPoint(ws2)
 	assert.Equal(t, ws2, pm.getWSEndPoint())
 }
 
