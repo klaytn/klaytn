@@ -156,7 +156,8 @@ func TestNodeDataRequestMsg(t *testing.T) {
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		msg := generateMsg(t, NodeDataRequestMsg, uint64(123)) // Non-list value to invoke an error
 
-		assert.Error(t, handleNodeDataRequestMsg(pm, mockPeer, msg))
+		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 	{
@@ -171,7 +172,8 @@ func TestNodeDataRequestMsg(t *testing.T) {
 
 		mockPeer.EXPECT().SendNodeData(returnedData).Return(nil).Times(1)
 
-		assert.NoError(t, handleNodeDataRequestMsg(pm, mockPeer, msg))
+		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 }
@@ -181,7 +183,8 @@ func TestHandleReceiptsRequestMsg(t *testing.T) {
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		msg := generateMsg(t, ReceiptsRequestMsg, uint64(123)) // Non-list value to invoke an error
 
-		assert.Error(t, handleReceiptsRequestMsg(pm, mockPeer, msg))
+		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 	{
@@ -198,7 +201,8 @@ func TestHandleReceiptsRequestMsg(t *testing.T) {
 
 		mockPeer.EXPECT().SendReceiptsRLP(gomock.Any()).Return(nil).Times(1)
 
-		assert.NoError(t, handleReceiptsRequestMsg(pm, mockPeer, msg))
+		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 }
@@ -244,13 +248,14 @@ func TestHandleTxMsg(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockPeer := NewMockPeer(mockCtrl)
+	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
 
 	txs := types.Transactions{tx1}
 	msg := generateMsg(t, TxMsg, txs)
 
 	// If pm.acceptTxs == 0, nothing happens.
 	{
-		assert.NoError(t, handleTxMsg(pm, mockPeer, msg))
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 	}
 	// If pm.acceptTxs == 1, TxPool.HandleTxMsg is called.
 	{
@@ -260,7 +265,7 @@ func TestHandleTxMsg(t *testing.T) {
 		pm.txpool = mockTxPool
 
 		mockPeer.EXPECT().AddToKnownTxs(txs[0].Hash()).Times(1)
-		assert.NoError(t, handleTxMsg(pm, mockPeer, msg))
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 	}
 }
 
@@ -268,6 +273,7 @@ func prepareTestHandleBlockHeaderFetchRequestMsg(t *testing.T) (*gomock.Controll
 	mockCtrl := gomock.NewController(t)
 	mockPeer := NewMockPeer(mockCtrl)
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
 
 	return mockCtrl, mockPeer, mockBlockChain, &ProtocolManager{blockchain: mockBlockChain}
 }
@@ -279,7 +285,7 @@ func TestHandleBlockHeaderFetchRequestMsg(t *testing.T) {
 
 		msg := generateMsg(t, BlockHeaderFetchRequestMsg, newBlock(blockNum1)) // use message data as a block, not a hash
 
-		assert.Error(t, handleBlockHeaderFetchRequestMsg(pm, mockPeer, msg))
+		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 	// GetHeaderByHash returns nil, an error is returned.
@@ -290,7 +296,7 @@ func TestHandleBlockHeaderFetchRequestMsg(t *testing.T) {
 
 		msg := generateMsg(t, BlockHeaderFetchRequestMsg, hash1)
 
-		assert.Error(t, handleBlockHeaderFetchRequestMsg(pm, mockPeer, msg))
+		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 	// GetHeaderByHash returns a header, p.SendFetchedBlockHeader(header) should be called.
@@ -303,7 +309,7 @@ func TestHandleBlockHeaderFetchRequestMsg(t *testing.T) {
 		mockPeer.EXPECT().SendFetchedBlockHeader(header).AnyTimes()
 
 		msg := generateMsg(t, BlockHeaderFetchRequestMsg, hash1)
-		assert.NoError(t, handleBlockHeaderFetchRequestMsg(pm, mockPeer, msg))
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 }
@@ -311,6 +317,7 @@ func TestHandleBlockHeaderFetchRequestMsg(t *testing.T) {
 func prepareTestHandleBlockHeaderFetchResponseMsg(t *testing.T) (*gomock.Controller, *MockPeer, *mocks2.MockProtocolManagerFetcher, *ProtocolManager) {
 	mockCtrl := gomock.NewController(t)
 	mockPeer := NewMockPeer(mockCtrl)
+	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
 
 	mockFetcher := mocks2.NewMockProtocolManagerFetcher(mockCtrl)
 	pm := &ProtocolManager{fetcher: mockFetcher}
@@ -324,9 +331,10 @@ func TestHandleBlockHeaderFetchResponseMsg(t *testing.T) {
 	{
 		mockCtrl := gomock.NewController(t)
 		mockPeer := NewMockPeer(mockCtrl)
+		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
 		pm := &ProtocolManager{}
 		msg := generateMsg(t, BlockHeaderFetchResponseMsg, newBlock(blockNum1)) // use message data as a block, not a header
-		assert.Error(t, handleBlockHeaderFetchResponseMsg(pm, mockPeer, msg))
+		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 	// FilterHeaders returns nil, error is not returned.
@@ -336,7 +344,7 @@ func TestHandleBlockHeaderFetchResponseMsg(t *testing.T) {
 		mockFetcher.EXPECT().FilterHeaders(nodeids[0].String(), gomock.Eq([]*types.Header{header}), gomock.Any()).Return(nil).AnyTimes()
 
 		msg := generateMsg(t, BlockHeaderFetchResponseMsg, header)
-		assert.NoError(t, handleBlockHeaderFetchResponseMsg(pm, mockPeer, msg))
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 	// FilterHeaders returns not-nil, peer.GetID() is called twice to leave a log.
@@ -346,7 +354,7 @@ func TestHandleBlockHeaderFetchResponseMsg(t *testing.T) {
 		mockFetcher.EXPECT().FilterHeaders(nodeids[0].String(), gomock.Eq([]*types.Header{header}), gomock.Any()).Return([]*types.Header{header}).AnyTimes()
 
 		msg := generateMsg(t, BlockHeaderFetchResponseMsg, header)
-		assert.NoError(t, handleBlockHeaderFetchResponseMsg(pm, mockPeer, msg))
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 }
@@ -355,6 +363,7 @@ func preparePeerAndDownloader(t *testing.T) (*gomock.Controller, *MockPeer, *moc
 	mockCtrl := gomock.NewController(t)
 	mockPeer := NewMockPeer(mockCtrl)
 	mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
 
 	mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
 	pm := &ProtocolManager{downloader: mockDownloader}
@@ -367,9 +376,11 @@ func TestHandleReceiptMsg(t *testing.T) {
 	{
 		mockCtrl := gomock.NewController(t)
 		mockPeer := NewMockPeer(mockCtrl)
+		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+
 		pm := &ProtocolManager{}
 		msg := generateMsg(t, ReceiptsMsg, newBlock(blockNum1)) // use message data as a block, not a header
-		assert.Error(t, handleReceiptsMsg(pm, mockPeer, msg))
+		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 	// DeliverReceipts returns nil, error is not returned.
@@ -381,7 +392,7 @@ func TestHandleReceiptMsg(t *testing.T) {
 		mockDownloader.EXPECT().DeliverReceipts(nodeids[0].String(), gomock.Eq(receipts)).Times(1).Return(nil)
 
 		msg := generateMsg(t, ReceiptsMsg, receipts)
-		assert.NoError(t, handleReceiptsMsg(pm, mockPeer, msg))
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 	// DeliverReceipts returns an error, but the error is not returned.
@@ -393,7 +404,7 @@ func TestHandleReceiptMsg(t *testing.T) {
 		mockDownloader.EXPECT().DeliverReceipts(nodeids[0].String(), gomock.Eq(receipts)).Times(1).Return(err)
 
 		msg := generateMsg(t, ReceiptsMsg, receipts)
-		assert.NoError(t, handleReceiptsMsg(pm, mockPeer, msg))
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 }
@@ -403,9 +414,10 @@ func TestHandleNodeDataMsg(t *testing.T) {
 	{
 		mockCtrl := gomock.NewController(t)
 		mockPeer := NewMockPeer(mockCtrl)
+		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
 		pm := &ProtocolManager{}
 		msg := generateMsg(t, NodeDataMsg, newBlock(blockNum1)) // use message data as a block, not a node data
-		assert.Error(t, handleNodeDataMsg(pm, mockPeer, msg))
+		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 	// DeliverNodeData returns nil, error is not returned.
@@ -416,8 +428,8 @@ func TestHandleNodeDataMsg(t *testing.T) {
 		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
 		mockDownloader.EXPECT().DeliverNodeData(nodeids[0].String(), gomock.Eq(nodeData)).Times(1).Return(nil)
 
-		msg := generateMsg(t, ReceiptsMsg, nodeData)
-		assert.NoError(t, handleNodeDataMsg(pm, mockPeer, msg))
+		msg := generateMsg(t, NodeDataMsg, nodeData)
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 	// DeliverNodeData returns an error, but the error is not returned.
@@ -428,8 +440,8 @@ func TestHandleNodeDataMsg(t *testing.T) {
 		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
 		mockDownloader.EXPECT().DeliverNodeData(nodeids[0].String(), gomock.Eq(nodeData)).Times(1).Return(err)
 
-		msg := generateMsg(t, ReceiptsMsg, nodeData)
-		assert.NoError(t, handleNodeDataMsg(pm, mockPeer, msg))
+		msg := generateMsg(t, NodeDataMsg, nodeData)
+		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
 }
