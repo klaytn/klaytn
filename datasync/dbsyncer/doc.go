@@ -1,4 +1,4 @@
-// Copyright 2018 The klaytn Authors
+// Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
 // The klaytn library is free software: you can redistribute it and/or modify
@@ -15,17 +15,17 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package grpc implements the gRPC protocol for Klaytn.
+Package dbsyncer implements blockchain data synchronisation to relational database.
 
-This package allows you to use Klaytn's RPC API using gRPC.
-See below for gRPC: https://grpc.io/docs/quickstart/go/
+Source Files
 
-Source files
-
-Each file provides the following features
- - gClient.go : gRPC client implementation.
- - gServer.go : gRPC server implementation.
- - klaytn.proto : Define a interface and messages to use in gRPC server and clients.
- - klaytn.pb.go : the generated Go file from klaytn.proto by protoc-gen-go.
+  - config.go         : includes configurations, mostly related to the connected database
+  - dbsync.go         : implements data synchronisation operations
+  - dbsync_context.go : provides context for chain event, block header, transactions and bulk inserts
+  - dbsync_multi.go   : supports parallel synchronisation
+  - gen_config.go     : is automatically generated from config.go
+  - query_engine.go   : supports query level requests and results
+  - tx_record.go      : manages transaction data handling
+  - utils.go          : includes utility functions for dbsyncer package
 */
-package grpc
+package dbsyncer

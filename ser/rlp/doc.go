@@ -33,5 +33,13 @@ array).
 RLP values are distinguished by a type tag. The type tag precedes the
 value in the input stream and defines the size and kind of the bytes
 that follow.
+
+Source Files
+
+  - decode.go    : provides Decoder interface and implements decoding of default types
+  - encode.go    : provides Encoder interface and implements encoding of default types
+  - raw.go       : includes RawValue (an encoded RLP value) related operations
+  - typecache.go : caches typeinfo which includes decoder and writer
+
 */
 package rlp
