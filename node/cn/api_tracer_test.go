@@ -40,6 +40,7 @@ func createCNMocks(t *testing.T) (*gomock.Controller, *PrivateDebugAPI, *mocks2.
 func TestPrivateDebugAPI_TraceChain(t *testing.T) {
 	endBlockNumber := rpc.BlockNumber(123)
 	block := newBlock(123)
+	// from == nil
 	{
 		mockCtrl, api, _, _, mockMiner := createCNMocks(t)
 		mockMiner.EXPECT().PendingBlock().Return(nil).Times(2)
@@ -49,28 +50,27 @@ func TestPrivateDebugAPI_TraceChain(t *testing.T) {
 		mockCtrl.Finish()
 	}
 	{
-		mockCtrl, api, _, mockBlockChain, mockMiner := createCNMocks(t)
-		mockMiner.EXPECT().PendingBlock().Return(nil).Times(1)
-		mockBlockChain.EXPECT().CurrentBlock().Return(nil).Times(1)
-		sub, err := api.TraceChain(context.Background(), rpc.PendingBlockNumber, rpc.LatestBlockNumber, nil)
+		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
+		mockBlockChain.EXPECT().CurrentBlock().Return(nil).Times(2)
+		sub, err := api.TraceChain(context.Background(), rpc.LatestBlockNumber, rpc.LatestBlockNumber, nil)
 		assert.Nil(t, sub)
 		assert.Error(t, err)
 		mockCtrl.Finish()
 	}
 	{
-		mockCtrl, api, _, mockBlockChain, mockMiner := createCNMocks(t)
-		mockMiner.EXPECT().PendingBlock().Return(nil).Times(1)
-		mockBlockChain.EXPECT().GetBlockByNumber(uint64(endBlockNumber)).Return(nil).Times(1)
-		sub, err := api.TraceChain(context.Background(), rpc.PendingBlockNumber, endBlockNumber, nil)
+		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
+		mockBlockChain.EXPECT().GetBlockByNumber(uint64(endBlockNumber)).Return(nil).Times(2)
+		sub, err := api.TraceChain(context.Background(), endBlockNumber, endBlockNumber, nil)
 		assert.Nil(t, sub)
 		assert.Error(t, err)
 		mockCtrl.Finish()
 	}
+	// from != nil
 	{
 		mockCtrl, api, _, mockBlockChain, mockMiner := createCNMocks(t)
 		mockMiner.EXPECT().PendingBlock().Return(block).Times(1)
 		mockBlockChain.EXPECT().CurrentBlock().Return(nil).Times(1)
-		sub, err := api.TraceChain(context.Background(), rpc.LatestBlockNumber, rpc.PendingBlockNumber, nil)
+		sub, err := api.TraceChain(context.Background(), rpc.PendingBlockNumber, rpc.LatestBlockNumber, nil)
 		assert.Nil(t, sub)
 		assert.Error(t, err)
 		mockCtrl.Finish()
@@ -80,7 +80,7 @@ func TestPrivateDebugAPI_TraceChain(t *testing.T) {
 		mockCtrl, api, _, mockBlockChain, mockMiner := createCNMocks(t)
 		mockMiner.EXPECT().PendingBlock().Return(block).Times(1)
 		mockBlockChain.EXPECT().GetBlockByNumber(uint64(endBlockNumber)).Return(nil).Times(1)
-		sub, err := api.TraceChain(context.Background(), endBlockNumber, rpc.PendingBlockNumber, nil)
+		sub, err := api.TraceChain(context.Background(), rpc.PendingBlockNumber, endBlockNumber, nil)
 		assert.Nil(t, sub)
 		assert.Error(t, err)
 		mockCtrl.Finish()
@@ -143,19 +143,19 @@ func TestPrivateDebugAPI_TraceBlockFromFile(t *testing.T) {
 func TestPrivateDebugAPI_TraceBadBlock(t *testing.T) {
 	{
 		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
-		mockBlockChain.EXPECT().BadBlocks().Return(nil, err).Times(1)
+		mockBlockChain.EXPECT().BadBlocks().Return(nil, expectedErr).Times(1)
 		sub, returnedErr := api.TraceBadBlock(context.Background(), hashes[0], nil)
 		assert.Nil(t, sub)
-		assert.Equal(t, err, returnedErr)
+		assert.Equal(t, expectedErr, returnedErr)
 		mockCtrl.Finish()
 	}
 	{
 		block := newBlock(123)
 		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
-		mockBlockChain.EXPECT().BadBlocks().Return([]blockchain.BadBlockArgs{{Hash: block.Hash(), Block: block}}, err).Times(1)
+		mockBlockChain.EXPECT().BadBlocks().Return([]blockchain.BadBlockArgs{{Hash: block.Hash(), Block: block}}, expectedErr).Times(1)
 		sub, returnedErr := api.TraceBadBlock(context.Background(), hashes[0], nil)
 		assert.Nil(t, sub)
-		assert.Equal(t, err, returnedErr)
+		assert.Equal(t, expectedErr, returnedErr)
 		mockCtrl.Finish()
 	}
 }
@@ -174,19 +174,19 @@ func TestPrivateDebugAPI_StandardTraceBlockToFile(t *testing.T) {
 func TestPrivateDebugAPI_StandardTraceBadBlockToFile(t *testing.T) {
 	{
 		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
-		mockBlockChain.EXPECT().BadBlocks().Return(nil, err).Times(1)
+		mockBlockChain.EXPECT().BadBlocks().Return(nil, expectedErr).Times(1)
 		sub, returnedErr := api.StandardTraceBadBlockToFile(context.Background(), hashes[0], nil)
 		assert.Nil(t, sub)
-		assert.Equal(t, err, returnedErr)
+		assert.Equal(t, expectedErr, returnedErr)
 		mockCtrl.Finish()
 	}
 	{
 		block := newBlock(123)
 		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
-		mockBlockChain.EXPECT().BadBlocks().Return([]blockchain.BadBlockArgs{{Hash: block.Hash(), Block: block}}, err).Times(1)
+		mockBlockChain.EXPECT().BadBlocks().Return([]blockchain.BadBlockArgs{{Hash: block.Hash(), Block: block}}, expectedErr).Times(1)
 		sub, returnedErr := api.StandardTraceBadBlockToFile(context.Background(), hashes[0], nil)
 		assert.Nil(t, sub)
-		assert.Equal(t, err, returnedErr)
+		assert.Equal(t, expectedErr, returnedErr)
 		mockCtrl.Finish()
 	}
 }
@@ -222,7 +222,7 @@ func TestPrivateDebugAPI_computeTxEnv(t *testing.T) {
 		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
 		mockBlockChain.EXPECT().GetBlockByHash(blockHash).Return(block).Times(1)
 		mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(block).Times(1)
-		mockBlockChain.EXPECT().StateAt(parentBlock.Root()).Return(nil, err).Times(1)
+		mockBlockChain.EXPECT().StateAt(parentBlock.Root()).Return(nil, expectedErr).Times(1)
 		msg, ctx, stateDB, err := api.computeTxEnv(blockHash, txIndex, reexec)
 		assert.Nil(t, msg)
 		assert.Equal(t, vm.Context{}, ctx)

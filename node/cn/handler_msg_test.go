@@ -31,7 +31,7 @@ import (
 	"testing"
 )
 
-var err = errors.New("some error")
+var expectedErr = errors.New("some error")
 
 // generateMsg creates a message struct for message handling tests.
 func generateMsg(t *testing.T, msgCode uint64, data interface{}) p2p.Msg {
@@ -87,7 +87,7 @@ func TestHandleBlockHeadersMsg(t *testing.T) {
 	{
 		mockCtrl, mockDownloader, mockPeer, pm := prepareDownloader(t)
 		msg := generateMsg(t, BlockHeadersMsg, headers)
-		mockDownloader.EXPECT().DeliverHeaders(nodeids[0].String(), gomock.Eq(headers)).Return(err).Times(1)
+		mockDownloader.EXPECT().DeliverHeaders(nodeids[0].String(), gomock.Eq(headers)).Return(expectedErr).Times(1)
 
 		assert.NoError(t, handleBlockHeadersMsg(pm, mockPeer, msg))
 		mockCtrl.Finish()
@@ -401,7 +401,7 @@ func TestHandleReceiptMsg(t *testing.T) {
 		receipts[0] = []*types.Receipt{newReceipt(123)}
 
 		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
-		mockDownloader.EXPECT().DeliverReceipts(nodeids[0].String(), gomock.Eq(receipts)).Times(1).Return(err)
+		mockDownloader.EXPECT().DeliverReceipts(nodeids[0].String(), gomock.Eq(receipts)).Times(1).Return(expectedErr)
 
 		msg := generateMsg(t, ReceiptsMsg, receipts)
 		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
@@ -438,7 +438,7 @@ func TestHandleNodeDataMsg(t *testing.T) {
 		nodeData[0] = hash1[:]
 
 		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
-		mockDownloader.EXPECT().DeliverNodeData(nodeids[0].String(), gomock.Eq(nodeData)).Times(1).Return(err)
+		mockDownloader.EXPECT().DeliverNodeData(nodeids[0].String(), gomock.Eq(nodeData)).Times(1).Return(expectedErr)
 
 		msg := generateMsg(t, NodeDataMsg, nodeData)
 		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
