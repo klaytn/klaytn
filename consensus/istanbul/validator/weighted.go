@@ -308,6 +308,8 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	}
 
 	seed, err := strconv.ParseInt(hashstring, 16, 64)
+	seed += view.Round.Int64()
+
 	if err != nil {
 		logger.Error("input", "hash", prevHash.Hex())
 		logger.Error("fail to make sub-list of validators", "seed", seed, "err", err)
