@@ -144,6 +144,7 @@ var (
 	errRangeNil                = errors.New("range values should not be nil")
 	errExtractIstanbulExtra    = errors.New("extract Istanbul Extra from block header of the given block number")
 	errNoBlockExist            = errors.New("block with the given block number is not existed")
+	errNoBlockNumber           = errors.New("block number is not assigned")
 )
 
 // GetCouncil retrieves the list of authorized validators at the specified block.
@@ -153,14 +154,14 @@ func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, 
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
 	} else if *number == rpc.PendingBlockNumber {
-		logger.Error("Cannot get council of the pending block.", "number", number)
+		logger.Trace("Cannot get council of the pending block.", "number", number)
 		return nil, errPendingNotAllowed
 	} else {
 		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
 	}
 	// Ensure we have an actually valid block and return the council from its snapshot
 	if header == nil {
-		logger.Error("Failed to find the requested block", "number", number)
+		logger.Trace("Failed to find the requested block", "number", number)
 		return nil, errNoBlockExist // return nil if block is not found.
 	}
 	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
@@ -186,7 +187,7 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
 	} else if *number == rpc.PendingBlockNumber {
-		logger.Error("Cannot get validators of the pending block.", "number", number)
+		logger.Trace("Cannot get validators of the pending block.", "number", number)
 		return nil, errPendingNotAllowed
 	} else {
 		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
@@ -263,7 +264,7 @@ func (api *APIExtension) getProposerAndValidators(block *types.Block) (common.Ad
 	//		}
 	//	}
 	//	if found == false {
-	//		logger.Error("validator is different!", "snap", commiteeAddrs, "istanbul", istanbulAddrs)
+	//		logger.Trace("validator is different!", "snap", commiteeAddrs, "istanbul", istanbulAddrs)
 	//		return proposer, commiteeAddrs, errors.New("validator set is different from Istanbul engine!!")
 	//	}
 	//}
@@ -311,12 +312,12 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	var blockNumber uint64
 
 	if number == nil {
-		number = new(rpc.BlockNumber)
-		*number = rpc.LatestBlockNumber
+		logger.Trace("block number is not assigned")
+		return nil, errNoBlockNumber
 	}
 
 	if *number == rpc.PendingBlockNumber {
-		logger.Error("Cannot get consensus information of the PendingBlock.")
+		logger.Trace("Cannot get consensus information of the PendingBlock.")
 		return nil, errPendingNotAllowed
 	}
 
@@ -330,7 +331,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	}
 
 	if block == nil {
-		logger.Error("Finding a block by number failed.", "blockNum", blockNumber)
+		logger.Trace("Finding a block by number failed.", "blockNum", blockNumber)
 		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNumber)
 	}
 	blockHash := block.Hash()
@@ -352,7 +353,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.Block
 	blocks := make(map[string]interface{})
 
 	if start == nil || end == nil {
-		logger.Error("the range values should not be nil.", "start", start, "end", end)
+		logger.Trace("the range values should not be nil.", "start", start, "end", end)
 		return nil, errRangeNil
 	}
 
@@ -360,23 +361,23 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.Block
 	s := start.Int64()
 	e := end.Int64()
 	if s < 0 {
-		logger.Error("start should be positive", "start", s)
+		logger.Trace("start should be positive", "start", s)
 		return nil, errStartNotPositive
 	}
 
 	eChain := api.chain.CurrentHeader().Number.Int64()
 	if e > eChain {
-		logger.Error("end should be smaller than the lastest block number", "end", end, "eChain", eChain)
+		logger.Trace("end should be smaller than the lastest block number", "end", end, "eChain", eChain)
 		return nil, errEndLargetThanLatest
 	}
 
 	if s > e {
-		logger.Error("start should be smaller than end", "start", s, "end", e)
+		logger.Trace("start should be smaller than end", "start", s, "end", e)
 		return nil, errStartLargerThanEnd
 	}
 
 	if (e - s) > 50 {
-		logger.Error("number of requested blocks should be smaller than 50", "start", s, "end", e)
+		logger.Trace("number of requested blocks should be smaller than 50", "start", s, "end", e)
 		return nil, errRequestedBlocksTooLarge
 	}
 
@@ -406,7 +407,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 
 	block := b.GetBlockByHash(blockHash)
 	if block == nil {
-		logger.Error("Finding a block failed.", "blockHash", blockHash)
+		logger.Trace("Finding a block failed.", "blockHash", blockHash)
 		return nil, fmt.Errorf("the block does not exist (block hash: %s)", blockHash.String())
 	}
 
@@ -422,4 +423,8 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 	}
 
 	return api.makeRPCOutput(block, proposer, committee, block.Transactions(), receipts), nil
+}
+
+func (api *API) GetTimeout() uint64 {
+	return istanbul.DefaultConfig.Timeout
 }

@@ -18,6 +18,7 @@ package sc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -29,6 +30,10 @@ import (
 
 const (
 	SyncRequestInterval = 10
+)
+
+var (
+	errInvalidBlock = errors.New("block is invalid")
 )
 
 // parentChainInfo handles the information of parent chain, which is needed from child chain.
@@ -220,11 +225,11 @@ func (sbh *SubBridgeHandler) handleParentChainInfoResponseMsg(p BridgePeer, msg 
 			logger.Error("parent chain operator nonce is bigger than the chain pool nonce.", "BridgeTxPoolNonce", poolNonce, "mainChainAccountNonce", sbh.getParentOperatorNonce())
 		}
 		if poolNonce < pcInfo.Nonce {
-			// bridgeTxPool journal miss txs which already sent to parent-chain
+			// BridgeTxPool journal miss txs which already sent to parent-chain
 			logger.Error("chain pool nonce is less than the parent chain nonce.", "chainPoolNonce", poolNonce, "receivedNonce", pcInfo.Nonce)
 			sbh.setParentOperatorNonce(pcInfo.Nonce)
 		} else {
-			// bridgeTxPool journal has txs which don't receive receipt from parent-chain
+			// BridgeTxPool journal has txs which don't receive receipt from parent-chain
 			sbh.setParentOperatorNonce(poolNonce)
 		}
 	} else if sbh.getParentOperatorNonce() > pcInfo.Nonce {
@@ -274,7 +279,14 @@ func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block)
 		types.TxValueKeyAnchoredData: encodedCCTxData,
 	}
 
-	if tx, err := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values); err != nil {
+	txType := types.TxTypeChainDataAnchoring
+
+	if feePayer := sbh.subbridge.bridgeAccounts.GetParentOperatorFeePayer(); feePayer != (common.Address{}) {
+		values[types.TxValueKeyFeePayer] = feePayer
+		txType = types.TxTypeFeeDelegatedChainDataAnchoring
+	}
+
+	if tx, err := types.NewTransactionWithMap(txType, values); err != nil {
 		return nil, err
 	} else {
 		return tx, nil
@@ -297,7 +309,7 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 		if sbh.skipSyncBlockCount%SyncRequestInterval == 0 {
 			// TODO-Klaytn too many request while sync main-net
 			sbh.SyncNonceAndGasPrice()
-			// check tx's receipts which parent-chain already executed in bridgeTxPool
+			// check tx's receipts which parent-chain already executed in BridgeTxPool
 			go sbh.broadcastServiceChainReceiptRequest()
 		}
 		sbh.skipSyncBlockCount++
@@ -331,7 +343,7 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 	for _, receipt := range receipts {
 		txHash := receipt.TxHash
 		if tx := sbh.subbridge.GetBridgeTxPool().Get(txHash); tx != nil {
-			if tx.Type() == types.TxTypeChainDataAnchoring {
+			if tx.Type().IsChainDataAnchoring() {
 				data, err := tx.AnchoredData()
 				if err != nil {
 					logger.Error("failed to get anchoring data", "txHash", txHash.String(), "err", err)
@@ -376,7 +388,11 @@ func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
 }
 
 // updateTxCount update txCount to insert into anchoring tx.
-func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
+func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) error {
+	if block == nil {
+		return errInvalidBlock
+	}
+
 	if sbh.txCountStartingBlockNumber == 0 {
 		sbh.txCount = 0 // reset for the next anchoring period
 		sbh.txCountStartingBlockNumber = block.NumberU64()
@@ -402,15 +418,23 @@ func (sbh *SubBridgeHandler) updateTxCount(block *types.Block) {
 		sbh.txCount += uint64(b.Transactions().Len())
 		sbh.UpdateLatestTxCountAddedBlockNumber(i)
 	}
+
+	return nil
 }
 
 // blockAnchoringManager generates anchoring transactions and updates transaction count.
-func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) {
-	sbh.updateTxCount(block)
-	sbh.generateAndAddAnchoringTxIntoTxPool(block)
+func (sbh *SubBridgeHandler) blockAnchoringManager(block *types.Block) error {
+	if err := sbh.updateTxCount(block); err != nil {
+		return err
+	}
+	return sbh.generateAndAddAnchoringTxIntoTxPool(block)
 }
 
 func (sbh *SubBridgeHandler) generateAndAddAnchoringTxIntoTxPool(block *types.Block) error {
+	if block == nil {
+		return errInvalidBlock
+	}
+
 	// Generating Anchoring Tx
 	if block.NumberU64()%sbh.chainTxPeriod != 0 {
 		return nil

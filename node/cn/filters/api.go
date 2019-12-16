@@ -327,7 +327,7 @@ func (api *PublicFilterAPI) GetLogs(ctx context.Context, crit FilterCriteria) ([
 		crit.ToBlock = big.NewInt(rpc.LatestBlockNumber.Int64())
 	}
 	// Create and run the filter to get all the logs
-	filter := New(api.backend, crit.FromBlock.Int64(), crit.ToBlock.Int64(), crit.Addresses, crit.Topics)
+	filter := NewRangeFilter(api.backend, crit.FromBlock.Int64(), crit.ToBlock.Int64(), crit.Addresses, crit.Topics)
 
 	logs, err := filter.Logs(ctx)
 	if err != nil {
@@ -371,7 +371,7 @@ func (api *PublicFilterAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*ty
 		end = f.crit.ToBlock.Int64()
 	}
 	// Create and run the filter to get all the logs
-	filter := New(api.backend, begin, end, f.crit.Addresses, f.crit.Topics)
+	filter := NewRangeFilter(api.backend, begin, end, f.crit.Addresses, f.crit.Topics)
 
 	logs, err := filter.Logs(ctx)
 	if err != nil {

@@ -233,7 +233,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 // sign it with the key associated with args.From. If the given password isn't
 // able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
-	if args.Nonce == nil {
+	if args.AccountNonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
 		s.nonceLock.LockAddr(args.From)
@@ -254,17 +254,17 @@ func (s *PrivateAccountAPI) SendTransactionAsFeePayer(ctx context.Context, args 
 	if args.TypeInt == nil {
 		return common.Hash{}, errTxArgNilTxType
 	}
-	if args.Nonce == nil {
+	if args.AccountNonce == nil {
 		return common.Hash{}, errTxArgNilNonce
 	}
-	if args.Gas == nil {
+	if args.GasLimit == nil {
 		return common.Hash{}, errTxArgNilGas
 	}
-	if args.GasPrice == nil {
+	if args.Price == nil {
 		return common.Hash{}, errTxArgNilGasPrice
 	}
 
-	if args.Signatures == nil {
+	if args.TxSignatures == nil {
 		return common.Hash{}, errTxArgNilSenderSig
 	}
 
@@ -377,8 +377,8 @@ func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args 
 		return nil, err
 	}
 	// Don't return errors for nil signature allowing the fee payer to sign a tx earlier than the sender.
-	if args.Signatures != nil {
-		tx.SetSignature(args.Signatures.ToTxSignatures())
+	if args.TxSignatures != nil {
+		tx.SetSignature(args.TxSignatures.ToTxSignatures())
 	}
 	feePayer, err := tx.FeePayer()
 	if err != nil {

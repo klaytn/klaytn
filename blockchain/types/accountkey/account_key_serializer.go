@@ -19,7 +19,12 @@ package accountkey
 import (
 	"encoding/json"
 	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/pkg/errors"
 	"io"
+)
+
+var (
+	errNoKeyType = errors.New("key type is not specified on the input")
 )
 
 type AccountKeySerializer struct {
@@ -27,8 +32,8 @@ type AccountKeySerializer struct {
 	key     AccountKey
 }
 
-type accountKeyJSON struct {
-	KeyType AccountKeyType  `json:"keyType"`
+type AccountKeyJSON struct {
+	KeyType *AccountKeyType `json:"keyType"`
 	Key     json.RawMessage `json:"key"`
 }
 
@@ -72,17 +77,20 @@ func (serializer *AccountKeySerializer) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	return json.Marshal(&accountKeyJSON{serializer.keyType, b})
+	return json.Marshal(&AccountKeyJSON{&serializer.keyType, b})
 }
 
 func (serializer *AccountKeySerializer) UnmarshalJSON(b []byte) error {
-	var keyJSON accountKeyJSON
+	var keyJSON AccountKeyJSON
 
 	if err := json.Unmarshal(b, &keyJSON); err != nil {
 		return err
 	}
 
-	serializer.keyType = keyJSON.KeyType
+	if keyJSON.KeyType == nil {
+		return errNoKeyType
+	}
+	serializer.keyType = *keyJSON.KeyType
 
 	var err error
 	serializer.key, err = NewAccountKey(serializer.keyType)

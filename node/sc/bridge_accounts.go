@@ -42,9 +42,17 @@ var (
 	errUnlockDurationTooLarge = errors.New("unlock duration too large")
 )
 
+type feePayerDB interface {
+	WriteParentOperatorFeePayer(feePayer common.Address)
+	WriteChildOperatorFeePayer(feePayer common.Address)
+	ReadParentOperatorFeePayer() common.Address
+	ReadChildOperatorFeePayer() common.Address
+}
+
 // accountInfo has bridge account's information to make and sign a transaction.
 type accountInfo struct {
-	keystore *keystore.KeyStore
+	am       *accounts.Manager  // the account manager of the node for the fee payer.
+	keystore *keystore.KeyStore // the keystore of the operator.
 	address  common.Address
 	nonce    uint64
 	chainID  *big.Int
@@ -52,12 +60,15 @@ type accountInfo struct {
 
 	isNonceSynced bool
 	mu            sync.RWMutex
+
+	feePayer common.Address
 }
 
 // BridgeAccounts manages bridge account for parent/child chain.
 type BridgeAccounts struct {
 	pAccount *accountInfo
 	cAccount *accountInfo
+	db       feePayerDB
 }
 
 // GetBridgeOperators returns the information of bridgeOperator.
@@ -70,8 +81,32 @@ func (ba *BridgeAccounts) GetBridgeOperators() map[string]interface{} {
 	return res
 }
 
+// GetParentOperatorFeePayer can return the fee payer of parent operator.
+func (ba *BridgeAccounts) GetParentOperatorFeePayer() common.Address {
+	return ba.pAccount.feePayer
+}
+
+// SetParentOperatorFeePayer can set the fee payer of parent operator.
+func (ba *BridgeAccounts) SetParentOperatorFeePayer(feePayer common.Address) error {
+	ba.pAccount.feePayer = feePayer
+	ba.db.WriteParentOperatorFeePayer(feePayer)
+	return nil
+}
+
+// GetChildOperatorFeePayer can return the fee payer of child operator.
+func (ba *BridgeAccounts) GetChildOperatorFeePayer() common.Address {
+	return ba.cAccount.feePayer
+}
+
+// SetChildOperatorFeePayer can set the fee payer of child operator.
+func (ba *BridgeAccounts) SetChildOperatorFeePayer(feePayer common.Address) error {
+	ba.cAccount.feePayer = feePayer
+	ba.db.WriteChildOperatorFeePayer(feePayer)
+	return nil
+}
+
 // NewBridgeAccounts returns bridgeAccounts created by main/service bridge account keys.
-func NewBridgeAccounts(dataDir string) (*BridgeAccounts, error) {
+func NewBridgeAccounts(am *accounts.Manager, dataDir string, db feePayerDB) (*BridgeAccounts, error) {
 	pKS, pAccAddr, isLock, err := InitializeBridgeAccountKeystore(path.Join(dataDir, "parent_bridge_account"))
 	if err != nil {
 		return nil, err
@@ -93,24 +128,29 @@ func NewBridgeAccounts(dataDir string) (*BridgeAccounts, error) {
 	logger.Info("bridge account is loaded", "parent", pAccAddr.String(), "child", cAccAddr.String())
 
 	pAccInfo := &accountInfo{
+		am:       am,
 		keystore: pKS,
 		address:  pAccAddr,
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
+		feePayer: db.ReadParentOperatorFeePayer(),
 	}
 
 	cAccInfo := &accountInfo{
+		am:       am,
 		keystore: cKS,
 		address:  cAccAddr,
 		nonce:    0,
 		chainID:  nil,
 		gasPrice: nil,
+		feePayer: db.ReadChildOperatorFeePayer(),
 	}
 
 	return &BridgeAccounts{
 		pAccount: pAccInfo,
 		cAccount: cAccInfo,
+		db:       db,
 	}, nil
 }
 
@@ -183,7 +223,23 @@ func (acc *accountInfo) GenerateTransactOpts() *bind.TransactOpts {
 
 // SignTx signs a transaction with the accountInfo.
 func (acc *accountInfo) SignTx(tx *types.Transaction) (*types.Transaction, error) {
-	return acc.keystore.SignTx(accounts.Account{Address: acc.address}, tx, acc.chainID)
+	tx, err := acc.keystore.SignTx(accounts.Account{Address: acc.address}, tx, acc.chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	if tx.Type().IsFeeDelegatedTransaction() {
+		// Look up the wallet containing the requested signer
+		account := accounts.Account{Address: acc.feePayer}
+
+		wallet, err := acc.am.Find(account)
+		if err != nil {
+			return nil, err
+		}
+		// Request the wallet to sign the transaction
+		return wallet.SignTxAsFeePayer(account, tx, acc.chainID)
+	}
+	return tx, nil
 }
 
 // SetChainID sets the chain ID of the chain of the account.

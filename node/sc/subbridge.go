@@ -82,6 +82,19 @@ type SubBridgeInfo struct {
 	ChainID *big.Int            `json:"chainid"` // ChainID
 }
 
+//go:generate mockgen -destination=bridgeTxPool_mock_test.go -package=sc github.com/klaytn/klaytn/node/sc BridgeTxPool
+type BridgeTxPool interface {
+	GetMaxTxNonce(from *common.Address) uint64
+	AddLocal(tx *types.Transaction) error
+	Stats() int
+	Pending() map[common.Address]types.Transactions
+	Get(hash common.Hash) *types.Transaction
+	RemoveTx(tx *types.Transaction) error
+	PendingTxHashesByAddress(from *common.Address, limit int) []common.Hash
+	PendingTxsByAddress(from *common.Address, limit int) types.Transactions
+	Stop()
+}
+
 // SubBridge implements the Klaytn consensus node service.
 type SubBridge struct {
 	config *SCConfig
@@ -115,7 +128,7 @@ type SubBridge struct {
 
 	blockchain   *blockchain.BlockChain
 	txPool       *blockchain.TxPool
-	bridgeTxPool *bridgepool.BridgeTxPool
+	bridgeTxPool BridgeTxPool
 
 	// chain event
 	chainHeadCh  chan blockchain.ChainHeadEvent
@@ -195,7 +208,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 	sb.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
 
 	var err error
-	sb.bridgeAccounts, err = NewBridgeAccounts(config.DataDir)
+	sb.bridgeAccounts, err = NewBridgeAccounts(sb.accountManager, config.DataDir, chainDB)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +268,7 @@ func (sb *SubBridge) BridgePeerSet() *bridgePeerSet {
 	return sb.peers
 }
 
-func (sb *SubBridge) GetBridgeTxPool() *bridgepool.BridgeTxPool {
+func (sb *SubBridge) GetBridgeTxPool() BridgeTxPool {
 	return sb.bridgeTxPool
 }
 

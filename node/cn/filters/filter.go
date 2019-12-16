@@ -32,6 +32,7 @@ import (
 	"math/big"
 )
 
+//go:generate mockgen -destination=node/cn/filters/mock/backend_mock.go -package=cn github.com/klaytn/klaytn/node/cn/filters Backend
 type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
@@ -52,7 +53,6 @@ type Backend interface {
 type Filter struct {
 	backend Backend
 
-	db         database.DBManager
 	begin, end int64
 	addresses  []common.Address
 	topics     [][]common.Hash
@@ -60,9 +60,9 @@ type Filter struct {
 	matcher *bloombits.Matcher
 }
 
-// New creates a new filter which uses a bloom filter on blocks to figure out whether
-// a particular block is interesting or not.
-func New(backend Backend, begin, end int64, addresses []common.Address, topics [][]common.Hash) *Filter {
+// NewRangeFilter creates a new filter which uses a bloom filter on blocks to
+// figure out whether a particular block is interesting or not.
+func NewRangeFilter(backend Backend, begin, end int64, addresses []common.Address, topics [][]common.Hash) *Filter {
 	// Flatten the address and topic filter clauses into a single bloombits filter
 	// system. Since the bloombits are not positional, nil topics are permitted,
 	// which get flattened into a nil byte slice.
@@ -84,14 +84,23 @@ func New(backend Backend, begin, end int64, addresses []common.Address, topics [
 	// Assemble and return the filter
 	size, _ := backend.BloomStatus()
 
+	// Create a generic filter and convert it into a range filter
+	filter := newFilter(backend, addresses, topics)
+
+	filter.matcher = bloombits.NewMatcher(size, filters)
+	filter.begin = begin
+	filter.end = end
+
+	return filter
+}
+
+// newFilter creates a generic filter that can either filter based on a block hash,
+// or based on range queries. The search criteria needs to be explicitly set.
+func newFilter(backend Backend, addresses []common.Address, topics [][]common.Hash) *Filter {
 	return &Filter{
 		backend:   backend,
-		begin:     begin,
-		end:       end,
 		addresses: addresses,
 		topics:    topics,
-		db:        backend.ChainDB(),
-		matcher:   bloombits.NewMatcher(size, filters),
 	}
 }
 

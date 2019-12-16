@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"math/big"
+	"reflect"
 )
 
 var (
@@ -45,6 +46,53 @@ var (
 	errNotForFeeDelegationTx = errors.New("fee-delegation type transactions are not allowed to use this API")
 )
 
+// isTxField checks whether the string is a field name of the specific txType.
+// isTxField[txType][txFieldName] has true/false.
+var isTxField = func() map[types.TxType]map[string]bool {
+	var mapOfFieldMap = map[types.TxType]map[string]bool{}
+	var internalDataTypes = map[types.TxType]interface{}{
+		// since legacy tx has optional fields, some fields can be omitted
+		//types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
+		types.TxTypeValueTransfer:                               types.TxInternalDataValueTransfer{},
+		types.TxTypeFeeDelegatedValueTransfer:                   types.TxInternalDataFeeDelegatedValueTransfer{},
+		types.TxTypeFeeDelegatedValueTransferWithRatio:          types.TxInternalDataFeeDelegatedValueTransferWithRatio{},
+		types.TxTypeValueTransferMemo:                           types.TxInternalDataValueTransferMemo{},
+		types.TxTypeFeeDelegatedValueTransferMemo:               types.TxInternalDataFeeDelegatedValueTransferMemo{},
+		types.TxTypeFeeDelegatedValueTransferMemoWithRatio:      types.TxInternalDataFeeDelegatedValueTransferMemoWithRatio{},
+		types.TxTypeAccountUpdate:                               types.TxInternalDataAccountUpdate{},
+		types.TxTypeFeeDelegatedAccountUpdate:                   types.TxInternalDataFeeDelegatedAccountUpdate{},
+		types.TxTypeFeeDelegatedAccountUpdateWithRatio:          types.TxInternalDataFeeDelegatedAccountUpdateWithRatio{},
+		types.TxTypeSmartContractDeploy:                         types.TxInternalDataSmartContractDeploy{},
+		types.TxTypeFeeDelegatedSmartContractDeploy:             types.TxInternalDataFeeDelegatedSmartContractDeploy{},
+		types.TxTypeFeeDelegatedSmartContractDeployWithRatio:    types.TxInternalDataFeeDelegatedSmartContractDeployWithRatio{},
+		types.TxTypeSmartContractExecution:                      types.TxInternalDataSmartContractExecution{},
+		types.TxTypeFeeDelegatedSmartContractExecution:          types.TxInternalDataFeeDelegatedSmartContractExecution{},
+		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio: types.TxInternalDataFeeDelegatedSmartContractExecutionWithRatio{},
+		types.TxTypeCancel:                                      types.TxInternalDataCancel{},
+		types.TxTypeFeeDelegatedCancel:                          types.TxInternalDataFeeDelegatedCancel{},
+		types.TxTypeFeeDelegatedCancelWithRatio:                 types.TxInternalDataFeeDelegatedCancelWithRatio{},
+	}
+
+	// generate field maps for each tx type
+	for txType, internalData := range internalDataTypes {
+		fieldMap := map[string]bool{}
+		internalDataType := reflect.TypeOf(internalData)
+
+		// key of filedMap is tx field name and value of fieldMap means the existence of field name
+		for i := 0; i < internalDataType.NumField(); i++ {
+			fieldMap[internalDataType.Field(i).Name] = true
+		}
+
+		// additional field of SendTxArgs to support various tx types
+		fieldMap["TypeInt"] = true
+		// additional field of SendTxArgs to support a legacy tx field (skip checking)
+		fieldMap["Data"] = false
+
+		mapOfFieldMap[txType] = fieldMap
+	}
+	return mapOfFieldMap
+}()
+
 type NewTxArgs interface {
 	setDefaults(context.Context, Backend) error
 	toTransaction() (*types.Transaction, error)
@@ -53,27 +101,27 @@ type NewTxArgs interface {
 
 // SendTxArgs represents the arguments to submit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	TypeInt  *types.TxType   `json:"typeInt"`
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Value    *hexutil.Big    `json:"value"`
-	Nonce    *hexutil.Uint64 `json:"nonce"`
+	TypeInt      *types.TxType   `json:"typeInt"`
+	From         common.Address  `json:"from"`
+	Recipient    *common.Address `json:"to"`
+	GasLimit     *hexutil.Uint64 `json:"gas"`
+	Price        *hexutil.Big    `json:"gasPrice"`
+	Amount       *hexutil.Big    `json:"value"`
+	AccountNonce *hexutil.Uint64 `json:"nonce"`
 	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
 	// newer name and should be preferred by clients.
-	Data  *hexutil.Bytes `json:"data"`
-	Input *hexutil.Bytes `json:"input"`
+	Data    *hexutil.Bytes `json:"data"`
+	Payload *hexutil.Bytes `json:"input"`
 
 	CodeFormat    *params.CodeFormat `json:"codeFormat"`
 	HumanReadable *bool              `json:"humanReadable"`
 
-	AccountKey *hexutil.Bytes `json:"Key"`
+	Key *hexutil.Bytes `json:"key"`
 
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
 
-	Signatures types.TxSignaturesJSON `json:"Signatures"`
+	TxSignatures types.TxSignaturesJSON `json:"signatures"`
 }
 
 // setDefaults is a helper function that fills in default values for unspecified common tx fields.
@@ -82,20 +130,20 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		args.TypeInt = new(types.TxType)
 		*args.TypeInt = types.TxTypeLegacyTransaction
 	}
-	if args.Gas == nil {
-		args.Gas = new(hexutil.Uint64)
-		*args.Gas = hexutil.Uint64(90000)
+	if args.GasLimit == nil {
+		args.GasLimit = new(hexutil.Uint64)
+		*args.GasLimit = hexutil.Uint64(90000)
 	}
-	if args.GasPrice == nil {
+	if args.Price == nil {
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
 			return err
 		}
-		args.GasPrice = (*hexutil.Big)(price)
+		args.Price = (*hexutil.Big)(price)
 	}
-	if args.Nonce == nil {
+	if args.AccountNonce == nil {
 		nonce := b.GetPoolNonce(ctx, args.From)
-		args.Nonce = (*hexutil.Uint64)(&nonce)
+		args.AccountNonce = (*hexutil.Uint64)(&nonce)
 	}
 
 	return nil
@@ -107,13 +155,35 @@ func (args *SendTxArgs) checkArgs() error {
 	if args.TypeInt == nil {
 		return errTxArgNilTxType
 	}
+	// Skip legacy transaction type since it has optional fields
+	if *args.TypeInt == types.TxTypeLegacyTransaction {
+		return nil
+	}
 
-	// TODO-Klaytn-TxType Arguments validation will be implemented for each tx type
-	//switch *args.TypeInt {
-	//case types.TxTypeLegacyTransaction:
-	//case types.TxTypeValueTransfer:
-	//case types.TxTypeFeeDelegatedValueTransfer:
-	//}
+	argsType := reflect.TypeOf(*args)
+	argsValue := reflect.ValueOf(*args)
+
+	for i := 0; i < argsType.NumField(); i++ {
+		// Skip From since it is an essential field and a non-pointer value
+		// Skip TxSignatures since the value is not considered by all APIs
+		if argsType.Field(i).Name == "From" || argsType.Field(i).Name == "TxSignatures" {
+			continue
+		}
+
+		// An args field doesn't have a value but the field name exist on the tx type
+		if argsValue.Field(i).IsNil() && isTxField[*args.TypeInt][argsType.Field(i).Name] {
+			// Allow only contract deploying txs to set the recipient as nil
+			if (*args.TypeInt).IsContractDeploy() && argsType.Field(i).Name == "Recipient" {
+				continue
+			}
+			return errors.New((string)(argsType.Field(i).Tag) + " is required for " + (*args.TypeInt).String())
+		}
+
+		// An args field has a value but the field name doesn't exist on the tx type
+		if !argsValue.Field(i).IsNil() && !isTxField[*args.TypeInt][argsType.Field(i).Name] {
+			return errors.New((string)(argsType.Field(i).Tag) + " is not a field of " + (*args.TypeInt).String())
+		}
+	}
 
 	return nil
 }
@@ -125,20 +195,20 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	values := make(map[types.TxValueKeyType]interface{})
 
 	// common tx fields. They should have values after executing "setDefaults" function.
-	if args.TypeInt == nil || args.Nonce == nil || args.Gas == nil || args.GasPrice == nil {
+	if args.TypeInt == nil || args.AccountNonce == nil || args.GasLimit == nil || args.Price == nil {
 		return values
 	}
 	values[types.TxValueKeyFrom] = args.From
-	values[types.TxValueKeyNonce] = uint64(*args.Nonce)
-	values[types.TxValueKeyGasLimit] = uint64(*args.Gas)
-	values[types.TxValueKeyGasPrice] = (*big.Int)(args.GasPrice)
+	values[types.TxValueKeyNonce] = uint64(*args.AccountNonce)
+	values[types.TxValueKeyGasLimit] = uint64(*args.GasLimit)
+	values[types.TxValueKeyGasPrice] = (*big.Int)(args.Price)
 
 	// optional tx fields
 	if args.TypeInt.IsContractDeploy() {
 		// contract deploy type allows nil as TxValueKeyTo value
-		values[types.TxValueKeyTo] = (*common.Address)(args.To)
-	} else if args.To != nil {
-		values[types.TxValueKeyTo] = *args.To
+		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
+	} else if args.Recipient != nil {
+		values[types.TxValueKeyTo] = *args.Recipient
 	}
 	if args.FeePayer != nil {
 		values[types.TxValueKeyFeePayer] = *args.FeePayer
@@ -146,11 +216,11 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.FeeRatio != nil {
 		values[types.TxValueKeyFeeRatioOfFeePayer] = *args.FeeRatio
 	}
-	if args.Value != nil {
-		values[types.TxValueKeyAmount] = (*big.Int)(args.Value)
+	if args.Amount != nil {
+		values[types.TxValueKeyAmount] = (*big.Int)(args.Amount)
 	}
-	if args.Data != nil {
-		values[types.TxValueKeyData] = ([]byte)(*args.Data)
+	if args.Payload != nil {
+		values[types.TxValueKeyData] = ([]byte)(*args.Payload)
 	}
 	if args.CodeFormat != nil {
 		values[types.TxValueKeyCodeFormat] = *args.CodeFormat
@@ -158,9 +228,9 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.HumanReadable != nil {
 		values[types.TxValueKeyHumanReadable] = *args.HumanReadable
 	}
-	if args.AccountKey != nil {
+	if args.Key != nil {
 		serializer := accountkey.NewAccountKeySerializer()
-		if err := rlp.DecodeBytes(*args.AccountKey, &serializer); err == nil {
+		if err := rlp.DecodeBytes(*args.Key, &serializer); err == nil {
 			values[types.TxValueKeyAccountKey] = serializer.GetKey()
 		}
 	}
@@ -179,23 +249,23 @@ func (args *SendTxArgs) toTransaction() (*types.Transaction, error) {
 
 	// for TxTypeLegacyTransaction
 	if *args.TypeInt == types.TxTypeLegacyTransaction {
-		if args.Data != nil && args.Input != nil && !bytes.Equal(*args.Data, *args.Input) {
+		if args.Data != nil && args.Payload != nil && !bytes.Equal(*args.Data, *args.Payload) {
 			return nil, errTxArgInvalidInputData
 		}
 
 		if args.Data != nil {
 			input = *args.Data
-		} else if args.Input != nil {
-			input = *args.Input
+		} else if args.Payload != nil {
+			input = *args.Payload
 		}
 
-		if args.To == nil {
+		if args.Recipient == nil {
 			if len(input) == 0 {
 				return nil, errTxArgNilContractData
 			}
-			return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input), nil
+			return types.NewContractCreation(uint64(*args.AccountNonce), (*big.Int)(args.Amount), uint64(*args.GasLimit), (*big.Int)(args.Price), input), nil
 		}
-		return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input), nil
+		return types.NewTransaction(uint64(*args.AccountNonce), *args.Recipient, (*big.Int)(args.Amount), uint64(*args.GasLimit), (*big.Int)(args.Price), input), nil
 	}
 
 	// for other tx types except TxTypeLegacyTransaction
