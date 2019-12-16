@@ -86,7 +86,9 @@ commands:
     steps:
       - run:
           name: "upload S3 repo"
-          command: for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
+          command: |
+            KLAYTN_VERSION=$(go run build/rpm/main.go version)
+            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
