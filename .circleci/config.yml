@@ -52,17 +52,18 @@ commands:
           command: |
             export GOPATH=~/go
             export PATH=$HOME/go1.13.3/go/bin:$PATH
-            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
-            if [ -z "$CIRCLE_TAG" ]; then
-              echo "this is not RC version"
-            else
+
+            pat="^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*"
+
+            if [[ $CIRCLE_TAG =~ $pat ]]; then
               echo "this is rc version $CIRCLE_TAG"
               rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
               sed -i 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go
               sed -n '/%d.%d.%d/p' params/version.go
+            else
+              echo "this is not RC version"
             fi
-            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-            echo $KLAYTN_VERSION | echo $KLAYTN_RELEASE_NUM
+            
   build-packaging:
     description: "Build for each OS/Network"
     parameters:
@@ -126,9 +127,9 @@ commands:
       - run:
           name: "createrepo update"
           command: |
-            aws s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
+            aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/7/prod/ rhel/7/prod/
             createrepo --update rhel/7/prod
-            aws s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
+            aws s3 sync --delete rhel/7/prod/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/7/prod/repodata/
   tag-verify:
     steps:
       - run:
@@ -390,6 +391,7 @@ jobs:
   deploy-rpm-public:
     executor: rpm-executor
     steps:
+      - add_ssh_keys
       - createrepo-update
       - notify-failure
       - notify-success
