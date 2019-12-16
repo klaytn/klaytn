@@ -159,7 +159,9 @@ func Setup(ctx *cli.Context) error {
 
 	// pprof server
 	if ctx.GlobalBool(pprofFlag.Name) {
-		Handler.StartPProf(ctx.GlobalString(pprofAddrFlag.Name), ctx.GlobalInt(pprofPortFlag.Name))
+		addr := ctx.GlobalString(pprofAddrFlag.Name)
+		port := ctx.GlobalInt(pprofPortFlag.Name)
+		Handler.StartPProf(&addr, &port)
 	}
 	return nil
 }
