@@ -464,6 +464,10 @@ func gen(ctx *cli.Context) error {
 	chainid := ctx.Uint64(chainIDFlag.Name)
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
 
+	if cnNum == 0 && scnNum == 0 {
+		return fmt.Errorf("needed at least one consensus node")
+	}
+
 	if numValidators == 0 {
 		numValidators = cnNum
 	}
