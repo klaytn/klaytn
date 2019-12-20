@@ -211,7 +211,7 @@ func TestProtocolManager_removePeer(t *testing.T) {
 		pm.downloader = mockDownloader
 
 		// Return
-		mockPeerSet.EXPECT().Unregister(peerID).Return(err).Times(1)
+		mockPeerSet.EXPECT().Unregister(peerID).Return(expectedErr).Times(1)
 
 		mockPeer.EXPECT().GetP2PPeer().Return(p2pPeers[0]).Times(1)
 
