@@ -2,7 +2,7 @@
 #
 # ksend         Startup script for the ksen
 #
-# chkconifg: - 85 15
+# chkconfig: - 85 15
 # description : ksend is the Klaytn endpoint node daemon
 #
 # processname: ksend

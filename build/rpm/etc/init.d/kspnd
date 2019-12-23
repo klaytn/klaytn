@@ -2,7 +2,7 @@
 #
 # kspnd         Startup script for the kspn
 #
-# chkconifg: - 85 15
+# chkconfig: - 85 15
 # description : kspnd is the Klaytn proxy node daemon
 #
 # processname: kspnd

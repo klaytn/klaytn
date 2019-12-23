@@ -2,7 +2,7 @@
 #
 # kend         Startup script for the ken
 #
-# chkconifg: - 85 15
+# chkconfig: - 85 15
 # description : kend is the Klaytn endpoint node daemon
 #
 # processname: kend
