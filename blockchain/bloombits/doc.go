@@ -18,5 +18,14 @@
 // This file is derived from core/bloombits/doc.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package bloombits implements bloom filtering on batches of data.
+/*
+Package bloombits implements bloom filtering on batches of data.
+
+Source Files
+
+Each file provides the following features.
+  - generator.go : generates the rotated bloom bits to be used for batched filtering.
+  - matcher.go : creates a steam of potential blocks to inspect for data content through binary AND/OR operations on the bit-steams.
+  - scheduler.go : handles the scheduling of bloom-filter retrieval operations.
+*/
 package bloombits
