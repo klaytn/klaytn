@@ -20,7 +20,7 @@
 
 package fetcher
 
-import "github.com/klaytn/klaytn/metrics"
+import "github.com/rcrowley/go-metrics"
 
 var (
 	propAnnounceInMeter   = metrics.NewRegisteredMeter("cn/fetcher/prop/announces/in", nil)

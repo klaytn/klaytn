@@ -32,7 +32,7 @@ import (
 	"github.com/klaytn/klaytn/datasync/dbsyncer"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/metrics"
+	"github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
@@ -322,15 +322,15 @@ var (
 
 	// Logging and debug settings
 	MetricsEnabledFlag = cli.BoolFlag{
-		Name:  metrics.MetricsEnabledFlag,
+		Name:  metricutils.MetricsEnabledFlag,
 		Usage: "Enable metrics collection and reporting",
 	}
 	PrometheusExporterFlag = cli.BoolFlag{
-		Name:  metrics.PrometheusExporterFlag,
+		Name:  metricutils.PrometheusExporterFlag,
 		Usage: "Enable prometheus exporter",
 	}
 	PrometheusExporterPortFlag = cli.IntFlag{
-		Name:  metrics.PrometheusExporterPortFlag,
+		Name:  metricutils.PrometheusExporterPortFlag,
 		Usage: "Prometheus exporter listening port",
 		Value: 61001,
 	}

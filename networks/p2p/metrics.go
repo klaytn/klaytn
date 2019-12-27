@@ -23,9 +23,10 @@
 package p2p
 
 import (
+	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"net"
 
-	"github.com/klaytn/klaytn/metrics"
+	"github.com/rcrowley/go-metrics"
 )
 
 var (
@@ -62,7 +63,7 @@ type meteredConn struct {
 // returns the original object.
 func newMeteredConn(conn net.Conn, ingress bool) net.Conn {
 	// Short circuit if metrics are disabled
-	if !metrics.Enabled {
+	if !metricutils.Enabled {
 		return conn
 	}
 	// Otherwise bump the connection counters and wrap the connection

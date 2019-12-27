@@ -17,7 +17,7 @@
 package database
 
 import (
-	"github.com/klaytn/klaytn/metrics"
+	"github.com/rcrowley/go-metrics"
 )
 
 var (

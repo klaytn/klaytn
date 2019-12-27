@@ -25,10 +25,10 @@ import (
 	"fmt"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/rcrowley/go-metrics"
 	"strings"
 	"time"
 )
