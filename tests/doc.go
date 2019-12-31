@@ -14,5 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package tests implements execution of Klaytn JSON tests.
+/*
+Package tests implements execution of Klaytn scenario-based tests and JSON tests.
+*/
 package tests
