@@ -14,5 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package benchmarks contains go-benchmark tests for Klaytn performance.
+/*
+Package benchmarks contains go-benchmark tests for Klaytn performance.
+*/
 package benchmarks
