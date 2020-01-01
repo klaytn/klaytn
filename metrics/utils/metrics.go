@@ -6,8 +6,14 @@
 package metricutils
 
 import (
+	"fmt"
 	"github.com/klaytn/klaytn/log"
+	prometheusmetrics "github.com/klaytn/klaytn/metrics/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rcrowley/go-metrics"
+	"gopkg.in/urfave/cli.v1"
+	"net/http"
 	"os"
 	"runtime"
 	"strings"
@@ -41,6 +47,30 @@ func init() {
 			EnabledPrometheusExport = true
 		}
 	}
+}
+
+// StartMetricCollectionAndExport starts exporting to prometheus and collects process metrics.
+func StartMetricCollectionAndExport(ctx *cli.Context) {
+	metricsCollectionInterval := 3 * time.Second
+	if Enabled {
+		logger.Info("Enabling metrics collection")
+		if EnabledPrometheusExport {
+			logger.Info("Enabling Prometheus Exporter")
+			pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, "klaytn",
+				"", prometheus.DefaultRegisterer, metricsCollectionInterval)
+			go pClient.UpdatePrometheusMetrics()
+			http.Handle("/metrics", promhttp.Handler())
+			port := ctx.GlobalInt(PrometheusExporterPortFlag)
+
+			go func() {
+				err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+				if err != nil {
+					logger.Error("PrometheusExporter starting failed:", "port", port, "err", err)
+				}
+			}()
+		}
+	}
+	go CollectProcessMetrics(metricsCollectionInterval)
 }
 
 // CollectProcessMetrics periodically collects various metrics about the running process.

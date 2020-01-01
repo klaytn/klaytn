@@ -26,20 +26,14 @@ import (
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/console"
-	"github.com/klaytn/klaytn/metrics/prometheus"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/rcrowley/go-metrics"
 	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"runtime"
 	"sort"
 	"testing"
-	"time"
 )
 
 func tmpdir(t *testing.T) string {
@@ -128,30 +122,7 @@ func init() {
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}
-
-		// Start prometheus exporter
-		if metricutils.Enabled {
-			logger.Info("Enabling metrics collection")
-			if metricutils.EnabledPrometheusExport {
-				logger.Info("Enabling Prometheus Exporter")
-				pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, "klaytn",
-					"", prometheus.DefaultRegisterer, 3*time.Second)
-				go pClient.UpdatePrometheusMetrics()
-				http.Handle("/metrics", promhttp.Handler())
-				port := ctx.GlobalInt(metricutils.PrometheusExporterPortFlag)
-
-				go func() {
-					err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-					if err != nil {
-						logger.Error("PrometheusExporter starting failed:", "port", port, "err", err)
-					}
-				}()
-			}
-		}
-
-		// Start system runtime metrics collection
-		go metricutils.CollectProcessMetrics(3 * time.Second)
-
+		metricutils.StartMetricCollectionAndExport(ctx)
 		utils.SetupNetwork(ctx)
 		return nil
 	}
