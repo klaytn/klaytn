@@ -22,6 +22,7 @@ package database
 
 import (
 	"github.com/klaytn/klaytn/common/fdlimit"
+	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"sync"
 	"time"
 
@@ -33,7 +34,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/metrics"
+	"github.com/rcrowley/go-metrics"
 )
 
 var OpenFileLimit = 64
@@ -307,8 +308,8 @@ func (db *levelDB) Meter(prefix string) {
 	db.blockCacheGauge = metrics.NewRegisteredGauge(prefix+"blockcache", nil)
 
 	// Short circuit metering if the metrics system is disabled
-	// Above meters are initialized by NilMeter if metrics.Enabled == false
-	if !metrics.Enabled {
+	// Above meters are initialized by NilMeter if metricutils.Enabled == false
+	if !metricutils.Enabled {
 		return
 	}
 

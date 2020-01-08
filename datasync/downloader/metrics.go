@@ -20,7 +20,7 @@
 
 package downloader
 
-import "github.com/klaytn/klaytn/metrics"
+import "github.com/rcrowley/go-metrics"
 
 var (
 	headerInMeter      = metrics.NewRegisteredMeter("klay/downloader/headers/in", nil)

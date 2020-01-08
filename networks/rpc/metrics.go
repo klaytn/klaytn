@@ -1,6 +1,6 @@
 package rpc
 
-import "github.com/klaytn/klaytn/metrics"
+import "github.com/rcrowley/go-metrics"
 
 var (
 	rpcTotalRequestsCounter    = metrics.NewRegisteredCounter("rpc/counts/total", nil)

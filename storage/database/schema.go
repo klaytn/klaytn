@@ -23,7 +23,7 @@ package database
 import (
 	"encoding/binary"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/metrics"
+	"github.com/rcrowley/go-metrics"
 )
 
 // The fields below define the low level database schema prefixing.

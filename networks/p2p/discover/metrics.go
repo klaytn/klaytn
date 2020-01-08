@@ -16,7 +16,7 @@
 
 package discover
 
-import "github.com/klaytn/klaytn/metrics"
+import "github.com/rcrowley/go-metrics"
 
 var (
 	bucketEntriesGauge      = metrics.NewRegisteredGauge("discover/bucketEntries", nil)      // the closest nodes list gauge
