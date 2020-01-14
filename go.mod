@@ -16,11 +16,13 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/fjl/memsize v0.0.0-20180427083637-f6d5545993d6
 	github.com/go-kit/kit v0.9.0 // indirect
+	github.com/go-redsync/redsync v1.3.1
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/go-stack/stack v1.8.0
 	github.com/golang/mock v1.3.1-0.20190508161146-9fa652df1129
 	github.com/golang/protobuf v1.3.2
 	github.com/golang/snappy v0.0.1
+	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/huin/goupnp v1.0.0
 	github.com/influxdata/influxdb v1.5.2
@@ -30,6 +32,7 @@ require (
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.2
 	github.com/mattn/go-runewidth v0.0.2 // indirect
+	github.com/mna/redisc v1.1.6
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
 	github.com/otiai10/copy v1.0.1

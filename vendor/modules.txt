@@ -31,6 +31,8 @@ github.com/fatih/color
 # github.com/fjl/memsize v0.0.0-20180427083637-f6d5545993d6
 github.com/fjl/memsize
 github.com/fjl/memsize/memsizeui
+# github.com/go-redsync/redsync v1.3.1
+github.com/go-redsync/redsync
 # github.com/go-sql-driver/mysql v1.4.1
 github.com/go-sql-driver/mysql
 # github.com/go-stack/stack v1.8.0
@@ -46,6 +48,9 @@ github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 # github.com/golang/snappy v0.0.1
 github.com/golang/snappy
+# github.com/gomodule/redigo v2.0.0+incompatible
+github.com/gomodule/redigo/internal
+github.com/gomodule/redigo/redis
 # github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
@@ -83,6 +88,8 @@ github.com/mattn/go-isatty
 github.com/mattn/go-runewidth
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
+# github.com/mna/redisc v1.1.6
+github.com/mna/redisc
 # github.com/naoina/go-stringutil v0.1.0
 github.com/naoina/go-stringutil
 # github.com/naoina/toml v0.1.1
