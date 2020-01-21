@@ -2,7 +2,7 @@
 #
 # kscnd         Startup script for the kscnd
 #
-# chkconifg: - 85 15
+# chkconfig: - 85 15
 # description : kscnd is Klaytn consensus node daemon
 #
 # processname: kscnd
