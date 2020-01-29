@@ -30,6 +30,7 @@ Each file contains following contents
  - account_cache.go 	: Provides `accountCache` which contains a live index of all accounts in keystore folder
  - file_cache.go 	: Provides `fileCache` which contains information of all files in keystore folder
  - key.go 		: Defines `KeyV3` struct, `keyStore` interface and related functions
+ - keyv4.go 		: Defines `KeyV4` struct.
  - keystore.go 		: Defines `KeyStore` which manages a key storage directory on disk and related functions
  - keystore_passphrase.go: Provides functions to encrypt and decrypt `Key` with a passphrase
  - keystore_plain.go 	: Deprecated

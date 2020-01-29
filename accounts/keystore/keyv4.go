@@ -65,7 +65,7 @@ func (k *KeyV4) MarshalJSON() (j []byte, err error) {
 	}
 
 	jStruct := plainKeyJSONV4{
-		Address:     k.Address.Hex(),
+		Address:     hex.EncodeToString(k.Address.Bytes()),
 		PrivateKeys: privateKeys,
 		Id:          k.Id.String(),
 		Version:     4,
@@ -76,7 +76,7 @@ func (k *KeyV4) MarshalJSON() (j []byte, err error) {
 
 func (k *KeyV4) UnmarshalJSON(j []byte) (err error) {
 	keyJSON := new(plainKeyJSONV4)
-	if err := json.Unmarshal(j, &keyJSON); err != nil {
+	if err := json.Unmarshal(j, keyJSON); err != nil {
 		return err
 	}
 

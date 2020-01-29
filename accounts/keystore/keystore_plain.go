@@ -38,9 +38,16 @@ func (ks keyStorePlain) GetKey(addr common.Address, filename, auth string) (Key,
 		return nil, err
 	}
 	defer fd.Close()
-	key := new(KeyV3)
-	if err := json.NewDecoder(fd).Decode(key); err != nil {
-		return nil, err
+	var key Key
+	keyv4 := new(KeyV4)
+	if err := json.NewDecoder(fd).Decode(keyv4); err != nil {
+		keyv3 := new(KeyV3)
+		if err := json.NewDecoder(fd).Decode(keyv3); err != nil {
+			return nil, err
+		}
+		key = keyv3
+	} else {
+		key = keyv4
 	}
 	if key.GetAddress() != addr {
 		return nil, fmt.Errorf("key content mismatch: have address %x, want %x", key.GetAddress(), addr)
