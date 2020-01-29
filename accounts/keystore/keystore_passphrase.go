@@ -68,7 +68,7 @@ type keyStorePassphrase struct {
 	scryptP     int
 }
 
-func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*Key, error) {
+func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*KeyV3, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -79,8 +79,8 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 		return nil, err
 	}
 	// Make sure we're really operating on the requested key (no swap attacks)
-	if key.Address != addr {
-		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
+	if key.GetAddress() != addr {
+		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.GetAddress(), addr)
 	}
 	return key, nil
 }
@@ -91,7 +91,7 @@ func StoreKey(dir, auth string, scryptN, scryptP int) (common.Address, error) {
 	return a.Address, err
 }
 
-func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) error {
+func (ks keyStorePassphrase) StoreKey(filename string, key *KeyV3, auth string) error {
 	keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
 		return err
@@ -108,7 +108,7 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
 // blob that can be decrypted later on.
-func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
+func EncryptKey(key *KeyV3, auth string, scryptN, scryptP int) ([]byte, error) {
 	authArray := []byte(auth)
 
 	salt := make([]byte, 32)
@@ -120,7 +120,7 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		return nil, err
 	}
 	encryptKey := derivedKey[:16]
-	keyBytes := math.PaddedBigBytes(key.PrivateKey.D, 32)
+	keyBytes := math.PaddedBigBytes(key.GetPrivateKey().D, 32)
 
 	iv := make([]byte, aes.BlockSize) // 16
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
@@ -152,16 +152,16 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 		MAC:          hex.EncodeToString(mac),
 	}
 	encryptedKeyJSONV3 := encryptedKeyJSONV3{
-		hex.EncodeToString(key.Address[:]),
+		hex.EncodeToString(key.GetAddress().Bytes()),
 		cryptoStruct,
-		key.Id.String(),
+		key.GetId().String(),
 		version,
 	}
 	return json.Marshal(encryptedKeyJSONV3)
 }
 
 // DecryptKey decrypts a key from a json blob, returning the private key itself.
-func DecryptKey(keyjson []byte, auth string) (*Key, error) {
+func DecryptKey(keyjson []byte, auth string) (*KeyV3, error) {
 	// Parse the json into a simple map to fetch the key version
 	m := make(map[string]interface{})
 	if err := json.Unmarshal(keyjson, &m); err != nil {
@@ -194,7 +194,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	}
 	key := crypto.ToECDSAUnsafe(keyBytes)
 
-	return &Key{
+	return &KeyV3{
 		Id:         uuid.UUID(keyId),
 		Address:    address,
 		PrivateKey: key,
