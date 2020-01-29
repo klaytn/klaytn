@@ -57,14 +57,14 @@ func TestKeyStorePlain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	k2, err := ks.GetKey(k1.Address, account.URL.Path, pass)
+	k2, err := ks.GetKey(k1.GetAddress(), account.URL.Path, pass)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(k1.Address, k2.Address) {
+	if !reflect.DeepEqual(k1.GetAddress(), k2.GetAddress()) {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(k1.PrivateKey, k2.PrivateKey) {
+	if !reflect.DeepEqual(k1.GetPrivateKeys(), k2.GetPrivateKeys()) {
 		t.Fatal(err)
 	}
 }
@@ -78,14 +78,14 @@ func TestKeyStorePassphrase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	k2, err := ks.GetKey(k1.Address, account.URL.Path, pass)
+	k2, err := ks.GetKey(k1.GetAddress(), account.URL.Path, pass)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(k1.Address, k2.Address) {
+	if !reflect.DeepEqual(k1.GetAddress(), k2.GetAddress()) {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(k1.PrivateKey, k2.PrivateKey) {
+	if !reflect.DeepEqual(k1.GetPrivateKeys(), k2.GetPrivateKeys()) {
 		t.Fatal(err)
 	}
 }
@@ -99,7 +99,7 @@ func TestKeyStorePassphraseDecryptionFail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = ks.GetKey(k1.Address, account.URL.Path, "bar"); err != ErrDecrypt {
+	if _, err = ks.GetKey(k1.GetAddress(), account.URL.Path, "bar"); err != ErrDecrypt {
 		t.Fatalf("wrong error for invalid passphrase\ngot %q\nwant %q", err, ErrDecrypt)
 	}
 }
@@ -181,7 +181,7 @@ func TestV1_2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	privHex := hex.EncodeToString(crypto.FromECDSA(k.PrivateKey))
+	privHex := hex.EncodeToString(crypto.FromECDSA(k.GetPrivateKey()))
 	expectedHex := "d1b1178d3529626a1a93e073f65028370d14c7eb0936eb42abef05db6f37ad7d"
 	if privHex != expectedHex {
 		t.Fatal(fmt.Errorf("Unexpected privkey: %v, expected %v", privHex, expectedHex))
