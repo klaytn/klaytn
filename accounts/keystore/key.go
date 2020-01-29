@@ -42,6 +42,30 @@ const (
 	version = 3
 )
 
+// Key represents a keystore storing private keys of an account.
+type Key interface {
+	json.Marshaler
+	json.Unmarshaler
+
+	// Returns key ID.
+	GetId() uuid.UUID
+
+	// Returns the address of the keystore.
+	GetAddress() common.Address
+
+	// Returns the default key of the keystore.
+	GetPrivateKey() *ecdsa.PrivateKey
+
+	// Returns all keys in the keystore.
+	GetPrivateKeys() [][]*ecdsa.PrivateKey
+
+	// Returns all keys in the specified role in the keystore.
+	GetPrivateKeysWithRole(role int) []*ecdsa.PrivateKey
+
+	// Resets all the keys in the keystore.
+	ResetPrivateKey()
+}
+
 type KeyV3 struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
 	// to simplify lookups we also store the address
@@ -53,9 +77,9 @@ type KeyV3 struct {
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
-	GetKey(addr common.Address, filename string, auth string) (*KeyV3, error)
+	GetKey(addr common.Address, filename string, auth string) (Key, error)
 	// Writes and encrypts the key.
-	StoreKey(filename string, k *KeyV3, auth string) error
+	StoreKey(filename string, k Key, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
 	JoinPath(filename string) string
 }
@@ -142,11 +166,19 @@ func (k *KeyV3) GetPrivateKey() *ecdsa.PrivateKey {
 	return k.PrivateKey
 }
 
+func (k *KeyV3) GetPrivateKeys() [][]*ecdsa.PrivateKey {
+	return [][]*ecdsa.PrivateKey{{k.PrivateKey}}
+}
+
+func (k *KeyV3) GetPrivateKeysWithRole(role int) []*ecdsa.PrivateKey {
+	return []*ecdsa.PrivateKey{k.PrivateKey}
+}
+
 func (k *KeyV3) ResetPrivateKey() {
 	zeroKey(k.PrivateKey)
 }
 
-func newKeyFromECDSAWithAddress(privateKeyECDSA *ecdsa.PrivateKey, address common.Address) *KeyV3 {
+func newKeyFromECDSAWithAddress(privateKeyECDSA *ecdsa.PrivateKey, address common.Address) Key {
 	id := uuid.NewRandom()
 	key := &KeyV3{
 		Id:         id,
@@ -156,7 +188,7 @@ func newKeyFromECDSAWithAddress(privateKeyECDSA *ecdsa.PrivateKey, address commo
 	return key
 }
 
-func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *KeyV3 {
+func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) Key {
 	id := uuid.NewRandom()
 	key := &KeyV3{
 		Id:         id,
@@ -169,7 +201,7 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *KeyV3 {
 // NewKeyForDirectICAP generates a key whose address fits into < 155 bits so it can fit
 // into the Direct ICAP spec. for simplicity and easier compatibility with other libs, we
 // retry until the first byte is 0.
-func NewKeyForDirectICAP(rand io.Reader) *KeyV3 {
+func NewKeyForDirectICAP(rand io.Reader) Key {
 	randBytes := make([]byte, 64)
 	_, err := rand.Read(randBytes)
 	if err != nil {
@@ -187,7 +219,7 @@ func NewKeyForDirectICAP(rand io.Reader) *KeyV3 {
 	return key
 }
 
-func newKey(rand io.Reader) (*KeyV3, error) {
+func newKey(rand io.Reader) (Key, error) {
 	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), rand)
 	if err != nil {
 		return nil, err
@@ -195,7 +227,7 @@ func newKey(rand io.Reader) (*KeyV3, error) {
 	return newKeyFromECDSA(privateKeyECDSA), nil
 }
 
-func storeNewKey(ks keyStore, rand io.Reader, auth string) (*KeyV3, accounts.Account, error) {
+func storeNewKey(ks keyStore, rand io.Reader, auth string) (Key, accounts.Account, error) {
 	key, err := newKey(rand)
 	if err != nil {
 		return nil, accounts.Account{}, err

@@ -71,7 +71,7 @@ type KeyStore struct {
 }
 
 type unlocked struct {
-	*KeyV3
+	Key
 	abort chan struct{}
 }
 
@@ -236,7 +236,7 @@ func (ks *KeyStore) Delete(a accounts.Account, passphrase string) error {
 	// immediately afterwards.
 	a, key, err := ks.getDecryptedKey(a, passphrase)
 	if key != nil {
-		zeroKey(key.PrivateKey)
+		key.ResetPrivateKey()
 	}
 	if err != nil {
 		return err
@@ -264,7 +264,7 @@ func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 		return nil, ErrLocked
 	}
 	// Sign the hash using plain ECDSA operations
-	return crypto.Sign(hash, unlockedKey.PrivateKey)
+	return crypto.Sign(hash, unlockedKey.GetPrivateKey())
 }
 
 // SignTx signs the given transaction with the requested account.
@@ -279,7 +279,7 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
+		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.GetPrivateKey())
 	}
 	return nil, ErrChainIdNil
 }
@@ -296,7 +296,7 @@ func (ks *KeyStore) SignTxAsFeePayer(a accounts.Account, tx *types.Transaction, 
 	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTxAsFeePayer(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
+		return types.SignTxAsFeePayer(tx, types.NewEIP155Signer(chainID), unlockedKey.GetPrivateKey())
 	}
 	return nil, ErrChainIdNil
 }
@@ -397,10 +397,10 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 		close(u.abort)
 	}
 	if timeout > 0 {
-		u = &unlocked{KeyV3: key, abort: make(chan struct{})}
+		u = &unlocked{Key: key, abort: make(chan struct{})}
 		go ks.expire(a.Address, u, timeout)
 	} else {
-		u = &unlocked{KeyV3: key}
+		u = &unlocked{Key: key}
 	}
 	ks.unlocked[a.Address] = u
 	return nil
@@ -415,7 +415,7 @@ func (ks *KeyStore) Find(a accounts.Account) (accounts.Account, error) {
 	return a, err
 }
 
-func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.Account, *KeyV3, error) {
+func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.Account, Key, error) {
 	a, err := ks.Find(a)
 	if err != nil {
 		return a, nil, err
@@ -437,7 +437,7 @@ func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Durati
 		// because the map stores a new pointer every time the key is
 		// unlocked.
 		if ks.unlocked[addr] == u {
-			zeroKey(u.PrivateKey)
+			u.ResetPrivateKey()
 			delete(ks.unlocked, addr)
 		}
 		ks.mu.Unlock()
@@ -488,7 +488,7 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 // ReplaceECDSAWithAddress stores the given key and address into the key directory, encrypting it with the newPassphrase.
 // This first checks that the target address exists and it can be unlocked with passphrase.
 func (ks *KeyStore) ReplaceECDSAWithAddress(priv *ecdsa.PrivateKey, passphrase string, newPassphrase string, address *common.Address) (accounts.Account, error) {
-	var key *KeyV3
+	var key Key
 	if address != nil {
 		key = newKeyFromECDSAWithAddress(priv, *address)
 	} else {
@@ -514,7 +514,7 @@ func (ks *KeyStore) ReplaceECDSAWithAddress(priv *ecdsa.PrivateKey, passphrase s
 
 // ImportECDSAWithAddress stores the given key and address into the key directory, encrypting it with the passphrase.
 func (ks *KeyStore) ImportECDSAWithAddress(priv *ecdsa.PrivateKey, passphrase string, address *common.Address) (accounts.Account, error) {
-	var key *KeyV3
+	var key Key
 	if address != nil {
 		key = newKeyFromECDSAWithAddress(priv, *address)
 	} else {
@@ -535,7 +535,7 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 	return ks.importKey(key, passphrase)
 }
 
-func (ks *KeyStore) importKey(key *KeyV3, passphrase string) (accounts.Account, error) {
+func (ks *KeyStore) importKey(key Key, passphrase string) (accounts.Account, error) {
 	a := accounts.Account{Address: key.GetAddress(), URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.GetAddress()))}}
 	if err := ks.storage.StoreKey(a.URL.Path, key, passphrase); err != nil {
 		return accounts.Account{}, err
@@ -546,7 +546,7 @@ func (ks *KeyStore) importKey(key *KeyV3, passphrase string) (accounts.Account, 
 }
 
 // UpdateKey changes the key and passphrase of an existing account.
-func (ks *KeyStore) UpdateKey(a accounts.Account, newKey *KeyV3, passphrase, newPassphrase string) error {
+func (ks *KeyStore) UpdateKey(a accounts.Account, newKey Key, passphrase, newPassphrase string) error {
 	a, _, err := ks.getDecryptedKey(a, passphrase)
 	if err != nil {
 		return err
