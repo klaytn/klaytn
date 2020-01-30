@@ -38,10 +38,6 @@ import (
 	"time"
 )
 
-const (
-	version = 3
-)
-
 // Key represents a keystore storing private keys of an account.
 type Key interface {
 	json.Marshaler
@@ -123,7 +119,7 @@ func (k *KeyV3) MarshalJSON() (j []byte, err error) {
 		hex.EncodeToString(k.Address[:]),
 		hex.EncodeToString(crypto.FromECDSA(k.PrivateKey)),
 		k.Id.String(),
-		version,
+		3,
 	}
 	j, err = json.Marshal(jStruct)
 	return j, err
@@ -180,20 +176,20 @@ func (k *KeyV3) ResetPrivateKey() {
 
 func newKeyFromECDSAWithAddress(privateKeyECDSA *ecdsa.PrivateKey, address common.Address) Key {
 	id := uuid.NewRandom()
-	key := &KeyV3{
-		Id:         id,
-		Address:    address,
-		PrivateKey: privateKeyECDSA,
+	key := &KeyV4{
+		Id:          id,
+		Address:     address,
+		PrivateKeys: [][]*ecdsa.PrivateKey{{privateKeyECDSA}},
 	}
 	return key
 }
 
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) Key {
 	id := uuid.NewRandom()
-	key := &KeyV3{
-		Id:         id,
-		Address:    crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
-		PrivateKey: privateKeyECDSA,
+	key := &KeyV4{
+		Id:          id,
+		Address:     crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
+		PrivateKeys: [][]*ecdsa.PrivateKey{{privateKeyECDSA}},
 	}
 	return key
 }
