@@ -479,7 +479,12 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 
 			// Fetch and execute the next transaction trace tasks
 			for task := range jobs {
-				msg, _ := txs[task.index].AsMessageWithAccountKeyPicker(signer, task.statedb, block.NumberU64())
+				msg, err := txs[task.index].AsMessageWithAccountKeyPicker(signer, task.statedb, block.NumberU64())
+				if err != nil {
+					results[task.index] = &txTraceResult{Error: err.Error()}
+					continue
+				}
+
 				vmctx := blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 
 				res, err := api.traceTx(ctx, msg, vmctx, task.statedb, config)
