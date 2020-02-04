@@ -596,7 +596,7 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 		}
 
 		var (
-			vmctx  = blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
+			vmctx = blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 
 			vmConf vm.Config
 			dump   *os.File
