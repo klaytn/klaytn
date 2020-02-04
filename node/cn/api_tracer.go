@@ -204,7 +204,13 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 
 				// Trace all the transactions contained within
 				for i, tx := range task.block.Transactions() {
-					msg, _ := tx.AsMessageWithAccountKeyPicker(signer, task.statedb, task.block.NumberU64())
+					msg, err := tx.AsMessageWithAccountKeyPicker(signer, task.statedb, task.block.NumberU64())
+					if err != nil {
+						logger.Warn("Tracing failed", "hash", tx.Hash(), "block", task.block.NumberU64(), "err", err)
+						task.results[i] = &txTraceResult{Error: err.Error()}
+						break
+					}
+
 					vmctx := blockchain.NewEVMContext(msg, task.block.Header(), api.cn.blockchain, nil)
 
 					res, err := api.traceTx(ctx, msg, vmctx, task.statedb, config)
@@ -481,6 +487,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 			for task := range jobs {
 				msg, err := txs[task.index].AsMessageWithAccountKeyPicker(signer, task.statedb, block.NumberU64())
 				if err != nil {
+					logger.Warn("Tracing failed", "tx idx", task.index, "block", block.NumberU64(), "err", err)
 					results[task.index] = &txTraceResult{Error: err.Error()}
 					continue
 				}
@@ -503,7 +510,13 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 		jobs <- &txTraceTask{statedb: statedb.Copy(), index: i}
 
 		// Generate the next state snapshot fast without tracing
-		msg, _ := tx.AsMessageWithAccountKeyPicker(signer, statedb, block.NumberU64())
+		msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, block.NumberU64())
+		if err != nil {
+			logger.Warn("Tracing failed", "hash", tx.Hash(), "block", block.NumberU64(), "err", err)
+			failed = err
+			break
+		}
+
 		vmctx := blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 
 		vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{})
@@ -576,14 +589,19 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 	)
 	for i, tx := range block.Transactions() {
 		// Prepare the trasaction for un-traced execution
+		msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, block.NumberU64())
+		if err != nil {
+			logger.Warn("Tracing failed", "hash", tx.Hash(), "block", block.NumberU64(), "err", err)
+			return nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
+		}
+
 		var (
-			msg, _ = tx.AsMessageWithAccountKeyPicker(signer, statedb, block.NumberU64())
 			vmctx  = blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 
 			vmConf vm.Config
 			dump   *os.File
-			err    error
 		)
+
 		// If the transaction needs tracing, swap out the configs
 		if tx.Hash() == txHash || txHash == (common.Hash{}) {
 			// Generate a unique temporary file to dump it into
@@ -794,7 +812,12 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 
 	for idx, tx := range block.Transactions() {
 		// Assemble the transaction call message and return if the requested offset
-		msg, _ := tx.AsMessageWithAccountKeyPicker(signer, statedb, block.NumberU64())
+		msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, block.NumberU64())
+		if err != nil {
+			logger.Warn("ComputeTxEnv failed", "hash", tx.Hash(), "block", block.NumberU64(), "err", err)
+			return nil, vm.Context{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
+		}
+
 		context := blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 		if idx == txIndex {
 			return msg, context, statedb, nil
