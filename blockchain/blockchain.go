@@ -68,7 +68,7 @@ const (
 )
 
 const (
-	triesInMemory = 4
+	triesInMemory = 128
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion    = 3
 	DefaultBlockInterval = 128
