@@ -107,8 +107,9 @@ type BlockChain struct {
 	chainConfigMu *sync.RWMutex
 	cacheConfig   *CacheConfig // stateDB caching and trie caching/pruning configuration
 
-	db     database.DBManager // Low level persistent database to store final content in
-	triegc *prque.Prque       // Priority queue mapping block numbers to tries to gc
+	db        database.DBManager // Low level persistent database to store final content in
+	triegc    *prque.Prque       // Priority queue mapping block numbers to tries to gc
+	gcTrigger chan uint64        // This delivers latest block number to gc loop
 
 	hc            *HeaderChain
 	rmLogsFeed    event.Feed
@@ -184,6 +185,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		cacheConfig:     cacheConfig,
 		db:              db,
 		triegc:          prque.New(),
+		gcTrigger:       make(chan uint64),
 		stateCache:      state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit, cacheConfig.DataArchivingBlockNum),
 		quit:            make(chan struct{}),
 		futureBlocks:    futureBlocks,
@@ -229,6 +231,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 	// Take ownership of this particular state
 	go bc.update()
+	go bc.gcCachedNodeLoop()
 	return bc, nil
 }
 
@@ -442,6 +445,17 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return state.New(root, bc.stateCache)
+}
+
+// StateAtWithGCLock returns a new mutable state based on a particular point in time with read lock of the state nodes.
+func (bc *BlockChain) StateAtWithGCLock(root common.Hash) (*state.StateDB, error) {
+	bc.LockGCCachedNode()
+	exist := bc.stateCache.TrieDB().DoesExistCachedNode(root)
+	if exist {
+		return state.New(root, bc.stateCache)
+	}
+	bc.UnLockGCCachedNode()
+	return nil, errors.New("the node does not exist in state cache")
 }
 
 // StateCache returns the caching database underpinning the blockchain instance.
@@ -1045,23 +1059,51 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			trieDB.Commit(block.Header().Root, true, block.NumberU64())
 		}
 
-		if current := block.NumberU64(); current > triesInMemory {
-			// Find the next state trie we need to commit
-			header := bc.GetHeaderByNumber(current - triesInMemory)
-			chosen := header.Number.Uint64()
-
-			// Garbage collect anything below our required write retention
-			for !bc.triegc.Empty() {
-				root, number := bc.triegc.Pop()
-				if uint64(-number) > chosen {
-					bc.triegc.Push(root, number)
-					break
-				}
-				trieDB.Dereference(root.(common.Hash))
-			}
+		// trigger to GC stateDB cache
+		select {
+		case bc.gcTrigger <- block.NumberU64():
+		default:
 		}
 	}
 	return nil
+}
+
+// LockGCCachedNode locks the GC lock of CachedNode.
+func (bc *BlockChain) LockGCCachedNode() {
+	bc.stateCache.LockGCCachedNode()
+}
+
+// UnLockGCCachedNode unlocks the GC lock of CachedNode.
+func (bc *BlockChain) UnLockGCCachedNode() {
+	bc.stateCache.UnLockGCCachedNode()
+}
+
+// gcCachedNodeLoop runs a loop to gc.
+func (bc *BlockChain) gcCachedNodeLoop() {
+	trieDB := bc.stateCache.TrieDB()
+
+	for {
+		select {
+		case current := <-bc.gcTrigger:
+			if current > triesInMemory {
+				// Find the next state trie we need to commit
+				header := bc.GetHeaderByNumber(current - triesInMemory)
+				chosen := header.Number.Uint64()
+
+				// Garbage collect anything below our required write retention
+				for !bc.triegc.Empty() {
+					root, number := bc.triegc.Pop()
+					if uint64(-number) > chosen {
+						bc.triegc.Push(root, number)
+						break
+					}
+					trieDB.Dereference(root.(common.Hash))
+				}
+			}
+		case <-bc.quit:
+			return
+		}
+	}
 }
 
 func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
