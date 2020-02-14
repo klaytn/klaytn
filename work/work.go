@@ -215,7 +215,7 @@ func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }
 
-//go:generate mockgen -destination=work/mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/work BlockChain
+//go:generate mockgen -destination=mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/work BlockChain
 // BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
 type BlockChain interface {
 	Genesis() *types.Block
