@@ -838,7 +838,7 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 		}
 		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
 	} else {
-		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64(), "&stateDB", fmt.Sprintf("%p", statedb))
+		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64())
 		// During this processing, this lock will prevent to evict the state.
 		defer statedb.UnlockGCCachedNode()
 	}
