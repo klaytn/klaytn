@@ -132,9 +132,9 @@ func (self *StateDB) LockGCCachedNode() {
 	self.db.LockGCCachedNode()
 }
 
-// UnLockGCCachedNode unlocks the GC lock of CachedNode.
-func (self *StateDB) UnLockGCCachedNode() {
-	self.db.UnLockGCCachedNode()
+// UnlockGCCachedNode unlocks the GC lock of CachedNode.
+func (self *StateDB) UnlockGCCachedNode() {
+	self.db.UnlockGCCachedNode()
 }
 
 // setError remembers the first non-nil error it is called with.

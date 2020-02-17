@@ -474,7 +474,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 	} else {
 		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64(), "&stateDB", fmt.Sprintf("%p", statedb))
 		// During this processing, this lock will prevent to evict the state.
-		defer statedb.UnLockGCCachedNode()
+		defer statedb.UnlockGCCachedNode()
 	}
 
 	// Execute all the transaction contained within the block concurrently
@@ -592,7 +592,7 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 	} else {
 		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64(), "&stateDB", fmt.Sprintf("%p", statedb))
 		// During this processing, this lock will prevent to evict the state.
-		defer statedb.UnLockGCCachedNode()
+		defer statedb.UnlockGCCachedNode()
 	}
 
 	// Retrieve the tracing configurations, or use default values
@@ -840,7 +840,7 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 	} else {
 		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64(), "&stateDB", fmt.Sprintf("%p", statedb))
 		// During this processing, this lock will prevent to evict the state.
-		defer statedb.UnLockGCCachedNode()
+		defer statedb.UnlockGCCachedNode()
 	}
 
 	// Recompute transactions up to the target index.

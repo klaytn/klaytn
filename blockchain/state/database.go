@@ -58,8 +58,8 @@ type Database interface {
 	// LockGCCachedNode locks the GC lock of CachedNode.
 	LockGCCachedNode()
 
-	// UnLockGCCachedNode unlocks the GC lock of CachedNode.
-	UnLockGCCachedNode()
+	// UnlockGCCachedNode unlocks the GC lock of CachedNode.
+	UnlockGCCachedNode()
 }
 
 // Trie is a Klaytn Merkle Patricia trie.
@@ -184,7 +184,7 @@ func (db *cachingDB) LockGCCachedNode() {
 	db.db.LockGCCachedNode()
 }
 
-// UnLockGCCachedNode unlocks the GC lock of CachedNode.
-func (db *cachingDB) UnLockGCCachedNode() {
-	db.db.UnLockGCCachedNode()
+// UnlockGCCachedNode unlocks the GC lock of CachedNode.
+func (db *cachingDB) UnlockGCCachedNode() {
+	db.db.UnlockGCCachedNode()
 }

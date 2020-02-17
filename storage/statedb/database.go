@@ -345,8 +345,8 @@ func (db *Database) LockGCCachedNode() {
 	db.gcLock.Lock()
 }
 
-// UnLockGCCachedNode unlocks the GC lock of CachedNode.
-func (db *Database) UnLockGCCachedNode() {
+// UnlockGCCachedNode unlocks the GC lock of CachedNode.
+func (db *Database) UnlockGCCachedNode() {
 	db.gcLock.Unlock()
 }
 

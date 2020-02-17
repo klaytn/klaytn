@@ -454,7 +454,7 @@ func (bc *BlockChain) StateAtWithGCLock(root common.Hash) (*state.StateDB, error
 	if exist {
 		return state.New(root, bc.stateCache)
 	}
-	bc.UnLockGCCachedNode()
+	bc.UnlockGCCachedNode()
 	return nil, errors.New("the node does not exist in state cache")
 }
 
@@ -1073,9 +1073,9 @@ func (bc *BlockChain) LockGCCachedNode() {
 	bc.stateCache.LockGCCachedNode()
 }
 
-// UnLockGCCachedNode unlocks the GC lock of CachedNode.
-func (bc *BlockChain) UnLockGCCachedNode() {
-	bc.stateCache.UnLockGCCachedNode()
+// UnlockGCCachedNode unlocks the GC lock of CachedNode.
+func (bc *BlockChain) UnlockGCCachedNode() {
+	bc.stateCache.UnlockGCCachedNode()
 }
 
 // gcCachedNodeLoop runs a loop to gc.
