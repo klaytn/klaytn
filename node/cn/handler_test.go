@@ -112,6 +112,24 @@ func newBlock(blockNum int) *types.Block {
 	return block
 }
 
+func newBlockWithParentHash(blockNum int, parentHash common.Hash) *types.Block {
+	header := &types.Header{
+		Number:     big.NewInt(int64(blockNum)),
+		BlockScore: big.NewInt(int64(1)),
+		Extra:      addrs[0][:],
+		Governance: addrs[0][:],
+		Vote:       addrs[0][:],
+		ParentHash: parentHash,
+	}
+	header.Hash()
+	block := types.NewBlockWithHeader(header)
+	block = block.WithBody(types.Transactions{})
+	block.Hash()
+	block.Size()
+	block.BlockScore()
+	return block
+}
+
 func newReceipt(gasUsed int) *types.Receipt {
 	rct := types.NewReceipt(uint(gasUsed), common.Hash{}, uint64(gasUsed))
 	rct.Logs = []*types.Log{}
