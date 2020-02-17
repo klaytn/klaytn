@@ -472,7 +472,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 		}
 		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
 	} else {
-		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64(), "&stateDB", fmt.Sprintf("%p", statedb))
+		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64())
 		// During this processing, this lock will prevent to evict the state.
 		defer statedb.UnlockGCCachedNode()
 	}
@@ -590,7 +590,7 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 		}
 		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
 	} else {
-		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64(), "&stateDB", fmt.Sprintf("%p", statedb))
+		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64())
 		// During this processing, this lock will prevent to evict the state.
 		defer statedb.UnlockGCCachedNode()
 	}
