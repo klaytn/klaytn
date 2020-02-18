@@ -52,6 +52,7 @@ import (
 var (
 	blockInsertTimeGauge = metrics.NewRegisteredGauge("chain/inserts", nil)
 	ErrNoGenesis         = errors.New("Genesis not found in chain")
+	ErrNotExistNode      = errors.New("the node does not exist in cached node")
 	logger               = log.NewModuleLogger(log.Blockchain)
 )
 
@@ -450,12 +451,20 @@ func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 // StateAtWithGCLock returns a new mutable state based on a particular point in time with read lock of the state nodes.
 func (bc *BlockChain) StateAtWithGCLock(root common.Hash) (*state.StateDB, error) {
 	bc.LockGCCachedNode()
+
 	exist := bc.stateCache.TrieDB().DoesExistCachedNode(root)
-	if exist {
-		return state.New(root, bc.stateCache)
+	if !exist {
+		bc.UnlockGCCachedNode()
+		return nil, ErrNotExistNode
 	}
-	bc.UnlockGCCachedNode()
-	return nil, errors.New("the node does not exist in state cache")
+
+	stateDB, err := state.New(root, bc.stateCache)
+	if err != nil {
+		bc.UnlockGCCachedNode()
+		return nil, err
+	}
+
+	return stateDB, nil
 }
 
 // StateCache returns the caching database underpinning the blockchain instance.
