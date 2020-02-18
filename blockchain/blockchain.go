@@ -1060,6 +1060,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		}
 
 		// trigger to GC stateDB cache
+		logger.Debug("trigger GC cached node", "currentBlk", block.NumberU64())
 		select {
 		case bc.gcTrigger <- block.NumberU64():
 		default:
@@ -1090,6 +1091,7 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 				header := bc.GetHeaderByNumber(current - triesInMemory)
 				chosen := header.Number.Uint64()
 
+				cnt := 0
 				// Garbage collect anything below our required write retention
 				for !bc.triegc.Empty() {
 					root, number := bc.triegc.Pop()
@@ -1098,7 +1100,10 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 						break
 					}
 					trieDB.Dereference(root.(common.Hash))
+					cnt++
 				}
+
+				logger.Debug("GC cached node", "currentBlk", current, "chosenBlk", chosen, "deferenceCnt", cnt)
 			}
 		case <-bc.quit:
 			return
