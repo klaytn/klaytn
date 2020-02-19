@@ -1095,8 +1095,8 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 	gcTrigger := make(chan uint64)
 	trieDB := bc.stateCache.TrieDB()
 
+	bc.wg.Add(2)
 	go func() {
-		bc.wg.Add(1)
 		defer bc.wg.Done()
 		for {
 			select {
@@ -1118,7 +1118,6 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 	}()
 
 	go func() {
-		bc.wg.Add(1)
 		defer bc.wg.Done()
 		for {
 			select {
