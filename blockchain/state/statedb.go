@@ -33,7 +33,6 @@ import (
 	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"sort"
-	"sync"
 	"sync/atomic"
 )
 
@@ -90,8 +89,6 @@ type StateDB struct {
 	journal        *journal
 	validRevisions []revision
 	nextRevisionId int
-
-	lock sync.Mutex
 }
 
 // NewCachedStateObjects returns a new Common.Cache object for cachedStateObjects.
@@ -720,9 +717,6 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 // Copy creates a deep, independent copy of the state.
 // Snapshots of the copied state cannot be applied to the copy.
 func (self *StateDB) Copy() *StateDB {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
 		db:                 self.db,
