@@ -127,14 +127,14 @@ func NewWithCache(root common.Hash, db Database, cachedStateObjects common.Cache
 	}
 }
 
-// LockGCCachedNode locks the GC lock of CachedNode.
+// RLockGCCachedNode locks the GC lock of CachedNode.
 func (self *StateDB) LockGCCachedNode() {
-	self.db.LockGCCachedNode()
+	self.db.RLockGCCachedNode()
 }
 
-// UnlockGCCachedNode unlocks the GC lock of CachedNode.
+// RUnlockGCCachedNode unlocks the GC lock of CachedNode.
 func (self *StateDB) UnlockGCCachedNode() {
-	self.db.UnlockGCCachedNode()
+	self.db.RUnlockGCCachedNode()
 }
 
 // setError remembers the first non-nil error it is called with.

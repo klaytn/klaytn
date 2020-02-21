@@ -55,11 +55,11 @@ type Database interface {
 	// TrieDB retrieves the low level trie database used for data storage.
 	TrieDB() *statedb.Database
 
-	// LockGCCachedNode locks the GC lock of CachedNode.
-	LockGCCachedNode()
+	// RLockGCCachedNode locks the GC lock of CachedNode.
+	RLockGCCachedNode()
 
-	// UnlockGCCachedNode unlocks the GC lock of CachedNode.
-	UnlockGCCachedNode()
+	// RUnlockGCCachedNode unlocks the GC lock of CachedNode.
+	RUnlockGCCachedNode()
 }
 
 // Trie is a Klaytn Merkle Patricia trie.
@@ -179,12 +179,12 @@ func (db *cachingDB) TrieDB() *statedb.Database {
 	return db.db
 }
 
-// LockGCCachedNode locks the GC lock of CachedNode.
-func (db *cachingDB) LockGCCachedNode() {
-	db.db.LockGCCachedNode()
+// RLockGCCachedNode locks the GC lock of CachedNode.
+func (db *cachingDB) RLockGCCachedNode() {
+	db.db.RLockGCCachedNode()
 }
 
-// UnlockGCCachedNode unlocks the GC lock of CachedNode.
-func (db *cachingDB) UnlockGCCachedNode() {
-	db.db.UnlockGCCachedNode()
+// RUnlockGCCachedNode unlocks the GC lock of CachedNode.
+func (db *cachingDB) RUnlockGCCachedNode() {
+	db.db.RUnlockGCCachedNode()
 }

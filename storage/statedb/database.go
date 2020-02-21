@@ -98,7 +98,7 @@ type Database struct {
 	gctime  time.Duration      // Time spent on garbage collection since last commit
 	gcnodes uint64             // Nodes garbage collected since last commit
 	gcsize  common.StorageSize // Data storage garbage collected since last commit
-	gcLock  sync.Mutex         // Lock for preventing to garbage collect cachedNode without flushing.
+	gcLock  sync.RWMutex       // Lock for preventing to garbage collect cachedNode without flushing.
 
 	flushtime  time.Duration      // Time spent on data flushing since last commit
 	flushnodes uint64             // Nodes flushed since last commit
@@ -340,14 +340,14 @@ func (db *Database) DiskDB() database.DBManager {
 	return db.diskDB
 }
 
-// LockGCCachedNode locks the GC lock of CachedNode.
-func (db *Database) LockGCCachedNode() {
-	db.gcLock.Lock()
+// RLockGCCachedNode locks the GC lock of CachedNode.
+func (db *Database) RLockGCCachedNode() {
+	db.gcLock.RLock()
 }
 
-// UnlockGCCachedNode unlocks the GC lock of CachedNode.
-func (db *Database) UnlockGCCachedNode() {
-	db.gcLock.Unlock()
+// RUnlockGCCachedNode unlocks the GC lock of CachedNode.
+func (db *Database) RUnlockGCCachedNode() {
+	db.gcLock.RUnlock()
 }
 
 // InsertBlob writes a new reference tracked blob to the memory database if it's

@@ -461,21 +461,11 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 		reexec = *config.Reexec
 	}
 
-	var statedb *state.StateDB
-	// If we have the state fully available, use that.
-	statedb, err := api.cn.blockchain.StateAtWithGCLock(parent.Root())
+	statedb, deferFn, err := api.stateAt(parent, reexec)
 	if err != nil {
-		// If no state is locally available, the desired state will be generated.
-		statedb, err = api.computeStateDB(parent, reexec)
-		if err != nil {
-			return nil, err
-		}
-		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
-	} else {
-		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64())
-		// During this processing, this lock will prevent to evict the state.
-		defer statedb.UnlockGCCachedNode()
+		return nil, fmt.Errorf("can not get the state of block %#x: %v", parent.Root(), err)
 	}
+	defer deferFn()
 
 	// Execute all the transaction contained within the block concurrently
 	var (
@@ -579,21 +569,11 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 		reexec = *config.Reexec
 	}
 
-	var statedb *state.StateDB
-	// If we have the state fully available, use that.
-	statedb, err := api.cn.blockchain.StateAtWithGCLock(parent.Root())
+	statedb, deferFn, err := api.stateAt(parent, reexec)
 	if err != nil {
-		// If no state is locally available, the desired state will be generated.
-		statedb, err = api.computeStateDB(parent, reexec)
-		if err != nil {
-			return nil, err
-		}
-		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
-	} else {
-		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64())
-		// During this processing, this lock will prevent to evict the state.
-		defer statedb.UnlockGCCachedNode()
+		return nil, fmt.Errorf("can not get the state of block %#x: %v", parent.Root(), err)
 	}
+	defer deferFn()
 
 	// Retrieve the tracing configurations, or use default values
 	var (
@@ -815,6 +795,26 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 	}
 }
 
+// stateAt returns the given block's state from cached stateDB with the GC lock or by regenerating.
+func (api *PrivateDebugAPI) stateAt(block *types.Block, reexec uint64) (*state.StateDB, func(), error) {
+	var stateDB *state.StateDB
+
+	// If we have the state fully available, use that.
+	stateDB, err := api.cn.blockchain.StateAtWithGCLock(block.Root())
+	if err != nil {
+		// If no state is locally available, the desired state will be generated.
+		stateDB, err = api.computeStateDB(block, reexec)
+		if err != nil {
+			return nil, func() {}, err
+		}
+		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
+		return stateDB, func() {}, nil
+	}
+	logger.Debug("Get stateDB from stateCache", "block", block.NumberU64())
+	// During this processing, this lock will prevent to evict the state.
+	return stateDB, stateDB.UnlockGCCachedNode, nil
+}
+
 // computeTxEnv returns the execution environment of a certain transaction.
 func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, reexec uint64) (blockchain.Message, vm.Context, *state.StateDB, error) {
 	// Create the parent state database
@@ -827,21 +827,11 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 		return nil, vm.Context{}, nil, fmt.Errorf("parent %#x not found", block.ParentHash())
 	}
 
-	var statedb *state.StateDB
-	// If we have the state fully available, use that.
-	statedb, err := api.cn.blockchain.StateAtWithGCLock(parent.Root())
+	statedb, deferFn, err := api.stateAt(parent, reexec)
 	if err != nil {
-		// If no state is locally available, the desired state will be generated.
-		statedb, err = api.computeStateDB(parent, reexec)
-		if err != nil {
-			return nil, vm.Context{}, nil, fmt.Errorf("can not compute the state of block %#x: %v", blockHash, err)
-		}
-		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
-	} else {
-		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64())
-		// During this processing, this lock will prevent to evict the state.
-		defer statedb.UnlockGCCachedNode()
+		return nil, vm.Context{}, nil, fmt.Errorf("can not get the state of block %#x: %v", parent.Root(), err)
 	}
+	defer deferFn()
 
 	// Recompute transactions up to the target index.
 	signer := types.MakeSigner(api.config, block.Number())
