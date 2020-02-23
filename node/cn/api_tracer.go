@@ -462,10 +462,10 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 	}
 
 	statedb, deferFn, err := api.stateAt(parent, reexec)
+	defer deferFn()
 	if err != nil {
 		return nil, fmt.Errorf("can not get the state of block %#x: %v", parent.Root(), err)
 	}
-	defer deferFn()
 
 	// Execute all the transaction contained within the block concurrently
 	var (
@@ -570,10 +570,10 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 	}
 
 	statedb, deferFn, err := api.stateAt(parent, reexec)
+	defer deferFn()
 	if err != nil {
 		return nil, fmt.Errorf("can not get the state of block %#x: %v", parent.Root(), err)
 	}
-	defer deferFn()
 
 	// Retrieve the tracing configurations, or use default values
 	var (
@@ -810,7 +810,7 @@ func (api *PrivateDebugAPI) stateAt(block *types.Block, reexec uint64) (*state.S
 		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
 		return stateDB, func() {}, nil
 	}
-	logger.Debug("Get stateDB from stateCache", "block", block.NumberU64())
+	logger.Debug("Get stateDB from stateCache", "block", block.NumberU64(), "reexec", reexec)
 	// During this processing, this lock will prevent to evict the state.
 	return stateDB, stateDB.UnlockGCCachedNode, nil
 }
@@ -828,10 +828,10 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 	}
 
 	statedb, deferFn, err := api.stateAt(parent, reexec)
+	defer deferFn()
 	if err != nil {
 		return nil, vm.Context{}, nil, fmt.Errorf("can not get the state of block %#x: %v", parent.Root(), err)
 	}
-	defer deferFn()
 
 	// Recompute transactions up to the target index.
 	signer := types.MakeSigner(api.config, block.Number())

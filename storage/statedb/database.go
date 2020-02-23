@@ -98,7 +98,7 @@ type Database struct {
 	gctime  time.Duration      // Time spent on garbage collection since last commit
 	gcnodes uint64             // Nodes garbage collected since last commit
 	gcsize  common.StorageSize // Data storage garbage collected since last commit
-	gcLock  sync.RWMutex       // Lock for preventing to garbage collect cachedNode without flushing.
+	gcLock  sync.RWMutex       // Lock for preventing to garbage collect cachedNode without flushing
 
 	flushtime  time.Duration      // Time spent on data flushing since last commit
 	flushnodes uint64             // Nodes flushed since last commit
