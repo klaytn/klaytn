@@ -25,7 +25,7 @@ web3ext defines `Modules` which defines APIs for each category. This `Modules` i
 
 API Categories
 
-APIs are categorized as follows. If you want to know more detail, please refer to <https://docs.klaytn.com/api>
+APIs are categorized as follows. If you want to know more detail, please refer to https://docs.klaytn.com/bapp/json-rpc
   - admin
   - debug
   - klay

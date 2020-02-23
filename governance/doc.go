@@ -17,7 +17,7 @@
 /*
 Package governance contains functions and variables used for voting and reflecting vote results in Klaytn.
 In Klaytn, various settings such as the amount of KLAY minted as a block reward can be changed by using governance vote.
-These votes can be casted by nodes of Governance Council and detailed introduction can be found at <https://docs.klaytn.com/klaytn/governance>
+These votes can be casted by nodes of Governance Council and detailed introduction can be found at https://docs.klaytn.com/klaytn/design/governance
 
 How to cast a vote
 
@@ -46,7 +46,7 @@ How governance works
 
 Governance package contains a governance struct which stores current system configurations and voting status.
 If a vote passed, the governance struct is updated to provide new information to related packages and users.
-The API documentation can be found at <https://docs.klaytn.com/api/governance>
+The API documentation can be found at https://docs.klaytn.com/bapp/json-rpc/api-references/governance
 
 When a CN (consensus node which is managed by CCO) proposes a block, it writes its vote on the block header and other nodes
 parse the header and handle it. This process is handled by snapshot.go in the consensus engine and processed by functions in handler.go
