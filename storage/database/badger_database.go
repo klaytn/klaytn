@@ -38,10 +38,7 @@ type badgerDB struct {
 }
 
 func getBadgerDBOptions(dbDir string) badger.Options {
-	opts := badger.DefaultOptions
-	opts.Dir = dbDir
-	opts.ValueDir = dbDir
-
+	opts := badger.DefaultOptions(dbDir)
 	return opts
 }
 
@@ -123,7 +120,7 @@ func (bg *badgerDB) Put(key []byte, value []byte) error {
 	if err != nil {
 		return err
 	}
-	return txn.Commit(nil)
+	return txn.Commit()
 }
 
 // Has returns true if the corresponding value to the given key exists.
@@ -134,8 +131,8 @@ func (bg *badgerDB) Has(key []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	value, err := item.Value()
-	return value != nil, err
+	err = item.Value(nil)
+	return err == nil, err
 }
 
 // Get returns the corresponding value to the given key if exists.
@@ -146,7 +143,13 @@ func (bg *badgerDB) Get(key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return item.Value()
+
+	var valCopy []byte
+	err = item.Value(func(val []byte) error {
+		valCopy = append([]byte{}, val...)
+		return nil
+	})
+	return valCopy, err
 }
 
 // Delete deletes the key from the queue and database
@@ -157,7 +160,7 @@ func (bg *badgerDB) Delete(key []byte) error {
 	if err != nil {
 		return err
 	}
-	return txn.Commit(nil)
+	return txn.Commit()
 }
 
 func (bg *badgerDB) NewIterator() *badger.Iterator {
@@ -201,7 +204,7 @@ func (b *badgerBatch) Put(key, value []byte) error {
 }
 
 func (b *badgerBatch) Write() error {
-	return b.txn.Commit(nil)
+	return b.txn.Commit()
 }
 
 func (b *badgerBatch) ValueSize() int {

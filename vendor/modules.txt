@@ -1,4 +1,4 @@
-# github.com/AndreasBriese/bbloom v0.0.0-20170702084017-28f7e881ca57
+# github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9
 github.com/AndreasBriese/bbloom
 # github.com/allegro/bigcache v1.2.1-0.20190218064605-e24eb225f156
 github.com/allegro/bigcache
@@ -13,17 +13,19 @@ github.com/cespare/cp
 github.com/clevergo/websocket
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/dgraph-io/badger v1.5.4
+# github.com/dgraph-io/badger v1.6.0
 github.com/dgraph-io/badger
 github.com/dgraph-io/badger/options
-github.com/dgraph-io/badger/protos
+github.com/dgraph-io/badger/pb
 github.com/dgraph-io/badger/skl
 github.com/dgraph-io/badger/table
 github.com/dgraph-io/badger/y
-# github.com/dgryski/go-farm v0.0.0-20180109070241-2de33835d102
+# github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2
 github.com/dgryski/go-farm
 # github.com/docker/docker v1.13.1
 github.com/docker/docker/pkg/reexec
+# github.com/dustin/go-humanize v1.0.0
+github.com/dustin/go-humanize
 # github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712
 github.com/edsrzf/mmap-go
 # github.com/fatih/color v1.7.0
