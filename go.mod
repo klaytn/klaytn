@@ -3,14 +3,12 @@ module github.com/klaytn/klaytn
 go 1.13
 
 require (
-	github.com/AndreasBriese/bbloom v0.0.0-20170702084017-28f7e881ca57 // indirect
 	github.com/allegro/bigcache v1.2.1-0.20190218064605-e24eb225f156
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
 	github.com/cespare/cp v1.0.0
 	github.com/clevergo/websocket v1.0.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/dgraph-io/badger v1.5.4
-	github.com/dgryski/go-farm v0.0.0-20180109070241-2de33835d102 // indirect
+	github.com/dgraph-io/badger v1.6.0
 	github.com/docker/docker v1.13.1
 	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712
 	github.com/fatih/color v1.7.0
