@@ -487,10 +487,12 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 	return enc, err
 }
 
-// DoesExistCachedNode return if the noce exist from cached trie node in memory.
+// DoesExistCachedNode returns if the node exists on cached trie node in memory.
 func (db *Database) DoesExistCachedNode(hash common.Hash) bool {
 	// Retrieve the node from cache if available
+	db.lock.RLock()
 	_, ok := db.nodes[hash]
+	db.lock.RUnlock()
 	return ok
 }
 

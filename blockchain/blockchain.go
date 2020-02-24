@@ -116,8 +116,8 @@ type BlockChain struct {
 
 	db database.DBManager // Low level persistent database to store final content in
 
-	triegc             *prque.Prque // Priority queue mapping block numbers to tries to gc
-	chPushBlockGCPrque chan gcBlock // chPushBlockGCPrque is a channel for delivering the gc item to gc loop.
+	triegc  *prque.Prque // Priority queue mapping block numbers to tries to gc
+	chBlock chan gcBlock // chPushBlockGCPrque is a channel for delivering the gc item to gc loop.
 
 	hc            *HeaderChain
 	rmLogsFeed    event.Feed
@@ -188,21 +188,21 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	bc := &BlockChain{
-		chainConfig:        chainConfig,
-		chainConfigMu:      new(sync.RWMutex),
-		cacheConfig:        cacheConfig,
-		db:                 db,
-		triegc:             prque.New(),
-		chPushBlockGCPrque: make(chan gcBlock, 1000),
-		stateCache:         state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit, cacheConfig.DataArchivingBlockNum),
-		quit:               make(chan struct{}),
-		futureBlocks:       futureBlocks,
-		engine:             engine,
-		vmConfig:           vmConfig,
-		badBlocks:          badBlocks,
-		parallelDBWrite:    db.IsParallelDBWrite(),
-		nonceCache:         nonceCache,
-		balanceCache:       balanceCache,
+		chainConfig:     chainConfig,
+		chainConfigMu:   new(sync.RWMutex),
+		cacheConfig:     cacheConfig,
+		db:              db,
+		triegc:          prque.New(),
+		chBlock:         make(chan gcBlock, 1000),
+		stateCache:      state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit, cacheConfig.DataArchivingBlockNum),
+		quit:            make(chan struct{}),
+		futureBlocks:    futureBlocks,
+		engine:          engine,
+		vmConfig:        vmConfig,
+		badBlocks:       badBlocks,
+		parallelDBWrite: db.IsParallelDBWrite(),
+		nonceCache:      nonceCache,
+		balanceCache:    balanceCache,
 	}
 
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
@@ -1074,7 +1074,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			trieDB.Commit(block.Header().Root, true, block.NumberU64())
 		}
 
-		bc.chPushBlockGCPrque <- gcBlock{root, block.NumberU64()}
+		bc.chBlock <- gcBlock{root, block.NumberU64()}
 	}
 	return nil
 }
@@ -1098,7 +1098,7 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 		defer bc.wg.Done()
 		for {
 			select {
-			case block := <-bc.chPushBlockGCPrque:
+			case block := <-bc.chBlock:
 				bc.triegc.Push(block.root, -float32(block.blockNum))
 				logger.Trace("Push GC block", "blkNum", block.blockNum, "hash", block.root.String())
 				blkNum := block.blockNum
