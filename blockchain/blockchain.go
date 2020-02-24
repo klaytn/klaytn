@@ -1101,24 +1101,25 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 			case block := <-bc.chBlock:
 				bc.triegc.Push(block.root, -float32(block.blockNum))
 				logger.Trace("Push GC block", "blkNum", block.blockNum, "hash", block.root.String())
+
 				blkNum := block.blockNum
-				if blkNum > triesInMemory {
-					chosen := blkNum - triesInMemory
-
-					// Garbage collect anything below our required write retention
-					cnt := 0
-					for !bc.triegc.Empty() {
-						root, number := bc.triegc.Pop()
-						if uint64(-number) > chosen {
-							bc.triegc.Push(root, number)
-							break
-						}
-						trieDB.Dereference(root.(common.Hash))
-						cnt++
-					}
-
-					logger.Debug("GC cached node", "currentBlk", blkNum, "chosenBlk", chosen, "deferenceCnt", cnt)
+				if blkNum <= triesInMemory {
+					continue
 				}
+
+				// Garbage collect anything below our required write retention
+				chosen := blkNum - triesInMemory
+				cnt := 0
+				for !bc.triegc.Empty() {
+					root, number := bc.triegc.Pop()
+					if uint64(-number) > chosen {
+						bc.triegc.Push(root, number)
+						break
+					}
+					trieDB.Dereference(root.(common.Hash))
+					cnt++
+				}
+				logger.Debug("GC cached node", "currentBlk", blkNum, "chosenBlk", chosen, "deferenceCnt", cnt)
 			case <-bc.quit:
 				return
 			}

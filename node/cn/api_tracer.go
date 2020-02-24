@@ -802,13 +802,15 @@ func (api *PrivateDebugAPI) stateAt(block *types.Block, reexec uint64) (*state.S
 	// If we have the state fully available, use that.
 	stateDB, err := api.cn.blockchain.StateAtWithGCLock(block.Root())
 	if err != nil {
+		emptyFn := func() {}
+
 		// If no state is locally available, the desired state will be generated.
 		stateDB, err = api.computeStateDB(block, reexec)
 		if err != nil {
-			return nil, func() {}, err
+			return nil, emptyFn, err
 		}
 		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
-		return stateDB, func() {}, nil
+		return stateDB, emptyFn, nil
 	}
 	logger.Debug("Get stateDB from stateCache", "block", block.NumberU64(), "reexec", reexec)
 	// During this processing, this lock will prevent to evict the state.
