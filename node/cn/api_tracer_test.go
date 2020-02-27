@@ -193,7 +193,7 @@ func TestPrivateDebugAPI_StandardTraceBadBlockToFile(t *testing.T) {
 
 func TestPrivateDebugAPI_computeTxEnv(t *testing.T) {
 	parentBlock := newBlock(122)
-	block := newBlock(123)
+	block := newBlockWithParentHash(123, parentBlock.Hash())
 	blockHash := block.Hash()
 	txIndex := 0
 	reexec := uint64(0)
@@ -211,18 +211,6 @@ func TestPrivateDebugAPI_computeTxEnv(t *testing.T) {
 		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
 		mockBlockChain.EXPECT().GetBlockByHash(blockHash).Return(block).Times(1)
 		mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(nil).Times(1)
-		msg, ctx, stateDB, err := api.computeTxEnv(blockHash, txIndex, reexec)
-		assert.Nil(t, msg)
-		assert.Equal(t, vm.Context{}, ctx)
-		assert.Nil(t, stateDB)
-		assert.Error(t, err)
-		mockCtrl.Finish()
-	}
-	{
-		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
-		mockBlockChain.EXPECT().GetBlockByHash(blockHash).Return(block).Times(1)
-		mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(block).Times(1)
-		mockBlockChain.EXPECT().StateAt(parentBlock.Root()).Return(nil, expectedErr).Times(1)
 		msg, ctx, stateDB, err := api.computeTxEnv(blockHash, txIndex, reexec)
 		assert.Nil(t, msg)
 		assert.Equal(t, vm.Context{}, ctx)

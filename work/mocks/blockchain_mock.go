@@ -688,6 +688,21 @@ func (mr *MockBlockChainMockRecorder) StateAt(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateAt", reflect.TypeOf((*MockBlockChain)(nil).StateAt), arg0)
 }
 
+// StateAtWithGCLock mocks base method
+func (m *MockBlockChain) StateAtWithGCLock(arg0 common.Hash) (*state.StateDB, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StateAtWithGCLock", arg0)
+	ret0, _ := ret[0].(*state.StateDB)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StateAtWithGCLock indicates an expected call of StateAtWithGCLock
+func (mr *MockBlockChainMockRecorder) StateAtWithGCLock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateAtWithGCLock", reflect.TypeOf((*MockBlockChain)(nil).StateAtWithGCLock), arg0)
+}
+
 // StateCache mocks base method
 func (m *MockBlockChain) StateCache() state.Database {
 	m.ctrl.T.Helper()
