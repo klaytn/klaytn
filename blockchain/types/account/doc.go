@@ -44,6 +44,6 @@ Account related functions and variables are defined in the files listed below.
   - smart_contract_account.go   : SmartContractAccount containing an AccountCommon is defined.
 
 For more information on Account, please refer to the document below.
-https://docs.klaytn.com/klaytn/design/account#klaytn-accounts
+https://docs.klaytn.com/klaytn/design/accounts#klaytn-accounts
 */
 package account
