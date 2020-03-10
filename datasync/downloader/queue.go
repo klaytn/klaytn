@@ -380,6 +380,7 @@ func (q *queue) Results(block bool) []*fetchResult {
 			q.resultCache[i] = nil
 		}
 		// Advance the expected block number of the first cache entry.
+		logger.Debug("clear resultCache and update resultOffset", "resultOffset", q.resultOffset, "newResultOffset", q.resultOffset+uint64(nproc), "nproc", nproc)
 		q.resultOffset += uint64(nproc)
 
 		// Recalculate the result item weights to prevent memory exhaustion
@@ -504,8 +505,13 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 
 		// If we're the first to request this task, initialise the result container
 		index := int(header.Number.Int64() - int64(q.resultOffset))
-		if index >= len(q.resultCache) || index < 0 {
-			common.Report("index allocation went beyond available resultCache space")
+		if index >= len(q.resultCache) {
+			logger.Warn("exceeded index of reserveHeaders", "header.Number.Uint64()", header.Number.Uint64())
+			taskQueue.Push(header, -float32(header.Number.Uint64()))
+			break
+		}
+		if index < 0 {
+			common.Report("negative index allocation for resultCache space")
 			return nil, false, errInvalidChain
 		}
 		if q.resultCache[index] == nil {
