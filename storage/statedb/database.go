@@ -316,16 +316,9 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // for nodes loaded from disk.
 func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int, daBlockNum uint64) *Database {
 	var trieNodeCache *bigcache.BigCache
-	if cacheSize >= 0 {
+	if cacheSize > 0 {
 		if cacheSize == 0 {
-			totalPhysicalMem := float32(common.TotalPhysicalMemGB)
-			var cacheSizeGB float32
-			if totalPhysicalMem/4 < 2.5 {
-				cacheSizeGB = totalPhysicalMem - 2.5
-			} else {
-				cacheSizeGB = totalPhysicalMem * 3 / 4
-			}
-			cacheSize = int(cacheSizeGB * 1024)
+			cacheSize = getCacheSize()
 		}
 		maxEntrySize := 512
 		trieNodeCache, _ = bigcache.NewBigCache(bigcache.Config{
@@ -344,6 +337,17 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int, daBlockNum u
 		trieNodeCache:         trieNodeCache,
 		dataArchivingBlockNum: daBlockNum,
 	}
+}
+
+func getCacheSize() int {
+	totalPhysicalMem := float32(common.TotalPhysicalMemGB)
+	var cacheSizeGB float32
+	if totalPhysicalMem/4 < 2.5 {
+		cacheSizeGB = totalPhysicalMem - 2.5
+	} else {
+		cacheSizeGB = totalPhysicalMem * 3 / 4
+	}
+	return int(cacheSizeGB * 1024)
 }
 
 // DiskDB retrieves the persistent database backing the trie database.
