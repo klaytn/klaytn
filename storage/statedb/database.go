@@ -308,7 +308,7 @@ func (t trieNodeHasher) Sum64(key string) uint64 {
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
-	return NewDatabaseWithCache(diskDB, 0, 0)
+	return NewDatabaseWithCache(diskDB, -1, 0)
 }
 
 // NewDatabaseWithCache creates a new trie database to store ephemeral trie content
@@ -316,7 +316,17 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // for nodes loaded from disk.
 func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int, daBlockNum uint64) *Database {
 	var trieNodeCache *bigcache.BigCache
-	if cacheSize > 0 {
+	if cacheSize >= 0 {
+		if cacheSize == 0 {
+			totalPhysicalMem := float32(common.TotalPhysicalMemGB)
+			var cacheSizeGB float32
+			if totalPhysicalMem/4 < 2.5 {
+				cacheSizeGB = totalPhysicalMem - 2.5
+			} else {
+				cacheSizeGB = totalPhysicalMem * 3 / 4
+			}
+			cacheSize = int(cacheSizeGB * 1024)
+		}
 		maxEntrySize := 512
 		trieNodeCache, _ = bigcache.NewBigCache(bigcache.Config{
 			Shards:             1024,
