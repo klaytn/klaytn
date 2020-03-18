@@ -123,7 +123,7 @@ func NewDatabaseWithCache(db database.DBManager, cacheSize int, dataArchivingBlo
 	default:
 		cacheConfig = common.FIFOCacheConfig{CacheSize: codeSizeCacheSize}
 	}
-	csc := common.NewCache(cacheConfig)
+	csc := common.NewCache(cacheConfig, false)
 
 	return &cachingDB{
 		db:            statedb.NewDatabaseWithCache(db, cacheSize, dataArchivingBlockNum),

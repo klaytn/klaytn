@@ -134,7 +134,7 @@ func (sb *backend) NodeType() common.ConnType {
 }
 
 func newGovernanceCache() common.Cache {
-	cache := common.NewCache(common.LRUConfig{CacheSize: params.GovernanceCacheLimit})
+	cache := common.NewCache(common.LRUConfig{CacheSize: params.GovernanceCacheLimit}, false)
 	return cache
 }
 

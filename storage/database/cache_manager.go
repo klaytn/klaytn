@@ -124,13 +124,13 @@ func newCache(cacheNameKey cacheKey, cacheType common.CacheType) common.Cache {
 
 	switch cacheType {
 	case common.FIFOCacheType:
-		cache = common.NewCache(fifoCacheConfig[cacheNameKey])
+		cache = common.NewCache(fifoCacheConfig[cacheNameKey], true)
 	case common.LRUCacheType:
-		cache = common.NewCache(lruCacheConfig[cacheNameKey])
+		cache = common.NewCache(lruCacheConfig[cacheNameKey], true)
 	case common.LRUShardCacheType:
-		cache = common.NewCache(lruShardCacheConfig[cacheNameKey])
+		cache = common.NewCache(lruShardCacheConfig[cacheNameKey], true)
 	default:
-		cache = common.NewCache(fifoCacheConfig[cacheNameKey])
+		cache = common.NewCache(fifoCacheConfig[cacheNameKey], true)
 	}
 	return cache
 }

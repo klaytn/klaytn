@@ -189,12 +189,12 @@ func (cache *lruShardCache) Purge() {
 	}
 }
 
-func NewCache(config CacheConfiger) Cache {
+func NewCache(config CacheConfiger, isScaled bool) Cache {
 	if config == nil {
 		logger.Crit("config shouldn't be nil!")
 	}
 
-	cache, err := config.newCache()
+	cache, err := config.newCache(isScaled)
 	if err != nil {
 		logger.Crit("Failed to allocate cache!", "err", err)
 	}
@@ -202,15 +202,18 @@ func NewCache(config CacheConfiger) Cache {
 }
 
 type CacheConfiger interface {
-	newCache() (Cache, error)
+	newCache(bool) (Cache, error)
 }
 
 type LRUConfig struct {
 	CacheSize int
 }
 
-func (c LRUConfig) newCache() (Cache, error) {
-	cacheSize := c.CacheSize * calculateScale()
+func (c LRUConfig) newCache(isScaled bool) (Cache, error) {
+	cacheSize := c.CacheSize
+	if isScaled {
+		cacheSize *= calculateScale()
+	}
 	lru, err := lru.New(cacheSize)
 	return &lruCache{lru}, err
 }
@@ -229,8 +232,11 @@ const (
 
 //If key is not common.Hash nor common.Address then you should set numShard 1 or use LRU Cache
 //The number of shards is readjusted to meet the minimum shard size.
-func (c LRUShardConfig) newCache() (Cache, error) {
-	cacheSize := c.CacheSize * calculateScale()
+func (c LRUShardConfig) newCache(isScaled bool) (Cache, error) {
+	cacheSize := c.CacheSize
+	if isScaled {
+		cacheSize *= calculateScale()
+	}
 
 	if cacheSize < 1 {
 		logger.Error("Negative Cache Size Error", "Cache Size", cacheSize, "Cache Scale", CacheScale)
@@ -278,8 +284,12 @@ type FIFOCacheConfig struct {
 }
 
 // newCache creates a Cache interface whose implementation is fifoCache.
-func (c FIFOCacheConfig) newCache() (Cache, error) {
-	cacheSize := c.CacheSize * calculateScale()
+func (c FIFOCacheConfig) newCache(isScaled bool) (Cache, error) {
+	cacheSize := c.CacheSize
+	if isScaled {
+		cacheSize *= calculateScale()
+	}
+
 	lru, err := lru.New(cacheSize)
 	return &fifoCache{&lruCache{lru}}, err
 }
@@ -299,8 +309,12 @@ type ARCConfig struct {
 	CacheSize int
 }
 
-func (c ARCConfig) newCache() (Cache, error) {
-	arc, err := lru.NewARC(c.CacheSize)
+func (c ARCConfig) newCache(isScaled bool) (Cache, error) {
+	cacheSize := c.CacheSize
+	if isScaled {
+		cacheSize *= calculateScale()
+	}
+	arc, err := lru.NewARC(cacheSize)
 	return &arcCache{arc}, err
 }
 

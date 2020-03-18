@@ -322,7 +322,7 @@ func TestCachedStateObjects(t *testing.T) {
 // it should be loaded from underlying state trie or persistent database.
 func TestCachedStateObjectsEviction(t *testing.T) {
 	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()))
-	stateDB.cachedStateObjects = common.NewCache(common.LRUConfig{CacheSize: 1})
+	stateDB.cachedStateObjects = common.NewCache(common.LRUConfig{CacheSize: 1}, true)
 
 	// Update an account with addr1.
 	i1 := byte(1)
