@@ -30,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/rcrowley/go-metrics"
 	"io"
+	"math"
 	"sync"
 	"time"
 )
@@ -314,21 +315,23 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // NewDatabaseWithCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int, daBlockNum uint64) *Database {
+func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum uint64) *Database {
 	var trieNodeCache *bigcache.BigCache
-	if cacheSize > 0 {
-		if cacheSize == 0 {
-			cacheSize = getCacheSize()
-		}
-		maxEntrySize := 512
+	if cacheSizeMB == 0 {
+		cacheSizeMB = getTrieNodeCacheSizeMB()
+	}
+	if cacheSizeMB > 0 {
+		shards := 1024
+		maxEntrySizeByte := 512
 		trieNodeCache, _ = bigcache.NewBigCache(bigcache.Config{
-			Shards:             1024,
+			Shards:             shards,
 			LifeWindow:         time.Hour * 24 * 365 * 200,
-			MaxEntriesInWindow: cacheSize * 1024 * 1024 / maxEntrySize,
-			MaxEntrySize:       maxEntrySize,
-			HardMaxCacheSize:   cacheSize,
+			MaxEntriesInWindow: cacheSizeMB * 1024 * 1024 / maxEntrySizeByte,
+			MaxEntrySize:       maxEntrySizeByte,
+			HardMaxCacheSize:   cacheSizeMB,
 			Hasher:             trieNodeHasher{},
 		})
+		logger.Debug("Initialize BigCache", "HardMaxCacheSize", cacheSizeMB, "Shards", shards, "MaxEntrySize", maxEntrySizeByte)
 	}
 	return &Database{
 		diskDB:                diskDB,
@@ -339,11 +342,12 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int, daBlockNum u
 	}
 }
 
-func getCacheSize() int {
-	totalPhysicalMem := float32(common.TotalPhysicalMemGB)
-	var cacheSizeGB float32
-	if totalPhysicalMem/4 < 2.5 {
-		cacheSizeGB = totalPhysicalMem - 2.5
+// getTrieNodeCacheSizeMB retrieves size for trie cache
+func getTrieNodeCacheSizeMB() int {
+	totalPhysicalMem := float64(common.TotalPhysicalMemGB)
+	var cacheSizeGB float64
+	if totalPhysicalMem/4 < 2.5 { // 2.5GB margin at minimum (0.75GB for NewCache, 1.75GB fore rest)
+		cacheSizeGB = math.Max(totalPhysicalMem-2.5, 0)
 	} else {
 		cacheSizeGB = totalPhysicalMem * 3 / 4
 	}
