@@ -105,7 +105,7 @@ type Trie interface {
 // concurrent use, but does not retain any recent trie nodes in memory. To keep some
 // historical state in memory, use the NewDatabaseWithCache constructor.
 func NewDatabase(db database.DBManager) Database {
-	return NewDatabaseWithCache(db, -1, 0)
+	return NewDatabaseWithCache(db, 0, 0)
 }
 
 // NewDatabaseWithCache creates a backing store for state. The returned database

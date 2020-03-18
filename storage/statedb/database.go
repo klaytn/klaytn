@@ -75,6 +75,10 @@ const commitResultChSizeLimit = 100 * 10000
 // do not need preparation of data archiving.
 const NoDataArchivingPreparation = 0
 
+// AutoScaling is for auto-scaling cache size. If cacheSize is set to this value,
+// cache size is set scaling to physical memeory
+const AutoScaling = -1
+
 type DatabaseReader interface {
 	// Get retrieves the value associated with key from the database.
 	Get(key []byte) (value []byte, err error)
@@ -309,7 +313,7 @@ func (t trieNodeHasher) Sum64(key string) uint64 {
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
-	return NewDatabaseWithCache(diskDB, -1, 0)
+	return NewDatabaseWithCache(diskDB, 0, 0)
 }
 
 // NewDatabaseWithCache creates a new trie database to store ephemeral trie content
@@ -317,7 +321,7 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // for nodes loaded from disk.
 func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum uint64) *Database {
 	var trieNodeCache *bigcache.BigCache
-	if cacheSizeMB == 0 {
+	if cacheSizeMB == AutoScaling {
 		cacheSizeMB = getTrieNodeCacheSizeMB()
 	}
 	if cacheSizeMB > 0 {

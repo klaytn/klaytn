@@ -251,7 +251,8 @@ var (
 	}
 	TrieCacheLimitFlag = cli.IntFlag{
 		Name:  "state.trie-cache-limit",
-		Usage: "Memory allowance (MB) to use for caching trie nodes in memory",
+		Usage: "Memory allowance (MB) to use for caching trie nodes in memory. -1 is for auto-scaling",
+		Value: -1,
 	}
 
 	SenderTxHashIndexingFlag = cli.BoolFlag{
