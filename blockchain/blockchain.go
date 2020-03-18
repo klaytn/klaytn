@@ -183,8 +183,8 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	var nonceCache common.Cache
 	var balanceCache common.Cache
 	if cacheConfig.TxPoolStateCache {
-		nonceCache = common.NewCache(common.FIFOCacheConfig{CacheSize: maxAccountForCache}, false)
-		balanceCache = common.NewCache(common.FIFOCacheConfig{CacheSize: maxAccountForCache}, false)
+		nonceCache = common.NewCache(common.FIFOCacheConfig{CacheSize: maxAccountForCache})
+		balanceCache = common.NewCache(common.FIFOCacheConfig{CacheSize: maxAccountForCache})
 	}
 
 	bc := &BlockChain{

@@ -252,12 +252,12 @@ type basePeer struct {
 
 // newKnownBlockCache returns an empty cache for knownBlocksCache.
 func newKnownBlockCache() common.Cache {
-	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownBlocks}, true)
+	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownBlocks, IsScaled: true})
 }
 
 // newKnownTxCache returns an empty cache for knownTxsCache.
 func newKnownTxCache() common.Cache {
-	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownTxs}, true)
+	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownTxs, IsScaled: true})
 }
 
 // newPeer returns new Peer interface.

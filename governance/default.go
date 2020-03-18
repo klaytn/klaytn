@@ -614,7 +614,7 @@ func CheckGenesisValues(c *params.ChainConfig) error {
 }
 
 func newGovernanceCache() common.Cache {
-	cache := common.NewCache(common.LRUConfig{CacheSize: params.GovernanceCacheLimit}, false)
+	cache := common.NewCache(common.LRUConfig{CacheSize: params.GovernanceCacheLimit})
 	return cache
 }
 
