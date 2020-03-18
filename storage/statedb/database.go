@@ -345,7 +345,7 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 func getTrieNodeCacheSizeMB() int {
 	totalPhysicalMem := float64(common.TotalPhysicalMemGB)
 	var cacheSizeGB float64
-	if totalPhysicalMem/4 < 2.5 { // 2.5GB margin at minimum (0.75GB for NewCache, 1.75GB fore rest)
+	if totalPhysicalMem/4 < 2.5 { // 2.5GB margin at minimum (0.75GB for NewCache, 1.75GB for rest)
 		cacheSizeGB = math.Max(totalPhysicalMem-2.5, 0)
 	} else {
 		cacheSizeGB = totalPhysicalMem * 3 / 4
