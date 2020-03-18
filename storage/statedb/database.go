@@ -316,7 +316,7 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // for nodes loaded from disk.
 func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int, daBlockNum uint64) *Database {
 	var trieNodeCache *bigcache.BigCache
-	if cacheSize > 0 {
+	if cacheSize >= 0 {
 		if cacheSize == 0 {
 			cacheSize = getCacheSize()
 		}
