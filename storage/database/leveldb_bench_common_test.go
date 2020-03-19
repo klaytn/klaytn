@@ -214,7 +214,7 @@ func initCacheData(cache common.Cache, valueSize int) []common.Hash {
 // TestLRUShardCacheAddressKey is a test to make sure add and get commands work when using Address as key.
 // Cache hit for all data.
 func TestLRUShardCacheAddressKey(t *testing.T) {
-	cache := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096, IsScaled: true})
+	cache := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096})
 
 	for i := 0; i < 4096; i++ {
 		cache.Add(getAddressKey(i), i)
@@ -230,7 +230,7 @@ func TestLRUShardCacheAddressKey(t *testing.T) {
 // TestLRUShardCacheHashKey is a test to check whether the add and get commands are working
 // when the Address created by SetBytesFromFront is used as key. Cache hit for all data.
 func TestLRUShardCacheAddressKeyFromFront(t *testing.T) {
-	cache := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096, IsScaled: true})
+	cache := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096})
 
 	for i := 0; i < 4096; i++ {
 		cache.Add(getAddressKeyFromFront(i), i)
@@ -246,7 +246,7 @@ func TestLRUShardCacheAddressKeyFromFront(t *testing.T) {
 //TestLRUShardCacheHashKey is a test to see if add and get commands work when using Hash as key.
 // Cache hit for all data.
 func TestLRUShardCacheHashKey(t *testing.T) {
-	cache := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096, IsScaled: true})
+	cache := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096})
 
 	for i := 0; i < 4096; i++ {
 		cache.Add(getHashKey(i), i)
