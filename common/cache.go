@@ -46,8 +46,8 @@ const (
 // it's set by flag.
 var DefaultCacheType CacheType = FIFOCacheType
 var logger = log.NewModuleLogger(log.Common)
-var CacheScale int = 100                             // Cache size = preset size * CacheScale / 100.
-var ScaleByCacheUsageLevel int = 100                 // Scale according to cache usage level (%).
+var CacheScale int = 100                             // Cache size = preset size * CacheScale / 100. Only used when IsScaled == true
+var ScaleByCacheUsageLevel int = 100                 // Scale according to cache usage level (%). Only used when IsScaled == true
 var TotalPhysicalMemGB int = getPhysicalMemorySize() // Convert Byte to GByte
 
 // getPhysicalMemorySize returns the system's physical memory value.
