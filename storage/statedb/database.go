@@ -349,9 +349,10 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 // getTrieNodeCacheSizeMB retrieves size for trie cache
 func getTrieNodeCacheSizeMB() int {
 	totalPhysicalMem := float64(common.TotalPhysicalMemGB)
-	memoryMarginGB := 20.0
+	memoryMarginGB := 20.0    // margin for processing and other cache
+	memoryScalePercent := 0.6 // leave margin proportional to physical memory size
 
-	cacheSizeGB := math.Max((totalPhysicalMem-memoryMarginGB)*0.6, 0.0)
+	cacheSizeGB := math.Max((totalPhysicalMem-memoryMarginGB)*memoryScalePercent, 0.0)
 
 	return int(cacheSizeGB * 1024)
 }
