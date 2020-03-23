@@ -326,15 +326,16 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 	}
 	if cacheSizeMB > 0 {
 		maxEntrySizeByte := 512
+		maxEntriesInWindow := cacheSizeMB * 1024 * 1024 / maxEntrySizeByte
 		trieNodeCache, _ = bigcache.NewBigCache(bigcache.Config{
 			Shards:             1024,
 			LifeWindow:         time.Hour * 24 * 365 * 200,
-			MaxEntriesInWindow: cacheSizeMB * 1024 * 1024 / maxEntrySizeByte,
+			MaxEntriesInWindow: maxEntriesInWindow,
 			MaxEntrySize:       maxEntrySizeByte,
 			HardMaxCacheSize:   cacheSizeMB,
 			Hasher:             trieNodeHasher{},
 		})
-		logger.Debug("Initialize BigCache", "HardMaxCacheSize", cacheSizeMB, "MaxEntrySize", maxEntrySizeByte)
+		logger.Debug("Initialize BigCache", "HardMaxCacheSize", cacheSizeMB, "MaxEntrySize", maxEntrySizeByte, "MaxEntriesInWindow", maxEntriesInWindow)
 	}
 	return &Database{
 		diskDB:                diskDB,
@@ -348,12 +349,10 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 // getTrieNodeCacheSizeMB retrieves size for trie cache
 func getTrieNodeCacheSizeMB() int {
 	totalPhysicalMem := float64(common.TotalPhysicalMemGB)
-	var cacheSizeGB float64
-	if totalPhysicalMem/4 < 2.5 { // 2.5GB margin at minimum (0.75GB for NewCache, 1.75GB for rest)
-		cacheSizeGB = math.Max(totalPhysicalMem-2.5, 0)
-	} else {
-		cacheSizeGB = totalPhysicalMem * 3 / 4
-	}
+	memoryMarginGB := 20.0
+
+	cacheSizeGB := math.Max((totalPhysicalMem-memoryMarginGB)*0.6, 0.0)
+
 	return int(cacheSizeGB * 1024)
 }
 
