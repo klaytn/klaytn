@@ -147,13 +147,13 @@ func Benchmark_read_data(b *testing.B) {
 
 // benchmarkFIFOCacheGetParallel measures the performance of the fifoCache when reading data in parallel
 func benchmarkFIFOCacheGetParallel(b *testing.B, valueSize int) {
-	cache := common.NewCache(common.FIFOCacheConfig{CacheSize: numDataInsertions, IsScaled: true})
+	cache := common.NewCache(common.FIFOCacheConfig{CacheSize: numDataInsertions})
 	benchmarkCacheGetParallel(b, cache, valueSize)
 }
 
 // benchmarkLruCacheCacheGetParallel measures the performance of the lruCache when reading data in parallel
 func benchmarkLruCacheCacheGetParallel(b *testing.B, valueSize int) {
-	cache := common.NewCache(common.LRUConfig{CacheSize: numDataInsertions, IsScaled: true})
+	cache := common.NewCache(common.LRUConfig{CacheSize: numDataInsertions})
 	benchmarkCacheGetParallel(b, cache, valueSize)
 }
 
@@ -174,13 +174,13 @@ func benchmarkCacheGetParallel(b *testing.B, cache common.Cache, valueSize int) 
 
 // benchmarkFIFOCacheGetSingle is a benchmark to read fifoCache serially.
 func benchmarkFIFOCacheGetSingle(b *testing.B, valueSize int) {
-	cache := common.NewCache(common.FIFOCacheConfig{CacheSize: numDataInsertions, IsScaled: true})
+	cache := common.NewCache(common.FIFOCacheConfig{CacheSize: numDataInsertions})
 	benchmarkCacheGetSingle(b, cache, valueSize)
 }
 
 // benchmarkLruCacheGetSingle is a benchmark to read lruCache serially.
 func benchmarkLruCacheGetSingle(b *testing.B, valueSize int) {
-	cache := common.NewCache(common.LRUConfig{CacheSize: numDataInsertions, IsScaled: true})
+	cache := common.NewCache(common.LRUConfig{CacheSize: numDataInsertions})
 	benchmarkCacheGetSingle(b, cache, valueSize)
 }
 
