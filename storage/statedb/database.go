@@ -346,7 +346,7 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 	}
 }
 
-// getTrieNodeCacheSizeMB retrieves size for trie cache
+// getTrieNodeCacheSizeMB retrieves size for trie cache.
 func getTrieNodeCacheSizeMB() int {
 	totalPhysicalMem := float64(common.TotalPhysicalMemGB)
 	memoryMarginGB := 20.0
