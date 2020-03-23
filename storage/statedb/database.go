@@ -335,7 +335,7 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 			HardMaxCacheSize:   cacheSizeMB,
 			Hasher:             trieNodeHasher{},
 		})
-		logger.Debug("Initialize BigCache", "HardMaxCacheSize", cacheSizeMB, "MaxEntrySize", maxEntrySizeByte, "MaxEntriesInWindow", maxEntriesInWindow)
+		logger.Info("Initialize BigCache", "HardMaxCacheSize", cacheSizeMB, "MaxEntrySize", maxEntrySizeByte, "MaxEntriesInWindow", maxEntriesInWindow)
 	}
 	return &Database{
 		diskDB:                diskDB,
@@ -346,7 +346,7 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 	}
 }
 
-// getTrieNodeCacheSizeMB retrieves size for trie cache
+// getTrieNodeCacheSizeMB retrieves size for trie cache.
 func getTrieNodeCacheSizeMB() int {
 	totalPhysicalMem := float64(common.TotalPhysicalMemGB)
 	memoryMarginGB := 20.0    // margin for processing and other cache
