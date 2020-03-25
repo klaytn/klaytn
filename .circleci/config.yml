@@ -75,7 +75,7 @@ commands:
           name: "build new(Cross compile)"
           command: |
             export GOPATH=~/go 
-            export PATH=$HOME/go1.14.1/go/bin:$PATH 
+            export PATH=$HOME/go1.14.1/go/bin:$PATH
             make << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
@@ -486,7 +486,7 @@ workflows:
             branches:
               ignore: /.*/
 
-      - rpm-tagged: 
+      - rpm-tagged:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
@@ -498,7 +498,7 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-linux-baobab: 
+      - packaging-linux-baobab:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
@@ -506,7 +506,7 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-darwin-baobab: 
+      - packaging-darwin-baobab:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
