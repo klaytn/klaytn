@@ -931,6 +931,10 @@ func (db *Database) Size() (common.StorageSize, common.StorageSize) {
 	return db.nodesSize + flushlistSize, db.preimagesSize
 }
 
+func (db *Database) CacheSize() int {
+	return db.trieNodeCache.Capacity()
+}
+
 // verifyIntegrity is a debug method to iterate over the entire trie stored in
 // memory and check whether every node is reachable from the meta root. The goal
 // is to find any errors that might cause memory leaks and or trie nodes to go
