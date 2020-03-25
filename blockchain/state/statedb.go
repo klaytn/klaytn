@@ -94,7 +94,7 @@ type StateDB struct {
 
 // NewCachedStateObjects returns a new Common.Cache object for cachedStateObjects.
 func NewCachedStateObjects() common.Cache {
-	return common.NewCache(common.LRUConfig{CacheSize: maxCachedStateObjects})
+	return common.NewCache(common.LRUConfig{CacheSize: maxCachedStateObjects, IsScaled: true})
 }
 
 // Create a new state from a given trie.

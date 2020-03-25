@@ -157,7 +157,7 @@ type baseBridgePeer struct {
 
 // newKnownTxCache returns an empty cache for knownTxsCache.
 func newKnownTxCache() common.Cache {
-	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownTxs})
+	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownTxs, IsScaled: true})
 }
 
 // newPeer returns new Peer interface.
