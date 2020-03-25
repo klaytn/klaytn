@@ -9,7 +9,7 @@ Official golang implementation of the Klaytn protocol. Please visit [KlaytnDocs]
 ## Building from Sources
 
 Building the Klaytn node binaries as well as utility tools, such as `kcn`, `kpn`, `ken`, `kbn`, `kscn`, `kspn`, `ksen`, `kgen`, `homi` and `abigen` requires
-both a Go (version 1.13.3 or later) and a C compiler. You can install them using
+both a Go (version 1.14.1 or later) and a C compiler. You can install them using
 your favorite package manager.
 Once the dependencies are installed, run
 
