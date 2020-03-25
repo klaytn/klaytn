@@ -21,11 +21,11 @@ executors:
   test-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.0-go1.13.3-solc0.4.24
+      - image: klaytn/build_base:1.0-go1.14.1-solc0.4.24
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/circleci-rpmbuild:1.13.3-5
+      - image: klaytn/circleci-rpmbuild:1.14.1
   default:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
@@ -41,9 +41,9 @@ commands:
       - run:
           name: "Install golang on machine"
           command: |
-            curl -O https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz
-            mkdir $HOME/go1.13.3
-            tar -C $HOME/go1.13.3 -xzf go1.13.3.linux-amd64.tar.gz
+            curl -O https://dl.google.com/go/go1.14.1.linux-amd64.tar.gz
+            mkdir $HOME/go1.14.1
+            tar -C $HOME/go1.14.1 -xzf go1.14.1.linux-amd64.tar.gz
   pre-build:
     description: "before build, set version"
     steps:
@@ -51,7 +51,7 @@ commands:
           name: "set variables"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.13.3/go/bin:$PATH
+            export PATH=$HOME/go1.14.1/go/bin:$PATH
 
             pat="^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*"
 
@@ -75,7 +75,7 @@ commands:
           name: "build new(Cross compile)"
           command: |
             export GOPATH=~/go 
-            export PATH=$HOME/go1.13.3/go/bin:$PATH 
+            export PATH=$HOME/go1.14.1/go/bin:$PATH
             make << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
@@ -87,6 +87,8 @@ commands:
       - run:
           name: "upload S3 repo"
           command: |
+            export GOPATH=~/go
+            export PATH=$HOME/go1.14.1/go/bin:$PATH
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
             for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
@@ -232,7 +234,7 @@ jobs:
       - run:
           name: "Build"
           command: |
-            export PATH=$HOME/go1.13.3/go/bin:$PATH
+            export PATH=$HOME/go1.14.1/go/bin:$PATH
             make fmt
             make all
 
@@ -484,7 +486,7 @@ workflows:
             branches:
               ignore: /.*/
 
-      - rpm-tagged: 
+      - rpm-tagged:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
@@ -496,7 +498,7 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-linux-baobab: 
+      - packaging-linux-baobab:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
@@ -504,7 +506,7 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-darwin-baobab: 
+      - packaging-darwin-baobab:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
