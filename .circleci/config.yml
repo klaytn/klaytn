@@ -87,6 +87,8 @@ commands:
       - run:
           name: "upload S3 repo"
           command: |
+            export GOPATH=~/go
+            export PATH=$HOME/go1.14.1/go/bin:$PATH
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
             for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
