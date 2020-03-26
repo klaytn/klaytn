@@ -316,17 +316,21 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // NewDatabaseWithCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int, daBlockNum uint64) *Database {
+func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum uint64) *Database {
 	var trieNodeCache *bigcache.BigCache
-	if cacheSize > 0 {
+	if cacheSizeMB > 0 {
+		maxEntrySizeByte := 512
+		maxEntriesInWindow := cacheSizeMB * 1024 * 1024 / maxEntrySizeByte
 		trieNodeCache, _ = bigcache.NewBigCache(bigcache.Config{
 			Shards:             1024,
-			LifeWindow:         time.Hour,
-			MaxEntriesInWindow: cacheSize * 1024,
-			MaxEntrySize:       512,
-			HardMaxCacheSize:   cacheSize,
+			LifeWindow:         time.Hour * 24 * 365 * 200,
+			MaxEntriesInWindow: maxEntriesInWindow,
+			MaxEntrySize:       maxEntrySizeByte,
+			HardMaxCacheSize:   cacheSizeMB,
 			Hasher:             trieNodeHasher{},
 		})
+		logger.Info("Initialize BigCache", "HardMaxCacheSize", cacheSizeMB, "MaxEntrySize", maxEntrySizeByte, "MaxEntriesInWindow", maxEntriesInWindow)
+
 	}
 	return &Database{
 		diskDB:                diskDB,
@@ -925,6 +929,10 @@ func (db *Database) Size() (common.StorageSize, common.StorageSize) {
 	// counted. For every useful node, we track 2 extra hashes as the flushlist.
 	var flushlistSize = common.StorageSize((len(db.nodes) - 1) * 2 * common.HashLength)
 	return db.nodesSize + flushlistSize, db.preimagesSize
+}
+
+func (db *Database) CacheSize() int {
+	return db.trieNodeCache.Capacity()
 }
 
 // verifyIntegrity is a debug method to iterate over the entire trie stored in
