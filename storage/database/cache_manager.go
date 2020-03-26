@@ -75,48 +75,48 @@ const (
 )
 
 var lruCacheConfig = [cacheKeySize]common.CacheConfiger{
-	headerCacheIndex:      common.LRUConfig{CacheSize: maxHeaderCache},
-	tdCacheIndex:          common.LRUConfig{CacheSize: maxTdCache},
-	blockNumberCacheIndex: common.LRUConfig{CacheSize: maxBlockNumberCache},
-	canonicalCacheIndex:   common.LRUConfig{CacheSize: maxCanonicalHashCache},
+	headerCacheIndex:      common.LRUConfig{CacheSize: maxHeaderCache, IsScaled: true},
+	tdCacheIndex:          common.LRUConfig{CacheSize: maxTdCache, IsScaled: true},
+	blockNumberCacheIndex: common.LRUConfig{CacheSize: maxBlockNumberCache, IsScaled: true},
+	canonicalCacheIndex:   common.LRUConfig{CacheSize: maxCanonicalHashCache, IsScaled: true},
 
-	bodyCacheIndex:             common.LRUConfig{CacheSize: maxBodyCache},
-	bodyRLPCacheIndex:          common.LRUConfig{CacheSize: maxBodyCache},
-	blockCacheIndex:            common.LRUConfig{CacheSize: maxBlockCache},
-	recentTxAndLookupInfoIndex: common.LRUConfig{CacheSize: maxRecentTransactions},
-	recentBlockReceiptsIndex:   common.LRUConfig{CacheSize: maxRecentBlockReceipts},
-	recentTxReceiptIndex:       common.LRUConfig{CacheSize: maxRecentTxReceipt},
-	senderTxHashToTxHashIndex:  common.LRUConfig{CacheSize: maxSenderTxHashToTxHash},
+	bodyCacheIndex:             common.LRUConfig{CacheSize: maxBodyCache, IsScaled: true},
+	bodyRLPCacheIndex:          common.LRUConfig{CacheSize: maxBodyCache, IsScaled: true},
+	blockCacheIndex:            common.LRUConfig{CacheSize: maxBlockCache, IsScaled: true},
+	recentTxAndLookupInfoIndex: common.LRUConfig{CacheSize: maxRecentTransactions, IsScaled: true},
+	recentBlockReceiptsIndex:   common.LRUConfig{CacheSize: maxRecentBlockReceipts, IsScaled: true},
+	recentTxReceiptIndex:       common.LRUConfig{CacheSize: maxRecentTxReceipt, IsScaled: true},
+	senderTxHashToTxHashIndex:  common.LRUConfig{CacheSize: maxSenderTxHashToTxHash, IsScaled: true},
 }
 
 var lruShardCacheConfig = [cacheKeySize]common.CacheConfiger{
-	headerCacheIndex:      common.LRUShardConfig{CacheSize: maxHeaderCache, NumShards: numShardsHeaderCache},
-	tdCacheIndex:          common.LRUShardConfig{CacheSize: maxTdCache, NumShards: numShardsTdCache},
-	blockNumberCacheIndex: common.LRUShardConfig{CacheSize: maxBlockNumberCache, NumShards: numShardsBlockNumberCache},
-	canonicalCacheIndex:   common.LRUShardConfig{CacheSize: maxCanonicalHashCache, NumShards: numShardsCanonicalHashCache},
+	headerCacheIndex:      common.LRUShardConfig{CacheSize: maxHeaderCache, NumShards: numShardsHeaderCache, IsScaled: true},
+	tdCacheIndex:          common.LRUShardConfig{CacheSize: maxTdCache, NumShards: numShardsTdCache, IsScaled: true},
+	blockNumberCacheIndex: common.LRUShardConfig{CacheSize: maxBlockNumberCache, NumShards: numShardsBlockNumberCache, IsScaled: true},
+	canonicalCacheIndex:   common.LRUShardConfig{CacheSize: maxCanonicalHashCache, NumShards: numShardsCanonicalHashCache, IsScaled: true},
 
-	bodyCacheIndex:             common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
-	bodyRLPCacheIndex:          common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache},
-	blockCacheIndex:            common.LRUShardConfig{CacheSize: maxBlockCache, NumShards: numShardsBlockCache},
-	recentTxAndLookupInfoIndex: common.LRUShardConfig{CacheSize: maxRecentTransactions, NumShards: numShardsRecentTransactions},
-	recentBlockReceiptsIndex:   common.LRUShardConfig{CacheSize: maxRecentBlockReceipts, NumShards: numShardsRecentBlockReceipts},
-	recentTxReceiptIndex:       common.LRUShardConfig{CacheSize: maxRecentTxReceipt, NumShards: numShardsRecentTxReceipt},
-	senderTxHashToTxHashIndex:  common.LRUShardConfig{CacheSize: maxSenderTxHashToTxHash, NumShards: numShardsSenderTxHashToTxHash},
+	bodyCacheIndex:             common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache, IsScaled: true},
+	bodyRLPCacheIndex:          common.LRUShardConfig{CacheSize: maxBodyCache, NumShards: numShardsBodyCache, IsScaled: true},
+	blockCacheIndex:            common.LRUShardConfig{CacheSize: maxBlockCache, NumShards: numShardsBlockCache, IsScaled: true},
+	recentTxAndLookupInfoIndex: common.LRUShardConfig{CacheSize: maxRecentTransactions, NumShards: numShardsRecentTransactions, IsScaled: true},
+	recentBlockReceiptsIndex:   common.LRUShardConfig{CacheSize: maxRecentBlockReceipts, NumShards: numShardsRecentBlockReceipts, IsScaled: true},
+	recentTxReceiptIndex:       common.LRUShardConfig{CacheSize: maxRecentTxReceipt, NumShards: numShardsRecentTxReceipt, IsScaled: true},
+	senderTxHashToTxHashIndex:  common.LRUShardConfig{CacheSize: maxSenderTxHashToTxHash, NumShards: numShardsSenderTxHashToTxHash, IsScaled: true},
 }
 
 var fifoCacheConfig = [cacheKeySize]common.CacheConfiger{
-	headerCacheIndex:      common.FIFOCacheConfig{CacheSize: maxHeaderCache},
-	tdCacheIndex:          common.FIFOCacheConfig{CacheSize: maxTdCache},
-	blockNumberCacheIndex: common.FIFOCacheConfig{CacheSize: maxBlockNumberCache},
-	canonicalCacheIndex:   common.FIFOCacheConfig{CacheSize: maxCanonicalHashCache},
+	headerCacheIndex:      common.FIFOCacheConfig{CacheSize: maxHeaderCache, IsScaled: true},
+	tdCacheIndex:          common.FIFOCacheConfig{CacheSize: maxTdCache, IsScaled: true},
+	blockNumberCacheIndex: common.FIFOCacheConfig{CacheSize: maxBlockNumberCache, IsScaled: true},
+	canonicalCacheIndex:   common.FIFOCacheConfig{CacheSize: maxCanonicalHashCache, IsScaled: true},
 
-	bodyCacheIndex:             common.FIFOCacheConfig{CacheSize: maxBodyCache},
-	bodyRLPCacheIndex:          common.FIFOCacheConfig{CacheSize: maxBodyCache},
-	blockCacheIndex:            common.FIFOCacheConfig{CacheSize: maxBlockCache},
-	recentTxAndLookupInfoIndex: common.FIFOCacheConfig{CacheSize: maxRecentTransactions},
-	recentBlockReceiptsIndex:   common.FIFOCacheConfig{CacheSize: maxRecentBlockReceipts},
-	recentTxReceiptIndex:       common.FIFOCacheConfig{CacheSize: maxRecentTxReceipt},
-	senderTxHashToTxHashIndex:  common.FIFOCacheConfig{CacheSize: maxSenderTxHashToTxHash},
+	bodyCacheIndex:             common.FIFOCacheConfig{CacheSize: maxBodyCache, IsScaled: true},
+	bodyRLPCacheIndex:          common.FIFOCacheConfig{CacheSize: maxBodyCache, IsScaled: true},
+	blockCacheIndex:            common.FIFOCacheConfig{CacheSize: maxBlockCache, IsScaled: true},
+	recentTxAndLookupInfoIndex: common.FIFOCacheConfig{CacheSize: maxRecentTransactions, IsScaled: true},
+	recentBlockReceiptsIndex:   common.FIFOCacheConfig{CacheSize: maxRecentBlockReceipts, IsScaled: true},
+	recentTxReceiptIndex:       common.FIFOCacheConfig{CacheSize: maxRecentTxReceipt, IsScaled: true},
+	senderTxHashToTxHashIndex:  common.FIFOCacheConfig{CacheSize: maxSenderTxHashToTxHash, IsScaled: true},
 }
 
 func newCache(cacheNameKey cacheKey, cacheType common.CacheType) common.Cache {

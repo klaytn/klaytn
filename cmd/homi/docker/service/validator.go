@@ -159,7 +159,7 @@ var validatorTemplate = `{{ .Name }}:
 {{- end }}
         echo 'ADDITIONAL="$$ADDITIONAL --debug --metrics --prometheus"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         /klaytn-docker-pkg/bin/k{{ .NodeType }}d start
-        while true; do sleep 1; done
+        tail -F klaytn/log/k{{ .NodeType }}d.out
     networks:
       app_net:
         ipv4_address: {{ .IP }}

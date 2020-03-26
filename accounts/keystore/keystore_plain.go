@@ -32,23 +32,30 @@ type keyStorePlain struct {
 	keysDirPath string
 }
 
-func (ks keyStorePlain) GetKey(addr common.Address, filename, auth string) (*Key, error) {
+func (ks keyStorePlain) GetKey(addr common.Address, filename, auth string) (Key, error) {
 	fd, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer fd.Close()
-	key := new(Key)
-	if err := json.NewDecoder(fd).Decode(key); err != nil {
-		return nil, err
+	var key Key
+	keyv4 := new(KeyV4)
+	if err := json.NewDecoder(fd).Decode(keyv4); err != nil {
+		keyv3 := new(KeyV3)
+		if err := json.NewDecoder(fd).Decode(keyv3); err != nil {
+			return nil, err
+		}
+		key = keyv3
+	} else {
+		key = keyv4
 	}
-	if key.Address != addr {
-		return nil, fmt.Errorf("key content mismatch: have address %x, want %x", key.Address, addr)
+	if key.GetAddress() != addr {
+		return nil, fmt.Errorf("key content mismatch: have address %x, want %x", key.GetAddress(), addr)
 	}
 	return key, nil
 }
 
-func (ks keyStorePlain) StoreKey(filename string, key *Key, auth string) error {
+func (ks keyStorePlain) StoreKey(filename string, key Key, auth string) error {
 	content, err := json.Marshal(key)
 	if err != nil {
 		return err

@@ -20,12 +20,14 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/golang/mock/gomock"
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	consensusmocks "github.com/klaytn/klaytn/consensus/mocks"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/downloader"
+	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node/cn/mocks"
@@ -34,6 +36,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+	"time"
 )
 
 const blockNum1 = 20190902
@@ -109,6 +112,24 @@ func newBlock(blockNum int) *types.Block {
 	return block
 }
 
+func newBlockWithParentHash(blockNum int, parentHash common.Hash) *types.Block {
+	header := &types.Header{
+		Number:     big.NewInt(int64(blockNum)),
+		BlockScore: big.NewInt(int64(1)),
+		Extra:      addrs[0][:],
+		Governance: addrs[0][:],
+		Vote:       addrs[0][:],
+		ParentHash: parentHash,
+	}
+	header.Hash()
+	block := types.NewBlockWithHeader(header)
+	block = block.WithBody(types.Transactions{})
+	block.Hash()
+	block.Size()
+	block.BlockScore()
+	return block
+}
+
 func newReceipt(gasUsed int) *types.Receipt {
 	rct := types.NewReceipt(uint(gasUsed), common.Hash{}, uint64(gasUsed))
 	rct.Logs = []*types.Log{}
@@ -132,6 +153,130 @@ func TestNewProtocolManager(t *testing.T) {
 		assert.Nil(t, pm)
 		assert.Equal(t, errIncompatibleConfig, err)
 	}
+}
+
+func TestProtocolManager_RegisterValidator(t *testing.T) {
+	pm := &ProtocolManager{}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockPeerSet := NewMockPeerSet(mockCtrl)
+	pm.peers = mockPeerSet
+
+	val := &ByPassValidator{}
+
+	mockPeerSet.EXPECT().RegisterValidator(common.CONSENSUSNODE, val).Times(1)
+	mockPeerSet.EXPECT().RegisterValidator(common.ENDPOINTNODE, val).Times(1)
+	mockPeerSet.EXPECT().RegisterValidator(common.PROXYNODE, val).Times(1)
+	mockPeerSet.EXPECT().RegisterValidator(common.BOOTNODE, val).Times(1)
+	mockPeerSet.EXPECT().RegisterValidator(common.UNKNOWNNODE, val).Times(1)
+
+	pm.RegisterValidator(common.CONSENSUSNODE, val)
+	pm.RegisterValidator(common.ENDPOINTNODE, val)
+	pm.RegisterValidator(common.PROXYNODE, val)
+	pm.RegisterValidator(common.BOOTNODE, val)
+	pm.RegisterValidator(common.UNKNOWNNODE, val)
+}
+
+func TestProtocolManager_getWSEndPoint(t *testing.T) {
+	pm := &ProtocolManager{}
+
+	ws1 := "abc"
+	ws2 := "123"
+
+	pm.SetWsEndPoint(ws1)
+	assert.Equal(t, ws1, pm.getWSEndPoint())
+
+	pm.SetWsEndPoint(ws2)
+	assert.Equal(t, ws2, pm.getWSEndPoint())
+}
+
+func TestProtocolManager_SetRewardbase(t *testing.T) {
+	pm := &ProtocolManager{rewardbase: addrs[0]}
+	assert.Equal(t, addrs[0], pm.rewardbase)
+
+	pm.SetRewardbase(addrs[1])
+	assert.Equal(t, addrs[1], pm.rewardbase)
+}
+
+func TestProtocolManager_removePeer(t *testing.T) {
+	peerID := nodeids[0].String()
+
+	{
+		pm := &ProtocolManager{}
+		mockCtrl := gomock.NewController(t)
+
+		mockPeerSet := NewMockPeerSet(mockCtrl)
+		pm.peers = mockPeerSet
+
+		mockPeerSet.EXPECT().Peer(peerID).Return(nil).Times(1)
+		pm.removePeer(peerID)
+
+		mockCtrl.Finish()
+	}
+
+	{
+		pm := &ProtocolManager{}
+		mockCtrl := gomock.NewController(t)
+
+		mockPeerSet := NewMockPeerSet(mockCtrl)
+		pm.peers = mockPeerSet
+
+		mockPeer := NewMockPeer(mockCtrl)
+
+		mockDownloader := mocks.NewMockProtocolManagerDownloader(mockCtrl)
+		mockDownloader.EXPECT().UnregisterPeer(peerID).Times(1)
+		pm.downloader = mockDownloader
+
+		// Return
+		mockPeerSet.EXPECT().Unregister(peerID).Return(expectedErr).Times(1)
+
+		mockPeer.EXPECT().GetP2PPeer().Return(p2pPeers[0]).Times(1)
+
+		mockPeerSet.EXPECT().Peer(peerID).Return(mockPeer).Times(1)
+		pm.removePeer(peerID)
+
+		mockCtrl.Finish()
+	}
+
+	{
+		pm := &ProtocolManager{}
+		mockCtrl := gomock.NewController(t)
+
+		mockPeerSet := NewMockPeerSet(mockCtrl)
+		pm.peers = mockPeerSet
+
+		mockPeer := NewMockPeer(mockCtrl)
+
+		mockDownloader := mocks.NewMockProtocolManagerDownloader(mockCtrl)
+		mockDownloader.EXPECT().UnregisterPeer(peerID).Times(1)
+		pm.downloader = mockDownloader
+
+		// Return
+		mockPeerSet.EXPECT().Unregister(peerID).Return(nil).Times(1)
+
+		mockPeer.EXPECT().GetP2PPeer().Return(p2pPeers[0]).Times(1)
+
+		mockPeerSet.EXPECT().Peer(peerID).Return(mockPeer).Times(1)
+		pm.removePeer(peerID)
+
+		mockCtrl.Finish()
+	}
+
+}
+
+func TestProtocolManager_getChainID(t *testing.T) {
+	pm := &ProtocolManager{}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	cfg := &params.ChainConfig{ChainID: big.NewInt(12345)}
+
+	mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
+	mockBlockChain.EXPECT().Config().Return(cfg).AnyTimes()
+	pm.blockchain = mockBlockChain
+
+	assert.Equal(t, cfg.ChainID, pm.getChainID())
 }
 
 func TestSampleSize(t *testing.T) {
@@ -227,6 +372,38 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 		pm.BroadcastBlockHash(block)
 	}
+}
+
+func TestProtocolManager_txBroadcastLoop_FromCN_CN_NotExists(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = common.CONSENSUSNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	txsCh := make(chan blockchain.NewTxsEvent, txChanSize)
+	pm.txsCh = txsCh
+
+	feed := &event.Feed{}
+	pm.txsSub = feed.Subscribe(txsCh)
+
+	peers := newPeerSet()
+	pm.peers = peers
+	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
+
+	// Using gomock.Eq(txs) for AsyncSendTransactions calls,
+	// since transactions are put into a new list inside broadcastCNTx.
+	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(true).Times(1)
+	cnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+	pnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+
+	go pm.txBroadcastLoop()
+
+	txsCh <- blockchain.NewTxsEvent{Txs: txs}
+
+	time.Sleep(500 * time.Millisecond)
+
+	pm.txsSub.Unsubscribe()
 }
 
 func TestBroadcastTxsFromCN_CN_NotExists(t *testing.T) {
@@ -385,6 +562,44 @@ func TestBroadcastTxsFrom_DefaultCase(t *testing.T) {
 
 	pm.nodetype = common.UNKNOWNNODE
 	pm.BroadcastTxs(txs)
+}
+
+func TestProtocolManager_txResendLoop(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = common.CONSENSUSNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	createAndRegisterPeers(mockCtrl, peers)
+
+	pm.quitResendCh = make(chan struct{})
+
+	maxTxCount := 100
+	mockTxPool := workmocks.NewMockTxPool(mockCtrl)
+	mockTxPool.EXPECT().CachedPendingTxsByCount(maxTxCount).Return(txs).Times(1)
+
+	pm.txpool = mockTxPool
+
+	go pm.txResendLoop(1, maxTxCount)
+
+	time.Sleep(1500 * time.Millisecond)
+
+	pm.quitResendCh <- struct{}{}
+}
+
+func TestProtocolManager_txResend(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = common.CONSENSUSNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	createAndRegisterPeers(mockCtrl, peers)
+
+	pm.txResend(txs)
 }
 
 func TestReBroadcastTxs_CN(t *testing.T) {

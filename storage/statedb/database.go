@@ -26,9 +26,9 @@ import (
 	"github.com/allegro/bigcache"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/rcrowley/go-metrics"
 	"io"
 	"sync"
 	"time"
@@ -98,6 +98,7 @@ type Database struct {
 	gctime  time.Duration      // Time spent on garbage collection since last commit
 	gcnodes uint64             // Nodes garbage collected since last commit
 	gcsize  common.StorageSize // Data storage garbage collected since last commit
+	gcLock  sync.RWMutex       // Lock for preventing to garbage collect cachedNode without flushing
 
 	flushtime  time.Duration      // Time spent on data flushing since last commit
 	flushnodes uint64             // Nodes flushed since last commit
@@ -154,10 +155,12 @@ type rawShortNode struct {
 	Val node
 }
 
-func (n rawShortNode) canUnload(uint16, uint16) bool { panic("this should never end up in a live trie") }
-func (n rawShortNode) cache() (hashNode, bool)       { panic("this should never end up in a live trie") }
-func (n rawShortNode) fstring(ind string) string     { panic("this should never end up in a live trie") }
-func (n rawShortNode) lenEncoded() uint16            { panic("this should never end up in a live trie") }
+func (n rawShortNode) canUnload(uint16, uint16) bool {
+	panic("this should never end up in a live trie")
+}
+func (n rawShortNode) cache() (hashNode, bool)   { panic("this should never end up in a live trie") }
+func (n rawShortNode) fstring(ind string) string { panic("this should never end up in a live trie") }
+func (n rawShortNode) lenEncoded() uint16        { panic("this should never end up in a live trie") }
 
 // cachedNode is all the information we know about a single cached node in the
 // memory database write layer.
@@ -313,17 +316,21 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // NewDatabaseWithCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int, daBlockNum uint64) *Database {
+func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum uint64) *Database {
 	var trieNodeCache *bigcache.BigCache
-	if cacheSize > 0 {
+	if cacheSizeMB > 0 {
+		maxEntrySizeByte := 512
+		maxEntriesInWindow := cacheSizeMB * 1024 * 1024 / maxEntrySizeByte
 		trieNodeCache, _ = bigcache.NewBigCache(bigcache.Config{
 			Shards:             1024,
-			LifeWindow:         time.Hour,
-			MaxEntriesInWindow: cacheSize * 1024,
-			MaxEntrySize:       512,
-			HardMaxCacheSize:   cacheSize,
+			LifeWindow:         time.Hour * 24 * 365 * 200,
+			MaxEntriesInWindow: maxEntriesInWindow,
+			MaxEntrySize:       maxEntrySizeByte,
+			HardMaxCacheSize:   cacheSizeMB,
 			Hasher:             trieNodeHasher{},
 		})
+		logger.Info("Initialize BigCache", "HardMaxCacheSize", cacheSizeMB, "MaxEntrySize", maxEntrySizeByte, "MaxEntriesInWindow", maxEntriesInWindow)
+
 	}
 	return &Database{
 		diskDB:                diskDB,
@@ -337,6 +344,16 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSize int, daBlockNum u
 // DiskDB retrieves the persistent database backing the trie database.
 func (db *Database) DiskDB() database.DBManager {
 	return db.diskDB
+}
+
+// RLockGCCachedNode locks the GC lock of CachedNode.
+func (db *Database) RLockGCCachedNode() {
+	db.gcLock.RLock()
+}
+
+// RUnlockGCCachedNode unlocks the GC lock of CachedNode.
+func (db *Database) RUnlockGCCachedNode() {
+	db.gcLock.RUnlock()
 }
 
 // InsertBlob writes a new reference tracked blob to the memory database if it's
@@ -431,13 +448,15 @@ func (db *Database) node(hash common.Hash) node {
 			logger.Error("node from cached trie node fails to be decoded!", "err", err)
 		}
 	}
+
+	// Retrieve the node from the state cache if available
 	db.lock.RLock()
 	node := db.nodes[hash]
 	db.lock.RUnlock()
-
 	if node != nil {
 		return node.obj(hash)
 	}
+
 	// Content unavailable in memory, attempt to retrieve from disk
 	enc, err := db.diskDB.ReadCachedTrieNode(hash)
 	if err != nil || enc == nil {
@@ -472,6 +491,15 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 		db.setCachedNode(hash[:], enc)
 	}
 	return enc, err
+}
+
+// DoesExistCachedNode returns if the node exists on cached trie node in memory.
+func (db *Database) DoesExistCachedNode(hash common.Hash) bool {
+	// Retrieve the node from cache if available
+	db.lock.RLock()
+	_, ok := db.nodes[hash]
+	db.lock.RUnlock()
+	return ok
 }
 
 // preimage retrieves a cached trie node pre-image from memory. If it cannot be
@@ -541,6 +569,9 @@ func (db *Database) reference(child common.Hash, parent common.Hash) {
 
 // Dereference removes an existing reference from a root node.
 func (db *Database) Dereference(root common.Hash) {
+	db.gcLock.Lock()
+	defer db.gcLock.Unlock()
+
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
@@ -898,6 +929,10 @@ func (db *Database) Size() (common.StorageSize, common.StorageSize) {
 	// counted. For every useful node, we track 2 extra hashes as the flushlist.
 	var flushlistSize = common.StorageSize((len(db.nodes) - 1) * 2 * common.HashLength)
 	return db.nodesSize + flushlistSize, db.preimagesSize
+}
+
+func (db *Database) CacheSize() int {
+	return db.trieNodeCache.Capacity()
 }
 
 // verifyIntegrity is a debug method to iterate over the entire trie stored in

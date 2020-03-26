@@ -33,7 +33,6 @@ import (
 	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"sort"
-	"sync"
 	"sync/atomic"
 )
 
@@ -62,8 +61,9 @@ type StateDB struct {
 	trie Trie
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
-	stateObjects      map[common.Address]*stateObject
-	stateObjectsDirty map[common.Address]struct{}
+	stateObjects             map[common.Address]*stateObject
+	stateObjectsDirty        map[common.Address]struct{}
+	stateObjectsDirtyStorage map[common.Address]struct{}
 
 	// cachedStateObjects stores the most recent finalized stateObjects.
 	cachedStateObjects common.Cache
@@ -90,13 +90,11 @@ type StateDB struct {
 	journal        *journal
 	validRevisions []revision
 	nextRevisionId int
-
-	lock sync.Mutex
 }
 
 // NewCachedStateObjects returns a new Common.Cache object for cachedStateObjects.
 func NewCachedStateObjects() common.Cache {
-	return common.NewCache(common.LRUConfig{CacheSize: maxCachedStateObjects})
+	return common.NewCache(common.LRUConfig{CacheSize: maxCachedStateObjects, IsScaled: true})
 }
 
 // Create a new state from a given trie.
@@ -106,14 +104,15 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		return nil, err
 	}
 	return &StateDB{
-		db:                 db,
-		trie:               tr,
-		stateObjects:       make(map[common.Address]*stateObject),
-		stateObjectsDirty:  make(map[common.Address]struct{}),
-		cachedStateObjects: nil,
-		logs:               make(map[common.Hash][]*types.Log),
-		preimages:          make(map[common.Hash][]byte),
-		journal:            newJournal(),
+		db:                       db,
+		trie:                     tr,
+		stateObjects:             make(map[common.Address]*stateObject),
+		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
+		stateObjectsDirty:        make(map[common.Address]struct{}),
+		cachedStateObjects:       nil,
+		logs:                     make(map[common.Hash][]*types.Log),
+		preimages:                make(map[common.Hash][]byte),
+		journal:                  newJournal(),
 	}, nil
 }
 
@@ -125,6 +124,16 @@ func NewWithCache(root common.Hash, db Database, cachedStateObjects common.Cache
 		stateDB.cachedStateObjects = cachedStateObjects
 		return stateDB, nil
 	}
+}
+
+// RLockGCCachedNode locks the GC lock of CachedNode.
+func (self *StateDB) LockGCCachedNode() {
+	self.db.RLockGCCachedNode()
+}
+
+// RUnlockGCCachedNode unlocks the GC lock of CachedNode.
+func (self *StateDB) UnlockGCCachedNode() {
+	self.db.RUnlockGCCachedNode()
 }
 
 // setError remembers the first non-nil error it is called with.
@@ -720,9 +729,6 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 // Copy creates a deep, independent copy of the state.
 // Snapshots of the copied state cannot be applied to the copy.
 func (self *StateDB) Copy() *StateDB {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
 		db:                 self.db,
@@ -816,36 +822,48 @@ func (self *StateDB) GetRefund() uint64 {
 
 // Finalise finalises the state by removing the self destructed objects
 // and clears the journal as well as the refunds.
-func (s *StateDB) Finalise(deleteEmptyObjects bool) {
-	for addr := range s.journal.dirties {
-		stateObject, exist := s.stateObjects[addr]
+func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
+	for addr := range stateDB.journal.dirties {
+		so, exist := stateDB.stateObjects[addr]
 		if !exist {
 			// ripeMD is 'touched' at block 1714175, in tx 0x1237f737031e40bcde4a8b7e717b2d15e3ecadfe49bb1bbc71ee9deb09c6fcf2
 			// That tx goes out of gas, and although the notion of 'touched' does not exist there, the
 			// touch-event will still be recorded in the journal. Since ripeMD is a special snowflake,
 			// it will persist in the journal even though the journal is reverted. In this special circumstance,
-			// it may exist in `s.journal.dirties` but not in `s.stateObjects`.
+			// it may exist in `stateDB.journal.dirties` but not in `stateDB.stateObjects`.
 			// Thus, we can safely ignore it here
 			continue
 		}
 
-		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
-			s.deleteStateObject(stateObject)
+		if so.suicided || (deleteEmptyObjects && so.empty()) {
+			stateDB.deleteStateObject(so)
 		} else {
-			stateObject.updateStorageRoot(s.db)
-			s.updateStateObject(stateObject)
+			so.updateStorageTrie(stateDB.db)
+			so.setStorageRoot(setStorageRoot, stateDB.stateObjectsDirtyStorage)
+			stateDB.updateStateObject(so)
 		}
-		s.stateObjectsDirty[addr] = struct{}{}
+		stateDB.stateObjectsDirty[addr] = struct{}{}
 	}
 	// Invalidate journal because reverting across transactions is not allowed.
-	s.clearJournalAndRefund()
+	stateDB.clearJournalAndRefund()
+
+	if setStorageRoot && len(stateDB.stateObjectsDirtyStorage) > 0 {
+		for addr := range stateDB.stateObjectsDirtyStorage {
+			so, exist := stateDB.stateObjects[addr]
+			if exist {
+				so.updateStorageRoot(stateDB.db)
+				stateDB.updateStateObject(so)
+			}
+		}
+		stateDB.stateObjectsDirtyStorage = make(map[common.Address]struct{})
+	}
 }
 
 // IntermediateRoot computes the current root hash of the state statedb.
 // It is called in between transactions to get the root hash that
 // goes into transaction receipts.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	s.Finalise(deleteEmptyObjects)
+	s.Finalise(deleteEmptyObjects, true)
 	return s.trie.Hash()
 }
 

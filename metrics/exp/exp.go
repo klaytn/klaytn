@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/klaytn/klaytn/metrics"
+	"github.com/rcrowley/go-metrics"
 )
 
 type exp struct {

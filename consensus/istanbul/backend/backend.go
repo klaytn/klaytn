@@ -34,7 +34,6 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 	"math/big"
@@ -70,7 +69,6 @@ func New(rewardbase common.Address, config *istanbul.Config, privateKey *ecdsa.P
 		knownMessages:     knownMessages,
 		rewardbase:        rewardbase,
 		governance:        governance,
-		GovernanceCache:   newGovernanceCache(),
 		nodetype:          nodetype,
 		rewardDistributor: reward.NewRewardDistributor(governance),
 	}
@@ -117,8 +115,7 @@ type backend struct {
 	currentView atomic.Value //*istanbul.View
 
 	// Reference to the governance.Governance
-	governance      *governance.Governance
-	GovernanceCache common.Cache
+	governance *governance.Governance
 	// Last Block Number which has current Governance Config
 	lastGovernanceBlock uint64
 
@@ -131,11 +128,6 @@ type backend struct {
 
 func (sb *backend) NodeType() common.ConnType {
 	return sb.nodetype
-}
-
-func newGovernanceCache() common.Cache {
-	cache := common.NewCache(common.LRUConfig{CacheSize: params.GovernanceCacheLimit})
-	return cache
 }
 
 func (sb *backend) GetRewardBase() common.Address {

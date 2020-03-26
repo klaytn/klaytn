@@ -86,7 +86,8 @@ func TestDatabase_DeReference(t *testing.T) {
 
 func TestDatabase_Size(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithCache(memDB, 128, 0)
+	cacheSizeMB := 128
+	db := NewDatabaseWithCache(memDB, cacheSizeMB, 0)
 
 	totalMemorySize, preimagesSize := db.Size()
 	assert.Equal(t, common.StorageSize(0), totalMemorySize)
@@ -107,6 +108,9 @@ func TestDatabase_Size(t *testing.T) {
 	totalMemorySize, preimagesSize = db.Size()
 	assert.Equal(t, common.StorageSize(128), totalMemorySize)
 	assert.Equal(t, common.StorageSize(100), preimagesSize)
+
+	cacheSize := db.CacheSize()
+	assert.Equal(t, cacheSizeMB*1024*1024, cacheSize)
 }
 
 func TestDatabase_SecureKey(t *testing.T) {

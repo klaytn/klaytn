@@ -282,7 +282,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 			return false
 		}
 		s.dialing[n.ID] = flag
-		logger.Info("[Dial] Add dial candidate from discovery nodes", "id", n.ID, "addr",
+		logger.Debug("[Dial] Add dial candidate from discovery nodes", "id", n.ID, "addr",
 			&net.TCPAddr{IP: n.IP, Port: int(n.TCP)})
 		newtasks = append(newtasks, &dialTask{flags: flag, dest: n})
 		return true

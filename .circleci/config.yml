@@ -21,11 +21,11 @@ executors:
   test-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.0-go1.13.3-solc0.4.24
+      - image: klaytn/build_base:1.0-go1.14.1-solc0.4.24
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/circleci-rpmbuild:1.13.3-5
+      - image: klaytn/circleci-rpmbuild:1.14.1
   default:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
@@ -41,9 +41,9 @@ commands:
       - run:
           name: "Install golang on machine"
           command: |
-            curl -O https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz
-            mkdir $HOME/go1.13.3
-            tar -C $HOME/go1.13.3 -xzf go1.13.3.linux-amd64.tar.gz
+            curl -O https://dl.google.com/go/go1.14.1.linux-amd64.tar.gz
+            mkdir $HOME/go1.14.1
+            tar -C $HOME/go1.14.1 -xzf go1.14.1.linux-amd64.tar.gz
   pre-build:
     description: "before build, set version"
     steps:
@@ -51,18 +51,19 @@ commands:
           name: "set variables"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.13.3/go/bin:$PATH
-            echo "export KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)" >> $BASH_ENV
-            if [ -z "$CIRCLE_TAG" ]; then
-              echo "this is not RC version"
-            else
+            export PATH=$HOME/go1.14.1/go/bin:$PATH
+
+            pat="^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*"
+
+            if [[ $CIRCLE_TAG =~ $pat ]]; then
               echo "this is rc version $CIRCLE_TAG"
               rc_num=$(echo $CIRCLE_TAG | cut -d '-' -f 2)
               sed -i 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go
               sed -n '/%d.%d.%d/p' params/version.go
+            else
+              echo "this is not RC version"
             fi
-            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-            echo $KLAYTN_VERSION | echo $KLAYTN_RELEASE_NUM
+            
   build-packaging:
     description: "Build for each OS/Network"
     parameters:
@@ -74,7 +75,7 @@ commands:
           name: "build new(Cross compile)"
           command: |
             export GOPATH=~/go 
-            export PATH=$HOME/go1.13.3/go/bin:$PATH 
+            export PATH=$HOME/go1.14.1/go/bin:$PATH
             make << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
@@ -85,7 +86,11 @@ commands:
     steps:
       - run:
           name: "upload S3 repo"
-          command: for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
+          command: |
+            export GOPATH=~/go
+            export PATH=$HOME/go1.14.1/go/bin:$PATH
+            KLAYTN_VERSION=$(go run build/rpm/main.go version)
+            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
@@ -126,9 +131,9 @@ commands:
       - run:
           name: "createrepo update"
           command: |
-            aws s3 sync s3://klaytn-packages-repo-dev/packages/rhel/7/prod/ rhel/7/prod/
+            aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/7/prod/ rhel/7/prod/
             createrepo --update rhel/7/prod
-            aws s3 sync --delete rhel/7/prod/repodata/ s3://klaytn-packages-repo-dev/packages/rhel/7/prod/repodata/
+            aws s3 sync --delete rhel/7/prod/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/7/prod/repodata/
   tag-verify:
     steps:
       - run:
@@ -229,7 +234,7 @@ jobs:
       - run:
           name: "Build"
           command: |
-            export PATH=$HOME/go1.13.3/go/bin:$PATH
+            export PATH=$HOME/go1.14.1/go/bin:$PATH
             make fmt
             make all
 
@@ -390,6 +395,7 @@ jobs:
   deploy-rpm-public:
     executor: rpm-executor
     steps:
+      - add_ssh_keys
       - createrepo-update
       - notify-failure
       - notify-success
@@ -480,7 +486,7 @@ workflows:
             branches:
               ignore: /.*/
 
-      - rpm-tagged: 
+      - rpm-tagged:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
@@ -492,7 +498,7 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-linux-baobab: 
+      - packaging-linux-baobab:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
@@ -500,7 +506,7 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-darwin-baobab: 
+      - packaging-darwin-baobab:
           filters: *filter-only-version-tag
           requires:
             - pass-tests

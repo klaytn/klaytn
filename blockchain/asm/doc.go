@@ -18,5 +18,14 @@
 // This file is derived from core/asm/asm.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package asm provides support for dealing with EVM assembly instructions (e.g., disassembling them).
+/*
+Package asm provides support for dealing with EVM assembly instructions (e.g., disassembling them).
+
+Source Files
+
+Each file provides the following features.
+  - asm.go: provides instruction iterators for EVM assembly instructions.
+  - compiler.go: provides a compiler which compiles input tokens and returns EVM binaries.
+  - lexer.go: provides the basic construct for parsing source code and turning them into tokens.
+*/
 package asm

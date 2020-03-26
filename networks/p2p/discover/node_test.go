@@ -220,7 +220,7 @@ var parseNodeTests = []struct {
 	{
 		// This test checks that errors from url.Parse are handled.
 		rawurl:    "://foo",
-		wantError: `parse ://foo: missing protocol scheme`,
+		wantError: `missing protocol scheme`,
 	},
 }
 

@@ -698,7 +698,6 @@ func Benchmark_getTargetReceivers(b *testing.B) {
 		knownMessages:     knownMessages,
 		rewardbase:        rewards[0],
 		governance:        gov,
-		GovernanceCache:   newGovernanceCache(),
 		nodetype:          common.CONSENSUSNODE,
 		rewardDistributor: reward.NewRewardDistributor(gov),
 	}
@@ -745,7 +744,6 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 		knownMessages:     knownMessages,
 		rewardbase:        rewards[0],
 		governance:        gov,
-		GovernanceCache:   newGovernanceCache(),
 		nodetype:          common.CONSENSUSNODE,
 		rewardDistributor: reward.NewRewardDistributor(gov),
 	}

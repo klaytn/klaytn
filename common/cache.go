@@ -46,8 +46,8 @@ const (
 // it's set by flag.
 var DefaultCacheType CacheType = FIFOCacheType
 var logger = log.NewModuleLogger(log.Common)
-var CacheScale int = 100                             // Cache size = preset size * CacheScale / 100.
-var ScaleByCacheUsageLevel int = 100                 // Scale according to cache usage level (%).
+var CacheScale int = 100                             // Cache size = preset size * CacheScale / 100. Only used when IsScaled == true
+var ScaleByCacheUsageLevel int = 100                 // Scale according to cache usage level (%). Only used when IsScaled == true
 var TotalPhysicalMemGB int = getPhysicalMemorySize() // Convert Byte to GByte
 
 // getPhysicalMemorySize returns the system's physical memory value.
@@ -207,10 +207,14 @@ type CacheConfiger interface {
 
 type LRUConfig struct {
 	CacheSize int
+	IsScaled  bool
 }
 
 func (c LRUConfig) newCache() (Cache, error) {
-	cacheSize := c.CacheSize * calculateScale()
+	cacheSize := c.CacheSize
+	if c.IsScaled {
+		cacheSize *= calculateScale()
+	}
 	lru, err := lru.New(cacheSize)
 	return &lruCache{lru}, err
 }
@@ -220,6 +224,7 @@ type LRUShardConfig struct {
 	// Hash, and Address type can not generate as many shard indexes as the maximum (2 ^ 16 = 65536),
 	// so it is meaningless to set the NumShards larger than this.
 	NumShards int
+	IsScaled  bool
 }
 
 const (
@@ -230,7 +235,10 @@ const (
 //If key is not common.Hash nor common.Address then you should set numShard 1 or use LRU Cache
 //The number of shards is readjusted to meet the minimum shard size.
 func (c LRUShardConfig) newCache() (Cache, error) {
-	cacheSize := c.CacheSize * calculateScale()
+	cacheSize := c.CacheSize
+	if c.IsScaled {
+		cacheSize *= calculateScale()
+	}
 
 	if cacheSize < 1 {
 		logger.Error("Negative Cache Size Error", "Cache Size", cacheSize, "Cache Scale", CacheScale)
@@ -275,11 +283,16 @@ func (c LRUShardConfig) makeNumShardsPowOf2() int {
 // FIFOCacheConfig is a implementation of CacheConfiger interface for fifoCache.
 type FIFOCacheConfig struct {
 	CacheSize int
+	IsScaled  bool
 }
 
 // newCache creates a Cache interface whose implementation is fifoCache.
 func (c FIFOCacheConfig) newCache() (Cache, error) {
-	cacheSize := c.CacheSize * calculateScale()
+	cacheSize := c.CacheSize
+	if c.IsScaled {
+		cacheSize *= calculateScale()
+	}
+
 	lru, err := lru.New(cacheSize)
 	return &fifoCache{&lruCache{lru}}, err
 }
@@ -297,10 +310,15 @@ func (cache *fifoCache) Get(key CacheKey) (value interface{}, ok bool) {
 
 type ARCConfig struct {
 	CacheSize int
+	IsScaled  bool
 }
 
 func (c ARCConfig) newCache() (Cache, error) {
-	arc, err := lru.NewARC(c.CacheSize)
+	cacheSize := c.CacheSize
+	if c.IsScaled {
+		cacheSize *= calculateScale()
+	}
+	arc, err := lru.NewARC(cacheSize)
 	return &arcCache{arc}, err
 }
 

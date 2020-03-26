@@ -433,24 +433,24 @@ func TestCNAPIBackend_SubscribeEvents(t *testing.T) {
 func TestCNAPIBackend_SendTx(t *testing.T) {
 	mockCtrl, _, _, api := newCNAPIBackend(t)
 	mockTxPool := mocks.NewMockTxPool(mockCtrl)
-	mockTxPool.EXPECT().AddLocal(tx1).Return(err).Times(1)
+	mockTxPool.EXPECT().AddLocal(tx1).Return(expectedErr).Times(1)
 	api.cn.txPool = mockTxPool
 
 	defer mockCtrl.Finish()
 
-	assert.Equal(t, err, api.SendTx(context.Background(), tx1))
+	assert.Equal(t, expectedErr, api.SendTx(context.Background(), tx1))
 }
 
 func TestCNAPIBackend_GetPoolTransactions(t *testing.T) {
 	{
 		mockCtrl, _, _, api := newCNAPIBackend(t)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
-		mockTxPool.EXPECT().Pending().Return(nil, err).Times(1)
+		mockTxPool.EXPECT().Pending().Return(nil, expectedErr).Times(1)
 		api.cn.txPool = mockTxPool
 
 		txs, ReturnedErr := api.GetPoolTransactions()
 		assert.Nil(t, txs)
-		assert.Equal(t, err, ReturnedErr)
+		assert.Equal(t, expectedErr, ReturnedErr)
 		mockCtrl.Finish()
 	}
 	{

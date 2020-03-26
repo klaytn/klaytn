@@ -22,8 +22,9 @@ package cn
 
 import (
 	"github.com/klaytn/klaytn/consensus/istanbul/backend"
-	"github.com/klaytn/klaytn/metrics"
+	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/rcrowley/go-metrics"
 )
 
 var (
@@ -83,7 +84,7 @@ type meteredMsgReadWriter struct {
 // newMeteredMsgWriter wraps a p2p MsgReadWriter with metering support. If the
 // metrics system is disabled, this function returns the original object.
 func newMeteredMsgWriter(rw p2p.MsgReadWriter) p2p.MsgReadWriter {
-	if !metrics.Enabled {
+	if !metricutils.Enabled {
 		return rw
 	}
 	return &meteredMsgReadWriter{MsgReadWriter: rw}
