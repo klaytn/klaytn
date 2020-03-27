@@ -52,6 +52,7 @@ commands:
           command: |
             export GOPATH=~/go
             export PATH=$HOME/go1.14.1/go/bin:$PATH
+            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
 
             pat="^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*"
 
