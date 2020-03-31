@@ -168,6 +168,10 @@ fi
 if [[ ! -z $REWARDBASE ]] && [[ $REWARDBASE != "" ]]; then
     OPTIONS="$OPTIONS --rewardbase $REWARDBASE"
 fi
+
+BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+CURRENTFILE=`basename "$0"`
+OPTIONS="$OPTIONS --daemon.path $BASEDIR/$CURRENTFILE"
 set +f
 
 start() {

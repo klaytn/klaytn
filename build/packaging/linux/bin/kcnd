@@ -196,6 +196,10 @@ start() {
         OPTIONS="$OPTIONS --rewardbase $REWARDBASE"
     fi
 
+    BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+    CURRENTFILE=`basename "$0"`
+    OPTIONS="$OPTIONS --daemon.path $BASEDIR/$CURRENTFILE"
+
     $BIN/kcn $OPTIONS >> ${LOG_DIR}/kcnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
