@@ -89,6 +89,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.PrometheusExporterPortFlag,
 	utils.ExtraDataFlag,
 	utils.SrvTypeFlag,
+	utils.DaemonPathFlag,
 	ConfigFileFlag,
 }
 

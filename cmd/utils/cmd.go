@@ -28,11 +28,14 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/ser/rlp"
+	"gopkg.in/urfave/cli.v1"
 	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 )
 
 const (
@@ -59,6 +62,16 @@ func StartNode(stack *node.Node) {
 			}
 		}
 	}()
+}
+
+func RestartNode(ctx *cli.Context) {
+	daemonPath := ctx.GlobalString(DaemonPathFlag.Name)
+
+	time.Sleep(100 * time.Second)
+
+	logger.Info("Restart node", "command", daemonPath+" restart")
+	cmd := exec.Command(daemonPath, "restart")
+	cmd.Run()
 }
 
 func ImportChain(chain *blockchain.BlockChain, fn string) error {

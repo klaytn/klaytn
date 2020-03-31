@@ -657,6 +657,11 @@ var (
 		Usage: "The maximum difference between current block and event block. 0 means off",
 		Value: 0,
 	}
+	DaemonPathFlag = cli.StringFlag{
+		Name:  "daemon.path",
+		Usage: "Path of node daemon. Used to give signal to kill",
+		Value: "~/klaytn/bin/kend",
+	}
 	// Data Archiving
 	// TODO-Klaytn-DataArchiving Please note that DataArchivingBlockNumFlag is just for development purpose.
 	DataArchivingBlockNumFlag = cli.Uint64Flag{
