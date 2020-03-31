@@ -766,6 +766,13 @@ var flagsWithValues = []struct {
 		wrongValues: commonTwoErrors,
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue},
 	},
+	{
+		flag:        "--daemon.path",
+		flagType:    FlagTypeArgument,
+		values:      []string{"~/klaytn/bin/kcnd", "~/klaytn/bin/kpnd", "~/klaytn/bin/kend"},
+		wrongValues: commonThreeErrors,
+		errors:      []int{NonError, NonError, NonError},
+	},
 }
 
 func testFlags(t *testing.T, flag string, value string, idx int) {
