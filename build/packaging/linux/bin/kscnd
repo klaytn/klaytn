@@ -192,6 +192,10 @@ start() {
         OPTIONS="$OPTIONS $ADDITIONAL"
     fi
 
+    if [[ ! -z $AUTO_RESTART ]] && [[ $AUTO_RESTART -eq 1 ]]; then
+        OPTIONS="$OPTIONS --auto.restart"
+    fi
+
     BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
     CURRENTFILE=`basename "$0"`
     OPTIONS="$OPTIONS --daemon.path $BASEDIR/$CURRENTFILE"

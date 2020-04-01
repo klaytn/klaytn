@@ -90,6 +90,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.ExtraDataFlag,
 	utils.SrvTypeFlag,
 	utils.DaemonPathFlag,
+	utils.AutoRestartFlag,
 	ConfigFileFlag,
 }
 

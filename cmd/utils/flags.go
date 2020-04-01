@@ -662,6 +662,10 @@ var (
 		Usage: "Path of node daemon. Used to give signal to kill",
 		Value: "~/klaytn/bin/kend",
 	}
+	AutoRestartFlag = cli.BoolFlag{
+		Name:  "auto.restart",
+		Usage: "Node can restart itself when there is a problem making blocks",
+	}
 	// Data Archiving
 	// TODO-Klaytn-DataArchiving Please note that DataArchivingBlockNumFlag is just for development purpose.
 	DataArchivingBlockNumFlag = cli.Uint64Flag{

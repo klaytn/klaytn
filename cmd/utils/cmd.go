@@ -65,6 +65,10 @@ func StartNode(stack *node.Node) {
 }
 
 func RestartNode(ctx *cli.Context) {
+	if !ctx.GlobalBool(AutoRestartFlag.Name) {
+		return
+	}
+
 	daemonPath := ctx.GlobalString(DaemonPathFlag.Name)
 
 	time.Sleep(100 * time.Second)

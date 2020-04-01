@@ -773,6 +773,10 @@ var flagsWithValues = []struct {
 		wrongValues: commonThreeErrors,
 		errors:      []int{NonError, NonError, NonError},
 	},
+	{
+		flag:     "--auto.restart",
+		flagType: FlagTypeBoolean,
+	},
 }
 
 func testFlags(t *testing.T, flag string, value string, idx int) {
