@@ -192,6 +192,10 @@ start() {
         OPTIONS="$OPTIONS $ADDITIONAL"
     fi
 
+    BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+    CURRENTFILE=`basename "$0"`
+    OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
+
     $BIN/kpn $OPTIONS >> ${LOG_DIR}/kpnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
@@ -223,6 +227,7 @@ status() {
 
 restart() {
     stop
+    sleep 3
     start
 }
 

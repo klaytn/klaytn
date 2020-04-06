@@ -141,24 +141,30 @@ type worker struct {
 	atWork int32
 
 	nodetype common.ConnType
+
+	resetTimeOut  time.Duration
+	resetFn       func()
+	resetWatchdog *time.Timer
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, resetTimeOut time.Duration, resetFn func()) *worker {
 	worker := &worker{
-		config:      config,
-		engine:      engine,
-		backend:     backend,
-		mux:         mux,
-		txsCh:       make(chan blockchain.NewTxsEvent, txChanSize),
-		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh: make(chan blockchain.ChainSideEvent, chainSideChanSize),
-		chainDB:     backend.ChainDB(),
-		recv:        make(chan *Result, resultQueueSize),
-		chain:       backend.BlockChain(),
-		proc:        backend.BlockChain().Validator(),
-		agents:      make(map[Agent]struct{}),
-		nodetype:    nodetype,
-		rewardbase:  rewardbase,
+		config:       config,
+		engine:       engine,
+		backend:      backend,
+		mux:          mux,
+		txsCh:        make(chan blockchain.NewTxsEvent, txChanSize),
+		chainHeadCh:  make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		chainSideCh:  make(chan blockchain.ChainSideEvent, chainSideChanSize),
+		chainDB:      backend.ChainDB(),
+		recv:         make(chan *Result, resultQueueSize),
+		chain:        backend.BlockChain(),
+		proc:         backend.BlockChain().Validator(),
+		agents:       make(map[Agent]struct{}),
+		nodetype:     nodetype,
+		rewardbase:   rewardbase,
+		resetTimeOut: resetTimeOut,
+		resetFn:      resetFn,
 	}
 
 	// istanbul BFT
@@ -289,11 +295,27 @@ func (self *worker) update() {
 	quitByErr := make(chan bool, 1)
 	go self.handleTxsCh(quitByErr)
 
+	// Initialize reset watchdog
+	if self.nodetype == common.CONSENSUSNODE && self.resetFn != nil && self.resetTimeOut > 0 {
+		callback := func() {
+			logger.Warn("Consensus timeout")
+			self.resetFn()
+		}
+		logger.Info("Initialize auto reset watchdog", "timeout", self.resetTimeOut.String())
+		self.resetWatchdog = time.AfterFunc(self.resetTimeOut, callback)
+		defer self.resetWatchdog.Stop()
+	}
+
 	for {
 		// A real event arrived, process interesting content
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
+			// Refresh reset watchdog
+			if self.resetWatchdog != nil {
+				self.resetWatchdog.Reset(self.resetTimeOut)
+			}
+
 			// istanbul BFT
 			if h, ok := self.engine.(consensus.Handler); ok {
 				h.NewChainHead()

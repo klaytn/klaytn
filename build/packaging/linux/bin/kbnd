@@ -79,6 +79,10 @@ start() {
         OPTIONS="$OPTIONS --datadir $DATA_DIR"
     fi
 
+    BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+    CURRENTFILE=`basename "$0"`
+    OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
+
     $BIN/kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
@@ -110,6 +114,7 @@ status() {
 
 restart() {
     stop
+    sleep 3
     start
 }
 
