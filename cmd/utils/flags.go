@@ -657,6 +657,20 @@ var (
 		Usage: "The maximum difference between current block and event block. 0 means off",
 		Value: 0,
 	}
+	AutoRestartFlag = cli.BoolFlag{
+		Name:  "autorestart.enable",
+		Usage: "Node can restart itself when there is a problem in making consensus",
+	}
+	RestartTimeOutFlag = cli.DurationFlag{
+		Name:  "autorestart.timeout",
+		Usage: "The elapsed time to wait auto restart (minutes)",
+		Value: 15 * time.Minute,
+	}
+	DaemonPathFlag = cli.StringFlag{
+		Name:  "autorestart.daemon.path",
+		Usage: "Path of node daemon. Used to give signal to kill",
+		Value: "~/klaytn/bin/kcnd",
+	}
 	// Data Archiving
 	// TODO-Klaytn-DataArchiving Please note that DataArchivingBlockNumFlag is just for development purpose.
 	DataArchivingBlockNumFlag = cli.Uint64Flag{
@@ -1172,6 +1186,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 			logger.Warn("Incorrect vmlog value", "err", err)
 		}
 	}
+
+	cfg.AutoRestartFlag = ctx.GlobalBool(AutoRestartFlag.Name)
+	cfg.RestartTimeOutFlag = ctx.GlobalDuration(RestartTimeOutFlag.Name)
+	cfg.DaemonPathFlag = ctx.GlobalString(DaemonPathFlag.Name)
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
