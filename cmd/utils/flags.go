@@ -659,7 +659,7 @@ var (
 	}
 	AutoRestartFlag = cli.BoolFlag{
 		Name:  "autorestart.enable",
-		Usage: "Node can restart itself when there is a problem in consensus",
+		Usage: "Node can restart itself when there is a problem in making consensus",
 	}
 	RestartTimeOutFlag = cli.DurationFlag{
 		Name:  "autorestart.timeout",
