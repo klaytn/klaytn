@@ -141,9 +141,9 @@ type Config struct {
 	IsPrivate bool
 
 	// Restart
-	AutoRestartFlag  bool
-	ResetTimeOutFlag time.Duration
-	DaemonPathFlag   string
+	AutoRestartFlag    bool
+	RestartTimeOutFlag time.Duration
+	DaemonPathFlag     string
 }
 
 type configMarshaling struct {

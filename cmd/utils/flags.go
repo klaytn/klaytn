@@ -659,11 +659,11 @@ var (
 	}
 	AutoRestartFlag = cli.BoolFlag{
 		Name:  "autorestart.enable",
-		Usage: "Node can restart itself when there is a problem in consensus.",
+		Usage: "Node can restart itself when there is a problem in consensus",
 	}
-	ResetTimeOutFlag = cli.DurationFlag{
+	RestartTimeOutFlag = cli.DurationFlag{
 		Name:  "autorestart.timeout",
-		Usage: "the elapsed time to wait auto restart (minutes)",
+		Usage: "The elapsed time to wait auto restart (minutes)",
 		Value: 15 * time.Minute,
 	}
 	DaemonPathFlag = cli.StringFlag{
@@ -1188,7 +1188,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	cfg.AutoRestartFlag = ctx.GlobalBool(AutoRestartFlag.Name)
-	cfg.ResetTimeOutFlag = ctx.GlobalDuration(ResetTimeOutFlag.Name)
+	cfg.RestartTimeOutFlag = ctx.GlobalDuration(RestartTimeOutFlag.Name)
 	cfg.DaemonPathFlag = ctx.GlobalString(DaemonPathFlag.Name)
 
 	// Override any default configs for hard coded network.

@@ -142,29 +142,29 @@ type worker struct {
 
 	nodetype common.ConnType
 
-	resetTimeOut  time.Duration
-	resetFn       func()
-	resetWatchdog *time.Timer
+	restartTimeOut  time.Duration
+	restartFn       func()
+	restartWatchdog *time.Timer
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, resetTimeOut time.Duration, resetFn func()) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, restartTimeOut time.Duration, restartFn func()) *worker {
 	worker := &worker{
-		config:       config,
-		engine:       engine,
-		backend:      backend,
-		mux:          mux,
-		txsCh:        make(chan blockchain.NewTxsEvent, txChanSize),
-		chainHeadCh:  make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh:  make(chan blockchain.ChainSideEvent, chainSideChanSize),
-		chainDB:      backend.ChainDB(),
-		recv:         make(chan *Result, resultQueueSize),
-		chain:        backend.BlockChain(),
-		proc:         backend.BlockChain().Validator(),
-		agents:       make(map[Agent]struct{}),
-		nodetype:     nodetype,
-		rewardbase:   rewardbase,
-		resetTimeOut: resetTimeOut,
-		resetFn:      resetFn,
+		config:         config,
+		engine:         engine,
+		backend:        backend,
+		mux:            mux,
+		txsCh:          make(chan blockchain.NewTxsEvent, txChanSize),
+		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		chainSideCh:    make(chan blockchain.ChainSideEvent, chainSideChanSize),
+		chainDB:        backend.ChainDB(),
+		recv:           make(chan *Result, resultQueueSize),
+		chain:          backend.BlockChain(),
+		proc:           backend.BlockChain().Validator(),
+		agents:         make(map[Agent]struct{}),
+		nodetype:       nodetype,
+		rewardbase:     rewardbase,
+		restartTimeOut: restartTimeOut,
+		restartFn:      restartFn,
 	}
 
 	// istanbul BFT
@@ -295,15 +295,15 @@ func (self *worker) update() {
 	quitByErr := make(chan bool, 1)
 	go self.handleTxsCh(quitByErr)
 
-	// Initialize reset watchdog
-	if self.nodetype == common.CONSENSUSNODE && self.resetFn != nil && self.resetTimeOut > 0 {
+	// Initialize restart watchdog
+	if self.nodetype == common.CONSENSUSNODE && self.restartFn != nil && self.restartTimeOut > 0 {
 		callback := func() {
 			logger.Warn("Consensus timeout")
-			self.resetFn()
+			self.restartFn()
 		}
-		logger.Info("Initialize auto reset watchdog", "timeout", self.resetTimeOut.String())
-		self.resetWatchdog = time.AfterFunc(self.resetTimeOut, callback)
-		defer self.resetWatchdog.Stop()
+		logger.Info("Initialize auto restart watchdog", "timeout", self.restartTimeOut.String())
+		self.restartWatchdog = time.AfterFunc(self.restartTimeOut, callback)
+		defer self.restartWatchdog.Stop()
 	}
 
 	for {
@@ -311,9 +311,9 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
-			// Refresh reset watchdog
-			if self.resetWatchdog != nil {
-				self.resetWatchdog.Reset(self.resetTimeOut)
+			// Refresh restart watchdog
+			if self.restartWatchdog != nil {
+				self.restartWatchdog.Reset(self.restartTimeOut)
 			}
 
 			// istanbul BFT
