@@ -297,12 +297,8 @@ func (self *worker) update() {
 
 	// Initialize restart watchdog
 	if self.restartFn != nil && self.restartTimeOut > 0 {
-		callback := func() {
-			logger.Warn("auto restart watchdog timeout. restarting...")
-			self.restartFn()
-		}
-		logger.Info("Initialize auto restart watchdog", "timeout", self.restartTimeOut.String())
-		self.restartWatchdog = time.AfterFunc(self.restartTimeOut, callback)
+		logger.Info("Initialize auto restart watchdog", "timeout", self.restartTimeOut)
+		self.restartWatchdog = time.AfterFunc(self.restartTimeOut, self.restartFn)
 		defer self.restartWatchdog.Stop()
 	}
 
