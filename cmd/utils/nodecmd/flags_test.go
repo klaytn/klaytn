@@ -777,6 +777,13 @@ var flagsWithValues = []struct {
 		flag:     "--autorestart.enable",
 		flagType: FlagTypeBoolean,
 	},
+	{
+		flag:        "--autorestart.timeout",
+		flagType:    FlagTypeArgument,
+		values:      []string{"10m", "60s", "1h"},
+		wrongValues: commonThreeErrors,
+		errors:      []int{ErrorInvalidValue, ErrorInvalidValue, ErrorInvalidValue},
+	},
 }
 
 func testFlags(t *testing.T, flag string, value string, idx int) {
