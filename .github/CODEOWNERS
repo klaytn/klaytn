@@ -6,7 +6,7 @@
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
 #*       @global-owner1 @global-owner2
-*       @kjhman21
+*       @kjhman21 @KimKyungup @aidan-kwon @winnie-byun
 
 # Order is important; the last matching pattern takes the most
 # precedence. When someone opens a pull request that only
@@ -23,40 +23,6 @@
 # directory at the root of the repository and any of its
 # subdirectories.
 #/build/logs/      @doctocat
-
-/accounts/         @KimKyungup @jeonghonah @kjhman21
-/api/              @aidan-kwon @kjhman21
-/blockchain/       @ehnuje @nogang @KimKyungup @jeonghonah @kjhman21
-/blockchain/types  @aidan-kwon @jimni1222 @kjhman21
-/build/            @KimKyungup @jeonghonah @kjhman21
-/client/           @KimKyungup @jeonghonah @kjhman21
-/cmd/              @KimKyungup @jeonghonah @kjhman21
-/common/           @andybclee @kjhman21
-/consensus/        @andybclee @kjhman21
-/console/          @andybclee @kjhman21
-/contracts/        @KimKyungup @jeonghonah @kjhman21
-/crypto/           @aidan-kwon @kjhman21
-/datasync/         @ehnuje @nogang @kjhman21
-/event/            @ehnuje @kjhman21
-/fork/             @aidan-kwon @kjhman21
-/governance/       @andybclee @kjhman21
-/kerrors/          @aidan-kwon @kjhman21
-/log/              @ehnuje @kjhman21
-/metrics/          @nogang @kjhman21
-/networks/         @nogang @KimKyungup @jeonghonah @kjhman21
-/node/             @nogang @KimKyungup @jeonghonah @kjhman21
-/params/           @andybclee @kjhman21
-/params/version.go @kjhman21
-/reward/           @laggu @kjhman21
-/ser/              @ehnuje @kjhman21
-/storage/          @ehnuje @kjhman21
-/tests/            @aidan-kwon @jimni1222 @kjhman21
-/utils/            @kjhman21
-/vendor/           @ehnuje @kjhman21
-/work/             @ehnuje @nogang @kjhman21
-/Gopkg.lock        @ehnuje @kjhman21
-/Gopkg.toml        @ehnuje @kjhman21
-/tags-for-todo-and-note.md   @ehnuje @kjhman21
 
 # The `docs/*` pattern will match files like
 # `docs/getting-started.md` but not further nested files like
