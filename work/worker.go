@@ -296,9 +296,9 @@ func (self *worker) update() {
 	go self.handleTxsCh(quitByErr)
 
 	// Initialize restart watchdog
-	if self.nodetype == common.CONSENSUSNODE && self.restartFn != nil && self.restartTimeOut > 0 {
+	if self.restartFn != nil && self.restartTimeOut > 0 {
 		callback := func() {
-			logger.Warn("Consensus timeout")
+			logger.Warn("auto restart watchdog timeout. restarting...")
 			self.restartFn()
 		}
 		logger.Info("Initialize auto restart watchdog", "timeout", self.restartTimeOut.String())
