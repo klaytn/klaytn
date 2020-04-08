@@ -57,6 +57,9 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		TxResendUseLegacy       bool
 		NoAccountCreation       bool
 		IsPrivate               bool
+		AutoRestartFlag         bool
+		RestartTimeOutFlag      time.Duration
+		DaemonPathFlag          string
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -96,6 +99,9 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.TxResendUseLegacy = c.TxResendUseLegacy
 	enc.NoAccountCreation = c.NoAccountCreation
 	enc.IsPrivate = c.IsPrivate
+	enc.AutoRestartFlag = c.AutoRestartFlag
+	enc.RestartTimeOutFlag = c.RestartTimeOutFlag
+	enc.DaemonPathFlag = c.DaemonPathFlag
 	return &enc, nil
 }
 
@@ -139,6 +145,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		TxResendUseLegacy       *bool
 		NoAccountCreation       *bool
 		IsPrivate               *bool
+		AutoRestartFlag         *bool
+		RestartTimeOutFlag      *time.Duration
+		DaemonPathFlag          *string
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -254,6 +263,15 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.IsPrivate != nil {
 		c.IsPrivate = *dec.IsPrivate
+	}
+	if dec.AutoRestartFlag != nil {
+		c.AutoRestartFlag = *dec.AutoRestartFlag
+	}
+	if dec.RestartTimeOutFlag != nil {
+		c.RestartTimeOutFlag = *dec.RestartTimeOutFlag
+	}
+	if dec.DaemonPathFlag != nil {
+		c.DaemonPathFlag = *dec.DaemonPathFlag
 	}
 	return nil
 }

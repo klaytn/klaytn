@@ -168,6 +168,14 @@ fi
 if [[ ! -z $REWARDBASE ]] && [[ $REWARDBASE != "" ]]; then
     OPTIONS="$OPTIONS --rewardbase $REWARDBASE"
 fi
+
+if [[ ! -z $AUTO_RESTART ]] && [[ $AUTO_RESTART -eq 1 ]]; then
+    OPTIONS="$OPTIONS --autorestart.enable"
+fi
+
+BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+CURRENTFILE=`basename "$0"`
+OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
 set +f
 
 start() {
@@ -215,6 +223,7 @@ case "$1" in
         ;;
     restart)
         stop
+        sleep 3
         start
         ;;
     *)

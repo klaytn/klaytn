@@ -171,6 +171,14 @@ fi
 if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
     OPTIONS="$OPTIONS $ADDITIONAL"
 fi
+
+if [[ ! -z $AUTO_RESTART ]] && [[ $AUTO_RESTART -eq 1 ]]; then
+    OPTIONS="$OPTIONS --autorestart.enable"
+fi
+
+BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+CURRENTFILE=`basename "$0"`
+OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
 set +f
 
 start() {

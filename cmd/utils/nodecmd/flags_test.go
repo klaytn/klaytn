@@ -766,6 +766,24 @@ var flagsWithValues = []struct {
 		wrongValues: commonTwoErrors,
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue},
 	},
+	{
+		flag:        "--autorestart.daemon.path",
+		flagType:    FlagTypeArgument,
+		values:      []string{"~/klaytn/bin/kcnd", "~/klaytn/bin/kpnd", "~/klaytn/bin/kend"},
+		wrongValues: commonThreeErrors,
+		errors:      []int{NonError, NonError, NonError},
+	},
+	{
+		flag:     "--autorestart.enable",
+		flagType: FlagTypeBoolean,
+	},
+	{
+		flag:        "--autorestart.timeout",
+		flagType:    FlagTypeArgument,
+		values:      []string{"10m", "60s", "1h"},
+		wrongValues: commonThreeErrors,
+		errors:      []int{ErrorInvalidValue, ErrorInvalidValue, ErrorInvalidValue},
+	},
 }
 
 func testFlags(t *testing.T, flag string, value string, idx int) {

@@ -38,6 +38,7 @@ import (
 	"io"
 	"math/big"
 	"sync/atomic"
+	"time"
 )
 
 var logger = log.NewModuleLogger(log.Work)
@@ -92,12 +93,12 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, rewardbase common.Address, TxResendUseLegacy bool) *Miner {
+func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, rewardbase common.Address, TxResendUseLegacy bool, restartTimeOut time.Duration, restartFn func()) *Miner {
 	miner := &Miner{
 		backend:  backend,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, rewardbase, backend, mux, nodetype, TxResendUseLegacy),
+		worker:   newWorker(config, engine, rewardbase, backend, mux, nodetype, TxResendUseLegacy, restartTimeOut, restartFn),
 		canStart: 1,
 	}
 	// TODO-Klaytn drop or missing tx

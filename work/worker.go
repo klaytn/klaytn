@@ -141,24 +141,30 @@ type worker struct {
 	atWork int32
 
 	nodetype common.ConnType
+
+	restartTimeOut  time.Duration
+	restartFn       func()
+	restartWatchdog *time.Timer
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, restartTimeOut time.Duration, restartFn func()) *worker {
 	worker := &worker{
-		config:      config,
-		engine:      engine,
-		backend:     backend,
-		mux:         mux,
-		txsCh:       make(chan blockchain.NewTxsEvent, txChanSize),
-		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh: make(chan blockchain.ChainSideEvent, chainSideChanSize),
-		chainDB:     backend.ChainDB(),
-		recv:        make(chan *Result, resultQueueSize),
-		chain:       backend.BlockChain(),
-		proc:        backend.BlockChain().Validator(),
-		agents:      make(map[Agent]struct{}),
-		nodetype:    nodetype,
-		rewardbase:  rewardbase,
+		config:         config,
+		engine:         engine,
+		backend:        backend,
+		mux:            mux,
+		txsCh:          make(chan blockchain.NewTxsEvent, txChanSize),
+		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		chainSideCh:    make(chan blockchain.ChainSideEvent, chainSideChanSize),
+		chainDB:        backend.ChainDB(),
+		recv:           make(chan *Result, resultQueueSize),
+		chain:          backend.BlockChain(),
+		proc:           backend.BlockChain().Validator(),
+		agents:         make(map[Agent]struct{}),
+		nodetype:       nodetype,
+		rewardbase:     rewardbase,
+		restartTimeOut: restartTimeOut,
+		restartFn:      restartFn,
 	}
 
 	// istanbul BFT
@@ -289,11 +295,23 @@ func (self *worker) update() {
 	quitByErr := make(chan bool, 1)
 	go self.handleTxsCh(quitByErr)
 
+	// Initialize restart watchdog
+	if self.restartFn != nil && self.restartTimeOut > 0 {
+		logger.Info("Initialize auto restart watchdog", "timeout", self.restartTimeOut)
+		self.restartWatchdog = time.AfterFunc(self.restartTimeOut, self.restartFn)
+		defer self.restartWatchdog.Stop()
+	}
+
 	for {
 		// A real event arrived, process interesting content
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
+			// Refresh restart watchdog
+			if self.restartWatchdog != nil {
+				self.restartWatchdog.Reset(self.restartTimeOut)
+			}
+
 			// istanbul BFT
 			if h, ok := self.engine.(consensus.Handler); ok {
 				h.NewChainHead()
