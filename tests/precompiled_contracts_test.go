@@ -72,7 +72,7 @@ func TestPrecompiledContract(t *testing.T) {
 		sig, err := crypto.Sign(hash[:], bcdata.privKeys[0])
 		require.NoError(t, err)
 
-		v := sig[64] + 27
+		v := sig[crypto.RecoveryIDOffset] + 27
 		var r, s [32]byte
 		copy(r[:], sig[:32])
 		copy(s[:], sig[32:64])
