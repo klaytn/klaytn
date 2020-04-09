@@ -659,9 +659,10 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 	var err error
 
 	for i := uint64(0); i < reexec; i++ {
-		block = api.cn.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1)
+		blockNumber := block.NumberU64()
+		block = api.cn.blockchain.GetBlock(block.ParentHash(), blockNumber-1)
 		if block == nil {
-			break
+			return nil, fmt.Errorf("block #%d not found", blockNumber-1)
 		}
 		if statedb, err = state.New(block.Root(), database); err == nil {
 			break
