@@ -190,10 +190,6 @@ func parseComplete(rawurl string) (*Node, error) {
 		return nil, fmt.Errorf("invalid node ID (%v)", err)
 	}
 
-	// TODO-Klaytn-Bootnode: Have to solve following issues
-	//  1. `klay` ignore local hostfile(/etc/hosts) and use nameservers which are received from dhcp server or manually specified in `/etc/resolve.conf`.
-	//  2. Domain may have many CNAME IP address and sometimes changes it, but, we only stored a IP address which was resolved at `klay` started.
-
 	// Parse the host address and port.
 	ip := net.ParseIP(u.Hostname())
 	if ip == nil {
