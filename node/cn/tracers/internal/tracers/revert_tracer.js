@@ -18,6 +18,7 @@
 // If not reverted, returns an empty string "".
 {
     revertString: "",
+    callerAddress:"",
 
     toAscii: function(hex) {
         var str = "";
@@ -34,7 +35,16 @@
     },
 
     // step is invoked for every opcode that the VM executes.
-    step: function(log, db) { },
+    step: function(log, db) {
+        if(this.callerAddress == "")
+            this.callerAddress = "0x" + log.contract.getAddress();
+        if(log.op === undefined)
+            return;
+        var op = log.op.toString();
+        if(op == "CALL" || op == "CALLCODE" || op == "DELEGATECALL" || op == "STATICCALL" ) {
+            this.callerAddress = "0x" + log.stack.peek(1).toString(16);
+        }
+    },
 
     // fault is invoked when the actual execution of an opcode fails.
     fault: function(log, db) { },
@@ -53,6 +63,6 @@
                 this.revertString = this.toAscii(outputHex.slice(start,end));
             }
         }
-        return this.revertString;
+        return {"callerAddress": this.callerAddress, "revertMessage": this.revertString};
     }
 }
