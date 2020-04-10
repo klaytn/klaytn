@@ -133,6 +133,7 @@ func (n *Node) String() string {
 
 // TODO-Klaytn-NodeDiscovery: Deprecate supporting "enode"
 var incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
+var lookupIPFunc = net.LookupIP
 
 // ParseNode parses a node designator.
 //
@@ -172,7 +173,6 @@ func ParseNode(rawurl string) (*Node, error) {
 func parseComplete(rawurl string) (*Node, error) {
 	var (
 		id               NodeID
-		ip               net.IP
 		tcpPort, udpPort uint64
 	)
 	u, err := url.Parse(rawurl)
@@ -189,41 +189,23 @@ func parseComplete(rawurl string) (*Node, error) {
 	if id, err = HexID(u.User.String()); err != nil {
 		return nil, fmt.Errorf("invalid node ID (%v)", err)
 	}
+
 	// Parse the host address and port.
-	host, port, err := net.SplitHostPort(u.Host)
-	if err != nil {
-		return nil, fmt.Errorf("invalid host: %v", err)
-	}
-	if len(host) == 0 {
-		return nil, fmt.Errorf("invalid host: host is empty")
+	ip := net.ParseIP(u.Hostname())
+	if ip == nil {
+		ips, err := lookupIPFunc(u.Hostname())
+		if err != nil {
+			return nil, err
+		}
+		ip = ips[0]
 	}
 
-	// TODO-Klaytn-Bootnode: Have to solve following issues
-	//  1. `klay` ignore local hostfile(/etc/hosts) and use nameservers which are received from dhcp server or manually specified in `/etc/resolve.conf`.
-	//  2. Domain may have many CNAME IP address and sometimes changes it, but, we only stored a IP address which was resolved at `klay` started.
-	if (host[0] >= 'a' && host[0] <= 'z') || (host[0] >= 'A' && host[0] <= 'Z') {
-		// in case host contains domain
-		logger.Debug("Try to resolve IP address", "host", host)
-		ipAddrs, err := net.LookupIP(host)
-		if err != nil || len(ipAddrs) == 0 {
-			logger.Error("resolving fail", "err", err)
-			return nil, errors.New("failed to resolve IP address")
-		}
-		// pickup the first IP address
-		ip = ipAddrs[0]
-		logger.Debug("resolved address", "Host", host, "IP", ip.String())
-	} else {
-		// in case host contains IP address
-		if ip = net.ParseIP(host); ip == nil {
-			return nil, errors.New("invalid IP address")
-		}
-	}
 	// Ensure the IP is 4 bytes long for IPv4 addresses.
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
 	}
 	// Parse the port numbers.
-	if tcpPort, err = strconv.ParseUint(port, 10, 16); err != nil {
+	if tcpPort, err = strconv.ParseUint(u.Port(), 10, 16); err != nil {
 		return nil, errors.New("invalid port")
 	}
 	udpPort = tcpPort
