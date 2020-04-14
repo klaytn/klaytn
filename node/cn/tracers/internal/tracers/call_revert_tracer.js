@@ -199,7 +199,7 @@
                 end = start + stringLength*2;
                 this.revertString = this.toAscii(outputHex.slice(start,end));
             }
-            result = {"callstack": this.callstack, "reverted": {"contract": this.revertedContract, "message": this.revertString}};
+            result = {"calls": this.callstack, "reverted": {"contract": this.revertedContract, "message": this.revertString}};
         }
         return result;
     }

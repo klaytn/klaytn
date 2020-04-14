@@ -22,7 +22,6 @@ package tracers
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -114,11 +113,27 @@ type callContext struct {
 
 // callTracerTest defines a single test to check the call tracer against.
 type callTracerTest struct {
+	Genesis *blockchain.Genesis `json:"genesis"`
+	Context *callContext        `json:"context"`
+	Input   string              `json:"input"`
+	Result  *callTrace          `json:"result"`
+}
+
+type reverted struct {
+	Contract common.Address `json:"contract"`
+	Message  string         `json:"message"`
+}
+
+type revertTrace struct {
+	Calls    []callTrace `json:"calls,omitempty"`
+	Reverted reverted    `json:"reverted"`
+}
+
+type revertTracerTest struct {
 	Genesis     *blockchain.Genesis `json:"genesis"`
 	Context     *callContext        `json:"context"`
-	Input       string              `json:"input"`
 	Transaction map[string]string   `json:"transaction"`
-	Result      *callTrace          `json:"result"`
+	Result      *revertTrace        `json:"result"`
 }
 
 // Iterates over all the input-output datasets in the tracer test harness and
@@ -214,7 +229,7 @@ func TestRevertTracer(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to read testcase: %v", err)
 			}
-			test := new(callTracerTest)
+			test := new(revertTracerTest)
 			if err := json.Unmarshal(blob, test); err != nil {
 				t.Fatalf("failed to parse testcase: %v", err)
 			}
@@ -241,7 +256,6 @@ func TestRevertTracer(t *testing.T) {
 			require.NoError(t, err)
 			err = tx.Sign(signer, testKey)
 			require.NoError(t, err)
-			fmt.Println(tx)
 
 			origin, err := signer.Sender(tx)
 			require.NoError(t, err)
@@ -275,11 +289,10 @@ func TestRevertTracer(t *testing.T) {
 			}
 			// Retrieve the trace result and compare against the etalon
 			res, err := tracer.GetResult()
-			fmt.Println(string(res))
 			if err != nil {
 				t.Fatalf("failed to retrieve trace result: %v", err)
 			}
-			ret := new(callTrace)
+			ret := new(revertTrace)
 			if err := json.Unmarshal(res, ret); err != nil {
 				t.Fatalf("failed to unmarshal trace result: %v", err)
 			}
