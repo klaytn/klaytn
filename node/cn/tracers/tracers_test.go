@@ -22,15 +22,18 @@ package tracers
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/tests"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
@@ -111,10 +114,11 @@ type callContext struct {
 
 // callTracerTest defines a single test to check the call tracer against.
 type callTracerTest struct {
-	Genesis *blockchain.Genesis `json:"genesis"`
-	Context *callContext        `json:"context"`
-	Input   string              `json:"input"`
-	Result  *callTrace          `json:"result"`
+	Genesis     *blockchain.Genesis `json:"genesis"`
+	Context     *callContext        `json:"context"`
+	Input       string              `json:"input"`
+	Transaction map[string]string   `json:"transaction"`
+	Result      *callTrace          `json:"result"`
 }
 
 // Iterates over all the input-output datasets in the tracer test harness and
@@ -178,6 +182,100 @@ func TestCallTracer(t *testing.T) {
 			}
 			// Retrieve the trace result and compare against the etalon
 			res, err := tracer.GetResult()
+			if err != nil {
+				t.Fatalf("failed to retrieve trace result: %v", err)
+			}
+			ret := new(callTrace)
+			if err := json.Unmarshal(res, ret); err != nil {
+				t.Fatalf("failed to unmarshal trace result: %v", err)
+			}
+			if !reflect.DeepEqual(ret, test.Result) {
+				t.Fatalf("trace mismatch: have %+v, want %+v", ret, test.Result)
+			}
+		})
+	}
+}
+
+func TestRevertTracer(t *testing.T) {
+	files, err := ioutil.ReadDir("testdata")
+	if err != nil {
+		t.Fatalf("failed to retrieve tracer test suite: %v", err)
+	}
+	for _, file := range files {
+		if !strings.HasPrefix(file.Name(), "revert_tracer_") {
+			continue
+		}
+		file := file // capture range variable
+		t.Run(camel(strings.TrimSuffix(strings.TrimPrefix(file.Name(), "revert_tracer_"), ".json")), func(t *testing.T) {
+			t.Parallel()
+
+			// Call tracer test found, read if from disk
+			blob, err := ioutil.ReadFile(filepath.Join("testdata", file.Name()))
+			if err != nil {
+				t.Fatalf("failed to read testcase: %v", err)
+			}
+			test := new(callTracerTest)
+			if err := json.Unmarshal(blob, test); err != nil {
+				t.Fatalf("failed to parse testcase: %v", err)
+			}
+			// Configure a blockchain with the given prestate
+			value := new(big.Int)
+			gasPrice := new(big.Int)
+			err = value.UnmarshalJSON([]byte(test.Transaction["value"]))
+			require.NoError(t, err)
+			err = gasPrice.UnmarshalJSON([]byte(test.Transaction["gasPrice"]))
+			require.NoError(t, err)
+			nonce, b := math.ParseUint64(test.Transaction["nonce"])
+			require.True(t, b)
+			gas, b := math.ParseUint64(test.Transaction["gas"])
+			require.True(t, b)
+
+			to := common.HexToAddress(test.Transaction["to"])
+			input := common.FromHex(test.Transaction["input"])
+
+			tx := types.NewTransaction(nonce, to, value, gas, gasPrice, input)
+
+			signer := types.MakeSigner(test.Genesis.Config, new(big.Int).SetUint64(uint64(test.Context.Number)))
+
+			testKey, err := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+			require.NoError(t, err)
+			err = tx.Sign(signer, testKey)
+			require.NoError(t, err)
+			fmt.Println(tx)
+
+			origin, err := signer.Sender(tx)
+			require.NoError(t, err)
+
+			context := vm.Context{
+				CanTransfer: blockchain.CanTransfer,
+				Transfer:    blockchain.Transfer,
+				Origin:      origin,
+				BlockNumber: new(big.Int).SetUint64(uint64(test.Context.Number)),
+				Time:        new(big.Int).SetUint64(uint64(test.Context.Time)),
+				BlockScore:  (*big.Int)(test.Context.BlockScore),
+				GasLimit:    uint64(test.Context.GasLimit),
+				GasPrice:    tx.GasPrice(),
+			}
+			statedb := tests.MakePreState(database.NewMemoryDBManager(), test.Genesis.Alloc)
+
+			// Create the tracer, the EVM environment and run it
+			tracer, err := New("callRevertTracer")
+			if err != nil {
+				t.Fatalf("failed to create call tracer: %v", err)
+			}
+			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
+
+			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
+			if err != nil {
+				t.Fatalf("failed to prepare transaction for tracing: %v", err)
+			}
+			st := blockchain.NewStateTransition(evm, msg)
+			if _, _, kerr := st.TransitionDb(); kerr.ErrTxInvalid != nil {
+				t.Fatalf("failed to execute transaction: %v", kerr.ErrTxInvalid)
+			}
+			// Retrieve the trace result and compare against the etalon
+			res, err := tracer.GetResult()
+			fmt.Println(string(res))
 			if err != nil {
 				t.Fatalf("failed to retrieve trace result: %v", err)
 			}
