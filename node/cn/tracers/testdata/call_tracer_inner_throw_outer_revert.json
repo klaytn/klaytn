@@ -76,6 +76,7 @@
     "input": "0x",
     "to": "0x33056b5dcac09a9b4becad0e1dcf92c19bd0af76",
     "type": "CALL",
-    "value": "0xe92596fd6290000"
+    "value": "0xe92596fd6290000",
+    "reverted":{"contract":"0x33056b5dcac09a9b4becad0e1dcf92c19bd0af76"}
   }
 }
