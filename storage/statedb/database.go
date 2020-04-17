@@ -88,6 +88,10 @@ const commitResultChSizeLimit = 100 * 10000
 // do not need preparation of data archiving.
 const NoDataArchivingPreparation = 0
 
+// AutoScaling is for auto-scaling cache size. If cacheSize is set to this value,
+// cache size is set scaling to physical memeory
+const AutoScaling = -1
+
 type DatabaseReader interface {
 	// Get retrieves the value associated with key from the database.
 	Get(key []byte) (value []byte, err error)
@@ -319,6 +323,9 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // for nodes loaded from disk.
 func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum uint64) *Database {
 	var trieNodeCache *fastcache.Cache
+	if cacheSizeMB == AutoScaling {
+		cacheSizeMB = getTrieNodeCacheSizeMB()
+	}
 	if cacheSizeMB > 0 {
 		cacheSizeByte := cacheSizeMB * 1024 * 1024
 		trieNodeCache = fastcache.New(cacheSizeByte)
@@ -332,6 +339,21 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 		trieNodeCache:         trieNodeCache,
 		dataArchivingBlockNum: daBlockNum,
 	}
+}
+
+func getTrieNodeCacheSizeMB() int {
+	totalPhysicalMem := float64(common.TotalPhysicalMemGB)
+
+	if totalPhysicalMem < 20*1024 {
+		return 1 * 1024 // allocate 1G for small memory
+	}
+
+	memoryScalePercent := 0.3
+	if totalPhysicalMem > 100*1024 {
+		memoryScalePercent = 0.35 // allocate more for big memory
+	}
+
+	return int(totalPhysicalMem * memoryScalePercent * 1024)
 }
 
 // DiskDB retrieves the persistent database backing the trie database.
