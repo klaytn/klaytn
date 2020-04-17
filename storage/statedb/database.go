@@ -36,28 +36,43 @@ import (
 var (
 	logger = log.NewModuleLogger(log.StorageStateDB)
 
+	// metrics for Cap state
 	memcacheFlushTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/flush/time", nil)
 	memcacheFlushNodesGauge = metrics.NewRegisteredGauge("trie/memcache/flush/nodes", nil)
 	memcacheFlushSizeGauge  = metrics.NewRegisteredGauge("trie/memcache/flush/size", nil)
 
+	// metrics for GC
 	memcacheGCTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/gc/time", nil)
 	memcacheGCNodesMeter = metrics.NewRegisteredMeter("trie/memcache/gc/nodes", nil)
 	memcacheGCSizeMeter  = metrics.NewRegisteredMeter("trie/memcache/gc/size", nil)
 
+	// metrics for commit state
 	memcacheCommitTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/commit/time", nil)
 	memcacheCommitNodesMeter = metrics.NewRegisteredMeter("trie/memcache/commit/nodes", nil)
 	memcacheCommitSizeMeter  = metrics.NewRegisteredMeter("trie/memcache/commit/size", nil)
-
-	memcacheCleanHitMeter      = metrics.NewRegisteredMeter("trie/memcache/clean/hit", nil)
-	memcacheCleanMissMeter     = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
-	memcacheCleanReadMeter     = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
-	memcacheCleanWriteMeter    = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
-	memcacheCleanLengthGauge   = metrics.NewRegisteredGauge("trie/memcache/clean/length", nil)
-	memcacheCleanCapacityGauge = metrics.NewRegisteredGauge("trie/memcache/clean/capacity", nil)
-
-	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
-
 	memcacheUncacheTimeGauge = metrics.NewRegisteredGauge("trie/memcache/uncache/time", nil)
+
+	// metrics for state trie cache db
+	memcacheCleanHitMeter   = metrics.NewRegisteredMeter("trie/memcache/clean/hit", nil)
+	memcacheCleanMissMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
+	memcacheCleanReadMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
+	memcacheCleanWriteMeter = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
+
+	// metrics for fastcache
+	memcacheFastMisses                 = metrics.NewRegisteredGauge("trie/memcache/fast/misses", nil)
+	memcacheFastCollisions             = metrics.NewRegisteredGauge("trie/memcache/fast/collions", nil)
+	memcacheFastCorruptions            = metrics.NewRegisteredGauge("trie/memcache/fast/corruptions", nil)
+	memcacheFastEntriesCount           = metrics.NewRegisteredGauge("trie/memcache/fast/entries", nil)
+	memcacheFastBytesSize              = metrics.NewRegisteredGauge("trie/memcache/fast/size", nil)
+	memcacheFastGetBigCalls            = metrics.NewRegisteredGauge("trie/memcache/fast/get", nil)
+	memcacheFastSetBigCalls            = metrics.NewRegisteredGauge("trie/memcache/fast/set", nil)
+	memcacheFastTooBigKeyErrors        = metrics.NewRegisteredGauge("trie/memcache/fast/error/too/bigkey", nil)
+	memcacheFastInvalidMetavalueErrors = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/matal", nil)
+	memcacheFastInvalidValueLenErrors  = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/valuelen", nil)
+	memcacheFastInvalidValueHashErrors = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/hash", nil)
+
+	// metric of total node number
+	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
 )
 
 // secureKeyPrefix is the database key prefix used to store trie node preimages.
@@ -997,7 +1012,19 @@ func (db *Database) getLastNodeHashInFlushList() common.Hash {
 func (db *Database) UpdateMetricNodes() {
 	memcacheNodesGauge.Update(int64(len(db.nodes)))
 	if db.trieNodeCache != nil {
-		//memcacheCleanLengthGauge.Update(int64(db.trieNodeCache.Len()))
-		//memcacheCleanCapacityGauge.Update(int64(db.trieNodeCache.Capacity()))
+		var stats fastcache.Stats
+		db.trieNodeCache.UpdateStats(&stats)
+
+		memcacheFastMisses.Update(int64(stats.Misses))
+		memcacheFastCollisions.Update(int64(stats.Collisions))
+		memcacheFastCorruptions.Update(int64(stats.Corruptions))
+		memcacheFastEntriesCount.Update(int64(stats.EntriesCount))
+		memcacheFastBytesSize.Update(int64(stats.BytesSize))
+		memcacheFastGetBigCalls.Update(int64(stats.GetBigCalls))
+		memcacheFastSetBigCalls.Update(int64(stats.SetBigCalls))
+		memcacheFastTooBigKeyErrors.Update(int64(stats.TooBigKeyErrors))
+		memcacheFastInvalidMetavalueErrors.Update(int64(stats.InvalidMetavalueErrors))
+		memcacheFastInvalidValueLenErrors.Update(int64(stats.InvalidValueLenErrors))
+		memcacheFastInvalidValueHashErrors.Update(int64(stats.InvalidValueHashErrors))
 	}
 }
