@@ -1,14 +1,15 @@
 # github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9
 github.com/AndreasBriese/bbloom
-# github.com/allegro/bigcache v1.2.1-0.20190218064605-e24eb225f156
-github.com/allegro/bigcache
-github.com/allegro/bigcache/queue
+# github.com/VictoriaMetrics/fastcache v1.5.7
+github.com/VictoriaMetrics/fastcache
 # github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
 github.com/aristanetworks/goarista/monotime
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/cespare/cp v1.0.0
 github.com/cespare/cp
+# github.com/cespare/xxhash/v2 v2.1.1
+github.com/cespare/xxhash/v2
 # github.com/clevergo/websocket v1.0.0
 github.com/clevergo/websocket
 # github.com/davecgh/go-spew v1.1.1
