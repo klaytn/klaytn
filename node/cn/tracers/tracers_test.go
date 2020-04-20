@@ -28,9 +28,11 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/tests"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
@@ -87,18 +89,24 @@ var makeTest = function(tx, rewind) {
 }
 */
 
+type reverted struct {
+	Contract common.Address `json:"contract"`
+	Message  string         `json:"message"`
+}
+
 // callTrace is the result of a callTracer run.
 type callTrace struct {
-	Type    string          `json:"type"`
-	From    common.Address  `json:"from"`
-	To      common.Address  `json:"to"`
-	Input   hexutil.Bytes   `json:"input"`
-	Output  hexutil.Bytes   `json:"output"`
-	Gas     *hexutil.Uint64 `json:"gas,omitempty"`
-	GasUsed *hexutil.Uint64 `json:"gasUsed,omitempty"`
-	Value   *hexutil.Big    `json:"value,omitempty"`
-	Error   string          `json:"error,omitempty"`
-	Calls   []callTrace     `json:"calls,omitempty"`
+	Type     string          `json:"type"`
+	From     common.Address  `json:"from"`
+	To       common.Address  `json:"to"`
+	Input    hexutil.Bytes   `json:"input"`
+	Output   hexutil.Bytes   `json:"output"`
+	Gas      *hexutil.Uint64 `json:"gas,omitempty"`
+	GasUsed  *hexutil.Uint64 `json:"gasUsed,omitempty"`
+	Value    *hexutil.Big    `json:"value,omitempty"`
+	Error    string          `json:"error,omitempty"`
+	Calls    []callTrace     `json:"calls,omitempty"`
+	Reverted reverted        `json:"reverted,omitempty"`
 }
 
 type callContext struct {
@@ -111,10 +119,11 @@ type callContext struct {
 
 // callTracerTest defines a single test to check the call tracer against.
 type callTracerTest struct {
-	Genesis *blockchain.Genesis `json:"genesis"`
-	Context *callContext        `json:"context"`
-	Input   string              `json:"input"`
-	Result  *callTrace          `json:"result"`
+	Genesis     *blockchain.Genesis `json:"genesis"`
+	Context     *callContext        `json:"context"`
+	Input       string              `json:"input,omitempty"`
+	Transaction map[string]string   `json:"transaction,omitempty"`
+	Result      *callTrace          `json:"result"`
 }
 
 // Iterates over all the input-output datasets in the tracer test harness and
@@ -141,12 +150,38 @@ func TestCallTracer(t *testing.T) {
 			if err := json.Unmarshal(blob, test); err != nil {
 				t.Fatalf("failed to parse testcase: %v", err)
 			}
-			// Configure a blockchain with the given prestate
-			tx := new(types.Transaction)
-			if err := rlp.DecodeBytes(common.FromHex(test.Input), tx); err != nil {
-				t.Fatalf("failed to parse testcase input: %v", err)
-			}
+
 			signer := types.MakeSigner(test.Genesis.Config, new(big.Int).SetUint64(uint64(test.Context.Number)))
+			tx := new(types.Transaction)
+			// Configure a blockchain with the given prestate
+			if test.Input != "" {
+				if err := rlp.DecodeBytes(common.FromHex(test.Input), tx); err != nil {
+					t.Fatalf("failed to parse testcase input: %v", err)
+				}
+			} else {
+				// Configure a blockchain with the given prestate
+				value := new(big.Int)
+				gasPrice := new(big.Int)
+				err = value.UnmarshalJSON([]byte(test.Transaction["value"]))
+				require.NoError(t, err)
+				err = gasPrice.UnmarshalJSON([]byte(test.Transaction["gasPrice"]))
+				require.NoError(t, err)
+				nonce, b := math.ParseUint64(test.Transaction["nonce"])
+				require.True(t, b)
+				gas, b := math.ParseUint64(test.Transaction["gas"])
+				require.True(t, b)
+
+				to := common.HexToAddress(test.Transaction["to"])
+				input := common.FromHex(test.Transaction["input"])
+
+				tx = types.NewTransaction(nonce, to, value, gas, gasPrice, input)
+
+				testKey, err := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+				require.NoError(t, err)
+				err = tx.Sign(signer, testKey)
+				require.NoError(t, err)
+			}
+
 			origin, _ := signer.Sender(tx)
 
 			context := vm.Context{
