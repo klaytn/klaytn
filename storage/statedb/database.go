@@ -344,7 +344,9 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 func getTrieNodeCacheSizeMB() int {
 	totalPhysicalMem := float64(common.TotalPhysicalMemGB)
 
-	if totalPhysicalMem < 20*1024 {
+	if totalPhysicalMem < 10*1024 {
+		return 0
+	} else if totalPhysicalMem < 20*1024 {
 		return 1 * 1024 // allocate 1G for small memory
 	}
 
