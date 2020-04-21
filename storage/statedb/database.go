@@ -348,9 +348,9 @@ func getTrieNodeCacheSizeMB() int {
 		return 1 * 1024 // allocate 1G for small memory
 	}
 
-	memoryScalePercent := 0.3
+	memoryScalePercent := 0.3 // allocate 30% for 20 < mem < 100
 	if totalPhysicalMem > 100*1024 {
-		memoryScalePercent = 0.35 // allocate more for big memory
+		memoryScalePercent = 0.35 // allocate 35% for 100 < mem
 	}
 
 	return int(totalPhysicalMem * memoryScalePercent * 1024)
