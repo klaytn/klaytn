@@ -124,13 +124,10 @@ func TestDatabase_SecureKey(t *testing.T) {
 	assert.Equal(t, secKey1, secKey2)         // secKey1 has changed into secKey2 as they are created from the same buffer
 }
 
-func makeRandomString(n int) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
+func makeRandomByte(n int) []byte {
+	s := make([]byte, n)
+	rand.Read(s)
+	return s
 }
 
 func TestCache(t *testing.T) {
@@ -139,11 +136,11 @@ func TestCache(t *testing.T) {
 	db := NewDatabaseWithCache(memDB, cacheSizeMB, 0)
 
 	for i := 0; i < 100; i++ {
-		key, value := []byte(makeRandomString(256)), []byte(makeRandomString(500))
+		key, value := makeRandomByte(256), makeRandomByte(63*1024) // fastcache can store entrie under 64KB
 		db.trieNodeCache.Set(key, value)
 		rValue, found := db.trieNodeCache.HasGet(nil, key)
 
-		assert.Equal(t, found, true)
-		assert.Equal(t, rValue, value)
+		assert.Equal(t, true, found)
+		assert.Equal(t, value, rValue)
 	}
 }
