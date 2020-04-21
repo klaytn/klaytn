@@ -39,7 +39,7 @@ set DB_NO_PARALLEL_WRITE=0
 set MULTICHANNEL=1
 
 REM Raw options e.g) "--txpool.nolocals"
-set ADDITIONAL="--txpool.nolocals --state.trie-cache-limit 30720"
+set ADDITIONAL="--txpool.nolocals"
 
 set KLAY_HOME=%homepath%\.kpn
 
