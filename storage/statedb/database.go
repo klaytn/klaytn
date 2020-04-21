@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/pbnjay/memory"
 	"github.com/rcrowley/go-metrics"
 	"io"
 	"sync"
@@ -342,20 +343,20 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 }
 
 func getTrieNodeCacheSizeMB() int {
-	totalPhysicalMem := float64(common.TotalPhysicalMemGB)
+	totalPhysicalMemMB := float64(memory.TotalMemory() / 1024 / 1024)
 
-	if totalPhysicalMem < 10*1024 {
+	if totalPhysicalMemMB < 10*1024 {
 		return 0
-	} else if totalPhysicalMem < 20*1024 {
+	} else if totalPhysicalMemMB < 20*1024 {
 		return 1 * 1024 // allocate 1G for small memory
 	}
 
 	memoryScalePercent := 0.3 // allocate 30% for 20 < mem < 100
-	if totalPhysicalMem > 100*1024 {
+	if totalPhysicalMemMB > 100*1024 {
 		memoryScalePercent = 0.35 // allocate 35% for 100 < mem
 	}
 
-	return int(totalPhysicalMem * memoryScalePercent * 1024)
+	return int(totalPhysicalMemMB * memoryScalePercent * 1024)
 }
 
 // DiskDB retrieves the persistent database backing the trie database.
