@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"runtime"
 	"sync"
@@ -44,6 +45,33 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	statedb2 "github.com/klaytn/klaytn/storage/statedb"
 )
+
+var tracersCh chan *tracers.Tracer
+
+const tracersChSize = 4000
+
+var tracerGenRequestCh chan *string
+
+func init() {
+	tracersCh = make(chan *tracers.Tracer, tracersChSize)
+	tracerGenRequestCh = make(chan *string, tracersChSize)
+
+	for i := 0; i < 4; i++ {
+		go tracerGenerator()
+	}
+}
+
+func tracerGenerator() {
+	for t := range tracerGenRequestCh {
+		newTracer, err := tracers.New(*t)
+		if err != nil {
+			logger.Error("Error while generating a new tracer", "err", err)
+			tracersCh <- nil
+			continue
+		}
+		tracersCh <- newTracer
+	}
+}
 
 const (
 	// defaultTraceTimeout is the amount of time a single transaction can execute
@@ -478,10 +506,15 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 		pend = new(sync.WaitGroup)
 		jobs = make(chan *txTraceTask, len(txs))
 	)
-	threads := runtime.NumCPU()
+	threads := int(math.Max(float64(runtime.NumCPU())-5, 4))
 	if threads > len(txs) {
 		threads = len(txs)
 	}
+
+	for i := 0; i < len(txs); i++ {
+		tracerGenRequestCh <- config.Tracer
+	}
+
 	for th := 0; th < threads; th++ {
 		pend.Add(1)
 		go func() {
@@ -755,9 +788,11 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 			}
 		}
 		// Constuct the JavaScript tracer to execute with
-		if tracer, err = tracers.New(*config.Tracer); err != nil {
-			return nil, err
+		tracer = <-tracersCh
+		if tracer == nil {
+			return nil, fmt.Errorf("nil tracer returned")
 		}
+
 		// Handle timeouts and RPC cancellations
 		deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
 		go func() {
