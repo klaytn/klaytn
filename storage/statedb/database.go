@@ -356,7 +356,7 @@ func getTrieNodeCacheSizeMB() int {
 		memoryScalePercent = 0.35 // allocate 35% for 100 < mem
 	}
 
-	return int(totalPhysicalMemMB * memoryScalePercent * 1024)
+	return int(totalPhysicalMemMB * memoryScalePercent)
 }
 
 // DiskDB retrieves the persistent database backing the trie database.
