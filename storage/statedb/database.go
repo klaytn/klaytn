@@ -21,13 +21,13 @@
 package statedb
 
 import (
-	"encoding/binary"
 	"fmt"
-	"github.com/allegro/bigcache"
+	"github.com/VictoriaMetrics/fastcache"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/pbnjay/memory"
 	"github.com/rcrowley/go-metrics"
 	"io"
 	"sync"
@@ -37,28 +37,43 @@ import (
 var (
 	logger = log.NewModuleLogger(log.StorageStateDB)
 
+	// metrics for Cap state
 	memcacheFlushTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/flush/time", nil)
 	memcacheFlushNodesGauge = metrics.NewRegisteredGauge("trie/memcache/flush/nodes", nil)
 	memcacheFlushSizeGauge  = metrics.NewRegisteredGauge("trie/memcache/flush/size", nil)
 
+	// metrics for GC
 	memcacheGCTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/gc/time", nil)
 	memcacheGCNodesMeter = metrics.NewRegisteredMeter("trie/memcache/gc/nodes", nil)
 	memcacheGCSizeMeter  = metrics.NewRegisteredMeter("trie/memcache/gc/size", nil)
 
+	// metrics for commit state
 	memcacheCommitTimeGauge  = metrics.NewRegisteredGauge("trie/memcache/commit/time", nil)
 	memcacheCommitNodesMeter = metrics.NewRegisteredMeter("trie/memcache/commit/nodes", nil)
 	memcacheCommitSizeMeter  = metrics.NewRegisteredMeter("trie/memcache/commit/size", nil)
-
-	memcacheCleanHitMeter      = metrics.NewRegisteredMeter("trie/memcache/clean/hit", nil)
-	memcacheCleanMissMeter     = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
-	memcacheCleanReadMeter     = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
-	memcacheCleanWriteMeter    = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
-	memcacheCleanLengthGauge   = metrics.NewRegisteredGauge("trie/memcache/clean/length", nil)
-	memcacheCleanCapacityGauge = metrics.NewRegisteredGauge("trie/memcache/clean/capacity", nil)
-
-	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
-
 	memcacheUncacheTimeGauge = metrics.NewRegisteredGauge("trie/memcache/uncache/time", nil)
+
+	// metrics for state trie cache db
+	memcacheCleanHitMeter   = metrics.NewRegisteredMeter("trie/memcache/clean/hit", nil)
+	memcacheCleanMissMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
+	memcacheCleanReadMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
+	memcacheCleanWriteMeter = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
+
+	// metrics for fastcache
+	memcacheFastMisses                 = metrics.NewRegisteredGauge("trie/memcache/fast/misses", nil)
+	memcacheFastCollisions             = metrics.NewRegisteredGauge("trie/memcache/fast/collisions", nil)
+	memcacheFastCorruptions            = metrics.NewRegisteredGauge("trie/memcache/fast/corruptions", nil)
+	memcacheFastEntriesCount           = metrics.NewRegisteredGauge("trie/memcache/fast/entries", nil)
+	memcacheFastBytesSize              = metrics.NewRegisteredGauge("trie/memcache/fast/size", nil)
+	memcacheFastGetBigCalls            = metrics.NewRegisteredGauge("trie/memcache/fast/get", nil)
+	memcacheFastSetBigCalls            = metrics.NewRegisteredGauge("trie/memcache/fast/set", nil)
+	memcacheFastTooBigKeyErrors        = metrics.NewRegisteredGauge("trie/memcache/fast/error/too/bigkey", nil)
+	memcacheFastInvalidMetavalueErrors = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/matal", nil)
+	memcacheFastInvalidValueLenErrors  = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/valuelen", nil)
+	memcacheFastInvalidValueHashErrors = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/hash", nil)
+
+	// metric of total node number
+	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
 )
 
 // secureKeyPrefix is the database key prefix used to store trie node preimages.
@@ -73,6 +88,10 @@ const commitResultChSizeLimit = 100 * 10000
 // NoDataArchivingPreparation is used to indicate that certain Database.Commit operations
 // do not need preparation of data archiving.
 const NoDataArchivingPreparation = 0
+
+// AutoScaling is for auto-scaling cache size. If cacheSize is set to this value,
+// cache size is set scaling to physical memeory
+const AutoScaling = -1
 
 type DatabaseReader interface {
 	// Get retrieves the value associated with key from the database.
@@ -109,7 +128,7 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache *bigcache.BigCache // GC friendly memory cache of trie node RLPs
+	trieNodeCache *fastcache.Cache // GC friendly memory cache of trie node RLPs
 
 	dataArchivingBlockNum uint64
 }
@@ -294,19 +313,6 @@ func expandNode(hash hashNode, n node) node {
 	}
 }
 
-// trieNodeHasher is a struct to be used with BigCache, which uses a Hasher to
-// determine which shard to place an entry into. It's not a cryptographic hash,
-// just to provide a bit of anti-collision (default is FNV64a).
-//
-// Since trie keys are already hashes, we can just use the key directly to
-// map shard id.
-type trieNodeHasher struct{}
-
-// Sum64 implements the bigcache.Hasher interface.
-func (t trieNodeHasher) Sum64(key string) uint64 {
-	return binary.BigEndian.Uint64([]byte(key))
-}
-
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
@@ -317,20 +323,15 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
 func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum uint64) *Database {
-	var trieNodeCache *bigcache.BigCache
+	var trieNodeCache *fastcache.Cache
+	if cacheSizeMB == AutoScaling {
+		cacheSizeMB = getTrieNodeCacheSizeMB()
+	}
 	if cacheSizeMB > 0 {
-		maxEntrySizeByte := 512
-		maxEntriesInWindow := cacheSizeMB * 1024 * 1024 / maxEntrySizeByte
-		trieNodeCache, _ = bigcache.NewBigCache(bigcache.Config{
-			Shards:             1024,
-			LifeWindow:         time.Hour * 24 * 365 * 200,
-			MaxEntriesInWindow: maxEntriesInWindow,
-			MaxEntrySize:       maxEntrySizeByte,
-			HardMaxCacheSize:   cacheSizeMB,
-			Hasher:             trieNodeHasher{},
-		})
-		logger.Info("Initialize BigCache", "HardMaxCacheSize", cacheSizeMB, "MaxEntrySize", maxEntrySizeByte, "MaxEntriesInWindow", maxEntriesInWindow)
+		cacheSizeByte := cacheSizeMB * 1024 * 1024
+		trieNodeCache = fastcache.New(cacheSizeByte)
 
+		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
 	}
 	return &Database{
 		diskDB:                diskDB,
@@ -339,6 +340,23 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 		trieNodeCache:         trieNodeCache,
 		dataArchivingBlockNum: daBlockNum,
 	}
+}
+
+func getTrieNodeCacheSizeMB() int {
+	totalPhysicalMemMB := float64(memory.TotalMemory() / 1024 / 1024)
+
+	if totalPhysicalMemMB < 10*1024 {
+		return 0
+	} else if totalPhysicalMemMB < 20*1024 {
+		return 1 * 1024 // allocate 1G for small memory
+	}
+
+	memoryScalePercent := 0.3 // allocate 30% for 20 < mem < 100
+	if totalPhysicalMemMB > 100*1024 {
+		memoryScalePercent = 0.35 // allocate 35% for 100 < mem
+	}
+
+	return int(totalPhysicalMemMB * memoryScalePercent)
 }
 
 // DiskDB retrieves the persistent database backing the trie database.
@@ -419,7 +437,7 @@ func (db *Database) insertPreimage(hash common.Hash, preimage []byte) {
 // getCachedNode finds an encoded node in the trie node cache if enabled.
 func (db *Database) getCachedNode(hash common.Hash) []byte {
 	if db.trieNodeCache != nil {
-		if enc, err := db.trieNodeCache.Get(string(hash[:])); err == nil && enc != nil {
+		if enc := db.trieNodeCache.Get(nil, hash[:]); enc != nil {
 			memcacheCleanHitMeter.Mark(1)
 			memcacheCleanReadMeter.Mark(int64(len(enc)))
 			return enc
@@ -431,7 +449,7 @@ func (db *Database) getCachedNode(hash common.Hash) []byte {
 // setCachedNode stores an encoded node to the trie node cache if enabled.
 func (db *Database) setCachedNode(hash, enc []byte) {
 	if db.trieNodeCache != nil {
-		db.trieNodeCache.Set(string(hash), enc)
+		db.trieNodeCache.Set(hash, enc)
 		memcacheCleanMissMeter.Mark(1)
 		memcacheCleanWriteMeter.Mark(int64(len(enc)))
 	}
@@ -665,7 +683,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 		}
 
 		if db.trieNodeCache != nil {
-			db.trieNodeCache.Set(string(oldest[:]), enc)
+			db.trieNodeCache.Set(oldest[:], enc)
 		}
 		// Iterate to the next flush item, or abort if the size cap was achieved. Size
 		// is the total size, including both the useful cached data (hash -> blob), as
@@ -796,7 +814,7 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 		return err
 	}
 	if db.trieNodeCache != nil {
-		db.trieNodeCache.Set(string(node[:]), enc)
+		db.trieNodeCache.Set(node[:], enc)
 	}
 
 	return nil
@@ -894,7 +912,7 @@ func (db *Database) commit(hash common.Hash, resultCh chan<- commitResult) {
 	resultCh <- commitResult{hash[:], enc}
 
 	if db.trieNodeCache != nil {
-		db.trieNodeCache.Set(string(hash[:]), enc)
+		db.trieNodeCache.Set(hash[:], enc)
 	}
 }
 
@@ -929,10 +947,6 @@ func (db *Database) Size() (common.StorageSize, common.StorageSize) {
 	// counted. For every useful node, we track 2 extra hashes as the flushlist.
 	var flushlistSize = common.StorageSize((len(db.nodes) - 1) * 2 * common.HashLength)
 	return db.nodesSize + flushlistSize, db.preimagesSize
-}
-
-func (db *Database) CacheSize() int {
-	return db.trieNodeCache.Capacity()
 }
 
 // verifyIntegrity is a debug method to iterate over the entire trie stored in
@@ -1023,7 +1037,19 @@ func (db *Database) getLastNodeHashInFlushList() common.Hash {
 func (db *Database) UpdateMetricNodes() {
 	memcacheNodesGauge.Update(int64(len(db.nodes)))
 	if db.trieNodeCache != nil {
-		memcacheCleanLengthGauge.Update(int64(db.trieNodeCache.Len()))
-		memcacheCleanCapacityGauge.Update(int64(db.trieNodeCache.Capacity()))
+		var stats fastcache.Stats
+		db.trieNodeCache.UpdateStats(&stats)
+
+		memcacheFastMisses.Update(int64(stats.Misses))
+		memcacheFastCollisions.Update(int64(stats.Collisions))
+		memcacheFastCorruptions.Update(int64(stats.Corruptions))
+		memcacheFastEntriesCount.Update(int64(stats.EntriesCount))
+		memcacheFastBytesSize.Update(int64(stats.BytesSize))
+		memcacheFastGetBigCalls.Update(int64(stats.GetBigCalls))
+		memcacheFastSetBigCalls.Update(int64(stats.SetBigCalls))
+		memcacheFastTooBigKeyErrors.Update(int64(stats.TooBigKeyErrors))
+		memcacheFastInvalidMetavalueErrors.Update(int64(stats.InvalidMetavalueErrors))
+		memcacheFastInvalidValueLenErrors.Update(int64(stats.InvalidValueLenErrors))
+		memcacheFastInvalidValueHashErrors.Update(int64(stats.InvalidValueHashErrors))
 	}
 }
