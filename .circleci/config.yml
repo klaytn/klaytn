@@ -245,6 +245,14 @@ jobs:
             make fmt
             make all
 
+  test-linter:
+    executor: test-executor
+    steps:
+      - checkout
+      - run:
+          name: "Run golangci-lint"
+          command: golangci-lint run --new-from-rev=dev -v
+
   test-datasync:
     executor: test-executor
     steps:
@@ -452,6 +460,8 @@ workflows:
           filters: *filter-version-not-release
       - test-others:
          filters: *filter-version-not-release
+      - test-linter:
+          filters: *filter-version-not-release
       - tagger-verify:
          filters:
             tags:
