@@ -332,7 +332,20 @@ func doFmt(cmdline []string) {
 		packages = flag.CommandLine.Args()
 	}
 	// Get metalinter and install all supported linters
-	build.MustRun(goTool("get", "github.com/golangci/golangci-lint/cmd/golangci-lint"))
+	lintInstaller := "golangci-lint-install.sh"
+	curlArgs := []string{
+		"-sSfL",
+		"-o" + lintInstaller,
+		"https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh",
+	}
+	build.MustRunCommand("curl", curlArgs...)
+
+	shArgs := []string{
+		lintInstaller,
+		"-b" + GOBIN,
+	}
+	build.MustRunCommand("sh", shArgs...)
+	build.MustRunCommand("rm", lintInstaller)
 
 	// Run fast linters batched together
 	configs := []string{
@@ -353,7 +366,20 @@ func doLint(cmdline []string, exitOnError bool) {
 		packages = flag.CommandLine.Args()
 	}
 	// Get metalinter and install all supported linters
-	build.MustRun(goTool("get", "github.com/golangci/golangci-lint/cmd/golangci-lint"))
+	lintInstaller := "golangci-lint-install.sh"
+	curlArgs := []string{
+		"-sSfL",
+		"-o" + lintInstaller,
+		"https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh",
+	}
+	build.MustRunCommand("curl", curlArgs...)
+
+	shArgs := []string{
+		lintInstaller,
+		"-b" + GOBIN,
+	}
+	build.MustRunCommand("sh", shArgs...)
+	build.MustRunCommand("rm", lintInstaller)
 
 	// Prepare a report file for linters
 	fname := "linter_report.txt"
