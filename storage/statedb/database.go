@@ -331,7 +331,7 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 		cacheSizeByte := cacheSizeMB * 1024 * 1024
 		trieNodeCache = fastcache.New(cacheSizeByte)
 
-		logger.Info("Initialize trie node cache with fastcache", "maxBytes", cacheSizeByte)
+		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
 	}
 	return &Database{
 		diskDB:                diskDB,
