@@ -331,21 +331,13 @@ func doFmt(cmdline []string) {
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
 	}
-	// Get metalinter and install all supported linters
-	lintInstaller := "golangci-lint-install.sh"
-	curlArgs := []string{
-		"-sSfL",
-		"-o" + lintInstaller,
-		"https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh",
-	}
-	build.MustRunCommand("curl", curlArgs...)
 
-	shArgs := []string{
-		lintInstaller,
-		"-b" + GOBIN,
+	lintBin := filepath.Join(build.GOPATH(), "bin", "golangci-lint")
+
+	_, err := exec.LookPath(lintBin)
+	if err != nil {
+		installLinter(filepath.Join(build.GOPATH(), "bin"))
 	}
-	build.MustRunCommand("sh", shArgs...)
-	build.MustRunCommand("rm", lintInstaller)
 
 	// Run fast linters batched together
 	configs := []string{
@@ -354,7 +346,7 @@ func doFmt(cmdline []string) {
 		"--disable-all",
 		"--enable=gofmt",
 	}
-	build.MustRunCommand(filepath.Join(GOBIN, "golangci-lint"), append(configs, packages...)...)
+	build.MustRunCommand(lintBin, append(configs, packages...)...)
 }
 
 // runs gometalinter on requested packages and exits immediately when linter warning observed if exitOnError is true
@@ -365,21 +357,13 @@ func doLint(cmdline []string, exitOnError bool) {
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
 	}
-	// Get metalinter and install all supported linters
-	lintInstaller := "golangci-lint-install.sh"
-	curlArgs := []string{
-		"-sSfL",
-		"-o" + lintInstaller,
-		"https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh",
-	}
-	build.MustRunCommand("curl", curlArgs...)
 
-	shArgs := []string{
-		lintInstaller,
-		"-b" + GOBIN,
+	lintBin := filepath.Join(build.GOPATH(), "bin", "golangci-lint")
+
+	_, err := exec.LookPath(lintBin)
+	if err != nil {
+		installLinter(lintBin)
 	}
-	build.MustRunCommand("sh", shArgs...)
-	build.MustRunCommand("rm", lintInstaller)
 
 	// Prepare a report file for linters
 	fname := "linter_report.txt"
@@ -402,12 +386,11 @@ func doLint(cmdline []string, exitOnError bool) {
 		"--enable=misspell",
 		"--enable=goconst",
 	}
-	cmd := filepath.Join(GOBIN, "golangci-lint")
 	args := append(configs, packages...)
 	if exitOnError {
-		build.MustRunCommand(cmd, args...)
+		build.MustRunCommand(lintBin, args...)
 	} else {
-		build.TryRunCommand(cmd, args...)
+		build.TryRunCommand(lintBin, args...)
 	}
 
 	// Run fast linters batched together
@@ -423,23 +406,21 @@ func doLint(cmdline []string, exitOnError bool) {
 		"--enable=unparam",
 		"--enable=unused",
 	}
-	cmd = filepath.Join(GOBIN, "golangci-lint")
 	args = append(configs, packages...)
 	if exitOnError {
-		build.MustRunCommand(cmd, args...)
+		build.MustRunCommand(lintBin, args...)
 	} else {
-		build.TryRunCommand(cmd, args...)
+		build.TryRunCommand(lintBin, args...)
 	}
 
 	// Run slow linters one by one
 	for _, linter := range []string{"unconvert", "gosimple", "staticcheck", "gocyclo"} {
 		configs = []string{"run", "--tests", "--deadline=10m", "--disable-all", "--enable=" + linter}
-		cmd = filepath.Join(GOBIN, "golangci-lint")
 		args = append(configs, packages...)
 		if exitOnError {
-			build.MustRunCommand(cmd, args...)
+			build.MustRunCommand(lintBin, args...)
 		} else {
-			build.TryRunCommand(cmd, args...)
+			build.TryRunCommand(lintBin, args...)
 		}
 	}
 
@@ -1068,4 +1049,21 @@ func xgoTool(args []string) *exec.Cmd {
 		cmd.Env = append(cmd.Env, e)
 	}
 	return cmd
+}
+
+func installLinter(lintPath string) {
+	lintInstaller := "golangci-lint-install.sh"
+	curlArgs := []string{
+		"-sSfL",
+		"-o" + lintInstaller,
+		"https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh",
+	}
+	build.MustRunCommand("curl", curlArgs...)
+
+	shArgs := []string{
+		lintInstaller,
+		"-b" + lintPath,
+	}
+	build.MustRunCommand("sh", shArgs...)
+	build.MustRunCommand("rm", lintInstaller)
 }
