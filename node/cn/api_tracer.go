@@ -47,28 +47,33 @@ import (
 )
 
 var tracersCh chan *tracers.Tracer
+var tracerStr *string
 
 const tracersChSize = 4000
 
-var tracerGenRequestCh chan *string
-
 func init() {
 	tracersCh = make(chan *tracers.Tracer, tracersChSize)
-	tracerGenRequestCh = make(chan *string, tracersChSize)
-
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 3; i++ {
 		go tracerGenerator()
 	}
 }
 
 func tracerGenerator() {
-	for t := range tracerGenRequestCh {
-		newTracer, err := tracers.New(*t)
+	for {
+		if tracerStr == nil {
+			logger.Info("Sleep for 1 second since there is no tracer given")
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		genStart := time.Now()
+		newTracer, err := tracers.New(*tracerStr)
 		if err != nil {
 			logger.Error("Error while generating a new tracer", "err", err)
 			tracersCh <- nil
 			continue
 		}
+		logger.Info("Successfully generated a new tracer", "elapsed", time.Since(genStart))
 		tracersCh <- newTracer
 	}
 }
@@ -478,6 +483,10 @@ func (api *PrivateDebugAPI) StandardTraceBadBlockToFile(ctx context.Context, has
 // per transaction, dependent on the requestd tracer.
 func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, config *TraceConfig) ([]*txTraceResult, error) {
 	// Create the parent state database
+	if tracerStr == nil {
+		tracerStr = config.Tracer
+	}
+
 	if err := api.cn.engine.VerifyHeader(api.cn.blockchain, block.Header(), true); err != nil {
 		return nil, err
 	}
@@ -506,13 +515,9 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 		pend = new(sync.WaitGroup)
 		jobs = make(chan *txTraceTask, len(txs))
 	)
-	threads := int(math.Max(float64(runtime.NumCPU())-5, 4))
+	threads := int(math.Max(float64(runtime.NumCPU())-4, 3))
 	if threads > len(txs) {
 		threads = len(txs)
-	}
-
-	for i := 0; i < len(txs); i++ {
-		tracerGenRequestCh <- config.Tracer
 	}
 
 	for th := 0; th < threads; th++ {
