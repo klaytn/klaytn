@@ -35,18 +35,21 @@ const (
 
 var (
 	// errDecodeFailed is returned when decode message fails
-	errDecodeFailed = errors.New("fail to decode istanbul message")
+	errDecodeFailed       = errors.New("fail to decode istanbul message")
+	errNoChainReader      = errors.New("sb.chain is nil! --mine option might be missing")
+	errInvalidPeerAddress = errors.New("invalid address")
+
+	// TODO-Klaytn-Istanbul: define Versions and Lengths with correct values.
+	istanbulProtocol = consensus.Protocol{
+		Name:     "istanbul",
+		Versions: []uint{64},
+		Lengths:  []uint64{21},
+	}
 )
 
 // Protocol implements consensus.Engine.Protocol
 func (sb *backend) Protocol() consensus.Protocol {
-	return consensus.Protocol{
-		Name:     "istanbul",
-		Versions: []uint{64},
-		//Lengths:  []uint64{18},
-		//Lengths:  []uint64{19},  // add PoRMsg
-		Lengths: []uint64{21},
-	}
+	return istanbulProtocol
 }
 
 // HandleMsg implements consensus.Handler.HandleMsg
@@ -69,8 +72,8 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		hash := istanbul.RLPHash(data)
 
 		// Mark peer's message
-		ms, ok := sb.recentMessages.Get(addr)
 		var m *lru.ARCCache
+		ms, ok := sb.recentMessages.Get(addr)
 		if ok {
 			m, _ = ms.(*lru.ARCCache)
 		} else {
@@ -98,14 +101,14 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 func (sb *backend) ValidatePeerType(addr common.Address) error {
 	// istanbul.Start vs try to connect by peer
 	for sb.chain == nil {
-		return errors.New("sb.chain is nil! --mine option might be missing")
+		return errNoChainReader
 	}
 	for _, val := range sb.getValidators(sb.chain.CurrentHeader().Number.Uint64(), sb.chain.CurrentHeader().Hash()).List() {
 		if addr == val.Address() {
 			return nil
 		}
 	}
-	return errors.New("invalid address")
+	return errInvalidPeerAddress
 }
 
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
