@@ -332,12 +332,7 @@ func doFmt(cmdline []string) {
 		packages = flag.CommandLine.Args()
 	}
 
-	lintBin := filepath.Join(build.GOPATH(), "bin", "golangci-lint")
-
-	_, err := exec.LookPath(lintBin)
-	if err != nil {
-		installLinter(filepath.Join(build.GOPATH(), "bin"))
-	}
+	lintBin := installLinter()
 
 	// Run fast linters batched together
 	configs := []string{
@@ -358,12 +353,7 @@ func doLint(cmdline []string, exitOnError bool) {
 		packages = flag.CommandLine.Args()
 	}
 
-	lintBin := filepath.Join(build.GOPATH(), "bin", "golangci-lint")
-
-	_, err := exec.LookPath(lintBin)
-	if err != nil {
-		installLinter(lintBin)
-	}
+	lintBin := installLinter()
 
 	// Prepare a report file for linters
 	fname := "linter_report.txt"
@@ -1051,19 +1041,30 @@ func xgoTool(args []string) *exec.Cmd {
 	return cmd
 }
 
-func installLinter(lintPath string) {
-	lintInstaller := "golangci-lint-install.sh"
-	curlArgs := []string{
-		"-sSfL",
-		"-o" + lintInstaller,
-		"https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh",
-	}
-	build.MustRunCommand("curl", curlArgs...)
+func installLinter() string {
+	lintBin := filepath.Join(build.GOPATH(), "bin", "golangci-lint")
 
-	shArgs := []string{
-		lintInstaller,
-		"-b" + lintPath,
+	_, err := exec.LookPath(lintBin)
+	if err != nil {
+		fmt.Println("Installing golangci-lint.")
+
+		cmdCurl := exec.Command("curl", "-sSfL", "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh")
+		cmdSh := exec.Command("sh", "-s", "--", "-b", filepath.Join(build.GOPATH(), "bin"), "v1.24.0")
+		cmdSh.Stdin, err = cmdCurl.StdoutPipe()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println(">>>", strings.Join(cmdCurl.Args, " "))
+		if err := cmdCurl.Start(); err != nil {
+			log.Fatal(err)
+		}
+
+		build.MustRun(cmdSh)
+
+		if err := cmdCurl.Wait(); err != nil {
+			log.Fatal(err)
+		}
 	}
-	build.MustRunCommand("sh", shArgs...)
-	build.MustRunCommand("rm", lintInstaller)
+	return lintBin
 }
