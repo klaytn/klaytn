@@ -147,7 +147,6 @@ func doInstall(cmdline []string) {
 	if flag.NArg() > 0 {
 		packages = flag.Args()
 	}
-	packages = build.ExpandPackagesNoVendor(packages)
 
 	if *arch == "" || *arch == runtime.GOARCH {
 		goinstall := goTool("install", buildFlags(env)...)
@@ -254,7 +253,7 @@ func doTest(cmdline []string) {
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
 	}
-	packages = build.ExpandPackagesNoVendor(packages)
+
 	if *excludes != "" {
 		packages = build.ExcludePackages(packages, strings.Split(*excludes, ","))
 	}
@@ -284,7 +283,7 @@ func doCover(cmdline []string) {
 	if len(flag.CommandLine.Args()) > 0 {
 		packages = flag.CommandLine.Args()
 	}
-	packages = build.ExpandPackagesNoVendor(packages)
+
 	if *excludes != "" {
 		packages = build.ExcludePackages(packages, strings.Split(*excludes, ","))
 	}
@@ -301,7 +300,7 @@ func doCover(cmdline []string) {
 		"/fork",
 		"/mocks",
 	}
-	coverPackages = build.ExpandPackagesNoVendor(coverPackages)
+
 	coverPackages = build.ExcludePackages(coverPackages, coverExcludes)
 	coverPackagesString := strings.Join(coverPackages, ",")
 
