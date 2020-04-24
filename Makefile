@@ -2,9 +2,11 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-GOBIN = $(shell pwd)/build/bin
 GO ?= latest
-GORUN = env GO111MODULE=on go run
+GOPATH := $(or $(GOPATH), $(shell go env GOPATH))
+GORUN = env GOPATH=$(GOPATH) GO111MODULE=on go run
+
+BIN = $(shell pwd)/build/bin
 BUILD_PARAM?=install
 
 OBJECTS=kcn kpn ken kscn kspn ksen kbn kgen homi
@@ -71,7 +73,7 @@ ${TAR_BAOBAB_DARWIN_amd64_OBJECTS}:
 abigen:
 	$(GORUN) build/ci.go ${BUILD_PARAM} ./cmd/abigen
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/abigen\" to launch abigen."
+	@echo "Run \"$(BIN)/abigen\" to launch abigen."
 
 test:
 	$(GORUN) build/ci.go test
@@ -105,10 +107,10 @@ lint-try:
 
 clean:
 	env GO111MODULE=on go clean -cache
-	rm -fr build/_workspace/pkg/ $(GOBIN)/* build/_workspace/src/
+	rm -fr build/_workspace/pkg/ $(BIN)/* build/_workspace/src/
 
 # The devtools target installs tools required for 'go generate'.
-# You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
+# You need to put $BIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
 devtools:
 	env GOFLAGS= GOBIN= go get -u golang.org/x/tools/cmd/stringer
