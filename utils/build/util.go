@@ -187,7 +187,7 @@ func ExpandPackagesNoVendor(patterns []string) []string {
 	}
 	if expand {
 		cmd := GoTool("list", patterns...)
-		out, err := cmd.CombinedOutput()
+		out, err := cmd.Output()
 		if err != nil {
 			log.Fatalf("package listing failed: %v\n%s", err, string(out))
 		}
