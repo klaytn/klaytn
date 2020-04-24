@@ -30,6 +30,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
@@ -43,7 +44,10 @@ type DBManager interface {
 	NewBatch(dbType DBEntryType) Batch
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
-	SetStateTrieMigrationDB(blockNum uint64)
+	SetStateTrieMigrationDB(blockNum uint64) error
+	FinishStateMigration()
+	GetOldStateTrieDB() Database
+	GetNewStateTrieDB() Database
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -195,14 +199,14 @@ type DBManager interface {
 type DBEntryType uint8
 
 const (
-	headerDB DBEntryType = iota
+	MiscDB DBEntryType = iota
+	headerDB
 	BodyDB
 	ReceiptsDB
 	StateTrieDB
+	StateTrieMigrationDB
 	TxLookUpEntryDB
-	MiscDB
 	bridgeServiceDB
-
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -211,25 +215,27 @@ const notInMigrationFlag = 0
 const inMigrationFlag = 1
 
 var dbDirs = [databaseEntryTypeSize]string{
+	"misc",
 	"header",
 	"body",
 	"receipts",
 	"statetrie",
+	"statetrie_", // not used
 	"txlookup",
-	"misc",
 	"bridgeservice",
 }
 
 // Sum of dbConfigRatio should be 100.
 // Otherwise, logger.Crit will be called at checkDBEntryConfigRatio.
 var dbConfigRatio = [databaseEntryTypeSize]int{
-	6,  // headerDB
-	21, // BodyDB
-	21, // ReceiptsDB
-	23, // StateTrieDB
-	21, // TXLookUpEntryDB
 	3,  // MiscDB
-	5,  // bridgeServiceDB
+	6,  // headerDB
+	16, // BodyDB
+	16, // ReceiptsDB
+	19, // StateTrieDB
+	19, // StateTrieMigrationDB
+	17, // TXLookUpEntryDB
+	4,  // bridgeServiceDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -315,18 +321,42 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	return dbm, nil
 }
 
+// getMiscDB returns misc DBManager
+func getMiscDB(dbc *DBConfig) Database {
+	newDBC := getDBEntryConfig(dbc, MiscDB)
+	db, err := newDatabase(newDBC, MiscDB)
+
+	if err != nil {
+		logger.Crit("Failed while generating a MISC database", "err", err)
+	}
+	return db
+}
+
 // partitionedDatabaseDBManager returns DBManager which handles partitioned Database.
 // Each Database will have its own separated Database.
 func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 	dbm := newDatabaseManager(dbc)
 	var db Database
 	var err error
-	for et := 0; et < int(databaseEntryTypeSize); et++ {
+
+	// Create Misc DB first to get the DB directory of stateTrieDB.
+	miscDB := getMiscDB(dbc)
+	miscDB.Meter(dbMetricPrefix + dbDirs[MiscDB] + "/") // Each partition collects metrics independently.
+	dbm.dbs[MiscDB] = miscDB
+
+	// Create other DBs
+	for et := int(MiscDB) + 1; et < int(databaseEntryTypeSize); et++ {
 		entryType := DBEntryType(et)
 
 		newDBC := getDBEntryConfig(dbc, entryType)
 
-		if entryType == StateTrieDB && dbc.NumStateTriePartitions > 1 {
+		if (entryType == StateTrieDB || entryType == StateTrieMigrationDB) && dbc.NumStateTriePartitions > 1 {
+			if dir := dbm.getDBDir(entryType); dir != "" {
+				newDBC.Dir = dir
+			} else {
+				dbm.setDBDir(entryType, newDBC.Dir)
+			}
+			// TODO-Klaytn need to skip newDB if there is no dir of state trie migration DB
 			db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
 		} else {
 			db, err = newDatabase(newDBC, entryType)
@@ -383,8 +413,8 @@ func NewDBManager(dbc *DBConfig) DBManager {
 		if err != nil {
 			logger.Crit("Failed to partitioned database", "DBType", dbc.DBType, "err", err)
 		}
-		if inMigration, migrationDir := dbm.getStateTrieMigrationInfo(); inMigration {
-			dbm.newStateTrieDB = createStateTrieMigrationDB(dbm.config, migrationDir)
+		if inMigration := dbm.getStateTrieMigrationInfo(); inMigration {
+			dbm.newStateTrieDB = dbm.getDatabase(StateTrieMigrationDB)
 			dbm.inMigration = true
 		}
 		return dbm
@@ -412,62 +442,76 @@ func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 	return dbm.getDatabase(dbEntryType).NewBatch()
 }
 
-func (dbm *databaseManager) getStateTrieMigrationInfo() (bool, string) {
+func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
+	miscDB := dbm.getDatabase(MiscDB)
+	enc, _ := miscDB.Get(databaseDirKey(uint64(dbEntry)))
+	return string(enc)
+}
+
+func (dbm *databaseManager) setDBDir(dbEntry DBEntryType, newDBDir string) error {
+	miscDB := dbm.getDatabase(MiscDB)
+	return miscDB.Put(databaseDirKey(uint64(dbEntry)), []byte(newDBDir))
+}
+
+func (dbm *databaseManager) getStateTrieMigrationInfo() bool {
 	miscDB := dbm.getDatabase(MiscDB)
 	enc, _ := miscDB.Get(migrationStatusKey)
 	if len(enc) != 8 {
-		return false, ""
+		return false
 	}
 	status := binary.BigEndian.Uint64(enc)
 	if status == 0 {
-		return false, ""
+		return false
 	}
-
-	enc, _ = miscDB.Get(databaseDirKey(uint64(StateTrieDB)))
-	return true, string(enc)
+	return true
 }
 
-func createStateTrieMigrationDB(dbc *DBConfig, newDBDir string) Database {
+func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) {
 	oldDBConfig := dbc
-	newDBConfig := getDBEntryConfig(oldDBConfig, StateTrieDB)
-	newDBConfig.Dir = newDBDir
+	newDBConfig := getDBEntryConfig(oldDBConfig, StateTrieMigrationDB)
+	newDBConfig.Dir = newDBConfig.Dir + strconv.FormatUint(blockNum, 10)
 	var newDB Database
 	var err error
 	if newDBConfig.NumStateTriePartitions > 1 {
-		newDB, err = newPartitionedDB(newDBConfig, StateTrieDB, newDBConfig.NumStateTriePartitions)
+		newDB, err = newPartitionedDB(newDBConfig, StateTrieMigrationDB, newDBConfig.NumStateTriePartitions)
 	} else {
-		newDB, err = newDatabase(newDBConfig, StateTrieDB)
+		newDB, err = newDatabase(newDBConfig, StateTrieMigrationDB)
 	}
 	if err != nil {
 		logger.Crit("Failed to create a new database for state trie migration", "err", err)
 	}
 	logger.Info("Created a new database for state trie migration", "newStateTrieDB", newDBConfig.Dir)
-	return newDB
+	return newDB, newDBConfig.Dir
 }
 
-func (dbm *databaseManager) SetStateTrieMigrationDB(blockNum uint64) {
+func (dbm *databaseManager) SetStateTrieMigrationDB(blockNum uint64) error {
 	if !dbm.config.Partitioned {
 		logger.Warn("Setting a new database for state trie migration is allowed for partitioned database only")
-		return
+		return errors.New("non-partitioned DB does not support state trie migration")
 	}
 
 	logger.Info("Start setting a new database for state trie migration", "blockNum", blockNum)
 
-	// Store the directory of the new database first to avoid missing directory name situation
-	newDBDir := dbm.config.Dir + strconv.FormatUint(blockNum, 10)
-	miscDB := dbm.getDatabase(MiscDB)
-	if err := miscDB.Put(databaseDirKey(uint64(StateTrieDB)), []byte(newDBDir)); err != nil {
-		logger.Crit("Failed to store a new database directory", "newDBDir", newDBDir, "err", err)
-	}
+	// Create a new database for migration process.
+	newDB, newDBDir := newStateTrieMigrationDB(dbm.config, blockNum)
 
-	// After storing the directory, create a new database for migration process.
-	newDB := createStateTrieMigrationDB(dbm.config, newDBDir)
+	// Store the directory,
+	if err := dbm.setDBDir(StateTrieMigrationDB, newDBDir); err != nil {
+		// TODO-Klaytn need to remove newDB
+		logger.Error("Failed to store a new database directory", "newDBDir", newDBDir, "err", err)
+		return err
+	}
 
 	// After creating the database, store migration status to the database.
 	// If it fails to store the migration status, remove the new database and kill the process.
+	dbm.dbs[StateTrieMigrationDB] = newDB
 	dbm.newStateTrieDB = newDB
 	dbm.inMigration = true
-	if err := miscDB.Put(migrationStatusKey, encodeUint64(inMigrationFlag)); err != nil {
+
+	//miscDB := dbm.getDatabase(MiscDB)
+	//if err := miscDB.Put(migrationStatusKey, encodeUint64(inMigrationFlag)); err != nil {
+	if false {
+		err := errors.New("test")
 		logger.Error("Failed to store the migration status, trying to remove the new database for state trie migration", "err", err)
 		newDB.Close()
 		if err := os.RemoveAll(newDBDir); err != nil {
@@ -478,6 +522,39 @@ func (dbm *databaseManager) SetStateTrieMigrationDB(blockNum uint64) {
 		logger.Crit("Killed the process due to the failure of storing the migration status")
 	}
 	logger.Info("Finished setting a new database for state trie migration")
+	return nil
+}
+
+// FinishStateMigration updates stateTrieDB and triggers to remove old one.
+func (dbm *databaseManager) FinishStateMigration() {
+	oldDBDir := dbm.getDBDir(StateTrieDB)
+	newDBDir := dbm.getDBDir(StateTrieMigrationDB)
+	dbm.setDBDir(StateTrieDB, newDBDir)
+
+	oldDB := dbm.dbs[StateTrieDB]
+	dbm.dbs[StateTrieDB] = dbm.dbs[StateTrieMigrationDB]
+
+	dbm.inMigration = false
+
+	// TODO-Klaytn Refine remove DB code
+	go func(dbDir string) {
+		// TODO-Klaytn remove oldDB after StakingInfoInterval
+		time.Sleep(10 * time.Second)
+		oldDB.Close()
+		if err := os.RemoveAll(dbDir); err != nil {
+			logger.Error("Failed to remove the state trie migration database due to an error", "err", err, "dir", dbDir)
+			return
+		}
+		logger.Info("Successfully removed the state trie migration database", "dir", dbDir)
+	}(oldDBDir)
+}
+
+func (dbm *databaseManager) GetOldStateTrieDB() Database {
+	return dbm.dbs[StateTrieDB]
+}
+
+func (dbm *databaseManager) GetNewStateTrieDB() Database {
+	return dbm.newStateTrieDB
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
@@ -500,7 +577,7 @@ func (dbm *databaseManager) GetDBConfig() *DBConfig {
 
 func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
 	if dbm.config.DBType == MemoryDB {
-		return dbm.dbs[headerDB]
+		return dbm.dbs[0]
 	} else {
 		return dbm.dbs[dbEntryType]
 	}
@@ -515,7 +592,9 @@ func (dbm *databaseManager) Close() {
 
 	// If partitioned, close all databases.
 	for _, db := range dbm.dbs {
-		db.Close()
+		if db != nil {
+			db.Close()
+		}
 	}
 
 	// If in migration process, also close new state trie database.

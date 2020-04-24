@@ -159,6 +159,15 @@ type BlockChain struct {
 
 	nonceCache   common.Cache
 	balanceCache common.Cache
+
+	// State migration
+	chStateTrieMigrationTask chan stateTrieMigrationTask
+	stopMigration            chan struct{}
+}
+
+type stateTrieMigrationTask struct {
+	blockNum uint64
+	rootHash common.Hash
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -188,21 +197,23 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	bc := &BlockChain{
-		chainConfig:     chainConfig,
-		chainConfigMu:   new(sync.RWMutex),
-		cacheConfig:     cacheConfig,
-		db:              db,
-		triegc:          prque.New(),
-		chBlock:         make(chan gcBlock, 1000),
-		stateCache:      state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit, cacheConfig.DataArchivingBlockNum),
-		quit:            make(chan struct{}),
-		futureBlocks:    futureBlocks,
-		engine:          engine,
-		vmConfig:        vmConfig,
-		badBlocks:       badBlocks,
-		parallelDBWrite: db.IsParallelDBWrite(),
-		nonceCache:      nonceCache,
-		balanceCache:    balanceCache,
+		chainConfig:              chainConfig,
+		chainConfigMu:            new(sync.RWMutex),
+		cacheConfig:              cacheConfig,
+		db:                       db,
+		triegc:                   prque.New(),
+		chBlock:                  make(chan gcBlock, 1000),
+		stateCache:               state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit, cacheConfig.DataArchivingBlockNum),
+		quit:                     make(chan struct{}),
+		futureBlocks:             futureBlocks,
+		engine:                   engine,
+		vmConfig:                 vmConfig,
+		badBlocks:                badBlocks,
+		parallelDBWrite:          db.IsParallelDBWrite(),
+		nonceCache:               nonceCache,
+		balanceCache:             balanceCache,
+		chStateTrieMigrationTask: make(chan stateTrieMigrationTask),
+		stopMigration:            make(chan struct{}),
 	}
 
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
@@ -240,7 +251,160 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	// Take ownership of this particular state
 	go bc.update()
 	go bc.gcCachedNodeLoop()
+	go bc.migrationLoop()
 	return bc, nil
+}
+
+type stateTrieDB struct {
+	db database.Database
+}
+
+func (td *stateTrieDB) ReadStateTrieNode(key []byte) ([]byte, error) {
+	return td.db.Get(key)
+}
+
+func (td *stateTrieDB) HasStateTrieNode(key []byte) (bool, error) {
+	val, err := td.db.Get(key)
+	if val == nil || err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (bc *BlockChain) migrateState(blockNumber uint64, rootHash common.Hash) error {
+	if err := bc.db.SetStateTrieMigrationDB(blockNumber); err != nil {
+		return err
+	}
+	srcDB := bc.stateCache.TrieDB()
+	targetDB := &stateTrieDB{bc.db.GetNewStateTrieDB()}
+
+	sched := state.NewStateSync(rootHash, targetDB)
+	batch := 1000
+	queue := append([]common.Hash{}, sched.Missing(batch)...)
+
+	resultCnt := 0
+	for sched.Pending() > 0 {
+		results := make([]statedb.SyncResult, len(queue))
+		for i, hash := range queue {
+			data, err := srcDB.NodeFromOld(hash)
+			if err != nil {
+				return errors.New(fmt.Sprintf("failed to retrieve node data for %x: %v", hash, err))
+			}
+			results[i] = statedb.SyncResult{Hash: hash, Data: data}
+		}
+
+		resultCnt = resultCnt + len(results)
+
+		if _, index, err := sched.Process(results); err != nil {
+			return errors.New(fmt.Sprintf("failed to process result #%d: %v", index, err))
+		}
+
+		if index, err := sched.Commit(targetDB.db); err != nil {
+			return errors.New(fmt.Sprintf("failed to commit data #%d: %v", index, err))
+		}
+		queue = append(queue[:0], sched.Missing(batch)...)
+
+		select {
+		case <-bc.stopMigration:
+			return errors.New("stop state migration")
+		case <-bc.quit:
+			return nil
+		default:
+		}
+
+		// TODO-Klaytn refine the status parameter (progress percentage, etc)
+		logger.Warn("State migration progress", "resultCnt", resultCnt, "len(queue)", len(queue))
+	}
+
+	// Preimage Copy
+	// TODO-Klaytn consider to copy preimage
+
+	// Cross check that the two tries are in sync
+	// TODO-Klaytn consider to check Trie contents optionally
+	//dirty, err := bc.checkTrieContents(srcDB, bc.db.GetNewStateTrieDB(), rootHash)
+	//if err != nil || len(dirty) > 0 {
+	//	logger.Error("completed state migration", "err", err, "len(dirty)", len(dirty))
+	//	// TODO-Klaytn Remove new DB and log.Error
+	//	if err != nil {
+	//		return err
+	//	}
+	//	return errors.New("failed sync state trie")
+	//}
+
+	// TODO-Klaytn Swap DB and Remove Old DB
+	bc.db.FinishStateMigration()
+	logger.Info("completed state migration")
+	return nil
+}
+
+//func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root common.Hash) ([]common.Address, error) {
+func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root common.Hash) ([]common.Hash, error) {
+	oldTrie, err := statedb.NewSecureTrie(root, oldDB)
+	if err != nil {
+		return nil, err
+	}
+	newTrie, err := statedb.NewSecureTrie(root, newDB)
+	if err != nil {
+		return nil, err
+	}
+
+	diff, _ := statedb.NewDifferenceIterator(oldTrie.NodeIterator([]byte{}), newTrie.NodeIterator([]byte{}))
+	iter := statedb.NewIterator(diff)
+
+	//var dirty []common.Address
+	var dirty []common.Hash
+	for iter.Next() {
+		//key := newTrie.GetKey(iter.Key)
+		//if key == nil {
+		//	return nil, fmt.Errorf("no preimage found for hash %x", iter.Key)
+		//}
+		//dirty = append(dirty, common.BytesToAddress(key))
+		dirty = append(dirty, common.BytesToHash(iter.Key))
+	}
+	return dirty, nil
+}
+
+func (bc *BlockChain) migrationLoop() {
+	logger.Info("State migration loop starts")
+	for {
+		select {
+		case task := <-bc.chStateTrieMigrationTask:
+			logger.Info("State migration is started", "blockNum", task.blockNum, "root", task.rootHash.String())
+			err := bc.migrateState(task.blockNum, task.rootHash)
+			if err != nil {
+				logger.Error("State migration failed", "err", err, "blockNum", task.blockNum, "root", task.rootHash.String())
+			} else {
+				logger.Info("State migration is completed", "blockNum", task.blockNum, "root", task.rootHash.String())
+			}
+
+		case <-bc.quit:
+			return
+		}
+	}
+}
+
+func (bc *BlockChain) StartStateMigration(number uint64, root common.Hash) error {
+	// TODO-Klaytn Add internal status check routine
+	if bc.db.InMigration() == true {
+		return errors.New("migration already started")
+	}
+
+	select {
+	case bc.chStateTrieMigrationTask <- stateTrieMigrationTask{number, root}:
+	default:
+		return errors.New("migration trigger already started")
+	}
+
+	return nil
+}
+
+func (bc *BlockChain) StopStateMigration() error {
+	bc.stopMigration <- struct{}{}
+	return nil
+}
+
+func (bc *BlockChain) StatusStateMigration() (uint64, uint64, error) {
+	return 0, 0, nil
 }
 
 func (bc *BlockChain) UseGiniCoeff() bool {

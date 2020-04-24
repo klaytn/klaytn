@@ -192,6 +192,16 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 	return stateDb.RawDump(), nil
 }
 
+// StartStateMigration starts state migration.
+func (api *PublicDebugAPI) StartStateMigration() error {
+	// TODO-Klaytn add the routine to change valid block number or remove block number argument.
+	currentBlock := api.cn.blockchain.CurrentBlock().NumberU64()
+	targetBlock := currentBlock - (currentBlock % 128)
+	targetRoot := api.cn.blockchain.GetBlockByNumber(targetBlock).Root()
+	logger.Info("Start state migration", "currentBlock", currentBlock, "targetBlock", targetBlock, "targetRoot", targetRoot)
+	return api.cn.BlockChain().StartStateMigration(targetBlock, targetRoot)
+}
+
 // PrivateDebugAPI is the collection of CN full node APIs exposed over
 // the private debugging endpoint.
 type PrivateDebugAPI struct {

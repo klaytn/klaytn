@@ -493,6 +493,34 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 	return enc, err
 }
 
+// NodeFromOld retrieves an encoded cached trie node from memory. If it cannot be found
+// cached, the method queries the old persistent database for the content.
+func (db *Database) NodeFromOld(hash common.Hash) ([]byte, error) {
+	if (hash == common.Hash{}) {
+		return nil, ErrZeroHashNode
+	}
+	// Retrieve the node from the trie node cache if available
+	if enc := db.getCachedNode(hash); enc != nil {
+		return enc, nil
+	}
+
+	// Retrieve the node from cache if available
+	db.lock.RLock()
+	node := db.nodes[hash]
+	db.lock.RUnlock()
+
+	if node != nil {
+		return node.rlp(), nil
+	}
+	// Content unavailable in memory, attempt to retrieve from disk
+	enc, err := db.diskDB.ReadCachedTrieNodeFromOld(hash)
+	if err == nil && enc != nil {
+		db.setCachedNode(hash[:], enc)
+	}
+	return enc, err
+}
+
+
 // DoesExistCachedNode returns if the node exists on cached trie node in memory.
 func (db *Database) DoesExistCachedNode(hash common.Hash) bool {
 	// Retrieve the node from cache if available
@@ -862,9 +890,9 @@ func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error
 	db.gcnodes, db.gcsize, db.gctime = 0, 0, 0
 	db.flushnodes, db.flushsize, db.flushtime = 0, 0, 0
 
-	if db.settingMigrationDBRequired(blockNum) {
-		db.diskDB.SetStateTrieMigrationDB(blockNum)
-	}
+	//if db.settingMigrationDBRequired(blockNum) {
+	//	db.diskDB.SetStateTrieMigrationDB(blockNum)
+	//}
 	return nil
 }
 

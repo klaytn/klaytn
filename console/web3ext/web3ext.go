@@ -276,6 +276,14 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'startStateMigration',
+			call: 'debug_startStateMigration',
+		}),
+		new web3._extend.Method({
+			name: 'stopStateMigration',
+			call: 'debug_stopStateMigration',
+		}),
+		new web3._extend.Method({
 			name: 'chaindbProperty',
 			call: 'debug_chaindbProperty',
 			params: 1,
@@ -504,7 +512,12 @@ web3._extend({
 			params: 1
 		}),
 	],
-	properties: []
+	properties: [
+        new web3._extend.Property({
+            name : 'statusStateMigration',
+            getter: 'klay_statusStateMigration'
+        })
+	]
 });
 `
 
