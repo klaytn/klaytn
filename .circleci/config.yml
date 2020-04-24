@@ -251,7 +251,7 @@ jobs:
       - checkout
       - run:
           name: "Run golangci-lint"
-          command: golangci-lint run --new-from-rev=dev -v
+          command: golangci-lint run --new-from-rev=dev --presets format,style -v
 
   test-datasync:
     executor: test-executor
