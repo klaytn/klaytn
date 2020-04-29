@@ -391,7 +391,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 		if !dbm.IsPartitioned() {
 			continue
 		}
-		dbm.SetStateTrieMigrationDB(123)
+		dbm.CreateMigrationDBAndSetStatus(123)
 
 		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
 		oldCachedNode, _ := dbm.ReadCachedTrieNodeFromOld(hash1)
@@ -674,7 +674,7 @@ func TestDBManager_StateTrieMigration(t *testing.T) {
 		if !dbm.IsPartitioned() || dbConfigs[i].DBType == MemoryDB {
 			continue
 		}
-		dbm.SetStateTrieMigrationDB(12345)
+		dbm.CreateMigrationDBAndSetStatus(12345)
 		dbm.Close()
 		dbManagers[i] = NewDBManager(dbConfigs[i])
 		assert.True(t, dbManagers[i].InMigration())
