@@ -481,9 +481,11 @@ func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
 	return string(enc)
 }
 
-func (dbm *databaseManager) setDBDir(dbEntry DBEntryType, newDBDir string) error {
+func (dbm *databaseManager) setDBDir(dbEntry DBEntryType, newDBDir string) {
 	miscDB := dbm.getDatabase(MiscDB)
-	return miscDB.Put(databaseDirKey(uint64(dbEntry)), []byte(newDBDir))
+	if err := miscDB.Put(databaseDirKey(uint64(dbEntry)), []byte(newDBDir)); err != nil {
+		logger.Crit("Failed to DB dir", "err", err)
+	}
 }
 
 func (dbm *databaseManager) getStateTrieMigrationInfo() uint64 {
@@ -496,29 +498,27 @@ func (dbm *databaseManager) getStateTrieMigrationInfo() uint64 {
 	return blockNum
 }
 
-func (dbm *databaseManager) setStateTrieMigrationStatus(blockNum uint64) error {
+func (dbm *databaseManager) setStateTrieMigrationStatus(blockNum uint64) {
 	miscDB := dbm.getDatabase(MiscDB)
 	if err := miscDB.Put(migrationStatusKey, encodeUint64(blockNum)); err != nil {
-		return err
+		logger.Crit("Failed to set state trie migration status", "err", err)
 	}
 	dbm.lockInMigration.Lock()
 	defer dbm.lockInMigration.Unlock()
 
 	dbm.inMigration, dbm.migrationBlockNumber = true, blockNum
-	return nil
 }
 
-func (dbm *databaseManager) clearStateTrieMigrationStatus() error {
+func (dbm *databaseManager) clearStateTrieMigrationStatus() {
 	miscDB := dbm.getDatabase(MiscDB)
 	if err := miscDB.Put(migrationStatusKey, encodeUint64(0)); err != nil {
-		return err
+		logger.Crit("Failed to clear state trie migration status", "err", err)
 	}
 
 	dbm.lockInMigration.Lock()
 	defer dbm.lockInMigration.Unlock()
 
 	dbm.inMigration, dbm.migrationBlockNumber = false, 0
-	return nil
 }
 
 func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) {
@@ -555,20 +555,10 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 	newDB, newDBDir := newStateTrieMigrationDB(dbm.config, blockNum)
 
 	// Store the directory
-	if err := dbm.setDBDir(StateTrieMigrationDB, newDBDir); err != nil {
-		newDB.Close()
-		removeDB(newDBDir)
-		logger.Error("Failed to store a new database directory", "newDBDir", newDBDir, "err", err)
-		return err
-	}
+	dbm.setDBDir(StateTrieMigrationDB, newDBDir)
 
 	// Store the migration status
-	if err := dbm.setStateTrieMigrationStatus(blockNum); err != nil {
-		newDB.Close()
-		removeDB(newDBDir)
-		logger.Error("Failed to save migration status")
-		return err
-	}
+	dbm.setStateTrieMigrationStatus(blockNum)
 
 	dbm.dbs[StateTrieMigrationDB] = newDB
 	return nil
