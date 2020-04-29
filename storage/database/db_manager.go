@@ -47,8 +47,8 @@ type DBManager interface {
 	GetDBConfig() *DBConfig
 	CreateMigrationDBAndSetStatus(blockNum uint64) error
 	FinishStateMigration()
-	GetOldStateTrieDB() Database
-	GetNewStateTrieDB() Database
+	GetStateTrieDB() Database
+	GetStateTrieMigrationDB() Database
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -469,7 +469,7 @@ func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 		defer dbm.lockInMigration.RUnlock()
 
 		if dbm.inMigration {
-			return dbm.GetNewStateTrieDB().NewBatch()
+			return dbm.GetStateTrieMigrationDB().NewBatch()
 		}
 	}
 	return dbm.getDatabase(dbEntryType).NewBatch()
@@ -611,11 +611,11 @@ func removeDB(dbPath string) {
 	logger.Info("Successfully removed database", "path", dbPath)
 }
 
-func (dbm *databaseManager) GetOldStateTrieDB() Database {
+func (dbm *databaseManager) GetStateTrieDB() Database {
 	return dbm.dbs[StateTrieDB]
 }
 
-func (dbm *databaseManager) GetNewStateTrieDB() Database {
+func (dbm *databaseManager) GetStateTrieMigrationDB() Database {
 	return dbm.dbs[StateTrieMigrationDB]
 }
 
@@ -1307,7 +1307,7 @@ func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 	defer dbm.lockInMigration.RUnlock()
 
 	if dbm.inMigration {
-		if val, err := dbm.GetNewStateTrieDB().Get(hash[:]); err == nil {
+		if val, err := dbm.GetStateTrieMigrationDB().Get(hash[:]); err == nil {
 			return val, nil
 		}
 	}
@@ -1320,7 +1320,7 @@ func (dbm *databaseManager) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte
 	defer dbm.lockInMigration.RUnlock()
 
 	if dbm.inMigration {
-		if val, err := dbm.GetNewStateTrieDB().Get(secureKey); err == nil {
+		if val, err := dbm.GetStateTrieMigrationDB().Get(secureKey); err == nil {
 			return val, nil
 		}
 	}
@@ -1333,7 +1333,7 @@ func (dbm *databaseManager) ReadStateTrieNode(key []byte) ([]byte, error) {
 	defer dbm.lockInMigration.RUnlock()
 
 	if dbm.inMigration {
-		if val, err := dbm.GetNewStateTrieDB().Get(key); err == nil {
+		if val, err := dbm.GetStateTrieMigrationDB().Get(key); err == nil {
 			return val, nil
 		}
 	}
@@ -1354,7 +1354,7 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 	defer dbm.lockInMigration.RUnlock()
 
 	if dbm.inMigration {
-		if val, err := dbm.GetNewStateTrieDB().Get(preimageKey(hash)); err == nil {
+		if val, err := dbm.GetStateTrieMigrationDB().Get(preimageKey(hash)); err == nil {
 			return val
 		}
 	}
@@ -1363,21 +1363,21 @@ func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
 
 // Cached Trie Node operation.
 func (dbm *databaseManager) ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error) {
-	return dbm.GetNewStateTrieDB().Get(hash[:])
+	return dbm.GetStateTrieMigrationDB().Get(hash[:])
 }
 
 // Cached Trie Node Preimage operation.
 func (dbm *databaseManager) ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error) {
-	return dbm.GetNewStateTrieDB().Get(secureKey)
+	return dbm.GetStateTrieMigrationDB().Get(secureKey)
 }
 
 // State Trie Related operations.
 func (dbm *databaseManager) ReadStateTrieNodeFromNew(key []byte) ([]byte, error) {
-	return dbm.GetNewStateTrieDB().Get(key)
+	return dbm.GetStateTrieMigrationDB().Get(key)
 }
 
 func (dbm *databaseManager) HasStateTrieNodeFromNew(key []byte) (bool, error) {
-	val, err := dbm.GetNewStateTrieDB().Get(key)
+	val, err := dbm.GetStateTrieMigrationDB().Get(key)
 	if val == nil || err != nil {
 		return false, err
 	}
@@ -1386,7 +1386,7 @@ func (dbm *databaseManager) HasStateTrieNodeFromNew(key []byte) (bool, error) {
 
 // ReadPreimage retrieves a single preimage of the provided hash.
 func (dbm *databaseManager) ReadPreimageFromNew(hash common.Hash) []byte {
-	data, _ := dbm.GetNewStateTrieDB().Get(preimageKey(hash))
+	data, _ := dbm.GetStateTrieMigrationDB().Get(preimageKey(hash))
 	return data
 }
 
