@@ -203,6 +203,14 @@ func buildFlags(env build.Environment) (flags []string) {
 		ld = append(ld, "-s")
 	}
 
+	if env.IsDisabledSymbolTable {
+		ld = append(ld, "-s")
+	}
+	if env.IsStaticLink {
+		// Pass the static link flag to the external linker.
+		// By default, cmd/link will use external linking mode when non-standard cgo packages are involved.
+		ld = append(ld, "-linkmode", "external", "-extldflags", "-static")
+	}
 	if env.IsKlaytnRaceDetectionOn {
 		flags = append(flags, "-race")
 	}
