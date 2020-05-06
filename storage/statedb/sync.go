@@ -72,18 +72,23 @@ func newSyncMemBatch() *syncMemBatch {
 	}
 }
 
+type StateTrieReadDB interface {
+	ReadStateTrieNode(key []byte) ([]byte, error)
+	HasStateTrieNode(key []byte) (bool, error)
+}
+
 // TrieSync is the main state trie synchronisation scheduler, which provides yet
 // unknown trie hashes to retrieve, accepts node data associated with said hashes
 // and reconstructs the trie step by step until all is done.
 type TrieSync struct {
-	database database.DBManager       // Persistent database to check for existing entries
+	database StateTrieReadDB          // Persistent database to check for existing entries
 	membatch *syncMemBatch            // Memory buffer to avoid frequest database writes
 	requests map[common.Hash]*request // Pending requests pertaining to a key hash
 	queue    *prque.Prque             // Priority queue with the pending requests
 }
 
 // NewTrieSync creates a new trie data download scheduler.
-func NewTrieSync(root common.Hash, database database.DBManager, callback LeafCallback) *TrieSync {
+func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback) *TrieSync {
 	ts := &TrieSync{
 		database: database,
 		membatch: newSyncMemBatch(),
@@ -219,6 +224,7 @@ func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
 // storage, returning th enumber of items written and any occurred error.
 func (s *TrieSync) Commit(dbw database.Putter) (int, error) {
 	// Dump the membatch into a database dbw
+	// TODO-Klaytn need to consider batch put
 	for i, key := range s.membatch.order {
 		if err := dbw.Put(key[:], s.membatch.batch[key]); err != nil {
 			return i, err
