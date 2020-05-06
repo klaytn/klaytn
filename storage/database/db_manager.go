@@ -30,6 +30,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
@@ -38,12 +39,16 @@ type DBManager interface {
 	IsParallelDBWrite() bool
 	IsPartitioned() bool
 	InMigration() bool
+	MigrationBlockNumber() uint64
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
-	SetStateTrieMigrationDB(blockNum uint64)
+	CreateMigrationDBAndSetStatus(blockNum uint64) error
+	FinishStateMigration()
+	GetStateTrieDB() Database
+	GetStateTrieMigrationDB() Database
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -111,6 +116,14 @@ type DBManager interface {
 	HasStateTrieNode(key []byte) (bool, error)
 	ReadPreimage(hash common.Hash) []byte
 
+	// Read StateTrie from new DB
+	ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error)
+	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
+	ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
+	HasStateTrieNodeFromNew(key []byte) (bool, error)
+	ReadPreimageFromNew(hash common.Hash) []byte
+
+	// Read StateTrie from old DB
 	ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error)
 	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
 	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
@@ -195,14 +208,14 @@ type DBManager interface {
 type DBEntryType uint8
 
 const (
-	headerDB DBEntryType = iota
+	MiscDB DBEntryType = iota // Do not move MiscDB which has the path of others DB.
+	headerDB
 	BodyDB
 	ReceiptsDB
 	StateTrieDB
+	StateTrieMigrationDB
 	TxLookUpEntryDB
-	MiscDB
 	bridgeServiceDB
-
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -211,25 +224,27 @@ const notInMigrationFlag = 0
 const inMigrationFlag = 1
 
 var dbDirs = [databaseEntryTypeSize]string{
+	"misc", // do not move misc
 	"header",
 	"body",
 	"receipts",
 	"statetrie",
+	"statetrie_", // not used
 	"txlookup",
-	"misc",
 	"bridgeservice",
 }
 
 // Sum of dbConfigRatio should be 100.
 // Otherwise, logger.Crit will be called at checkDBEntryConfigRatio.
 var dbConfigRatio = [databaseEntryTypeSize]int{
-	6,  // headerDB
-	21, // BodyDB
-	21, // ReceiptsDB
-	23, // StateTrieDB
-	21, // TXLookUpEntryDB
 	3,  // MiscDB
-	5,  // bridgeServiceDB
+	6,  // headerDB
+	16, // BodyDB
+	16, // ReceiptsDB
+	19, // StateTrieDB
+	19, // StateTrieMigrationDB
+	17, // TXLookUpEntryDB
+	4,  // bridgeServiceDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -244,9 +259,9 @@ func checkDBEntryConfigRatio() {
 	}
 }
 
-// getDBEntryConfig returns a new DBConfig with original DBConfig and DBEntryType.
+// getDBEntryConfig returns a new DBConfig with original DBConfig, DBEntryType and dbDir.
 // It adjusts configuration according to the ratio specified in dbConfigRatio and dbDirs.
-func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType) *DBConfig {
+func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBConfig {
 	newDBC := *originalDBC
 	ratio := dbConfigRatio[i]
 
@@ -254,7 +269,7 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType) *DBConfig {
 	newDBC.OpenFilesLimit = originalDBC.OpenFilesLimit * ratio / 100
 
 	// Update dir to each Database specific directory.
-	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDirs[i])
+	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDir)
 
 	return &newDBC
 }
@@ -264,8 +279,11 @@ type databaseManager struct {
 	dbs    []Database
 	cm     *cacheManager
 
-	inMigration    bool
-	newStateTrieDB Database
+	// TODO-Klaytn need to refine below.
+	// -merge status variable
+	lockInMigration      sync.RWMutex
+	inMigration          bool
+	migrationBlockNumber uint64
 }
 
 func NewMemoryDBManager() DBManager {
@@ -315,20 +333,48 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	return dbm, nil
 }
 
+// newMiscDB returns misc DBManager. If not exist, the function create DB before returning.
+func newMiscDB(dbc *DBConfig) Database {
+	newDBC := getDBEntryConfig(dbc, MiscDB, dbDirs[MiscDB])
+	db, err := newDatabase(newDBC, MiscDB)
+	if err != nil {
+		logger.Crit("Failed while generating a MISC database", "err", err)
+	}
+
+	db.Meter(dbMetricPrefix + dbDirs[MiscDB] + "/")
+	return db
+}
+
 // partitionedDatabaseDBManager returns DBManager which handles partitioned Database.
 // Each Database will have its own separated Database.
 func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 	dbm := newDatabaseManager(dbc)
 	var db Database
 	var err error
-	for et := 0; et < int(databaseEntryTypeSize); et++ {
+
+	// Create Misc DB first to get the DB directory of stateTrieDB.
+	miscDB := newMiscDB(dbc)
+	dbm.dbs[MiscDB] = miscDB
+
+	// Create other DBs
+	for et := int(MiscDB) + 1; et < int(databaseEntryTypeSize); et++ {
 		entryType := DBEntryType(et)
 
-		newDBC := getDBEntryConfig(dbc, entryType)
+		if entryType == StateTrieDB || entryType == StateTrieMigrationDB {
+			dir := dbm.getDBDir(entryType)
+			newDBC := getDBEntryConfig(dbc, entryType, dir)
+			if entryType == StateTrieMigrationDB && dir == "" {
+				// If there is no migration DB, skip to set.
+				continue
+			}
 
-		if entryType == StateTrieDB && dbc.NumStateTriePartitions > 1 {
-			db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
+			if dbc.NumStateTriePartitions > 1 {
+				db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
+			} else {
+				db, err = newDatabase(newDBC, entryType)
+			}
 		} else {
+			newDBC := getDBEntryConfig(dbc, entryType, dbDirs[entryType])
 			db, err = newDatabase(newDBC, entryType)
 		}
 
@@ -383,9 +429,14 @@ func NewDBManager(dbc *DBConfig) DBManager {
 		if err != nil {
 			logger.Crit("Failed to partitioned database", "DBType", dbc.DBType, "err", err)
 		}
-		if inMigration, migrationDir := dbm.getStateTrieMigrationInfo(); inMigration {
-			dbm.newStateTrieDB = createStateTrieMigrationDB(dbm.config, migrationDir)
-			dbm.inMigration = true
+		if migrationBlockNum := dbm.getStateTrieMigrationInfo(); migrationBlockNum > 0 {
+			mdb := dbm.getDatabase(StateTrieMigrationDB)
+			if mdb == nil {
+				logger.Error("Failed to load StateTrieMigrationDB database", "migrationBlockNumber", migrationBlockNum)
+			} else {
+				dbm.inMigration = true
+				dbm.migrationBlockNumber = migrationBlockNum
+			}
 		}
 		return dbm
 	}
@@ -402,82 +453,157 @@ func (dbm *databaseManager) IsPartitioned() bool {
 }
 
 func (dbm *databaseManager) InMigration() bool {
+	dbm.lockInMigration.RLock()
+	defer dbm.lockInMigration.RUnlock()
+
 	return dbm.inMigration
 }
 
+func (dbm *databaseManager) MigrationBlockNumber() uint64 {
+	return dbm.migrationBlockNumber
+}
+
 func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
-	if dbEntryType == StateTrieDB && dbm.inMigration {
-		return dbm.newStateTrieDB.NewBatch()
+	if dbEntryType == StateTrieDB {
+		dbm.lockInMigration.RLock()
+		defer dbm.lockInMigration.RUnlock()
+
+		if dbm.inMigration {
+			return dbm.GetStateTrieMigrationDB().NewBatch()
+		}
 	}
 	return dbm.getDatabase(dbEntryType).NewBatch()
 }
 
-func (dbm *databaseManager) getStateTrieMigrationInfo() (bool, string) {
+func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
+	miscDB := dbm.getDatabase(MiscDB)
+	enc, _ := miscDB.Get(databaseDirKey(uint64(dbEntry)))
+	return string(enc)
+}
+
+func (dbm *databaseManager) setDBDir(dbEntry DBEntryType, newDBDir string) {
+	miscDB := dbm.getDatabase(MiscDB)
+	if err := miscDB.Put(databaseDirKey(uint64(dbEntry)), []byte(newDBDir)); err != nil {
+		logger.Crit("Failed to put DB dir", "err", err)
+	}
+}
+
+func (dbm *databaseManager) getStateTrieMigrationInfo() uint64 {
 	miscDB := dbm.getDatabase(MiscDB)
 	enc, _ := miscDB.Get(migrationStatusKey)
 	if len(enc) != 8 {
-		return false, ""
+		return 0
 	}
-	status := binary.BigEndian.Uint64(enc)
-	if status == 0 {
-		return false, ""
-	}
-
-	enc, _ = miscDB.Get(databaseDirKey(uint64(StateTrieDB)))
-	return true, string(enc)
+	blockNum := binary.BigEndian.Uint64(enc)
+	return blockNum
 }
 
-func createStateTrieMigrationDB(dbc *DBConfig, newDBDir string) Database {
-	oldDBConfig := dbc
-	newDBConfig := getDBEntryConfig(oldDBConfig, StateTrieDB)
-	newDBConfig.Dir = newDBDir
+func (dbm *databaseManager) setStateTrieMigrationStatus(blockNum uint64) {
+	miscDB := dbm.getDatabase(MiscDB)
+	if err := miscDB.Put(migrationStatusKey, encodeUint64(blockNum)); err != nil {
+		logger.Crit("Failed to set state trie migration status", "err", err)
+	}
+	dbm.lockInMigration.Lock()
+	defer dbm.lockInMigration.Unlock()
+
+	if blockNum == 0 {
+		dbm.inMigration, dbm.migrationBlockNumber = false, 0
+		return
+	}
+
+	dbm.inMigration, dbm.migrationBlockNumber = true, blockNum
+}
+
+func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) {
+	dbDir := dbDirs[StateTrieMigrationDB] + strconv.FormatUint(blockNum, 10)
+	newDBConfig := getDBEntryConfig(dbc, StateTrieMigrationDB, dbDir)
 	var newDB Database
 	var err error
 	if newDBConfig.NumStateTriePartitions > 1 {
-		newDB, err = newPartitionedDB(newDBConfig, StateTrieDB, newDBConfig.NumStateTriePartitions)
+		newDB, err = newPartitionedDB(newDBConfig, StateTrieMigrationDB, newDBConfig.NumStateTriePartitions)
 	} else {
-		newDB, err = newDatabase(newDBConfig, StateTrieDB)
+		newDB, err = newDatabase(newDBConfig, StateTrieMigrationDB)
 	}
 	if err != nil {
 		logger.Crit("Failed to create a new database for state trie migration", "err", err)
 	}
 	logger.Info("Created a new database for state trie migration", "newStateTrieDB", newDBConfig.Dir)
-	return newDB
+	return newDB, dbDir
 }
 
-func (dbm *databaseManager) SetStateTrieMigrationDB(blockNum uint64) {
+// CreateMigrationDBAndSetStatus create migrationDB and set migration status.
+func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error {
+	if dbm.InMigration() {
+		logger.Warn("Failed to set a new state trie migration db. Already in migration")
+		return errors.New("already in migration")
+	}
 	if !dbm.config.Partitioned {
 		logger.Warn("Setting a new database for state trie migration is allowed for partitioned database only")
-		return
+		return errors.New("non-partitioned DB does not support state trie migration")
 	}
 
 	logger.Info("Start setting a new database for state trie migration", "blockNum", blockNum)
 
-	// Store the directory of the new database first to avoid missing directory name situation
-	newDBDir := dbm.config.Dir + strconv.FormatUint(blockNum, 10)
-	miscDB := dbm.getDatabase(MiscDB)
-	if err := miscDB.Put(databaseDirKey(uint64(StateTrieDB)), []byte(newDBDir)); err != nil {
-		logger.Crit("Failed to store a new database directory", "newDBDir", newDBDir, "err", err)
-	}
+	// Create a new database for migration process.
+	newDB, newDBDir := newStateTrieMigrationDB(dbm.config, blockNum)
 
-	// After storing the directory, create a new database for migration process.
-	newDB := createStateTrieMigrationDB(dbm.config, newDBDir)
+	// Store migration db path in misc db
+	dbm.setDBDir(StateTrieMigrationDB, newDBDir)
 
-	// After creating the database, store migration status to the database.
-	// If it fails to store the migration status, remove the new database and kill the process.
-	dbm.newStateTrieDB = newDB
-	dbm.inMigration = true
-	if err := miscDB.Put(migrationStatusKey, encodeUint64(inMigrationFlag)); err != nil {
-		logger.Error("Failed to store the migration status, trying to remove the new database for state trie migration", "err", err)
-		newDB.Close()
-		if err := os.RemoveAll(newDBDir); err != nil {
-			logger.Error("Failed to remove the state trie migration database due to an error", "err", err, "dir", newDBDir)
-		} else {
-			logger.Error("Successfully removed the state trie migration database", "dir", newDBDir)
-		}
-		logger.Crit("Killed the process due to the failure of storing the migration status")
+	// Set migration db
+	dbm.dbs[StateTrieMigrationDB] = newDB
+
+	// Store the migration status
+	dbm.setStateTrieMigrationStatus(blockNum)
+
+	return nil
+}
+
+func (dbm *databaseManager) getOldStateTrieDBDir() string {
+	// get old DB dir
+	oldDBDir := dbm.getDBDir(StateTrieDB)
+	if oldDBDir == "" {
+		oldDBDir = dbDirs[StateTrieDB]
 	}
-	logger.Info("Finished setting a new database for state trie migration")
+	return oldDBDir
+}
+
+// FinishStateMigration updates stateTrieDB and removes the old one.
+// The function should be called only after when state trie migration is finished.
+func (dbm *databaseManager) FinishStateMigration() {
+	oldDB := dbm.dbs[StateTrieDB]
+	newDB := dbm.dbs[StateTrieMigrationDB]
+	oldDBDir := dbm.getOldStateTrieDBDir()
+	newDBDir := dbm.getDBDir(StateTrieMigrationDB)
+
+	// Replace StateTrieDB with new one
+	dbm.setDBDir(StateTrieDB, newDBDir)
+	dbm.dbs[StateTrieDB] = newDB
+
+	dbm.setStateTrieMigrationStatus(0)
+
+	dbm.dbs[StateTrieMigrationDB] = nil
+	dbm.setDBDir(StateTrieMigrationDB, "")
+
+	oldDBPath := filepath.Join(dbm.config.Dir, oldDBDir)
+	oldDB.Close()
+	removeDB(oldDBPath)
+}
+
+func removeDB(dbPath string) {
+	if err := os.RemoveAll(dbPath); err != nil {
+		logger.Error("Failed to remove the database due to an error", "err", err, "dir", dbPath)
+		return
+	}
+	logger.Info("Successfully removed database", "path", dbPath)
+}
+
+func (dbm *databaseManager) GetStateTrieDB() Database {
+	return dbm.dbs[StateTrieDB]
+}
+
+func (dbm *databaseManager) GetStateTrieMigrationDB() Database {
+	return dbm.dbs[StateTrieMigrationDB]
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
@@ -500,7 +626,7 @@ func (dbm *databaseManager) GetDBConfig() *DBConfig {
 
 func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
 	if dbm.config.DBType == MemoryDB {
-		return dbm.dbs[headerDB]
+		return dbm.dbs[0]
 	} else {
 		return dbm.dbs[dbEntryType]
 	}
@@ -515,12 +641,9 @@ func (dbm *databaseManager) Close() {
 
 	// If partitioned, close all databases.
 	for _, db := range dbm.dbs {
-		db.Close()
-	}
-
-	// If in migration process, also close new state trie database.
-	if dbm.inMigration {
-		dbm.newStateTrieDB.Close()
+		if db != nil {
+			db.Close()
+		}
 	}
 }
 
@@ -1167,8 +1290,11 @@ func (dbm *databaseManager) WriteMerkleProof(key, value []byte) {
 
 // Cached Trie Node operation.
 func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error) {
+	dbm.lockInMigration.RLock()
+	defer dbm.lockInMigration.RUnlock()
+
 	if dbm.inMigration {
-		if val, err := dbm.newStateTrieDB.Get(hash[:]); err == nil {
+		if val, err := dbm.GetStateTrieMigrationDB().Get(hash[:]); err == nil {
 			return val, nil
 		}
 	}
@@ -1177,8 +1303,11 @@ func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 
 // Cached Trie Node Preimage operation.
 func (dbm *databaseManager) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error) {
+	dbm.lockInMigration.RLock()
+	defer dbm.lockInMigration.RUnlock()
+
 	if dbm.inMigration {
-		if val, err := dbm.newStateTrieDB.Get(secureKey); err == nil {
+		if val, err := dbm.GetStateTrieMigrationDB().Get(secureKey); err == nil {
 			return val, nil
 		}
 	}
@@ -1187,8 +1316,11 @@ func (dbm *databaseManager) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte
 
 // State Trie Related operations.
 func (dbm *databaseManager) ReadStateTrieNode(key []byte) ([]byte, error) {
+	dbm.lockInMigration.RLock()
+	defer dbm.lockInMigration.RUnlock()
+
 	if dbm.inMigration {
-		if val, err := dbm.newStateTrieDB.Get(key); err == nil {
+		if val, err := dbm.GetStateTrieMigrationDB().Get(key); err == nil {
 			return val, nil
 		}
 	}
@@ -1205,12 +1337,44 @@ func (dbm *databaseManager) HasStateTrieNode(key []byte) (bool, error) {
 
 // ReadPreimage retrieves a single preimage of the provided hash.
 func (dbm *databaseManager) ReadPreimage(hash common.Hash) []byte {
+	dbm.lockInMigration.RLock()
+	defer dbm.lockInMigration.RUnlock()
+
 	if dbm.inMigration {
-		if val, err := dbm.newStateTrieDB.Get(preimageKey(hash)); err == nil {
+		if val, err := dbm.GetStateTrieMigrationDB().Get(preimageKey(hash)); err == nil {
 			return val
 		}
 	}
 	return dbm.ReadPreimageFromOld(hash)
+}
+
+// Cached Trie Node operation.
+func (dbm *databaseManager) ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error) {
+	return dbm.GetStateTrieMigrationDB().Get(hash[:])
+}
+
+// Cached Trie Node Preimage operation.
+func (dbm *databaseManager) ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error) {
+	return dbm.GetStateTrieMigrationDB().Get(secureKey)
+}
+
+// State Trie Related operations.
+func (dbm *databaseManager) ReadStateTrieNodeFromNew(key []byte) ([]byte, error) {
+	return dbm.GetStateTrieMigrationDB().Get(key)
+}
+
+func (dbm *databaseManager) HasStateTrieNodeFromNew(key []byte) (bool, error) {
+	val, err := dbm.GetStateTrieMigrationDB().Get(key)
+	if val == nil || err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// ReadPreimage retrieves a single preimage of the provided hash.
+func (dbm *databaseManager) ReadPreimageFromNew(hash common.Hash) []byte {
+	data, _ := dbm.GetStateTrieMigrationDB().Get(preimageKey(hash))
+	return data
 }
 
 func (dbm *databaseManager) ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error) {

@@ -879,10 +879,6 @@ func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error
 	// Reset the garbage collection statistics
 	db.gcnodes, db.gcsize, db.gctime = 0, 0, 0
 	db.flushnodes, db.flushsize, db.flushtime = 0, 0, 0
-
-	if db.settingMigrationDBRequired(blockNum) {
-		db.diskDB.SetStateTrieMigrationDB(blockNum)
-	}
 	return nil
 }
 
