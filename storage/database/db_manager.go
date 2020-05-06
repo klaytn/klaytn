@@ -577,7 +577,6 @@ func (dbm *databaseManager) FinishStateMigration() {
 	newDBDir := dbm.getDBDir(StateTrieMigrationDB)
 
 	// Replace StateTrieDB with new one
-	// Replace StateTrieDB with new one
 	dbm.setDBDir(StateTrieDB, newDBDir)
 	dbm.dbs[StateTrieDB] = newDB
 
