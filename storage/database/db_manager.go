@@ -432,11 +432,11 @@ func NewDBManager(dbc *DBConfig) DBManager {
 		if migrationBlockNum := dbm.getStateTrieMigrationInfo(); migrationBlockNum > 0 {
 			mdb := dbm.getDatabase(StateTrieMigrationDB)
 			if mdb == nil {
-				logger.Error("Failed to load StateTrieMigrationDB database")
-
+				logger.Error("Failed to load StateTrieMigrationDB database", "migrationBlockNumber", migrationBlockNum)
+			} else {
+				dbm.inMigration = true
+				dbm.migrationBlockNumber = migrationBlockNum
 			}
-			dbm.inMigration = true
-			dbm.migrationBlockNumber = migrationBlockNum
 		}
 		return dbm
 	}
