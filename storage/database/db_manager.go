@@ -550,10 +550,12 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 	// Store migration db path in misc db
 	dbm.setDBDir(StateTrieMigrationDB, newDBDir)
 
+	// Set migration db
+	dbm.dbs[StateTrieMigrationDB] = newDB
+
 	// Store the migration status
 	dbm.setStateTrieMigrationStatus(blockNum)
 
-	dbm.dbs[StateTrieMigrationDB] = newDB
 	return nil
 }
 
