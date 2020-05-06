@@ -558,7 +558,7 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 	// Create a new database for migration process.
 	newDB, newDBDir := newStateTrieMigrationDB(dbm.config, blockNum)
 
-	// Store the directory
+	// Store migration db path in misc db
 	dbm.setDBDir(StateTrieMigrationDB, newDBDir)
 
 	// Store the migration status
@@ -577,13 +577,15 @@ func (dbm *databaseManager) getOldStateTrieDBDir() string {
 	return oldDBDir
 }
 
-// FinishStateMigration updates stateTrieDB and remove old one.
+// FinishStateMigration updates stateTrieDB and removes the old one.
+// The function should be called only after when state trie migration is finished.
 func (dbm *databaseManager) FinishStateMigration() {
 	oldDB := dbm.dbs[StateTrieDB]
 	newDB := dbm.dbs[StateTrieMigrationDB]
 	oldDBDir := dbm.getOldStateTrieDBDir()
 	newDBDir := dbm.getDBDir(StateTrieMigrationDB)
 
+	// Replace StateTrieDB with new one
 	dbm.setDBDir(StateTrieDB, newDBDir)
 	dbm.dbs[StateTrieDB] = newDB
 
