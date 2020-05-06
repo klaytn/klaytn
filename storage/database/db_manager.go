@@ -259,7 +259,7 @@ func checkDBEntryConfigRatio() {
 	}
 }
 
-// getDBEntryConfig returns a new DBConfig with original DBConfig, DBEntryType, and dbDir.
+// getDBEntryConfig returns a new DBConfig with original DBConfig, DBEntryType and dbDir.
 // It adjusts configuration according to the ratio specified in dbConfigRatio and dbDirs.
 func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBConfig {
 	newDBC := *originalDBC
@@ -333,7 +333,7 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	return dbm, nil
 }
 
-// newMiscDB creates misc DBManager.
+// newMiscDB returns misc DBManager. If not exist, the function create DB before returning.
 func newMiscDB(dbc *DBConfig) Database {
 	newDBC := getDBEntryConfig(dbc, MiscDB, dbDirs[MiscDB])
 	db, err := newDatabase(newDBC, MiscDB)
