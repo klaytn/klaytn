@@ -269,10 +269,7 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBCon
 	newDBC.OpenFilesLimit = originalDBC.OpenFilesLimit * ratio / 100
 
 	// Update dir to each Database specific directory.
-	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDirs[i])
-	if dbDir != "" {
-		newDBC.Dir = filepath.Join(originalDBC.Dir, dbDir)
-	}
+	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDir)
 
 	return &newDBC
 }
@@ -338,7 +335,7 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 
 // newMiscDB creates misc DBManager.
 func newMiscDB(dbc *DBConfig) Database {
-	newDBC := getDBEntryConfig(dbc, MiscDB, "")
+	newDBC := getDBEntryConfig(dbc, MiscDB, dbDirs[MiscDB])
 	db, err := newDatabase(newDBC, MiscDB)
 	if err != nil {
 		logger.Crit("Failed while generating a MISC database", "err", err)
@@ -377,7 +374,7 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 				db, err = newDatabase(newDBC, entryType)
 			}
 		} else {
-			newDBC := getDBEntryConfig(dbc, entryType, "")
+			newDBC := getDBEntryConfig(dbc, entryType, dbDirs[entryType])
 			db, err = newDatabase(newDBC, entryType)
 		}
 
