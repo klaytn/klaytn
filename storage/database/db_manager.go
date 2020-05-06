@@ -364,7 +364,7 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 	for et := int(MiscDB) + 1; et < int(databaseEntryTypeSize); et++ {
 		entryType := DBEntryType(et)
 
-		if (entryType == StateTrieDB || entryType == StateTrieMigrationDB) && dbc.NumStateTriePartitions > 1 {
+		if entryType == StateTrieDB || entryType == StateTrieMigrationDB {
 			dir := dbm.getDBDir(entryType)
 			newDBC := getDBEntryConfig(dbc, entryType, dir)
 			if entryType == StateTrieMigrationDB && dir == "" {
@@ -372,7 +372,11 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 				continue
 			}
 
-			db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
+			if dbc.NumStateTriePartitions > 1 {
+				db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
+			} else {
+				db, err = newDatabase(newDBC, entryType)
+			}
 		} else {
 			newDBC := getDBEntryConfig(dbc, entryType, "")
 			db, err = newDatabase(newDBC, entryType)

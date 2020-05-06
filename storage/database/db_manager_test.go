@@ -431,6 +431,8 @@ func TestDBManager_TrieNode(t *testing.T) {
 		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2[:])
 		assert.True(t, hasStateTrieNode)
 		assert.False(t, hasOldStateTrieNode)
+
+		dbm.FinishStateMigration()
 	}
 }
 
@@ -675,11 +677,19 @@ func TestDBManager_StateTrieMigration(t *testing.T) {
 		if !dbm.IsPartitioned() || dbConfigs[i].DBType == MemoryDB {
 			continue
 		}
+
+		assert.False(t, dbManagers[i].InMigration())
+
 		err := dbm.CreateMigrationDBAndSetStatus(12345)
 		assert.NoError(t, err)
+		assert.True(t, dbManagers[i].InMigration())
+
+		dbm.FinishStateMigration()
+		assert.False(t, dbManagers[i].InMigration())
+
 		dbm.Close()
 		dbManagers[i] = NewDBManager(dbConfigs[i])
-		assert.True(t, dbManagers[i].InMigration())
+		assert.False(t, dbManagers[i].InMigration())
 	}
 }
 
