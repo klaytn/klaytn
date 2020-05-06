@@ -269,9 +269,8 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBCon
 	newDBC.OpenFilesLimit = originalDBC.OpenFilesLimit * ratio / 100
 
 	// Update dir to each Database specific directory.
-	if dbDir == "" {
-		newDBC.Dir = filepath.Join(originalDBC.Dir, dbDirs[i])
-	} else {
+	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDirs[i])
+	if dbDir != "" {
 		newDBC.Dir = filepath.Join(originalDBC.Dir, dbDir)
 	}
 
@@ -337,14 +336,15 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	return dbm, nil
 }
 
-// getMiscDB returns misc DBManager
-func getMiscDB(dbc *DBConfig) Database {
+// newMiscDB creates misc DBManager.
+func newMiscDB(dbc *DBConfig) Database {
 	newDBC := getDBEntryConfig(dbc, MiscDB, "")
 	db, err := newDatabase(newDBC, MiscDB)
-
 	if err != nil {
 		logger.Crit("Failed while generating a MISC database", "err", err)
 	}
+
+	db.Meter(dbMetricPrefix + dbDirs[MiscDB] + "/")
 	return db
 }
 
@@ -356,8 +356,7 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 	var err error
 
 	// Create Misc DB first to get the DB directory of stateTrieDB.
-	miscDB := getMiscDB(dbc)
-	miscDB.Meter(dbMetricPrefix + dbDirs[MiscDB] + "/") // Each partition collects metrics independently.
+	miscDB := newMiscDB(dbc)
 	dbm.dbs[MiscDB] = miscDB
 
 	// Create other DBs
