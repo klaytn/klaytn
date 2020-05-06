@@ -484,7 +484,7 @@ func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
 func (dbm *databaseManager) setDBDir(dbEntry DBEntryType, newDBDir string) {
 	miscDB := dbm.getDatabase(MiscDB)
 	if err := miscDB.Put(databaseDirKey(uint64(dbEntry)), []byte(newDBDir)); err != nil {
-		logger.Crit("Failed to DB dir", "err", err)
+		logger.Crit("Failed to put DB dir", "err", err)
 	}
 }
 
