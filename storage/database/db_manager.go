@@ -506,19 +506,12 @@ func (dbm *databaseManager) setStateTrieMigrationStatus(blockNum uint64) {
 	dbm.lockInMigration.Lock()
 	defer dbm.lockInMigration.Unlock()
 
-	dbm.inMigration, dbm.migrationBlockNumber = true, blockNum
-}
-
-func (dbm *databaseManager) clearStateTrieMigrationStatus() {
-	miscDB := dbm.getDatabase(MiscDB)
-	if err := miscDB.Put(migrationStatusKey, encodeUint64(0)); err != nil {
-		logger.Crit("Failed to clear state trie migration status", "err", err)
+	if blockNum == 0 {
+		dbm.inMigration, dbm.migrationBlockNumber = false, 0
+		return
 	}
 
-	dbm.lockInMigration.Lock()
-	defer dbm.lockInMigration.Unlock()
-
-	dbm.inMigration, dbm.migrationBlockNumber = false, 0
+	dbm.inMigration, dbm.migrationBlockNumber = true, blockNum
 }
 
 func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) {
@@ -585,7 +578,7 @@ func (dbm *databaseManager) FinishStateMigration() {
 	dbm.setDBDir(StateTrieDB, newDBDir)
 	dbm.dbs[StateTrieDB] = newDB
 
-	dbm.clearStateTrieMigrationStatus()
+	dbm.setStateTrieMigrationStatus(0)
 
 	dbm.dbs[StateTrieMigrationDB] = nil
 	dbm.setDBDir(StateTrieMigrationDB, "")
