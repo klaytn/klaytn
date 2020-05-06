@@ -259,7 +259,7 @@ func checkDBEntryConfigRatio() {
 	}
 }
 
-// getDBEntryConfig returns a new DBConfig with original DBConfig and DBEntryType.
+// getDBEntryConfig returns a new DBConfig with original DBConfig, DBEntryType, and dbDir.
 // It adjusts configuration according to the ratio specified in dbConfigRatio and dbDirs.
 func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBConfig {
 	newDBC := *originalDBC
@@ -576,6 +576,7 @@ func (dbm *databaseManager) FinishStateMigration() {
 	oldDBDir := dbm.getOldStateTrieDBDir()
 	newDBDir := dbm.getDBDir(StateTrieMigrationDB)
 
+	// Replace StateTrieDB with new one
 	// Replace StateTrieDB with new one
 	dbm.setDBDir(StateTrieDB, newDBDir)
 	dbm.dbs[StateTrieDB] = newDB
