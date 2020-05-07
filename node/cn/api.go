@@ -165,8 +165,10 @@ func (api *PrivateAdminAPI) StartStateMigration(immediately bool) error {
 		targetBlock := currentBlock - (currentBlock % blockchain.DefaultBlockInterval)
 		targetRoot := api.cn.blockchain.GetBlockByNumber(targetBlock).Root()
 		logger.Info("Start state migration", "currentBlock", currentBlock, "targetBlock", targetBlock, "targetRoot", targetRoot)
+
 		return api.cn.BlockChain().StartStateMigration(targetBlock, targetRoot)
 	}
+
 	return api.cn.blockchain.PrepareStateMigration()
 }
 
@@ -180,6 +182,7 @@ func (api *PrivateAdminAPI) StopStateMigration() error {
 // StatusStateMigration returns the status information of state trie migration.
 func (api *PrivateAdminAPI) StatusStateMigration() map[string]interface{} {
 	isMigration, blkNum, committed, pending := api.cn.BlockChain().StatusStateMigration()
+
 	return map[string]interface{}{
 		// TODO-Klaytn Add more information.
 		"isMigration":          isMigration,
