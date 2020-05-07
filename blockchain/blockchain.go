@@ -290,29 +290,33 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	queue := append([]common.Hash{}, trieSync.Missing(maxBatchSize)...)
 
 	committedCnt := 0
+
 	for trieSync.Pending() > 0 {
 		// TODO-Klaytn refine the status parameter (progress percentage, etc)
 		bc.committedCnt, bc.pendingCnt = committedCnt, trieSync.Pending()
 		logger.Warn("State migration progress", "committedCnt", bc.committedCnt, "pendingCnt", bc.pendingCnt)
 
 		results := make([]statedb.SyncResult, len(queue))
+
 		for i, hash := range queue {
 			data, err := srcCachedDB.NodeFromOld(hash)
 			if err != nil {
-				return errors.New(fmt.Sprintf("failed to retrieve node data for %x: %v", hash, err))
+				return fmt.Errorf("failed to retrieve node data for %x: %v", hash, err)
 			}
+
 			results[i] = statedb.SyncResult{Hash: hash, Data: data}
 		}
 
-		committedCnt = committedCnt + len(results)
+		committedCnt += len(results)
 
 		if _, index, err := trieSync.Process(results); err != nil {
-			return errors.New(fmt.Sprintf("failed to process result #%d: %v", index, err))
+			return fmt.Errorf("failed to process result #%d: %v", index, err)
 		}
 
 		if index, err := trieSync.Commit(targetDB.DiskDB().GetStateTrieMigrationDB()); err != nil {
-			return errors.New(fmt.Sprintf("failed to commit data #%d: %v", index, err))
+			return fmt.Errorf("failed to commit data #%d: %v", index, err)
 		}
+
 		queue = append(queue[:0], trieSync.Missing(maxBatchSize)...)
 
 		select {
@@ -341,12 +345,14 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		if err != nil {
 			return err
 		}
+
 		return errors.New("copied state is not same with origin")
 	}
 
 	// TODO-Klaytn Swap DB and Remove Old DB
 	bc.db.FinishStateMigration()
 	logger.Info("completed state migration")
+
 	return nil
 }
 
@@ -355,6 +361,7 @@ func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root com
 	if err != nil {
 		return nil, err
 	}
+
 	newTrie, err := statedb.NewSecureTrie(root, newDB)
 	if err != nil {
 		return nil, err
@@ -364,13 +371,16 @@ func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root com
 	iter := statedb.NewIterator(diff)
 
 	var dirty []common.Address
+
 	for iter.Next() {
 		key := newTrie.GetKey(iter.Key)
 		if key == nil {
 			return nil, fmt.Errorf("no preimage found for hash %x", iter.Key)
 		}
+
 		dirty = append(dirty, common.BytesToAddress(key))
 	}
+
 	return dirty, nil
 }
 
@@ -379,6 +389,7 @@ func (bc *BlockChain) migrationLoop() {
 
 	if bc.db.InMigration() {
 		number := bc.db.MigrationBlockNumber()
+
 		block := bc.GetBlockByNumber(number)
 		if block == nil {
 			logger.Error("failed to get migration block number", "blockNumber", number)
@@ -411,26 +422,30 @@ func (bc *BlockChain) PrepareStateMigration() error {
 	if bc.db.InMigration() || bc.prepareStateMigration {
 		return errors.New("migration already started")
 	}
+
 	bc.prepareStateMigration = true
 	currentBlock := bc.CurrentBlock().NumberU64()
 	nextCommittedBlock := currentBlock + (DefaultBlockInterval - currentBlock%DefaultBlockInterval)
 	logger.Warn("Prepare state migration", "nextCommittedBlock", nextCommittedBlock)
+
 	return nil
 }
 
 func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) {
 	if bc.prepareStateMigration {
 		logger.Info("Start state migration", "block", number, "root", root)
+
 		if err := bc.StartStateMigration(number, root); err != nil {
 			logger.Error("Failed to start state migration", "err", err)
 		}
+
 		bc.prepareStateMigration = false
 	}
 }
 
 func (bc *BlockChain) StartStateMigration(number uint64, root common.Hash) error {
 	// TODO-Klaytn Add internal status check routine
-	if bc.db.InMigration() == true {
+	if bc.db.InMigration() {
 		return errors.New("migration already started")
 	}
 
@@ -451,7 +466,9 @@ func (bc *BlockChain) StopStateMigration() error {
 	if !bc.db.InMigration() {
 		return errors.New("not in migration")
 	}
+
 	bc.stopMigration <- struct{}{}
+
 	return nil
 }
 
@@ -1268,6 +1285,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		if err := trieDB.Commit(root, false, statedb.NoDataArchivingPreparation); err != nil {
 			return err
 		}
+
 		bc.checkStartStateMigration(block.NumberU64(), root)
 	} else {
 		// Full but not archive node, do proper garbage collection
@@ -1291,6 +1309,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			if err := trieDB.Commit(block.Header().Root, true, block.NumberU64()); err != nil {
 				return err
 			}
+
 			bc.checkStartStateMigration(block.NumberU64(), root)
 		}
 
