@@ -362,12 +362,12 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 
 		if entryType == StateTrieDB || entryType == StateTrieMigrationDB {
 			dir := dbm.getDBDir(entryType)
-			newDBC := getDBEntryConfig(dbc, entryType, dir)
 			if entryType == StateTrieMigrationDB && dir == dbDirs[StateTrieMigrationDB] {
 				// If there is no migration DB, skip to set.
 				continue
 			}
 
+			newDBC := getDBEntryConfig(dbc, entryType, dir)
 			if dbc.NumStateTriePartitions > 1 {
 				db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
 			} else {
@@ -493,10 +493,12 @@ func (dbm *databaseManager) setDBDir(dbEntry DBEntryType, newDBDir string) {
 
 func (dbm *databaseManager) getStateTrieMigrationInfo() uint64 {
 	miscDB := dbm.getDatabase(MiscDB)
+
 	enc, _ := miscDB.Get(migrationStatusKey)
 	if len(enc) != 8 {
 		return 0
 	}
+
 	blockNum := binary.BigEndian.Uint64(enc)
 	return blockNum
 }
