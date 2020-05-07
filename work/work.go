@@ -287,4 +287,10 @@ type BlockChain interface {
 	PostChainEvents(events []interface{}, logs []*types.Log)
 	TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB, error)
 	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, uint64, error)
+
+	// State Migration
+	PrepareStateMigration() error
+	StartStateMigration(uint64, common.Hash) error
+	StopStateMigration() error
+	StatusStateMigration() (bool, uint64, int, int)
 }
