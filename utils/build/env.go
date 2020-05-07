@@ -46,6 +46,8 @@ type Environment struct {
 	IsPullRequest           bool
 	IsCronJob               bool
 	IsKlaytnRaceDetectionOn bool
+	IsStaticLink            bool
+	IsDisabledSymbolTable   bool
 }
 
 func (env Environment) String() string {
@@ -90,6 +92,12 @@ func LocalEnv() Environment {
 
 	if os.Getenv("KLAYTN_RACE_DETECT") == "1" {
 		env.IsKlaytnRaceDetectionOn = true
+	}
+	if os.Getenv("KLAYTN_STATIC_LINK") == "1" {
+		env.IsStaticLink = true
+	}
+	if os.Getenv("KLAYTN_DISABLE_SYMBOL") == "1" {
+		env.IsDisabledSymbolTable = true
 	}
 
 	head := readGitFile("HEAD")
