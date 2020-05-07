@@ -477,6 +477,7 @@ func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 
 func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
 	miscDB := dbm.getDatabase(MiscDB)
+
 	enc, _ := miscDB.Get(databaseDirKey(uint64(dbEntry)))
 	if len(enc) == 0 {
 		return dbDirs[dbEntry]
