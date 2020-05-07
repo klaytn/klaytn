@@ -363,7 +363,7 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 		if entryType == StateTrieDB || entryType == StateTrieMigrationDB {
 			dir := dbm.getDBDir(entryType)
 			newDBC := getDBEntryConfig(dbc, entryType, dir)
-			if entryType == StateTrieMigrationDB && dir == "" {
+			if entryType == StateTrieMigrationDB && dir == dbDirs[StateTrieMigrationDB] {
 				// If there is no migration DB, skip to set.
 				continue
 			}
@@ -478,6 +478,9 @@ func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
 	miscDB := dbm.getDatabase(MiscDB)
 	enc, _ := miscDB.Get(databaseDirKey(uint64(dbEntry)))
+	if len(enc) == 0 {
+		return dbDirs[dbEntry]
+	}
 	return string(enc)
 }
 
@@ -559,21 +562,12 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 	return nil
 }
 
-func (dbm *databaseManager) getOldStateTrieDBDir() string {
-	// get old DB dir
-	oldDBDir := dbm.getDBDir(StateTrieDB)
-	if oldDBDir == "" {
-		oldDBDir = dbDirs[StateTrieDB]
-	}
-	return oldDBDir
-}
-
 // FinishStateMigration updates stateTrieDB and removes the old one.
 // The function should be called only after when state trie migration is finished.
 func (dbm *databaseManager) FinishStateMigration() {
 	oldDB := dbm.dbs[StateTrieDB]
 	newDB := dbm.dbs[StateTrieMigrationDB]
-	oldDBDir := dbm.getOldStateTrieDBDir()
+	oldDBDir := dbm.getDBDir(StateTrieDB)
 	newDBDir := dbm.getDBDir(StateTrieMigrationDB)
 
 	// Replace StateTrieDB with new one
