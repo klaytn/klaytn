@@ -315,7 +315,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	if governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
-		cn.stakingManager = reward.NewStakingManager(cn.blockchain, governance)
+		cn.stakingManager = reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 		if handler, ok := cn.engine.(StakingHandler); ok {
 			handler.SetStakingManager(cn.stakingManager)
 		}

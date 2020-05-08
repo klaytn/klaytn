@@ -45,7 +45,7 @@ func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
 		{345601, 259200},
 		{400000, 259200},
 	}
-	stakingManager := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance())
+	stakingManager := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
 
 	for i := 0; i < len(testData); i++ {
 		testStakingInfo := newEmptyStakingInfo(testData[i] * stakingInterval)

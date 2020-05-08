@@ -23,6 +23,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 )
 
 const (
@@ -42,6 +43,7 @@ type blockChain interface {
 type StakingManager struct {
 	ac           *addressBookConnector
 	sic          *stakingInfoCache
+	sidb         *stakingInfoDB
 	gh           governanceHelper
 	bc           blockChain
 	chainHeadCh  chan blockchain.ChainHeadEvent
@@ -49,10 +51,16 @@ type StakingManager struct {
 	isActivated  bool
 }
 
-func NewStakingManager(bc blockChain, gh governanceHelper) *StakingManager {
+func NewStakingManager(bc blockChain, gh governanceHelper, dbm database.DBManager) *StakingManager {
+	sidb := &stakingInfoDB{}
+	if dbm != nil {
+		sidb.db = dbm.GetStakingInfoDB()
+	}
+
 	return &StakingManager{
 		ac:          newAddressBookConnector(bc, gh),
 		sic:         newStakingInfoCache(),
+		sidb:        sidb,
 		gh:          gh,
 		bc:          bc,
 		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),

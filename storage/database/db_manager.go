@@ -44,6 +44,7 @@ type DBManager interface {
 	Close()
 	NewBatch(dbType DBEntryType) Batch
 	GetMemDB() *MemDB
+	GetStakingInfoDB() Database
 	GetDBConfig() *DBConfig
 	CreateMigrationDBAndSetStatus(blockNum uint64) error
 	FinishStateMigration()
