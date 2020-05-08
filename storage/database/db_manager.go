@@ -216,6 +216,7 @@ const (
 	StateTrieMigrationDB
 	TxLookUpEntryDB
 	bridgeServiceDB
+	StakingInfoDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -232,6 +233,7 @@ var dbDirs = [databaseEntryTypeSize]string{
 	"statetrie_", // not used
 	"txlookup",
 	"bridgeservice",
+	"stakinginfo",
 }
 
 // Sum of dbConfigRatio should be 100.
@@ -239,12 +241,13 @@ var dbDirs = [databaseEntryTypeSize]string{
 var dbConfigRatio = [databaseEntryTypeSize]int{
 	3,  // MiscDB
 	6,  // headerDB
-	16, // BodyDB
-	16, // ReceiptsDB
+	15, // BodyDB
+	15, // ReceiptsDB
 	19, // StateTrieDB
 	19, // StateTrieMigrationDB
-	17, // TXLookUpEntryDB
+	16, // TXLookUpEntryDB
 	4,  // bridgeServiceDB
+	3,  // StakingInfoDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -617,6 +620,10 @@ func (dbm *databaseManager) GetMemDB() *MemDB {
 	}
 	logger.Error("GetMemDB() call to non memory DBManager object.")
 	return nil
+}
+
+func (dbm *databaseManager) GetStakingInfoDB() Database {
+	return dbm.getDatabase(StakingInfoDB)
 }
 
 // GetDBConfig returns DBConfig of the DB manager.
