@@ -35,14 +35,14 @@ func (sdb *stakingInfoDB) get(blockNum uint64) *StakingInfo {
 	key := intToByte(blockNum)
 	value, err := sdb.db.Get(key)
 	if err != nil {
-		logger.Error("Failed to get staking info from stakingInfoDB", "blockNum", blockNum, "err", err)
+		logger.Error("Failed to get staking info from stakingInfoDB.", "blockNum", blockNum, "err", err)
 		return nil
 	}
 
 	stakingInfo := new(StakingInfo)
 	err = json.Unmarshal(value, stakingInfo)
 	if err != nil {
-		logger.Error("Failed to unmarshal staking info", "blockNum", blockNum, "err", err, "raw staking info", value)
+		logger.Error("Failed to unmarshal staking info.", "blockNum", blockNum, "err", err, "raw staking info", value)
 		return nil
 	}
 
@@ -56,14 +56,20 @@ func (sdb *stakingInfoDB) add(stakingInfo *StakingInfo) {
 	}
 	key := intToByte(stakingInfo.BlockNum)
 
+	has, _ := sdb.db.Has(key)
+	if has == true {
+		logger.Debug("StakingInfo is already stored in DB. Skipping to put in stakingInfo.", "stakingInfo", stakingInfo)
+		return
+	}
+
 	value, err := json.Marshal(stakingInfo)
 	if err != nil {
-		logger.Error("Failed to marshal staking info before adding", "blockNum", stakingInfo.BlockNum, "err", err, "stakingInfo", stakingInfo)
+		logger.Error("Failed to marshal staking info before adding.", "err", err, "stakingInfo", stakingInfo)
 	}
 
 	err = sdb.db.Put(key, value)
 	if err != nil {
-		logger.Error("Failed to put staking info to DB", "blockNum", stakingInfo.BlockNum, "err", err)
+		logger.Error("Failed to put staking info to DB.", "blockNum", stakingInfo.BlockNum, "err", err, "stakingInfo", stakingInfo)
 	}
 }
 
