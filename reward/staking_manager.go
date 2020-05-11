@@ -43,7 +43,7 @@ type blockChain interface {
 type StakingManager struct {
 	addressBookConnector *addressBookConnector
 	stakingInfoCache     *stakingInfoCache
-	stakingInfoDB        *stakingInfoDB
+	dbManager            database.DBManager // to store staking info into db
 	governanceHelper     governanceHelper
 	blockchain           blockChain
 	chainHeadChan        chan blockchain.ChainHeadEvent
@@ -52,15 +52,10 @@ type StakingManager struct {
 }
 
 func NewStakingManager(bc blockChain, gh governanceHelper, dbm database.DBManager) *StakingManager {
-	sidb := &stakingInfoDB{}
-	if dbm != nil {
-		sidb.dbm = dbm
-	}
-
 	return &StakingManager{
 		addressBookConnector: newAddressBookConnector(bc, gh),
 		stakingInfoCache:     newStakingInfoCache(),
-		stakingInfoDB:        sidb,
+		dbManager:            dbm,
 		governanceHelper:     gh,
 		blockchain:           bc,
 		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
@@ -79,9 +74,13 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	}
 
 	// Get staking info from db
-	if storedStakingInfo := sm.stakingInfoDB.get(stakingBlockNumber); storedStakingInfo != nil {
-		logger.Debug("StakingInfoDB hit.", "Block number", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
-		return storedStakingInfo
+	if sm.dbManager != nil {
+		if storedStakingInfo, err := sm.dbManager.ReadStakingInfo(stakingBlockNumber); storedStakingInfo != nil && err == nil {
+			logger.Debug("StakingInfoDB hit.", "Block number", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
+			return storedStakingInfo.(*StakingInfo)
+		} else {
+			logger.Warn("Failed to get staking info from db.", "blockNum", blockNum, "err", err, "value", storedStakingInfo)
+		}
 	}
 
 	// Get staking info from block header and updates it to cache and db
@@ -106,8 +105,17 @@ func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, erro
 		return nil, err
 	}
 	sm.isActivated = true
+
+	// update cache
 	sm.stakingInfoCache.add(stakingInfo)
-	sm.stakingInfoDB.add(stakingInfo)
+
+	// update db
+	if sm.dbManager != nil {
+		err := sm.dbManager.WriteStakingInfo(stakingInfo)
+		if err != nil {
+			logger.Warn("Failed to write staking info to db.", "err", err, "stakingInfo", stakingInfo)
+		}
+	}
 
 	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "stakingInfo", stakingInfo)
 	return stakingInfo, nil

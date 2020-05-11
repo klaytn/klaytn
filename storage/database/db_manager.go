@@ -205,8 +205,8 @@ type DBManager interface {
 	ReadGovernanceState() ([]byte, error)
 
 	// StakingInfo related functions
-	ReadStakingInfo(key []byte) ([]byte, error)
-	WriteStakingInfo(key, value []byte) error
+	ReadStakingInfo(blockNum uint64) (interface{}, error)
+	WriteStakingInfo(stakingInfo interface{}) error
 }
 
 type DBEntryType uint8
@@ -220,7 +220,6 @@ const (
 	StateTrieMigrationDB
 	TxLookUpEntryDB
 	bridgeServiceDB
-	StakingInfoDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -237,7 +236,6 @@ var dbDirs = [databaseEntryTypeSize]string{
 	"statetrie_", // not used
 	"txlookup",
 	"bridgeservice",
-	"stakinginfo",
 }
 
 // Sum of dbConfigRatio should be 100.
@@ -245,13 +243,12 @@ var dbDirs = [databaseEntryTypeSize]string{
 var dbConfigRatio = [databaseEntryTypeSize]int{
 	3,  // MiscDB
 	6,  // headerDB
-	15, // BodyDB
-	15, // ReceiptsDB
+	16, // BodyDB
+	16, // ReceiptsDB
 	19, // StateTrieDB
 	19, // StateTrieMigrationDB
-	16, // TXLookUpEntryDB
+	17, // TXLookUpEntryDB
 	4,  // bridgeServiceDB
-	3,  // StakingInfoDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -1946,14 +1943,4 @@ func (dbm *databaseManager) WriteGovernanceState(b []byte) error {
 func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	db := dbm.getDatabase(MiscDB)
 	return db.Get(governanceStateKey)
-}
-
-func (dbm *databaseManager) ReadStakingInfo(key []byte) ([]byte, error) {
-	db := dbm.getDatabase(StakingInfoDB)
-	return db.Get(key)
-}
-
-func (dbm *databaseManager) WriteStakingInfo(key, value []byte) error {
-	db := dbm.getDatabase(StakingInfoDB)
-	return db.Put(key, value)
 }
