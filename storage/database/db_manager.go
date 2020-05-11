@@ -223,13 +223,13 @@ const (
 const notInMigrationFlag = 0
 const inMigrationFlag = 1
 
-var dbDirs = [databaseEntryTypeSize]string{
+var dbBaseDirs = [databaseEntryTypeSize]string{
 	"misc", // do not move misc
 	"header",
 	"body",
 	"receipts",
 	"statetrie",
-	"statetrie_", // not used
+	"statetrie_migrated", // "statetrie_migrated_#N" path will be used. (#N is a migrated block number.)
 	"txlookup",
 	"bridgeservice",
 }
@@ -335,13 +335,13 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 
 // newMiscDB returns misc DBManager. If not exist, the function create DB before returning.
 func newMiscDB(dbc *DBConfig) Database {
-	newDBC := getDBEntryConfig(dbc, MiscDB, dbDirs[MiscDB])
+	newDBC := getDBEntryConfig(dbc, MiscDB, dbBaseDirs[MiscDB])
 	db, err := newDatabase(newDBC, MiscDB)
 	if err != nil {
 		logger.Crit("Failed while generating a MISC database", "err", err)
 	}
 
-	db.Meter(dbMetricPrefix + dbDirs[MiscDB] + "/")
+	db.Meter(dbMetricPrefix + dbBaseDirs[MiscDB] + "/")
 	return db
 }
 
@@ -359,30 +359,33 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 	// Create other DBs
 	for et := int(MiscDB) + 1; et < int(databaseEntryTypeSize); et++ {
 		entryType := DBEntryType(et)
+		dir := dbm.getDBDir(entryType)
 
-		if entryType == StateTrieDB || entryType == StateTrieMigrationDB {
-			dir := dbm.getDBDir(entryType)
-			newDBC := getDBEntryConfig(dbc, entryType, dir)
-			if entryType == StateTrieMigrationDB && dir == "" {
+		switch entryType {
+		case StateTrieMigrationDB:
+			if dir == dbBaseDirs[StateTrieMigrationDB] {
 				// If there is no migration DB, skip to set.
 				continue
 			}
-
+			fallthrough
+		case StateTrieDB:
+			newDBC := getDBEntryConfig(dbc, entryType, dir)
 			if dbc.NumStateTriePartitions > 1 {
 				db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
 			} else {
 				db, err = newDatabase(newDBC, entryType)
 			}
-		} else {
-			newDBC := getDBEntryConfig(dbc, entryType, dbDirs[entryType])
+		default:
+			newDBC := getDBEntryConfig(dbc, entryType, dir)
 			db, err = newDatabase(newDBC, entryType)
 		}
 
 		if err != nil {
-			logger.Crit("Failed while generating a partition of LevelDB", "partition", dbDirs[et], "err", err)
+			logger.Crit("Failed while generating a partition of LevelDB", "partition", dbBaseDirs[et], "err", err)
 		}
+
 		dbm.dbs[et] = db
-		db.Meter(dbMetricPrefix + dbDirs[et] + "/") // Each partition collects metrics independently.
+		db.Meter(dbMetricPrefix + dbBaseDirs[et] + "/") // Each partition collects metrics independently.
 	}
 	return dbm, nil
 }
@@ -477,7 +480,11 @@ func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 
 func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
 	miscDB := dbm.getDatabase(MiscDB)
+
 	enc, _ := miscDB.Get(databaseDirKey(uint64(dbEntry)))
+	if len(enc) == 0 {
+		return dbBaseDirs[dbEntry]
+	}
 	return string(enc)
 }
 
@@ -490,10 +497,12 @@ func (dbm *databaseManager) setDBDir(dbEntry DBEntryType, newDBDir string) {
 
 func (dbm *databaseManager) getStateTrieMigrationInfo() uint64 {
 	miscDB := dbm.getDatabase(MiscDB)
+
 	enc, _ := miscDB.Get(migrationStatusKey)
 	if len(enc) != 8 {
 		return 0
 	}
+
 	blockNum := binary.BigEndian.Uint64(enc)
 	return blockNum
 }
@@ -515,7 +524,7 @@ func (dbm *databaseManager) setStateTrieMigrationStatus(blockNum uint64) {
 }
 
 func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) {
-	dbDir := dbDirs[StateTrieMigrationDB] + strconv.FormatUint(blockNum, 10)
+	dbDir := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(blockNum, 10)
 	newDBConfig := getDBEntryConfig(dbc, StateTrieMigrationDB, dbDir)
 	var newDB Database
 	var err error
@@ -527,7 +536,10 @@ func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) 
 	if err != nil {
 		logger.Crit("Failed to create a new database for state trie migration", "err", err)
 	}
+
+	newDB.Meter(dbMetricPrefix + dbBaseDirs[StateTrieMigrationDB] + "/") // Each partition collects metrics independently.
 	logger.Info("Created a new database for state trie migration", "newStateTrieDB", newDBConfig.Dir)
+
 	return newDB, dbDir
 }
 
@@ -559,21 +571,12 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 	return nil
 }
 
-func (dbm *databaseManager) getOldStateTrieDBDir() string {
-	// get old DB dir
-	oldDBDir := dbm.getDBDir(StateTrieDB)
-	if oldDBDir == "" {
-		oldDBDir = dbDirs[StateTrieDB]
-	}
-	return oldDBDir
-}
-
 // FinishStateMigration updates stateTrieDB and removes the old one.
 // The function should be called only after when state trie migration is finished.
 func (dbm *databaseManager) FinishStateMigration() {
 	oldDB := dbm.dbs[StateTrieDB]
 	newDB := dbm.dbs[StateTrieMigrationDB]
-	oldDBDir := dbm.getOldStateTrieDBDir()
+	oldDBDir := dbm.getDBDir(StateTrieDB)
 	newDBDir := dbm.getDBDir(StateTrieMigrationDB)
 
 	// Replace StateTrieDB with new one
