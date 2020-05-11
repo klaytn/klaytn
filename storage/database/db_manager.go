@@ -44,7 +44,6 @@ type DBManager interface {
 	Close()
 	NewBatch(dbType DBEntryType) Batch
 	GetMemDB() *MemDB
-	GetStakingInfoDB() Database
 	GetDBConfig() *DBConfig
 	CreateMigrationDBAndSetStatus(blockNum uint64) error
 	FinishStateMigration()
@@ -204,6 +203,10 @@ type DBManager interface {
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
+
+	// StakingInfo related functions
+	ReadStakingInfo(key []byte) ([]byte, error)
+	WriteStakingInfo(key, value []byte) error
 }
 
 type DBEntryType uint8
@@ -621,10 +624,6 @@ func (dbm *databaseManager) GetMemDB() *MemDB {
 	}
 	logger.Error("GetMemDB() call to non memory DBManager object.")
 	return nil
-}
-
-func (dbm *databaseManager) GetStakingInfoDB() Database {
-	return dbm.getDatabase(StakingInfoDB)
 }
 
 // GetDBConfig returns DBConfig of the DB manager.
@@ -1947,4 +1946,14 @@ func (dbm *databaseManager) WriteGovernanceState(b []byte) error {
 func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	db := dbm.getDatabase(MiscDB)
 	return db.Get(governanceStateKey)
+}
+
+func (dbm *databaseManager) ReadStakingInfo(key []byte) ([]byte, error) {
+	db := dbm.getDatabase(StakingInfoDB)
+	return db.Get(key)
+}
+
+func (dbm *databaseManager) WriteStakingInfo(key, value []byte) error {
+	db := dbm.getDatabase(StakingInfoDB)
+	return db.Put(key, value)
 }

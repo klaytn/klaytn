@@ -23,17 +23,17 @@ import (
 )
 
 type stakingInfoDB struct {
-	db database.Database
+	dbm database.DBManager
 }
 
 func (sdb *stakingInfoDB) get(blockNum uint64) *StakingInfo {
-	if sdb.db == nil {
+	if sdb.dbm == nil {
 		logger.Debug("stakingInfoDB.get() is called but stakingInfoDB is not set.")
 		return nil
 	}
 
 	key := intToByte(blockNum)
-	value, err := sdb.db.Get(key)
+	value, err := sdb.dbm.ReadStakingInfo(key)
 	if err != nil {
 		logger.Error("Failed to get staking info from stakingInfoDB.", "blockNum", blockNum, "err", err)
 		return nil
@@ -50,7 +50,7 @@ func (sdb *stakingInfoDB) get(blockNum uint64) *StakingInfo {
 }
 
 func (sdb *stakingInfoDB) add(stakingInfo *StakingInfo) {
-	if sdb.db == nil {
+	if sdb.dbm == nil {
 		logger.Debug("stakingInfoDB.add() is called but stakingInfoDB is not set.")
 		return
 	}
@@ -61,7 +61,7 @@ func (sdb *stakingInfoDB) add(stakingInfo *StakingInfo) {
 		logger.Error("Failed to marshal staking info before adding.", "err", err, "stakingInfo", stakingInfo)
 	}
 
-	err = sdb.db.Put(key, value)
+	err = sdb.dbm.WriteStakingInfo(key, value)
 	if err != nil {
 		logger.Error("Failed to put staking info to DB.", "blockNum", stakingInfo.BlockNum, "err", err, "stakingInfo", stakingInfo)
 	}

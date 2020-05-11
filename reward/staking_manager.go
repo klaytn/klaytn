@@ -54,7 +54,7 @@ type StakingManager struct {
 func NewStakingManager(bc blockChain, gh governanceHelper, dbm database.DBManager) *StakingManager {
 	sidb := &stakingInfoDB{}
 	if dbm != nil {
-		sidb.db = dbm.GetStakingInfoDB()
+		sidb.dbm = dbm
 	}
 
 	return &StakingManager{
