@@ -90,6 +90,8 @@ var (
 
 	databaseDirPrefix  = []byte("databaseDirectory")
 	migrationStatusKey = []byte("migrationStatus")
+
+	stakingInfoPrefix = []byte("stakingInfo")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of
