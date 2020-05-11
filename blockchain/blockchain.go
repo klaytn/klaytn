@@ -299,12 +299,12 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	targetDB := statedb.NewDatabase(&stateTrieMigrationDB{bc.db})
 
 	trieSync := state.NewStateSync(rootHash, targetDB.DiskDB())
-	queue := append([]common.Hash{}, trieSync.Missing(database.IdealBatchSize)...)
-
+	var queue []common.Hash
 	committedCnt := 0
 
 	for trieSync.Pending() > 0 {
 		bc.committedCnt, bc.pendingCnt = committedCnt, trieSync.Pending()
+		queue = append(queue[:0], trieSync.Missing(database.IdealBatchSize)...)
 		results := make([]statedb.SyncResult, len(queue))
 
 		for i, hash := range queue {
@@ -328,8 +328,6 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		// TODO-Klaytn refine the status parameter (progress percentage, etc)
 		committedCnt += written
 		logger.Warn("State migration progress", "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt, "written", written, "elapsed", elapsed)
-
-		queue = append(queue[:0], trieSync.Missing(database.IdealBatchSize)...)
 
 		select {
 		case <-bc.stopStateMigration:
