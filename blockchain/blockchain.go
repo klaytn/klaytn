@@ -161,16 +161,10 @@ type BlockChain struct {
 	balanceCache common.Cache
 
 	// State migration
-	prepareStateMigration    bool
-	chStateTrieMigrationTask chan stateTrieMigrationTask
-	stopMigration            chan struct{}
-	committedCnt             int
-	pendingCnt               int
-}
-
-type stateTrieMigrationTask struct {
-	blockNum uint64
-	rootHash common.Hash
+	prepareStateMigration bool
+	stopStateMigration    chan struct{}
+	committedCnt          int
+	pendingCnt            int
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -200,23 +194,22 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	bc := &BlockChain{
-		chainConfig:              chainConfig,
-		chainConfigMu:            new(sync.RWMutex),
-		cacheConfig:              cacheConfig,
-		db:                       db,
-		triegc:                   prque.New(),
-		chBlock:                  make(chan gcBlock, 1000),
-		stateCache:               state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit, cacheConfig.DataArchivingBlockNum),
-		quit:                     make(chan struct{}),
-		futureBlocks:             futureBlocks,
-		engine:                   engine,
-		vmConfig:                 vmConfig,
-		badBlocks:                badBlocks,
-		parallelDBWrite:          db.IsParallelDBWrite(),
-		nonceCache:               nonceCache,
-		balanceCache:             balanceCache,
-		chStateTrieMigrationTask: make(chan stateTrieMigrationTask, 1),
-		stopMigration:            make(chan struct{}),
+		chainConfig:        chainConfig,
+		chainConfigMu:      new(sync.RWMutex),
+		cacheConfig:        cacheConfig,
+		db:                 db,
+		triegc:             prque.New(),
+		chBlock:            make(chan gcBlock, 1000),
+		stateCache:         state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit, cacheConfig.DataArchivingBlockNum),
+		quit:               make(chan struct{}),
+		futureBlocks:       futureBlocks,
+		engine:             engine,
+		vmConfig:           vmConfig,
+		badBlocks:          badBlocks,
+		parallelDBWrite:    db.IsParallelDBWrite(),
+		nonceCache:         nonceCache,
+		balanceCache:       balanceCache,
+		stopStateMigration: make(chan struct{}),
 	}
 
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
@@ -254,7 +247,8 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	// Take ownership of this particular state
 	go bc.update()
 	go bc.gcCachedNodeLoop()
-	go bc.migrationLoop()
+	go bc.checkRestartStateMigration()
+
 	return bc, nil
 }
 
@@ -282,6 +276,9 @@ func (td *stateTrieMigrationDB) ReadPreimage(hash common.Hash) []byte {
 }
 
 func (bc *BlockChain) migrateState(rootHash common.Hash) error {
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
 	srcCachedDB := bc.StateCache().TrieDB()
 	targetDB := statedb.NewDatabase(&stateTrieMigrationDB{bc.db})
 
@@ -320,7 +317,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		queue = append(queue[:0], trieSync.Missing(maxBatchSize)...)
 
 		select {
-		case <-bc.stopMigration:
+		case <-bc.stopStateMigration:
 			// TODO-Klaytn Revert DB.
 			// - copied new DB data to old DB.
 			// - remove new DB
@@ -384,37 +381,20 @@ func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root com
 	return dirty, nil
 }
 
-func (bc *BlockChain) migrationLoop() {
-	logger.Info("State migration loop starts")
-
+func (bc *BlockChain) checkRestartStateMigration() {
 	if bc.db.InMigration() {
 		number := bc.db.MigrationBlockNumber()
 
 		block := bc.GetBlockByNumber(number)
 		if block == nil {
 			logger.Error("failed to get migration block number", "blockNumber", number)
-			goto LOOP
-		}
-
-		logger.Warn("Restart state trie migration", "blockNumber", number, "root", block.Root().String())
-		bc.chStateTrieMigrationTask <- stateTrieMigrationTask{number, block.Root()}
-	}
-
-LOOP:
-	for {
-		select {
-		case task := <-bc.chStateTrieMigrationTask:
-			logger.Info("State migration is started", "blockNum", task.blockNum, "root", task.rootHash.String())
-			err := bc.migrateState(task.rootHash)
-			if err != nil {
-				logger.Error("State migration failed", "err", err, "blockNum", task.blockNum, "root", task.rootHash.String())
-			} else {
-				logger.Info("State migration is completed", "blockNum", task.blockNum, "root", task.rootHash.String())
-			}
-
-		case <-bc.quit:
 			return
 		}
+
+		root := block.Root()
+		logger.Warn("Restart state trie migration", "blockNumber", number, "root", root.String())
+
+		go bc.migrateState(root)
 	}
 }
 
@@ -453,11 +433,7 @@ func (bc *BlockChain) StartStateMigration(number uint64, root common.Hash) error
 		return err
 	}
 
-	select {
-	case bc.chStateTrieMigrationTask <- stateTrieMigrationTask{number, root}:
-	default:
-		return errors.New("migration trigger already started")
-	}
+	go bc.migrateState(root)
 
 	return nil
 }
@@ -467,11 +443,13 @@ func (bc *BlockChain) StopStateMigration() error {
 		return errors.New("not in migration")
 	}
 
-	bc.stopMigration <- struct{}{}
+	bc.stopStateMigration <- struct{}{}
 
 	return nil
 }
 
+// StatusStateMigration returns if it is in migration, the block number of in migration,
+// number of committed blocks and number of pending blocks
 func (bc *BlockChain) StatusStateMigration() (bool, uint64, int, int) {
 	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.committedCnt, bc.pendingCnt
 }
