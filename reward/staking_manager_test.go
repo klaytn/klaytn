@@ -49,7 +49,7 @@ func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
 
 	for i := 0; i < len(testData); i++ {
 		testStakingInfo := newEmptyStakingInfo(testData[i] * stakingInterval)
-		stakingManager.sic.add(testStakingInfo)
+		stakingManager.stakingInfoCache.add(testStakingInfo)
 	}
 
 	// should find a correct stakingInfo with a given block number
