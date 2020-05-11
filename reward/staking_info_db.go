@@ -42,7 +42,7 @@ func (sdb *stakingInfoDB) get(blockNum uint64) *StakingInfo {
 	stakingInfo := new(StakingInfo)
 	err = json.Unmarshal(value, stakingInfo)
 	if err != nil {
-		logger.Error("Failed to unmarshal staking info.", "blockNum", blockNum, "err", err, "raw staking info", value)
+		logger.Error("Failed to unmarshal staking info.", "blockNum", blockNum, "err", err, "value", value)
 		return nil
 	}
 
@@ -56,12 +56,6 @@ func (sdb *stakingInfoDB) add(stakingInfo *StakingInfo) {
 	}
 	key := intToByte(stakingInfo.BlockNum)
 
-	has, _ := sdb.db.Has(key)
-	if has == true {
-		logger.Debug("StakingInfo is already stored in DB. Skipping to put in stakingInfo.", "stakingInfo", stakingInfo)
-		return
-	}
-
 	value, err := json.Marshal(stakingInfo)
 	if err != nil {
 		logger.Error("Failed to marshal staking info before adding.", "err", err, "stakingInfo", stakingInfo)
@@ -71,6 +65,7 @@ func (sdb *stakingInfoDB) add(stakingInfo *StakingInfo) {
 	if err != nil {
 		logger.Error("Failed to put staking info to DB.", "blockNum", stakingInfo.BlockNum, "err", err, "stakingInfo", stakingInfo)
 	}
+	logger.Info("Add a new stakingInfo to stakingInfoDB", "stakingInfo", stakingInfo)
 }
 
 // intToByte converts value of int to []byte

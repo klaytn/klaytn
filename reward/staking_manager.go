@@ -79,8 +79,8 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	}
 
 	// Get staking info from db
-	if storedStakingInfo := sm.sic.get(stakingBlockNumber); storedStakingInfo != nil {
-		logger.Debug("StakingInfoCache hit.", "Block number", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
+	if storedStakingInfo := sm.sidb.get(stakingBlockNumber); storedStakingInfo != nil {
+		logger.Debug("StakingInfoDB hit.", "Block number", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
 		return storedStakingInfo
 	}
 
