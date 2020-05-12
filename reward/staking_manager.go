@@ -92,7 +92,7 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 		}
 	}
 
-	// Get staking info from block header and updates it to cache and db
+	// Calculate staking info from block header and updates it to cache and db
 	calcStakingInfo, err := sm.updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil && err != nil {
 		logger.Error("Failed to get stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber, "err", err, "stakingInfo", calcStakingInfo)
