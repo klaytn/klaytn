@@ -136,8 +136,8 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	return padded
 }
 
-// intToByte converts value of int to []byte
-func IntToByte(num uint64) []byte {
+// IntToByteLittleEndian converts value of int to []byte
+func Int64ToByteLittleEndian(num uint64) []byte {
 	bs := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bs, num)
 	return bs

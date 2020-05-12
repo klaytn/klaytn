@@ -65,6 +65,6 @@ func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo interf
 
 // makeStakingInfoKey is used for making keys for staking info
 func makeStakingInfoKey(num uint64) []byte {
-	key := append(stakingInfoPrefix, common.IntToByte(num)...)
+	key := append(stakingInfoPrefix, common.Int64ToByteLittleEndian(num)...)
 	return key
 }
