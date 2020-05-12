@@ -23,7 +23,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
 )
 
 const (
@@ -40,10 +39,15 @@ type blockChain interface {
 	blockchain.ChainContext
 }
 
+type stakingInfoDB interface {
+	ReadStakingInfo(blockNum uint64) (interface{}, error)
+	WriteStakingInfo(blockNum uint64, stakingInfo interface{}) error
+}
+
 type StakingManager struct {
 	addressBookConnector *addressBookConnector
 	stakingInfoCache     *stakingInfoCache
-	dbManager            database.DBManager // to store staking info into db
+	stakingInfDB         stakingInfoDB
 	governanceHelper     governanceHelper
 	blockchain           blockChain
 	chainHeadChan        chan blockchain.ChainHeadEvent
@@ -51,11 +55,11 @@ type StakingManager struct {
 	isActivated          bool
 }
 
-func NewStakingManager(bc blockChain, gh governanceHelper, dbm database.DBManager) *StakingManager {
+func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *StakingManager {
 	return &StakingManager{
 		addressBookConnector: newAddressBookConnector(bc, gh),
 		stakingInfoCache:     newStakingInfoCache(),
-		dbManager:            dbm,
+		stakingInfDB:         db,
 		governanceHelper:     gh,
 		blockchain:           bc,
 		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
@@ -74,8 +78,8 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	}
 
 	// Get staking info from DB
-	if sm.dbManager != nil {
-		if storedStakingInfo, err := sm.dbManager.ReadStakingInfo(stakingBlockNumber); storedStakingInfo != nil && err == nil {
+	if sm.stakingInfDB != nil {
+		if storedStakingInfo, err := sm.stakingInfDB.ReadStakingInfo(stakingBlockNumber); storedStakingInfo != nil && err == nil {
 			s, ok := storedStakingInfo.(*StakingInfo)
 			if ok {
 				logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", s)
@@ -115,8 +119,8 @@ func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, erro
 	sm.stakingInfoCache.add(stakingInfo)
 
 	// update db
-	if sm.dbManager != nil {
-		err := sm.dbManager.WriteStakingInfo(blockNum, stakingInfo)
+	if sm.stakingInfDB != nil {
+		err := sm.stakingInfDB.WriteStakingInfo(blockNum, stakingInfo)
 		if err != nil {
 			logger.Warn("Failed to write staking info to db.", "err", err)
 		}
