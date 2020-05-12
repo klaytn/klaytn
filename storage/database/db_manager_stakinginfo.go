@@ -17,8 +17,8 @@
 package database
 
 import (
-	"encoding/binary"
 	"encoding/json"
+	"github.com/klaytn/klaytn/common"
 )
 
 // ReadStakingInfo reads staking information from database. It returns
@@ -65,13 +65,6 @@ func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo interf
 
 // makeStakingInfoKey is used for making keys for staking info
 func makeStakingInfoKey(num uint64) []byte {
-	key := append(stakingInfoPrefix, intToByte(num)...)
+	key := append(stakingInfoPrefix, common.IntToByte(num)...)
 	return key
-}
-
-// intToByte converts value of int to []byte
-func intToByte(num uint64) []byte {
-	bs := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bs, num)
-	return bs
 }

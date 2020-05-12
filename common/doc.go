@@ -25,7 +25,7 @@ Source Files
 
 Each source file provides functions and types as listed below
   - big.go   	: Defines common big integers often used such as Big1
-  - bytes.go	: Provides conversion functions between a byte slice and a string in Hex format
+  - bytes.go	: Provides conversion functions between a byte slice and other types such as string in Hex format and int
   - cache.go	: Defines Cache interface and constants such as CacheType
   - debug.go	: Provides a function to let an user know where to report a bug. It is being used by datasync/downloader
   - format.go	: Provides a function to print a time.Duration in more readable format
