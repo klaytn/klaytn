@@ -228,6 +228,19 @@ web3._extend({
 			name: 'stopWS',
 			call: 'admin_stopWS'
 		}),
+		new web3._extend.Method({
+			name: 'startStateMigration',
+			call: 'admin_startStateMigration',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'stopStateMigration',
+			call: 'admin_stopStateMigration',
+		}),
+		new web3._extend.Method({
+			name: 'statusStateMigration',
+			call: 'admin_statusStateMigration',
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
