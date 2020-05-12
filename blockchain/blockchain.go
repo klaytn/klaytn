@@ -406,7 +406,7 @@ func (bc *BlockChain) PrepareStateMigration() error {
 	bc.prepareStateMigration = true
 	currentBlock := bc.CurrentBlock().NumberU64()
 	nextCommittedBlock := currentBlock + (DefaultBlockInterval - currentBlock%DefaultBlockInterval)
-	logger.Warn("Prepare state migration", "nextCommittedBlock", nextCommittedBlock)
+	logger.Warn("Prepared state migration", "migrationStartingBlockNumber", nextCommittedBlock)
 
 	return nil
 }
