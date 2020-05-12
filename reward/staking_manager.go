@@ -85,7 +85,7 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 				logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", s)
 				return s
 			} else {
-				logger.Warn("Cannot convert to StakingInfo. Wrong data is writen in DB.")
+				logger.Warn("Cannot convert to StakingInfo. Wrong data is written in DB.")
 			}
 		} else {
 			logger.Warn("Failed to get staking info from db.", "blockNum", blockNum, "err", err)
