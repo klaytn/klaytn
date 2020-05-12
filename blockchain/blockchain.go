@@ -247,7 +247,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	// Take ownership of this particular state
 	go bc.update()
 	go bc.gcCachedNodeLoop()
-	go bc.checkRestartStateMigration()
+	go bc.restartStateMigration()
 
 	return bc, nil
 }
@@ -381,7 +381,7 @@ func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root com
 	return dirty, nil
 }
 
-func (bc *BlockChain) checkRestartStateMigration() {
+func (bc *BlockChain) restartStateMigration() {
 	if bc.db.InMigration() {
 		number := bc.db.MigrationBlockNumber()
 
