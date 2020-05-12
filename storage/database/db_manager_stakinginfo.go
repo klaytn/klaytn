@@ -19,7 +19,6 @@ package database
 import (
 	"encoding/binary"
 	"encoding/json"
-	"reflect"
 )
 
 // ReadStakingInfo reads staking information from database. It returns
@@ -47,17 +46,13 @@ func (dbm *databaseManager) ReadStakingInfo(blockNum uint64) (interface{}, error
 
 // WriteStakingInfo writes staking information to database. It returns
 // nil if it succeeds to write and error if it fails.
-// Key of stakingInfo is BlockNum stored inside StakingInfo. Value is
-// marshaled stakingInfo. StakingInfo is stored in MiscDB.
+// Key should be the blockNum of stakingIfo. Value is marshaled
+// stakingInfo. StakingInfo is stored in MiscDB.
+// stakingInfo should be type StakingInfo defined in reward/staking_info.go
 // Be sure to use the right block number before calling this function.
 // (Refer to CalcStakingBlockNumber() in params/governance_params.go)
-func (dbm *databaseManager) WriteStakingInfo(stakingInfo interface{}) error {
+func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo interface{}) error {
 	db := dbm.getDatabase(MiscDB)
-
-	var blockNum uint64
-	rs := reflect.ValueOf(stakingInfo)
-	fv := rs.FieldByName("BlockNum")
-	fv.SetUint(blockNum)
 
 	key := makeKey(blockNum)
 	value, err := json.Marshal(stakingInfo)

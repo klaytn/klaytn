@@ -206,7 +206,7 @@ type DBManager interface {
 
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) (interface{}, error)
-	WriteStakingInfo(stakingInfo interface{}) error
+	WriteStakingInfo(blockNum uint64, stakingInfo interface{}) error
 }
 
 type DBEntryType uint8
