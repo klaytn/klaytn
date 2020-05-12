@@ -47,7 +47,7 @@ type stakingInfoDB interface {
 type StakingManager struct {
 	addressBookConnector *addressBookConnector
 	stakingInfoCache     *stakingInfoCache
-	stakingInfDB         stakingInfoDB
+	stakingInfoDB        stakingInfoDB
 	governanceHelper     governanceHelper
 	blockchain           blockChain
 	chainHeadChan        chan blockchain.ChainHeadEvent
@@ -59,7 +59,7 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 	return &StakingManager{
 		addressBookConnector: newAddressBookConnector(bc, gh),
 		stakingInfoCache:     newStakingInfoCache(),
-		stakingInfDB:         db,
+		stakingInfoDB:        db,
 		governanceHelper:     gh,
 		blockchain:           bc,
 		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
@@ -78,8 +78,8 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	}
 
 	// Get staking info from DB
-	if sm.stakingInfDB != nil {
-		if storedStakingInfo, err := sm.stakingInfDB.ReadStakingInfo(stakingBlockNumber); storedStakingInfo != nil && err == nil {
+	if sm.stakingInfoDB != nil {
+		if storedStakingInfo, err := sm.stakingInfoDB.ReadStakingInfo(stakingBlockNumber); storedStakingInfo != nil && err == nil {
 			s, ok := storedStakingInfo.(*StakingInfo)
 			if ok {
 				logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", s)
@@ -119,8 +119,8 @@ func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, erro
 	sm.stakingInfoCache.add(stakingInfo)
 
 	// update db
-	if sm.stakingInfDB != nil {
-		err := sm.stakingInfDB.WriteStakingInfo(blockNum, stakingInfo)
+	if sm.stakingInfoDB != nil {
+		err := sm.stakingInfoDB.WriteStakingInfo(blockNum, stakingInfo)
 		if err != nil {
 			logger.Warn("Failed to write staking info to db.", "err", err)
 		}
