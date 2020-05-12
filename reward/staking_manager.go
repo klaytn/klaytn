@@ -69,33 +69,33 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 
 	// Get staking info from cache
 	if cachedStakingInfo := sm.stakingInfoCache.get(stakingBlockNumber); cachedStakingInfo != nil {
-		logger.Debug("StakingInfoCache hit.", "Block number", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
+		logger.Debug("StakingInfoCache hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
 		return cachedStakingInfo
 	}
 
-	// Get staking info from db
+	// Get staking info from DB
 	if sm.dbManager != nil {
 		if storedStakingInfo, err := sm.dbManager.ReadStakingInfo(stakingBlockNumber); storedStakingInfo != nil && err == nil {
 			s, ok := storedStakingInfo.(*StakingInfo)
 			if ok {
-				logger.Debug("StakingInfoDB hit.", "Block number", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", s)
+				logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", s)
 				return s
 			} else {
 				logger.Warn("Cannot convert to StakingInfo. Wrong data is writen in DB.")
 			}
 		} else {
-			logger.Warn("Failed to get staking info from db.", "blockNum", blockNum, "err", err, "value", storedStakingInfo)
+			logger.Warn("Failed to get staking info from db.", "blockNum", blockNum, "err", err)
 		}
 	}
 
 	// Get staking info from block header and updates it to cache and db
 	calcStakingInfo, err := sm.updateStakingInfo(stakingBlockNumber)
 	if err != nil {
-		logger.Error("Failed to get stakingInfo", "Block number", blockNum, "staking block number", stakingBlockNumber, "err", err, "stakingInfo", calcStakingInfo)
+		logger.Error("Failed to get stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber, "err", err, "stakingInfo", calcStakingInfo)
 		return nil
 	}
 
-	logger.Debug("Get stakingInfo from header.", "Block number", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
+	logger.Debug("Get stakingInfo from header.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
 	return calcStakingInfo
 }
 
@@ -118,11 +118,12 @@ func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, erro
 	if sm.dbManager != nil {
 		err := sm.dbManager.WriteStakingInfo(blockNum, stakingInfo)
 		if err != nil {
-			logger.Warn("Failed to write staking info to db.", "err", err, "stakingInfo", stakingInfo)
+			logger.Warn("Failed to write staking info to db.", "err", err)
 		}
 	}
 
-	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "stakingInfo", stakingInfo)
+	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
+	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
 }
 
