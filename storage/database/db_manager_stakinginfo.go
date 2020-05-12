@@ -29,7 +29,7 @@ import (
 func (dbm *databaseManager) ReadStakingInfo(blockNum uint64) (interface{}, error) {
 	db := dbm.getDatabase(MiscDB)
 
-	key := makeKey(blockNum)
+	key := makeStakingInfoKey(blockNum)
 	value, err := db.Get(key)
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (dbm *databaseManager) ReadStakingInfo(blockNum uint64) (interface{}, error
 func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo interface{}) error {
 	db := dbm.getDatabase(MiscDB)
 
-	key := makeKey(blockNum)
+	key := makeStakingInfoKey(blockNum)
 	value, err := json.Marshal(stakingInfo)
 	if err != nil {
 		return err
@@ -63,8 +63,8 @@ func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo interf
 	return db.Put(key, value)
 }
 
-// makeKey is used for making keys for staking info
-func makeKey(num uint64) []byte {
+// makeStakingInfoKey is used for making keys for staking info
+func makeStakingInfoKey(num uint64) []byte {
 	key := append(stakingInfoPrefix, intToByte(num)...)
 	return key
 }
