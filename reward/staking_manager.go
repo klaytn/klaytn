@@ -94,7 +94,7 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 
 	// Get staking info from block header and updates it to cache and db
 	calcStakingInfo, err := sm.updateStakingInfo(stakingBlockNumber)
-	if err != nil {
+	if calcStakingInfo == nil && err != nil {
 		logger.Error("Failed to get stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber, "err", err, "stakingInfo", calcStakingInfo)
 		return nil
 	}
@@ -122,7 +122,8 @@ func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, erro
 	if sm.stakingInfoDB != nil {
 		err := sm.stakingInfoDB.WriteStakingInfo(blockNum, stakingInfo)
 		if err != nil {
-			logger.Warn("Failed to write staking info to db.", "err", err)
+			logger.Warn("Failed to write staking info to db.", "err", err, "stakingInfo", stakingInfo)
+			return stakingInfo, err
 		}
 	}
 
@@ -151,8 +152,8 @@ func (sm *StakingManager) handleChainHeadEvent() {
 			if sm.governanceHelper.ProposerPolicy() == params.WeightedRandom {
 				stakingBlockNum := ev.Block.NumberU64() - ev.Block.NumberU64()%sm.governanceHelper.StakingUpdateInterval()
 				if cachedStakingInfo := sm.stakingInfoCache.get(stakingBlockNum); cachedStakingInfo == nil {
-					_, err := sm.updateStakingInfo(stakingBlockNum)
-					if err != nil {
+					stakingInfo, err := sm.updateStakingInfo(stakingBlockNum)
+					if stakingInfo == nil && err != nil {
 						logger.Error("Failed to update stakingInfoCache", "blockNumber", ev.Block.NumberU64(), "stakingNumber", stakingBlockNum, "err", err)
 					}
 				}
