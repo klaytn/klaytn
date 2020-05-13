@@ -55,7 +55,7 @@ type request struct {
 type SyncResult struct {
 	Hash common.Hash // Hash of the originally unknown trie node
 	Data []byte      // Data content of the retrieved node
-	Err error
+	Err  error
 }
 
 // syncMemBatch is an in-memory buffer of successfully downloaded but not yet
