@@ -73,7 +73,7 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	}
 
 	// Get staking info from DB
-	if cachedStakingInfo, err := sm.getStakingInfoDB(stakingBlockNumber); cachedStakingInfo != nil && err != nil {
+	if cachedStakingInfo, err := sm.getStakingInfoDB(stakingBlockNumber); cachedStakingInfo != nil && err == nil {
 		logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
 		return cachedStakingInfo
 	} else {
