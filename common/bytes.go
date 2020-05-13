@@ -20,7 +20,10 @@
 
 package common
 
-import "encoding/hex"
+import (
+	"encoding/binary"
+	"encoding/hex"
+)
 
 // ToHex returns the hex representation of b, prefixed with '0x'.
 // For empty slices, the return value is "0x0".
@@ -131,4 +134,11 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	copy(padded[l-len(slice):], slice)
 
 	return padded
+}
+
+// IntToByteLittleEndian converts value of int to []byte
+func Int64ToByteLittleEndian(num uint64) []byte {
+	bs := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bs, num)
+	return bs
 }

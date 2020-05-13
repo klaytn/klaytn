@@ -203,6 +203,10 @@ type DBManager interface {
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
+
+	// StakingInfo related functions
+	ReadStakingInfo(blockNum uint64) (interface{}, error)
+	WriteStakingInfo(blockNum uint64, stakingInfo interface{}) error
 }
 
 type DBEntryType uint8
