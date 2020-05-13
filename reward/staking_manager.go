@@ -83,7 +83,7 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	// Calculate staking info from block header and updates it to cache and db
 	calcStakingInfo, _ := sm.updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
-		logger.Error("Failed to get stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber, "err", err, "stakingInfo", calcStakingInfo)
+		logger.Error("Failed to get stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
 		return nil
 	}
 
@@ -136,7 +136,7 @@ func (sm *StakingManager) handleChainHeadEvent() {
 				if cachedStakingInfo := sm.stakingInfoCache.get(stakingBlockNum); cachedStakingInfo == nil {
 					stakingInfo, _ := sm.updateStakingInfo(stakingBlockNum)
 					if stakingInfo == nil {
-						logger.Error("Failed to update stakingInfoCache", "blockNumber", ev.Block.NumberU64(), "stakingNumber", stakingBlockNum, "err", err)
+						logger.Error("Failed to update stakingInfoCache", "blockNumber", ev.Block.NumberU64(), "stakingNumber", stakingBlockNum)
 					}
 				}
 			}

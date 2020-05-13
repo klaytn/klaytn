@@ -59,4 +59,6 @@ func (sm *StakingManager) addStakingInfoDB(stakingInfo *StakingInfo) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
 }
