@@ -366,9 +366,32 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 			return fmt.Errorf("failed to commit data #%d: %v", written, err)
 		}
 
-		// TODO-Klaytn refine the status parameter (progress percentage, etc)
+		// Calculate progress percentage
+		var progress float64
+		var lastRatio float64
+		progress, lastRatio = 0.0, 1.0
+		for i := 1; i < 10; i++ {
+			c, p := trieSync.CommittedByDepth(i), trieSync.PendingByDepth(i)
+			if p == 0 {
+				break
+			}
+			progress += lastRatio * float64(c) / float64(p)
+			lastRatio = lastRatio / float64(p)
+			logger.Trace("State migration progress by depth #"+strconv.Itoa(i), "committed", c, "pending", p)
+
+			if c == p {
+				break
+			}
+		}
+
+		// Report progress
 		committedCnt += written
-		logger.Warn("State migration progress", "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt, "read", read, "readElapsed", readElapsed, "written", written, "writeElapsed", writeElapsed, "elapsed", time.Since(start))
+		logger.Warn("State migration progress",
+			"progress", strconv.FormatFloat(progress*100, 'f', 2, 64)+"%",
+			"committedCnt", committedCnt, "pendingCnt", bc.pendingCnt,
+			"read", read, "readElapsed", readElapsed,
+			"written", written, "writeElapsed", writeElapsed,
+			"elapsed", time.Since(start))
 
 		select {
 		case <-bc.stopStateMigration:

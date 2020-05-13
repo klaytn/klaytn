@@ -82,19 +82,23 @@ type StateTrieReadDB interface {
 // unknown trie hashes to retrieve, accepts node data associated with said hashes
 // and reconstructs the trie step by step until all is done.
 type TrieSync struct {
-	database StateTrieReadDB          // Persistent database to check for existing entries
-	membatch *syncMemBatch            // Memory buffer to avoid frequest database writes
-	requests map[common.Hash]*request // Pending requests pertaining to a key hash
-	queue    *prque.Prque             // Priority queue with the pending requests
+	database         StateTrieReadDB          // Persistent database to check for existing entries
+	membatch         *syncMemBatch            // Memory buffer to avoid frequest database writes
+	requests         map[common.Hash]*request // Pending requests pertaining to a key hash
+	queue            *prque.Prque             // Priority queue with the pending requests
+	pendingByDepth   map[int]int              // Pending trie count by depth
+	committedByDepth map[int]int              // Committed trie count by depth
 }
 
 // NewTrieSync creates a new trie data download scheduler.
 func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback) *TrieSync {
 	ts := &TrieSync{
-		database: database,
-		membatch: newSyncMemBatch(),
-		requests: make(map[common.Hash]*request),
-		queue:    prque.New(),
+		database:         database,
+		membatch:         newSyncMemBatch(),
+		requests:         make(map[common.Hash]*request),
+		queue:            prque.New(),
+		pendingByDepth:   make(map[int]int),
+		committedByDepth: make(map[int]int),
 	}
 	ts.AddSubTrie(root, 0, common.Hash{}, callback)
 	return ts
@@ -251,6 +255,10 @@ func (s *TrieSync) schedule(req *request) {
 		old.parents = append(old.parents, req.parents...)
 		return
 	}
+
+	// Count the pending trie by depth
+	s.pendingByDepth[req.depth]++
+
 	// Schedule the request for future retrieval
 	s.queue.Push(req.hash, float32(req.depth))
 	s.requests[req.hash] = req
@@ -321,6 +329,9 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 // of the referencing parent requests complete due to this commit, they are also
 // committed themselves.
 func (s *TrieSync) commit(req *request) (err error) {
+	// Count the committed trie by depth
+	s.committedByDepth[req.depth]++
+
 	// Write the node content to the membatch
 	s.membatch.batch[req.hash] = req.data
 	s.membatch.order = append(s.membatch.order, req.hash)
@@ -337,4 +348,14 @@ func (s *TrieSync) commit(req *request) (err error) {
 		}
 	}
 	return nil
+}
+
+// PendingByDepth returns the pending trie count by given depth.
+func (s *TrieSync) PendingByDepth(depth int) int {
+	return s.pendingByDepth[depth]
+}
+
+// CommittedByDepth returns the committed trie count by given depth.
+func (s *TrieSync) CommittedByDepth(depth int) int {
+	return s.committedByDepth[depth]
 }
