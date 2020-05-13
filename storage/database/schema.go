@@ -188,10 +188,9 @@ func BloomBitsKey(bit uint, section uint64, hash common.Hash) []byte {
 	return key
 }
 
-func governanceKey(num uint64) []byte {
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, num)
-	return append(governancePrefix[:], b[:]...)
+func makeKey(prefix []byte, num uint64) []byte {
+	byteKey := common.Int64ToByteLittleEndian(num)
+	return append(prefix, byteKey...)
 }
 
 func databaseDirKey(dbEntryType uint64) []byte {

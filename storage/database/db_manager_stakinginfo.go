@@ -16,27 +16,16 @@
 
 package database
 
-import (
-	"encoding/json"
-	"github.com/klaytn/klaytn/common"
-)
-
 // ReadStakingInfo reads staking information from database. It returns
 // (StakingInfo, nil) if it succeeds to read and (nil, error) if it fails.
 // StakingInfo is stored in MiscDB.
 // Be sure to use the right block number before calling this function.
 // (Refer to CalcStakingBlockNumber() in params/governance_params.go)
-func (dbm *databaseManager) ReadStakingInfo(blockNum uint64) (interface{}, error) {
+func (dbm *databaseManager) ReadStakingInfo(blockNum uint64) ([]byte, error) {
 	db := dbm.getDatabase(MiscDB)
 
-	key := makeStakingInfoKey(blockNum)
-	value, err := db.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	stakingInfo := new(interface{})
-	err = json.Unmarshal(value, stakingInfo)
+	key := makeKey(stakingInfoPrefix, blockNum)
+	stakingInfo, err := db.Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -51,20 +40,9 @@ func (dbm *databaseManager) ReadStakingInfo(blockNum uint64) (interface{}, error
 // stakingInfo should be type StakingInfo defined in reward/staking_info.go
 // Be sure to use the right block number before calling this function.
 // (Refer to CalcStakingBlockNumber() in params/governance_params.go)
-func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo interface{}) error {
+func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo []byte) error {
 	db := dbm.getDatabase(MiscDB)
 
-	key := makeStakingInfoKey(blockNum)
-	value, err := json.Marshal(stakingInfo)
-	if err != nil {
-		return err
-	}
-
-	return db.Put(key, value)
-}
-
-// makeStakingInfoKey is used for making keys for staking info
-func makeStakingInfoKey(num uint64) []byte {
-	key := append(stakingInfoPrefix, common.Int64ToByteLittleEndian(num)...)
-	return key
+	key := makeKey(stakingInfoPrefix, blockNum)
+	return db.Put(key, stakingInfo)
 }
