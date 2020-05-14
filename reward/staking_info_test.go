@@ -18,9 +18,11 @@ package reward
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/klaytn/klaytn/common"
 	"github.com/stretchr/testify/assert"
 	"math"
+	"reflect"
 	"testing"
 )
 
@@ -246,5 +248,26 @@ func TestGiniReflectToExpectedCCO(t *testing.T) {
 				t.Errorf("weight reflected gini is different. result : %v expected : %v", stakingAmountsGiniReflected[j], testCase[i].afterReflected[j])
 			}
 		}
+	}
+}
+
+// TestStakingInfoJSON tests marshalling and unmarshalling StakingInfo
+// StakingInfo is marshaled before storing to DB.
+func TestStakingInfoJSON(t *testing.T) {
+	enc := newEmptyStakingInfo(1234)
+
+	s, err := json.Marshal(enc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dec := new(StakingInfo)
+	err = json.Unmarshal(s, dec)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(enc, dec) {
+		t.Fatal(errors.New("problem while marshaling or unmarshaling"))
 	}
 }

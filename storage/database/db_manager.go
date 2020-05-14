@@ -205,8 +205,8 @@ type DBManager interface {
 	ReadGovernanceState() ([]byte, error)
 
 	// StakingInfo related functions
-	ReadStakingInfo(blockNum uint64) (interface{}, error)
-	WriteStakingInfo(blockNum uint64, stakingInfo interface{}) error
+	ReadStakingInfo(blockNum uint64) ([]byte, error)
+	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
 }
 
 type DBEntryType uint8
@@ -1861,7 +1861,7 @@ func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uin
 	if err := dbm.WriteGovernanceIdx(num); err != nil {
 		return err
 	}
-	return db.Put(governanceKey(num), b)
+	return db.Put(makeKey(governancePrefix, num), b)
 }
 
 func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
@@ -1885,7 +1885,7 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 func (dbm *databaseManager) ReadGovernance(num uint64) (map[string]interface{}, error) {
 	db := dbm.getDatabase(MiscDB)
 
-	if data, err := db.Get(governanceKey(num)); err != nil {
+	if data, err := db.Get(makeKey(governancePrefix, num)); err != nil {
 		return nil, err
 	} else {
 		result := make(map[string]interface{})
