@@ -224,7 +224,6 @@ func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
 // storage, returning th enumber of items written and any occurred error.
 func (s *TrieSync) Commit(dbw database.Putter) (int, error) {
 	// Dump the membatch into a database dbw
-	// TODO-Klaytn need to consider batch put
 	for i, key := range s.membatch.order {
 		if err := dbw.Put(key[:], s.membatch.batch[key]); err != nil {
 			return i, err

@@ -275,6 +275,22 @@ func (td *stateTrieMigrationDB) ReadPreimage(hash common.Hash) []byte {
 	return td.ReadPreimageFromNew(hash)
 }
 
+func (bc *BlockChain) stateMigrationCommit(s *statedb.TrieSync, db database.DBManager) (int, time.Duration, error) {
+	start := time.Now()
+	stateTrieBatch := db.NewBatch(database.StateTrieDB)
+
+	written, err := s.Commit(stateTrieBatch)
+	if written == 0 || err != nil {
+		return written, 0, err
+	}
+
+	if err := stateTrieBatch.Write(); err != nil {
+		return 0, 0, fmt.Errorf("DB write error: %v", err)
+	}
+
+	return written, time.Since(start), nil
+}
+
 func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
@@ -283,16 +299,12 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	targetDB := statedb.NewDatabase(&stateTrieMigrationDB{bc.db})
 
 	trieSync := state.NewStateSync(rootHash, targetDB.DiskDB())
-	maxBatchSize := 10000
-	queue := append([]common.Hash{}, trieSync.Missing(maxBatchSize)...)
-
+	var queue []common.Hash
 	committedCnt := 0
 
 	for trieSync.Pending() > 0 {
-		// TODO-Klaytn refine the status parameter (progress percentage, etc)
 		bc.committedCnt, bc.pendingCnt = committedCnt, trieSync.Pending()
-		logger.Warn("State migration progress", "committedCnt", bc.committedCnt, "pendingCnt", bc.pendingCnt)
-
+		queue = append(queue[:0], trieSync.Missing(database.IdealBatchSize)...)
 		results := make([]statedb.SyncResult, len(queue))
 
 		for i, hash := range queue {
@@ -304,17 +316,18 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 			results[i] = statedb.SyncResult{Hash: hash, Data: data}
 		}
 
-		committedCnt += len(results)
-
 		if _, index, err := trieSync.Process(results); err != nil {
 			return fmt.Errorf("failed to process result #%d: %v", index, err)
 		}
 
-		if index, err := trieSync.Commit(targetDB.DiskDB().GetStateTrieMigrationDB()); err != nil {
-			return fmt.Errorf("failed to commit data #%d: %v", index, err)
+		written, elapsed, err := bc.stateMigrationCommit(trieSync, targetDB.DiskDB())
+		if err != nil {
+			return fmt.Errorf("failed to commit data #%d: %v", written, err)
 		}
 
-		queue = append(queue[:0], trieSync.Missing(maxBatchSize)...)
+		// TODO-Klaytn refine the status parameter (progress percentage, etc)
+		committedCnt += written
+		logger.Warn("State migration progress", "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt, "written", written, "elapsed", elapsed)
 
 		select {
 		case <-bc.stopStateMigration:
