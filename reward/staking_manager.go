@@ -74,7 +74,7 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 
 	// Get staking info from DB
 	if storedStakingInfo, err := sm.getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
-		logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
+		logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
 		return storedStakingInfo
 	} else {
 		logger.Warn("Failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
