@@ -28,7 +28,7 @@ type stakingInfoDB interface {
 
 func (sm *StakingManager) getStakingInfoFromDB(blockNum uint64) (*StakingInfo, error) {
 	if sm.stakingInfoDB == nil {
-		return nil, errors.New("stakingInfoDB is not set.")
+		return nil, errors.New("stakingInfoDB is not set")
 	}
 
 	jsonByte, err := sm.stakingInfoDB.ReadStakingInfo(blockNum)
@@ -47,7 +47,7 @@ func (sm *StakingManager) getStakingInfoFromDB(blockNum uint64) (*StakingInfo, e
 
 func (sm *StakingManager) addStakingInfoToDB(stakingInfo *StakingInfo) error {
 	if sm.stakingInfoDB == nil {
-		return errors.New("stakingInfoDB is not set.")
+		return errors.New("stakingInfoDB is not set")
 	}
 
 	marshaledStakingInfo, err := json.Marshal(stakingInfo)
