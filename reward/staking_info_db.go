@@ -26,7 +26,7 @@ type stakingInfoDB interface {
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
 }
 
-func (sm *StakingManager) getStakingInfoDB(blockNum uint64) (*StakingInfo, error) {
+func (sm *StakingManager) getStakingInfoFromDB(blockNum uint64) (*StakingInfo, error) {
 	if sm.stakingInfoDB == nil {
 		return nil, errors.New("stakingInfoDB is not set.")
 	}
@@ -45,7 +45,7 @@ func (sm *StakingManager) getStakingInfoDB(blockNum uint64) (*StakingInfo, error
 	return stakingInfo, nil
 }
 
-func (sm *StakingManager) addStakingInfoDB(stakingInfo *StakingInfo) error {
+func (sm *StakingManager) addStakingInfoToDB(stakingInfo *StakingInfo) error {
 	if sm.stakingInfoDB == nil {
 		return errors.New("stakingInfoDB is not set.")
 	}

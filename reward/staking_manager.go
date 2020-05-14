@@ -73,9 +73,9 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	}
 
 	// Get staking info from DB
-	if cachedStakingInfo, err := sm.getStakingInfoDB(stakingBlockNumber); cachedStakingInfo != nil && err == nil {
+	if storedStakingInfo, err := sm.getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
 		logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
-		return cachedStakingInfo
+		return storedStakingInfo
 	} else {
 		logger.Warn("Failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
 	}
@@ -104,7 +104,7 @@ func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, erro
 
 	sm.isActivated = true
 	sm.stakingInfoCache.add(stakingInfo)
-	if err := sm.addStakingInfoDB(stakingInfo); err != nil {
+	if err := sm.addStakingInfoToDB(stakingInfo); err != nil {
 		logger.Warn("Failed to write staking info to db.", "err", err, "stakingInfo", stakingInfo)
 		return stakingInfo, err
 	}
