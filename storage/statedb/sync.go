@@ -87,8 +87,8 @@ type TrieSync struct {
 	membatch         *syncMemBatch            // Memory buffer to avoid frequest database writes
 	requests         map[common.Hash]*request // Pending requests pertaining to a key hash
 	queue            *prque.Prque             // Priority queue with the pending requests
-	retrievedByDepth map[int]int              // Retrieved trie count by depth
-	committedByDepth map[int]int              // Committed trie count by depth
+	retrievedByDepth map[int]int              // Retrieved trie node number counted by depth
+	committedByDepth map[int]int              // Committed trie nodes number counted by depth
 }
 
 // NewTrieSync creates a new trie data download scheduler.
