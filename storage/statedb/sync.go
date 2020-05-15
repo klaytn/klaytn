@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/common"
+	"strconv"
 
 	"github.com/klaytn/klaytn/storage/database"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
@@ -298,7 +299,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 		// Notify any external watcher of a new key/value node
 		if req.callback != nil {
 			if node, ok := (child.node).(valueNode); ok {
-				if err := req.callback(node, req.hash); err != nil {
+				if err := req.callback(node, req.hash, child.depth); err != nil {
 					return nil, err
 				}
 			}
@@ -329,8 +330,11 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 // of the referencing parent requests complete due to this commit, they are also
 // committed themselves.
 func (s *TrieSync) commit(req *request) (err error) {
-	// Count the committed trie by depth
+	// Count the committed trie by depth and Clear the counts of lower depth
 	s.committedByDepth[req.depth]++
+	if s.committedByDepth[req.depth+1] == s.pendingByDepth[req.depth+1] {
+		s.committedByDepth[req.depth+1], s.pendingByDepth[req.depth+1] = 0, 0
+	}
 
 	// Write the node content to the membatch
 	s.membatch.batch[req.hash] = req.data
@@ -358,4 +362,30 @@ func (s *TrieSync) PendingByDepth(depth int) int {
 // CommittedByDepth returns the committed trie count by given depth.
 func (s *TrieSync) CommittedByDepth(depth int) int {
 	return s.committedByDepth[depth]
+}
+
+// CalcProgressPercentage returns the progress percentage.
+func (s *TrieSync) CalcProgressPercentage() float64 {
+	// Calculate progress percentage
+	var progress float64
+	var lastRatio float64
+	progress, lastRatio = 0.0, 1.0
+	for i := 0; i < 20; i++ {
+		c, p := s.CommittedByDepth(i), s.PendingByDepth(i)
+		if p == 0 {
+			break
+		}
+		progress += lastRatio * float64(c) / float64(p)
+		lastRatio = lastRatio / float64(p)
+		logger.Info("Trie sync progress by depth #"+strconv.Itoa(i), "committed", c, "pending", p)
+
+		if c == p {
+			break
+		}
+	}
+
+	progress *= 100
+	logger.Debug("Trie sync progress ", "progress", strconv.FormatFloat(progress, 'f', 10, 64)+"%")
+
+	return progress
 }

@@ -167,6 +167,7 @@ type BlockChain struct {
 	stopStateMigration    chan struct{}
 	committedCnt          int
 	pendingCnt            int
+	progress              float64
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -366,28 +367,11 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 			return fmt.Errorf("failed to commit data #%d: %v", written, err)
 		}
 
-		// Calculate progress percentage
-		var progress float64
-		var lastRatio float64
-		progress, lastRatio = 0.0, 1.0
-		for i := 1; i < 10; i++ {
-			c, p := trieSync.CommittedByDepth(i), trieSync.PendingByDepth(i)
-			if p == 0 {
-				break
-			}
-			progress += lastRatio * float64(c) / float64(p)
-			lastRatio = lastRatio / float64(p)
-			logger.Trace("State migration progress by depth #"+strconv.Itoa(i), "committed", c, "pending", p)
-
-			if c == p {
-				break
-			}
-		}
-
 		// Report progress
 		committedCnt += written
+		bc.committedCnt, bc.pendingCnt, bc.progress = committedCnt, trieSync.Pending(), trieSync.CalcProgressPercentage()
 		logger.Warn("State migration progress",
-			"progress", strconv.FormatFloat(progress*100, 'f', 2, 64)+"%",
+			"progress", strconv.FormatFloat(bc.progress, 'f', 5, 64)+"%",
 			"committedCnt", committedCnt, "pendingCnt", bc.pendingCnt,
 			"read", read, "readElapsed", readElapsed,
 			"written", written, "writeElapsed", writeElapsed,
@@ -404,6 +388,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		default:
 		}
 	}
+	bc.committedCnt, bc.pendingCnt, bc.progress = committedCnt, trieSync.Pending(), trieSync.CalcProgressPercentage()
 
 	logger.Info("Completed to copy state tries", "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt)
 
@@ -415,7 +400,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	// TODO-Klaytn consider to check storage trie also
 	dirty, err := bc.checkTrieContents(targetDB, srcCachedDB, rootHash)
 	if err != nil || len(dirty) > 0 {
-		logger.Error("copied stated is invalid", "err", err, "len(dirty)", len(dirty))
+		logger.Error("copied state is invalid", "err", err, "len(dirty)", len(dirty))
 		// TODO-Klaytn Remove new DB and log.Error
 		if err != nil {
 			return err
@@ -424,7 +409,6 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		return errors.New("copied state is not same with origin")
 	}
 
-	// TODO-Klaytn Swap DB and Remove Old DB
 	bc.db.FinishStateMigration()
 	logger.Info("completed state migration")
 
