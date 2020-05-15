@@ -327,8 +327,8 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	//threads := int(math.Max(math.Ceil(float64(runtime.NumCPU())/2), 4))
 	threads := int(math.Max(float64(runtime.NumCPU())-2, 4))
 
-	hashCh := make(chan common.Hash, threads*100)
-	resultCh := make(chan statedb.SyncResult, threads*100)
+	hashCh := make(chan common.Hash, threads)
+	resultCh := make(chan statedb.SyncResult, threads)
 
 	for th := 0; th < threads; th++ {
 		go bc.concurrentRead(srcCachedDB, quitCh, hashCh, resultCh)
@@ -336,7 +336,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 
 	for trieSync.Pending() > 0 {
 		bc.committedCnt, bc.pendingCnt = committedCnt, trieSync.Pending()
-		queue = append(queue[:0], trieSync.Missing(50000)...)
+		queue = append(queue[:0], trieSync.Missing(database.IdealBatchSize/threads)...)
 		results := make([]statedb.SyncResult, len(queue))
 
 		// Read the trie nodes
