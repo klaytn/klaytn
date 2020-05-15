@@ -372,30 +372,21 @@ func (s *TrieSync) CalcProgressPercentage() float64 {
 	//4	 	65,536 	 	0.00153
 	//5	 	1,048,576 	0.00010
 
-	for i := 0; i < 6; i++ {
-		c, r := s.CommittedByDepth(i), s.RetrievedByDepth(i)
-		if r == 0 {
-			break
-		}
-		newProgress := float64(c) / float64(r)
-		if newProgress > progress {
-			progress = newProgress
-		}
-	}
-
 	for i := 0; i < 20; i++ {
-		var progressByDepth float64
 		c, r := s.CommittedByDepth(i), s.RetrievedByDepth(i)
-		if r == 0 {
-			break
-		}
+
+		var progressByDepth float64
+
 		if r > 0 {
 			progressByDepth = float64(c) / float64(r) * 100
+			if progressByDepth > progress && i < 6 { // Scan depth 0 ~ 5 for accuracy
+				progress = progressByDepth
+			}
 		}
+
 		logger.Info("Trie sync progress by depth #"+strconv.Itoa(i), "committed", c, "retrieved", r, "progress", progressByDepth)
 	}
 
-	progress *= 100
 	logger.Info("Trie sync progress ", "progress", strconv.FormatFloat(progress, 'f', -1, 64)+"%")
 
 	return progress
