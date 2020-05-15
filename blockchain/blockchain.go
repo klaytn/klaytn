@@ -40,9 +40,11 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"io"
+	"math"
 	"math/big"
 	mrand "math/rand"
 	"reflect"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -291,6 +293,22 @@ func (bc *BlockChain) stateMigrationCommit(s *statedb.TrieSync, db database.DBMa
 	return written, time.Since(start), nil
 }
 
+func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{}, hashCh chan common.Hash, resultCh chan statedb.SyncResult) {
+	for {
+		select {
+		case <-quitCh:
+			return
+		case hash := <-hashCh:
+			data, err := db.NodeFromOld(hash)
+			if err != nil {
+				resultCh <- statedb.SyncResult{Hash: hash, Err: err}
+				continue
+			}
+			resultCh <- statedb.SyncResult{Hash: hash, Data: data}
+		}
+	}
+}
+
 func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
@@ -302,32 +320,55 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	var queue []common.Hash
 	committedCnt := 0
 
+	quitCh := make(chan struct{})
+	defer close(quitCh)
+
+	// Prepare concurrent read goroutines
+	threads := int(math.Max(math.Ceil(float64(runtime.NumCPU())/2), 4))
+	hashCh := make(chan common.Hash, threads)
+	resultCh := make(chan statedb.SyncResult, threads)
+
+	for th := 0; th < threads; th++ {
+		go bc.concurrentRead(srcCachedDB, quitCh, hashCh, resultCh)
+	}
+
+	// Migration main loop
 	for trieSync.Pending() > 0 {
 		bc.committedCnt, bc.pendingCnt = committedCnt, trieSync.Pending()
 		queue = append(queue[:0], trieSync.Missing(database.IdealBatchSize)...)
 		results := make([]statedb.SyncResult, len(queue))
 
-		for i, hash := range queue {
-			data, err := srcCachedDB.NodeFromOld(hash)
-			if err != nil {
-				return fmt.Errorf("failed to retrieve node data for %x: %v", hash, err)
+		// Read the trie nodes
+		start := time.Now()
+		go func() {
+			for _, hash := range queue {
+				hashCh <- hash
 			}
+		}()
 
-			results[i] = statedb.SyncResult{Hash: hash, Data: data}
+		for i := 0; i < len(queue); i++ {
+			result := <-resultCh
+			if result.Err != nil {
+				return fmt.Errorf("failed to retrieve node data for %x: %v", result.Hash, result.Err)
+			}
+			results[i] = result
 		}
+		read, readElapsed := len(queue), time.Since(start)
 
+		// Process trie nodes
 		if _, index, err := trieSync.Process(results); err != nil {
 			return fmt.Errorf("failed to process result #%d: %v", index, err)
 		}
 
-		written, elapsed, err := bc.stateMigrationCommit(trieSync, targetDB.DiskDB())
+		// Commit trie nodes
+		written, writeElapsed, err := bc.stateMigrationCommit(trieSync, targetDB.DiskDB())
 		if err != nil {
 			return fmt.Errorf("failed to commit data #%d: %v", written, err)
 		}
 
 		// TODO-Klaytn refine the status parameter (progress percentage, etc)
 		committedCnt += written
-		logger.Warn("State migration progress", "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt, "written", written, "elapsed", elapsed)
+		logger.Warn("State migration progress", "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt, "read", read, "readElapsed", readElapsed, "written", written, "writeElapsed", writeElapsed, "elapsed", time.Since(start))
 
 		select {
 		case <-bc.stopStateMigration:
@@ -340,7 +381,8 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		default:
 		}
 	}
-	logger.Info("completed to copy state migration", "resultCnt", committedCnt)
+
+	logger.Info("Completed to copy state tries", "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt)
 
 	// Preimage Copy
 	// TODO-Klaytn consider to copy preimage
