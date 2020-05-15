@@ -332,9 +332,6 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 func (s *TrieSync) commit(req *request) (err error) {
 	// Count the committed trie by depth and Clear the counts of lower depth
 	s.committedByDepth[req.depth]++
-	if s.committedByDepth[req.depth+1] == s.pendingByDepth[req.depth+1] {
-		s.committedByDepth[req.depth+1], s.pendingByDepth[req.depth+1] = 0, 0
-	}
 
 	// Write the node content to the membatch
 	s.membatch.batch[req.hash] = req.data
@@ -366,26 +363,40 @@ func (s *TrieSync) CommittedByDepth(depth int) int {
 
 // CalcProgressPercentage returns the progress percentage.
 func (s *TrieSync) CalcProgressPercentage() float64 {
-	// Calculate progress percentage
 	var progress float64
-	var lastRatio float64
-	progress, lastRatio = 0.0, 1.0
-	for i := 0; i < 20; i++ {
+	//depth	max trie	resolution (%)
+	//0	 	1 	 		100.00000
+	//1	 	16 	 		6.25000
+	//2	 	256 	 	0.39063
+	//3	 	4,096 	 	0.02441
+	//4	 	65,536 	 	0.00153
+	//5	 	1,048,576 	0.00010
+
+	for i := 0; i < 6; i++ {
 		c, p := s.CommittedByDepth(i), s.PendingByDepth(i)
 		if p == 0 {
 			break
 		}
-		progress += lastRatio * float64(c) / float64(p)
-		lastRatio = lastRatio / float64(p)
-		logger.Info("Trie sync progress by depth #"+strconv.Itoa(i), "committed", c, "pending", p)
-
-		if c == p {
-			break
+		newProgress := float64(c) / float64(p)
+		if newProgress > progress {
+			progress = newProgress
 		}
 	}
 
+	for i := 0; i < 20; i++ {
+		var progressByDepth float64
+		c, p := s.CommittedByDepth(i), s.PendingByDepth(i)
+		if p == 0 {
+			break
+		}
+		if p > 0 {
+			progressByDepth = float64(c) / float64(p) * 100
+		}
+		logger.Info("Trie sync progress by depth #"+strconv.Itoa(i), "committed", c, "pending", p, "progress", progressByDepth)
+	}
+
 	progress *= 100
-	logger.Debug("Trie sync progress ", "progress", strconv.FormatFloat(progress, 'f', 10, 64)+"%")
+	logger.Info("Trie sync progress ", "progress", strconv.FormatFloat(progress, 'f', -1, 64)+"%")
 
 	return progress
 }
