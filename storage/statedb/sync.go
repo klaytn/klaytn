@@ -87,7 +87,7 @@ type TrieSync struct {
 	membatch         *syncMemBatch            // Memory buffer to avoid frequest database writes
 	requests         map[common.Hash]*request // Pending requests pertaining to a key hash
 	queue            *prque.Prque             // Priority queue with the pending requests
-	pendingByDepth   map[int]int              // Pending trie count by depth
+	retrievedByDepth map[int]int              // Retrieved trie count by depth
 	committedByDepth map[int]int              // Committed trie count by depth
 }
 
@@ -98,7 +98,7 @@ func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallba
 		membatch:         newSyncMemBatch(),
 		requests:         make(map[common.Hash]*request),
 		queue:            prque.New(),
-		pendingByDepth:   make(map[int]int),
+		retrievedByDepth: make(map[int]int),
 		committedByDepth: make(map[int]int),
 	}
 	ts.AddSubTrie(root, 0, common.Hash{}, callback)
@@ -257,8 +257,8 @@ func (s *TrieSync) schedule(req *request) {
 		return
 	}
 
-	// Count the pending trie by depth
-	s.pendingByDepth[req.depth]++
+	// Count the retrieved trie by depth
+	s.retrievedByDepth[req.depth]++
 
 	// Schedule the request for future retrieval
 	s.queue.Push(req.hash, float32(req.depth))
@@ -351,9 +351,9 @@ func (s *TrieSync) commit(req *request) (err error) {
 	return nil
 }
 
-// PendingByDepth returns the pending trie count by given depth.
-func (s *TrieSync) PendingByDepth(depth int) int {
-	return s.pendingByDepth[depth]
+// RetrievedByDepth returns the retrieved trie count by given depth.
+func (s *TrieSync) RetrievedByDepth(depth int) int {
+	return s.retrievedByDepth[depth]
 }
 
 // CommittedByDepth returns the committed trie count by given depth.
@@ -373,11 +373,11 @@ func (s *TrieSync) CalcProgressPercentage() float64 {
 	//5	 	1,048,576 	0.00010
 
 	for i := 0; i < 6; i++ {
-		c, p := s.CommittedByDepth(i), s.PendingByDepth(i)
-		if p == 0 {
+		c, r := s.CommittedByDepth(i), s.RetrievedByDepth(i)
+		if r == 0 {
 			break
 		}
-		newProgress := float64(c) / float64(p)
+		newProgress := float64(c) / float64(r)
 		if newProgress > progress {
 			progress = newProgress
 		}
@@ -385,14 +385,14 @@ func (s *TrieSync) CalcProgressPercentage() float64 {
 
 	for i := 0; i < 20; i++ {
 		var progressByDepth float64
-		c, p := s.CommittedByDepth(i), s.PendingByDepth(i)
-		if p == 0 {
+		c, r := s.CommittedByDepth(i), s.RetrievedByDepth(i)
+		if r == 0 {
 			break
 		}
-		if p > 0 {
-			progressByDepth = float64(c) / float64(p) * 100
+		if r > 0 {
+			progressByDepth = float64(c) / float64(r) * 100
 		}
-		logger.Info("Trie sync progress by depth #"+strconv.Itoa(i), "committed", c, "pending", p, "progress", progressByDepth)
+		logger.Info("Trie sync progress by depth #"+strconv.Itoa(i), "committed", c, "retrieved", r, "progress", progressByDepth)
 	}
 
 	progress *= 100
