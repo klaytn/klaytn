@@ -237,10 +237,6 @@ web3._extend({
 			name: 'stopStateMigration',
 			call: 'admin_stopStateMigration',
 		}),
-		new web3._extend.Method({
-			name: 'statusStateMigration',
-			call: 'admin_statusStateMigration',
-		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -254,6 +250,10 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'datadir',
 			getter: 'admin_datadir'
+		}),
+		new web3._extend.Property({
+			name: 'statusStateMigration',
+			getter: 'admin_statusStateMigration'
 		}),
 	]
 });

@@ -31,15 +31,15 @@ import (
 // NewStateSync create a new state trie download scheduler.
 func NewStateSync(root common.Hash, database statedb.StateTrieReadDB) *statedb.TrieSync {
 	var syncer *statedb.TrieSync
-	callback := func(leaf []byte, parent common.Hash) error {
+	callback := func(leaf []byte, parent common.Hash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
 		if err := rlp.Decode(bytes.NewReader(leaf), serializer); err != nil {
 			return err
 		}
 		obj := serializer.GetAccount()
 		if pa := account.GetProgramAccount(obj); pa != nil {
-			syncer.AddSubTrie(pa.GetStorageRoot(), 64, parent, nil)
-			syncer.AddRawEntry(common.BytesToHash(pa.GetCodeHash()), 64, parent)
+			syncer.AddSubTrie(pa.GetStorageRoot(), parentDepth+1, parent, nil)
+			syncer.AddRawEntry(common.BytesToHash(pa.GetCodeHash()), parentDepth+1, parent)
 		}
 		return nil
 	}

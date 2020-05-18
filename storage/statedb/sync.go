@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/common"
+	"strconv"
 
 	"github.com/klaytn/klaytn/storage/database"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
@@ -82,19 +83,23 @@ type StateTrieReadDB interface {
 // unknown trie hashes to retrieve, accepts node data associated with said hashes
 // and reconstructs the trie step by step until all is done.
 type TrieSync struct {
-	database StateTrieReadDB          // Persistent database to check for existing entries
-	membatch *syncMemBatch            // Memory buffer to avoid frequest database writes
-	requests map[common.Hash]*request // Pending requests pertaining to a key hash
-	queue    *prque.Prque             // Priority queue with the pending requests
+	database         StateTrieReadDB          // Persistent database to check for existing entries
+	membatch         *syncMemBatch            // Memory buffer to avoid frequest database writes
+	requests         map[common.Hash]*request // Pending requests pertaining to a key hash
+	queue            *prque.Prque             // Priority queue with the pending requests
+	retrievedByDepth map[int]int              // Retrieved trie node number counted by depth
+	committedByDepth map[int]int              // Committed trie nodes number counted by depth
 }
 
 // NewTrieSync creates a new trie data download scheduler.
 func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback) *TrieSync {
 	ts := &TrieSync{
-		database: database,
-		membatch: newSyncMemBatch(),
-		requests: make(map[common.Hash]*request),
-		queue:    prque.New(),
+		database:         database,
+		membatch:         newSyncMemBatch(),
+		requests:         make(map[common.Hash]*request),
+		queue:            prque.New(),
+		retrievedByDepth: make(map[int]int),
+		committedByDepth: make(map[int]int),
 	}
 	ts.AddSubTrie(root, 0, common.Hash{}, callback)
 	return ts
@@ -251,6 +256,10 @@ func (s *TrieSync) schedule(req *request) {
 		old.parents = append(old.parents, req.parents...)
 		return
 	}
+
+	// Count the retrieved trie by depth
+	s.retrievedByDepth[req.depth]++
+
 	// Schedule the request for future retrieval
 	s.queue.Push(req.hash, float32(req.depth))
 	s.requests[req.hash] = req
@@ -290,7 +299,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 		// Notify any external watcher of a new key/value node
 		if req.callback != nil {
 			if node, ok := (child.node).(valueNode); ok {
-				if err := req.callback(node, req.hash); err != nil {
+				if err := req.callback(node, req.hash, child.depth); err != nil {
 					return nil, err
 				}
 			}
@@ -321,6 +330,9 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 // of the referencing parent requests complete due to this commit, they are also
 // committed themselves.
 func (s *TrieSync) commit(req *request) (err error) {
+	// Count the committed trie by depth and Clear the counts of lower depth
+	s.committedByDepth[req.depth]++
+
 	// Write the node content to the membatch
 	s.membatch.batch[req.hash] = req.data
 	s.membatch.order = append(s.membatch.order, req.hash)
@@ -337,4 +349,46 @@ func (s *TrieSync) commit(req *request) (err error) {
 		}
 	}
 	return nil
+}
+
+// RetrievedByDepth returns the retrieved trie count by given depth.
+// This number is same as the number of nodes that needs to be commited to complete trie sync.
+func (s *TrieSync) RetrievedByDepth(depth int) int {
+	return s.retrievedByDepth[depth]
+}
+
+// CommittedByDepth returns the committed trie count by given depth.
+func (s *TrieSync) CommittedByDepth(depth int) int {
+	return s.committedByDepth[depth]
+}
+
+// CalcProgressPercentage returns the progress percentage.
+func (s *TrieSync) CalcProgressPercentage() float64 {
+	var progress float64
+	//depth	max trie	resolution (%)
+	//0	 	1 	 		100.00000
+	//1	 	16 	 		6.25000
+	//2	 	256 	 	0.39063
+	//3	 	4,096 	 	0.02441
+	//4	 	65,536 	 	0.00153
+	//5	 	1,048,576 	0.00010
+
+	for i := 0; i < 20; i++ {
+		c, r := s.CommittedByDepth(i), s.RetrievedByDepth(i)
+
+		var progressByDepth float64
+
+		if r > 0 {
+			progressByDepth = float64(c) / float64(r) * 100
+			if progressByDepth > progress && i < 6 { // Scan depth 0 ~ 5 for accuracy
+				progress = progressByDepth
+			}
+		}
+
+		logger.Info("Trie sync progress by depth #"+strconv.Itoa(i), "committed", c, "retrieved", r, "progress", progressByDepth)
+	}
+
+	logger.Info("Trie sync progress ", "progress", strconv.FormatFloat(progress, 'f', -1, 64)+"%")
+
+	return progress
 }

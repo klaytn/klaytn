@@ -46,6 +46,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -167,6 +168,7 @@ type BlockChain struct {
 	stopStateMigration    chan struct{}
 	committedCnt          int
 	pendingCnt            int
+	progress              float64
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -313,6 +315,8 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
+	start := time.Now()
+
 	srcCachedDB := bc.StateCache().TrieDB()
 	targetDB := statedb.NewDatabase(&stateTrieMigrationDB{bc.db})
 
@@ -339,7 +343,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		results := make([]statedb.SyncResult, len(queue))
 
 		// Read the trie nodes
-		start := time.Now()
+		startIter := time.Now()
 		go func() {
 			for _, hash := range queue {
 				hashCh <- hash
@@ -353,7 +357,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 			}
 			results[i] = result
 		}
-		read, readElapsed := len(queue), time.Since(start)
+		read, readElapsed := len(queue), time.Since(startIter)
 
 		// Process trie nodes
 		if _, index, err := trieSync.Process(results); err != nil {
@@ -366,9 +370,17 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 			return fmt.Errorf("failed to commit data #%d: %v", written, err)
 		}
 
-		// TODO-Klaytn refine the status parameter (progress percentage, etc)
+		// Report progress
 		committedCnt += written
-		logger.Warn("State migration progress", "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt, "read", read, "readElapsed", readElapsed, "written", written, "writeElapsed", writeElapsed, "elapsed", time.Since(start))
+		bc.committedCnt, bc.pendingCnt, bc.progress = committedCnt, trieSync.Pending(), trieSync.CalcProgressPercentage()
+		progressStr := strconv.FormatFloat(bc.progress, 'f', 4, 64)
+		progressStr = strings.TrimRight(progressStr, "0")
+		progressStr = strings.TrimRight(progressStr, ".") + "%"
+
+		logger.Warn("State migration progress",
+			"progress", progressStr, "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt,
+			"read", read, "readElapsed", readElapsed, "written", written, "writeElapsed", writeElapsed,
+			"elapsed", time.Since(startIter))
 
 		select {
 		case <-bc.stopStateMigration:
@@ -381,8 +393,11 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		default:
 		}
 	}
+	bc.committedCnt, bc.pendingCnt, bc.progress = committedCnt, trieSync.Pending(), trieSync.CalcProgressPercentage()
 
-	logger.Info("Completed to copy state tries", "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt)
+	elapsed := time.Since(start)
+	speed := float64(committedCnt) / elapsed.Seconds()
+	logger.Info("State migration is completed", "committedCnt", committedCnt, "elapsed", elapsed, "committed per second", speed)
 
 	// Preimage Copy
 	// TODO-Klaytn consider to copy preimage
@@ -392,7 +407,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	// TODO-Klaytn consider to check storage trie also
 	dirty, err := bc.checkTrieContents(targetDB, srcCachedDB, rootHash)
 	if err != nil || len(dirty) > 0 {
-		logger.Error("copied stated is invalid", "err", err, "len(dirty)", len(dirty))
+		logger.Error("copied state is invalid", "err", err, "len(dirty)", len(dirty))
 		// TODO-Klaytn Remove new DB and log.Error
 		if err != nil {
 			return err
@@ -401,7 +416,6 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		return errors.New("copied state is not same with origin")
 	}
 
-	// TODO-Klaytn Swap DB and Remove Old DB
 	bc.db.FinishStateMigration()
 	logger.Info("completed state migration")
 
@@ -447,7 +461,7 @@ func (bc *BlockChain) restartStateMigration() {
 		}
 
 		root := block.Root()
-		logger.Warn("Restart state trie migration", "blockNumber", number, "root", root.String())
+		logger.Warn("State migration is restarted", "blockNumber", number, "root", root.String())
 
 		go bc.migrateState(root)
 	}
@@ -461,14 +475,14 @@ func (bc *BlockChain) PrepareStateMigration() error {
 	bc.prepareStateMigration = true
 	currentBlock := bc.CurrentBlock().NumberU64()
 	nextCommittedBlock := currentBlock + (DefaultBlockInterval - currentBlock%DefaultBlockInterval)
-	logger.Warn("Prepared state migration", "migrationStartingBlockNumber", nextCommittedBlock)
+	logger.Warn("State migration is prepared", "migrationStartingBlockNumber", nextCommittedBlock)
 
 	return nil
 }
 
 func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) {
 	if bc.prepareStateMigration {
-		logger.Info("Start state migration", "block", number, "root", root)
+		logger.Info("State migration is started", "block", number, "root", root)
 
 		if err := bc.StartStateMigration(number, root); err != nil {
 			logger.Error("Failed to start state migration", "err", err)
@@ -505,8 +519,8 @@ func (bc *BlockChain) StopStateMigration() error {
 
 // StatusStateMigration returns if it is in migration, the block number of in migration,
 // number of committed blocks and number of pending blocks
-func (bc *BlockChain) StatusStateMigration() (bool, uint64, int, int) {
-	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.committedCnt, bc.pendingCnt
+func (bc *BlockChain) StatusStateMigration() (bool, uint64, int, int, float64) {
+	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.committedCnt, bc.pendingCnt, bc.progress
 }
 
 func (bc *BlockChain) UseGiniCoeff() bool {
