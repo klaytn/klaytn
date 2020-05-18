@@ -40,7 +40,6 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"io"
-	"math"
 	"math/big"
 	mrand "math/rand"
 	"reflect"
@@ -328,7 +327,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	defer close(quitCh)
 
 	// Prepare concurrent read goroutines
-	threads := int(math.Max(math.Ceil(float64(runtime.NumCPU())/2), 4))
+	threads := runtime.NumCPU()
 	hashCh := make(chan common.Hash, threads)
 	resultCh := make(chan statedb.SyncResult, threads)
 
