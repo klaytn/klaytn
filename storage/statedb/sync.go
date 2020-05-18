@@ -352,7 +352,7 @@ func (s *TrieSync) commit(req *request) (err error) {
 }
 
 // RetrievedByDepth returns the retrieved trie count by given depth.
-// This number is same as the number of nodes that needs to be commited to complete trie sync. 
+// This number is same as the number of nodes that needs to be commited to complete trie sync.
 func (s *TrieSync) RetrievedByDepth(depth int) int {
 	return s.retrievedByDepth[depth]
 }
