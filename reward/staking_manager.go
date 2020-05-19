@@ -127,7 +127,10 @@ func (sm *StakingManager) handleChainHeadEvent() {
 		case ev := <-sm.chainHeadChan:
 			if sm.governanceHelper.ProposerPolicy() == params.WeightedRandom {
 				// check and update if staking info is not valid beforehand
-				sm.GetStakingInfo(ev.Block.NumberU64())
+				stakingManager := sm.GetStakingInfo(ev.Block.NumberU64())
+				if stakingManager == nil {
+					logger.Error("unable to fetch staking info")
+				}
 			}
 		case <-sm.chainHeadSub.Err():
 			return
