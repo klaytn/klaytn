@@ -130,7 +130,6 @@ func (sm *StakingManager) handleChainHeadEvent() {
 				stakingManager := sm.GetStakingInfo(ev.Block.NumberU64() + params.StakingUpdateInterval())
 				if stakingManager == nil {
 					logger.Error("unable to fetch staking info", "blockNum", ev.Block.NumberU64())
-
 				}
 			}
 		case <-sm.chainHeadSub.Err():
