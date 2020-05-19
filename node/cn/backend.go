@@ -590,18 +590,15 @@ func (s *CN) Start(srvr p2p.Server) error {
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
-	if reward.GetStakingManager() != nil {
-		reward.SubscribeStakingManager()
-	}
+	reward.SubscribeStakingManager()
+
 	return nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Klaytn protocol.
 func (s *CN) Stop() error {
-	if reward.GetStakingManager() != nil {
-		reward.UnsubscribeStakingManager()
-	}
+	reward.UnsubscribeStakingManager()
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()

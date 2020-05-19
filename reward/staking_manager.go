@@ -17,6 +17,7 @@
 package reward
 
 import (
+	"errors"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -86,6 +87,11 @@ func GetStakingManager() *StakingManager {
 
 // GetStakingInfo returns a corresponding stakingInfo for a blockNum.
 func GetStakingInfo(blockNum uint64) *StakingInfo {
+	if stakingManager == nil {
+		logger.Info("unable to GetStakingInfo; stakingManager is not set")
+		return nil
+	}
+
 	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
 
 	// Get staking info from cache
@@ -114,11 +120,20 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 }
 
 func IsActivated() bool {
+	if stakingManager == nil {
+		logger.Debug("unable to get IsActivated; stakingManager is not set")
+		return false
+	}
+
 	return stakingManager.isActivated
 }
 
 // updateStakingInfo updates staking info in cache and db created from given block number.
 func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
+	if stakingManager == nil {
+		return nil, errors.New("unable to updateStakingInfo; stakingManager is not set")
+	}
+
 	stakingInfo, err := stakingManager.addressBookConnector.getStakingInfoFromAddressBook(blockNum)
 	if err != nil {
 		return nil, err
@@ -126,6 +141,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 
 	stakingManager.isActivated = true
 	stakingManager.stakingInfoCache.add(stakingInfo)
+
 	if err := addStakingInfoToDB(stakingInfo); err != nil {
 		logger.Warn("Failed to write staking info to db.", "err", err, "stakingInfo", stakingInfo)
 		return stakingInfo, err
@@ -138,6 +154,11 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 
 // Subscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.
 func SubscribeStakingManager() {
+	if stakingManager == nil {
+		logger.Debug("unable to subscribe; stakingManager is not set")
+		return
+	}
+
 	stakingManager.chainHeadSub = stakingManager.blockchain.SubscribeChainHeadEvent(stakingManager.chainHeadChan)
 
 	go checkStakingInfoOnChainHeadEvent()
@@ -170,5 +191,10 @@ func checkStakingInfoOnChainHeadEvent() {
 
 // Unsubscribe can unsubscribe a subscription to listen chain head event.
 func UnsubscribeStakingManager() {
+	if stakingManager == nil {
+		logger.Debug("unable to unsubscribe; stakingManager is not set")
+		return
+	}
+
 	stakingManager.chainHeadSub.Unsubscribe()
 }
