@@ -47,7 +47,6 @@ type StakingManager struct {
 	blockchain           blockChain
 	chainHeadChan        chan blockchain.ChainHeadEvent
 	chainHeadSub         event.Subscription
-	isActivated          bool
 }
 
 func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *StakingManager {
@@ -58,7 +57,6 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 		governanceHelper:     gh,
 		blockchain:           bc,
 		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		isActivated:          false,
 	}
 }
 
@@ -75,6 +73,7 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	// Get staking info from DB
 	if storedStakingInfo, err := sm.getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
 		logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
+		sm.stakingInfoCache.add(storedStakingInfo)
 		return storedStakingInfo
 	} else {
 		logger.Warn("Failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
@@ -91,10 +90,6 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	return calcStakingInfo
 }
 
-func (sm *StakingManager) IsActivated() bool {
-	return sm.isActivated
-}
-
 // updateStakingInfo updates staking info in cache and db created from given block number.
 func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	stakingInfo, err := sm.addressBookConnector.getStakingInfoFromAddressBook(blockNum)
@@ -102,7 +97,6 @@ func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, erro
 		return nil, err
 	}
 
-	sm.isActivated = true
 	sm.stakingInfoCache.add(stakingInfo)
 	if err := sm.addStakingInfoToDB(stakingInfo); err != nil {
 		logger.Warn("Failed to write staking info to db.", "err", err, "stakingInfo", stakingInfo)
@@ -132,12 +126,10 @@ func (sm *StakingManager) handleChainHeadEvent() {
 		// Handle ChainHeadEvent
 		case ev := <-sm.chainHeadChan:
 			if sm.governanceHelper.ProposerPolicy() == params.WeightedRandom {
-				stakingBlockNum := ev.Block.NumberU64() - ev.Block.NumberU64()%sm.governanceHelper.StakingUpdateInterval()
-				if cachedStakingInfo := sm.stakingInfoCache.get(stakingBlockNum); cachedStakingInfo == nil {
-					stakingInfo, _ := sm.updateStakingInfo(stakingBlockNum)
-					if stakingInfo == nil {
-						logger.Error("Failed to update stakingInfoCache", "blockNumber", ev.Block.NumberU64(), "stakingNumber", stakingBlockNum)
-					}
+				// check and update if staking info is not valid before for the next update interval blocks
+				stakingManager := sm.GetStakingInfo(ev.Block.NumberU64() + params.StakingUpdateInterval())
+				if stakingManager == nil {
+					logger.Error("unable to fetch staking info", "blockNum", ev.Block.NumberU64())
 				}
 			}
 		case <-sm.chainHeadSub.Err():

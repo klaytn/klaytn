@@ -373,12 +373,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		stakingInfo := sb.GetStakingManager().GetStakingInfo(header.Number.Uint64())
-		if sb.GetStakingManager().IsActivated() {
-			if stakingInfo != nil {
-				kirAddr = stakingInfo.KIRAddr
-				pocAddr = stakingInfo.PoCAddr
-			}
+		if stakingInfo := sb.GetStakingManager().GetStakingInfo(header.Number.Uint64()); stakingInfo != nil {
+			kirAddr = stakingInfo.KIRAddr
+			pocAddr = stakingInfo.PoCAddr
 		}
 
 		if err := sb.rewardDistributor.DistributeBlockReward(state, header, pocAddr, kirAddr); err != nil {
