@@ -352,6 +352,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		for i := 0; i < len(queue); i++ {
 			result := <-resultCh
 			if result.Err != nil {
+				logger.Error("State migration is failed by resultCh", "result.Err", result.Err)
 				return fmt.Errorf("failed to retrieve node data for %x: %v", result.Hash, result.Err)
 			}
 			results[i] = result
@@ -360,12 +361,14 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 
 		// Process trie nodes
 		if _, index, err := trieSync.Process(results); err != nil {
+			logger.Error("State migration is failed by process error", "err", err)
 			return fmt.Errorf("failed to process result #%d: %v", index, err)
 		}
 
 		// Commit trie nodes
 		written, writeElapsed, err := bc.stateMigrationCommit(trieSync, targetDB.DiskDB())
 		if err != nil {
+			logger.Error("State migration is failed by commit error", "err", err)
 			return fmt.Errorf("failed to commit data #%d: %v", written, err)
 		}
 
@@ -386,6 +389,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 			// TODO-Klaytn Revert DB.
 			// - copied new DB data to old DB.
 			// - remove new DB
+			logger.Error("State migration is failed by stop")
 			return errors.New("stop state migration")
 		case <-bc.quit:
 			return nil
