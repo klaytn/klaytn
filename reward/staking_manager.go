@@ -106,7 +106,7 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 		stakingManager.stakingInfoCache.add(storedStakingInfo)
 		return storedStakingInfo
 	} else {
-		logger.Warn("failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
+		logger.Debug("failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
 	}
 
 	// Calculate staking info from block header and updates it to cache and db
@@ -134,7 +134,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	stakingManager.stakingInfoCache.add(stakingInfo)
 
 	if err := addStakingInfoToDB(stakingInfo); err != nil {
-		logger.Warn("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
+		logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
 		return stakingInfo, err
 	}
 
