@@ -87,7 +87,6 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	}
 
 	logger.Debug("Get stakingInfo from header.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
-	sm.stakingInfoCache.add(calcStakingInfo)
 	return calcStakingInfo
 }
 
@@ -127,13 +126,8 @@ func (sm *StakingManager) handleChainHeadEvent() {
 		// Handle ChainHeadEvent
 		case ev := <-sm.chainHeadChan:
 			if sm.governanceHelper.ProposerPolicy() == params.WeightedRandom {
-				stakingBlockNum := ev.Block.NumberU64() - ev.Block.NumberU64()%sm.governanceHelper.StakingUpdateInterval()
-				if cachedStakingInfo := sm.stakingInfoCache.get(stakingBlockNum); cachedStakingInfo == nil {
-					stakingInfo, _ := sm.updateStakingInfo(stakingBlockNum)
-					if stakingInfo == nil {
-						logger.Error("Failed to update stakingInfoCache", "blockNumber", ev.Block.NumberU64(), "stakingNumber", stakingBlockNum)
-					}
-				}
+				// check if staking info is valid beforehand
+				sm.GetStakingInfo(ev.Block.NumberU64())
 			}
 		case <-sm.chainHeadSub.Err():
 			return
