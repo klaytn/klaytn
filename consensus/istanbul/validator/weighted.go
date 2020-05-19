@@ -554,7 +554,7 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 // It returns no error when weightedCouncil:
 //   (1) already has up-do-date proposers
 //   (2) successfully calculated up-do-date proposers
-func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakingManager *reward.StakingManager) error {
+func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 
@@ -578,7 +578,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, stakin
 		return err
 	}
 
-	newStakingInfo := stakingManager.GetStakingInfo(blockNum + 1)
+	newStakingInfo := reward.GetStakingInfo(blockNum + 1)
 
 	valSet.stakingInfo = newStakingInfo
 	if valSet.stakingInfo == nil {
