@@ -352,7 +352,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		for i := 0; i < len(queue); i++ {
 			result := <-resultCh
 			if result.Err != nil {
-				logger.Error("State migration is failed by resultCh", "result.Err", result.Err)
+				logger.Error("State migration is failed by resultCh", "result.hash", result.Hash.String(), "result.Err", result.Err)
 				return fmt.Errorf("failed to retrieve node data for %x: %v", result.Hash, result.Err)
 			}
 			results[i] = result
