@@ -47,7 +47,6 @@ type StakingManager struct {
 	blockchain           blockChain
 	chainHeadChan        chan blockchain.ChainHeadEvent
 	chainHeadSub         event.Subscription
-	isActivated          bool
 }
 
 func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *StakingManager {
@@ -58,7 +57,6 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 		governanceHelper:     gh,
 		blockchain:           bc,
 		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		isActivated:          false,
 	}
 }
 
@@ -75,6 +73,7 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	// Get staking info from DB
 	if storedStakingInfo, err := sm.getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
 		logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
+		sm.stakingInfoCache.add(storedStakingInfo)
 		return storedStakingInfo
 	} else {
 		logger.Warn("Failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
@@ -88,11 +87,8 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	}
 
 	logger.Debug("Get stakingInfo from header.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
+	sm.stakingInfoCache.add(calcStakingInfo)
 	return calcStakingInfo
-}
-
-func (sm *StakingManager) IsActivated() bool {
-	return sm.isActivated
 }
 
 // updateStakingInfo updates staking info in cache and db created from given block number.
@@ -102,7 +98,6 @@ func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, erro
 		return nil, err
 	}
 
-	sm.isActivated = true
 	sm.stakingInfoCache.add(stakingInfo)
 	if err := sm.addStakingInfoToDB(stakingInfo); err != nil {
 		logger.Warn("Failed to write staking info to db.", "err", err, "stakingInfo", stakingInfo)
