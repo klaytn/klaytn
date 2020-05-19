@@ -590,6 +590,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
+
 	reward.SubscribeStakingManager()
 
 	return nil

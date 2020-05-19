@@ -74,6 +74,8 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 				chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 			}
 		})
+	} else {
+		logger.Error("unable to set StakingManager", "blockchain", bc, "governanceHelper", gh)
 	}
 
 	return stakingManager
@@ -86,7 +88,7 @@ func GetStakingManager() *StakingManager {
 // GetStakingInfo returns a corresponding stakingInfo for a blockNum.
 func GetStakingInfo(blockNum uint64) *StakingInfo {
 	if stakingManager == nil {
-		logger.Info("unable to GetStakingInfo; stakingManager is not set")
+		logger.Warn("unable to GetStakingInfo; stakingManager is not set")
 		return nil
 	}
 
@@ -104,13 +106,13 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 		stakingManager.stakingInfoCache.add(storedStakingInfo)
 		return storedStakingInfo
 	} else {
-		logger.Warn("Failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
+		logger.Warn("failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
 	}
 
 	// Calculate staking info from block header and updates it to cache and db
 	calcStakingInfo, _ := updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
-		logger.Error("Failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber)
+		logger.Error("failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber)
 		return nil
 	}
 
@@ -132,7 +134,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	stakingManager.stakingInfoCache.add(stakingInfo)
 
 	if err := addStakingInfoToDB(stakingInfo); err != nil {
-		logger.Warn("Failed to write staking info to db.", "err", err, "stakingInfo", stakingInfo)
+		logger.Warn("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
 		return stakingInfo, err
 	}
 
@@ -144,7 +146,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 // Subscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.
 func SubscribeStakingManager() {
 	if stakingManager == nil {
-		logger.Debug("unable to subscribe; stakingManager is not set")
+		logger.Warn("unable to subscribe; stakingManager is not set; this can slow down node")
 		return
 	}
 
@@ -179,7 +181,7 @@ func checkStakingInfoOnChainHeadEvent() {
 // Unsubscribe can unsubscribe a subscription to listen chain head event.
 func UnsubscribeStakingManager() {
 	if stakingManager == nil && stakingManager.chainHeadSub == nil {
-		logger.Debug("unable to unsubscribe; stakingManager of chainHeadSub is not set")
+		logger.Info("unable to unsubscribe; stakingManager of chainHeadSub is not set")
 		return
 	}
 
