@@ -49,7 +49,6 @@ type StakingManager struct {
 	blockchain           blockChain
 	chainHeadChan        chan blockchain.ChainHeadEvent
 	chainHeadSub         event.Subscription
-	isActivated          bool
 }
 
 var (
@@ -73,7 +72,6 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 				governanceHelper:     gh,
 				blockchain:           bc,
 				chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-				isActivated:          false,
 			}
 		})
 	}
@@ -103,6 +101,7 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 	// Get staking info from DB
 	if storedStakingInfo, err := getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
 		logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
+		stakingManager.stakingInfoCache.add(storedStakingInfo)
 		return storedStakingInfo
 	} else {
 		logger.Warn("Failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
@@ -119,15 +118,6 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 	return calcStakingInfo
 }
 
-func IsActivated() bool {
-	if stakingManager == nil {
-		logger.Debug("unable to get IsActivated; stakingManager is not set")
-		return false
-	}
-
-	return stakingManager.isActivated
-}
-
 // updateStakingInfo updates staking info in cache and db created from given block number.
 func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	if stakingManager == nil {
@@ -139,7 +129,6 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 		return nil, err
 	}
 
-	stakingManager.isActivated = true
 	stakingManager.stakingInfoCache.add(stakingInfo)
 
 	if err := addStakingInfoToDB(stakingInfo); err != nil {
@@ -175,12 +164,10 @@ func checkStakingInfoOnChainHeadEvent() {
 		// Handle ChainHeadEvent
 		case ev := <-stakingManager.chainHeadChan:
 			if stakingManager.governanceHelper.ProposerPolicy() == params.WeightedRandom {
-				stakingBlockNum := ev.Block.NumberU64() - ev.Block.NumberU64()%stakingManager.governanceHelper.StakingUpdateInterval()
-				if cachedStakingInfo := stakingManager.stakingInfoCache.get(stakingBlockNum); cachedStakingInfo == nil {
-					stakingInfo, _ := updateStakingInfo(stakingBlockNum)
-					if stakingInfo == nil {
-						logger.Error("Failed to update stakingInfoCache", "blockNumber", ev.Block.NumberU64(), "stakingNumber", stakingBlockNum)
-					}
+				// check and update if staking info is not valid before for the next update interval blocks
+				stakingInfo := GetStakingInfo(ev.Block.NumberU64() + params.StakingUpdateInterval())
+				if stakingInfo == nil {
+					logger.Error("unable to fetch staking info", "blockNum", ev.Block.NumberU64())
 				}
 			}
 		case <-stakingManager.chainHeadSub.Err():
