@@ -178,7 +178,7 @@ func checkStakingInfoOnChainHeadEvent() {
 
 // Unsubscribe can unsubscribe a subscription to listen chain head event.
 func UnsubscribeStakingManager() {
-	if stakingManager == nil && stakingManager.chainHeadSub == nil {
+	if stakingManager == nil || stakingManager.chainHeadSub == nil {
 		logger.Debug("unable to unsubscribe; stakingManager of chainHeadSub is not set")
 		return
 	}
