@@ -129,7 +129,7 @@ func (sm *StakingManager) handleChainHeadEvent() {
 				// check and update if staking info is not valid beforehand
 				stakingManager := sm.GetStakingInfo(ev.Block.NumberU64())
 				if stakingManager == nil {
-					logger.Error("unable to fetch staking info", "blockNum", ev.Block.NumberU64(), "stakingNumber", stakingBlockNum)
+					logger.Error("unable to fetch staking info", "blockNum", ev.Block.NumberU64())
 
 				}
 			}
