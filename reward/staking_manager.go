@@ -126,8 +126,8 @@ func (sm *StakingManager) handleChainHeadEvent() {
 		// Handle ChainHeadEvent
 		case ev := <-sm.chainHeadChan:
 			if sm.governanceHelper.ProposerPolicy() == params.WeightedRandom {
-				// check and update if staking info is not valid beforehand
-				stakingManager := sm.GetStakingInfo(ev.Block.NumberU64())
+				// check and update if staking info is not valid before for the next update interval blocks
+				stakingManager := sm.GetStakingInfo(ev.Block.NumberU64() + params.StakingUpdateInterval())
 				if stakingManager == nil {
 					logger.Error("unable to fetch staking info", "blockNum", ev.Block.NumberU64())
 
