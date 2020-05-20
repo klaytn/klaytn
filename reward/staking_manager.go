@@ -23,6 +23,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 )
 
 const (
@@ -39,6 +40,10 @@ type blockChain interface {
 	blockchain.ChainContext
 }
 
+type migrationCheck interface {
+	InMigration() bool
+}
+
 type StakingManager struct {
 	addressBookConnector *addressBookConnector
 	stakingInfoCache     *stakingInfoCache
@@ -47,16 +52,18 @@ type StakingManager struct {
 	blockchain           blockChain
 	chainHeadChan        chan blockchain.ChainHeadEvent
 	chainHeadSub         event.Subscription
+	migrationCheck       migrationCheck
 }
 
-func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *StakingManager {
+func NewStakingManager(bc blockChain, gh governanceHelper, db database.DBManager) *StakingManager {
 	sm := &StakingManager{
 		addressBookConnector: newAddressBookConnector(bc, gh),
 		stakingInfoCache:     newStakingInfoCache(),
-		stakingInfoDB:        db,
+		stakingInfoDB:        stakingInfoDB(db),
 		governanceHelper:     gh,
 		blockchain:           bc,
 		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		migrationCheck:       migrationCheck(db),
 	}
 
 	// Staking info of current and before need to be stored in DB before migration
@@ -93,6 +100,9 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 	// Calculate staking info from block header and updates it to cache and db
 	calcStakingInfo, _ := sm.updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
+		if sm.migrationCheck.InMigration() {
+			logger.Error("YOU MUST NOT RESTART NODE", "action", "if you want to restart the node, you should wait a day after the migration completes", "reason", "failed to store staking info while migration")
+		}
 		logger.Error("Failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber)
 		return nil
 	}
