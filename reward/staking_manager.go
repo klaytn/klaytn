@@ -66,7 +66,11 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db database.DBManager
 		migrationCheck:       migrationCheck(db),
 	}
 
-	// Staking info of current and before need to be stored in DB before migration
+	// Before migration, staking information of current and before should be stored in DB.
+	//
+	// Staking information from block of StakingUpdateInterval ahead is needed to create a block.
+	// If there is no staking info in either cache, db or state trie, the node cannot make a block.
+	// The information in state trie is deleted after state trie migration.
 	blockchain.RegisterMigrationPrerequisites(func(blockNum uint64) error {
 		if _, err := sm.updateStakingInfo(blockNum); err != nil {
 			return err
