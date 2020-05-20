@@ -50,7 +50,7 @@ type StakingManager struct {
 }
 
 func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *StakingManager {
-	return &StakingManager{
+	sm := &StakingManager{
 		addressBookConnector: newAddressBookConnector(bc, gh),
 		stakingInfoCache:     newStakingInfoCache(),
 		stakingInfoDB:        db,
@@ -58,6 +58,17 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 		blockchain:           bc,
 		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 	}
+
+	// Staking info of current and before need to be stored in DB before migration
+	blockchain.RegisterMigrationPrerequisites(func(blockNum uint64) error {
+		if _, err := sm.updateStakingInfo(blockNum); err != nil {
+			return err
+		}
+		_, err := sm.updateStakingInfo(blockNum - params.StakingUpdateInterval())
+		return err
+	})
+
+	return sm
 }
 
 // GetStakingInfo returns a corresponding stakingInfo for a blockNum.

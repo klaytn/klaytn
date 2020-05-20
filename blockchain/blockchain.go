@@ -311,7 +311,23 @@ func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{},
 	}
 }
 
+// migrationPrerequisites is a collection of functions that needs to be run
+// before state tire migration. If it fails to run one of the functions,
+// the migration will not start.
+var migrationPrerequisites []func(uint64) error
+
+func RegisterMigrationPrerequisites(f func(uint64) error) {
+	migrationPrerequisites = append(migrationPrerequisites, f)
+}
+
 func (bc *BlockChain) migrateState(rootHash common.Hash) error {
+	for _, f := range migrationPrerequisites {
+		err := f(*bc.GetBlockNumber(rootHash))
+		if err != nil {
+			return err
+		}
+	}
+
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
