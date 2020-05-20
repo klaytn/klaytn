@@ -29,7 +29,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/filter"
-	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
 
@@ -263,12 +262,21 @@ func (db *levelDB) Delete(key []byte) error {
 	return db.db.Delete(key, nil)
 }
 
-func (db *levelDB) NewIterator() iterator.Iterator {
+// NewIterator creates a binary-alphabetical iterator over the entire keyspace
+// contained within the leveldb database.
+func (db *levelDB) NewIterator() Iterator {
 	return db.db.NewIterator(nil, nil)
 }
 
+// NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
+// database content starting at a particular initial key (or after, if it does
+// not exist).
+func (db *levelDB) NewIteratorWithStart(start []byte) Iterator {
+	return db.db.NewIterator(&util.Range{Start: start}, nil)
+}
+
 // NewIteratorWithPrefix returns a iterator to iterate over subset of database content with a particular prefix.
-func (db *levelDB) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
+func (db *levelDB) NewIteratorWithPrefix(prefix []byte) Iterator {
 	return db.db.NewIterator(util.BytesPrefix(prefix), nil)
 }
 

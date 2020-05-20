@@ -14,7 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package ethdb
+// This file is derived from ethdb/interface.go (2020/05/20).
+// Modified and improved for the klaytn development.
+
+package database
 
 // Iterator iterates over a database's key/value pairs in ascending key order.
 //

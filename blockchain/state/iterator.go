@@ -14,15 +14,18 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
+// This file is derived from ethdb/iterator.go (2020/05/20).
+// Modified and improved for the klaytn development.
+
 package state
 
 import (
 	"bytes"
 	"fmt"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/trie"
+	"github.com/klaytn/klaytn/blockchain/types/account"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 // NodeIterator is an iterator to traverse the entire state trie post-order,
@@ -30,8 +33,8 @@ import (
 type NodeIterator struct {
 	state *StateDB // State being iterated
 
-	stateIt trie.NodeIterator // Primary iterator for the global state trie
-	dataIt  trie.NodeIterator // Secondary iterator for the data trie of a contract
+	stateIt statedb.NodeIterator // Primary iterator for the global state trie
+	dataIt  statedb.NodeIterator // Secondary iterator for the data trie of a contract
 
 	accountHash common.Hash // Hash of the node containing the account
 	codeHash    common.Hash // Hash of the contract source code
@@ -104,24 +107,28 @@ func (it *NodeIterator) step() error {
 		return nil
 	}
 	// Otherwise we've reached an account node, initiate data iteration
-	var account Account
-	if err := rlp.Decode(bytes.NewReader(it.stateIt.LeafBlob()), &account); err != nil {
+
+	serializer := account.NewAccountSerializer()
+	if err := rlp.Decode(bytes.NewReader(it.stateIt.LeafBlob()), serializer); err != nil {
 		return err
 	}
-	dataTrie, err := it.state.db.OpenStorageTrie(common.BytesToHash(it.stateIt.LeafKey()), account.Root)
-	if err != nil {
-		return err
-	}
-	it.dataIt = dataTrie.NodeIterator(nil)
-	if !it.dataIt.Next(true) {
-		it.dataIt = nil
-	}
-	if !bytes.Equal(account.CodeHash, emptyCodeHash) {
-		it.codeHash = common.BytesToHash(account.CodeHash)
-		addrHash := common.BytesToHash(it.stateIt.LeafKey())
-		it.code, err = it.state.db.ContractCode(addrHash, common.BytesToHash(account.CodeHash))
+	obj := serializer.GetAccount()
+
+	if pa := account.GetProgramAccount(obj); pa != nil {
+		dataTrie, err := it.state.db.OpenStorageTrie(pa.GetStorageRoot())
 		if err != nil {
-			return fmt.Errorf("code %x: %v", account.CodeHash, err)
+			return err
+		}
+		it.dataIt = dataTrie.NodeIterator(nil)
+		if !it.dataIt.Next(true) {
+			it.dataIt = nil
+		}
+
+		it.codeHash = common.BytesToHash(pa.GetCodeHash())
+		//addrHash := common.BytesToHash(it.stateIt.LeafKey())
+		it.code, err = it.state.db.ContractCode(common.BytesToHash(pa.GetCodeHash()))
+		if err != nil {
+			return fmt.Errorf("code %x: %v", pa.GetCodeHash(), err)
 		}
 	}
 	it.accountHash = it.stateIt.Parent()
