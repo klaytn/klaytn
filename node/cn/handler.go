@@ -38,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/klaytn/klaytn/work"
 	"math"
 	"math/big"
@@ -123,7 +124,7 @@ type ProtocolManager struct {
 // NewProtocolManager returns a new Klaytn sub protocol manager. The Klaytn sub protocol manages peers capable
 // with the Klaytn network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
-	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager,
+	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
 	nodetype common.ConnType, cnconfig *Config) (*ProtocolManager, error) {
 	// Create the protocol maanger with the base fields
 	manager := &ProtocolManager{
@@ -231,8 +232,16 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	if len(manager.SubProtocols) == 0 {
 		return nil, errIncompatibleConfig
 	}
-	// Construct the different synchronisation mechanisms
-	manager.downloader = downloader.New(mode, chainDB, manager.eventMux, blockchain, nil, manager.removePeer)
+
+	// Construct the downloader (long sync) and its backing state bloom if fast
+	// sync is requested. The downloader is responsible for deallocating the state
+
+	// bloom when it's done.
+	var stateBloom *statedb.SyncBloom
+	if atomic.LoadUint32(&manager.fastSync) == 1 {
+		stateBloom = statedb.NewSyncBloom(uint64(cacheLimit), chainDB.GetStateTrieDB())
+	}
+	manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.removePeer)
 
 	validator := func(header *types.Header) error {
 		return engine.VerifyHeader(blockchain, header, true)

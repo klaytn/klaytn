@@ -100,7 +100,7 @@ func TestEmptyTrieSync(t *testing.T) {
 	emptyB, _ := NewTrie(emptyRoot, dbB)
 
 	for i, trie := range []*Trie{emptyA, emptyB} {
-		if req := NewTrieSync(trie.Hash(), database.NewMemoryDBManager(), nil).Missing(1); len(req) != 0 {
+		if req := NewTrieSync(trie.Hash(), database.NewMemoryDBManager(), nil, NewSyncBloom(1, database.NewMemDB())).Missing(1); len(req) != 0 {
 			t.Errorf("test %d: content requested for empty trie: %v", i, req)
 		}
 	}
@@ -119,7 +119,7 @@ func testIterativeTrieSync(t *testing.T, batch int) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb))
 
 	queue := append([]common.Hash{}, sched.Missing(batch)...)
 	for len(queue) > 0 {
@@ -153,7 +153,7 @@ func TestIterativeDelayedTrieSync(t *testing.T) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb))
 
 	queue := append([]common.Hash{}, sched.Missing(10000)...)
 	for len(queue) > 0 {
@@ -192,7 +192,7 @@ func testIterativeRandomTrieSync(t *testing.T, batch int) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb))
 
 	queue := make(map[common.Hash]struct{})
 	for _, hash := range sched.Missing(batch) {
@@ -234,7 +234,7 @@ func TestIterativeRandomDelayedTrieSync(t *testing.T) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb))
 
 	queue := make(map[common.Hash]struct{})
 	for _, hash := range sched.Missing(10000) {
@@ -282,7 +282,7 @@ func TestDuplicateAvoidanceTrieSync(t *testing.T) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb))
 
 	queue := append([]common.Hash{}, sched.Missing(0)...)
 	requested := make(map[common.Hash]struct{})
@@ -323,7 +323,7 @@ func TestIncompleteTrieSync(t *testing.T) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb))
 
 	added := []common.Hash{}
 	queue := append([]common.Hash{}, sched.Missing(1)...)

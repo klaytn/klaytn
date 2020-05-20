@@ -29,7 +29,7 @@ import (
 )
 
 // NewStateSync create a new state trie download scheduler.
-func NewStateSync(root common.Hash, database statedb.StateTrieReadDB) *statedb.TrieSync {
+func NewStateSync(root common.Hash, database statedb.StateTrieReadDB, bloom *statedb.SyncBloom) *statedb.TrieSync {
 	var syncer *statedb.TrieSync
 	callback := func(leaf []byte, parent common.Hash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
@@ -43,6 +43,6 @@ func NewStateSync(root common.Hash, database statedb.StateTrieReadDB) *statedb.T
 		}
 		return nil
 	}
-	syncer = statedb.NewTrieSync(root, database, callback)
+	syncer = statedb.NewTrieSync(root, database, callback, bloom)
 	return syncer
 }

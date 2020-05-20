@@ -13,21 +13,22 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-package trie
+//
+// This file is derived from trie/sync_test.go (2020/05/20).
+// Modified and improved for the klaytn development.
+package statedb
 
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/storage/database"
+	"github.com/rcrowley/go-metrics"
 	"math"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/steakknife/bloomfilter"
 )
 
@@ -66,13 +67,13 @@ type SyncBloom struct {
 
 // NewSyncBloom creates a new bloom filter of the given size (in megabytes) and
 // initializes it from the database. The bloom is hard coded to use 3 filters.
-func NewSyncBloom(memory uint64, database ethdb.Iteratee) *SyncBloom {
+func NewSyncBloom(memory uint64, database database.Iteratee) *SyncBloom {
 	// Create the bloom filter to track known trie nodes
 	bloom, err := bloomfilter.New(memory*1024*1024*8, 3)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create bloom: %v", err))
 	}
-	log.Info("Allocated fast sync bloom", "size", common.StorageSize(memory*1024*1024))
+	logger.Info("Allocated fast sync bloom", "size", common.StorageSize(memory*1024*1024))
 
 	// Assemble the fast sync bloom and init it from previous sessions
 	b := &SyncBloom{
@@ -91,7 +92,7 @@ func NewSyncBloom(memory uint64, database ethdb.Iteratee) *SyncBloom {
 }
 
 // init iterates over the database, pushing every trie hash into the bloom filter.
-func (b *SyncBloom) init(database ethdb.Iteratee) {
+func (b *SyncBloom) init(database database.Iteratee) {
 	// Iterate over the database, but restart every now and again to avoid holding
 	// a persistent snapshot since fast sync can push a ton of data concurrently,
 	// bloating the disk.
@@ -118,14 +119,14 @@ func (b *SyncBloom) init(database ethdb.Iteratee) {
 			it.Release()
 			it = database.NewIteratorWithStart(key)
 
-			log.Info("Initializing fast sync bloom", "items", b.bloom.N(), "errorrate", b.errorRate(), "elapsed", common.PrettyDuration(time.Since(start)))
+			logger.Info("Initializing fast sync bloom", "items", b.bloom.N(), "errorrate", b.errorRate(), "elapsed", common.PrettyDuration(time.Since(start)))
 			swap = time.Now()
 		}
 	}
 	it.Release()
 
 	// Mark the bloom filter inited and return
-	log.Info("Initialized fast sync bloom", "items", b.bloom.N(), "errorrate", b.errorRate(), "elapsed", common.PrettyDuration(time.Since(start)))
+	logger.Info("Initialized fast sync bloom", "items", b.bloom.N(), "errorrate", b.errorRate(), "elapsed", common.PrettyDuration(time.Since(start)))
 	atomic.StoreUint32(&b.inited, 1)
 }
 
@@ -155,7 +156,7 @@ func (b *SyncBloom) Close() error {
 		b.pend.Wait()
 
 		// Wipe the bloom, but mark it "uninited" just in case someone attempts an access
-		log.Info("Deallocated fast sync bloom", "items", b.bloom.N(), "errorrate", b.errorRate())
+		logger.Info("Deallocated fast sync bloom", "items", b.bloom.N(), "errorrate", b.errorRate())
 
 		atomic.StoreUint32(&b.inited, 0)
 		b.bloom = nil

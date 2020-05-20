@@ -148,7 +148,7 @@ func TestNewProtocolManager(t *testing.T) {
 		mockEngine.EXPECT().Protocol().Return(consensus.Protocol{}).Times(1)
 
 		pm, err := NewProtocolManager(nil, downloader.FastSync, 0, nil, mockTxPool,
-			mockEngine, mockBlockChain, nil, -1, &Config{})
+			mockEngine, mockBlockChain, nil, 1, -1, &Config{})
 
 		assert.Nil(t, pm)
 		assert.Equal(t, errIncompatibleConfig, err)
