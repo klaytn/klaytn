@@ -31,10 +31,11 @@ import (
 
 // testAccount is the data associated with an account used by the state tests.
 type testAccount struct {
-	address common.Address
-	balance *big.Int
-	nonce   uint64
-	code    []byte
+	address    common.Address
+	balance    *big.Int
+	nonce      uint64
+	code       []byte
+	storageMap map[common.Hash]common.Hash
 }
 
 // makeTestState create a sample test state to test node-wise reconstruction.
@@ -44,10 +45,13 @@ func makeTestState() (Database, common.Hash, []*testAccount) {
 	statedb, _ := New(common.Hash{}, db)
 
 	// Fill it with some arbitrary data
-	accounts := []*testAccount{}
+	var accounts []*testAccount
 	for i := byte(0); i < 96; i++ {
 		var obj *stateObject
-		acc := &testAccount{address: common.BytesToAddress([]byte{i})}
+		acc := &testAccount{
+			address:    common.BytesToAddress([]byte{i}),
+			storageMap: make(map[common.Hash]common.Hash),
+		}
 
 		if i%3 > 0 {
 			obj = statedb.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -55,6 +59,14 @@ func makeTestState() (Database, common.Hash, []*testAccount) {
 			obj = statedb.GetOrNewSmartContract(common.BytesToAddress([]byte{i}))
 			obj.SetCode(crypto.Keccak256Hash([]byte{i, i, i, i, i}), []byte{i, i, i, i, i})
 			acc.code = []byte{i, i, i, i, i}
+
+			for j := 0; j < int(i)%10; j++ {
+				key := common.Hash{i + byte(j)}
+				value := common.Hash{i*2 + 1}
+				acc.storageMap[key] = value
+
+				obj.SetState(db, key, value)
+			}
 		}
 
 		obj.AddBalance(big.NewInt(int64(11 * i)))
@@ -74,13 +86,13 @@ func makeTestState() (Database, common.Hash, []*testAccount) {
 
 // checkStateAccounts cross references a reconstructed state with an expected
 // account array.
-func checkStateAccounts(t *testing.T, db database.DBManager, root common.Hash, accounts []*testAccount) {
+func checkStateAccounts(t *testing.T, newDB database.DBManager, root common.Hash, accounts []*testAccount) {
 	// Check root availability and state contents
-	state, err := New(root, NewDatabase(db))
+	state, err := New(root, NewDatabase(newDB))
 	if err != nil {
 		t.Fatalf("failed to create state trie at %x: %v", root, err)
 	}
-	if err := checkStateConsistency(db, root); err != nil {
+	if err := checkStateConsistency(newDB, root); err != nil {
 		t.Fatalf("inconsistent state trie at %x: %v", root, err)
 	}
 	for i, acc := range accounts {
@@ -92,6 +104,23 @@ func checkStateAccounts(t *testing.T, db database.DBManager, root common.Hash, a
 		}
 		if code := state.GetCode(acc.address); !bytes.Equal(code, acc.code) {
 			t.Errorf("account %d: code mismatch: have %x, want %x", i, code, acc.code)
+		}
+
+		// check storage trie
+		st := state.StorageTrie(acc.address)
+		it := statedb.NewIterator(st.NodeIterator(nil))
+		storageMapWithHashedKey := make(map[common.Hash]common.Hash)
+		for it.Next() {
+			storageMapWithHashedKey[common.BytesToHash(it.Key)] = common.BytesToHash(it.Value)
+		}
+		if len(storageMapWithHashedKey) != len(acc.storageMap) {
+			t.Errorf("account %d: stroage trie number mismatch: have %x, want %x", i, len(storageMapWithHashedKey), len(acc.storageMap))
+		}
+		for key, value := range acc.storageMap {
+			hk := crypto.Keccak256Hash(key[:])
+			if storageMapWithHashedKey[hk] != value {
+				t.Errorf("account %d: stroage trie (%v) mismatch: have %x, want %x", i, key.String(), acc.storageMap[key], value)
+			}
 		}
 	}
 }
@@ -356,12 +385,12 @@ func TestIncompleteStateSync(t *testing.T) {
 	// Sanity check that removing any node from the database is detected
 	for _, node := range added[1:] {
 		key := node.Bytes()
-		value, _ := dstDb.GetStateTrieDB().Get(key)
+		value, _ := dstDb.GetMemDB().Get(key)
 
-		dstDb.GetStateTrieDB().Delete(key)
+		dstDb.GetMemDB().Delete(key)
 		if err := checkStateConsistency(dstDb, added[0]); err == nil {
 			t.Fatalf("trie inconsistency not caught, missing: %x", key)
 		}
-		dstDb.GetStateTrieDB().Put(key, value)
+		dstDb.GetMemDB().Put(key, value)
 	}
 }
