@@ -166,6 +166,7 @@ func handleChainHeadEvent() {
 		return
 	} else if stakingManager.chainHeadSub == nil {
 		logger.Info("unable to start chain head event", "err", ErrChainHeadChanNotSet)
+		return
 	}
 
 	defer StakingManagerUnsubscribe()
@@ -197,6 +198,7 @@ func StakingManagerUnsubscribe() {
 		return
 	} else if stakingManager.chainHeadSub == nil {
 		logger.Info("unable to start chain head event", "err", ErrChainHeadChanNotSet)
+		return
 	}
 
 	stakingManager.chainHeadSub.Unsubscribe()
