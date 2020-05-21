@@ -75,7 +75,7 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db database.DBManager
 		if _, err := sm.updateStakingInfo(blockNum); err != nil {
 			return err
 		}
-		_, err := sm.updateStakingInfo(blockNum - params.StakingUpdateInterval())
+		_, err := sm.updateStakingInfo(blockNum + params.StakingUpdateInterval())
 		return err
 	})
 
