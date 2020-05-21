@@ -54,7 +54,7 @@ func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
 
 	// should find a correct stakingInfo with a given block number
 	for i := 0; i < len(testCases); i++ {
-		resultStakingInfo := stakingManager.GetStakingInfo(testCases[i].stakingNumber)
+		resultStakingInfo := GetStakingInfo(testCases[i].stakingNumber)
 		assert.Equal(t, testCases[i].expectedNumber, resultStakingInfo.BlockNum)
 	}
 }

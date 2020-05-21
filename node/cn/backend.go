@@ -66,11 +66,6 @@ type LesServer interface {
 	SetBloomBitsIndexer(bbIndexer *blockchain.ChainIndexer)
 }
 
-type StakingHandler interface {
-	SetStakingManager(manager *reward.StakingManager)
-	GetStakingManager() *reward.StakingManager
-}
-
 //go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/klaytn/klaytn/node/cn Miner
 // Miner is an interface of work.Miner used by ServiceChain.
 type Miner interface {
@@ -138,8 +133,7 @@ type CN struct {
 
 	components []interface{}
 
-	governance     *governance.Governance
-	stakingManager *reward.StakingManager
+	governance *governance.Governance
 }
 
 func (s *CN) AddLesServer(ls LesServer) {
@@ -315,10 +309,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	if governance.ProposerPolicy() == uint64(istanbul.WeightedRandom) {
-		cn.stakingManager = reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
-		if handler, ok := cn.engine.(StakingHandler); ok {
-			handler.SetStakingManager(cn.stakingManager)
-		}
+		// NewStakingManager is called with proper non-nil parameters
+		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
 
 	var restartFn func()
@@ -598,18 +590,16 @@ func (s *CN) Start(srvr p2p.Server) error {
 	if s.lesServer != nil {
 		s.lesServer.Start(srvr)
 	}
-	if s.stakingManager != nil {
-		s.stakingManager.Subscribe()
-	}
+
+	reward.StakingManagerSubscribe()
+
 	return nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Klaytn protocol.
 func (s *CN) Stop() error {
-	if s.stakingManager != nil {
-		s.stakingManager.Unsubscribe()
-	}
+	reward.StakingManagerUnsubscribe()
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()
