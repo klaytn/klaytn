@@ -156,6 +156,11 @@ func SubscribeStakingManager() {
 }
 
 func checkStakingInfoOnChainHeadEvent() {
+	if stakingManager == nil || stakingManager.chainHeadSub == nil {
+		logger.Info("unable to start chain head event; stakingManager of chainHeadSub is not set")
+		return
+	}
+
 	defer UnsubscribeStakingManager()
 
 	logger.Info("Start listening chain head event to update stakingInfoCache.")
