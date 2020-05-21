@@ -52,8 +52,13 @@ type StakingManager struct {
 }
 
 var (
+	// variables for sole StakingManager
 	once           sync.Once
 	stakingManager *StakingManager
+
+	// errors for staking manager
+	ErrStakingManagerNotSet = errors.New("staking manager is not set")
+	ErrChainHeadChanNotSet  = errors.New("chain head channel is not set")
 )
 
 // NewStakingManager creates and returns StakingManager.
@@ -88,7 +93,7 @@ func GetStakingManager() *StakingManager {
 // GetStakingInfo returns a corresponding stakingInfo for a blockNum.
 func GetStakingInfo(blockNum uint64) *StakingInfo {
 	if stakingManager == nil {
-		logger.Warn("unable to GetStakingInfo; stakingManager is not set")
+		logger.Warn("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
 		return nil
 	}
 
@@ -123,7 +128,7 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 // updateStakingInfo updates staking info in cache and db created from given block number.
 func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	if stakingManager == nil {
-		return nil, errors.New("unable to updateStakingInfo; stakingManager is not set")
+		return nil, ErrStakingManagerNotSet
 	}
 
 	stakingInfo, err := stakingManager.addressBookConnector.getStakingInfoFromAddressBook(blockNum)
@@ -143,25 +148,27 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	return stakingInfo, nil
 }
 
-// Subscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.
-func SubscribeStakingManager() {
+// SubscribeChainHeadEvent setups a channel to listen chain head event and starts a goroutine to update staking cache.
+func SubscribeChainHeadEvent() {
 	if stakingManager == nil {
-		logger.Warn("unable to subscribe; stakingManager is not set; this can slow down node")
+		logger.Warn("unable to subscribe; this can slow down node", "err", ErrStakingManagerNotSet)
 		return
 	}
 
 	stakingManager.chainHeadSub = stakingManager.blockchain.SubscribeChainHeadEvent(stakingManager.chainHeadChan)
 
-	go checkStakingInfoOnChainHeadEvent()
+	go handleChainHeadEvent()
 }
 
-func checkStakingInfoOnChainHeadEvent() {
-	if stakingManager == nil || stakingManager.chainHeadSub == nil {
-		logger.Info("unable to start chain head event; stakingManager of chainHeadSub is not set")
+func handleChainHeadEvent() {
+	if stakingManager == nil {
+		logger.Warn("unable to start chain head event", "err", ErrStakingManagerNotSet)
 		return
+	} else if stakingManager.chainHeadSub == nil {
+		logger.Info("unable to start chain head event", "err", ErrChainHeadChanNotSet)
 	}
 
-	defer UnsubscribeStakingManager()
+	defer UnsubscribeChainHeadEvent()
 
 	logger.Info("Start listening chain head event to update stakingInfoCache.")
 
@@ -183,11 +190,13 @@ func checkStakingInfoOnChainHeadEvent() {
 	}
 }
 
-// Unsubscribe can unsubscribe a subscription to listen chain head event.
-func UnsubscribeStakingManager() {
-	if stakingManager == nil || stakingManager.chainHeadSub == nil {
-		logger.Info("unable to unsubscribe; stakingManager of chainHeadSub is not set")
+// UnsubscribeChainHeadEvent can unsubscribe a subscription to listen chain head event.
+func UnsubscribeChainHeadEvent() {
+	if stakingManager == nil {
+		logger.Warn("unable to start chain head event", "err", ErrStakingManagerNotSet)
 		return
+	} else if stakingManager.chainHeadSub == nil {
+		logger.Info("unable to start chain head event", "err", ErrChainHeadChanNotSet)
 	}
 
 	stakingManager.chainHeadSub.Unsubscribe()

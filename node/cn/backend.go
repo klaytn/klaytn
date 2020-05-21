@@ -591,7 +591,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	reward.SubscribeStakingManager()
+	reward.SubscribeChainHeadEvent()
 
 	return nil
 }
@@ -599,7 +599,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Klaytn protocol.
 func (s *CN) Stop() error {
-	reward.UnsubscribeStakingManager()
+	reward.UnsubscribeChainHeadEvent()
 	s.bloomIndexer.Close()
 	s.blockchain.Stop()
 	s.protocolManager.Stop()
