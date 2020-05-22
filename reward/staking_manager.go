@@ -92,11 +92,10 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db database.DBManager
 			// If there is no staking info in either cache, db or state trie, the node cannot make a block.
 			// The information in state trie is deleted after state trie migration.
 			blockchain.RegisterMigrationPrerequisites(func(blockNum uint64) error {
-				if _, err := updateStakingInfo(blockNum); err != nil {
+				if err := CheckStakingInfoStored(blockNum); err != nil {
 					return err
 				}
-				_, err := updateStakingInfo(blockNum + params.StakingUpdateInterval())
-				return err
+				return CheckStakingInfoStored(blockNum + params.StakingUpdateInterval())
 			})
 		})
 	} else {
@@ -155,9 +154,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 		return nil, ErrStakingManagerNotSet
 	}
 
-	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
-
-	stakingInfo, err := stakingManager.addressBookConnector.getStakingInfoFromAddressBook(stakingBlockNumber)
+	stakingInfo, err := stakingManager.addressBookConnector.getStakingInfoFromAddressBook(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -169,9 +166,22 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 		return stakingInfo, err
 	}
 
-	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", stakingBlockNumber)
+	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
+}
+
+// CheckStakingInfoStored makes sure the given staking info is stored in cache and DB
+func CheckStakingInfoStored(blockNum uint64) error {
+	if stakingManager == nil {
+		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
+		return nil
+	}
+
+	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+	_, err := updateStakingInfo(stakingBlockNumber)
+
+	return err
 }
 
 // StakingManagerSubscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.
