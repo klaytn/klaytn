@@ -60,6 +60,7 @@ func TestStakingManager_NewStakingManager(t *testing.T) {
 	// test if get same
 	stNew := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
 	stGet := GetStakingManager()
+	assert.NotNil(t, stNew)
 	assert.Equal(t, stGet, stNew)
 }
 
