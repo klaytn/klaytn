@@ -138,7 +138,7 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 	calcStakingInfo, _ := updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
 		if stakingManager.migrationCheck.InMigration() {
-			logger.Error("YOU MUST NOT RESTART NODE", "action", "if you want to restart the node, you should wait a day after the migration completes", "reason", "failed to store staking info while migration")
+			logger.Error("YOU MUST NOT RESTART NODE", "action", "if you want to restart the node, you should wait a day after the migration completed", "reason", "failed to store staking info while migration")
 		}
 		logger.Error("failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber)
 
