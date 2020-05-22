@@ -170,21 +170,30 @@ func (st *StateTransition) buyGas() error {
 	validatedSender := st.msg.ValidatedSender()
 	feeRatio, isRatioTx := st.msg.FeeRatio()
 	if isRatioTx {
-		feePayer, feeSender := types.CalcFeeWithRatio(feeRatio, mgval)
+		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
 
-		if st.state.GetBalance(validatedFeePayer).Cmp(feePayer) < 0 {
+		if st.state.GetBalance(validatedFeePayer).Cmp(feePayerFee) < 0 {
+			logger.Error("%w - feePayer: %v, feePayerBalance: %v, feePayerFee: %v, txHash: %v",
+				errInsufficientBalanceForGasFeePayer, validatedFeePayer.String(), st.state.GetBalance(validatedFeePayer).Uint64(),
+				feePayerFee.Uint64(), st.msg.Hash().String())
 			return errInsufficientBalanceForGasFeePayer
 		}
 
-		if st.state.GetBalance(validatedSender).Cmp(feeSender) < 0 {
+		if st.state.GetBalance(validatedSender).Cmp(senderFee) < 0 {
+			logger.Error("%w - sender: %v, senderBalance: %v, senderFee: %v, txHash: %v",
+				errInsufficientBalanceForGas, validatedSender.String(), st.state.GetBalance(validatedSender).Uint64(),
+				senderFee.Uint64(), st.msg.Hash().String())
 			return errInsufficientBalanceForGas
 		}
 
-		st.state.SubBalance(validatedFeePayer, feePayer)
-		st.state.SubBalance(validatedSender, feeSender)
+		st.state.SubBalance(validatedFeePayer, feePayerFee)
+		st.state.SubBalance(validatedSender, senderFee)
 	} else {
 		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
 		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
+			logger.Error("%w - feePayer: %v, feePayerBalance: %v, feePayerFee: %v, txHash: %v",
+				errInsufficientBalanceForGasFeePayer, validatedFeePayer.String(), st.state.GetBalance(validatedFeePayer).Uint64(),
+				mgval.Uint64(), st.msg.Hash().String())
 			return errInsufficientBalanceForGasFeePayer
 		}
 
@@ -202,8 +211,12 @@ func (st *StateTransition) preCheck() error {
 	if st.msg.CheckNonce() {
 		nonce := st.state.GetNonce(st.msg.ValidatedSender())
 		if nonce < st.msg.Nonce() {
+			logger.Error("%w - addr: %v, accountNonce: %v, txNonce: %v, txHash: %v",
+				ErrNonceTooHigh, st.msg.ValidatedSender().String(), nonce, st.msg.Nonce(), st.msg.Hash().String())
 			return ErrNonceTooHigh
 		} else if nonce > st.msg.Nonce() {
+			logger.Error("%w - addr: %v, accountNonce: %v, txNonce: %v, txHash: %v",
+				ErrNonceTooLow, st.msg.ValidatedSender().String(), nonce, st.msg.Nonce(), st.msg.Hash().String())
 			return ErrNonceTooLow
 		}
 	}
