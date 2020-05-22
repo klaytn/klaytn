@@ -63,8 +63,9 @@ var (
 	stakingManager *StakingManager
 
 	// errors for staking manager
-	ErrStakingManagerNotSet = errors.New("staking manager is not set")
-	ErrChainHeadChanNotSet  = errors.New("chain head channel is not set")
+	ErrStakingManagerNotSet      = errors.New("staking manager is not set")
+	ErrChainHeadChanNotSet       = errors.New("chain head channel is not set")
+	ErrStakingInfoDBWriteFailure = errors.New("failed to write staking info to DB")
 )
 
 // NewStakingManager creates and returns StakingManager.
@@ -134,10 +135,10 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 	}
 
 	// Calculate staking info from block header and updates it to cache and db
-	calcStakingInfo, _ := updateStakingInfo(stakingBlockNumber)
+	calcStakingInfo, err := updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
-		if stakingManager.migrationCheck.InMigration() {
-			logger.Warn("YOU MUST NOT RESTART NODE",
+		if err == ErrStakingInfoDBWriteFailure && stakingManager.migrationCheck.InMigration() {
+			logger.Warn("YOU MUST NOT RESTART NODE", "situation", err.Error(),
 				"desc", "restarting leads to node failure; if you want to restart the node, you should wait a day after the migration completed",
 				"reason", "enough data should be stored to calculate staking info after the state migration is done")
 		}
@@ -164,8 +165,8 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	stakingManager.stakingInfoCache.add(stakingInfo)
 
 	if err := addStakingInfoToDB(stakingInfo); err != nil {
-		logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
-		return stakingInfo, err
+		logger.Warn("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
+		return stakingInfo, ErrStakingInfoDBWriteFailure
 	}
 
 	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
