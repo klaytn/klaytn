@@ -130,7 +130,6 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 	calcStakingInfo, err := updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
 		logger.Error("failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber, "err", err)
-
 		return nil
 	}
 
