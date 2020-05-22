@@ -311,24 +311,7 @@ func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{},
 	}
 }
 
-// migrationPrerequisites is a collection of functions that needs to be run
-// before state trie migration. If it fails to run one of the functions,
-// the migration will not start.
-var migrationPrerequisites []func(uint64) error
-
-func RegisterMigrationPrerequisites(f func(uint64) error) {
-	migrationPrerequisites = append(migrationPrerequisites, f)
-}
-
 func (bc *BlockChain) migrateState(rootHash common.Hash) error {
-	for _, f := range migrationPrerequisites {
-		err := f(bc.db.MigrationBlockNumber())
-
-		if err != nil {
-			return err
-		}
-	}
-
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
@@ -509,10 +492,27 @@ func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) 
 	}
 }
 
+// migrationPrerequisites is a collection of functions that needs to be run
+// before state trie migration. If it fails to run one of the functions,
+// the migration will not start.
+var migrationPrerequisites []func(uint64) error
+
+func RegisterMigrationPrerequisites(f func(uint64) error) {
+	migrationPrerequisites = append(migrationPrerequisites, f)
+}
+
 func (bc *BlockChain) StartStateMigration(number uint64, root common.Hash) error {
 	// TODO-Klaytn Add internal status check routine
 	if bc.db.InMigration() {
 		return errors.New("migration already started")
+	}
+
+	for _, f := range migrationPrerequisites {
+		err := f(bc.db.MigrationBlockNumber())
+
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := bc.db.CreateMigrationDBAndSetStatus(number); err != nil {
