@@ -21,6 +21,7 @@
 package cn
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -121,10 +122,19 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 			return false, err
 		}
 	}
-
-	// Run actual the import in pre-configured batches
 	stream := rlp.NewStream(reader, 0)
 
+	return api.importChain(stream)
+}
+
+func (api *PrivateAdminAPI) ImportChainFromString(blockRlp string) (bool, error) {
+	// Run actual the import in pre-configured batches
+	stream := rlp.NewStream(bytes.NewReader(common.FromHex(blockRlp)), 0)
+
+	return api.importChain(stream)
+}
+
+func (api *PrivateAdminAPI) importChain(stream *rlp.Stream) (bool, error) {
 	blocks, index := make([]*types.Block, 0, 2500), 0
 	for batch := 0; ; batch++ {
 		// Load a batch of blocks from the input file

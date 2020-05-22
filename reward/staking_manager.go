@@ -17,6 +17,7 @@
 package reward
 
 import (
+	"errors"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -24,6 +25,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
+	"sync"
 )
 
 const (
@@ -55,59 +57,91 @@ type StakingManager struct {
 	migrationCheck       migrationCheck
 }
 
+var (
+	// variables for sole StakingManager
+	once           sync.Once
+	stakingManager *StakingManager
+
+	// errors for staking manager
+	ErrStakingManagerNotSet = errors.New("staking manager is not set")
+	ErrChainHeadChanNotSet  = errors.New("chain head channel is not set")
+)
+
+// NewStakingManager creates and returns StakingManager.
+//
+// On the first call, a StakingManager is created with given parameters.
+// From next calls, the existing StakingManager is returned. (Parameters
+// from the next calls will not affect.)
 func NewStakingManager(bc blockChain, gh governanceHelper, db database.DBManager) *StakingManager {
-	sm := &StakingManager{
-		addressBookConnector: newAddressBookConnector(bc, gh),
-		stakingInfoCache:     newStakingInfoCache(),
-		stakingInfoDB:        stakingInfoDB(db),
-		governanceHelper:     gh,
-		blockchain:           bc,
-		chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		migrationCheck:       migrationCheck(db),
+	if bc != nil && gh != nil {
+		// this is only called once
+		once.Do(func() {
+			stakingManager = &StakingManager{
+				addressBookConnector: newAddressBookConnector(bc, gh),
+				stakingInfoCache:     newStakingInfoCache(),
+				stakingInfoDB:        db,
+				governanceHelper:     gh,
+				blockchain:           bc,
+				chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+				migrationCheck:       migrationCheck(db),
+			}
+
+			// Before migration, staking information of current and before should be stored in DB.
+			//
+			// Staking information from block of StakingUpdateInterval ahead is needed to create a block.
+			// If there is no staking info in either cache, db or state trie, the node cannot make a block.
+			// The information in state trie is deleted after state trie migration.
+			blockchain.RegisterMigrationPrerequisites(func(blockNum uint64) error {
+				if _, err := updateStakingInfo(blockNum); err != nil {
+					return err
+				}
+				_, err := updateStakingInfo(blockNum + params.StakingUpdateInterval())
+				return err
+			})
+		})
+	} else {
+		logger.Error("unable to set StakingManager", "blockchain", bc, "governanceHelper", gh)
 	}
 
-	// Before migration, staking information of current and before should be stored in DB.
-	//
-	// Staking information from block of StakingUpdateInterval ahead is needed to create a block.
-	// If there is no staking info in either cache, db or state trie, the node cannot make a block.
-	// The information in state trie is deleted after state trie migration.
-	blockchain.RegisterMigrationPrerequisites(func(blockNum uint64) error {
-		if _, err := sm.updateStakingInfo(blockNum); err != nil {
-			return err
-		}
-		_, err := sm.updateStakingInfo(blockNum + params.StakingUpdateInterval())
-		return err
-	})
+	return stakingManager
+}
 
-	return sm
+func GetStakingManager() *StakingManager {
+	return stakingManager
 }
 
 // GetStakingInfo returns a corresponding stakingInfo for a blockNum.
-func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
+func GetStakingInfo(blockNum uint64) *StakingInfo {
+	if stakingManager == nil {
+		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
+		return nil
+	}
+
 	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
 
 	// Get staking info from cache
-	if cachedStakingInfo := sm.stakingInfoCache.get(stakingBlockNumber); cachedStakingInfo != nil {
+	if cachedStakingInfo := stakingManager.stakingInfoCache.get(stakingBlockNumber); cachedStakingInfo != nil {
 		logger.Debug("StakingInfoCache hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
 		return cachedStakingInfo
 	}
 
 	// Get staking info from DB
-	if storedStakingInfo, err := sm.getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
+	if storedStakingInfo, err := getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
 		logger.Debug("StakingInfoDB hit.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
-		sm.stakingInfoCache.add(storedStakingInfo)
+		stakingManager.stakingInfoCache.add(storedStakingInfo)
 		return storedStakingInfo
 	} else {
-		logger.Warn("Failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
+		logger.Debug("failed to get stakingInfo from DB", "err", err, "blockNum", blockNum)
 	}
 
 	// Calculate staking info from block header and updates it to cache and db
-	calcStakingInfo, _ := sm.updateStakingInfo(stakingBlockNumber)
+	calcStakingInfo, _ := updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
-		if sm.migrationCheck.InMigration() {
+		if stakingManager.migrationCheck.InMigration() {
 			logger.Error("YOU MUST NOT RESTART NODE", "action", "if you want to restart the node, you should wait a day after the migration completes", "reason", "failed to store staking info while migration")
 		}
-		logger.Error("Failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber)
+		logger.Error("failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber)
+
 		return nil
 	}
 
@@ -116,34 +150,52 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 }
 
 // updateStakingInfo updates staking info in cache and db created from given block number.
-func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
+func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
+	if stakingManager == nil {
+		return nil, ErrStakingManagerNotSet
+	}
+
 	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
 
-	stakingInfo, err := sm.addressBookConnector.getStakingInfoFromAddressBook(stakingBlockNumber)
+	stakingInfo, err := stakingManager.addressBookConnector.getStakingInfoFromAddressBook(stakingBlockNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	sm.stakingInfoCache.add(stakingInfo)
-	if err := sm.addStakingInfoToDB(stakingInfo); err != nil {
-		logger.Warn("Failed to write staking info to db.", "err", err, "stakingInfo", stakingInfo)
+	stakingManager.stakingInfoCache.add(stakingInfo)
+
+	if err := addStakingInfoToDB(stakingInfo); err != nil {
+		logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
 		return stakingInfo, err
 	}
 
-	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blostakingBlockNumberckNum)
+	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", stakingBlockNumber)
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
 }
 
-// Subscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.
-func (sm *StakingManager) Subscribe() {
-	sm.chainHeadSub = sm.blockchain.SubscribeChainHeadEvent(sm.chainHeadChan)
+// StakingManagerSubscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.
+func StakingManagerSubscribe() {
+	if stakingManager == nil {
+		logger.Warn("unable to subscribe; this can slow down node", "err", ErrStakingManagerNotSet)
+		return
+	}
 
-	go sm.handleChainHeadEvent()
+	stakingManager.chainHeadSub = stakingManager.blockchain.SubscribeChainHeadEvent(stakingManager.chainHeadChan)
+
+	go handleChainHeadEvent()
 }
 
-func (sm *StakingManager) handleChainHeadEvent() {
-	defer sm.Unsubscribe()
+func handleChainHeadEvent() {
+	if stakingManager == nil {
+		logger.Warn("unable to start chain head event", "err", ErrStakingManagerNotSet)
+		return
+	} else if stakingManager.chainHeadSub == nil {
+		logger.Info("unable to start chain head event", "err", ErrChainHeadChanNotSet)
+		return
+	}
+
+	defer StakingManagerUnsubscribe()
 
 	logger.Info("Start listening chain head event to update stakingInfoCache.")
 
@@ -151,21 +203,29 @@ func (sm *StakingManager) handleChainHeadEvent() {
 		// A real event arrived, process interesting content
 		select {
 		// Handle ChainHeadEvent
-		case ev := <-sm.chainHeadChan:
-			if sm.governanceHelper.ProposerPolicy() == params.WeightedRandom {
+		case ev := <-stakingManager.chainHeadChan:
+			if stakingManager.governanceHelper.ProposerPolicy() == params.WeightedRandom {
 				// check and update if staking info is not valid before for the next update interval blocks
-				stakingManager := sm.GetStakingInfo(ev.Block.NumberU64() + params.StakingUpdateInterval())
-				if stakingManager == nil {
+				stakingInfo := GetStakingInfo(ev.Block.NumberU64() + params.StakingUpdateInterval())
+				if stakingInfo == nil {
 					logger.Error("unable to fetch staking info", "blockNum", ev.Block.NumberU64())
 				}
 			}
-		case <-sm.chainHeadSub.Err():
+		case <-stakingManager.chainHeadSub.Err():
 			return
 		}
 	}
 }
 
-// Unsubscribe can unsubscribe a subscription to listen chain head event.
-func (sm *StakingManager) Unsubscribe() {
-	sm.chainHeadSub.Unsubscribe()
+// StakingManagerUnsubscribe can unsubscribe a subscription on chain head event.
+func StakingManagerUnsubscribe() {
+	if stakingManager == nil {
+		logger.Warn("unable to start chain head event", "err", ErrStakingManagerNotSet)
+		return
+	} else if stakingManager.chainHeadSub == nil {
+		logger.Info("unable to start chain head event", "err", ErrChainHeadChanNotSet)
+		return
+	}
+
+	stakingManager.chainHeadSub.Unsubscribe()
 }
