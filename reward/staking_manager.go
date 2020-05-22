@@ -24,7 +24,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
 	"sync"
 )
 
@@ -42,10 +41,6 @@ type blockChain interface {
 	blockchain.ChainContext
 }
 
-type migrationCheck interface {
-	InMigration() bool
-}
-
 type StakingManager struct {
 	addressBookConnector *addressBookConnector
 	stakingInfoCache     *stakingInfoCache
@@ -54,7 +49,6 @@ type StakingManager struct {
 	blockchain           blockChain
 	chainHeadChan        chan blockchain.ChainHeadEvent
 	chainHeadSub         event.Subscription
-	migrationCheck       migrationCheck
 }
 
 var (
@@ -63,9 +57,8 @@ var (
 	stakingManager *StakingManager
 
 	// errors for staking manager
-	ErrStakingManagerNotSet      = errors.New("staking manager is not set")
-	ErrChainHeadChanNotSet       = errors.New("chain head channel is not set")
-	ErrStakingInfoDBWriteFailure = errors.New("failed to write staking info to DB")
+	ErrStakingManagerNotSet = errors.New("staking manager is not set")
+	ErrChainHeadChanNotSet  = errors.New("chain head channel is not set")
 )
 
 // NewStakingManager creates and returns StakingManager.
@@ -73,7 +66,7 @@ var (
 // On the first call, a StakingManager is created with given parameters.
 // From next calls, the existing StakingManager is returned. (Parameters
 // from the next calls will not affect.)
-func NewStakingManager(bc blockChain, gh governanceHelper, db database.DBManager) *StakingManager {
+func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *StakingManager {
 	if bc != nil && gh != nil {
 		// this is only called once
 		once.Do(func() {
@@ -84,7 +77,6 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db database.DBManager
 				governanceHelper:     gh,
 				blockchain:           bc,
 				chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-				migrationCheck:       migrationCheck(db),
 			}
 
 			// Before migration, staking information of current and before should be stored in DB.
@@ -137,12 +129,7 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 	// Calculate staking info from block header and updates it to cache and db
 	calcStakingInfo, err := updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
-		if err == ErrStakingInfoDBWriteFailure && stakingManager.migrationCheck.InMigration() {
-			logger.Warn("YOU MUST NOT RESTART NODE", "situation", err.Error(),
-				"desc", "restarting leads to node failure; if you want to restart the node, you should wait a day after the migration completed",
-				"reason", "enough data should be stored to calculate staking info after the state migration is done")
-		}
-		logger.Error("failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber)
+		logger.Error("failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber, "err", err)
 
 		return nil
 	}
@@ -165,8 +152,8 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	stakingManager.stakingInfoCache.add(stakingInfo)
 
 	if err := addStakingInfoToDB(stakingInfo); err != nil {
-		logger.Warn("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
-		return stakingInfo, ErrStakingInfoDBWriteFailure
+		logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
+		return stakingInfo, err
 	}
 
 	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
