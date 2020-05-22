@@ -177,8 +177,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 // CheckStakingInfoStored makes sure the given staking info is stored in cache and DB
 func CheckStakingInfoStored(blockNum uint64) error {
 	if stakingManager == nil {
-		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
-		return nil
+		return ErrStakingManagerNotSet
 	}
 
 	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
