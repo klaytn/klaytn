@@ -814,7 +814,7 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 			continue
 		}
 
-		logger.Info("write node", "key", common.BytesToHash(result.key))
+		logger.Info("write node", "key", common.BytesToHash(result.key).String())
 		if err := batch.Put(result.key, result.val); err != nil {
 			return err
 		}
@@ -831,7 +831,7 @@ func (db *Database) writeBatchNodes(node common.Hash) error {
 		return err
 	}
 
-	logger.Info("write node", "key", node)
+	logger.Info("write root node", "key", node.String())
 
 	if err := batch.Write(); err != nil {
 		logger.Error("Failed to write trie to disk", "err", err)
