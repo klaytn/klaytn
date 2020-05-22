@@ -145,7 +145,6 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 
 		return nil
 	}
-	stakingManager.stakingInfoCache.add(calcStakingInfo)
 
 	logger.Debug("Get stakingInfo from header.", "blockNum", blockNum, "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
 	return calcStakingInfo
