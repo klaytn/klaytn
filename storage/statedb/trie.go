@@ -408,6 +408,7 @@ func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 	if node := t.db.node(hash); node != nil {
 		return node, nil
 	}
+	logger.ErrorWithStack("missingNode", "hash", hash.String(), "path", prefix)
 	return nil, &MissingNodeError{NodeHash: hash, Path: prefix}
 }
 
