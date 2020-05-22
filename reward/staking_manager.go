@@ -117,7 +117,9 @@ func (sm *StakingManager) GetStakingInfo(blockNum uint64) *StakingInfo {
 
 // updateStakingInfo updates staking info in cache and db created from given block number.
 func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
-	stakingInfo, err := sm.addressBookConnector.getStakingInfoFromAddressBook(blockNum)
+	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+
+	stakingInfo, err := sm.addressBookConnector.getStakingInfoFromAddressBook(stakingBlockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +130,7 @@ func (sm *StakingManager) updateStakingInfo(blockNum uint64) (*StakingInfo, erro
 		return stakingInfo, err
 	}
 
-	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
+	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blostakingBlockNumberckNum)
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
 }
