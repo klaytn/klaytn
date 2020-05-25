@@ -195,6 +195,20 @@ func compareStatesConsistency(oldDB database.DBManager, newDB database.DBManager
 		if oldIt.Parent != newIt.Parent {
 			return fmt.Errorf("mismatched parent hash : oldIt.Parent(%v) newIt.Parent(%v)", oldIt.Parent, newIt.Parent)
 		}
+
+		if oldIt.Code != nil {
+			if newIt.Code != nil {
+				if !bytes.Equal(oldIt.Code, newIt.Code) {
+					return fmt.Errorf("mismatched code : oldIt.Code(%v) newIt.Code(%v)", oldIt.Code, newIt.Code)
+				}
+			} else {
+				return fmt.Errorf("mismatched code : oldIt.Code(%v) newIt.Code(nil)", string(oldIt.Code))
+			}
+		} else {
+			if newIt.Code != nil {
+				return fmt.Errorf("mismatched code : oldIt.Code(nil) newIt.Code(%v)", string(newIt.Code))
+			}
+		}
 	}
 
 	if newIt.Next() {
