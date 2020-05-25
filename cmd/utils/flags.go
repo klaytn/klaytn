@@ -671,13 +671,6 @@ var (
 		Usage: "Path of node daemon. Used to give signal to kill",
 		Value: "~/klaytn/bin/kcnd",
 	}
-	// Data Archiving
-	// TODO-Klaytn-DataArchiving Please note that DataArchivingBlockNumFlag is just for development purpose.
-	DataArchivingBlockNumFlag = cli.Uint64Flag{
-		Name:  "dataarchiving.blocknumber",
-		Usage: "The block number when the data archiving starts from. 0 means off",
-		Value: 0,
-	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
 	// TODO-Klaytn-Bootnode: Implements bootnode's RPC
@@ -1175,7 +1168,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
 	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
 	cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
-	cfg.DataArchivingBlockNum = ctx.GlobalUint64(DataArchivingBlockNumFlag.Name)
 
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode

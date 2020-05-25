@@ -41,7 +41,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		StateDBCaching          bool
 		TxPoolStateCache        bool
 		TrieCacheLimit          int
-		DataArchivingBlockNum   uint64
 		ServiceChainSigner      common.Address `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -83,7 +82,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.StateDBCaching = c.StateDBCaching
 	enc.TxPoolStateCache = c.TxPoolStateCache
 	enc.TrieCacheLimit = c.TrieCacheLimit
-	enc.DataArchivingBlockNum = c.DataArchivingBlockNum
 	enc.ServiceChainSigner = c.ServiceChainSigner
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
@@ -129,7 +127,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		StateDBCaching          *bool
 		TxPoolStateCache        *bool
 		TrieCacheLimit          *int
-		DataArchivingBlockNum   *uint64
 		ServiceChainSigner      *common.Address `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -215,9 +212,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.TrieCacheLimit != nil {
 		c.TrieCacheLimit = *dec.TrieCacheLimit
-	}
-	if dec.DataArchivingBlockNum != nil {
-		c.DataArchivingBlockNum = *dec.DataArchivingBlockNum
 	}
 	if dec.ServiceChainSigner != nil {
 		c.ServiceChainSigner = *dec.ServiceChainSigner

@@ -105,13 +105,13 @@ type Trie interface {
 // concurrent use, but does not retain any recent trie nodes in memory. To keep some
 // historical state in memory, use the NewDatabaseWithCache constructor.
 func NewDatabase(db database.DBManager) Database {
-	return NewDatabaseWithCache(db, 0, 0)
+	return NewDatabaseWithCache(db, 0)
 }
 
 // NewDatabaseWithCache creates a backing store for state. The returned database
 // is safe for concurrent use and retains a lot of collapsed RLP trie nodes in a
 // large memory cache.
-func NewDatabaseWithCache(db database.DBManager, cacheSize int, dataArchivingBlockNum uint64) Database {
+func NewDatabaseWithCache(db database.DBManager, cacheSize int) Database {
 	var cacheConfig common.CacheConfiger
 	switch common.DefaultCacheType {
 	case common.LRUShardCacheType:
@@ -126,7 +126,7 @@ func NewDatabaseWithCache(db database.DBManager, cacheSize int, dataArchivingBlo
 	csc := common.NewCache(cacheConfig)
 
 	return &cachingDB{
-		db:            statedb.NewDatabaseWithCache(db, cacheSize, dataArchivingBlockNum),
+		db:            statedb.NewDatabaseWithCache(db, cacheSize),
 		codeSizeCache: csc,
 	}
 }
