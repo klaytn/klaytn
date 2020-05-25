@@ -17,7 +17,6 @@
 package database
 
 import (
-	"bytes"
 	"fmt"
 	"path"
 	"strconv"
@@ -151,6 +150,7 @@ func (pdb *partitionedDB) Close() {
 }
 
 type partitionedDBIterator struct {
+	// TODO-Klaytn implement this later.
 	iterators []Iterator
 	key       []byte
 	value     []byte
@@ -172,6 +172,7 @@ func (pdb *partitionedDB) NewIterator() Iterator {
 // database content starting at a particular initial key (or after, if it does
 // not exist).
 func (pdb *partitionedDB) NewIteratorWithStart(start []byte) Iterator {
+	// TODO-Klaytn implement this later.
 	iterators := make([]Iterator, 0, pdb.numPartitions)
 	for i := 0; i < int(pdb.numPartitions); i++ {
 		iterators = append(iterators, pdb.partitions[i].NewIteratorWithStart(start))
@@ -196,50 +197,54 @@ func (pdb *partitionedDB) NewIteratorWithPrefix(prefix []byte) Iterator {
 }
 
 func (pdi *partitionedDBIterator) Next() bool {
-	var minIter Iterator
-	minIdx := -1
-	minKey := []byte{0}
-	minKeyValue := []byte{0}
-
-	for idx, iter := range pdi.iterators {
-		if iter != nil {
-			if bytes.Compare(minKey, iter.Key()) >= 0 {
-				minIdx = idx
-				minIter = iter
-				minKey = iter.Key()
-				minKeyValue = iter.Value()
-			}
-		}
-	}
-
-	if minIter == nil {
-		return false
-	}
-
-	pdi.key = minKey
-	pdi.value = minKeyValue
-
-	if !minIter.Next() {
-		pdi.iterators[minIdx] = nil
-	}
-
-	return false
+	// TODO-Klaytn implement this later.
+	//var minIter Iterator
+	//minIdx := -1
+	//minKey := []byte{0}
+	//minKeyValue := []byte{0}
+	//
+	//for idx, iter := range pdi.iterators {
+	//	if iter != nil {
+	//		if bytes.Compare(minKey, iter.Key()) >= 0 {
+	//			minIdx = idx
+	//			minIter = iter
+	//			minKey = iter.Key()
+	//			minKeyValue = iter.Value()
+	//		}
+	//	}
+	//}
+	//
+	//if minIter == nil {
+	//	return false
+	//}
+	//
+	//pdi.key = minKey
+	//pdi.value = minKeyValue
+	//
+	//if !minIter.Next() {
+	//	pdi.iterators[minIdx] = nil
+	//}
+	//
+	return true
 }
 
 func (pdi *partitionedDBIterator) Error() error {
+	// TODO-Klaytn implement this later.
 	return nil
 }
 
 func (pdi *partitionedDBIterator) Key() []byte {
+	// TODO-Klaytn implement this later.
 	return nil
 }
 
 func (pdi *partitionedDBIterator) Value() []byte {
+	// TODO-Klaytn implement this later.
 	return nil
 }
 
 func (pdi *partitionedDBIterator) Release() {
-
+	// TODO-Klaytn implement this later.
 }
 
 func (pdb *partitionedDB) NewBatch() Batch {
