@@ -44,7 +44,10 @@ type testAccount struct {
 func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
 	// Create an empty state
 	db := NewDatabase(database.NewMemoryDBManager())
-	statedb, _ := New(common.Hash{}, db)
+	statedb, err := New(common.Hash{}, db)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Fill it with some arbitrary data
 	var accounts []*testAccount
@@ -168,17 +171,11 @@ func checkStateConsistency(db database.DBManager, root common.Hash) error {
 // compareStatesConsistency checks that all data of given two states.
 func compareStatesConsistency(oldDB database.DBManager, newDB database.DBManager, root common.Hash) error {
 	// Create and iterate a state trie rooted in a sub-node
-	if _, err := oldDB.ReadStateTrieNode(root.Bytes()); err != nil {
-		return err
-	}
 	oldState, err := New(root, NewDatabase(oldDB))
 	if err != nil {
 		return err
 	}
 
-	if _, err := newDB.ReadStateTrieNode(root.Bytes()); err != nil {
-		return err
-	}
 	newState, err := New(root, NewDatabase(newDB))
 	if err != nil {
 		return err
@@ -188,7 +185,7 @@ func compareStatesConsistency(oldDB database.DBManager, newDB database.DBManager
 	newIt := NewNodeIterator(newState)
 	for oldIt.Next() {
 		if !newIt.Next() {
-			return fmt.Errorf("newDB iterator finished early : oldIt.Hash(%v) oldIt.Parent(%v)", oldIt.Hash, oldIt.Parent)
+			return fmt.Errorf("newDB iterator finished earlier : oldIt.Hash(%v) oldIt.Parent(%v)", oldIt.Hash, oldIt.Parent)
 		}
 
 		if oldIt.Hash != newIt.Hash {
@@ -201,7 +198,7 @@ func compareStatesConsistency(oldDB database.DBManager, newDB database.DBManager
 	}
 
 	if newIt.Next() {
-		return fmt.Errorf("oldDB iterator finished early  : newIt.Hash(%v) newIt.Parent(%v)", newIt.Hash, newIt.Parent)
+		return fmt.Errorf("oldDB iterator finished earlier  : newIt.Hash(%v) newIt.Parent(%v)", newIt.Hash, newIt.Parent)
 	}
 
 	return nil
