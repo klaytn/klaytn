@@ -517,7 +517,7 @@ func (bc *BlockChain) StartStateMigration(number uint64, root common.Hash) error
 	}
 
 	for _, f := range migrationPrerequisites {
-		err := f(bc.db.MigrationBlockNumber())
+		err := f(number)
 
 		if err != nil {
 			return err
