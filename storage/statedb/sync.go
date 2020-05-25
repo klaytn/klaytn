@@ -84,7 +84,7 @@ type StateTrieReadDB interface {
 // and reconstructs the trie step by step until all is done.
 type TrieSync struct {
 	database         StateTrieReadDB          // Persistent database to check for existing entries
-	membatch         *syncMemBatch            // Memory buffer to avoid frequest database writes
+	membatch         *syncMemBatch            // Memory buffer to avoid frequent database writes
 	requests         map[common.Hash]*request // Pending requests pertaining to a key hash
 	queue            *prque.Prque             // Priority queue with the pending requests
 	retrievedByDepth map[int]int              // Retrieved trie node number counted by depth
@@ -227,7 +227,7 @@ func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
 }
 
 // Commit flushes the data stored in the internal membatch out to persistent
-// storage, returning th enumber of items written and any occurred error.
+// storage, returning the number of items written and any occurred error.
 func (s *TrieSync) Commit(dbw database.Putter) (int, error) {
 	// Dump the membatch into a database dbw
 	for i, key := range s.membatch.order {
