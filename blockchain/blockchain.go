@@ -318,7 +318,14 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	srcCachedDB := bc.StateCache().TrieDB()
 	targetDB := statedb.NewDatabase(&stateTrieMigrationDB{bc.db})
 
-	trieSync := state.NewStateSync(rootHash, targetDB.DiskDB())
+	// TODO-Klaytn Change NewMemDB to real targetDB for restarting state migration
+	// Present bloom filter for migration.
+	// Since iterator doesn't support partitionedDB, we cannot use targetDB.
+	// If state migration is finished without restarting node, this fake empty DB is ok.
+	stateBloom := statedb.NewSyncBloom(uint64(512), database.NewMemDB())
+	defer stateBloom.Close()
+
+	trieSync := state.NewStateSync(rootHash, targetDB.DiskDB(), stateBloom)
 	var queue []common.Hash
 	committedCnt := 0
 

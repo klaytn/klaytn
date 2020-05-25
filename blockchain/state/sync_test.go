@@ -159,7 +159,7 @@ func checkStateConsistency(db database.DBManager, root common.Hash) error {
 // Tests that an empty state is not scheduled for syncing.
 func TestEmptyStateSync(t *testing.T) {
 	empty := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-	if req := NewStateSync(empty, database.NewMemoryDBManager()).Missing(1); len(req) != 0 {
+	if req := NewStateSync(empty, database.NewMemoryDBManager(), statedb.NewSyncBloom(1, database.NewMemDB())).Missing(1); len(req) != 0 {
 		t.Errorf("content requested for empty state: %v", req)
 	}
 }
@@ -175,7 +175,7 @@ func testIterativeStateSync(t *testing.T, count int) {
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb)
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()))
 
 	queue := append([]common.Hash{}, sched.Missing(count)...)
 	for len(queue) > 0 {
@@ -209,7 +209,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb)
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()))
 
 	queue := append([]common.Hash{}, sched.Missing(0)...)
 	for len(queue) > 0 {
@@ -248,7 +248,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb)
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()))
 
 	queue := make(map[common.Hash]struct{})
 	for _, hash := range sched.Missing(count) {
@@ -290,7 +290,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb)
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()))
 
 	queue := make(map[common.Hash]struct{})
 	for _, hash := range sched.Missing(0) {
@@ -339,7 +339,7 @@ func TestIncompleteStateSync(t *testing.T) {
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb)
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()))
 
 	added := []common.Hash{}
 	queue := append([]common.Hash{}, sched.Missing(1)...)

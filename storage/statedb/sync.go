@@ -89,10 +89,11 @@ type TrieSync struct {
 	queue            *prque.Prque             // Priority queue with the pending requests
 	retrievedByDepth map[int]int              // Retrieved trie node number counted by depth
 	committedByDepth map[int]int              // Committed trie nodes number counted by depth
+	bloom            *SyncBloom               // Bloom filter for fast node existence checks
 }
 
 // NewTrieSync creates a new trie data download scheduler.
-func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback) *TrieSync {
+func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback, bloom *SyncBloom) *TrieSync {
 	ts := &TrieSync{
 		database:         database,
 		membatch:         newSyncMemBatch(),
@@ -100,6 +101,7 @@ func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallba
 		queue:            prque.New(),
 		retrievedByDepth: make(map[int]int),
 		committedByDepth: make(map[int]int),
+		bloom:            bloom,
 	}
 	ts.AddSubTrie(root, 0, common.Hash{}, callback)
 	return ts
@@ -114,10 +116,14 @@ func (s *TrieSync) AddSubTrie(root common.Hash, depth int, parent common.Hash, c
 	if _, ok := s.membatch.batch[root]; ok {
 		return
 	}
-	key := root.Bytes()
-	blob, _ := s.database.ReadStateTrieNode(key)
-	if local, err := decodeNode(key, blob); local != nil && err == nil {
-		return
+	if s.bloom.Contains(root[:]) {
+		key := root.Bytes()
+		blob, _ := s.database.ReadStateTrieNode(key)
+		if local, err := decodeNode(key, blob); local != nil && err == nil {
+			return
+		}
+		// False positive, bump fault meter
+		bloomFaultMeter.Mark(1)
 	}
 	// Assemble the new sub-trie sync request
 	req := &request{
@@ -149,8 +155,12 @@ func (s *TrieSync) AddRawEntry(hash common.Hash, depth int, parent common.Hash) 
 	if _, ok := s.membatch.batch[hash]; ok {
 		return
 	}
-	if ok, _ := s.database.HasStateTrieNode(hash.Bytes()); ok {
-		return
+	if s.bloom.Contains(hash[:]) {
+		if ok, _ := s.database.HasStateTrieNode(hash.Bytes()); ok {
+			return
+		}
+		// False positive, bump fault meter
+		bloomFaultMeter.Mark(1)
 	}
 	// Assemble the new sub-trie sync request
 	req := &request{
@@ -234,6 +244,7 @@ func (s *TrieSync) Commit(dbw database.Putter) (int, error) {
 		if err := dbw.Put(key[:], s.membatch.batch[key]); err != nil {
 			return i, err
 		}
+		s.bloom.Add(key[:])
 	}
 	written := len(s.membatch.order)
 
@@ -311,8 +322,13 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 			if _, ok := s.membatch.batch[hash]; ok {
 				continue
 			}
-			if ok, _ := s.database.HasStateTrieNode(node); ok {
-				continue
+			if s.bloom.Contains(node) {
+				// Bloom filter says this might be a duplicate, double check
+				if ok, _ := s.database.HasStateTrieNode(node); ok {
+					continue
+				}
+				// False positive, bump fault meter
+				bloomFaultMeter.Mark(1)
 			}
 			// Locally unknown node, schedule for retrieval
 			requests = append(requests, &request{

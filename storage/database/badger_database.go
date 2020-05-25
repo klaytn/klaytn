@@ -163,9 +163,21 @@ func (bg *badgerDB) Delete(key []byte) error {
 	return txn.Commit()
 }
 
-func (bg *badgerDB) NewIterator() *badger.Iterator {
-	txn := bg.db.NewTransaction(false)
-	return txn.NewIterator(badger.DefaultIteratorOptions)
+func (bg *badgerDB) NewIterator() Iterator {
+	//txn := bg.db.NewTransaction(false)
+	//return txn.NewIterator(badger.DefaultIteratorOptions)
+	logger.CritWithStack("badgerDB doesn't support NewIterator")
+	return nil
+}
+
+func (bg *badgerDB) NewIteratorWithStart(start []byte) Iterator {
+	logger.CritWithStack("badgerDB doesn't support NewIteratorWithStart")
+	return nil
+}
+
+func (pdb *badgerDB) NewIteratorWithPrefix(prefix []byte) Iterator {
+	logger.CritWithStack("badgerDB doesn't support NewIteratorWithPrefix")
+	return nil
 }
 
 func (bg *badgerDB) Close() {
