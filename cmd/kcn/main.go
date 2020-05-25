@@ -93,7 +93,6 @@ var cnHelpFlagGroups = []utils.FlagGroup{
 			utils.LevelDBNoBufferPoolFlag,
 			utils.NoParallelDBWriteFlag,
 			utils.SenderTxHashIndexingFlag,
-			utils.DataArchivingBlockNumFlag,
 		},
 	},
 	{

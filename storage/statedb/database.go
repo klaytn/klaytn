@@ -85,10 +85,6 @@ const secureKeyLength = 11 + 32
 // commitResultChSizeLimit limits the size of channel used for commitResult.
 const commitResultChSizeLimit = 100 * 10000
 
-// NoDataArchivingPreparation is used to indicate that certain Database.Commit operations
-// do not need preparation of data archiving.
-const NoDataArchivingPreparation = 0
-
 // AutoScaling is for auto-scaling cache size. If cacheSize is set to this value,
 // cache size is set scaling to physical memeory
 const AutoScaling = -1
@@ -129,8 +125,6 @@ type Database struct {
 	lock sync.RWMutex
 
 	trieNodeCache *fastcache.Cache // GC friendly memory cache of trie node RLPs
-
-	dataArchivingBlockNum uint64
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -316,13 +310,13 @@ func expandNode(hash hashNode, n node) node {
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
-	return NewDatabaseWithCache(diskDB, 0, 0)
+	return NewDatabaseWithCache(diskDB, 0)
 }
 
 // NewDatabaseWithCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum uint64) *Database {
+func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int) *Database {
 	var trieNodeCache *fastcache.Cache
 	if cacheSizeMB == AutoScaling {
 		cacheSizeMB = getTrieNodeCacheSizeMB()
@@ -334,11 +328,10 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int, daBlockNum
 		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
 	}
 	return &Database{
-		diskDB:                diskDB,
-		nodes:                 map[common.Hash]*cachedNode{{}: {}},
-		preimages:             make(map[common.Hash][]byte),
-		trieNodeCache:         trieNodeCache,
-		dataArchivingBlockNum: daBlockNum,
+		diskDB:        diskDB,
+		nodes:         map[common.Hash]*cachedNode{{}: {}},
+		preimages:     make(map[common.Hash][]byte),
+		trieNodeCache: trieNodeCache,
 	}
 }
 
@@ -909,19 +902,6 @@ func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error
 	db.gcnodes, db.gcsize, db.gctime = 0, 0, 0
 	db.flushnodes, db.flushsize, db.flushtime = 0, 0, 0
 	return nil
-}
-
-func (db *Database) settingMigrationDBRequired(blockNum uint64) bool {
-	if blockNum == NoDataArchivingPreparation {
-		return false
-	}
-	if db.dataArchivingBlockNum == 0 {
-		return false
-	}
-	if blockNum >= db.dataArchivingBlockNum && !db.diskDB.InMigration() {
-		return true
-	}
-	return false
 }
 
 // commit iteratively encodes nodes from parents to child nodes.

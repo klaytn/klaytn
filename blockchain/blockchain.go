@@ -82,14 +82,13 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	StateDBCaching        bool   // Enables caching of state objects in stateDB.
-	TxPoolStateCache      bool   // Enables caching of nonce and balance for txpool.
-	ArchiveMode           bool   // If true, state trie is not pruned and always written to database.
-	CacheSize             int    // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval         uint   // Block interval to flush the trie. Each interval state trie will be flushed into disk.
-	TrieCacheLimit        int    // Memory allowance (MB) to use for caching trie nodes in memory
-	SenderTxHashIndexing  bool   // Enables saving senderTxHash to txHash mapping information to database and cache.
-	DataArchivingBlockNum uint64 // If not zero, the number indicates the starting point of data archiving operation.
+	StateDBCaching       bool // Enables caching of state objects in stateDB.
+	TxPoolStateCache     bool // Enables caching of nonce and balance for txpool.
+	ArchiveMode          bool // If true, state trie is not pruned and always written to database.
+	CacheSize            int  // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval        uint // Block interval to flush the trie. Each interval state trie will be flushed into disk.
+	TrieCacheLimit       int  // Memory allowance (MB) to use for caching trie nodes in memory
+	SenderTxHashIndexing bool // Enables saving senderTxHash to txHash mapping information to database and cache.
 }
 
 // gcBlock is used for priority queue for GC.
@@ -204,7 +203,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		db:                 db,
 		triegc:             prque.New(),
 		chBlock:            make(chan gcBlock, 1000),
-		stateCache:         state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit, cacheConfig.DataArchivingBlockNum),
+		stateCache:         state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit),
 		quit:               make(chan struct{}),
 		futureBlocks:       futureBlocks,
 		engine:             engine,
@@ -1089,7 +1088,7 @@ func (bc *BlockChain) Stop() {
 				}
 
 				logger.Info("Writing cached state to disk", "block", recent.Number(), "hash", recent.Hash(), "root", recent.Root())
-				if err := triedb.Commit(recent.Root(), true, statedb.NoDataArchivingPreparation); err != nil {
+				if err := triedb.Commit(recent.Root(), true, number-offset); err != nil {
 					logger.Error("Failed to commit recent state trie", "err", err)
 				}
 			}
@@ -1329,7 +1328,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 	// If we're running an archive node, always flush
 	if bc.isArchiveMode() {
-		if err := trieDB.Commit(root, false, statedb.NoDataArchivingPreparation); err != nil {
+		if err := trieDB.Commit(root, false, block.NumberU64()); err != nil {
 			return err
 		}
 
