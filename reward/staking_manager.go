@@ -78,6 +78,18 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 				blockchain:           bc,
 				chainHeadChan:        make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 			}
+
+			// Before migration, staking information of current and before should be stored in DB.
+			//
+			// Staking information from block of StakingUpdateInterval ahead is needed to create a block.
+			// If there is no staking info in either cache, db or state trie, the node cannot make a block.
+			// The information in state trie is deleted after state trie migration.
+			blockchain.RegisterMigrationPrerequisites(func(blockNum uint64) error {
+				if err := CheckStakingInfoStored(blockNum); err != nil {
+					return err
+				}
+				return CheckStakingInfoStored(blockNum + params.StakingUpdateInterval())
+			})
 		})
 	} else {
 		logger.Error("unable to set StakingManager", "blockchain", bc, "governanceHelper", gh)
@@ -115,9 +127,9 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 	}
 
 	// Calculate staking info from block header and updates it to cache and db
-	calcStakingInfo, _ := updateStakingInfo(stakingBlockNumber)
+	calcStakingInfo, err := updateStakingInfo(stakingBlockNumber)
 	if calcStakingInfo == nil {
-		logger.Error("failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber)
+		logger.Error("failed to update stakingInfo", "blockNum", blockNum, "staking block number", stakingBlockNumber, "err", err)
 		return nil
 	}
 
@@ -146,6 +158,18 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
+}
+
+// CheckStakingInfoStored makes sure the given staking info is stored in cache and DB
+func CheckStakingInfoStored(blockNum uint64) error {
+	if stakingManager == nil {
+		return ErrStakingManagerNotSet
+	}
+
+	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+	_, err := updateStakingInfo(stakingBlockNumber)
+
+	return err
 }
 
 // StakingManagerSubscribe setups a channel to listen chain head event and starts a goroutine to update staking cache.

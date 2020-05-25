@@ -21,6 +21,8 @@ import (
 	"errors"
 )
 
+var ErrStakingDBNotSet = errors.New("stakingInfoDB is not set")
+
 type stakingInfoDB interface {
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
@@ -28,7 +30,7 @@ type stakingInfoDB interface {
 
 func getStakingInfoFromDB(blockNum uint64) (*StakingInfo, error) {
 	if stakingManager.stakingInfoDB == nil {
-		return nil, errors.New("stakingInfoDB is not set")
+		return nil, ErrStakingDBNotSet
 	}
 
 	jsonByte, err := stakingManager.stakingInfoDB.ReadStakingInfo(blockNum)
@@ -47,7 +49,7 @@ func getStakingInfoFromDB(blockNum uint64) (*StakingInfo, error) {
 
 func addStakingInfoToDB(stakingInfo *StakingInfo) error {
 	if stakingManager.stakingInfoDB == nil {
-		return errors.New("stakingInfoDB is not set")
+		return ErrStakingDBNotSet
 	}
 
 	marshaledStakingInfo, err := json.Marshal(stakingInfo)
