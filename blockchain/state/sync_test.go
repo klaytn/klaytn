@@ -288,6 +288,9 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 	}
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
+
+	err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	assert.NoError(t, err)
 }
 
 // Tests that given a root hash, a trie can sync iteratively on a single thread,
@@ -334,6 +337,9 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 	}
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
+
+	err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	assert.NoError(t, err)
 }
 
 // Tests that the trie scheduler can correctly reconstruct the state even if only
@@ -381,6 +387,9 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 	}
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
+
+	err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	assert.NoError(t, err)
 }
 
 // Tests that at any point in time during a sync, only complete sub-tries are in
@@ -445,6 +454,13 @@ func TestIncompleteStateSync(t *testing.T) {
 		if err := checkStateConsistency(dstDb, added[0]); err == nil {
 			t.Fatalf("trie inconsistency not caught, missing: %x", key)
 		}
+
+		err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+		assert.Error(t, err)
+
 		dstDb.GetMemDB().Put(key, value)
 	}
+
+	err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	assert.NoError(t, err)
 }
