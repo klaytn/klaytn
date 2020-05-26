@@ -169,7 +169,7 @@ func CheckStakingInfoStored(blockNum uint64) error {
 	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
 
 	// skip checking if staking info is stored in DB
-	if stakingInfo, err := getStakingInfoFromDB(stakingBlockNumber); stakingInfo != nil && err == nil {
+	if _, err := getStakingInfoFromDB(stakingBlockNumber); err == nil {
 		return nil
 	}
 
