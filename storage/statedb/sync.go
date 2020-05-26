@@ -114,12 +114,14 @@ func (s *TrieSync) AddSubTrie(root common.Hash, depth int, parent common.Hash, c
 		return
 	}
 	if _, ok := s.membatch.batch[root]; ok {
+		logger.Info("skip write node in migration by membatch", "AddSubTrie", root.String())
 		return
 	}
 	if s.bloom.Contains(root[:]) {
 		key := root.Bytes()
 		blob, _ := s.database.ReadStateTrieNode(key)
 		if local, err := decodeNode(key, blob); local != nil && err == nil {
+			logger.Info("skip write node in migration by ReadStateTrieNode", "AddSubTrie", root.String())
 			return
 		}
 		// False positive, bump fault meter
@@ -153,10 +155,12 @@ func (s *TrieSync) AddRawEntry(hash common.Hash, depth int, parent common.Hash) 
 		return
 	}
 	if _, ok := s.membatch.batch[hash]; ok {
+		logger.Info("skip write node in migration by membatch", "AddRawEntry", hash.String())
 		return
 	}
 	if s.bloom.Contains(hash[:]) {
 		if ok, _ := s.database.HasStateTrieNode(hash.Bytes()); ok {
+			logger.Info("skip write node in migration by HasStateTrieNode", "AddRawEntry", hash.String())
 			return
 		}
 		// False positive, bump fault meter
@@ -241,6 +245,7 @@ func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
 func (s *TrieSync) Commit(dbw database.Putter) (int, error) {
 	// Dump the membatch into a database dbw
 	for i, key := range s.membatch.order {
+		logger.Info("write node in migration", "key", key.String())
 		if err := dbw.Put(key[:], s.membatch.batch[key]); err != nil {
 			return i, err
 		}
@@ -320,11 +325,13 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 			// Try to resolve the node from the local database
 			hash := common.BytesToHash(node)
 			if _, ok := s.membatch.batch[hash]; ok {
+				logger.Info("skip write node in migration by membatch", "key", hash.String())
 				continue
 			}
 			if s.bloom.Contains(node) {
 				// Bloom filter says this might be a duplicate, double check
 				if ok, _ := s.database.HasStateTrieNode(node); ok {
+					logger.Info("skip write node in migration by HasStateTrieNode", "key", hash.String())
 					continue
 				}
 				// False positive, bump fault meter
