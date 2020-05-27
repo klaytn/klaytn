@@ -240,6 +240,48 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 	return stateDb.RawDump(), nil
 }
 
+type Trie struct {
+	Hash   string `json:"hash"`
+	Parent string `json:"parent"`
+}
+
+type DumpStateTrieResult struct {
+	Root  string `json:"root"`
+	Tries []Trie `json:"tries"`
+}
+
+// DumpStateTrie retrieves all state Trie of the given state root.
+func (api *PublicDebugAPI) DumpStateTrie(blockNr rpc.BlockNumber) (DumpStateTrieResult, error) {
+	//func (api *PublicDebugAPI) DumpStateTrie(blockNr rpc.BlockNumber) error {
+	var block *types.Block
+	if blockNr == rpc.LatestBlockNumber {
+		block = api.cn.blockchain.CurrentBlock()
+	} else {
+		block = api.cn.blockchain.GetBlockByNumber(uint64(blockNr))
+	}
+	if block == nil {
+		return DumpStateTrieResult{}, fmt.Errorf("block #%d not found", blockNr)
+		//return fmt.Errorf("block #%d not found", blockNr)
+	}
+
+	t := DumpStateTrieResult{
+		Root:  block.Root().String(),
+		Tries: make([]Trie, 0),
+	}
+
+	stateDB, err := state.New(block.Root(), state.NewDatabase(api.cn.chainDB))
+	if err != nil {
+		//return err
+		return DumpStateTrieResult{}, err
+	}
+	it := state.NewNodeIterator(stateDB)
+	for it.Next() {
+		t.Tries = append(t.Tries, Trie{it.Hash.String(), it.Parent.String()})
+	}
+	return t, nil
+	//return nil
+}
+
 // PrivateDebugAPI is the collection of CN full node APIs exposed over
 // the private debugging endpoint.
 type PrivateDebugAPI struct {

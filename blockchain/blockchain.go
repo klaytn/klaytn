@@ -1566,6 +1566,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			parent = chain[i-1]
 		}
 
+		logger.Info("TryGetCachedStateDB", "parent.Root()", parent.Root())
 		stateDB, err := bc.TryGetCachedStateDB(parent.Root())
 		if err != nil {
 			return i, events, coalescedLogs, err
@@ -1661,7 +1662,7 @@ func (st *insertStats) report(chain []*types.Block, index int, cache common.Stor
 			txs = countTransactions(chain[st.lastIndex : index+1])
 		)
 		context := []interface{}{
-			"number", end.Number(), "hash", end.Hash(), "blocks", st.processed, "txs", txs, "elapsed", common.PrettyDuration(elapsed),
+			"number", end.Number(), "hash", end.Hash().String(), "blocks", st.processed, "txs", txs, "elapsed", common.PrettyDuration(elapsed),
 			"trieDBSize", cache, "mgas", float64(st.usedGas) / 1000000, "mgasps", float64(st.usedGas) * 1000 / float64(elapsed),
 		}
 		if st.queued > 0 {

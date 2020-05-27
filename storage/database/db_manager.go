@@ -1304,6 +1304,7 @@ func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 		if val, err := dbm.GetStateTrieMigrationDB().Get(hash[:]); err == nil {
 			return val, nil
 		}
+		logger.Info("ReadCachedTrieNode in migration but no data migrationDB", "hash", hash.String())
 	}
 	return dbm.ReadCachedTrieNodeFromOld(hash)
 }
@@ -1317,6 +1318,7 @@ func (dbm *databaseManager) ReadCachedTrieNodePreimage(secureKey []byte) ([]byte
 		if val, err := dbm.GetStateTrieMigrationDB().Get(secureKey); err == nil {
 			return val, nil
 		}
+		logger.Info("ReadCachedTrieNodePreimage in migration but no data migrationDB", "hash", string(secureKey))
 	}
 	return dbm.ReadCachedTrieNodePreimageFromOld(secureKey)
 }
@@ -1330,6 +1332,7 @@ func (dbm *databaseManager) ReadStateTrieNode(key []byte) ([]byte, error) {
 		if val, err := dbm.GetStateTrieMigrationDB().Get(key); err == nil {
 			return val, nil
 		}
+		logger.Info("ReadStateTrieNode in migration but no data migrationDB", "hash", common.BytesToHash(key).String())
 	}
 	return dbm.ReadStateTrieNodeFromOld(key)
 }

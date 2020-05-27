@@ -912,6 +912,7 @@ func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error
 func (db *Database) commit(hash common.Hash, resultCh chan<- commitResult) {
 	node, ok := db.nodes[hash]
 	if !ok {
+		logger.Error("Skip trie commit", "hash", hash.String())
 		return
 	}
 	for _, child := range node.childs() {
