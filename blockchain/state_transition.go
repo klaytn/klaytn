@@ -173,16 +173,15 @@ func (st *StateTransition) buyGas() error {
 		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
 
 		if st.state.GetBalance(validatedFeePayer).Cmp(feePayerFee) < 0 {
-			logger.Debug("%w - feePayer: %v, feePayerBalance: %v, feePayerFee: %v, txHash: %v",
-				errInsufficientBalanceForGasFeePayer, validatedFeePayer.String(), st.state.GetBalance(validatedFeePayer).Uint64(),
-				feePayerFee.Uint64(), st.msg.Hash().String())
+			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
+				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", feePayerFee.Uint64(),
+				"txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGasFeePayer
 		}
 
 		if st.state.GetBalance(validatedSender).Cmp(senderFee) < 0 {
-			logger.Debug("%w - sender: %v, senderBalance: %v, senderFee: %v, txHash: %v",
-				errInsufficientBalanceForGas, validatedSender.String(), st.state.GetBalance(validatedSender).Uint64(),
-				senderFee.Uint64(), st.msg.Hash().String())
+			logger.Debug(errInsufficientBalanceForGas.Error(), "sender", validatedSender.String(),
+				"senderBalance", st.state.GetBalance(validatedSender).Uint64(), "senderFee", senderFee.Uint64(), "txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGas
 		}
 
@@ -191,9 +190,8 @@ func (st *StateTransition) buyGas() error {
 	} else {
 		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
 		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
-			logger.Debug("%w - feePayer: %v, feePayerBalance: %v, feePayerFee: %v, txHash: %v",
-				errInsufficientBalanceForGasFeePayer, validatedFeePayer.String(), st.state.GetBalance(validatedFeePayer).Uint64(),
-				mgval.Uint64(), st.msg.Hash().String())
+			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
+				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", mgval.Uint64(), "txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGasFeePayer
 		}
 
@@ -211,12 +209,12 @@ func (st *StateTransition) preCheck() error {
 	if st.msg.CheckNonce() {
 		nonce := st.state.GetNonce(st.msg.ValidatedSender())
 		if nonce < st.msg.Nonce() {
-			logger.Debug("%w - addr: %v, accountNonce: %v, txNonce: %v, txHash: %v",
-				ErrNonceTooHigh, st.msg.ValidatedSender().String(), nonce, st.msg.Nonce(), st.msg.Hash().String())
+			logger.Debug(ErrNonceTooHigh.Error(), "account", st.msg.ValidatedSender().String(),
+				"accountNonce", nonce, "txNonce", st.msg.Nonce(), "txHash", st.msg.Hash().String())
 			return ErrNonceTooHigh
 		} else if nonce > st.msg.Nonce() {
-			logger.Debug("%w - addr: %v, accountNonce: %v, txNonce: %v, txHash: %v",
-				ErrNonceTooLow, st.msg.ValidatedSender().String(), nonce, st.msg.Nonce(), st.msg.Hash().String())
+			logger.Debug(ErrNonceTooLow.Error(), "account", st.msg.ValidatedSender().String(),
+				"accountNonce", nonce, "txNonce", st.msg.Nonce(), "txHash", st.msg.Hash().String())
 			return ErrNonceTooLow
 		}
 	}
