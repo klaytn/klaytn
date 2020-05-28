@@ -181,7 +181,8 @@ func (st *StateTransition) buyGas() error {
 
 		if st.state.GetBalance(validatedSender).Cmp(senderFee) < 0 {
 			logger.Debug(errInsufficientBalanceForGas.Error(), "sender", validatedSender.String(),
-				"senderBalance", st.state.GetBalance(validatedSender).Uint64(), "senderFee", senderFee.Uint64(), "txHash", st.msg.Hash().String())
+				"senderBalance", st.state.GetBalance(validatedSender).Uint64(), "senderFee", senderFee.Uint64(),
+				"txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGas
 		}
 
@@ -191,7 +192,8 @@ func (st *StateTransition) buyGas() error {
 		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
 		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
 			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", mgval.Uint64(), "txHash", st.msg.Hash().String())
+				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", mgval.Uint64(),
+				"txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGasFeePayer
 		}
 
