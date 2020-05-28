@@ -1087,6 +1087,10 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			}
 
 			bc.checkStartStateMigration(block.NumberU64(), root)
+
+			if err := trieDB.Cap(0); err != nil {
+				logger.Error("Error from trieDB.Cap by state migration" )
+			}
 		}
 
 		bc.chBlock <- gcBlock{root, block.NumberU64()}
