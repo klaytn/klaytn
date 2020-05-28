@@ -241,8 +241,10 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 }
 
 type Trie struct {
+	Type   string `json:"type"`
 	Hash   string `json:"hash"`
 	Parent string `json:"parent"`
+	Path   string `json:"path"`
 }
 
 type DumpStateTrieResult struct {
@@ -251,20 +253,15 @@ type DumpStateTrieResult struct {
 }
 
 // DumpStateTrie retrieves all state Trie of the given state root.
-func (api *PublicDebugAPI) DumpStateTrie(blockNr rpc.BlockNumber) (DumpStateTrieResult, error) {
+func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, error) {
 	//func (api *PublicDebugAPI) DumpStateTrie(blockNr rpc.BlockNumber) error {
-	var block *types.Block
-	if blockNr == rpc.LatestBlockNumber {
-		block = api.cn.blockchain.CurrentBlock()
-	} else {
-		block = api.cn.blockchain.GetBlockByNumber(uint64(blockNr))
-	}
+	block := api.cn.blockchain.GetBlockByNumber(uint64(blockNr))
 	if block == nil {
 		return DumpStateTrieResult{}, fmt.Errorf("block #%d not found", blockNr)
 		//return fmt.Errorf("block #%d not found", blockNr)
 	}
 
-	t := DumpStateTrieResult{
+	result := DumpStateTrieResult{
 		Root:  block.Root().String(),
 		Tries: make([]Trie, 0),
 	}
@@ -276,9 +273,16 @@ func (api *PublicDebugAPI) DumpStateTrie(blockNr rpc.BlockNumber) (DumpStateTrie
 	}
 	it := state.NewNodeIterator(stateDB)
 	for it.Next() {
-		t.Tries = append(t.Tries, Trie{it.Hash.String(), it.Parent.String()})
+		t := Trie{
+			it.Type,
+			it.Hash.String(),
+			it.Parent.String(),
+			common.Bytes2Hex(it.Path),
+		}
+
+		result.Tries = append(result.Tries, t)
 	}
-	return t, nil
+	return result, nil
 	//return nil
 }
 

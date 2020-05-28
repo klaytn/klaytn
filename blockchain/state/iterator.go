@@ -40,6 +40,7 @@ type NodeIterator struct {
 	codeHash    common.Hash // Hash of the contract source code
 	Code        []byte      // Source code associated with a contract
 
+	Type   string
 	Hash   common.Hash // Hash of the current entry being iterated (nil if not standalone)
 	Parent common.Hash // Hash of the first full ancestor node (nil if current is the root)
 	Path   []byte      // the hex-encoded path to the current node.
@@ -141,6 +142,7 @@ func (it *NodeIterator) step() error {
 func (it *NodeIterator) retrieve() bool {
 	// Clear out any previously set values
 	it.Hash = common.Hash{}
+	it.Path = []byte{}
 
 	// If the iteration's done, return no available data
 	if it.state == nil {
@@ -149,13 +151,16 @@ func (it *NodeIterator) retrieve() bool {
 	// Otherwise retrieve the current entry
 	switch {
 	case it.dataIt != nil:
+		it.Type = "storage"
 		it.Hash, it.Parent, it.Path = it.dataIt.Hash(), it.dataIt.Parent(), it.dataIt.Path()
 		if it.Parent == (common.Hash{}) {
 			it.Parent = it.accountHash
 		}
 	case it.Code != nil:
+		it.Type = "code"
 		it.Hash, it.Parent = it.codeHash, it.accountHash
 	case it.stateIt != nil:
+		it.Type = "state"
 		it.Hash, it.Parent, it.Path = it.stateIt.Hash(), it.stateIt.Parent(), it.stateIt.Path()
 	}
 	return true
