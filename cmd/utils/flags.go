@@ -950,6 +950,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		logger.Crit("Unknown node type", "nodetype", nodeType)
 	}
 	logger.Info("Setting connection type", "nodetype", nodeType, "conntype", cfg.ConnectionType)
+	logger.Info("Setting connection type %v - %v", nodeType, cfg.ConnectionType)
 
 	// set bootnodes via this function by check specified parameters
 	setBootstrapNodes(ctx, cfg)

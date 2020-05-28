@@ -399,6 +399,7 @@ func (db *Database) insert(hash common.Hash, lenEncoded uint16, node node) {
 		}
 	}
 	db.nodes[hash] = entry
+	//logger.Error("insert trie", "hash", hash.String())
 
 	// Update the flush-list endpoints
 	if db.oldest == (common.Hash{}) {
@@ -603,6 +604,7 @@ func (db *Database) reference(child common.Hash, parent common.Hash) {
 	}
 	node.parents++
 	db.nodes[parent].children[child]++
+	logger.Info("reference node", "hash", child.String(), "node.parents", node.parents)
 }
 
 // Dereference removes an existing reference from a root node.
@@ -660,6 +662,7 @@ func (db *Database) dereference(child common.Hash, parent common.Hash) {
 			db.dereference(hash, child)
 		}
 		delete(db.nodes, child)
+		logger.Info("dereference and gc node", "hash", child.String())
 		db.nodesSize -= common.StorageSize(common.HashLength + int(node.size))
 	}
 }
@@ -696,6 +699,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	for size > limit && oldest != (common.Hash{}) {
 		// Fetch the oldest referenced node and push into the batch
 		node := db.nodes[oldest]
+		logger.Info("write node in Cap", "key", oldest.String())
 		enc := node.rlp()
 		if err := database.PutAndWriteBatchesOverThreshold(batch, oldest[:], enc); err != nil {
 			db.lock.RUnlock()
@@ -749,7 +753,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	memcacheFlushSizeGauge.Update(int64(nodeSize - db.nodesSize))
 	memcacheFlushNodesGauge.Update(int64(nodes - len(db.nodes)))
 
-	logger.Debug("Persisted nodes from memory database", "nodes", nodes-len(db.nodes), "size", nodeSize-db.nodesSize, "time", time.Since(start),
+	logger.Info("Persisted nodes from memory database by Cap", "nodes", nodes-len(db.nodes), "size", nodeSize-db.nodesSize, "time", time.Since(start),
 		"flushnodes", db.flushnodes, "flushsize", db.flushsize, "flushtime", db.flushtime, "livenodes", len(db.nodes), "livesize", db.nodesSize)
 
 	return nil
@@ -912,7 +916,7 @@ func (db *Database) Commit(node common.Hash, report bool, blockNum uint64) error
 func (db *Database) commit(hash common.Hash, resultCh chan<- commitResult) {
 	node, ok := db.nodes[hash]
 	if !ok {
-		logger.Error("Skip trie commit", "hash", hash.String())
+		//logger.Error("Skip trie commit", "hash", hash.String())
 		return
 	}
 	for _, child := range node.childs() {
