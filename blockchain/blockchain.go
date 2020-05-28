@@ -1076,7 +1076,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			// NOTE-Klaytn Not to change the original behavior, error is not returned.
 			// Error should be returned if it is thought to be safe in the future.
 			if err := trieDB.Cap(nodesSizeLimit - database.IdealBatchSize); err != nil {
-				logger.Error("Error from trieDB.Cap", "limit", nodesSizeLimit-database.IdealBatchSize)
+				logger.Error("Error from trieDB.Cap", "err", err, "limit", nodesSizeLimit-database.IdealBatchSize)
 			}
 		}
 
@@ -1088,8 +1088,9 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 			bc.checkStartStateMigration(block.NumberU64(), root)
 
+			// flush referenced trie nodes out to new stateTrieDB
 			if err := trieDB.Cap(0); err != nil {
-				logger.Error("Error from trieDB.Cap by state migration" )
+				logger.Error("Error from trieDB.Cap by state migration", "err", err)
 			}
 		}
 
