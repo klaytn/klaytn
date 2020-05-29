@@ -264,7 +264,7 @@ func (bc *BlockChain) PrepareStateMigration() error {
 	return nil
 }
 
-func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) {
+func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) bool {
 	if bc.prepareStateMigration {
 		logger.Info("State migration is started", "block", number, "root", root)
 
@@ -273,7 +273,11 @@ func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) 
 		}
 
 		bc.prepareStateMigration = false
+
+		return true
 	}
+
+	return false
 }
 
 // migrationPrerequisites is a collection of functions that needs to be run

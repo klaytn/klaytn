@@ -1086,11 +1086,11 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 				return err
 			}
 
-			bc.checkStartStateMigration(block.NumberU64(), root)
-
-			// flush referenced trie nodes out to new stateTrieDB
-			if err := trieDB.Cap(0); err != nil {
-				logger.Error("Error from trieDB.Cap by state migration", "err", err)
+			if bc.checkStartStateMigration(block.NumberU64(), root) {
+				// flush referenced trie nodes out to new stateTrieDB
+				if err := trieDB.Cap(0); err != nil {
+					logger.Error("Error from trieDB.Cap by state migration", "err", err)
+				}
 			}
 		}
 
