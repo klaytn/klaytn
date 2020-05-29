@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
@@ -257,18 +258,16 @@ func (bc *BlockChain) PrepareStateMigration() error {
 	}
 
 	bc.prepareStateMigration = true
-	currentBlock := bc.CurrentBlock().NumberU64()
-	nextCommittedBlock := currentBlock + (DefaultBlockInterval - currentBlock%DefaultBlockInterval)
-	logger.Warn("State migration is prepared", "migrationStartingBlockNumber", nextCommittedBlock)
+	logger.Warn("State migration is prepared", "migrationStartingBlockNumber", bc.CurrentBlock().NumberU64()+1)
 
 	return nil
 }
 
-func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) bool {
+func (bc *BlockChain) checkStartStateMigration(block *types.Block, root common.Hash) bool {
 	if bc.prepareStateMigration {
-		logger.Info("State migration is started", "block", number, "root", root)
+		logger.Info("State migration is started", "block", block.NumberU64(), "root", root)
 
-		if err := bc.StartStateMigration(number, root); err != nil {
+		if err := bc.StartStateMigration(block, root); err != nil {
 			logger.Error("Failed to start state migration", "err", err)
 		}
 
@@ -283,27 +282,24 @@ func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) 
 // migrationPrerequisites is a collection of functions that needs to be run
 // before state trie migration. If it fails to run one of the functions,
 // the migration will not start.
-var migrationPrerequisites []func(uint64) error
+var migrationPrerequisites []func(block *types.Block) error
 
-func RegisterMigrationPrerequisites(f func(uint64) error) {
+func RegisterMigrationPrerequisites(f func(block *types.Block) error) {
 	migrationPrerequisites = append(migrationPrerequisites, f)
 }
 
-func (bc *BlockChain) StartStateMigration(number uint64, root common.Hash) error {
-	// TODO-Klaytn Add internal status check routine
+func (bc *BlockChain) StartStateMigration(block *types.Block, root common.Hash) error {
 	if bc.db.InMigration() {
 		return errors.New("migration already started")
 	}
 
 	for _, f := range migrationPrerequisites {
-		err := f(number)
-
-		if err != nil {
+		if err := f(block); err != nil {
 			return err
 		}
 	}
 
-	if err := bc.db.CreateMigrationDBAndSetStatus(number); err != nil {
+	if err := bc.db.CreateMigrationDBAndSetStatus(block.NumberU64()); err != nil {
 		return err
 	}
 

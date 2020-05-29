@@ -84,11 +84,11 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 			// Staking information from block of StakingUpdateInterval ahead is needed to create a block.
 			// If there is no staking info in either cache, db or state trie, the node cannot make a block.
 			// The information in state trie is deleted after state trie migration.
-			blockchain.RegisterMigrationPrerequisites(func(blockNum uint64) error {
-				if err := CheckStakingInfoStored(blockNum); err != nil {
+			blockchain.RegisterMigrationPrerequisites(func(block *types.Block) error {
+				if err := CheckStakingInfoStored(block.NumberU64()); err != nil {
 					return err
 				}
-				return CheckStakingInfoStored(blockNum + params.StakingUpdateInterval())
+				return CheckStakingInfoStored(block.NumberU64() + params.StakingUpdateInterval())
 			})
 		})
 	} else {
