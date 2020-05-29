@@ -85,6 +85,12 @@ func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{},
 	}
 }
 
+// migrateState is the core implementation of state trie migration.
+// This migrates a trie from StateTrieDB to StateTrieMigrationDB.
+// Reading StateTrieDB happens in parallel and writing StateTrieMigrationDB happens in batch write.
+//
+// Before this function is called, StateTrieMigrationDB should be set.
+// After the migration finish, the original StateTrieDB is removed and StateTrieMigrationDB becomes a new StateTrieDB.
 func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
@@ -235,6 +241,7 @@ func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root com
 	return dirty, nil
 }
 
+// restartStateMigration is called when a server is restarted while migration. The migration continues.
 func (bc *BlockChain) restartStateMigration() {
 	if bc.db.InMigration() {
 		number := bc.db.MigrationBlockNumber()
@@ -252,6 +259,7 @@ func (bc *BlockChain) restartStateMigration() {
 	}
 }
 
+// PrepareStateMigration sets prepareStateMigration to be called in checkStartStateMigration.
 func (bc *BlockChain) PrepareStateMigration() error {
 	if bc.db.InMigration() || bc.prepareStateMigration {
 		return errors.New("migration already started")
@@ -280,7 +288,7 @@ func (bc *BlockChain) checkStartStateMigration(block *types.Block, root common.H
 }
 
 // migrationPrerequisites is a collection of functions that needs to be run
-// before state trie migration. If it fails to run one of the functions,
+// before state trie migration. If one of the functions fails to run,
 // the migration will not start.
 var migrationPrerequisites []func(block *types.Block) error
 
@@ -288,6 +296,7 @@ func RegisterMigrationPrerequisites(f func(block *types.Block) error) {
 	migrationPrerequisites = append(migrationPrerequisites, f)
 }
 
+// StartStateMigration checks prerequisites, configures DB and starts migration.
 func (bc *BlockChain) StartStateMigration(block *types.Block, root common.Hash) error {
 	if bc.db.InMigration() {
 		return errors.New("migration already started")
