@@ -691,7 +691,6 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	}
 	// Keep committing nodes from the flush-list until we're below allowance
 	oldest := db.oldest
-	// TODO-Klaytn What kind of batch should be used below?
 	batch := db.diskDB.NewBatch(database.StateTrieDB)
 	for size > limit && oldest != (common.Hash{}) {
 		// Fetch the oldest referenced node and push into the batch
@@ -749,7 +748,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	memcacheFlushSizeGauge.Update(int64(nodeSize - db.nodesSize))
 	memcacheFlushNodesGauge.Update(int64(nodes - len(db.nodes)))
 
-	logger.Debug("Persisted nodes from memory database", "nodes", nodes-len(db.nodes), "size", nodeSize-db.nodesSize, "time", time.Since(start),
+	logger.Info("Persisted nodes from memory database by Cap", "nodes", nodes-len(db.nodes), "size", nodeSize-db.nodesSize, "time", time.Since(start),
 		"flushnodes", db.flushnodes, "flushsize", db.flushsize, "flushtime", db.flushtime, "livenodes", len(db.nodes), "livesize", db.nodesSize)
 
 	return nil
