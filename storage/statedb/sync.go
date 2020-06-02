@@ -92,6 +92,8 @@ type TrieSync struct {
 	bloom            *SyncBloom               // Bloom filter for fast node existence checks
 }
 
+const shortNodeDepthOffset = 1000
+
 // NewTrieSync creates a new trie data download scheduler.
 func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback, bloom *SyncBloom) *TrieSync {
 	ts := &TrieSync{
@@ -269,7 +271,7 @@ func (s *TrieSync) schedule(req *request) {
 	}
 
 	// Count the retrieved trie by depth
-	s.retrievedByDepth[req.depth]++
+	s.retrievedByDepth[req.depth%shortNodeDepthOffset]++
 
 	// Schedule the request for future retrieval
 	s.queue.Push(req.hash, float32(req.depth))
@@ -290,7 +292,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 	case *shortNode:
 		children = []child{{
 			node:  node.Val,
-			depth: req.depth + len(node.Key),
+			depth: req.depth + 1 + shortNodeDepthOffset,
 		}}
 	case *fullNode:
 		for i := 0; i < 17; i++ {
@@ -347,11 +349,12 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 // committed themselves.
 func (s *TrieSync) commit(req *request) (err error) {
 	// Count the committed trie by depth and Clear the counts of lower depth
-	s.committedByDepth[req.depth]++
+	s.committedByDepth[req.depth%shortNodeDepthOffset]++
 
 	// Write the node content to the membatch
 	s.membatch.batch[req.hash] = req.data
 	s.membatch.order = append(s.membatch.order, req.hash)
+	//logger.Warn("add membatch", "hash", req.hash.String(), "depth", req.depth, "depth % shortNodeDepthOffset", req.depth%shortNodeDepthOffset)
 
 	delete(s.requests, req.hash)
 
