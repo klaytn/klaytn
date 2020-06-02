@@ -116,14 +116,16 @@ func (s *TrieSync) AddSubTrie(root common.Hash, depth int, parent common.Hash, c
 	if _, ok := s.membatch.batch[root]; ok {
 		return
 	}
-	if s.bloom.Contains(root[:]) {
+	if s.bloom.Contains(root[:]) || depth < 6 {
 		key := root.Bytes()
 		blob, _ := s.database.ReadStateTrieNode(key)
 		if local, err := decodeNode(key, blob); local != nil && err == nil {
 			return
 		}
 		// False positive, bump fault meter
-		bloomFaultMeter.Mark(1)
+		if !(depth < 6) {
+			bloomFaultMeter.Mark(1)
+		}
 	}
 	// Assemble the new sub-trie sync request
 	req := &request{
@@ -155,12 +157,14 @@ func (s *TrieSync) AddRawEntry(hash common.Hash, depth int, parent common.Hash) 
 	if _, ok := s.membatch.batch[hash]; ok {
 		return
 	}
-	if s.bloom.Contains(hash[:]) {
+	if s.bloom.Contains(hash[:]) || depth < 6 {
 		if ok, _ := s.database.HasStateTrieNode(hash.Bytes()); ok {
 			return
 		}
 		// False positive, bump fault meter
-		bloomFaultMeter.Mark(1)
+		if !(depth < 6) {
+			bloomFaultMeter.Mark(1)
+		}
 	}
 	// Assemble the new sub-trie sync request
 	req := &request{
@@ -322,13 +326,15 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 			if _, ok := s.membatch.batch[hash]; ok {
 				continue
 			}
-			if s.bloom.Contains(node) {
+			if s.bloom.Contains(node) || child.depth < 6 {
 				// Bloom filter says this might be a duplicate, double check
 				if ok, _ := s.database.HasStateTrieNode(node); ok {
 					continue
 				}
 				// False positive, bump fault meter
-				bloomFaultMeter.Mark(1)
+				if !(child.depth < 6) {
+					bloomFaultMeter.Mark(1)
+				}
 			}
 			// Locally unknown node, schedule for retrieval
 			requests = append(requests, &request{
