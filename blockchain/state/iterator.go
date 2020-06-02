@@ -39,7 +39,6 @@ type NodeIterator struct {
 
 	accountHash common.Hash // Hash of the node containing the account
 	codeHash    common.Hash // Hash of the contract source code
-	addrHash    common.Hash // Hash of address of the account
 	Code        []byte      // Source code associated with a contract
 
 	Type   string
