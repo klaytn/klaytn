@@ -258,7 +258,6 @@ func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, e
 	block := api.cn.blockchain.GetBlockByNumber(uint64(blockNr))
 	if block == nil {
 		return DumpStateTrieResult{}, fmt.Errorf("block #%d not found", blockNr)
-		//return fmt.Errorf("block #%d not found", blockNr)
 	}
 
 	result := DumpStateTrieResult{
@@ -268,7 +267,6 @@ func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, e
 
 	stateDB, err := state.New(block.Root(), state.NewDatabase(api.cn.chainDB))
 	if err != nil {
-		//return err
 		return DumpStateTrieResult{}, err
 	}
 	it := state.NewNodeIterator(stateDB)
@@ -283,7 +281,6 @@ func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, e
 		result.Tries = append(result.Tries, t)
 	}
 	return result, nil
-	//return nil
 }
 
 // PrivateDebugAPI is the collection of CN full node APIs exposed over
