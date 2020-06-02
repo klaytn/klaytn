@@ -42,6 +42,7 @@ type NodeIterator struct {
 
 	Hash   common.Hash // Hash of the current entry being iterated (nil if not standalone)
 	Parent common.Hash // Hash of the first full ancestor node (nil if current is the root)
+	Path   []byte      // the hex-encoded path to the current node.
 
 	Error error // Failure set in case of an internal error in the iteratord
 }
@@ -148,14 +149,14 @@ func (it *NodeIterator) retrieve() bool {
 	// Otherwise retrieve the current entry
 	switch {
 	case it.dataIt != nil:
-		it.Hash, it.Parent = it.dataIt.Hash(), it.dataIt.Parent()
+		it.Hash, it.Parent, it.Path = it.dataIt.Hash(), it.dataIt.Parent(), it.dataIt.Path()
 		if it.Parent == (common.Hash{}) {
 			it.Parent = it.accountHash
 		}
 	case it.Code != nil:
 		it.Hash, it.Parent = it.codeHash, it.accountHash
 	case it.stateIt != nil:
-		it.Hash, it.Parent = it.stateIt.Hash(), it.stateIt.Parent()
+		it.Hash, it.Parent, it.Path = it.stateIt.Hash(), it.stateIt.Parent(), it.stateIt.Path()
 	}
 	return true
 }
