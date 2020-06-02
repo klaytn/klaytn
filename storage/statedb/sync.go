@@ -354,8 +354,7 @@ func (s *TrieSync) commit(req *request) (err error) {
 	// Write the node content to the membatch
 	s.membatch.batch[req.hash] = req.data
 	s.membatch.order = append(s.membatch.order, req.hash)
-	//logger.Warn("add membatch", "hash", req.hash.String(), "depth", req.depth, "depth % shortNodeDepthOffset", req.depth%shortNodeDepthOffset)
-
+	
 	delete(s.requests, req.hash)
 
 	// Check all parents for completion
