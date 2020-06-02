@@ -254,7 +254,6 @@ type DumpStateTrieResult struct {
 
 // DumpStateTrie retrieves all state/storage tries of the given state root.
 func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, error) {
-	//func (api *PublicDebugAPI) DumpStateTrie(blockNr rpc.BlockNumber) error {
 	block := api.cn.blockchain.GetBlockByNumber(uint64(blockNr))
 	if block == nil {
 		return DumpStateTrieResult{}, fmt.Errorf("block #%d not found", blockNr)
