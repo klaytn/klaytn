@@ -25,6 +25,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 )
 
@@ -38,6 +39,7 @@ type NodeIterator struct {
 
 	accountHash common.Hash // Hash of the node containing the account
 	codeHash    common.Hash // Hash of the contract source code
+	addrHash    common.Hash // Hash of address of the account
 	Code        []byte      // Source code associated with a contract
 
 	Type   string
@@ -152,7 +154,12 @@ func (it *NodeIterator) retrieve() bool {
 	switch {
 	case it.dataIt != nil:
 		it.Type = "storage"
+		if it.dataIt.Leaf() {
+			it.Type = "storage_leaf"
+		}
+
 		it.Hash, it.Parent, it.Path = it.dataIt.Hash(), it.dataIt.Parent(), it.dataIt.Path()
+
 		if it.Parent == (common.Hash{}) {
 			it.Parent = it.accountHash
 		}
@@ -161,7 +168,83 @@ func (it *NodeIterator) retrieve() bool {
 		it.Hash, it.Parent = it.codeHash, it.accountHash
 	case it.stateIt != nil:
 		it.Type = "state"
+		if it.stateIt.Leaf() {
+			it.Type = "state_leaf"
+		}
+
 		it.Hash, it.Parent, it.Path = it.stateIt.Hash(), it.stateIt.Parent(), it.stateIt.Path()
 	}
 	return true
+}
+
+// CheckStateConsistency checks the consistency of all state/storage trie of given two state database.
+func CheckStateConsistency(oldDB database.DBManager, newDB database.DBManager, root common.Hash) error {
+	// Create and iterate a state trie rooted in a sub-node
+	oldState, err := New(root, NewDatabase(oldDB))
+	if err != nil {
+		return err
+	}
+
+	newState, err := New(root, NewDatabase(newDB))
+	if err != nil {
+		return err
+	}
+
+	oldIt := NewNodeIterator(oldState)
+	newIt := NewNodeIterator(newState)
+
+	cnt := 0
+	nodes := make(map[common.Hash]bool)
+
+	for oldIt.Next() {
+		cnt++
+
+		if !newIt.Next() {
+			return fmt.Errorf("newDB iterator finished earlier : oldIt.Hash(%v) oldIt.Parent(%v)", oldIt.Hash, oldIt.Parent)
+		}
+
+		if oldIt.Hash != newIt.Hash {
+			return fmt.Errorf("mismatched hash oldIt.Hash : oldIt.Hash(%v) newIt.Hash(%v)", oldIt.Hash, newIt.Hash)
+		}
+
+		if oldIt.Parent != newIt.Parent {
+			return fmt.Errorf("mismatched parent hash : oldIt.Parent(%v) newIt.Parent(%v)", oldIt.Parent, newIt.Parent)
+		}
+
+		if !bytes.Equal(oldIt.Path, newIt.Path) {
+			return fmt.Errorf("mismatched path : oldIt.path(%v) newIt.path(%v)",
+				statedb.HexKeyPathToHashString(oldIt.Path), statedb.HexKeyPathToHashString(newIt.Path))
+		}
+
+		if oldIt.Code != nil {
+			if newIt.Code != nil {
+				if !bytes.Equal(oldIt.Code, newIt.Code) {
+					return fmt.Errorf("mismatched code : oldIt.Code(%v) newIt.Code(%v)", oldIt.Code, newIt.Code)
+				}
+			} else {
+				return fmt.Errorf("mismatched code : oldIt.Code(%v) newIt.Code(nil)", string(oldIt.Code))
+			}
+		} else {
+			if newIt.Code != nil {
+				return fmt.Errorf("mismatched code : oldIt.Code(nil) newIt.Code(%v)", string(newIt.Code))
+			}
+		}
+
+		if !common.EmptyHash(oldIt.Hash) {
+			nodes[oldIt.Hash] = true
+		}
+
+		logger.Trace("CheckStateConsistency next",
+			"type", oldIt.Type,
+			"hash", oldIt.Hash.String(),
+			"parent", oldIt.Parent.String(),
+			"path", statedb.HexKeyPathToHashString(oldIt.Path))
+	}
+
+	if newIt.Next() {
+		return fmt.Errorf("oldDB iterator finished earlier  : newIt.Hash(%v) newIt.Parent(%v)", newIt.Hash, newIt.Parent)
+	}
+
+	logger.Info("CheckStateConsistency is completed", "cnt", cnt, "cnt without duplication", len(nodes))
+	return nil
 }
