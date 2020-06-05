@@ -172,9 +172,7 @@ func (api *PrivateAdminAPI) StartStateMigration() error {
 
 // StopStateMigration stops state migration and removes stateMigrationDB.
 func (api *PrivateAdminAPI) StopStateMigration() error {
-	// TODO-Klaytn need to support stopStateMigration
-	// return api.cn.BlockChain().StopStateMigration()
-	return errors.New("StopStateMigration is not yet supported")
+	return api.cn.BlockChain().StopStateMigration()
 }
 
 // StatusStateMigration returns the status information of state trie migration.

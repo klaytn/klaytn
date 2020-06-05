@@ -432,7 +432,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 		assert.True(t, hasStateTrieNode)
 		assert.False(t, hasOldStateTrieNode)
 
-		dbm.FinishStateMigration()
+		dbm.FinishStateMigration(true)
 	}
 }
 
@@ -684,7 +684,7 @@ func TestDBManager_StateTrieMigration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, dbManagers[i].InMigration())
 
-		dbm.FinishStateMigration()
+		dbm.FinishStateMigration(true)
 		assert.False(t, dbManagers[i].InMigration())
 
 		dbm.Close()

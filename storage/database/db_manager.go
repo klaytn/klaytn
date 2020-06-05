@@ -48,7 +48,7 @@ type DBManager interface {
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
 	CreateMigrationDBAndSetStatus(blockNum uint64) error
-	FinishStateMigration()
+	FinishStateMigration(succeed bool)
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
@@ -479,10 +479,72 @@ func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 		defer dbm.lockInMigration.RUnlock()
 
 		if dbm.inMigration {
-			return dbm.GetStateTrieMigrationDB().NewBatch()
+			newDBBatch := dbm.GetStateTrieMigrationDB().NewBatch()
+			oldDBBatch := dbm.getDatabase(dbEntryType).NewBatch()
+			return NewStateTrieDBBatch([]Batch{oldDBBatch, newDBBatch})
 		}
 	}
 	return dbm.getDatabase(dbEntryType).NewBatch()
+}
+
+func NewStateTrieDBBatch(batches []Batch) Batch {
+	return &stateTrieDBBatch{batches: batches}
+}
+
+type stateTrieDBBatch struct {
+	batches []Batch
+}
+
+func (stdBatch *stateTrieDBBatch) Put(key []byte, value []byte) error {
+	var errResult error
+	for _, batch := range stdBatch.batches {
+		if err := batch.Put(key, value); err != nil {
+			errResult = err
+		}
+	}
+
+	return errResult
+}
+
+// ValueSize is called to determine whether to write batches when it exceeds
+// certain limit. partitionedDB returns the largest size of its batches to
+// write all batches at once when one of batch exceeds the limit.
+func (stdBatch *stateTrieDBBatch) ValueSize() int {
+	maxSize := 0
+	for _, batch := range stdBatch.batches {
+		if batch.ValueSize() > maxSize {
+			maxSize = batch.ValueSize()
+		}
+	}
+
+	return maxSize
+}
+
+// Write passes the list of batch tasks to taskCh so batch can be processed
+// by underlying workers. Write waits until all workers return the result.
+func (stdBatch *stateTrieDBBatch) Write() error {
+	resultCh := make(chan error, len(stdBatch.batches))
+	for _, batch := range stdBatch.batches {
+		go func() {
+			resultCh <- batch.Write()
+		}()
+	}
+
+	var errResult error
+	for range stdBatch.batches {
+		err := <-resultCh
+		if err != nil {
+			errResult = err
+		}
+	}
+
+	return errResult
+}
+
+func (stdBatch *stateTrieDBBatch) Reset() {
+	for _, batch := range stdBatch.batches {
+		batch.Reset()
+	}
 }
 
 func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
@@ -580,24 +642,31 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 
 // FinishStateMigration updates stateTrieDB and removes the old one.
 // The function should be called only after when state trie migration is finished.
-func (dbm *databaseManager) FinishStateMigration() {
-	oldDB := dbm.dbs[StateTrieDB]
-	newDB := dbm.dbs[StateTrieMigrationDB]
-	oldDBDir := dbm.getDBDir(StateTrieDB)
-	newDBDir := dbm.getDBDir(StateTrieMigrationDB)
+func (dbm *databaseManager) FinishStateMigration(succeed bool) {
+	dbRemoved := StateTrieDB
+	dbUsed := StateTrieMigrationDB
+
+	if !succeed {
+		dbRemoved, dbUsed = dbUsed, dbRemoved
+	}
+
+	dbToBeRemoved := dbm.dbs[dbRemoved]
+	dbToBeUsed := dbm.dbs[dbUsed]
+	dbDirToBeRemoved := dbm.getDBDir(dbRemoved)
+	dbDirToBeUsed := dbm.getDBDir(dbUsed)
 
 	// Replace StateTrieDB with new one
-	dbm.setDBDir(StateTrieDB, newDBDir)
-	dbm.dbs[StateTrieDB] = newDB
+	dbm.setDBDir(StateTrieDB, dbDirToBeUsed)
+	dbm.dbs[StateTrieDB] = dbToBeUsed
 
 	dbm.setStateTrieMigrationStatus(0)
 
 	dbm.dbs[StateTrieMigrationDB] = nil
 	dbm.setDBDir(StateTrieMigrationDB, "")
 
-	oldDBPath := filepath.Join(dbm.config.Dir, oldDBDir)
-	oldDB.Close()
-	removeDB(oldDBPath)
+	dbPathToBeRemoved := filepath.Join(dbm.config.Dir, dbDirToBeRemoved)
+	dbToBeRemoved.Close()
+	removeDB(dbPathToBeRemoved)
 }
 
 func removeDB(dbPath string) {
