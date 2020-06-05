@@ -25,6 +25,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 )
 
@@ -40,8 +41,10 @@ type NodeIterator struct {
 	codeHash    common.Hash // Hash of the contract source code
 	Code        []byte      // Source code associated with a contract
 
+	Type   string
 	Hash   common.Hash // Hash of the current entry being iterated (nil if not standalone)
 	Parent common.Hash // Hash of the first full ancestor node (nil if current is the root)
+	Path   []byte      // the hex-encoded path to the current node.
 
 	Error error // Failure set in case of an internal error in the iteratord
 }
@@ -140,6 +143,7 @@ func (it *NodeIterator) step() error {
 func (it *NodeIterator) retrieve() bool {
 	// Clear out any previously set values
 	it.Hash = common.Hash{}
+	it.Path = []byte{}
 
 	// If the iteration's done, return no available data
 	if it.state == nil {
@@ -148,14 +152,98 @@ func (it *NodeIterator) retrieve() bool {
 	// Otherwise retrieve the current entry
 	switch {
 	case it.dataIt != nil:
-		it.Hash, it.Parent = it.dataIt.Hash(), it.dataIt.Parent()
+		it.Type = "storage"
+		if it.dataIt.Leaf() {
+			it.Type = "storage_leaf"
+		}
+
+		it.Hash, it.Parent, it.Path = it.dataIt.Hash(), it.dataIt.Parent(), it.dataIt.Path()
+
 		if it.Parent == (common.Hash{}) {
 			it.Parent = it.accountHash
 		}
 	case it.Code != nil:
+		it.Type = "code"
 		it.Hash, it.Parent = it.codeHash, it.accountHash
 	case it.stateIt != nil:
-		it.Hash, it.Parent = it.stateIt.Hash(), it.stateIt.Parent()
+		it.Type = "state"
+		if it.stateIt.Leaf() {
+			it.Type = "state_leaf"
+		}
+
+		it.Hash, it.Parent, it.Path = it.stateIt.Hash(), it.stateIt.Parent(), it.stateIt.Path()
 	}
 	return true
+}
+
+// CheckStateConsistency checks the consistency of all state/storage trie of given two state database.
+func CheckStateConsistency(oldDB database.DBManager, newDB database.DBManager, root common.Hash) error {
+	// Create and iterate a state trie rooted in a sub-node
+	oldState, err := New(root, NewDatabase(oldDB))
+	if err != nil {
+		return err
+	}
+
+	newState, err := New(root, NewDatabase(newDB))
+	if err != nil {
+		return err
+	}
+
+	oldIt := NewNodeIterator(oldState)
+	newIt := NewNodeIterator(newState)
+
+	cnt := 0
+	nodes := make(map[common.Hash]bool)
+
+	for oldIt.Next() {
+		cnt++
+
+		if !newIt.Next() {
+			return fmt.Errorf("newDB iterator finished earlier : oldIt.Hash(%v) oldIt.Parent(%v)", oldIt.Hash.String(), oldIt.Parent.String())
+		}
+
+		if oldIt.Hash != newIt.Hash {
+			return fmt.Errorf("mismatched hash oldIt.Hash : oldIt.Hash(%v) newIt.Hash(%v)", oldIt.Hash.String(), newIt.Hash.String())
+		}
+
+		if oldIt.Parent != newIt.Parent {
+			return fmt.Errorf("mismatched parent hash : oldIt.Parent(%v) newIt.Parent(%v)", oldIt.Parent.String(), newIt.Parent.String())
+		}
+
+		if !bytes.Equal(oldIt.Path, newIt.Path) {
+			return fmt.Errorf("mismatched path : oldIt.path(%v) newIt.path(%v)",
+				statedb.HexPathToString(oldIt.Path), statedb.HexPathToString(newIt.Path))
+		}
+
+		if oldIt.Code != nil {
+			if newIt.Code != nil {
+				if !bytes.Equal(oldIt.Code, newIt.Code) {
+					return fmt.Errorf("mismatched code : oldIt.Code(%v) newIt.Code(%v)", string(oldIt.Code), string(newIt.Code))
+				}
+			} else {
+				return fmt.Errorf("mismatched code : oldIt.Code(%v) newIt.Code(nil)", string(oldIt.Code))
+			}
+		} else {
+			if newIt.Code != nil {
+				return fmt.Errorf("mismatched code : oldIt.Code(nil) newIt.Code(%v)", string(newIt.Code))
+			}
+		}
+
+		if !common.EmptyHash(oldIt.Hash) {
+			nodes[oldIt.Hash] = true
+		}
+
+		logger.Trace("CheckStateConsistency next",
+			"type", oldIt.Type,
+			"hash", oldIt.Hash.String(),
+			"parent", oldIt.Parent.String(),
+			"path", statedb.HexPathToString(oldIt.Path))
+	}
+
+	if newIt.Next() {
+		return fmt.Errorf("oldDB iterator finished earlier  : newIt.Hash(%v) newIt.Parent(%v)", newIt.Hash, newIt.Parent)
+	}
+
+	logger.Info("CheckStateConsistency is completed", "cnt", cnt, "cnt without duplication", len(nodes))
+	return nil
 }

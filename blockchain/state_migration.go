@@ -186,18 +186,10 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	// Preimage Copy
 	// TODO-Klaytn consider to copy preimage
 
-	// Cross check that the two tries are in sync
 	// TODO-Klaytn consider to check Trie contents optionally
-	// TODO-Klaytn consider to check storage trie also
-	dirty, err := bc.checkTrieContents(targetDB, srcCachedDB, rootHash)
-	if err != nil || len(dirty) > 0 {
-		logger.Error("copied state is invalid", "err", err, "len(dirty)", len(dirty))
-		// TODO-Klaytn Remove new DB and log.Error
-		if err != nil {
-			return err
-		}
-
-		return errors.New("copied state is not same with origin")
+	if err := state.CheckStateConsistency(srcCachedDB.DiskDB(), targetDB.DiskDB(), rootHash); err != nil {
+		logger.Error("State migration : copied stateDB is invalid", "err", err)
+		return err
 	}
 
 	bc.db.FinishStateMigration()

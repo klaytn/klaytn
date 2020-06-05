@@ -21,7 +21,6 @@ package state
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/storage/database"
@@ -168,56 +167,6 @@ func checkStateConsistency(db database.DBManager, root common.Hash) error {
 	return it.Error
 }
 
-// compareStatesConsistency checks that all data of given two states.
-func compareStatesConsistency(oldDB database.DBManager, newDB database.DBManager, root common.Hash) error {
-	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, NewDatabase(oldDB))
-	if err != nil {
-		return err
-	}
-
-	newState, err := New(root, NewDatabase(newDB))
-	if err != nil {
-		return err
-	}
-
-	oldIt := NewNodeIterator(oldState)
-	newIt := NewNodeIterator(newState)
-	for oldIt.Next() {
-		if !newIt.Next() {
-			return fmt.Errorf("newDB iterator finished earlier : oldIt.Hash(%v) oldIt.Parent(%v)", oldIt.Hash, oldIt.Parent)
-		}
-
-		if oldIt.Hash != newIt.Hash {
-			return fmt.Errorf("mismatched hash oldIt.Hash : oldIt.Hash(%v) newIt.Hash(%v)", oldIt.Hash, newIt.Hash)
-		}
-
-		if oldIt.Parent != newIt.Parent {
-			return fmt.Errorf("mismatched parent hash : oldIt.Parent(%v) newIt.Parent(%v)", oldIt.Parent, newIt.Parent)
-		}
-
-		if oldIt.Code != nil {
-			if newIt.Code != nil {
-				if !bytes.Equal(oldIt.Code, newIt.Code) {
-					return fmt.Errorf("mismatched code : oldIt.Code(%v) newIt.Code(%v)", oldIt.Code, newIt.Code)
-				}
-			} else {
-				return fmt.Errorf("mismatched code : oldIt.Code(%v) newIt.Code(nil)", string(oldIt.Code))
-			}
-		} else {
-			if newIt.Code != nil {
-				return fmt.Errorf("mismatched code : oldIt.Code(nil) newIt.Code(%v)", string(newIt.Code))
-			}
-		}
-	}
-
-	if newIt.Next() {
-		return fmt.Errorf("oldDB iterator finished earlier  : newIt.Hash(%v) newIt.Parent(%v)", newIt.Hash, newIt.Parent)
-	}
-
-	return nil
-}
-
 // Tests that an empty state is not scheduled for syncing.
 func TestEmptyStateSync(t *testing.T) {
 	empty := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
@@ -262,7 +211,7 @@ func testIterativeStateSync(t *testing.T, count int) {
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
-	err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
 	assert.NoError(t, err)
 }
 
@@ -300,7 +249,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
-	err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
 	assert.NoError(t, err)
 }
 
@@ -349,7 +298,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
-	err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
 	assert.NoError(t, err)
 }
 
@@ -399,7 +348,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
-	err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
 	assert.NoError(t, err)
 }
 
@@ -466,12 +415,12 @@ func TestIncompleteStateSync(t *testing.T) {
 			t.Fatalf("trie inconsistency not caught, missing: %x", key)
 		}
 
-		err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+		err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
 		assert.Error(t, err)
 
 		dstDb.GetMemDB().Put(key, value)
 	}
 
-	err := compareStatesConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
 	assert.NoError(t, err)
 }
