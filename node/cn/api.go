@@ -274,7 +274,7 @@ func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, e
 			it.Type,
 			it.Hash.String(),
 			it.Parent.String(),
-			statedb.HexKeyPathToHashString(it.Path),
+			statedb.HexPathToString(it.Path),
 		}
 
 		result.Tries = append(result.Tries, t)

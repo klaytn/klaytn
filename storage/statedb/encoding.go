@@ -124,8 +124,8 @@ func hasTerm(s []byte) bool {
 	return len(s) > 0 && s[len(s)-1] == 16
 }
 
-// HexKeyPathToHashString turns hex nibbles of trie path key into hash string of the trie path key.
-func HexKeyPathToHashString(path []byte) string {
+// HexPathToString turns hex nibbles of trie path key into string of the trie path key.
+func HexPathToString(path []byte) string {
 	if hasTerm(path) {
 		path = path[:len(path)-1]
 	}
