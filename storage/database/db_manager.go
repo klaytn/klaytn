@@ -525,9 +525,9 @@ func (stdBatch *stateTrieDBBatch) ValueSize() int {
 func (stdBatch *stateTrieDBBatch) Write() error {
 	resultCh := make(chan error, len(stdBatch.batches))
 	for _, batch := range stdBatch.batches {
-		go func() {
+		go func(batch Batch) {
 			resultCh <- batch.Write()
-		}()
+		}(batch)
 	}
 
 	var errResult error
