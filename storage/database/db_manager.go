@@ -479,10 +479,12 @@ func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
 		defer dbm.lockInMigration.RUnlock()
 
 		if dbm.inMigration {
-			newDBBatch := dbm.GetStateTrieMigrationDB().NewBatch()
-			oldDBBatch := dbm.getDatabase(dbEntryType).NewBatch()
+			newDBBatch := dbm.getDatabase(StateTrieMigrationDB).NewBatch()
+			oldDBBatch := dbm.getDatabase(StateTrieDB).NewBatch()
 			return NewStateTrieDBBatch([]Batch{oldDBBatch, newDBBatch})
 		}
+	} else if dbEntryType == StateTrieMigrationDB {
+		return dbm.GetStateTrieMigrationDB().NewBatch()
 	}
 	return dbm.getDatabase(dbEntryType).NewBatch()
 }
