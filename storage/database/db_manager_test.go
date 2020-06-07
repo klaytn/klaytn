@@ -420,17 +420,17 @@ func TestDBManager_TrieNode(t *testing.T) {
 		cachedNode, _ = dbm.ReadCachedTrieNode(hash2)
 		oldCachedNode, _ = dbm.ReadCachedTrieNodeFromOld(hash2)
 		assert.Equal(t, hash2[:], cachedNode)
-		assert.Nil(t, oldCachedNode)
+		assert.Equal(t, hash2[:], oldCachedNode)
 
 		stateTrieNode, _ = dbm.ReadStateTrieNode(hash2[:])
 		oldStateTrieNode, _ = dbm.ReadStateTrieNodeFromOld(hash2[:])
 		assert.Equal(t, hash2[:], stateTrieNode)
-		assert.Nil(t, oldStateTrieNode)
+		assert.Equal(t, hash2[:], oldStateTrieNode)
 
 		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2[:])
 		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2[:])
 		assert.True(t, hasStateTrieNode)
-		assert.False(t, hasOldStateTrieNode)
+		assert.True(t, hasOldStateTrieNode)
 
 		dbm.FinishStateMigration(true)
 	}
