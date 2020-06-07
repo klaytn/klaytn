@@ -130,7 +130,6 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 	// Migration main loop
 	for trieSync.Pending() > 0 {
-		time.Sleep(time.Second)
 		bc.committedCnt, bc.pendingCnt = committedCnt, trieSync.Pending()
 		queue = append(queue[:0], trieSync.Missing(1024)...)
 		results := make([]statedb.SyncResult, len(queue))
