@@ -56,7 +56,7 @@ func (cn *CN) startBloomHandlers() {
 		go func() {
 			for {
 				select {
-				case <-cn.shutdownChan:
+				case <-cn.closeBloomHandler:
 					return
 
 				case request := <-cn.bloomRequests:
