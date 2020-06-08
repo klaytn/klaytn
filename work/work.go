@@ -290,7 +290,7 @@ type BlockChain interface {
 
 	// State Migration
 	PrepareStateMigration() error
-	StartStateMigration(*types.Block, common.Hash) error
+	StartStateMigration(uint64, common.Hash) error
 	StopStateMigration() error
 	StatusStateMigration() (bool, uint64, int, int, float64)
 }

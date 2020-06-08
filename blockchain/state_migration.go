@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
@@ -271,11 +270,11 @@ func (bc *BlockChain) PrepareStateMigration() error {
 	return nil
 }
 
-func (bc *BlockChain) checkStartStateMigration(block *types.Block, root common.Hash) bool {
+func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) bool {
 	if bc.prepareStateMigration {
-		logger.Info("State migration is started", "block", block.NumberU64(), "root", root)
+		logger.Info("State migration is started", "block", number, "root", root)
 
-		if err := bc.StartStateMigration(block, root); err != nil {
+		if err := bc.StartStateMigration(number, root); err != nil {
 			logger.Error("Failed to start state migration", "err", err)
 		}
 
@@ -290,25 +289,25 @@ func (bc *BlockChain) checkStartStateMigration(block *types.Block, root common.H
 // migrationPrerequisites is a collection of functions that needs to be run
 // before state trie migration. If one of the functions fails to run,
 // the migration will not start.
-var migrationPrerequisites []func(block *types.Block) error
+var migrationPrerequisites []func(number uint64) error
 
-func RegisterMigrationPrerequisites(f func(block *types.Block) error) {
+func RegisterMigrationPrerequisites(f func(number uint64) error) {
 	migrationPrerequisites = append(migrationPrerequisites, f)
 }
 
 // StartStateMigration checks prerequisites, configures DB and starts migration.
-func (bc *BlockChain) StartStateMigration(block *types.Block, root common.Hash) error {
+func (bc *BlockChain) StartStateMigration(number uint64, root common.Hash) error {
 	if bc.db.InMigration() {
 		return errors.New("migration already started")
 	}
 
 	for _, f := range migrationPrerequisites {
-		if err := f(block); err != nil {
+		if err := f(number); err != nil {
 			return err
 		}
 	}
 
-	if err := bc.db.CreateMigrationDBAndSetStatus(block.NumberU64()); err != nil {
+	if err := bc.db.CreateMigrationDBAndSetStatus(number); err != nil {
 		return err
 	}
 
