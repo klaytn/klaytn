@@ -244,7 +244,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			}
 		}
 	}
-
 	// Take ownership of this particular state
 	go bc.update()
 	go bc.gcCachedNodeLoop()

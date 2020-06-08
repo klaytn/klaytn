@@ -289,9 +289,9 @@ func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) 
 // migrationPrerequisites is a collection of functions that needs to be run
 // before state trie migration. If one of the functions fails to run,
 // the migration will not start.
-var migrationPrerequisites []func(number uint64) error
+var migrationPrerequisites []func(uint64) error
 
-func RegisterMigrationPrerequisites(f func(number uint64) error) {
+func RegisterMigrationPrerequisites(f func(uint64) error) {
 	migrationPrerequisites = append(migrationPrerequisites, f)
 }
 
