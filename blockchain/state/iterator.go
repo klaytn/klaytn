@@ -127,11 +127,13 @@ func (it *NodeIterator) step() error {
 			it.dataIt = nil
 		}
 
-		it.codeHash = common.BytesToHash(pa.GetCodeHash())
-		//addrHash := common.BytesToHash(it.stateIt.LeafKey())
-		it.Code, err = it.state.db.ContractCode(common.BytesToHash(pa.GetCodeHash()))
-		if err != nil {
-			return fmt.Errorf("code %x: %v", pa.GetCodeHash(), err)
+		if !bytes.Equal(pa.GetCodeHash(), emptyCodeHash) {
+			it.codeHash = common.BytesToHash(pa.GetCodeHash())
+			//addrHash := common.BytesToHash(it.stateIt.LeafKey())
+			it.Code, err = it.state.db.ContractCode(common.BytesToHash(pa.GetCodeHash()))
+			if err != nil {
+				return fmt.Errorf("code %x: %v", pa.GetCodeHash(), err)
+			}
 		}
 	}
 	it.accountHash = it.stateIt.Parent()
