@@ -100,9 +100,6 @@ type CN struct {
 	config      *Config
 	chainConfig *params.ChainConfig
 
-	// Channel for shutting down the service
-	shutdownChan chan bool // Channel for shutting down the CN
-
 	// Handlers
 	txPool          work.TxPool
 	blockchain      work.BlockChain
@@ -116,8 +113,9 @@ type CN struct {
 	engine         consensus.Engine
 	accountManager accounts.AccountManager
 
-	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
-	bloomIndexer  *blockchain.ChainIndexer       // Bloom indexer operating during block imports
+	bloomRequests     chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
+	bloomIndexer      *blockchain.ChainIndexer       // Bloom indexer operating during block imports
+	closeBloomHandler chan struct{}
 
 	APIBackend *CNAPIBackend
 
@@ -221,19 +219,19 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	governance := governance.NewGovernance(chainConfig, chainDB)
 
 	cn := &CN{
-		config:         config,
-		chainDB:        chainDB,
-		chainConfig:    chainConfig,
-		eventMux:       ctx.EventMux,
-		accountManager: ctx.AccountManager,
-		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, ctx.NodeType()),
-		shutdownChan:   make(chan bool),
-		networkId:      config.NetworkId,
-		gasPrice:       config.GasPrice,
-		rewardbase:     config.Rewardbase,
-		bloomRequests:  make(chan chan *bloombits.Retrieval),
-		bloomIndexer:   NewBloomIndexer(chainDB, params.BloomBitsBlocks),
-		governance:     governance,
+		config:            config,
+		chainDB:           chainDB,
+		chainConfig:       chainConfig,
+		eventMux:          ctx.EventMux,
+		accountManager:    ctx.AccountManager,
+		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, ctx.NodeType()),
+		networkId:         config.NetworkId,
+		gasPrice:          config.GasPrice,
+		rewardbase:        config.Rewardbase,
+		bloomRequests:     make(chan chan *bloombits.Retrieval),
+		bloomIndexer:      NewBloomIndexer(chainDB, params.BloomBitsBlocks),
+		closeBloomHandler: make(chan struct{}),
+		governance:        governance,
 	}
 
 	// istanbul BFT. Derive and set node's address using nodekey
@@ -601,19 +599,21 @@ func (s *CN) Start(srvr p2p.Server) error {
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Klaytn protocol.
 func (s *CN) Stop() error {
-	reward.StakingManagerUnsubscribe()
-	s.bloomIndexer.Close()
-	s.blockchain.Stop()
+	// Stop all the peer-related stuff first.
 	s.protocolManager.Stop()
 	if s.lesServer != nil {
 		s.lesServer.Stop()
 	}
+
+	// Then stop everything else.
+	s.bloomIndexer.Close()
+	close(s.closeBloomHandler)
 	s.txPool.Stop()
 	s.miner.Stop()
-	s.eventMux.Stop()
-
+	reward.StakingManagerUnsubscribe()
+	s.blockchain.Stop()
 	s.chainDB.Close()
-	close(s.shutdownChan)
+	s.eventMux.Stop()
 
 	return nil
 }
