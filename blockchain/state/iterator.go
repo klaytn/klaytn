@@ -21,12 +21,17 @@ package state
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
+)
+
+var (
+	errIterator = errors.New("iterator error")
 )
 
 // NodeIterator is an iterator to traverse the entire state trie post-order,
@@ -198,6 +203,12 @@ func CheckStateConsistency(oldDB database.DBManager, newDB database.DBManager, r
 	for oldIt.Next() {
 		cnt++
 
+		logger.Trace("CheckStateConsistency next",
+			"type", oldIt.Type,
+			"hash", oldIt.Hash.String(),
+			"parent", oldIt.Parent.String(),
+			"path", statedb.HexPathToString(oldIt.Path))
+
 		if !newIt.Next() {
 			return fmt.Errorf("newDB iterator finished earlier : oldIt.Hash(%v) oldIt.Parent(%v)", oldIt.Hash.String(), oldIt.Parent.String())
 		}
@@ -232,16 +243,14 @@ func CheckStateConsistency(oldDB database.DBManager, newDB database.DBManager, r
 		if !common.EmptyHash(oldIt.Hash) {
 			nodes[oldIt.Hash] = true
 		}
-
-		logger.Trace("CheckStateConsistency next",
-			"type", oldIt.Type,
-			"hash", oldIt.Hash.String(),
-			"parent", oldIt.Parent.String(),
-			"path", statedb.HexPathToString(oldIt.Path))
 	}
 
 	if newIt.Next() {
 		return fmt.Errorf("oldDB iterator finished earlier  : newIt.Hash(%v) newIt.Parent(%v)", newIt.Hash, newIt.Parent)
+	}
+
+	if oldIt.Error != nil || newIt.Error != nil {
+		return fmt.Errorf("%w : oldIt.Error(%v), newIt.Error(%v)", errIterator, oldIt.Error, newIt.Error)
 	}
 
 	logger.Info("CheckStateConsistency is completed", "cnt", cnt, "cnt without duplication", len(nodes))

@@ -21,6 +21,7 @@ package state
 
 import (
 	"bytes"
+	"errors"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/storage/database"
@@ -212,6 +213,44 @@ func testIterativeStateSync(t *testing.T, count int) {
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
 	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	assert.NoError(t, err)
+}
+
+func TestCheckStateConsistencyMissNode(t *testing.T) {
+	// Create a random state to copy
+	srcDb, srcRoot, _ := makeTestState(t)
+	newDb, _, _ := makeTestState(t)
+
+	oldState, err := New(srcRoot, NewDatabase(srcDb.TrieDB().DiskDB()))
+	assert.NoError(t, err)
+
+	it := NewNodeIterator(oldState)
+	it.Next() // skip trie root node
+
+	for it.Next() {
+		if !common.EmptyHash(it.Hash) {
+			hash := it.Hash
+			data, _ := oldState.db.TrieDB().DiskDB().ReadStateTrieNode(hash[:])
+
+			// Remove nodes
+			oldState.db.TrieDB().DiskDB().GetMemDB().Delete(hash[:])
+			newDb.TrieDB().DiskDB().GetMemDB().Delete(hash[:])
+
+			// Check consistency : errIterator
+			err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), newDb.TrieDB().DiskDB(), srcRoot)
+			if !errors.Is(err, errIterator) {
+				t.Log("mismatched err", "err", err, "expErr", errIterator)
+				t.FailNow()
+			}
+
+			// Recover nodes
+			oldState.db.TrieDB().DiskDB().GetMemDB().Put(hash[:], data)
+			newDb.TrieDB().DiskDB().GetMemDB().Put(hash[:], data)
+		}
+	}
+
+	// Check consistency : no error
+	err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), newDb.TrieDB().DiskDB(), srcRoot)
 	assert.NoError(t, err)
 }
 
