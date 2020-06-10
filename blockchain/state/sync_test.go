@@ -62,8 +62,14 @@ func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
 			obj = statedb.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		} else {
 			obj = statedb.GetOrNewSmartContract(common.BytesToAddress([]byte{i}))
+
 			obj.SetCode(crypto.Keccak256Hash([]byte{i, i, i, i, i}), []byte{i, i, i, i, i})
 			acc.code = []byte{i, i, i, i, i}
+			if i == 0 {
+				// to test emptyCodeHash
+				obj.SetCode(crypto.Keccak256Hash([]byte{}), []byte{})
+				acc.code = []byte{}
+			}
 
 			for j := 0; j < int(i)%10; j++ {
 				key := common.Hash{i + byte(j)}
