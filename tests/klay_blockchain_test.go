@@ -51,6 +51,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		contractAccounts[i].Addr = deployContractDeployTx(t, node.TxPool(), chainId, richAccount, contractDeployCode)
 	}
+	time.Sleep(10 * time.Second)
 
 	// deploy
 	for i := 0; i < numAccounts; i++ {
