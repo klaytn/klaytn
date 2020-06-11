@@ -44,6 +44,7 @@ func TestSimpleBlockchain(t *testing.T) {
 
 	numAccounts := 12
 	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	defer os.RemoveAll(workspace)
 
 	// create account
 	richAccount, accounts, contractAccounts := createAccount(t, numAccounts, validator)
@@ -81,7 +82,6 @@ func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int
 	if err != nil {
 		t.Fatalf("failed to create temporary keystore: %v", err)
 	}
-	defer os.RemoveAll(workspace)
 	t.Log("Workspace is ", workspace)
 
 	// Prepare a validator
