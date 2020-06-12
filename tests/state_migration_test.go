@@ -31,14 +31,14 @@ import (
 
 // continues occurrence of state trie migration and node restart must success
 func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
-	fullNode, node, validator, chainId, workspace, richAccount, _, _ := newSimpleBlockchain(t, 100)
+	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 100)
 	defer os.RemoveAll(workspace)
 
 	numTxs := []int{100, 1000, 10000}
 	for i := 0; i < len(numTxs)*5; i++ {
 		numTx := numTxs[i%len(numTxs)]
 		t.Log("attempt", strconv.Itoa(i), "deployRandomTxs of", strconv.Itoa(numTx))
-		deployRandomTxs(t, node.TxPool(), chainId, richAccount, numTx)
+		deployRandomTxs(t, node.TxPool(), chainID, richAccount, numTx)
 		time.Sleep(10 * time.Second) // wait until txpool is flushed
 
 		startMigration(t, node)
@@ -50,12 +50,12 @@ func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
 
 // if migration status is set on miscDB and a node is restarted, migration should start
 func TestMigration_StartMigrationByMiscDB(t *testing.T) {
-	fullNode, node, validator, chainId, workspace, richAccount, _, _ := newSimpleBlockchain(t, 100)
+	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 100)
 	defer os.RemoveAll(workspace)
 	miscDB := node.ChainDB().GetMiscDB()
 
 	// size up state trie to be prepared for migration
-	deployRandomTxs(t, node.TxPool(), chainId, richAccount, 1000)
+	deployRandomTxs(t, node.TxPool(), chainID, richAccount, 1000)
 
 	// set migration status in miscDB
 	migrationBlockNum := node.BlockChain().CurrentBlock().Header().Number.Uint64()
@@ -96,11 +96,11 @@ func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *Te
 	}
 
 	t.Log("=========== create blockchain ==============")
-	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	fullNode, node, validator, chainID, workspace := newBlockchain(t)
 	richAccount, accounts, contractAccounts := createAccount(t, numAccounts, validator)
 	time.Sleep(10 * time.Second)
 
-	return fullNode, node, validator, chainId, workspace, richAccount, accounts, contractAccounts
+	return fullNode, node, validator, chainID, workspace, richAccount, accounts, contractAccounts
 }
 
 func startMigration(t *testing.T, node *cn.CN) {
