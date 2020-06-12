@@ -40,6 +40,8 @@ type DBManager interface {
 	IsPartitioned() bool
 	InMigration() bool
 	MigrationBlockNumber() uint64
+	getStateTrieMigrationInfo() uint64
+	getDBDir(DBEntryType) string
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
@@ -49,6 +51,7 @@ type DBManager interface {
 	FinishStateMigration()
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
+	GetMiscDB() Database
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -611,6 +614,10 @@ func (dbm *databaseManager) GetStateTrieDB() Database {
 
 func (dbm *databaseManager) GetStateTrieMigrationDB() Database {
 	return dbm.dbs[StateTrieMigrationDB]
+}
+
+func (dbm *databaseManager) GetMiscDB() Database {
+	return dbm.dbs[MiscDB]
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
