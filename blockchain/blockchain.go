@@ -1148,6 +1148,10 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 }
 
 func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
+	if bc.prepareStateMigration {
+		return true
+	}
+
 	// TODO-Klaytn-Issue1602 Introduce a simple and more concise way to determine commit trie requirements from governance
 	if blockNum%uint64(bc.cacheConfig.BlockInterval) == 0 {
 		return true

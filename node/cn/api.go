@@ -166,19 +166,7 @@ func (api *PrivateAdminAPI) importChain(stream *rlp.Stream) (bool, error) {
 }
 
 // StartStateMigration starts state migration.
-func (api *PrivateAdminAPI) StartStateMigration(immediately bool) error {
-	// TODO-Klaytn refine force option.
-	// if immediately is true, state migration begins immediately with last committed block. (for only TEST)
-	// if not, migration will be started after next committed block.
-	if immediately {
-		currentBlock := api.cn.blockchain.CurrentBlock().NumberU64()
-		targetBlock := currentBlock - (currentBlock % blockchain.DefaultBlockInterval)
-		targetRoot := api.cn.blockchain.GetBlockByNumber(targetBlock).Root()
-		logger.Info("Start state migration", "currentBlock", currentBlock, "targetBlock", targetBlock, "targetRoot", targetRoot)
-
-		return api.cn.BlockChain().StartStateMigration(targetBlock, targetRoot)
-	}
-
+func (api *PrivateAdminAPI) StartStateMigration() error {
 	return api.cn.blockchain.PrepareStateMigration()
 }
 
