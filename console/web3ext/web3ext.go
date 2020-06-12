@@ -236,7 +236,6 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'startStateMigration',
 			call: 'admin_startStateMigration',
-			params: 1,
 		}),
 		new web3._extend.Method({
 			name: 'stopStateMigration',

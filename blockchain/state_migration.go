@@ -84,6 +84,12 @@ func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{},
 	}
 }
 
+// migrateState is the core implementation of state trie migration.
+// This migrates a trie from StateTrieDB to StateTrieMigrationDB.
+// Reading StateTrieDB happens in parallel and writing StateTrieMigrationDB happens in batch write.
+//
+// Before this function is called, StateTrieMigrationDB should be set.
+// After the migration finish, the original StateTrieDB is removed and StateTrieMigrationDB becomes a new StateTrieDB.
 func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
@@ -226,6 +232,7 @@ func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root com
 	return dirty, nil
 }
 
+// restartStateMigration is called when a server is restarted while migration. The migration continues.
 func (bc *BlockChain) restartStateMigration() {
 	if bc.db.InMigration() {
 		number := bc.db.MigrationBlockNumber()
@@ -243,15 +250,13 @@ func (bc *BlockChain) restartStateMigration() {
 	}
 }
 
+// PrepareStateMigration sets prepareStateMigration to be called in checkStartStateMigration.
 func (bc *BlockChain) PrepareStateMigration() error {
 	if bc.db.InMigration() || bc.prepareStateMigration {
 		return errors.New("migration already started")
 	}
 
 	bc.prepareStateMigration = true
-	currentBlock := bc.CurrentBlock().NumberU64()
-	nextCommittedBlock := currentBlock + (DefaultBlockInterval - currentBlock%DefaultBlockInterval)
-	logger.Warn("State migration is prepared", "migrationStartingBlockNumber", nextCommittedBlock)
 
 	return nil
 }
@@ -273,7 +278,7 @@ func (bc *BlockChain) checkStartStateMigration(number uint64, root common.Hash) 
 }
 
 // migrationPrerequisites is a collection of functions that needs to be run
-// before state trie migration. If it fails to run one of the functions,
+// before state trie migration. If one of the functions fails to run,
 // the migration will not start.
 var migrationPrerequisites []func(uint64) error
 
@@ -281,16 +286,14 @@ func RegisterMigrationPrerequisites(f func(uint64) error) {
 	migrationPrerequisites = append(migrationPrerequisites, f)
 }
 
+// StartStateMigration checks prerequisites, configures DB and starts migration.
 func (bc *BlockChain) StartStateMigration(number uint64, root common.Hash) error {
-	// TODO-Klaytn Add internal status check routine
 	if bc.db.InMigration() {
 		return errors.New("migration already started")
 	}
 
 	for _, f := range migrationPrerequisites {
-		err := f(number)
-
-		if err != nil {
+		if err := f(number); err != nil {
 			return err
 		}
 	}
