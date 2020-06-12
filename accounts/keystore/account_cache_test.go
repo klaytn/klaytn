@@ -34,6 +34,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 )
 
 var (
