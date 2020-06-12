@@ -107,14 +107,7 @@ func startMigration(t *testing.T, node *cn.CN) {
 	waitMigrationEnds(t, node)
 
 	t.Log("=========== migrate trie ==============")
-	currentHeader := node.BlockChain().CurrentBlock().Header()
-	err := node.BlockChain().StateCache().TrieDB().Commit(currentHeader.Root, false, currentHeader.Number.Uint64())
-	assert.NoError(t, err)
-
-	err = node.BlockChain().StartStateMigration(currentHeader.Number.Uint64(), currentHeader.Root)
-	assert.NoError(t, err)
-
-	err = node.BlockChain().StateCache().TrieDB().Cap(0)
+	err := node.BlockChain().PrepareStateMigration()
 	assert.NoError(t, err)
 }
 
