@@ -29,34 +29,39 @@ import (
 	"time"
 )
 
+// continues occurrence of state trie migration and node restart must success
 func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
-	numAccounts := 1000
-	fullNode, node, validator, chainId, workspace, richAccount, _, _ := newSimpleBlockchain(t, numAccounts)
+	fullNode, node, validator, chainId, workspace, richAccount, _, _ := newSimpleBlockchain(t, 100)
 	defer os.RemoveAll(workspace)
 
-	for i := 0; i < 100; i++ {
-		deployRandomTxs(t, node.TxPool(), chainId, richAccount, 1000)
+	numTxs := []int{100, 1000, 10000}
+	for i := 0; i < len(numTxs)*5; i++ {
+		numTx := numTxs[i%len(numTxs)]
+		t.Log("attempt", strconv.Itoa(i), "deployRandomTxs of", strconv.Itoa(numTx))
+		deployRandomTxs(t, node.TxPool(), chainId, richAccount, numTx)
 		time.Sleep(10 * time.Second) // wait until txpool is flushed
 
 		startMigration(t, node)
+		time.Sleep(1 * time.Second)
 		t.Log("migration state before restart", node.ChainDB().InMigration())
 		fullNode, node = restartNode(t, fullNode, node, workspace, validator)
 	}
 }
 
 // if migration status is set on miscDB and a node is restarted, migration should start
-func TestMigration_Restart(t *testing.T) {
-	const migrationBlockNum uint64 = 54321
-	fullNode, node, validator, chainId, workspace, richAccount, _, _ := newSimpleBlockchain(t, 10000)
+func TestMigration_StartMigrationByMiscDB(t *testing.T) {
+	fullNode, node, validator, chainId, workspace, richAccount, _, _ := newSimpleBlockchain(t, 100)
 	defer os.RemoveAll(workspace)
+	miscDB := node.ChainDB().GetMiscDB()
 
 	// size up state trie to be prepared for migration
-	deployRandomTxs(t, node.TxPool(), chainId, richAccount, 10)
+	deployRandomTxs(t, node.TxPool(), chainId, richAccount, 1000)
 
-	miscDB := node.ChainDB().GetMiscDB()
 	// set migration status in miscDB
+	migrationBlockNum := node.BlockChain().CurrentBlock().Header().Number.Uint64()
 	err := miscDB.Put([]byte("migrationStatus"), common.Int64ToByteBigEndian(migrationBlockNum))
 	assert.NoError(t, err)
+
 	// set migration db path in miscDB
 	migrationPathKey := append([]byte("databaseDirectory"), common.Int64ToByteBigEndian(uint64(database.StateTrieMigrationDB))...)
 	migrationPath := []byte("statetrie_migrated_" + strconv.FormatUint(migrationBlockNum, 10))
@@ -67,11 +72,22 @@ func TestMigration_Restart(t *testing.T) {
 	assert.False(t, node.ChainDB().InMigration())
 	assert.NotEqual(t, migrationBlockNum, node.ChainDB().MigrationBlockNumber())
 
-	restartNode(t, fullNode, node, workspace, validator)
+	fullNode, node = restartNode(t, fullNode, node, workspace, validator)
+	miscDB = node.ChainDB().GetMiscDB()
 
 	// check migration Status in cache after restart
-	assert.True(t, node.ChainDB().InMigration())
-	assert.Equal(t, migrationBlockNum, node.ChainDB().MigrationBlockNumber())
+	if node.ChainDB().InMigration() {
+		assert.Equal(t, migrationBlockNum, node.ChainDB().MigrationBlockNumber())
+		t.Log("Checked migration status while migration in on process")
+	}
+
+	waitMigrationEnds(t, node)
+
+	// state trie path should not be "statetrie" in miscDB
+	newPathKey := append([]byte("databaseDirectory"), common.Int64ToByteBigEndian(uint64(database.StateTrieDB))...)
+	dir, err := miscDB.Get(newPathKey)
+	assert.NoError(t, err)
+	assert.NotEqual(t, "statetrie", string(dir))
 }
 
 func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string, *TestAccountType, []*TestAccountType, []*TestAccountType) {
@@ -103,12 +119,12 @@ func startMigration(t *testing.T, node *cn.CN) {
 }
 
 func restartNode(t *testing.T, fullNode *node.Node, node *cn.CN, workspace string, validator *TestAccountType) (*node.Node, *cn.CN) {
-	t.Log("=========== stop node ==============")
 	if err := fullNode.Stop(); err != nil {
 		t.Fatal(err)
 	}
+	t.Log("=========== stopped node ==============")
 	time.Sleep(5 * time.Second)
-	t.Log("=========== start node ==============")
+	t.Log("=========== starting node ==============")
 	newFullNode, newNode := newKlaytnNode(t, workspace, validator)
 	if err := newNode.StartMining(false); err != nil {
 		t.Fatal()
