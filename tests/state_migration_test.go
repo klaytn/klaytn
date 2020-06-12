@@ -91,9 +91,9 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 }
 
 func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string, *TestAccountType, []*TestAccountType, []*TestAccountType) {
-	if testing.Verbose() {
-		enableLog() // Change verbosity level in the function if needed
-	}
+	//if testing.Verbose() {
+	//	enableLog() // Change verbosity level in the function if needed
+	//}
 
 	t.Log("=========== create blockchain ==============")
 	fullNode, node, validator, chainID, workspace := newBlockchain(t)

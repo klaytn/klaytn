@@ -38,9 +38,9 @@ import (
 
 // TestSimpleBlockchain
 func TestSimpleBlockchain(t *testing.T) {
-	if testing.Verbose() {
-		enableLog() // Change verbosity level in the function if needed
-	}
+	//if testing.Verbose() {
+	//	enableLog() // Change verbosity level in the function if needed
+	//}
 
 	numAccounts := 12
 	fullNode, node, validator, chainId, workspace := newBlockchain(t)
