@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/rcrowley/go-metrics"
 	"math"
@@ -113,7 +114,7 @@ func (b *SyncBloom) init(database database.Iteratee) {
 			bloomLoadMeter.Mark(1)
 		}
 		// If enough time elapsed since the last iterator swap, restart
-		if time.Since(swap) > 8*time.Second {
+		if time.Since(swap) > log.StatsReportLimit {
 			key := common.CopyBytes(it.Key())
 
 			it.Release()

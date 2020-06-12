@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn/log"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -267,7 +268,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 			default:
 			}
 			// Print progress logs if long enough time elapsed
-			if time.Since(logged) > 8*time.Second {
+			if time.Since(logged) > log.StatsReportLimit {
 				if number > origin {
 					nodeSize, preimageSize := database.TrieDB().Size()
 					logger.Info("Tracing chain segment", "start", origin, "end", end.NumberU64(), "current", number, "transactions", traced, "elapsed", time.Since(begin), "nodeSize", nodeSize, "preimageSize", preimageSize)
@@ -685,7 +686,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 	)
 	for block.NumberU64() < origin {
 		// Print progress logs if long enough time elapsed
-		if time.Since(logged) > 8*time.Second {
+		if time.Since(logged) > log.StatsReportLimit {
 			logger.Info("Regenerating historical state", "block", block.NumberU64()+1, "target", origin, "remaining", origin-block.NumberU64()-1, "elapsed", time.Since(start))
 			logged = time.Now()
 		}

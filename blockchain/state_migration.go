@@ -139,7 +139,8 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		for i := 0; i < len(queue); i++ {
 			result := <-resultCh
 			if result.Err != nil {
-				logger.Error("State migration is failed by resultCh", "result.hash", result.Hash.String(), "result.Err", result.Err)
+				logger.Error("State migration is failed by resultCh",
+					"result.hash", result.Hash.String(), "result.Err", result.Err)
 				return fmt.Errorf("failed to retrieve node data for %x: %v", result.Hash, result.Err)
 			}
 			results[i] = result
@@ -166,7 +167,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		progressStr = strings.TrimRight(progressStr, "0")
 		progressStr = strings.TrimRight(progressStr, ".") + "%"
 
-		logger.Warn("State migration progress",
+		logger.Warn("State migration : Progress",
 			"progress", progressStr, "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt,
 			"read", read, "readElapsed", readElapsed, "written", written, "writeElapsed", writeElapsed,
 			"elapsed", time.Since(startIter))
@@ -187,19 +188,15 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 
 	elapsed := time.Since(start)
 	speed := float64(committedCnt) / elapsed.Seconds()
-	logger.Info("State migration is completed", "committedCnt", committedCnt, "elapsed", elapsed, "committed per second", speed)
+	logger.Info("State migration : State copied", "committedCnt", committedCnt, "elapsed", elapsed, "committed per second", speed)
 
-	// Preimage Copy
-	// TODO-Klaytn consider to copy preimage
-
-	// TODO-Klaytn consider to check Trie contents optionally
-	if err := state.CheckStateConsistency(srcCachedDB.DiskDB(), targetDB.DiskDB(), rootHash); err != nil {
-		logger.Error("State migration : copied stateDB is invalid", "err", err)
+	if err := state.CheckStateConsistency(srcCachedDB.DiskDB(), targetDB.DiskDB(), rootHash, bc.committedCnt, bc.quit); err != nil {
+		logger.Error("State migration : CheckStateConsistency returns error", "err", err)
 		return err
 	}
 
 	bc.db.FinishStateMigration()
-	logger.Info("completed state migration")
+	logger.Info("State migration : Finished")
 
 	return nil
 }
@@ -244,7 +241,7 @@ func (bc *BlockChain) restartStateMigration() {
 		}
 
 		root := block.Root()
-		logger.Warn("State migration is restarted", "blockNumber", number, "root", root.String())
+		logger.Warn("State migration : Restarted", "blockNumber", number, "root", root.String())
 
 		go bc.migrateState(root)
 	}
