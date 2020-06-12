@@ -88,15 +88,18 @@ func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *Te
 }
 
 func startMigration(t *testing.T, node *cn.CN) {
-	for node.ChainDB().InMigration() {
-		t.Log("state trie migration is processing; sleep for a second before a new migration")
-		time.Sleep(time.Second)
-	}
+	waitMigrationEnds(t, node)
+
 	t.Log("=========== migrate trie ==============")
-	if err := node.BlockChain().PrepareStateMigration(); err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(time.Second)
+	currentHeader := node.BlockChain().CurrentBlock().Header()
+	err := node.BlockChain().StateCache().TrieDB().Commit(currentHeader.Root, false, currentHeader.Number.Uint64())
+	assert.NoError(t, err)
+
+	err = node.BlockChain().StartStateMigration(currentHeader.Number.Uint64(), currentHeader.Root)
+	assert.NoError(t, err)
+
+	err = node.BlockChain().StateCache().TrieDB().Cap(0)
+	assert.NoError(t, err)
 }
 
 func restartNode(t *testing.T, fullNode *node.Node, node *cn.CN, workspace string, validator *TestAccountType) (*node.Node, *cn.CN) {
@@ -113,4 +116,11 @@ func restartNode(t *testing.T, fullNode *node.Node, node *cn.CN, workspace strin
 	time.Sleep(5 * time.Second)
 
 	return newFullNode, newNode
+}
+
+func waitMigrationEnds(t *testing.T, node *cn.CN) {
+	for node.ChainDB().InMigration() {
+		t.Log("state trie migration is processing; sleep for a second before a new migration")
+		time.Sleep(time.Second)
+	}
 }
