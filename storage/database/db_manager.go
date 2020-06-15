@@ -525,22 +525,8 @@ func (stdBatch *stateTrieDBBatch) ValueSize() int {
 // Write passes the list of batch tasks to taskCh so batch can be processed
 // by underlying workers. Write waits until all workers return the result.
 func (stdBatch *stateTrieDBBatch) Write() error {
-	resultCh := make(chan error, len(stdBatch.batches))
-	for _, batch := range stdBatch.batches {
-		go func(batch Batch) {
-			resultCh <- batch.Write()
-		}(batch)
-	}
-
-	var errResult error
-	for range stdBatch.batches {
-		err := <-resultCh
-		if err != nil {
-			errResult = err
-		}
-	}
-
-	return errResult
+	_, err := WriteBatchesParallel(stdBatch.batches...)
+	return err
 }
 
 func (stdBatch *stateTrieDBBatch) Reset() {

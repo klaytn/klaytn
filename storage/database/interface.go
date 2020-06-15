@@ -93,6 +93,38 @@ func WriteBatches(batches ...Batch) (int, error) {
 	return bytes, nil
 }
 
+func WriteBatchesParallel(batches ...Batch) (int, error) {
+	type result struct {
+		bytes int
+		err   error
+	}
+
+	resultCh := make(chan result, len(batches))
+	for _, batch := range batches {
+		go func(batch Batch) {
+			bytes := batch.ValueSize()
+			err := batch.Write()
+			if err != nil {
+				batch.Reset()
+			}
+			resultCh <- result{bytes, err}
+		}(batch)
+	}
+
+	var bytes int
+	var errResult error
+
+	for range batches {
+		rst := <-resultCh
+		if rst.err != nil {
+			errResult = rst.err
+		}
+		bytes += rst.bytes
+	}
+
+	return bytes, errResult
+}
+
 func WriteBatchesOverThreshold(batches ...Batch) (int, error) {
 	bytes := 0
 	for _, batch := range batches {
