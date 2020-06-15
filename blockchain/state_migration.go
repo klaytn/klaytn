@@ -185,14 +185,14 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	}
 	bc.committedCnt, bc.pendingCnt, bc.progress = committedCnt, trieSync.Pending(), trieSync.CalcProgressPercentage()
 
+	// Clear memory of bloom filter and trieSync
+	stateBloom.Close()
+	trieSync = nil
+
 	elapsed := time.Since(start)
 	speed := float64(committedCnt) / elapsed.Seconds()
 	logger.Info("State migration is completed", "committedCnt", committedCnt, "elapsed", elapsed, "committed per second", speed)
 
-	// Preimage Copy
-	// TODO-Klaytn consider to copy preimage
-
-	// TODO-Klaytn consider to check Trie contents optionally
 	if err := state.CheckStateConsistency(srcCachedDB.DiskDB(), targetDB.DiskDB(), rootHash); err != nil {
 		logger.Error("State migration : copied stateDB is invalid", "err", err)
 		return err
