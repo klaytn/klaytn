@@ -103,7 +103,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	// Present bloom filter for migration.
 	// Since iterator doesn't support partitionedDB, we cannot use targetDB.
 	// If state migration is finished without restarting node, this fake empty DB is ok.
-	stateBloom := statedb.NewSyncBloom(uint64(512), database.NewMemDB())
+	stateBloom := statedb.NewSyncBloom(uint64(1000), database.NewMemDB())
 	defer stateBloom.Close()
 
 	trieSync := state.NewStateSync(rootHash, targetDB.DiskDB(), stateBloom)
