@@ -36,8 +36,8 @@ func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
 
 	stateTriePath := []byte("statetrie")
 
-	numTxs := []int{10, 100, 1000}
-	for i := 0; i < len(numTxs)*3; i++ {
+	numTxs := []int{10, 100}
+	for i := 0; i < len(numTxs); i++ {
 		numTx := numTxs[i%len(numTxs)]
 		t.Log("attempt", strconv.Itoa(i), "deployRandomTxs of", strconv.Itoa(numTx))
 		deployRandomTxs(t, node.TxPool(), chainID, richAccount, numTx)

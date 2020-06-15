@@ -48,6 +48,8 @@ func TestSimpleBlockchain(t *testing.T) {
 
 	// create account
 	richAccount, accounts, contractAccounts := createAccount(t, numAccounts, validator)
+	time.Sleep(10 * time.Second)
+
 	contractDeployCode := "0x608060405234801561001057600080fd5b506000808190555060646001819055506101848061002f6000396000f300608060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806302e5329e14610067578063197e70e41461009457806349b667d2146100c157806367e0badb146100ec575b600080fd5b34801561007357600080fd5b5061009260048036038101908080359060200190929190505050610117565b005b3480156100a057600080fd5b506100bf60048036038101908080359060200190929190505050610121565b005b3480156100cd57600080fd5b506100d6610145565b6040518082815260200191505060405180910390f35b3480156100f857600080fd5b5061010161014f565b6040518082815260200191505060405180910390f35b8060018190555050565b806000540160008190555060015460005481151561013b57fe5b0660008190555050565b6000600154905090565b600080549050905600a165627a7a72305820ef4e7e564c744de3a36cb74000c35687f7de9ecf1d29abdd3c4bcc66db981c160029"
 	for i := 0; i < numAccounts; i++ {
 		contractAccounts[i].Addr = deployContractDeployTx(t, node.TxPool(), chainId, richAccount, contractDeployCode)
@@ -59,6 +61,7 @@ func TestSimpleBlockchain(t *testing.T) {
 		deployRandomTxs(t, node.TxPool(), chainId, richAccount, 10)
 		deployValueTransferTx(t, node.TxPool(), chainId, richAccount, accounts[i%numAccounts])
 		deployContractExecutionTx(t, node.TxPool(), chainId, richAccount, contractAccounts[i%numAccounts].Addr)
+
 		time.Sleep(5 * time.Second)
 	}
 
@@ -69,7 +72,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	time.Sleep(5 * time.Second)
 
 	// start full node with previous db
-	fullNode, _ = newKlaytnNode(t, workspace, validator)
+	fullNode, node = newKlaytnNode(t, workspace, validator)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
 	}
@@ -156,7 +159,7 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
 	genesis.Config.Istanbul.SubGroupSize = 1
 	genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-	genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(100), big.NewInt(params.KLAY))
+	genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
 
 	cnConf := &cn.DefaultConfig
 	cnConf.Genesis = genesis
@@ -184,7 +187,6 @@ func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender 
 	var tx *types.Transaction
 	signer := types.NewEIP155Signer(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
-	gasLimit = uint64(100000)
 
 	txNuminABlock := 100
 	for i := 0; i < txNum; i++ {
@@ -259,7 +261,7 @@ func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.In
 		types.TxValueKeyFrom:     sender.GetAddr(),
 		types.TxValueKeyTo:       contractAddr,
 		types.TxValueKeyAmount:   new(big.Int).SetUint64(0),
-		types.TxValueKeyGasLimit: gasLimit,
+		types.TxValueKeyGasLimit: uint64(100000),
 		types.TxValueKeyGasPrice: gasPrice,
 		types.TxValueKeyData:     common.FromHex(contractExecutionPayload),
 	}
@@ -270,6 +272,7 @@ func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.In
 	if err := tx.SignWithKeys(signer, sender.GetTxKeys()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := txpool.AddLocal(tx); err != nil && err != blockchain.ErrAlreadyNonceExistInPool {
 		t.Fatal(err)
 	}
