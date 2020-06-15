@@ -186,6 +186,10 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	}
 	bc.committedCnt, bc.pendingCnt, bc.progress = committedCnt, trieSync.Pending(), trieSync.CalcProgressPercentage()
 
+	// Clear memory of bloom filter and trieSync
+	stateBloom.Close()
+	trieSync = nil
+
 	elapsed := time.Since(start)
 	speed := float64(committedCnt) / elapsed.Seconds()
 	logger.Info("State migration : State copied", "committedCnt", committedCnt, "elapsed", elapsed, "committed per second", speed)
