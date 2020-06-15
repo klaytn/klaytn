@@ -59,6 +59,7 @@ func TestSimpleBlockchain(t *testing.T) {
 		deployRandomTxs(t, node.TxPool(), chainId, richAccount, 10)
 		deployValueTransferTx(t, node.TxPool(), chainId, richAccount, accounts[i%numAccounts])
 		deployContractExecutionTx(t, node.TxPool(), chainId, richAccount, contractAccounts[i%numAccounts].Addr)
+		time.Sleep(5 * time.Second)
 	}
 
 	// stop full node
@@ -68,11 +69,16 @@ func TestSimpleBlockchain(t *testing.T) {
 	time.Sleep(5 * time.Second)
 
 	// start full node with previous db
-	newKlaytnNode(t, workspace, validator)
+	fullNode, _ = newKlaytnNode(t, workspace, validator)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
 	}
 	time.Sleep(5 * time.Second)
+
+	// stop node before ending the test code
+	if err := fullNode.Stop(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {

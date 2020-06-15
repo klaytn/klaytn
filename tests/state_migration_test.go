@@ -31,11 +31,13 @@ import (
 
 // continues occurrence of state trie migration and node restart must success
 func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
-	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 100)
+	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 
-	numTxs := []int{100, 1000, 10000}
-	for i := 0; i < len(numTxs)*5; i++ {
+	stateTriePath := []byte("statetrie")
+
+	numTxs := []int{10, 100, 1000}
+	for i := 0; i < len(numTxs)*3; i++ {
 		numTx := numTxs[i%len(numTxs)]
 		t.Log("attempt", strconv.Itoa(i), "deployRandomTxs of", strconv.Itoa(numTx))
 		deployRandomTxs(t, node.TxPool(), chainID, richAccount, numTx)
@@ -43,19 +45,32 @@ func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
 
 		startMigration(t, node)
 		time.Sleep(1 * time.Second)
+
 		t.Log("migration state before restart", node.ChainDB().InMigration())
 		fullNode, node = restartNode(t, fullNode, node, workspace, validator)
+
+		waitMigrationEnds(t, node)
+
+		// check if migration succeeds (StateTrieDB changes when migration finishes)
+		newPathKey := append([]byte("databaseDirectory"), common.Int64ToByteBigEndian(uint64(database.StateTrieDB))...)
+		newStateTriePath, err := node.ChainDB().GetMiscDB().Get(newPathKey)
+		assert.NoError(t, err)
+		assert.NotEqual(t, stateTriePath, newStateTriePath)
+		stateTriePath = newStateTriePath
 	}
+
+	stopNode(t, fullNode)
 }
 
 // if migration status is set on miscDB and a node is restarted, migration should start
 func TestMigration_StartMigrationByMiscDB(t *testing.T) {
-	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 100)
+	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 	miscDB := node.ChainDB().GetMiscDB()
 
 	// size up state trie to be prepared for migration
-	deployRandomTxs(t, node.TxPool(), chainID, richAccount, 1000)
+	deployRandomTxs(t, node.TxPool(), chainID, richAccount, 100)
+	time.Sleep(5 * time.Second)
 
 	// set migration status in miscDB
 	migrationBlockNum := node.BlockChain().CurrentBlock().Header().Number.Uint64()
@@ -88,6 +103,8 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 	dir, err := miscDB.Get(newPathKey)
 	assert.NoError(t, err)
 	assert.NotEqual(t, "statetrie", string(dir))
+
+	stopNode(t, fullNode)
 }
 
 func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string, *TestAccountType, []*TestAccountType, []*TestAccountType) {
@@ -112,19 +129,29 @@ func startMigration(t *testing.T, node *cn.CN) {
 }
 
 func restartNode(t *testing.T, fullNode *node.Node, node *cn.CN, workspace string, validator *TestAccountType) (*node.Node, *cn.CN) {
-	if err := fullNode.Stop(); err != nil {
-		t.Fatal(err)
-	}
-	t.Log("=========== stopped node ==============")
+	stopNode(t, fullNode)
 	time.Sleep(5 * time.Second)
+	newFullNode, newNode := startNode(t, workspace, validator)
+	time.Sleep(5 * time.Second)
+
+	return newFullNode, newNode
+}
+
+func startNode(t *testing.T, workspace string, validator *TestAccountType) (fullNode *node.Node, node *cn.CN) {
 	t.Log("=========== starting node ==============")
 	newFullNode, newNode := newKlaytnNode(t, workspace, validator)
 	if err := newNode.StartMining(false); err != nil {
 		t.Fatal()
 	}
-	time.Sleep(5 * time.Second)
 
 	return newFullNode, newNode
+}
+
+func stopNode(t *testing.T, fullNode *node.Node) {
+	if err := fullNode.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	t.Log("=========== stopped node ==============")
 }
 
 func waitMigrationEnds(t *testing.T, node *cn.CN) {
