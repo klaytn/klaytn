@@ -509,7 +509,7 @@ func (stdBatch *stateTrieDBBatch) Put(key []byte, value []byte) error {
 }
 
 // ValueSize is called to determine whether to write batches when it exceeds
-// certain limit. partitionedDB returns the largest size of its batches to
+// certain limit. stdBatch returns the largest size of its batches to
 // write all batches at once when one of batch exceeds the limit.
 func (stdBatch *stateTrieDBBatch) ValueSize() int {
 	maxSize := 0
