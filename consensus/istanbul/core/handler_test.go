@@ -20,8 +20,8 @@ import (
 	"time"
 )
 
-// newMockBackend create a backend
-func newMockBackend(t *testing.T, validatorAddrs []common.Address) *mock_istanbul.MockBackend {
+// newMockBackend create a mock-backend initialized with default values
+func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanbul.MockBackend, *gomock.Controller) {
 	committeeSize := uint64(len(validatorAddrs) / 3)
 
 	istExtra := &types.IstanbulExtra{
@@ -70,7 +70,7 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) *mock_istanbu
 	// Verify checks whether the proposal of the preprepare message is a valid block. Consider it valid.
 	mockBackend.EXPECT().Verify(gomock.Any()).Return(time.Duration(0), nil).AnyTimes()
 
-	return mockBackend
+	return mockBackend, mockCtrl
 }
 
 // genValidators returns a set of addresses and corresponding keys used for generating a validator set
@@ -216,7 +216,8 @@ func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block,
 // It posts an invalid message and a valid message of each istanbul message type.
 func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	validatorAddrs, validatorKeyMap := genValidators(30)
-	mockBackend := newMockBackend(t, validatorAddrs)
+	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	defer mockCtrl.Finish()
 
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
@@ -390,7 +391,8 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 func TestCore_handlerMsg(t *testing.T) {
 	validatorAddrs, validatorKeyMap := genValidators(10)
-	mockBackend := newMockBackend(t, validatorAddrs)
+	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	defer mockCtrl.Finish()
 
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
