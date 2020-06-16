@@ -49,7 +49,7 @@ func GetDefaultConfig() *Config {
 		TrieBlockInterval: blockchain.DefaultBlockInterval,
 		GasPrice:          big.NewInt(18 * params.Ston),
 
-		TxPool: *blockchain.GetDefaultTxPoolConfig(),
+		TxPool: blockchain.DefaultTxPoolConfig,
 		GPO: gasprice.Config{
 			Blocks:     20,
 			Percentile: 60,
