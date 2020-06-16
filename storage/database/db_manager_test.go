@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -88,6 +89,12 @@ func createDBManagers(configs []*DBConfig) []DBManager {
 	}
 
 	return dbManagers
+}
+
+func removeDBDirs() {
+	for _, dbm := range dbManagers {
+		os.RemoveAll(dbm.GetDBConfig().Dir)
+	}
 }
 
 // TestDBManager_IsParallelDBWrite compares the return value of IsParallelDBWrite with the value in the config.
@@ -747,6 +754,58 @@ func testDatabaseManager_FinishStateMigration(t *testing.T, dbm DBManager, migra
 	assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
 }
 
+// While state trie migration, directory should be created with expected name
+func TestDBManager_StateMigrationDBPath(t *testing.T) {
+	for i, dbm := range dbManagers {
+		if !dbm.IsPartitioned() || dbConfigs[i].DBType == MemoryDB {
+			continue
+		}
+
+		migrationBlockNum := uint64(12345)
+		migrationBlockNum2 := uint64(54321)
+		NewMigrationPath := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(migrationBlockNum, 10)
+		NewMigrationPath2 := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(migrationBlockNum2, 10)
+
+		// scenario1) successfully completes state migration
+		// check if there is only one state trie db
+		initialDirNames := getDirNum(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
+		assert.Equal(t, 1, len(initialDirNames))
+
+		// check if new db is created
+		err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+		assert.NoError(t, err)
+		dirNames := getDirNum(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
+		assert.Equal(t, 2, len(dirNames))
+
+		assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
+
+		// check if old db is deleted
+		dbm.FinishStateMigration(true)
+		newDirNames := getDirNum(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
+		assert.Equal(t, 1, len(newDirNames))
+		assert.Equal(t, newDirNames[0], NewMigrationPath)
+
+		// scenario 2) stops migration by user's request
+		// check if only statedb
+		initialDirNames = getDirNum(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
+		assert.Equal(t, 1, len(initialDirNames))
+
+		// check if new db is created
+		err = dbm.CreateMigrationDBAndSetStatus(migrationBlockNum2)
+		assert.NoError(t, err)
+		dirNames = getDirNum(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
+		assert.Equal(t, 2, len(dirNames))
+
+		assert.True(t, dirNames[0] == NewMigrationPath2 || dirNames[1] == NewMigrationPath2)
+
+		// check if new db is deleted
+		dbm.FinishStateMigration(false)
+		newDirNames = getDirNum(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
+		assert.Equal(t, 1, len(newDirNames))
+		assert.Equal(t, newDirNames[0], initialDirNames[0])
+	}
+}
+
 func genReceipt(gasUsed int) *types.Receipt {
 	log := &types.Log{Topics: []common.Hash{}, Data: []uint8{}, BlockNumber: uint64(gasUsed)}
 	log.Topics = append(log.Topics, common.HexToHash(strconv.Itoa(gasUsed)))
@@ -762,4 +821,19 @@ func genTransaction(val uint64) (*types.Transaction, error) {
 	return types.SignTx(
 		types.NewTransaction(0, addr,
 			big.NewInt(int64(val)), 0, big.NewInt(int64(val)), nil), signer, key)
+}
+
+// getDirNum fetches all files in giben directory path and returns the
+func getDirNum(t *testing.T, dirPath string, substr string) []string {
+	files, err := ioutil.ReadDir(dirPath)
+	assert.NoError(t, err)
+
+	var dirNames []string
+	for _, f := range files {
+		if strings.Contains(f.Name(), substr) {
+			dirNames = append(dirNames, f.Name())
+		}
+	}
+
+	return dirNames
 }

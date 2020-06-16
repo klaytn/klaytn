@@ -43,6 +43,7 @@ type DBManager interface {
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
+	getDBDir(dbEntry DBEntryType) string
 	setStateTrieMigrationStatus(uint64)
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
