@@ -39,9 +39,9 @@ func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
 	numTxs := []int{10, 100}
 	for i := 0; i < len(numTxs); i++ {
 		numTx := numTxs[i%len(numTxs)]
-		t.Log("attempt", strconv.Itoa(i), "deployRandomTxs of", strconv.Itoa(numTx))
+		t.Log("attempt", strconv.Itoa(i), " : deployRandomTxs of", strconv.Itoa(numTx))
 		deployRandomTxs(t, node.TxPool(), chainID, richAccount, numTx)
-		time.Sleep(10 * time.Second) // wait until txpool is flushed
+		time.Sleep(3 * time.Second) // wait until txpool is flushed
 
 		startMigration(t, node)
 		time.Sleep(1 * time.Second)
@@ -70,7 +70,7 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 
 	// size up state trie to be prepared for migration
 	deployRandomTxs(t, node.TxPool(), chainID, richAccount, 100)
-	time.Sleep(5 * time.Second)
+	time.Sleep(time.Second)
 
 	// set migration status in miscDB
 	migrationBlockNum := node.BlockChain().CurrentBlock().Header().Number.Uint64()
@@ -115,7 +115,7 @@ func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *Te
 	t.Log("=========== create blockchain ==============")
 	fullNode, node, validator, chainID, workspace := newBlockchain(t)
 	richAccount, accounts, contractAccounts := createAccount(t, numAccounts, validator)
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	return fullNode, node, validator, chainID, workspace, richAccount, accounts, contractAccounts
 }
@@ -130,9 +130,9 @@ func startMigration(t *testing.T, node *cn.CN) {
 
 func restartNode(t *testing.T, fullNode *node.Node, node *cn.CN, workspace string, validator *TestAccountType) (*node.Node, *cn.CN) {
 	stopNode(t, fullNode)
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * time.Second)
 	newFullNode, newNode := startNode(t, workspace, validator)
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	return newFullNode, newNode
 }
