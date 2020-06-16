@@ -101,7 +101,7 @@ var (
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=MainNet (Not yet launched), 1000=Aspen, 1001=Baobab)",
-		Value: cn.DefaultConfig.NetworkId,
+		Value: cn.GetDefaultConfig().NetworkId,
 	}
 	IdentityFlag = cli.StringFlag{
 		Name:  "identity",
@@ -112,7 +112,7 @@ var (
 		Usage: "Document Root for HTTPClient file scheme",
 		Value: DirectoryString{homeDir()},
 	}
-	defaultSyncMode = cn.DefaultConfig.SyncMode
+	defaultSyncMode = cn.GetDefaultConfig().SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode (only "full" is supported)`,
@@ -145,32 +145,32 @@ var (
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
 		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: cn.DefaultConfig.TxPool.PriceLimit,
+		Value: cn.GetDefaultConfig().TxPool.PriceLimit,
 	}
 	TxPoolPriceBumpFlag = cli.Uint64Flag{
 		Name:  "txpool.pricebump",
 		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: cn.DefaultConfig.TxPool.PriceBump,
+		Value: cn.GetDefaultConfig().TxPool.PriceBump,
 	}
 	TxPoolExecSlotsAccountFlag = cli.Uint64Flag{
 		Name:  "txpool.exec-slots.account",
 		Usage: "Number of executable transaction slots guaranteed per account",
-		Value: cn.DefaultConfig.TxPool.ExecSlotsAccount,
+		Value: cn.GetDefaultConfig().TxPool.ExecSlotsAccount,
 	}
 	TxPoolExecSlotsAllFlag = cli.Uint64Flag{
 		Name:  "txpool.exec-slots.all",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: cn.DefaultConfig.TxPool.ExecSlotsAll,
+		Value: cn.GetDefaultConfig().TxPool.ExecSlotsAll,
 	}
 	TxPoolNonExecSlotsAccountFlag = cli.Uint64Flag{
 		Name:  "txpool.nonexec-slots.account",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: cn.DefaultConfig.TxPool.NonExecSlotsAccount,
+		Value: cn.GetDefaultConfig().TxPool.NonExecSlotsAccount,
 	}
 	TxPoolNonExecSlotsAllFlag = cli.Uint64Flag{
 		Name:  "txpool.nonexec-slots.all",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: cn.DefaultConfig.TxPool.NonExecSlotsAll,
+		Value: cn.GetDefaultConfig().TxPool.NonExecSlotsAll,
 	}
 	TxPoolKeepLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.keeplocals",
@@ -179,7 +179,7 @@ var (
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
 		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: cn.DefaultConfig.TxPool.Lifetime,
+		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
 	// Performance tuning settings
 	StateDBCachingFlag = cli.BoolFlag{

@@ -136,9 +136,18 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	return padded
 }
 
-// IntToByteLittleEndian converts value of int to []byte
+// IntToByteLittleEndian encodes a number as little endian uint64
 func Int64ToByteLittleEndian(num uint64) []byte {
-	bs := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bs, num)
-	return bs
+	enc := make([]byte, 8)
+	binary.LittleEndian.PutUint64(enc, num)
+
+	return enc
+}
+
+// Int64ToByteBigEndian encodes a number as big endian uint64
+func Int64ToByteBigEndian(number uint64) []byte {
+	enc := make([]byte, 8)
+	binary.BigEndian.PutUint64(enc, number)
+
+	return enc
 }

@@ -38,24 +38,26 @@ import (
 
 var logger = log.NewModuleLogger(log.NodeCN)
 
-// DefaultConfig contains default settings for use on the Klaytn main net.
-var DefaultConfig = Config{
-	SyncMode:          downloader.FullSync,
-	NetworkId:         params.CypressNetworkId,
-	LevelDBCacheSize:  768,
-	TrieCacheSize:     512,
-	TrieTimeout:       5 * time.Minute,
-	TrieBlockInterval: blockchain.DefaultBlockInterval,
-	GasPrice:          big.NewInt(18 * params.Ston),
+// GetDefaultConfig returns default settings for use on the Klaytn main net.
+func GetDefaultConfig() *Config {
+	return &Config{
+		SyncMode:          downloader.FullSync,
+		NetworkId:         params.CypressNetworkId,
+		LevelDBCacheSize:  768,
+		TrieCacheSize:     512,
+		TrieTimeout:       5 * time.Minute,
+		TrieBlockInterval: blockchain.DefaultBlockInterval,
+		GasPrice:          big.NewInt(18 * params.Ston),
 
-	TxPool: blockchain.DefaultTxPoolConfig,
-	GPO: gasprice.Config{
-		Blocks:     20,
-		Percentile: 60,
-	},
-	WsEndpoint: "localhost:8546",
+		TxPool: blockchain.DefaultTxPoolConfig,
+		GPO: gasprice.Config{
+			Blocks:     20,
+			Percentile: 60,
+		},
+		WsEndpoint: "localhost:8546",
 
-	Istanbul: *istanbul.DefaultConfig,
+		Istanbul: *istanbul.DefaultConfig,
+	}
 }
 
 func init() {

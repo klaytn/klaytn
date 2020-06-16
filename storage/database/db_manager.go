@@ -40,6 +40,8 @@ type DBManager interface {
 	IsPartitioned() bool
 	InMigration() bool
 	MigrationBlockNumber() uint64
+	getStateTrieMigrationInfo() uint64
+	getDBDir(DBEntryType) string
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
@@ -49,6 +51,7 @@ type DBManager interface {
 	FinishStateMigration()
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
+	GetMiscDB() Database
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -513,7 +516,7 @@ func (dbm *databaseManager) getStateTrieMigrationInfo() uint64 {
 
 func (dbm *databaseManager) setStateTrieMigrationStatus(blockNum uint64) {
 	miscDB := dbm.getDatabase(MiscDB)
-	if err := miscDB.Put(migrationStatusKey, encodeUint64(blockNum)); err != nil {
+	if err := miscDB.Put(migrationStatusKey, common.Int64ToByteBigEndian(blockNum)); err != nil {
 		logger.Crit("Failed to set state trie migration status", "err", err)
 	}
 	dbm.lockInMigration.Lock()
@@ -611,6 +614,10 @@ func (dbm *databaseManager) GetStateTrieDB() Database {
 
 func (dbm *databaseManager) GetStateTrieMigrationDB() Database {
 	return dbm.dbs[StateTrieMigrationDB]
+}
+
+func (dbm *databaseManager) GetMiscDB() Database {
+	return dbm.dbs[MiscDB]
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
@@ -818,7 +825,7 @@ func (dbm *databaseManager) WriteHeader(header *types.Header) {
 	var (
 		hash    = header.Hash()
 		number  = header.Number.Uint64()
-		encoded = encodeUint64(number)
+		encoded = common.Int64ToByteBigEndian(number)
 	)
 	key := headerNumberKey(hash)
 	if err := db.Put(key, encoded); err != nil {
@@ -1688,7 +1695,7 @@ func (dbm *databaseManager) ConvertChildChainBlockHashToParentChainTxHash(scBloc
 func (dbm *databaseManager) WriteLastIndexedBlockNumber(blockNum uint64) {
 	key := lastIndexedBlockKey
 	db := dbm.getDatabase(bridgeServiceDB)
-	if err := db.Put(key, encodeUint64(blockNum)); err != nil {
+	if err := db.Put(key, common.Int64ToByteBigEndian(blockNum)); err != nil {
 		logger.Crit("Failed to store LastIndexedBlockNumber", "blockNumber", blockNum, "err", err)
 	}
 }
@@ -1708,7 +1715,7 @@ func (dbm *databaseManager) GetLastIndexedBlockNumber() uint64 {
 func (dbm *databaseManager) WriteAnchoredBlockNumber(blockNum uint64) {
 	key := lastServiceChainTxReceiptKey
 	db := dbm.getDatabase(bridgeServiceDB)
-	if err := db.Put(key, encodeUint64(blockNum)); err != nil {
+	if err := db.Put(key, common.Int64ToByteBigEndian(blockNum)); err != nil {
 		logger.Crit("Failed to store LatestServiceChainBlockNum", "blockNumber", blockNum, "err", err)
 	}
 }
