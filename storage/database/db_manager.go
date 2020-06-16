@@ -522,8 +522,7 @@ func (stdBatch *stateTrieDBBatch) ValueSize() int {
 	return maxSize
 }
 
-// Write passes the list of batch tasks to taskCh so batch can be processed
-// by underlying workers. Write waits until all workers return the result.
+// Write passes the list of batch to WriteBatchesParallel for writing batches.
 func (stdBatch *stateTrieDBBatch) Write() error {
 	_, err := WriteBatchesParallel(stdBatch.batches...)
 	return err
