@@ -97,7 +97,7 @@ type TrieSync struct {
 
 // NewTrieSync creates a new trie data download scheduler.
 func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback, bloom *SyncBloom) *TrieSync {
-	lruCache, _ := lru.New(int(1*units.Giga/common.HashLength))	// 1GB for common.Hash
+	lruCache, _ := lru.New(int(1*units.Giga/common.HashLength))	// 1GB for 31,250,000 common.Hash key values
 	ts := &TrieSync{
 		database:         database,
 		membatch:         newSyncMemBatch(),
@@ -106,7 +106,6 @@ func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallba
 		retrievedByDepth: make(map[int]int),
 		committedByDepth: make(map[int]int),
 		bloom:            bloom,
-		// Klaytn-TODO need to limit the size and support low memory machine.
 		exist: lruCache,
 	}
 	ts.AddSubTrie(root, 0, common.Hash{}, callback)
