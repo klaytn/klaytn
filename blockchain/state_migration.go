@@ -187,6 +187,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		}
 	}
 
+	// Flush trie nodes which is not written yet.
 	if err := stateTrieBatch.Write(); err != nil {
 		logger.Error("State migration is failed by commit error", "err", err)
 		return fmt.Errorf("DB write error: %v", err)
