@@ -111,7 +111,7 @@ func defaultNodeConfig() node.Config {
 func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	// Load defaults.
 	cfg := klayConfig{
-		CN:   cn.DefaultConfig,
+		CN:   *cn.GetDefaultConfig(),
 		Node: defaultNodeConfig(),
 	}
 

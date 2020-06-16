@@ -161,7 +161,7 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
 	genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
 
-	cnConf := &cn.DefaultConfig
+	cnConf := cn.GetDefaultConfig()
 	cnConf.Genesis = genesis
 	cnConf.Rewardbase = validator.Addr
 	cnConf.PartitionedDB = true
