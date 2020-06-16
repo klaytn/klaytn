@@ -22,6 +22,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/mclock"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"runtime"
@@ -204,7 +205,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 
 	// TODO-Klaytn consider to check Trie contents optionally
 	startCheck := time.Now()
-	if err := state.CheckStateConsistency(srcCachedDB.DiskDB(), targetDB.DiskDB(), rootHash); err != nil {
+	if err := state.CheckStateConsistency(srcCachedDB.DiskDB(), targetDB.DiskDB(), rootHash, 100000000, bc.quit); err != nil {
 		logger.Error("State migration : copied stateDB is invalid", "err", err)
 		return err
 	}
@@ -234,7 +235,7 @@ func (st *migrationStats) stateMigrationReport(force bool, pending int, progress
 		elapsed = time.Duration(now) - time.Duration(st.startTime)
 	)
 
-	if force || elapsed >= statsReportLimit {
+	if force || elapsed >= log.StatsReportLimit {
 		st.totalRead += st.read
 		st.totalCommitted += st.committed
 		st.pending, st.progress = pending, progress
@@ -245,7 +246,7 @@ func (st *migrationStats) stateMigrationReport(force bool, pending int, progress
 
 		logger.Info("State migration progress",
 			"progress", progressStr,
-			"totalread", st.totalRead, "totalCommitted", st.totalCommitted, "pending", st.pending,
+			"totalRead", st.totalRead, "totalCommitted", st.totalCommitted, "pending", st.pending,
 			"read", st.read, "readElapsed", st.readElapsed, "processElapsed", st.processElapsed,
 			"written", st.committed, "writeElapsed", st.writeElapsed,
 			"elapsed", common.PrettyDuration(elapsed),
