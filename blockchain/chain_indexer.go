@@ -282,7 +282,7 @@ func (c *ChainIndexer) updateLoop() {
 			c.lock.Lock()
 			if c.knownSections > c.storedSections {
 				// Periodically print an upgrade log message to the user
-				if time.Since(updated) > 8*time.Second {
+				if time.Since(updated) > log.StatsReportLimit {
 					if c.knownSections > c.storedSections+1 {
 						updating = true
 						c.logger.Info("Upgrading chain index", "percentage", c.storedSections*100/c.knownSections)

@@ -801,28 +801,21 @@ func (bc *BlockChain) Stop() {
 
 	bc.wg.Wait()
 
-	// Ensure the state of a recent block is also stored to disk before exiting.
-	// We're writing three different states to catch different restart scenarios:
-	//  - HEAD:     So we don't need to reprocess any blocks in the general case
-	//  - HEAD-127: So we have a hard limit on the number of blocks reexecuted
 	if !bc.isArchiveMode() {
 		triedb := bc.stateCache.TrieDB()
 
-		for _, offset := range []uint64{0, triesInMemory - 1} {
-			if number := bc.CurrentBlock().NumberU64(); number > offset {
-				recent := bc.GetBlockByNumber(number - offset)
-
-				if recent == nil {
-					logger.Error("Failed to find recent block from persistent", "blockNumber", number-offset)
-					continue
-				}
-
-				logger.Info("Writing cached state to disk", "block", recent.Number(), "hash", recent.Hash(), "root", recent.Root())
-				if err := triedb.Commit(recent.Root(), true, number-offset); err != nil {
-					logger.Error("Failed to commit recent state trie", "err", err)
-				}
-			}
+		number := bc.CurrentBlock().NumberU64()
+		recent := bc.GetBlockByNumber(number)
+		if recent == nil {
+			logger.Error("Failed to find recent block from persistent", "blockNumber", number)
+			return
 		}
+
+		logger.Info("Writing cached state to disk", "block", recent.Number(), "hash", recent.Hash(), "root", recent.Root())
+		if err := triedb.Commit(recent.Root(), true, number); err != nil {
+			logger.Error("Failed to commit recent state trie", "err", err)
+		}
+
 		for !bc.triegc.Empty() {
 			triedb.Dereference(bc.triegc.PopItem().(common.Hash))
 		}
@@ -1651,10 +1644,6 @@ type insertStats struct {
 	startTime                  mclock.AbsTime
 }
 
-// statsReportLimit is the time limit during import after which we always print
-// out progress. This avoids the user wondering what's going on.
-const statsReportLimit = 8 * time.Second
-
 // report prints statistics if some number of blocks have been processed
 // or more than a few seconds have passed since the last message.
 func (st *insertStats) report(chain []*types.Block, index int, cache common.StorageSize) {
@@ -1664,7 +1653,7 @@ func (st *insertStats) report(chain []*types.Block, index int, cache common.Stor
 		elapsed = time.Duration(now) - time.Duration(st.startTime)
 	)
 	// If we're at the last block of the batch or report period reached, log
-	if index == len(chain)-1 || elapsed >= statsReportLimit {
+	if index == len(chain)-1 || elapsed >= log.StatsReportLimit {
 		var (
 			end = chain[index]
 			txs = countTransactions(chain[st.lastIndex : index+1])
