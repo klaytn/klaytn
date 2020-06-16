@@ -1651,10 +1651,6 @@ type insertStats struct {
 	startTime                  mclock.AbsTime
 }
 
-// statsReportLimit is the time limit during import after which we always print
-// out progress. This avoids the user wondering what's going on.
-const statsReportLimit = 8 * time.Second
-
 // report prints statistics if some number of blocks have been processed
 // or more than a few seconds have passed since the last message.
 func (st *insertStats) report(chain []*types.Block, index int, cache common.StorageSize) {
@@ -1664,7 +1660,7 @@ func (st *insertStats) report(chain []*types.Block, index int, cache common.Stor
 		elapsed = time.Duration(now) - time.Duration(st.startTime)
 	)
 	// If we're at the last block of the batch or report period reached, log
-	if index == len(chain)-1 || elapsed >= statsReportLimit {
+	if index == len(chain)-1 || elapsed >= log.StatsReportLimit {
 		var (
 			end = chain[index]
 			txs = countTransactions(chain[st.lastIndex : index+1])

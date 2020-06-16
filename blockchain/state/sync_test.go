@@ -218,8 +218,20 @@ func testIterativeStateSync(t *testing.T, count int) {
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
-	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
 	assert.NoError(t, err)
+
+	// Test with quit channel
+	quit := make(chan struct{})
+
+	// normal
+	err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, quit)
+	assert.NoError(t, err)
+
+	// quit
+	close(quit)
+	err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, quit)
+	assert.Error(t, err, errStopByQuit)
 }
 
 func TestCheckStateConsistencyMissNode(t *testing.T) {
@@ -243,7 +255,7 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 			newDb.TrieDB().DiskDB().GetMemDB().Delete(hash[:])
 
 			// Check consistency : errIterator
-			err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), newDb.TrieDB().DiskDB(), srcRoot)
+			err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), newDb.TrieDB().DiskDB(), srcRoot, 100, nil)
 			if !errors.Is(err, errIterator) {
 				t.Log("mismatched err", "err", err, "expErr", errIterator)
 				t.FailNow()
@@ -256,7 +268,7 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 	}
 
 	// Check consistency : no error
-	err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), newDb.TrieDB().DiskDB(), srcRoot)
+	err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), newDb.TrieDB().DiskDB(), srcRoot, 100, nil)
 	assert.NoError(t, err)
 }
 
@@ -294,7 +306,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
-	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
 	assert.NoError(t, err)
 }
 
@@ -343,7 +355,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
-	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
 	assert.NoError(t, err)
 }
 
@@ -393,7 +405,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
-	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
 	assert.NoError(t, err)
 }
 
@@ -460,12 +472,12 @@ func TestIncompleteStateSync(t *testing.T) {
 			t.Fatalf("trie inconsistency not caught, missing: %x", key)
 		}
 
-		err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+		err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
 		assert.Error(t, err)
 
 		dstDb.GetMemDB().Put(key, value)
 	}
 
-	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot)
+	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
 	assert.NoError(t, err)
 }
