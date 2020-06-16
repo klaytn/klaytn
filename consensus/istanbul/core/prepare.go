@@ -51,6 +51,9 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 	}
 
 	//logger.Error("call receive prepare","num",prepare.View.Sequence)
+	if !c.valSet.CheckInSubList(msg.Hash, prepare.View, src.Address()) {
+		return errNotFromCommittee
+	}
 
 	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
 		return err
