@@ -205,7 +205,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 
 	// TODO-Klaytn consider to check Trie contents optionally
 	startCheck := time.Now()
-	if err := state.CheckStateConsistency(srcCachedDB.DiskDB(), targetDB.DiskDB(), rootHash, 100000000, bc.quit); err != nil {
+	if err := state.CheckStateConsistency(srcCachedDB.DiskDB(), targetDB.DiskDB(), rootHash, bc.committedCnt, bc.quit); err != nil {
 		logger.Error("State migration : copied stateDB is invalid", "err", err)
 		return err
 	}
