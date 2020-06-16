@@ -43,8 +43,10 @@ type DBManager interface {
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
+	setStateTrieMigrationStatus(uint64)
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
+	getDatabase(DBEntryType) Database
 	CreateMigrationDBAndSetStatus(blockNum uint64) error
 	FinishStateMigration()
 	GetStateTrieDB() Database

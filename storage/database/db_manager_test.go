@@ -678,19 +678,73 @@ func TestDBManager_StateTrieMigration(t *testing.T) {
 			continue
 		}
 
+		migrationBlockNum := uint64(12345)
+		migrationBlockNum2 := uint64(23456)
+		migrationBlockNum3 := uint64(34567)
+
+		// scenario 1) successfully completes state migration
 		assert.False(t, dbManagers[i].InMigration())
 
-		err := dbm.CreateMigrationDBAndSetStatus(12345)
+		err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
 		assert.NoError(t, err)
-		assert.True(t, dbManagers[i].InMigration())
+		testDatabaseManager_CreateMigrationDBAndSetStatus(t, dbm, migrationBlockNum)
 
-		dbm.FinishStateMigration()
+		dbm.FinishStateMigration(true)
+		testDatabaseManager_FinishStateMigration(t, dbm, migrationBlockNum)
+
+		// scenario 2) stops migration by user's request
 		assert.False(t, dbManagers[i].InMigration())
+
+		err = dbm.CreateMigrationDBAndSetStatus(migrationBlockNum2)
+		assert.NoError(t, err)
+		testDatabaseManager_CreateMigrationDBAndSetStatus(t, dbm, migrationBlockNum2)
+
+		dbm.FinishStateMigration(false)
+		testDatabaseManager_FinishStateMigration(t, dbm, migrationBlockNum)
+
+		// scenario 3) requests migration when a migration is on process
+		assert.False(t, dbManagers[i].InMigration())
+		dbm.setStateTrieMigrationStatus(migrationBlockNum3)
+		err = dbm.CreateMigrationDBAndSetStatus(migrationBlockNum3)
+		assert.Error(t, err)
 
 		dbm.Close()
 		dbManagers[i] = NewDBManager(dbConfigs[i])
 		assert.False(t, dbManagers[i].InMigration())
 	}
+}
+
+func testDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T, dbm DBManager, migrationBlockNum uint64) {
+	assert.True(t, dbm.InMigration())
+	// check state trie migration DB path in MiscDB
+	newPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
+	dbDir := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(migrationBlockNum, 10)
+	fetchedValue, err := dbm.getDatabase(MiscDB).Get(newPathKey)
+	assert.NoError(t, err)
+	assert.Equal(t, dbDir, string(fetchedValue))
+	// check block number in MiscDB
+	fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+	assert.NoError(t, err)
+	assert.Equal(t, common.Int64ToByteBigEndian(migrationBlockNum), fetchedBlockNum)
+}
+
+func testDatabaseManager_FinishStateMigration(t *testing.T, dbm DBManager, migrationBlockNum uint64) {
+	assert.False(t, dbm.InMigration())
+	// check state trie migration DB path in MiscDB
+	oldPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
+	fetchedValue, err := dbm.getDatabase(MiscDB).Get(oldPathKey)
+	assert.NoError(t, err)
+	assert.Equal(t, "", string(fetchedValue))
+	// check state trie DB path in MiscDB
+	newPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
+	dbDir := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(migrationBlockNum, 10)
+	fetchedValue, err = dbm.getDatabase(MiscDB).Get(newPathKey)
+	assert.NoError(t, err)
+	assert.Equal(t, dbDir, string(fetchedValue))
+	// check block number in MiscDB
+	fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+	assert.NoError(t, err)
+	assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
 }
 
 func genReceipt(gasUsed int) *types.Receipt {
