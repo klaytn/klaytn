@@ -1136,3 +1136,8 @@ func (db *Database) UpdateMetricNodes() {
 		memcacheFastInvalidValueHashErrors.Update(int64(stats.InvalidValueHashErrors))
 	}
 }
+
+// GetTrieNodeCacheSize returns the byte size of trie node cache.
+func (db *Database) GetTrieNodeCacheSize() int {
+	return db.trieNodeCacheLimit
+}
