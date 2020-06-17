@@ -200,7 +200,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		db:                 db,
 		triegc:             prque.New(),
 		chBlock:            make(chan gcBlock, 1000),
-		stateCache:         state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit),
+		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieCacheLimit),
 		quit:               make(chan struct{}),
 		futureBlocks:       futureBlocks,
 		engine:             engine,
@@ -461,6 +461,15 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
+	return state.New(root, bc.stateCache)
+}
+
+// StateAtWithPersistent returns a new mutable state based on a particular point in time with persistent trie nodes.
+func (bc *BlockChain) StateAtWithPersistent(root common.Hash) (*state.StateDB, error) {
+	exist := bc.stateCache.TrieDB().DoesExistNodeInPersistent(root)
+	if !exist {
+		return nil, ErrNotExistNode
+	}
 	return state.New(root, bc.stateCache)
 }
 

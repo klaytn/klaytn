@@ -29,7 +29,7 @@ var parentHash = common.HexToHash("1343A3F") // 20199999 in hexadecimal
 
 func TestDatabase_Reference(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithCache(memDB, 128)
+	db := NewDatabaseWithNewCache(memDB, 128)
 
 	assert.Equal(t, memDB, db.DiskDB())
 	assert.Equal(t, 1, len(db.nodes)) // {} : {}
@@ -57,7 +57,7 @@ func TestDatabase_Reference(t *testing.T) {
 
 func TestDatabase_DeReference(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithCache(memDB, 128)
+	db := NewDatabaseWithNewCache(memDB, 128)
 	assert.Equal(t, 1, len(db.nodes)) // {} : {}
 
 	db.Dereference(parentHash)
@@ -87,7 +87,7 @@ func TestDatabase_DeReference(t *testing.T) {
 
 func TestDatabase_Size(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithCache(memDB, 128)
+	db := NewDatabaseWithNewCache(memDB, 128)
 
 	totalMemorySize, preimagesSize := db.Size()
 	assert.Equal(t, common.StorageSize(0), totalMemorySize)
@@ -112,7 +112,7 @@ func TestDatabase_Size(t *testing.T) {
 
 func TestDatabase_SecureKey(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithCache(memDB, 128)
+	db := NewDatabaseWithNewCache(memDB, 128)
 
 	secKey1 := db.secureKey(childHash[:])
 	copiedSecKey := make([]byte, 0, len(secKey1))
@@ -133,7 +133,7 @@ func makeRandomByte(n int) []byte {
 func TestCache(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
 	cacheSizeMB := 10
-	db := NewDatabaseWithCache(memDB, cacheSizeMB)
+	db := NewDatabaseWithNewCache(memDB, cacheSizeMB)
 
 	for i := 0; i < 100; i++ {
 		key, value := makeRandomByte(256), makeRandomByte(63*1024) // fastcache can store entrie under 64KB

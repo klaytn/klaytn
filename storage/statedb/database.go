@@ -310,13 +310,13 @@ func expandNode(hash hashNode, n node) node {
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
-	return NewDatabaseWithCache(diskDB, 0)
+	return NewDatabaseWithNewCache(diskDB, 0)
 }
 
-// NewDatabaseWithCache creates a new trie database to store ephemeral trie content
+// NewDatabaseWithNewCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int) *Database {
+func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Database {
 	var trieNodeCache *fastcache.Cache
 	if cacheSizeMB == AutoScaling {
 		cacheSizeMB = getTrieNodeCacheSizeMB()
@@ -328,10 +328,22 @@ func NewDatabaseWithCache(diskDB database.DBManager, cacheSizeMB int) *Database 
 		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
 	}
 	return &Database{
+		diskDB:            diskDB,
+		nodes:             map[common.Hash]*cachedNode{{}: {}},
+		preimages:         make(map[common.Hash][]byte),
+		trieNodeCache:     trieNodeCache,
+	}
+}
+
+// NewDatabaseWithCache creates a new trie database to store ephemeral trie content
+// before its written out to disk or garbage collected. It also acts as a read cache
+// for nodes loaded from disk.
+func NewDatabaseWithCache(diskDB database.DBManager, cache *fastcache.Cache) *Database {
+	return &Database{
 		diskDB:        diskDB,
 		nodes:         map[common.Hash]*cachedNode{{}: {}},
 		preimages:     make(map[common.Hash][]byte),
-		trieNodeCache: trieNodeCache,
+		trieNodeCache: cache,
 	}
 }
 
@@ -355,6 +367,11 @@ func getTrieNodeCacheSizeMB() int {
 // DiskDB retrieves the persistent database backing the trie database.
 func (db *Database) DiskDB() database.DBManager {
 	return db.diskDB
+}
+
+// TrieNodeCache retrieves the trieNodeCachetheof the trie database.
+func (db *Database) TrieNodeCache() *fastcache.Cache {
+	return db.trieNodeCache
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.
@@ -538,6 +555,22 @@ func (db *Database) DoesExistCachedNode(hash common.Hash) bool {
 	_, ok := db.nodes[hash]
 	db.lock.RUnlock()
 	return ok
+}
+
+// DoesExistNodeInPersistent returns if the node exists on the persistent database or its cache.
+func (db *Database) DoesExistNodeInPersistent(hash common.Hash) bool {
+	// Retrieve the node from DB cache if available
+	if enc := db.getCachedNode(hash); enc != nil {
+		return true
+	}
+
+	// Content unavailable in DB cache, attempt to retrieve from disk
+	enc, err := db.diskDB.ReadCachedTrieNode(hash)
+	if err == nil && enc != nil {
+		return true
+	}
+
+	return false
 }
 
 // preimage retrieves a cached trie node pre-image from memory. If it cannot be
