@@ -22,6 +22,7 @@ package state
 
 import (
 	"bytes"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/ser/rlp"
@@ -29,7 +30,7 @@ import (
 )
 
 // NewStateSync create a new state trie download scheduler.
-func NewStateSync(root common.Hash, database statedb.StateTrieReadDB, bloom *statedb.SyncBloom) *statedb.TrieSync {
+func NewStateSync(root common.Hash, database statedb.StateTrieReadDB, bloom *statedb.SyncBloom, lruCache *lru.Cache) *statedb.TrieSync {
 	var syncer *statedb.TrieSync
 	callback := func(leaf []byte, parent common.Hash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
@@ -43,6 +44,6 @@ func NewStateSync(root common.Hash, database statedb.StateTrieReadDB, bloom *sta
 		}
 		return nil
 	}
-	syncer = statedb.NewTrieSync(root, database, callback, bloom)
+	syncer = statedb.NewTrieSync(root, database, callback, bloom, lruCache)
 	return syncer
 }

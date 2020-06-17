@@ -23,7 +23,6 @@ package statedb
 import (
 	"errors"
 	"fmt"
-	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/common"
 	"strconv"
@@ -96,8 +95,7 @@ type TrieSync struct {
 }
 
 // NewTrieSync creates a new trie data download scheduler.
-func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback, bloom *SyncBloom) *TrieSync {
-	lruCache, _ := lru.New(int(1 * units.Giga / common.HashLength)) // 1GB for 31,250,000 common.Hash key values
+func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback, bloom *SyncBloom, lruCache *lru.Cache) *TrieSync {
 	ts := &TrieSync{
 		database:         database,
 		membatch:         newSyncMemBatch(),
@@ -121,14 +119,14 @@ func (s *TrieSync) AddSubTrie(root common.Hash, depth int, parent common.Hash, c
 	if _, ok := s.membatch.batch[root]; ok {
 		return
 	}
-	if s.bloom.Contains(root[:]) {
+	if s.exist != nil {
+		if _, ok := s.exist.Get(root); ok {
+			// already written in migration, skip the node
+			return
+		}
+	} else if s.bloom == nil || s.bloom.Contains(root[:]) {
 		// Bloom filter says this might be a duplicate, double check
-		if s.exist != nil {
-			if _, ok := s.exist.Get(root); ok {
-				// already written in migration, skip the node
-				return
-			}
-		} else if ok, _ := s.database.HasStateTrieNode(root[:]); ok {
+		if ok, _ := s.database.HasStateTrieNode(root[:]); ok {
 			logger.Info("skip write node in migration by ReadStateTrieNode", "AddSubTrie", root.String())
 			return
 		}
@@ -165,14 +163,14 @@ func (s *TrieSync) AddRawEntry(hash common.Hash, depth int, parent common.Hash) 
 	if _, ok := s.membatch.batch[hash]; ok {
 		return
 	}
-	if s.bloom.Contains(hash[:]) {
+	if s.exist != nil {
+		if _, ok := s.exist.Get(hash); ok {
+			// already written in migration, skip the node
+			return
+		}
+	} else if s.bloom == nil || s.bloom.Contains(hash[:]) {
 		// Bloom filter says this might be a duplicate, double check
-		if s.exist != nil {
-			if _, ok := s.exist.Get(hash); ok {
-				// already written in migration, skip the node
-				return
-			}
-		} else if ok, _ := s.database.HasStateTrieNode(hash.Bytes()); ok {
+		if ok, _ := s.database.HasStateTrieNode(hash.Bytes()); ok {
 			return
 		}
 		// False positive, bump fault meter
@@ -260,7 +258,10 @@ func (s *TrieSync) Commit(dbw database.Putter) (int, error) {
 		if err := dbw.Put(key[:], s.membatch.batch[key]); err != nil {
 			return i, err
 		}
-		s.bloom.Add(key[:])
+
+		if s.bloom != nil {
+			s.bloom.Add(key[:])
+		}
 
 		if s.exist != nil {
 			s.exist.Add(key, nil)
@@ -342,20 +343,20 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 			if _, ok := s.membatch.batch[hash]; ok {
 				continue
 			}
-
-			if s.bloom.Contains(node) {
+			if s.exist != nil {
+				if _, ok := s.exist.Get(hash); ok {
+					// already written in migration, skip the node
+					continue
+				}
+			} else if s.bloom == nil || s.bloom.Contains(node) {
 				// Bloom filter says this might be a duplicate, double check
-				if s.exist != nil {
-					if _, ok := s.exist.Get(hash); ok {
-						// already written in migration, skip the node
-						continue
-					}
-				} else if ok, _ := s.database.HasStateTrieNode(node); ok {
+				if ok, _ := s.database.HasStateTrieNode(node); ok {
 					continue
 				}
 				// False positive, bump fault meter
 				bloomFaultMeter.Mark(1)
 			}
+
 			// Locally unknown node, schedule for retrieval
 			requests = append(requests, &request{
 				hash:     hash,
