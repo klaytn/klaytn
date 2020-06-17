@@ -68,6 +68,8 @@ type ValidatorSet interface {
 	List() []Validator
 	// Return the sub validator array
 	SubList(prevHash common.Hash, view *View) []Validator
+	// Return whether the given address is one of sub-list
+	CheckInSubList(prevHash common.Hash, view *View, addr common.Address) bool
 	// Return the sub validator array with the specified proposer
 	SubListWithProposer(prevHash common.Hash, proposer common.Address, view *View) []Validator
 	// Get validator by index

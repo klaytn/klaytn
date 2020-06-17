@@ -25,6 +25,8 @@ var (
 	// errNotFromProposer is returned when received message is supposed to be from
 	// proposer.
 	errNotFromProposer = errors.New("message does not come from proposer")
+	// errNotFromCommittee is returned when received message is supposed to be from a committee.
+	errNotFromCommittee = errors.New("message does not come from a committee")
 	// errIgnored is returned when a message was ignored.
 	errIgnored = errors.New("message is ignored")
 	// errFutureMessage is returned when current view is earlier than the

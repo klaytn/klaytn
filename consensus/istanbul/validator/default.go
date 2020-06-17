@@ -270,6 +270,15 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	return subset
 }
 
+func (valSet *defaultSet) CheckInSubList(prevHash common.Hash, view *istanbul.View, addr common.Address) bool {
+	for _, val := range valSet.SubList(prevHash, view) {
+		if val.Address() == addr {
+			return true
+		}
+	}
+	return false
+}
+
 func (valSet *defaultSet) IsSubSet() bool {
 	return valSet.Size() > valSet.subSize
 }

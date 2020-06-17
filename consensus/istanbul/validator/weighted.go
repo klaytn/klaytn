@@ -384,6 +384,15 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	return committee
 }
 
+func (valSet *weightedCouncil) CheckInSubList(prevHash common.Hash, view *istanbul.View, addr common.Address) bool {
+	for _, val := range valSet.SubList(prevHash, view) {
+		if val.Address() == addr {
+			return true
+		}
+	}
+	return false
+}
+
 func (valSet *weightedCouncil) IsSubSet() bool {
 	// TODO-Klaytn-RemoveLater We don't use this interface anymore. Eventually let's remove this function from ValidatorSet interface.
 	return valSet.Size() > valSet.subSize
