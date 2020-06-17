@@ -328,10 +328,10 @@ func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Databa
 		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
 	}
 	return &Database{
-		diskDB:            diskDB,
-		nodes:             map[common.Hash]*cachedNode{{}: {}},
-		preimages:         make(map[common.Hash][]byte),
-		trieNodeCache:     trieNodeCache,
+		diskDB:        diskDB,
+		nodes:         map[common.Hash]*cachedNode{{}: {}},
+		preimages:     make(map[common.Hash][]byte),
+		trieNodeCache: trieNodeCache,
 	}
 }
 
