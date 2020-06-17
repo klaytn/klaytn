@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/mclock"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"runtime"
@@ -52,20 +54,20 @@ func (td *stateTrieMigrationDB) ReadPreimage(hash common.Hash) []byte {
 	return td.ReadPreimageFromNew(hash)
 }
 
-func (bc *BlockChain) stateMigrationCommit(s *statedb.TrieSync, db database.DBManager) (int, time.Duration, error) {
-	start := time.Now()
-	stateTrieBatch := db.NewBatch(database.StateTrieDB)
-
-	written, err := s.Commit(stateTrieBatch)
+func (bc *BlockChain) stateMigrationCommit(s *statedb.TrieSync, batch database.Batch) (int, error) {
+	written, err := s.Commit(batch)
 	if written == 0 || err != nil {
-		return written, 0, err
+		return written, err
 	}
 
-	if err := stateTrieBatch.Write(); err != nil {
-		return 0, 0, fmt.Errorf("DB write error: %v", err)
+	if batch.ValueSize() > database.IdealBatchSize {
+		if err := batch.Write(); err != nil {
+			return 0, fmt.Errorf("DB write error: %v", err)
+		}
+		batch.Reset()
 	}
 
-	return written, time.Since(start), nil
+	return written, nil
 }
 
 func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{}, hashCh chan common.Hash, resultCh chan statedb.SyncResult) {
@@ -122,14 +124,17 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		go bc.concurrentRead(srcCachedDB, quitCh, hashCh, resultCh)
 	}
 
+	stateTrieBatch := targetDB.DiskDB().NewBatch(database.StateTrieDB)
+	stats := migrationStats{initialStartTime: start, startTime: mclock.Now()}
+
 	// Migration main loop
 	for trieSync.Pending() > 0 {
 		bc.committedCnt, bc.pendingCnt = committedCnt, trieSync.Pending()
-		queue = append(queue[:0], trieSync.Missing(database.IdealBatchSize)...)
+		queue = append(queue[:0], trieSync.Missing(1024)...)
 		results := make([]statedb.SyncResult, len(queue))
 
 		// Read the trie nodes
-		startIter := time.Now()
+		startRead := time.Now()
 		go func() {
 			for _, hash := range queue {
 				hashCh <- hash
@@ -145,32 +150,29 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 			}
 			results[i] = result
 		}
-		read, readElapsed := len(queue), time.Since(startIter)
+		stats.read += len(queue)
+		stats.readElapsed += time.Since(startRead)
 
 		// Process trie nodes
+		startProcess := time.Now()
 		if _, index, err := trieSync.Process(results); err != nil {
 			logger.Error("State migration is failed by process error", "err", err)
 			return fmt.Errorf("failed to process result #%d: %v", index, err)
 		}
+		stats.processElapsed += time.Since(startProcess)
 
 		// Commit trie nodes
-		written, writeElapsed, err := bc.stateMigrationCommit(trieSync, targetDB.DiskDB())
+		startWrite := time.Now()
+		written, err := bc.stateMigrationCommit(trieSync, stateTrieBatch)
 		if err != nil {
 			logger.Error("State migration is failed by commit error", "err", err)
 			return fmt.Errorf("failed to commit data #%d: %v", written, err)
 		}
+		stats.committed += written
+		stats.writeElapsed += time.Since(startWrite)
 
 		// Report progress
-		committedCnt += written
-		bc.committedCnt, bc.pendingCnt, bc.progress = committedCnt, trieSync.Pending(), trieSync.CalcProgressPercentage()
-		progressStr := strconv.FormatFloat(bc.progress, 'f', 4, 64)
-		progressStr = strings.TrimRight(progressStr, "0")
-		progressStr = strings.TrimRight(progressStr, ".") + "%"
-
-		logger.Warn("State migration : Progress",
-			"progress", progressStr, "committedCnt", committedCnt, "pendingCnt", bc.pendingCnt,
-			"read", read, "readElapsed", readElapsed, "written", written, "writeElapsed", writeElapsed,
-			"elapsed", time.Since(startIter))
+		stats.stateMigrationReport(false, trieSync.Pending(), trieSync.CalcProgressPercentage())
 
 		select {
 		case <-bc.stopStateMigration:
@@ -184,16 +186,28 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 		default:
 		}
 	}
-	bc.committedCnt, bc.pendingCnt, bc.progress = committedCnt, trieSync.Pending(), trieSync.CalcProgressPercentage()
+
+	// Flush trie nodes which is not written yet.
+	if err := stateTrieBatch.Write(); err != nil {
+		logger.Error("State migration is failed by commit error", "err", err)
+		return fmt.Errorf("DB write error: %v", err)
+	}
+
+	stats.stateMigrationReport(true, trieSync.Pending(), trieSync.CalcProgressPercentage())
 
 	elapsed := time.Since(start)
-	speed := float64(committedCnt) / elapsed.Seconds()
-	logger.Info("State migration : State copied", "committedCnt", committedCnt, "elapsed", elapsed, "committed per second", speed)
+	speed := float64(stats.totalCommitted) / elapsed.Seconds()
+	logger.Info("State migration : Copy is done",
+		"totalRead", stats.totalRead, "totalCommitted", stats.totalCommitted,
+		"totalElapsed", elapsed, "committed per second", speed)
 
+	startCheck := time.Now()
 	if err := state.CheckStateConsistency(srcCachedDB.DiskDB(), targetDB.DiskDB(), rootHash, bc.committedCnt, bc.quit); err != nil {
-		logger.Error("State migration : CheckStateConsistency returns error", "err", err)
+		logger.Error("State migration : copied stateDB is invalid", "err", err)
 		return err
 	}
+	checkElapsed := time.Since(startCheck)
+	logger.Info("State migration : Consistency check is done", "elapsed", checkElapsed)
 
 	bc.db.FinishStateMigration()
 	logger.Info("State migration : Finished")
@@ -201,6 +215,44 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	return nil
 }
 
+// migrationStats tracks and reports on state migration.
+type migrationStats struct {
+	read, committed, totalRead, totalCommitted, pending int
+	progress                                            float64
+	initialStartTime                                    time.Time
+	startTime                                           mclock.AbsTime
+	readElapsed                                         time.Duration
+	processElapsed                                      time.Duration
+	writeElapsed                                        time.Duration
+}
+
+func (st *migrationStats) stateMigrationReport(force bool, pending int, progress float64) {
+	var (
+		now     = mclock.Now()
+		elapsed = time.Duration(now) - time.Duration(st.startTime)
+	)
+
+	if force || elapsed >= log.StatsReportLimit {
+		st.totalRead += st.read
+		st.totalCommitted += st.committed
+		st.pending, st.progress = pending, progress
+
+		progressStr := strconv.FormatFloat(st.progress, 'f', 4, 64)
+		progressStr = strings.TrimRight(progressStr, "0")
+		progressStr = strings.TrimRight(progressStr, ".") + "%"
+
+		logger.Info("State migration progress",
+			"progress", progressStr,
+			"totalRead", st.totalRead, "totalCommitted", st.totalCommitted, "pending", st.pending,
+			"read", st.read, "readElapsed", st.readElapsed, "processElapsed", st.processElapsed,
+			"written", st.committed, "writeElapsed", st.writeElapsed,
+			"elapsed", common.PrettyDuration(elapsed),
+			"totalElapsed", time.Since(st.initialStartTime))
+
+		st.read, st.committed = 0, 0
+		st.startTime = now
+	}
+}
 func (bc *BlockChain) checkTrieContents(oldDB, newDB *statedb.Database, root common.Hash) ([]common.Address, error) {
 	oldTrie, err := statedb.NewSecureTrie(root, oldDB)
 	if err != nil {
