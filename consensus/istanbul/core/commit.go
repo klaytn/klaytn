@@ -34,6 +34,14 @@ func (c *core) sendCommit() {
 	}
 
 	sub := c.current.Subject()
+	prevHash := c.current.Proposal().ParentHash()
+
+	// Do not send message if the owner of the core is not a member of the committee for the `sub.View`
+	if !c.valSet.CheckInSubList(prevHash, sub.View, c.Address()) {
+		return
+	}
+
+	// TODO-Klaytn-Istanbul: generalize broadcastCommit for all istanbul message types
 	c.broadcastCommit(sub)
 }
 
