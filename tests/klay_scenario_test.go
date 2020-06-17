@@ -44,6 +44,9 @@ import (
 var (
 	to       = common.HexToAddress("7b65B75d204aBed71587c9E519a89277766EE1d0")
 	feePayer = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
+)
+
+const (
 	nonce    = uint64(1234)
 	gasLimit = uint64(100000000000)
 )
