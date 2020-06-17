@@ -36,6 +36,18 @@ var (
 	errStopByQuit = errors.New("stopByQuit")
 )
 
+type NodeParallelIterator struct {
+	iterators []*NodeIterator
+}
+
+// NewNodeIterator creates an post-order state node iterator.
+func NewNodeParallelIterator(state *StateDB) *NodeIterator {
+	state.trie.Hash()
+	return &NodeIterator{
+		state: state,
+	}
+}
+
 // NodeIterator is an iterator to traverse the entire state trie post-order,
 // including all of the contract code and contract state tries.
 type NodeIterator struct {

@@ -220,7 +220,7 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 	if block == nil {
 		return state.Dump{}, fmt.Errorf("block #%d not found", blockNr)
 	}
-	stateDb, err := api.cn.BlockChain().StateAt(block.Root())
+	stateDb, err := api.cn.BlockChain().StateAtWithPersistent(block.Root())
 	if err != nil {
 		return state.Dump{}, err
 	}
@@ -251,7 +251,8 @@ func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, e
 		Tries: make([]Trie, 0),
 	}
 
-	stateDB, err := state.New(block.Root(), state.NewDatabase(api.cn.chainDB))
+	db := state.NewDatabaseWithCache(api.cn.chainDB, api.cn.blockchain.StateCache().TrieDB().TrieNodeCache())
+	stateDB, err := state.New(block.Root(), db)
 	if err != nil {
 		return DumpStateTrieResult{}, err
 	}
@@ -267,6 +268,16 @@ func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, e
 		result.Tries = append(result.Tries, t)
 	}
 	return result, nil
+}
+
+// StartWarmUp retrieves all state/storage tries of the given state root and caches the tries.
+func (api *PublicDebugAPI) StartWarmUp() error {
+	return api.cn.blockchain.StartWarmUp()
+}
+
+// StopWarmUp stop the warming up process.
+func (api *PublicDebugAPI) StopWarmUp() error {
+	return api.cn.blockchain.StopWarmUp()
 }
 
 // PrivateDebugAPI is the collection of CN full node APIs exposed over
