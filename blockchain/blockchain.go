@@ -165,6 +165,10 @@ type BlockChain struct {
 	committedCnt          int
 	pendingCnt            int
 	progress              float64
+
+	// Warm up
+	lastCommittedBlock uint64
+	quitWarmUp         chan struct{}
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -311,6 +315,7 @@ func (bc *BlockChain) loadLastState() error {
 	}
 	// Everything seems to be fine, set as the head block
 	bc.currentBlock.Store(currentBlock)
+	bc.lastCommittedBlock = currentBlock.NumberU64()
 
 	// Restore the last known head header
 	currentHeader := currentBlock.Header()
@@ -408,6 +413,7 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	// If all checks out, manually set the head block
 	bc.mu.Lock()
 	bc.currentBlock.Store(block)
+	bc.lastCommittedBlock = block.NumberU64()
 	bc.mu.Unlock()
 
 	logger.Info("Committed new head block", "number", block.Number(), "hash", hash)
@@ -461,6 +467,15 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
+	return state.New(root, bc.stateCache)
+}
+
+// StateAtWithPersistent returns a new mutable state based on a particular point in time with persistent trie nodes.
+func (bc *BlockChain) StateAtWithPersistent(root common.Hash) (*state.StateDB, error) {
+	exist := bc.stateCache.TrieDB().DoesExistNodeInPersistent(root)
+	if !exist {
+		return nil, ErrNotExistNode
+	}
 	return state.New(root, bc.stateCache)
 }
 
@@ -1056,6 +1071,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		}
 
 		bc.checkStartStateMigration(block.NumberU64(), root)
+		bc.lastCommittedBlock = block.NumberU64()
 	} else {
 		// Full but not archive node, do proper garbage collection
 		trieDB.Reference(root, common.Hash{}) // metadata reference to keep trie alive
@@ -1085,6 +1101,8 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 					logger.Error("Error from trieDB.Cap by state migration", "err", err)
 				}
 			}
+
+			bc.lastCommittedBlock = block.NumberU64()
 		}
 
 		bc.chBlock <- gcBlock{root, block.NumberU64()}

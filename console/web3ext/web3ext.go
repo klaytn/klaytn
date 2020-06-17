@@ -298,6 +298,14 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'startWarmUp',
+			call: 'debug_startWarmUp',
+		}),
+		new web3._extend.Method({
+			name: 'stopWarmUp',
+			call: 'debug_stopWarmUp',
+		}),
+		new web3._extend.Method({
 			name: 'chaindbProperty',
 			call: 'debug_chaindbProperty',
 			params: 1,

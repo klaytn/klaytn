@@ -19,6 +19,7 @@ package blockchain
 import (
 	"errors"
 	"fmt"
+	"github.com/VictoriaMetrics/fastcache"
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -370,4 +371,135 @@ func (bc *BlockChain) StopStateMigration() error {
 // number of committed blocks and number of pending blocks
 func (bc *BlockChain) StatusStateMigration() (bool, uint64, int, int, float64) {
 	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.committedCnt, bc.pendingCnt, bc.progress
+}
+
+func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database, result chan common.Hash, finish chan error) (resultErr error) {
+	defer func() {
+		finish <- resultErr
+	}()
+
+	stateDB, err := state.New(root, db)
+	if err != nil {
+		return err
+	}
+
+	it := state.NewNodeIterator(stateDB)
+	for it.Next() {
+		result <- it.Hash
+
+		select {
+		case <-bc.quitWarmUp:
+			return errors.New("quitWarmUp")
+		case <-bc.quit:
+			return errors.New("quit")
+		default:
+		}
+	}
+
+	return nil
+}
+
+func (bc *BlockChain) StartWarmUp() error {
+	if bc.quitWarmUp != nil {
+		return fmt.Errorf("already warming up")
+	}
+
+	block := bc.GetBlockByNumber(bc.lastCommittedBlock)
+	if block == nil {
+		return fmt.Errorf("block #%d not found", bc.lastCommittedBlock)
+	}
+
+	mainTrieDB := bc.StateCache().TrieDB()
+	mainTrieCacheLimit := uint64(mainTrieDB.GetTrieNodeCacheLimit())
+	db := state.NewDatabaseWithCache(bc.db, mainTrieDB.TrieNodeCache())
+
+	bc.quitWarmUp = make(chan struct{})
+
+	go func() {
+		defer func() {
+			bc.quitWarmUp = nil
+		}()
+
+		var stats fastcache.Stats
+		var context []interface{}
+		var percent uint64
+		var cnt int
+
+		updateContext := func() []interface{} {
+			stats = fastcache.Stats{}
+			mainTrieDB.TrieNodeCache().UpdateStats(&stats)
+			percent = stats.BytesSize * 100 / mainTrieCacheLimit
+			context = []interface{}{
+				"warmUpCnt", cnt,
+				"cacheLimit", units.Base2Bytes(mainTrieCacheLimit).String(),
+				"cachedSize", units.Base2Bytes(stats.BytesSize).String(),
+				"percent", percent,
+			}
+			return context
+		}
+
+		children, err := db.TrieDB().NodeChildren(block.Root())
+		if err != nil {
+			logger.Error("Warm up is stop by err", "err", err)
+		}
+
+		logger.Info("Warm up is started", "blockNum", block.NumberU64(), "root", block.Root().String(), "len(children)", len(children))
+
+		var resultErr error
+		resultHashCh := make(chan common.Hash, 10000)
+		resultErrCh := make(chan error)
+		finishCnt := 0
+
+		for _, child := range children {
+			go bc.concurrentIterateTrie(child, db, resultHashCh, resultErrCh)
+		}
+
+		logged := time.Now()
+	loop:
+		for {
+			select {
+			case <-resultHashCh:
+				cnt++
+				if time.Since(logged) > log.StatsReportLimit {
+					logged = time.Now()
+
+					updateContext()
+					if percent > 90 { //more than 90%
+						close(bc.quitWarmUp)
+						logger.Info("Warm up is completed", context...)
+						return
+					}
+
+					logger.Info("Warm up progress", context...)
+				}
+			case err := <-resultErrCh:
+				if err != nil {
+					resultErr = err
+					logger.Warn("Warm up got an error", "err", err)
+				}
+
+				finishCnt++
+				logger.Debug("Warm up is being finished", "finishCnt", finishCnt, "err", err)
+
+				if finishCnt >= len(children) {
+					break loop
+				}
+			}
+		}
+		updateContext()
+		context = append(context, "resultErr", resultErr)
+		logger.Info("Warm up is completed", context...)
+	}()
+
+	return nil
+}
+
+func (bc *BlockChain) StopWarmUp() error {
+	if bc.quitWarmUp == nil {
+		return fmt.Errorf("not in warm up")
+	}
+
+	close(bc.quitWarmUp)
+
+	return nil
 }

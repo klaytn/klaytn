@@ -124,7 +124,8 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache *fastcache.Cache // GC friendly memory cache of trie node RLPs
+	trieNodeCache      *fastcache.Cache // GC friendly memory cache of trie node RLPs
+	trieNodeCacheLimit int              // byte size of trieNodeCache
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -318,20 +319,23 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // for nodes loaded from disk.
 func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Database {
 	var trieNodeCache *fastcache.Cache
+	var cacheSizeByte int
+
 	if cacheSizeMB == AutoScaling {
 		cacheSizeMB = getTrieNodeCacheSizeMB()
 	}
 	if cacheSizeMB > 0 {
-		cacheSizeByte := cacheSizeMB * 1024 * 1024
+		cacheSizeByte = cacheSizeMB * 1024 * 1024
 		trieNodeCache = fastcache.New(cacheSizeByte)
 
 		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
 	}
 	return &Database{
-		diskDB:        diskDB,
-		nodes:         map[common.Hash]*cachedNode{{}: {}},
-		preimages:     make(map[common.Hash][]byte),
-		trieNodeCache: trieNodeCache,
+		diskDB:             diskDB,
+		nodes:              map[common.Hash]*cachedNode{{}: {}},
+		preimages:          make(map[common.Hash][]byte),
+		trieNodeCache:      trieNodeCache,
+		trieNodeCacheLimit: cacheSizeByte,
 	}
 }
 
@@ -372,6 +376,11 @@ func (db *Database) DiskDB() database.DBManager {
 // TrieNodeCache retrieves the trieNodeCache of the trie database.
 func (db *Database) TrieNodeCache() *fastcache.Cache {
 	return db.trieNodeCache
+}
+
+// GetTrieNodeCacheLimit returns the byte size of trie node cache.
+func (db *Database) GetTrieNodeCacheLimit() int {
+	return db.trieNodeCacheLimit
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.
@@ -521,6 +530,43 @@ func (db *Database) Node(hash common.Hash) ([]byte, error) {
 	return enc, err
 }
 
+// NodeChildren retrieves the children of the given hash trie
+func (db *Database) NodeChildren(hash common.Hash) ([]common.Hash, error) {
+	childrenHash := make([]common.Hash, 0, 16)
+
+	if (hash == common.Hash{}) {
+		return childrenHash, ErrZeroHashNode
+	}
+
+	n := db.node(hash)
+	if n == nil {
+		return childrenHash, nil
+	}
+
+	children := make([]node, 0, 16)
+
+	switch n := (n).(type) {
+	case *shortNode:
+		children = []node{n}
+	case *fullNode:
+		for i := 0; i < 17; i++ {
+			if n.Children[i] != nil {
+				children = append(children, n.Children[i])
+			}
+		}
+	}
+
+	for _, child := range children {
+		n, ok := child.(hashNode)
+		if ok {
+			hash := common.BytesToHash(n)
+			childrenHash = append(childrenHash, hash)
+		}
+	}
+
+	return childrenHash, nil
+}
+
 // NodeFromOld retrieves an encoded cached trie node from memory. If it cannot be found
 // cached, the method queries the old persistent database for the content.
 func (db *Database) NodeFromOld(hash common.Hash) ([]byte, error) {
@@ -555,6 +601,22 @@ func (db *Database) DoesExistCachedNode(hash common.Hash) bool {
 	_, ok := db.nodes[hash]
 	db.lock.RUnlock()
 	return ok
+}
+
+// DoesExistNodeInPersistent returns if the node exists on the persistent database or its cache.
+func (db *Database) DoesExistNodeInPersistent(hash common.Hash) bool {
+	// Retrieve the node from DB cache if available
+	if enc := db.getCachedNode(hash); enc != nil {
+		return true
+	}
+
+	// Content unavailable in DB cache, attempt to retrieve from disk
+	enc, err := db.diskDB.ReadCachedTrieNode(hash)
+	if err == nil && enc != nil {
+		return true
+	}
+
+	return false
 }
 
 // preimage retrieves a cached trie node pre-image from memory. If it cannot be
