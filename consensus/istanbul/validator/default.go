@@ -28,8 +28,6 @@ import (
 	"math/rand"
 	"reflect"
 	"sort"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -156,14 +154,10 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer com
 	if uint64(len(valSet.validators)) <= valSet.subSize {
 		return valSet.validators
 	}
-	hashstring := strings.TrimPrefix(prevHash.Hex(), "0x")
-	if len(hashstring) > 15 {
-		hashstring = hashstring[:15]
-	}
-	seed, err := strconv.ParseInt(hashstring, 16, 64)
+
+	// get a random seed used to calculate proposer.
+	seed, err := CalcSeed(prevHash)
 	if err != nil {
-		logger.Error("input", "hash", prevHash.Hex())
-		logger.Error("fail to make sub-list of validators", "seed", seed, "err", err)
 		return valSet.validators
 	}
 

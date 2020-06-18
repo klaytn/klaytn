@@ -25,6 +25,8 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/log"
+	"strconv"
+	"strings"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulValidator)
@@ -62,4 +64,21 @@ func ExtractValidators(extraData []byte) []common.Address {
 	}
 
 	return addrs
+}
+
+// CalcSeed returns a random seed used to calculate proposer.
+// It converts 7.5 bytes of the given hash to int64.
+func CalcSeed(hash common.Hash) (int64, error) {
+	// TODO-Klaytn-Istanbul: convert hash.Hex() to int64 directly without string conversion
+	hashstring := strings.TrimPrefix(hash.Hex(), "0x")
+	if len(hashstring) > 15 {
+		hashstring = hashstring[:15]
+	}
+
+	seed, err := strconv.ParseInt(hashstring, 16, 64)
+	if err != nil {
+		logger.Error("fail to make sub-list of validators", "hash", hash.Hex(), "seed", seed, "err", err)
+		return 0, err
+	}
+	return seed, nil
 }
