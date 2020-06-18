@@ -95,6 +95,7 @@ type TrieSync struct {
 }
 
 // NewTrieSync creates a new trie data download scheduler.
+// If both bloom and cache are set, only cache is used.
 func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback, bloom *SyncBloom, lruCache *lru.Cache) *TrieSync {
 	ts := &TrieSync{
 		database:         database,
