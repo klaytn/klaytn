@@ -41,7 +41,6 @@ type DBManager interface {
 	InMigration() bool
 	MigrationBlockNumber() uint64
 	getStateTrieMigrationInfo() uint64
-	getDBDir(DBEntryType) string
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
