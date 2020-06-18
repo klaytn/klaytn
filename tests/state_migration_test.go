@@ -34,7 +34,7 @@ import (
 // continuous occurrence of state trie migration and node restart must success
 func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
 	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 10)
-	defer os.RemoveAll(workspace)
+	//defer os.RemoveAll(workspace)
 
 	stateTriePath := []byte("statetrie")
 
@@ -73,41 +73,30 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 
 	// use the default StateTrie DB if it is not set on miscDB
 	{
+		// check if stateDB value is not stored in miscDB
 		key, err := cn.ChainDB().GetMiscDB().Get(stateTriePathKey)
 		assert.Error(t, err)
 		assert.Len(t, key, 0)
-		fullNode, cn = checkStatTrieDB(t, fullNode, cn, validator, workspace, "statetrie")
-	}
 
-	// after migration, use the created DB
-	{
-		startMigration(t, cn)
-		time.Sleep(time.Second)
-		newDBPath2, err := cn.ChainDB().GetMiscDB().Get(stateTriePathKey)
-		assert.NoError(t, err)
-		fullNode, cn = checkStatTrieDB(t, fullNode, cn, validator, workspace, string(newDBPath2))
+		// write values in stateDB and check if the values are stored in DB
+		entries := writeRandomValueToStateTrieDB(t, cn.ChainDB().NewBatch(database.StateTrieDB))
+		stopNode(t, fullNode) // stop node to release DB lock
+		checkIfStoredInDB(t, filepath.Join(cn.ChainDB().GetDBConfig().Dir, "statetrie"), entries)
+		fullNode, cn = startNode(t, workspace, validator)
 	}
 
 	// use the state trie DB that is specified in miscDB
 	{
-		newDBPath := []byte("NEW_STATE_TRIE_DB_PATH")
-		err := cn.ChainDB().GetMiscDB().Put(stateTriePathKey, newDBPath)
+		// change stateDB value in miscDB
+		newDBPath := "NEW_STATE_TRIE_DB_PATH"
+		err := cn.ChainDB().GetMiscDB().Put(stateTriePathKey, []byte(newDBPath))
 		assert.NoError(t, err)
+
+		// an error expected on node start
 		stopNode(t, fullNode)
-		// errpr expected on node start
 		_, _, err = newKlaytnNode(t, workspace, validator)
 		assert.Error(t, err, "start failure expected, changed state trie db has no data")
 	}
-}
-
-// checkStatTrieDB writes random values to state trie and checks if the values are stored in expected DB
-func checkStatTrieDB(t *testing.T, fullNode *node.Node, node *cn.CN, validator *TestAccountType, workspace string, dbPath string) (*node.Node, *cn.CN) {
-	entries := writeRandomValueToStateTrieDB(t, node.ChainDB().NewBatch(database.StateTrieDB))
-	time.Sleep(10 * time.Second)
-
-	stopNode(t, fullNode) // release DB lock
-	checkIfStoredInDB(t, filepath.Join(node.ChainDB().GetDBConfig().Dir, dbPath), entries)
-	return startNode(t, workspace, validator)
 }
 
 func writeRandomValueToStateTrieDB(t *testing.T, batch database.Batch) map[string]string {
