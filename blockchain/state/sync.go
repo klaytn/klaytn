@@ -30,6 +30,7 @@ import (
 )
 
 // NewStateSync create a new state trie download scheduler.
+// LRU cache is mendatory when state syncing and block processing are executed simultaneously
 func NewStateSync(root common.Hash, database statedb.StateTrieReadDB, bloom *statedb.SyncBloom, lruCache *lru.Cache) *statedb.TrieSync {
 	var syncer *statedb.TrieSync
 	callback := func(leaf []byte, parent common.Hash, parentDepth int) error {
