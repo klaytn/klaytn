@@ -142,62 +142,11 @@ func (valSet *defaultSet) List() []istanbul.Validator {
 }
 
 func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
-	valSet.validatorMu.RLock()
-	defer valSet.validatorMu.RUnlock()
-
-	if uint64(len(valSet.validators)) <= valSet.subSize {
-		return valSet.validators
+	proposer := valSet.GetProposer()
+	if proposer == nil {
+		return valSet.List()
 	}
-	hashstring := strings.TrimPrefix(prevHash.Hex(), "0x")
-	if len(hashstring) > 15 {
-		hashstring = hashstring[:15]
-	}
-	seed, err := strconv.ParseInt(hashstring, 16, 64)
-	if err != nil {
-		logger.Error("input", "hash", prevHash.Hex())
-		logger.Error("fail to make sub-list of validators", "seed", seed, "err", err)
-		return valSet.validators
-	}
-
-	// shuffle
-	subset := make([]istanbul.Validator, valSet.subSize)
-	subset[0] = valSet.GetProposer()
-	// next proposer
-	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64())
-
-	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
-	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
-
-	if proposerIdx == nextproposerIdx {
-		logger.Error("fail to make propser", "current proposer idx", proposerIdx, "next idx", nextproposerIdx)
-	}
-
-	limit := len(valSet.validators)
-	picker := rand.New(rand.NewSource(seed))
-
-	pickSize := limit - 2
-	indexs := make([]int, pickSize)
-	idx := 0
-	for i := 0; i < limit; i++ {
-		if i != proposerIdx && i != nextproposerIdx {
-			indexs[idx] = i
-			idx++
-		}
-	}
-	for i := 0; i < pickSize; i++ {
-		randIndex := picker.Intn(pickSize)
-		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
-	}
-
-	for i := uint64(0); i < valSet.subSize-2; i++ {
-		subset[i+2] = valSet.validators[indexs[i]]
-	}
-
-	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-		logger.Error("### subList", "prevHash", prevHash.Hex())
-	}
-
-	return subset
+	return valSet.SubListWithProposer(prevHash, proposer.Address(), view)
 }
 
 func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer common.Address, view *istanbul.View) []istanbul.Validator {

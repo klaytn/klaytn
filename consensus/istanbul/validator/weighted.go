@@ -423,6 +423,7 @@ func (valSet *weightedCouncil) GetByAddress(addr common.Address) (int, istanbul.
 }
 
 func (valSet *weightedCouncil) GetProposer() istanbul.Validator {
+	// TODO-Klaytn-Istanbul: nil check is needed for valSet.proposer
 	//logger.Trace("GetProposer()", "proposer", valSet.proposer)
 	return valSet.proposer.Load().(istanbul.Validator)
 }
