@@ -18,7 +18,7 @@ package tests
 
 import (
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/node"
+	node_ "github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -88,17 +88,26 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 		fullNode, node = checkStatTrieDB(t, fullNode, node, validator, workspace, string(newDBPath2))
 	}
 
-	stopNode(t, fullNode)
+	// use the state trie DB that is specified in miscDB
+	{
+		newDBPath := []byte("NEW_STATE_TRIE_DB_PATH")
+		err := node.ChainDB().GetMiscDB().Put(stateTriePathKey, newDBPath)
+		assert.NoError(t, err)
+		// node should not be restarted because changed state trie db has no data
+		stopNode(t, fullNode)
+		_, _, err = newKlaytnNode(t, workspace, validator)
+		assert.Error(t, err)
+	}
 }
 
 // checkStatTrieDB writes random values to state trie and checks if the values are stored in expected DB
-func checkStatTrieDB(t *testing.T, fullNode *node.Node, node *cn.CN, validator *TestAccountType, workspace string, dbPath string) (*node.Node, *cn.CN) {
+func checkStatTrieDB(t *testing.T, fullNode *node_.Node, node *cn.CN, validator *TestAccountType, workspace string, dbPath string) (*node_.Node, *cn.CN) {
 	entries := writeRandomValueToStateTrieDB(t, node.ChainDB().NewBatch(database.StateTrieDB), node)
 	time.Sleep(10 * time.Second)
 
 	t.Log("stop before checking")
 	stopNode(t, fullNode) // release DB lock
-	checkIfStoredInDB(t, node, filepath.Join(node.ChainDB().GetDBConfig().Dir, dbPath), entries)
+	checkIfStoredInDB(t, filepath.Join(node.ChainDB().GetDBConfig().Dir, dbPath), entries)
 	return startNode(t, workspace, validator)
 }
 
@@ -117,9 +126,7 @@ func writeRandomValueToStateTrieDB(t *testing.T, batch database.Batch, node *cn.
 	return entries
 }
 
-func checkIfStoredInDB(t *testing.T, node *cn.CN, dir string, entries map[string]string) {
-	//node.ChainDB().GetStateTrieDB().Close() // release DB lock
-
+func checkIfStoredInDB(t *testing.T, dir string, entries map[string]string) {
 	dbs := make([]*leveldb.DB, 4)
 	for i := 0; i < 4; i++ {
 		var err error
@@ -181,7 +188,7 @@ func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 	stopNode(t, fullNode)
 }
 
-func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string, *TestAccountType, []*TestAccountType, []*TestAccountType) {
+func newSimpleBlockchain(t *testing.T, numAccounts int) (*node_.Node, *cn.CN, *TestAccountType, *big.Int, string, *TestAccountType, []*TestAccountType, []*TestAccountType) {
 	//if testing.Verbose() {
 	//	enableLog() // Change verbosity level in the function if needed
 	//}
@@ -202,7 +209,7 @@ func startMigration(t *testing.T, node *cn.CN) {
 	assert.NoError(t, err)
 }
 
-func restartNode(t *testing.T, fullNode *node.Node, node *cn.CN, workspace string, validator *TestAccountType) (*node.Node, *cn.CN) {
+func restartNode(t *testing.T, fullNode *node_.Node, node *cn.CN, workspace string, validator *TestAccountType) (*node_.Node, *cn.CN) {
 	stopNode(t, fullNode)
 	time.Sleep(2 * time.Second)
 	newFullNode, newNode := startNode(t, workspace, validator)
@@ -211,9 +218,10 @@ func restartNode(t *testing.T, fullNode *node.Node, node *cn.CN, workspace strin
 	return newFullNode, newNode
 }
 
-func startNode(t *testing.T, workspace string, validator *TestAccountType) (fullNode *node.Node, node *cn.CN) {
+func startNode(t *testing.T, workspace string, validator *TestAccountType) (fullNode *node_.Node, node *cn.CN) {
 	t.Log("=========== starting node ==============")
-	newFullNode, newNode := newKlaytnNode(t, workspace, validator)
+	newFullNode, newNode, err := newKlaytnNode(t, workspace, validator)
+	assert.NoError(t, err)
 	if err := newNode.StartMining(false); err != nil {
 		t.Fatal()
 	}
@@ -221,7 +229,7 @@ func startNode(t *testing.T, workspace string, validator *TestAccountType) (full
 	return newFullNode, newNode
 }
 
-func stopNode(t *testing.T, fullNode *node.Node) {
+func stopNode(t *testing.T, fullNode *node_.Node) {
 	if err := fullNode.Stop(); err != nil {
 		t.Fatal(err)
 	}
