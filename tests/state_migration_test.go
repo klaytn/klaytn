@@ -57,7 +57,7 @@ func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
 		newPathKey := append([]byte("databaseDirectory"), common.Int64ToByteBigEndian(uint64(database.StateTrieDB))...)
 		newStateTriePath, err := node.ChainDB().GetMiscDB().Get(newPathKey)
 		assert.NoError(t, err)
-		assert.NotEqual(t, stateTriePath, newStateTriePath)
+		assert.NotEqual(t, stateTriePath, newStateTriePath, "migration failed")
 		stateTriePath = newStateTriePath
 	}
 
@@ -93,31 +93,28 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 		newDBPath := []byte("NEW_STATE_TRIE_DB_PATH")
 		err := node.ChainDB().GetMiscDB().Put(stateTriePathKey, newDBPath)
 		assert.NoError(t, err)
-		// node should not be restarted because changed state trie db has no data
 		stopNode(t, fullNode)
 		_, _, err = newKlaytnNode(t, workspace, validator)
-		assert.Error(t, err)
+		assert.Error(t, err, "start failure expected, changed state trie db has no data")
 	}
 }
 
 // checkStatTrieDB writes random values to state trie and checks if the values are stored in expected DB
 func checkStatTrieDB(t *testing.T, fullNode *node_.Node, node *cn.CN, validator *TestAccountType, workspace string, dbPath string) (*node_.Node, *cn.CN) {
-	entries := writeRandomValueToStateTrieDB(t, node.ChainDB().NewBatch(database.StateTrieDB), node)
+	entries := writeRandomValueToStateTrieDB(t, node.ChainDB().NewBatch(database.StateTrieDB))
 	time.Sleep(10 * time.Second)
 
-	t.Log("stop before checking")
 	stopNode(t, fullNode) // release DB lock
 	checkIfStoredInDB(t, filepath.Join(node.ChainDB().GetDBConfig().Dir, dbPath), entries)
 	return startNode(t, workspace, validator)
 }
 
-func writeRandomValueToStateTrieDB(t *testing.T, batch database.Batch, node *cn.CN) map[string]string {
+func writeRandomValueToStateTrieDB(t *testing.T, batch database.Batch) map[string]string {
 	entries := make(map[string]string, 10)
 
 	for i := 0; i < 10; i++ {
 		key, value := common.MakeRandomByte(common.HashLength), common.MakeRandomByte(400)
 		err := batch.Put(key, value)
-
 		assert.NoError(t, err)
 		entries[string(key)] = string(value)
 	}
@@ -139,7 +136,7 @@ func checkIfStoredInDB(t *testing.T, dir string, entries map[string]string) {
 		for i := 0; i < 4; i++ {
 			datas[i], _ = dbs[i].Get([]byte(k), nil)
 		}
-		assert.Contains(t, datas, []byte(v))
+		assert.Contains(t, datas, []byte(v), "value written in stateDB does not actually exist in DB")
 	}
 }
 
@@ -165,15 +162,15 @@ func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check migration Status in cache before restart
-	assert.False(t, node.ChainDB().InMigration())
-	assert.NotEqual(t, migrationBlockNum, node.ChainDB().MigrationBlockNumber())
+	assert.False(t, node.ChainDB().InMigration(), "migration has not started yet")
+	assert.NotEqual(t, migrationBlockNum, node.ChainDB().MigrationBlockNumber(), "migration has not started yet")
 
 	fullNode, node = restartNode(t, fullNode, node, workspace, validator)
 	miscDB = node.ChainDB().GetMiscDB()
 
 	// check migration Status in cache after restart
 	if node.ChainDB().InMigration() {
-		assert.Equal(t, migrationBlockNum, node.ChainDB().MigrationBlockNumber())
+		assert.Equal(t, migrationBlockNum, node.ChainDB().MigrationBlockNumber(), "migration block number should match")
 		t.Log("Checked migration status while migration in on process")
 	}
 
@@ -183,7 +180,7 @@ func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 	newPathKey := append([]byte("databaseDirectory"), common.Int64ToByteBigEndian(uint64(database.StateTrieDB))...)
 	dir, err := miscDB.Get(newPathKey)
 	assert.NoError(t, err)
-	assert.NotEqual(t, "statetrie", string(dir))
+	assert.NotEqual(t, "statetrie", string(dir), "migration failed")
 
 	stopNode(t, fullNode)
 }
