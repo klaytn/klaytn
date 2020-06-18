@@ -23,6 +23,7 @@ package common
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"math/rand"
 )
 
 // ToHex returns the hex representation of b, prefixed with '0x'.
@@ -134,6 +135,12 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	copy(padded[l-len(slice):], slice)
 
 	return padded
+}
+
+func MakeRandomByte(n int) []byte {
+	s := make([]byte, n)
+	rand.Read(s)
+	return s
 }
 
 // IntToByteLittleEndian encodes a number as little endian uint64
