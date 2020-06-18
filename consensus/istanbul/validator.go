@@ -53,6 +53,14 @@ func (slice Validators) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
+func (slice Validators) AddressStringList() []string {
+	var stringAddrs []string
+	for _, val := range slice {
+		stringAddrs = append(stringAddrs, val.Address().String())
+	}
+	return stringAddrs
+}
+
 // ----------------------------------------------------------------------------
 
 type ValidatorSet interface {
@@ -66,11 +74,11 @@ type ValidatorSet interface {
 	SetSubGroupSize(size uint64)
 	// Return the validator array
 	List() []Validator
-	// Return the sub validator array
+	// SubList composes a committee after setting a proposer with a default value.
 	SubList(prevHash common.Hash, view *View) []Validator
 	// Return whether the given address is one of sub-list
 	CheckInSubList(prevHash common.Hash, view *View, addr common.Address) bool
-	// Return the sub validator array with the specified proposer
+	// SubListWithProposer composes a committee with given parameters.
 	SubListWithProposer(prevHash common.Hash, proposer common.Address, view *View) []Validator
 	// Get validator by index
 	GetByIndex(i uint64) Validator

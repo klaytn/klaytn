@@ -51,7 +51,7 @@ func TestCalcSeed(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		actual, err := CalcSeed(tc.hash)
+		actual, err := ConvertHashToSeed(tc.hash)
 		assert.Equal(t, err, tc.expectedErr)
 		assert.Equal(t, actual, tc.expected)
 	}
