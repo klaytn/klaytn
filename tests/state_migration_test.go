@@ -18,7 +18,7 @@ package tests
 
 import (
 	"github.com/klaytn/klaytn/common"
-	node_ "github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -66,41 +66,42 @@ func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
 
 // state trie DB should be determined by the values of miscDB
 func TestMigration_StartMigrationByMiscDB(t *testing.T) {
-	fullNode, node, validator, _, workspace, _, _, _ := newSimpleBlockchain(t, 10)
+	fullNode, cn, validator, _, workspace, _, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 
 	stateTriePathKey := append([]byte("databaseDirectory"), common.Int64ToByteBigEndian(uint64(database.StateTrieDB))...)
 
 	// use the default StateTrie DB if it is not set on miscDB
 	{
-		key, err := node.ChainDB().GetMiscDB().Get(stateTriePathKey)
+		key, err := cn.ChainDB().GetMiscDB().Get(stateTriePathKey)
 		assert.Error(t, err)
 		assert.Len(t, key, 0)
-		fullNode, node = checkStatTrieDB(t, fullNode, node, validator, workspace, "statetrie")
+		fullNode, cn = checkStatTrieDB(t, fullNode, cn, validator, workspace, "statetrie")
 	}
 
 	// after migration, use the created DB
 	{
-		startMigration(t, node)
+		startMigration(t, cn)
 		time.Sleep(time.Second)
-		newDBPath2, err := node.ChainDB().GetMiscDB().Get(stateTriePathKey)
+		newDBPath2, err := cn.ChainDB().GetMiscDB().Get(stateTriePathKey)
 		assert.NoError(t, err)
-		fullNode, node = checkStatTrieDB(t, fullNode, node, validator, workspace, string(newDBPath2))
+		fullNode, cn = checkStatTrieDB(t, fullNode, cn, validator, workspace, string(newDBPath2))
 	}
 
 	// use the state trie DB that is specified in miscDB
 	{
 		newDBPath := []byte("NEW_STATE_TRIE_DB_PATH")
-		err := node.ChainDB().GetMiscDB().Put(stateTriePathKey, newDBPath)
+		err := cn.ChainDB().GetMiscDB().Put(stateTriePathKey, newDBPath)
 		assert.NoError(t, err)
 		stopNode(t, fullNode)
+		// errpr expected on node start
 		_, _, err = newKlaytnNode(t, workspace, validator)
 		assert.Error(t, err, "start failure expected, changed state trie db has no data")
 	}
 }
 
 // checkStatTrieDB writes random values to state trie and checks if the values are stored in expected DB
-func checkStatTrieDB(t *testing.T, fullNode *node_.Node, node *cn.CN, validator *TestAccountType, workspace string, dbPath string) (*node_.Node, *cn.CN) {
+func checkStatTrieDB(t *testing.T, fullNode *node.Node, node *cn.CN, validator *TestAccountType, workspace string, dbPath string) (*node.Node, *cn.CN) {
 	entries := writeRandomValueToStateTrieDB(t, node.ChainDB().NewBatch(database.StateTrieDB))
 	time.Sleep(10 * time.Second)
 
@@ -185,7 +186,7 @@ func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 	stopNode(t, fullNode)
 }
 
-func newSimpleBlockchain(t *testing.T, numAccounts int) (*node_.Node, *cn.CN, *TestAccountType, *big.Int, string, *TestAccountType, []*TestAccountType, []*TestAccountType) {
+func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string, *TestAccountType, []*TestAccountType, []*TestAccountType) {
 	//if testing.Verbose() {
 	//	enableLog() // Change verbosity level in the function if needed
 	//}
@@ -206,7 +207,7 @@ func startMigration(t *testing.T, node *cn.CN) {
 	assert.NoError(t, err)
 }
 
-func restartNode(t *testing.T, fullNode *node_.Node, node *cn.CN, workspace string, validator *TestAccountType) (*node_.Node, *cn.CN) {
+func restartNode(t *testing.T, fullNode *node.Node, node *cn.CN, workspace string, validator *TestAccountType) (*node.Node, *cn.CN) {
 	stopNode(t, fullNode)
 	time.Sleep(2 * time.Second)
 	newFullNode, newNode := startNode(t, workspace, validator)
@@ -215,7 +216,7 @@ func restartNode(t *testing.T, fullNode *node_.Node, node *cn.CN, workspace stri
 	return newFullNode, newNode
 }
 
-func startNode(t *testing.T, workspace string, validator *TestAccountType) (fullNode *node_.Node, node *cn.CN) {
+func startNode(t *testing.T, workspace string, validator *TestAccountType) (fullNode *node.Node, node *cn.CN) {
 	t.Log("=========== starting node ==============")
 	newFullNode, newNode, err := newKlaytnNode(t, workspace, validator)
 	assert.NoError(t, err)
@@ -226,7 +227,7 @@ func startNode(t *testing.T, workspace string, validator *TestAccountType) (full
 	return newFullNode, newNode
 }
 
-func stopNode(t *testing.T, fullNode *node_.Node) {
+func stopNode(t *testing.T, fullNode *node.Node) {
 	if err := fullNode.Stop(); err != nil {
 		t.Fatal(err)
 	}
