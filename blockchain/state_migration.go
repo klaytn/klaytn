@@ -101,7 +101,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) error {
 	srcCachedDB := bc.StateCache().TrieDB()
 	targetDB := statedb.NewDatabase(&stateTrieMigrationDB{bc.db})
 
-	// NOTE: lruCache is medatory when state migration and block processing are executed simultaneously
+	// NOTE: lruCache is mendatory when state migration and block processing are executed simultaneously
 	lruCache, _ := lru.New(int(2 * units.Giga / common.HashLength)) // 2GB for 62,500,000 common.Hash key values
 	trieSync := state.NewStateSync(rootHash, targetDB.DiskDB(), nil, lruCache)
 	var queue []common.Hash
