@@ -208,10 +208,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 		return err
 	}
 	checkElapsed := time.Since(startCheck)
-	logger.Info("State migration : Consistency check is done", "elapsed", checkElapsed)
-
-	logger.Info("completed state migration")
-
+	logger.Info("State migration is completed", "copyElapsed", elapsed, "checkElapsed", checkElapsed)
 	return nil
 }
 
