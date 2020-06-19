@@ -86,6 +86,7 @@ func ConvertHashToSeed(hash common.Hash) (int64, error) {
 }
 
 // SelectRandomCommittee composes a committee selecting validators randomly based on the seed value.
+// It returns nil if the given committeeSize is bigger than validatorSize or proposer indexes are invalid.
 func SelectRandomCommittee(validators []istanbul.Validator, committeeSize uint64, seed int64, proposerIdx int, nextProposerIdx int) []istanbul.Validator {
 	// ensure validator indexes are valid
 	if proposerIdx < 0 || nextProposerIdx < 0 || proposerIdx == nextProposerIdx {

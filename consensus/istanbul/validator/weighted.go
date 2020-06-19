@@ -287,12 +287,6 @@ func (valSet *weightedCouncil) SetSubGroupSize(size uint64) {
 		logger.Error("cannot assign committee size to 0")
 		return
 	}
-	validatorSize := valSet.Size()
-	if size > validatorSize {
-		logger.Warn("cannot assign committee size bigger than validator size. "+
-			"set committee size to validator size", "validatorSize", validatorSize, "requestedSize", size)
-		size = validatorSize
-	}
 	valSet.subSize = size
 }
 
@@ -334,12 +328,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	if committeeSize == 1 {
 		return []istanbul.Validator{proposer}
 	}
-	if committeeSize == validatorSize {
-		return validators
-	}
-	if committeeSize > validatorSize {
-		logger.Warn("committee size is assigned bigger than validator size. check committee size",
-			"committeeSize", committeeSize, "validatorSize", validatorSize)
+	if committeeSize >= validatorSize {
 		return validators
 	}
 
