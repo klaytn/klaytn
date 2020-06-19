@@ -369,7 +369,7 @@ func (db *Database) DiskDB() database.DBManager {
 	return db.diskDB
 }
 
-// TrieNodeCache retrieves the trieNodeCachetheof the trie database.
+// TrieNodeCache retrieves the trieNodeCache of the trie database.
 func (db *Database) TrieNodeCache() *fastcache.Cache {
 	return db.trieNodeCache
 }

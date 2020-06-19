@@ -109,7 +109,7 @@ func NewDatabase(db database.DBManager) Database {
 	return NewDatabaseWithNewCache(db, 0)
 }
 
-func codeSizeCache() common.Cache {
+func getCodeSizeCache() common.Cache {
 	var cacheConfig common.CacheConfiger
 	switch common.DefaultCacheType {
 	case common.LRUShardCacheType:
@@ -131,7 +131,7 @@ func codeSizeCache() common.Cache {
 func NewDatabaseWithNewCache(db database.DBManager, cacheSize int) Database {
 	return &cachingDB{
 		db:            statedb.NewDatabaseWithNewCache(db, cacheSize),
-		codeSizeCache: codeSizeCache(),
+		codeSizeCache: getCodeSizeCache(),
 	}
 }
 
@@ -141,7 +141,7 @@ func NewDatabaseWithNewCache(db database.DBManager, cacheSize int) Database {
 func NewDatabaseWithCache(db database.DBManager, cache *fastcache.Cache) Database {
 	return &cachingDB{
 		db:            statedb.NewDatabaseWithCache(db, cache),
-		codeSizeCache: codeSizeCache(),
+		codeSizeCache: getCodeSizeCache(),
 	}
 }
 
