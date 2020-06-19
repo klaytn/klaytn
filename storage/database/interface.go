@@ -112,17 +112,15 @@ func WriteBatchesParallel(batches ...Batch) (int, error) {
 	}
 
 	var bytes int
-	var errResult error
-
 	for range batches {
 		rst := <-resultCh
 		if rst.err != nil {
-			errResult = rst.err
+			return bytes, rst.err
 		}
 		bytes += rst.bytes
 	}
 
-	return bytes, errResult
+	return bytes, nil
 }
 
 func WriteBatchesOverThreshold(batches ...Batch) (int, error) {
