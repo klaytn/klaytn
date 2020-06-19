@@ -21,13 +21,14 @@
 package validator
 
 import (
+	"math/rand"
+	"strconv"
+	"strings"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/log"
-	"math/rand"
-	"strconv"
-	"strings"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulValidator)

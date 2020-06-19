@@ -135,7 +135,8 @@ func (valSet *defaultSet) SetSubGroupSize(size uint64) {
 	}
 	validatorSize := valSet.Size()
 	if size > validatorSize {
-		logger.Warn("cannot assign committee size bigger than validator size. set committee size to validator size", "validatorSize", validatorSize, "requestedSize", size)
+		logger.Warn("cannot assign committee size bigger than validator size. "+
+			"set committee size to validator size", "validatorSize", validatorSize, "requestedSize", size)
 		size = validatorSize
 	}
 	valSet.subSize = size
@@ -168,7 +169,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 	defer valSet.validatorMu.RUnlock()
 
 	validators := valSet.validators
-	validatorSize := uint64(len(valSet.validators))
+	validatorSize := uint64(len(validators))
 	committeeSize := valSet.subSize
 
 	// find the proposer
@@ -183,7 +184,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 		return validators
 	}
 	if committeeSize > validatorSize {
-		logger.Warn("committee size is assigned bigger than validator size. check and reset committee size",
+		logger.Warn("committee size is assigned bigger than validator size. check committee size",
 			"committeeSize", committeeSize, "validatorSize", validatorSize)
 		return validators
 	}
@@ -196,7 +197,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 	seed, err := ConvertHashToSeed(prevHash)
 	if err != nil {
 		logger.Error("failed to covert hash to seed", "prevHash", prevHash, "err", err)
-		return valSet.validators
+		return validators
 	}
 
 	// select a random committee
@@ -207,6 +208,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 
 	logger.Trace("composed committee", "prevHash", prevHash.Hex(), "proposerAddr", proposerAddr,
 		"committee", committee, "committee size", len(committee), "valSet.subSize", committeeSize)
+
 	return committee
 }
 
@@ -238,7 +240,8 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, istanbul.Valid
 			return i, val
 		}
 	}
-	logger.Warn("failed to find an address in the validator list", "address", addr, "validatorAddrs", valSet.validators.AddressStringList())
+	logger.Warn("failed to find an address in the validator list",
+		"address", addr, "validatorAddrs", valSet.validators.AddressStringList())
 	return -1, nil
 }
 
