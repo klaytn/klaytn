@@ -22,6 +22,8 @@ package state
 import (
 	"bytes"
 	"errors"
+	"github.com/alecthomas/units"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/storage/database"
@@ -177,8 +179,37 @@ func checkStateConsistency(db database.DBManager, root common.Hash) error {
 // Tests that an empty state is not scheduled for syncing.
 func TestEmptyStateSync(t *testing.T) {
 	empty := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-	if req := NewStateSync(empty, database.NewMemoryDBManager(), statedb.NewSyncBloom(1, database.NewMemDB())).Missing(1); len(req) != 0 {
-		t.Errorf("content requested for empty state: %v", req)
+
+	// only bloom
+	{
+		bloom := statedb.NewSyncBloom(1, database.NewMemDB())
+		if req := NewStateSync(empty, database.NewMemoryDBManager(), bloom, nil).Missing(1); len(req) != 0 {
+			t.Errorf("content requested for empty state: %v", req)
+		}
+	}
+
+	// only lru
+	{
+		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
+		if req := NewStateSync(empty, database.NewMemoryDBManager(), nil, lruCache).Missing(1); len(req) != 0 {
+			t.Errorf("content requested for empty state: %v", req)
+		}
+	}
+
+	// no bloom lru
+	{
+		if req := NewStateSync(empty, database.NewMemoryDBManager(), nil, nil).Missing(1); len(req) != 0 {
+			t.Errorf("content requested for empty state: %v", req)
+		}
+	}
+
+	// both bloom, lru
+	{
+		bloom := statedb.NewSyncBloom(1, database.NewMemDB())
+		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
+		if req := NewStateSync(empty, database.NewMemoryDBManager(), bloom, lruCache).Missing(1); len(req) != 0 {
+			t.Errorf("content requested for empty state: %v", req)
+		}
 	}
 }
 
@@ -193,7 +224,7 @@ func testIterativeStateSync(t *testing.T, count int) {
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()))
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
 
 	queue := append([]common.Hash{}, sched.Missing(count)...)
 	for len(queue) > 0 {
@@ -280,7 +311,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()))
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
 
 	queue := append([]common.Hash{}, sched.Missing(0)...)
 	for len(queue) > 0 {
@@ -322,7 +353,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()))
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
 
 	queue := make(map[common.Hash]struct{})
 	for _, hash := range sched.Missing(count) {
@@ -367,7 +398,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()))
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
 
 	queue := make(map[common.Hash]struct{})
 	for _, hash := range sched.Missing(0) {
@@ -419,7 +450,7 @@ func TestIncompleteStateSync(t *testing.T) {
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()))
+	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
 
 	added := []common.Hash{}
 	queue := append([]common.Hash{}, sched.Missing(1)...)
