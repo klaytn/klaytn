@@ -103,12 +103,12 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 	start := time.Now()
 
-	srcCachedDB := bc.StateCache().TrieDB()
-	targetDB := statedb.NewDatabase(&stateTrieMigrationDB{bc.db})
+	srcState := bc.StateCache()
+	targetState := state.NewDatabase(&stateTrieMigrationDB{bc.db})
 
 	// NOTE: lruCache is mendatory when state migration and block processing are executed simultaneously
 	lruCache, _ := lru.New(int(2 * units.Giga / common.HashLength)) // 2GB for 62,500,000 common.Hash key values
-	trieSync := state.NewStateSync(rootHash, targetDB.DiskDB(), nil, lruCache)
+	trieSync := state.NewStateSync(rootHash, targetState.TrieDB().DiskDB(), nil, lruCache)
 	var queue []common.Hash
 	committedCnt := 0
 
@@ -121,10 +121,10 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	resultCh := make(chan statedb.SyncResult, threads)
 
 	for th := 0; th < threads; th++ {
-		go bc.concurrentRead(srcCachedDB, quitCh, hashCh, resultCh)
+		go bc.concurrentRead(srcState.TrieDB(), quitCh, hashCh, resultCh)
 	}
 
-	stateTrieBatch := targetDB.DiskDB().NewBatch(database.StateTrieDB)
+	stateTrieBatch := targetState.TrieDB().DiskDB().NewBatch(database.StateTrieDB)
 	stats := migrationStats{initialStartTime: start, startTime: mclock.Now()}
 
 	// Migration main loop
@@ -202,7 +202,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 		"totalElapsed", elapsed, "committed per second", speed)
 
 	startCheck := time.Now()
-	if err := state.CheckStateConsistency(srcCachedDB.DiskDB(), targetDB.DiskDB(), rootHash, bc.committedCnt, bc.quit); err != nil {
+	if err := state.CheckStateConsistency(srcState, targetState, rootHash, bc.committedCnt, bc.quit); err != nil {
 		logger.Error("State migration : copied stateDB is invalid", "err", err)
 		return err
 	}

@@ -27,7 +27,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"time"
 )
@@ -187,14 +186,14 @@ func (it *NodeIterator) retrieve() bool {
 }
 
 // CheckStateConsistency checks the consistency of all state/storage trie of given two state database.
-func CheckStateConsistency(oldDB database.DBManager, newDB database.DBManager, root common.Hash, mapSize int, quit chan struct{}) error {
+func CheckStateConsistency(oldDB Database, newDB Database, root common.Hash, mapSize int, quit chan struct{}) error {
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, NewDatabase(oldDB))
+	oldState, err := New(root, oldDB)
 	if err != nil {
 		return err
 	}
 
-	newState, err := New(root, NewDatabase(newDB))
+	newState, err := New(root, newDB)
 	if err != nil {
 		return err
 	}

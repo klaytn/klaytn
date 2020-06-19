@@ -220,17 +220,18 @@ func TestIterativeStateSyncBatched(t *testing.T)    { testIterativeStateSync(t, 
 
 func testIterativeStateSync(t *testing.T, count int) {
 	// Create a random state to copy
-	srcDb, srcRoot, srcAccounts := makeTestState(t)
+	srcState, srcRoot, srcAccounts := makeTestState(t)
 
 	// Create a destination state and sync with the scheduler
-	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
+	dstDiskDb := database.NewMemoryDBManager()
+	dstState := NewDatabase(dstDiskDb)
+	sched := NewStateSync(srcRoot, dstDiskDb, statedb.NewSyncBloom(1, dstDiskDb.GetMemDB()), nil)
 
 	queue := append([]common.Hash{}, sched.Missing(count)...)
 	for len(queue) > 0 {
 		results := make([]statedb.SyncResult, len(queue))
 		for i, hash := range queue {
-			data, err := srcDb.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash)
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x", hash)
 			}
@@ -239,7 +240,7 @@ func testIterativeStateSync(t *testing.T, count int) {
 		if _, index, err := sched.Process(results); err != nil {
 			t.Fatalf("failed to process result #%d: %v", index, err)
 		}
-		batch := dstDb.NewBatch(database.StateTrieDB)
+		batch := dstDiskDb.NewBatch(database.StateTrieDB)
 		if _, err := sched.Commit(batch); err != nil {
 			t.Fatalf("failed to commit data: %v", err)
 		}
@@ -247,59 +248,59 @@ func testIterativeStateSync(t *testing.T, count int) {
 		queue = append(queue[:0], sched.Missing(count)...)
 	}
 	// Cross check that the two states are in sync
-	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
+	checkStateAccounts(t, dstDiskDb, srcRoot, srcAccounts)
 
-	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
+	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 	assert.NoError(t, err)
 
 	// Test with quit channel
 	quit := make(chan struct{})
 
 	// normal
-	err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, quit)
+	err = CheckStateConsistency(srcState, dstState, srcRoot, 100, quit)
 	assert.NoError(t, err)
 
 	// quit
 	close(quit)
-	err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, quit)
+	err = CheckStateConsistency(srcState, dstState, srcRoot, 100, quit)
 	assert.Error(t, err, errStopByQuit)
 }
 
 func TestCheckStateConsistencyMissNode(t *testing.T) {
 	// Create a random state to copy
-	srcDb, srcRoot, _ := makeTestState(t)
-	newDb, _, _ := makeTestState(t)
+	srcState, srcRoot, _ := makeTestState(t)
+	newState, _, _ := makeTestState(t)
 
-	oldState, err := New(srcRoot, NewDatabase(srcDb.TrieDB().DiskDB()))
+	srcStateDB, err := New(srcRoot, srcState)
 	assert.NoError(t, err)
 
-	it := NewNodeIterator(oldState)
+	it := NewNodeIterator(srcStateDB)
 	it.Next() // skip trie root node
 
 	for it.Next() {
 		if !common.EmptyHash(it.Hash) {
 			hash := it.Hash
-			data, _ := oldState.db.TrieDB().DiskDB().ReadStateTrieNode(hash[:])
+			data, _ := srcStateDB.db.TrieDB().DiskDB().ReadStateTrieNode(hash[:])
 
 			// Remove nodes
-			oldState.db.TrieDB().DiskDB().GetMemDB().Delete(hash[:])
-			newDb.TrieDB().DiskDB().GetMemDB().Delete(hash[:])
+			srcState.TrieDB().DiskDB().GetMemDB().Delete(hash[:])
+			newState.TrieDB().DiskDB().GetMemDB().Delete(hash[:])
 
 			// Check consistency : errIterator
-			err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), newDb.TrieDB().DiskDB(), srcRoot, 100, nil)
+			err = CheckStateConsistency(srcState, newState, srcRoot, 100, nil)
 			if !errors.Is(err, errIterator) {
 				t.Log("mismatched err", "err", err, "expErr", errIterator)
 				t.FailNow()
 			}
 
 			// Recover nodes
-			oldState.db.TrieDB().DiskDB().GetMemDB().Put(hash[:], data)
-			newDb.TrieDB().DiskDB().GetMemDB().Put(hash[:], data)
+			srcState.TrieDB().DiskDB().GetMemDB().Put(hash[:], data)
+			newState.TrieDB().DiskDB().GetMemDB().Put(hash[:], data)
 		}
 	}
 
 	// Check consistency : no error
-	err = CheckStateConsistency(srcDb.TrieDB().DiskDB(), newDb.TrieDB().DiskDB(), srcRoot, 100, nil)
+	err = CheckStateConsistency(srcState, newState, srcRoot, 100, nil)
 	assert.NoError(t, err)
 }
 
@@ -307,18 +308,19 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 // partial results are returned, and the others sent only later.
 func TestIterativeDelayedStateSync(t *testing.T) {
 	// Create a random state to copy
-	srcDb, srcRoot, srcAccounts := makeTestState(t)
+	srcState, srcRoot, srcAccounts := makeTestState(t)
 
 	// Create a destination state and sync with the scheduler
-	dstDb := database.NewMemoryDBManager()
-	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
+	dstDiskDB := database.NewMemoryDBManager()
+	dstState := NewDatabase(dstDiskDB)
+	sched := NewStateSync(srcRoot, dstDiskDB, statedb.NewSyncBloom(1, dstDiskDB.GetMemDB()), nil)
 
 	queue := append([]common.Hash{}, sched.Missing(0)...)
 	for len(queue) > 0 {
 		// Sync only half of the scheduled nodes
 		results := make([]statedb.SyncResult, len(queue)/2+1)
 		for i, hash := range queue[:len(results)] {
-			data, err := srcDb.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash)
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x", hash)
 			}
@@ -327,7 +329,7 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 		if _, index, err := sched.Process(results); err != nil {
 			t.Fatalf("failed to process result #%d: %v", index, err)
 		}
-		batch := dstDb.NewBatch(database.StateTrieDB)
+		batch := dstDiskDB.NewBatch(database.StateTrieDB)
 		if _, err := sched.Commit(batch); err != nil {
 			t.Fatalf("failed to commit data: %v", err)
 		}
@@ -335,9 +337,9 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 		queue = append(queue[len(results):], sched.Missing(0)...)
 	}
 	// Cross check that the two states are in sync
-	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
+	checkStateAccounts(t, dstDiskDB, srcRoot, srcAccounts)
 
-	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
+	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 	assert.NoError(t, err)
 }
 
@@ -349,10 +351,11 @@ func TestIterativeRandomStateSyncBatched(t *testing.T)    { testIterativeRandomS
 
 func testIterativeRandomStateSync(t *testing.T, count int) {
 	// Create a random state to copy
-	srcDb, srcRoot, srcAccounts := makeTestState(t)
+	srcState, srcRoot, srcAccounts := makeTestState(t)
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
+	dstState := NewDatabase(dstDb)
 	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
 
 	queue := make(map[common.Hash]struct{})
@@ -363,7 +366,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 		// Fetch all the queued nodes in a random order
 		results := make([]statedb.SyncResult, 0, len(queue))
 		for hash := range queue {
-			data, err := srcDb.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash)
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x", hash)
 			}
@@ -386,7 +389,7 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
-	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
+	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 	assert.NoError(t, err)
 }
 
@@ -394,10 +397,11 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 // partial results are returned (Even those randomly), others sent only later.
 func TestIterativeRandomDelayedStateSync(t *testing.T) {
 	// Create a random state to copy
-	srcDb, srcRoot, srcAccounts := makeTestState(t)
+	srcState, srcRoot, srcAccounts := makeTestState(t)
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
+	dstState := NewDatabase(dstDb)
 	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
 
 	queue := make(map[common.Hash]struct{})
@@ -410,7 +414,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 		for hash := range queue {
 			delete(queue, hash)
 
-			data, err := srcDb.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash)
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x", hash)
 			}
@@ -436,7 +440,7 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 	// Cross check that the two states are in sync
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
-	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
+	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 	assert.NoError(t, err)
 }
 
@@ -444,21 +448,22 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 // the database.
 func TestIncompleteStateSync(t *testing.T) {
 	// Create a random state to copy
-	srcDb, srcRoot, srcAccounts := makeTestState(t)
+	srcState, srcRoot, srcAccounts := makeTestState(t)
 
-	checkTrieConsistency(srcDb.TrieDB().DiskDB().(database.DBManager), srcRoot)
+	checkTrieConsistency(srcState.TrieDB().DiskDB().(database.DBManager), srcRoot)
 
 	// Create a destination state and sync with the scheduler
 	dstDb := database.NewMemoryDBManager()
+	dstState := NewDatabase(dstDb)
 	sched := NewStateSync(srcRoot, dstDb, statedb.NewSyncBloom(1, dstDb.GetMemDB()), nil)
 
-	added := []common.Hash{}
+	var added []common.Hash
 	queue := append([]common.Hash{}, sched.Missing(1)...)
 	for len(queue) > 0 {
 		// Fetch a batch of state nodes
 		results := make([]statedb.SyncResult, len(queue))
 		for i, hash := range queue {
-			data, err := srcDb.TrieDB().Node(hash)
+			data, err := srcState.TrieDB().Node(hash)
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x", hash)
 			}
@@ -503,12 +508,12 @@ func TestIncompleteStateSync(t *testing.T) {
 			t.Fatalf("trie inconsistency not caught, missing: %x", key)
 		}
 
-		err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
+		err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 		assert.Error(t, err)
 
 		dstDb.GetMemDB().Put(key, value)
 	}
 
-	err := CheckStateConsistency(srcDb.TrieDB().DiskDB(), dstDb, srcRoot, 100, nil)
+	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 	assert.NoError(t, err)
 }
