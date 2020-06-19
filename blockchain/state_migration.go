@@ -373,9 +373,9 @@ func (bc *BlockChain) StatusStateMigration() (bool, uint64, int, int, float64) {
 	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.committedCnt, bc.pendingCnt, bc.progress
 }
 
-func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database, result chan common.Hash, finish chan error) (resultErr error) {
+func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database, resultCh chan common.Hash, finishCh chan error) (resultErr error) {
 	defer func() {
-		finish <- resultErr
+		finishCh <- resultErr
 	}()
 
 	stateDB, err := state.New(root, db)
@@ -385,7 +385,7 @@ func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database,
 
 	it := state.NewNodeIterator(stateDB)
 	for it.Next() {
-		result <- it.Hash
+		resultCh <- it.Hash
 
 		select {
 		case <-bc.quitWarmUp:
@@ -425,7 +425,7 @@ func (bc *BlockChain) StartWarmUp() error {
 		var percent uint64
 		var cnt int
 
-		updateContext := func() []interface{} {
+		updateContext := func() {
 			stats = fastcache.Stats{}
 			mainTrieDB.TrieNodeCache().UpdateStats(&stats)
 			percent = stats.BytesSize * 100 / mainTrieCacheLimit
@@ -435,7 +435,6 @@ func (bc *BlockChain) StartWarmUp() error {
 				"cachedSize", units.Base2Bytes(stats.BytesSize).String(),
 				"percent", percent,
 			}
-			return context
 		}
 
 		children, err := db.TrieDB().NodeChildren(block.Root())
