@@ -27,6 +27,7 @@ import (
 	"time"
 )
 
+//go:generate mockgen -destination=consensus/istanbul/mocks/backend_mock.go github.com/klaytn/klaytn/consensus/istanbul Backend
 // Backend provides application specific functions for Istanbul core
 type Backend interface {
 	// Address returns the owner's address
