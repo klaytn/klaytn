@@ -679,7 +679,74 @@ func TestDBManager_Governance(t *testing.T) {
 	// TODO-Klaytn-Database Implement this!
 }
 
-func TestDBManager_StateTrieMigration(t *testing.T) {
+func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
+	for i, dbm := range dbManagers {
+		if dbConfigs[i].DBType == MemoryDB {
+			continue
+		}
+
+		// check if migration fails on single DB
+		if !dbm.IsPartitioned() {
+			migrationBlockNum := uint64(12345)
+
+			// check if not in migration
+			assert.False(t, dbManagers[i].InMigration())
+
+			// check if create migration fails
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			assert.Error(t, err) // expect error
+
+			continue
+		}
+
+		// check if migration fails when in migration
+		{
+			migrationBlockNum := uint64(34567)
+
+			// check if not in migration
+			assert.False(t, dbManagers[i].InMigration())
+
+			// set migration status
+			dbm.setStateTrieMigrationStatus(migrationBlockNum)
+			assert.True(t, dbManagers[i].InMigration())
+
+			// check if create migration fails
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			assert.Error(t, err) // expect error
+
+			// reset migration status for next test
+			dbm.setStateTrieMigrationStatus(0)
+		}
+
+		// check if CreateMigrationDBAndSetStatus works as expected
+		{
+			migrationBlockNum := uint64(56789)
+
+			// check if not in migration state
+			assert.False(t, dbManagers[i].InMigration())
+
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			assert.NoError(t, err)
+
+			// check if in migration state
+			assert.True(t, dbm.InMigration())
+
+			// check migration DB path in MiscDB
+			migrationDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
+			fetchedMigrationPath, err := dbm.getDatabase(MiscDB).Get(migrationDBPathKey)
+			assert.NoError(t, err)
+			expectedMigrationPath := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(migrationBlockNum, 10)
+			assert.Equal(t, expectedMigrationPath, string(fetchedMigrationPath))
+
+			// check block number in MiscDB
+			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+			assert.NoError(t, err)
+			assert.Equal(t, common.Int64ToByteBigEndian(migrationBlockNum), fetchedBlockNum)
+		}
+	}
+}
+
+func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 	for i, dbm := range dbManagers {
 		if !dbm.IsPartitioned() || dbConfigs[i].DBType == MemoryDB {
 			continue
@@ -687,71 +754,81 @@ func TestDBManager_StateTrieMigration(t *testing.T) {
 
 		migrationBlockNum := uint64(12345)
 		migrationBlockNum2 := uint64(23456)
-		migrationBlockNum3 := uint64(34567)
 
-		// scenario 1) successfully completes state migration
-		assert.False(t, dbManagers[i].InMigration())
+		// check status in miscDB on state migration failure
+		{
+			// check if not in migration state
+			assert.False(t, dbManagers[i].InMigration())
 
-		err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
-		assert.NoError(t, err)
-		testDatabaseManager_CreateMigrationDBAndSetStatus(t, dbm, migrationBlockNum)
+			// finish migration with failure
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum2)
+			assert.NoError(t, err)
+			dbm.FinishStateMigration(false)
 
-		dbm.FinishStateMigration(true)
-		testDatabaseManager_FinishStateMigration(t, dbm, migrationBlockNum)
+			// check if in migration state
+			assert.False(t, dbm.InMigration())
 
-		// scenario 2) stops migration by user's request
-		assert.False(t, dbManagers[i].InMigration())
+			// check if state DB Path is set to old DB in MiscDB
+			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
+			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
+			assert.NoError(t, err)
+			expectedStateDBPath := dbBaseDirs[StateTrieDB] // old DB format
+			assert.Equal(t, expectedStateDBPath, string(fetchedStateDBPath))
 
-		err = dbm.CreateMigrationDBAndSetStatus(migrationBlockNum2)
-		assert.NoError(t, err)
-		testDatabaseManager_CreateMigrationDBAndSetStatus(t, dbm, migrationBlockNum2)
+			// check if migration DB Path is not set in MiscDB
+			migrationDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
+			fetchedMigrationPath, err := dbm.getDatabase(MiscDB).Get(migrationDBPathKey)
+			assert.NoError(t, err)
+			assert.Equal(t, "", string(fetchedMigrationPath))
 
-		dbm.FinishStateMigration(false)
-		testDatabaseManager_FinishStateMigration(t, dbm, migrationBlockNum)
+			// check if block number is not set in MiscDB
+			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+			assert.NoError(t, err)
+			assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
 
-		// scenario 3) requests migration when a migration is on process
-		assert.False(t, dbManagers[i].InMigration())
-		dbm.setStateTrieMigrationStatus(migrationBlockNum3)
-		err = dbm.CreateMigrationDBAndSetStatus(migrationBlockNum3)
-		assert.Error(t, err)
+			// migration status is set even on restart
+			dbManager := NewDBManager(dbConfigs[i])
+			assert.False(t, dbManager.InMigration())
+			dbManager.Close()
+		}
 
-		dbm.Close()
-		dbManagers[i] = NewDBManager(dbConfigs[i])
-		assert.False(t, dbManagers[i].InMigration())
+		// check status in miscDB on successful state migration
+		{
+			// check if not in migration state
+			assert.False(t, dbManagers[i].InMigration())
+
+			// finish migration successfully
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			assert.NoError(t, err)
+			dbm.FinishStateMigration(true)
+
+			// check if in migration state
+			assert.False(t, dbm.InMigration())
+
+			// check if state DB Path is set to new DB in MiscDB
+			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
+			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
+			assert.NoError(t, err)
+			expectedStateDBPath := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(migrationBlockNum, 10) // new DB format
+			assert.Equal(t, expectedStateDBPath, string(fetchedStateDBPath))
+
+			// check if migration DB Path is not set in MiscDB
+			migrationDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
+			fetchedMigrationPath, err := dbm.getDatabase(MiscDB).Get(migrationDBPathKey)
+			assert.NoError(t, err)
+			assert.Equal(t, "", string(fetchedMigrationPath))
+
+			// check if block number is not set in MiscDB
+			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+			assert.NoError(t, err)
+			assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
+
+			// migration status is set even on restart
+			dbManager := NewDBManager(dbConfigs[i])
+			assert.False(t, dbManager.InMigration())
+			dbManager.Close()
+		}
 	}
-}
-
-func testDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T, dbm DBManager, migrationBlockNum uint64) {
-	assert.True(t, dbm.InMigration())
-	// check state trie migration DB path in MiscDB
-	newPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
-	dbDir := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(migrationBlockNum, 10)
-	fetchedValue, err := dbm.getDatabase(MiscDB).Get(newPathKey)
-	assert.NoError(t, err)
-	assert.Equal(t, dbDir, string(fetchedValue))
-	// check block number in MiscDB
-	fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
-	assert.NoError(t, err)
-	assert.Equal(t, common.Int64ToByteBigEndian(migrationBlockNum), fetchedBlockNum)
-}
-
-func testDatabaseManager_FinishStateMigration(t *testing.T, dbm DBManager, migrationBlockNum uint64) {
-	assert.False(t, dbm.InMigration())
-	// check state trie migration DB path in MiscDB
-	oldPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
-	fetchedValue, err := dbm.getDatabase(MiscDB).Get(oldPathKey)
-	assert.NoError(t, err)
-	assert.Equal(t, "", string(fetchedValue))
-	// check state trie DB path in MiscDB
-	newPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
-	dbDir := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(migrationBlockNum, 10)
-	fetchedValue, err = dbm.getDatabase(MiscDB).Get(newPathKey)
-	assert.NoError(t, err)
-	assert.Equal(t, dbDir, string(fetchedValue))
-	// check block number in MiscDB
-	fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
-	assert.NoError(t, err)
-	assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
 }
 
 // While state trie migration, directory should be created with expected name
