@@ -54,6 +54,7 @@ var (
 	ErrNoGenesis         = errors.New("Genesis not found in chain")
 	ErrNotExistNode      = errors.New("the node does not exist in cached node")
 	ErrQuitBySignal      = errors.New("quit by signal")
+	ErrNotInWarmUp       = errors.New("not in warm up")
 	logger               = log.NewModuleLogger(log.Blockchain)
 )
 

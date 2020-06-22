@@ -406,6 +406,58 @@ func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database,
 	return nil
 }
 
+func (bc *BlockChain) warmUpLoop(cache *fastcache.Cache, mainTrieCacheLimit uint64, children []common.Hash, resultHashCh chan common.Hash, resultErrCh chan error) {
+	logged := time.Now()
+	var context []interface{}
+	var stats fastcache.Stats
+	var percent uint64
+	var cnt int
+
+	updateContext := func() {
+		stats = fastcache.Stats{}
+		cache.UpdateStats(&stats)
+		percent = stats.BytesSize * 100 / mainTrieCacheLimit
+		context = []interface{}{
+			"warmUpCnt", cnt,
+			"cacheLimit", units.Base2Bytes(mainTrieCacheLimit).String(),
+			"cachedSize", units.Base2Bytes(stats.BytesSize).String(),
+			"percent", percent,
+		}
+	}
+
+	var resultErr error
+	for finishCnt := 0; finishCnt < len(children); {
+		select {
+		case <-resultHashCh:
+			cnt++
+			if time.Since(logged) > log.StatsReportLimit {
+				logged = time.Now()
+
+				updateContext()
+				if percent > 90 { //more than 90%
+					close(bc.quitWarmUp)
+					logger.Info("Warm up is completed", context...)
+					return
+				}
+
+				logger.Info("Warm up progress", context...)
+			}
+		case err := <-resultErrCh:
+			if err != nil {
+				resultErr = err
+				logger.Warn("Warm up got an error", "err", err)
+			}
+
+			finishCnt++
+			logger.Debug("Warm up is being finished", "finishCnt", finishCnt, "err", err)
+		}
+	}
+
+	updateContext()
+	context = append(context, "resultErr", resultErr)
+	logger.Info("Warm up is completed", context...)
+}
+
 func (bc *BlockChain) StartWarmUp() error {
 	if bc.quitWarmUp != nil {
 		return fmt.Errorf("already warming up")
@@ -417,7 +469,6 @@ func (bc *BlockChain) StartWarmUp() error {
 	}
 
 	mainTrieDB := bc.StateCache().TrieDB()
-	mainTrieCacheLimit := uint64(mainTrieDB.GetTrieNodeCacheLimit())
 	db := state.NewDatabaseWithCache(bc.db, mainTrieDB.TrieNodeCache())
 
 	bc.quitWarmUp = make(chan struct{})
@@ -427,23 +478,6 @@ func (bc *BlockChain) StartWarmUp() error {
 			bc.quitWarmUp = nil
 		}()
 
-		var stats fastcache.Stats
-		var context []interface{}
-		var percent uint64
-		var cnt int
-
-		updateContext := func() {
-			stats = fastcache.Stats{}
-			mainTrieDB.TrieNodeCache().UpdateStats(&stats)
-			percent = stats.BytesSize * 100 / mainTrieCacheLimit
-			context = []interface{}{
-				"warmUpCnt", cnt,
-				"cacheLimit", units.Base2Bytes(mainTrieCacheLimit).String(),
-				"cachedSize", units.Base2Bytes(stats.BytesSize).String(),
-				"percent", percent,
-			}
-		}
-
 		children, err := db.TrieDB().NodeChildren(block.Root())
 		if err != nil {
 			logger.Error("Warm up is stop by err", "err", err)
@@ -451,50 +485,15 @@ func (bc *BlockChain) StartWarmUp() error {
 
 		logger.Info("Warm up is started", "blockNum", block.NumberU64(), "root", block.Root().String(), "len(children)", len(children))
 
-		var resultErr error
 		resultHashCh := make(chan common.Hash, 10000)
 		resultErrCh := make(chan error)
-		finishCnt := 0
 
 		for _, child := range children {
 			go bc.concurrentIterateTrie(child, db, resultHashCh, resultErrCh)
 		}
 
-		logged := time.Now()
-	loop:
-		for {
-			select {
-			case <-resultHashCh:
-				cnt++
-				if time.Since(logged) > log.StatsReportLimit {
-					logged = time.Now()
-
-					updateContext()
-					if percent > 90 { //more than 90%
-						close(bc.quitWarmUp)
-						logger.Info("Warm up is completed", context...)
-						return
-					}
-
-					logger.Info("Warm up progress", context...)
-				}
-			case err := <-resultErrCh:
-				if err != nil {
-					resultErr = err
-					logger.Warn("Warm up got an error", "err", err)
-				}
-
-				finishCnt++
-				logger.Debug("Warm up is being finished", "finishCnt", finishCnt, "err", err)
-
-				if finishCnt >= len(children) {
-					break loop
-				}
-			}
-		}
-		updateContext()
-		context = append(context, "resultErr", resultErr)
-		logger.Info("Warm up is completed", context...)
+		cacheLimitSize := uint64(mainTrieDB.GetTrieNodeCacheLimit())
+		bc.warmUpLoop(mainTrieDB.TrieNodeCache(), cacheLimitSize, children, resultHashCh, resultErrCh)
 	}()
 
 	return nil
@@ -502,7 +501,7 @@ func (bc *BlockChain) StartWarmUp() error {
 
 func (bc *BlockChain) StopWarmUp() error {
 	if bc.quitWarmUp == nil {
-		return fmt.Errorf("not in warm up")
+		return ErrNotInWarmUp
 	}
 
 	close(bc.quitWarmUp)
