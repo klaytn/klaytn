@@ -91,12 +91,6 @@ func createDBManagers(configs []*DBConfig) []DBManager {
 	return dbManagers
 }
 
-func removeDBDirs() {
-	for _, dbm := range dbManagers {
-		os.RemoveAll(dbm.GetDBConfig().Dir)
-	}
-}
-
 // TestDBManager_IsParallelDBWrite compares the return value of IsParallelDBWrite with the value in the config.
 func TestDBManager_IsParallelDBWrite(t *testing.T) {
 	for i, dbm := range dbManagers {
