@@ -203,7 +203,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 		"totalElapsed", elapsed, "committed per second", speed)
 
 	startCheck := time.Now()
-	if err := state.CheckStateConsistency(srcState, dstState, rootHash, bc.committedCnt, bc.quit); err != nil {
+	if err := state.CheckStateConsistencyParallel(srcState, dstState, rootHash, bc.quit); err != nil {
 		logger.Error("State migration : copied stateDB is invalid", "err", err)
 		return err
 	}
