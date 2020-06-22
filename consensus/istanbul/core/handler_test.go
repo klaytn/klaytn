@@ -352,23 +352,23 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 		assert.Equal(t, 1, len(istCore.current.Commits.messages))
 	}
 
-	// RoundChange message originated from invalid sender
-	{
-		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
-
-		istanbulMsg, err := genIstanbulMsg(msgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := eventMux.Post(istanbulMsg); err != nil {
-			t.Fatal(err)
-		}
-
-		time.Sleep(time.Second)
-		assert.Nil(t, istCore.roundChangeSet.roundChanges[0]) // round is set to 0 in this test
-	}
+	//// RoundChange message originated from invalid sender
+	//{
+	//	msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
+	//	msgSenderKey := validatorKeyMap[msgSender.Address()]
+	//
+	//	istanbulMsg, err := genIstanbulMsg(msgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
+	//	if err != nil {
+	//		t.Fatal(err)
+	//	}
+	//
+	//	if err := eventMux.Post(istanbulMsg); err != nil {
+	//		t.Fatal(err)
+	//	}
+	//
+	//	time.Sleep(time.Second)
+	//	assert.Nil(t, istCore.roundChangeSet.roundChanges[0]) // round is set to 0 in this test
+	//}
 
 	// RoundChange message originated from valid sender
 	{

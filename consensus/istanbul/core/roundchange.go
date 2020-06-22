@@ -85,9 +85,10 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 		return errInvalidMessage
 	}
 
-	if !c.valSet.CheckInSubList(msg.Hash, rc.View, src.Address()) {
-		return errNotFromCommittee
-	}
+	// TODO-Klaytn-Istanbul: establish round change messaging policy and then apply it
+	//if !c.valSet.CheckInSubList(msg.Hash, rc.View, src.Address()) {
+	//	return errNotFromCommittee
+	//}
 
 	if err := c.checkMessage(msgRoundChange, rc.View); err != nil {
 		return err
