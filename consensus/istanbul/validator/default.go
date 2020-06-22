@@ -167,8 +167,12 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 	committeeSize := valSet.subSize
 
 	// find the proposer
-	proposer := New(proposerAddr)
-	proposerIdx, _ := valSet.GetByAddress(proposer.Address())
+	proposerIdx, proposer := valSet.GetByAddress(proposerAddr)
+	if proposerIdx < 0 {
+		logger.Error("invalid index of the proposer",
+			"addr", proposerAddr.String(), "index", proposerIdx)
+		return validators
+	}
 
 	// return early if the committee size is an edge value
 	if committeeSize == 1 {
@@ -181,6 +185,11 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 	// find the next proposer
 	nextProposer := valSet.selector(valSet, proposer.Address(), view.Round.Uint64())
 	nextProposerIdx, _ := valSet.GetByAddress(nextProposer.Address())
+	if nextProposerIdx < 0 {
+		logger.Error("invalid index of the next proposer",
+			"addr", nextProposer.Address().String(), "index", nextProposerIdx)
+		return validators
+	}
 
 	// seed will be used to select a random committee
 	seed, err := ConvertHashToSeed(prevHash)

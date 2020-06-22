@@ -319,8 +319,9 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 
 	// find the proposer
 	proposerIdx, proposer := valSet.getByAddress(proposerAddr)
-	if proposer == nil {
-		logger.Error("invalid proposer address", "proposerAddr", proposerAddr)
+	if proposerIdx < 0 {
+		logger.Error("invalid index of the proposer",
+			"addr", proposerAddr.String(), "index", proposerIdx)
 		return validators
 	}
 
@@ -349,6 +350,11 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 		idx++
 	}
 	nextProposerIdx, _ := valSet.getByAddress(nextProposer.Address())
+	if nextProposerIdx < 0 {
+		logger.Error("invalid index of the next proposer",
+			"addr", nextProposer.Address().String(), "index", nextProposerIdx)
+		return validators
+	}
 
 	// seed will be used to select a random committee
 	seed, err := ConvertHashToSeed(prevHash)
