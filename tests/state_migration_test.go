@@ -103,7 +103,7 @@ func writeRandomValueToStateTrieDB(t *testing.T, batch database.Batch) map[strin
 	entries := make(map[string]string, 10)
 
 	for i := 0; i < 10; i++ {
-		key, value := common.MakeRandomByte(common.HashLength), common.MakeRandomByte(400)
+		key, value := common.MakeRandomBytes(common.HashLength), common.MakeRandomBytes(400)
 		err := batch.Put(key, value)
 		assert.NoError(t, err)
 		entries[string(key)] = string(value)

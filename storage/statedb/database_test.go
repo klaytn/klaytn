@@ -129,7 +129,7 @@ func TestCache(t *testing.T) {
 	db := NewDatabaseWithCache(memDB, cacheSizeMB)
 
 	for i := 0; i < 100; i++ {
-		key, value := common.MakeRandomByte(256), common.MakeRandomByte(63*1024) // fastcache can store entrie under 64KB
+		key, value := common.MakeRandomBytes(256), common.MakeRandomBytes(63*1024) // fastcache can store entrie under 64KB
 		db.trieNodeCache.Set(key, value)
 		rValue, found := db.trieNodeCache.HasGet(nil, key)
 

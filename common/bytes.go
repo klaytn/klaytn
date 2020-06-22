@@ -24,6 +24,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"math/rand"
+	"time"
 )
 
 // ToHex returns the hex representation of b, prefixed with '0x'.
@@ -137,7 +138,8 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	return padded
 }
 
-func MakeRandomByte(n int) []byte {
+func MakeRandomBytes(n int) []byte {
+	rand.Seed(time.Now().UTC().UnixNano())
 	s := make([]byte, n)
 	rand.Read(s)
 	return s
