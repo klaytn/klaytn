@@ -32,7 +32,7 @@ import (
 )
 
 // continuous occurrence of state trie migration and node restart must success
-func TestMigration_ContinuesRestartAndMigration(t *testing.T) {
+func TestMigration_ContinuousRestartAndMigration(t *testing.T) {
 	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 
