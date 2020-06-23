@@ -761,7 +761,7 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			assert.Equal(t, 1, len(initialDirNames), "migration status should be not set before testing")
 
 			// finish migration with failure
-			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum2)
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
 			assert.NoError(t, err)
 			dbm.FinishStateMigration(false)
 
@@ -784,11 +784,6 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
 			assert.NoError(t, err)
 			assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
-
-			// migration status is set even on restart
-			dbManager := NewDBManager(dbConfigs[i])
-			assert.False(t, dbManager.InMigration())
-			dbManager.Close()
 		}
 
 		// check status in miscDB on successful state migration
@@ -797,7 +792,7 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			assert.False(t, dbManagers[i].InMigration(), "migration status should be not set before testing")
 
 			// finish migration successfully
-			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum2)
 			assert.NoError(t, err)
 			dbm.FinishStateMigration(true)
 
@@ -808,7 +803,7 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
 			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
 			assert.NoError(t, err)
-			expectedStateDBPath := "statetrie_migrated_" + strconv.FormatUint(migrationBlockNum, 10) // new DB format
+			expectedStateDBPath := "statetrie_migrated_" + strconv.FormatUint(migrationBlockNum2, 10) // new DB format
 			assert.Equal(t, expectedStateDBPath, string(fetchedStateDBPath), "new DB should remain")
 
 			// check if migration DB Path is not set in MiscDB
@@ -821,11 +816,6 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
 			assert.NoError(t, err)
 			assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
-
-			// migration status is set even on restart
-			dbManager := NewDBManager(dbConfigs[i])
-			assert.False(t, dbManager.InMigration())
-			dbManager.Close()
 		}
 	}
 }
