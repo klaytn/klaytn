@@ -464,15 +464,6 @@ func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return state.New(root, bc.stateCache)
 }
 
-// StateAtWithPersistent returns a new mutable state based on a particular point in time with persistent trie nodes.
-func (bc *BlockChain) StateAtWithPersistent(root common.Hash) (*state.StateDB, error) {
-	exist := bc.stateCache.TrieDB().DoesExistNodeInPersistent(root)
-	if !exist {
-		return nil, ErrNotExistNode
-	}
-	return state.New(root, bc.stateCache)
-}
-
 // StateAtWithGCLock returns a new mutable state based on a particular point in time with read lock of the state nodes.
 func (bc *BlockChain) StateAtWithGCLock(root common.Hash) (*state.StateDB, error) {
 	bc.RLockGCCachedNode()

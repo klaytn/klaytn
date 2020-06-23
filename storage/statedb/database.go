@@ -557,22 +557,6 @@ func (db *Database) DoesExistCachedNode(hash common.Hash) bool {
 	return ok
 }
 
-// DoesExistNodeInPersistent returns if the node exists on the persistent database or its cache.
-func (db *Database) DoesExistNodeInPersistent(hash common.Hash) bool {
-	// Retrieve the node from DB cache if available
-	if enc := db.getCachedNode(hash); enc != nil {
-		return true
-	}
-
-	// Content unavailable in DB cache, attempt to retrieve from disk
-	enc, err := db.diskDB.ReadCachedTrieNode(hash)
-	if err == nil && enc != nil {
-		return true
-	}
-
-	return false
-}
-
 // preimage retrieves a cached trie node pre-image from memory. If it cannot be
 // found cached, the method queries the persistent database for the content.
 func (db *Database) preimage(hash common.Hash) ([]byte, error) {

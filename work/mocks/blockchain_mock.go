@@ -731,21 +731,6 @@ func (mr *MockBlockChainMockRecorder) StateAtWithGCLock(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateAtWithGCLock", reflect.TypeOf((*MockBlockChain)(nil).StateAtWithGCLock), arg0)
 }
 
-// StateAtWithPersistent mocks base method
-func (m *MockBlockChain) StateAtWithPersistent(arg0 common.Hash) (*state.StateDB, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StateAtWithPersistent", arg0)
-	ret0, _ := ret[0].(*state.StateDB)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StateAtWithPersistent indicates an expected call of StateAtWithPersistent
-func (mr *MockBlockChainMockRecorder) StateAtWithPersistent(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateAtWithPersistent", reflect.TypeOf((*MockBlockChain)(nil).StateAtWithPersistent), arg0)
-}
-
 // StateCache mocks base method
 func (m *MockBlockChain) StateCache() state.Database {
 	m.ctrl.T.Helper()

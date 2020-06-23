@@ -813,7 +813,7 @@ func (api *PrivateDebugAPI) stateAt(block *types.Block, reexec uint64) (*state.S
 	emptyFn := func() {}
 
 	// If we have the state fully available in persistent, use that.
-	stateDB, err = api.cn.blockchain.StateAtWithPersistent(block.Root())
+	stateDB, err = api.cn.blockchain.StateAt(block.Root())
 	if err == nil {
 		logger.Debug("Get stateDB from persistent DB or its cache", "block", block.NumberU64())
 		return stateDB, emptyFn, nil
