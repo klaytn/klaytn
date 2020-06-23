@@ -81,7 +81,7 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 		// write values in stateDB and check if the values are stored in DB
 		entries := writeRandomValueToStateTrieDB(t, cn.ChainDB().NewBatch(database.StateTrieDB))
 		stopNode(t, fullNode) // stop node to release DB lock
-		checkIfStoredInDB(t, filepath.Join(cn.ChainDB().GetDBConfig().Dir, "statetrie"), entries)
+		checkIfStoredInDB(t, cn.ChainDB().GetDBConfig().NumStateTriePartitions, filepath.Join(cn.ChainDB().GetDBConfig().Dir, "statetrie"), entries)
 		fullNode, cn = startNode(t, workspace, validator)
 	}
 
@@ -95,7 +95,7 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 		// an error expected on node start
 		stopNode(t, fullNode)
 		_, _, err = newKlaytnNode(t, workspace, validator)
-		assert.Error(t, err, "start failure expected, changed state trie db has no data")
+		assert.Error(t, err, "start failure expected, changed state trie db has no data") // error expected
 	}
 }
 
@@ -113,8 +113,8 @@ func writeRandomValueToStateTrieDB(t *testing.T, batch database.Batch) map[strin
 	return entries
 }
 
-func checkIfStoredInDB(t *testing.T, dir string, entries map[string]string) {
-	dbs := make([]*leveldb.DB, 4)
+func checkIfStoredInDB(t *testing.T, numPartitioned uint, dir string, entries map[string]string) {
+	dbs := make([]*leveldb.DB, numPartitioned)
 	for i := 0; i < 4; i++ {
 		var err error
 		dbs[i], err = leveldb.OpenFile(dir+"/"+strconv.Itoa(i), nil)
