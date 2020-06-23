@@ -271,12 +271,12 @@ func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, e
 	return result, nil
 }
 
-// StartWarmUp retrieves all state/storage tries of the given state root and caches the tries.
+// StartWarmUp retrieves all state/storage tries of the latest committed state root and caches the tries.
 func (api *PublicDebugAPI) StartWarmUp() error {
 	return api.cn.blockchain.StartWarmUp()
 }
 
-// StopWarmUp stop the warming up process.
+// StopWarmUp stops the warming up process.
 func (api *PublicDebugAPI) StopWarmUp() error {
 	return api.cn.blockchain.StopWarmUp()
 }
