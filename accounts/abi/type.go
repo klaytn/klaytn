@@ -93,9 +93,7 @@ func NewType(t string, components []ArgumentMarshaling) (typ Type, err error) {
 			typ.Kind = reflect.Slice
 			typ.Elem = &embeddedType
 			typ.Type = reflect.SliceOf(embeddedType.Type)
-			if embeddedType.T == TupleTy {
-				typ.stringKind = embeddedType.stringKind + sliced
-			}
+			typ.stringKind = embeddedType.stringKind + sliced
 		} else if len(intz) == 1 {
 			// is a array
 			typ.T = ArrayTy
@@ -106,9 +104,7 @@ func NewType(t string, components []ArgumentMarshaling) (typ Type, err error) {
 				return Type{}, fmt.Errorf("abi: error parsing variable size: %v", err)
 			}
 			typ.Type = reflect.ArrayOf(typ.Size, embeddedType.Type)
-			if embeddedType.T == TupleTy {
-				typ.stringKind = embeddedType.stringKind + sliced
-			}
+			typ.stringKind = embeddedType.stringKind + sliced
 		} else {
 			return Type{}, fmt.Errorf("invalid formatting of array type")
 		}

@@ -22,13 +22,15 @@ package bind
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/accounts/abi"
 	"go/format"
 	"regexp"
 	"strings"
 	"text/template"
 	"unicode"
+
+	"github.com/klaytn/klaytn/accounts/abi"
 )
 
 // Lang is a target programming language selector to generate bindings for.
@@ -62,11 +64,12 @@ func Bind(types []string, abis []string, bytecodes []string, runtimebytecodes []
 			return r
 		}, abis[i])
 
-		// Extract the call and transact methods; events; and sort them alphabetically
+		// Extract the call and transact methods; events, struct definitions; and sort them alphabetically
 		var (
 			calls     = make(map[string]*tmplMethod)
 			transacts = make(map[string]*tmplMethod)
 			events    = make(map[string]*tmplEvent)
+			structs   = make(map[string]*tmplStruct)
 		)
 		for _, original := range evmABI.Methods {
 			// Normalize the method for capital cases and non-anonymous inputs/outputs
@@ -79,12 +82,18 @@ func Bind(types []string, abis []string, bytecodes []string, runtimebytecodes []
 				if input.Name == "" {
 					normalized.Inputs[j].Name = fmt.Sprintf("arg%d", j)
 				}
+				if _, exist := structs[input.Type.String()]; input.Type.T == abi.TupleTy && !exist {
+					bindStructType[lang](input.Type, structs)
+				}
 			}
 			normalized.Outputs = make([]abi.Argument, len(original.Outputs))
 			copy(normalized.Outputs, original.Outputs)
 			for j, output := range normalized.Outputs {
 				if output.Name != "" {
 					normalized.Outputs[j].Name = capitalise(output.Name)
+				}
+				if _, exist := structs[output.Type.String()]; output.Type.T == abi.TupleTy && !exist {
+					bindStructType[lang](output.Type, structs)
 				}
 			}
 			// Append the methods to the call or transact lists
@@ -111,11 +120,20 @@ func Bind(types []string, abis []string, bytecodes []string, runtimebytecodes []
 					if input.Name == "" {
 						normalized.Inputs[j].Name = fmt.Sprintf("arg%d", j)
 					}
+					if _, exist := structs[input.Type.String()]; input.Type.T == abi.TupleTy && !exist {
+						bindStructType[lang](input.Type, structs)
+					}
 				}
 			}
 			// Append the event to the accumulator list
 			events[original.Name] = &tmplEvent{Original: original, Normalized: normalized}
 		}
+
+		// There is no easy way to pass arbitrary java objects to the Go side.
+		if len(structs) > 0 && lang == LangJava {
+			return "", errors.New("java binding for tuple arguments is not supported yet")
+		}
+
 		contracts[types[i]] = &tmplContract{
 			Type:            capitalise(types[i]),
 			InputABI:        strings.Replace(strippedABI, "\"", "\\\"", -1),
@@ -125,6 +143,7 @@ func Bind(types []string, abis []string, bytecodes []string, runtimebytecodes []
 			Calls:           calls,
 			Transacts:       transacts,
 			Events:          events,
+			Structs:         structs,
 		}
 	}
 	// Generate the contract template data content and render it
@@ -138,6 +157,8 @@ func Bind(types []string, abis []string, bytecodes []string, runtimebytecodes []
 		"bindtype":      bindType[lang],
 		"bindtopictype": bindTopicType[lang],
 		"namedtype":     namedType[lang],
+		"formatmethod":  formatMethod,
+		"formatevent":   formatEvent,
 		"capitalise":    capitalise,
 		"decapitalise":  decapitalise,
 	}
@@ -159,129 +180,68 @@ func Bind(types []string, abis []string, bytecodes []string, runtimebytecodes []
 
 // bindType is a set of type binders that convert Solidity types to some supported
 // programming language types.
-var bindType = map[Lang]func(kind abi.Type) string{
+var bindType = map[Lang]func(kind abi.Type, structs map[string]*tmplStruct) string{
 	LangGo:   bindTypeGo,
 	LangJava: bindTypeJava,
 }
 
-// Helper function for the binding generators.
-// It reads the unmatched characters after the inner type-match,
-//  (since the inner type is a prefix of the total type declaration),
-//  looks for valid arrays (possibly a dynamic one) wrapping the inner type,
-//  and returns the sizes of these arrays.
-//
-// Returned array sizes are in the same order as solidity signatures; inner array size first.
-// Array sizes may also be "", indicating a dynamic array.
-func wrapArray(stringKind string, innerLen int, innerMapping string) (string, []string) {
-	remainder := stringKind[innerLen:]
-	//find all the sizes
-	matches := regexp.MustCompile(`\[(\d*)\]`).FindAllStringSubmatch(remainder, -1)
-	parts := make([]string, 0, len(matches))
-	for _, match := range matches {
-		//get group 1 from the regex match
-		parts = append(parts, match[1])
-	}
-	return innerMapping, parts
-}
-
-// Translates the array sizes to a Go-lang declaration of a (nested) array of the inner type.
-// Simply returns the inner type if arraySizes is empty.
-func arrayBindingGo(inner string, arraySizes []string) string {
-	out := ""
-	//prepend all array sizes, from outer (end arraySizes) to inner (start arraySizes)
-	for i := len(arraySizes) - 1; i >= 0; i-- {
-		out += "[" + arraySizes[i] + "]"
-	}
-	out += inner
-	return out
-}
-
-// bindTypeGo converts a Solidity type to a Go one. Since there is no clear mapping
-// from all Solidity types to Go ones (e.g. uint17), those that cannot be exactly
-// mapped will use an upscaled type (e.g. *big.Int).
-func bindTypeGo(kind abi.Type) string {
-	stringKind := kind.String()
-	innerLen, innerMapping := bindUnnestedTypeGo(stringKind)
-	return arrayBindingGo(wrapArray(stringKind, innerLen, innerMapping))
-}
-
-// The inner function of bindTypeGo, this finds the inner type of stringKind.
-// (Or just the type itself if it is not an array or slice)
-// The length of the matched part is returned, with the translated type.
-func bindUnnestedTypeGo(stringKind string) (int, string) {
-
-	switch {
-	case strings.HasPrefix(stringKind, "address"):
-		return len("address"), "common.Address"
-
-	case strings.HasPrefix(stringKind, "bytes"):
-		parts := regexp.MustCompile(`bytes([0-9]*)`).FindStringSubmatch(stringKind)
-		return len(parts[0]), fmt.Sprintf("[%s]byte", parts[1])
-
-	case strings.HasPrefix(stringKind, "int") || strings.HasPrefix(stringKind, "uint"):
-		parts := regexp.MustCompile(`(u)?int([0-9]*)`).FindStringSubmatch(stringKind)
+// bindBasicTypeGo converts basic solidity types(except array, slice and tuple) to Go one.
+func bindBasicTypeGo(kind abi.Type) string {
+	switch kind.T {
+	case abi.AddressTy:
+		return "common.Address"
+	case abi.IntTy, abi.UintTy:
+		parts := regexp.MustCompile(`(u)?int([0-9]*)`).FindStringSubmatch(kind.String())
 		switch parts[2] {
 		case "8", "16", "32", "64":
-			return len(parts[0]), fmt.Sprintf("%sint%s", parts[1], parts[2])
+			return fmt.Sprintf("%sint%s", parts[1], parts[2])
 		}
-		return len(parts[0]), "*big.Int"
-
-	case strings.HasPrefix(stringKind, "bool"):
-		return len("bool"), "bool"
-
-	case strings.HasPrefix(stringKind, "string"):
-		return len("string"), "string"
-
+		return "*big.Int"
+	case abi.FixedBytesTy:
+		return fmt.Sprintf("[%d]byte", kind.Size)
+	case abi.BytesTy:
+		return "[]byte"
+	case abi.FunctionTy:
+		// todo(rjl493456442)
+		return ""
 	default:
-		return len(stringKind), stringKind
+		// string, bool types
+		return kind.String()
 	}
 }
 
-// Translates the array sizes to a Java declaration of a (nested) array of the inner type.
-// Simply returns the inner type if arraySizes is empty.
-func arrayBindingJava(inner string, arraySizes []string) string {
-	// Java array type declarations do not include the length.
-	return inner + strings.Repeat("[]", len(arraySizes))
-}
-
-// bindTypeJava converts a Solidity type to a Java one. Since there is no clear mapping
-// from all Solidity types to Java ones (e.g. uint17), those that cannot be exactly
+// bindTypeGo converts solidity types to Go ones. Since there is no clear mapping
+// from all Solidity types to Go ones (e.g. uint17), those that cannot be exactly
 // mapped will use an upscaled type (e.g. BigDecimal).
-func bindTypeJava(kind abi.Type) string {
-	stringKind := kind.String()
-	innerLen, innerMapping := bindUnnestedTypeJava(stringKind)
-	return arrayBindingJava(wrapArray(stringKind, innerLen, innerMapping))
+func bindTypeGo(kind abi.Type, structs map[string]*tmplStruct) string {
+	switch kind.T {
+	case abi.TupleTy:
+		return structs[kind.String()].Name
+	case abi.ArrayTy:
+		return fmt.Sprintf("[%d]", kind.Size) + bindTypeGo(*kind.Elem, structs)
+	case abi.SliceTy:
+		return "[]" + bindTypeGo(*kind.Elem, structs)
+	default:
+		return bindBasicTypeGo(kind)
+	}
 }
 
-// The inner function of bindTypeJava, this finds the inner type of stringKind.
-// (Or just the type itself if it is not an array or slice)
-// The length of the matched part is returned, with the translated type.
-func bindUnnestedTypeJava(stringKind string) (int, string) {
-
-	switch {
-	case strings.HasPrefix(stringKind, "address"):
-		parts := regexp.MustCompile(`address(\[[0-9]*\])?`).FindStringSubmatch(stringKind)
-		if len(parts) != 2 {
-			return len(stringKind), stringKind
-		}
-		if parts[1] == "" {
-			return len("address"), "Address"
-		}
-		return len(parts[0]), "Addresses"
-
-	case strings.HasPrefix(stringKind, "bytes"):
-		parts := regexp.MustCompile(`bytes([0-9]*)`).FindStringSubmatch(stringKind)
-		if len(parts) != 2 {
-			return len(stringKind), stringKind
-		}
-		return len(parts[0]), "byte[]"
-
-	case strings.HasPrefix(stringKind, "int") || strings.HasPrefix(stringKind, "uint"):
-		//Note that uint and int (without digits) are also matched,
+// bindBasicTypeJava converts basic solidity types(except array, slice and tuple) to Java one.
+func bindBasicTypeJava(kind abi.Type) string {
+	switch kind.T {
+	case abi.AddressTy:
+		return "Address"
+	case abi.IntTy, abi.UintTy:
+		// Note that uint and int (without digits) are also matched,
 		// these are size 256, and will translate to BigInt (the default).
-		parts := regexp.MustCompile(`(u)?int([0-9]*)`).FindStringSubmatch(stringKind)
+		parts := regexp.MustCompile(`(u)?int([0-9]*)`).FindStringSubmatch(kind.String())
 		if len(parts) != 3 {
-			return len(stringKind), stringKind
+			return kind.String()
+		}
+		// All unsigned integers should be translated to BigInt since gomobile doesn't
+		// support them.
+		if parts[1] == "u" {
+			return "BigInt"
 		}
 
 		namedSize := map[string]string{
@@ -291,34 +251,68 @@ func bindUnnestedTypeJava(stringKind string) (int, string) {
 			"64": "long",
 		}[parts[2]]
 
-		//default to BigInt
+		// default to BigInt
 		if namedSize == "" {
 			namedSize = "BigInt"
 		}
-		return len(parts[0]), namedSize
-
-	case strings.HasPrefix(stringKind, "bool"):
-		return len("bool"), "boolean"
-
-	case strings.HasPrefix(stringKind, "string"):
-		return len("string"), "String"
-
+		return namedSize
+	case abi.FixedBytesTy, abi.BytesTy:
+		return "byte[]"
+	case abi.BoolTy:
+		return "boolean"
+	case abi.StringTy:
+		return "String"
+	case abi.FunctionTy:
+		// todo(rjl493456442)
+		return ""
 	default:
-		return len(stringKind), stringKind
+		return kind.String()
+	}
+}
+
+// pluralizeJavaType explicitly converts multidimensional types to predefined
+// type in go side.
+func pluralizeJavaType(typ string) string {
+	switch typ {
+	case "boolean":
+		return "Bools"
+	case "String":
+		return "Strings"
+	case "Address":
+		return "Addresses"
+	case "byte[]":
+		return "Binaries"
+	case "BigInt":
+		return "BigInts"
+	}
+	return typ + "[]"
+}
+
+// bindTypeJava converts a Solidity type to a Java one. Since there is no clear mapping
+// from all Solidity types to Java ones (e.g. uint17), those that cannot be exactly
+// mapped will use an upscaled type (e.g. BigDecimal).
+func bindTypeJava(kind abi.Type, structs map[string]*tmplStruct) string {
+	switch kind.T {
+	case abi.TupleTy:
+		return structs[kind.String()].Name
+	case abi.ArrayTy, abi.SliceTy:
+		return pluralizeJavaType(bindTypeJava(*kind.Elem, structs))
+	default:
+		return bindBasicTypeJava(kind)
 	}
 }
 
 // bindTopicType is a set of type binders that convert Solidity types to some
 // supported programming language topic types.
-var bindTopicType = map[Lang]func(kind abi.Type) string{
+var bindTopicType = map[Lang]func(kind abi.Type, structs map[string]*tmplStruct) string{
 	LangGo:   bindTopicTypeGo,
 	LangJava: bindTopicTypeJava,
 }
 
 // bindTypeGo converts a Solidity topic type to a Go one. It is almost the same
 // funcionality as for simple types, but dynamic types get converted to hashes.
-func bindTopicTypeGo(kind abi.Type) string {
-	bound := bindTypeGo(kind)
+func bindTopicTypeGo(kind abi.Type, structs map[string]*tmplStruct) string {
+	bound := bindTypeGo(kind, structs)
 	if bound == "string" || bound == "[]byte" {
 		bound = "common.Hash"
 	}
@@ -327,12 +321,75 @@ func bindTopicTypeGo(kind abi.Type) string {
 
 // bindTypeGo converts a Solidity topic type to a Java one. It is almost the same
 // funcionality as for simple types, but dynamic types get converted to hashes.
-func bindTopicTypeJava(kind abi.Type) string {
-	bound := bindTypeJava(kind)
+func bindTopicTypeJava(kind abi.Type, structs map[string]*tmplStruct) string {
+	bound := bindTypeJava(kind, structs)
 	if bound == "String" || bound == "Bytes" {
 		bound = "Hash"
 	}
 	return bound
+}
+
+// bindStructType is a set of type binders that convert Solidity tuple types to some supported
+// programming language struct definition.
+var bindStructType = map[Lang]func(kind abi.Type, structs map[string]*tmplStruct) string{
+	LangGo:   bindStructTypeGo,
+	LangJava: bindStructTypeJava,
+}
+
+// bindStructTypeGo converts a Solidity tuple type to a Go one and records the mapping
+// in the given map.
+// Notably, this function will resolve and record nested struct recursively.
+func bindStructTypeGo(kind abi.Type, structs map[string]*tmplStruct) string {
+	switch kind.T {
+	case abi.TupleTy:
+		if s, exist := structs[kind.String()]; exist {
+			return s.Name
+		}
+		var fields []*tmplField
+		for i, elem := range kind.TupleElems {
+			field := bindStructTypeGo(*elem, structs)
+			fields = append(fields, &tmplField{Type: field, Name: capitalise(kind.TupleRawNames[i]), SolKind: *elem})
+		}
+		name := fmt.Sprintf("Struct%d", len(structs))
+		structs[kind.String()] = &tmplStruct{
+			Name:   name,
+			Fields: fields,
+		}
+		return name
+	case abi.ArrayTy:
+		return fmt.Sprintf("[%d]", kind.Size) + bindStructTypeGo(*kind.Elem, structs)
+	case abi.SliceTy:
+		return "[]" + bindStructTypeGo(*kind.Elem, structs)
+	default:
+		return bindBasicTypeGo(kind)
+	}
+}
+
+// bindStructTypeJava converts a Solidity tuple type to a Java one and records the mapping
+// in the given map.
+// Notably, this function will resolve and record nested struct recursively.
+func bindStructTypeJava(kind abi.Type, structs map[string]*tmplStruct) string {
+	switch kind.T {
+	case abi.TupleTy:
+		if s, exist := structs[kind.String()]; exist {
+			return s.Name
+		}
+		var fields []*tmplField
+		for i, elem := range kind.TupleElems {
+			field := bindStructTypeJava(*elem, structs)
+			fields = append(fields, &tmplField{Type: field, Name: decapitalise(kind.TupleRawNames[i]), SolKind: *elem})
+		}
+		name := fmt.Sprintf("Class%d", len(structs))
+		structs[kind.String()] = &tmplStruct{
+			Name:   name,
+			Fields: fields,
+		}
+		return name
+	case abi.ArrayTy, abi.SliceTy:
+		return pluralizeJavaType(bindStructTypeJava(*kind.Elem, structs))
+	default:
+		return bindBasicTypeJava(kind)
+	}
 }
 
 // namedType is a set of functions that transform language specific types to
@@ -421,4 +478,64 @@ func structured(args abi.Arguments) bool {
 		exists[field] = true
 	}
 	return true
+}
+
+// resolveArgName converts a raw argument representation into a user friendly format.
+func resolveArgName(arg abi.Argument, structs map[string]*tmplStruct) string {
+	var (
+		prefix   string
+		embedded string
+		typ      = &arg.Type
+	)
+loop:
+	for {
+		switch typ.T {
+		case abi.SliceTy:
+			prefix += "[]"
+		case abi.ArrayTy:
+			prefix += fmt.Sprintf("[%d]", typ.Size)
+		default:
+			embedded = typ.String()
+			break loop
+		}
+		typ = typ.Elem
+	}
+	if s, exist := structs[embedded]; exist {
+		return prefix + s.Name
+	} else {
+		return arg.Type.String()
+	}
+}
+
+// formatMethod transforms raw method representation into a user friendly one.
+func formatMethod(method abi.Method, structs map[string]*tmplStruct) string {
+	inputs := make([]string, len(method.Inputs))
+	for i, input := range method.Inputs {
+		inputs[i] = fmt.Sprintf("%v %v", resolveArgName(input, structs), input.Name)
+	}
+	outputs := make([]string, len(method.Outputs))
+	for i, output := range method.Outputs {
+		outputs[i] = resolveArgName(output, structs)
+		if len(output.Name) > 0 {
+			outputs[i] += fmt.Sprintf(" %v", output.Name)
+		}
+	}
+	constant := ""
+	if method.Const {
+		constant = "constant "
+	}
+	return fmt.Sprintf("function %v(%v) %sreturns(%v)", method.Name, strings.Join(inputs, ", "), constant, strings.Join(outputs, ", "))
+}
+
+// formatEvent transforms raw event representation into a user friendly one.
+func formatEvent(event abi.Event, structs map[string]*tmplStruct) string {
+	inputs := make([]string, len(event.Inputs))
+	for i, input := range event.Inputs {
+		if input.Indexed {
+			inputs[i] = fmt.Sprintf("%v indexed %v", resolveArgName(input, structs), input.Name)
+		} else {
+			inputs[i] = fmt.Sprintf("%v %v", resolveArgName(input, structs), input.Name)
+		}
+	}
+	return fmt.Sprintf("event %v(%v)", event.Name, strings.Join(inputs, ", "))
 }
