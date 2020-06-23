@@ -467,7 +467,7 @@ func (bc *BlockChain) StartWarmUp() error {
 	}
 
 	mainTrieDB := bc.StateCache().TrieDB()
-	db := state.NewDatabaseWithCache(bc.db, mainTrieDB.TrieNodeCache())
+	db := state.NewDatabaseWithExistingCache(bc.db, mainTrieDB.TrieNodeCache())
 
 	bc.quitWarmUp = make(chan struct{})
 
