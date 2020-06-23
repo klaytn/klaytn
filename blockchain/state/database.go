@@ -135,12 +135,12 @@ func NewDatabaseWithNewCache(db database.DBManager, cacheSize int) Database {
 	}
 }
 
-// NewDatabaseWithCache creates a backing store for state with given cache. The returned database
+// NewDatabaseWithExistingCache creates a backing store for state with given cache. The returned database
 // is safe for concurrent use and retains a lot of collapsed RLP trie nodes in a
 // large memory cache.
 func NewDatabaseWithCache(db database.DBManager, cache *fastcache.Cache) Database {
 	return &cachingDB{
-		db:            statedb.NewDatabaseWithCache(db, cache),
+		db:            statedb.NewDatabaseWithExistingCache(db, cache),
 		codeSizeCache: getCodeSizeCache(),
 	}
 }

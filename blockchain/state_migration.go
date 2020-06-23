@@ -426,30 +426,33 @@ func (bc *BlockChain) warmUpLoop(cache *fastcache.Cache, mainTrieCacheLimit uint
 	}
 
 	var resultErr error
-	for finishCnt := 0; finishCnt < len(children); {
+	for childCnt := 0; childCnt < len(children); {
 		select {
 		case <-resultHashCh:
 			cnt++
-			if time.Since(logged) > log.StatsReportLimit {
-				logged = time.Now()
-
-				updateContext()
-				if percent > 90 { //more than 90%
-					close(bc.quitWarmUp)
-					logger.Info("Warm up is completed", context...)
-					return
-				}
-
-				logger.Info("Warm up progress", context...)
+			if time.Since(logged) < log.StatsReportLimit {
+				continue
 			}
+
+			logged = time.Now()
+
+			updateContext()
+			if percent > 90 { //more than 90%
+				close(bc.quitWarmUp)
+				logger.Info("Warm up is completed", context...)
+				return
+			}
+
+			logger.Info("Warm up progress", context...)
 		case err := <-resultErrCh:
+			// if resultErrCh is nil, it means success.
 			if err != nil {
 				resultErr = err
 				logger.Warn("Warm up got an error", "err", err)
 			}
 
-			finishCnt++
-			logger.Debug("Warm up is being finished", "finishCnt", finishCnt, "err", err)
+			childCnt++
+			logger.Debug("Warm up a child trie is finished", "childCnt", childCnt, "err", err)
 		}
 	}
 
@@ -458,7 +461,9 @@ func (bc *BlockChain) warmUpLoop(cache *fastcache.Cache, mainTrieCacheLimit uint
 	logger.Info("Warm up is completed", context...)
 }
 
+// StartWarmUp retrieves all state/storage tries of the latest state root and caches the tries.
 func (bc *BlockChain) StartWarmUp() error {
+	// There is a chance of concurrent access to quitWarmUp, though not likely to happen.
 	if bc.quitWarmUp != nil {
 		return fmt.Errorf("already warming up")
 	}
@@ -499,6 +504,7 @@ func (bc *BlockChain) StartWarmUp() error {
 	return nil
 }
 
+// StopWarmUp stops the warming up process.
 func (bc *BlockChain) StopWarmUp() error {
 	if bc.quitWarmUp == nil {
 		return ErrNotInWarmUp
