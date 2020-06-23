@@ -939,7 +939,6 @@ func TestBindings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temporary workspace: %v", err)
 	}
-	fmt.Println(ws)
 	defer os.RemoveAll(ws)
 
 	pkg := filepath.Join(ws, "bindtest")
