@@ -148,7 +148,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 
 	// Ensure we have a valid starting state before doing any work
 	origin := start.NumberU64()
-	database := state.NewDatabaseWithCache(api.cn.ChainDB(), api.cn.blockchain.StateCache().TrieDB().TrieNodeCache()) // Chain tracing will probably start at genesis
+	database := state.NewDatabaseWithExistingCache(api.cn.ChainDB(), api.cn.blockchain.StateCache().TrieDB().TrieNodeCache()) // Chain tracing will probably start at genesis
 
 	if number := start.NumberU64(); number > 0 {
 		start = api.cn.blockchain.GetBlock(start.ParentHash(), start.NumberU64()-1)
@@ -655,7 +655,7 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*state.StateDB, error) {
 	// try to reexec blocks until we find a state or reach our limit
 	origin := block.NumberU64()
-	database := state.NewDatabaseWithCache(api.cn.ChainDB(), api.cn.blockchain.StateCache().TrieDB().TrieNodeCache())
+	database := state.NewDatabaseWithExistingCache(api.cn.ChainDB(), api.cn.blockchain.StateCache().TrieDB().TrieNodeCache())
 
 	var statedb *state.StateDB
 	var err error

@@ -251,7 +251,7 @@ func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, e
 		Tries: make([]Trie, 0),
 	}
 
-	db := state.NewDatabaseWithCache(api.cn.chainDB, api.cn.blockchain.StateCache().TrieDB().TrieNodeCache())
+	db := state.NewDatabaseWithExistingCache(api.cn.chainDB, api.cn.blockchain.StateCache().TrieDB().TrieNodeCache())
 	stateDB, err := state.New(block.Root(), db)
 	if err != nil {
 		return DumpStateTrieResult{}, err
