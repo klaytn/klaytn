@@ -166,6 +166,11 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 	validatorSize := uint64(len(validators))
 	committeeSize := valSet.subSize
 
+	// return early if the committee size is equal or larger than the validator size
+	if committeeSize >= validatorSize {
+		return validators
+	}
+
 	// find the proposer
 	proposerIdx, proposer := valSet.GetByAddress(proposerAddr)
 	if proposerIdx < 0 {
@@ -174,12 +179,9 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 		return validators
 	}
 
-	// return early if the committee size is an edge value
+	// return early if the committee size is 1
 	if committeeSize == 1 {
 		return []istanbul.Validator{proposer}
-	}
-	if committeeSize >= validatorSize {
-		return validators
 	}
 
 	// find the next proposer
@@ -194,7 +196,7 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 	// seed will be used to select a random committee
 	seed, err := ConvertHashToSeed(prevHash)
 	if err != nil {
-		logger.Error("failed to covert hash to seed", "prevHash", prevHash, "err", err)
+		logger.Error("failed to convert hash to seed", "prevHash", prevHash, "err", err)
 		return validators
 	}
 
