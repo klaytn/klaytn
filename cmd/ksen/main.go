@@ -120,7 +120,7 @@ var senHelpFlagGroups = []utils.FlagGroup{
 			utils.StateDBCachingFlag,
 			utils.TrieMemoryCacheSizeFlag,
 			utils.TrieBlockIntervalFlag,
-			utils.TriesInMemory,
+			utils.TriesInMemoryFlag,
 		},
 	},
 	{
