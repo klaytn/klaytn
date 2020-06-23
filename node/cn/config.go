@@ -47,6 +47,7 @@ func GetDefaultConfig() *Config {
 		TrieCacheSize:     512,
 		TrieTimeout:       5 * time.Minute,
 		TrieBlockInterval: blockchain.DefaultBlockInterval,
+		TriesInMemory:     blockchain.DefaultTriesInMemory,
 		GasPrice:          big.NewInt(18 * params.Ston),
 
 		TxPool: blockchain.DefaultTxPoolConfig,
@@ -100,6 +101,7 @@ type Config struct {
 	TrieCacheSize          int
 	TrieTimeout            time.Duration
 	TrieBlockInterval      uint
+	TriesInMemory          uint64
 	SenderTxHashIndexing   bool
 	ParallelDBWrite        bool
 	StateDBCaching         bool

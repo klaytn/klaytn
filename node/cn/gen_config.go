@@ -36,6 +36,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		TrieCacheSize           int
 		TrieTimeout             time.Duration
 		TrieBlockInterval       uint
+		TriesInMemory           uint64
 		SenderTxHashIndexing    bool
 		ParallelDBWrite         bool
 		StateDBCaching          bool
@@ -77,6 +78,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.TrieCacheSize = c.TrieCacheSize
 	enc.TrieTimeout = c.TrieTimeout
 	enc.TrieBlockInterval = c.TrieBlockInterval
+	enc.TriesInMemory = c.TriesInMemory
 	enc.SenderTxHashIndexing = c.SenderTxHashIndexing
 	enc.ParallelDBWrite = c.ParallelDBWrite
 	enc.StateDBCaching = c.StateDBCaching
@@ -122,6 +124,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		TrieCacheSize           *int
 		TrieTimeout             *time.Duration
 		TrieBlockInterval       *uint
+		TriesInMemory           *uint64
 		SenderTxHashIndexing    *bool
 		ParallelDBWrite         *bool
 		StateDBCaching          *bool
@@ -197,6 +200,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.TrieBlockInterval != nil {
 		c.TrieBlockInterval = *dec.TrieBlockInterval
+	}
+	if dec.TriesInMemory != nil {
+		c.TriesInMemory = *dec.TriesInMemory
 	}
 	if dec.SenderTxHashIndexing != nil {
 		c.SenderTxHashIndexing = *dec.SenderTxHashIndexing

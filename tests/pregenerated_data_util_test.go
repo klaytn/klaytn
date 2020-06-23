@@ -474,6 +474,7 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 		ArchiveMode:      false,
 		CacheSize:        512,
 		BlockInterval:    blockchain.DefaultBlockInterval,
+		TriesInMemory:    blockchain.DefaultTriesInMemory,
 		TrieCacheLimit:   4096,
 	}
 }
