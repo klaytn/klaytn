@@ -28,8 +28,15 @@ import (
 	"reflect"
 )
 
+var (
+	// MaxUint256 is the maximum value that can be represented by a uint256
+	MaxUint256 = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 256), common.Big1)
+	// MaxInt256 is the maximum value that can be represented by a int256
+	MaxInt256 = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 255), common.Big1)
+)
+
 // reads the integer based on its kind
-func readInteger(kind reflect.Kind, b []byte) interface{} {
+func readInteger(typ byte, kind reflect.Kind, b []byte) interface{} {
 	switch kind {
 	case reflect.Uint8:
 		return b[len(b)-1]
@@ -48,7 +55,20 @@ func readInteger(kind reflect.Kind, b []byte) interface{} {
 	case reflect.Int64:
 		return int64(binary.BigEndian.Uint64(b[len(b)-8:]))
 	default:
-		return new(big.Int).SetBytes(b)
+		// the only case left for integer is int256/uint256.
+		ret := new(big.Int).SetBytes(b)
+		if typ == UintTy {
+			return ret
+		}
+		// big.SetBytes can't tell if a number is negative or positive in itself.
+		// On EVM, if the returned number > max int256, it is negative.
+		// A number is > max int256 if the bit at position 255 is set.
+		if ret.Bit(255) == 1 {
+			ret.Add(MaxUint256, new(big.Int).Neg(ret))
+			ret.Add(ret, common.Big1)
+			ret.Neg(ret)
+		}
+		return ret
 	}
 }
 
@@ -182,7 +202,7 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	case StringTy: // variable arrays are written at the end of the return bytes
 		return string(output[begin : begin+end]), nil
 	case IntTy, UintTy:
-		return readInteger(t.Kind, returnOutput), nil
+		return readInteger(t.T, t.Kind, returnOutput), nil
 	case BoolTy:
 		return readBool(returnOutput)
 	case AddressTy:

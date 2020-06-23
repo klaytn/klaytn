@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -299,6 +300,53 @@ var unpackTests = []unpackTest{
 		}{big.NewInt(1), big.NewInt(2)},
 	},
 	{
+		def: `[{"name":"int_one","type":"int256"}]`,
+		enc: "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002",
+		want: struct {
+			IntOne *big.Int
+		}{big.NewInt(1)},
+	},
+	{
+		def: `[{"name":"int__one","type":"int256"}]`,
+		enc: "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002",
+		want: struct {
+			IntOne *big.Int
+		}{big.NewInt(1)},
+	},
+	{
+		def: `[{"name":"int_one_","type":"int256"}]`,
+		enc: "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002",
+		want: struct {
+			IntOne *big.Int
+		}{big.NewInt(1)},
+	},
+	{
+		def: `[{"name":"int_one","type":"int256"}, {"name":"intone","type":"int256"}]`,
+		enc: "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002",
+		want: struct {
+			IntOne *big.Int
+			Intone *big.Int
+		}{big.NewInt(1), big.NewInt(2)},
+	},
+	{
+		def: `[{"name":"___","type":"int256"}]`,
+		enc: "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002",
+		want: struct {
+			IntOne *big.Int
+			Intone *big.Int
+		}{},
+		err: "abi: purely underscored output cannot unpack to struct",
+	},
+	{
+		def: `[{"name":"int_one","type":"int256"},{"name":"IntOne","type":"int256"}]`,
+		enc: "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002",
+		want: struct {
+			Int1 *big.Int
+			Int2 *big.Int
+		}{},
+		err: "abi: multiple outputs mapping to the same struct field 'IntOne'",
+	},
+	{
 		def: `[{"name":"int","type":"int256"},{"name":"Int","type":"int256"}]`,
 		enc: "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002",
 		want: struct {
@@ -336,8 +384,6 @@ var unpackTests = []unpackTest{
 	},
 }
 
-// TODO-Klaytn-FailedTest Enable this test later
-/*
 func TestUnpack(t *testing.T) {
 	for i, test := range unpackTests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
@@ -348,7 +394,7 @@ func TestUnpack(t *testing.T) {
 			}
 			encb, err := hex.DecodeString(test.enc)
 			if err != nil {
-				t.Fatalf("invalid hex: %s" + test.enc)
+				t.Fatalf("invalid hex %s: %v", test.enc, err)
 			}
 			outptr := reflect.New(reflect.TypeOf(test.want))
 			err = abi.Unpack(outptr.Interface(), "method", encb)
@@ -363,7 +409,6 @@ func TestUnpack(t *testing.T) {
 		})
 	}
 }
-*/
 
 type methodMultiOutput struct {
 	Int    *big.Int
