@@ -208,7 +208,7 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 	iteratorQuitCh := make(chan struct{})
 	resultHashCh := make(chan struct{}, 10000)
 	resultErrCh := make(chan error)
-	
+
 	// checks the consistency for each child in parallel
 	for _, child := range children {
 		go concurrentIterator(oldDB, newDB, child, iteratorQuitCh, resultHashCh, resultErrCh)
