@@ -96,9 +96,12 @@ func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{},
 // After the migration finish, the original StateTrieDB is removed and StateTrieMigrationDB becomes a new StateTrieDB.
 func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	bc.wg.Add(1)
+	bc.migrationErr = nil
 	defer func() {
+		bc.migrationErr = returnErr
 		// If migration stops by quit signal, it doesn't finish migration and it it will restart again.
 		if returnErr != ErrQuitBySignal {
+			// lock to prevent from a conflict of state DB close and state DB write
 			bc.mu.Lock()
 			bc.db.FinishStateMigration(returnErr == nil)
 			bc.mu.Unlock()
@@ -180,10 +183,10 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 		select {
 		case <-bc.stopStateMigration:
-			logger.Info("State migration stopped by request")
+			logger.Info("State migration terminated by request")
 			return errors.New("stop state migration")
 		case <-bc.quit:
-			logger.Info("State migration stopped by quit signal")
+			logger.Info("State migration stopped by quit signal; should continue on node restart")
 			return ErrQuitBySignal
 		default:
 		}
