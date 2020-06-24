@@ -21,13 +21,13 @@ package state
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -188,19 +188,18 @@ func (it *NodeIterator) retrieve() bool {
 // CheckStateConsistencyParallel checks parallelly the consistency of all state/storage trie of given two state database.
 func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.Hash, quitCh chan struct{}) error {
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, oldDB)
+	_, err := oldDB.OpenTrie(root)
 	if err != nil {
 		return err
 	}
-
-	_, err = New(root, newDB)
+	_, err = newDB.OpenTrie(root)
 	if err != nil {
 		return err
 	}
-
-	children, err := oldState.db.TrieDB().NodeChildren(root)
+	children, err := oldDB.TrieDB().NodeChildren(root)
 	if err != nil {
 		logger.Error("cannot start CheckStateConsistencyParallel", "err", err)
+		return errors.Wrap(err, "cannot get children before consistency check")
 	}
 
 	logger.Info("CheckStateConsistencyParallel is started", "root", root.String(), "len(children)", len(children))
