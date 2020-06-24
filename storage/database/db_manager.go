@@ -572,7 +572,7 @@ func (dbm *databaseManager) setStateTrieMigrationStatus(blockNum uint64) {
 	defer dbm.lockInMigration.Unlock()
 
 	if blockNum == 0 {
-		dbm.inMigration, dbm.migrationBlockNumber = false, 0
+		dbm.inMigration = false
 		return
 	}
 

@@ -167,6 +167,7 @@ type BlockChain struct {
 	committedCnt          int
 	pendingCnt            int
 	progress              float64
+	migrationErr          error
 }
 
 // NewBlockChain returns a fully initialised block chain using information

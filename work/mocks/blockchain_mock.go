@@ -746,7 +746,7 @@ func (mr *MockBlockChainMockRecorder) StateCache() *gomock.Call {
 }
 
 // StatusStateMigration mocks base method
-func (m *MockBlockChain) StatusStateMigration() (bool, uint64, int, int, float64) {
+func (m *MockBlockChain) StatusStateMigration() (bool, uint64, int, int, float64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StatusStateMigration")
 	ret0, _ := ret[0].(bool)
@@ -754,7 +754,8 @@ func (m *MockBlockChain) StatusStateMigration() (bool, uint64, int, int, float64
 	ret2, _ := ret[2].(int)
 	ret3, _ := ret[3].(int)
 	ret4, _ := ret[4].(float64)
-	return ret0, ret1, ret2, ret3, ret4
+	ret5, _ := ret[5].(error)
+	return ret0, ret1, ret2, ret3, ret4, ret5
 }
 
 // StatusStateMigration indicates an expected call of StatusStateMigration
