@@ -185,9 +185,9 @@ func (it *NodeIterator) retrieve() bool {
 	return true
 }
 
-// CheckStateConsistencyParallel checks parallelly the consistency of all state/storage trie of given two state database.
+// CheckStateConsistencyParallel checks the consistency of all state/storage trie of given two state databases in parallel.
 func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.Hash, quitCh chan struct{}) error {
-	// Create and iterate a state trie rooted in a sub-node
+	// Check if the tries can be called
 	_, err := oldDB.OpenTrie(root)
 	if err != nil {
 		return err
@@ -196,6 +196,7 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 	if err != nil {
 		return err
 	}
+	// get children hash
 	children, err := oldDB.TrieDB().NodeChildren(root)
 	if err != nil {
 		logger.Error("cannot start CheckStateConsistencyParallel", "err", err)
@@ -207,7 +208,8 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 	iteratorQuitCh := make(chan struct{})
 	resultHashCh := make(chan struct{}, 10000)
 	resultErrCh := make(chan error)
-
+	
+	// checks the consistency for each child in parallel
 	for _, child := range children {
 		go concurrentIterator(oldDB, newDB, child, iteratorQuitCh, resultHashCh, resultErrCh)
 	}
