@@ -489,7 +489,8 @@ func (bc *BlockChain) StartWarmUp() error {
 
 		children, err := db.TrieDB().NodeChildren(block.Root())
 		if err != nil {
-			logger.Error("Warm up is stop by err", "err", err)
+			logger.Error("Cannot start warming up", "err", err)
+			return
 		}
 
 		logger.Info("Warm up is started", "blockNum", block.NumberU64(), "root", block.Root().String(), "len(children)", len(children))
