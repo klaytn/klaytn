@@ -224,6 +224,11 @@ var (
 		Usage: "An interval in terms of block number to commit the global state to disk",
 		Value: blockchain.DefaultBlockInterval,
 	}
+	TriesInMemoryFlag = cli.Uint64Flag{
+		Name:  "state.tries-in-memory",
+		Usage: "The number of recent state tries residing in the memory",
+		Value: blockchain.DefaultTriesInMemory,
+	}
 	CacheTypeFlag = cli.IntFlag{
 		Name:  "cache.type",
 		Usage: "Cache Type: 0=LRUCache, 1=LRUShardCache, 2=FIFOCache",
@@ -1134,6 +1139,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
 	common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
 	cfg.TrieBlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
+	cfg.TriesInMemory = ctx.GlobalUint64(TriesInMemoryFlag.Name)
 
 	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)

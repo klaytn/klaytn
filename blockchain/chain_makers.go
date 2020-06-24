@@ -173,6 +173,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 			ArchiveMode:    false,
 			CacheSize:      512,
 			BlockInterval:  DefaultBlockInterval,
+			TriesInMemory:  DefaultTriesInMemory,
 			TrieCacheLimit: 0,
 		}
 		blockchain, _ := NewBlockChain(db, cacheConfig, config, engine, vm.Config{})

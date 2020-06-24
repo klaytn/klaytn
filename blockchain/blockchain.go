@@ -69,7 +69,7 @@ const (
 )
 
 const (
-	triesInMemory = 4
+	DefaultTriesInMemory = 4
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion    = 3
 	DefaultBlockInterval = 128
@@ -79,13 +79,14 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	StateDBCaching       bool // Enables caching of state objects in stateDB.
-	TxPoolStateCache     bool // Enables caching of nonce and balance for txpool.
-	ArchiveMode          bool // If true, state trie is not pruned and always written to database.
-	CacheSize            int  // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval        uint // Block interval to flush the trie. Each interval state trie will be flushed into disk.
-	TrieCacheLimit       int  // Memory allowance (MB) to use for caching trie nodes in memory
-	SenderTxHashIndexing bool // Enables saving senderTxHash to txHash mapping information to database and cache.
+	StateDBCaching       bool   // Enables caching of state objects in stateDB.
+	TxPoolStateCache     bool   // Enables caching of nonce and balance for txpool.
+	ArchiveMode          bool   // If true, state trie is not pruned and always written to database.
+	CacheSize            int    // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval        uint   // Block interval to flush the trie. Each interval state trie will be flushed into disk.
+	TriesInMemory        uint64 // Maximum number of recent state tries according to its block number
+	TrieCacheLimit       int    // Memory allowance (MB) to use for caching trie nodes in memory
+	SenderTxHashIndexing bool   // Enables saving senderTxHash to txHash mapping information to database and cache.
 }
 
 // gcBlock is used for priority queue for GC.
@@ -177,6 +178,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			ArchiveMode:    false,
 			CacheSize:      512,
 			BlockInterval:  DefaultBlockInterval,
+			TriesInMemory:  DefaultTriesInMemory,
 			TrieCacheLimit: 0,
 		}
 	}
@@ -1102,6 +1104,11 @@ func (bc *BlockChain) RUnlockGCCachedNode() {
 	bc.stateCache.RUnlockGCCachedNode()
 }
 
+// DefaultTriesInMemory returns the number of tries residing in the memory.
+func (bc *BlockChain) triesInMemory() uint64 {
+	return bc.cacheConfig.TriesInMemory
+}
+
 // gcCachedNodeLoop runs a loop to gc.
 func (bc *BlockChain) gcCachedNodeLoop() {
 	trieDB := bc.stateCache.TrieDB()
@@ -1116,12 +1123,12 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 				logger.Trace("Push GC block", "blkNum", block.blockNum, "hash", block.root.String())
 
 				blkNum := block.blockNum
-				if blkNum <= triesInMemory {
+				if blkNum <= bc.triesInMemory() {
 					continue
 				}
 
 				// Garbage collect anything below our required write retention
-				chosen := blkNum - triesInMemory
+				chosen := blkNum - bc.triesInMemory()
 				cnt := 0
 				for !bc.triegc.Empty() {
 					root, number := bc.triegc.Pop()
