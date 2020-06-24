@@ -186,7 +186,7 @@ func (it *NodeIterator) retrieve() bool {
 }
 
 // CheckStateConsistencyParallel checks parallelly the consistency of all state/storage trie of given two state database.
-func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.Hash, quit chan struct{}) error {
+func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.Hash, quitCh chan struct{}) error {
 	// Create and iterate a state trie rooted in a sub-node
 	oldState, err := New(root, oldDB)
 	if err != nil {
@@ -200,16 +200,17 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 
 	children, err := oldState.db.TrieDB().NodeChildren(root)
 	if err != nil {
-		logger.Error("CheckStateConsistencyParallel is stop by err", "err", err)
+		logger.Error("cannot start CheckStateConsistencyParallel", "err", err)
 	}
 
 	logger.Info("CheckStateConsistencyParallel is started", "root", root.String(), "len(children)", len(children))
 
-	resultHashCh := make(chan common.Hash, 10000)
+	iteratorQuitCh := make(chan struct{})
+	resultHashCh := make(chan struct{}, 10000)
 	resultErrCh := make(chan error)
 
 	for _, child := range children {
-		go concurrentIterator(oldDB, newDB, child, quit, resultHashCh, resultErrCh)
+		go concurrentIterator(oldDB, newDB, child, iteratorQuitCh, resultHashCh, resultErrCh)
 	}
 
 	var resultErr error
@@ -225,13 +226,18 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 			}
 		case err := <-resultErrCh:
 			if err != nil {
-				resultErr = err
 				logger.Warn("CheckStateConsistencyParallel got an error", "err", err)
+				close(iteratorQuitCh)
+				return err
 			}
 
 			finishCnt++
 			logger.Debug("CheckStateConsistencyParallel is being finished", "finishCnt", finishCnt, "err", err)
+		case <-quitCh:
+			close(iteratorQuitCh)
+			return nil
 		}
+
 	}
 	logger.Info("CheckStateConsistencyParallel is done", "cnt", cnt, "err", resultErr)
 
@@ -240,7 +246,7 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 
 // concurrentIterator checks the consistency of all state/storage trie of given two state database
 // and pass the result via the channel.
-func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit chan struct{}, resultCh chan common.Hash, finishCh chan error) (resultErr error) {
+func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit chan struct{}, resultCh chan struct{}, finishCh chan error) (resultErr error) {
 	defer func() {
 		finishCh <- resultErr
 	}()
@@ -292,7 +298,7 @@ func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit c
 			}
 		}
 
-		resultCh <- oldIt.Hash
+		resultCh <- struct{}{}
 
 		if quit != nil {
 			select {
