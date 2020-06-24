@@ -148,7 +148,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 
 	// Ensure we have a valid starting state before doing any work
 	origin := start.NumberU64()
-	database := state.NewDatabaseWithCache(api.cn.ChainDB(), 16) // Chain tracing will probably start at genesis
+	database := state.NewDatabaseWithCache(api.cn.ChainDB(), api.cn.blockchain.StateCache().TrieDB().TrieNodeCache()) // Chain tracing will probably start at genesis
 
 	if number := start.NumberU64(); number > 0 {
 		start = api.cn.blockchain.GetBlock(start.ParentHash(), start.NumberU64()-1)
@@ -655,7 +655,7 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*state.StateDB, error) {
 	// try to reexec blocks until we find a state or reach our limit
 	origin := block.NumberU64()
-	database := state.NewDatabaseWithCache(api.cn.ChainDB(), 16)
+	database := state.NewDatabaseWithCache(api.cn.ChainDB(), api.cn.blockchain.StateCache().TrieDB().TrieNodeCache())
 
 	var statedb *state.StateDB
 	var err error
@@ -802,22 +802,31 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 func (api *PrivateDebugAPI) stateAt(block *types.Block, reexec uint64) (*state.StateDB, func(), error) {
 	var stateDB *state.StateDB
 
-	// If we have the state fully available, use that.
+	// If we have the state fully available in cachedNode, use that.
 	stateDB, err := api.cn.blockchain.StateAtWithGCLock(block.Root())
-	if err != nil {
-		emptyFn := func() {}
+	if err == nil {
+		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64())
+		// During this processing, this lock will prevent to evict the state.
+		return stateDB, stateDB.UnlockGCCachedNode, nil
+	}
 
-		// If no state is locally available, the desired state will be generated.
-		stateDB, err = api.computeStateDB(block, reexec)
-		if err != nil {
-			return nil, emptyFn, err
-		}
-		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
+	emptyFn := func() {}
+
+	// If we have the state fully available in persistent, use that.
+	stateDB, err = api.cn.blockchain.StateAt(block.Root())
+	if err == nil {
+		logger.Debug("Get stateDB from persistent DB or its cache", "block", block.NumberU64())
 		return stateDB, emptyFn, nil
 	}
-	logger.Debug("Get stateDB from stateCache", "block", block.NumberU64(), "reexec", reexec)
-	// During this processing, this lock will prevent to evict the state.
-	return stateDB, stateDB.UnlockGCCachedNode, nil
+
+	// If no state is locally available, the desired state will be generated.
+	stateDB, err = api.computeStateDB(block, reexec)
+	if err == nil {
+		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64(), "reexec", reexec)
+		return stateDB, emptyFn, nil
+	}
+
+	return nil, emptyFn, err
 }
 
 // computeTxEnv returns the execution environment of a certain transaction.

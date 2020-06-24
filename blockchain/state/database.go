@@ -22,6 +22,7 @@ package state
 
 import (
 	"fmt"
+	"github.com/VictoriaMetrics/fastcache"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
@@ -103,15 +104,12 @@ type Trie interface {
 
 // NewDatabase creates a backing store for state. The returned database is safe for
 // concurrent use, but does not retain any recent trie nodes in memory. To keep some
-// historical state in memory, use the NewDatabaseWithCache constructor.
+// historical state in memory, use the NewDatabaseWithNewCache constructor.
 func NewDatabase(db database.DBManager) Database {
-	return NewDatabaseWithCache(db, 0)
+	return NewDatabaseWithNewCache(db, 0)
 }
 
-// NewDatabaseWithCache creates a backing store for state. The returned database
-// is safe for concurrent use and retains a lot of collapsed RLP trie nodes in a
-// large memory cache.
-func NewDatabaseWithCache(db database.DBManager, cacheSize int) Database {
+func getCodeSizeCache() common.Cache {
 	var cacheConfig common.CacheConfiger
 	switch common.DefaultCacheType {
 	case common.LRUShardCacheType:
@@ -123,11 +121,27 @@ func NewDatabaseWithCache(db database.DBManager, cacheSize int) Database {
 	default:
 		cacheConfig = common.FIFOCacheConfig{CacheSize: codeSizeCacheSize}
 	}
-	csc := common.NewCache(cacheConfig)
 
+	return common.NewCache(cacheConfig)
+}
+
+// NewDatabaseWithNewCache creates a backing store for state. The returned database
+// is safe for concurrent use and retains a lot of collapsed RLP trie nodes in a
+// large memory cache.
+func NewDatabaseWithNewCache(db database.DBManager, cacheSize int) Database {
 	return &cachingDB{
-		db:            statedb.NewDatabaseWithCache(db, cacheSize),
-		codeSizeCache: csc,
+		db:            statedb.NewDatabaseWithNewCache(db, cacheSize),
+		codeSizeCache: getCodeSizeCache(),
+	}
+}
+
+// NewDatabaseWithCache creates a backing store for state with given cache. The returned database
+// is safe for concurrent use and retains a lot of collapsed RLP trie nodes in a
+// large memory cache.
+func NewDatabaseWithCache(db database.DBManager, cache *fastcache.Cache) Database {
+	return &cachingDB{
+		db:            statedb.NewDatabaseWithCache(db, cache),
+		codeSizeCache: getCodeSizeCache(),
 	}
 }
 

@@ -200,7 +200,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		db:                 db,
 		triegc:             prque.New(),
 		chBlock:            make(chan gcBlock, 1000),
-		stateCache:         state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit),
+		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieCacheLimit),
 		quit:               make(chan struct{}),
 		futureBlocks:       futureBlocks,
 		engine:             engine,
