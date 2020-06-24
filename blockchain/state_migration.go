@@ -97,7 +97,12 @@ func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{},
 func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	bc.wg.Add(1)
 	defer func() {
-		bc.db.FinishStateMigration(returnErr == nil)
+		// If migration stops by quit signal, it doesn't finish migration and it it will restart again.
+		if returnErr != ErrQuitBySignal {
+			bc.mu.Lock()
+			bc.db.FinishStateMigration(returnErr == nil)
+			bc.mu.Unlock()
+		}
 		bc.wg.Done()
 	}()
 
@@ -179,7 +184,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 			logger.Error("State migration is failed by stop")
 			return errors.New("stop state migration")
 		case <-bc.quit:
-			return nil
+			return ErrQuitBySignal
 		default:
 		}
 	}

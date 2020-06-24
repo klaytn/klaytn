@@ -53,6 +53,7 @@ var (
 	blockInsertTimeGauge = metrics.NewRegisteredGauge("chain/inserts", nil)
 	ErrNoGenesis         = errors.New("Genesis not found in chain")
 	ErrNotExistNode      = errors.New("the node does not exist in cached node")
+	ErrQuitBySignal      = errors.New("quit by signal")
 	logger               = log.NewModuleLogger(log.Blockchain)
 )
 
