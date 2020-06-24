@@ -312,7 +312,7 @@ func (bc *BlockChain) PrepareStateMigration() error {
 	}
 
 	bc.prepareStateMigration = true
-	logger.Info("State migration is prepared", "migrationStartingBlockNumber", bc.CurrentBlock().NumberU64()+1)
+	logger.Info("State migration is prepared", "expectedMigrationStartingBlockNumber", bc.CurrentBlock().NumberU64()+1)
 
 	return nil
 }
