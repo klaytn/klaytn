@@ -406,8 +406,9 @@ func (valSet *weightedCouncil) getByAddress(addr common.Address) (int, istanbul.
 			return i, val
 		}
 	}
-	logger.Warn("failed to find an address in the validator list",
-		"address", addr, "validatorAddrs", valSet.validators.AddressStringList())
+	// TODO-Klaytn-Istanbul: Enable this log when non-committee nodes don't call `core.startNewRound()`
+	/*logger.Warn("failed to find an address in the validator list",
+	"address", addr, "validatorAddrs", valSet.validators.AddressStringList())*/
 	return -1, nil
 }
 
