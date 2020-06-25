@@ -141,6 +141,7 @@ var enHelpFlagGroups = []utils.FlagGroup{
 			utils.SubListenPortFlag,
 			utils.MultiChannelUseFlag,
 			utils.MaxConnectionsFlag,
+			utils.MaxRequestContentLengthFlag,
 			utils.MaxPendingPeersFlag,
 			utils.TargetGasLimitFlag,
 			utils.NATFlag,

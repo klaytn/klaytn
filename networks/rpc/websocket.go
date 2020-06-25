@@ -66,7 +66,7 @@ func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 		Handshake: wsHandshakeValidator(allowedOrigins),
 		Handler: func(conn *websocket.Conn) {
 			// Create a custom encode/decode pair to enforce payload size and number encoding
-			conn.MaxPayloadBytes = maxRequestContentLength
+			conn.MaxPayloadBytes = MaxRequestContentLength
 
 			encoder := func(v interface{}) error {
 				return websocketJSONCodec.Send(conn, v)
@@ -118,7 +118,7 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 			//return fastws.ReadJSON(conn, v)
 		}
 
-		reader := bufio.NewReaderSize(bytes.NewReader(ctx.Request.Body()), maxRequestContentLength)
+		reader := bufio.NewReaderSize(bytes.NewReader(ctx.Request.Body()), MaxRequestContentLength)
 		srv.ServeCodec(NewCodec(&httpReadWriteNopCloser{reader, ctx.Response.BodyWriter()}, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
 	})
 	if err != nil {
@@ -138,7 +138,7 @@ func NewFastWSServer(allowedOrigins []string, srv *Server) *fasthttp.Server {
 	upgrader.CheckOrigin = wsFastHandshakeValidator(allowedOrigins)
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
-	return &fasthttp.Server{Concurrency: concurrencyLimit, MaxRequestBodySize: maxRequestContentLength, Handler: srv.FastWebsocketHandler}
+	return &fasthttp.Server{Concurrency: concurrencyLimit, MaxRequestBodySize: MaxRequestContentLength, Handler: srv.FastWebsocketHandler}
 }
 
 func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.RequestCtx) bool {
