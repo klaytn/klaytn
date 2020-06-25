@@ -175,9 +175,9 @@ func (api *PrivateAdminAPI) StopStateMigration() error {
 	return api.cn.BlockChain().StopStateMigration()
 }
 
-// StatusStateMigration returns the status information of state trie migration.
-func (api *PrivateAdminAPI) StatusStateMigration() map[string]interface{} {
-	isMigration, blkNum, committed, pending, progress, err := api.cn.BlockChain().StatusStateMigration()
+// StateMigrationStatus returns the status information of state trie migration.
+func (api *PrivateAdminAPI) StateMigrationStatus() map[string]interface{} {
+	isMigration, blkNum, committed, pending, progress, err := api.cn.BlockChain().StateMigrationStatus()
 
 	return map[string]interface{}{
 		// TODO-Klaytn Add more information.

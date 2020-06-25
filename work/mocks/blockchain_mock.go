@@ -774,10 +774,10 @@ func (mr *MockBlockChainMockRecorder) StateCache() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateCache", reflect.TypeOf((*MockBlockChain)(nil).StateCache))
 }
 
-// StatusStateMigration mocks base method
-func (m *MockBlockChain) StatusStateMigration() (bool, uint64, int, int, float64, error) {
+// StateMigrationStatus mocks base method
+func (m *MockBlockChain) StateMigrationStatus() (bool, uint64, int, int, float64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StatusStateMigration")
+	ret := m.ctrl.Call(m, "StateMigrationStatus")
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(uint64)
 	ret2, _ := ret[2].(int)
@@ -787,10 +787,10 @@ func (m *MockBlockChain) StatusStateMigration() (bool, uint64, int, int, float64
 	return ret0, ret1, ret2, ret3, ret4, ret5
 }
 
-// StatusStateMigration indicates an expected call of StatusStateMigration
-func (mr *MockBlockChainMockRecorder) StatusStateMigration() *gomock.Call {
+// StateMigrationStatus indicates an expected call of StateMigrationStatus
+func (mr *MockBlockChainMockRecorder) StateMigrationStatus() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusStateMigration", reflect.TypeOf((*MockBlockChain)(nil).StatusStateMigration))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateMigrationStatus", reflect.TypeOf((*MockBlockChain)(nil).StateMigrationStatus))
 }
 
 // Stop mocks base method
