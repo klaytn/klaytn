@@ -29,6 +29,8 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/work"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -71,7 +73,8 @@ func TestSimpleBlockchain(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// start full node with previous db
-	fullNode, node = newKlaytnNode(t, workspace, validator)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator)
+	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
 	}
@@ -99,7 +102,8 @@ func newBlockchain(t *testing.T) (*node.Node, *cn.CN, *TestAccountType, *big.Int
 	}
 
 	// Create a Klaytn node
-	fullNode, node := newKlaytnNode(t, workspace, validator)
+	fullNode, node, err := newKlaytnNode(t, workspace, validator)
+	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
 	}
@@ -136,7 +140,7 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 }
 
 // newKlaytnNode creates a klaytn node
-func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.Node, *cn.CN) {
+func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.Node, *cn.CN, error) {
 	var klaytnNode *cn.CN
 
 	fullNode, err := node.New(&node.Config{DataDir: dir, UseLightweightKDF: true, P2P: p2p.Config{PrivateKey: validator.Keys[0]}})
@@ -167,18 +171,18 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	cnConf.NumStateTriePartitions = 4
 
 	if err = fullNode.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, cnConf) }); err != nil {
-		t.Fatalf("failed to register Klaytn protocol: %v", err)
+		return nil, nil, errors.Wrap(err, "failed to register Klaytn protocol")
 	}
 
 	if err = fullNode.Start(); err != nil {
-		t.Fatalf("failed to start test fullNode: %v", err)
+		return nil, nil, errors.Wrap(err, "failed to start test fullNode")
 	}
 
 	if err := fullNode.Service(&klaytnNode); err != nil {
-		t.Fatal(err)
+		return nil, nil, err
 	}
 
-	return fullNode, klaytnNode
+	return fullNode, klaytnNode, nil
 }
 
 // deployRandomTxs creates a random transaction
