@@ -19,6 +19,7 @@ package blockchain
 import (
 	"errors"
 	"fmt"
+	"github.com/VictoriaMetrics/fastcache"
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -377,4 +378,144 @@ func (bc *BlockChain) StopStateMigration() error {
 // number of committed blocks and number of pending blocks
 func (bc *BlockChain) StatusStateMigration() (bool, uint64, int, int, float64, error) {
 	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.committedCnt, bc.pendingCnt, bc.progress, bc.migrationErr
+}
+
+func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database, resultCh chan common.Hash, finishCh chan error) (resultErr error) {
+	defer func() {
+		finishCh <- resultErr
+	}()
+
+	stateDB, err := state.New(root, db)
+	if err != nil {
+		return err
+	}
+
+	it := state.NewNodeIterator(stateDB)
+	for it.Next() {
+		resultCh <- it.Hash
+
+		select {
+		case <-bc.quitWarmUp:
+			return errors.New("quitWarmUp")
+		case <-bc.quit:
+			return errors.New("quit")
+		default:
+		}
+	}
+
+	return nil
+}
+
+func (bc *BlockChain) warmUpLoop(cache *fastcache.Cache, mainTrieCacheLimit uint64, children []common.Hash, resultHashCh chan common.Hash, resultErrCh chan error) {
+	logged := time.Now()
+	var context []interface{}
+	var stats fastcache.Stats
+	var percent uint64
+	var cnt int
+
+	updateContext := func() {
+		stats = fastcache.Stats{}
+		cache.UpdateStats(&stats)
+		percent = stats.BytesSize * 100 / mainTrieCacheLimit
+		context = []interface{}{
+			"warmUpCnt", cnt,
+			"cacheLimit", units.Base2Bytes(mainTrieCacheLimit).String(),
+			"cachedSize", units.Base2Bytes(stats.BytesSize).String(),
+			"percent", percent,
+		}
+	}
+
+	var resultErr error
+	for childCnt := 0; childCnt < len(children); {
+		select {
+		case <-resultHashCh:
+			cnt++
+			if time.Since(logged) < log.StatsReportLimit {
+				continue
+			}
+
+			logged = time.Now()
+
+			updateContext()
+			if percent > 90 { //more than 90%
+				close(bc.quitWarmUp)
+				logger.Info("Warm up is completed", context...)
+				return
+			}
+
+			logger.Info("Warm up progress", context...)
+		case err := <-resultErrCh:
+			// if resultErrCh is nil, it means success.
+			if err != nil {
+				resultErr = err
+				logger.Warn("Warm up got an error", "err", err)
+			}
+
+			childCnt++
+			logger.Debug("Warm up a child trie is finished", "childCnt", childCnt, "err", err)
+		}
+	}
+
+	updateContext()
+	context = append(context, "resultErr", resultErr)
+	logger.Info("Warm up is completed", context...)
+}
+
+// StartWarmUp retrieves all state/storage tries of the latest state root and caches the tries.
+func (bc *BlockChain) StartWarmUp() error {
+	// There is a chance of concurrent access to quitWarmUp, though not likely to happen.
+	if bc.quitWarmUp != nil {
+		return fmt.Errorf("already warming up")
+	}
+
+	block := bc.GetBlockByNumber(bc.lastCommittedBlock)
+	if block == nil {
+		return fmt.Errorf("block #%d not found", bc.lastCommittedBlock)
+	}
+
+	mainTrieDB := bc.StateCache().TrieDB()
+	cache := mainTrieDB.TrieNodeCache()
+	if cache == nil {
+		return fmt.Errorf("target cache is nil")
+	}
+	db := state.NewDatabaseWithExistingCache(bc.db, cache)
+
+	bc.quitWarmUp = make(chan struct{})
+
+	go func() {
+		defer func() {
+			bc.quitWarmUp = nil
+		}()
+
+		children, err := db.TrieDB().NodeChildren(block.Root())
+		if err != nil {
+			logger.Error("Cannot start warming up", "err", err)
+			return
+		}
+
+		logger.Info("Warm up is started", "blockNum", block.NumberU64(), "root", block.Root().String(), "len(children)", len(children))
+
+		resultHashCh := make(chan common.Hash, 10000)
+		resultErrCh := make(chan error)
+
+		for _, child := range children {
+			go bc.concurrentIterateTrie(child, db, resultHashCh, resultErrCh)
+		}
+
+		cacheLimitSize := uint64(mainTrieDB.GetTrieNodeCacheLimit())
+		bc.warmUpLoop(mainTrieDB.TrieNodeCache(), cacheLimitSize, children, resultHashCh, resultErrCh)
+	}()
+
+	return nil
+}
+
+// StopWarmUp stops the warming up process.
+func (bc *BlockChain) StopWarmUp() error {
+	if bc.quitWarmUp == nil {
+		return ErrNotInWarmUp
+	}
+
+	close(bc.quitWarmUp)
+
+	return nil
 }

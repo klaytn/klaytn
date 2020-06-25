@@ -600,7 +600,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 
 	valSet.refreshProposers(seed, blockNum)
 
-	logger.Info("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
+	logger.Debug("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
 	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
 
 	return nil

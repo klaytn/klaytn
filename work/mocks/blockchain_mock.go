@@ -686,6 +686,20 @@ func (mr *MockBlockChainMockRecorder) StartStateMigration(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartStateMigration", reflect.TypeOf((*MockBlockChain)(nil).StartStateMigration), arg0, arg1)
 }
 
+// StartWarmUp mocks base method
+func (m *MockBlockChain) StartWarmUp() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartWarmUp")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartWarmUp indicates an expected call of StartWarmUp
+func (mr *MockBlockChainMockRecorder) StartWarmUp() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartWarmUp", reflect.TypeOf((*MockBlockChain)(nil).StartWarmUp))
+}
+
 // State mocks base method
 func (m *MockBlockChain) State() (*state.StateDB, error) {
 	m.ctrl.T.Helper()
@@ -729,6 +743,21 @@ func (m *MockBlockChain) StateAtWithGCLock(arg0 common.Hash) (*state.StateDB, er
 func (mr *MockBlockChainMockRecorder) StateAtWithGCLock(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateAtWithGCLock", reflect.TypeOf((*MockBlockChain)(nil).StateAtWithGCLock), arg0)
+}
+
+// StateAtWithPersistent mocks base method
+func (m *MockBlockChain) StateAtWithPersistent(arg0 common.Hash) (*state.StateDB, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StateAtWithPersistent", arg0)
+	ret0, _ := ret[0].(*state.StateDB)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StateAtWithPersistent indicates an expected call of StateAtWithPersistent
+func (mr *MockBlockChainMockRecorder) StateAtWithPersistent(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateAtWithPersistent", reflect.TypeOf((*MockBlockChain)(nil).StateAtWithPersistent), arg0)
 }
 
 // StateCache mocks base method
@@ -788,6 +817,20 @@ func (m *MockBlockChain) StopStateMigration() error {
 func (mr *MockBlockChainMockRecorder) StopStateMigration() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopStateMigration", reflect.TypeOf((*MockBlockChain)(nil).StopStateMigration))
+}
+
+// StopWarmUp mocks base method
+func (m *MockBlockChain) StopWarmUp() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopWarmUp")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopWarmUp indicates an expected call of StopWarmUp
+func (mr *MockBlockChainMockRecorder) StopWarmUp() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopWarmUp", reflect.TypeOf((*MockBlockChain)(nil).StopWarmUp))
 }
 
 // SubscribeChainEvent mocks base method

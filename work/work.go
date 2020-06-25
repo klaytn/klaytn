@@ -270,6 +270,7 @@ type BlockChain interface {
 	Processor() blockchain.Processor
 	BadBlocks() ([]blockchain.BadBlockArgs, error)
 	StateAt(root common.Hash) (*state.StateDB, error)
+	StateAtWithPersistent(root common.Hash) (*state.StateDB, error)
 	StateAtWithGCLock(root common.Hash) (*state.StateDB, error)
 	Export(w io.Writer) error
 	Engine() consensus.Engine
@@ -293,4 +294,8 @@ type BlockChain interface {
 	StartStateMigration(uint64, common.Hash) error
 	StopStateMigration() error
 	StatusStateMigration() (bool, uint64, int, int, float64, error)
+
+	// Warm up
+	StartWarmUp() error
+	StopWarmUp() error
 }
