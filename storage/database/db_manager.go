@@ -41,12 +41,14 @@ type DBManager interface {
 	InMigration() bool
 	MigrationBlockNumber() uint64
 	getStateTrieMigrationInfo() uint64
-	getDBDir(DBEntryType) string
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
+	getDBDir(dbEntry DBEntryType) string
+	setStateTrieMigrationStatus(uint64)
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
+	getDatabase(DBEntryType) Database
 	CreateMigrationDBAndSetStatus(blockNum uint64) error
 	FinishStateMigration(succeed bool)
 	GetStateTrieDB() Database
