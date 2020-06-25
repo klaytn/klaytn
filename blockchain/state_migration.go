@@ -374,9 +374,9 @@ func (bc *BlockChain) StopStateMigration() error {
 	return nil
 }
 
-// StatusStateMigration returns if it is in migration, the block number of in migration,
+// StateMigrationStatus returns if it is in migration, the block number of in migration,
 // number of committed blocks and number of pending blocks
-func (bc *BlockChain) StatusStateMigration() (bool, uint64, int, int, float64, error) {
+func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, float64, error) {
 	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.committedCnt, bc.pendingCnt, bc.progress, bc.migrationErr
 }
 

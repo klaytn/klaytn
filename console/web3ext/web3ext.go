@@ -256,7 +256,7 @@ web3._extend({
 			getter: 'admin_datadir'
 		}),
 		new web3._extend.Property({
-			name: 'statusStateMigration',
+			name: 'stateMigrationStatus',
 			getter: 'admin_statusStateMigration'
 		}),
 	]
