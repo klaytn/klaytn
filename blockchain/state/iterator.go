@@ -21,13 +21,13 @@ package state
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -183,6 +183,144 @@ func (it *NodeIterator) retrieve() bool {
 		it.Hash, it.Parent, it.Path = it.stateIt.Hash(), it.stateIt.Parent(), it.stateIt.Path()
 	}
 	return true
+}
+
+// CheckStateConsistencyParallel checks the consistency of all state/storage trie of given two state databases in parallel.
+func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.Hash, quitCh chan struct{}) error {
+	// Check if the tries can be called
+	_, err := oldDB.OpenTrie(root)
+	if err != nil {
+		return errors.Wrap(err, "can not open oldDB trie")
+	}
+	_, err = newDB.OpenTrie(root)
+	if err != nil {
+		return errors.Wrap(err, "can not open newDB trie")
+	}
+	// get children hash
+	children, err := oldDB.TrieDB().NodeChildren(root)
+	if err != nil {
+		logger.Error("cannot start CheckStateConsistencyParallel", "err", err)
+		return errors.Wrap(err, "cannot get children before consistency check")
+	}
+
+	logger.Info("CheckStateConsistencyParallel is started", "root", root.String(), "len(children)", len(children))
+
+	iteratorQuitCh := make(chan struct{})
+	resultHashCh := make(chan struct{}, 10000)
+	resultErrCh := make(chan error)
+
+	// checks the consistency for each child in parallel
+	for _, child := range children {
+		go concurrentIterator(oldDB, newDB, child, iteratorQuitCh, resultHashCh, resultErrCh)
+	}
+
+	var resultErr error
+	cnt := 0
+	logged := time.Now()
+	for finishCnt := 0; finishCnt < len(children); {
+		select {
+		case <-resultHashCh:
+			cnt++
+			if time.Since(logged) > log.StatsReportLimit {
+				logged = time.Now()
+				logger.Info("CheckStateConsistencyParallel progress", "cnt", cnt)
+			}
+		case err := <-resultErrCh:
+			if err != nil {
+				logger.Warn("CheckStateConsistencyParallel got an error", "err", err)
+				close(iteratorQuitCh)
+				return err
+			}
+
+			finishCnt++
+			logger.Debug("CheckStateConsistencyParallel is being finished", "finishCnt", finishCnt, "err", err)
+		case <-quitCh:
+			close(iteratorQuitCh)
+			return nil
+		}
+
+	}
+	logger.Info("CheckStateConsistencyParallel is done", "cnt", cnt, "err", resultErr)
+
+	return resultErr
+}
+
+// concurrentIterator checks the consistency of all state/storage trie of given two state database
+// and pass the result via the channel.
+func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit chan struct{}, resultCh chan struct{}, finishCh chan error) (resultErr error) {
+	defer func() {
+		finishCh <- resultErr
+	}()
+
+	// Create and iterate a state trie rooted in a sub-node
+	oldState, err := New(root, oldDB)
+	if err != nil {
+		return errors.Wrap(err, "can not open oldDB trie")
+	}
+
+	newState, err := New(root, newDB)
+	if err != nil {
+		return errors.Wrap(err, "can not open newDB trie")
+	}
+
+	oldIt := NewNodeIterator(oldState)
+	newIt := NewNodeIterator(newState)
+
+	for oldIt.Next() {
+		if !newIt.Next() {
+			return fmt.Errorf("newDB iterator finished earlier : oldIt.Hash(%v) oldIt.Parent(%v) newIt.Error(%v)",
+				oldIt.Hash.String(), oldIt.Parent.String(), newIt.Error)
+		}
+
+		if oldIt.Hash != newIt.Hash {
+			return fmt.Errorf("mismatched hash oldIt.Hash : oldIt.Hash(%v) newIt.Hash(%v)", oldIt.Hash.String(), newIt.Hash.String())
+		}
+
+		if oldIt.Parent != newIt.Parent {
+			return fmt.Errorf("mismatched parent hash : oldIt.Parent(%v) newIt.Parent(%v)", oldIt.Parent.String(), newIt.Parent.String())
+		}
+
+		if !bytes.Equal(oldIt.Path, newIt.Path) {
+			return fmt.Errorf("mismatched path : oldIt.path(%v) newIt.path(%v)",
+				statedb.HexPathToString(oldIt.Path), statedb.HexPathToString(newIt.Path))
+		}
+
+		if oldIt.Code != nil {
+			if newIt.Code != nil {
+				if !bytes.Equal(oldIt.Code, newIt.Code) {
+					return fmt.Errorf("mismatched code : oldIt.Code(%v) newIt.Code(%v)", string(oldIt.Code), string(newIt.Code))
+				}
+			} else {
+				return fmt.Errorf("mismatched code : oldIt.Code(%v) newIt.Code(nil)", string(oldIt.Code))
+			}
+		} else {
+			if newIt.Code != nil {
+				return fmt.Errorf("mismatched code : oldIt.Code(nil) newIt.Code(%v)", string(newIt.Code))
+			}
+		}
+
+		resultCh <- struct{}{}
+
+		if quit != nil {
+			select {
+			case <-quit:
+				logger.Warn("CheckStateConsistency is stop")
+				return errStopByQuit
+			default:
+			}
+		}
+	}
+
+	if newIt.Next() {
+		return fmt.Errorf("oldDB iterator finished earlier  : newIt.Hash(%v) newIt.Parent(%v) oldIt.Error(%v)",
+			newIt.Hash, newIt.Parent, oldIt.Error)
+	}
+
+	if oldIt.Error != nil || newIt.Error != nil {
+		return fmt.Errorf("%w : oldIt.Error(%v), newIt.Error(%v)", errIterator, oldIt.Error, newIt.Error)
+	}
+
+	return nil
 }
 
 // CheckStateConsistency checks the consistency of all state/storage trie of given two state database.

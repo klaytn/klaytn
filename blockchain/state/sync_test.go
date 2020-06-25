@@ -302,6 +302,9 @@ func TestCheckStateConsistencyMissNode(t *testing.T) {
 	// Check consistency : no error
 	err = CheckStateConsistency(srcState, newState, srcRoot, 100, nil)
 	assert.NoError(t, err)
+
+	err = CheckStateConsistencyParallel(srcState, newState, srcRoot, nil)
+	assert.NoError(t, err)
 }
 
 // Tests that the trie scheduler can correctly reconstruct the state even if only
@@ -340,6 +343,9 @@ func TestIterativeDelayedStateSync(t *testing.T) {
 	checkStateAccounts(t, dstDiskDB, srcRoot, srcAccounts)
 
 	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
+	assert.NoError(t, err)
+
+	err = CheckStateConsistencyParallel(srcState, dstState, srcRoot, nil)
 	assert.NoError(t, err)
 }
 
@@ -391,6 +397,9 @@ func testIterativeRandomStateSync(t *testing.T, count int) {
 
 	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 	assert.NoError(t, err)
+
+	err = CheckStateConsistencyParallel(srcState, dstState, srcRoot, nil)
+	assert.NoError(t, err)
 }
 
 // Tests that the trie scheduler can correctly reconstruct the state even if only
@@ -441,6 +450,9 @@ func TestIterativeRandomDelayedStateSync(t *testing.T) {
 	checkStateAccounts(t, dstDb, srcRoot, srcAccounts)
 
 	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
+	assert.NoError(t, err)
+
+	err = CheckStateConsistencyParallel(srcState, dstState, srcRoot, nil)
 	assert.NoError(t, err)
 }
 
@@ -511,9 +523,15 @@ func TestIncompleteStateSync(t *testing.T) {
 		err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
 		assert.Error(t, err)
 
+		err = CheckStateConsistencyParallel(srcState, dstState, srcRoot, nil)
+		assert.Error(t, err)
+
 		dstDb.GetMemDB().Put(key, value)
 	}
 
 	err := CheckStateConsistency(srcState, dstState, srcRoot, 100, nil)
+	assert.NoError(t, err)
+
+	err = CheckStateConsistencyParallel(srcState, dstState, srcRoot, nil)
 	assert.NoError(t, err)
 }

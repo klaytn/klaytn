@@ -384,6 +384,43 @@ func (db *Database) RUnlockGCCachedNode() {
 	db.gcLock.RUnlock()
 }
 
+// NodeChildren retrieves the children of the given hash trie
+func (db *Database) NodeChildren(hash common.Hash) ([]common.Hash, error) {
+	childrenHash := make([]common.Hash, 0, 16)
+
+	if (hash == common.Hash{}) {
+		return childrenHash, ErrZeroHashNode
+	}
+
+	n := db.node(hash)
+	if n == nil {
+		return childrenHash, nil
+	}
+
+	children := make([]node, 0, 16)
+
+	switch n := (n).(type) {
+	case *shortNode:
+		children = []node{n.Val}
+	case *fullNode:
+		for i := 0; i < 17; i++ {
+			if n.Children[i] != nil {
+				children = append(children, n.Children[i])
+			}
+		}
+	}
+
+	for _, child := range children {
+		n, ok := child.(hashNode)
+		if ok {
+			hash := common.BytesToHash(n)
+			childrenHash = append(childrenHash, hash)
+		}
+	}
+
+	return childrenHash, nil
+}
+
 // InsertBlob writes a new reference tracked blob to the memory database if it's
 // yet unknown. This method should only be used for non-trie nodes that require
 // reference counting, since trie nodes are garbage collected directly through
