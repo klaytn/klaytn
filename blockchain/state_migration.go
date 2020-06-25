@@ -96,8 +96,16 @@ func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{},
 // After the migration finish, the original StateTrieDB is removed and StateTrieMigrationDB becomes a new StateTrieDB.
 func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	bc.wg.Add(1)
+	bc.migrationErr = nil
 	defer func() {
-		bc.db.FinishStateMigration(returnErr == nil)
+		bc.migrationErr = returnErr
+		// If migration stops by quit signal, it doesn't finish migration and it it will restart again.
+		if returnErr != ErrQuitBySignal {
+			// lock to prevent from a conflict of state DB close and state DB write
+			bc.mu.Lock()
+			bc.db.FinishStateMigration(returnErr == nil)
+			bc.mu.Unlock()
+		}
 		bc.wg.Done()
 	}()
 
@@ -129,7 +137,6 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 	// Migration main loop
 	for trieSync.Pending() > 0 {
-		bc.committedCnt, bc.pendingCnt = committedCnt, trieSync.Pending()
 		queue = append(queue[:0], trieSync.Missing(1024)...)
 		results := make([]statedb.SyncResult, len(queue))
 
@@ -176,12 +183,15 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 
 		select {
 		case <-bc.stopStateMigration:
-			logger.Error("State migration is failed by stop")
+			logger.Info("State migration terminated by request")
 			return errors.New("stop state migration")
 		case <-bc.quit:
-			return nil
+			logger.Info("State migration stopped by quit signal; should continue on node restart")
+			return ErrQuitBySignal
 		default:
 		}
+
+		bc.committedCnt, bc.pendingCnt = committedCnt, trieSync.Pending()
 	}
 
 	// Flush trie nodes which is not written yet.
@@ -302,6 +312,7 @@ func (bc *BlockChain) PrepareStateMigration() error {
 	}
 
 	bc.prepareStateMigration = true
+	logger.Info("State migration is prepared", "expectedMigrationStartingBlockNumber", bc.CurrentBlock().NumberU64()+1)
 
 	return nil
 }
@@ -364,6 +375,6 @@ func (bc *BlockChain) StopStateMigration() error {
 
 // StatusStateMigration returns if it is in migration, the block number of in migration,
 // number of committed blocks and number of pending blocks
-func (bc *BlockChain) StatusStateMigration() (bool, uint64, int, int, float64) {
-	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.committedCnt, bc.pendingCnt, bc.progress
+func (bc *BlockChain) StatusStateMigration() (bool, uint64, int, int, float64, error) {
+	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.committedCnt, bc.pendingCnt, bc.progress, bc.migrationErr
 }
