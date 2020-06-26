@@ -119,7 +119,6 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	lruCache, _ := lru.New(int(2 * units.Giga / common.HashLength)) // 2GB for 62,500,000 common.Hash key values
 	trieSync := state.NewStateSync(rootHash, dstState.TrieDB().DiskDB(), nil, lruCache)
 	var queue []common.Hash
-	committedCnt := 0
 
 	quitCh := make(chan struct{})
 	defer close(quitCh)
@@ -192,7 +191,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 		default:
 		}
 
-		bc.committedCnt, bc.pendingCnt = committedCnt, trieSync.Pending()
+		bc.readCnt, bc.committedCnt, bc.pendingCnt, bc.progress = stats.totalRead, stats.totalCommitted, trieSync.Pending(), stats.progress
 	}
 
 	// Flush trie nodes which is not written yet.
@@ -376,8 +375,8 @@ func (bc *BlockChain) StopStateMigration() error {
 
 // StateMigrationStatus returns if it is in migration, the block number of in migration,
 // number of committed blocks and number of pending blocks
-func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, float64, error) {
-	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.committedCnt, bc.pendingCnt, bc.progress, bc.migrationErr
+func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, int, float64, error) {
+	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.readCnt, bc.committedCnt, bc.pendingCnt, bc.progress, bc.migrationErr
 }
 
 func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database, resultCh chan common.Hash, finishCh chan error) (resultErr error) {

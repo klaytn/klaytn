@@ -165,6 +165,7 @@ type BlockChain struct {
 	// State migration
 	prepareStateMigration bool
 	stopStateMigration    chan struct{}
+	readCnt               int
 	committedCnt          int
 	pendingCnt            int
 	progress              float64
