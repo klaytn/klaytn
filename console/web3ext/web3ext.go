@@ -257,7 +257,7 @@ web3._extend({
 		}),
 		new web3._extend.Property({
 			name: 'stateMigrationStatus',
-			getter: 'admin_statusStateMigration'
+			getter: 'admin_stateMigrationStatus'
 		}),
 	]
 });
