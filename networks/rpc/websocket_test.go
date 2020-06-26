@@ -23,6 +23,7 @@ package rpc
 import (
 	"context"
 	"github.com/klaytn/klaytn/common"
+	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -42,6 +43,7 @@ type echoResult struct {
 func TestWebsocketLargeCall(t *testing.T) {
 	t.Parallel()
 
+	// create server
 	var (
 		srv     = newTestServer("service", new(Service))
 		httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"*"}))
@@ -58,20 +60,22 @@ func TestWebsocketLargeCall(t *testing.T) {
 	}
 	defer client.Close()
 
-	// This call sends slightly less than the limit and should work.
+	// set configurations before testing
 	var result echoResult
-	arg := strings.Repeat("x", common.MaxRequestContentLength-200)
-	if err := client.Call(&result, "service_echo", arg, 1); err != nil {
-		t.Fatalf("valid call didn't work: %v", err)
-	}
-	if result.String != arg {
-		t.Fatal("wrong string echoed")
-	}
+	method := "service_echo"
 
-	// This call sends twice the allowed size and shouldn't work.
-	arg = strings.Repeat("x", common.MaxRequestContentLength*2)
-	err = client.Call(&result, "test_echo", arg)
-	if err == nil {
-		t.Fatal("no error for too large call")
-	}
+	// set message size
+	messageSize := 200
+	messageSize, err = client.getMessageSize(method)
+	assert.NoError(t, err)
+	requestMaxLen := common.MaxRequestContentLength - messageSize
+
+	// This call sends slightly less than the limit and should work.
+	arg := strings.Repeat("x", requestMaxLen-1)
+	assert.NoError(t, client.Call(&result, method, arg, 1), "valid call didn't work")
+	assert.Equal(t, arg, result.String, "wrong string echoed")
+
+	// This call sends slightly larger than the allowed size and shouldn't work.
+	arg = strings.Repeat("x", requestMaxLen)
+	assert.Error(t, client.Call(&result, method, arg), "no error for too large call")
 }
