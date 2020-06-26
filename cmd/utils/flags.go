@@ -33,12 +33,10 @@ import (
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/metrics/utils"
-	grpc "github.com/klaytn/klaytn/networks/grpc"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
-	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/node/sc"
@@ -989,8 +987,7 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NetRestrict = list
 	}
 
-	rpc.MaxRequestContentLength = ctx.GlobalInt(MaxRequestContentLengthFlag.Name)
-	grpc.MaxRequestContentLength = ctx.GlobalInt(MaxRequestContentLengthFlag.Name)
+	common.MaxRequestContentLength = ctx.GlobalInt(MaxRequestContentLengthFlag.Name)
 
 	cfg.NetworkID, _ = getNetworkId(ctx)
 }
