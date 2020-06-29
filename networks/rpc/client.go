@@ -37,7 +37,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unsafe"
 )
 
 var (
@@ -284,7 +283,6 @@ func (c *Client) Close() {
 // The result must be a pointer so that package json can unmarshal into it. You
 // can also pass nil, in which case the result is ignored.
 func (c *Client) Call(result interface{}, method string, args ...interface{}) error {
-	fmt.Println("insideCall")
 	ctx := context.Background()
 	return c.CallContext(ctx, result, method, args...)
 }
@@ -296,14 +294,10 @@ func (c *Client) Call(result interface{}, method string, args ...interface{}) er
 // can also pass nil, in which case the result is ignored.
 func (c *Client) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
 	msg, err := c.newMessage(method, args...)
-	fmt.Println("messsage size", unsafe.Sizeof(msg))
 	if err != nil {
 		return err
 	}
 	op := &requestOp{ids: []json.RawMessage{msg.ID}, resp: make(chan *jsonrpcMessage, 1)}
-
-	body, err := json.Marshal(msg)
-	fmt.Println("messsage body size", len(body))
 
 	if c.isHTTP {
 		err = c.sendHTTP(ctx, op, msg)
@@ -689,7 +683,6 @@ func (c *Client) handleResponse(msg *jsonrpcMessage) {
 		return
 	}
 	if op.err = json.Unmarshal(msg.Result, &op.sub.subid); op.err == nil {
-		fmt.Println("message body size2", len(msg.Result))
 		go op.sub.start()
 		c.subs[op.sub.subid] = op.sub
 	}

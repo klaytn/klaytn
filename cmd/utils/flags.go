@@ -502,8 +502,8 @@ var (
 	}
 	MaxRequestContentLengthFlag = cli.IntFlag{
 		Name:  "maxRequestContentLength",
-		Usage: "Max request content length for http, websocket and gRPC",
-		Value: 1024 * 512,
+		Usage: "Max request content length in byte for http, websocket and gRPC",
+		Value: common.MaxRequestContentLength,
 	}
 
 	// ATM the url is left to the user and deployment to
