@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/klaytn/klaytn/common"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -41,10 +42,7 @@ import (
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
-const (
-	contentType             = "application/json"
-	maxRequestContentLength = 1024 * 512
-)
+const contentType = "application/json"
 
 var nullAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 
@@ -211,7 +209,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx = context.WithValue(ctx, "scheme", r.Proto)
 	ctx = context.WithValue(ctx, "local", r.Host)
 
-	body := io.LimitReader(r.Body, maxRequestContentLength)
+	body := io.LimitReader(r.Body, int64(common.MaxRequestContentLength))
 	codec := NewJSONCodec(&httpReadWriteNopCloser{body, w})
 	defer codec.Close()
 
@@ -243,7 +241,7 @@ func (srv *Server) HandleFastHTTP(requestCtx *fasthttp.RequestCtx) {
 	ctx = context.WithValue(ctx, "scheme", string(requestCtx.URI().Scheme()))
 	ctx = context.WithValue(ctx, "local", requestCtx.LocalAddr().String())
 
-	reader := bufio.NewReaderSize(bytes.NewReader(r.Body()), maxRequestContentLength)
+	reader := bufio.NewReaderSize(bytes.NewReader(r.Body()), common.MaxRequestContentLength)
 	codec := NewJSONCodec(&httpReadWriteNopCloser{reader, w.BodyWriter()})
 	defer codec.Close()
 
@@ -257,8 +255,8 @@ func validateRequest(r *http.Request) (int, error) {
 	if r.Method == http.MethodPut || r.Method == http.MethodDelete {
 		return http.StatusMethodNotAllowed, errors.New("method not allowed")
 	}
-	if r.ContentLength > maxRequestContentLength {
-		err := fmt.Errorf("content length too large (%d>%d)", r.ContentLength, maxRequestContentLength)
+	if r.ContentLength > int64(common.MaxRequestContentLength) {
+		err := fmt.Errorf("content length too large (%d>%d)", r.ContentLength, common.MaxRequestContentLength)
 		return http.StatusRequestEntityTooLarge, err
 	}
 	mt, _, err := mime.ParseMediaType(r.Header.Get("content-type"))
@@ -275,8 +273,8 @@ func validateFastRequest(requestCtx *fasthttp.RequestCtx) (int, error) {
 	if requestCtx.IsPut() || requestCtx.IsDelete() {
 		return http.StatusMethodNotAllowed, errors.New("method not allowed")
 	}
-	if requestCtx.Request.Header.ContentLength() > maxRequestContentLength {
-		err := fmt.Errorf("content length too large (%d>%d)", requestCtx.Request.Header.ContentLength(), maxRequestContentLength)
+	if requestCtx.Request.Header.ContentLength() > common.MaxRequestContentLength {
+		err := fmt.Errorf("content length too large (%d>%d)", requestCtx.Request.Header.ContentLength(), common.MaxRequestContentLength)
 		return http.StatusRequestEntityTooLarge, err
 	}
 	mt, _, err := mime.ParseMediaType(string(requestCtx.Request.Header.ContentType()))

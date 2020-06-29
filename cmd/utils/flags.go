@@ -500,6 +500,11 @@ var (
 		Usage: "Wait time the rw timer waits for message writing",
 		Value: 15 * time.Second,
 	}
+	MaxRequestContentLengthFlag = cli.IntFlag{
+		Name:  "maxRequestContentLength",
+		Usage: "Max request content length in byte for http, websocket and gRPC",
+		Value: common.MaxRequestContentLength,
+	}
 
 	// ATM the url is left to the user and deployment to
 	JSpathFlag = cli.StringFlag{
@@ -981,6 +986,8 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		}
 		cfg.NetRestrict = list
 	}
+
+	common.MaxRequestContentLength = ctx.GlobalInt(MaxRequestContentLengthFlag.Name)
 
 	cfg.NetworkID, _ = getNetworkId(ctx)
 }

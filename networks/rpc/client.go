@@ -25,9 +25,9 @@ import (
 	"container/list"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/log"
+	"github.com/pkg/errors"
 	"net"
 	"net/url"
 	"os"
@@ -456,6 +456,20 @@ func (c *Client) newMessage(method string, paramsIn ...interface{}) (*jsonrpcMes
 		return nil, err
 	}
 	return &jsonrpcMessage{Version: "2.0", ID: c.nextID(), Method: method, Params: params}, nil
+}
+
+func (c *Client) getMessageSize(method string, args ...interface{}) (int, error) {
+	msg, err := c.newMessage(method, args)
+	if err != nil {
+		return -1, errors.Wrap(err, "failed to make a new message")
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return -1, errors.Wrap(err, "failed to marshal new message")
+	}
+
+	return len(data), nil
 }
 
 // send registers op with the dispatch loop, then sends msg on the connection.
