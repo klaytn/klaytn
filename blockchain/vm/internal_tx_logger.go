@@ -255,6 +255,7 @@ func (this *InternalTxLogger) step(log *tracerLog) error {
 		call := this.callStackPop()
 
 		if call.Type == CREATE || call.Type == CREATE2 {
+			// If the call was a CREATE, retrieve the contract address and output code
 			call.GasUsed = call.GasIn - call.GasCost - log.gas
 			call.GasIn, call.GasCost = uint64(0), uint64(0)
 
@@ -267,7 +268,7 @@ func (this *InternalTxLogger) step(log *tracerLog) error {
 			}
 		} else {
 			// If the call was a contract call, retrieve the gas usage and output
-			if call.Gas == uint64(0) {
+			if call.Gas != uint64(0) {
 				call.GasUsed = call.GasIn - call.GasCost + call.Gas - log.gas
 
 				ret := log.stack.peek()
