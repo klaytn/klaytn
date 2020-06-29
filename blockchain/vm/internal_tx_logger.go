@@ -1,18 +1,20 @@
 package vm
 
 import (
-	"encoding/json"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
 	"math/big"
+	"strconv"
 	"time"
 )
 
 //go:generate gencodec -type InternalTxLog -field-override InternalTxLogMarshaling -out gen_InternalTxLog.go
 
+var errEvmExecutionReverted = errors.New("evm: execution reverted")
 var errExecutionReverted = errors.New("execution reverted")
 var errInternalFailure = errors.New("internal failure")
 var emptyAddr = common.Address{}
@@ -54,6 +56,26 @@ type InternalTxLogMarshaling struct {
 	ErrorString string `json:"error"`  // adds call to ErrorString() in MarshalJSON
 }
 
+type InternalTxTraceResult struct {
+	callType OpCode
+	from     common.Address
+	to       common.Address
+	value    string
+	gas      uint64
+	gasUsed  uint64
+	input    string // hex string
+	output   string // hex string
+	time     time.Duration
+	calls    []*InternalCallLog
+	error    error
+	reverted revertedInfo
+}
+
+type revertedInfo struct {
+	contract common.Address
+	message  string
+}
+
 // OpName formats the operand name in a human-readable format.
 func (s *InternalCallLog) OpName() string {
 	return s.Type.String()
@@ -86,6 +108,7 @@ type InternalTxLogger struct {
 	revertedContract common.Address
 	ctx              map[string]interface{} // Transaction context gathered throughout execution
 	initialized      bool
+	revertString     string
 }
 
 // NewInternalTxLogger returns a new logger
@@ -107,7 +130,7 @@ func (this *InternalTxLogger) CaptureStart(from common.Address, to common.Addres
 	}
 	this.ctx["from"] = from
 	this.ctx["to"] = to
-	this.ctx["input"] = input
+	this.ctx["input"] = hexutil.Encode(input)
 	this.ctx["gas"] = gas
 	this.ctx["value"] = value
 
@@ -320,9 +343,9 @@ func (this *InternalTxLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, 
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
 func (this *InternalTxLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
-	this.ctx["output"] = output
+	this.ctx["output"] = hexutil.Encode(output)
 	this.ctx["gasUsed"] = gasUsed
-	this.ctx["time"] = t.String()
+	this.ctx["time"] = t
 
 	if err != nil {
 		this.ctx["error"] = err.Error()
@@ -330,48 +353,114 @@ func (this *InternalTxLogger) CaptureEnd(output []byte, gasUsed uint64, t time.D
 	return nil
 }
 
-func (this *InternalTxLogger) GetResult() (json.RawMessage, error) {
-	// TODO-ChainDataFetcher
-	// Below code is just copied codes from tracers.Tracer, will be ported later
-	// Transform the context into a JavaScript object and inject into the state
-	//obj := jst.vm.PushObject()
-	//
-	//for key, val := range jst.ctx {
-	//	switch val := val.(type) {
-	//	case uint64:
-	//		jst.vm.PushUint(uint(val))
-	//
-	//	case string:
-	//		jst.vm.PushString(val)
-	//
-	//	case []byte:
-	//		ptr := jst.vm.PushFixedBuffer(len(val))
-	//		copy(makeSlice(ptr, uint(len(val))), val[:])
-	//
-	//	case common.Address:
-	//		ptr := jst.vm.PushFixedBuffer(20)
-	//		copy(makeSlice(ptr, 20), val[:])
-	//
-	//	case *big.Int:
-	//		pushBigInt(val, jst.vm)
-	//
-	//	default:
-	//		panic(fmt.Sprintf("unsupported type: %T", val))
-	//	}
-	//	jst.vm.PutPropString(obj, key)
-	//}
-	//jst.vm.PutPropString(jst.stateObject, "ctx")
-	//
-	//// Finalize the trace and return the results
-	//result, err := jst.call("result", "ctx", "db")
-	//if err != nil {
-	//	jst.err = wrapError("result", err)
-	//}
-	//// Clean up the JavaScript environment
-	//jst.vm.DestroyHeap()
-	//jst.vm.Destroy()
+func (this *InternalTxLogger) GetResult() (*InternalTxTraceResult, error) {
+	result, err := this.result()
+	if err != nil {
+		this.err = wrapError("result", err)
+	}
+	// Clean up the JavaScript environment
+	this.reset()
+	return result, this.err
+}
 
-	return json.RawMessage{}, nil
+// reset clears data collected during the previous tracing.
+// It should act like calling jst.vm.DestroyHeap() and jst.vm.Destroy() at tracers.Tracer
+func (this *InternalTxLogger) reset() {
+	this.callStack = []*InternalCallLog{}
+	this.changedValues = map[common.Address]Storage{}
+	this.output = nil
+
+	this.descended = false
+	this.revertedContract = common.Address{}
+	this.initialized = false
+	this.revertString = ""
+}
+
+// result is invoked when all the opcodes have been iterated over and returns
+// the final result of the tracing.
+func (this *InternalTxLogger) result() (*InternalTxTraceResult, error) {
+	if _, exist := this.ctx["type"]; !exist {
+		this.ctx["type"] = 0
+	}
+	if _, exist := this.ctx["from"]; !exist {
+		this.ctx["from"] = common.Address{}
+	}
+	if _, exist := this.ctx["to"]; !exist {
+		this.ctx["to"] = common.Address{}
+	}
+	if _, exist := this.ctx["value"]; !exist {
+		this.ctx["value"] = big.NewInt(0)
+	}
+	if _, exist := this.ctx["gas"]; !exist {
+		this.ctx["gas"] = 0
+	}
+	if _, exist := this.ctx["gasUsed"]; !exist {
+		this.ctx["gasUsed"] = 0
+	}
+	if _, exist := this.ctx["input"]; !exist {
+		this.ctx["input"] = ""
+	}
+	if _, exist := this.ctx["output"]; !exist {
+		this.ctx["output"] = ""
+	}
+	if _, exist := this.ctx["time"]; !exist {
+		this.ctx["time"] = time.Duration(0)
+	}
+	if this.callStackLength() == 0 {
+		this.callStack = []*InternalCallLog{{}}
+	}
+	result := &InternalTxTraceResult{
+		callType: this.ctx["type"].(OpCode),
+		from:     this.ctx["from"].(common.Address),
+		to:       this.ctx["to"].(common.Address),
+		value:    "0x" + this.ctx["value"].(*big.Int).Text(16),
+		gas:      this.ctx["gas"].(uint64),
+		gasUsed:  this.ctx["gasUsed"].(uint64),
+		input:    this.ctx["input"].(string),
+		output:   this.ctx["output"].(string),
+		time:     this.ctx["time"].(time.Duration),
+	}
+	if this.callStack[0].calls != nil {
+		result.calls = this.callStack[0].calls
+	}
+	if this.callStack[0].Err != nil {
+		result.error = this.callStack[0].Err
+	} else if ctxErr, _ := this.ctx["error"]; ctxErr != nil {
+		result.error = ctxErr.(error)
+	}
+	if result.error != nil {
+		result.output = "" // delete result.output;
+	}
+	if this.ctx["error"] == errEvmExecutionReverted {
+		outputHex := this.ctx["output"].(string) // it is already a hex string
+		if outputHex[2:10] == "08c379a0" {
+			defaultOffset := 10
+
+			stringOffset, err := strconv.ParseInt(outputHex[defaultOffset:defaultOffset+32*2], 16, 64)
+			if err != nil {
+				logger.Error("failed to parse hex string to get stringOffset",
+					"err", err, "outputHex", outputHex)
+				return nil, err
+			}
+			stringLength, err := strconv.ParseInt(outputHex[defaultOffset+32*2:defaultOffset+32*2+32*2], 16, 64)
+			if err != nil {
+				logger.Error("failed to parse hex string to get stringLength",
+					"err", err, "outputHex", outputHex)
+				return nil, err
+			}
+			start := defaultOffset + 32*2 + int(stringOffset*2)
+			end := start + int(stringLength*2)
+			asciiInBytes, err := hex.DecodeString(outputHex[start:end])
+			if err != nil {
+				logger.Error("failed to parse hex string to get ASCII representation",
+					"err", err, "outputHex", outputHex)
+				return nil, err
+			}
+			this.revertString = string(asciiInBytes)
+		}
+		result.reverted = revertedInfo{contract: this.revertedContract, message: this.revertString}
+	}
+	return result, nil
 }
 
 // InternalTxLogs returns the captured tracerLog entries.
