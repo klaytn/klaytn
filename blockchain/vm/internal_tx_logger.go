@@ -78,6 +78,7 @@ type InternalTxLogger struct {
 	changedValues map[common.Address]Storage
 	output        []byte
 	err           error
+	errValue      string
 
 	// Below are newly added fields to support call_tracer.js
 	descended        bool
@@ -99,8 +100,16 @@ func NewInternalTxLogger(cfg *LogConfig) *InternalTxLogger {
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
 func (this *InternalTxLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
-	// TODO-ChainDataFetcher
-	// Below code is just copied codes from StructLogger, will be ported later
+	this.ctx["type"] = "CALL"
+	if create {
+		this.ctx["type"] = "CREATE"
+	}
+	this.ctx["from"] = from
+	this.ctx["to"] = to
+	this.ctx["input"] = input
+	this.ctx["gas"] = gas
+	this.ctx["value"] = value
+
 	return nil
 }
 
@@ -292,24 +301,30 @@ func (this *InternalTxLogger) step(log *tracerLog) error {
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (this *InternalTxLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, stack *Stack, contract *Contract, depth int, err error) error {
-	// TODO-ChainDataFetcher
-	// Below code is just copied codes from StructLogger, will be ported later
+func (this *InternalTxLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, s *Stack, contract *Contract, depth int, err error) error {
+	if this.err == nil {
+		// Apart from the error, everything matches the previous invocation
+		this.errValue = err.Error()
+
+		log := &tracerLog{
+			env, pc, op, gas, cost,
+			memory, s, contract, depth, err,
+		}
+		// fault does not return an error
+		this.fault(log)
+	}
 	return nil
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
 func (this *InternalTxLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
-	// TODO-ChainDataFetcher
-	// Below code is just copied codes from StructLogger, will be ported later
-	//this.output = output
-	//this.err = err
-	//if this.cfg.Debug {
-	//	fmt.Printf("0x%x\n", output)
-	//	if err != nil {
-	//		fmt.Printf(" error: %v\n", err)
-	//	}
-	//}
+	this.ctx["output"] = output
+	this.ctx["gasUsed"] = gasUsed
+	this.ctx["time"] = t.String()
+
+	if err != nil {
+		this.ctx["error"] = err.Error()
+	}
 	return nil
 }
 
