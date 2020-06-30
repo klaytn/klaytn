@@ -353,6 +353,7 @@ func (c *core) stopTimer() {
 func (c *core) newRoundChangeTimer() {
 	c.stopTimer()
 
+	// TODO-Klaytn-Istanbul: Replace &istanbul.DefaultConfig.Timeout to c.config.Timeout
 	// set timeout based on the round number
 	timeout := time.Duration(atomic.LoadUint64(&istanbul.DefaultConfig.Timeout)) * time.Millisecond
 	round := c.current.Round().Uint64()
@@ -388,7 +389,10 @@ func (c *core) newRoundChangeTimer() {
 			}
 		}
 
-		c.sendEvent(timeoutEvent{})
+		c.sendEvent(timeoutEvent{&istanbul.View{
+			Sequence: c.current.sequence,
+			Round:    new(big.Int).Add(c.current.round, common.Big1),
+		}})
 	}))
 
 	logger.Debug("New RoundChangeTimer Set", "seq", c.current.Sequence(), "round", round, "timeout", timeout)

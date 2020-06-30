@@ -43,7 +43,8 @@ func (c *core) sendRoundChange(round *big.Int) {
 
 	cv := c.currentView()
 	if cv.Round.Cmp(round) >= 0 {
-		logger.Error("Cannot send out the round change", "current round", cv.Round, "target round", round)
+		logger.Info("Skip sending out the round change message",
+			"current round", cv.Round, "target round", round)
 		return
 	}
 

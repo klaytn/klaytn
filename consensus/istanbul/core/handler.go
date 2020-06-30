@@ -121,11 +121,17 @@ func (c *core) handleEvents() {
 					//c.backend.Gossip(c.valSet, p)
 				}
 			}
-		case _, ok := <-c.timeoutSub.Chan():
-			if !ok {
+		case ev, ok := <-c.timeoutSub.Chan():
+			if !ok || ev.Data == nil {
+				logger.Warn("Invalid message type from timeout channel")
 				return
 			}
-			c.handleTimeoutMsg()
+			data, ok := ev.Data.(timeoutEvent)
+			if !ok || data.view == nil {
+				logger.Warn("Invalid message from timeout channel", "msg", ev.Data)
+				return
+			}
+			c.handleTimeoutMsg(data.view)
 		case event, ok := <-c.finalCommittedSub.Chan():
 			if !ok {
 				return
@@ -193,7 +199,26 @@ func (c *core) handleCheckedMsg(msg *message, src istanbul.Validator) error {
 	return errInvalidMessage
 }
 
-func (c *core) handleTimeoutMsg() {
+func (c *core) handleTimeoutMsg(view *istanbul.View) {
+	// TODO-Klaytn-Istanbul: Check whether this statement is required. EN/PN should not handle consensus msgs.
+	if c.backend.NodeType() != common.CONSENSUSNODE {
+		logger.Warn("Received an istanbul timeout message from EN or PN",
+			"nodeType", c.backend.NodeType().String())
+		return
+	}
+
+	lastProposal, _ := c.backend.LastProposal()
+	if lastProposal == nil {
+		logger.Error("Cannot find the last proposal")
+		return
+	}
+
+	if lastProposal.Number().Cmp(view.Sequence) >= 0 {
+		logger.Debug("This timeoutMsg is outdated",
+			"blockNumber", lastProposal.Number().Uint64(), "msgView", view.String())
+		return
+	}
+
 	// If we're not waiting for round change yet, we can try to catch up
 	// the max round with F+1 round change message. We only need to catch up
 	// if the max round is larger than current round.
@@ -206,11 +231,10 @@ func (c *core) handleTimeoutMsg() {
 		}
 	}
 
-	lastProposal, _ := c.backend.LastProposal()
-	if lastProposal != nil && lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
+	if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
 		c.logger.Trace("round change timeout, catch up latest sequence", "number", lastProposal.Number().Uint64())
 		c.startNewRound(common.Big0)
 	} else {
-		c.sendNextRoundChange("handleTimeoutMsg. lastProposal is nil or lastProposal's number is smaller than current sequence")
+		c.sendRoundChange(view.Round)
 	}
 }

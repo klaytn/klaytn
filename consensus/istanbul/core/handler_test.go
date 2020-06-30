@@ -482,7 +482,7 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 			name:          "timeout during processing the (2f+1)th round change message",
 			timeoutTime:   300 * time.Millisecond,
 			messageRound:  20,
-			expectedRound: 21, // TODO-Klaytn-Istanbul: it should be 20
+			expectedRound: 20,
 		},
 		{
 			// if timeoutTime > processingTime && timeoutTime < (processingTime + sleepTime * 2),
