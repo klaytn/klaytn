@@ -470,7 +470,7 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 	testCases := []testCase{
 		{
 			// if timeoutTime < sleepTime,
-			// timeout event will be post and then round change message will be processed
+			// timeout event will be posted and then round change message will be processed
 			name:          "timeout before processing the (2f+1)th round change message",
 			timeoutTime:   50 * time.Millisecond,
 			messageRound:  10,
@@ -478,7 +478,7 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 		},
 		{
 			// if timeoutTime > sleepTime && timeoutTime < (processingTime + sleepTime),
-			// timeout event will be post during the processing of (2f+1)th round change message
+			// timeout event will be posted during the processing of (2f+1)th round change message
 			name:          "timeout during processing the (2f+1)th round change message",
 			timeoutTime:   300 * time.Millisecond,
 			messageRound:  20,
