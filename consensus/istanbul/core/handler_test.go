@@ -453,3 +453,129 @@ func TestCore_handlerMsg(t *testing.T) {
 		assert.Nil(t, err)
 	}
 }
+
+// TestCore_handleTimeoutMsg_race tests a race condition between round change triggers.
+// There should be no race condition when and round change message and timeout event are handled simultaneously.
+func TestCore_handleTimeoutMsg_race(t *testing.T) {
+	// important variables to construct test cases
+	const sleepTime = 200 * time.Millisecond
+	const processingTime = 400 * time.Millisecond
+
+	type testCase struct {
+		name          string
+		timeoutTime   time.Duration
+		messageRound  int64
+		expectedRound int64
+	}
+	testCases := []testCase{
+		{
+			// if timeoutTime < sleepTime,
+			// timeout event will be post and then round change message will be processed
+			name:          "timeout before processing the (2f+1)th round change message",
+			timeoutTime:   50 * time.Millisecond,
+			messageRound:  10,
+			expectedRound: 10,
+		},
+		{
+			// if timeoutTime > sleepTime && timeoutTime < (processingTime + sleepTime),
+			// timeout event will be post during the processing of (2f+1)th round change message
+			name:          "timeout during processing the (2f+1)th round change message",
+			timeoutTime:   300 * time.Millisecond,
+			messageRound:  20,
+			expectedRound: 21, // TODO-Klaytn-Istanbul: it should be 20
+		},
+		{
+			// if timeoutTime > processingTime && timeoutTime < (processingTime + sleepTime * 2),
+			// (2f+1)th round change message will be process and then timeout event will be reset
+			name:          "reset timeout after processing the (2f+1)th round change message",
+			timeoutTime:   700 * time.Millisecond,
+			messageRound:  30,
+			expectedRound: 30,
+		},
+	}
+
+	validatorAddrs, _ := genValidators(10)
+	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	defer mockCtrl.Finish()
+
+	istConfig := istanbul.DefaultConfig
+	istConfig.ProposerPolicy = istanbul.WeightedRandom
+
+	istCore := New(mockBackend, istConfig).(*core)
+	if err := istCore.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	eventMux := mockBackend.EventMux()
+	lastProposal, _ := mockBackend.LastProposal()
+	sequence := istCore.current.sequence.Int64()
+
+	for _, tc := range testCases {
+		handler := func(t *testing.T) {
+			roundChangeTimer := istCore.roundChangeTimer.Load().(*time.Timer)
+
+			// reset timeout timer of this round and wait some time
+			roundChangeTimer.Reset(tc.timeoutTime)
+			time.Sleep(sleepTime)
+
+			// `istCore.validateFn` will be executed on processing a istanbul message
+			istCore.validateFn = func(arg1 []byte, arg2 []byte) (common.Address, error) {
+				// postpones the processing of a istanbul message
+				time.Sleep(processingTime)
+				return common.Address{}, nil
+			}
+
+			// prepare a round change message payload
+			payload := makeRCMsgPayload(tc.messageRound, sequence, lastProposal.Hash(), validatorAddrs[0])
+			if payload == nil {
+				t.Fatal("failed to make a round change message payload")
+			}
+
+			// one round change message changes the round because the committee size of mockBackend is 3
+			err := eventMux.Post(istanbul.MessageEvent{
+				Hash:    lastProposal.Hash(),
+				Payload: payload,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// wait until the istanbul message have processed
+			time.Sleep(processingTime + 2*sleepTime)
+			roundChangeTimer.Stop()
+
+			// check the result
+			assert.Equal(t, tc.expectedRound, istCore.current.round.Int64())
+		}
+		t.Run(tc.name, handler)
+	}
+}
+
+// makeRCMsgPayload makes a payload of round change message.
+func makeRCMsgPayload(round int64, sequence int64, prevHash common.Hash, senderAddr common.Address) []byte {
+	subject, err := Encode(&istanbul.Subject{
+		View: &istanbul.View{
+			Round:    big.NewInt(round),
+			Sequence: big.NewInt(sequence),
+		},
+		Digest:   common.Hash{},
+		PrevHash: prevHash,
+	})
+	if err != nil {
+		return nil
+	}
+
+	msg := &message{
+		Hash:    prevHash,
+		Code:    msgRoundChange,
+		Msg:     subject,
+		Address: senderAddr,
+	}
+
+	payload, err := msg.Payload()
+	if err != nil {
+		return nil
+	}
+
+	return payload
+}
