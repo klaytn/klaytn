@@ -69,12 +69,10 @@ func (s *InternalCallLog) ErrorString() string {
 	return ""
 }
 
-// InternalTxLogger is an EVM state logger and implements Tracer.
-//
-// InternalTxLogger can capture state based on the given Log configuration and also keeps
-// a track record of modified storage which is used in reporting snapshots of the
-// contract their storage.
-type InternalTxLogger struct {
+// InternalTxTracer is a full blown transaction tracer that extracts and reports all
+// the internal calls made by a transaction, along with any useful information.
+// It is ported to golang from JS, specifically call_tracer.js
+type InternalTxTracer struct {
 	cfg LogConfig
 
 	callStack []*InternalCallLog
@@ -90,9 +88,9 @@ type InternalTxLogger struct {
 	revertString     string
 }
 
-// NewInternalTxLogger returns a new logger
-func NewInternalTxLogger(cfg *LogConfig) *InternalTxLogger {
-	logger := &InternalTxLogger{}
+// NewInternalTxLogger returns a new InternalTxTracer
+func NewInternalTxLogger(cfg *LogConfig) *InternalTxTracer {
+	logger := &InternalTxTracer{}
 	if cfg != nil {
 		logger.cfg = *cfg
 	}
@@ -100,7 +98,7 @@ func NewInternalTxLogger(cfg *LogConfig) *InternalTxLogger {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-func (this *InternalTxLogger) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
+func (this *InternalTxTracer) CaptureStart(from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) error {
 	this.ctx["type"] = "CALL"
 	if create {
 		this.ctx["type"] = "CREATE"
@@ -130,7 +128,7 @@ type tracerLog struct {
 }
 
 // CaptureState implements the Tracer interface to trace a single step of VM execution.
-func (this *InternalTxLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, logStack *Stack, contract *Contract, depth int, err error) error {
+func (this *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, logStack *Stack, contract *Contract, depth int, err error) error {
 	if this.err == nil {
 		// Initialize the context if it wasn't done yet
 		if !this.initialized {
@@ -152,7 +150,7 @@ func (this *InternalTxLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, 
 	return nil
 }
 
-func (this *InternalTxLogger) step(log *tracerLog) error {
+func (this *InternalTxTracer) step(log *tracerLog) error {
 	// Capture any errors immediately
 	if log.err != nil {
 		this.fault(log)
@@ -303,7 +301,7 @@ func (this *InternalTxLogger) step(log *tracerLog) error {
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (this *InternalTxLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, s *Stack, contract *Contract, depth int, err error) error {
+func (this *InternalTxTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, s *Stack, contract *Contract, depth int, err error) error {
 	if this.err == nil {
 		// Apart from the error, everything matches the previous invocation
 		this.errValue = err.Error()
@@ -319,7 +317,7 @@ func (this *InternalTxLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, 
 }
 
 // CaptureEnd is called after the call finishes to finalize the tracing.
-func (this *InternalTxLogger) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
+func (this *InternalTxTracer) CaptureEnd(output []byte, gasUsed uint64, t time.Duration, err error) error {
 	this.ctx["output"] = hexutil.Encode(output)
 	this.ctx["gasUsed"] = gasUsed
 	this.ctx["time"] = t
@@ -330,7 +328,7 @@ func (this *InternalTxLogger) CaptureEnd(output []byte, gasUsed uint64, t time.D
 	return nil
 }
 
-func (this *InternalTxLogger) GetResult() (*InternalTxTraceResult, error) {
+func (this *InternalTxTracer) GetResult() (*InternalTxTraceResult, error) {
 	result, err := this.result()
 	if err != nil {
 		this.err = wrapError("result", err)
@@ -342,7 +340,7 @@ func (this *InternalTxLogger) GetResult() (*InternalTxTraceResult, error) {
 
 // reset clears data collected during the previous tracing.
 // It should act like calling jst.vm.DestroyHeap() and jst.vm.Destroy() at tracers.Tracer
-func (this *InternalTxLogger) reset() {
+func (this *InternalTxTracer) reset() {
 	this.callStack = []*InternalCallLog{}
 	this.output = nil
 
@@ -354,7 +352,7 @@ func (this *InternalTxLogger) reset() {
 
 // result is invoked when all the opcodes have been iterated over and returns
 // the final result of the tracing.
-func (this *InternalTxLogger) result() (*InternalTxTraceResult, error) {
+func (this *InternalTxTracer) result() (*InternalTxTraceResult, error) {
 	if _, exist := this.ctx["type"]; !exist {
 		this.ctx["type"] = 0
 	}
@@ -440,10 +438,10 @@ func (this *InternalTxLogger) result() (*InternalTxTraceResult, error) {
 }
 
 // InternalTxLogs returns the captured tracerLog entries.
-func (this *InternalTxLogger) InternalTxLogs() []*InternalCallLog { return this.callStack }
+func (this *InternalTxTracer) InternalTxLogs() []*InternalCallLog { return this.callStack }
 
 // fault is invoked when the actual execution of an opcode fails.
-func (this *InternalTxLogger) fault(log *tracerLog) {
+func (this *InternalTxTracer) fault(log *tracerLog) {
 	// If the topmost call already reverted, don't handle the additional fault again
 	if this.callStack[this.callStackLength()-1].Err != nil {
 		return
@@ -475,11 +473,11 @@ func (this *InternalTxLogger) fault(log *tracerLog) {
 	this.callStack = append(this.callStack, call)
 }
 
-func (this *InternalTxLogger) callStackLength() int {
+func (this *InternalTxTracer) callStackLength() int {
 	return len(this.callStack)
 }
 
-func (this *InternalTxLogger) callStackPop() *InternalCallLog {
+func (this *InternalTxTracer) callStackPop() *InternalCallLog {
 	topItem := this.callStack[this.callStackLength()-1]
 	this.callStack = this.callStack[:this.callStackLength()-2]
 	return topItem
