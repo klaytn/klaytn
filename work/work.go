@@ -293,7 +293,7 @@ type BlockChain interface {
 	PrepareStateMigration() error
 	StartStateMigration(uint64, common.Hash) error
 	StopStateMigration() error
-	StateMigrationStatus() (bool, uint64, int, int, float64, error)
+	StateMigrationStatus() (bool, uint64, int, int, int, float64, error)
 
 	// Warm up
 	StartWarmUp() error
