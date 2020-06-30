@@ -47,19 +47,19 @@ func NewInternalTxLogger(cfg *LogConfig) *InternalTxTracer {
 // InternalCall is emitted to the EVM each cycle and lists information about the current internal state
 // prior to the execution of the statement.
 type InternalCall struct {
-	Type          OpCode         `json:"op"`
-	From          common.Address `json:"from"`
-	To            common.Address `json:"to"`
-	Input         string
-	Gas           uint64                      `json:"gas"`
-	GasIn         uint64                      `json:"gasIn"`
-	GasUsed       uint64                      `json:"gasUsed"`
-	GasCost       uint64                      `json:"gasCost"`
-	Value         string                      `json:"value"`
-	Err           error                       `json:"-"`
-	OutOff        *big.Int
-	OutLen        *big.Int
-	Output        []byte
+	Type    OpCode         `json:"op"`
+	From    common.Address `json:"from"`
+	To      common.Address `json:"to"`
+	Input   string
+	Gas     uint64 `json:"gas"`
+	GasIn   uint64 `json:"gasIn"`
+	GasUsed uint64 `json:"gasUsed"`
+	GasCost uint64 `json:"gasCost"`
+	Value   string `json:"value"`
+	Err     error  `json:"-"`
+	OutOff  *big.Int
+	OutLen  *big.Int
+	Output  []byte
 
 	calls []*InternalCall
 }
