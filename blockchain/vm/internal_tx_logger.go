@@ -6,13 +6,10 @@ import (
 	"fmt"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/common/math"
 	"math/big"
 	"strconv"
 	"time"
 )
-
-//go:generate gencodec -type InternalTxLog -field-override InternalTxLogMarshaling -out gen_InternalTxLog.go
 
 var errEvmExecutionReverted = errors.New("evm: execution reverted")
 var errExecutionReverted = errors.New("execution reverted")
@@ -22,7 +19,6 @@ var emptyAddr = common.Address{}
 // InternalCallLog is emitted to the EVM each cycle and lists information about the current internal state
 // prior to the execution of the statement.
 type InternalCallLog struct {
-	Pc            uint64         `json:"pc"`
 	Type          OpCode         `json:"op"`
 	From          common.Address `json:"from"`
 	To            common.Address `json:"to"`
@@ -32,28 +28,12 @@ type InternalCallLog struct {
 	GasUsed       uint64                      `json:"gasUsed"`
 	GasCost       uint64                      `json:"gasCost"`
 	Value         string                      `json:"value"`
-	Memory        []byte                      `json:"memory"`
-	MemorySize    int                         `json:"memSize"`
-	Stack         []*big.Int                  `json:"stack"`
-	Storage       map[common.Hash]common.Hash `json:"-"`
-	Depth         int                         `json:"depth"`
-	RefundCounter uint64                      `json:"refund"`
 	Err           error                       `json:"-"`
 	OutOff        *big.Int
 	OutLen        *big.Int
 	Output        []byte
 
 	calls []*InternalCallLog
-}
-
-// overrides for gencodec
-type InternalTxLogMarshaling struct {
-	Stack       []*math.HexOrDecimal256
-	Gas         math.HexOrDecimal64
-	GasCost     math.HexOrDecimal64
-	Memory      hexutil.Bytes
-	OpName      string `json:"opName"` // adds call to OpName() in MarshalJSON
-	ErrorString string `json:"error"`  // adds call to ErrorString() in MarshalJSON
 }
 
 type InternalTxTraceResult struct {
@@ -97,11 +77,10 @@ func (s *InternalCallLog) ErrorString() string {
 type InternalTxLogger struct {
 	cfg LogConfig
 
-	callStack     []*InternalCallLog
-	changedValues map[common.Address]Storage
-	output        []byte
-	err           error
-	errValue      string
+	callStack []*InternalCallLog
+	output    []byte
+	err       error
+	errValue  string
 
 	// Below are newly added fields to support call_tracer.js
 	descended        bool
@@ -113,9 +92,7 @@ type InternalTxLogger struct {
 
 // NewInternalTxLogger returns a new logger
 func NewInternalTxLogger(cfg *LogConfig) *InternalTxLogger {
-	logger := &InternalTxLogger{
-		changedValues: make(map[common.Address]Storage),
-	}
+	logger := &InternalTxLogger{}
 	if cfg != nil {
 		logger.cfg = *cfg
 	}
@@ -367,7 +344,6 @@ func (this *InternalTxLogger) GetResult() (*InternalTxTraceResult, error) {
 // It should act like calling jst.vm.DestroyHeap() and jst.vm.Destroy() at tracers.Tracer
 func (this *InternalTxLogger) reset() {
 	this.callStack = []*InternalCallLog{}
-	this.changedValues = map[common.Address]Storage{}
 	this.output = nil
 
 	this.descended = false
