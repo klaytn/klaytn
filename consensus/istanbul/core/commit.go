@@ -79,10 +79,6 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	}
 
 	//logger.Error("receive handle commit","num", commit.View.Sequence)
-	if !c.valSet.CheckInSubList(msg.Hash, commit.View, src.Address()) {
-		return errNotFromCommittee
-	}
-
 	if err := c.checkMessage(msgCommit, commit.View); err != nil {
 		//logger.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
 		return err
@@ -90,6 +86,12 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 
 	if err := c.verifyCommit(commit, src); err != nil {
 		return err
+	}
+
+	if !c.valSet.CheckInSubList(msg.Hash, commit.View, src.Address()) {
+		logger.Warn("received an istanbul commit message from non-committee",
+			"currentSequence", c.current.sequence.Uint64(), "sender", src.Address().String(), "msgView", commit.View.String())
+		return errNotFromCommittee
 	}
 
 	c.acceptCommit(msg, src)
