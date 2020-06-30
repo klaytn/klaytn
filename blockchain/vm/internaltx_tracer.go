@@ -16,59 +16,6 @@ var errExecutionReverted = errors.New("execution reverted")
 var errInternalFailure = errors.New("internal failure")
 var emptyAddr = common.Address{}
 
-// InternalCall is emitted to the EVM each cycle and lists information about the current internal state
-// prior to the execution of the statement.
-type InternalCall struct {
-	Type          OpCode         `json:"op"`
-	From          common.Address `json:"from"`
-	To            common.Address `json:"to"`
-	Input         string
-	Gas           uint64                      `json:"gas"`
-	GasIn         uint64                      `json:"gasIn"`
-	GasUsed       uint64                      `json:"gasUsed"`
-	GasCost       uint64                      `json:"gasCost"`
-	Value         string                      `json:"value"`
-	Err           error                       `json:"-"`
-	OutOff        *big.Int
-	OutLen        *big.Int
-	Output        []byte
-
-	calls []*InternalCall
-}
-
-type InternalTxTraceResult struct {
-	callType OpCode
-	from     common.Address
-	to       common.Address
-	value    string
-	gas      uint64
-	gasUsed  uint64
-	input    string // hex string
-	output   string // hex string
-	time     time.Duration
-	calls    []*InternalCall
-	error    error
-	reverted revertedInfo
-}
-
-type revertedInfo struct {
-	contract common.Address
-	message  string
-}
-
-// OpName formats the operand name in a human-readable format.
-func (s *InternalCall) OpName() string {
-	return s.Type.String()
-}
-
-// ErrorString formats the tracerLog's error as a string.
-func (s *InternalCall) ErrorString() string {
-	if s.Err != nil {
-		return s.Err.Error()
-	}
-	return ""
-}
-
 // InternalTxTracer is a full blown transaction tracer that extracts and reports all
 // the internal calls made by a transaction, along with any useful information.
 // It is ported to golang from JS, specifically call_tracer.js
@@ -95,6 +42,61 @@ func NewInternalTxLogger(cfg *LogConfig) *InternalTxTracer {
 		logger.cfg = *cfg
 	}
 	return logger
+}
+
+// InternalCall is emitted to the EVM each cycle and lists information about the current internal state
+// prior to the execution of the statement.
+type InternalCall struct {
+	Type          OpCode         `json:"op"`
+	From          common.Address `json:"from"`
+	To            common.Address `json:"to"`
+	Input         string
+	Gas           uint64                      `json:"gas"`
+	GasIn         uint64                      `json:"gasIn"`
+	GasUsed       uint64                      `json:"gasUsed"`
+	GasCost       uint64                      `json:"gasCost"`
+	Value         string                      `json:"value"`
+	Err           error                       `json:"-"`
+	OutOff        *big.Int
+	OutLen        *big.Int
+	Output        []byte
+
+	calls []*InternalCall
+}
+
+// OpName formats the operand name in a human-readable format.
+func (s *InternalCall) OpName() string {
+	return s.Type.String()
+}
+
+// ErrorString formats the tracerLog's error as a string.
+func (s *InternalCall) ErrorString() string {
+	if s.Err != nil {
+		return s.Err.Error()
+	}
+	return ""
+}
+
+// InternalTxTraceResult is returned data after the end of trace-collecting cycle.
+// It implements an object returned by "result" function at call_tracer.js
+type InternalTxTraceResult struct {
+	callType OpCode
+	from     common.Address
+	to       common.Address
+	value    string
+	gas      uint64
+	gasUsed  uint64
+	input    string // hex string
+	output   string // hex string
+	time     time.Duration
+	calls    []*InternalCall
+	error    error
+	reverted revertedInfo
+}
+
+type revertedInfo struct {
+	contract common.Address
+	message  string
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
