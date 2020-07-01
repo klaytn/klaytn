@@ -123,12 +123,12 @@ func (c *core) handleEvents() {
 			}
 		case ev, ok := <-c.timeoutSub.Chan():
 			if !ok || ev.Data == nil {
-				logger.Warn("Invalid message type from timeout channel")
+				logger.Warn("Invalid message from timeout channel")
 				return
 			}
 			data, ok := ev.Data.(timeoutEvent)
 			if !ok || data.view == nil {
-				logger.Warn("Invalid message from timeout channel", "msg", ev.Data)
+				logger.Warn("Invalid message type from timeout channel", "msg", ev.Data)
 				return
 			}
 			c.handleTimeoutMsg(data.view)
@@ -202,7 +202,7 @@ func (c *core) handleCheckedMsg(msg *message, src istanbul.Validator) error {
 func (c *core) handleTimeoutMsg(view *istanbul.View) {
 	// TODO-Klaytn-Istanbul: Check whether this statement is required. EN/PN should not handle consensus msgs.
 	if c.backend.NodeType() != common.CONSENSUSNODE {
-		logger.Warn("Received an istanbul timeout message from EN or PN",
+		logger.Warn("This is not consensus node, but received an istanbul timeout message",
 			"nodeType", c.backend.NodeType().String())
 		return
 	}
