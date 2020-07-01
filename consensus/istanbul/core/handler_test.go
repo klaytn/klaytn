@@ -228,6 +228,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
+	defer istCore.Stop()
 
 	// Get variables initialized on `newMockBackend()`
 	eventMux := mockBackend.EventMux()
@@ -402,6 +403,7 @@ func TestCore_handlerMsg(t *testing.T) {
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
+	defer istCore.Stop()
 
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
@@ -455,7 +457,7 @@ func TestCore_handlerMsg(t *testing.T) {
 }
 
 // TestCore_handleTimeoutMsg_race tests a race condition between round change triggers.
-// There should be no race condition when and round change message and timeout event are handled simultaneously.
+// There should be no race condition when round change message and timeout event are handled simultaneously.
 func TestCore_handleTimeoutMsg_race(t *testing.T) {
 	// important variables to construct test cases
 	const sleepTime = 200 * time.Millisecond
@@ -505,6 +507,7 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
+	defer istCore.Stop()
 
 	eventMux := mockBackend.EventMux()
 	lastProposal, _ := mockBackend.LastProposal()
@@ -541,7 +544,7 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 			}
 
 			// wait until the istanbul message have processed
-			time.Sleep(processingTime + 2*sleepTime)
+			time.Sleep(processingTime + sleepTime)
 			roundChangeTimer.Stop()
 
 			// check the result
