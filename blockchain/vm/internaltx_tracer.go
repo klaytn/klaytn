@@ -51,7 +51,7 @@ func NewInternalTxLogger(cfg *LogConfig) *InternalTxTracer {
 // prior to the execution of the statement.
 type InternalCall struct {
 	Type    OpCode         `json:"op"`
-	from    common.Address `json:"from"`
+	From    common.Address `json:"from"`
 	To      common.Address `json:"to"`
 	Input   string
 	Gas     uint64 `json:"gas"`
@@ -173,7 +173,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		// Assemble the internal call report and store for completion
 		call := &InternalCall{
 			Type:    op,
-			from:    log.contract.Address(),
+			From:    log.contract.Address(),
 			Input:   hexutil.Encode(log.memory.store[inOff.Int64():inEnd]),
 			Gas:     log.gas,
 			GasCost: log.cost,
@@ -213,7 +213,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		// Assemble the internal call report and store for completion
 		call := &InternalCall{
 			Type:    op,
-			from:    log.contract.Address(),
+			From:    log.contract.Address(),
 			To:      toAddr,
 			Input:   hexutil.Encode(log.memory.store[inOff.Int64():inEnd]),
 			GasIn:   log.gas,
