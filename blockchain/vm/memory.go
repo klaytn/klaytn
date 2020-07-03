@@ -131,3 +131,10 @@ func (m *Memory) Print() {
 	}
 	fmt.Println("####################")
 }
+
+func (m *Memory) Slice(from, to int64) []byte {
+	sliced := m.store[from:to]
+	copied := make([]byte, len(sliced))
+	copy(copied, sliced)
+	return copied
+}
