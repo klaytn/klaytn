@@ -219,7 +219,7 @@ func (t TxType) IsChainDataAnchoring() bool {
 
 // IsRPCExcluded returns true if the submission of such tx type is excluded via RPC.
 func (t TxType) IsRPCExcluded() bool {
-	return t.IsChainDataAnchoring()
+	return false
 }
 
 type FeeRatio uint8
