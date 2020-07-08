@@ -101,7 +101,7 @@ var (
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
 		Usage: "Network identifier (integer, 1=MainNet (Not yet launched), 1000=Aspen, 1001=Baobab)",
-		Value: cn.DefaultConfig.NetworkId,
+		Value: cn.GetDefaultConfig().NetworkId,
 	}
 	IdentityFlag = cli.StringFlag{
 		Name:  "identity",
@@ -112,7 +112,7 @@ var (
 		Usage: "Document Root for HTTPClient file scheme",
 		Value: DirectoryString{homeDir()},
 	}
-	defaultSyncMode = cn.DefaultConfig.SyncMode
+	defaultSyncMode = cn.GetDefaultConfig().SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
 		Usage: `Blockchain sync mode (only "full" is supported)`,
@@ -145,32 +145,32 @@ var (
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
 		Usage: "Minimum gas price limit to enforce for acceptance into the pool",
-		Value: cn.DefaultConfig.TxPool.PriceLimit,
+		Value: cn.GetDefaultConfig().TxPool.PriceLimit,
 	}
 	TxPoolPriceBumpFlag = cli.Uint64Flag{
 		Name:  "txpool.pricebump",
 		Usage: "Price bump percentage to replace an already existing transaction",
-		Value: cn.DefaultConfig.TxPool.PriceBump,
+		Value: cn.GetDefaultConfig().TxPool.PriceBump,
 	}
 	TxPoolExecSlotsAccountFlag = cli.Uint64Flag{
 		Name:  "txpool.exec-slots.account",
 		Usage: "Number of executable transaction slots guaranteed per account",
-		Value: cn.DefaultConfig.TxPool.ExecSlotsAccount,
+		Value: cn.GetDefaultConfig().TxPool.ExecSlotsAccount,
 	}
 	TxPoolExecSlotsAllFlag = cli.Uint64Flag{
 		Name:  "txpool.exec-slots.all",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: cn.DefaultConfig.TxPool.ExecSlotsAll,
+		Value: cn.GetDefaultConfig().TxPool.ExecSlotsAll,
 	}
 	TxPoolNonExecSlotsAccountFlag = cli.Uint64Flag{
 		Name:  "txpool.nonexec-slots.account",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: cn.DefaultConfig.TxPool.NonExecSlotsAccount,
+		Value: cn.GetDefaultConfig().TxPool.NonExecSlotsAccount,
 	}
 	TxPoolNonExecSlotsAllFlag = cli.Uint64Flag{
 		Name:  "txpool.nonexec-slots.all",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: cn.DefaultConfig.TxPool.NonExecSlotsAll,
+		Value: cn.GetDefaultConfig().TxPool.NonExecSlotsAll,
 	}
 	TxPoolKeepLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.keeplocals",
@@ -179,7 +179,7 @@ var (
 	TxPoolLifetimeFlag = cli.DurationFlag{
 		Name:  "txpool.lifetime",
 		Usage: "Maximum amount of time non-executable transaction are queued",
-		Value: cn.DefaultConfig.TxPool.Lifetime,
+		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
 	// Performance tuning settings
 	StateDBCachingFlag = cli.BoolFlag{
@@ -224,6 +224,11 @@ var (
 		Usage: "An interval in terms of block number to commit the global state to disk",
 		Value: blockchain.DefaultBlockInterval,
 	}
+	TriesInMemoryFlag = cli.Uint64Flag{
+		Name:  "state.tries-in-memory",
+		Usage: "The number of recent state tries residing in the memory",
+		Value: blockchain.DefaultTriesInMemory,
+	}
 	CacheTypeFlag = cli.IntFlag{
 		Name:  "cache.type",
 		Usage: "Cache Type: 0=LRUCache, 1=LRUShardCache, 2=FIFOCache",
@@ -251,8 +256,8 @@ var (
 	}
 	TrieCacheLimitFlag = cli.IntFlag{
 		Name:  "state.trie-cache-limit",
-		Usage: "Memory allowance (MB) to use for caching trie nodes in memory",
-		Value: 6144,
+		Usage: "Memory allowance (MB) to use for caching trie nodes in memory. -1 is for auto-scaling",
+		Value: -1,
 	}
 
 	SenderTxHashIndexingFlag = cli.BoolFlag{
@@ -495,6 +500,11 @@ var (
 		Usage: "Wait time the rw timer waits for message writing",
 		Value: 15 * time.Second,
 	}
+	MaxRequestContentLengthFlag = cli.IntFlag{
+		Name:  "maxRequestContentLength",
+		Usage: "Max request content length in byte for http, websocket and gRPC",
+		Value: common.MaxRequestContentLength,
+	}
 
 	// ATM the url is left to the user and deployment to
 	JSpathFlag = cli.StringFlag{
@@ -670,13 +680,6 @@ var (
 		Name:  "autorestart.daemon.path",
 		Usage: "Path of node daemon. Used to give signal to kill",
 		Value: "~/klaytn/bin/kcnd",
-	}
-	// Data Archiving
-	// TODO-Klaytn-DataArchiving Please note that DataArchivingBlockNumFlag is just for development purpose.
-	DataArchivingBlockNumFlag = cli.Uint64Flag{
-		Name:  "dataarchiving.blocknumber",
-		Usage: "The block number when the data archiving starts from. 0 means off",
-		Value: 0,
 	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
@@ -984,6 +987,8 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		cfg.NetRestrict = list
 	}
 
+	common.MaxRequestContentLength = ctx.GlobalInt(MaxRequestContentLengthFlag.Name)
+
 	cfg.NetworkID, _ = getNetworkId(ctx)
 }
 
@@ -1141,6 +1146,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.TrieCacheSize = ctx.GlobalInt(TrieMemoryCacheSizeFlag.Name)
 	common.DefaultCacheType = common.CacheType(ctx.GlobalInt(CacheTypeFlag.Name))
 	cfg.TrieBlockInterval = ctx.GlobalUint(TrieBlockIntervalFlag.Name)
+	cfg.TriesInMemory = ctx.GlobalUint64(TriesInMemoryFlag.Name)
 
 	if ctx.GlobalIsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.GlobalInt(CacheScaleFlag.Name)
@@ -1175,7 +1181,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
 	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
 	cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
-	cfg.DataArchivingBlockNum = ctx.GlobalUint64(DataArchivingBlockNumFlag.Name)
 
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode

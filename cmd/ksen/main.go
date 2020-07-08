@@ -112,7 +112,6 @@ var senHelpFlagGroups = []utils.FlagGroup{
 			utils.LevelDBNoBufferPoolFlag,
 			utils.NoParallelDBWriteFlag,
 			utils.SenderTxHashIndexingFlag,
-			utils.DataArchivingBlockNumFlag,
 		},
 	},
 	{
@@ -121,6 +120,7 @@ var senHelpFlagGroups = []utils.FlagGroup{
 			utils.StateDBCachingFlag,
 			utils.TrieMemoryCacheSizeFlag,
 			utils.TrieBlockIntervalFlag,
+			utils.TriesInMemoryFlag,
 		},
 	},
 	{

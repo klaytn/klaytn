@@ -21,6 +21,7 @@
 package cn
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -70,6 +71,12 @@ func NewPrivateAdminAPI(cn *CN) *PrivateAdminAPI {
 
 // ExportChain exports the current blockchain into a local file.
 func (api *PrivateAdminAPI) ExportChain(file string) (bool, error) {
+	if _, err := os.Stat(file); err == nil {
+		// File already exists. Allowing overwrite could be a DoS vecotor,
+		// since the 'file' may point to arbitrary paths on the drive
+		return false, errors.New("location would overwrite an existing file")
+	}
+
 	// Make sure we can create the file to export into
 	out, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
 	if err != nil {
@@ -115,10 +122,19 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 			return false, err
 		}
 	}
-
-	// Run actual the import in pre-configured batches
 	stream := rlp.NewStream(reader, 0)
 
+	return api.importChain(stream)
+}
+
+func (api *PrivateAdminAPI) ImportChainFromString(blockRlp string) (bool, error) {
+	// Run actual the import in pre-configured batches
+	stream := rlp.NewStream(bytes.NewReader(common.FromHex(blockRlp)), 0)
+
+	return api.importChain(stream)
+}
+
+func (api *PrivateAdminAPI) importChain(stream *rlp.Stream) (bool, error) {
 	blocks, index := make([]*types.Block, 0, 2500), 0
 	for batch := 0; ; batch++ {
 		// Load a batch of blocks from the input file
@@ -147,6 +163,36 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 		blocks = blocks[:0]
 	}
 	return true, nil
+}
+
+// StartStateMigration starts state migration.
+func (api *PrivateAdminAPI) StartStateMigration() error {
+	return api.cn.blockchain.PrepareStateMigration()
+}
+
+// StopStateMigration stops state migration and removes stateMigrationDB.
+func (api *PrivateAdminAPI) StopStateMigration() error {
+	return api.cn.BlockChain().StopStateMigration()
+}
+
+// StateMigrationStatus returns the status information of state trie migration.
+func (api *PrivateAdminAPI) StateMigrationStatus() map[string]interface{} {
+	isMigration, blkNum, read, committed, pending, progress, err := api.cn.BlockChain().StateMigrationStatus()
+
+	errStr := "null"
+	if err != nil {
+		errStr = err.Error()
+	}
+
+	return map[string]interface{}{
+		"isMigration":          isMigration,
+		"migrationBlockNumber": blkNum,
+		"read":                 read,
+		"committed":            committed,
+		"pending":              pending,
+		"progress":             progress,
+		"err":                  errStr,
+	}
 }
 
 // PublicDebugAPI is the collection of Klaytn full node APIs exposed
@@ -179,11 +225,64 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 	if block == nil {
 		return state.Dump{}, fmt.Errorf("block #%d not found", blockNr)
 	}
-	stateDb, err := api.cn.BlockChain().StateAt(block.Root())
+	stateDb, err := api.cn.BlockChain().StateAtWithPersistent(block.Root())
 	if err != nil {
 		return state.Dump{}, err
 	}
 	return stateDb.RawDump(), nil
+}
+
+type Trie struct {
+	Type   string `json:"type"`
+	Hash   string `json:"hash"`
+	Parent string `json:"parent"`
+	Path   string `json:"path"`
+}
+
+type DumpStateTrieResult struct {
+	Root  string `json:"root"`
+	Tries []Trie `json:"tries"`
+}
+
+// DumpStateTrie retrieves all state/storage tries of the given state root.
+func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, error) {
+	block := api.cn.blockchain.GetBlockByNumber(uint64(blockNr))
+	if block == nil {
+		return DumpStateTrieResult{}, fmt.Errorf("block #%d not found", blockNr)
+	}
+
+	result := DumpStateTrieResult{
+		Root:  block.Root().String(),
+		Tries: make([]Trie, 0),
+	}
+
+	db := state.NewDatabaseWithExistingCache(api.cn.chainDB, api.cn.blockchain.StateCache().TrieDB().TrieNodeCache())
+	stateDB, err := state.New(block.Root(), db)
+	if err != nil {
+		return DumpStateTrieResult{}, err
+	}
+	it := state.NewNodeIterator(stateDB)
+	for it.Next() {
+		t := Trie{
+			it.Type,
+			it.Hash.String(),
+			it.Parent.String(),
+			statedb.HexPathToString(it.Path),
+		}
+
+		result.Tries = append(result.Tries, t)
+	}
+	return result, nil
+}
+
+// StartWarmUp retrieves all state/storage tries of the latest committed state root and caches the tries.
+func (api *PublicDebugAPI) StartWarmUp() error {
+	return api.cn.blockchain.StartWarmUp()
+}
+
+// StopWarmUp stops the warming up process.
+func (api *PublicDebugAPI) StopWarmUp() error {
+	return api.cn.blockchain.StopWarmUp()
 }
 
 // PrivateDebugAPI is the collection of CN full node APIs exposed over

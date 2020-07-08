@@ -34,6 +34,14 @@ func (c *core) sendCommit() {
 	}
 
 	sub := c.current.Subject()
+	prevHash := c.current.Proposal().ParentHash()
+
+	// Do not send message if the owner of the core is not a member of the committee for the `sub.View`
+	if !c.valSet.CheckInSubList(prevHash, sub.View, c.Address()) {
+		return
+	}
+
+	// TODO-Klaytn-Istanbul: generalize broadcastCommit for all istanbul message types
 	c.broadcastCommit(sub)
 }
 
@@ -71,7 +79,6 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	}
 
 	//logger.Error("receive handle commit","num", commit.View.Sequence)
-
 	if err := c.checkMessage(msgCommit, commit.View); err != nil {
 		//logger.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
 		return err
@@ -79,6 +86,12 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 
 	if err := c.verifyCommit(commit, src); err != nil {
 		return err
+	}
+
+	if !c.valSet.CheckInSubList(msg.Hash, commit.View, src.Address()) {
+		logger.Warn("received an istanbul commit message from non-committee",
+			"currentSequence", c.current.sequence.Uint64(), "sender", src.Address().String(), "msgView", commit.View.String())
+		return errNotFromCommittee
 	}
 
 	c.acceptCommit(msg, src)

@@ -64,4 +64,5 @@ func (sc *stakingInfoCache) add(stakingInfo *StakingInfo) {
 		}
 	}
 	sc.cells[stakingInfo.BlockNum] = stakingInfo
+	logger.Debug("Add a new stakingInfo to stakingInfoCache", "blockNum", stakingInfo.BlockNum)
 }

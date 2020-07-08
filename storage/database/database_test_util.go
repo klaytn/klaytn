@@ -37,13 +37,13 @@ func NewLevelDBManagerForTest(dbc *DBConfig, levelDBOption *opt.Options) (DBMana
 				ldb, err = NewLevelDBWithOption(dbc.Dir, levelDBOption)
 			}
 		} else {
-			partitionDir := filepath.Join(dbc.Dir, dbDirs[i])
+			partitionDir := filepath.Join(dbc.Dir, dbBaseDirs[i])
 			partitionLDBOption := getLevelDBOptionByPartition(levelDBOption, DBEntryType(i))
 			partitionLDBOption.Compression = getCompressionType(dbc.LevelDBCompression, DBEntryType(i))
 
 			ldb, err = NewLevelDBWithOption(partitionDir, partitionLDBOption)
 
-			fmt.Printf("Database: %-15s Compression: %-15s DisableBufferPool: %v \n", dbDirs[i], partitionLDBOption.Compression, levelDBOption.DisableBufferPool)
+			fmt.Printf("Database: %-15s Compression: %-15s DisableBufferPool: %v \n", dbBaseDirs[i], partitionLDBOption.Compression, levelDBOption.DisableBufferPool)
 		}
 
 		if err != nil {

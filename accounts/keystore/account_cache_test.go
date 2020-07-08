@@ -34,6 +34,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 )
 
 var (
@@ -121,7 +122,7 @@ func TestWatchNoDir(t *testing.T) {
 	// ks should see the account.
 	wantAccounts := []accounts.Account{cachetestAccounts[0]}
 	wantAccounts[0].URL = accounts.URL{Scheme: KeyStoreScheme, Path: file}
-	for d := 200 * time.Millisecond; d < 8*time.Second; d *= 2 {
+	for d := 200 * time.Millisecond; d < log.StatsReportLimit; d *= 2 {
 		list = ks.Accounts()
 		if reflect.DeepEqual(list, wantAccounts) {
 			// ks should have also received change notifications
@@ -305,7 +306,7 @@ func TestCacheFind(t *testing.T) {
 
 func waitForAccounts(wantAccounts []accounts.Account, ks *KeyStore) error {
 	var list []accounts.Account
-	for d := 200 * time.Millisecond; d < 8*time.Second; d *= 2 {
+	for d := 200 * time.Millisecond; d < log.StatsReportLimit; d *= 2 {
 		list = ks.Accounts()
 		if reflect.DeepEqual(list, wantAccounts) {
 			// ks should have also received change notifications

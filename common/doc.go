@@ -24,14 +24,15 @@ Package common contains various helper functions, commonly used data types and c
 Source Files
 
 Each source file provides functions and types as listed below
-  - big.go   	: Defines common big integers often used such as Big1
-  - bytes.go	: Provides conversion functions between a byte slice and a string in Hex format
-  - cache.go	: Defines Cache interface and constants such as CacheType
-  - debug.go	: Provides a function to let an user know where to report a bug. It is being used by datasync/downloader
-  - format.go	: Provides a function to print a time.Duration in more readable format
-  - path.go  	: Provides functions to check a file's existence and to get an absolute path
-  - size.go 	: Provides StorageSize type and its stringer functions
-  - types.go	: Provides commonly used Hash and Address types and its methods
-  - utils.go	: Provides LoadJSON function to read a JSON file
+  - big.go   		: Defines common big integers often used such as Big1
+  - bytes.go		: Provides conversion functions between a byte slice and other types such as string in Hex format and int
+  - cache.go		: Defines Cache interface and constants such as CacheType
+  - debug.go		: Provides a function to let an user know where to report a bug. It is being used by datasync/downloader
+  - format.go		: Provides a function to print a time.Duration in more readable format
+  - path.go  		: Provides functions to check a file's existence and to get an absolute path
+  - size.go 		: Provides StorageSize type and its stringer functions
+  - types.go		: Provides commonly used Hash and Address types and its methods
+  - utils.go		: Provides LoadJSON function to read a JSON file
+  - variables.go	: Provides configuration values
 */
 package common

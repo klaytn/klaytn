@@ -29,6 +29,13 @@ func (c *core) sendPrepare() {
 	logger := c.logger.NewWith("state", c.state)
 
 	sub := c.current.Subject()
+	prevHash := c.current.Proposal().ParentHash()
+
+	// Do not send message if the owner of the core is not a member of the committee for the `sub.View`
+	if !c.valSet.CheckInSubList(prevHash, sub.View, c.Address()) {
+		return
+	}
+
 	encodedSubject, err := Encode(sub)
 	if err != nil {
 		logger.Error("Failed to encode", "subject", sub)
@@ -36,7 +43,7 @@ func (c *core) sendPrepare() {
 	}
 
 	c.broadcast(&message{
-		Hash: c.current.Proposal().ParentHash(),
+		Hash: prevHash,
 		Code: msgPrepare,
 		Msg:  encodedSubject,
 	})
@@ -51,7 +58,6 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 	}
 
 	//logger.Error("call receive prepare","num",prepare.View.Sequence)
-
 	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
 		return err
 	}
@@ -60,6 +66,12 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 	// Passing verifyPrepare and checkMessage implies it is processing on the locked block since it was verified in the Preprepared state.
 	if err := c.verifyPrepare(prepare, src); err != nil {
 		return err
+	}
+
+	if !c.valSet.CheckInSubList(msg.Hash, prepare.View, src.Address()) {
+		logger.Warn("received an istanbul prepare message from non-committee",
+			"currentSequence", c.current.sequence.Uint64(), "sender", src.Address().String(), "msgView", prepare.View.String())
+		return errNotFromCommittee
 	}
 
 	c.acceptPrepare(msg, src)

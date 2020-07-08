@@ -10,12 +10,13 @@ aliases:
     tags:
       only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
-      ignore: 
+      ignore:
         - /release\/.*/
         - master
 
 orbs:
   codecov: codecov/codecov@1.0.5
+  docker: circleci/docker@1.0.1
 
 executors:
   test-executor:
@@ -52,7 +53,7 @@ commands:
   pre-build:
     description: "before build, set version"
     steps:
-      - run: 
+      - run:
           name: "set variables"
           command: |
             export GOPATH=~/go
@@ -78,7 +79,7 @@ commands:
       - run:
           name: "build new(Cross compile)"
           command: |
-            export GOPATH=~/go 
+            export GOPATH=~/go
             export PATH=$HOME/go1.14.1/go/bin:$PATH
             make << parameters.os-network >>
   upload-repo:
@@ -101,13 +102,13 @@ commands:
       - run:
           name: "rpm tagging"
           command: make rpm-all
-      - run: 
+      - run:
           name: "upload S3 repo"
           command: |
             PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
 
-            for item in kcn kpn ken kscn kspn ksen kbn kgen homi; 
+            for item in kcn kpn ken kscn kspn ksen kbn kgen homi;
             do
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
@@ -122,10 +123,10 @@ commands:
               make rpm-baobab-kcn
               make rpm-baobab-kpn
               make rpm-baobab-ken
-      - run: 
+      - run:
           name: "upload S3 repo"
           command: |
-            for item in kcn kpn ken; 
+            for item in kcn kpn ken;
             do
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-baobab-v" '$0~pat')
@@ -175,14 +176,14 @@ commands:
               git checkout -b release/${CIRCLE_TAG%-*}
               git push origin release/${CIRCLE_TAG%-*}
       - run:
-          name: "Install hub" 
+          name: "Install hub"
           command: |
               curl -sSLf https://github.com/github/hub/releases/download/v2.12.3/hub-linux-amd64-2.12.3.tgz | \
                 tar zxf - --strip-components=1 -C /tmp && \
                 sudo mv /tmp/bin/hub /usr/local/bin/hub
               type hub
       - run:
-          name: "Create pull request" 
+          name: "Create pull request"
           command: |
               version=$(hub pr list -s open -L 10 -f "%H%n")
               echo $version
@@ -213,7 +214,7 @@ commands:
                 git push origin --delete release/$version
               else
                 echo "Need to delete branch manually"
-              fi  
+              fi
   notify-success:
     steps:
       - run:
@@ -243,6 +244,14 @@ jobs:
             export PATH=$HOME/go1.14.1/go/bin:$PATH
             make fmt
             make all
+
+  test-linter:
+    executor: test-executor
+    steps:
+      - checkout
+      - run:
+          name: "Run golangci-lint"
+          command: golangci-lint run --new-from-rev=dev --presets format,style -v --timeout 10m
 
   test-datasync:
     executor: test-executor
@@ -293,7 +302,7 @@ jobs:
   pass-tests:
     executor: default
     steps:
-      - run: 
+      - run:
           name: "tests pass!"
           command: echo "tests pass!"
 
@@ -405,7 +414,7 @@ jobs:
       - checkout
       - pre-build
       - rpm-tagging-baobab
-      
+
   deploy-rpm-public:
     executor: rpm-executor
     steps:
@@ -441,16 +450,18 @@ workflows:
   version: 2
   build_n_packaging:
     jobs:
-      - build: 
+      - build:
           filters: *filter-version-not-release
-      - test-datasync: 
+      - test-datasync:
           filters: *filter-version-not-release
-      - test-networks: 
+      - test-networks:
           filters: *filter-version-not-release
-      - test-tests: 
+      - test-tests:
           filters: *filter-version-not-release
-      - test-others: 
+      - test-others:
          filters: *filter-version-not-release
+      - test-linter:
+          filters: *filter-version-not-release
       - tagger-verify:
          filters:
             tags:
@@ -458,8 +469,8 @@ workflows:
             branches:
               ignore: /.*/
 
-      - pass-tests: 
-          requires: 
+      - pass-tests:
+          requires:
             - build
             - test-datasync
             - test-networks
@@ -468,11 +479,11 @@ workflows:
             - tag-verify
             - tagger-verify
           filters: *filter-version-not-release
-      
+
       - tag-verify:
           filters: *filter-only-version-tag
 
-      - deploy-rpm-public: 
+      - deploy-rpm-public:
           requires:
             - rpm-tagged
             - rpm-tagged-baobab
@@ -494,7 +505,7 @@ workflows:
             - packaging-linux-baobab
             - packaging-darwin
             - packaging-darwin-baobab
-          filters: 
+          filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*/
             branches:
@@ -508,7 +519,7 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-linux: 
+      - packaging-linux:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
@@ -516,7 +527,7 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-darwin: 
+      - packaging-darwin:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
@@ -524,6 +535,19 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
+
+      - docker/publish:
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+/
+            branches:
+              ignore: /.*/
+          requires:
+            - pass-tests
+          image: klaytn/klaytn
+          tag: $CIRCLE_TAG,latest
+          executor: docker/docker
+          use-remote-docker: true
 
       - major-tagging:
           filters:

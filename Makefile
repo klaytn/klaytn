@@ -2,8 +2,11 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-GOBIN = $(shell pwd)/build/bin
 GO ?= latest
+GOPATH := $(or $(GOPATH), $(shell go env GOPATH))
+GORUN = env GOPATH=$(GOPATH) GO111MODULE=on go run
+
+BIN = $(shell pwd)/build/bin
 BUILD_PARAM?=install
 
 OBJECTS=kcn kpn ken kscn kspn ksen kbn kgen homi
@@ -29,7 +32,7 @@ tar-baobab-linux-amd64-all: ${TAR_BAOBAB_LINUX_amd64_OBJECTS}
 tar-baobab-darwin-amd64-all: ${TAR_BAOBAB_DARWIN_amd64_OBJECTS}
 
 ${OBJECTS}:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/$@
+	$(GORUN) build/ci.go ${BUILD_PARAM} ./cmd/$@
 
 ${RPM_OBJECTS}:
 	./build/package-rpm.sh ${@:rpm-%=%}
@@ -68,51 +71,46 @@ ${TAR_BAOBAB_DARWIN_amd64_OBJECTS}:
 	./build/package-tar.sh -b darwin-amd64 ${BIN}
 
 abigen:
-	build/env.sh go run build/ci.go ${BUILD_PARAM} ./cmd/abigen
+	$(GORUN) build/ci.go ${BUILD_PARAM} ./cmd/abigen
 	@echo "Done building."
-	@echo "Run \"$(GOBIN)/abigen\" to launch abigen."
+	@echo "Run \"$(BIN)/abigen\" to launch abigen."
 
 test:
-	build/env.sh go run build/ci.go test
+	$(GORUN) build/ci.go test
 
 test-seq:
-	build/env.sh go run build/ci.go test -p 1
+	$(GORUN) build/ci.go test -p 1
 
 test-datasync:
-	build/env.sh go run build/ci.go test -p 1 ./datasync/...
+	$(GORUN) build/ci.go test -p 1 ./datasync/...
 
 test-networks:
-	build/env.sh go run build/ci.go test -p 1 ./networks/...
+	$(GORUN) build/ci.go test -p 1 ./networks/...
 
 test-tests:
-	build/env.sh go run build/ci.go test -p 1 ./tests/...
+	$(GORUN) build/ci.go test -p 1 ./tests/...
 
 test-others:
-	build/env.sh go run build/ci.go test -p 1 -exclude datasync,networks,tests
+	$(GORUN) build/ci.go test -p 1 -exclude datasync,networks,tests
 
 cover:
-	build/env.sh go run build/ci.go cover -coverprofile=coverage.out
+	$(GORUN) build/ci.go cover -coverprofile=coverage.out
 	go tool cover -func=coverage.out -o coverage_report.txt
 	go tool cover -html=coverage.out -o coverage_report.html
 	@echo "Two coverage reports coverage_report.txt and coverage_report.html are generated."
 
 fmt:
-	GOFLAGS= GO111MODULE=off build/env.sh go run build/ci.go fmt
-
-# Not supported. Use lint-try instead of lint
-#lint:
-#	build/env.sh env GOFLAGS= GO111MODULE=off go run build/ci.go lint
+	$(GORUN) build/ci.go fmt
 
 lint-try:
-	GOFLAGS= GO111MODULE=off build/env.sh go run build/ci.go lint-try
+	$(GORUN) build/ci.go lint-try
 
 clean:
-	./build/clean_go_build_cache.sh
-	chmod -R +w ./build/_workspace/pkg/
-	rm -fr build/_workspace/pkg/ $(GOBIN)/* build/_workspace/src/
+	env GO111MODULE=on go clean -cache
+	rm -fr build/_workspace/pkg/ $(BIN)/* build/_workspace/src/
 
 # The devtools target installs tools required for 'go generate'.
-# You need to put $GOBIN (or $GOPATH/bin) in your PATH to use 'go generate'.
+# You need to put $BIN (or $GOPATH/bin) in your PATH to use 'go generate'.
 
 devtools:
 	env GOFLAGS= GOBIN= go get -u golang.org/x/tools/cmd/stringer

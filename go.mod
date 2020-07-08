@@ -3,7 +3,8 @@ module github.com/klaytn/klaytn
 go 1.13
 
 require (
-	github.com/allegro/bigcache v1.2.1-0.20190218064605-e24eb225f156
+	github.com/VictoriaMetrics/fastcache v1.5.7
+	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
 	github.com/cespare/cp v1.0.0
 	github.com/clevergo/websocket v1.0.0
@@ -44,6 +45,8 @@ require (
 	github.com/robertkrimen/otto v0.0.0-20180506084358-03d472dc43ab
 	github.com/rs/cors v1.4.0
 	github.com/satori/go.uuid v1.2.0
+	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570
+	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.1-0.20190318030020-c3a204f8e965
 	github.com/urfave/cli v1.20.0
@@ -54,7 +57,7 @@ require (
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
 	golang.org/x/net v0.0.0-20191003171128-d98b1b443823
 	golang.org/x/sys v0.0.0-20190912141932-bc967efca4b8
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/text v0.3.2
 	golang.org/x/tools v0.0.0-20191005014404-c9f9432ec4b2
 	google.golang.org/appengine v1.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20190111180523-db91494dd46c // indirect

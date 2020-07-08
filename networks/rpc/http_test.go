@@ -17,6 +17,7 @@
 package rpc
 
 import (
+	"github.com/klaytn/klaytn/common"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,7 +33,7 @@ func TestHTTPErrorResponseWithPut(t *testing.T) {
 }
 
 func TestHTTPErrorResponseWithMaxContentLength(t *testing.T) {
-	body := make([]rune, maxRequestContentLength+1)
+	body := make([]rune, common.MaxRequestContentLength+1)
 	testHTTPErrorResponse(t,
 		http.MethodPost, contentType, string(body), http.StatusRequestEntityTooLarge)
 }

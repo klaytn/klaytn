@@ -254,7 +254,7 @@ func testParallelPutGet(db Database, t *testing.T) {
 func TestDBEntryLengthCheck(t *testing.T) {
 	dbRatioSum := 0
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
-		if dbDirs[i] == "" {
+		if dbBaseDirs[i] == "" {
 			t.Fatalf("Database directory should be specified! index: %v", i)
 		}
 

@@ -20,7 +20,12 @@
 
 package common
 
-import "encoding/hex"
+import (
+	"encoding/binary"
+	"encoding/hex"
+	"math/rand"
+	"time"
+)
 
 // ToHex returns the hex representation of b, prefixed with '0x'.
 // For empty slices, the return value is "0x0".
@@ -131,4 +136,27 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	copy(padded[l-len(slice):], slice)
 
 	return padded
+}
+
+func MakeRandomBytes(n int) []byte {
+	rand.Seed(time.Now().UTC().UnixNano())
+	s := make([]byte, n)
+	rand.Read(s)
+	return s
+}
+
+// IntToByteLittleEndian encodes a number as little endian uint64
+func Int64ToByteLittleEndian(num uint64) []byte {
+	enc := make([]byte, 8)
+	binary.LittleEndian.PutUint64(enc, num)
+
+	return enc
+}
+
+// Int64ToByteBigEndian encodes a number as big endian uint64
+func Int64ToByteBigEndian(number uint64) []byte {
+	enc := make([]byte, 8)
+	binary.BigEndian.PutUint64(enc, number)
+
+	return enc
 }

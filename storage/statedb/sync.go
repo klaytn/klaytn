@@ -23,7 +23,9 @@ package statedb
 import (
 	"errors"
 	"fmt"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/common"
+	"strconv"
 
 	"github.com/klaytn/klaytn/storage/database"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
@@ -55,6 +57,7 @@ type request struct {
 type SyncResult struct {
 	Hash common.Hash // Hash of the originally unknown trie node
 	Data []byte      // Data content of the retrieved node
+	Err  error
 }
 
 // syncMemBatch is an in-memory buffer of successfully downloaded but not yet
@@ -72,23 +75,37 @@ func newSyncMemBatch() *syncMemBatch {
 	}
 }
 
+type StateTrieReadDB interface {
+	ReadStateTrieNode(key []byte) ([]byte, error)
+	HasStateTrieNode(key []byte) (bool, error)
+}
+
 // TrieSync is the main state trie synchronisation scheduler, which provides yet
 // unknown trie hashes to retrieve, accepts node data associated with said hashes
 // and reconstructs the trie step by step until all is done.
 type TrieSync struct {
-	database database.DBManager       // Persistent database to check for existing entries
-	membatch *syncMemBatch            // Memory buffer to avoid frequest database writes
-	requests map[common.Hash]*request // Pending requests pertaining to a key hash
-	queue    *prque.Prque             // Priority queue with the pending requests
+	database         StateTrieReadDB          // Persistent database to check for existing entries
+	membatch         *syncMemBatch            // Memory buffer to avoid frequent database writes
+	requests         map[common.Hash]*request // Pending requests pertaining to a key hash
+	queue            *prque.Prque             // Priority queue with the pending requests
+	retrievedByDepth map[int]int              // Retrieved trie node number counted by depth
+	committedByDepth map[int]int              // Committed trie nodes number counted by depth
+	bloom            *SyncBloom               // Bloom filter for fast node existence checks
+	exist            *lru.Cache               // exist to check if the trie node is already written or not
 }
 
 // NewTrieSync creates a new trie data download scheduler.
-func NewTrieSync(root common.Hash, database database.DBManager, callback LeafCallback) *TrieSync {
+// If both bloom and cache are set, only cache is used.
+func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallback, bloom *SyncBloom, lruCache *lru.Cache) *TrieSync {
 	ts := &TrieSync{
-		database: database,
-		membatch: newSyncMemBatch(),
-		requests: make(map[common.Hash]*request),
-		queue:    prque.New(),
+		database:         database,
+		membatch:         newSyncMemBatch(),
+		requests:         make(map[common.Hash]*request),
+		queue:            prque.New(),
+		retrievedByDepth: make(map[int]int),
+		committedByDepth: make(map[int]int),
+		bloom:            bloom,
+		exist:            lruCache,
 	}
 	ts.AddSubTrie(root, 0, common.Hash{}, callback)
 	return ts
@@ -103,10 +120,19 @@ func (s *TrieSync) AddSubTrie(root common.Hash, depth int, parent common.Hash, c
 	if _, ok := s.membatch.batch[root]; ok {
 		return
 	}
-	key := root.Bytes()
-	blob, _ := s.database.ReadStateTrieNode(key)
-	if local, err := decodeNode(key, blob); local != nil && err == nil {
-		return
+	if s.exist != nil {
+		if _, ok := s.exist.Get(root); ok {
+			// already written in migration, skip the node
+			return
+		}
+	} else if s.bloom == nil || s.bloom.Contains(root[:]) {
+		// Bloom filter says this might be a duplicate, double check
+		if ok, _ := s.database.HasStateTrieNode(root[:]); ok {
+			logger.Info("skip write node in migration by ReadStateTrieNode", "AddSubTrie", root.String())
+			return
+		}
+		// False positive, bump fault meter
+		bloomFaultMeter.Mark(1)
 	}
 	// Assemble the new sub-trie sync request
 	req := &request{
@@ -138,8 +164,18 @@ func (s *TrieSync) AddRawEntry(hash common.Hash, depth int, parent common.Hash) 
 	if _, ok := s.membatch.batch[hash]; ok {
 		return
 	}
-	if ok, _ := s.database.HasStateTrieNode(hash.Bytes()); ok {
-		return
+	if s.exist != nil {
+		if _, ok := s.exist.Get(hash); ok {
+			// already written in migration, skip the node
+			return
+		}
+	} else if s.bloom == nil || s.bloom.Contains(hash[:]) {
+		// Bloom filter says this might be a duplicate, double check
+		if ok, _ := s.database.HasStateTrieNode(hash.Bytes()); ok {
+			return
+		}
+		// False positive, bump fault meter
+		bloomFaultMeter.Mark(1)
 	}
 	// Assemble the new sub-trie sync request
 	req := &request{
@@ -216,12 +252,20 @@ func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
 }
 
 // Commit flushes the data stored in the internal membatch out to persistent
-// storage, returning th enumber of items written and any occurred error.
+// storage, returning the number of items written and any occurred error.
 func (s *TrieSync) Commit(dbw database.Putter) (int, error) {
 	// Dump the membatch into a database dbw
 	for i, key := range s.membatch.order {
 		if err := dbw.Put(key[:], s.membatch.batch[key]); err != nil {
 			return i, err
+		}
+
+		if s.bloom != nil {
+			s.bloom.Add(key[:])
+		}
+
+		if s.exist != nil {
+			s.exist.Add(key, nil)
 		}
 	}
 	written := len(s.membatch.order)
@@ -245,6 +289,10 @@ func (s *TrieSync) schedule(req *request) {
 		old.parents = append(old.parents, req.parents...)
 		return
 	}
+
+	// Count the retrieved trie by depth
+	s.retrievedByDepth[req.depth]++
+
 	// Schedule the request for future retrieval
 	s.queue.Push(req.hash, float32(req.depth))
 	s.requests[req.hash] = req
@@ -284,7 +332,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 		// Notify any external watcher of a new key/value node
 		if req.callback != nil {
 			if node, ok := (child.node).(valueNode); ok {
-				if err := req.callback(node, req.hash); err != nil {
+				if err := req.callback(node, req.hash, child.depth); err != nil {
 					return nil, err
 				}
 			}
@@ -296,9 +344,20 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 			if _, ok := s.membatch.batch[hash]; ok {
 				continue
 			}
-			if ok, _ := s.database.HasStateTrieNode(node); ok {
-				continue
+			if s.exist != nil {
+				if _, ok := s.exist.Get(hash); ok {
+					// already written in migration, skip the node
+					continue
+				}
+			} else if s.bloom == nil || s.bloom.Contains(node) {
+				// Bloom filter says this might be a duplicate, double check
+				if ok, _ := s.database.HasStateTrieNode(node); ok {
+					continue
+				}
+				// False positive, bump fault meter
+				bloomFaultMeter.Mark(1)
 			}
+
 			// Locally unknown node, schedule for retrieval
 			requests = append(requests, &request{
 				hash:     hash,
@@ -315,6 +374,9 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 // of the referencing parent requests complete due to this commit, they are also
 // committed themselves.
 func (s *TrieSync) commit(req *request) (err error) {
+	// Count the committed trie by depth and Clear the counts of lower depth
+	s.committedByDepth[req.depth]++
+
 	// Write the node content to the membatch
 	s.membatch.batch[req.hash] = req.data
 	s.membatch.order = append(s.membatch.order, req.hash)
@@ -331,4 +393,50 @@ func (s *TrieSync) commit(req *request) (err error) {
 		}
 	}
 	return nil
+}
+
+// RetrievedByDepth returns the retrieved trie count by given depth.
+// This number is same as the number of nodes that needs to be commited to complete trie sync.
+func (s *TrieSync) RetrievedByDepth(depth int) int {
+	return s.retrievedByDepth[depth]
+}
+
+// CommittedByDepth returns the committed trie count by given depth.
+func (s *TrieSync) CommittedByDepth(depth int) int {
+	return s.committedByDepth[depth]
+}
+
+// CalcProgressPercentage returns the progress percentage.
+func (s *TrieSync) CalcProgressPercentage() float64 {
+	var progress float64
+	//depth	max trie	resolution (%)
+	//0	 	1 	 		100.00000
+	//1	 	16 	 		6.25000
+	//2	 	256 	 	0.39063
+	//3	 	4,096 	 	0.02441
+	//4	 	65,536 	 	0.00153
+	//5	 	1,048,576 	0.00010
+
+	for i := 0; i < 20; i++ {
+		c, r := s.CommittedByDepth(i), s.RetrievedByDepth(i)
+
+		var progressByDepth float64
+
+		if r == 0 {
+			break
+		}
+
+		if r > 0 {
+			progressByDepth = float64(c) / float64(r) * 100
+			if progressByDepth > progress && i < 4 { // Scan depth 0 ~ 3 for accuracy
+				progress = progressByDepth
+			}
+		}
+
+		logger.Debug("Trie sync progress by depth #"+strconv.Itoa(i), "committed", c, "retrieved", r, "progress", progressByDepth)
+	}
+
+	logger.Debug("Trie sync progress ", "progress", strconv.FormatFloat(progress, 'f', -1, 64)+"%")
+
+	return progress
 }

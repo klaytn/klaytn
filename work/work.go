@@ -270,6 +270,7 @@ type BlockChain interface {
 	Processor() blockchain.Processor
 	BadBlocks() ([]blockchain.BadBlockArgs, error)
 	StateAt(root common.Hash) (*state.StateDB, error)
+	StateAtWithPersistent(root common.Hash) (*state.StateDB, error)
 	StateAtWithGCLock(root common.Hash) (*state.StateDB, error)
 	Export(w io.Writer) error
 	Engine() consensus.Engine
@@ -287,4 +288,14 @@ type BlockChain interface {
 	PostChainEvents(events []interface{}, logs []*types.Log)
 	TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB, error)
 	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, uint64, error)
+
+	// State Migration
+	PrepareStateMigration() error
+	StartStateMigration(uint64, common.Hash) error
+	StopStateMigration() error
+	StateMigrationStatus() (bool, uint64, int, int, int, float64, error)
+
+	// Warm up
+	StartWarmUp() error
+	StopWarmUp() error
 }

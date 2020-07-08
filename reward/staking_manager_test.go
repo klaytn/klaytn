@@ -21,13 +21,12 @@ import (
 	"testing"
 )
 
-// checking calculate blockNumber of stakingInfo and return the stakingInfo with the blockNumber correct when stakingInfo is stored in cache
-func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
-	stakingInterval := uint64(86400)
-	testData := []uint64{
+var (
+	stakingInterval = uint64(86400)
+	testData        = []uint64{
 		0, 1, 2, 3,
 	}
-	testCases := []struct {
+	testCases = []struct {
 		stakingNumber  uint64
 		expectedNumber uint64
 	}{
@@ -45,16 +44,38 @@ func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
 		{345601, 259200},
 		{400000, 259200},
 	}
-	stakingManager := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance())
+)
+
+func TestStakingManager_NewStakingManager(t *testing.T) {
+	// test if nil
+	assert.Nil(t, GetStakingManager())
+	assert.Nil(t, GetStakingInfo(123))
+
+	st, err := updateStakingInfo(456)
+	assert.Nil(t, st)
+	assert.EqualError(t, err, ErrStakingManagerNotSet.Error())
+
+	assert.EqualError(t, CheckStakingInfoStored(789), ErrStakingManagerNotSet.Error())
+
+	// test if get same
+	stNew := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
+	stGet := GetStakingManager()
+	assert.NotNil(t, stNew)
+	assert.Equal(t, stGet, stNew)
+}
+
+// checking calculate blockNumber of stakingInfo and return the stakingInfo with the blockNumber correct when stakingInfo is stored in cache
+func TestStakingManager_getStakingInfoFromStakingCache(t *testing.T) {
+	stakingManager := NewStakingManager(newTestBlockChain(), newDefaultTestGovernance(), nil)
 
 	for i := 0; i < len(testData); i++ {
 		testStakingInfo := newEmptyStakingInfo(testData[i] * stakingInterval)
-		stakingManager.sic.add(testStakingInfo)
+		stakingManager.stakingInfoCache.add(testStakingInfo)
 	}
 
 	// should find a correct stakingInfo with a given block number
 	for i := 0; i < len(testCases); i++ {
-		resultStakingInfo := stakingManager.GetStakingInfo(testCases[i].stakingNumber)
+		resultStakingInfo := GetStakingInfo(testCases[i].stakingNumber)
 		assert.Equal(t, testCases[i].expectedNumber, resultStakingInfo.BlockNum)
 	}
 }

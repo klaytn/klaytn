@@ -54,7 +54,7 @@ var TotalPhysicalMemGB int = getPhysicalMemorySize() // Convert Byte to GByte
 // It internally returns a minimumMemorySize if it is an os that does not support using the system call to obtain it,
 // or if the system call fails.
 func getPhysicalMemorySize() int {
-	TotalMemGB := int(memory.TotalMemory() / 1000 / 1000 / 1000)
+	TotalMemGB := int(memory.TotalMemory() / 1024 / 1024 / 1024)
 	if TotalMemGB >= minimumMemorySize {
 		return TotalMemGB
 	} else {

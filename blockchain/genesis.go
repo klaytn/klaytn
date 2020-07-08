@@ -34,7 +34,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
-	"github.com/klaytn/klaytn/storage/statedb"
 	"math/big"
 	"strings"
 )
@@ -273,7 +272,7 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 		head.BlockScore = params.GenesisBlockScore
 	}
 	stateDB.Commit(false)
-	stateDB.Database().TrieDB().Commit(root, true, statedb.NoDataArchivingPreparation)
+	stateDB.Database().TrieDB().Commit(root, true, g.Number)
 
 	return types.NewBlock(head, nil, nil)
 }

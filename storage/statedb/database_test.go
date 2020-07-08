@@ -28,7 +28,7 @@ var parentHash = common.HexToHash("1343A3F") // 20199999 in hexadecimal
 
 func TestDatabase_Reference(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithCache(memDB, 128, 0)
+	db := NewDatabaseWithNewCache(memDB, 128)
 
 	assert.Equal(t, memDB, db.DiskDB())
 	assert.Equal(t, 1, len(db.nodes)) // {} : {}
@@ -56,7 +56,7 @@ func TestDatabase_Reference(t *testing.T) {
 
 func TestDatabase_DeReference(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithCache(memDB, 128, 0)
+	db := NewDatabaseWithNewCache(memDB, 128)
 	assert.Equal(t, 1, len(db.nodes)) // {} : {}
 
 	db.Dereference(parentHash)
@@ -86,8 +86,7 @@ func TestDatabase_DeReference(t *testing.T) {
 
 func TestDatabase_Size(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	cacheSizeMB := 128
-	db := NewDatabaseWithCache(memDB, cacheSizeMB, 0)
+	db := NewDatabaseWithNewCache(memDB, 128)
 
 	totalMemorySize, preimagesSize := db.Size()
 	assert.Equal(t, common.StorageSize(0), totalMemorySize)
@@ -108,14 +107,11 @@ func TestDatabase_Size(t *testing.T) {
 	totalMemorySize, preimagesSize = db.Size()
 	assert.Equal(t, common.StorageSize(128), totalMemorySize)
 	assert.Equal(t, common.StorageSize(100), preimagesSize)
-
-	cacheSize := db.CacheSize()
-	assert.Equal(t, cacheSizeMB*1024*1024, cacheSize)
 }
 
 func TestDatabase_SecureKey(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithCache(memDB, 128, 0)
+	db := NewDatabaseWithNewCache(memDB, 128)
 
 	secKey1 := db.secureKey(childHash[:])
 	copiedSecKey := make([]byte, 0, len(secKey1))
@@ -125,4 +121,19 @@ func TestDatabase_SecureKey(t *testing.T) {
 
 	assert.NotEqual(t, secKey1, copiedSecKey) // after the next call of secureKey, secKey1 became different from the copied
 	assert.Equal(t, secKey1, secKey2)         // secKey1 has changed into secKey2 as they are created from the same buffer
+}
+
+func TestCache(t *testing.T) {
+	memDB := database.NewMemoryDBManager()
+	cacheSizeMB := 10
+	db := NewDatabaseWithNewCache(memDB, cacheSizeMB)
+
+	for i := 0; i < 100; i++ {
+		key, value := common.MakeRandomBytes(256), common.MakeRandomBytes(63*1024) // fastcache can store entrie under 64KB
+		db.trieNodeCache.Set(key, value)
+		rValue, found := db.trieNodeCache.HasGet(nil, key)
+
+		assert.Equal(t, true, found)
+		assert.Equal(t, value, rValue)
+	}
 }

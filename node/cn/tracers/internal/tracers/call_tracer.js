@@ -19,10 +19,25 @@
 {
 	// callstack is the current recursive call stack of the EVM execution.
 	callstack: [{}],
+	revertedContract: "",
 
 	// descended tracks whether we've just descended from an outer transaction into
 	// an inner call.
 	descended: false,
+
+	toAscii: function(hex) {
+		var str = "";
+		var i = 0, l = hex.length;
+		if (hex.substring(0, 2) === "0x") {
+			i = 2;
+		}
+		for (; i < l; i+=2) {
+			var code = parseInt(hex.substr(i, 2), 16);
+			str += String.fromCharCode(code);
+		}
+
+		return str;
+	},
 
 	// step is invoked for every opcode that the VM executes.
 	step: function(log, db) {
@@ -38,7 +53,7 @@
 			var op = log.op.toString();
 		}
 		// If a new contract is being created, add to the call stack
-		if (syscall && op == 'CREATE') {
+		if (syscall && (op == 'CREATE' || op == 'CREATE2')) {
 			var inOff = log.stack.peek(1).valueOf();
 			var inEnd = inOff + log.stack.peek(2).valueOf();
 
@@ -113,13 +128,21 @@
 		// If an existing call is returning, pop off the call stack
 		if (syscall && op == 'REVERT') {
 			this.callstack[this.callstack.length - 1].error = "execution reverted";
+			if(this.revertedContract == "")
+			{
+				if(this.callstack[this.callstack.length-1].to === undefined) {
+					this.revertedContract = toHex(log.contract.getAddress());
+				} else {
+					this.revertedContract = this.callstack[this.callstack.length-1].to;
+				}
+			}
 			return;
 		}
 		if (log.getDepth() == this.callstack.length - 1) {
 			// Pop off the last call and get the execution results
 			var call = this.callstack.pop();
 
-			if (call.type == 'CREATE') {
+			if (call.type == 'CREATE' || call.type == 'CREATE2') {
 				// If the call was a CREATE, retrieve the contract address and output code
 				call.gasUsed = '0x' + bigInt(call.gasIn - call.gasCost - log.getGas()).toString(16);
 				delete call.gasIn; delete call.gasCost;
@@ -251,6 +274,18 @@
 		if (result.error !== undefined) {
 			delete result.output;
 		}
+		if (ctx.error == "evm: execution reverted") {
+			outputHex = toHex(ctx.output);
+			if (outputHex.slice(2,10) == "08c379a0") {
+				defaultOffset=10;
+				stringOffset = parseInt(bigInt("0x"+outputHex.slice(defaultOffset,defaultOffset+32*2)).toString());
+				stringLength = parseInt(bigInt("0x"+outputHex.slice(defaultOffset+32*2,defaultOffset+32*2+32*2)).toString());
+				start = defaultOffset+32*2+stringOffset*2;
+				end = start + stringLength*2;
+				this.revertString = this.toAscii(outputHex.slice(start,end));
+			}
+			result.reverted = {"contract": this.revertedContract, "message": this.revertString};
+		}
 		return this.finalize(result);
 	},
 
@@ -270,6 +305,7 @@
 			error:   call.error,
 			time:    call.time,
 			calls:   call.calls,
+			reverted: call.reverted,
 		}
 		for (var key in sorted) {
 			if (sorted[key] === undefined) {

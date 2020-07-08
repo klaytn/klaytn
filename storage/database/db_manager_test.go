@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -391,7 +392,8 @@ func TestDBManager_TrieNode(t *testing.T) {
 		if !dbm.IsPartitioned() {
 			continue
 		}
-		dbm.SetStateTrieMigrationDB(123)
+		err := dbm.CreateMigrationDBAndSetStatus(123)
+		assert.NoError(t, err)
 
 		cachedNode, _ = dbm.ReadCachedTrieNode(hash1)
 		oldCachedNode, _ := dbm.ReadCachedTrieNodeFromOld(hash1)
@@ -419,17 +421,19 @@ func TestDBManager_TrieNode(t *testing.T) {
 		cachedNode, _ = dbm.ReadCachedTrieNode(hash2)
 		oldCachedNode, _ = dbm.ReadCachedTrieNodeFromOld(hash2)
 		assert.Equal(t, hash2[:], cachedNode)
-		assert.Nil(t, oldCachedNode)
+		assert.Equal(t, hash2[:], oldCachedNode)
 
 		stateTrieNode, _ = dbm.ReadStateTrieNode(hash2[:])
 		oldStateTrieNode, _ = dbm.ReadStateTrieNodeFromOld(hash2[:])
 		assert.Equal(t, hash2[:], stateTrieNode)
-		assert.Nil(t, oldStateTrieNode)
+		assert.Equal(t, hash2[:], oldStateTrieNode)
 
 		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash2[:])
 		hasOldStateTrieNode, _ = dbm.HasStateTrieNodeFromOld(hash2[:])
 		assert.True(t, hasStateTrieNode)
-		assert.False(t, hasOldStateTrieNode)
+		assert.True(t, hasOldStateTrieNode)
+
+		dbm.FinishStateMigration(true)
 	}
 }
 
@@ -669,15 +673,207 @@ func TestDBManager_Governance(t *testing.T) {
 	// TODO-Klaytn-Database Implement this!
 }
 
-func TestDBManager_StateTrieMigration(t *testing.T) {
+func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
+	for i, dbm := range dbManagers {
+		if dbConfigs[i].DBType == MemoryDB {
+			continue
+		}
+
+		// check if migration fails on single DB
+		if !dbm.IsPartitioned() {
+			migrationBlockNum := uint64(12345)
+
+			// check if not in migration
+			assert.False(t, dbManagers[i].InMigration(), "migration status should be not set before testing")
+
+			// check if create migration fails
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			assert.Error(t, err, "error expected on non-partitioned DB") // expect error
+
+			continue
+		}
+
+		// check if migration fails when in migration
+		{
+			migrationBlockNum := uint64(34567)
+
+			// check if not in migration
+			assert.False(t, dbManagers[i].InMigration(), "migration status should be not set before testing")
+
+			// set migration status
+			dbm.setStateTrieMigrationStatus(migrationBlockNum)
+			assert.True(t, dbManagers[i].InMigration())
+
+			// check if create migration fails
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			assert.Error(t, err, "error expected when in migration state") // expect error
+
+			// reset migration status for next test
+			dbm.setStateTrieMigrationStatus(0)
+		}
+
+		// check if CreateMigrationDBAndSetStatus works as expected
+		{
+			migrationBlockNum := uint64(56789)
+
+			// check if not in migration state
+			assert.False(t, dbManagers[i].InMigration(), "migration status should be not set before testing")
+
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			assert.NoError(t, err)
+
+			// check if in migration state
+			assert.True(t, dbm.InMigration())
+
+			// check migration DB path in MiscDB
+			migrationDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
+			fetchedMigrationPath, err := dbm.getDatabase(MiscDB).Get(migrationDBPathKey)
+			assert.NoError(t, err)
+			expectedMigrationPath := "statetrie_migrated_" + strconv.FormatUint(migrationBlockNum, 10)
+			assert.Equal(t, expectedMigrationPath, string(fetchedMigrationPath))
+
+			// check block number in MiscDB
+			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+			assert.NoError(t, err)
+			assert.Equal(t, common.Int64ToByteBigEndian(migrationBlockNum), fetchedBlockNum)
+
+			// reset migration status for next test
+			dbm.FinishStateMigration(false)
+		}
+	}
+}
+
+func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 	for i, dbm := range dbManagers {
 		if !dbm.IsPartitioned() || dbConfigs[i].DBType == MemoryDB {
 			continue
 		}
-		dbm.SetStateTrieMigrationDB(12345)
-		dbm.Close()
-		dbManagers[i] = NewDBManager(dbConfigs[i])
-		assert.True(t, dbManagers[i].InMigration())
+
+		migrationBlockNum := uint64(12345)
+		migrationBlockNum2 := uint64(23456)
+
+		// check status in miscDB on state migration failure
+		{
+			// check if not in migration state
+			assert.False(t, dbManagers[i].InMigration(), "migration status should be not set before testing")
+			// fetch state trie db name before migration
+			initialDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
+			assert.Equal(t, 1, len(initialDirNames), "migration status should be not set before testing")
+
+			// finish migration with failure
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			assert.NoError(t, err)
+			dbm.FinishStateMigration(false)
+
+			// check if in migration state
+			assert.False(t, dbm.InMigration())
+
+			// check if state DB Path is set to old DB in MiscDB
+			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
+			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
+			assert.NoError(t, err)
+			assert.Equal(t, initialDirNames[0], string(fetchedStateDBPath), "old DB should remain")
+
+			// check if migration DB Path is not set in MiscDB
+			migrationDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
+			fetchedMigrationPath, err := dbm.getDatabase(MiscDB).Get(migrationDBPathKey)
+			assert.NoError(t, err)
+			assert.Equal(t, "", string(fetchedMigrationPath))
+
+			// check if block number is not set in MiscDB
+			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+			assert.NoError(t, err)
+			assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
+		}
+
+		// check status in miscDB on successful state migration
+		{
+			// check if not in migration state
+			assert.False(t, dbManagers[i].InMigration(), "migration status should be not set before testing")
+
+			// finish migration successfully
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum2)
+			assert.NoError(t, err)
+			dbm.FinishStateMigration(true)
+
+			// check if in migration state
+			assert.False(t, dbm.InMigration())
+
+			// check if state DB Path is set to new DB in MiscDB
+			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
+			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
+			assert.NoError(t, err)
+			expectedStateDBPath := "statetrie_migrated_" + strconv.FormatUint(migrationBlockNum2, 10) // new DB format
+			assert.Equal(t, expectedStateDBPath, string(fetchedStateDBPath), "new DB should remain")
+
+			// check if migration DB Path is not set in MiscDB
+			migrationDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
+			fetchedMigrationPath, err := dbm.getDatabase(MiscDB).Get(migrationDBPathKey)
+			assert.NoError(t, err)
+			assert.Equal(t, "", string(fetchedMigrationPath))
+
+			// check if block number is not set in MiscDB
+			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+			assert.NoError(t, err)
+			assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
+		}
+	}
+}
+
+// While state trie migration, directory should be created with expected name
+func TestDBManager_StateMigrationDBPath(t *testing.T) {
+	for i, dbm := range dbManagers {
+		if !dbm.IsPartitioned() || dbConfigs[i].DBType == MemoryDB {
+			continue
+		}
+
+		// check directory creation on successful migration
+		{
+			migrationBlockNum := uint64(12345)
+			NewMigrationPath := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(migrationBlockNum, 10)
+
+			// check if there is only one state trie db before migration
+			initialDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
+			assert.Equal(t, 1, len(initialDirNames), "migration status should be not set before testing")
+
+			// check if new db is created
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			assert.NoError(t, err)
+			dirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
+			assert.Equal(t, 2, len(dirNames))
+
+			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
+
+			// check if old db is deleted on migration success
+			dbm.FinishStateMigration(true) // migration success
+			newDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
+			assert.Equal(t, 1, len(newDirNames))
+			assert.Equal(t, NewMigrationPath, newDirNames[0], "new DB should remain")
+		}
+
+		// check directory creation on failed migration
+		{
+			migrationBlockNum := uint64(54321)
+			NewMigrationPath := dbBaseDirs[StateTrieMigrationDB] + "_" + strconv.FormatUint(migrationBlockNum, 10)
+
+			// check if there is only one state trie db before migration
+			initialDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
+			assert.Equal(t, 1, len(initialDirNames), "migration status should be not set before testing")
+
+			// check if new db is created
+			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
+			assert.NoError(t, err)
+			dirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
+			assert.Equal(t, 2, len(dirNames))
+
+			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
+
+			// check if new db is deleted on migration fail
+			dbm.FinishStateMigration(false) // migration fail
+			newDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
+			assert.Equal(t, 1, len(newDirNames))
+			assert.Equal(t, initialDirNames[0], newDirNames[0], "old DB should remain")
+		}
 	}
 }
 
@@ -696,4 +892,19 @@ func genTransaction(val uint64) (*types.Transaction, error) {
 	return types.SignTx(
 		types.NewTransaction(0, addr,
 			big.NewInt(int64(val)), 0, big.NewInt(int64(val)), nil), signer, key)
+}
+
+// getFilesInDir returns all file names containing the substring in the directory
+func getFilesInDir(t *testing.T, dirPath string, substr string) []string {
+	files, err := ioutil.ReadDir(dirPath)
+	assert.NoError(t, err)
+
+	var dirNames []string
+	for _, f := range files {
+		if strings.Contains(f.Name(), substr) {
+			dirNames = append(dirNames, f.Name())
+		}
+	}
+
+	return dirNames
 }

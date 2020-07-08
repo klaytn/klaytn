@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn/log"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -73,6 +74,7 @@ type StdTraceConfig struct {
 
 // txTraceResult is the result of a single transaction trace.
 type txTraceResult struct {
+	TxHash common.Hash `json:"txHash,omitempty"` // transaction hash
 	Result interface{} `json:"result,omitempty"` // Trace results produced by the tracer
 	Error  string      `json:"error,omitempty"`  // Trace failure produced by the tracer
 }
@@ -146,7 +148,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 
 	// Ensure we have a valid starting state before doing any work
 	origin := start.NumberU64()
-	database := state.NewDatabaseWithCache(api.cn.ChainDB(), 16, 0) // Chain tracing will probably start at genesis
+	database := state.NewDatabaseWithExistingCache(api.cn.ChainDB(), api.cn.blockchain.StateCache().TrieDB().TrieNodeCache()) // Chain tracing will probably start at genesis
 
 	if number := start.NumberU64(); number > 0 {
 		start = api.cn.blockchain.GetBlock(start.ParentHash(), start.NumberU64()-1)
@@ -207,7 +209,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 					msg, err := tx.AsMessageWithAccountKeyPicker(signer, task.statedb, task.block.NumberU64())
 					if err != nil {
 						logger.Warn("Tracing failed", "hash", tx.Hash(), "block", task.block.NumberU64(), "err", err)
-						task.results[i] = &txTraceResult{Error: err.Error()}
+						task.results[i] = &txTraceResult{TxHash: tx.Hash(), Error: err.Error()}
 						break
 					}
 
@@ -215,12 +217,12 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 
 					res, err := api.traceTx(ctx, msg, vmctx, task.statedb, config)
 					if err != nil {
-						task.results[i] = &txTraceResult{Error: err.Error()}
+						task.results[i] = &txTraceResult{TxHash: tx.Hash(), Error: err.Error()}
 						logger.Warn("Tracing failed", "hash", tx.Hash(), "block", task.block.NumberU64(), "err", err)
 						break
 					}
 					task.statedb.Finalise(true, true)
-					task.results[i] = &txTraceResult{Result: res}
+					task.results[i] = &txTraceResult{TxHash: tx.Hash(), Result: res}
 				}
 				// Stream the result back to the user or abort on teardown
 				select {
@@ -266,7 +268,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 			default:
 			}
 			// Print progress logs if long enough time elapsed
-			if time.Since(logged) > 8*time.Second {
+			if time.Since(logged) > log.StatsReportLimit {
 				if number > origin {
 					nodeSize, preimageSize := database.TrieDB().Size()
 					logger.Info("Tracing chain segment", "start", origin, "end", end.NumberU64(), "current", number, "transactions", traced, "elapsed", time.Since(begin), "nodeSize", nodeSize, "preimageSize", preimageSize)
@@ -491,7 +493,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 				msg, err := txs[task.index].AsMessageWithAccountKeyPicker(signer, task.statedb, block.NumberU64())
 				if err != nil {
 					logger.Warn("Tracing failed", "tx idx", task.index, "block", block.NumberU64(), "err", err)
-					results[task.index] = &txTraceResult{Error: err.Error()}
+					results[task.index] = &txTraceResult{TxHash: txs[task.index].Hash(), Error: err.Error()}
 					continue
 				}
 
@@ -499,10 +501,10 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 
 				res, err := api.traceTx(ctx, msg, vmctx, task.statedb, config)
 				if err != nil {
-					results[task.index] = &txTraceResult{Error: err.Error()}
+					results[task.index] = &txTraceResult{TxHash: txs[task.index].Hash(), Error: err.Error()}
 					continue
 				}
-				results[task.index] = &txTraceResult{Result: res}
+				results[task.index] = &txTraceResult{TxHash: txs[task.index].Hash(), Result: res}
 			}
 		}()
 	}
@@ -653,18 +655,19 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*state.StateDB, error) {
 	// try to reexec blocks until we find a state or reach our limit
 	origin := block.NumberU64()
-	database := state.NewDatabaseWithCache(api.cn.ChainDB(), 16, 0)
+	database := state.NewDatabaseWithExistingCache(api.cn.ChainDB(), api.cn.blockchain.StateCache().TrieDB().TrieNodeCache())
 
 	var statedb *state.StateDB
 	var err error
 
 	for i := uint64(0); i < reexec; i++ {
-		block = api.cn.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1)
-		if block == nil {
-			break
-		}
 		if statedb, err = state.New(block.Root(), database); err == nil {
 			break
+		}
+		blockNumber := block.NumberU64()
+		block = api.cn.blockchain.GetBlock(block.ParentHash(), blockNumber-1)
+		if block == nil {
+			return nil, fmt.Errorf("block #%d not found", blockNumber-1)
 		}
 	}
 	if err != nil {
@@ -683,7 +686,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 	)
 	for block.NumberU64() < origin {
 		// Print progress logs if long enough time elapsed
-		if time.Since(logged) > 8*time.Second {
+		if time.Since(logged) > log.StatsReportLimit {
 			logger.Info("Regenerating historical state", "block", block.NumberU64()+1, "target", origin, "remaining", origin-block.NumberU64()-1, "elapsed", time.Since(start))
 			logged = time.Now()
 		}
@@ -799,22 +802,31 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 func (api *PrivateDebugAPI) stateAt(block *types.Block, reexec uint64) (*state.StateDB, func(), error) {
 	var stateDB *state.StateDB
 
-	// If we have the state fully available, use that.
+	// If we have the state fully available in cachedNode, use that.
 	stateDB, err := api.cn.blockchain.StateAtWithGCLock(block.Root())
-	if err != nil {
-		emptyFn := func() {}
+	if err == nil {
+		logger.Debug("Get stateDB from stateCache", "block", block.NumberU64())
+		// During this processing, this lock will prevent to evict the state.
+		return stateDB, stateDB.UnlockGCCachedNode, nil
+	}
 
-		// If no state is locally available, the desired state will be generated.
-		stateDB, err = api.computeStateDB(block, reexec)
-		if err != nil {
-			return nil, emptyFn, err
-		}
-		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64())
+	emptyFn := func() {}
+
+	// If we have the state fully available in persistent, use that.
+	stateDB, err = api.cn.blockchain.StateAt(block.Root())
+	if err == nil {
+		logger.Debug("Get stateDB from persistent DB or its cache", "block", block.NumberU64())
 		return stateDB, emptyFn, nil
 	}
-	logger.Debug("Get stateDB from stateCache", "block", block.NumberU64(), "reexec", reexec)
-	// During this processing, this lock will prevent to evict the state.
-	return stateDB, stateDB.UnlockGCCachedNode, nil
+
+	// If no state is locally available, the desired state will be generated.
+	stateDB, err = api.computeStateDB(block, reexec)
+	if err == nil {
+		logger.Debug("Get stateDB by computeStateDB", "block", block.NumberU64(), "reexec", reexec)
+		return stateDB, emptyFn, nil
+	}
+
+	return nil, emptyFn, err
 }
 
 // computeTxEnv returns the execution environment of a certain transaction.

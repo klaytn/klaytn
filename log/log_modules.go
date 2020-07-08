@@ -19,7 +19,12 @@ package log
 import (
 	"strconv"
 	"strings"
+	"time"
 )
+
+// statsReportLimit is the time limit during working after which we always print
+// out progress. This avoids the user wondering what's going on.
+const StatsReportLimit = 10 * time.Second
 
 type ModuleID int
 

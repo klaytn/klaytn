@@ -20,6 +20,10 @@
 
 package statedb
 
+import (
+	"github.com/klaytn/klaytn/common"
+)
+
 // Trie keys are dealt with in three distinct encodings:
 //
 // KEYBYTES encoding contains the actual key and nothing else. This encoding is the
@@ -90,7 +94,7 @@ func hexToKeybytes(hex []byte) []byte {
 	if len(hex)&1 != 0 {
 		panic("can't convert hex key of odd length")
 	}
-	key := make([]byte, (len(hex)+1)/2)
+	key := make([]byte, len(hex)/2)
 	decodeNibbles(hex, key)
 	return key
 }
@@ -118,4 +122,14 @@ func prefixLen(a, b []byte) int {
 // hasTerm returns whether a hex key has the terminator flag.
 func hasTerm(s []byte) bool {
 	return len(s) > 0 && s[len(s)-1] == 16
+}
+
+// HexPathToString turns hex nibbles of trie path key into string of the trie path key.
+func HexPathToString(path []byte) string {
+	if hasTerm(path) {
+		path = path[:len(path)-1]
+	}
+	byteKey := hexToKeybytes(common.RightPadBytes(path, 64))
+	rst := common.BytesToHash(byteKey).String()
+	return rst[:2+len(path)]
 }

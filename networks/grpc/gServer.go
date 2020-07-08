@@ -25,6 +25,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"google.golang.org/grpc"
@@ -40,8 +41,6 @@ type Listener struct {
 	handler    *rpc.Server
 	grpcServer *grpc.Server
 }
-
-const maxRequestContentLength = 1024 * 128
 
 // grpcReadWriteNopCloser wraps an io.Reader and io.Writer with a NOP Close method.
 type grpcReadWriteNopCloser struct {
@@ -125,7 +124,7 @@ func (kns *klaytnServer) BiCall(stream KlaytnNode_BiCallServer) error {
 
 		ctx := context.Background()
 
-		reader := bufio.NewReaderSize(preader, maxRequestContentLength)
+		reader := bufio.NewReaderSize(preader, common.MaxRequestContentLength)
 		kns.handler.ServeSingleRequest(ctx, rpc.NewCodec(&grpcReadWriteNopCloser{reader, &grpcWriter{stream, nil}}, encoder, decoder), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
 	}
 }
@@ -165,7 +164,7 @@ func (kns *klaytnServer) Subscribe(request *RPCRequest, stream KlaytnNode_Subscr
 
 	ctx := context.Background()
 
-	reader := bufio.NewReaderSize(preader, maxRequestContentLength)
+	reader := bufio.NewReaderSize(preader, common.MaxRequestContentLength)
 	kns.handler.ServeSingleRequest(ctx, rpc.NewCodec(&grpcReadWriteNopCloser{reader, &grpcWriter{stream, writeErr}}, encoder, decoder), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
 
 	var err error
@@ -221,7 +220,7 @@ func (kns *klaytnServer) Call(ctx context.Context, request *RPCRequest) (*RPCRes
 		return err
 	}
 
-	reader := bufio.NewReaderSize(preader, maxRequestContentLength)
+	reader := bufio.NewReaderSize(preader, common.MaxRequestContentLength)
 	kns.handler.ServeSingleRequest(ctx, rpc.NewCodec(&grpcReadWriteNopCloser{reader, writer}, encoder, decoder), rpc.OptionMethodInvocation)
 
 loop:

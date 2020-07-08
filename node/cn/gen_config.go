@@ -36,12 +36,12 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		TrieCacheSize           int
 		TrieTimeout             time.Duration
 		TrieBlockInterval       uint
+		TriesInMemory           uint64
 		SenderTxHashIndexing    bool
 		ParallelDBWrite         bool
 		StateDBCaching          bool
 		TxPoolStateCache        bool
 		TrieCacheLimit          int
-		DataArchivingBlockNum   uint64
 		ServiceChainSigner      common.Address `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -78,12 +78,12 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.TrieCacheSize = c.TrieCacheSize
 	enc.TrieTimeout = c.TrieTimeout
 	enc.TrieBlockInterval = c.TrieBlockInterval
+	enc.TriesInMemory = c.TriesInMemory
 	enc.SenderTxHashIndexing = c.SenderTxHashIndexing
 	enc.ParallelDBWrite = c.ParallelDBWrite
 	enc.StateDBCaching = c.StateDBCaching
 	enc.TxPoolStateCache = c.TxPoolStateCache
 	enc.TrieCacheLimit = c.TrieCacheLimit
-	enc.DataArchivingBlockNum = c.DataArchivingBlockNum
 	enc.ServiceChainSigner = c.ServiceChainSigner
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
@@ -124,12 +124,12 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		TrieCacheSize           *int
 		TrieTimeout             *time.Duration
 		TrieBlockInterval       *uint
+		TriesInMemory           *uint64
 		SenderTxHashIndexing    *bool
 		ParallelDBWrite         *bool
 		StateDBCaching          *bool
 		TxPoolStateCache        *bool
 		TrieCacheLimit          *int
-		DataArchivingBlockNum   *uint64
 		ServiceChainSigner      *common.Address `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -201,6 +201,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.TrieBlockInterval != nil {
 		c.TrieBlockInterval = *dec.TrieBlockInterval
 	}
+	if dec.TriesInMemory != nil {
+		c.TriesInMemory = *dec.TriesInMemory
+	}
 	if dec.SenderTxHashIndexing != nil {
 		c.SenderTxHashIndexing = *dec.SenderTxHashIndexing
 	}
@@ -215,9 +218,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.TrieCacheLimit != nil {
 		c.TrieCacheLimit = *dec.TrieCacheLimit
-	}
-	if dec.DataArchivingBlockNum != nil {
-		c.DataArchivingBlockNum = *dec.DataArchivingBlockNum
 	}
 	if dec.ServiceChainSigner != nil {
 		c.ServiceChainSigner = *dec.ServiceChainSigner

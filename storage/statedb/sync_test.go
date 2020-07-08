@@ -22,6 +22,8 @@ package statedb
 
 import (
 	"bytes"
+	"github.com/alecthomas/units"
+	lru "github.com/hashicorp/golang-lru"
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
@@ -100,7 +102,7 @@ func TestEmptyTrieSync(t *testing.T) {
 	emptyB, _ := NewTrie(emptyRoot, dbB)
 
 	for i, trie := range []*Trie{emptyA, emptyB} {
-		if req := NewTrieSync(trie.Hash(), database.NewMemoryDBManager(), nil).Missing(1); len(req) != 0 {
+		if req := NewTrieSync(trie.Hash(), database.NewMemoryDBManager(), nil, NewSyncBloom(1, database.NewMemDB()), nil).Missing(1); len(req) != 0 {
 			t.Errorf("test %d: content requested for empty trie: %v", i, req)
 		}
 	}
@@ -111,36 +113,81 @@ func TestEmptyTrieSync(t *testing.T) {
 func TestIterativeTrieSyncIndividual(t *testing.T) { testIterativeTrieSync(t, 1) }
 func TestIterativeTrieSyncBatched(t *testing.T)    { testIterativeTrieSync(t, 100) }
 
-func testIterativeTrieSync(t *testing.T, batch int) {
-	// Create a random trie to copy
-	srcDb, srcTrie, srcData := makeTestTrie()
-
-	// Create a destination trie and sync with the scheduler
-	memDBManager := database.NewMemoryDBManager()
-	diskdb := memDBManager.GetMemDB()
-	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
-
+func trieSyncLoop(t *testing.T, batch int, sched *TrieSync, srcDB *Database, diskDB database.Database) {
 	queue := append([]common.Hash{}, sched.Missing(batch)...)
 	for len(queue) > 0 {
 		results := make([]SyncResult, len(queue))
 		for i, hash := range queue {
-			data, err := srcDb.Node(hash)
+			data, err := srcDB.Node(hash)
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}
-			results[i] = SyncResult{hash, data}
+			results[i] = SyncResult{hash, data, nil}
 		}
 		if _, index, err := sched.Process(results); err != nil {
 			t.Fatalf("failed to process result #%d: %v", index, err)
 		}
-		if index, err := sched.Commit(diskdb); err != nil {
+		if index, err := sched.Commit(diskDB); err != nil {
 			t.Fatalf("failed to commit data #%d: %v", index, err)
 		}
 		queue = append(queue[:0], sched.Missing(batch)...)
 	}
-	// Cross check that the two tries are in sync
-	checkTrieContents(t, triedb, srcTrie.Hash().Bytes(), srcData)
+}
+
+func testIterativeTrieSync(t *testing.T, batch int) {
+	// Create a random trie to copy
+	srcDb, srcTrie, srcData := makeTestTrie()
+
+	// test with bloom filter
+	{
+		memDBManager := database.NewMemoryDBManager()
+		diskdb := memDBManager.GetMemDB()
+		triedb := NewDatabase(memDBManager)
+		sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
+
+		trieSyncLoop(t, batch, sched, srcDb, diskdb)
+		// Cross check that the two tries are in sync
+		checkTrieContents(t, triedb, srcTrie.Hash().Bytes(), srcData)
+	}
+
+	// test with lru cache
+	{
+		memDBManager := database.NewMemoryDBManager()
+		diskdb := memDBManager.GetMemDB()
+		triedb := NewDatabase(memDBManager)
+		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
+		sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, nil, lruCache)
+
+		trieSyncLoop(t, batch, sched, srcDb, diskdb)
+		// Cross check that the two tries are in sync
+		checkTrieContents(t, triedb, srcTrie.Hash().Bytes(), srcData)
+	}
+
+	// test without bloom, lru cache
+	{
+		memDBManager := database.NewMemoryDBManager()
+		diskdb := memDBManager.GetMemDB()
+		triedb := NewDatabase(memDBManager)
+		sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, nil, nil)
+
+		trieSyncLoop(t, batch, sched, srcDb, diskdb)
+		// Cross check that the two tries are in sync
+		checkTrieContents(t, triedb, srcTrie.Hash().Bytes(), srcData)
+	}
+
+	// test with bloom, lru cache
+	{
+		memDBManager := database.NewMemoryDBManager()
+		diskdb := memDBManager.GetMemDB()
+		triedb := NewDatabase(memDBManager)
+		bloom := NewSyncBloom(1, diskdb)
+		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
+		sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, bloom, lruCache)
+
+		trieSyncLoop(t, batch, sched, srcDb, diskdb)
+		// Cross check that the two tries are in sync
+		checkTrieContents(t, triedb, srcTrie.Hash().Bytes(), srcData)
+	}
 }
 
 // Tests that the trie scheduler can correctly reconstruct the state even if only
@@ -153,7 +200,7 @@ func TestIterativeDelayedTrieSync(t *testing.T) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
 	queue := append([]common.Hash{}, sched.Missing(10000)...)
 	for len(queue) > 0 {
@@ -164,7 +211,7 @@ func TestIterativeDelayedTrieSync(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}
-			results[i] = SyncResult{hash, data}
+			results[i] = SyncResult{hash, data, nil}
 		}
 		if _, index, err := sched.Process(results); err != nil {
 			t.Fatalf("failed to process result #%d: %v", index, err)
@@ -192,7 +239,7 @@ func testIterativeRandomTrieSync(t *testing.T, batch int) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
 	queue := make(map[common.Hash]struct{})
 	for _, hash := range sched.Missing(batch) {
@@ -206,7 +253,7 @@ func testIterativeRandomTrieSync(t *testing.T, batch int) {
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}
-			results = append(results, SyncResult{hash, data})
+			results = append(results, SyncResult{hash, data, nil})
 		}
 		// Feed the retrieved results back and queue new tasks
 		if _, index, err := sched.Process(results); err != nil {
@@ -234,7 +281,7 @@ func TestIterativeRandomDelayedTrieSync(t *testing.T) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
 	queue := make(map[common.Hash]struct{})
 	for _, hash := range sched.Missing(10000) {
@@ -248,7 +295,7 @@ func TestIterativeRandomDelayedTrieSync(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}
-			results = append(results, SyncResult{hash, data})
+			results = append(results, SyncResult{hash, data, nil})
 
 			if len(results) >= cap(results) {
 				break
@@ -282,7 +329,7 @@ func TestDuplicateAvoidanceTrieSync(t *testing.T) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
 	queue := append([]common.Hash{}, sched.Missing(0)...)
 	requested := make(map[common.Hash]struct{})
@@ -299,7 +346,7 @@ func TestDuplicateAvoidanceTrieSync(t *testing.T) {
 			}
 			requested[hash] = struct{}{}
 
-			results[i] = SyncResult{hash, data}
+			results[i] = SyncResult{hash, data, nil}
 		}
 		if _, index, err := sched.Process(results); err != nil {
 			t.Fatalf("failed to process result #%d: %v", index, err)
@@ -323,7 +370,7 @@ func TestIncompleteTrieSync(t *testing.T) {
 	memDBManager := database.NewMemoryDBManager()
 	diskdb := memDBManager.GetMemDB()
 	triedb := NewDatabase(memDBManager)
-	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil)
+	sched := NewTrieSync(srcTrie.Hash(), memDBManager, nil, NewSyncBloom(1, diskdb), nil)
 
 	added := []common.Hash{}
 	queue := append([]common.Hash{}, sched.Missing(1)...)
@@ -335,7 +382,7 @@ func TestIncompleteTrieSync(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to retrieve node data for %x: %v", hash, err)
 			}
-			results[i] = SyncResult{hash, data}
+			results[i] = SyncResult{hash, data, nil}
 		}
 		// Process each of the trie nodes
 		if _, index, err := sched.Process(results); err != nil {

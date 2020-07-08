@@ -21,16 +21,11 @@
 package validator
 
 import (
-	"fmt"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/reward"
 	"math"
-	"math/rand"
 	"reflect"
 	"sort"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -132,7 +127,12 @@ func (valSet *defaultSet) SubGroupSize() uint64 {
 	return valSet.subSize
 }
 
+// SetSubGroupSize sets committee size of the valSet.
 func (valSet *defaultSet) SetSubGroupSize(size uint64) {
+	if size == 0 {
+		logger.Error("cannot assign committee size to 0")
+		return
+	}
 	valSet.subSize = size
 }
 
@@ -142,133 +142,83 @@ func (valSet *defaultSet) List() []istanbul.Validator {
 	return valSet.validators
 }
 
+// SubList composes a committee after setting a proposer with a default value.
+// This functions returns whole validators if it failed to compose a committee.
 func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
-	valSet.validatorMu.RLock()
-	defer valSet.validatorMu.RUnlock()
-
-	if uint64(len(valSet.validators)) <= valSet.subSize {
-		return valSet.validators
+	// TODO-Klaytn-Istanbul: investigate whether `valSet.GetProposer().Address()` is a proper value or the proposer should be calculated based on `view`
+	proposer := valSet.GetProposer()
+	if proposer == nil {
+		return valSet.List()
 	}
-	hashstring := strings.TrimPrefix(prevHash.Hex(), "0x")
-	if len(hashstring) > 15 {
-		hashstring = hashstring[:15]
-	}
-	seed, err := strconv.ParseInt(hashstring, 16, 64)
-	if err != nil {
-		logger.Error("input", "hash", prevHash.Hex())
-		logger.Error("fail to make sub-list of validators", "seed", seed, "err", err)
-		return valSet.validators
-	}
-
-	// shuffle
-	subset := make([]istanbul.Validator, valSet.subSize)
-	subset[0] = valSet.GetProposer()
-	// next proposer
-	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64())
-
-	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
-	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
-
-	if proposerIdx == nextproposerIdx {
-		logger.Error("fail to make propser", "current proposer idx", proposerIdx, "next idx", nextproposerIdx)
-	}
-
-	limit := len(valSet.validators)
-	picker := rand.New(rand.NewSource(seed))
-
-	pickSize := limit - 2
-	indexs := make([]int, pickSize)
-	idx := 0
-	for i := 0; i < limit; i++ {
-		if i != proposerIdx && i != nextproposerIdx {
-			indexs[idx] = i
-			idx++
-		}
-	}
-	for i := 0; i < pickSize; i++ {
-		randIndex := picker.Intn(pickSize)
-		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
-	}
-
-	for i := uint64(0); i < valSet.subSize-2; i++ {
-		subset[i+2] = valSet.validators[indexs[i]]
-	}
-
-	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-		logger.Error("### subList", "prevHash", prevHash.Hex())
-	}
-
-	return subset
+	return valSet.SubListWithProposer(prevHash, proposer.Address(), view)
 }
 
-func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposer common.Address, view *istanbul.View) []istanbul.Validator {
+// SubListWithProposer composes a committee with given parameters.
+// The first member of the committee is set to the given proposer without calculating proposer with the given `view`.
+// The second member of the committee is calculated with a round number of the given view and `valSet.blockNum`.
+// The reset of the committee is selected with a random seed derived from `prevHash`.
+// This functions returns whole validators if it failed to compose a committee.
+func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr common.Address, view *istanbul.View) []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
-	if uint64(len(valSet.validators)) <= valSet.subSize {
-		return valSet.validators
+	validators := valSet.validators
+	validatorSize := uint64(len(validators))
+	committeeSize := valSet.subSize
+
+	// return early if the committee size is equal or larger than the validator size
+	if committeeSize >= validatorSize {
+		return validators
 	}
-	hashstring := strings.TrimPrefix(prevHash.Hex(), "0x")
-	if len(hashstring) > 15 {
-		hashstring = hashstring[:15]
+
+	// find the proposer
+	proposerIdx, proposer := valSet.GetByAddress(proposerAddr)
+	if proposerIdx < 0 {
+		logger.Error("invalid index of the proposer",
+			"addr", proposerAddr.String(), "index", proposerIdx)
+		return validators
 	}
-	seed, err := strconv.ParseInt(hashstring, 16, 64)
+
+	// return early if the committee size is 1
+	if committeeSize == 1 {
+		return []istanbul.Validator{proposer}
+	}
+
+	// find the next proposer
+	nextProposer := valSet.selector(valSet, proposer.Address(), view.Round.Uint64())
+	nextProposerIdx, _ := valSet.GetByAddress(nextProposer.Address())
+	if nextProposerIdx < 0 {
+		logger.Error("invalid index of the next proposer",
+			"addr", nextProposer.Address().String(), "index", nextProposerIdx)
+		return validators
+	}
+
+	// seed will be used to select a random committee
+	seed, err := ConvertHashToSeed(prevHash)
 	if err != nil {
-		logger.Error("input", "hash", prevHash.Hex())
-		logger.Error("fail to make sub-list of validators", "seed", seed, "err", err)
-		return valSet.validators
+		logger.Error("failed to convert hash to seed", "prevHash", prevHash, "err", err)
+		return validators
 	}
 
-	// shuffle
-	subset := make([]istanbul.Validator, valSet.subSize)
-	subset[0] = New(proposer)
-	// next proposer
-	subset[1] = valSet.selector(valSet, subset[0].Address(), view.Round.Uint64())
-
-	proposerIdx, _ := valSet.GetByAddress(subset[0].Address())
-	nextproposerIdx, _ := valSet.GetByAddress(subset[1].Address())
-
-	// TODO-Klaytn-RemoveLater remove this check code if the implementation is stable.
-	if proposerIdx < 0 || nextproposerIdx < 0 {
-		vals := "["
-		for _, v := range valSet.validators {
-			vals += fmt.Sprintf("%s,", v.Address().Hex())
-		}
-		vals += "]"
-		logger.Error("idx should not be negative!", "proposerIdx", proposerIdx, "nextproposerIdx", nextproposerIdx, "proposer", subset[0].Address().Hex(),
-			"nextproposer", subset[1].Address().Hex(), "validators", vals)
+	// select a random committee
+	committee := SelectRandomCommittee(validators, committeeSize, seed, proposerIdx, nextProposerIdx)
+	if committee == nil {
+		committee = validators
 	}
 
-	if proposerIdx == nextproposerIdx {
-		logger.Error("fail to make propser", "current proposer idx", proposerIdx, "next idx", nextproposerIdx)
-	}
+	logger.Trace("composed committee", "prevHash", prevHash.Hex(), "proposerAddr", proposerAddr,
+		"committee", committee, "committee size", len(committee), "valSet.subSize", committeeSize)
 
-	limit := len(valSet.validators)
-	picker := rand.New(rand.NewSource(seed))
+	return committee
+}
 
-	pickSize := limit - 2
-	indexs := make([]int, pickSize)
-	idx := 0
-	for i := 0; i < limit; i++ {
-		if i != proposerIdx && i != nextproposerIdx {
-			indexs[idx] = i
-			idx++
+func (valSet *defaultSet) CheckInSubList(prevHash common.Hash, view *istanbul.View, addr common.Address) bool {
+	for _, val := range valSet.SubList(prevHash, view) {
+		if val.Address() == addr {
+			return true
 		}
 	}
-	for i := 0; i < pickSize; i++ {
-		randIndex := picker.Intn(pickSize)
-		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
-	}
-
-	for i := uint64(0); i < valSet.subSize-2; i++ {
-		subset[i+2] = valSet.validators[indexs[i]]
-	}
-
-	if prevHash.Hex() == "0x0000000000000000000000000000000000000000000000000000000000000000" {
-		logger.Error("### subList", "prevHash", prevHash.Hex())
-	}
-
-	return subset
+	return false
 }
 
 func (valSet *defaultSet) IsSubSet() bool {
@@ -290,6 +240,9 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, istanbul.Valid
 			return i, val
 		}
 	}
+	// TODO-Klaytn-Istanbul: Enable this log when non-committee nodes don't call `core.startNewRound()`
+	// logger.Warn("failed to find an address in the validator list",
+	// 	"address", addr, "validatorAddrs", valSet.validators.AddressStringList())
 	return -1, nil
 }
 
@@ -406,7 +359,7 @@ func (valSet *defaultSet) F() int {
 
 func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
-func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64, stakingManager *reward.StakingManager) error {
+func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64) error {
 	return nil
 }
 func (valSet *defaultSet) SetBlockNum(blockNum uint64)     { /* Do nothing */ }

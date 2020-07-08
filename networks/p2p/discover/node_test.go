@@ -22,6 +22,7 @@ package discover
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -35,6 +36,18 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 )
+
+func init() {
+	lookupIPFunc = func(name string) ([]net.IP, error) {
+		if name == "node.example.org" {
+			return []net.IP{{33, 44, 55, 66}}, nil
+		}
+		if name == "1234.com" {
+			return []net.IP{{11, 22, 33, 44}}, nil
+		}
+		return nil, errors.New("no such host")
+	}
+}
 
 func ExampleNewNode() {
 	id := MustHexID("1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439")
@@ -58,9 +71,10 @@ func ExampleNewNode() {
 }
 
 var parseNodeTests = []struct {
-	rawurl     string
-	wantError  string
-	wantResult *Node
+	rawurl         string
+	wantError      string
+	wantResult     *Node
+	wantNodeString string
 }{
 	{
 		rawurl:    "http://foobar",
@@ -77,7 +91,7 @@ var parseNodeTests = []struct {
 	// Complete nodes with IP address.
 	{
 		rawurl:    "enode://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@hostname:3",
-		wantError: `failed to resolve IP address`,
+		wantError: `no such host`,
 	},
 	{
 		rawurl:    "enode://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@127.0.0.1:foo",
@@ -91,7 +105,29 @@ var parseNodeTests = []struct {
 		rawurl: "enode://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@127.0.0.1:52150",
 		wantResult: NewNode(
 			MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
-			net.IP{0x7f, 0x0, 0x0, 0x1},
+			net.IP{127, 0, 0, 1},
+			52150,
+			52150,
+			NodeTypeUnknown,
+		),
+	},
+	{
+		rawurl:         "enode://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@node.example.org:52150",
+		wantNodeString: "kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@33.44.55.66:52150",
+		wantResult: NewNode(
+			MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
+			net.IP{33, 44, 55, 66},
+			52150,
+			52150,
+			NodeTypeUnknown,
+		),
+	},
+	{
+		rawurl:         "enode://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@1234.com:52150",
+		wantNodeString: "kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@11.22.33.44:52150",
+		wantResult: NewNode(
+			MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
+			net.IP{11, 22, 33, 44},
 			52150,
 			52150,
 			NodeTypeUnknown,
@@ -129,7 +165,7 @@ var parseNodeTests = []struct {
 	},
 	{
 		rawurl:    "kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@hostname:3",
-		wantError: `failed to resolve IP address`,
+		wantError: `no such host`,
 	},
 	{
 		rawurl:    "kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@127.0.0.1:foo",
@@ -263,7 +299,7 @@ func TestNodeString(t *testing.T) {
 		}
 		if test.wantError == "" && strings.HasPrefix(rawUrl, "kni://") {
 			str := test.wantResult.String()
-			if str != rawUrl {
+			if str != rawUrl && str != test.wantNodeString && test.wantNodeString != "" {
 				t.Errorf("test %d: Node.String() mismatch:\ngot:  %s\nwant: %s", i, str, rawUrl)
 			}
 		}

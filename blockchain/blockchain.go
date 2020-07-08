@@ -53,6 +53,8 @@ var (
 	blockInsertTimeGauge = metrics.NewRegisteredGauge("chain/inserts", nil)
 	ErrNoGenesis         = errors.New("Genesis not found in chain")
 	ErrNotExistNode      = errors.New("the node does not exist in cached node")
+	ErrQuitBySignal      = errors.New("quit by signal")
+	ErrNotInWarmUp       = errors.New("not in warm up")
 	logger               = log.NewModuleLogger(log.Blockchain)
 )
 
@@ -69,7 +71,7 @@ const (
 )
 
 const (
-	triesInMemory = 4
+	DefaultTriesInMemory = 4
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion    = 3
 	DefaultBlockInterval = 128
@@ -79,14 +81,14 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	StateDBCaching        bool   // Enables caching of state objects in stateDB.
-	TxPoolStateCache      bool   // Enables caching of nonce and balance for txpool.
-	ArchiveMode           bool   // If true, state trie is not pruned and always written to database.
-	CacheSize             int    // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval         uint   // Block interval to flush the trie. Each interval state trie will be flushed into disk.
-	TrieCacheLimit        int    // Memory allowance (MB) to use for caching trie nodes in memory
-	SenderTxHashIndexing  bool   // Enables saving senderTxHash to txHash mapping information to database and cache.
-	DataArchivingBlockNum uint64 // If not zero, the number indicates the starting point of data archiving operation.
+	StateDBCaching       bool   // Enables caching of state objects in stateDB.
+	TxPoolStateCache     bool   // Enables caching of nonce and balance for txpool.
+	ArchiveMode          bool   // If true, state trie is not pruned and always written to database.
+	CacheSize            int    // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval        uint   // Block interval to flush the trie. Each interval state trie will be flushed into disk.
+	TriesInMemory        uint64 // Maximum number of recent state tries according to its block number
+	TrieCacheLimit       int    // Memory allowance (MB) to use for caching trie nodes in memory
+	SenderTxHashIndexing bool   // Enables saving senderTxHash to txHash mapping information to database and cache.
 }
 
 // gcBlock is used for priority queue for GC.
@@ -159,6 +161,19 @@ type BlockChain struct {
 
 	nonceCache   common.Cache
 	balanceCache common.Cache
+
+	// State migration
+	prepareStateMigration bool
+	stopStateMigration    chan struct{}
+	readCnt               int
+	committedCnt          int
+	pendingCnt            int
+	progress              float64
+	migrationErr          error
+
+	// Warm up
+	lastCommittedBlock uint64
+	quitWarmUp         chan struct{}
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -171,6 +186,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			ArchiveMode:    false,
 			CacheSize:      512,
 			BlockInterval:  DefaultBlockInterval,
+			TriesInMemory:  DefaultTriesInMemory,
 			TrieCacheLimit: 0,
 		}
 	}
@@ -188,21 +204,22 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	bc := &BlockChain{
-		chainConfig:     chainConfig,
-		chainConfigMu:   new(sync.RWMutex),
-		cacheConfig:     cacheConfig,
-		db:              db,
-		triegc:          prque.New(),
-		chBlock:         make(chan gcBlock, 1000),
-		stateCache:      state.NewDatabaseWithCache(db, cacheConfig.TrieCacheLimit, cacheConfig.DataArchivingBlockNum),
-		quit:            make(chan struct{}),
-		futureBlocks:    futureBlocks,
-		engine:          engine,
-		vmConfig:        vmConfig,
-		badBlocks:       badBlocks,
-		parallelDBWrite: db.IsParallelDBWrite(),
-		nonceCache:      nonceCache,
-		balanceCache:    balanceCache,
+		chainConfig:        chainConfig,
+		chainConfigMu:      new(sync.RWMutex),
+		cacheConfig:        cacheConfig,
+		db:                 db,
+		triegc:             prque.New(),
+		chBlock:            make(chan gcBlock, 1000),
+		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieCacheLimit),
+		quit:               make(chan struct{}),
+		futureBlocks:       futureBlocks,
+		engine:             engine,
+		vmConfig:           vmConfig,
+		badBlocks:          badBlocks,
+		parallelDBWrite:    db.IsParallelDBWrite(),
+		nonceCache:         nonceCache,
+		balanceCache:       balanceCache,
+		stopStateMigration: make(chan struct{}),
 	}
 
 	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
@@ -240,6 +257,8 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	// Take ownership of this particular state
 	go bc.update()
 	go bc.gcCachedNodeLoop()
+	go bc.restartStateMigration()
+
 	return bc, nil
 }
 
@@ -302,6 +321,7 @@ func (bc *BlockChain) loadLastState() error {
 	}
 	// Everything seems to be fine, set as the head block
 	bc.currentBlock.Store(currentBlock)
+	bc.lastCommittedBlock = currentBlock.NumberU64()
 
 	// Restore the last known head header
 	currentHeader := currentBlock.Header()
@@ -399,6 +419,7 @@ func (bc *BlockChain) FastSyncCommitHead(hash common.Hash) error {
 	// If all checks out, manually set the head block
 	bc.mu.Lock()
 	bc.currentBlock.Store(block)
+	bc.lastCommittedBlock = block.NumberU64()
 	bc.mu.Unlock()
 
 	logger.Info("Committed new head block", "number", block.Number(), "hash", hash)
@@ -452,6 +473,15 @@ func (bc *BlockChain) State() (*state.StateDB, error) {
 
 // StateAt returns a new mutable state based on a particular point in time.
 func (bc *BlockChain) StateAt(root common.Hash) (*state.StateDB, error) {
+	return state.New(root, bc.stateCache)
+}
+
+// StateAtWithPersistent returns a new mutable state based on a particular point in time with persistent trie nodes.
+func (bc *BlockChain) StateAtWithPersistent(root common.Hash) (*state.StateDB, error) {
+	exist := bc.stateCache.TrieDB().DoesExistNodeInPersistent(root)
+	if !exist {
+		return nil, ErrNotExistNode
+	}
 	return state.New(root, bc.stateCache)
 }
 
@@ -792,28 +822,21 @@ func (bc *BlockChain) Stop() {
 
 	bc.wg.Wait()
 
-	// Ensure the state of a recent block is also stored to disk before exiting.
-	// We're writing three different states to catch different restart scenarios:
-	//  - HEAD:     So we don't need to reprocess any blocks in the general case
-	//  - HEAD-127: So we have a hard limit on the number of blocks reexecuted
 	if !bc.isArchiveMode() {
 		triedb := bc.stateCache.TrieDB()
 
-		for _, offset := range []uint64{0, triesInMemory - 1} {
-			if number := bc.CurrentBlock().NumberU64(); number > offset {
-				recent := bc.GetBlockByNumber(number - offset)
-
-				if recent == nil {
-					logger.Error("Failed to find recent block from persistent", "blockNumber", number-offset)
-					continue
-				}
-
-				logger.Info("Writing cached state to disk", "block", recent.Number(), "hash", recent.Hash(), "root", recent.Root())
-				if err := triedb.Commit(recent.Root(), true, statedb.NoDataArchivingPreparation); err != nil {
-					logger.Error("Failed to commit recent state trie", "err", err)
-				}
-			}
+		number := bc.CurrentBlock().NumberU64()
+		recent := bc.GetBlockByNumber(number)
+		if recent == nil {
+			logger.Error("Failed to find recent block from persistent", "blockNumber", number)
+			return
 		}
+
+		logger.Info("Writing cached state to disk", "block", recent.Number(), "hash", recent.Hash(), "root", recent.Root())
+		if err := triedb.Commit(recent.Root(), true, number); err != nil {
+			logger.Error("Failed to commit recent state trie", "err", err)
+		}
+
 		for !bc.triegc.Empty() {
 			triedb.Dereference(bc.triegc.PopItem().(common.Hash))
 		}
@@ -1049,9 +1072,12 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 	// If we're running an archive node, always flush
 	if bc.isArchiveMode() {
-		if err := trieDB.Commit(root, false, statedb.NoDataArchivingPreparation); err != nil {
+		if err := trieDB.Commit(root, false, block.NumberU64()); err != nil {
 			return err
 		}
+
+		bc.checkStartStateMigration(block.NumberU64(), root)
+		bc.lastCommittedBlock = block.NumberU64()
 	} else {
 		// Full but not archive node, do proper garbage collection
 		trieDB.Reference(root, common.Hash{}) // metadata reference to keep trie alive
@@ -1065,13 +1091,24 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			// NOTE-Klaytn Not to change the original behavior, error is not returned.
 			// Error should be returned if it is thought to be safe in the future.
 			if err := trieDB.Cap(nodesSizeLimit - database.IdealBatchSize); err != nil {
-				logger.Error("Error from trieDB.Cap", "limit", nodesSizeLimit-database.IdealBatchSize)
+				logger.Error("Error from trieDB.Cap", "err", err, "limit", nodesSizeLimit-database.IdealBatchSize)
 			}
 		}
 
 		if isCommitTrieRequired(bc, block.NumberU64()) {
 			logger.Trace("Commit the state trie into the disk", "blocknum", block.NumberU64())
-			trieDB.Commit(block.Header().Root, true, block.NumberU64())
+			if err := trieDB.Commit(block.Header().Root, true, block.NumberU64()); err != nil {
+				return err
+			}
+
+			if bc.checkStartStateMigration(block.NumberU64(), root) {
+				// flush referenced trie nodes out to new stateTrieDB
+				if err := trieDB.Cap(0); err != nil {
+					logger.Error("Error from trieDB.Cap by state migration", "err", err)
+				}
+			}
+
+			bc.lastCommittedBlock = block.NumberU64()
 		}
 
 		bc.chBlock <- gcBlock{root, block.NumberU64()}
@@ -1089,6 +1126,11 @@ func (bc *BlockChain) RUnlockGCCachedNode() {
 	bc.stateCache.RUnlockGCCachedNode()
 }
 
+// DefaultTriesInMemory returns the number of tries residing in the memory.
+func (bc *BlockChain) triesInMemory() uint64 {
+	return bc.cacheConfig.TriesInMemory
+}
+
 // gcCachedNodeLoop runs a loop to gc.
 func (bc *BlockChain) gcCachedNodeLoop() {
 	trieDB := bc.stateCache.TrieDB()
@@ -1103,12 +1145,12 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 				logger.Trace("Push GC block", "blkNum", block.blockNum, "hash", block.root.String())
 
 				blkNum := block.blockNum
-				if blkNum <= triesInMemory {
+				if blkNum <= bc.triesInMemory() {
 					continue
 				}
 
 				// Garbage collect anything below our required write retention
-				chosen := blkNum - triesInMemory
+				chosen := blkNum - bc.triesInMemory()
 				cnt := 0
 				for !bc.triegc.Empty() {
 					root, number := bc.triegc.Pop()
@@ -1128,6 +1170,10 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 }
 
 func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
+	if bc.prepareStateMigration {
+		return true
+	}
+
 	// TODO-Klaytn-Issue1602 Introduce a simple and more concise way to determine commit trie requirements from governance
 	if blockNum%uint64(bc.cacheConfig.BlockInterval) == 0 {
 		return true
@@ -1627,10 +1673,6 @@ type insertStats struct {
 	startTime                  mclock.AbsTime
 }
 
-// statsReportLimit is the time limit during import after which we always print
-// out progress. This avoids the user wondering what's going on.
-const statsReportLimit = 8 * time.Second
-
 // report prints statistics if some number of blocks have been processed
 // or more than a few seconds have passed since the last message.
 func (st *insertStats) report(chain []*types.Block, index int, cache common.StorageSize) {
@@ -1640,7 +1682,7 @@ func (st *insertStats) report(chain []*types.Block, index int, cache common.Stor
 		elapsed = time.Duration(now) - time.Duration(st.startTime)
 	)
 	// If we're at the last block of the batch or report period reached, log
-	if index == len(chain)-1 || elapsed >= statsReportLimit {
+	if index == len(chain)-1 || elapsed >= log.StatsReportLimit {
 		var (
 			end = chain[index]
 			txs = countTransactions(chain[st.lastIndex : index+1])

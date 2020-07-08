@@ -22,7 +22,6 @@ package istanbul
 
 import (
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/reward"
 	"strings"
 )
 
@@ -54,6 +53,14 @@ func (slice Validators) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
+func (slice Validators) AddressStringList() []string {
+	var stringAddrs []string
+	for _, val := range slice {
+		stringAddrs = append(stringAddrs, val.Address().String())
+	}
+	return stringAddrs
+}
+
 // ----------------------------------------------------------------------------
 
 type ValidatorSet interface {
@@ -67,9 +74,11 @@ type ValidatorSet interface {
 	SetSubGroupSize(size uint64)
 	// Return the validator array
 	List() []Validator
-	// Return the sub validator array
+	// SubList composes a committee after setting a proposer with a default value.
 	SubList(prevHash common.Hash, view *View) []Validator
-	// Return the sub validator array with the specified proposer
+	// Return whether the given address is one of sub-list
+	CheckInSubList(prevHash common.Hash, view *View, addr common.Address) bool
+	// SubListWithProposer composes a committee with given parameters.
 	SubListWithProposer(prevHash common.Hash, proposer common.Address, view *View) []Validator
 	// Get validator by index
 	GetByIndex(i uint64) Validator
@@ -93,7 +102,7 @@ type ValidatorSet interface {
 	IsSubSet() bool
 
 	// Refreshes a list of candidate proposers with given hash and blockNum
-	Refresh(hash common.Hash, blockNum uint64, stakingManager *reward.StakingManager) error
+	Refresh(hash common.Hash, blockNum uint64) error
 
 	SetBlockNum(blockNum uint64)
 

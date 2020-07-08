@@ -120,7 +120,6 @@ type backend struct {
 	lastGovernanceBlock uint64
 
 	rewardDistributor *reward.RewardDistributor
-	stakingManager    *reward.StakingManager
 
 	// Node type
 	nodetype common.ConnType
@@ -150,14 +149,6 @@ func (sb *backend) Address() common.Address {
 // Validators implements istanbul.Backend.Validators
 func (sb *backend) Validators(proposal istanbul.Proposal) istanbul.ValidatorSet {
 	return sb.getValidators(proposal.Number().Uint64(), proposal.Hash())
-}
-
-func (sb *backend) SetStakingManager(manager *reward.StakingManager) {
-	sb.stakingManager = manager
-}
-
-func (sb *backend) GetStakingManager() *reward.StakingManager {
-	return sb.stakingManager
 }
 
 // Broadcast implements istanbul.Backend.Broadcast
@@ -211,12 +202,7 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 
 // checkInSubList checks if the node is in a sublist
 func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.ValidatorSet) bool {
-	for _, val := range valSet.SubList(prevHash, sb.currentView.Load().(*istanbul.View)) {
-		if val.Address() == sb.Address() {
-			return true
-		}
-	}
-	return false
+	return valSet.CheckInSubList(prevHash, sb.currentView.Load().(*istanbul.View), sb.Address())
 }
 
 // getTargetReceivers returns a map of nodes which need to receive a message

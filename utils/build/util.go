@@ -176,36 +176,20 @@ func GoTool(tool string, args ...string) *exec.Cmd {
 	return exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), args...)
 }
 
-// ExpandPackagesNoVendor expands a cmd/go import path pattern, skipping
-// vendored packages.
-func ExpandPackagesNoVendor(patterns []string) []string {
-	expand := false
-	for _, pkg := range patterns {
-		if strings.Contains(pkg, "...") {
-			expand = true
-		}
-	}
-	if expand {
-		cmd := GoTool("list", patterns...)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Fatalf("package listing failed: %v\n%s", err, string(out))
-		}
-		var packages []string
-		for _, line := range strings.Split(string(out), "\n") {
-			if !strings.Contains(line, "/vendor/") {
-				packages = append(packages, strings.TrimSpace(line))
-			}
-		}
-		return packages
-	}
-	return patterns
-}
-
 // ExcludePackages excludes packages having patterns from the passed package slice and
 // returns a slice including only the remained packages.
 func ExcludePackages(packages []string, patterns []string) []string {
 	// TODO-Klaytn This exclusion code is a naive implementation. Improve this if it hurts build performance.
+	for _, pkg := range patterns {
+		if strings.Contains(pkg, "...") {
+			cmd := GoTool("list", patterns...)
+			out, err := cmd.Output()
+			if err != nil {
+				log.Fatalf("package listing failed: %v\n%s", err, string(out))
+			}
+		}
+	}
+
 	for _, pattern := range patterns {
 		var newpkgs []string
 		for _, pkg := range packages {

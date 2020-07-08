@@ -204,6 +204,11 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'importChainFromString',
+			call: 'admin_importChainFromString',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'sleepBlocks',
 			call: 'admin_sleepBlocks',
 			params: 2
@@ -228,6 +233,14 @@ web3._extend({
 			name: 'stopWS',
 			call: 'admin_stopWS'
 		}),
+		new web3._extend.Method({
+			name: 'startStateMigration',
+			call: 'admin_startStateMigration',
+		}),
+		new web3._extend.Method({
+			name: 'stopStateMigration',
+			call: 'admin_stopStateMigration',
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -241,6 +254,10 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'datadir',
 			getter: 'admin_datadir'
+		}),
+		new web3._extend.Property({
+			name: 'stateMigrationStatus',
+			getter: 'admin_stateMigrationStatus'
 		}),
 	]
 });
@@ -274,6 +291,19 @@ web3._extend({
 			name: 'dumpBlock',
 			call: 'debug_dumpBlock',
 			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'dumpStateTrie',
+			call: 'debug_dumpStateTrie',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'startWarmUp',
+			call: 'debug_startWarmUp',
+		}),
+		new web3._extend.Method({
+			name: 'stopWarmUp',
+			call: 'debug_stopWarmUp',
 		}),
 		new web3._extend.Method({
 			name: 'chaindbProperty',
