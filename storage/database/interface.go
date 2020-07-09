@@ -31,6 +31,7 @@ const (
 	BadgerDB
 	MemoryDB
 	PartitionedDB
+	MongoDB
 )
 
 func (dbType DBType) String() string {
