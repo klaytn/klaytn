@@ -768,10 +768,10 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 		defer cancel()
 
 	case config == nil:
-		tracer = vm.NewStructLogger(config.LogConfig)
+		tracer = vm.NewStructLogger(nil)
 
 	default:
-		tracer = vm.NewStructLogger(nil)
+		tracer = vm.NewStructLogger(config.LogConfig)
 	}
 	// Run the transaction with tracing enabled.
 	vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{Debug: true, Tracer: tracer})
