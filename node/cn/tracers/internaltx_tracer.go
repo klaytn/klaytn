@@ -91,7 +91,7 @@ type InternalCall struct {
 	OutOff *big.Int `json:"outoff"`
 	OutLen *big.Int `json:"outlen"`
 
-	Calls []*InternalCall `json:"Calls"`
+	Calls []*InternalCall `json:"calls"`
 }
 
 // OpName formats the operand name in a human-readable format.
