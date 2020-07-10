@@ -181,7 +181,7 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *SCConfig, name string) database.DBManager {
 	// OpenFilesLimit and LevelDBCacheSize are used by minimum value.
-	dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB}
+	dbc := &database.DBConfig{Dir: name, DBType: database.MongoDB}
 	return ctx.OpenDatabase(dbc)
 }
 

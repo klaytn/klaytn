@@ -111,7 +111,19 @@ func NewMongoDBWithOption(dbName, collName string, mdbOption *options.ClientOpti
 // https://docs.mongodb.com/manual/reference/limits/#indexes
 // https://docs.mongodb.com/manual/faq/indexes/
 func (db *mongoDB) Put(key []byte, value []byte) error {
-	_, err := db.coll.InsertOne(db.ctx, bson.M{"_id": key, "d": value})
+	newKey, newValue := make([]byte, len(key)), make([]byte, len(value))
+	copy(newKey, key)
+	copy(newValue, value)
+	entry := bson.M{
+		"_id": newKey,
+		"d":   newValue,
+	}
+
+	upsert := true
+	option := options.ReplaceOptions{Upsert: &upsert}
+	_, err := db.coll.ReplaceOne(db.ctx, bson.M{"_id": newKey}, entry, &option)
+	// TODO more than one of values in resultof ReplaceOne should be 1
+
 	return err
 }
 
@@ -140,7 +152,7 @@ func (db *mongoDB) Close() {
 }
 
 func (db *mongoDB) NewBatch() Batch {
-	return &mdbBatch{ctx: db.ctx, coll: db.coll, b: []interface{}{}, logger: db.logger}
+	return &mdbBatch{ctx: db.ctx, coll: db.coll, b: []mongo.WriteModel{}, logger: db.logger}
 }
 
 func (db *mongoDB) Type() DBType {
@@ -178,23 +190,39 @@ type mdbBatch struct {
 	ctx  context.Context
 	coll *mongo.Collection
 
-	b []interface{}
+	b []mongo.WriteModel
 
 	logger log.Logger
 }
 
 func (b *mdbBatch) Put(key, value []byte) error {
-	b.b = append(b.b, bson.M{"_id": key, "d": value})
+	newKey, newValue := make([]byte, len(key)), make([]byte, len(value))
+	copy(newKey, key)
+	copy(newValue, value)
+	entry := bson.M{
+		"_id": newKey,
+		"d":   newValue,
+	}
+
+	upsert := true
+	b.b = append(b.b, &mongo.ReplaceOneModel{
+		Upsert:      &upsert,
+		Filter:      bson.M{"_id": newKey},
+		Replacement: entry,
+	})
 	return nil
 }
 
 func (b *mdbBatch) Write() error {
-	result, err := b.coll.InsertMany(b.ctx, b.b)
-	if err != nil && len(result.InsertedIDs) != len(b.b) {
-		b.logger.Info("failed to batch write mongoDB", "err", err,
-			"expected write", len(b.b), "actual write", len(result.InsertedIDs),
-			"expected docs", b.b, "write IDs", result.InsertedIDs)
+	if len(b.b) == 0 {
+		return nil
 	}
+
+	r, err := b.coll.BulkWrite(b.ctx, b.b)
+	b.logger.Debug("Batch write on mongodb", "InsertedCount", r.InsertedCount,
+		"MatchedCount", r.MatchedCount, "ModifiedCount", r.ModifiedCount,
+		"DeletedCount", r.DeletedCount, "UpsertedCount", r.UpsertedCount)
+
 	return errors.Wrap(err, "failed to batch write to mongoDB")
 }
 
@@ -203,5 +231,5 @@ func (b *mdbBatch) ValueSize() int {
 }
 
 func (b *mdbBatch) Reset() {
-	b.b = []interface{}{}
+	b.b = []mongo.WriteModel{}
 }

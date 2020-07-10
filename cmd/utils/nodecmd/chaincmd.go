@@ -133,7 +133,7 @@ func initGenesis(ctx *cli.Context) error {
 	partitioned := !ctx.GlobalIsSet(utils.NoPartitionedDBFlag.Name)
 	numStateTriePartitions := ctx.GlobalUint(utils.NumStateTriePartitionsFlag.Name)
 	for _, name := range []string{"chaindata", "lightchaindata"} {
-		dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite,
+		dbc := &database.DBConfig{Dir: name, DBType: database.MongoDB, ParallelDBWrite: parallelDBWrite,
 			Partitioned: partitioned, NumStateTriePartitions: numStateTriePartitions,
 			LevelDBCacheSize: 0, OpenFilesLimit: 0}
 		chaindb := stack.OpenDatabase(dbc)
