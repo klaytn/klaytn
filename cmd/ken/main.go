@@ -168,6 +168,7 @@ var enHelpFlagGroups = []utils.FlagGroup{
 		Flags: []cli.Flag{
 			utils.VMEnableDebugFlag,
 			utils.VMLogTargetFlag,
+			utils.VMTraceInternalTx,
 		},
 	},
 	{

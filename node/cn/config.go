@@ -22,6 +22,7 @@ package cn
 
 import (
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -124,6 +125,8 @@ type Config struct {
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
+	// Enables collecting internal transaction data during processing a block
+	EnableInternalTxTracing bool
 	// Istanbul options
 	Istanbul istanbul.Config
 
@@ -151,4 +154,11 @@ type Config struct {
 
 type configMarshaling struct {
 	ExtraData hexutil.Bytes
+}
+
+func (c *Config) getVMConfig() vm.Config {
+	return vm.Config{
+		EnablePreimageRecording: c.EnablePreimageRecording,
+		EnableInternalTxTracing: c.EnableInternalTxTracing,
+	}
 }

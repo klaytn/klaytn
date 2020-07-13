@@ -324,6 +324,10 @@ var (
 		Usage: "Set the output target of vmlog precompiled contract (0: no output, 1: file, 2: stdout, 3: both)",
 		Value: 0,
 	}
+	VMTraceInternalTx = cli.BoolFlag{
+		Name:  "vm.internaltx",
+		Usage: "Collect internal transaction data while processing a block",
+	}
 
 	// Logging and debug settings
 	MetricsEnabledFlag = cli.BoolFlag{
@@ -1191,6 +1195,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 			logger.Warn("Incorrect vmlog value", "err", err)
 		}
 	}
+	cfg.EnableInternalTxTracing = ctx.GlobalIsSet(VMTraceInternalTx.Name)
 
 	cfg.AutoRestartFlag = ctx.GlobalBool(AutoRestartFlag.Name)
 	cfg.RestartTimeOutFlag = ctx.GlobalDuration(RestartTimeOutFlag.Name)

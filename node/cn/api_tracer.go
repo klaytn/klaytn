@@ -792,7 +792,7 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 
 	case *tracers.Tracer:
 		return tracer.GetResult()
-	case *tracers.InternalTxTracer:
+	case *vm.InternalTxTracer:
 		return tracer.GetResult()
 
 	default:
