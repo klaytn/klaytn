@@ -69,7 +69,7 @@ func (st *Stack) dup(pool *intPool, n int) {
 	st.push(pool.get().Set(st.data[st.len()-n]))
 }
 
-func (st *Stack) peek() *big.Int {
+func (st *Stack) Peek() *big.Int {
 	return st.data[st.len()-1]
 }
 

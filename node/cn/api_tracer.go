@@ -792,6 +792,8 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 
 	case *tracers.Tracer:
 		return tracer.GetResult()
+	case *tracers.InternalTxTracer:
+		return tracer.GetResult()
 
 	default:
 		panic(fmt.Sprintf("bad tracer type %T", tracer))

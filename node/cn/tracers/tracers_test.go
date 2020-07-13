@@ -35,6 +35,7 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/tests"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"math/big"
@@ -99,17 +100,17 @@ type reverted struct {
 
 // callTrace is the result of a callTracer run.
 type callTrace struct {
-	Type     string          `json:"type"`
-	From     common.Address  `json:"from"`
-	To       common.Address  `json:"to"`
-	Input    hexutil.Bytes   `json:"input"`
-	Output   hexutil.Bytes   `json:"output"`
-	Gas      *hexutil.Uint64 `json:"gas,omitempty"`
-	GasUsed  *hexutil.Uint64 `json:"gasUsed,omitempty"`
-	Value    *hexutil.Big    `json:"value,omitempty"`
-	Error    string          `json:"error,omitempty"`
-	Calls    []callTrace     `json:"calls,omitempty"`
-	Reverted reverted        `json:"reverted,omitempty"`
+	Type     string         `json:"type"`
+	From     common.Address `json:"from"`
+	To       common.Address `json:"to"`
+	Input    hexutil.Bytes  `json:"input"`
+	Output   hexutil.Bytes  `json:"output"`
+	Gas      hexutil.Uint64 `json:"gas,omitempty"`
+	GasUsed  hexutil.Uint64 `json:"gasUsed,omitempty"`
+	Value    hexutil.Uint64 `json:"value,omitempty"`
+	Error    string         `json:"error,omitempty"`
+	Calls    []callTrace    `json:"calls,omitempty"`
+	Reverted reverted       `json:"reverted,omitempty"`
 }
 
 type callContext struct {
@@ -203,6 +204,68 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	if _, has := ret["0x60f3f640a8508fc6a86d45df051962668e1e8ac7"]; !has {
 		t.Fatalf("Expected 0x60f3f640a8508fc6a86d45df051962668e1e8ac7 in result")
 	}
+}
+
+func covertToCallTrace(t *testing.T, internalTx *InternalTxTrace) *callTrace {
+	// coverts nested InternalTxTraces
+	var nestedCalls []callTrace
+	for _, call := range internalTx.Calls {
+		nestedCalls = append(nestedCalls, *covertToCallTrace(t, call))
+	}
+
+	// decodes input and output if they are not an empty string
+	decodedInput := []byte{}
+	var decodedOutput []byte
+	var err error
+	if internalTx.Input != "" {
+		decodedInput, err = hexutil.Decode(internalTx.Input)
+		if err != nil {
+			t.Fatal("failed to decode input of an internal transaction", "err", err)
+		}
+	}
+	if internalTx.Output != "" {
+		decodedOutput, err = hexutil.Decode(internalTx.Output)
+		if err != nil {
+			t.Fatal("failed to decode output of an internal transaction", "err", err)
+		}
+	}
+
+	// decodes value into *big.Int if it is not an empty string
+	var value *big.Int
+	if internalTx.Value != "" {
+		value, err = hexutil.DecodeBig(internalTx.Value)
+		if err != nil {
+			t.Fatal("failed to decode value of an internal transaction", "err", err)
+		}
+	}
+	var val hexutil.Uint64
+	if value != nil {
+		val = hexutil.Uint64(value.Uint64())
+	}
+
+	errStr := ""
+	if internalTx.Error != nil {
+		errStr = internalTx.Error.Error()
+	}
+
+	ct := &callTrace{
+		Type:    internalTx.Type,
+		From:    internalTx.From,
+		To:      internalTx.To,
+		Input:   decodedInput,
+		Output:  decodedOutput,
+		Gas:     hexutil.Uint64(internalTx.Gas),
+		GasUsed: hexutil.Uint64(internalTx.GasUsed),
+		Value:   val,
+		Error:   errStr,
+		Calls:   nestedCalls,
+		Reverted: reverted{
+			Contract: internalTx.Reverted.Contract,
+			Message:  internalTx.Reverted.Message,
+		},
+	}
+
+	return ct
 }
 
 // Iterates over all the input-output datasets in the tracer test harness and
@@ -302,6 +365,100 @@ func TestCallTracer(t *testing.T) {
 			if !reflect.DeepEqual(ret, test.Result) {
 				t.Fatalf("trace mismatch: \nhave %+v, \nwant %+v", ret, test.Result)
 			}
+		})
+	}
+}
+
+// Iterates over all the input-output datasets in the tracer test harness and
+// runs the InternalCallTracer against them.
+func TestInternalCallTracer(t *testing.T) {
+	files, err := ioutil.ReadDir("testdata")
+	if err != nil {
+		t.Fatalf("failed to retrieve tracer test suite: %v", err)
+	}
+	for _, file := range files {
+		if !strings.HasPrefix(file.Name(), "call_tracer_") {
+			continue
+		}
+		file := file // capture range variable
+		t.Run(camel(strings.TrimSuffix(strings.TrimPrefix(file.Name(), "call_tracer_"), ".json")), func(t *testing.T) {
+			t.Parallel()
+
+			// Call tracer test found, read if from disk
+			blob, err := ioutil.ReadFile(filepath.Join("testdata", file.Name()))
+			if err != nil {
+				t.Fatalf("failed to read testcase: %v", err)
+			}
+			test := new(callTracerTest)
+			if err := json.Unmarshal(blob, test); err != nil {
+				t.Fatalf("failed to parse testcase: %v", err)
+			}
+
+			signer := types.MakeSigner(test.Genesis.Config, new(big.Int).SetUint64(uint64(test.Context.Number)))
+			tx := new(types.Transaction)
+			// Configure a blockchain with the given prestate
+			if test.Input != "" {
+				if err := rlp.DecodeBytes(common.FromHex(test.Input), tx); err != nil {
+					t.Fatalf("failed to parse testcase input: %v", err)
+				}
+			} else {
+				// Configure a blockchain with the given prestate
+				value := new(big.Int)
+				gasPrice := new(big.Int)
+				err = value.UnmarshalJSON([]byte(test.Transaction["value"]))
+				require.NoError(t, err)
+				err = gasPrice.UnmarshalJSON([]byte(test.Transaction["gasPrice"]))
+				require.NoError(t, err)
+				nonce, b := math.ParseUint64(test.Transaction["nonce"])
+				require.True(t, b)
+				gas, b := math.ParseUint64(test.Transaction["gas"])
+				require.True(t, b)
+
+				to := common.HexToAddress(test.Transaction["to"])
+				input := common.FromHex(test.Transaction["input"])
+
+				tx = types.NewTransaction(nonce, to, value, gas, gasPrice, input)
+
+				testKey, err := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+				require.NoError(t, err)
+				err = tx.Sign(signer, testKey)
+				require.NoError(t, err)
+			}
+
+			origin, _ := signer.Sender(tx)
+
+			context := vm.Context{
+				CanTransfer: blockchain.CanTransfer,
+				Transfer:    blockchain.Transfer,
+				Origin:      origin,
+				BlockNumber: new(big.Int).SetUint64(uint64(test.Context.Number)),
+				Time:        new(big.Int).SetUint64(uint64(test.Context.Time)),
+				BlockScore:  (*big.Int)(test.Context.BlockScore),
+				GasLimit:    uint64(test.Context.GasLimit),
+				GasPrice:    tx.GasPrice(),
+			}
+			statedb := tests.MakePreState(database.NewMemoryDBManager(), test.Genesis.Alloc)
+
+			// Create the tracer, the EVM environment and run it
+			tracer := NewInternalTxLogger(nil)
+			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
+
+			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
+			if err != nil {
+				t.Fatalf("failed to prepare transaction for tracing: %v", err)
+			}
+			st := blockchain.NewStateTransition(evm, msg)
+			if _, _, kerr := st.TransitionDb(); kerr.ErrTxInvalid != nil {
+				t.Fatalf("failed to execute transaction: %v", kerr.ErrTxInvalid)
+			}
+			// Retrieve the trace result and compare against the etalon
+			res, err := tracer.GetResult()
+			if err != nil {
+				t.Fatalf("failed to retrieve trace result: %v", err)
+			}
+
+			resultFromInternalCallTracer := covertToCallTrace(t, res)
+			assert.EqualValues(t, test.Result, resultFromInternalCallTracer)
 		})
 	}
 }
