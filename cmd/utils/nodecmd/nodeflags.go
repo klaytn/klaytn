@@ -82,6 +82,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.NodeKeyHexFlag,
 	utils.VMEnableDebugFlag,
 	utils.VMLogTargetFlag,
+	utils.VMTraceInternalTxFlag,
 	utils.NetworkIdFlag,
 	utils.RPCCORSDomainFlag,
 	utils.RPCVirtualHostsFlag,

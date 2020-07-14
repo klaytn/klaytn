@@ -206,7 +206,7 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	}
 }
 
-func covertToCallTrace(t *testing.T, internalTx *InternalTxTrace) *callTrace {
+func covertToCallTrace(t *testing.T, internalTx *vm.InternalTxTrace) *callTrace {
 	// coverts nested InternalTxTraces
 	var nestedCalls []callTrace
 	for _, call := range internalTx.Calls {
@@ -440,7 +440,7 @@ func TestInternalCallTracer(t *testing.T) {
 			statedb := tests.MakePreState(database.NewMemoryDBManager(), test.Genesis.Alloc)
 
 			// Create the tracer, the EVM environment and run it
-			tracer := NewInternalTxLogger(nil)
+			tracer := vm.NewInternalTxTracer()
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
 
 			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
