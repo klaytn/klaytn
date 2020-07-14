@@ -182,12 +182,7 @@ type tracerLog struct {
 }
 
 func wrapError(context string, err error) error {
-	var message string
-	switch err := err.(type) {
-	default:
-		message = err.Error()
-	}
-	return fmt.Errorf("%v    in server-side tracer function '%v'", message, context)
+	return fmt.Errorf("%v    in server-side tracer function '%v'", err.Error(), context)
 }
 
 // CaptureState implements the Tracer interface to trace a single step of VM execution.
