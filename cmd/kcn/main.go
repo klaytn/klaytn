@@ -157,7 +157,7 @@ var cnHelpFlagGroups = []utils.FlagGroup{
 		Flags: []cli.Flag{
 			utils.VMEnableDebugFlag,
 			utils.VMLogTargetFlag,
-			utils.VMTraceInternalTx,
+			utils.VMTraceInternalTxFlag,
 		},
 	},
 	{
