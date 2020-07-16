@@ -1065,7 +1065,7 @@ func (bc *BlockChain) writeReceipts(hash common.Hash, number uint64, receipts ty
 func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) error {
 	state.LockGCCachedNode()
 	defer state.UnlockGCCachedNode()
-	
+
 	root, err := state.Commit(true)
 	if err != nil {
 		return err
