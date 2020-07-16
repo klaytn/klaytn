@@ -1063,6 +1063,8 @@ func (bc *BlockChain) writeReceipts(hash common.Hash, number uint64, receipts ty
 // If an archiving node is running, it always flushes state trie to DB.
 // If not, it flushes state trie to DB periodically. (period = bc.cacheConfig.BlockInterval)
 func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) error {
+	state.LockGCCachedNode()
+	defer state.UnlockGCCachedNode()
 	root, err := state.Commit(true)
 	if err != nil {
 		return err
