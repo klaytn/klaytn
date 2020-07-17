@@ -23,18 +23,21 @@ package database
 
 import (
 	"context"
+	"path/filepath"
+
 	"github.com/klaytn/klaytn/log"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"path/filepath"
 
 	"time"
 )
 
 const (
 	STOP_TIMEOUT = 10 * time.Second
+	URI          = "mongodb://localhost:27017"
+	//URI          = "mongodb://winnie:password@mongodb.cluster-cnuopt13avbx.ap-northeast-2.docdb.amazonaws.com:27017/?ssl=true&ssl_ca_certs=rds-combined-ca-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false"
 )
 
 // mongoDBClient controls connections to MongoDB.
@@ -55,13 +58,16 @@ type result struct {
 	D []byte
 }
 
-// TODO check WiredTiger for memory usage
+// TODO Set WiredTiger to improve the performance on behalf of memory usage (Server config)
+// https://docs.mongodb.com/v3.6/reference/configuration-options/#storage-wiredtiger-options
 
 func getMongoDBOptions() *options.ClientOptions {
 	newOption := options.Client()
 
-	newOption.ApplyURI("mongodb://localhost:27017")
+	newOption.ApplyURI(URI)
 	newOption.SetAppName("Klaytn")
+	newOption.SetRetryReads(true)
+	newOption.SetRetryWrites(true)
 
 	// TODO find an adequate number of pool size through benchmarking
 	//      Pool size may be differ for every db type and the number for CPU core
@@ -107,9 +113,6 @@ func NewMongoDBWithOption(dbName, collName string, mdbOption *options.ClientOpti
 	}, nil
 }
 
-// TODO find out how index works and apply them for performance
-// https://docs.mongodb.com/manual/reference/limits/#indexes
-// https://docs.mongodb.com/manual/faq/indexes/
 func (db *mongoDB) Put(key []byte, value []byte) error {
 	newKey, newValue := make([]byte, len(key)), make([]byte, len(value))
 	copy(newKey, key)
