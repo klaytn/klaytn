@@ -268,8 +268,6 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		input := ""
 		if int(inOff.Int64()) >= log.memory.Len() {
 			input = ""
-		} else if int(inEnd) >= log.memory.Len() {
-			input = hexutil.Encode(log.memory.Slice(inOff.Int64(), int64(log.memory.Len()-1)))
 		} else {
 			input = hexutil.Encode(log.memory.Slice(inOff.Int64(), inEnd))
 		}
