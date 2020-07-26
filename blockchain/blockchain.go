@@ -174,6 +174,9 @@ type BlockChain struct {
 	// Warm up
 	lastCommittedBlock uint64
 	quitWarmUp         chan struct{}
+
+	// InternalTx Tracing Buffer
+	internalTraces []*vm.InternalTxTrace
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -1641,8 +1644,18 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			logger.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(),
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)))
 
+			var callTraces []*vm.InternalTxTrace
+			if bc.vmConfig.EnableInternalTxTracing && len(bc.internalTraces) > 0 {
+				callTraces = bc.internalTraces
+				bc.internalTraces = nil
+			}
 			coalescedLogs = append(coalescedLogs, logs...)
-			events = append(events, ChainEvent{block, block.Hash(), logs})
+			events = append(events, ChainEvent{
+				Block:      block,
+				Hash:       block.Hash(),
+				Logs:       logs,
+				CallTraces: callTraces,
+			})
 			lastCanon = block
 
 		case SideStatTy:
@@ -2128,8 +2141,15 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 		return nil, 0, err
 	}
 	if vmConfig.EnableInternalTxTracing {
-		// TODO-InternalTxTracer
-		// Need to store traces to the database or send them to the designated channel
+		switch tracer := vmConfig.Tracer.(type) {
+		case *vm.InternalTxTracer:
+			result, err := tracer.GetResult()
+			if err != nil {
+				logger.Error("failed to get tracing result from a transaction", "txHash", tx.Hash().String(), "err", err)
+				return nil, 0, err
+			}
+			bc.internalTraces = append(bc.internalTraces, result)
+		}
 	}
 	// Update the state with pending changes
 	statedb.Finalise(true, false)
