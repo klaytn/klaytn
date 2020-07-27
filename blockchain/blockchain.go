@@ -1645,7 +1645,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)))
 
 			var callTraces []*vm.InternalTxTrace
-			if bc.vmConfig.EnableInternalTxTracing && len(bc.internalTraces) > 0 {
+			if bc.vmConfig.EnableInternalTxTracing {
 				callTraces = bc.internalTraces
 				bc.internalTraces = nil
 			}
