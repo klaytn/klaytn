@@ -265,21 +265,12 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		inOff := log.stack.Back(2 + off)
 		inEnd := big.NewInt(0).Add(inOff, log.stack.Back(3+off)).Int64()
 
-		input := ""
-		if int(inOff.Int64()) >= log.memory.Len() {
-			input = ""
-		} else if int(inEnd) >= log.memory.Len() {
-			input = hexutil.Encode(log.memory.Slice(inOff.Int64(), int64(log.memory.Len()-1)))
-		} else {
-			input = hexutil.Encode(log.memory.Slice(inOff.Int64(), inEnd))
-		}
-
 		// Assemble the internal call report and store for completion
 		call := &InternalCall{
 			Type:    op.String(),
 			From:    log.contract.Address(),
 			To:      toAddr,
-			Input:   input,
+			Input:   hexutil.Encode(log.memory.Slice(inOff.Int64(), inEnd)),
 			GasIn:   log.gas,
 			GasCost: log.cost,
 			OutOff:  big.NewInt(log.stack.Back(4 + off).Int64()),

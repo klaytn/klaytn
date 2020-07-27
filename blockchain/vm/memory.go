@@ -133,6 +133,13 @@ func (m *Memory) Print() {
 }
 
 func (m *Memory) Slice(from, to int64) []byte {
+	if from > int64(m.Len()) {
+		return nil
+	}
+	if to > int64(m.Len()) {
+		to = int64(m.Len())
+	}
+
 	sliced := m.store[from:to]
 	copied := make([]byte, len(sliced))
 	copy(copied, sliced)
