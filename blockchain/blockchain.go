@@ -2150,7 +2150,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 			}
 			bc.internalTraces = append(bc.internalTraces, result)
 		default:
-			logger.Warn("internal transaction tracing is on, but the VM tracer type is not the expected one", "type", reflect.TypeOf(tracer).String())
+			logger.Warn("To trace internal transactions, VM tracer type should be vm.InternalTxTracer", "actualType", reflect.TypeOf(tracer).String())
 		}
 	}
 	// Update the state with pending changes
