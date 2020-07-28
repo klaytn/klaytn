@@ -2018,5 +2018,6 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 		BlockScore: big.NewInt(0),
 	}
 	usedGas := uint64(0)
-	return bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, &usedGas, vmConfig)
+	receipt, gas, _, err := bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, &usedGas, vmConfig)
+	return receipt, gas, err
 }

@@ -174,9 +174,6 @@ type BlockChain struct {
 	// Warm up
 	lastCommittedBlock uint64
 	quitWarmUp         chan struct{}
-
-	// InternalTx Tracing Buffer
-	internalTraces []*vm.InternalTxTrace
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -1609,7 +1606,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		start := time.Now()
 
 		// Process block using the parent state as reference point.
-		receipts, logs, usedGas, err := bc.processor.Process(block, stateDB, bc.vmConfig)
+		receipts, logs, usedGas, internalTxTraces, err := bc.processor.Process(block, stateDB, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
@@ -1644,17 +1641,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			logger.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(),
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)))
 
-			var callTraces []*vm.InternalTxTrace
-			if bc.vmConfig.EnableInternalTxTracing {
-				callTraces = bc.internalTraces
-				bc.internalTraces = nil
-			}
 			coalescedLogs = append(coalescedLogs, logs...)
 			events = append(events, ChainEvent{
-				Block:      block,
-				Hash:       block.Hash(),
-				Logs:       logs,
-				CallTraces: callTraces,
+				Block:            block,
+				Hash:             block.Hash(),
+				Logs:             logs,
+				InternalTxTraces: internalTxTraces,
 			})
 			lastCanon = block
 
@@ -2107,7 +2099,7 @@ func (bc *BlockChain) GetNonceInCache(addr common.Address) (uint64, bool) {
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, vmConfig *vm.Config) (*types.Receipt, uint64, error) {
+func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, vmConfig *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error) {
 
 	// TODO-Klaytn We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
 	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
@@ -2122,12 +2114,12 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 
 	// validation for each transaction before execution
 	if err := tx.Validate(statedb, blockNumber); err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 
 	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chainConfig, header.Number), statedb, blockNumber)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(msg, header, bc, author)
@@ -2138,17 +2130,18 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	_, gas, kerr := ApplyMessage(vmenv, msg)
 	err = kerr.ErrTxInvalid
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
+
+	var internalTrace *vm.InternalTxTrace
 	if vmConfig.EnableInternalTxTracing {
 		switch tracer := vmConfig.Tracer.(type) {
 		case *vm.InternalTxTracer:
-			result, err := tracer.GetResult()
+			internalTrace, err = tracer.GetResult()
 			if err != nil {
 				logger.Error("failed to get tracing result from a transaction", "txHash", tx.Hash().String(), "err", err)
-				return nil, 0, err
+				return nil, 0, nil, err
 			}
-			bc.internalTraces = append(bc.internalTraces, result)
 		default:
 			logger.Warn("To trace internal transactions, VM tracer type should be vm.InternalTxTracer", "actualType", reflect.TypeOf(tracer).String())
 		}
@@ -2164,7 +2157,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
-	return receipt, gas, err
+	return receipt, gas, internalTrace, err
 }
 
 // CheckBlockChainVersion checks the version of the current database and upgrade if possible.

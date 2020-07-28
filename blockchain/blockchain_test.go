@@ -159,7 +159,7 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 		if err != nil {
 			return err
 		}
-		receipts, _, usedGas, err := blockchain.Processor().Process(block, statedb, vm.Config{})
+		receipts, _, usedGas, _, err := blockchain.Processor().Process(block, statedb, vm.Config{})
 		if err != nil {
 			blockchain.reportBlock(block, receipts, err)
 			return err
@@ -1546,17 +1546,17 @@ func TestCallTraceChainEventSubscription(t *testing.T) {
 	select {
 	case ev := <-chainEventCh:
 		// a contract deploy tx and a contract execution tx
-		assert.Equal(t, 2, len(ev.CallTraces))
+		assert.Equal(t, 2, len(ev.InternalTxTraces))
 
 		// compare contract deploy result
-		assert.Equal(t, address, ev.CallTraces[0].From)
-		assert.Equal(t, 0, len(ev.CallTraces[0].Calls))
-		assert.Equal(t, "0x"+testCode, ev.CallTraces[0].Input)
-		assert.Equal(t, fmt.Sprintf("0x%x", 100000000), ev.CallTraces[0].Value)
+		assert.Equal(t, address, ev.InternalTxTraces[0].From)
+		assert.Equal(t, 0, len(ev.InternalTxTraces[0].Calls))
+		assert.Equal(t, "0x"+testCode, ev.InternalTxTraces[0].Input)
+		assert.Equal(t, fmt.Sprintf("0x%x", 100000000), ev.InternalTxTraces[0].Value)
 
 		// compare contract execution result
-		assert.Equal(t, address, ev.CallTraces[1].From)
-		assert.Equal(t, 3, len(ev.CallTraces[1].Calls))
-		assert.Equal(t, fmt.Sprintf("0x%x", 0), ev.CallTraces[1].Value)
+		assert.Equal(t, address, ev.InternalTxTraces[1].From)
+		assert.Equal(t, 3, len(ev.InternalTxTraces[1].Calls))
+		assert.Equal(t, fmt.Sprintf("0x%x", 0), ev.InternalTxTraces[1].Value)
 	}
 }
