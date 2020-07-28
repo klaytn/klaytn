@@ -2135,15 +2135,10 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 
 	var internalTrace *vm.InternalTxTrace
 	if vmConfig.EnableInternalTxTracing {
-		switch tracer := vmConfig.Tracer.(type) {
-		case *vm.InternalTxTracer:
-			internalTrace, err = tracer.GetResult()
-			if err != nil {
-				logger.Error("failed to get tracing result from a transaction", "txHash", tx.Hash().String(), "err", err)
-				return nil, 0, nil, err
-			}
-		default:
-			logger.Warn("To trace internal transactions, VM tracer type should be vm.InternalTxTracer", "actualType", reflect.TypeOf(tracer).String())
+		internalTrace, err = GetInternalTxTraces(vmConfig.Tracer)
+		if err != nil {
+			logger.Error("failed to get tracing result from a transaction", "txHash", tx.Hash().String(), "err", err)
+			return nil, 0, nil, err
 		}
 	}
 	// Update the state with pending changes
@@ -2158,6 +2153,23 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
 	return receipt, gas, internalTrace, err
+}
+
+func GetInternalTxTraces(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
+	var (
+		internalTxTrace *vm.InternalTxTrace
+		err             error
+	)
+	switch tracer := tracer.(type) {
+	case *vm.InternalTxTracer:
+		internalTxTrace, err = tracer.GetResult()
+		if err != nil {
+			return nil, err
+		}
+	default:
+		logger.Warn("To trace internal transactions, VM tracer type should be vm.InternalTxTracer", "actualType", reflect.TypeOf(tracer).String())
+	}
+	return internalTxTrace, nil
 }
 
 // CheckBlockChainVersion checks the version of the current database and upgrade if possible.
