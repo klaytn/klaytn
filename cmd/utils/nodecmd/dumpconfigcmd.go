@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/cmd/utils"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
 	"github.com/klaytn/klaytn/datasync/dbsyncer"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/node"
@@ -134,6 +135,61 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	//utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 
 	return stack, cfg
+}
+
+func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetcherConfig {
+	cfg := chaindatafetcher.DefaultChainDataFetcherConfig
+
+	if ctx.GlobalBool(utils.EnableChainDataFetcherFlag.Name) {
+		cfg.EnabledChainDataFetcher = true
+
+		if ctx.GlobalIsSet(utils.ChainDataFetcherNoDefault.Name) {
+			cfg.NoDefaultStart = true
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherNumHandlers.Name) {
+			cfg.NumHandlers = ctx.GlobalInt(utils.ChainDataFetcherNumHandlers.Name)
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherReqChSize.Name) {
+			cfg.RequestChSize = ctx.GlobalInt(utils.ChainDataFetcherReqChSize.Name)
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherResChSize.Name) {
+			cfg.ResponseChSize = ctx.GlobalInt(utils.ChainDataFetcherResChSize.Name)
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherChainEventSizeFlag.Name) {
+			cfg.BlockChannelSize = ctx.GlobalInt(utils.ChainDataFetcherChainEventSizeFlag.Name)
+		}
+
+		if ctx.GlobalIsSet(utils.ChainDataFetcherDBHostFlag.Name) {
+			dbhost := ctx.GlobalString(utils.ChainDataFetcherDBHostFlag.Name)
+			cfg.DBHost = dbhost
+		} else {
+			logger.Crit("DBHost must be set !", "key", utils.ChainDataFetcherDBHostFlag.Name)
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherDBPortFlag.Name) {
+			dbports := ctx.GlobalString(utils.ChainDataFetcherDBPortFlag.Name)
+			cfg.DBPort = dbports
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherDBUserFlag.Name) {
+			dbuser := ctx.GlobalString(utils.ChainDataFetcherDBUserFlag.Name)
+			cfg.DBUser = dbuser
+		} else {
+			logger.Crit("DBUser must be set !", "key", utils.ChainDataFetcherDBUserFlag.Name)
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherDBPasswordFlag.Name) {
+			dbpasswd := ctx.GlobalString(utils.ChainDataFetcherDBPasswordFlag.Name)
+			cfg.DBPassword = dbpasswd
+		} else {
+			logger.Crit("DBPassword must be set !", "key", utils.ChainDataFetcherDBPasswordFlag.Name)
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherDBNameFlag.Name) {
+			dbname := ctx.GlobalString(utils.ChainDataFetcherDBNameFlag.Name)
+			cfg.DBName = dbname
+		} else {
+			logger.Crit("DBName must be set !", "key", utils.ChainDataFetcherDBNameFlag.Name)
+		}
+	}
+
+	return *cfg
 }
 
 func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
@@ -261,6 +317,9 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 
 	dbfg := makeDBSyncerConfig(ctx)
 	utils.RegisterDBSyncerService(stack, &dbfg)
+
+	chaindataFetcherConfig := makeChainDataFetcherConfig(ctx)
+	utils.RegisterChainDataFetcherService(stack, &chaindataFetcherConfig)
 
 	return stack
 }
