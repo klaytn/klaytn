@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	"math/big"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
 
@@ -54,6 +55,9 @@ type InternalTxTracer struct {
 	ctx              map[string]interface{} // Transaction context gathered throughout execution
 	initialized      bool
 	revertString     string
+
+	interrupt uint32 // Atomic flag to signal execution interruption
+	reason    error  // Textual reason for the interruption
 }
 
 // NewInternalTxTracer returns a new InternalTxTracer.
@@ -128,27 +132,27 @@ func (s *InternalCall) ToTrace() *InternalTxTrace {
 // InternalTxTrace is returned data after the end of trace-collecting cycle.
 // It implements an object returned by "result" function at call_tracer.js
 type InternalTxTrace struct {
-	Type  string
-	From  common.Address
-	To    common.Address
-	Value string
+	Type  string         `json:"type"`
+	From  common.Address `json:"from,omitempty"`
+	To    common.Address `json:"to,omitempty"`
+	Value string         `json:"value"`
 
-	Gas     uint64
-	GasUsed uint64
+	Gas     uint64 `json:"gas"`
+	GasUsed uint64 `json:"gasUsed"`
 
-	Input  string // hex string
-	Output string // hex string
-	Error  error
+	Input  string `json:"input"`  // hex string
+	Output string `json:"output"` // hex string
+	Error  error  `json:"error,omitempty"`
 
-	Time  time.Duration
-	Calls []*InternalTxTrace
+	Time  time.Duration      `json:"time"`
+	Calls []*InternalTxTrace `json:"calls,omitempty"`
 
-	Reverted RevertedInfo
+	Reverted RevertedInfo `json:"reverted,omitempty"`
 }
 
 type RevertedInfo struct {
-	Contract common.Address
-	Message  string
+	Contract common.Address `json:"contract"`
+	Message  string         `json:"message"`
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
@@ -185,6 +189,12 @@ func wrapError(context string, err error) error {
 	return fmt.Errorf("%v    in server-side tracer function '%v'", err.Error(), context)
 }
 
+// Stop terminates execution of the tracer at the first opportune moment.
+func (this *InternalTxTracer) Stop(err error) {
+	this.reason = err
+	atomic.StoreUint32(&this.interrupt, 1)
+}
+
 // CaptureState implements the Tracer interface to trace a single step of VM execution.
 func (this *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, memory *Memory, logStack *Stack, contract *Contract, depth int, err error) error {
 	if this.err == nil {
@@ -193,8 +203,11 @@ func (this *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, 
 			this.ctx["block"] = env.BlockNumber.Uint64()
 			this.initialized = true
 		}
-		// As this tracer is executed inside the node and there is no reason to stop this
-		// while the node is running, let's skip stop logic from tracers.Tracer
+		// If tracing was interrupted, set the error and stop
+		if atomic.LoadUint32(&this.interrupt) > 0 {
+			this.err = this.reason
+			return nil
+		}
 
 		log := &tracerLog{
 			env, pc, op, gas, cost,
