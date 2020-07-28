@@ -1542,8 +1542,12 @@ func TestCallTraceChainEventSubscription(t *testing.T) {
 		t.Fatalf("failed to process block %d: %v", n, err)
 	}
 
+	timer := time.NewTimer(1 * time.Second)
+	defer timer.Stop()
 	// compare the published chain event with the expected test data
 	select {
+	case <-timer.C:
+		t.Fatal("Timeout. There is no chain event posted for 1 second")
 	case ev := <-chainEventCh:
 		// a contract deploy tx and a contract execution tx
 		assert.Equal(t, 2, len(ev.InternalTxTraces))
