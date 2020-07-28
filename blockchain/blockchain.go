@@ -2135,7 +2135,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 
 	var internalTrace *vm.InternalTxTrace
 	if vmConfig.EnableInternalTxTracing {
-		internalTrace, err = GetInternalTxTraces(vmConfig.Tracer)
+		internalTrace, err = GetInternalTxTrace(vmConfig.Tracer)
 		if err != nil {
 			logger.Error("failed to get tracing result from a transaction", "txHash", tx.Hash().String(), "err", err)
 			return nil, 0, nil, err
@@ -2155,7 +2155,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	return receipt, gas, internalTrace, err
 }
 
-func GetInternalTxTraces(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
+func GetInternalTxTrace(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
 	var (
 		internalTxTrace *vm.InternalTxTrace
 		err             error
@@ -2167,7 +2167,8 @@ func GetInternalTxTraces(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
 			return nil, err
 		}
 	default:
-		logger.Warn("To trace internal transactions, VM tracer type should be vm.InternalTxTracer", "actualType", reflect.TypeOf(tracer).String())
+		logger.Error("To trace internal transactions, VM tracer type should be vm.InternalTxTracer", "actualType", reflect.TypeOf(tracer).String())
+		return nil, ErrInvalidTracer
 	}
 	return internalTxTrace, nil
 }
