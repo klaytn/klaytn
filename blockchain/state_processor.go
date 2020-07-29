@@ -53,12 +53,13 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
-func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
+func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, []*vm.InternalTxTrace, error) {
 	var (
-		receipts types.Receipts
-		usedGas  = new(uint64)
-		header   = block.Header()
-		allLogs  []*types.Log
+		receipts         types.Receipts
+		usedGas          = new(uint64)
+		header           = block.Header()
+		allLogs          []*types.Log
+		internalTxTraces []*vm.InternalTxTrace
 	)
 
 	// Enable the opcode computation cost limit
@@ -70,18 +71,19 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		receipt, _, err := p.bc.ApplyTransaction(p.config, &author, statedb, header, tx, usedGas, &cfg)
+		receipt, _, internalTxTrace, err := p.bc.ApplyTransaction(p.config, &author, statedb, header, tx, usedGas, &cfg)
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, nil, 0, nil, err
 		}
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
+		internalTxTraces = append(internalTxTraces, internalTxTrace)
 	}
 
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	if _, err := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), receipts); err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, nil, err
 	}
 
-	return receipts, allLogs, *usedGas, nil
+	return receipts, allLogs, *usedGas, internalTxTraces, nil
 }

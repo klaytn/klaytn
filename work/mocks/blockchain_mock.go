@@ -44,13 +44,14 @@ func (m *MockBlockChain) EXPECT() *MockBlockChainMockRecorder {
 }
 
 // ApplyTransaction mocks base method
-func (m *MockBlockChain) ApplyTransaction(arg0 *params.ChainConfig, arg1 *common.Address, arg2 *state.StateDB, arg3 *types.Header, arg4 *types.Transaction, arg5 *uint64, arg6 *vm.Config) (*types.Receipt, uint64, error) {
+func (m *MockBlockChain) ApplyTransaction(arg0 *params.ChainConfig, arg1 *common.Address, arg2 *state.StateDB, arg3 *types.Header, arg4 *types.Transaction, arg5 *uint64, arg6 *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ApplyTransaction", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(*types.Receipt)
 	ret1, _ := ret[1].(uint64)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret2, _ := ret[2].(*vm.InternalTxTrace)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // ApplyTransaction indicates an expected call of ApplyTransaction
