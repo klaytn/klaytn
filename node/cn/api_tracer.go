@@ -57,6 +57,8 @@ const (
 	// trace.
 	defaultTraceReexec = uint64(128)
 
+	// fastCallTracer is the go-version callTracer which is lighter and faster than
+	// Javascript version.
 	fastCallTracer = "fastCallTracer"
 )
 
