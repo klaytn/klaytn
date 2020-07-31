@@ -43,24 +43,35 @@ type ChainDataFetcher struct {
 
 	numHandlers int
 
+	checkpoint    int64
+	checkpointMap map[int64]struct{}
+
 	wg sync.WaitGroup
 
-	repo repository
+	repo Repository
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
 	repo, err := kas.NewRepository(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
 	if err != nil {
+		logger.Error("Failed to create new Repository", "err", err, "user", cfg.DBUser, "password", cfg.DBPassword, "host", cfg.DBHost, "port", cfg.DBPort, "name", cfg.DBName)
+		return nil, err
+	}
+	checkpoint, err := repo.GetCheckpoint()
+	if err != nil {
+		logger.Error("Failed to get checkpoint", "err", err)
 		return nil, err
 	}
 	return &ChainDataFetcher{
-		config:      cfg,
-		chainCh:     make(chan blockchain.ChainEvent, cfg.BlockChannelSize),
-		reqCh:       make(chan *request, cfg.JobChannelSize),
-		resCh:       make(chan *response, cfg.JobChannelSize),
-		stopCh:      make(chan struct{}),
-		numHandlers: cfg.NumHandlers,
-		repo:        repo,
+		config:        cfg,
+		chainCh:       make(chan blockchain.ChainEvent, cfg.BlockChannelSize),
+		reqCh:         make(chan *request, cfg.JobChannelSize),
+		resCh:         make(chan *response, cfg.JobChannelSize),
+		stopCh:        make(chan struct{}),
+		numHandlers:   cfg.NumHandlers,
+		checkpoint:    checkpoint,
+		checkpointMap: make(map[int64]struct{}),
+		repo:          repo,
 	}, nil
 }
 
@@ -162,12 +173,29 @@ func (f *ChainDataFetcher) resLoop() {
 				logger.Error("db insertion is failed", "blockNumber", res.blockNumber, "reqType", res.reqType, "err", res.err)
 				// TODO-ChainDataFetcher add retry logic when data insertion is failed
 			} else {
-				f.updateCheckpoint(res.blockNumber.Uint64())
+				if err := f.updateCheckpoint(res.blockNumber.Int64()); err != nil {
+					logger.Error("Failed to update checkpoint", "checkpoint", res.blockNumber.Int64())
+				}
 			}
 		}
 	}
 }
 
-func (f *ChainDataFetcher) updateCheckpoint(num uint64) {
-	// TODO-ChainDataFetcher add logic to update new checkpoint
+func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
+	f.checkpointMap[num] = struct{}{}
+
+	oldCheckpoint := f.checkpoint
+	newCheckpoint := oldCheckpoint
+	for {
+		if _, ok := f.checkpointMap[newCheckpoint]; !ok {
+			break
+		}
+		delete(f.checkpointMap, newCheckpoint)
+		newCheckpoint++
+	}
+
+	if oldCheckpoint != newCheckpoint {
+		return f.repo.SetCheckpoint(newCheckpoint)
+	}
+	return nil
 }

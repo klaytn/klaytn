@@ -16,14 +16,8 @@
 
 package chaindatafetcher
 
-import "github.com/klaytn/klaytn/blockchain"
+import "testing"
 
-//go:generate mockgen -destination=./mocks/repository_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher Repository
-type Repository interface {
-	InsertTransactions(event blockchain.ChainEvent) error
-	InsertTokenTransfers(event blockchain.ChainEvent) error
-	InsertTraceResults(event blockchain.ChainEvent) error
+func TestChainDataFetcher_updateCheckpoint(t *testing.T) {
 
-	GetCheckpoint() (int64, error)
-	SetCheckpoint(checkpoint int64) error
 }
