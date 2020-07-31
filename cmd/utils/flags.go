@@ -604,17 +604,17 @@ var (
 	ChainDataFetcherNumHandlers = cli.IntFlag{
 		Name:  "chaindatafetcher.num.handlers",
 		Usage: "Number of chaindata handlers",
-		Value: 10,
+		Value: chaindatafetcher.DefaultNumHandlers,
 	}
 	ChainDataFetcherJobChannelSize = cli.IntFlag{
 		Name:  "chaindatafetcher.job.channel.size",
 		Usage: "Job channel size",
-		Value: 50,
+		Value: chaindatafetcher.DefaultJobChannelSize,
 	}
 	ChainDataFetcherChainEventSizeFlag = cli.IntFlag{
 		Name:  "chaindatafetcher.block.channel.size",
 		Usage: "Block received channel size",
-		Value: 500,
+		Value: chaindatafetcher.DefaultJobChannelSize,
 	}
 	ChainDataFetcherDBHostFlag = cli.StringFlag{
 		Name:  "chaindatafetcher.db.host",
@@ -623,7 +623,7 @@ var (
 	ChainDataFetcherDBPortFlag = cli.StringFlag{
 		Name:  "chaindatafetcher.db.port",
 		Usage: "db.port in chaindatafetcher",
-		Value: "3306",
+		Value: chaindatafetcher.DefaultDBPort,
 	}
 	ChainDataFetcherDBNameFlag = cli.StringFlag{
 		Name:  "chaindatafetcher.db.name",

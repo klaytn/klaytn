@@ -1,5 +1,12 @@
 package chaindatafetcher
 
+const (
+	DefaultNumHandlers      = 10
+	DefaultJobChannelSize   = 50
+	DefaultBlockChannelSize = 500
+	DefaultDBPort           = "3306"
+)
+
 //go:generate gencodec -type ChainDataFetcherConfig -formats toml -out gen_config.go
 type ChainDataFetcherConfig struct {
 	EnabledChainDataFetcher bool
@@ -18,10 +25,9 @@ type ChainDataFetcherConfig struct {
 var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
 	EnabledChainDataFetcher: false,
 	NoDefaultStart:          false,
-	NumHandlers:             10,
-	JobChannelSize:          50,
+	NumHandlers:             DefaultNumHandlers,
+	JobChannelSize:          DefaultJobChannelSize,
+	BlockChannelSize:        DefaultBlockChannelSize,
 
-	BlockChannelSize: 500,
-
-	DBPort: "3306",
+	DBPort: DefaultDBPort,
 }
