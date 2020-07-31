@@ -52,20 +52,13 @@ func (f *ChainDataFetcher) APIs() []rpc.API {
 func (f *ChainDataFetcher) Start(server p2p.Server) error {
 	// launch multiple goroutines to handle new blocks
 	for i := 0; i < f.numHandlers; i++ {
-		f.wg.Add(1)
-		go func() {
-			defer f.wg.Done()
-			f.handler()
-		}()
+		go f.handler()
 	}
 
 	// subscribe chain head event
 	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
-	f.wg.Add(1)
-	go func() {
-		defer f.wg.Done()
-		f.loop()
-	}()
+	go f.reqLoop()
+	go f.resLoop()
 
 	return nil
 }
@@ -94,6 +87,8 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 }
 
 func (f *ChainDataFetcher) handler() {
+	f.wg.Add(1)
+	defer f.wg.Done()
 	for {
 		select {
 		case <-f.stopCh:
@@ -106,16 +101,30 @@ func (f *ChainDataFetcher) handler() {
 	}
 }
 
-func (f *ChainDataFetcher) loop() {
+func (f *ChainDataFetcher) reqLoop() {
+	f.wg.Add(1)
+	defer f.wg.Done()
 	for {
 		select {
 		case <-f.stopCh:
-			logger.Info("stopped main loop for chaindatafetcher")
+			logger.Info("stopped reqLoop for chaindatafetcher")
 			return
 		case ev := <-f.chainCh:
 			num := ev.Block.NumberU64()
 			f.reqCh <- num
 			logger.Info("request to handle new block", "blockNumber", num)
+		}
+	}
+}
+
+func (f *ChainDataFetcher) resLoop() {
+	f.wg.Add(1)
+	defer f.wg.Done()
+	for {
+		select {
+		case <-f.stopCh:
+			logger.Info("stopped reqLoop for chaindatafetcher")
+			return
 		case res := <-f.resCh:
 			f.updateCheckpoint(res)
 			logger.Info("processed requested block", "blockNumber", res)
