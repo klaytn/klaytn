@@ -112,7 +112,6 @@ func (f *ChainDataFetcher) reqLoop() {
 		case ev := <-f.chainCh:
 			num := ev.Block.NumberU64()
 			f.reqCh <- num
-			logger.Info("request to handle new block", "blockNumber", num)
 		}
 	}
 }
@@ -127,7 +126,6 @@ func (f *ChainDataFetcher) resLoop() {
 			return
 		case res := <-f.resCh:
 			f.updateCheckpoint(res)
-			logger.Info("processed requested block", "blockNumber", res)
 		}
 	}
 }
