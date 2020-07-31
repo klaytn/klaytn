@@ -52,7 +52,7 @@ func (f *ChainDataFetcher) APIs() []rpc.API {
 func (f *ChainDataFetcher) Start(server p2p.Server) error {
 	// launch multiple goroutines to handle new blocks
 	for i := 0; i < f.numHandlers; i++ {
-		go f.handler()
+		go f.handleRequest()
 	}
 
 	// subscribe chain head event
@@ -86,13 +86,13 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 	}
 }
 
-func (f *ChainDataFetcher) handler() {
+func (f *ChainDataFetcher) handleRequest() {
 	f.wg.Add(1)
 	defer f.wg.Done()
 	for {
 		select {
 		case <-f.stopCh:
-			logger.Info("stopped a handler")
+			logger.Info("handleRequest is stopped")
 			return
 		case req := <-f.reqCh:
 			// TODO-ChainDataFetcher do handle new request
