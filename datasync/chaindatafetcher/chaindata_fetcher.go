@@ -33,8 +33,8 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 	return &ChainDataFetcher{
 		config:      cfg,
 		chainCh:     make(chan blockchain.ChainEvent, cfg.BlockChannelSize),
-		reqCh:       make(chan uint64, cfg.RequestChSize),
-		resCh:       make(chan uint64, cfg.ResponseChSize),
+		reqCh:       make(chan uint64, cfg.JobChannelSize),
+		resCh:       make(chan uint64, cfg.JobChannelSize),
 		stopCh:      make(chan struct{}),
 		numHandlers: cfg.NumHandlers,
 	}, nil

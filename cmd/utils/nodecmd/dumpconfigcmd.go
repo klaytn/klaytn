@@ -149,11 +149,8 @@ func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetc
 		if ctx.GlobalIsSet(utils.ChainDataFetcherNumHandlers.Name) {
 			cfg.NumHandlers = ctx.GlobalInt(utils.ChainDataFetcherNumHandlers.Name)
 		}
-		if ctx.GlobalIsSet(utils.ChainDataFetcherReqChSize.Name) {
-			cfg.RequestChSize = ctx.GlobalInt(utils.ChainDataFetcherReqChSize.Name)
-		}
-		if ctx.GlobalIsSet(utils.ChainDataFetcherResChSize.Name) {
-			cfg.ResponseChSize = ctx.GlobalInt(utils.ChainDataFetcherResChSize.Name)
+		if ctx.GlobalIsSet(utils.ChainDataFetcherJobChannelSize.Name) {
+			cfg.JobChannelSize = ctx.GlobalInt(utils.ChainDataFetcherJobChannelSize.Name)
 		}
 		if ctx.GlobalIsSet(utils.ChainDataFetcherChainEventSizeFlag.Name) {
 			cfg.BlockChannelSize = ctx.GlobalInt(utils.ChainDataFetcherChainEventSizeFlag.Name)

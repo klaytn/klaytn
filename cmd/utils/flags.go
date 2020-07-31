@@ -606,14 +606,9 @@ var (
 		Usage: "Number of chaindata handlers",
 		Value: 10,
 	}
-	ChainDataFetcherReqChSize = cli.IntFlag{
-		Name:  "chaindatafetcher.request.buffer",
-		Usage: "Buffer size of request channel",
-		Value: 50,
-	}
-	ChainDataFetcherResChSize = cli.IntFlag{
-		Name:  "chaindatafetcher.response.buffer",
-		Usage: "Buffer size of response channel",
+	ChainDataFetcherJobChannelSize = cli.IntFlag{
+		Name:  "chaindatafetcher.job.channel.size",
+		Usage: "Job channel size",
 		Value: 50,
 	}
 	ChainDataFetcherChainEventSizeFlag = cli.IntFlag{
