@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
 	"github.com/klaytn/klaytn/datasync/dbsyncer"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/log"
@@ -591,6 +592,52 @@ var (
 		Name:  "anchoring",
 		Usage: "Enable anchoring for service chain",
 	}
+	// ChainDataFetcher
+	EnableChainDataFetcherFlag = cli.BoolFlag{
+		Name:  "chaindatafetcher",
+		Usage: "Enable the ChainDataFetcher Service",
+	}
+	ChainDataFetcherNoDefault = cli.BoolFlag{
+		Name:  "chaindatafetcher.no.default",
+		Usage: "Turn off the starting of the chaindatafetcher",
+	}
+	ChainDataFetcherNumHandlers = cli.IntFlag{
+		Name:  "chaindatafetcher.num.handlers",
+		Usage: "Number of chaindata handlers",
+		Value: chaindatafetcher.DefaultNumHandlers,
+	}
+	ChainDataFetcherJobChannelSize = cli.IntFlag{
+		Name:  "chaindatafetcher.job.channel.size",
+		Usage: "Job channel size",
+		Value: chaindatafetcher.DefaultJobChannelSize,
+	}
+	ChainDataFetcherChainEventSizeFlag = cli.IntFlag{
+		Name:  "chaindatafetcher.block.channel.size",
+		Usage: "Block received channel size",
+		Value: chaindatafetcher.DefaultJobChannelSize,
+	}
+	ChainDataFetcherDBHostFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.db.host",
+		Usage: "db.host in chaindatafetcher",
+	}
+	ChainDataFetcherDBPortFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.db.port",
+		Usage: "db.port in chaindatafetcher",
+		Value: chaindatafetcher.DefaultDBPort,
+	}
+	ChainDataFetcherDBNameFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.db.name",
+		Usage: "db.name in chaindatafetcher",
+	}
+	ChainDataFetcherDBUserFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.db.user",
+		Usage: "db.user in chaindatafetcher",
+	}
+	ChainDataFetcherDBPasswordFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.db.password",
+		Usage: "db.password in chaindatafetcher",
+	}
+
 	// DBSyncer
 	EnableDBSyncerFlag = cli.BoolFlag{
 		Name:  "dbsyncer",
@@ -1246,6 +1293,19 @@ func RegisterService(stack *node.Node, cfg *sc.SCConfig) {
 		})
 		if err != nil {
 			log.Fatalf("Failed to register the sub bridge service: %v", err)
+		}
+	}
+}
+
+// RegisterChainDataFetcherService adds a ChainDataFetcher to the stack
+func RegisterChainDataFetcherService(stack *node.Node, cfg *chaindatafetcher.ChainDataFetcherConfig) {
+	if cfg.EnabledChainDataFetcher {
+		err := stack.RegisterSubService(func(ctx *node.ServiceContext) (node.Service, error) {
+			chainDataFetcher, err := chaindatafetcher.NewChainDataFetcher(ctx, cfg)
+			return chainDataFetcher, err
+		})
+		if err != nil {
+			log.Fatalf("Failed to register the service: %v", err)
 		}
 	}
 }

@@ -136,6 +136,17 @@ var KENFlags = []cli.Flag{
 	utils.ChildChainIndexingFlag,
 	utils.MainBridgeFlag,
 	utils.MainBridgeListenPortFlag,
+	// ChainDataFetcher
+	utils.EnableChainDataFetcherFlag,
+	utils.ChainDataFetcherNoDefault,
+	utils.ChainDataFetcherNumHandlers,
+	utils.ChainDataFetcherJobChannelSize,
+	utils.ChainDataFetcherChainEventSizeFlag,
+	utils.ChainDataFetcherDBHostFlag,
+	utils.ChainDataFetcherDBPortFlag,
+	utils.ChainDataFetcherDBNameFlag,
+	utils.ChainDataFetcherDBUserFlag,
+	utils.ChainDataFetcherDBPasswordFlag,
 	// DBSyncer
 	utils.EnableDBSyncerFlag,
 	utils.DBHostFlag,
