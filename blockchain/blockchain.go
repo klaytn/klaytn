@@ -1649,6 +1649,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				Block:            block,
 				Hash:             block.Hash(),
 				Logs:             logs,
+				Receipts:         receipts,
 				InternalTxTraces: internalTxTraces,
 			})
 			lastCanon = block

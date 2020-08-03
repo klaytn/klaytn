@@ -46,6 +46,7 @@ type RemovedLogsEvent struct{ Logs []*types.Log }
 type ChainEvent struct {
 	Block            *types.Block
 	Hash             common.Hash
+	Receipts         types.Receipts
 	Logs             []*types.Log
 	InternalTxTraces []*vm.InternalTxTrace
 }
