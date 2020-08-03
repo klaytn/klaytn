@@ -122,7 +122,7 @@ func (f *ChainDataFetcher) resLoop() {
 	for {
 		select {
 		case <-f.stopCh:
-			logger.Info("stopped reqLoop for chaindatafetcher")
+			logger.Info("stopped resLoop for chaindatafetcher")
 			return
 		case res := <-f.resCh:
 			f.updateCheckpoint(res)
