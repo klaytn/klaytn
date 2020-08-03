@@ -223,14 +223,14 @@ commands:
       - run:
           name: "notify slack when job success"
           command : |
-            curl --data '{"text": "✅ Job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH''$CIRCLE_TAG'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
+            curl --data '{"text": "✅ Job *'$CIRCLE_JOB'* succeeded on *'$CIRCLE_BRANCH''$CIRCLE_TAG'*. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_success
   notify-failure:
     steps:
       - run:
           name: "notify slack when job fail"
           command : |
-            curl --data '{"text": "❌ Job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
+            curl --data '{"text": "❌ Job *'$CIRCLE_JOB'* failed on *'$CIRCLE_BRANCH'*. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
 
 jobs:
@@ -553,3 +553,23 @@ workflows:
           filters:
             branches:
               only: master
+
+  nightly-coverage:
+    triggers:
+      - schedule:
+          cron: "0 18 * * *"
+          filters:
+            branches:
+              only: dev
+    jobs:
+      - coverage
+
+  nightly-linters:
+    triggers:
+      - schedule:
+          cron: "0 19 * * *"
+          filters:
+            branches:
+              only: dev
+    jobs:
+      - linters
