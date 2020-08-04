@@ -61,8 +61,6 @@ func transformToTxs(event blockchain.ChainEvent) []*Tx {
 		// value
 		value := hexutil.EncodeBig(rawTx.Value())
 
-		// transaction hash
-
 		// status
 		var status int
 		if receipts[idx].Status != types.ReceiptStatusSuccessful {
