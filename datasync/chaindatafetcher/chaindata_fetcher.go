@@ -29,7 +29,7 @@ type ChainDataFetcher struct {
 
 	wg sync.WaitGroup
 
-	repo Repository
+	repo repository
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
