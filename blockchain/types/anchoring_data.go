@@ -78,10 +78,17 @@ func (data *AnchoringDataInternalType0) GetBlockNumber() *big.Int {
 	return data.BlockNumber
 }
 
-func NewAnchoringDataType0(block *Block, blockCount *big.Int, txCount *big.Int) (*AnchoringData, error) {
-	data := &AnchoringDataInternalType0{block.Hash(), block.Header().TxHash,
-		block.Header().ParentHash, block.Header().ReceiptHash,
-		block.Header().Root, block.Header().Number, blockCount, txCount}
+func NewAnchoringDataType0(block *Block, blockCount uint64, txCount uint64) (*AnchoringData, error) {
+	data := &AnchoringDataInternalType0{
+		block.Hash(),
+		block.Header().TxHash,
+		block.Header().ParentHash,
+		block.Header().ReceiptHash,
+		block.Header().Root,
+		block.Header().Number,
+		new(big.Int).SetUint64(blockCount),
+		new(big.Int).SetUint64(txCount),
+	}
 	encodedCCTxData, err := rlp.EncodeToBytes(data)
 	if err != nil {
 		return nil, err
