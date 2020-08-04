@@ -34,7 +34,7 @@ var TxFilteringTypes = map[types.TxType]bool{
 func transformToTxs(event blockchain.ChainEvent) []*Tx {
 	var txs []*Tx
 	// TODO-ChainDataFetcher extract EOAs in order to expire the KAS cache
-	//expiredEOAs := make(map[string]struct{})
+	//expiredEOAs := make(map[common.Address]struct{})
 
 	block := event.Block
 	head := block.Header()
@@ -86,8 +86,8 @@ func transformToTxs(event blockchain.ChainEvent) []*Tx {
 			feeRatio = uint(ratio)
 		}
 		// TODO-ChainDataFetcher extract EOAs in order to expire the KAS cache
-		//expiredEOAs[from.String()] = struct{}{}
-		//expiredEOAs[to.String()] = struct{}{}
+		//expiredEOAs[from] = struct{}{}
+		//expiredEOAs[to] = struct{}{}
 
 		tx := &Tx{
 			Timestamp:       head.Time.Int64(),
