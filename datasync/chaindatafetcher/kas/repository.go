@@ -39,7 +39,7 @@ func NewRepository(user, password, host, port, name string) (*repository, error)
 	for i := 0; i < maxDBRetryCount; i++ {
 		db, err = gorm.Open("mysql", endpoint)
 		if err != nil {
-			logger.Info("Retrying to connect DB", "endpoint", endpoint, "err", err)
+			logger.Warn("Retrying to connect DB", "endpoint", endpoint, "err", err)
 			time.Sleep(DBRetryInterval)
 		} else {
 			// TODO-ChainDataFetcher insert other options such as maxOpen, maxIdle, maxLifetime, etc.
