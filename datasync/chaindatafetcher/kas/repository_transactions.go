@@ -110,12 +110,9 @@ func transformToTxs(event blockchain.ChainEvent) []*Tx {
 }
 
 // InsertTransactions inserts transactions in the given chain event into KAS database.
+// The transactions are divided into chunkUnit because of max number of placeholders.
 func (r *repository) InsertTransactions(event blockchain.ChainEvent) error {
-	return r.insertTransactions(transformToTxs(event))
-}
-
-// insertTransactions inserts the given transactions divided into chunkUnit because of max number of place holders.
-func (r *repository) insertTransactions(txs []*Tx) error {
+	txs := transformToTxs(event)
 	chunkUnit := maxPlaceholders / placeholdersPerTxItem
 	var chunks []*Tx
 
