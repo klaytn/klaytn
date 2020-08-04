@@ -33,7 +33,10 @@ type ChainDataFetcher struct {
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
-	repo := kas.NewRepository(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	repo, err := kas.NewRepository(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	if err != nil {
+		return nil, err
+	}
 	return &ChainDataFetcher{
 		config:      cfg,
 		chainCh:     make(chan blockchain.ChainEvent, cfg.BlockChannelSize),

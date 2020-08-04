@@ -4,6 +4,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"github.com/klaytn/klaytn/log"
+	"time"
 )
 
 const (
@@ -14,6 +15,9 @@ const (
 	maxPlaceholders = 65535
 
 	placeholdersPerTxItem = 13
+
+	maxDBRetryCount = 20
+	DBRetryInterval = 1 * time.Second
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
@@ -26,17 +30,26 @@ func getEndpoint(user, password, host, port, name string) string {
 	return user + ":" + password + "@tcp(" + host + ":" + port + ")/" + name + "?parseTime=True&charset=utf8mb4"
 }
 
-func NewRepository(user, password, host, port, name string) *repository {
+func NewRepository(user, password, host, port, name string) (*repository, error) {
 	endpoint := getEndpoint(user, password, host, port, name)
-	db, err := gorm.Open("mysql", endpoint)
-	if err != nil {
-		logger.Crit("Connecting to DB is failed", "endpoint", endpoint, "err", err)
+	var (
+		db  *gorm.DB
+		err error
+	)
+	for i := 0; i < maxDBRetryCount; i++ {
+		db, err = gorm.Open("mysql", endpoint)
+		if err != nil {
+			logger.Info("Retrying to connect DB", "endpoint", endpoint, "err", err)
+			time.Sleep(DBRetryInterval)
+		} else {
+			// TODO-ChainDataFetcher insert other options such as maxOpen, maxIdle, maxLifetime, etc.
+			//db.DB().SetMaxOpenConns(maxOpen)
+			//db.DB().SetMaxIdleConns(maxIdle)
+			//db.DB().SetConnMaxLifetime(time.Duration(maxLifetime) * time.Second)
+
+			return &repository{db: db}, nil
+		}
 	}
-
-	// TODO-ChainDataFetcher insert other options such as maxOpen, maxIdle, maxLifetime, etc.
-	//db.DB().SetMaxOpenConns(maxOpen)
-	//db.DB().SetMaxIdleConns(maxIdle)
-	//db.DB().SetConnMaxLifetime(time.Duration(maxLifetime) * time.Second)
-
-	return &repository{db: db}
+	logger.Error("Failed to connect to the database", "endpoint", endpoint, "err", err)
+	return nil, err
 }
