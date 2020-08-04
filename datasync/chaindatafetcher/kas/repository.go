@@ -14,7 +14,8 @@ const (
 
 	maxPlaceholders = 65535
 
-	placeholdersPerTxItem = 13
+	placeholdersPerTxItem          = 13
+	placeholdersPerKCTTransferItem = 7
 
 	maxDBRetryCount = 20
 	DBRetryInterval = 1 * time.Second
