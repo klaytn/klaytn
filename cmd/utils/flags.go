@@ -592,6 +592,39 @@ var (
 		Name:  "anchoring",
 		Usage: "Enable anchoring for service chain",
 	}
+	// KAS
+	ServiceChainKASAnchorFlag = cli.BoolFlag{
+		Name:  "kas.anchor",
+		Usage: "Enable KAS anchoring for service chain",
+	}
+	ServiceChainKASAnchorPeriodFlag = cli.Uint64Flag{
+		Name:  "kas.anchor.period",
+		Usage: "The period to anchor service chain blocks to KAS",
+		Value: 1,
+	}
+	ServiceChainKASAnchorUrlFlag = cli.StringFlag{
+		Name:  "kas.anchor.url",
+		Usage: "The url for KAS anchor",
+		Value: "http://anchor.wallet-api.dev.klaytn.com/v1/anchor", // TODO-Klaytn need to change production server
+	}
+	ServiceChainKASAnchorOperatorFlag = cli.StringFlag{
+		Name:  "kas.anchor.operator",
+		Usage: "The operator address for KAS anchor",
+	}
+	ServiceChainKASXKRNFlag = cli.StringFlag{
+		Name:  "kas.xkrn",
+		Usage: "The x-krn for KAS",
+		Value: "krn:1001:anchor:test:operator-pool:op1",
+	}
+	ServiceChainKASAccessKeyFlag = cli.StringFlag{
+		Name:  "kas.accesskey",
+		Usage: "The access key id for KAS",
+	}
+	ServiceChainKASSecreteKeyFlag = cli.StringFlag{
+		Name:  "kas.secretkey",
+		Usage: "The secret key for KAS",
+	}
+
 	// ChainDataFetcher
 	EnableChainDataFetcherFlag = cli.BoolFlag{
 		Name:  "chaindatafetcher",

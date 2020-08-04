@@ -284,6 +284,35 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
 	cfg.ServiceChainConsensus = utils.ServiceChainConsensusFlag.Value
 
+	cfg.KASAnchor = ctx.GlobalBool(utils.ServiceChainKASAnchorFlag.Name)
+	if cfg.KASAnchor {
+		cfg.KASAnchorPeriod = ctx.GlobalUint64(utils.ServiceChainKASAnchorPeriodFlag.Name)
+
+		cfg.KASAnchorUrl = ctx.GlobalString(utils.ServiceChainKASAnchorUrlFlag.Name)
+		if cfg.KASAnchorOperator == "" {
+			logger.Crit("KAS anchor url should be set", "key", utils.ServiceChainKASAnchorUrlFlag.Name)
+		}
+
+		cfg.KASAnchorOperator = ctx.GlobalString(utils.ServiceChainKASAnchorOperatorFlag.Name)
+		if cfg.KASAnchorOperator == "" {
+			logger.Crit("KAS anchor operator should be set", "key", utils.ServiceChainKASAnchorOperatorFlag.Name)
+		}
+
+		cfg.KASAccessKey = ctx.GlobalString(utils.ServiceChainKASAccessKeyFlag.Name)
+		if cfg.KASAnchorOperator == "" {
+			logger.Crit("KAS access key should be set", "key", utils.ServiceChainKASAccessKeyFlag.Name)
+		}
+
+		cfg.KASSecreteKey = ctx.GlobalString(utils.ServiceChainKASSecreteKeyFlag.Name)
+		if cfg.KASAnchorOperator == "" {
+			logger.Crit("KAS secret key should be set", "key", utils.ServiceChainKASSecreteKeyFlag.Name)
+		}
+
+		cfg.KASXKRN = ctx.GlobalString(utils.ServiceChainKASXKRNFlag.Name)
+		if cfg.KASAnchorOperator == "" {
+			logger.Crit("KAS x-krn should be set", "key", utils.ServiceChainKASXKRNFlag.Name)
+		}
+	}
 	return cfg
 }
 

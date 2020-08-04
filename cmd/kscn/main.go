@@ -76,6 +76,14 @@ var scnHelpFlagGroups = []utils.FlagGroup{
 			utils.VTRecoveryIntervalFlag,
 			utils.ServiceChainNewAccountFlag,
 			utils.ServiceChainAnchoringFlag,
+			// KAS
+			utils.ServiceChainKASAnchorFlag,
+			utils.ServiceChainKASAnchorPeriodFlag,
+			utils.ServiceChainKASAnchorUrlFlag,
+			utils.ServiceChainKASAnchorOperatorFlag,
+			utils.ServiceChainKASAccessKeyFlag,
+			utils.ServiceChainKASSecreteKeyFlag,
+			utils.ServiceChainKASXKRNFlag,
 		},
 	},
 	{
