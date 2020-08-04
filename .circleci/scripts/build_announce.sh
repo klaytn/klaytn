@@ -8,8 +8,7 @@ CIRCLE_PR_NUMBER=$(hub pr list -s open -L 10 -f "%I")
 
 PACKAGES="kcn kpn ken kscn kspn ksen kbn kgen homi"
 BAOBAB_PACKAGES="kcn kpn ken"
-#PACKAGE_PREFIX="http://packages.klaytn.net/klaytn/${VERSION}"
-PACKAGE_PREFIX="http://package-dev.klaytn.net/klaytn/${VERSION}"
+PACKAGE_PREFIX="http://packages.klaytn.net/klaytn/${VERSION}"
 
 LINUX_PACKAGE_LINKS=""
 DARWIN_PACKAGE_LINKS=""
@@ -37,8 +36,7 @@ COMMENT_ROWS="<ul><li>Linux: ${LINUX_PACKAGE_LINKS}</li><li>Darwin: ${DARWIN_PAC
 COMMENT_HEAD="Builds ready [${SHORT_SHA1}]"
 COMMENT_BODY="<details><summary>${COMMENT_HEAD}</summary>${COMMENT_ROWS}</details>"
 
-#POST_COMMENT_URI="https://api.github.com/repos/klaytn/klaytn/issues/${CIRCLE_PR_NUMBER}/comments"
-POST_COMMENT_URI="https://api.github.com/repos/whoisxx/klaytn-1/issues/${CIRCLE_PR_NUMBER}/comments"
+POST_COMMENT_URI="https://api.github.com/repos/klaytn/klaytn/issues/${CIRCLE_PR_NUMBER}/comments"
 
 curl -i --request POST ${POST_COMMENT_URI} \
 -H 'Content-Type: application/json' \
