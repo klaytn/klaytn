@@ -60,14 +60,14 @@ func (data *AnchoringDataLegacy) GetBlockNumber() *big.Int {
 }
 
 type AnchoringDataInternalType0 struct {
-	BlockHash     common.Hash
-	TxHash        common.Hash
-	ParentHash    common.Hash
-	ReceiptHash   common.Hash
-	StateRootHash common.Hash
-	BlockNumber   *big.Int
-	BlockCount    *big.Int
-	TxCount       *big.Int
+	BlockHash     common.Hash `json:"BlockHash"`
+	TxHash        common.Hash `json:"TxHash"`
+	ParentHash    common.Hash `json:"ParentHash"`
+	ReceiptHash   common.Hash `json:"ReceiptHash"`
+	StateRootHash common.Hash `json:"StateRootHash"`
+	BlockNumber   *big.Int    `json:"BlockNumber"`
+	BlockCount    *big.Int    `json:"BlockCount"`
+	TxCount       *big.Int    `json:"TxCount"`
 }
 
 func (data *AnchoringDataInternalType0) GetBlockHash() common.Hash {
