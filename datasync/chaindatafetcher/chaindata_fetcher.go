@@ -140,7 +140,7 @@ func (f *ChainDataFetcher) resLoop() {
 			return
 		case res := <-f.resCh:
 			if res.err != nil {
-				logger.Error("db insertion is failed", "blockNumber", res.blockNumber, "err", res.err)
+				logger.Error("db insertion is failed", "blockNumber", res.blockNumber, "reqType", res.reqType, "err", res.err)
 				// TODO-ChainDataFetcher add retry logic when data insertion is failed
 			} else {
 				f.updateCheckpoint(res.blockNumber.Uint64())
