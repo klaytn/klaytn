@@ -30,8 +30,8 @@ var TxFilteringTypes = map[types.TxType]bool{
 	types.TxTypeFeeDelegatedSmartContractExecutionWithRatio: true,
 }
 
-// transformToKasTxs transforms a chain event to transaction list according to the KAS database scheme.
-func transformToKasTxs(event blockchain.ChainEvent) []*Tx {
+// transformToTxs transforms a chain event to transaction list according to the KAS database scheme.
+func transformToTxs(event blockchain.ChainEvent) []*Tx {
 	var txs []*Tx
 	// TODO-ChainDataFetcher extract EOAs in order to expire the KAS cache
 	//expiredEOAs := make(map[string]struct{})
@@ -113,11 +113,11 @@ func transformToKasTxs(event blockchain.ChainEvent) []*Tx {
 
 // InsertTransactions inserts transactions in the given chain event into KAS database.
 func (r *repository) InsertTransactions(event blockchain.ChainEvent) error {
-	return r.InsertKasTransactions(transformToKasTxs(event))
+	return r.insertTransactions(transformToTxs(event))
 }
 
-// InsertKasTransactions inserts the given transactions divided into chunkUnit because of max number of place holders.
-func (r *repository) InsertKasTransactions(txs []*Tx) error {
+// insertTransactions inserts the given transactions divided into chunkUnit because of max number of place holders.
+func (r *repository) insertTransactions(txs []*Tx) error {
 	chunkUnit := maxPlaceholders / placeholdersPerTxItem
 	var chunks []*Tx
 
@@ -130,7 +130,7 @@ func (r *repository) InsertKasTransactions(txs []*Tx) error {
 			txs = nil
 		}
 
-		if err := r.insertKasTransactions(chunks); err != nil {
+		if err := r.bulkInsertTransactions(chunks); err != nil {
 			logger.Error("failed to insert KAS transactions", "err", err, "numTxs", len(chunks))
 			return err
 		}
@@ -139,8 +139,8 @@ func (r *repository) InsertKasTransactions(txs []*Tx) error {
 	return nil
 }
 
-// insertKasTransactions inserts the given transactions in multiple rows at once.
-func (r *repository) insertKasTransactions(txs []*Tx) error {
+// bulkInsertTransactions inserts the given transactions in multiple rows at once.
+func (r *repository) bulkInsertTransactions(txs []*Tx) error {
 	var valueStrings []string
 	var valueArgs []interface{}
 
