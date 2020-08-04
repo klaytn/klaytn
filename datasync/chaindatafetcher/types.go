@@ -5,7 +5,7 @@ import (
 	"math/big"
 )
 
-type requestType int
+type requestType uint
 
 const (
 	requestTypeTransaction = requestType(1) << iota
