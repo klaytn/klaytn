@@ -79,12 +79,13 @@ func transformToTxs(event blockchain.ChainEvent) []*Tx {
 		if rawTx.IsFeeDelegatedTransaction() {
 			payer, _ := rawTx.FeePayer()
 			feePayer = payer.Bytes()
+
+			ratio, ok := rawTx.FeeRatio()
+			if ok {
+				feeRatio = uint(ratio)
+			}
 		}
 
-		ratio, ok := rawTx.FeeRatio()
-		if ok {
-			feeRatio = uint(ratio)
-		}
 		// TODO-ChainDataFetcher extract EOAs in order to expire the KAS cache
 		//expiredEOAs[from] = struct{}{}
 		//expiredEOAs[to] = struct{}{}
