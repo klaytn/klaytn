@@ -618,7 +618,7 @@ var (
 		Name:  "kas.accesskey",
 		Usage: "The access key id for KAS",
 	}
-	KASServiceChainSecreteKeyFlag = cli.StringFlag{
+	KASServiceChainSecretKeyFlag = cli.StringFlag{
 		Name:  "kas.secretkey",
 		Usage: "The secret key for KAS",
 	}

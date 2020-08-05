@@ -189,7 +189,7 @@ var KSCNFlags = []cli.Flag{
 	utils.KASServiceChainAnchorPeriodFlag,
 	utils.KASServiceChainAnchorUrlFlag,
 	utils.KASServiceChainAnchorOperatorFlag,
-	utils.KASServiceChainSecreteKeyFlag,
+	utils.KASServiceChainSecretKeyFlag,
 	utils.KASServiceChainAccessKeyFlag,
 	utils.KASServiceChainXKRNFlag,
 }
@@ -216,7 +216,7 @@ var KSPNFlags = []cli.Flag{
 	utils.KASServiceChainAnchorPeriodFlag,
 	utils.KASServiceChainAnchorUrlFlag,
 	utils.KASServiceChainAnchorOperatorFlag,
-	utils.KASServiceChainSecreteKeyFlag,
+	utils.KASServiceChainSecretKeyFlag,
 	utils.KASServiceChainAccessKeyFlag,
 	utils.KASServiceChainXKRNFlag,
 }
@@ -239,7 +239,7 @@ var KSENFlags = []cli.Flag{
 	utils.KASServiceChainAnchorPeriodFlag,
 	utils.KASServiceChainAnchorUrlFlag,
 	utils.KASServiceChainAnchorOperatorFlag,
-	utils.KASServiceChainSecreteKeyFlag,
+	utils.KASServiceChainSecretKeyFlag,
 	utils.KASServiceChainAccessKeyFlag,
 	utils.KASServiceChainXKRNFlag,
 	// DBSyncer

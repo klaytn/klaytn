@@ -80,7 +80,7 @@ var senHelpFlagGroups = []utils.FlagGroup{
 			utils.KASServiceChainAnchorUrlFlag,
 			utils.KASServiceChainAnchorOperatorFlag,
 			utils.KASServiceChainAccessKeyFlag,
-			utils.KASServiceChainSecreteKeyFlag,
+			utils.KASServiceChainSecretKeyFlag,
 			utils.KASServiceChainXKRNFlag,
 		},
 	},
