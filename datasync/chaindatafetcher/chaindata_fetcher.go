@@ -2,6 +2,7 @@ package chaindatafetcher
 
 import (
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
@@ -20,23 +21,30 @@ type ChainDataFetcher struct {
 	chainCh  chan blockchain.ChainEvent
 	chainSub event.Subscription
 
-	reqCh  chan uint64 // TODO-ChainDataFetcher add logic to insert new requests from APIs to this channel
-	resCh  chan uint64
+	reqCh  chan *request // TODO-ChainDataFetcher add logic to insert new requests from APIs to this channel
+	resCh  chan *response
 	stopCh chan struct{}
 
 	numHandlers int
 
 	wg sync.WaitGroup
+
+	repo repository
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
+	repo, err := kas.NewRepository(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	if err != nil {
+		return nil, err
+	}
 	return &ChainDataFetcher{
 		config:      cfg,
 		chainCh:     make(chan blockchain.ChainEvent, cfg.BlockChannelSize),
-		reqCh:       make(chan uint64, cfg.JobChannelSize),
-		resCh:       make(chan uint64, cfg.JobChannelSize),
+		reqCh:       make(chan *request, cfg.JobChannelSize),
+		resCh:       make(chan *response, cfg.JobChannelSize),
 		stopCh:      make(chan struct{}),
 		numHandlers: cfg.NumHandlers,
+		repo:        repo,
 	}, nil
 }
 
@@ -95,8 +103,15 @@ func (f *ChainDataFetcher) handleRequest() {
 			logger.Info("handleRequest is stopped")
 			return
 		case req := <-f.reqCh:
-			// TODO-ChainDataFetcher do handle new request
-			f.resCh <- req
+			res := &response{
+				reqType:     requestTypeTransaction,
+				blockNumber: req.event.Block.Number(),
+				err:         nil,
+			}
+
+			res.err = f.repo.InsertTransactions(req.event)
+			// TODO-ChainDataFetcher insert other types of data
+			f.resCh <- res
 		}
 	}
 }
@@ -110,8 +125,10 @@ func (f *ChainDataFetcher) reqLoop() {
 			logger.Info("stopped reqLoop for chaindatafetcher")
 			return
 		case ev := <-f.chainCh:
-			num := ev.Block.NumberU64()
-			f.reqCh <- num
+			f.reqCh <- &request{
+				reqType: requestTypeTransaction,
+				event:   ev,
+			}
 		}
 	}
 }
@@ -125,7 +142,12 @@ func (f *ChainDataFetcher) resLoop() {
 			logger.Info("stopped resLoop for chaindatafetcher")
 			return
 		case res := <-f.resCh:
-			f.updateCheckpoint(res)
+			if res.err != nil {
+				logger.Error("db insertion is failed", "blockNumber", res.blockNumber, "reqType", res.reqType, "err", res.err)
+				// TODO-ChainDataFetcher add retry logic when data insertion is failed
+			} else {
+				f.updateCheckpoint(res.blockNumber.Uint64())
+			}
 		}
 	}
 }
