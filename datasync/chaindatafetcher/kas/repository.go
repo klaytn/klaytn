@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	maxTransactionCount         = int64(1000000)
-	maxTransactionLogCount      = int64(100000)
-	maxInternalTransactionCount = int64(10000)
+	maxTxCountPerBlock      = int64(1000000)
+	maxTxLogCountPerTx      = int64(100000)
+	maxInternalTxCountPerTx = int64(10000)
 
 	maxPlaceholders = 65535
 

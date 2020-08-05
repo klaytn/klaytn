@@ -41,7 +41,7 @@ func transformToTxs(event blockchain.ChainEvent) []*Tx {
 	receipts := event.Receipts
 
 	for idx, rawTx := range block.Transactions() {
-		txId := head.Number.Int64()*maxTransactionCount*maxTransactionLogCount + int64(idx)*maxInternalTransactionCount
+		txId := head.Number.Int64()*maxTxCountPerBlock*maxTxLogCountPerTx + int64(idx)*maxInternalTxCountPerTx
 
 		// from
 		var from common.Address
