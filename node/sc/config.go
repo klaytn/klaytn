@@ -101,7 +101,7 @@ type SCConfig struct {
 	KASAnchorPeriod   uint64
 	KASAnchorOperator string
 	KASAccessKey      string
-	KASSecretKey     string
+	KASSecretKey      string
 	KASXKRN           string
 }
 
