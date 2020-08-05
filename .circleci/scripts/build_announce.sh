@@ -25,9 +25,9 @@ done
 
 for i in ${BAOBAB_PACKAGES}
 do
-    BAOBAB_LINUX_PACKAGE_LINKS+="<a href="${PACKAGE_PREFIX}/$i-${VERSION}-0-linux-amd64.tar.gz">$i</a>"
+    BAOBAB_LINUX_PACKAGE_LINKS+="<a href="${PACKAGE_PREFIX}/$i-baobab-${VERSION}-0-linux-amd64.tar.gz">$i</a>"
     BAOBAB_LINUX_PACKAGE_LINKS+=" "
-    BAOBAB_DARWIN_PACKAGE_LINKS+="<a href="${PACKAGE_PREFIX}/$i-${VERSION}-0-darwin-10.10-amd64.tar.gz">$i</a>"
+    BAOBAB_DARWIN_PACKAGE_LINKS+="<a href="${PACKAGE_PREFIX}/$i-baobab-${VERSION}-0-darwin-10.10-amd64.tar.gz">$i</a>"
     BAOBAB_DARWIN_PACKAGE_LINKS+=" "
 done
 
