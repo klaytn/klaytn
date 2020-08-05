@@ -23,7 +23,10 @@ type Repository interface {
 	InsertTransactions(event blockchain.ChainEvent) error
 	InsertTokenTransfers(event blockchain.ChainEvent) error
 	InsertTraceResults(event blockchain.ChainEvent) error
+	InsertContracts(event blockchain.ChainEvent) error
 
 	ReadCheckpoint() (int64, error)
 	WriteCheckpoint(checkpoint int64) error
+
+	SetComponent(component interface{})
 }

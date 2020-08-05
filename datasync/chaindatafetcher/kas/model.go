@@ -16,11 +16,16 @@
 
 package kas
 
+import "time"
+
 const (
 	TxTableName          = "klay_transfers"
 	KctTransferTableName = "kct_transfers"
 	RevertedTxTableName  = "reverted_transactions"
 	MetadataTableName    = "fetcher_metadata"
+	ContractTableName       = "contract"
+	KctFtMetadataTableName  = "kct_ft_metadata"
+	KctNftMetadataTableName = "kct_nft_metadata"
 )
 
 type Tx struct {
@@ -76,4 +81,54 @@ type FetcherMetadata struct {
 
 func (FetcherMetadata) TableName() string {
 	return MetadataTableName
+}
+
+type Contract struct {
+	Id      int    `gorm:"column:id;type:INT AUTO_INCREMENT;PRIMARY_KEY"`
+	Address []byte `gorm:"column:address;type:VARBINARY(20);UNIQUE_INDEX;NOT NULL"`
+}
+
+func (Contract) TableName() string {
+	return ContractTableName
+}
+
+type FT struct {
+	Id          int        `gorm:"column:id;type:INT AUTO_INCREMENT;PRIMARY_KEY"`
+	Address     []byte     `gorm:"column:address;type:VARBINARY(20);UNIQUE_INDEX;NOT NULL"`
+	Name        string     `gorm:"column:name;type:VARCHAR(30)"`
+	Symbol      string     `gorm:"column:symbol;type:VARCHAR(20)"`
+	Decimal     int        `gorm:"column:decimal;type:TINYINT"`
+	TotalSupply string     `gorm:"column:totalSupply;type:VARCHAR(80)"`
+	SiteUrl     string     `gorm:"column:siteUrl;type:VARCHAR(200)"`
+	IconUrl     string     `gorm:"column:iconUrl;type:VARCHAR(200)"`
+	Disable     bool       `gorm:"column:disable;type:TINYINT(1);DEFAULT:0"`
+	Type        int        `gorm:"column:type;type:TINYINT;DEFAULT:0"`
+	Status      int        `gorm:"column:status;type:TINYINT;DEFAULT:0"`
+	ErrorLog    string     `gorm:"column:errorLog;type:VARCHAR(255);"`
+	CreatedAt   *time.Time `gorm:"column:createdAt;type:DATETIME;DEFAULT:NULL"`
+	UpdatedAt   *time.Time `gorm:"column:updatedAt;type:DATETIME;DEFAULT:NULL"`
+	DeletedAt   *time.Time `gorm:"column:deletedAt;type:DATETIME;DEFAULT:NULL"`
+}
+
+func (FT) TableName() string {
+	return KctFtMetadataTableName
+}
+
+type NFT struct {
+	Id          int        `gorm:"column:id;type:INT AUTO_INCREMENT;PRIMARY_KEY"`
+	Address     []byte     `gorm:"column:address;type:VARBINARY(20);UNIQUE_INDEX;NOT NULL"`
+	Name        string     `gorm:"column:name;type:VARCHAR(30)"`
+	Symbol      string     `gorm:"column:symbol;type:VARCHAR(20)"`
+	TotalSupply string     `gorm:"column:totalSupply;type:VARCHAR(80)"`
+	Disable     bool       `gorm:"column:disable;type:TINYINT(1);DEFAULT:0"`
+	Type        int        `gorm:"column:type;type:TINYINT;DEFAULT:0"`
+	Status      int        `gorm:"column:status;type:TINYINT;DEFAULT:0"`
+	ErrorLog    string     `gorm:"column:errorLog;type:VARCHAR(255);"`
+	CreatedAt   *time.Time `gorm:"column:createdAt;type:DATETIME;DEFAULT:NULL"`
+	UpdatedAt   *time.Time `gorm:"column:updatedAt;type:DATETIME;DEFAULT:NULL"`
+	DeletedAt   *time.Time `gorm:"column:deletedAt;type:DATETIME;DEFAULT:NULL"`
+}
+
+func (NFT) TableName() string {
+	return KctNftMetadataTableName
 }

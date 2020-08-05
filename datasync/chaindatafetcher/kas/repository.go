@@ -19,6 +19,7 @@ package kas
 import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
+	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/log"
 	"time"
 )
@@ -33,6 +34,9 @@ const (
 	placeholdersPerTxItem          = 13
 	placeholdersPerKCTTransferItem = 7
 	placeholdersPerRevertedTxItem  = 5
+	placeholdersPerContractItem    = 1
+	placeholdersPerFTItem          = 3
+	placeholdersPerNFTItem         = 3
 
 	maxDBRetryCount = 20
 	DBRetryInterval = 1 * time.Second
@@ -42,6 +46,9 @@ var logger = log.NewModuleLogger(log.ChainDataFetcher)
 
 type repository struct {
 	db *gorm.DB
+
+	contractCaller *contractCaller
+	blockchainApi  *api.PublicBlockChainAPI
 }
 
 func getEndpoint(user, password, host, port, name string) string {
@@ -70,4 +77,11 @@ func NewRepository(user, password, host, port, name string) (*repository, error)
 	}
 	logger.Error("Failed to connect to the database", "endpoint", endpoint, "err", err)
 	return nil, err
+}
+
+func (r *repository) SetComponent(component interface{}) {
+	switch c := component.(type) {
+	case *api.PublicBlockChainAPI:
+		r.blockchainApi = c
+	}
 }
