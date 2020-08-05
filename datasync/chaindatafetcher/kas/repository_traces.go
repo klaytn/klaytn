@@ -10,11 +10,12 @@ import (
 	"strings"
 )
 
+var emptyTraceResult = &vm.InternalTxTrace{
+	Value: "0x0",
+}
+
 func isInternalTxResult(trace *vm.InternalTxTrace) bool {
-	emptyResult := &vm.InternalTxTrace{
-		Value: "0x0",
-	}
-	return !reflect.DeepEqual(trace, emptyResult)
+	return !reflect.DeepEqual(trace, emptyTraceResult)
 }
 
 // getMotherTx returns a entry transaction which may call internal transactions.
