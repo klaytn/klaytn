@@ -592,6 +592,37 @@ var (
 		Name:  "anchoring",
 		Usage: "Enable anchoring for service chain",
 	}
+	// KAS
+	KASServiceChainAnchorFlag = cli.BoolFlag{
+		Name:  "kas.sc.anchor",
+		Usage: "Enable KAS anchoring for service chain",
+	}
+	KASServiceChainAnchorPeriodFlag = cli.Uint64Flag{
+		Name:  "kas.sc.anchor.period",
+		Usage: "The period to anchor service chain blocks to KAS",
+		Value: 1,
+	}
+	KASServiceChainAnchorUrlFlag = cli.StringFlag{
+		Name:  "kas.sc.anchor.url",
+		Usage: "The url for KAS anchor",
+	}
+	KASServiceChainAnchorOperatorFlag = cli.StringFlag{
+		Name:  "kas.sc.anchor.operator",
+		Usage: "The operator address for KAS anchor",
+	}
+	KASServiceChainXKRNFlag = cli.StringFlag{
+		Name:  "kas.xkrn",
+		Usage: "The x-krn for KAS",
+	}
+	KASServiceChainAccessKeyFlag = cli.StringFlag{
+		Name:  "kas.accesskey",
+		Usage: "The access key id for KAS",
+	}
+	KASServiceChainSecretKeyFlag = cli.StringFlag{
+		Name:  "kas.secretkey",
+		Usage: "The secret key for KAS",
+	}
+
 	// ChainDataFetcher
 	EnableChainDataFetcherFlag = cli.BoolFlag{
 		Name:  "chaindatafetcher",

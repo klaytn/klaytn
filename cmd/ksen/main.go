@@ -74,6 +74,14 @@ var senHelpFlagGroups = []utils.FlagGroup{
 			utils.VTRecoveryFlag,
 			utils.VTRecoveryIntervalFlag,
 			utils.ServiceChainAnchoringFlag,
+			// KAS
+			utils.KASServiceChainAnchorFlag,
+			utils.KASServiceChainAnchorPeriodFlag,
+			utils.KASServiceChainAnchorUrlFlag,
+			utils.KASServiceChainAnchorOperatorFlag,
+			utils.KASServiceChainAccessKeyFlag,
+			utils.KASServiceChainSecretKeyFlag,
+			utils.KASServiceChainXKRNFlag,
 		},
 	},
 	{

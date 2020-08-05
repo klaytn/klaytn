@@ -184,6 +184,14 @@ var KSCNFlags = []cli.Flag{
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainNewAccountFlag,
 	utils.ServiceChainAnchoringFlag,
+	// KAS
+	utils.KASServiceChainAnchorFlag,
+	utils.KASServiceChainAnchorPeriodFlag,
+	utils.KASServiceChainAnchorUrlFlag,
+	utils.KASServiceChainAnchorOperatorFlag,
+	utils.KASServiceChainSecretKeyFlag,
+	utils.KASServiceChainAccessKeyFlag,
+	utils.KASServiceChainXKRNFlag,
 }
 
 var KSPNFlags = []cli.Flag{
@@ -203,6 +211,14 @@ var KSPNFlags = []cli.Flag{
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainNewAccountFlag,
 	utils.ServiceChainAnchoringFlag,
+	// KAS
+	utils.KASServiceChainAnchorFlag,
+	utils.KASServiceChainAnchorPeriodFlag,
+	utils.KASServiceChainAnchorUrlFlag,
+	utils.KASServiceChainAnchorOperatorFlag,
+	utils.KASServiceChainSecretKeyFlag,
+	utils.KASServiceChainAccessKeyFlag,
+	utils.KASServiceChainXKRNFlag,
 }
 
 var KSENFlags = []cli.Flag{
@@ -218,6 +234,14 @@ var KSENFlags = []cli.Flag{
 	utils.VTRecoveryFlag,
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainAnchoringFlag,
+	// KAS
+	utils.KASServiceChainAnchorFlag,
+	utils.KASServiceChainAnchorPeriodFlag,
+	utils.KASServiceChainAnchorUrlFlag,
+	utils.KASServiceChainAnchorOperatorFlag,
+	utils.KASServiceChainSecretKeyFlag,
+	utils.KASServiceChainAccessKeyFlag,
+	utils.KASServiceChainXKRNFlag,
 	// DBSyncer
 	utils.EnableDBSyncerFlag,
 	utils.DBHostFlag,
