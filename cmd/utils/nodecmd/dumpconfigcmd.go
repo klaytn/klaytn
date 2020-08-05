@@ -289,7 +289,7 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 		cfg.KASAnchorPeriod = ctx.GlobalUint64(utils.KASServiceChainAnchorPeriodFlag.Name)
 
 		cfg.KASAnchorUrl = ctx.GlobalString(utils.KASServiceChainAnchorUrlFlag.Name)
-		if cfg.KASAnchorOperator == "" {
+		if cfg.KASAnchorUrl == "" {
 			logger.Crit("KAS anchor url should be set", "key", utils.KASServiceChainAnchorUrlFlag.Name)
 		}
 
@@ -299,17 +299,17 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 		}
 
 		cfg.KASAccessKey = ctx.GlobalString(utils.KASServiceChainAccessKeyFlag.Name)
-		if cfg.KASAnchorOperator == "" {
+		if cfg.KASAccessKey == "" {
 			logger.Crit("KAS access key should be set", "key", utils.KASServiceChainAccessKeyFlag.Name)
 		}
 
 		cfg.KASSecreteKey = ctx.GlobalString(utils.KASServiceChainSecreteKeyFlag.Name)
-		if cfg.KASAnchorOperator == "" {
+		if cfg.KASSecreteKey == "" {
 			logger.Crit("KAS secret key should be set", "key", utils.KASServiceChainSecreteKeyFlag.Name)
 		}
 
 		cfg.KASXKRN = ctx.GlobalString(utils.KASServiceChainXKRNFlag.Name)
-		if cfg.KASAnchorOperator == "" {
+		if cfg.KASXKRN == "" {
 			logger.Crit("KAS x-krn should be set", "key", utils.KASServiceChainXKRNFlag.Name)
 		}
 	}
