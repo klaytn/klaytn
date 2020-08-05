@@ -50,13 +50,11 @@ func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, motherTx *T
 	}
 
 	var txs []*Tx
-	if !isFirstCall {
-		if trace.Value != "0x0" {
-			*offset++
-			newTx := *motherTx
-			newTx.TransactionId += *offset
-			txs = append(txs, &newTx)
-		}
+	if !isFirstCall && trace.Value != "0x0" {
+		*offset++
+		newTx := *motherTx
+		newTx.TransactionId += *offset
+		txs = append(txs, &newTx)
 	}
 
 	if len(trace.Calls) > 0 {
