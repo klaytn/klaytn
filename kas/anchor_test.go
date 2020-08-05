@@ -38,6 +38,18 @@ var (
 	errTest = errors.New("test error")
 )
 
+func testAnchorData() *types.AnchoringDataInternalType0 {
+	return &types.AnchoringDataInternalType0{
+		BlockHash:     common.HexToHash("0"),
+		TxHash:        common.HexToHash("1"),
+		ParentHash:    common.HexToHash("2"),
+		ReceiptHash:   common.HexToHash("3"),
+		StateRootHash: common.HexToHash("4"),
+		BlockNumber:   big.NewInt(5),
+		BlockCount:    big.NewInt(6),
+		TxCount:       big.NewInt(7),
+	}
+}
 func TestSendRequest(t *testing.T) {
 	config := KASConfig{}
 	anchor := NewKASAnchor(&config, nil, nil)
