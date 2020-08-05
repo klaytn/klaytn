@@ -33,6 +33,12 @@ var (
 	errInvalidBlockNumber = errors.New("invalid block number")
 )
 
+//go:generate mockgen -destination=./mocks/anchordb_mock.go -package=mocks github.com/klaytn/klaytn/kas AnchorDB
+type AnchorDB interface {
+	WriteAnchoredBlockNumber(blockNum uint64)
+	ReadAnchoredBlockNumber() uint64
+}
+
 //go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/kas BlockChain
 type BlockChain interface {
 	GetBlockByNumber(number uint64) *types.Block
