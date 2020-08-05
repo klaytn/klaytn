@@ -303,8 +303,8 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 			logger.Crit("KAS access key should be set", "key", utils.KASServiceChainAccessKeyFlag.Name)
 		}
 
-		cfg.KASSecreteKey = ctx.GlobalString(utils.KASServiceChainSecretKeyFlag.Name)
-		if cfg.KASSecreteKey == "" {
+		cfg.KASSecretKey = ctx.GlobalString(utils.KASServiceChainSecretKeyFlag.Name)
+		if cfg.KASSecretKey == "" {
 			logger.Crit("KAS secret key should be set", "key", utils.KASServiceChainSecretKeyFlag.Name)
 		}
 

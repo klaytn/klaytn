@@ -32,10 +32,11 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		VTRecoveryInterval    uint64
 		Anchoring             bool
 		KASAnchor             bool
+		KASAnchorUrl          string
 		KASAnchorPeriod       uint64
 		KASAnchorOperator     string
 		KASAccessKey          string
-		KASSecreteKey         string
+		KASSecretKey          string
 		KASXKRN               string
 	}
 	var enc SCConfig
@@ -62,10 +63,11 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.VTRecoveryInterval = s.VTRecoveryInterval
 	enc.Anchoring = s.Anchoring
 	enc.KASAnchor = s.KASAnchor
+	enc.KASAnchorUrl = s.KASAnchorUrl
 	enc.KASAnchorPeriod = s.KASAnchorPeriod
 	enc.KASAnchorOperator = s.KASAnchorOperator
 	enc.KASAccessKey = s.KASAccessKey
-	enc.KASSecreteKey = s.KASSecreteKey
+	enc.KASSecretKey = s.KASSecretKey
 	enc.KASXKRN = s.KASXKRN
 	return &enc, nil
 }
@@ -96,10 +98,11 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		VTRecoveryInterval    *uint64
 		Anchoring             *bool
 		KASAnchor             *bool
+		KASAnchorUrl          *string
 		KASAnchorPeriod       *uint64
 		KASAnchorOperator     *string
 		KASAccessKey          *string
-		KASSecreteKey         *string
+		KASSecretKey          *string
 		KASXKRN               *string
 	}
 	var dec SCConfig
@@ -175,6 +178,9 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.KASAnchor != nil {
 		s.KASAnchor = *dec.KASAnchor
 	}
+	if dec.KASAnchorUrl != nil {
+		s.KASAnchorUrl = *dec.KASAnchorUrl
+	}
 	if dec.KASAnchorPeriod != nil {
 		s.KASAnchorPeriod = *dec.KASAnchorPeriod
 	}
@@ -184,8 +190,8 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.KASAccessKey != nil {
 		s.KASAccessKey = *dec.KASAccessKey
 	}
-	if dec.KASSecreteKey != nil {
-		s.KASSecreteKey = *dec.KASSecreteKey
+	if dec.KASSecretKey != nil {
+		s.KASSecretKey = *dec.KASSecretKey
 	}
 	if dec.KASXKRN != nil {
 		s.KASXKRN = *dec.KASXKRN
