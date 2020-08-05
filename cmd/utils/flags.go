@@ -605,7 +605,6 @@ var (
 	KASServiceChainAnchorUrlFlag = cli.StringFlag{
 		Name:  "kas.sc.anchor.url",
 		Usage: "The url for KAS anchor",
-		Value: "http://anchor.wallet-api.dev.klaytn.com/v1/anchor", // TODO-Klaytn need to change production server
 	}
 	KASServiceChainAnchorOperatorFlag = cli.StringFlag{
 		Name:  "kas.sc.anchor.operator",
@@ -614,7 +613,6 @@ var (
 	KASServiceChainXKRNFlag = cli.StringFlag{
 		Name:  "kas.xkrn",
 		Usage: "The x-krn for KAS",
-		Value: "krn:1001:anchor:test:operator-pool:op1",
 	}
 	KASServiceChainAccessKeyFlag = cli.StringFlag{
 		Name:  "kas.accesskey",
