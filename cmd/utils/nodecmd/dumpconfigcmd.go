@@ -284,33 +284,33 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
 	cfg.ServiceChainConsensus = utils.ServiceChainConsensusFlag.Value
 
-	cfg.KASAnchor = ctx.GlobalBool(utils.ServiceChainKASAnchorFlag.Name)
+	cfg.KASAnchor = ctx.GlobalBool(utils.KASServiceChainAnchorFlag.Name)
 	if cfg.KASAnchor {
-		cfg.KASAnchorPeriod = ctx.GlobalUint64(utils.ServiceChainKASAnchorPeriodFlag.Name)
+		cfg.KASAnchorPeriod = ctx.GlobalUint64(utils.KASServiceChainAnchorPeriodFlag.Name)
 
-		cfg.KASAnchorUrl = ctx.GlobalString(utils.ServiceChainKASAnchorUrlFlag.Name)
+		cfg.KASAnchorUrl = ctx.GlobalString(utils.KASServiceChainAnchorUrlFlag.Name)
 		if cfg.KASAnchorOperator == "" {
-			logger.Crit("KAS anchor url should be set", "key", utils.ServiceChainKASAnchorUrlFlag.Name)
+			logger.Crit("KAS anchor url should be set", "key", utils.KASServiceChainAnchorUrlFlag.Name)
 		}
 
-		cfg.KASAnchorOperator = ctx.GlobalString(utils.ServiceChainKASAnchorOperatorFlag.Name)
+		cfg.KASAnchorOperator = ctx.GlobalString(utils.KASServiceChainAnchorOperatorFlag.Name)
 		if cfg.KASAnchorOperator == "" {
-			logger.Crit("KAS anchor operator should be set", "key", utils.ServiceChainKASAnchorOperatorFlag.Name)
+			logger.Crit("KAS anchor operator should be set", "key", utils.KASServiceChainAnchorOperatorFlag.Name)
 		}
 
-		cfg.KASAccessKey = ctx.GlobalString(utils.ServiceChainKASAccessKeyFlag.Name)
+		cfg.KASAccessKey = ctx.GlobalString(utils.KASServiceChainAccessKeyFlag.Name)
 		if cfg.KASAnchorOperator == "" {
-			logger.Crit("KAS access key should be set", "key", utils.ServiceChainKASAccessKeyFlag.Name)
+			logger.Crit("KAS access key should be set", "key", utils.KASServiceChainAccessKeyFlag.Name)
 		}
 
-		cfg.KASSecreteKey = ctx.GlobalString(utils.ServiceChainKASSecreteKeyFlag.Name)
+		cfg.KASSecreteKey = ctx.GlobalString(utils.KASServiceChainSecreteKeyFlag.Name)
 		if cfg.KASAnchorOperator == "" {
-			logger.Crit("KAS secret key should be set", "key", utils.ServiceChainKASSecreteKeyFlag.Name)
+			logger.Crit("KAS secret key should be set", "key", utils.KASServiceChainSecreteKeyFlag.Name)
 		}
 
-		cfg.KASXKRN = ctx.GlobalString(utils.ServiceChainKASXKRNFlag.Name)
+		cfg.KASXKRN = ctx.GlobalString(utils.KASServiceChainXKRNFlag.Name)
 		if cfg.KASAnchorOperator == "" {
-			logger.Crit("KAS x-krn should be set", "key", utils.ServiceChainKASXKRNFlag.Name)
+			logger.Crit("KAS x-krn should be set", "key", utils.KASServiceChainXKRNFlag.Name)
 		}
 	}
 	return cfg

@@ -185,8 +185,8 @@ var KSCNFlags = []cli.Flag{
 	utils.ServiceChainNewAccountFlag,
 	utils.ServiceChainAnchoringFlag,
 	// KAS
-	utils.ServiceChainKASAnchorFlag,
-	utils.ServiceChainKASAnchorPeriodFlag,
+	utils.KASServiceChainAnchorFlag,
+	utils.KASServiceChainAnchorPeriodFlag,
 }
 
 var KSPNFlags = []cli.Flag{
@@ -207,8 +207,8 @@ var KSPNFlags = []cli.Flag{
 	utils.ServiceChainNewAccountFlag,
 	utils.ServiceChainAnchoringFlag,
 	// KAS
-	utils.ServiceChainKASAnchorFlag,
-	utils.ServiceChainKASAnchorPeriodFlag,
+	utils.KASServiceChainAnchorFlag,
+	utils.KASServiceChainAnchorPeriodFlag,
 }
 
 var KSENFlags = []cli.Flag{
@@ -225,8 +225,8 @@ var KSENFlags = []cli.Flag{
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainAnchoringFlag,
 	// KAS
-	utils.ServiceChainKASAnchorFlag,
-	utils.ServiceChainKASAnchorPeriodFlag,
+	utils.KASServiceChainAnchorFlag,
+	utils.KASServiceChainAnchorPeriodFlag,
 	// DBSyncer
 	utils.EnableDBSyncerFlag,
 	utils.DBHostFlag,
