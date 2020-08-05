@@ -59,6 +59,30 @@ func NewKASAnchor(kasConfig *KASConfig, db AnchorDB, bc BlockChain) *Anchor {
 	}
 }
 
+
+type respBody struct {
+	Code   int         `json:"code"`
+	Result interface{} `json:"result"`
+}
+
+type reqBody struct {
+	Operator common.Address `json:"operator"`
+	Payload  interface{}    `json:"Payload"`
+}
+
+type Payload struct {
+	Id string `json:"id"`
+	types.AnchoringDataInternalType0
+}
+
+func dataToPayload(anchorData *types.AnchoringDataInternalType0) *Payload {
+	payload := &Payload{
+		Id:                         anchorData.BlockNumber.String(),
+		AnchoringDataInternalType0: *anchorData,
+	}
+
+	return payload
+}
 func (anchor *Anchor) sendRequest(payload interface{}) (*respBody, error) {
 	header := map[string]string{
 		"Content-Type": "application/json",
