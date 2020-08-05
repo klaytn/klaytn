@@ -60,14 +60,14 @@ func (data *AnchoringDataLegacy) GetBlockNumber() *big.Int {
 }
 
 type AnchoringDataInternalType0 struct {
-	BlockHash     common.Hash
-	TxHash        common.Hash
-	ParentHash    common.Hash
-	ReceiptHash   common.Hash
-	StateRootHash common.Hash
-	BlockNumber   *big.Int
-	BlockCount    *big.Int
-	TxCount       *big.Int
+	BlockHash     common.Hash `json:"blockHash"`
+	TxHash        common.Hash `json:"transactionsRoot"`
+	ParentHash    common.Hash `json:"parentHash"`
+	ReceiptHash   common.Hash `json:"receiptsRoot"`
+	StateRootHash common.Hash `json:"stateRoot"`
+	BlockNumber   *big.Int    `json:"blockNumber"`
+	BlockCount    *big.Int    `json:"blockCount"`
+	TxCount       *big.Int    `json:"txCount"`
 }
 
 func (data *AnchoringDataInternalType0) GetBlockHash() common.Hash {
@@ -78,10 +78,17 @@ func (data *AnchoringDataInternalType0) GetBlockNumber() *big.Int {
 	return data.BlockNumber
 }
 
-func NewAnchoringDataType0(block *Block, blockCount *big.Int, txCount *big.Int) (*AnchoringData, error) {
-	data := &AnchoringDataInternalType0{block.Hash(), block.Header().TxHash,
-		block.Header().ParentHash, block.Header().ReceiptHash,
-		block.Header().Root, block.Header().Number, blockCount, txCount}
+func NewAnchoringDataType0(block *Block, blockCount uint64, txCount uint64) (*AnchoringData, error) {
+	data := &AnchoringDataInternalType0{
+		block.Hash(),
+		block.Header().TxHash,
+		block.Header().ParentHash,
+		block.Header().ReceiptHash,
+		block.Header().Root,
+		block.Header().Number,
+		new(big.Int).SetUint64(blockCount),
+		new(big.Int).SetUint64(txCount),
+	}
 	encodedCCTxData, err := rlp.EncodeToBytes(data)
 	if err != nil {
 		return nil, err
