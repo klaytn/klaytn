@@ -20,10 +20,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"math/big"
 	"net/http"
 )
 
@@ -64,7 +62,6 @@ func NewKASAnchor(kasConfig *KASConfig, db AnchorDB, bc BlockChain) *Anchor {
 		client:    &http.Client{},
 	}
 }
-
 
 type respBody struct {
 	Code   int         `json:"code"`

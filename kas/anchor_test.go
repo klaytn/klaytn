@@ -23,12 +23,10 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kas/mocks"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"testing"
@@ -86,4 +84,3 @@ func TestSendRequest(t *testing.T) {
 		assert.Nil(t, resp)
 	}
 }
-
