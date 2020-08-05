@@ -58,3 +58,42 @@ func NewKASAnchor(kasConfig *KASConfig, db AnchorDB, bc BlockChain) *Anchor {
 		client:    &http.Client{},
 	}
 }
+
+func (anchor *Anchor) sendRequest(payload interface{}) (*respBody, error) {
+	header := map[string]string{
+		"Content-Type": "application/json",
+		"X-Krn":        anchor.kasConfig.Xkrn,
+	}
+
+	bodyData := reqBody{
+		Operator: anchor.kasConfig.Operator,
+		Payload:  payload,
+	}
+
+	bodyDataBytes, err := json.Marshal(bodyData)
+	if err != nil {
+		return nil, err
+	}
+
+	body := bytes.NewReader(bodyDataBytes)
+
+	req, err := http.NewRequest("POST", anchor.kasConfig.Url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.SetBasicAuth(anchor.kasConfig.User, anchor.kasConfig.Pwd)
+	for k, v := range header {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := anchor.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	v := respBody{}
+	json.NewDecoder(resp.Body).Decode(&v)
+
+	return &v, nil
+}
