@@ -102,7 +102,7 @@ func transformToTraceResults(event blockchain.ChainEvent) ([]*Tx, []*RevertedTx,
 		if receipt.Status == types.ReceiptStatusSuccessful {
 			internalTx, err := transformToInternalTx(trace, &offset, motherTx, true)
 			if err != nil {
-				logger.Error("Failed to transform tracing result into internal tx", "err", err)
+				logger.Error("Failed to transform tracing result into internal tx", "err", err, "txHash", common.BytesToHash(motherTx.TransactionHash).String())
 				return nil, nil, err
 			}
 			internalTxs = append(internalTxs, internalTx...)
@@ -112,7 +112,7 @@ func transformToTraceResults(event blockchain.ChainEvent) ([]*Tx, []*RevertedTx,
 		if receipt.Status == types.ReceiptStatusErrExecutionReverted {
 			revertedTx, err := transformToRevertedTx(trace, event.Block, tx)
 			if err != nil {
-				logger.Error("Failed to transform tracing result into reverted tx", "err", err)
+				logger.Error("Failed to transform tracing result into reverted tx", "err", err, "txHash", common.BytesToHash(motherTx.TransactionHash).String())
 				return nil, nil, err
 			}
 			revertedTxs = append(revertedTxs, revertedTx)
