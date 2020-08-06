@@ -73,14 +73,12 @@ func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, entryTx *Tx
 		txs = append(txs, &newTx)
 	}
 
-	if len(trace.Calls) > 0 {
-		for _, call := range trace.Calls {
-			nestedCalls, err := transformToInternalTx(call, offset, entryTx, false)
-			if err != nil {
-				return nil, err
-			}
-			txs = append(txs, nestedCalls...)
+	for _, call := range trace.Calls {
+		nestedCalls, err := transformToInternalTx(call, offset, entryTx, false)
+		if err != nil {
+			return nil, err
 		}
+		txs = append(txs, nestedCalls...)
 	}
 
 	return txs, nil
