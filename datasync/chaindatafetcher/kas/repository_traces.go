@@ -18,8 +18,8 @@ func isEmptyTraceResult(trace *vm.InternalTxTrace) bool {
 	return reflect.DeepEqual(trace, emptyTraceResult)
 }
 
-// getMotherTx returns a entry transaction which may call internal transactions.
-func getMotherTx(block *types.Block, txIdx int, tx *types.Transaction) *Tx {
+// getEntryTx returns a entry transaction which may call internal transactions.
+func getEntryTx(block *types.Block, txIdx int, tx *types.Transaction) *Tx {
 	head := block.Header()
 	txId := head.Number.Int64()*maxTxCountPerBlock*maxTxLogCountPerTx + int64(txIdx)*maxInternalTxCountPerTx
 	return &Tx{
@@ -33,7 +33,7 @@ func getMotherTx(block *types.Block, txIdx int, tx *types.Transaction) *Tx {
 }
 
 // transformToInternalTx converts the result of call tracer into the internal transaction list according to the KAS database scheme.
-func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, motherTx *Tx, isFirstCall bool) ([]*Tx, error) {
+func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, entryTx *Tx, isFirstCall bool) ([]*Tx, error) {
 	if trace.Type == "" {
 		return nil, noOpcodeError
 	} else if trace.Type == "SELFDESTRUCT" {
@@ -52,14 +52,14 @@ func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, motherTx *T
 	var txs []*Tx
 	if !isFirstCall && trace.Value != "0x0" {
 		*offset++
-		newTx := *motherTx
+		newTx := *entryTx
 		newTx.TransactionId += *offset
 		txs = append(txs, &newTx)
 	}
 
 	if len(trace.Calls) > 0 {
 		for _, call := range trace.Calls {
-			nestedCalls, err := transformToInternalTx(call, offset, motherTx, false)
+			nestedCalls, err := transformToInternalTx(call, offset, entryTx, false)
 			if err != nil {
 				return nil, err
 			}
@@ -71,9 +71,9 @@ func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, motherTx *T
 }
 
 // transformToRevertedTx converts the result of call tracer into the reverted transaction information according to the KAS database scheme.
-func transformToRevertedTx(trace *vm.InternalTxTrace, block *types.Block, motherTx *types.Transaction) (*RevertedTx, error) {
+func transformToRevertedTx(trace *vm.InternalTxTrace, block *types.Block, entryTx *types.Transaction) (*RevertedTx, error) {
 	return &RevertedTx{
-		TransactionHash: motherTx.Hash().Bytes(),
+		TransactionHash: entryTx.Hash().Bytes(),
 		BlockNumber:     block.Number().Int64(),
 		RevertMessage:   trace.Reverted.Message,
 		ContractAddress: trace.Reverted.Contract.Bytes(),
@@ -95,14 +95,14 @@ func transformToTraceResults(event blockchain.ChainEvent) ([]*Tx, []*RevertedTx,
 		tx := event.Block.Transactions()[txIdx]
 		receipt := event.Receipts[txIdx]
 
-		motherTx := getMotherTx(event.Block, txIdx, tx)
+		entryTx := getEntryTx(event.Block, txIdx, tx)
 		offset := int64(0)
 
 		// transforms the result into internal transaction which is associated with KLAY transfer recursively.
 		if receipt.Status == types.ReceiptStatusSuccessful {
-			internalTx, err := transformToInternalTx(trace, &offset, motherTx, true)
+			internalTx, err := transformToInternalTx(trace, &offset, entryTx, true)
 			if err != nil {
-				logger.Error("Failed to transform tracing result into internal tx", "err", err, "txHash", common.BytesToHash(motherTx.TransactionHash).String())
+				logger.Error("Failed to transform tracing result into internal tx", "err", err, "txHash", common.BytesToHash(entryTx.TransactionHash).String())
 				return nil, nil, err
 			}
 			internalTxs = append(internalTxs, internalTx...)
@@ -112,7 +112,7 @@ func transformToTraceResults(event blockchain.ChainEvent) ([]*Tx, []*RevertedTx,
 		if receipt.Status == types.ReceiptStatusErrExecutionReverted {
 			revertedTx, err := transformToRevertedTx(trace, event.Block, tx)
 			if err != nil {
-				logger.Error("Failed to transform tracing result into reverted tx", "err", err, "txHash", common.BytesToHash(motherTx.TransactionHash).String())
+				logger.Error("Failed to transform tracing result into reverted tx", "err", err, "txHash", common.BytesToHash(entryTx.TransactionHash).String())
 				return nil, nil, err
 			}
 			revertedTxs = append(revertedTxs, revertedTx)
