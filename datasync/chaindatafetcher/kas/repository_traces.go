@@ -14,8 +14,8 @@ var emptyTraceResult = &vm.InternalTxTrace{
 	Value: "0x0",
 }
 
-func isInternalTxResult(trace *vm.InternalTxTrace) bool {
-	return !reflect.DeepEqual(trace, emptyTraceResult)
+func isEmptyTraceResult(trace *vm.InternalTxTrace) bool {
+	return reflect.DeepEqual(trace, emptyTraceResult)
 }
 
 // getMotherTx returns a entry transaction which may call internal transactions.
@@ -88,7 +88,7 @@ func transformToTraceResults(event blockchain.ChainEvent) ([]*Tx, []*RevertedTx,
 		revertedTxs []*RevertedTx
 	)
 	for txIdx, trace := range event.InternalTxTraces {
-		if !isInternalTxResult(trace) {
+		if isEmptyTraceResult(trace) {
 			continue
 		}
 

@@ -27,5 +27,5 @@ func TestIsInternalTxResult_Success(t *testing.T) {
 	var testResult vm.InternalTxTrace
 	assert.True(t, json.Valid(fastCallTracerResult))
 	assert.NoError(t, json.Unmarshal(fastCallTracerResult, &testResult))
-	assert.False(t, isInternalTxResult(&testResult))
+	assert.True(t, isEmptyTraceResult(&testResult))
 }
