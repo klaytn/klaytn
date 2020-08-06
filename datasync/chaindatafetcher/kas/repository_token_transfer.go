@@ -12,12 +12,15 @@ import (
 var tokenTransferEventHash = common.HexToHash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
 
 // splitToWords divides log data to the words.
-func splitToWords(data []byte) []common.Hash {
+func splitToWords(data []byte) ([]common.Hash, error) {
+	if len(data)%common.HashLength != 0 {
+		return nil, fmt.Errorf("data length is not valid. want: %v, actual: %v", common.HashLength, len(data))
+	}
 	var words []common.Hash
 	for i := 0; i < len(data); i += common.HashLength {
 		words = append(words, common.BytesToHash(data[i:i+common.HashLength]))
 	}
-	return words
+	return words, nil
 }
 
 // wordToAddress trims input word to get address field only.
@@ -25,23 +28,26 @@ func wordToAddress(word common.Hash) common.Address {
 	return common.BytesToAddress(word[common.HashLength-common.AddressLength:])
 }
 
-// transformsLogsToTokenTransfers converts the given event into Klaytn Compatible Token transfers.
-func transformsLogsToTokenTransfers(event blockchain.ChainEvent) []*KCTTransfer {
+// transformLogsToTokenTransfers converts the given event into Klaytn Compatible Token transfers.
+func transformLogsToTokenTransfers(event blockchain.ChainEvent) ([]*KCTTransfer, error) {
 	timestamp := event.Block.Time().Int64()
 	var kctTransfers []*KCTTransfer
 	for _, log := range event.Logs {
 		if len(log.Topics) > 0 && log.Topics[0] == tokenTransferEventHash {
-			transfer := transformLogToTokenTransfer(log)
+			transfer, err := transformLogToTokenTransfer(log)
+			if err != nil {
+				return nil, err
+			}
 			transfer.Timestamp = timestamp
 			kctTransfers = append(kctTransfers, transfer)
 		}
 	}
 
-	return kctTransfers
+	return kctTransfers, nil
 }
 
 // transformLogToTokenTransfer converts the given log to Klaytn Compatible Token transfer.
-func transformLogToTokenTransfer(log *types.Log) *KCTTransfer {
+func transformLogToTokenTransfer(log *types.Log) (*KCTTransfer, error) {
 	// in case of token transfer,
 	// case 1:
 	//   log.LogTopics[0] = token transfer event hash
@@ -51,7 +57,11 @@ func transformLogToTokenTransfer(log *types.Log) *KCTTransfer {
 	//   log.LogTopics[1] = fromAddress
 	//   log.LogTopics[2] = toAddresss
 	//   log.LogData = value
-	data := append(log.Topics, splitToWords(log.Data)...)
+	words, err := splitToWords(log.Data)
+	if err != nil {
+		return nil, err
+	}
+	data := append(log.Topics, words...)
 	from := wordToAddress(data[1])
 	to := wordToAddress(data[2])
 	value := new(big.Int).SetBytes(data[3].Bytes())
@@ -65,13 +75,16 @@ func transformLogToTokenTransfer(log *types.Log) *KCTTransfer {
 		TransactionLogId: txLogId,
 		Value:            "0x" + value.Text(16),
 		TransactionHash:  log.TxHash.Bytes(),
-	}
+	}, nil
 }
 
 // InsertTokenTransfers inserts token transfers in the given chain event into KAS database.
 // The token transfers are divided into chunkUnit because of max number of place holders.
 func (r *repository) InsertTokenTransfers(event blockchain.ChainEvent) error {
-	tokenTransfers := transformsLogsToTokenTransfers(event)
+	tokenTransfers, err := transformLogsToTokenTransfers(event)
+	if err != nil {
+		return err
+	}
 
 	chunkUnit := maxPlaceholders / placeholdersPerKCTTransferItem
 	var chunks []*KCTTransfer

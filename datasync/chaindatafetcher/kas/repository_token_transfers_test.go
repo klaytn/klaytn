@@ -13,7 +13,7 @@ func TestSplitToWords_Success(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Log(bytes)
-	hashes := splitToWords(bytes)
+	hashes, _ := splitToWords(bytes)
 	assert.Equal(t, common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), hashes[0])
 	assert.Equal(t, common.HexToHash("0x000000000000000000000000850f0263a87af6dd51acb8baab96219041e28fda"), hashes[1])
 	assert.Equal(t, common.HexToHash("0x00000000000000000000000000000000000000000000d3c21bcecceda1000000"), hashes[2])
