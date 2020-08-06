@@ -90,7 +90,6 @@ func (r *repository) insertContracts(contracts []*Contract) error {
 		}
 
 		if err := r.bulkInsertContracts(chunks); err != nil {
-			//log.Logger.Sugar().Errorw("failed to bulkInsertContracts", "err", err, "itemsCount", len(chunks))
 			return err
 		}
 	}
@@ -139,7 +138,6 @@ func (r *repository) insertFTs(fts []*FT) error {
 		}
 
 		if err := r.bulkInsertFTs(chunks); err != nil {
-			//log.Logger.Sugar().Errorw("failed to bulkInsertFTs", "err", err, "itemsCount", len(chunks))
 			return err
 		}
 	}
@@ -191,7 +189,6 @@ func (r *repository) insertNFTs(nfts []*NFT) error {
 		}
 
 		if err := r.bulkInsertNFTs(chunks); err != nil {
-			//log.Logger.Sugar().Errorw("failed to bulkInsertNFTs", "err", err, "itemsCount", len(chunks))
 			return err
 		}
 	}
