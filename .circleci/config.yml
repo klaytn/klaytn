@@ -258,7 +258,7 @@ jobs:
     steps:
       - install-ssh-alpine
       - checkout
-      - run:
+      - run: # TODO-ChainDataFetcher launch mysql test database before the test-datasync runs
           name: "Run test datasync"
           command: make test-datasync
 
