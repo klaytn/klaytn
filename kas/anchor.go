@@ -20,8 +20,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"math/big"
 	"net/http"
 )
 
@@ -66,6 +68,86 @@ func NewKASAnchor(kasConfig *KASConfig, db AnchorDB, bc BlockChain) *Anchor {
 	}
 }
 
+// AnchorPeriodicBlock periodically anchor blocks to KAS.
+// if given block is invalid, it does nothing.
+func (anchor *Anchor) AnchorPeriodicBlock(block *types.Block) {
+	if !anchor.kasConfig.Anchor {
+		return
+	}
+
+	if block == nil {
+		logger.Error("KAS Anchor : failed to get a block form the event")
+		return
+	}
+
+	if block.NumberU64()%anchor.kasConfig.AnchorPeriod != 0 {
+		return
+	}
+
+	anchor.anchorBlock(block)
+}
+
+// AnchorByBlockNum anchors the block of given block number to KAS by API.
+func (anchor *Anchor) AnchorByBlockNum(blkNum uint64) error {
+	block := anchor.bc.GetBlockByNumber(blkNum)
+	if block == nil {
+		return errNotFoundBlock
+	}
+
+	return anchor.anchorBlock(block)
+}
+
+// blockToAnchoringDataInternalType0 makes AnchoringDataInternalType0 from the given block.
+// TxCount is the total number of transactions during N-P+1 ~ N blocks. (N: given block, P: anchoring period)
+func (anchor *Anchor) blockToAnchoringDataInternalType0(block *types.Block) *types.AnchoringDataInternalType0 {
+	start := uint64(0)
+	if block.NumberU64() >= anchor.kasConfig.AnchorPeriod {
+		start = block.NumberU64() - anchor.kasConfig.AnchorPeriod + 1
+	}
+	blkCnt := block.NumberU64() - start + 1
+
+	txCount := len(block.Body().Transactions)
+	for i := start; i < block.NumberU64(); i++ {
+		block := anchor.bc.GetBlockByNumber(i)
+		if block == nil {
+			return nil
+		}
+		txCount += len(block.Body().Transactions)
+	}
+
+	return &types.AnchoringDataInternalType0{
+		BlockHash:     block.Hash(),
+		TxHash:        block.Header().TxHash,
+		ParentHash:    block.Header().ParentHash,
+		ReceiptHash:   block.Header().ReceiptHash,
+		StateRootHash: block.Header().Root,
+		BlockNumber:   block.Header().Number,
+		BlockCount:    new(big.Int).SetUint64(blkCnt),
+		TxCount:       big.NewInt(int64(txCount)),
+	}
+}
+
+// anchorBlock converts given block to payload and anchor the payload via KAS anchor API.
+func (anchor *Anchor) anchorBlock(block *types.Block) error {
+	anchorData := anchor.blockToAnchoringDataInternalType0(block)
+
+	payload := dataToPayload(anchorData)
+
+	res, err := anchor.sendRequest(payload)
+	if err != nil {
+		return err
+	}
+
+	if res.Code != codeOK {
+		result, _ := json.Marshal(res)
+		logger.Debug("Failed to anchor a block via KAS", "blkNum", block.NumberU64(), "result", string(result))
+		return fmt.Errorf("error code %v", res.Code)
+	}
+
+	logger.Info("Anchored a block via KAS", "blkNum", block.NumberU64())
+	return nil
+}
+
 type respBody struct {
 	Code   int         `json:"code"`
 	Result interface{} `json:"result"`
@@ -81,6 +163,7 @@ type Payload struct {
 	types.AnchoringDataInternalType0
 }
 
+// dataToPayload wraps given AnchoringDataInternalType0 to payload with `id` field.
 func dataToPayload(anchorData *types.AnchoringDataInternalType0) *Payload {
 	payload := &Payload{
 		Id:                         anchorData.BlockNumber.String(),
@@ -89,6 +172,8 @@ func dataToPayload(anchorData *types.AnchoringDataInternalType0) *Payload {
 
 	return payload
 }
+
+// sendRequest requests to KAS anchor API with given payload.
 func (anchor *Anchor) sendRequest(payload interface{}) (*respBody, error) {
 	header := map[string]string{
 		"Content-Type": "application/json",
