@@ -4,6 +4,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
 
@@ -12,11 +13,21 @@ func TestSplitToWords_Success(t *testing.T) {
 	bytes, err := hexutil.Decode(data)
 	assert.NoError(t, err)
 
-	t.Log(bytes)
-	hashes, _ := splitToWords(bytes)
+	hashes, err := splitToWords(bytes)
+	assert.NoError(t, err)
 	assert.Equal(t, common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), hashes[0])
 	assert.Equal(t, common.HexToHash("0x000000000000000000000000850f0263a87af6dd51acb8baab96219041e28fda"), hashes[1])
 	assert.Equal(t, common.HexToHash("0x00000000000000000000000000000000000000000000d3c21bcecceda1000000"), hashes[2])
+}
+
+func TestSplitToWords_Fail_DataLengthError(t *testing.T) {
+	data := "0x0000000000000000000000000000000000850f0263a87af6dd51acb8baab96219041e28fda00000000000000000000000000000000000000000000d3c21bcecceda1000000"
+	bytes, err := hexutil.Decode(data)
+	assert.NoError(t, err)
+
+	_, err = splitToWords(bytes)
+	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "data length is not valid"))
 }
 
 func TestWordsToAddress_Success(t *testing.T) {
