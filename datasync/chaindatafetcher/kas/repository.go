@@ -48,7 +48,7 @@ type repository struct {
 	db *gorm.DB
 
 	contractCaller *contractCaller
-	blockchainApi  *api.PublicBlockChainAPI
+	blockchainApi  BlockchainAPI
 }
 
 func getEndpoint(user, password, host, port, name string) string {

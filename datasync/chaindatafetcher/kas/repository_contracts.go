@@ -18,7 +18,6 @@ package kas
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
 	"strings"
@@ -26,7 +25,7 @@ import (
 )
 
 // filterKIPContracts filters the deployed contracts to KIP7, KIP17 and others.
-func filterKIPContracts(api *api.PublicBlockChainAPI, event blockchain.ChainEvent) ([]*FT, []*NFT, []*Contract, error) {
+func filterKIPContracts(api BlockchainAPI, event blockchain.ChainEvent) ([]*FT, []*NFT, []*Contract, error) {
 	var (
 		kip7s  []*FT
 		kip17s []*NFT

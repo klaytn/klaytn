@@ -45,15 +45,25 @@ var (
 	// KIP 17: Non-fungible Token Standard - https://kips.klaytn.com/KIPs/kip-17
 	IKIP17Id         = [4]byte{0x80, 0xac, 0x58, 0xcd}
 	IKIP17MetadataId = [4]byte{0x5b, 0x5e, 0x13, 0x9f}
+
+	errMsgEmptyOutput = "abi: unmarshalling empty output"
+	errMsgEvmReverted = "evm: execution reverted"
 )
+
+//go:generate mockgen -destination=./mocks/blockchain_api_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kas BlockchainAPI
+// BlockchainAPI interface is for testing purpose.
+type BlockchainAPI interface {
+	GetCode(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (hexutil.Bytes, error)
+	Call(ctx context.Context, args api.CallArgs, blockNr rpc.BlockNumber) (hexutil.Bytes, error)
+}
 
 // contractCaller performs kip13 method `supportsInterface` to detect the deployed contracts are KIP7 or KIP17.
 type contractCaller struct {
-	blockchainAPI *api.PublicBlockChainAPI
+	blockchainAPI BlockchainAPI
 	callTimeout   time.Duration
 }
 
-func newContractCaller(api *api.PublicBlockChainAPI) *contractCaller {
+func newContractCaller(api BlockchainAPI) *contractCaller {
 	return &contractCaller{blockchainAPI: api, callTimeout: callTimeout}
 }
 
@@ -63,12 +73,9 @@ func (f *contractCaller) CodeAt(ctx context.Context, contract common.Address, bl
 
 func (f *contractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	callArgs := api.CallArgs{
-		From:     call.From,
-		To:       call.To,
-		Gas:      hexutil.Uint64(call.Gas),
-		GasPrice: hexutil.Big(*call.GasPrice),
-		Value:    hexutil.Big(*call.Value),
-		Data:     hexutil.Bytes(call.Data),
+		From: call.From,
+		To:   call.To,
+		Data: hexutil.Bytes(call.Data),
 	}
 	return f.blockchainAPI.Call(ctx, callArgs, rpc.BlockNumber(blockNumber.Int64()))
 }
@@ -92,8 +99,7 @@ func (f *contractCaller) supportsInterface(contract common.Address, opts *bind.C
 	// case 2: the contract does not implements fallback function
 	// - the call can be reverted: returns "evm: execution reverted"
 	isSupported, err := caller.SupportsInterface(opts, interfaceID)
-	if err != nil && (strings.Contains(err.Error(), "abi: unmarshalling empty output") ||
-		strings.Contains(err.Error(), "evm: execution reverted")) {
+	if err != nil && (strings.Contains(err.Error(), errMsgEmptyOutput) || strings.Contains(err.Error(), errMsgEvmReverted)) {
 		return false, nil
 	}
 	return isSupported, err
