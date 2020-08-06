@@ -25,8 +25,11 @@ import (
 	"net/http"
 )
 
+const (
+	codeOK = 0
+)
+
 var (
-	codeOK                = 0
 	errNotFoundBlock      = errors.New("not found block")
 	errInvalidBlockNumber = errors.New("invalid block number")
 )
