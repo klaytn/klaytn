@@ -19,6 +19,7 @@ package kas
 const (
 	TxTableName          = "klay_transfers"
 	KctTransferTableName = "kct_transfers"
+	RevertedTxTableName  = "reverted_transactions"
 )
 
 type Tx struct {
@@ -53,4 +54,16 @@ type KCTTransfer struct {
 
 func (KCTTransfer) TableName() string {
 	return KctTransferTableName
+}
+
+type RevertedTx struct {
+	TransactionHash []byte `gorm:"column:transactionHash;type:VARBINARY(32);NOT NULL;PRIMARY_KEY"`
+	BlockNumber     int64  `gorm:"column:blockNumber;type:BIGINT"`
+	RevertMessage   string `gorm:"column:revertMessage;type:VARCHAR(1024)"`
+	ContractAddress []byte `gorm:"column:contractAddress;type:VARBINARY(20);NOT NULL"`
+	Timestamp       int64  `gorm:"column:timestamp;type:INT(11)"`
+}
+
+func (RevertedTx) TableName() string {
+	return RevertedTxTableName
 }

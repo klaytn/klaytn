@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package chaindatafetcher
+package kas
 
-import "github.com/klaytn/klaytn/blockchain"
+import "errors"
 
-type repository interface {
-	InsertTransactions(event blockchain.ChainEvent) error
-	InsertTokenTransfers(event blockchain.ChainEvent) error
-	InsertTraceResults(event blockchain.ChainEvent) error
-}
+var (
+	noOpcodeError    = errors.New("trace result must include type field")
+	noFromFieldError = errors.New("from field is missing")
+	noToFieldError   = errors.New("to field is missing")
+)
