@@ -3,7 +3,7 @@ package kas
 const (
 	TxTableName          = "klay_transfers"
 	KctTransferTableName = "kct_transfers"
-	RevertedTxTableName = "reverted_transactions"
+	RevertedTxTableName  = "reverted_transactions"
 )
 
 type Tx struct {
