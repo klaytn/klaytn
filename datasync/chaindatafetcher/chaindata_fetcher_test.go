@@ -16,8 +16,49 @@
 
 package chaindatafetcher
 
-import "testing"
+import (
+	"github.com/golang/mock/gomock"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/mocks"
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestChainDataFetcher_updateCheckpoint(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
+	m := mocks.NewMockRepository(ctrl)
+
+	fetcher := &ChainDataFetcher{
+		checkpoint:    0,
+		checkpointMap: make(map[int64]struct{}),
+		repo:          m,
+	}
+
+	// update checkpoint as follows.
+	// done order: 1, 0, 2, 3, 5, 7, 9, 8, 4, 6, 10
+	// checkpoint: 0, 2, 3, 4, 4, 4, 4, 4, 6, 10, 11
+	assert.NoError(t, fetcher.updateCheckpoint(1))
+
+	m.EXPECT().SetCheckpoint(gomock.Eq(int64(2)))
+	assert.NoError(t, fetcher.updateCheckpoint(0))
+
+	m.EXPECT().SetCheckpoint(gomock.Eq(int64(3)))
+	assert.NoError(t, fetcher.updateCheckpoint(2))
+
+	m.EXPECT().SetCheckpoint(gomock.Eq(int64(4)))
+	assert.NoError(t, fetcher.updateCheckpoint(3))
+	assert.NoError(t, fetcher.updateCheckpoint(5))
+	assert.NoError(t, fetcher.updateCheckpoint(7))
+	assert.NoError(t, fetcher.updateCheckpoint(9))
+	assert.NoError(t, fetcher.updateCheckpoint(8))
+
+	m.EXPECT().SetCheckpoint(gomock.Eq(int64(6)))
+	assert.NoError(t, fetcher.updateCheckpoint(4))
+
+	m.EXPECT().SetCheckpoint(gomock.Eq(int64(10)))
+	assert.NoError(t, fetcher.updateCheckpoint(6))
+
+	m.EXPECT().SetCheckpoint(gomock.Eq(int64(11)))
+	assert.NoError(t, fetcher.updateCheckpoint(10))
 }

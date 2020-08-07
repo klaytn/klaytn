@@ -195,6 +195,7 @@ func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
 	}
 
 	if oldCheckpoint != newCheckpoint {
+		f.checkpoint = newCheckpoint
 		return f.repo.SetCheckpoint(newCheckpoint)
 	}
 	return nil
