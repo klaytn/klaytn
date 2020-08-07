@@ -1,6 +1,9 @@
 package kas
 
-const TxTableName = "klay_transfers"
+const (
+	TxTableName          = "klay_transfers"
+	KctTransferTableName = "kct_transfers"
+)
 
 type Tx struct {
 	TransactionId   int64  `gorm:"column:transactionId;type:BIGINT;INDEX:idIdx;NOT NULL;PRIMARY_KEY"`
@@ -20,4 +23,18 @@ type Tx struct {
 
 func (Tx) TableName() string {
 	return TxTableName
+}
+
+type KCTTransfer struct {
+	ContractAddress  []byte `gorm:"column:contractAddress;type:VARBINARY(20);INDEX:ttFromCompIdx,ttToCompIdx;NOT NULL"`
+	From             []byte `gorm:"column:fromAddr;type:VARBINARY(20);INDEX:ttFromCompIdx,ttFromIdx"`
+	To               []byte `gorm:"column:toAddr;type:VARBINARY(20);INDEX:ttToCompIdx,ttToIdx"`
+	TransactionLogId int64  `gorm:"column:transactionLogId;type:BIGINT;PRIMARY_KEY;INDEX:ttFromCompIdx,ttToCompIdx"`
+	Value            string `gorm:"column:value;type:VARCHAR(80)"`
+	TransactionHash  []byte `gorm:"column:transactionHash;type:VARBINARY(32);INDEX:ttHashIdx;NOT NULL"`
+	Timestamp        int64  `gorm:"column:timestamp;type:INT(11)"`
+}
+
+func (KCTTransfer) TableName() string {
+	return KctTransferTableName
 }
