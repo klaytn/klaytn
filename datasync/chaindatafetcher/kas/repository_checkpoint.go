@@ -23,7 +23,7 @@ import (
 
 const checkpointKey = "checkpoint"
 
-func (r *repository) SetCheckpoint(checkpoint int64) error {
+func (r *repository) WriteCheckpoint(checkpoint int64) error {
 	data := &FetcherMetadata{
 		Key:   checkpointKey,
 		Value: checkpoint,
@@ -32,15 +32,15 @@ func (r *repository) SetCheckpoint(checkpoint int64) error {
 	return r.db.Save(data).Error
 }
 
-func (r *repository) GetCheckpoint() (int64, error) {
-	checkpoint, err := r.getCheckpoint()
+func (r *repository) ReadCheckpoint() (int64, error) {
+	checkpoint, err := r.readCheckpoint()
 	if r.isRecordNotFoundError(err) {
 		return 0, nil
 	}
 	return checkpoint, err
 }
 
-func (r *repository) getCheckpoint() (int64, error) {
+func (r *repository) readCheckpoint() (int64, error) {
 	data := &FetcherMetadata{}
 	if err := r.db.Where("`key` = ?", checkpointKey).First(data).Error; err != nil {
 		return 0, err

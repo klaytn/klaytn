@@ -57,7 +57,7 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 		logger.Error("Failed to create new Repository", "err", err, "user", cfg.DBUser, "password", cfg.DBPassword, "host", cfg.DBHost, "port", cfg.DBPort, "name", cfg.DBName)
 		return nil, err
 	}
-	checkpoint, err := repo.GetCheckpoint()
+	checkpoint, err := repo.ReadCheckpoint()
 	if err != nil {
 		logger.Error("Failed to get checkpoint", "err", err)
 		return nil, err
@@ -196,7 +196,7 @@ func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
 
 	if oldCheckpoint != newCheckpoint {
 		f.checkpoint = newCheckpoint
-		return f.repo.SetCheckpoint(newCheckpoint)
+		return f.repo.WriteCheckpoint(newCheckpoint)
 	}
 	return nil
 }

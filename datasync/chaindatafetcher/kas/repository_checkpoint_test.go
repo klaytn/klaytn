@@ -14,16 +14,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package chaindatafetcher
+package kas
 
-import "github.com/klaytn/klaytn/blockchain"
-
-//go:generate mockgen -destination=./mocks/repository_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher Repository
-type Repository interface {
-	InsertTransactions(event blockchain.ChainEvent) error
-	InsertTokenTransfers(event blockchain.ChainEvent) error
-	InsertTraceResults(event blockchain.ChainEvent) error
-
-	ReadCheckpoint() (int64, error)
-	WriteCheckpoint(checkpoint int64) error
-}
+//fund (r *repository) Test
