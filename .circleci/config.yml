@@ -193,6 +193,9 @@ commands:
                 echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
                 echo -e "[Master] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
               fi
+      - run:
+          name: "build announce"
+          command: .circleci/scripts/build_announce.sh
   tagging-delete-branch:
     steps:
       - run:
@@ -220,14 +223,14 @@ commands:
       - run:
           name: "notify slack when job success"
           command : |
-            curl --data '{"text": "✅ Job **'$CIRCLE_JOB'** succeeded on **'$CIRCLE_BRANCH''$CIRCLE_TAG'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
+            curl --data '{"text": "✅ Job *'$CIRCLE_JOB'* succeeded on *'$CIRCLE_BRANCH''$CIRCLE_TAG'*. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_success
   notify-failure:
     steps:
       - run:
           name: "notify slack when job fail"
           command : |
-            curl --data '{"text": "❌ Job **'$CIRCLE_JOB'** failed on **'$CIRCLE_BRANCH'**. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
+            curl --data '{"text": "❌ Job *'$CIRCLE_JOB'* failed on *'$CIRCLE_BRANCH'*. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
 
 jobs:
@@ -478,6 +481,7 @@ workflows:
             - test-others
             - tag-verify
             - tagger-verify
+            - test-linter
           filters: *filter-version-not-release
 
       - tag-verify:
@@ -491,11 +495,7 @@ workflows:
             - packaging-linux-baobab
             - packaging-darwin
             - packaging-darwin-baobab
-          filters:
-            tags:
-              only: /^v[0-9]+\.[0-9]+\.[0-9]+/
-            branches:
-              ignore: /.*/
+          filters: *filter-only-version-tag
 
       - release-PR:
           requires:
