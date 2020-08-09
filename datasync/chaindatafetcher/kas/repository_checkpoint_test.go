@@ -16,4 +16,28 @@
 
 package kas
 
-//fund (r *repository) Test
+import "strings"
+
+func (s *SuiteRepository) TestCheckpoint_Success() {
+	expected := int64(1912)
+	err := s.repo.WriteCheckpoint(expected)
+	s.NoError(err)
+
+	actual, err := s.repo.ReadCheckpoint()
+	s.NoError(err)
+	s.Equal(expected, actual)
+}
+
+func (s *SuiteRepository) TestCheckpoint_Fail_RecordNotFound() {
+	// readCheckpoint returns an error if it is failed to read a checkpoint from database.
+	_, err := s.repo.readCheckpoint()
+	s.Error(err)
+	s.True(strings.Contains(err.Error(), "record not found"))
+}
+
+func (s *SuiteRepository) TestCheckpoint_Success_RecordNotFound() {
+	// ReadCheckpoint filters "record not found" error and returns 0.
+	checkpoint, err := s.repo.ReadCheckpoint()
+	s.NoError(err)
+	s.Equal(int64(0), checkpoint)
+}
