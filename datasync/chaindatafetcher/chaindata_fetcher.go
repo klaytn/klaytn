@@ -54,7 +54,7 @@ type ChainDataFetcher struct {
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
 	repo, err := kas.NewRepository(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
 	if err != nil {
-		logger.Error("Failed to create new Repository", "err", err, "user", cfg.DBUser, "password", cfg.DBPassword, "host", cfg.DBHost, "port", cfg.DBPort, "name", cfg.DBName)
+		logger.Error("Failed to create new Repository", "err", err, "user", cfg.DBUser, "host", cfg.DBHost, "port", cfg.DBPort, "name", cfg.DBName)
 		return nil, err
 	}
 	checkpoint, err := repo.ReadCheckpoint()
