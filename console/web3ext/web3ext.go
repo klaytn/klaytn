@@ -1013,6 +1013,11 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
+			name: 'KASAnchor',
+			call: 'subbridge_kASAnchor',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'anchoring',
 			call: 'subbridge_anchoring',
 			params: 1

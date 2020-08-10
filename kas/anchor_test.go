@@ -51,6 +51,39 @@ func testAnchorData() *types.AnchoringDataInternalType0 {
 	}
 }
 
+func TestExampleSendRequest(t *testing.T) {
+	url := "http://anchor.wallet-api.dev.klaytn.com/v1/anchor"
+	xkrn := "krn:1001:anchor:test:operator-pool:op1"
+	user := "78ab9116689659321aaf472aa154eac7dd7a99c6"
+	pwd := "403e0397d51a823cd59b7edcb212788c8599dd7e"
+
+	operator := common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
+
+	// Anchor Data
+	anchorData := testAnchorData()
+
+	kasConfig := &KASConfig{
+		Url:          url,
+		Xkrn:         xkrn,
+		User:         user,
+		Pwd:          pwd,
+		Operator:     operator,
+		Anchor:       true,
+		AnchorPeriod: 1,
+	}
+
+	kasAnchor := NewKASAnchor(kasConfig, nil, nil)
+
+	payload := dataToPayload(anchorData)
+	res, err := kasAnchor.sendRequest(payload)
+	assert.NoError(t, err)
+
+	result, err := json.Marshal(res)
+	assert.NoError(t, err)
+
+	t.Log(string(result))
+}
+
 func TestSendRequest(t *testing.T) {
 	config := KASConfig{}
 	anchor := NewKASAnchor(&config, nil, nil)

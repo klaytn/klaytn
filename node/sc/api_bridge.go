@@ -232,6 +232,14 @@ func (sb *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[str
 	}, nil
 }
 
+func (sb *SubBridgeAPI) KASAnchor(blkNum uint64) error {
+	block := sb.subBridge.blockchain.GetBlockByNumber(blkNum)
+	if block != nil {
+		return sb.subBridge.kasAnchor.AnchorBlock(block)
+	}
+	return errInvalidBlock
+}
+
 func (sb *SubBridgeAPI) Anchoring(flag bool) bool {
 	return sb.subBridge.SetAnchoringTx(flag)
 }

@@ -44,8 +44,8 @@ import (
 )
 
 const (
-	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
-	chainHeadChanSize   = 10000
+	// chainEventChanSize is the size of channel listening to ChainHeadEvent.
+	chainEventChanSize  = 10000
 	chainLogChanSize    = 10000
 	transactionChanSize = 10000
 	rpcBufferSize       = 1024
@@ -126,7 +126,7 @@ func NewMainBridge(ctx *node.ServiceContext, config *SCConfig) (*MainBridge, err
 		accountManager: ctx.AccountManager,
 		networkId:      config.NetworkId,
 		ctx:            ctx,
-		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainEventChanSize),
 		logsCh:         make(chan []*types.Log, chainLogChanSize),
 		txCh:           make(chan blockchain.NewTxsEvent, transactionChanSize),
 		quitSync:       make(chan struct{}),
