@@ -109,10 +109,11 @@ func (f *ChainDataFetcher) Start(server p2p.Server) error {
 		go f.handleRequest()
 	}
 
-	// TODO-ChainDataFetcher no.default option may skip the following code fragments
-	// subscribe chain head event
-	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
-	f.started = true
+	if !f.config.NoDefaultStart {
+		// subscribe chain head event
+		f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
+		f.started = true
+	}
 
 	go f.reqLoop()
 	go f.resLoop()
