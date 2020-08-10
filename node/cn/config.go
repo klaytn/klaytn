@@ -93,6 +93,7 @@ type Config struct {
 	//LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
 
 	// Database options
+	DBType                 database.DBType
 	SkipBcVersionCheck     bool `toml:"-"`
 	PartitionedDB          bool
 	NumStateTriePartitions uint

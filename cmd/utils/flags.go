@@ -81,8 +81,8 @@ var (
 	}
 	DbTypeFlag = cli.StringFlag{
 		Name:  "dbtype",
-		Usage: `Blockchain storage database type ("leveldb", "badger")`,
-		Value: "leveldb",
+		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB")`,
+		Value: "LevelDB",
 	}
 	SrvTypeFlag = cli.StringFlag{
 		Name:  "srvtype",
@@ -1102,7 +1102,10 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setgRPC(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
-	cfg.DBType = ctx.GlobalString(DbTypeFlag.Name)
+	cfg.DBType = node.DefaultDBType()
+	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)); dbtype.IsValid() {
+		cfg.DBType = dbtype
+	}
 	cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -1206,6 +1209,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
 
+	cfg.DBType = node.DefaultDBType()
+	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)); dbtype.IsValid() {
+		cfg.DBType = dbtype
+	}
 	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
 	cfg.NumStateTriePartitions = ctx.GlobalUint(NumStateTriePartitionsFlag.Name)
 	if !database.IsPow2(cfg.NumStateTriePartitions) {
