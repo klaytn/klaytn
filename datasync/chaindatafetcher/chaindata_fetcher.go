@@ -174,7 +174,7 @@ func (f *ChainDataFetcher) resLoop() {
 				// TODO-ChainDataFetcher add retry logic when data insertion is failed
 			} else {
 				if err := f.updateCheckpoint(res.blockNumber.Int64()); err != nil {
-					logger.Error("Failed to update checkpoint", "checkpoint", res.blockNumber.Int64())
+					logger.Error("Failed to update checkpoint", "err", err, "checkpoint", res.blockNumber.Int64())
 				}
 			}
 		}
