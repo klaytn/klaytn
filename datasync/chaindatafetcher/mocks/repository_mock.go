@@ -33,21 +33,6 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 	return m.recorder
 }
 
-// GetCheckpoint mocks base method
-func (m *MockRepository) ReadCheckpoint() (int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadCheckpoint")
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCheckpoint indicates an expected call of GetCheckpoint
-func (mr *MockRepositoryMockRecorder) GetCheckpoint() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadCheckpoint", reflect.TypeOf((*MockRepository)(nil).ReadCheckpoint))
-}
-
 // InsertTokenTransfers mocks base method
 func (m *MockRepository) InsertTokenTransfers(arg0 blockchain.ChainEvent) error {
 	m.ctrl.T.Helper()
@@ -90,7 +75,22 @@ func (mr *MockRepositoryMockRecorder) InsertTransactions(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertTransactions", reflect.TypeOf((*MockRepository)(nil).InsertTransactions), arg0)
 }
 
-// SetCheckpoint mocks base method
+// ReadCheckpoint mocks base method
+func (m *MockRepository) ReadCheckpoint() (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadCheckpoint")
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadCheckpoint indicates an expected call of ReadCheckpoint
+func (mr *MockRepositoryMockRecorder) ReadCheckpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadCheckpoint", reflect.TypeOf((*MockRepository)(nil).ReadCheckpoint))
+}
+
+// WriteCheckpoint mocks base method
 func (m *MockRepository) WriteCheckpoint(arg0 int64) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteCheckpoint", arg0)
@@ -98,8 +98,8 @@ func (m *MockRepository) WriteCheckpoint(arg0 int64) error {
 	return ret0
 }
 
-// SetCheckpoint indicates an expected call of SetCheckpoint
-func (mr *MockRepositoryMockRecorder) SetCheckpoint(arg0 interface{}) *gomock.Call {
+// WriteCheckpoint indicates an expected call of WriteCheckpoint
+func (mr *MockRepositoryMockRecorder) WriteCheckpoint(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteCheckpoint", reflect.TypeOf((*MockRepository)(nil).WriteCheckpoint), arg0)
 }
