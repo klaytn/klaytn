@@ -184,17 +184,18 @@ func (f *ChainDataFetcher) resLoop() {
 func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
 	f.checkpointMap[num] = struct{}{}
 
-	oldCheckpoint := f.checkpoint
-	newCheckpoint := oldCheckpoint
+	updated := false
+	newCheckpoint := f.checkpoint
 	for {
 		if _, ok := f.checkpointMap[newCheckpoint]; !ok {
 			break
 		}
 		delete(f.checkpointMap, newCheckpoint)
 		newCheckpoint++
+		updated = true
 	}
 
-	if oldCheckpoint != newCheckpoint {
+	if updated {
 		f.checkpoint = newCheckpoint
 		return f.repo.WriteCheckpoint(newCheckpoint)
 	}
