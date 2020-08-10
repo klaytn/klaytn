@@ -19,10 +19,10 @@ package kas
 import "time"
 
 const (
-	TxTableName          = "klay_transfers"
-	KctTransferTableName = "kct_transfers"
-	RevertedTxTableName  = "reverted_transactions"
-	MetadataTableName    = "fetcher_metadata"
+	TxTableName             = "klay_transfers"
+	KctTransferTableName    = "kct_transfers"
+	RevertedTxTableName     = "reverted_transactions"
+	MetadataTableName       = "fetcher_metadata"
 	ContractTableName       = "contract"
 	KctFtMetadataTableName  = "kct_ft_metadata"
 	KctNftMetadataTableName = "kct_nft_metadata"
