@@ -76,7 +76,7 @@ func (anchor *Anchor) AnchorPeriodicBlock(block *types.Block) {
 	}
 
 	if block == nil {
-		logger.Error("KAS Anchor : failed to get a block form the event")
+		logger.Error("KAS Anchor : can not anchor nil block")
 		return
 	}
 
@@ -84,21 +84,11 @@ func (anchor *Anchor) AnchorPeriodicBlock(block *types.Block) {
 		return
 	}
 
-	anchor.anchorBlock(block)
-}
-
-// AnchorByBlockNum anchors the block of given block number to KAS by API.
-func (anchor *Anchor) AnchorByBlockNum(blkNum uint64) error {
-	block := anchor.bc.GetBlockByNumber(blkNum)
-	if block == nil {
-		return errNotFoundBlock
-	}
-
-	return anchor.anchorBlock(block)
+	anchor.AnchorBlock(block)
 }
 
 // blockToAnchoringDataInternalType0 makes AnchoringDataInternalType0 from the given block.
-// TxCount is the total number of transactions during N-P+1 ~ N blocks. (N: given block, P: anchoring period)
+// TxCount is the number of transactions of the last N blocks. (N is a anchor period.)
 func (anchor *Anchor) blockToAnchoringDataInternalType0(block *types.Block) *types.AnchoringDataInternalType0 {
 	start := uint64(0)
 	if block.NumberU64() >= anchor.kasConfig.AnchorPeriod {
@@ -127,8 +117,8 @@ func (anchor *Anchor) blockToAnchoringDataInternalType0(block *types.Block) *typ
 	}
 }
 
-// anchorBlock converts given block to payload and anchor the payload via KAS anchor API.
-func (anchor *Anchor) anchorBlock(block *types.Block) error {
+// AnchorBlock converts given block to payload and anchor the payload via KAS anchor API.
+func (anchor *Anchor) AnchorBlock(block *types.Block) error {
 	anchorData := anchor.blockToAnchoringDataInternalType0(block)
 
 	payload := dataToPayload(anchorData)
@@ -140,7 +130,7 @@ func (anchor *Anchor) anchorBlock(block *types.Block) error {
 
 	if res.Code != codeOK {
 		result, _ := json.Marshal(res)
-		logger.Debug("Failed to anchor a block via KAS", "blkNum", block.NumberU64(), "result", string(result))
+		logger.Error("Failed to anchor a block via KAS", "blkNum", block.NumberU64(), "result", string(result))
 		return fmt.Errorf("error code %v", res.Code)
 	}
 
