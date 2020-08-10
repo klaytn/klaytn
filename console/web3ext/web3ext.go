@@ -21,20 +21,65 @@
 package web3ext
 
 var Modules = map[string]string{
-	"admin":      Admin_JS,
-	"debug":      Debug_JS,
-	"klay":       Klay_JS,
-	"net":        Net_JS,
-	"personal":   Personal_JS,
-	"rpc":        RPC_JS,
-	"txpool":     TxPool_JS,
-	"istanbul":   Istanbul_JS,
-	"mainbridge": MainBridge_JS,
-	"subbridge":  SubBridge_JS,
-	"clique":     CliqueJs,
-	"governance": Governance_JS,
-	"bootnode":   Bootnode_JS,
+	"admin":            Admin_JS,
+	"debug":            Debug_JS,
+	"klay":             Klay_JS,
+	"net":              Net_JS,
+	"personal":         Personal_JS,
+	"rpc":              RPC_JS,
+	"txpool":           TxPool_JS,
+	"istanbul":         Istanbul_JS,
+	"mainbridge":       MainBridge_JS,
+	"subbridge":        SubBridge_JS,
+	"clique":           CliqueJs,
+	"governance":       Governance_JS,
+	"bootnode":         Bootnode_JS,
+	"chaindatafetcher": ChainDataFetcher_JS,
 }
+
+const ChainDataFetcher_JS = `
+web3._extend({
+	property: 'chaindatafetcher',
+	methods: [
+		new web3._extend.Method({
+			name: 'start',
+			call: 'chaindatafetcher_start',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'stop',
+			call: 'chaindatafetcher_stop',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'startWithRange',
+			call: 'chaindatafetcher_startWithRange',
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'stopWithRange',
+			call: 'chaindatafetcher_stopWithRange',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'readCheckpoint',
+			call: 'chaindatafetcher_readCheckpoint',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'writeCheckpoint',
+			call: 'chaindatafetcher_writeCheckpoint',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getConfig',
+			call: 'chaindatafetcher_getConfig',
+			params: 0
+		})
+	],
+	properties: []
+});
+`
 
 const Bootnode_JS = `
 web3._extend({

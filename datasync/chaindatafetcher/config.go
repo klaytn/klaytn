@@ -16,6 +16,8 @@
 
 package chaindatafetcher
 
+import "fmt"
+
 const (
 	DefaultNumHandlers      = 10
 	DefaultJobChannelSize   = 50
@@ -36,6 +38,22 @@ type ChainDataFetcherConfig struct {
 	DBName     string
 	DBUser     string
 	DBPassword string
+}
+
+func (config *ChainDataFetcherConfig) String() string {
+	return fmt.Sprintf(`Config:
+	enabled: %v,
+	no.default.start: %v,
+	num.handlers: %v,
+	job.chan.size: %v,
+	block.chan.size: %v,
+
+	db.host: %v,
+	db.port: %v,
+	db.name: %v,
+	db.user: %v,
+`, config.EnabledChainDataFetcher, config.NoDefaultStart, config.NumHandlers, config.JobChannelSize,
+		config.BlockChannelSize, config.DBHost, config.DBPort, config.DBName, config.DBUser)
 }
 
 var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
