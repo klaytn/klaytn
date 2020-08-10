@@ -3,9 +3,8 @@ package database
 import (
 	"bytes"
 	"fmt"
-	"strings"
-
 	"github.com/klaytn/klaytn/common/hexutil"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -115,16 +114,14 @@ func (s3DB *s3FileDB) read(key []byte) ([]byte, error) {
 	// Below loop is to load all the data with the given key,
 	// as `Read` method does not read all the data when the data is large.
 	// The loop continues until there's nothing remaining.
-	buf := make([]byte, bodySize)
 	for totalReadSize < bodySize {
+		buf := make([]byte, bodySize)
 		currReadSize, err = output.Body.Read(buf)
 		if err != nil && !strings.Contains(err.Error(), "EOF") {
 			return nil, err
 		}
-
 		returnVal = append(returnVal, buf[:currReadSize]...)
 		totalReadSize += currReadSize
-		buf = buf[:0]
 	}
 
 	return returnVal, nil

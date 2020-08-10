@@ -2,6 +2,7 @@ package database
 
 import (
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -39,7 +40,7 @@ func TestDynamoBatch_Write(t *testing.T) {
 	var testVals [][]byte
 	batch := dynamo.NewBatch()
 
-	itemNum := 1000
+	itemNum := 25
 	for i := 0; i < itemNum; i++ {
 		testKey := common.MakeRandomBytes(32)
 		testVal := common.MakeRandomBytes(500)
@@ -55,9 +56,42 @@ func TestDynamoBatch_Write(t *testing.T) {
 	for i := 0; i < itemNum; i++ {
 		returnedVal, returnedErr := dynamo.Get(testKeys[i])
 		assert.NoError(t, returnedErr)
-		assert.Equal(t, testVals[i], returnedVal)
+		assert.Equal(t, hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
 	}
 }
+
+func TestDynamoBatch_WriteLargeData(t *testing.T) {
+	dynamo, err := NewDynamoDB(createTestDynamoDBConfig())
+	defer dynamo.deletedDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("dynamoDB", dynamo.config.TableName)
+
+	var testKeys [][]byte
+	var testVals [][]byte
+	batch := dynamo.NewBatch()
+
+	itemNum := 26
+	for i := 0; i < itemNum; i++ {
+		testKey := common.MakeRandomBytes(32)
+		testVal := common.MakeRandomBytes(500 * 1024)
+
+		testKeys = append(testKeys, testKey)
+		testVals = append(testVals, testVal)
+
+		assert.NoError(t, batch.Put(testKey, testVal))
+	}
+	assert.NoError(t, batch.Write())
+
+	// check if exist
+	for i := 0; i < itemNum; i++ {
+		returnedVal, returnedErr := dynamo.Get(testKeys[i])
+		assert.NoError(t, returnedErr)
+		assert.Equal(t, hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
+	}
+}
+
 func (dynamo *dynamoDB) deletedDB() {
 	dynamo.Close()
 	dynamo.deleteTable()

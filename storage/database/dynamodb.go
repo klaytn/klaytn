@@ -21,7 +21,7 @@ import (
 var dataNotFoundErr = errors.New("data is not found with the given key")
 var nilDynamoConfigErr = errors.New("attempt to create DynamoDB with nil configuration")
 
-const dynamoWriteSizeLimit = 400 * 1024 // The maximum item size is 400 KB including a key size
+const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB including attribute names and values
 const dynamoBatchSize = 25
 const dynamoMaxRetry = 5
 
@@ -80,7 +80,7 @@ func createTestDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
 		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com",
-		TableName:          "dynamo-test",
+		TableName:          "dynamo-test-tmp",
 		ReadCapacityUnits:  dynamoReadCapacityUnits,
 		WriteCapacityUnits: dynamoWriteCapacityUnits,
 	}
@@ -91,8 +91,8 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 		return nil, nilDynamoConfigErr
 	}
 
-	logger.Info("creating s3FileDB ", "bucket", config.TableName+"-bucket")
-	s3FileDB, err := newS3FileDB(config.Region, "https://s3.ap-northeast-2.amazonaws.com", config.TableName+"-bucket")
+	logger.Info("creating s3FileDB ", "bucket", config.TableName)
+	s3FileDB, err := newS3FileDB(config.Region, "https://s3.ap-northeast-2.amazonaws.com", config.TableName)
 	if err != nil {
 		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName+"-bucket")
 		return nil, err
@@ -208,18 +208,13 @@ func (dynamo *dynamoDB) Type() DBType {
 	return DynamoDB
 }
 
-// Path returns the path to the database directory.
-func (dynamo *dynamoDB) Path() string {
-	return fmt.Sprintf("%s-%s", dynamo.config.Region, dynamo.config.Endpoint)
-}
-
 // Put inserts the given key and value pair to the database.
 func (dynamo *dynamoDB) Put(key []byte, val []byte) error {
 	if len(key) == 0 {
 		return nil
 	}
 
-	if len(key)+len(val) > dynamoWriteSizeLimit {
+	if len(val) > dynamoWriteSizeLimit {
 		_, err := dynamo.fdb.write(item{key: key, val: val})
 		if err != nil {
 			return err
@@ -317,7 +312,7 @@ func (dynamo *dynamoDB) Close() {
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
-	// TODO-Klaytn: add metrics
+	// TODO-Klaytn: implement this later.
 	dynamo.batchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 	dynamo.batchWriteCountMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/count", nil)
 	dynamo.batchWriteSizeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/size", nil)
@@ -343,18 +338,18 @@ func (dynamo *dynamoDB) createBatchWriteWorker() {
 	batchWriteInput := &dynamodb.BatchWriteItemInput{
 		RequestItems: map[string][]*dynamodb.WriteRequest{},
 	}
-	dynamo.logger.Info("generate a dynamoDB batchWrite worker", "time", time.Now())
+	dynamo.logger.Info("generate a dynamoDB batchWrite worker")
 
 	for {
 		select {
 		case <-dynamo.quitCh:
-			dynamo.logger.Info("close a dynamoDB batchWrite worker", "time", time.Now())
+			dynamo.logger.Info("close a dynamoDB batchWrite worker")
 			return
 		case batchInput := <-dynamo.writeCh:
 			batchWriteInput.RequestItems[tableName] = batchInput.items
 
 			BatchWriteItemOutput, err := dynamo.db.BatchWriteItem(batchWriteInput)
-			numUnprocessed := len(BatchWriteItemOutput.UnprocessedItems)
+			numUnprocessed := len(BatchWriteItemOutput.UnprocessedItems[tableName])
 			for err != nil || numUnprocessed != 0 {
 				if err != nil {
 					failCount++
@@ -402,7 +397,7 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 	}
 
 	// If the size of the item is larger than the limit, it should be handled in different way
-	if len(key)+dataSize > dynamoWriteSizeLimit {
+	if dataSize > dynamoWriteSizeLimit {
 		batch.wg.Add(1)
 		go func() {
 			failCnt := 0
@@ -411,8 +406,8 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 			_, err := batch.db.fdb.write(item{key: key, val: val})
 			for err != nil {
 				failCnt++
-				batch.db.logger.Error("cannot write an item into fileDB. check the status of s3", "err", err,
-					"numRetry", failCnt)
+				batch.db.logger.Error("cannot write an item into fileDB. check the status of s3",
+					"err", err, "numRetry", failCnt)
 				time.Sleep(time.Second)
 
 				batch.db.logger.Warn("retrying write an item into fileDB")
@@ -444,10 +439,6 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 }
 
 func (batch *dynamoBatch) Write() error {
-	if batch.size == 0 {
-		return nil
-	}
-
 	var writeRequest []*dynamodb.WriteRequest
 	numRemainedItems := len(batch.batchItems)
 
@@ -459,7 +450,7 @@ func (batch *dynamoBatch) Write() error {
 			writeRequest = batch.batchItems
 		}
 		batch.wg.Add(1)
-		batch.db.writeCh <- &batchWriteWorkerInput{batch.batchItems, batch.wg}
+		batch.db.writeCh <- &batchWriteWorkerInput{writeRequest, batch.wg}
 		numRemainedItems -= len(writeRequest)
 	}
 
@@ -472,6 +463,6 @@ func (batch *dynamoBatch) ValueSize() int {
 }
 
 func (batch *dynamoBatch) Reset() {
-	batch.batchItems = batch.batchItems[:0]
+	batch.batchItems = []*dynamodb.WriteRequest{}
 	batch.size = 0
 }
