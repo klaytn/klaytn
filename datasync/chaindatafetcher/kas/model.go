@@ -20,6 +20,7 @@ const (
 	TxTableName          = "klay_transfers"
 	KctTransferTableName = "kct_transfers"
 	RevertedTxTableName  = "reverted_transactions"
+	MetadataTableName    = "fetcher_metadata"
 )
 
 type Tx struct {
@@ -66,4 +67,13 @@ type RevertedTx struct {
 
 func (RevertedTx) TableName() string {
 	return RevertedTxTableName
+}
+
+type FetcherMetadata struct {
+	Key   string `gorm:"column:key;type:VARCHAR(30);PRIMARY_KEY"`
+	Value int64  `gorm:"column:value;type:BIGINT"`
+}
+
+func (FetcherMetadata) TableName() string {
+	return MetadataTableName
 }

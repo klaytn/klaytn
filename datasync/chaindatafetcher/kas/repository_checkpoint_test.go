@@ -14,16 +14,30 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package chaindatafetcher
+package kas
 
-import "github.com/klaytn/klaytn/blockchain"
+import "strings"
 
-//go:generate mockgen -destination=./mocks/repository_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher Repository
-type Repository interface {
-	InsertTransactions(event blockchain.ChainEvent) error
-	InsertTokenTransfers(event blockchain.ChainEvent) error
-	InsertTraceResults(event blockchain.ChainEvent) error
+func (s *SuiteRepository) TestCheckpoint_Success() {
+	expected := int64(1912)
+	err := s.repo.WriteCheckpoint(expected)
+	s.NoError(err)
 
-	ReadCheckpoint() (int64, error)
-	WriteCheckpoint(checkpoint int64) error
+	actual, err := s.repo.ReadCheckpoint()
+	s.NoError(err)
+	s.Equal(expected, actual)
+}
+
+func (s *SuiteRepository) TestCheckpoint_Fail_RecordNotFound() {
+	// readCheckpoint returns an error if it is failed to read a checkpoint from database.
+	_, err := s.repo.readCheckpoint()
+	s.Error(err)
+	s.True(strings.Contains(err.Error(), "record not found"))
+}
+
+func (s *SuiteRepository) TestCheckpoint_Success_RecordNotFound() {
+	// ReadCheckpoint filters "record not found" error and returns 0.
+	checkpoint, err := s.repo.ReadCheckpoint()
+	s.NoError(err)
+	s.Equal(int64(0), checkpoint)
 }

@@ -23,6 +23,7 @@ import (
 
 var models = []interface{}{
 	&Tx{},
+	&FetcherMetadata{},
 }
 
 // configure and generate a test block chain
