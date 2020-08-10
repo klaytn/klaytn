@@ -17,6 +17,7 @@
 package chaindatafetcher
 
 import (
+	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 	"github.com/klaytn/klaytn/event"
@@ -32,7 +33,8 @@ var logger = log.NewModuleLogger(log.ChainDataFetcher)
 type ChainDataFetcher struct {
 	config *ChainDataFetcherConfig
 
-	blockchain *blockchain.BlockChain
+	blockchain    *blockchain.BlockChain
+	blockchainAPI *api.PublicBlockChainAPI
 
 	chainCh  chan blockchain.ChainEvent
 	chainSub event.Subscription
@@ -117,6 +119,13 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 		switch v := component.(type) {
 		case *blockchain.BlockChain:
 			f.blockchain = v
+		case []rpc.API:
+			for _, a := range v {
+				switch blockchainApi := a.Service.(type) {
+				case *api.PublicBlockChainAPI:
+					f.blockchainAPI = blockchainApi
+				}
+			}
 		}
 	}
 }

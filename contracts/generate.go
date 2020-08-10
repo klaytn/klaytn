@@ -24,6 +24,8 @@ package contracts
 
 //go:generate abigen --sol ./sc_erc20/sc_token.sol --pkg sctoken --out ./sc_erc20/sc_token.go
 
+//go:generate abigen --sol ./kip13/InterfaceIdentifier.sol --pkg kip13 --out ./kip13/InterfaceIdentifier.go
+
 //`credit.sol` was compiled by solidity@0.4.24.
 // This code data was included in cypress genesis file.
 ////go:generate abigen --sol ./cypress/credit.sol --pkg cypress --out ./cypress/credit.go

@@ -33,6 +33,20 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 	return m.recorder
 }
 
+// InsertContracts mocks base method
+func (m *MockRepository) InsertContracts(arg0 blockchain.ChainEvent) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertContracts", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InsertContracts indicates an expected call of InsertContracts
+func (mr *MockRepositoryMockRecorder) InsertContracts(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertContracts", reflect.TypeOf((*MockRepository)(nil).InsertContracts), arg0)
+}
+
 // InsertTokenTransfers mocks base method
 func (m *MockRepository) InsertTokenTransfers(arg0 blockchain.ChainEvent) error {
 	m.ctrl.T.Helper()
@@ -88,6 +102,18 @@ func (m *MockRepository) ReadCheckpoint() (int64, error) {
 func (mr *MockRepositoryMockRecorder) ReadCheckpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadCheckpoint", reflect.TypeOf((*MockRepository)(nil).ReadCheckpoint))
+}
+
+// SetComponent mocks base method
+func (m *MockRepository) SetComponent(arg0 interface{}) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetComponent", arg0)
+}
+
+// SetComponent indicates an expected call of SetComponent
+func (mr *MockRepositoryMockRecorder) SetComponent(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetComponent", reflect.TypeOf((*MockRepository)(nil).SetComponent), arg0)
 }
 
 // WriteCheckpoint mocks base method
