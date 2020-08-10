@@ -70,6 +70,8 @@ func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, entryTx *Tx
 		*offset++
 		newTx := *entryTx
 		newTx.TransactionId += *offset
+		newTx.FromAddr = trace.From.Bytes()
+		newTx.ToAddr = trace.To.Bytes()
 		txs = append(txs, &newTx)
 	}
 
