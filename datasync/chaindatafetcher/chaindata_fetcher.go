@@ -169,14 +169,15 @@ func (f *ChainDataFetcher) startRange(start, end uint64, reqType requestType) er
 	f.rangeStarted = true
 	defer func() { f.rangeStarted = false }()
 
-	events, err := f.makeChainEvents(start, end)
-	if err != nil {
-		return err
-	}
+	// TODO-ChainDataFetcher parallelize the following codes
+	for i := start; i < end; i++ {
+		e, err := f.makeChainEvent(i)
+		if err != nil {
+			return err
+		}
 
-	for _, e := range events {
 		f.reqCh <- &request{
-			reqType: requestTypeTransaction,
+			reqType: reqType,
 			event:   e,
 		}
 		// TODO-ChainDataFetcher add stop logic while processing the events.
@@ -189,41 +190,32 @@ func (f *ChainDataFetcher) stopRange() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) makeChainEvents(start, end uint64) ([]blockchain.ChainEvent, error) {
-	var (
-		events []blockchain.ChainEvent
-		logs   []*types.Log
-	)
-
-	// TODO-ChainDataFetcher parallelize the following codes
-	for i := start; i <= end; i++ {
-		block := f.blockchain.GetBlockByNumber(i)
-		receipts := f.blockchain.GetReceiptsByBlockHash(block.Hash())
-		for _, r := range receipts {
-			logs = append(logs, r.Logs...)
-		}
-		fct := "fastCallTracer"
-		results, err := f.debugAPI.TraceBlockByNumber(context.Background(), rpc.BlockNumber(block.Number().Int64()), &cn.TraceConfig{
-			Tracer: &fct,
-		})
-		if err != nil {
-			return nil, err
-		}
-		var internalTraces []*vm.InternalTxTrace
-		for _, r := range results {
-			// TODO-ChainDataFetcher Assume that the input parameters are valid always.
-			internalTraces = append(internalTraces, r.Result.(*vm.InternalTxTrace))
-		}
-		ev := blockchain.ChainEvent{
-			Block:            block,
-			Hash:             block.Hash(),
-			Receipts:         receipts,
-			Logs:             logs,
-			InternalTxTraces: internalTraces,
-		}
-		events = append(events, ev)
+func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainEvent, error) {
+	var logs []*types.Log
+	block := f.blockchain.GetBlockByNumber(blockNumber)
+	receipts := f.blockchain.GetReceiptsByBlockHash(block.Hash())
+	for _, r := range receipts {
+		logs = append(logs, r.Logs...)
 	}
-	return events, nil
+	fct := "fastCallTracer"
+	results, err := f.debugAPI.TraceBlockByNumber(context.Background(), rpc.BlockNumber(block.Number().Int64()), &cn.TraceConfig{
+		Tracer: &fct,
+	})
+	if err != nil {
+		return blockchain.ChainEvent{}, err
+	}
+	var internalTraces []*vm.InternalTxTrace
+	for _, r := range results {
+		// TODO-ChainDataFetcher Assume that the input parameters are valid always.
+		internalTraces = append(internalTraces, r.Result.(*vm.InternalTxTrace))
+	}
+	return blockchain.ChainEvent{
+		Block:            block,
+		Hash:             block.Hash(),
+		Receipts:         receipts,
+		Logs:             logs,
+		InternalTxTraces: internalTraces,
+	}, nil
 }
 
 func (f *ChainDataFetcher) Components() []interface{} {
