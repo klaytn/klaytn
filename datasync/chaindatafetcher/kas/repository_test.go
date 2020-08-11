@@ -121,11 +121,10 @@ func setTestDatabase(t *testing.T, mysql *gorm.DB) {
 
 func (s *SuiteRepository) SetupSuite() {
 	id := "root"
-	password := "root"
 
-	mysql, err := gorm.Open("mysql", fmt.Sprintf("%s:%s@/?parseTime=True", id, password))
+	mysql, err := gorm.Open("mysql", fmt.Sprintf("%s@/?parseTime=True", id))
 	if err != nil {
-		s.T().Log("Failed connecting to mysql", "id", id, "password", password, "err", err)
+		s.T().Log("Failed connecting to mysql", "id", id, "err", err)
 		s.T().Skip()
 	}
 

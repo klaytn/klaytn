@@ -19,6 +19,9 @@ package kas
 import "strings"
 
 func (s *SuiteRepository) TestCheckpoint_Success() {
+	// Clean up the table before test.
+	s.NoError(s.repo.db.Delete(FetcherMetadata{}).Error)
+
 	expected := int64(1912)
 	err := s.repo.WriteCheckpoint(expected)
 	s.NoError(err)
@@ -29,6 +32,9 @@ func (s *SuiteRepository) TestCheckpoint_Success() {
 }
 
 func (s *SuiteRepository) TestCheckpoint_Fail_RecordNotFound() {
+	// Clean up the table before test.
+	s.NoError(s.repo.db.Delete(FetcherMetadata{}).Error)
+
 	// readCheckpoint returns an error if it is failed to read a checkpoint from database.
 	_, err := s.repo.readCheckpoint()
 	s.Error(err)
@@ -36,6 +42,9 @@ func (s *SuiteRepository) TestCheckpoint_Fail_RecordNotFound() {
 }
 
 func (s *SuiteRepository) TestCheckpoint_Success_RecordNotFound() {
+	// Clean up the table before test.
+	s.NoError(s.repo.db.Delete(FetcherMetadata{}).Error)
+
 	// ReadCheckpoint filters "record not found" error and returns 0.
 	checkpoint, err := s.repo.ReadCheckpoint()
 	s.NoError(err)
