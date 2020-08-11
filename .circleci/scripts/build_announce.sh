@@ -4,8 +4,8 @@ set -euox
 VERSION=$(go run build/rpm/main.go version)~${CIRCLE_TAG##*-}
 
 SHORT_SHA1=${CIRCLE_SHA1:0:7}
-CIRCLE_PR_NUMBER=$(hub pr list -s open -L 10 -f "%I")
-
+CIRCLE_PR=$(hub pr list -s open -L 10 -f "%I %sH %n" | grep $CIRCLE_SHA1)
+CIRCLE_PR_NUMBER=${CIRCLE_PR%% *}
 PACKAGES="kcn kpn ken kscn kspn ksen kbn kgen homi"
 BAOBAB_PACKAGES="kcn kpn ken"
 PACKAGE_PREFIX="http://packages.klaytn.net/klaytn/${VERSION}"
