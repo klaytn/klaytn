@@ -17,14 +17,19 @@
 package chaindatafetcher
 
 import (
+	"context"
+	"errors"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/node/cn"
 	"sync"
 )
 
@@ -35,6 +40,7 @@ type ChainDataFetcher struct {
 
 	blockchain    *blockchain.BlockChain
 	blockchainAPI *api.PublicBlockChainAPI
+	debugAPI      *cn.PrivateDebugAPI
 
 	chainCh  chan blockchain.ChainEvent
 	chainSub event.Subscription
@@ -51,6 +57,9 @@ type ChainDataFetcher struct {
 	wg sync.WaitGroup
 
 	repo Repository
+
+	started      bool
+	rangeStarted bool
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
@@ -82,8 +91,14 @@ func (f *ChainDataFetcher) Protocols() []p2p.Protocol {
 }
 
 func (f *ChainDataFetcher) APIs() []rpc.API {
-	// TODO-ChainDataFetcher add APIs to start or stop chaindata fetcher
-	return []rpc.API{}
+	return []rpc.API{
+		{
+			Namespace: "chaindatafetcher",
+			Version:   "1.0",
+			Service:   NewPublicChainDataFetcherAPI(f),
+			Public:    true,
+		},
+	}
 }
 
 func (f *ChainDataFetcher) Start(server p2p.Server) error {
@@ -92,8 +107,12 @@ func (f *ChainDataFetcher) Start(server p2p.Server) error {
 		go f.handleRequest()
 	}
 
-	// subscribe chain head event
-	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
+	if !f.config.NoDefaultStart {
+		if err := f.startFetching(); err != nil {
+			return err
+		}
+	}
+
 	go f.reqLoop()
 	go f.resLoop()
 
@@ -101,13 +120,98 @@ func (f *ChainDataFetcher) Start(server p2p.Server) error {
 }
 
 func (f *ChainDataFetcher) Stop() error {
-	f.chainSub.Unsubscribe()
+	if f.chainSub != nil {
+		f.chainSub.Unsubscribe()
+	}
 	close(f.stopCh)
 
 	logger.Info("wait for all goroutines to be terminated...")
 	f.wg.Wait()
 	logger.Info("terminated all goroutines for chaindatafetcher")
+	f.started = false
 	return nil
+}
+
+func (f *ChainDataFetcher) startFetching() error {
+	if f.started {
+		return errors.New("the chaindata fetcher is already started")
+	}
+
+	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
+	currentBlock := f.blockchain.CurrentHeader().Number.Uint64()
+	if err := f.startRangeFetching(uint64(f.checkpoint), currentBlock, requestTypeTransaction); err != nil {
+		return err
+	}
+
+	f.started = true
+	return nil
+}
+
+func (f *ChainDataFetcher) stopFetching() error {
+	if !f.started {
+		return errors.New("the chaindata fetcher is not running")
+	}
+
+	f.chainSub.Unsubscribe()
+	f.started = false
+	return nil
+}
+
+func (f *ChainDataFetcher) startRangeFetching(start, end uint64, reqType requestType) error {
+	if f.rangeStarted {
+		return errors.New("the chaindata fetcher is already started with range")
+	}
+	f.rangeStarted = true
+	defer func() { f.rangeStarted = false }()
+
+	// TODO-ChainDataFetcher parallelize the following codes
+	for i := start; i < end; i++ {
+		e, err := f.makeChainEvent(i)
+		if err != nil {
+			return err
+		}
+
+		f.reqCh <- &request{
+			reqType: reqType,
+			event:   e,
+		}
+		// TODO-ChainDataFetcher add stop logic while processing the events.
+	}
+	return nil
+}
+
+func (f *ChainDataFetcher) stopRangeFetching() error {
+	// TODO-ChainDataFetcher add logic for stopping
+	return nil
+}
+
+// TODO-ChainDataFetcher push down this logic to handleRequest
+func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainEvent, error) {
+	var logs []*types.Log
+	block := f.blockchain.GetBlockByNumber(blockNumber)
+	receipts := f.blockchain.GetReceiptsByBlockHash(block.Hash())
+	for _, r := range receipts {
+		logs = append(logs, r.Logs...)
+	}
+	fct := "fastCallTracer"
+	results, err := f.debugAPI.TraceBlockByNumber(context.Background(), rpc.BlockNumber(block.Number().Int64()), &cn.TraceConfig{
+		Tracer: &fct,
+	})
+	if err != nil {
+		return blockchain.ChainEvent{}, err
+	}
+	var internalTraces []*vm.InternalTxTrace
+	for _, r := range results {
+		// TODO-ChainDataFetcher Assume that the input parameters are valid always.
+		internalTraces = append(internalTraces, r.Result.(*vm.InternalTxTrace))
+	}
+	return blockchain.ChainEvent{
+		Block:            block,
+		Hash:             block.Hash(),
+		Receipts:         receipts,
+		Logs:             logs,
+		InternalTxTraces: internalTraces,
+	}, nil
 }
 
 func (f *ChainDataFetcher) Components() []interface{} {
@@ -121,9 +225,11 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 			f.blockchain = v
 		case []rpc.API:
 			for _, a := range v {
-				switch blockchainApi := a.Service.(type) {
+				switch s := a.Service.(type) {
 				case *api.PublicBlockChainAPI:
-					f.blockchainAPI = blockchainApi
+					f.blockchainAPI = s
+				case *cn.PrivateDebugAPI:
+					f.debugAPI = s
 				}
 			}
 		}
