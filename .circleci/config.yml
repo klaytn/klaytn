@@ -28,6 +28,7 @@ executors:
     docker:
       - image: klaytn/build_base:1.1-go1.14.6-solc0.4.24
       - image: localstack/localstack:0.10.9
+      - image: circleci/mysql:5.7
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
@@ -257,11 +258,22 @@ jobs:
           command: golangci-lint run --new-from-rev=dev --presets format,style -v --timeout 10m
 
   test-datasync:
-    executor: test-executor
+    executor: test-others-executor
     steps:
       - install-ssh-alpine
       - checkout
-      - run: # TODO-ChainDataFetcher launch mysql test database before the test-datasync runs
+      - run:
+        # Our primary container isn't MYSQL so run a sleep command until it's ready.
+            name: "Waiting for MySQL to be ready"
+            command: |
+              for i in `seq 1 10`;
+              do
+                nc -z 127.0.0.1 3306 && echo Success && exit 0
+                echo -n .
+                sleep 1
+              done
+              echo Failed waiting for MySQL && exit 1
+      - run:
           name: "Run test datasync"
           command: make test-datasync
 
