@@ -93,22 +93,22 @@ type Config struct {
 	//LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
 
 	// Database options
-	DBType                 database.DBType
-	SkipBcVersionCheck     bool `toml:"-"`
-	PartitionedDB          bool
-	NumStateTriePartitions uint
-	LevelDBCompression     database.LevelDBCompressionType
-	LevelDBBufferPool      bool
-	LevelDBCacheSize       int
-	TrieCacheSize          int
-	TrieTimeout            time.Duration
-	TrieBlockInterval      uint
-	TriesInMemory          uint64
-	SenderTxHashIndexing   bool
-	ParallelDBWrite        bool
-	StateDBCaching         bool
-	TxPoolStateCache       bool
-	TrieCacheLimit         int
+	DBType               database.DBType
+	SkipBcVersionCheck   bool `toml:"-"`
+	SingleDB             bool
+	NumStateTrieShards   uint
+	LevelDBCompression   database.LevelDBCompressionType
+	LevelDBBufferPool    bool
+	LevelDBCacheSize     int
+	TrieCacheSize        int
+	TrieTimeout          time.Duration
+	TrieBlockInterval    uint
+	TriesInMemory        uint64
+	SenderTxHashIndexing bool
+	ParallelDBWrite      bool
+	StateDBCaching       bool
+	TxPoolStateCache     bool
+	TrieCacheLimit       int
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`

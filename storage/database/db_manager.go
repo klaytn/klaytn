@@ -37,7 +37,7 @@ var logger = log.NewModuleLogger(log.StorageDatabase)
 
 type DBManager interface {
 	IsParallelDBWrite() bool
-	IsPartitioned() bool
+	IsSingle() bool
 	InMigration() bool
 	MigrationBlockNumber() uint64
 	getStateTrieMigrationInfo() uint64
@@ -311,12 +311,12 @@ func NewMemoryDBManager() DBManager {
 // DBConfig handles database related configurations.
 type DBConfig struct {
 	// General configurations for all types of DB.
-	Dir                    string
-	DBType                 DBType
-	Partitioned            bool
-	NumStateTriePartitions uint
-	ParallelDBWrite        bool
-	OpenFilesLimit         int
+	Dir                string
+	DBType             DBType
+	SingleDB           bool // whether dbs (such as MiscDB, headerDB and etc) share one physical DB
+	NumStateTrieShards uint // the number of shards of state trie db
+	ParallelDBWrite    bool
+	OpenFilesLimit     int
 
 	// LevelDB related configurations.
 	LevelDBCacheSize   int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
@@ -354,9 +354,9 @@ func newMiscDB(dbc *DBConfig) Database {
 	return db
 }
 
-// partitionedDatabaseDBManager returns DBManager which handles partitioned Database.
+// databaseDBManager returns DBManager which handles partitioned Database.
 // Each Database will have its own separated Database.
-func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
+func databaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 	dbm := newDatabaseManager(dbc)
 	var db Database
 	var err error
@@ -379,8 +379,8 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 			fallthrough
 		case StateTrieDB:
 			newDBC := getDBEntryConfig(dbc, entryType, dir)
-			if dbc.NumStateTriePartitions > 1 {
-				db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
+			if dbc.NumStateTrieShards > 1 {
+				db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTrieShards)
 			} else {
 				db, err = newDatabase(newDBC, entryType)
 			}
@@ -427,19 +427,19 @@ func newDatabaseManager(dbc *DBConfig) *databaseManager {
 // If Partitioned is true, each Database will have its own LevelDB.
 // If not, each Database will share one common LevelDB.
 func NewDBManager(dbc *DBConfig) DBManager {
-	if !dbc.Partitioned {
-		logger.Info("Non-partitioned database is used for persistent storage", "DBType", dbc.DBType)
+	if dbc.SingleDB {
+		logger.Info("Single database is used for persistent storage", "DBType", dbc.DBType)
 		if dbm, err := singleDatabaseDBManager(dbc); err != nil {
-			logger.Crit("Failed to create non-partitioned database", "DBType", dbc.DBType, "err", err)
+			logger.Crit("Failed to create a single database", "DBType", dbc.DBType, "err", err)
 		} else {
 			return dbm
 		}
 	} else {
 		checkDBEntryConfigRatio()
-		logger.Info("Partitioned database is used for persistent storage", "DBType", dbc.DBType)
-		dbm, err := partitionedDatabaseDBManager(dbc)
+		logger.Info("Database is used for persistent storage", "DBType", dbc.DBType)
+		dbm, err := databaseDBManager(dbc)
 		if err != nil {
-			logger.Crit("Failed to partitioned database", "DBType", dbc.DBType, "err", err)
+			logger.Crit("Failed to create databases", "DBType", dbc.DBType, "err", err)
 		}
 		if migrationBlockNum := dbm.getStateTrieMigrationInfo(); migrationBlockNum > 0 {
 			mdb := dbm.getDatabase(StateTrieMigrationDB)
@@ -460,8 +460,8 @@ func (dbm *databaseManager) IsParallelDBWrite() bool {
 	return dbm.config.ParallelDBWrite
 }
 
-func (dbm *databaseManager) IsPartitioned() bool {
-	return dbm.config.Partitioned
+func (dbm *databaseManager) IsSingle() bool {
+	return dbm.config.SingleDB
 }
 
 func (dbm *databaseManager) InMigration() bool {
@@ -586,8 +586,8 @@ func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) 
 	newDBConfig := getDBEntryConfig(dbc, StateTrieMigrationDB, dbDir)
 	var newDB Database
 	var err error
-	if newDBConfig.NumStateTriePartitions > 1 {
-		newDB, err = newPartitionedDB(newDBConfig, StateTrieMigrationDB, newDBConfig.NumStateTriePartitions)
+	if newDBConfig.NumStateTrieShards > 1 {
+		newDB, err = newPartitionedDB(newDBConfig, StateTrieMigrationDB, newDBConfig.NumStateTrieShards)
 	} else {
 		newDB, err = newDatabase(newDBConfig, StateTrieMigrationDB)
 	}
@@ -607,7 +607,7 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 		logger.Warn("Failed to set a new state trie migration db. Already in migration")
 		return errors.New("already in migration")
 	}
-	if !dbm.config.Partitioned {
+	if dbm.config.SingleDB {
 		logger.Warn("Setting a new database for state trie migration is allowed for partitioned database only")
 		return errors.New("non-partitioned DB does not support state trie migration")
 	}
@@ -706,7 +706,7 @@ func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
 
 func (dbm *databaseManager) Close() {
 	// If not partitioned, only close the first database.
-	if !dbm.config.Partitioned {
+	if dbm.config.SingleDB {
 		dbm.dbs[0].Close()
 		return
 	}

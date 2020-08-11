@@ -24,7 +24,7 @@ DBManager is the interface used by the consumers of database package.
 databaseManager is the implementation of DBManager interface. It contains cacheManager and a list of Database interfaces.
 cacheManager caches data stored in the persistent layer, to decrease the direct access to the persistent layer.
 Database is the interface for persistent layer implementation. Currently there are 4 implementations, levelDB, memDB,
-badgerDB and partitionedDB.
+badgerDB and shardedDB.
 
 Source Files
 

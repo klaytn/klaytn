@@ -383,7 +383,7 @@ func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 		return database.NewMemoryDBManager()
 	} else {
 		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 768,
-			OpenFilesLimit: 1024, Partitioned: true, NumStateTriePartitions: 4, ParallelDBWrite: true,
+			OpenFilesLimit: 1024, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true,
 			LevelDBCompression: database.AllNoCompression, LevelDBBufferPool: true}
 		return database.NewDBManager(dbc)
 	}

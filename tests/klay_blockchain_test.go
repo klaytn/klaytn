@@ -167,8 +167,8 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	cnConf := cn.GetDefaultConfig()
 	cnConf.Genesis = genesis
 	cnConf.Rewardbase = validator.Addr
-	cnConf.PartitionedDB = true
-	cnConf.NumStateTriePartitions = 4
+	cnConf.SingleDB = false
+	cnConf.NumStateTrieShards = 4
 
 	if err = fullNode.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, cnConf) }); err != nil {
 		return nil, nil, errors.Wrap(err, "failed to register Klaytn protocol")

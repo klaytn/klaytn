@@ -26,11 +26,11 @@ package database
 type DBType string
 
 const (
-	LevelDB       DBType = "LevelDB"
-	BadgerDB             = "BadgerDB"
-	MemoryDB             = "MemoryDB"
-	DynamoDB             = "DynamoDB"
-	PartitionedDB        = "PartitionedDB"
+	LevelDB   DBType = "LevelDB"
+	BadgerDB         = "BadgerDB"
+	MemoryDB         = "MemoryDB"
+	DynamoDB         = "DynamoDB"
+	ShardedDB        = "ShardedDB"
 )
 
 func (db DBType) IsValid() bool {

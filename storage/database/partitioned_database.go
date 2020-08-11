@@ -258,7 +258,7 @@ func (pdb *partitionedDB) NewBatch() Batch {
 }
 
 func (pdb *partitionedDB) Type() DBType {
-	return PartitionedDB
+	return ShardedDB
 }
 
 func (pdb *partitionedDB) Meter(prefix string) {

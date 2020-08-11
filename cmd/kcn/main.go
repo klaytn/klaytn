@@ -87,8 +87,8 @@ var cnHelpFlagGroups = []utils.FlagGroup{
 		Name: "DATABASE",
 		Flags: []cli.Flag{
 			utils.LevelDBCacheSizeFlag,
-			utils.NoPartitionedDBFlag,
-			utils.NumStateTriePartitionsFlag,
+			utils.SingleDBFlag,
+			utils.NumStateTrieShardsFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.LevelDBNoBufferPoolFlag,
 			utils.NoParallelDBWriteFlag,

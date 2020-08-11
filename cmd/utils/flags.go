@@ -187,13 +187,13 @@ var (
 		Name:  "statedb.use-cache",
 		Usage: "Enables caching of state objects in stateDB",
 	}
-	NoPartitionedDBFlag = cli.BoolFlag{
-		Name:  "db.no-partitioning",
-		Usage: "Disable partitioned databases for persistent storage",
+	SingleDBFlag = cli.BoolFlag{
+		Name:  "db.single",
+		Usage: "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
 	}
-	NumStateTriePartitionsFlag = cli.UintFlag{
-		Name:  "db.num-statetrie-partitions",
-		Usage: "Number of internal partitions of state trie partition. Should be power of 2",
+	NumStateTrieShardsFlag = cli.UintFlag{
+		Name:  "db.num-statetrie-shards",
+		Usage: "Number of internal shards of state trie shards. Should be power of 2",
 		Value: 4,
 	}
 	LevelDBCacheSizeFlag = cli.IntFlag{
@@ -1213,10 +1213,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)); dbtype.IsValid() {
 		cfg.DBType = dbtype
 	}
-	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
-	cfg.NumStateTriePartitions = ctx.GlobalUint(NumStateTriePartitionsFlag.Name)
-	if !database.IsPow2(cfg.NumStateTriePartitions) {
-		log.Fatalf("--db.num-statetrie-partitions should be power of 2 but %v is not!", cfg.NumStateTriePartitions)
+	cfg.SingleDB = ctx.GlobalIsSet(SingleDBFlag.Name)
+	cfg.NumStateTrieShards = ctx.GlobalUint(NumStateTrieShardsFlag.Name)
+	if !database.IsPow2(cfg.NumStateTrieShards) {
+		log.Fatalf("--db.num-statetrie-shards should be power of 2 but %v is not!", cfg.NumStateTrieShards)
 	}
 
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))

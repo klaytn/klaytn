@@ -81,7 +81,7 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 		// write values in stateDB and check if the values are stored in DB
 		entries := writeRandomValueToStateTrieDB(t, cn.ChainDB().NewBatch(database.StateTrieDB))
 		stopNode(t, fullNode) // stop node to release DB lock
-		checkIfStoredInDB(t, cn.ChainDB().GetDBConfig().NumStateTriePartitions, filepath.Join(cn.ChainDB().GetDBConfig().Dir, "statetrie"), entries)
+		checkIfStoredInDB(t, cn.ChainDB().GetDBConfig().NumStateTrieShards, filepath.Join(cn.ChainDB().GetDBConfig().Dir, "statetrie"), entries)
 		fullNode, cn = startNode(t, workspace, validator)
 	}
 

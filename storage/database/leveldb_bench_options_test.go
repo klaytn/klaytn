@@ -229,7 +229,7 @@ func Benchmark_KlayOptions_Put(b *testing.B) {
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////// PARTITIONED PUT INSERTION TESTS BEGINNING ////////////////////////
+////////////////////////// SHARDED PUT INSERTION TESTS BEGINNING //////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 func removeDirs(dirs []string) {
@@ -459,9 +459,9 @@ func randStrBytes(n int) []byte {
 	return b
 }
 
-func getPartitionForTest(keys [][]byte, index, numPartitions int) int64 {
+func getPartitionForTest(keys [][]byte, index, numShards int) int64 {
 
-	return int64(index % numPartitions)
+	return int64(index % numShards)
 	// TODO-Klaytn: CHANGE BELOW LOGIC FROM ROUND-ROBIN TO USE getPartitionForTest
 	//key := keys[index]
 	//hashString := strings.TrimPrefix(common.Bytes2Hex(key),"0x")
