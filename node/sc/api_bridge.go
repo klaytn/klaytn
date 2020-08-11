@@ -235,7 +235,11 @@ func (sb *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[str
 func (sb *SubBridgeAPI) KASAnchor(blkNum uint64) error {
 	block := sb.subBridge.blockchain.GetBlockByNumber(blkNum)
 	if block != nil {
-		return sb.subBridge.kasAnchor.AnchorBlock(block)
+		if err := sb.subBridge.kasAnchor.AnchorBlock(block); err != nil {
+			logger.Error("Failed to anchor a block via KAS", "blkNum", block.NumberU64())
+			return err
+		}
+		return nil
 	}
 	return errInvalidBlock
 }

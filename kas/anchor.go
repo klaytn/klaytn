@@ -84,7 +84,9 @@ func (anchor *Anchor) AnchorPeriodicBlock(block *types.Block) {
 		return
 	}
 
-	anchor.AnchorBlock(block)
+	if err := anchor.AnchorBlock(block); err != nil {
+		logger.Warn("Failed to anchor a block via KAS", "blkNum", block.NumberU64())
+	}
 }
 
 // blockToAnchoringDataInternalType0 makes AnchoringDataInternalType0 from the given block.
@@ -130,7 +132,7 @@ func (anchor *Anchor) AnchorBlock(block *types.Block) error {
 
 	if res.Code != codeOK {
 		result, _ := json.Marshal(res)
-		logger.Error("Failed to anchor a block via KAS", "blkNum", block.NumberU64(), "result", string(result))
+		logger.Debug("Failed to anchor a block via KAS", "blkNum", block.NumberU64(), "result", string(result))
 		return fmt.Errorf("error code %v", res.Code)
 	}
 
