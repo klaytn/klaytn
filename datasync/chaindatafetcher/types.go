@@ -43,20 +43,8 @@ type request struct {
 	event   blockchain.ChainEvent
 }
 
-func hasTransactions(rt requestType) bool {
-	return rt&requestTypeTransaction == requestTypeTransaction
-}
-
-func hasTokenTransfers(rt requestType) bool {
-	return rt&requestTypeTokenTransfer == requestTypeTokenTransfer
-}
-
-func hasContracts(rt requestType) bool {
-	return rt&requestTypeContracts == requestTypeContracts
-}
-
-func hasTraces(rt requestType) bool {
-	return rt&requestTypeTraces == requestTypeTraces
+func checkRequestType(rt requestType, targetType requestType) bool {
+	return rt&targetType == targetType
 }
 
 func newRequest(reqType requestType, event blockchain.ChainEvent) *request {

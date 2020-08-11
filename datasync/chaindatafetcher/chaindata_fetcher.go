@@ -246,25 +246,25 @@ func (f *ChainDataFetcher) handleRequest() {
 			return
 		case req := <-f.reqCh:
 			// TODO-ChainDataFetcher parallelize handling data
-			if hasTransactions(req.reqType) {
+			if checkRequestType(req.reqType, requestTypeTransaction) {
 				if err := f.repo.InsertTransactions(req.event); err != nil {
 					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
 				}
 			}
 
-			if hasTokenTransfers(req.reqType) {
+			if checkRequestType(req.reqType, requestTypeTokenTransfer) {
 				if err := f.repo.InsertTokenTransfers(req.event); err != nil {
 					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
 				}
 			}
 
-			if hasContracts(req.reqType) {
+			if checkRequestType(req.reqType, requestTypeContracts) {
 				if err := f.repo.InsertContracts(req.event); err != nil {
 					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
 				}
 			}
 
-			if hasTraces(req.reqType) {
+			if checkRequestType(req.reqType, requestTypeTraces) {
 				if err := f.repo.InsertTraceResults(req.event); err != nil {
 					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
 				}
