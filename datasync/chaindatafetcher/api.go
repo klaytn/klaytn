@@ -53,6 +53,6 @@ func (api *PublicChainDataFetcherAPI) WriteCheckpoint(checkpoint int64) error {
 }
 
 // GetConfig returns the configuration setting of the launched chaindata fetcher.
-func (api *PublicChainDataFetcherAPI) GetConfig() string {
-	return api.f.config.String()
+func (api *PublicChainDataFetcherAPI) GetConfig() *ChainDataFetcherConfig {
+	return api.f.config
 }
