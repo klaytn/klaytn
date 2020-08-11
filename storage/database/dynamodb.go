@@ -337,14 +337,17 @@ func (dynamo *dynamoDB) Meter(prefix string) {
 }
 
 func (dynamo *dynamoDB) NewIterator() Iterator {
+	// TODO-Klaytn: implement this later.
 	return nil
 }
 
 func (dynamo *dynamoDB) NewIteratorWithStart(start []byte) Iterator {
+	// TODO-Klaytn: implement this later.
 	return nil
 }
 
 func (dynamo *dynamoDB) NewIteratorWithPrefix(prefix []byte) Iterator {
+	// TODO-Klaytn: implement this later.
 	return nil
 }
 

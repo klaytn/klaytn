@@ -19,8 +19,9 @@ package database
 import (
 	"bytes"
 	"fmt"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"strings"
+
+	"github.com/klaytn/klaytn/common/hexutil"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -65,6 +66,7 @@ func newS3FileDB(region, endpoint, bucketName string) (*s3FileDB, error) {
 		localLogger.Error("failed to retrieve a bucket list", "err", err)
 		return nil, err
 	}
+
 	if !exist {
 		localLogger.Warn("cannot find the bucket. creating the bucket")
 		_, err = s3DB.s3.CreateBucket(&s3.CreateBucketInput{

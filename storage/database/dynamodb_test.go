@@ -17,10 +17,11 @@
 package database
 
 import (
+	"testing"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestDynamoDB_Put(t *testing.T) {

@@ -18,9 +18,10 @@ package database
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/common"
 	"strings"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
