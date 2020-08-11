@@ -110,7 +110,7 @@ func (f *ChainDataFetcher) Start(server p2p.Server) error {
 	}
 
 	if !f.config.NoDefaultStart {
-		if err := f.start(); err != nil {
+		if err := f.startFetching(); err != nil {
 			return err
 		}
 	}
@@ -134,7 +134,7 @@ func (f *ChainDataFetcher) Stop() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) start() error {
+func (f *ChainDataFetcher) startFetching() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.started {
@@ -143,7 +143,7 @@ func (f *ChainDataFetcher) start() error {
 
 	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
 	currentBlock := f.blockchain.CurrentHeader().Number.Uint64()
-	if err := f.startRange(uint64(f.checkpoint), currentBlock, requestTypeTransaction); err != nil {
+	if err := f.startRangeFetching(uint64(f.checkpoint), currentBlock, requestTypeTransaction); err != nil {
 		return err
 	}
 
@@ -151,7 +151,7 @@ func (f *ChainDataFetcher) start() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) stop() error {
+func (f *ChainDataFetcher) stopFetching() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if !f.started {
@@ -163,7 +163,7 @@ func (f *ChainDataFetcher) stop() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) startRange(start, end uint64, reqType requestType) error {
+func (f *ChainDataFetcher) startRangeFetching(start, end uint64, reqType requestType) error {
 	f.rangeMu.Lock()
 	defer f.rangeMu.Unlock()
 	if f.rangeStarted {
@@ -188,7 +188,7 @@ func (f *ChainDataFetcher) startRange(start, end uint64, reqType requestType) er
 	return nil
 }
 
-func (f *ChainDataFetcher) stopRange() error {
+func (f *ChainDataFetcher) stopRangeFetching() error {
 	// TODO-ChainDataFetcher add logic for stopping
 	return nil
 }

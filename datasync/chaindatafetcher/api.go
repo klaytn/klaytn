@@ -25,19 +25,19 @@ func NewPublicChainDataFetcherAPI(f *ChainDataFetcher) *PublicChainDataFetcherAP
 }
 
 func (api *PublicChainDataFetcherAPI) Start() error {
-	return api.f.start()
+	return api.f.startFetching()
 }
 
 func (api *PublicChainDataFetcherAPI) Stop() error {
-	return api.f.stop()
+	return api.f.stopFetching()
 }
 
 func (api *PublicChainDataFetcherAPI) StartWithRange(start, end uint64, reqType uint) error {
-	return api.f.startRange(start, end, requestType(reqType))
+	return api.f.startRangeFetching(start, end, requestType(reqType))
 }
 
 func (api *PublicChainDataFetcherAPI) StopWithRange() error {
-	return api.f.stopRange()
+	return api.f.stopRangeFetching()
 }
 
 func (api *PublicChainDataFetcherAPI) Status() {
