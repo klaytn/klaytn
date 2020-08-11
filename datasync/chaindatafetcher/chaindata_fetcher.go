@@ -58,9 +58,7 @@ type ChainDataFetcher struct {
 
 	repo Repository
 
-	mu           sync.RWMutex
 	started      bool
-	rangeMu      sync.RWMutex
 	rangeStarted bool
 }
 
@@ -135,8 +133,6 @@ func (f *ChainDataFetcher) Stop() error {
 }
 
 func (f *ChainDataFetcher) startFetching() error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
 	if f.started {
 		return errors.New("the chaindata fetcher is already started")
 	}
@@ -152,8 +148,6 @@ func (f *ChainDataFetcher) startFetching() error {
 }
 
 func (f *ChainDataFetcher) stopFetching() error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
 	if !f.started {
 		return errors.New("the chaindata fetcher is not running")
 	}
@@ -164,8 +158,6 @@ func (f *ChainDataFetcher) stopFetching() error {
 }
 
 func (f *ChainDataFetcher) startRangeFetching(start, end uint64, reqType requestType) error {
-	f.rangeMu.Lock()
-	defer f.rangeMu.Unlock()
 	if f.rangeStarted {
 		return errors.New("the chaindata fetcher is already started with range")
 	}
