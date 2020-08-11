@@ -110,9 +110,9 @@ func (f *ChainDataFetcher) Start(server p2p.Server) error {
 	}
 
 	if !f.config.NoDefaultStart {
-		// subscribe chain head event
-		f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
-		f.started = true
+		if err := f.start(); err != nil {
+			return err
+		}
 	}
 
 	go f.reqLoop()
@@ -142,7 +142,10 @@ func (f *ChainDataFetcher) start() error {
 	}
 
 	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
-	// TODO-ChainDataFetcher add logic to request from checkpoint to the first posted event after start.
+	currentBlock := f.blockchain.CurrentHeader().Number.Uint64()
+	if err := f.startRange(uint64(f.checkpoint), currentBlock, requestTypeTransaction); err != nil {
+		return err
+	}
 
 	f.started = true
 	return nil
