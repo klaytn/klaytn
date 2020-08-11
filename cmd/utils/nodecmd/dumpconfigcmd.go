@@ -287,6 +287,10 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	cfg.KASAnchor = ctx.GlobalBool(utils.KASServiceChainAnchorFlag.Name)
 	if cfg.KASAnchor {
 		cfg.KASAnchorPeriod = ctx.GlobalUint64(utils.KASServiceChainAnchorPeriodFlag.Name)
+		if cfg.KASAnchorPeriod == 0 {
+			cfg.KASAnchorPeriod = 1
+			logger.Warn("KAS anchor period is set by 1")
+		}
 
 		cfg.KASAnchorUrl = ctx.GlobalString(utils.KASServiceChainAnchorUrlFlag.Name)
 		if cfg.KASAnchorUrl == "" {
