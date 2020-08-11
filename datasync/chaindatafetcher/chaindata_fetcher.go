@@ -152,7 +152,7 @@ func (f *ChainDataFetcher) stop() error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if !f.started {
-		return errors.New("the chaindata fetcher is already stopped")
+		return errors.New("the chaindata fetcher is not running")
 	}
 
 	f.chainSub.Unsubscribe()
