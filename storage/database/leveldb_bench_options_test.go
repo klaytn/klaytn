@@ -469,7 +469,7 @@ func getPartitionForTest(keys [][]byte, index, numShards int) int64 {
 	//	hashString = hashString[:15]
 	//}
 	//seed, _ := strconv.ParseInt(hashString, 16, 64)
-	//partition := seed % int64(numPartitions)
+	//partition := seed % int64(numShards)
 	//
 	//return partition
 }

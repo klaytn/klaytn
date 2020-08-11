@@ -120,19 +120,19 @@ var putMDPBenchmarks = [...]struct {
 	name string
 	mdo  multiDiskOption
 }{
-	// 10k Rows, 250 bytes, 1 disk, different number of partitions
+	// 10k Rows, 250 bytes, 1 disk, different number of shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_1D_2P_250", multiDiskOption{1, 2, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_1D_4P_250", multiDiskOption{1, 4, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_1D_8P_250", multiDiskOption{1, 8, numRowsPutMDP, rowSizePutMDP}},
 
-	// 10k Rows, 250 bytes, 8 partitions (fixed), different number of disks
+	// 10k Rows, 250 bytes, 8 shards (fixed), different number of disks
 	{"10k_1D_8P_250", multiDiskOption{1, 8, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_2D_8P_250", multiDiskOption{2, 8, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_4D_8P_250", multiDiskOption{4, 8, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_8D_8P_250", multiDiskOption{8, 8, numRowsPutMDP, rowSizePutMDP}},
 
-	// 10k Rows, 250 bytes, different number of disks & partitions
+	// 10k Rows, 250 bytes, different number of disks & shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_2D_2P_250", multiDiskOption{2, 2, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_4D_4P_250", multiDiskOption{4, 4, numRowsPutMDP, rowSizePutMDP}},
@@ -175,7 +175,7 @@ func benchmark_MDP_Batch_GoRoutine(b *testing.B, mdo *multiDiskOption) {
 	numBatches := 0
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// make same number of batches as numPartitions
+		// make same number of batches as numShards
 		batches := make([]Batch, numPartitions, numPartitions)
 		for k := 0; k < numPartitions; k++ {
 			batches[k] = databases[k].NewBatch()
@@ -230,7 +230,7 @@ func benchmark_MDP_Batch_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 	numBatches := 0
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// make same number of batches as numPartitions
+		// make same number of batches as numShards
 		batches := make([]Batch, numPartitions, numPartitions)
 		for k := 0; k < numPartitions; k++ {
 			batches[k] = databases[k].NewBatch()
@@ -269,19 +269,19 @@ var batchMDPBenchmarks = [...]struct {
 	name string
 	mdo  multiDiskOption
 }{
-	// 10k Rows, 250 bytes, 1 disk, different number of partitions
+	// 10k Rows, 250 bytes, 1 disk, different number of shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_1D_2P_250", multiDiskOption{1, 2, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_1D_4P_250", multiDiskOption{1, 4, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_1D_8P_250", multiDiskOption{1, 8, numRowsBatchMDP, rowSizeBatchMDP}},
 
-	// 10k Rows, 250 bytes, 8 partitions (fixed), different number of disks
+	// 10k Rows, 250 bytes, 8 shards (fixed), different number of disks
 	{"10k_1D_8P_250", multiDiskOption{1, 8, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_2D_8P_250", multiDiskOption{2, 8, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_4D_8P_250", multiDiskOption{4, 8, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_8D_8P_250", multiDiskOption{8, 8, numRowsBatchMDP, rowSizeBatchMDP}},
 
-	// 10k Rows, 250 bytes, different number of disks & partitions
+	// 10k Rows, 250 bytes, different number of disks & shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_2D_2P_250", multiDiskOption{2, 2, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_4D_4P_250", multiDiskOption{4, 4, numRowsBatchMDP, rowSizeBatchMDP}},
@@ -404,19 +404,19 @@ var getMDPBenchmarks = [...]struct {
 	mdo      multiDiskOption
 	numReads int
 }{
-	// 10k Rows, 250 bytes, 1 disk, different number of partitions
+	// 10k Rows, 250 bytes, 1 disk, different number of shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_1D_2P_250", multiDiskOption{1, 2, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_1D_4P_250", multiDiskOption{1, 4, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_1D_8P_250", multiDiskOption{1, 8, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 
-	// 10k Rows, 250 bytes, 8 partitions (fixed), different number of disks
+	// 10k Rows, 250 bytes, 8 shards (fixed), different number of disks
 	{"10k_1D_8P_250", multiDiskOption{1, 8, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_2D_8P_250", multiDiskOption{2, 8, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_4D_8P_250", multiDiskOption{4, 8, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_8D_8P_250", multiDiskOption{8, 8, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 
-	// 10k Rows, 250 bytes, different number of disks & partitions
+	// 10k Rows, 250 bytes, different number of disks & shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_2D_2P_250", multiDiskOption{2, 2, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_4D_4P_250", multiDiskOption{4, 4, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},

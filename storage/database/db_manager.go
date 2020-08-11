@@ -380,7 +380,7 @@ func databaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 		case StateTrieDB:
 			newDBC := getDBEntryConfig(dbc, entryType, dir)
 			if dbc.NumStateTrieShards > 1 {
-				db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTrieShards)
+				db, err = newShardedDB(newDBC, entryType, dbc.NumStateTrieShards)
 			} else {
 				db, err = newDatabase(newDBC, entryType)
 			}
@@ -587,7 +587,7 @@ func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) 
 	var newDB Database
 	var err error
 	if newDBConfig.NumStateTrieShards > 1 {
-		newDB, err = newPartitionedDB(newDBConfig, StateTrieMigrationDB, newDBConfig.NumStateTrieShards)
+		newDB, err = newShardedDB(newDBConfig, StateTrieMigrationDB, newDBConfig.NumStateTrieShards)
 	} else {
 		newDB, err = newDatabase(newDBConfig, StateTrieMigrationDB)
 	}

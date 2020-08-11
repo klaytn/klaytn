@@ -35,7 +35,7 @@ Source Files
   - leveldb_database.go      : implementation of levelDB, which wraps github.com/syndtr/goleveldb
   - memory_database.go       : implementation of MemDB, which wraps go native map structure
   - metrics.go               : metrics used in database package, mostly related to cacheManager
-  - partitioned_database.go  : implementation of partitionedDB, which wraps a list of Database interface
+  - sharded_database.go      : implementation of shardedDB, which wraps a list of Database interface
   - schema.go                : prefixes and suffixes for database keys and database key generating functions
 */
 package database
