@@ -40,6 +40,7 @@ func TestHasDataType(t *testing.T) {
 		// 3 composite type
 		requestTypeTransaction | requestTypeTokenTransfer | requestTypeTraces,
 		requestTypeTransaction | requestTypeTokenTransfer | requestTypeContracts,
+		requestTypeTransaction | requestTypeTraces | requestTypeContracts,
 		requestTypeTokenTransfer | requestTypeTraces | requestTypeContracts,
 
 		// all type
@@ -64,20 +65,21 @@ func TestHasDataType(t *testing.T) {
 		// 3 composite type
 		{true, true, true, false},
 		{true, true, false, true},
+		{true, false, true, true},
 		{false, true, true, true},
 
 		// all type
 		{true, true, true, true},
 	}
 
-	checkFuncs := []func(requestType) bool{
-		hasTransactions, hasTokenTransfers, hasTraces, hasContracts,
+	targetType := []requestType{
+		requestTypeTransaction, requestTypeTokenTransfer, requestTypeTraces, requestTypeContracts,
 	}
 
 	for idx, types := range testdata {
 		expectedTypes := expected[idx]
-		for idx, check := range checkFuncs {
-			assert.Equal(t, expectedTypes[idx], check(types))
+		for idx, target := range targetType {
+			assert.Equal(t, expectedTypes[idx], checkRequestType(types, target))
 		}
 	}
 }
