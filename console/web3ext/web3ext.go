@@ -42,23 +42,23 @@ web3._extend({
 	property: 'chaindatafetcher',
 	methods: [
 		new web3._extend.Method({
-			name: 'start',
-			call: 'chaindatafetcher_start',
+			name: 'startFetching',
+			call: 'chaindatafetcher_startFetching',
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'stop',
-			call: 'chaindatafetcher_stop',
+			name: 'stopFetching',
+			call: 'chaindatafetcher_stopFetching',
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'startWithRange',
-			call: 'chaindatafetcher_startWithRange',
+			name: 'startRangeFetching',
+			call: 'chaindatafetcher_startRangeFetching',
 			params: 3
 		}),
 		new web3._extend.Method({
-			name: 'stopWithRange',
-			call: 'chaindatafetcher_stopWithRange',
+			name: 'stopRangeFetching',
+			call: 'chaindatafetcher_stopRangeFetching',
 			params: 0
 		}),
 		new web3._extend.Method({
