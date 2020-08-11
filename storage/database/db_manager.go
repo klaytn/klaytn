@@ -354,7 +354,7 @@ func newMiscDB(dbc *DBConfig) Database {
 	return db
 }
 
-// databaseDBManager returns DBManager which handles partitioned Database.
+// databaseDBManager returns DBManager which handles Databases.
 // Each Database will have its own separated Database.
 func databaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 	dbm := newDatabaseManager(dbc)
@@ -390,11 +390,11 @@ func databaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 		}
 
 		if err != nil {
-			logger.Crit("Failed while generating a partition of LevelDB", "partition", dbBaseDirs[et], "err", err)
+			logger.Crit("Failed while generating databases", "DBType", dbBaseDirs[et], "err", err)
 		}
 
 		dbm.dbs[et] = db
-		db.Meter(dbMetricPrefix + dbBaseDirs[et] + "/") // Each partition collects metrics independently.
+		db.Meter(dbMetricPrefix + dbBaseDirs[et] + "/") // Each database collects metrics independently.
 	}
 	return dbm, nil
 }
@@ -424,8 +424,8 @@ func newDatabaseManager(dbc *DBConfig) *databaseManager {
 }
 
 // NewDBManager returns DBManager interface.
-// If Partitioned is true, each Database will have its own LevelDB.
-// If not, each Database will share one common LevelDB.
+// If SingleDB is false, each Database will have its own DB.
+// If not, each Database will share one common DB.
 func NewDBManager(dbc *DBConfig) DBManager {
 	if dbc.SingleDB {
 		logger.Info("Single database is used for persistent storage", "DBType", dbc.DBType)
@@ -595,7 +595,7 @@ func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) 
 		logger.Crit("Failed to create a new database for state trie migration", "err", err)
 	}
 
-	newDB.Meter(dbMetricPrefix + dbBaseDirs[StateTrieMigrationDB] + "/") // Each partition collects metrics independently.
+	newDB.Meter(dbMetricPrefix + dbBaseDirs[StateTrieMigrationDB] + "/") // Each database collects metrics independently.
 	logger.Info("Created a new database for state trie migration", "newStateTrieDB", newDBConfig.Dir)
 
 	return newDB, dbDir
@@ -608,8 +608,8 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 		return errors.New("already in migration")
 	}
 	if dbm.config.SingleDB {
-		logger.Warn("Setting a new database for state trie migration is allowed for partitioned database only")
-		return errors.New("non-partitioned DB does not support state trie migration")
+		logger.Warn("Setting a new database for state trie migration is allowed for non-single database only")
+		return errors.New("singleDB does not support state trie migration")
 	}
 
 	logger.Info("Start setting a new database for state trie migration", "blockNum", blockNum)
@@ -705,13 +705,13 @@ func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
 }
 
 func (dbm *databaseManager) Close() {
-	// If not partitioned, only close the first database.
+	// If single DB, only close the first database.
 	if dbm.config.SingleDB {
 		dbm.dbs[0].Close()
 		return
 	}
 
-	// If partitioned, close all databases.
+	// If not single DB, close all databases.
 	for _, db := range dbm.dbs {
 		if db != nil {
 			db.Close()

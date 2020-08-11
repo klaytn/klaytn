@@ -688,7 +688,7 @@ func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
 
 			// check if create migration fails
 			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
-			assert.Error(t, err, "error expected on non-partitioned DB") // expect error
+			assert.Error(t, err, "error expected on single DB") // expect error
 
 			continue
 		}
