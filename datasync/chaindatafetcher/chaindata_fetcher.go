@@ -139,7 +139,7 @@ func (f *ChainDataFetcher) startFetching() error {
 
 	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
 	currentBlock := f.blockchain.CurrentHeader().Number.Uint64()
-	if err := f.startRangeFetching(uint64(f.checkpoint), currentBlock, requestTypeTransaction); err != nil {
+	if err := f.startRangeFetching(uint64(f.checkpoint), currentBlock, requestTypeAll); err != nil {
 		return err
 	}
 
@@ -171,10 +171,7 @@ func (f *ChainDataFetcher) startRangeFetching(start, end uint64, reqType request
 			return err
 		}
 
-		f.reqCh <- &request{
-			reqType: reqType,
-			event:   e,
-		}
+		f.reqCh <- newRequest(reqType, e)
 		// TODO-ChainDataFetcher add stop logic while processing the events.
 	}
 	return nil
