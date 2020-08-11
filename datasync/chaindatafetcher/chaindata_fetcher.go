@@ -122,7 +122,9 @@ func (f *ChainDataFetcher) Start(server p2p.Server) error {
 }
 
 func (f *ChainDataFetcher) Stop() error {
-	f.chainSub.Unsubscribe()
+	if f.chainSub != nil {
+		f.chainSub.Unsubscribe()
+	}
 	close(f.stopCh)
 
 	logger.Info("wait for all goroutines to be terminated...")
