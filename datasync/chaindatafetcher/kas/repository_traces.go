@@ -28,6 +28,7 @@ import (
 
 var emptyTraceResult = &vm.InternalTxTrace{
 	Value: "0x0",
+	Calls: []*vm.InternalTxTrace{},
 }
 
 func isEmptyTraceResult(trace *vm.InternalTxTrace) bool {
