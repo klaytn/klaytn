@@ -32,7 +32,7 @@ func (api *PublicChainDataFetcherAPI) Stop() error {
 	return api.f.stop()
 }
 
-func (api *PublicChainDataFetcherAPI) StartWithRange(start, end int64, reqType uint) error {
+func (api *PublicChainDataFetcherAPI) StartWithRange(start, end uint64, reqType uint) error {
 	return api.f.startRange(start, end, requestType(reqType))
 }
 

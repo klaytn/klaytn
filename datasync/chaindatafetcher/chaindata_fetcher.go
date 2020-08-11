@@ -160,7 +160,7 @@ func (f *ChainDataFetcher) stop() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) startRange(start, end int64, reqType requestType) error {
+func (f *ChainDataFetcher) startRange(start, end uint64, reqType requestType) error {
 	f.rangeMu.Lock()
 	defer f.rangeMu.Unlock()
 	if f.rangeStarted {
@@ -189,14 +189,14 @@ func (f *ChainDataFetcher) stopRange() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) makeChainEvents(start, end int64) ([]blockchain.ChainEvent, error) {
+func (f *ChainDataFetcher) makeChainEvents(start, end uint64) ([]blockchain.ChainEvent, error) {
 	var (
 		events []blockchain.ChainEvent
 		logs   []*types.Log
 	)
 
 	// TODO-ChainDataFetcher parallelize the following codes
-	for i := uint64(start); i <= uint64(end); i++ {
+	for i := start; i <= end; i++ {
 		block := f.blockchain.GetBlockByNumber(i)
 		receipts := f.blockchain.GetReceiptsByBlockHash(block.Hash())
 		for _, r := range receipts {
