@@ -193,6 +193,7 @@ func (f *ChainDataFetcher) stopRange() error {
 	return nil
 }
 
+// TODO-ChainDataFetcher push down this logic to handleRequest
 func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainEvent, error) {
 	var logs []*types.Log
 	block := f.blockchain.GetBlockByNumber(blockNumber)
