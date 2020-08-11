@@ -26,6 +26,15 @@ type requestType uint
 
 const (
 	requestTypeTransaction = requestType(1) << iota
+	requestTypeTokenTransfer
+	requestTypeContracts
+	requestTypeTraces
+
+	requestTypeLength
+)
+
+const (
+	requestTypeAll = requestTypeTransaction | requestTypeTokenTransfer | requestTypeContracts | requestTypeTraces
 )
 
 // request contains a raw block which should be handled and the type of data which should be exported.
@@ -34,9 +43,40 @@ type request struct {
 	event   blockchain.ChainEvent
 }
 
+func hasTransactions(rt requestType) bool {
+	return rt&requestTypeTransaction == requestTypeTransaction
+}
+
+func hasTokenTransfers(rt requestType) bool {
+	return rt&requestTypeTokenTransfer == requestTypeTokenTransfer
+}
+
+func hasContracts(rt requestType) bool {
+	return rt&requestTypeContracts == requestTypeContracts
+}
+
+func hasTraces(rt requestType) bool {
+	return rt&requestTypeTraces == requestTypeTraces
+}
+
+func newRequest(reqType requestType, event blockchain.ChainEvent) *request {
+	return &request{
+		reqType: reqType,
+		event:   event,
+	}
+}
+
 // response contains the result of handling the requested block including request type, block number, and error if exists.
 type response struct {
 	reqType     requestType
 	blockNumber *big.Int
 	err         error
+}
+
+func newResponse(reqType requestType, blockNumber *big.Int, err error) *response {
+	return &response{
+		reqType:     reqType,
+		blockNumber: blockNumber,
+		err:         err,
+	}
 }

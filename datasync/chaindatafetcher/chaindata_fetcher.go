@@ -245,15 +245,30 @@ func (f *ChainDataFetcher) handleRequest() {
 			logger.Info("handleRequest is stopped")
 			return
 		case req := <-f.reqCh:
-			res := &response{
-				reqType:     requestTypeTransaction,
-				blockNumber: req.event.Block.Number(),
-				err:         nil,
+			// TODO-ChainDataFetcher parallelize handling data
+			if hasTransactions(req.reqType) {
+				if err := f.repo.InsertTransactions(req.event); err != nil {
+					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
+				}
 			}
 
-			res.err = f.repo.InsertTransactions(req.event)
-			// TODO-ChainDataFetcher insert other types of data
-			f.resCh <- res
+			if hasTokenTransfers(req.reqType) {
+				if err := f.repo.InsertTokenTransfers(req.event); err != nil {
+					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
+				}
+			}
+
+			if hasContracts(req.reqType) {
+				if err := f.repo.InsertContracts(req.event); err != nil {
+					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
+				}
+			}
+
+			if hasTraces(req.reqType) {
+				if err := f.repo.InsertTraceResults(req.event); err != nil {
+					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
+				}
+			}
 		}
 	}
 }
@@ -267,10 +282,7 @@ func (f *ChainDataFetcher) reqLoop() {
 			logger.Info("stopped reqLoop for chaindatafetcher")
 			return
 		case ev := <-f.chainCh:
-			f.reqCh <- &request{
-				reqType: requestTypeTransaction,
-				event:   ev,
-			}
+			f.reqCh <- newRequest(requestTypeAll, ev)
 		}
 	}
 }
