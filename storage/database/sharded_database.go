@@ -43,6 +43,8 @@ type pdbBatchResult struct {
 	err   error // Error from the batch write operation.
 }
 
+// newShardedDB creates database with numShards shards, or partitions.
+// The type of database is specified DBConfig.DBType.
 func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, error) {
 	const numShardsLimit = 16
 
