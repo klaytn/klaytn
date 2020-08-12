@@ -68,7 +68,7 @@ var flagsWithValues = []struct {
 	{
 		flag:        "--dbtype",
 		flagType:    FlagTypeArgument,
-		values:      []string{"LevelDB", "BadgerDB", "MemoryDB"},
+		values:      []string{"LevelDB", "BadgerDB", "MemoryDB", "DynamoDB"},
 		wrongValues: append(commonThreeErrors, "oracle"),
 		errors:      []int{NonError, NonError, NonError, NonError},
 	},

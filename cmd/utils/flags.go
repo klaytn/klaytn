@@ -81,7 +81,7 @@ var (
 	}
 	DbTypeFlag = cli.StringFlag{
 		Name:  "dbtype",
-		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB")`,
+		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDB")`,
 		Value: "LevelDB",
 	}
 	SrvTypeFlag = cli.StringFlag{
