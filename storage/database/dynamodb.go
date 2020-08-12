@@ -121,7 +121,7 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	logger.Info("creating s3FileDB ", "bucket", config.TableName)
 	s3FileDB, err := newS3FileDB(config.Region, "https://s3."+config.Region+".amazonaws.com", config.TableName)
 	if err != nil {
-		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName+"-bucket")
+		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName)
 		return nil, err
 	}
 
