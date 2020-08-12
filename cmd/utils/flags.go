@@ -135,7 +135,7 @@ var (
 	}
 	TxPoolAllowLocalAnchorTxFlag = cli.BoolFlag{
 		Name:  "txpool.allowlocalanchortx",
-		Usage: "Enable to allow locally submitted anchor transactions",
+		Usage: "Allow locally submitted anchoring transactions",
 	}
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
