@@ -19,6 +19,7 @@ package database
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -52,11 +53,12 @@ const itemChanSize = WorkerNum * 2
 var overSizedDataPrefix = []byte("oversizeditem")
 
 type DynamoDBConfig struct {
-	Region             string
-	Endpoint           string
 	TableName          string
-	ReadCapacityUnits  int64
-	WriteCapacityUnits int64
+	Region             string // AWS region
+	Endpoint           string // Where DynamoDB reside
+	IsProvisioned      bool   // Billing mode
+	ReadCapacityUnits  int64  // read capacity when provsioned
+	WriteCapacityUnits int64  // write capacity when provsioned
 }
 
 type batchWriteWorkerInput struct {
@@ -67,7 +69,7 @@ type batchWriteWorkerInput struct {
 type dynamoDB struct {
 	config *DynamoDBConfig
 	db     *dynamodb.DynamoDB
-	fdb    fileDB
+	fdb    fileDB     // where over size items are stored
 	logger log.Logger // Contextual logger tracking the database path
 
 	// worker pool
@@ -97,6 +99,7 @@ func createTestDynamoDBConfig() *DynamoDBConfig {
 		Region:             "ap-northeast-2",
 		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com",
 		TableName:          "dynamo-test-tmp",
+		IsProvisioned:      false,
 		ReadCapacityUnits:  dynamoReadCapacityUnits,
 		WriteCapacityUnits: dynamoWriteCapacityUnits,
 	}
@@ -106,9 +109,15 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if config == nil {
 		return nil, nilDynamoConfigErr
 	}
+	if len(config.Endpoint) == 0 {
+		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
+	}
+	if len(config.TableName) == 0 {
+		config.TableName = "klaytn" + strconv.Itoa(time.Now().Nanosecond())
+	}
 
 	logger.Info("creating s3FileDB ", "bucket", config.TableName)
-	s3FileDB, err := newS3FileDB(config.Region, "https://s3.ap-northeast-2.amazonaws.com", config.TableName)
+	s3FileDB, err := newS3FileDB(config.Region, "https://s3."+config.Region+".amazonaws.com", config.TableName)
 	if err != nil {
 		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName+"-bucket")
 		return nil, err
@@ -163,7 +172,6 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 
 func (dynamo *dynamoDB) createTable() error {
 	input := &dynamodb.CreateTableInput{
-		// TODO-Klaytn: enable Provisioned mode
 		BillingMode: aws.String("PAY_PER_REQUEST"),
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
 			{
@@ -177,11 +185,16 @@ func (dynamo *dynamoDB) createTable() error {
 				KeyType:       aws.String("HASH"), // HASH - partition key, RANGE - sort key
 			},
 		},
-		// ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-		// 	dynamoReadCapacityUnits:  aws.Int64(dynamo.config.dynamoReadCapacityUnits),
-		// 	dynamoWriteCapacityUnits: aws.Int64(dynamo.config.dynamoWriteCapacityUnits),
-		// },
+
 		TableName: aws.String(dynamo.config.TableName),
+	}
+
+	if dynamo.config.IsProvisioned {
+		input.BillingMode = aws.String("PROVISIONED")
+		input.ProvisionedThroughput = &dynamodb.ProvisionedThroughput{
+			ReadCapacityUnits:  aws.Int64(dynamo.config.ReadCapacityUnits),
+			WriteCapacityUnits: aws.Int64(dynamo.config.WriteCapacityUnits),
+		}
 	}
 
 	_, err := dynamo.db.CreateTable(input)

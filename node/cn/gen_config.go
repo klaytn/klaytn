@@ -33,6 +33,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		LevelDBCompression      database.LevelDBCompressionType
 		LevelDBBufferPool       bool
 		LevelDBCacheSize        int
+		DynamoDBConfig          database.DynamoDBConfig
 		TrieCacheSize           int
 		TrieTimeout             time.Duration
 		TrieBlockInterval       uint
@@ -75,6 +76,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.LevelDBCompression = c.LevelDBCompression
 	enc.LevelDBBufferPool = c.LevelDBBufferPool
 	enc.LevelDBCacheSize = c.LevelDBCacheSize
+	enc.DynamoDBConfig = c.DynamoDBConfig
 	enc.TrieCacheSize = c.TrieCacheSize
 	enc.TrieTimeout = c.TrieTimeout
 	enc.TrieBlockInterval = c.TrieBlockInterval
@@ -121,6 +123,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		LevelDBCompression      *database.LevelDBCompressionType
 		LevelDBBufferPool       *bool
 		LevelDBCacheSize        *int
+		DynamoDBConfig          *database.DynamoDBConfig
 		TrieCacheSize           *int
 		TrieTimeout             *time.Duration
 		TrieBlockInterval       *uint
@@ -191,6 +194,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.LevelDBCacheSize != nil {
 		c.LevelDBCacheSize = *dec.LevelDBCacheSize
+	}
+	if dec.DynamoDBConfig != nil {
+		c.DynamoDBConfig = *dec.DynamoDBConfig
 	}
 	if dec.TrieCacheSize != nil {
 		c.TrieCacheSize = *dec.TrieCacheSize

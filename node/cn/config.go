@@ -21,6 +21,11 @@
 package cn
 
 import (
+	"math/big"
+	"os"
+	"os/user"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
@@ -31,10 +36,6 @@ import (
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
-	"os"
-	"os/user"
-	"time"
 )
 
 var logger = log.NewModuleLogger(log.NodeCN)
@@ -100,6 +101,7 @@ type Config struct {
 	LevelDBCompression   database.LevelDBCompressionType
 	LevelDBBufferPool    bool
 	LevelDBCacheSize     int
+	DynamoDBConfig       database.DynamoDBConfig
 	TrieCacheSize        int
 	TrieTimeout          time.Duration
 	TrieBlockInterval    uint

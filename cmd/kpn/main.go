@@ -22,6 +22,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+	"sort"
+
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
@@ -30,9 +34,6 @@ import (
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"runtime"
-	"sort"
 )
 
 var (
@@ -97,6 +98,11 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 			utils.NumStateTrieShardsFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.LevelDBNoBufferPoolFlag,
+			utils.DynamoDBTableNameFlag,
+			utils.DynamoDBRegionFlag,
+			utils.DynamoDBIsProvisionedFlag,
+			utils.DynamoDBReadCapacityFlag,
+			utils.DynamoDBWriteCapacityFlag,
 			utils.NoParallelDBWriteFlag,
 			utils.SenderTxHashIndexingFlag,
 		},
