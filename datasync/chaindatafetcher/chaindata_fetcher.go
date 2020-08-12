@@ -205,7 +205,7 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 		logs = append(logs, r.Logs...)
 	}
 	var internalTraces []*vm.InternalTxTrace
-	if blockNumber != 0 {
+	if block.Transactions().Len() > 0 {
 		fct := "fastCallTracer"
 		results, err := f.debugAPI.TraceBlockByNumber(context.Background(), rpc.BlockNumber(block.Number().Int64()), &cn.TraceConfig{
 			Tracer: &fct,
