@@ -36,10 +36,10 @@ func TestFilterKIPContracts_Success(t *testing.T) {
 
 	// assume that test contracts are deployed
 	var receipts types.Receipts
-	receipts = append(receipts, &types.Receipt{ContractAddress: common.HexToAddress("1")})
-	receipts = append(receipts, &types.Receipt{ContractAddress: common.HexToAddress("2")})
-	receipts = append(receipts, &types.Receipt{ContractAddress: common.HexToAddress("3")})
-	receipts = append(receipts, &types.Receipt{ContractAddress: common.HexToAddress("4")})
+	receipts = append(receipts, &types.Receipt{ContractAddress: common.HexToAddress("1"), Status: types.ReceiptStatusSuccessful})
+	receipts = append(receipts, &types.Receipt{ContractAddress: common.HexToAddress("2"), Status: types.ReceiptStatusSuccessful})
+	receipts = append(receipts, &types.Receipt{ContractAddress: common.HexToAddress("3"), Status: types.ReceiptStatusSuccessful})
+	receipts = append(receipts, &types.Receipt{ContractAddress: common.HexToAddress("4"), Status: types.ReceiptStatusSuccessful})
 	event := blockchain.ChainEvent{
 		Block:    block,
 		Receipts: receipts,
