@@ -13,6 +13,11 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+//
+// Database implementation of AWS DynamoDB.
+// You need to set AWS credentials to access to dynamoDB.
+//    sh$ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//    sh$ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 
 package database
 
