@@ -38,8 +38,10 @@ type Repository interface {
 
 func retryFunc(f func(blockchain.ChainEvent) error) func(blockchain.ChainEvent) {
 	return func(event blockchain.ChainEvent) {
+		i := 0
 		for err := f(event); err != nil; {
-			logger.Warn("retrying...", "blockNumber", event.Block.NumberU64())
+			i++
+			logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i)
 			time.Sleep(DBInsertRetryInterval)
 		}
 	}
