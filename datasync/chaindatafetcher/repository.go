@@ -36,18 +36,11 @@ type Repository interface {
 	SetComponent(component interface{})
 }
 
-type retry func(blockchain.ChainEvent) error
-
-func retryFunc(f retry) retry {
-	return func(event blockchain.ChainEvent) error {
-		var err error
-		for {
-			if err = f(event); err == nil {
-				break
-			}
+func retryFunc(f func(blockchain.ChainEvent) error) func(blockchain.ChainEvent) {
+	return func(event blockchain.ChainEvent) {
+		for err := f(event); err != nil; {
 			logger.Warn("retrying...", "blockNumber", event.Block.NumberU64())
 			time.Sleep(DBInsertRetryInterval)
 		}
-		return err
 	}
 }

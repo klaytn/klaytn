@@ -31,7 +31,6 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"sync"
-	"time"
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
@@ -253,31 +252,16 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 func (f *ChainDataFetcher) handleChainEvent(reqType requestType, ev blockchain.ChainEvent) {
 	// TODO-ChainDataFetcher parallelize handling data
 	if checkRequestType(reqType, requestTypeTransaction) {
-		if err := retryFunc(f.repo.InsertTransactions)(ev); err != nil {
-			logger.Error("failed to insert transactions", "err", err, "reqType", reqType, "blockNumber", ev.Block.NumberU64())
-			return
-		}
+		retryFunc(f.repo.InsertTransactions)(ev)
 	}
-
 	if checkRequestType(reqType, requestTypeTokenTransfer) {
-		if err := retryFunc(f.repo.InsertTokenTransfers)(ev); err != nil {
-			logger.Error("failed to insert token transfers", "err", err, "reqType", reqType, "blockNumber", ev.Block.NumberU64())
-			return
-		}
+		retryFunc(f.repo.InsertTokenTransfers)(ev)
 	}
-
 	if checkRequestType(reqType, requestTypeContracts) {
-		if err := retryFunc(f.repo.InsertContracts)(ev); err != nil {
-			logger.Error("failed to insert contracts", "err", err, "reqType", reqType, "blockNumber", ev.Block.NumberU64())
-			return
-		}
+		retryFunc(f.repo.InsertContracts)(ev)
 	}
-
 	if checkRequestType(reqType, requestTypeTraces) {
-		if err := retryFunc(f.repo.InsertTraceResults)(ev); err != nil {
-			logger.Error("failed to insert trace results", "err", err, "reqType", reqType, "blockNumber", ev.Block.NumberU64())
-			return
-		}
+		retryFunc(f.repo.InsertTraceResults)(ev)
 	}
 	f.resCh <- newResponse(reqType, ev.Block.Number(), nil)
 }
@@ -293,7 +277,7 @@ func (f *ChainDataFetcher) handleRequest() {
 		case ev := <-f.chainCh:
 			f.handleChainEvent(requestTypeAll, ev)
 		case req := <-f.reqCh:
-			ev, err := f.makeChainEvent(req.block)
+			ev, err := f.makeChainEvent(req.blockNumber)
 			if err != nil {
 				// TODO-ChainDataFetcher handle error
 				logger.Error("making chain event is failed", "err", err)
@@ -313,16 +297,7 @@ func (f *ChainDataFetcher) resLoop() {
 			logger.Info("stopped resLoop for chaindatafetcher")
 			return
 		case res := <-f.resCh:
-			for {
-				err := f.updateCheckpoint(res.blockNumber.Int64())
-				if err != nil {
-					logger.Error("Failed to update checkpoint. Sleeping for retry...", "err", err, "checkpoint", res.blockNumber.Int64(), "interval", DBInsertRetryInterval)
-					time.Sleep(DBInsertRetryInterval)
-				} else {
-					logger.Info("responsed", "blockNumber", res.blockNumber.Uint64())
-					break
-				}
-			}
+			f.updateCheckpoint(res.blockNumber.Int64())
 		}
 	}
 }

@@ -38,8 +38,8 @@ const (
 
 // request contains a raw block which should be handled and the type of data which should be exported.
 type request struct {
-	reqType requestType
-	block   uint64
+	reqType     requestType
+	blockNumber uint64
 }
 
 func checkRequestType(rt requestType, targetType requestType) bool {
@@ -48,8 +48,8 @@ func checkRequestType(rt requestType, targetType requestType) bool {
 
 func newRequest(reqType requestType, block uint64) *request {
 	return &request{
-		reqType: reqType,
-		block:   block,
+		reqType:     reqType,
+		blockNumber: block,
 	}
 }
 
