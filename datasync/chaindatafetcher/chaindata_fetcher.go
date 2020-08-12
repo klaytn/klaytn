@@ -249,7 +249,7 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 	}
 }
 
-func (f *ChainDataFetcher) handleChainEvent(reqType requestType, ev blockchain.ChainEvent) {
+func (f *ChainDataFetcher) handleRequestByType(reqType requestType, ev blockchain.ChainEvent) {
 	// TODO-ChainDataFetcher parallelize handling data
 	if checkRequestType(reqType, requestTypeTransaction) {
 		retryFunc(f.repo.InsertTransactions)(ev)
@@ -275,7 +275,7 @@ func (f *ChainDataFetcher) handleRequest() {
 			logger.Info("handleRequest is stopped")
 			return
 		case ev := <-f.chainCh:
-			f.handleChainEvent(requestTypeAll, ev)
+			f.handleRequestByType(requestTypeAll, ev)
 		case req := <-f.reqCh:
 			ev, err := f.makeChainEvent(req.blockNumber)
 			if err != nil {
@@ -283,7 +283,7 @@ func (f *ChainDataFetcher) handleRequest() {
 				logger.Error("making chain event is failed", "err", err)
 				break
 			}
-			f.handleChainEvent(req.reqType, ev)
+			f.handleRequestByType(req.reqType, ev)
 		}
 	}
 }
