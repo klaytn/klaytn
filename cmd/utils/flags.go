@@ -193,7 +193,7 @@ var (
 	}
 	NumStateTrieShardsFlag = cli.UintFlag{
 		Name:  "db.num-statetrie-shards",
-		Usage: "Number of internal shards of state trie shards. Should be power of 2",
+		Usage: "Number of internal shards of state trie DB shards. Should be power of 2",
 		Value: 4,
 	}
 	LevelDBCacheSizeFlag = cli.IntFlag{
@@ -1102,9 +1102,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setgRPC(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
-	cfg.DBType = node.DefaultDBType()
-	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)); dbtype.IsValid() {
-		cfg.DBType = dbtype
+	cfg.DBType = database.DBType(ctx.GlobalString(DbTypeFlag.Name))
+	if !cfg.DBType.IsValid() {
+		logger.Crit("invalid dbtype", "dbtype", cfg.DBType)
 	}
 	cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 
@@ -1209,14 +1209,14 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
 
-	cfg.DBType = node.DefaultDBType()
-	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)); dbtype.IsValid() {
-		cfg.DBType = dbtype
+	cfg.DBType = database.DBType(ctx.GlobalString(DbTypeFlag.Name))
+	if !cfg.DBType.IsValid() {
+		logger.Crit("invalid dbtype", "dbtype", cfg.DBType)
 	}
 	cfg.SingleDB = ctx.GlobalIsSet(SingleDBFlag.Name)
 	cfg.NumStateTrieShards = ctx.GlobalUint(NumStateTrieShardsFlag.Name)
 	if !database.IsPow2(cfg.NumStateTrieShards) {
-		log.Fatalf("--db.num-statetrie-shards should be power of 2 but %v is not!", cfg.NumStateTrieShards)
+		log.Fatalf("%v should be power of 2 but %v is not!", NumStateTrieShardsFlag.Name, cfg.NumStateTrieShards)
 	}
 
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))

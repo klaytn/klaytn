@@ -35,7 +35,7 @@ const (
 
 func (db DBType) IsValid() bool {
 	switch db {
-	case LevelDB, BadgerDB, MemoryDB:
+	case LevelDB, BadgerDB, MemoryDB, DynamoDB:
 		return true
 	}
 	return false
