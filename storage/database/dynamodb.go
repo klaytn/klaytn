@@ -42,10 +42,6 @@ const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB inclu
 const dynamoBatchSize = 25
 const dynamoMaxRetry = 5
 
-// dynamo table provisioned setting
-const dynamoReadCapacityUnits = 10000
-const dynamoWriteCapacityUnits = 10000
-
 // batch write
 const WorkerNum = 10
 const itemChanSize = WorkerNum * 2
@@ -76,6 +72,7 @@ type dynamoDB struct {
 	quitCh  chan struct{}
 	writeCh chan *batchWriteWorkerInput
 
+	// metrics
 	batchWriteTimeMeter       metrics.Meter
 	batchWriteCountMeter      metrics.Meter
 	batchWriteSizeMeter       metrics.Meter
@@ -100,8 +97,8 @@ func createTestDynamoDBConfig() *DynamoDBConfig {
 		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com",
 		TableName:          "dynamo-test-tmp",
 		IsProvisioned:      false,
-		ReadCapacityUnits:  dynamoReadCapacityUnits,
-		WriteCapacityUnits: dynamoWriteCapacityUnits,
+		ReadCapacityUnits:  10000,
+		WriteCapacityUnits: 10000,
 	}
 }
 
@@ -341,7 +338,7 @@ func (dynamo *dynamoDB) Close() {
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
-	// TODO-Klaytn: implement this later.
+	// TODO-Klaytn: implement this later. Consider the return values of bathItemWrite
 	dynamo.batchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 	dynamo.batchWriteCountMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/count", nil)
 	dynamo.batchWriteSizeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/size", nil)
