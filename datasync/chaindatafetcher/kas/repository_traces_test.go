@@ -17,31 +17,24 @@
 package kas
 
 import (
-	"encoding/json"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-var fastCallTracerResult = []byte(`{
-      "from": "0x0000000000000000000000000000000000000000",
-      "gas": 0,
-      "gasUsed": 0,
-      "input": "",
-      "output": "",
-      "reverted": {
-        "contract": "0x0000000000000000000000000000000000000000",
-        "message": ""
-      },
-      "time": 0,
-      "to": "0x0000000000000000000000000000000000000000",
-      "type": "",
-      "value": "0x0"
-}`)
+// A specific types of transaction returns empty trace result which is defined as a variable `emptyTraceResult`.
+// As a result of the tracing, `reflect.DeepEqual` returns an error while comparing with the not-initialized slice.
+func TestRepository_isEmptyTraceResult(t *testing.T) {
+	// right empty result.
+	data := &vm.InternalTxTrace{
+		Value: "0x0",
+		Calls: []*vm.InternalTxTrace{},
+	}
+	assert.True(t, isEmptyTraceResult(data))
 
-func TestIsInternalTxResult_Success(t *testing.T) {
-	var testResult vm.InternalTxTrace
-	assert.True(t, json.Valid(fastCallTracerResult))
-	assert.NoError(t, json.Unmarshal(fastCallTracerResult, &testResult))
-	assert.True(t, isEmptyTraceResult(&testResult))
+	// wrong empty result.
+	data = &vm.InternalTxTrace{
+		Value: "0x0",
+	}
+	assert.False(t, isEmptyTraceResult(data))
 }
