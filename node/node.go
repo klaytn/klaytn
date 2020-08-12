@@ -57,7 +57,8 @@ type Node struct {
 	coreServiceFuncs []ServiceConstructor
 	serviceFuncs     []ServiceConstructor
 
-	services map[reflect.Type]Service // Currently running services
+	subservices map[reflect.Type]Service // services to be terminated previously
+	services    map[reflect.Type]Service // Currently running services
 
 	rpcAPIs       []rpc.API
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
@@ -261,6 +262,7 @@ func (n *Node) Start() error {
 	}
 
 	// Finish initializing the startup
+	n.subservices = services
 	n.services = coreservices
 	n.server = p2pServer
 	n.stop = make(chan struct{})
@@ -575,6 +577,12 @@ func (n *Node) Stop() error {
 	n.rpcAPIs = nil
 	failure := &StopError{
 		Services: make(map[reflect.Type]error),
+	}
+	for kind, service := range n.subservices {
+		if err := service.Stop(); err != nil {
+			failure.Services[kind] = err
+		}
+		delete(n.services, kind)
 	}
 	for kind, service := range n.services {
 		if err := service.Stop(); err != nil {
