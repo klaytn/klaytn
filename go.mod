@@ -6,6 +6,7 @@ require (
 	github.com/VictoriaMetrics/fastcache v1.5.7
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
+	github.com/aws/aws-sdk-go v1.34.0
 	github.com/cespare/cp v1.0.0
 	github.com/clevergo/websocket v1.0.0
 	github.com/davecgh/go-spew v1.1.1
@@ -37,7 +38,7 @@ require (
 	github.com/pbnjay/memory v0.0.0-20190104145345-974d429e7ae4
 	github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c
 	github.com/peterh/liner v1.0.1-0.20180504030148-80ce870644db
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.1.0
 	github.com/prometheus/prometheus v2.1.0+incompatible
 	github.com/prometheus/tsdb v0.10.0 // indirect
@@ -48,7 +49,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190318030020-c3a204f8e965
 	github.com/urfave/cli v1.20.0
 	github.com/valyala/fasthttp v1.2.0
