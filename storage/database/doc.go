@@ -24,7 +24,7 @@ DBManager is the interface used by the consumers of database package.
 databaseManager is the implementation of DBManager interface. It contains cacheManager and a list of Database interfaces.
 cacheManager caches data stored in the persistent layer, to decrease the direct access to the persistent layer.
 Database is the interface for persistent layer implementation. Currently there are 4 implementations, levelDB, memDB,
-badgerDB and partitionedDB.
+badgerDB and shardedDB.
 
 Source Files
 
@@ -35,7 +35,7 @@ Source Files
   - leveldb_database.go      : implementation of levelDB, which wraps github.com/syndtr/goleveldb
   - memory_database.go       : implementation of MemDB, which wraps go native map structure
   - metrics.go               : metrics used in database package, mostly related to cacheManager
-  - partitioned_database.go  : implementation of partitionedDB, which wraps a list of Database interface
+  - sharded_database.go      : implementation of shardedDB, which wraps a list of Database interface
   - schema.go                : prefixes and suffixes for database keys and database key generating functions
 */
 package database

@@ -448,7 +448,7 @@ func genCandidateBadgerDBOptions() (*database.DBConfig, *opt.Options) {
 
 // defaultDBConfig returns default database.DBConfig for pre-generated tests.
 func defaultDBConfig() *database.DBConfig {
-	return &database.DBConfig{Partitioned: true, ParallelDBWrite: true, NumStateTriePartitions: 4}
+	return &database.DBConfig{SingleDB: false, ParallelDBWrite: true, NumStateTrieShards: 4}
 }
 
 // getChainConfig returns chain config from chainDB.

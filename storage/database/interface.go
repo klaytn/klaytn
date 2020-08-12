@@ -23,33 +23,22 @@ package database
 // Code using batches should try to add this much data to the batch.
 // The value was determined empirically.
 
-type DBType uint8
+type DBType string
 
 const (
-	_ DBType = iota
-	LevelDB
-	BadgerDB
-	MemoryDB
-	PartitionedDB
-	DynamoDB
+	LevelDB   DBType = "LevelDB"
+	BadgerDB         = "BadgerDB"
+	MemoryDB         = "MemoryDB"
+	DynamoDB         = "DynamoDB"
+	ShardedDB        = "ShardedDB"
 )
 
-func (dbType DBType) String() string {
-	switch dbType {
-	case LevelDB:
-		return "LevelDB"
-	case BadgerDB:
-		return "BadgerDB"
-	case MemoryDB:
-		return "MemoryDB"
-	case PartitionedDB:
-		return "PartitionedDB"
-	case DynamoDB:
-		return "DynamoDB"
-	default:
-		logger.Error("Undefined DBType entered.", "entered DBType", dbType)
-		return "undefined"
+func (db DBType) IsValid() bool {
+	switch db {
+	case LevelDB, BadgerDB, MemoryDB, DynamoDB:
+		return true
 	}
+	return false
 }
 
 const IdealBatchSize = 100 * 1024

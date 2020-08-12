@@ -81,8 +81,8 @@ var (
 	}
 	DbTypeFlag = cli.StringFlag{
 		Name:  "dbtype",
-		Usage: `Blockchain storage database type ("leveldb", "badger")`,
-		Value: "leveldb",
+		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDB")`,
+		Value: "LevelDB",
 	}
 	SrvTypeFlag = cli.StringFlag{
 		Name:  "srvtype",
@@ -187,13 +187,13 @@ var (
 		Name:  "statedb.use-cache",
 		Usage: "Enables caching of state objects in stateDB",
 	}
-	NoPartitionedDBFlag = cli.BoolFlag{
-		Name:  "db.no-partitioning",
-		Usage: "Disable partitioned databases for persistent storage",
+	SingleDBFlag = cli.BoolFlag{
+		Name:  "db.single",
+		Usage: "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
 	}
-	NumStateTriePartitionsFlag = cli.UintFlag{
-		Name:  "db.num-statetrie-partitions",
-		Usage: "Number of internal partitions of state trie partition. Should be power of 2",
+	NumStateTrieShardsFlag = cli.UintFlag{
+		Name:  "db.num-statetrie-shards",
+		Usage: "Number of internal shards of state trie DB shards. Should be power of 2",
 		Value: 4,
 	}
 	LevelDBCacheSizeFlag = cli.IntFlag{
@@ -1102,7 +1102,10 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setgRPC(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
-	cfg.DBType = ctx.GlobalString(DbTypeFlag.Name)
+	cfg.DBType = database.DBType(ctx.GlobalString(DbTypeFlag.Name))
+	if !cfg.DBType.IsValid() {
+		logger.Crit("invalid dbtype", "dbtype", cfg.DBType)
+	}
 	cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -1206,10 +1209,14 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
 
-	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
-	cfg.NumStateTriePartitions = ctx.GlobalUint(NumStateTriePartitionsFlag.Name)
-	if !database.IsPow2(cfg.NumStateTriePartitions) {
-		log.Fatalf("--db.num-statetrie-partitions should be power of 2 but %v is not!", cfg.NumStateTriePartitions)
+	cfg.DBType = database.DBType(ctx.GlobalString(DbTypeFlag.Name))
+	if !cfg.DBType.IsValid() {
+		logger.Crit("invalid dbtype", "dbtype", cfg.DBType)
+	}
+	cfg.SingleDB = ctx.GlobalIsSet(SingleDBFlag.Name)
+	cfg.NumStateTrieShards = ctx.GlobalUint(NumStateTrieShardsFlag.Name)
+	if !database.IsPow2(cfg.NumStateTrieShards) {
+		log.Fatalf("%v should be power of 2 but %v is not!", NumStateTrieShardsFlag.Name, cfg.NumStateTrieShards)
 	}
 
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))

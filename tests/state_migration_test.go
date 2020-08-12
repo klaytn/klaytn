@@ -81,7 +81,7 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 		// write values in stateDB and check if the values are stored in DB
 		entries := writeRandomValueToStateTrieDB(t, cn.ChainDB().NewBatch(database.StateTrieDB))
 		stopNode(t, fullNode) // stop node to release DB lock
-		checkIfStoredInDB(t, cn.ChainDB().GetDBConfig().NumStateTriePartitions, filepath.Join(cn.ChainDB().GetDBConfig().Dir, "statetrie"), entries)
+		checkIfStoredInDB(t, cn.ChainDB().GetDBConfig().NumStateTrieShards, filepath.Join(cn.ChainDB().GetDBConfig().Dir, "statetrie"), entries)
 		fullNode, cn = startNode(t, workspace, validator)
 	}
 
@@ -113,8 +113,8 @@ func writeRandomValueToStateTrieDB(t *testing.T, batch database.Batch) map[strin
 	return entries
 }
 
-func checkIfStoredInDB(t *testing.T, numPartitioned uint, dir string, entries map[string]string) {
-	dbs := make([]*leveldb.DB, numPartitioned)
+func checkIfStoredInDB(t *testing.T, numShard uint, dir string, entries map[string]string) {
+	dbs := make([]*leveldb.DB, numShard)
 	for i := 0; i < 4; i++ {
 		var err error
 		dbs[i], err = leveldb.OpenFile(dir+"/"+strconv.Itoa(i), nil)
