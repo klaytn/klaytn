@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"sync"
+	"time"
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
@@ -117,7 +118,6 @@ func (f *ChainDataFetcher) Start(server p2p.Server) error {
 		}
 	}
 
-	go f.reqLoop()
 	go f.resLoop()
 
 	return nil
@@ -138,8 +138,7 @@ func (f *ChainDataFetcher) makeRequests(start, end uint64, reqType requestType, 
 		select {
 		case <-stopCh:
 			return
-		default:
-			f.reqCh <- newRequest(reqType, i)
+		case f.reqCh <- newRequest(reqType, i):
 		}
 	}
 }
@@ -252,33 +251,35 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 }
 
 func (f *ChainDataFetcher) handleChainEvent(reqType requestType, ev blockchain.ChainEvent) {
-	var err error
-	defer func() {
-		f.resCh <- newResponse(reqType, ev.Block.Number(), err)
-	}()
+	// TODO-ChainDataFetcher parallelize handling data
 	if checkRequestType(reqType, requestTypeTransaction) {
-		if err = f.repo.InsertTransactions(ev); err != nil {
+		if err := retryFunc(f.repo.InsertTransactions)(ev); err != nil {
+			logger.Error("failed to insert transactions", "err", err, "reqType", reqType, "blockNumber", ev.Block.NumberU64())
 			return
 		}
 	}
 
 	if checkRequestType(reqType, requestTypeTokenTransfer) {
-		if err = f.repo.InsertTokenTransfers(ev); err != nil {
+		if err := retryFunc(f.repo.InsertTokenTransfers)(ev); err != nil {
+			logger.Error("failed to insert token transfers", "err", err, "reqType", reqType, "blockNumber", ev.Block.NumberU64())
 			return
 		}
 	}
 
 	if checkRequestType(reqType, requestTypeContracts) {
-		if err = f.repo.InsertContracts(ev); err != nil {
+		if err := retryFunc(f.repo.InsertContracts)(ev); err != nil {
+			logger.Error("failed to insert contracts", "err", err, "reqType", reqType, "blockNumber", ev.Block.NumberU64())
 			return
 		}
 	}
 
 	if checkRequestType(reqType, requestTypeTraces) {
-		if err = f.repo.InsertTraceResults(ev); err != nil {
+		if err := retryFunc(f.repo.InsertTraceResults)(ev); err != nil {
+			logger.Error("failed to insert trace results", "err", err, "reqType", reqType, "blockNumber", ev.Block.NumberU64())
 			return
 		}
 	}
+	f.resCh <- newResponse(reqType, ev.Block.Number(), nil)
 }
 
 func (f *ChainDataFetcher) handleRequest() {
@@ -289,33 +290,16 @@ func (f *ChainDataFetcher) handleRequest() {
 		case <-f.stopCh:
 			logger.Info("handleRequest is stopped")
 			return
-		case req := <-f.reqCh:
-			switch b := req.block.(type) {
-			case blockchain.ChainEvent:
-				f.handleChainEvent(req.reqType, b)
-			case uint64:
-				ev, err := f.makeChainEvent(b)
-				if err != nil {
-					logger.Error("making chain event is failed", "err", err)
-					break
-				}
-				f.handleChainEvent(req.reqType, ev)
-			}
-			// TODO-ChainDataFetcher parallelize handling data
-		}
-	}
-}
-
-func (f *ChainDataFetcher) reqLoop() {
-	f.wg.Add(1)
-	defer f.wg.Done()
-	for {
-		select {
-		case <-f.stopCh:
-			logger.Info("stopped reqLoop for chaindatafetcher")
-			return
 		case ev := <-f.chainCh:
-			f.reqCh <- newRequest(requestTypeAll, ev)
+			f.handleChainEvent(requestTypeAll, ev)
+		case req := <-f.reqCh:
+			ev, err := f.makeChainEvent(req.block)
+			if err != nil {
+				// TODO-ChainDataFetcher handle error
+				logger.Error("making chain event is failed", "err", err)
+				break
+			}
+			f.handleChainEvent(req.reqType, ev)
 		}
 	}
 }
@@ -329,14 +313,15 @@ func (f *ChainDataFetcher) resLoop() {
 			logger.Info("stopped resLoop for chaindatafetcher")
 			return
 		case res := <-f.resCh:
-			if res.err != nil {
-				logger.Error("db insertion is failed", "blockNumber", res.blockNumber, "reqType", res.reqType, "err", res.err)
-				// TODO-ChainDataFetcher add retry logic when data insertion is failed
-			} else {
-				if err := f.updateCheckpoint(res.blockNumber.Int64()); err != nil {
-					logger.Error("Failed to update checkpoint", "err", err, "checkpoint", res.blockNumber.Int64())
+			for {
+				err := f.updateCheckpoint(res.blockNumber.Int64())
+				if err != nil {
+					logger.Error("Failed to update checkpoint. Sleeping for retry...", "err", err, "checkpoint", res.blockNumber.Int64(), "interval", DBInsertRetryInterval)
+					time.Sleep(DBInsertRetryInterval)
+				} else {
+					logger.Info("responsed", "blockNumber", res.blockNumber.Uint64())
+					break
 				}
-				// TODO-ChainDataFetcher add retry logic when checkpoint insertion is failed
 			}
 		}
 	}

@@ -39,14 +39,14 @@ const (
 // request contains a raw block which should be handled and the type of data which should be exported.
 type request struct {
 	reqType requestType
-	block   interface{}
+	block   uint64
 }
 
 func checkRequestType(rt requestType, targetType requestType) bool {
 	return rt&targetType == targetType
 }
 
-func newRequest(reqType requestType, block interface{}) *request {
+func newRequest(reqType requestType, block uint64) *request {
 	return &request{
 		reqType: reqType,
 		block:   block,
