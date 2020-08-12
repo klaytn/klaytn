@@ -438,7 +438,7 @@ func NewDBManager(dbc *DBConfig) DBManager {
 		}
 	} else {
 		checkDBEntryConfigRatio()
-		logger.Info("Database is used for persistent storage", "DBType", dbc.DBType)
+		logger.Info("Non-single database is used for persistent storage", "DBType", dbc.DBType)
 		dbm, err := databaseDBManager(dbc)
 		if err != nil {
 			logger.Crit("Failed to create databases", "DBType", dbc.DBType, "err", err)
