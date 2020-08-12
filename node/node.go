@@ -578,10 +578,12 @@ func (n *Node) Stop() error {
 	failure := &StopError{
 		Services: make(map[reflect.Type]error),
 	}
+	// subservices are the services which should be terminated before coreservices are terminated.
 	for kind, service := range n.subservices {
 		if err := service.Stop(); err != nil {
 			failure.Services[kind] = err
 		}
+		// delete the already terminated services.
 		delete(n.services, kind)
 	}
 	for kind, service := range n.services {
