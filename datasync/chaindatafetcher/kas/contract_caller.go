@@ -46,8 +46,9 @@ var (
 	IKIP17Id         = [4]byte{0x80, 0xac, 0x58, 0xcd}
 	IKIP17MetadataId = [4]byte{0x5b, 0x5e, 0x13, 0x9f}
 
-	errMsgEmptyOutput = "abi: unmarshalling empty output"
-	errMsgEvmReverted = "evm: execution reverted"
+	errMsgEmptyOutput    = "abi: unmarshalling empty output"
+	errMsgEvmReverted    = "evm: execution reverted"
+	errMsgNoContractCode = "no contract code at given address"
 )
 
 //go:generate mockgen -destination=./mocks/blockchain_api_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kas BlockchainAPI
@@ -68,16 +69,24 @@ func newContractCaller(api BlockchainAPI) *contractCaller {
 }
 
 func (f *contractCaller) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
-	return f.blockchainAPI.GetCode(ctx, contract, rpc.BlockNumber(blockNumber.Int64()))
+	num := rpc.LatestBlockNumber
+	if blockNumber != nil {
+		num = rpc.BlockNumber(blockNumber.Int64())
+	}
+	return f.blockchainAPI.GetCode(ctx, contract, num)
 }
 
 func (f *contractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+	num := rpc.LatestBlockNumber
+	if blockNumber != nil {
+		num = rpc.BlockNumber(blockNumber.Int64())
+	}
 	callArgs := api.CallArgs{
 		From: call.From,
 		To:   call.To,
 		Data: hexutil.Bytes(call.Data),
 	}
-	return f.blockchainAPI.Call(ctx, callArgs, rpc.BlockNumber(blockNumber.Int64()))
+	return f.blockchainAPI.Call(ctx, callArgs, num)
 }
 
 func getCallOpts(blockNumber *big.Int, timeout time.Duration) (*bind.CallOpts, context.CancelFunc) {
@@ -93,7 +102,8 @@ func getCallOpts(blockNumber *big.Int, timeout time.Duration) (*bind.CallOpts, c
 // - the call can be reverted: returns "evm: execution reverted"
 // handleSupportsInterfaceErr handles the given error according to the above explanation.
 func handleSupportsInterfaceErr(err error) error {
-	if err != nil && (strings.Contains(err.Error(), errMsgEmptyOutput) || strings.Contains(err.Error(), errMsgEvmReverted)) {
+	if err != nil && (strings.Contains(err.Error(), errMsgEmptyOutput) || strings.Contains(err.Error(), errMsgEvmReverted) ||
+		strings.Contains(err.Error(), errMsgNoContractCode)) {
 		return nil
 	}
 	return err

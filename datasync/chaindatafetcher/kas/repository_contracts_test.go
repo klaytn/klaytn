@@ -48,26 +48,26 @@ func TestFilterKIPContracts_Success(t *testing.T) {
 	api := mocks.NewMockBlockchainAPI(ctrl)
 
 	// First contract is KIP13 only
-	setExpectation(api, &receipts[0].ContractAddress, number, ikip13Input, decodedTrue)
-	setExpectation(api, &receipts[0].ContractAddress, number, ikip13InvalidInput, decodedFalse)
-	setExpectation(api, &receipts[0].ContractAddress, number, ikip7Input, decodedFalse)
-	setExpectation(api, &receipts[0].ContractAddress, number, ikip17Input, decodedFalse)
+	setExpectation(api, &receipts[0].ContractAddress, ikip13Input, decodedTrue)
+	setExpectation(api, &receipts[0].ContractAddress, ikip13InvalidInput, decodedFalse)
+	setExpectation(api, &receipts[0].ContractAddress, ikip7Input, decodedFalse)
+	setExpectation(api, &receipts[0].ContractAddress, ikip17Input, decodedFalse)
 
 	// Second one is IKIP7
-	setExpectation(api, &receipts[1].ContractAddress, number, ikip13Input, decodedTrue)
-	setExpectation(api, &receipts[1].ContractAddress, number, ikip13InvalidInput, decodedFalse)
-	setExpectation(api, &receipts[1].ContractAddress, number, ikip7Input, decodedTrue)
-	setExpectation(api, &receipts[1].ContractAddress, number, ikip7MetadataInput, decodedTrue)
+	setExpectation(api, &receipts[1].ContractAddress, ikip13Input, decodedTrue)
+	setExpectation(api, &receipts[1].ContractAddress, ikip13InvalidInput, decodedFalse)
+	setExpectation(api, &receipts[1].ContractAddress, ikip7Input, decodedTrue)
+	setExpectation(api, &receipts[1].ContractAddress, ikip7MetadataInput, decodedTrue)
 
 	// Third one is IKIP17
-	setExpectation(api, &receipts[2].ContractAddress, number, ikip13Input, decodedTrue)
-	setExpectation(api, &receipts[2].ContractAddress, number, ikip13InvalidInput, decodedFalse)
-	setExpectation(api, &receipts[2].ContractAddress, number, ikip7Input, decodedFalse)
-	setExpectation(api, &receipts[2].ContractAddress, number, ikip17Input, decodedTrue)
-	setExpectation(api, &receipts[2].ContractAddress, number, ikip17MetadataInput, decodedTrue)
+	setExpectation(api, &receipts[2].ContractAddress, ikip13Input, decodedTrue)
+	setExpectation(api, &receipts[2].ContractAddress, ikip13InvalidInput, decodedFalse)
+	setExpectation(api, &receipts[2].ContractAddress, ikip7Input, decodedFalse)
+	setExpectation(api, &receipts[2].ContractAddress, ikip17Input, decodedTrue)
+	setExpectation(api, &receipts[2].ContractAddress, ikip17MetadataInput, decodedTrue)
 
 	// Last one is not KIP
-	setExpectation(api, &receipts[3].ContractAddress, number, ikip13Input, decodedFalse)
+	setExpectation(api, &receipts[3].ContractAddress, ikip13Input, decodedFalse)
 
 	fts, nfts, others, err := filterKIPContracts(api, event)
 	assert.Equal(t, 1, len(fts))
