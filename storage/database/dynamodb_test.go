@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDynamoDB_Put(t *testing.T) {
+func testDynamoDB_Put(t *testing.T) {
 	dynamo, err := NewDynamoDB(createTestDynamoDBConfig())
 	defer dynamo.deletedDB()
 	if err != nil {
@@ -45,7 +45,7 @@ func TestDynamoDB_Put(t *testing.T) {
 	assert.NoError(t, returnedErr)
 }
 
-func TestDynamoBatch_Write(t *testing.T) {
+func testDynamoBatch_Write(t *testing.T) {
 	dynamo, err := NewDynamoDB(createTestDynamoDBConfig())
 	defer dynamo.deletedDB()
 	if err != nil {
@@ -77,7 +77,7 @@ func TestDynamoBatch_Write(t *testing.T) {
 	}
 }
 
-func TestDynamoBatch_WriteLargeData(t *testing.T) {
+func testDynamoBatch_WriteLargeData(t *testing.T) {
 	dynamo, err := NewDynamoDB(createTestDynamoDBConfig())
 	defer dynamo.deletedDB()
 	if err != nil {
