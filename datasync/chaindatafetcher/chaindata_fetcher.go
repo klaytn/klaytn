@@ -139,7 +139,7 @@ func (f *ChainDataFetcher) startFetching() error {
 
 	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
 	currentBlock := f.blockchain.CurrentHeader().Number.Uint64()
-	if err := f.startRangeFetching(uint64(f.checkpoint), currentBlock, requestTypeTransaction); err != nil {
+	if err := f.startRangeFetching(uint64(f.checkpoint), currentBlock, requestTypeAll); err != nil {
 		return err
 	}
 
@@ -171,10 +171,7 @@ func (f *ChainDataFetcher) startRangeFetching(start, end uint64, reqType request
 			return err
 		}
 
-		f.reqCh <- &request{
-			reqType: reqType,
-			event:   e,
-		}
+		f.reqCh <- newRequest(reqType, e)
 		// TODO-ChainDataFetcher add stop logic while processing the events.
 	}
 	return nil
@@ -245,15 +242,30 @@ func (f *ChainDataFetcher) handleRequest() {
 			logger.Info("handleRequest is stopped")
 			return
 		case req := <-f.reqCh:
-			res := &response{
-				reqType:     requestTypeTransaction,
-				blockNumber: req.event.Block.Number(),
-				err:         nil,
+			// TODO-ChainDataFetcher parallelize handling data
+			if checkRequestType(req.reqType, requestTypeTransaction) {
+				if err := f.repo.InsertTransactions(req.event); err != nil {
+					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
+				}
 			}
 
-			res.err = f.repo.InsertTransactions(req.event)
-			// TODO-ChainDataFetcher insert other types of data
-			f.resCh <- res
+			if checkRequestType(req.reqType, requestTypeTokenTransfer) {
+				if err := f.repo.InsertTokenTransfers(req.event); err != nil {
+					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
+				}
+			}
+
+			if checkRequestType(req.reqType, requestTypeContracts) {
+				if err := f.repo.InsertContracts(req.event); err != nil {
+					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
+				}
+			}
+
+			if checkRequestType(req.reqType, requestTypeTraces) {
+				if err := f.repo.InsertTraceResults(req.event); err != nil {
+					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
+				}
+			}
 		}
 	}
 }
@@ -267,10 +279,7 @@ func (f *ChainDataFetcher) reqLoop() {
 			logger.Info("stopped reqLoop for chaindatafetcher")
 			return
 		case ev := <-f.chainCh:
-			f.reqCh <- &request{
-				reqType: requestTypeTransaction,
-				event:   ev,
-			}
+			f.reqCh <- newRequest(requestTypeAll, ev)
 		}
 	}
 }
