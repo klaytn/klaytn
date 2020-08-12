@@ -19,6 +19,7 @@ package kas
 import (
 	"fmt"
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"strings"
 	"time"
@@ -33,7 +34,7 @@ func filterKIPContracts(api BlockchainAPI, event blockchain.ChainEvent) ([]*FT, 
 	)
 	caller := newContractCaller(api)
 	for _, receipt := range event.Receipts {
-		if receipt.ContractAddress == (common.Address{}) {
+		if receipt.Status != types.ReceiptStatusSuccessful || receipt.ContractAddress == (common.Address{}) {
 			continue
 		}
 		blockNumber := event.Block.Number()
