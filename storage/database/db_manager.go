@@ -408,6 +408,8 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
 		return NewMemDB(), nil
+	case DynamoDB:
+		return NewDynamoDB(createTestDynamoDBConfig())
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
 		return NewLevelDB(dbc, 0)
