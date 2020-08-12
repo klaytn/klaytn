@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"sync"
+	"time"
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
@@ -252,16 +253,16 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 func (f *ChainDataFetcher) handleRequestByType(reqType requestType, ev blockchain.ChainEvent) {
 	// TODO-ChainDataFetcher parallelize handling data
 	if checkRequestType(reqType, requestTypeTransaction) {
-		retryFunc(f.repo.InsertTransactions)(ev)
+		f.retryFunc(f.repo.InsertTransactions)(ev)
 	}
 	if checkRequestType(reqType, requestTypeTokenTransfer) {
-		retryFunc(f.repo.InsertTokenTransfers)(ev)
+		f.retryFunc(f.repo.InsertTokenTransfers)(ev)
 	}
 	if checkRequestType(reqType, requestTypeContracts) {
-		retryFunc(f.repo.InsertContracts)(ev)
+		f.retryFunc(f.repo.InsertContracts)(ev)
 	}
 	if checkRequestType(reqType, requestTypeTraces) {
-		retryFunc(f.repo.InsertTraceResults)(ev)
+		f.retryFunc(f.repo.InsertTraceResults)(ev)
 	}
 	f.resCh <- newResponse(reqType, ev.Block.Number(), nil)
 }
@@ -321,4 +322,20 @@ func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
 		return f.repo.WriteCheckpoint(newCheckpoint)
 	}
 	return nil
+}
+
+func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error) func(blockchain.ChainEvent) {
+	return func(event blockchain.ChainEvent) {
+		i := 0
+		for err := insert(event); err != nil; {
+			select {
+			case <-f.stopCh:
+				return
+			default:
+				i++
+				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i)
+				time.Sleep(DBInsertRetryInterval)
+			}
+		}
+	}
 }
