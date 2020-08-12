@@ -24,7 +24,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/kas/mocks"
+	"github.com/klaytn/klaytn/node/sc/kas/mocks"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
@@ -51,13 +51,13 @@ func testAnchorData() *types.AnchoringDataInternalType0 {
 	}
 }
 
-func TestExampleSendRequest(t *testing.T) {
-	url := "http://anchor.wallet-api.dev.klaytn.com/v1/anchor"
-	xkrn := "krn:1001:anchor:test:operator-pool:op1"
-	user := "78ab9116689659321aaf472aa154eac7dd7a99c6"
-	pwd := "403e0397d51a823cd59b7edcb212788c8599dd7e"
+func _TestExampleSendRequest(t *testing.T) {
+	url := "http://anchor-anchor-api.dev.klaytn.com/v1/anchor"
+	xkrn := "krn:1001:anchor:test:operator-pool:rp1"
+	user := ""
+	pwd := ""
 
-	operator := common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
+	operator := common.HexToAddress("0xFC6A9Fe8a71F7bB576070a7fe408AFdE8E3d4819")
 
 	// Anchor Data
 	anchorData := testAnchorData()

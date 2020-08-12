@@ -147,7 +147,7 @@ type respBody struct {
 
 type reqBody struct {
 	Operator common.Address `json:"operator"`
-	Payload  interface{}    `json:"Payload"`
+	Payload  interface{}    `json:"payload"`
 }
 
 type Payload struct {
