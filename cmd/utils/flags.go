@@ -214,7 +214,7 @@ var (
 	}
 	DynamoDBTableNameFlag = cli.StringFlag{
 		Name:  "db.dynamo.tablename",
-		Usage: "Specifies DynamoDB table name. If it is not set, a new name will be created. (Set dbtype to use DynamoDB)",
+		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDB)",
 	}
 	DynamoDBRegionFlag = cli.StringFlag{
 		Name:  "db.dynamo.region",
@@ -228,12 +228,12 @@ var (
 	DynamoDBReadCapacityFlag = cli.Int64Flag{
 		Name:  "db.dynamo.read-capacity",
 		Usage: "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
-		Value: 10000,
+		Value: database.DynamoReadCapacityUnits,
 	}
 	DynamoDBWriteCapacityFlag = cli.Int64Flag{
 		Name:  "db.dynamo.write-capacity",
 		Usage: "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
-		Value: 10000,
+		Value: database.DynamoWriteCapacityUnits,
 	}
 	NoParallelDBWriteFlag = cli.BoolFlag{
 		Name:  "db.no-parallel-write",

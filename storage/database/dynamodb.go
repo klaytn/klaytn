@@ -15,16 +15,19 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 //
 // Database implementation of AWS DynamoDB.
+//
+// [WARN] Using this DB may cause pricing in your AWS account.
+// [WARN] DynamoDB creates both Dynamo DB table and S3 bucket.
+//
 // You need to set AWS credentials to access to dynamoDB.
-//    sh$ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
-//    sh$ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
+//    $ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//    $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 
 package database
 
 import (
 	"bytes"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -40,9 +43,12 @@ import (
 	"github.com/klaytn/klaytn/log"
 )
 
+// errors
 var dataNotFoundErr = errors.New("data is not found with the given key")
 var nilDynamoConfigErr = errors.New("attempt to create DynamoDB with nil configuration")
+var noTableNameErr = errors.New("dynamoDB table name not provided")
 
+// batch rite size
 const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB including attribute names and values
 const dynamoBatchSize = 25
 const dynamoMaxRetry = 5
@@ -50,6 +56,10 @@ const dynamoMaxRetry = 5
 // batch write
 const WorkerNum = 10
 const itemChanSize = WorkerNum * 2
+
+// default values
+const DynamoReadCapacityUnits = 10000
+const DynamoWriteCapacityUnits = 10000
 
 var overSizedDataPrefix = []byte("oversizeditem")
 
@@ -102,8 +112,8 @@ func createTestDynamoDBConfig() *DynamoDBConfig {
 		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com",
 		TableName:          "dynamo-test-tmp",
 		IsProvisioned:      false,
-		ReadCapacityUnits:  10000,
-		WriteCapacityUnits: 10000,
+		ReadCapacityUnits:  DynamoReadCapacityUnits,
+		WriteCapacityUnits: DynamoWriteCapacityUnits,
 	}
 }
 
@@ -111,11 +121,11 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if config == nil {
 		return nil, nilDynamoConfigErr
 	}
+	if len(config.TableName) == 0 {
+		return nil, noTableNameErr
+	}
 	if len(config.Endpoint) == 0 {
 		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
-	}
-	if len(config.TableName) == 0 {
-		config.TableName = "klaytn" + strconv.Itoa(time.Now().Nanosecond())
 	}
 
 	logger.Info("creating s3FileDB ", "bucket", config.TableName)
@@ -157,7 +167,7 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 
 		switch tableStatus {
 		case dynamodb.TableStatusActive:
-			dynamoDB.logger.Info("DynamoDB configurations", "endPoint", config.Endpoint)
+			dynamoDB.logger.Warn("Successfully created dynamoDB table. You will be charged until the DB is deleted.", "endPoint", config.Endpoint)
 			for i := 0; i < WorkerNum; i++ {
 				go dynamoDB.createBatchWriteWorker()
 			}
@@ -197,6 +207,7 @@ func (dynamo *dynamoDB) createTable() error {
 			ReadCapacityUnits:  aws.Int64(dynamo.config.ReadCapacityUnits),
 			WriteCapacityUnits: aws.Int64(dynamo.config.WriteCapacityUnits),
 		}
+		dynamo.logger.Warn("Billing mode is provisioned. You will be charged every hour.", "RCU", dynamo.config.ReadCapacityUnits, "WRU", dynamo.config.WriteCapacityUnits)
 	}
 
 	_, err := dynamo.db.CreateTable(input)
@@ -204,7 +215,7 @@ func (dynamo *dynamoDB) createTable() error {
 		dynamo.logger.Error("Error while creating the DynamoDB table", "err", err, "tableName", dynamo.config.TableName)
 		return err
 	}
-	dynamo.logger.Info("Successfully created the Dynamo table", "tableName", dynamo.config.TableName)
+	dynamo.logger.Warn("Requesting create dynamoDB table. You will be charged until the table is deleted.")
 	return nil
 }
 
