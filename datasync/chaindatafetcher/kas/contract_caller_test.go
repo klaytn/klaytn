@@ -17,17 +17,19 @@
 package kas
 
 import (
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/api"
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas/mocks"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/stretchr/testify/suite"
-	"testing"
-	"time"
 )
 
 var (
@@ -145,9 +147,21 @@ func (s *SuiteContractCaller) TestContractCaller_SupportsInterface_NoContractCod
 	addr := common.HexToAddress("7")
 	s.True(addr != (common.Address{})) // make sure that the address is not empty address
 
-	// evm execution reverted mocking
 	s.api.EXPECT().Call(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 	s.api.EXPECT().GetCode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, bind.ErrNoCode).Times(1)
+
+	opts, cancel := getCallOpts(nil, 1*time.Second)
+	defer cancel()
+	isSupported, err := s.caller.supportsInterface(addr, opts, [4]byte{})
+	s.False(isSupported)
+	s.Nil(err)
+}
+
+func (s *SuiteContractCaller) TestContractCaller_SupportsInterface_ErrVMDefault() {
+	addr := common.HexToAddress("8")
+	s.True(addr != (common.Address{})) // make sure that the address is not empty address
+
+	s.api.EXPECT().Call(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, blockchain.ErrVMDefault).Times(1)
 
 	opts, cancel := getCallOpts(nil, 1*time.Second)
 	defer cancel()
