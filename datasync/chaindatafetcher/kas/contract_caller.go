@@ -19,7 +19,11 @@ package kas
 import (
 	"context"
 	"math/big"
+	"strings"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/vm"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
@@ -104,6 +108,9 @@ func (f *contractCaller) supportsInterface(contract common.Address, opts *bind.C
 		// removed handle error case for SupportsInterface contract call.
 		// 1. The error cases are too many to be handled.
 		// 2. There is no case to return an error (e.g. network error, ...) other than internal errors.
+		if !strings.Contains(err.Error(), errMsgEmptyOutput) && err != vm.ErrExecutionReverted && err != bind.ErrNoCode && err != blockchain.ErrVMDefault {
+			logger.Warn("supports interface returns an abnormal error", "err", err, "contract", contract.String(), "interfaceID", hexutil.Encode(interfaceID[:]))
+		}
 		return false, nil
 	}
 	return isSupported, nil
