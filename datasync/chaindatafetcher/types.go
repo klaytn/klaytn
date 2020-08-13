@@ -17,7 +17,6 @@
 package chaindatafetcher
 
 import (
-	"github.com/klaytn/klaytn/blockchain"
 	"math/big"
 )
 
@@ -39,18 +38,18 @@ const (
 
 // request contains a raw block which should be handled and the type of data which should be exported.
 type request struct {
-	reqType requestType
-	event   blockchain.ChainEvent
+	reqType     requestType
+	blockNumber uint64
 }
 
 func checkRequestType(rt requestType, targetType requestType) bool {
 	return rt&targetType == targetType
 }
 
-func newRequest(reqType requestType, event blockchain.ChainEvent) *request {
+func newRequest(reqType requestType, block uint64) *request {
 	return &request{
-		reqType: reqType,
-		event:   event,
+		reqType:     reqType,
+		blockNumber: block,
 	}
 }
 

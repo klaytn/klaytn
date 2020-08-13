@@ -16,7 +16,12 @@
 
 package chaindatafetcher
 
-import "github.com/klaytn/klaytn/blockchain"
+import (
+	"github.com/klaytn/klaytn/blockchain"
+	"time"
+)
+
+const DBInsertRetryInterval = 500 * time.Millisecond
 
 //go:generate mockgen -destination=./mocks/repository_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher Repository
 type Repository interface {

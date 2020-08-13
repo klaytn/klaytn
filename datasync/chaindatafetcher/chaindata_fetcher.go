@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"sync"
+	"time"
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
@@ -58,8 +59,12 @@ type ChainDataFetcher struct {
 
 	repo Repository
 
-	started      bool
-	rangeStarted bool
+	fetchingStarted      bool
+	fetchingStopCh       chan struct{}
+	fetchingWg           sync.WaitGroup
+	rangeFetchingStarted bool
+	rangeFetchingStopCh  chan struct{}
+	rangeFetchingWg      sync.WaitGroup
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
@@ -113,76 +118,85 @@ func (f *ChainDataFetcher) Start(server p2p.Server) error {
 		}
 	}
 
-	go f.reqLoop()
 	go f.resLoop()
 
 	return nil
 }
 
 func (f *ChainDataFetcher) Stop() error {
-	if f.chainSub != nil {
-		f.chainSub.Unsubscribe()
-	}
+	f.stopFetching()
+	f.stopRangeFetching()
 	close(f.stopCh)
-
 	logger.Info("wait for all goroutines to be terminated...")
 	f.wg.Wait()
 	logger.Info("terminated all goroutines for chaindatafetcher")
-	f.started = false
 	return nil
 }
 
+func (f *ChainDataFetcher) makeRequests(start, end uint64, reqType requestType, stopCh chan struct{}) {
+	for i := start; i <= end; i++ {
+		select {
+		case <-stopCh:
+			return
+		case f.reqCh <- newRequest(reqType, i):
+		}
+	}
+}
+
 func (f *ChainDataFetcher) startFetching() error {
-	if f.started {
-		return errors.New("the chaindata fetcher is already started")
+	if f.fetchingStarted {
+		return errors.New("fetching is already started")
 	}
 
 	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
 	currentBlock := f.blockchain.CurrentHeader().Number.Uint64()
-	if err := f.startRangeFetching(uint64(f.checkpoint), currentBlock, requestTypeAll); err != nil {
-		return err
-	}
 
-	f.started = true
+	f.fetchingStopCh = make(chan struct{})
+	f.fetchingWg.Add(1)
+	go func() {
+		defer f.fetchingWg.Done()
+		f.makeRequests(uint64(f.checkpoint), currentBlock, requestTypeAll, f.fetchingStopCh)
+	}()
+	f.fetchingStarted = true
 	return nil
 }
 
 func (f *ChainDataFetcher) stopFetching() error {
-	if !f.started {
-		return errors.New("the chaindata fetcher is not running")
+	if !f.fetchingStarted {
+		return errors.New("fetching is not running")
 	}
 
 	f.chainSub.Unsubscribe()
-	f.started = false
+	close(f.fetchingStopCh)
+	f.fetchingWg.Wait()
+	f.fetchingStarted = false
 	return nil
 }
 
 func (f *ChainDataFetcher) startRangeFetching(start, end uint64, reqType requestType) error {
-	if f.rangeStarted {
-		return errors.New("the chaindata fetcher is already started with range")
+	if f.rangeFetchingStarted {
+		return errors.New("range fetching is already started")
 	}
-	f.rangeStarted = true
-	defer func() { f.rangeStarted = false }()
-
-	// TODO-ChainDataFetcher parallelize the following codes
-	for i := start; i < end; i++ {
-		e, err := f.makeChainEvent(i)
-		if err != nil {
-			return err
-		}
-
-		f.reqCh <- newRequest(reqType, e)
-		// TODO-ChainDataFetcher add stop logic while processing the events.
-	}
+	f.rangeFetchingStopCh = make(chan struct{})
+	f.rangeFetchingWg.Add(1)
+	go func() {
+		defer f.rangeFetchingWg.Done()
+		f.makeRequests(start, end, reqType, f.rangeFetchingStopCh)
+	}()
+	f.rangeFetchingStarted = true
 	return nil
 }
 
 func (f *ChainDataFetcher) stopRangeFetching() error {
-	// TODO-ChainDataFetcher add logic for stopping
+	if !f.rangeFetchingStarted {
+		return errors.New("range fetching is not running")
+	}
+	close(f.rangeFetchingStopCh)
+	f.rangeFetchingWg.Wait()
+	f.rangeFetchingStarted = false
 	return nil
 }
 
-// TODO-ChainDataFetcher push down this logic to handleRequest
 func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainEvent, error) {
 	var logs []*types.Log
 	block := f.blockchain.GetBlockByNumber(blockNumber)
@@ -190,18 +204,21 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 	for _, r := range receipts {
 		logs = append(logs, r.Logs...)
 	}
-	fct := "fastCallTracer"
-	results, err := f.debugAPI.TraceBlockByNumber(context.Background(), rpc.BlockNumber(block.Number().Int64()), &cn.TraceConfig{
-		Tracer: &fct,
-	})
-	if err != nil {
-		return blockchain.ChainEvent{}, err
-	}
 	var internalTraces []*vm.InternalTxTrace
-	for _, r := range results {
-		// TODO-ChainDataFetcher Assume that the input parameters are valid always.
-		internalTraces = append(internalTraces, r.Result.(*vm.InternalTxTrace))
+	if block.Transactions().Len() > 0 {
+		fct := "fastCallTracer"
+		results, err := f.debugAPI.TraceBlockByNumber(context.Background(), rpc.BlockNumber(block.Number().Int64()), &cn.TraceConfig{
+			Tracer: &fct,
+		})
+		if err != nil {
+			return blockchain.ChainEvent{}, err
+		}
+		for _, r := range results {
+			// TODO-ChainDataFetcher Assume that the input parameters are valid always.
+			internalTraces = append(internalTraces, r.Result.(*vm.InternalTxTrace))
+		}
 	}
+
 	return blockchain.ChainEvent{
 		Block:            block,
 		Hash:             block.Hash(),
@@ -224,13 +241,30 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 			for _, a := range v {
 				switch s := a.Service.(type) {
 				case *api.PublicBlockChainAPI:
-					f.blockchainAPI = s
+					f.repo.SetComponent(s)
 				case *cn.PrivateDebugAPI:
 					f.debugAPI = s
 				}
 			}
 		}
 	}
+}
+
+func (f *ChainDataFetcher) handleRequestByType(reqType requestType, ev blockchain.ChainEvent) {
+	// TODO-ChainDataFetcher parallelize handling data
+	if checkRequestType(reqType, requestTypeTransaction) {
+		f.retryFunc(f.repo.InsertTransactions)(ev)
+	}
+	if checkRequestType(reqType, requestTypeTokenTransfer) {
+		f.retryFunc(f.repo.InsertTokenTransfers)(ev)
+	}
+	if checkRequestType(reqType, requestTypeContracts) {
+		f.retryFunc(f.repo.InsertContracts)(ev)
+	}
+	if checkRequestType(reqType, requestTypeTraces) {
+		f.retryFunc(f.repo.InsertTraceResults)(ev)
+	}
+	f.resCh <- newResponse(reqType, ev.Block.Number(), nil)
 }
 
 func (f *ChainDataFetcher) handleRequest() {
@@ -241,45 +275,16 @@ func (f *ChainDataFetcher) handleRequest() {
 		case <-f.stopCh:
 			logger.Info("handleRequest is stopped")
 			return
-		case req := <-f.reqCh:
-			// TODO-ChainDataFetcher parallelize handling data
-			if checkRequestType(req.reqType, requestTypeTransaction) {
-				if err := f.repo.InsertTransactions(req.event); err != nil {
-					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
-				}
-			}
-
-			if checkRequestType(req.reqType, requestTypeTokenTransfer) {
-				if err := f.repo.InsertTokenTransfers(req.event); err != nil {
-					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
-				}
-			}
-
-			if checkRequestType(req.reqType, requestTypeContracts) {
-				if err := f.repo.InsertContracts(req.event); err != nil {
-					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
-				}
-			}
-
-			if checkRequestType(req.reqType, requestTypeTraces) {
-				if err := f.repo.InsertTraceResults(req.event); err != nil {
-					f.resCh <- newResponse(req.reqType, req.event.Block.Number(), err)
-				}
-			}
-		}
-	}
-}
-
-func (f *ChainDataFetcher) reqLoop() {
-	f.wg.Add(1)
-	defer f.wg.Done()
-	for {
-		select {
-		case <-f.stopCh:
-			logger.Info("stopped reqLoop for chaindatafetcher")
-			return
 		case ev := <-f.chainCh:
-			f.reqCh <- newRequest(requestTypeAll, ev)
+			f.handleRequestByType(requestTypeAll, ev)
+		case req := <-f.reqCh:
+			ev, err := f.makeChainEvent(req.blockNumber)
+			if err != nil {
+				// TODO-ChainDataFetcher handle error
+				logger.Error("making chain event is failed", "err", err)
+				break
+			}
+			f.handleRequestByType(req.reqType, ev)
 		}
 	}
 }
@@ -293,15 +298,7 @@ func (f *ChainDataFetcher) resLoop() {
 			logger.Info("stopped resLoop for chaindatafetcher")
 			return
 		case res := <-f.resCh:
-			if res.err != nil {
-				logger.Error("db insertion is failed", "blockNumber", res.blockNumber, "reqType", res.reqType, "err", res.err)
-				// TODO-ChainDataFetcher add retry logic when data insertion is failed
-			} else {
-				if err := f.updateCheckpoint(res.blockNumber.Int64()); err != nil {
-					logger.Error("Failed to update checkpoint", "err", err, "checkpoint", res.blockNumber.Int64())
-				}
-				// TODO-ChainDataFetcher add retry logic when checkpoint insertion is failed
-			}
+			f.updateCheckpoint(res.blockNumber.Int64())
 		}
 	}
 }
@@ -325,4 +322,20 @@ func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
 		return f.repo.WriteCheckpoint(newCheckpoint)
 	}
 	return nil
+}
+
+func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error) func(blockchain.ChainEvent) {
+	return func(event blockchain.ChainEvent) {
+		i := 0
+		for err := insert(event); err != nil; {
+			select {
+			case <-f.stopCh:
+				return
+			default:
+				i++
+				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i)
+				time.Sleep(DBInsertRetryInterval)
+			}
+		}
+	}
 }
