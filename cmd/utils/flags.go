@@ -134,7 +134,7 @@ var (
 		Usage: "Disables price exemptions for locally submitted transactions",
 	}
 	TxPoolAllowLocalAnchorTxFlag = cli.BoolFlag{
-		Name:  "txpool.allowlocalanchortx",
+		Name:  "txpool.allow-local-anchortx",
 		Usage: "Allow locally submitted anchoring transactions",
 	}
 	TxPoolJournalFlag = cli.StringFlag{
