@@ -17,9 +17,10 @@
 package kas
 
 import (
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // A specific types of transaction returns empty trace result which is defined as a variable `emptyTraceResult`.

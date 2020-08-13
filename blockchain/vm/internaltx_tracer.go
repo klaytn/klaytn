@@ -27,12 +27,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"math/big"
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 )
 
 var errEvmExecutionReverted = errors.New("evm: execution reverted")

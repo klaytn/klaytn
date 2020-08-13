@@ -19,6 +19,9 @@ package chaindatafetcher
 import (
 	"context"
 	"errors"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -30,8 +33,6 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
-	"sync"
-	"time"
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)

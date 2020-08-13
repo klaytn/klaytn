@@ -24,6 +24,13 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/json"
+	"io/ioutil"
+	"math/big"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -37,12 +44,6 @@ import (
 	"github.com/klaytn/klaytn/tests"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"math/big"
-	"path/filepath"
-	"reflect"
-	"strings"
-	"testing"
 )
 
 // To generate a new callTracer test, copy paste the makeTest method below into

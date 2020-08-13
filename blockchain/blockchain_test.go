@@ -23,14 +23,15 @@ package blockchain
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/accounts/abi"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"

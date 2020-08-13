@@ -23,6 +23,13 @@ package node
 import (
 	"errors"
 	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"sync"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/event"
@@ -32,12 +39,6 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/prometheus/prometheus/util/flock"
-	"net"
-	"os"
-	"path/filepath"
-	"reflect"
-	"strings"
-	"sync"
 )
 
 var logger = log.NewModuleLogger(log.Node)

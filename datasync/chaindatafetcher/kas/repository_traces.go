@@ -18,12 +18,13 @@ package kas
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
-	"reflect"
-	"strings"
 )
 
 var emptyTraceResult = &vm.InternalTxTrace{
