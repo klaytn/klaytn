@@ -18,17 +18,19 @@ package kas
 
 import (
 	"context"
+	"math/big"
+	"strings"
+	"time"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/api"
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/contracts/kip13"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"math/big"
-	"strings"
-	"time"
 )
 
 // TODO-ChainDataFetcher extract the call timeout c as a configuration
@@ -101,7 +103,8 @@ func getCallOpts(blockNumber *big.Int, timeout time.Duration) (*bind.CallOpts, c
 // - the call can be reverted: returns "evm: execution reverted"
 // handleSupportsInterfaceErr handles the given error according to the above explanation.
 func handleSupportsInterfaceErr(err error) error {
-	if err != nil && (strings.Contains(err.Error(), errMsgEmptyOutput) || err == vm.ErrExecutionReverted || err == bind.ErrNoCode) {
+	if err != nil && (strings.Contains(err.Error(), errMsgEmptyOutput) || err == vm.ErrExecutionReverted ||
+		err == bind.ErrNoCode || err == blockchain.ErrVMDefault) {
 		return nil
 	}
 	return err
