@@ -21,6 +21,7 @@ import (
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/api"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/contracts/kip13"
@@ -46,9 +47,7 @@ var (
 	IKIP17Id         = [4]byte{0x80, 0xac, 0x58, 0xcd}
 	IKIP17MetadataId = [4]byte{0x5b, 0x5e, 0x13, 0x9f}
 
-	errMsgEmptyOutput    = "abi: unmarshalling empty output"
-	errMsgEvmReverted    = "evm: execution reverted"
-	errMsgNoContractCode = "no contract code at given address"
+	errMsgEmptyOutput = "abi: unmarshalling empty output"
 )
 
 //go:generate mockgen -destination=./mocks/blockchain_api_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kas BlockchainAPI
@@ -102,8 +101,7 @@ func getCallOpts(blockNumber *big.Int, timeout time.Duration) (*bind.CallOpts, c
 // - the call can be reverted: returns "evm: execution reverted"
 // handleSupportsInterfaceErr handles the given error according to the above explanation.
 func handleSupportsInterfaceErr(err error) error {
-	if err != nil && (strings.Contains(err.Error(), errMsgEmptyOutput) || strings.Contains(err.Error(), errMsgEvmReverted) ||
-		strings.Contains(err.Error(), errMsgNoContractCode)) {
+	if err != nil && (strings.Contains(err.Error(), errMsgEmptyOutput) || err == vm.ErrExecutionReverted || err == bind.ErrNoCode) {
 		return nil
 	}
 	return err
