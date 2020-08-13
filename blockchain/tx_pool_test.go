@@ -278,6 +278,66 @@ func TestInvalidTransactions(t *testing.T) {
 	}
 }
 
+func genAnchorTx(nonce uint64) *types.Transaction {
+	key, _ := crypto.HexToECDSA("45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
+	from := crypto.PubkeyToAddress(key.PublicKey)
+
+	gasLimit := uint64(1000000)
+	gasPrice := big.NewInt(1)
+
+	data := []byte{0x11, 0x22}
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:        nonce,
+		types.TxValueKeyFrom:         from,
+		types.TxValueKeyGasLimit:     gasLimit,
+		types.TxValueKeyGasPrice:     gasPrice,
+		types.TxValueKeyAnchoredData: data,
+	}
+
+	tx, _ := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values)
+
+	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	tx.Sign(signer, key)
+
+	return tx
+}
+
+func TestAnchorTransactions(t *testing.T) {
+	t.Parallel()
+
+	pool, _ := setupTxPool()
+	defer pool.Stop()
+
+	poolAllow, _ := setupTxPool()
+	poolAllow.config.AllowLocalAnchorTx = true
+	defer poolAllow.Stop()
+
+	tx1 := genAnchorTx(1)
+	tx2 := genAnchorTx(2)
+
+	from, _ := tx1.From()
+	pool.currentState.AddBalance(from, big.NewInt(10000000))
+	poolAllow.currentState.AddBalance(from, big.NewInt(10000000))
+
+	// default txPool
+	{
+		err := pool.AddRemote(tx1)
+		assert.NoError(t, err)
+
+		err = pool.AddLocal(tx2)
+		assert.Error(t, errNotAllowedAnchoringTx, err)
+	}
+
+	// txPool which allow locally submitted anchor txs
+	{
+		err := poolAllow.AddRemote(tx1)
+		assert.NoError(t, err)
+
+		err = poolAllow.AddLocal(tx2)
+		assert.NoError(t, err)
+	}
+}
+
 func TestTransactionQueue(t *testing.T) {
 	t.Parallel()
 

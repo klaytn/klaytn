@@ -133,6 +133,10 @@ var (
 		Name:  "txpool.nolocals",
 		Usage: "Disables price exemptions for locally submitted transactions",
 	}
+	TxPoolAllowLocalAnchorTxFlag = cli.BoolFlag{
+		Name:  "txpool.allow-local-anchortx",
+		Usage: "Allow locally submitted anchoring transactions",
+	}
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
 		Usage: "Disk journal for local transaction to survive node restarts",
@@ -1119,6 +1123,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolNoLocalsFlag.Name) {
 		cfg.NoLocals = ctx.GlobalBool(TxPoolNoLocalsFlag.Name)
+	}
+	if ctx.GlobalIsSet(TxPoolAllowLocalAnchorTxFlag.Name) {
+		cfg.AllowLocalAnchorTx = ctx.GlobalBool(TxPoolAllowLocalAnchorTxFlag.Name)
 	}
 	if ctx.GlobalIsSet(TxPoolJournalFlag.Name) {
 		cfg.Journal = ctx.GlobalString(TxPoolJournalFlag.Name)

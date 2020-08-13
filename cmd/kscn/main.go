@@ -97,6 +97,7 @@ var scnHelpFlagGroups = []utils.FlagGroup{
 		Name: "TXPOOL",
 		Flags: []cli.Flag{
 			utils.TxPoolNoLocalsFlag,
+			utils.TxPoolAllowLocalAnchorTxFlag,
 			utils.TxPoolJournalFlag,
 			utils.TxPoolJournalIntervalFlag,
 			utils.TxPoolPriceLimitFlag,
