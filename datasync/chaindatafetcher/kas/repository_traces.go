@@ -18,12 +18,13 @@ package kas
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
-	"reflect"
-	"strings"
 )
 
 var emptyTraceResult = &vm.InternalTxTrace{
@@ -67,13 +68,19 @@ func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, entryTx *Tx
 	}
 
 	var txs []*Tx
-	if !isFirstCall && trace.Value != "0x0" {
-		*offset++
-		newTx := *entryTx
-		newTx.TransactionId += *offset
-		newTx.FromAddr = trace.From.Bytes()
-		newTx.ToAddr = trace.To.Bytes()
-		txs = append(txs, &newTx)
+	if !isFirstCall && trace.Value != "0x0" { // filter the internal tx if the value is 0
+		*offset++ // adding 1 to calculate the transaction id in the order of internal transactions
+		txs = append(txs, &Tx{
+			TransactionId:   entryTx.TransactionId + *offset,
+			FromAddr:        trace.From.Bytes(),
+			ToAddr:          trace.To.Bytes(),
+			Value:           trace.Value,
+			TransactionHash: entryTx.TransactionHash,
+			Status:          entryTx.Status,
+			Timestamp:       entryTx.Timestamp,
+			TypeInt:         entryTx.TypeInt,
+			Internal:        true,
+		})
 	}
 
 	for _, call := range trace.Calls {
