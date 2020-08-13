@@ -18,17 +18,16 @@ package kas
 
 import (
 	"context"
+	"math/big"
+	"time"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/contracts/kip13"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"math/big"
-	"strings"
-	"time"
 )
 
 // TODO-ChainDataFetcher extract the call timeout c as a configuration
@@ -93,20 +92,6 @@ func getCallOpts(blockNumber *big.Int, timeout time.Duration) (*bind.CallOpts, c
 	return &bind.CallOpts{Context: ctx, BlockNumber: blockNumber}, cancel
 }
 
-// the `SupportsInterface` method error must be handled with the following cases.
-// case 1: the contract implements fallback function
-// - the call can be reverted within fallback function: returns "evm: execution reverted"
-// - the call can be done successfully, but it outputs empty: returns "abi: unmarshalling empty output"
-// case 2: the contract does not implements fallback function
-// - the call can be reverted: returns "evm: execution reverted"
-// handleSupportsInterfaceErr handles the given error according to the above explanation.
-func handleSupportsInterfaceErr(err error) error {
-	if err != nil && (strings.Contains(err.Error(), errMsgEmptyOutput) || err == vm.ErrExecutionReverted || err == bind.ErrNoCode) {
-		return nil
-	}
-	return err
-}
-
 // supportsInterface returns true if the given interfaceID is supported, otherwise returns false.
 func (f *contractCaller) supportsInterface(contract common.Address, opts *bind.CallOpts, interfaceID [4]byte) (bool, error) {
 	caller, err := kip13.NewInterfaceIdentifierCaller(contract, f)
@@ -115,7 +100,13 @@ func (f *contractCaller) supportsInterface(contract common.Address, opts *bind.C
 		return false, err
 	}
 	isSupported, err := caller.SupportsInterface(opts, interfaceID)
-	return isSupported, handleSupportsInterfaceErr(err)
+	if err != nil {
+		// removed handle error case for SupportsInterface contract call.
+		// 1. The error cases are too many to be handled.
+		// 2. There is no case to return an error (e.g. network error, ...) other than internal errors.
+		return false, nil
+	}
+	return isSupported, nil
 }
 
 // isKIP13 checks if the given contract implements KIP13 interface or not at the given block.

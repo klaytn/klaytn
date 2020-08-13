@@ -17,17 +17,15 @@
 package kas
 
 import (
+	"testing"
+
 	"github.com/golang/mock/gomock"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas/mocks"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/stretchr/testify/suite"
-	"testing"
-	"time"
 )
 
 var (
@@ -105,55 +103,6 @@ func (s *SuiteContractCaller) TestContractCaller_IsKIP17_Success() {
 	isKIP17, err := s.caller.isKIP17(addr, nil)
 	s.NoError(err)
 	s.True(isKIP17)
-}
-
-func (s *SuiteContractCaller) TestContractCaller_SupportsInterface_EmptyResult() {
-	addr := common.HexToAddress("4")
-	s.True(addr != (common.Address{})) // make sure that the address is not empty address
-	fakeContract := common.HexToAddress("5")
-	s.True(fakeContract != (common.Address{})) // make sure that the address is not empty address
-
-	// Call method should return the byte slice result or an error. However, if a fallback function exists,
-	// the method can return no result nor error. So, the next mocks a fallback function: both output and error are nil
-	s.api.EXPECT().Call(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
-
-	// After this, it checks if contract exists or not. If contract exists, then it returns an error `abi: unmarshalling empty output`
-	s.api.EXPECT().GetCode(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeContract.Bytes(), nil).Times(1)
-
-	opts, cancel := getCallOpts(nil, 1*time.Second)
-	defer cancel()
-	isSupported, err := s.caller.supportsInterface(addr, opts, [4]byte{})
-	s.False(isSupported)
-	s.Nil(err)
-}
-
-func (s *SuiteContractCaller) TestContractCaller_SupportsInterface_ExecutionReverted() {
-	addr := common.HexToAddress("6")
-	s.True(addr != (common.Address{})) // make sure that the address is not empty address
-
-	// evm execution reverted mocking
-	s.api.EXPECT().Call(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, vm.ErrExecutionReverted).Times(1)
-
-	opts, cancel := getCallOpts(nil, 1*time.Second)
-	defer cancel()
-	isSupported, err := s.caller.supportsInterface(addr, opts, [4]byte{})
-	s.False(isSupported)
-	s.Nil(err)
-}
-
-func (s *SuiteContractCaller) TestContractCaller_SupportsInterface_NoContractCode() {
-	addr := common.HexToAddress("7")
-	s.True(addr != (common.Address{})) // make sure that the address is not empty address
-
-	// evm execution reverted mocking
-	s.api.EXPECT().Call(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
-	s.api.EXPECT().GetCode(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, bind.ErrNoCode).Times(1)
-
-	opts, cancel := getCallOpts(nil, 1*time.Second)
-	defer cancel()
-	isSupported, err := s.caller.supportsInterface(addr, opts, [4]byte{})
-	s.False(isSupported)
-	s.Nil(err)
 }
 
 func TestSuiteContractCaller(t *testing.T) {
