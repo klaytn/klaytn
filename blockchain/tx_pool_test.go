@@ -325,7 +325,7 @@ func TestAnchorTransactions(t *testing.T) {
 		assert.NoError(t, err)
 
 		err = pool.AddLocal(tx2)
-		assert.Error(t, errNotAllowedTx, err)
+		assert.Error(t, errNotAllowedAnchoringTx, err)
 	}
 
 	// txPool which allow locally submitted anchor txs

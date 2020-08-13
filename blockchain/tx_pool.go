@@ -56,7 +56,7 @@ var (
 
 	txPoolIsFullErr = fmt.Errorf("txpool is full")
 
-	errNotAllowedTx = errors.New("not allowed tx")
+	errNotAllowedAnchoringTx = errors.New("locally anchoring chaindata tx is not allowed in this node")
 )
 
 var (
@@ -952,7 +952,7 @@ func (pool *TxPool) handleTxMsg() {
 // pricing constraints.
 func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 	if tx.Type().IsChainDataAnchoring() && !pool.config.AllowLocalAnchorTx {
-		return fmt.Errorf("tx type %v : %w", tx.Type().String(), errNotAllowedTx)
+		return errNotAllowedAnchoringTx
 	}
 
 	poolSize := uint64(len(pool.all))
