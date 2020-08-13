@@ -1126,9 +1126,10 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setgRPC(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
-	cfg.DBType = database.DBType(ctx.GlobalString(DbTypeFlag.Name))
-	if !cfg.DBType.IsValid() {
-		logger.Crit("invalid dbtype", "dbtype", cfg.DBType)
+	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
+		cfg.DBType = dbtype
+	} else {
+		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(DbTypeFlag.Name))
 	}
 	cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 
@@ -1233,9 +1234,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
 
-	cfg.DBType = database.DBType(ctx.GlobalString(DbTypeFlag.Name))
-	if !cfg.DBType.IsValid() {
-		logger.Crit("invalid dbtype", "dbtype", cfg.DBType)
+	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
+		cfg.DBType = dbtype
+	} else {
+		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(DbTypeFlag.Name))
 	}
 	cfg.SingleDB = ctx.GlobalIsSet(SingleDBFlag.Name)
 	cfg.NumStateTrieShards = ctx.GlobalUint(NumStateTrieShardsFlag.Name)
