@@ -28,6 +28,7 @@ package database
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -48,7 +49,7 @@ var dataNotFoundErr = errors.New("data is not found with the given key")
 var nilDynamoConfigErr = errors.New("attempt to create DynamoDB with nil configuration")
 var noTableNameErr = errors.New("dynamoDB table name not provided")
 
-// batch rite size
+// batch write size
 const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB including attribute names and values
 const dynamoBatchSize = 25
 const dynamoMaxRetry = 5
@@ -56,10 +57,6 @@ const dynamoMaxRetry = 5
 // batch write
 const WorkerNum = 10
 const itemChanSize = WorkerNum * 2
-
-// default values
-const DynamoReadCapacityUnits = 10000
-const DynamoWriteCapacityUnits = 10000
 
 var overSizedDataPrefix = []byte("oversizeditem")
 
@@ -106,14 +103,14 @@ type DynamoData struct {
  * $ docker pull amazon/dynamodb-local
  * $ docker run -d -p 8000:8000 amazon/dynamodb-local
  */
-func createTestDynamoDBConfig() *DynamoDBConfig {
+func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
 		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com",
-		TableName:          "dynamo-test-tmp",
+		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
 		IsProvisioned:      false,
-		ReadCapacityUnits:  DynamoReadCapacityUnits,
-		WriteCapacityUnits: DynamoWriteCapacityUnits,
+		ReadCapacityUnits:  10000,
+		WriteCapacityUnits: 10000,
 	}
 }
 

@@ -219,7 +219,7 @@ var (
 	DynamoDBRegionFlag = cli.StringFlag{
 		Name:  "db.dynamo.region",
 		Usage: "AWS region where the DynamoDB will be created.",
-		Value: "ap-northeast-2",
+		Value: database.GetDefaultDynamoDBConfig().Region,
 	}
 	DynamoDBIsProvisionedFlag = cli.BoolFlag{
 		Name:  "db.dynamo.is-provisioned",
@@ -228,12 +228,12 @@ var (
 	DynamoDBReadCapacityFlag = cli.Int64Flag{
 		Name:  "db.dynamo.read-capacity",
 		Usage: "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
-		Value: database.DynamoReadCapacityUnits,
+		Value: database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
 	}
 	DynamoDBWriteCapacityFlag = cli.Int64Flag{
 		Name:  "db.dynamo.write-capacity",
 		Usage: "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
-		Value: database.DynamoWriteCapacityUnits,
+		Value: database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
 	}
 	NoParallelDBWriteFlag = cli.BoolFlag{
 		Name:  "db.no-parallel-write",
