@@ -94,23 +94,23 @@ var makeTest = function(tx, rewind) {
 */
 
 type reverted struct {
-	Contract common.Address `json:"contract"`
-	Message  string         `json:"message"`
+	Contract *common.Address `json:"contract"`
+	Message  string          `json:"message"`
 }
 
 // callTrace is the result of a callTracer run.
 type callTrace struct {
-	Type     string         `json:"type"`
-	From     common.Address `json:"from"`
-	To       common.Address `json:"to"`
-	Input    hexutil.Bytes  `json:"input"`
-	Output   hexutil.Bytes  `json:"output"`
-	Gas      hexutil.Uint64 `json:"gas,omitempty"`
-	GasUsed  hexutil.Uint64 `json:"gasUsed,omitempty"`
-	Value    hexutil.Uint64 `json:"value,omitempty"`
-	Error    string         `json:"error,omitempty"`
-	Calls    []callTrace    `json:"calls,omitempty"`
-	Reverted reverted       `json:"reverted,omitempty"`
+	Type     string          `json:"type"`
+	From     *common.Address `json:"from"`
+	To       *common.Address `json:"to"`
+	Input    hexutil.Bytes   `json:"input"`
+	Output   hexutil.Bytes   `json:"output"`
+	Gas      hexutil.Uint64  `json:"gas,omitempty"`
+	GasUsed  hexutil.Uint64  `json:"gasUsed,omitempty"`
+	Value    hexutil.Uint64  `json:"value,omitempty"`
+	Error    string          `json:"error,omitempty"`
+	Calls    []callTrace     `json:"calls,omitempty"`
+	Reverted *reverted       `json:"reverted,omitempty"`
 }
 
 type callContext struct {
@@ -248,21 +248,26 @@ func covertToCallTrace(t *testing.T, internalTx *vm.InternalTxTrace) *callTrace 
 		errStr = internalTx.Error.Error()
 	}
 
-	ct := &callTrace{
-		Type:    internalTx.Type,
-		From:    internalTx.From,
-		To:      internalTx.To,
-		Input:   decodedInput,
-		Output:  decodedOutput,
-		Gas:     hexutil.Uint64(internalTx.Gas),
-		GasUsed: hexutil.Uint64(internalTx.GasUsed),
-		Value:   val,
-		Error:   errStr,
-		Calls:   nestedCalls,
-		Reverted: reverted{
+	var revertedInfo *reverted
+	if internalTx.Reverted != nil {
+		revertedInfo = &reverted{
 			Contract: internalTx.Reverted.Contract,
 			Message:  internalTx.Reverted.Message,
-		},
+		}
+	}
+
+	ct := &callTrace{
+		Type:     internalTx.Type,
+		From:     internalTx.From,
+		To:       internalTx.To,
+		Input:    decodedInput,
+		Output:   decodedOutput,
+		Gas:      hexutil.Uint64(internalTx.Gas),
+		GasUsed:  hexutil.Uint64(internalTx.GasUsed),
+		Value:    val,
+		Error:    errStr,
+		Calls:    nestedCalls,
+		Reverted: revertedInfo,
 	}
 
 	return ct
