@@ -18,7 +18,7 @@
 //
 // [WARN] Using this DB may cause pricing in your AWS account.
 //
-// You need to set AWS credentials to access to dynamoDB.
+// You need to set AWS credentials to access to S3.
 //    $ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
 //    $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 

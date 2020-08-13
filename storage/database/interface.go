@@ -29,7 +29,7 @@ const (
 	LevelDB   DBType = "LevelDB"
 	BadgerDB         = "BadgerDB"
 	MemoryDB         = "MemoryDB"
-	DynamoDB         = "DynamoDB"
+	DynamoDB         = "DynamoDBS3"
 	ShardedDB        = "ShardedDB"
 )
 

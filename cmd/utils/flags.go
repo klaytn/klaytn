@@ -82,7 +82,7 @@ var (
 	}
 	DbTypeFlag = cli.StringFlag{
 		Name:  "dbtype",
-		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDB")`,
+		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3")`,
 		Value: "LevelDB",
 	}
 	SrvTypeFlag = cli.StringFlag{
@@ -214,7 +214,7 @@ var (
 	}
 	DynamoDBTableNameFlag = cli.StringFlag{
 		Name:  "db.dynamo.tablename",
-		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDB)",
+		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
 	}
 	DynamoDBRegionFlag = cli.StringFlag{
 		Name:  "db.dynamo.region",
