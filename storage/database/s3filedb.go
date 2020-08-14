@@ -76,7 +76,6 @@ func newS3FileDB(region, endpoint, bucketName string) (*s3FileDB, error) {
 	}
 
 	if !exist {
-		localLogger.Warn("Requesting create S3 bucket. You will be charged until the bucket is deleted.")
 		_, err = s3DB.s3.CreateBucket(&s3.CreateBucketInput{
 			Bucket: aws.String(bucketName),
 		})
@@ -85,6 +84,7 @@ func newS3FileDB(region, endpoint, bucketName string) (*s3FileDB, error) {
 			return nil, err
 		}
 	}
+	localLogger.Warn("Successfully created S3 bucket. You will be CHARGED until the bucket is deleted.")
 	return s3DB, nil
 }
 

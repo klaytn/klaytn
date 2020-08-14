@@ -133,7 +133,6 @@ func NewDynamoDB(config *DynamoDBConfig, db string) (*dynamoDB, error) {
 
 	dynamoOpenedDBNum++
 
-	logger.Info("creating s3FileDB ", "bucket", config.TableName)
 	s3FileDB, err := newS3FileDB(config.Region, "https://s3."+config.Region+".amazonaws.com", config.TableName)
 	if err != nil {
 		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName)
@@ -184,7 +183,7 @@ func NewDynamoDB(config *DynamoDBConfig, db string) (*dynamoDB, error) {
 
 		switch tableStatus {
 		case dynamodb.TableStatusActive:
-			dynamoDB.logger.Warn("Successfully created dynamoDB table. You will be charged until the DB is deleted.", "endPoint", config.Endpoint)
+			dynamoDB.logger.Warn("Successfully created dynamoDB table. You will be CHARGED until the DB is deleted.", "endPoint", config.Endpoint)
 			return dynamoDB, nil
 		case dynamodb.TableStatusDeleting, dynamodb.TableStatusArchiving, dynamodb.TableStatusArchived:
 			return nil, errors.New("failed to get DynamoDB table, table status : " + tableStatus)
