@@ -18,11 +18,12 @@ package kas
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"strings"
-	"time"
 )
 
 // filterKIPContracts filters the deployed contracts to KIP7, KIP17 and others.

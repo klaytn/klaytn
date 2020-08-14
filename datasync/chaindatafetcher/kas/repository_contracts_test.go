@@ -17,14 +17,15 @@
 package kas
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas/mocks"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
 )
 
 func TestFilterKIPContracts_Success(t *testing.T) {

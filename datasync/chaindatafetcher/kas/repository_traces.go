@@ -59,11 +59,11 @@ func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, entryTx *Tx
 		return nil, nil
 	}
 
-	if trace.From == (common.Address{}) {
+	if trace.From == nil {
 		return nil, noFromFieldError
 	}
 
-	if trace.To == (common.Address{}) {
+	if trace.To == nil {
 		return nil, noToFieldError
 	}
 

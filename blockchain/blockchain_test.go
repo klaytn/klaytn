@@ -23,14 +23,15 @@ package blockchain
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/accounts/abi"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -1553,13 +1554,13 @@ func TestCallTraceChainEventSubscription(t *testing.T) {
 		assert.Equal(t, 2, len(ev.InternalTxTraces))
 
 		// compare contract deploy result
-		assert.Equal(t, address, ev.InternalTxTraces[0].From)
+		assert.Equal(t, address, *ev.InternalTxTraces[0].From)
 		assert.Equal(t, 0, len(ev.InternalTxTraces[0].Calls))
 		assert.Equal(t, "0x"+testCode, ev.InternalTxTraces[0].Input)
 		assert.Equal(t, fmt.Sprintf("0x%x", 100000000), ev.InternalTxTraces[0].Value)
 
 		// compare contract execution result
-		assert.Equal(t, address, ev.InternalTxTraces[1].From)
+		assert.Equal(t, address, *ev.InternalTxTraces[1].From)
 		assert.Equal(t, 3, len(ev.InternalTxTraces[1].Calls))
 		assert.Equal(t, fmt.Sprintf("0x%x", 0), ev.InternalTxTraces[1].Value)
 	}
