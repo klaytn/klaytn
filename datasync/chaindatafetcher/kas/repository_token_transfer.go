@@ -18,11 +18,12 @@ package kas
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"math/big"
-	"strings"
 )
 
 var tokenTransferEventHash = common.HexToHash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
@@ -115,7 +116,7 @@ func (r *repository) InsertTokenTransfers(event blockchain.ChainEvent) error {
 		}
 
 		if err := r.bulkInsertTokenTransfers(chunks); err != nil {
-			logger.Error("failed to insertTokenTransfers", "err", err, "numTokenTransfers", len(chunks))
+			logger.Error("Failed to insertTokenTransfers", "err", err, "numTokenTransfers", len(chunks))
 			return err
 		}
 	}

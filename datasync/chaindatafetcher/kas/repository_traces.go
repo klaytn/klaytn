@@ -180,7 +180,6 @@ func (r *repository) insertRevertedTransactions(revertedTxs []*RevertedTx) error
 		}
 
 		if err := r.bulkInsertRevertedTransactions(chunks); err != nil {
-			logger.Error("Failed to insert reverted transactions", "err", err, "numRevertedTxs", len(chunks))
 			return err
 		}
 	}

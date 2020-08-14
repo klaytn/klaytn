@@ -114,30 +114,35 @@ func (f *ChainDataFetcher) Start(server p2p.Server) error {
 
 	if !f.config.NoDefaultStart {
 		if err := f.startFetching(); err != nil {
+			logger.Error("start fetching is failed", "err", err)
 			return err
 		}
 	}
+	logger.Info("chaindata fetcher is started", "numHandlers", f.numHandlers)
 	return nil
 }
 
 func (f *ChainDataFetcher) Stop() error {
 	f.stopFetching()
 	f.stopRangeFetching()
+	logger.Info("wait for all goroutines to be terminated...", "numGoroutines", f.config.NumHandlers)
 	close(f.stopCh)
-	logger.Info("wait for all goroutines to be terminated...")
 	f.wg.Wait()
-	logger.Info("terminated all goroutines for chaindatafetcher")
+	logger.Info("chaindata fetcher is stopped")
 	return nil
 }
 
-func (f *ChainDataFetcher) sendRequests(start, end uint64, reqType requestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
-	for i := start; i <= end; i++ {
+func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType requestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
+	logger.Info("sending requests is started", "startBlock", startBlock, "endBlock", endBlock)
+	for i := startBlock; i <= endBlock; i++ {
 		select {
 		case <-stopCh:
+			logger.Info("stopped making requests", "startBlock", startBlock, "endBlock", endBlock, "stoppedBlock", i)
 			return
 		case f.reqCh <- newRequest(reqType, shouldUpdateCheckpoint, i):
 		}
 	}
+	logger.Info("sending requests is finished", "startBlock", startBlock, "endBlock", endBlock)
 }
 
 func (f *ChainDataFetcher) startFetching() error {
@@ -146,6 +151,7 @@ func (f *ChainDataFetcher) startFetching() error {
 	}
 
 	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
+	checkpoint := uint64(f.checkpoint)
 	currentBlock := f.blockchain.CurrentHeader().Number.Uint64()
 
 	f.fetchingStopCh = make(chan struct{})
@@ -155,6 +161,7 @@ func (f *ChainDataFetcher) startFetching() error {
 		f.sendRequests(uint64(f.checkpoint), currentBlock, requestTypeAll, true, f.fetchingStopCh)
 	}()
 	f.fetchingStarted = true
+	logger.Info("fetching is started", "startedCheckpoint", checkpoint, "currentBlock", currentBlock)
 	return nil
 }
 
@@ -167,10 +174,11 @@ func (f *ChainDataFetcher) stopFetching() error {
 	close(f.fetchingStopCh)
 	f.fetchingWg.Wait()
 	f.fetchingStarted = false
+	logger.Info("fetching is stopped")
 	return nil
 }
 
-func (f *ChainDataFetcher) startRangeFetching(start, end uint64, reqType requestType) error {
+func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqType requestType) error {
 	if f.rangeFetchingStarted {
 		return errors.New("range fetching is already started")
 	}
@@ -178,9 +186,10 @@ func (f *ChainDataFetcher) startRangeFetching(start, end uint64, reqType request
 	f.rangeFetchingWg.Add(1)
 	go func() {
 		defer f.rangeFetchingWg.Done()
-		f.sendRequests(start, end, reqType, false, f.rangeFetchingStopCh)
+		f.sendRequests(startBlock, endBlock, reqType, false, f.rangeFetchingStopCh)
 	}()
 	f.rangeFetchingStarted = true
+	logger.Info("range fetching is started", "startBlock", startBlock, "endBlock", endBlock)
 	return nil
 }
 
@@ -191,6 +200,7 @@ func (f *ChainDataFetcher) stopRangeFetching() error {
 	close(f.rangeFetchingStopCh)
 	f.rangeFetchingWg.Wait()
 	f.rangeFetchingStarted = false
+	logger.Info("range fetching is stopped")
 	return nil
 }
 
@@ -208,6 +218,7 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 			Tracer: &fct,
 		})
 		if err != nil {
+			logger.Error("Failed to call trace block by number", "blockNumber", block.NumberU64())
 			return blockchain.ChainEvent{}, err
 		}
 		for _, r := range results {
