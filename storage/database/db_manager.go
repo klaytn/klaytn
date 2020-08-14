@@ -280,7 +280,6 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBCon
 
 	// Update dir to each Database specific directory.
 	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDir)
-	newDBC.DBName = dbDir
 
 	return &newDBC
 }
@@ -314,7 +313,6 @@ func NewMemoryDBManager() DBManager {
 type DBConfig struct {
 	// General configurations for all types of DB.
 	Dir                string
-	DBName             string
 	DBType             DBType
 	SingleDB           bool // whether dbs (such as MiscDB, headerDB and etc) share one physical DB
 	NumStateTrieShards uint // the number of shards of state trie db
@@ -415,7 +413,7 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 	case MemoryDB:
 		return NewMemDB(), nil
 	case DynamoDB:
-		return NewDynamoDB(dbc.DynamoDBConfig, dbc.DBName)
+		return NewDynamoDB(dbc.DynamoDBConfig, dbBaseDirs[entryType])
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
 		return NewLevelDB(dbc, 0)
