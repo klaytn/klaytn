@@ -32,7 +32,7 @@ const (
 	requestTypeAll = requestTypeTransaction | requestTypeTokenTransfer | requestTypeContracts | requestTypeTraces
 )
 
-// request contains a raw block which should be handled and the type of data which should be exported.
+// request contains a blockNumber which should be handled and the type of data which should be exported.
 type request struct {
 	reqType                requestType
 	shouldUpdateCheckpoint bool
