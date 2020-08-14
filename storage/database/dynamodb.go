@@ -118,7 +118,7 @@ func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	}
 }
 
-func NewDynamoDB(config *DynamoDBConfig, db string) (*dynamoDB, error) {
+func NewDynamoDB(config *DynamoDBConfig, dbtype DBEntryType) (*dynamoDB, error) {
 	if config == nil {
 		return nil, nilDynamoConfigErr
 	}
@@ -155,7 +155,7 @@ func NewDynamoDB(config *DynamoDBConfig, db string) (*dynamoDB, error) {
 		config: *config,
 		fdb:    s3FileDB,
 	}
-	dynamoDB.config.TableName += "-" + db
+	dynamoDB.config.TableName += "-" + dbBaseDirs[dbtype]
 	dynamoDB.logger = logger.NewWith("region", config.Region, "tableName", dynamoDB.config.TableName)
 
 	// Check if the table is ready to serve
