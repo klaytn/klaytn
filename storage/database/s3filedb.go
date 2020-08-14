@@ -13,6 +13,14 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+//
+// FileDB implementation of AWS S3.
+//
+// [WARN] Using this DB may cause pricing in your AWS account.
+//
+// You need to set AWS credentials to access to S3.
+//    $ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//    $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 
 package database
 
@@ -68,7 +76,7 @@ func newS3FileDB(region, endpoint, bucketName string) (*s3FileDB, error) {
 	}
 
 	if !exist {
-		localLogger.Warn("cannot find the bucket. creating the bucket")
+		localLogger.Warn("Requesting create S3 bucket. You will be charged until the bucket is deleted.")
 		_, err = s3DB.s3.CreateBucket(&s3.CreateBucketInput{
 			Bucket: aws.String(bucketName),
 		})

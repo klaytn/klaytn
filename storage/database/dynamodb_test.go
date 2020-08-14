@@ -13,6 +13,10 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+//
+// You need to set AWS credentials to access to dynamoDB.
+//    sh$ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//    sh$ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 
 package database
 
@@ -25,7 +29,7 @@ import (
 )
 
 func testDynamoDB_Put(t *testing.T) {
-	dynamo, err := NewDynamoDB(createTestDynamoDBConfig())
+	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo.deletedDB()
 	if err != nil {
 		t.Fatal(err)
@@ -46,7 +50,7 @@ func testDynamoDB_Put(t *testing.T) {
 }
 
 func testDynamoBatch_Write(t *testing.T) {
-	dynamo, err := NewDynamoDB(createTestDynamoDBConfig())
+	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo.deletedDB()
 	if err != nil {
 		t.Fatal(err)
@@ -78,7 +82,7 @@ func testDynamoBatch_Write(t *testing.T) {
 }
 
 func testDynamoBatch_WriteLargeData(t *testing.T) {
-	dynamo, err := NewDynamoDB(createTestDynamoDBConfig())
+	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo.deletedDB()
 	if err != nil {
 		t.Fatal(err)

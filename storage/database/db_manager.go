@@ -20,17 +20,18 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"math/big"
+	"os"
+	"path/filepath"
+	"strconv"
+	"sync"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/pkg/errors"
-	"math/big"
-	"os"
-	"path/filepath"
-	"strconv"
-	"sync"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
@@ -322,6 +323,9 @@ type DBConfig struct {
 	LevelDBCacheSize   int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
 	LevelDBCompression LevelDBCompressionType
 	LevelDBBufferPool  bool
+
+	// DynamoDB related configurations
+	DynamoDBConfig *DynamoDBConfig
 }
 
 const dbMetricPrefix = "klay/db/chaindata/"
@@ -409,7 +413,7 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 	case MemoryDB:
 		return NewMemDB(), nil
 	case DynamoDB:
-		return NewDynamoDB(createTestDynamoDBConfig())
+		return NewDynamoDB(dbc.DynamoDBConfig)
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
 		return NewLevelDB(dbc, 0)

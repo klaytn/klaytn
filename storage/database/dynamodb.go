@@ -13,12 +13,22 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+//
+// Database implementation of AWS DynamoDB.
+//
+// [WARN] Using this DB may cause pricing in your AWS account.
+// [WARN] DynamoDB creates both Dynamo DB table and S3 bucket.
+//
+// You need to set AWS credentials to access to dynamoDB.
+//    $ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//    $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 
 package database
 
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -34,16 +44,15 @@ import (
 	"github.com/klaytn/klaytn/log"
 )
 
+// errors
 var dataNotFoundErr = errors.New("data is not found with the given key")
 var nilDynamoConfigErr = errors.New("attempt to create DynamoDB with nil configuration")
+var noTableNameErr = errors.New("dynamoDB table name not provided")
 
+// batch write size
 const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB including attribute names and values
 const dynamoBatchSize = 25
 const dynamoMaxRetry = 5
-
-// dynamo table provisioned setting
-const dynamoReadCapacityUnits = 10000
-const dynamoWriteCapacityUnits = 10000
 
 // batch write
 const WorkerNum = 10
@@ -52,11 +61,12 @@ const itemChanSize = WorkerNum * 2
 var overSizedDataPrefix = []byte("oversizeditem")
 
 type DynamoDBConfig struct {
-	Region             string
-	Endpoint           string
 	TableName          string
-	ReadCapacityUnits  int64
-	WriteCapacityUnits int64
+	Region             string // AWS region
+	Endpoint           string // Where DynamoDB reside
+	IsProvisioned      bool   // Billing mode
+	ReadCapacityUnits  int64  // read capacity when provsioned
+	WriteCapacityUnits int64  // write capacity when provsioned
 }
 
 type batchWriteWorkerInput struct {
@@ -67,13 +77,14 @@ type batchWriteWorkerInput struct {
 type dynamoDB struct {
 	config *DynamoDBConfig
 	db     *dynamodb.DynamoDB
-	fdb    fileDB
+	fdb    fileDB     // where over size items are stored
 	logger log.Logger // Contextual logger tracking the database path
 
 	// worker pool
 	quitCh  chan struct{}
 	writeCh chan *batchWriteWorkerInput
 
+	// metrics
 	batchWriteTimeMeter       metrics.Meter
 	batchWriteCountMeter      metrics.Meter
 	batchWriteSizeMeter       metrics.Meter
@@ -92,13 +103,14 @@ type DynamoData struct {
  * $ docker pull amazon/dynamodb-local
  * $ docker run -d -p 8000:8000 amazon/dynamodb-local
  */
-func createTestDynamoDBConfig() *DynamoDBConfig {
+func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
 		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com",
-		TableName:          "dynamo-test-tmp",
-		ReadCapacityUnits:  dynamoReadCapacityUnits,
-		WriteCapacityUnits: dynamoWriteCapacityUnits,
+		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
+		IsProvisioned:      false,
+		ReadCapacityUnits:  10000,
+		WriteCapacityUnits: 10000,
 	}
 }
 
@@ -106,11 +118,17 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if config == nil {
 		return nil, nilDynamoConfigErr
 	}
+	if len(config.TableName) == 0 {
+		return nil, noTableNameErr
+	}
+	if len(config.Endpoint) == 0 {
+		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
+	}
 
 	logger.Info("creating s3FileDB ", "bucket", config.TableName)
-	s3FileDB, err := newS3FileDB(config.Region, "https://s3.ap-northeast-2.amazonaws.com", config.TableName)
+	s3FileDB, err := newS3FileDB(config.Region, "https://s3."+config.Region+".amazonaws.com", config.TableName)
 	if err != nil {
-		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName+"-bucket")
+		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName)
 		return nil, err
 	}
 
@@ -146,7 +164,7 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 
 		switch tableStatus {
 		case dynamodb.TableStatusActive:
-			dynamoDB.logger.Info("DynamoDB configurations", "endPoint", config.Endpoint)
+			dynamoDB.logger.Warn("Successfully created dynamoDB table. You will be charged until the DB is deleted.", "endPoint", config.Endpoint)
 			for i := 0; i < WorkerNum; i++ {
 				go dynamoDB.createBatchWriteWorker()
 			}
@@ -163,7 +181,6 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 
 func (dynamo *dynamoDB) createTable() error {
 	input := &dynamodb.CreateTableInput{
-		// TODO-Klaytn: enable Provisioned mode
 		BillingMode: aws.String("PAY_PER_REQUEST"),
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
 			{
@@ -177,11 +194,17 @@ func (dynamo *dynamoDB) createTable() error {
 				KeyType:       aws.String("HASH"), // HASH - partition key, RANGE - sort key
 			},
 		},
-		// ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-		// 	dynamoReadCapacityUnits:  aws.Int64(dynamo.config.dynamoReadCapacityUnits),
-		// 	dynamoWriteCapacityUnits: aws.Int64(dynamo.config.dynamoWriteCapacityUnits),
-		// },
+
 		TableName: aws.String(dynamo.config.TableName),
+	}
+
+	if dynamo.config.IsProvisioned {
+		input.BillingMode = aws.String("PROVISIONED")
+		input.ProvisionedThroughput = &dynamodb.ProvisionedThroughput{
+			ReadCapacityUnits:  aws.Int64(dynamo.config.ReadCapacityUnits),
+			WriteCapacityUnits: aws.Int64(dynamo.config.WriteCapacityUnits),
+		}
+		dynamo.logger.Warn("Billing mode is provisioned. You will be charged every hour.", "RCU", dynamo.config.ReadCapacityUnits, "WRU", dynamo.config.WriteCapacityUnits)
 	}
 
 	_, err := dynamo.db.CreateTable(input)
@@ -189,7 +212,7 @@ func (dynamo *dynamoDB) createTable() error {
 		dynamo.logger.Error("Error while creating the DynamoDB table", "err", err, "tableName", dynamo.config.TableName)
 		return err
 	}
-	dynamo.logger.Info("Successfully created the Dynamo table", "tableName", dynamo.config.TableName)
+	dynamo.logger.Warn("Requesting create dynamoDB table. You will be charged until the table is deleted.")
 	return nil
 }
 
@@ -328,7 +351,7 @@ func (dynamo *dynamoDB) Close() {
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
-	// TODO-Klaytn: implement this later.
+	// TODO-Klaytn: implement this later. Consider the return values of bathItemWrite
 	dynamo.batchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 	dynamo.batchWriteCountMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/count", nil)
 	dynamo.batchWriteSizeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/size", nil)

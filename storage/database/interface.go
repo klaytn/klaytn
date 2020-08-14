@@ -20,6 +20,8 @@
 
 package database
 
+import "strings"
+
 // Code using batches should try to add this much data to the batch.
 // The value was determined empirically.
 
@@ -29,16 +31,22 @@ const (
 	LevelDB   DBType = "LevelDB"
 	BadgerDB         = "BadgerDB"
 	MemoryDB         = "MemoryDB"
-	DynamoDB         = "DynamoDB"
+	DynamoDB         = "DynamoDBS3"
 	ShardedDB        = "ShardedDB"
 )
 
-func (db DBType) IsValid() bool {
-	switch db {
-	case LevelDB, BadgerDB, MemoryDB, DynamoDB:
-		return true
+// ToValid converts DBType to a valid one.
+// If it is unable to convert, "" is returned.
+func (db DBType) ToValid() DBType {
+	validDBType := []DBType{LevelDB, BadgerDB, MemoryDB, DynamoDB}
+
+	for _, vdb := range validDBType {
+		if strings.ToLower(string(vdb)) == strings.ToLower(string(db)) {
+			return db
+		}
 	}
-	return false
+
+	return ""
 }
 
 const IdealBatchSize = 100 * 1024

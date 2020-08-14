@@ -23,6 +23,13 @@ package utils
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/api/debug"
@@ -33,7 +40,7 @@ import (
 	"github.com/klaytn/klaytn/datasync/dbsyncer"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/metrics/utils"
+	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
@@ -44,12 +51,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func InitHelper() {
@@ -81,7 +82,7 @@ var (
 	}
 	DbTypeFlag = cli.StringFlag{
 		Name:  "dbtype",
-		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDB")`,
+		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3")`,
 		Value: "LevelDB",
 	}
 	SrvTypeFlag = cli.StringFlag{
@@ -214,6 +215,29 @@ var (
 	LevelDBNoBufferPoolFlag = cli.BoolFlag{
 		Name:  "db.leveldb.no-buffer-pool",
 		Usage: "Disables using buffer pool for LevelDB's block allocation",
+	}
+	DynamoDBTableNameFlag = cli.StringFlag{
+		Name:  "db.dynamo.tablename",
+		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
+	}
+	DynamoDBRegionFlag = cli.StringFlag{
+		Name:  "db.dynamo.region",
+		Usage: "AWS region where the DynamoDB will be created.",
+		Value: database.GetDefaultDynamoDBConfig().Region,
+	}
+	DynamoDBIsProvisionedFlag = cli.BoolFlag{
+		Name:  "db.dynamo.is-provisioned",
+		Usage: "Set DynamoDB billing mode to provision. The default billing mode is on-demand.",
+	}
+	DynamoDBReadCapacityFlag = cli.Int64Flag{
+		Name:  "db.dynamo.read-capacity",
+		Usage: "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
+		Value: database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
+	}
+	DynamoDBWriteCapacityFlag = cli.Int64Flag{
+		Name:  "db.dynamo.write-capacity",
+		Usage: "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
+		Value: database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
 	}
 	NoParallelDBWriteFlag = cli.BoolFlag{
 		Name:  "db.no-parallel-write",
@@ -1106,9 +1130,10 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setgRPC(ctx, cfg)
 	setNodeUserIdent(ctx, cfg)
 
-	cfg.DBType = database.DBType(ctx.GlobalString(DbTypeFlag.Name))
-	if !cfg.DBType.IsValid() {
-		logger.Crit("invalid dbtype", "dbtype", cfg.DBType)
+	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
+		cfg.DBType = dbtype
+	} else {
+		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(DbTypeFlag.Name))
 	}
 	cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 
@@ -1216,9 +1241,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
 
-	cfg.DBType = database.DBType(ctx.GlobalString(DbTypeFlag.Name))
-	if !cfg.DBType.IsValid() {
-		logger.Crit("invalid dbtype", "dbtype", cfg.DBType)
+	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
+		cfg.DBType = dbtype
+	} else {
+		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(DbTypeFlag.Name))
 	}
 	cfg.SingleDB = ctx.GlobalIsSet(SingleDBFlag.Name)
 	cfg.NumStateTrieShards = ctx.GlobalUint(NumStateTrieShardsFlag.Name)
@@ -1229,6 +1255,12 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))
 	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)
 	cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
+
+	cfg.DynamoDBConfig.TableName = ctx.GlobalString(DynamoDBTableNameFlag.Name)
+	cfg.DynamoDBConfig.Region = ctx.GlobalString(DynamoDBRegionFlag.Name)
+	cfg.DynamoDBConfig.IsProvisioned = ctx.GlobalBool(DynamoDBIsProvisionedFlag.Name)
+	cfg.DynamoDBConfig.ReadCapacityUnits = ctx.GlobalInt64(DynamoDBReadCapacityFlag.Name)
+	cfg.DynamoDBConfig.WriteCapacityUnits = ctx.GlobalInt64(DynamoDBWriteCapacityFlag.Name)
 
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		log.Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)

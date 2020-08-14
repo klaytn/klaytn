@@ -22,6 +22,9 @@ package nodecmd
 
 import (
 	"encoding/json"
+	"os"
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/cmd/utils"
@@ -31,8 +34,6 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"strings"
 )
 
 var logger = log.NewModuleLogger(log.CMDUtilsNodeCMD)
@@ -47,6 +48,11 @@ var (
 			utils.DbTypeFlag,
 			utils.SingleDBFlag,
 			utils.NumStateTrieShardsFlag,
+			utils.DynamoDBTableNameFlag,
+			utils.DynamoDBRegionFlag,
+			utils.DynamoDBIsProvisionedFlag,
+			utils.DynamoDBReadCapacityFlag,
+			utils.DynamoDBWriteCapacityFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.DataDirFlag,
 		},
