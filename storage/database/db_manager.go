@@ -314,6 +314,7 @@ func NewMemoryDBManager() DBManager {
 type DBConfig struct {
 	// General configurations for all types of DB.
 	Dir                string
+	DBName             string
 	DBType             DBType
 	SingleDB           bool // whether dbs (such as MiscDB, headerDB and etc) share one physical DB
 	NumStateTrieShards uint // the number of shards of state trie db
@@ -384,7 +385,7 @@ func databaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 			fallthrough
 		case StateTrieDB:
 			newDBC := getDBEntryConfig(dbc, entryType, dir)
-			if dbc.NumStateTrieShards > 1 {
+			if dbc.NumStateTrieShards > 1 && !dbc.DBType.selfSharding() { // make non-sharding db if the db is sharding itself
 				db, err = newShardedDB(newDBC, entryType, dbc.NumStateTrieShards)
 			} else {
 				db, err = newDatabase(newDBC, entryType)
