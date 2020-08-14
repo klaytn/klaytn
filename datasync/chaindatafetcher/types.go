@@ -16,10 +16,6 @@
 
 package chaindatafetcher
 
-import (
-	"math/big"
-)
-
 // requestType informs which data should be exported such as block, transaction, transaction log, etc.
 type requestType uint
 
@@ -36,34 +32,21 @@ const (
 	requestTypeAll = requestTypeTransaction | requestTypeTokenTransfer | requestTypeContracts | requestTypeTraces
 )
 
-// request contains a raw block which should be handled and the type of data which should be exported.
+// request contains a blockNumber which should be handled and the type of data which should be exported.
 type request struct {
-	reqType     requestType
-	blockNumber uint64
+	reqType                requestType
+	shouldUpdateCheckpoint bool
+	blockNumber            uint64
 }
 
 func checkRequestType(rt requestType, targetType requestType) bool {
 	return rt&targetType == targetType
 }
 
-func newRequest(reqType requestType, block uint64) *request {
+func newRequest(reqType requestType, shouldUpdateCheckpoint bool, block uint64) *request {
 	return &request{
-		reqType:     reqType,
-		blockNumber: block,
-	}
-}
-
-// response contains the result of handling the requested block including request type, block number, and error if exists.
-type response struct {
-	reqType     requestType
-	blockNumber *big.Int
-	err         error
-}
-
-func newResponse(reqType requestType, blockNumber *big.Int, err error) *response {
-	return &response{
-		reqType:     reqType,
-		blockNumber: blockNumber,
-		err:         err,
+		reqType:                reqType,
+		shouldUpdateCheckpoint: shouldUpdateCheckpoint,
+		blockNumber:            block,
 	}
 }

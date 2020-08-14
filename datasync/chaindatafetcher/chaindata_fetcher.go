@@ -48,11 +48,11 @@ type ChainDataFetcher struct {
 	chainSub event.Subscription
 
 	reqCh  chan *request // TODO-ChainDataFetcher add logic to insert new requests from APIs to this channel
-	resCh  chan *response
 	stopCh chan struct{}
 
 	numHandlers int
 
+	checkpointMu  sync.RWMutex
 	checkpoint    int64
 	checkpointMap map[int64]struct{}
 
@@ -83,7 +83,6 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 		config:        cfg,
 		chainCh:       make(chan blockchain.ChainEvent, cfg.BlockChannelSize),
 		reqCh:         make(chan *request, cfg.JobChannelSize),
-		resCh:         make(chan *response, cfg.JobChannelSize),
 		stopCh:        make(chan struct{}),
 		numHandlers:   cfg.NumHandlers,
 		checkpoint:    checkpoint,
@@ -118,9 +117,6 @@ func (f *ChainDataFetcher) Start(server p2p.Server) error {
 			return err
 		}
 	}
-
-	go f.resLoop()
-
 	return nil
 }
 
@@ -134,12 +130,12 @@ func (f *ChainDataFetcher) Stop() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) makeRequests(start, end uint64, reqType requestType, stopCh chan struct{}) {
+func (f *ChainDataFetcher) sendRequests(start, end uint64, reqType requestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
 	for i := start; i <= end; i++ {
 		select {
 		case <-stopCh:
 			return
-		case f.reqCh <- newRequest(reqType, i):
+		case f.reqCh <- newRequest(reqType, shouldUpdateCheckpoint, i):
 		}
 	}
 }
@@ -156,7 +152,7 @@ func (f *ChainDataFetcher) startFetching() error {
 	f.fetchingWg.Add(1)
 	go func() {
 		defer f.fetchingWg.Done()
-		f.makeRequests(uint64(f.checkpoint), currentBlock, requestTypeAll, f.fetchingStopCh)
+		f.sendRequests(uint64(f.checkpoint), currentBlock, requestTypeAll, true, f.fetchingStopCh)
 	}()
 	f.fetchingStarted = true
 	return nil
@@ -182,7 +178,7 @@ func (f *ChainDataFetcher) startRangeFetching(start, end uint64, reqType request
 	f.rangeFetchingWg.Add(1)
 	go func() {
 		defer f.rangeFetchingWg.Done()
-		f.makeRequests(start, end, reqType, f.rangeFetchingStopCh)
+		f.sendRequests(start, end, reqType, false, f.rangeFetchingStopCh)
 	}()
 	f.rangeFetchingStarted = true
 	return nil
@@ -251,7 +247,7 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 	}
 }
 
-func (f *ChainDataFetcher) handleRequestByType(reqType requestType, ev blockchain.ChainEvent) {
+func (f *ChainDataFetcher) handleRequestByType(reqType requestType, shouldUpdateCheckpoint bool, ev blockchain.ChainEvent) {
 	// TODO-ChainDataFetcher parallelize handling data
 	if checkRequestType(reqType, requestTypeTransaction) {
 		f.retryFunc(f.repo.InsertTransactions)(ev)
@@ -265,7 +261,9 @@ func (f *ChainDataFetcher) handleRequestByType(reqType requestType, ev blockchai
 	if checkRequestType(reqType, requestTypeTraces) {
 		f.retryFunc(f.repo.InsertTraceResults)(ev)
 	}
-	f.resCh <- newResponse(reqType, ev.Block.Number(), nil)
+	if shouldUpdateCheckpoint {
+		f.updateCheckpoint(ev.Block.Number().Int64())
+	}
 }
 
 func (f *ChainDataFetcher) handleRequest() {
@@ -277,7 +275,7 @@ func (f *ChainDataFetcher) handleRequest() {
 			logger.Info("handleRequest is stopped")
 			return
 		case ev := <-f.chainCh:
-			f.handleRequestByType(requestTypeAll, ev)
+			f.handleRequestByType(requestTypeAll, true, ev)
 		case req := <-f.reqCh:
 			ev, err := f.makeChainEvent(req.blockNumber)
 			if err != nil {
@@ -285,26 +283,14 @@ func (f *ChainDataFetcher) handleRequest() {
 				logger.Error("making chain event is failed", "err", err)
 				break
 			}
-			f.handleRequestByType(req.reqType, ev)
-		}
-	}
-}
-
-func (f *ChainDataFetcher) resLoop() {
-	f.wg.Add(1)
-	defer f.wg.Done()
-	for {
-		select {
-		case <-f.stopCh:
-			logger.Info("stopped resLoop for chaindatafetcher")
-			return
-		case res := <-f.resCh:
-			f.updateCheckpoint(res.blockNumber.Int64())
+			f.handleRequestByType(req.reqType, req.shouldUpdateCheckpoint, ev)
 		}
 	}
 }
 
 func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
+	f.checkpointMu.Lock()
+	defer f.checkpointMu.Unlock()
 	f.checkpointMap[num] = struct{}{}
 
 	updated := false
