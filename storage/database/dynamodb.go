@@ -63,14 +63,10 @@ const WorkerNum = 10
 const itemChanSize = WorkerNum * 2
 
 var (
-	dynamoDBClient *dynamodb.DynamoDB
-
-	onceWorker sync.Once // worker is only created once
-
-	writeCh chan *batchWriteWorkerInput
-
-	quitCh      chan struct{}
-	openedDBNum uint
+	dynamoDBClient    *dynamodb.DynamoDB          // handles dynamoDB connections
+	dynamoOnceWorker  sync.Once                   // makes sure worker is created once
+	dynamoWriteCh     chan *batchWriteWorkerInput // use global write channel for shared worker
+	dynamoOpenedDBNum uint
 )
 
 type DynamoDBConfig struct {
@@ -78,8 +74,8 @@ type DynamoDBConfig struct {
 	Region             string // AWS region
 	Endpoint           string // Where DynamoDB reside
 	IsProvisioned      bool   // Billing mode
-	ReadCapacityUnits  int64  // read capacity when provsioned
-	WriteCapacityUnits int64  // write capacity when provsioned
+	ReadCapacityUnits  int64  // read capacity when provisioned
+	WriteCapacityUnits int64  // write capacity when provisioned
 }
 
 type batchWriteWorkerInput struct {
@@ -90,10 +86,9 @@ type batchWriteWorkerInput struct {
 }
 
 type dynamoDB struct {
-	config         *DynamoDBConfig
-	dynamoDBClient *dynamodb.DynamoDB
-	fdb            fileDB     // where over size items are stored
-	logger         log.Logger // Contextual logger tracking the database path
+	config *DynamoDBConfig
+	fdb    fileDB     // where over size items are stored
+	logger log.Logger // Contextual logger tracking the database path
 
 	// metrics
 	batchWriteTimeMeter       metrics.Meter
@@ -135,7 +130,8 @@ func NewDynamoDB(config *DynamoDBConfig, db string) (*dynamoDB, error) {
 	if len(config.Endpoint) == 0 {
 		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
 	}
-	openedDBNum++
+
+	dynamoOpenedDBNum++
 
 	logger.Info("creating s3FileDB ", "bucket", config.TableName)
 	s3FileDB, err := newS3FileDB(config.Region, "https://s3."+config.Region+".amazonaws.com", config.TableName)
@@ -144,17 +140,16 @@ func NewDynamoDB(config *DynamoDBConfig, db string) (*dynamoDB, error) {
 		return nil, err
 	}
 
-	onceWorker.Do(func() {
+	dynamoOnceWorker.Do(func() {
 		dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
 			Config: aws.Config{
 				Endpoint: aws.String(config.Endpoint),
 				Region:   aws.String(config.Region),
 			},
 		})))
-		quitCh = make(chan struct{})
-		writeCh = make(chan *batchWriteWorkerInput, itemChanSize)
+		dynamoWriteCh = make(chan *batchWriteWorkerInput, itemChanSize)
 		for i := 0; i < WorkerNum; i++ {
-			go createBatchWriteWorker(quitCh, writeCh)
+			go createBatchWriteWorker(dynamoWriteCh)
 		}
 		logger.Info("made dynamo batch write workers", "workerNum", WorkerNum)
 	})
@@ -368,9 +363,9 @@ func (dynamo *dynamoDB) Delete(key []byte) error {
 }
 
 func (dynamo *dynamoDB) Close() {
-	openedDBNum--
-	if openedDBNum == 0 {
-		close(quitCh)
+	dynamoOpenedDBNum--
+	if dynamoOpenedDBNum == 0 {
+		close(dynamoWriteCh)
 	}
 }
 
@@ -398,48 +393,42 @@ func (dynamo *dynamoDB) NewIteratorWithPrefix(prefix []byte) Iterator {
 	return nil
 }
 
-func createBatchWriteWorker(quitCh chan struct{}, writeCh chan *batchWriteWorkerInput) {
+func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 	failCount := 0
 	batchWriteInput := &dynamodb.BatchWriteItemInput{
 		RequestItems: map[string][]*dynamodb.WriteRequest{},
 	}
-	logger.Info("generate a dynamoDB batchWrite worker")
 
-	for {
-		select {
-		case <-quitCh:
-			logger.Info("close a dynamoDB batchWrite worker")
-			return
-		case batchInput := <-writeCh:
-			batchWriteInput.RequestItems[batchInput.tableName] = batchInput.items
+	for batchInput := range writeCh {
+		batchWriteInput.RequestItems[batchInput.tableName] = batchInput.items
 
-			BatchWriteItemOutput, err := dynamoDBClient.BatchWriteItem(batchWriteInput)
-			numUnprocessed := len(BatchWriteItemOutput.UnprocessedItems[batchInput.tableName])
-			for err != nil || numUnprocessed != 0 {
-				if err != nil {
-					failCount++
-					logger.Warn("dynamoDB failed to write batch items", "err", err, "failCnt", failCount)
-					if failCount > dynamoMaxRetry {
-						logger.Error("dynamoDB failed many times. sleep a second and retry",
-							"failCnt", failCount)
-						time.Sleep(time.Second)
-					}
+		BatchWriteItemOutput, err := dynamoDBClient.BatchWriteItem(batchWriteInput)
+		numUnprocessed := len(BatchWriteItemOutput.UnprocessedItems[batchInput.tableName])
+		for err != nil || numUnprocessed != 0 {
+			if err != nil {
+				failCount++
+				logger.Warn("dynamoDB failed to write batch items", "err", err, "failCnt", failCount)
+				if failCount > dynamoMaxRetry {
+					logger.Error("dynamoDB failed many times. sleep a second and retry",
+						"failCnt", failCount)
+					time.Sleep(time.Second)
 				}
-
-				if numUnprocessed != 0 {
-					logger.Debug("dynamoDB batchWrite remains unprocessedItem",
-						"numUnprocessedItem", numUnprocessed)
-					batchWriteInput.RequestItems[batchInput.tableName] = BatchWriteItemOutput.UnprocessedItems[batchInput.tableName]
-				}
-
-				BatchWriteItemOutput, err = dynamoDBClient.BatchWriteItem(batchWriteInput)
-				numUnprocessed = len(BatchWriteItemOutput.UnprocessedItems)
 			}
 
-			failCount = 0
-			batchInput.wg.Done()
+			if numUnprocessed != 0 {
+				logger.Debug("dynamoDB batchWrite remains unprocessedItem",
+					"numUnprocessedItem", numUnprocessed)
+				batchWriteInput.RequestItems[batchInput.tableName] = BatchWriteItemOutput.UnprocessedItems[batchInput.tableName]
+			}
+
+			BatchWriteItemOutput, err = dynamoDBClient.BatchWriteItem(batchWriteInput)
+			numUnprocessed = len(BatchWriteItemOutput.UnprocessedItems)
 		}
+
+		failCount = 0
+		batchInput.wg.Done()
 	}
+	logger.Debug("close a dynamoDB batchWrite worker")
 }
 
 func (dynamo *dynamoDB) NewBatch() Batch {
@@ -497,7 +486,7 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 
 	if len(batch.batchItems) == dynamoBatchSize {
 		batch.wg.Add(1)
-		writeCh <- &batchWriteWorkerInput{batch.tableName, batch.batchItems, batch.wg, batch.db.logger}
+		dynamoWriteCh <- &batchWriteWorkerInput{batch.tableName, batch.batchItems, batch.wg, batch.db.logger}
 		batch.Reset()
 	}
 	return nil
@@ -515,7 +504,7 @@ func (batch *dynamoBatch) Write() error {
 			writeRequest = batch.batchItems
 		}
 		batch.wg.Add(1)
-		writeCh <- &batchWriteWorkerInput{batch.tableName, writeRequest, batch.wg, batch.db.logger}
+		dynamoWriteCh <- &batchWriteWorkerInput{batch.tableName, writeRequest, batch.wg, batch.db.logger}
 		numRemainedItems -= len(writeRequest)
 	}
 
