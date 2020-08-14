@@ -34,19 +34,19 @@ const (
 
 // request contains a raw block which should be handled and the type of data which should be exported.
 type request struct {
-	reqType          requestType
-	updateCheckpoint bool
-	blockNumber      uint64
+	reqType                requestType
+	shouldUpdateCheckpoint bool
+	blockNumber            uint64
 }
 
 func checkRequestType(rt requestType, targetType requestType) bool {
 	return rt&targetType == targetType
 }
 
-func newRequest(reqType requestType, updateCheckpoint bool, block uint64) *request {
+func newRequest(reqType requestType, shouldUpdateCheckpoint bool, block uint64) *request {
 	return &request{
-		reqType:          reqType,
-		updateCheckpoint: updateCheckpoint,
-		blockNumber:      block,
+		reqType:                reqType,
+		shouldUpdateCheckpoint: shouldUpdateCheckpoint,
+		blockNumber:            block,
 	}
 }

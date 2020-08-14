@@ -130,12 +130,12 @@ func (f *ChainDataFetcher) Stop() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) makeRequests(start, end uint64, reqType requestType, updateCheckpoint bool, stopCh chan struct{}) {
+func (f *ChainDataFetcher) sendRequests(start, end uint64, reqType requestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
 	for i := start; i <= end; i++ {
 		select {
 		case <-stopCh:
 			return
-		case f.reqCh <- newRequest(reqType, updateCheckpoint, i):
+		case f.reqCh <- newRequest(reqType, shouldUpdateCheckpoint, i):
 		}
 	}
 }
@@ -152,7 +152,7 @@ func (f *ChainDataFetcher) startFetching() error {
 	f.fetchingWg.Add(1)
 	go func() {
 		defer f.fetchingWg.Done()
-		f.makeRequests(uint64(f.checkpoint), currentBlock, requestTypeAll, true, f.fetchingStopCh)
+		f.sendRequests(uint64(f.checkpoint), currentBlock, requestTypeAll, true, f.fetchingStopCh)
 	}()
 	f.fetchingStarted = true
 	return nil
@@ -178,7 +178,7 @@ func (f *ChainDataFetcher) startRangeFetching(start, end uint64, reqType request
 	f.rangeFetchingWg.Add(1)
 	go func() {
 		defer f.rangeFetchingWg.Done()
-		f.makeRequests(start, end, reqType, false, f.rangeFetchingStopCh)
+		f.sendRequests(start, end, reqType, false, f.rangeFetchingStopCh)
 	}()
 	f.rangeFetchingStarted = true
 	return nil
@@ -283,7 +283,7 @@ func (f *ChainDataFetcher) handleRequest() {
 				logger.Error("making chain event is failed", "err", err)
 				break
 			}
-			f.handleRequestByType(req.reqType, req.updateCheckpoint, ev)
+			f.handleRequestByType(req.reqType, req.shouldUpdateCheckpoint, ev)
 		}
 	}
 }
