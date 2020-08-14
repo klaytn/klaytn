@@ -247,7 +247,7 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 	}
 }
 
-func (f *ChainDataFetcher) handleRequestByType(reqType requestType, updateCheckpoint bool, ev blockchain.ChainEvent) {
+func (f *ChainDataFetcher) handleRequestByType(reqType requestType, shouldUpdateCheckpoint bool, ev blockchain.ChainEvent) {
 	// TODO-ChainDataFetcher parallelize handling data
 	if checkRequestType(reqType, requestTypeTransaction) {
 		f.retryFunc(f.repo.InsertTransactions)(ev)
@@ -261,7 +261,7 @@ func (f *ChainDataFetcher) handleRequestByType(reqType requestType, updateCheckp
 	if checkRequestType(reqType, requestTypeTraces) {
 		f.retryFunc(f.repo.InsertTraceResults)(ev)
 	}
-	if updateCheckpoint {
+	if shouldUpdateCheckpoint {
 		f.updateCheckpoint(ev.Block.Number().Int64())
 	}
 }
