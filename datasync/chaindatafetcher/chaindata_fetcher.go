@@ -261,7 +261,9 @@ func (f *ChainDataFetcher) handleRequestByType(reqType requestType, updateCheckp
 	if checkRequestType(reqType, requestTypeTraces) {
 		f.retryFunc(f.repo.InsertTraceResults)(ev)
 	}
-	f.updateCheckpoint(ev.Block.Number().Int64())
+	if updateCheckpoint {
+		f.updateCheckpoint(ev.Block.Number().Int64())
+	}
 }
 
 func (f *ChainDataFetcher) handleRequest() {
