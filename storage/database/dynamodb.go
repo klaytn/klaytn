@@ -33,8 +33,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/getlantern/deepcopy"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/rcrowley/go-metrics"
 
@@ -86,7 +84,7 @@ type batchWriteWorkerInput struct {
 }
 
 type dynamoDB struct {
-	config *DynamoDBConfig
+	config DynamoDBConfig
 	fdb    fileDB     // where over size items are stored
 	logger log.Logger // Contextual logger tracking the database path
 
@@ -153,17 +151,12 @@ func NewDynamoDB(config *DynamoDBConfig, db string) (*dynamoDB, error) {
 		logger.Info("made dynamo batch write workers", "workerNum", WorkerNum)
 	})
 
-	newConfig := &DynamoDBConfig{}
-	if err := deepcopy.Copy(newConfig, config); err != nil {
-		return nil, errors.Wrap(err, "unable to copy dynamo config")
-	}
-	newConfig.TableName += "-" + db
-
 	dynamoDB := &dynamoDB{
-		config: newConfig,
-		logger: logger.NewWith("region", config.Region, "tableName", newConfig.TableName),
+		config: *config,
 		fdb:    s3FileDB,
 	}
+	dynamoDB.config.TableName += "-" + db
+	dynamoDB.logger = logger.NewWith("region", config.Region, "tableName", dynamoDB.config.TableName)
 
 	// Check if the table is ready to serve
 	for {
