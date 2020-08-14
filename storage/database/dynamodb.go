@@ -33,16 +33,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/getlantern/deepcopy"
+
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/rcrowley/go-metrics"
 
 	"github.com/pkg/errors"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/klaytn/klaytn/log"
 )
+
+var overSizedDataPrefix = []byte("oversizeditem")
 
 // errors
 var dataNotFoundErr = errors.New("data is not found with the given key")
@@ -58,7 +62,16 @@ const dynamoMaxRetry = 5
 const WorkerNum = 10
 const itemChanSize = WorkerNum * 2
 
-var overSizedDataPrefix = []byte("oversizeditem")
+var (
+	dynamoDBClient *dynamodb.DynamoDB
+
+	onceWorker sync.Once // worker is only created once
+
+	writeCh chan *batchWriteWorkerInput
+
+	quitCh      chan struct{}
+	openedDBNum uint
+)
 
 type DynamoDBConfig struct {
 	TableName          string
@@ -70,19 +83,17 @@ type DynamoDBConfig struct {
 }
 
 type batchWriteWorkerInput struct {
-	items []*dynamodb.WriteRequest
-	wg    *sync.WaitGroup
+	tableName string
+	items     []*dynamodb.WriteRequest
+	wg        *sync.WaitGroup
+	logger    log.Logger
 }
 
 type dynamoDB struct {
-	config *DynamoDBConfig
-	db     *dynamodb.DynamoDB
-	fdb    fileDB     // where over size items are stored
-	logger log.Logger // Contextual logger tracking the database path
-
-	// worker pool
-	quitCh  chan struct{}
-	writeCh chan *batchWriteWorkerInput
+	config         *DynamoDBConfig
+	dynamoDBClient *dynamodb.DynamoDB
+	fdb            fileDB     // where over size items are stored
+	logger         log.Logger // Contextual logger tracking the database path
 
 	// metrics
 	batchWriteTimeMeter       metrics.Meter
@@ -114,7 +125,7 @@ func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	}
 }
 
-func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
+func NewDynamoDB(config *DynamoDBConfig, db string) (*dynamoDB, error) {
 	if config == nil {
 		return nil, nilDynamoConfigErr
 	}
@@ -124,6 +135,7 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if len(config.Endpoint) == 0 {
 		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
 	}
+	openedDBNum++
 
 	logger.Info("creating s3FileDB ", "bucket", config.TableName)
 	s3FileDB, err := newS3FileDB(config.Region, "https://s3."+config.Region+".amazonaws.com", config.TableName)
@@ -132,18 +144,31 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 		return nil, err
 	}
 
-	dynamoDB := &dynamoDB{
-		config:  config,
-		logger:  logger.NewWith("region", config.Region, "tableName", config.TableName),
-		quitCh:  make(chan struct{}),
-		writeCh: make(chan *batchWriteWorkerInput, itemChanSize),
-		fdb:     s3FileDB,
-		db: dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
+	onceWorker.Do(func() {
+		dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
 			Config: aws.Config{
 				Endpoint: aws.String(config.Endpoint),
 				Region:   aws.String(config.Region),
 			},
-		}))),
+		})))
+		quitCh = make(chan struct{})
+		writeCh = make(chan *batchWriteWorkerInput, itemChanSize)
+		for i := 0; i < WorkerNum; i++ {
+			go createBatchWriteWorker(quitCh, writeCh)
+		}
+		logger.Info("made dynamo batch write workers", "workerNum", WorkerNum)
+	})
+
+	newConfig := &DynamoDBConfig{}
+	if err := deepcopy.Copy(newConfig, config); err != nil {
+		return nil, errors.Wrap(err, "unable to copy dynamo config")
+	}
+	newConfig.TableName += "-" + db
+
+	dynamoDB := &dynamoDB{
+		config: newConfig,
+		logger: logger.NewWith("region", config.Region, "tableName", newConfig.TableName),
+		fdb:    s3FileDB,
 	}
 
 	// Check if the table is ready to serve
@@ -165,10 +190,6 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 		switch tableStatus {
 		case dynamodb.TableStatusActive:
 			dynamoDB.logger.Warn("Successfully created dynamoDB table. You will be charged until the DB is deleted.", "endPoint", config.Endpoint)
-			for i := 0; i < WorkerNum; i++ {
-				go dynamoDB.createBatchWriteWorker()
-			}
-			dynamoDB.logger.Info("made dynamo batch write workers", "workerNum", WorkerNum)
 			return dynamoDB, nil
 		case dynamodb.TableStatusDeleting, dynamodb.TableStatusArchiving, dynamodb.TableStatusArchived:
 			return nil, errors.New("failed to get DynamoDB table, table status : " + tableStatus)
@@ -207,7 +228,7 @@ func (dynamo *dynamoDB) createTable() error {
 		dynamo.logger.Warn("Billing mode is provisioned. You will be charged every hour.", "RCU", dynamo.config.ReadCapacityUnits, "WRU", dynamo.config.WriteCapacityUnits)
 	}
 
-	_, err := dynamo.db.CreateTable(input)
+	_, err := dynamoDBClient.CreateTable(input)
 	if err != nil {
 		dynamo.logger.Error("Error while creating the DynamoDB table", "err", err, "tableName", dynamo.config.TableName)
 		return err
@@ -217,7 +238,7 @@ func (dynamo *dynamoDB) createTable() error {
 }
 
 func (dynamo *dynamoDB) deleteTable() error {
-	if _, err := dynamo.db.DeleteTable(&dynamodb.DeleteTableInput{TableName: &dynamo.config.TableName}); err != nil {
+	if _, err := dynamoDBClient.DeleteTable(&dynamodb.DeleteTableInput{TableName: &dynamo.config.TableName}); err != nil {
 		dynamo.logger.Error("Error while deleting the DynamoDB table", "tableName", dynamo.config.TableName)
 		return err
 	}
@@ -235,7 +256,7 @@ func (dynamo *dynamoDB) tableStatus() (string, error) {
 }
 
 func (dynamo *dynamoDB) tableDescription() (*dynamodb.TableDescription, error) {
-	describe, err := dynamo.db.DescribeTable(&dynamodb.DescribeTableInput{TableName: aws.String(dynamo.config.TableName)})
+	describe, err := dynamoDBClient.DescribeTable(&dynamodb.DescribeTableInput{TableName: aws.String(dynamo.config.TableName)})
 	if describe == nil {
 		return nil, err
 	}
@@ -272,7 +293,7 @@ func (dynamo *dynamoDB) Put(key []byte, val []byte) error {
 		Item:      marshaledData,
 	}
 
-	_, err = dynamo.db.PutItem(params)
+	_, err = dynamoDBClient.PutItem(params)
 	if err != nil {
 		fmt.Printf("Put ERROR: %v\n", err.Error())
 		return err
@@ -301,7 +322,7 @@ func (dynamo *dynamoDB) Get(key []byte) ([]byte, error) {
 		ConsistentRead: aws.Bool(true),
 	}
 
-	result, err := dynamo.db.GetItem(params)
+	result, err := dynamoDBClient.GetItem(params)
 	if err != nil {
 		fmt.Printf("Get ERROR: %v\n", err.Error())
 		return nil, err
@@ -338,7 +359,7 @@ func (dynamo *dynamoDB) Delete(key []byte) error {
 		},
 	}
 
-	_, err := dynamo.db.DeleteItem(params)
+	_, err := dynamoDBClient.DeleteItem(params)
 	if err != nil {
 		fmt.Printf("ERROR: %v\n", err.Error())
 		return err
@@ -347,7 +368,10 @@ func (dynamo *dynamoDB) Delete(key []byte) error {
 }
 
 func (dynamo *dynamoDB) Close() {
-	close(dynamo.quitCh)
+	openedDBNum--
+	if openedDBNum == 0 {
+		close(quitCh)
+	}
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
@@ -374,42 +398,41 @@ func (dynamo *dynamoDB) NewIteratorWithPrefix(prefix []byte) Iterator {
 	return nil
 }
 
-func (dynamo *dynamoDB) createBatchWriteWorker() {
+func createBatchWriteWorker(quitCh chan struct{}, writeCh chan *batchWriteWorkerInput) {
 	failCount := 0
-	tableName := dynamo.config.TableName
 	batchWriteInput := &dynamodb.BatchWriteItemInput{
 		RequestItems: map[string][]*dynamodb.WriteRequest{},
 	}
-	dynamo.logger.Info("generate a dynamoDB batchWrite worker")
+	logger.Info("generate a dynamoDB batchWrite worker")
 
 	for {
 		select {
-		case <-dynamo.quitCh:
-			dynamo.logger.Info("close a dynamoDB batchWrite worker")
+		case <-quitCh:
+			logger.Info("close a dynamoDB batchWrite worker")
 			return
-		case batchInput := <-dynamo.writeCh:
-			batchWriteInput.RequestItems[tableName] = batchInput.items
+		case batchInput := <-writeCh:
+			batchWriteInput.RequestItems[batchInput.tableName] = batchInput.items
 
-			BatchWriteItemOutput, err := dynamo.db.BatchWriteItem(batchWriteInput)
-			numUnprocessed := len(BatchWriteItemOutput.UnprocessedItems[tableName])
+			BatchWriteItemOutput, err := dynamoDBClient.BatchWriteItem(batchWriteInput)
+			numUnprocessed := len(BatchWriteItemOutput.UnprocessedItems[batchInput.tableName])
 			for err != nil || numUnprocessed != 0 {
 				if err != nil {
 					failCount++
-					dynamo.logger.Warn("dynamoDB failed to write batch items", "err", err, "failCnt", failCount)
+					logger.Warn("dynamoDB failed to write batch items", "err", err, "failCnt", failCount)
 					if failCount > dynamoMaxRetry {
-						dynamo.logger.Error("dynamoDB failed many times. sleep a second and retry",
+						logger.Error("dynamoDB failed many times. sleep a second and retry",
 							"failCnt", failCount)
 						time.Sleep(time.Second)
 					}
 				}
 
 				if numUnprocessed != 0 {
-					dynamo.logger.Debug("dynamoDB batchWrite remains unprocessedItem",
+					logger.Debug("dynamoDB batchWrite remains unprocessedItem",
 						"numUnprocessedItem", numUnprocessed)
-					batchWriteInput.RequestItems[tableName] = BatchWriteItemOutput.UnprocessedItems[tableName]
+					batchWriteInput.RequestItems[batchInput.tableName] = BatchWriteItemOutput.UnprocessedItems[batchInput.tableName]
 				}
 
-				BatchWriteItemOutput, err = dynamo.db.BatchWriteItem(batchWriteInput)
+				BatchWriteItemOutput, err = dynamoDBClient.BatchWriteItem(batchWriteInput)
 				numUnprocessed = len(BatchWriteItemOutput.UnprocessedItems)
 			}
 
@@ -474,7 +497,7 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 
 	if len(batch.batchItems) == dynamoBatchSize {
 		batch.wg.Add(1)
-		batch.db.writeCh <- &batchWriteWorkerInput{batch.batchItems, batch.wg}
+		writeCh <- &batchWriteWorkerInput{batch.tableName, batch.batchItems, batch.wg, batch.db.logger}
 		batch.Reset()
 	}
 	return nil
@@ -492,7 +515,7 @@ func (batch *dynamoBatch) Write() error {
 			writeRequest = batch.batchItems
 		}
 		batch.wg.Add(1)
-		batch.db.writeCh <- &batchWriteWorkerInput{writeRequest, batch.wg}
+		writeCh <- &batchWriteWorkerInput{batch.tableName, writeRequest, batch.wg, batch.db.logger}
 		numRemainedItems -= len(writeRequest)
 	}
 
