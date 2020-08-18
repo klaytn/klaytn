@@ -383,7 +383,7 @@ func databaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 			fallthrough
 		case StateTrieDB:
 			newDBC := getDBEntryConfig(dbc, entryType, dir)
-			if dbc.NumStateTrieShards > 1 && !dbc.DBType.selfSharding() { // make non-sharding db if the db is sharding itself
+			if dbc.NumStateTrieShards > 1 && !dbc.DBType.selfShardable() { // make non-sharding db if the db is sharding itself
 				db, err = newShardedDB(newDBC, entryType, dbc.NumStateTrieShards)
 			} else {
 				db, err = newDatabase(newDBC, entryType)

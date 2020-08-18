@@ -49,8 +49,8 @@ func (db DBType) ToValid() DBType {
 	return ""
 }
 
-// selfSharding returns if the db is able to shard by itself or not
-func (db DBType) selfSharding() bool {
+// selfShardable returns if the db is able to shard by itself or not
+func (db DBType) selfShardable() bool {
 	switch db {
 	case DynamoDB:
 		return true
