@@ -80,7 +80,6 @@ type batchWriteWorkerInput struct {
 	tableName string
 	items     []*dynamodb.WriteRequest
 	wg        *sync.WaitGroup
-	logger    log.Logger
 }
 
 type dynamoDB struct {
@@ -399,17 +398,18 @@ func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 		for err != nil || numUnprocessed != 0 {
 			if err != nil {
 				failCount++
-				logger.Warn("dynamoDB failed to write batch items", "err", err, "failCnt", failCount)
+				logger.Warn("dynamoDB failed to write batch items",
+					"tableName", batchInput.tableName, "err", err, "failCnt", failCount)
 				if failCount > dynamoMaxRetry {
 					logger.Error("dynamoDB failed many times. sleep a second and retry",
-						"failCnt", failCount)
+						"tableName", batchInput.tableName, "failCnt", failCount)
 					time.Sleep(time.Second)
 				}
 			}
 
 			if numUnprocessed != 0 {
 				logger.Debug("dynamoDB batchWrite remains unprocessedItem",
-					"numUnprocessedItem", numUnprocessed)
+					"tableName", batchInput.tableName, "numUnprocessedItem", numUnprocessed)
 				batchWriteInput.RequestItems[batchInput.tableName] = BatchWriteItemOutput.UnprocessedItems[batchInput.tableName]
 			}
 
@@ -478,7 +478,7 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 
 	if len(batch.batchItems) == dynamoBatchSize {
 		batch.wg.Add(1)
-		dynamoWriteCh <- &batchWriteWorkerInput{batch.tableName, batch.batchItems, batch.wg, batch.db.logger}
+		dynamoWriteCh <- &batchWriteWorkerInput{batch.tableName, batch.batchItems, batch.wg}
 		batch.Reset()
 	}
 	return nil
@@ -496,7 +496,7 @@ func (batch *dynamoBatch) Write() error {
 			writeRequest = batch.batchItems
 		}
 		batch.wg.Add(1)
-		dynamoWriteCh <- &batchWriteWorkerInput{batch.tableName, writeRequest, batch.wg, batch.db.logger}
+		dynamoWriteCh <- &batchWriteWorkerInput{batch.tableName, writeRequest, batch.wg}
 		numRemainedItems -= len(writeRequest)
 	}
 
