@@ -18,11 +18,12 @@ package kas
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"strings"
 )
 
 // TxFilteringTypes filters types which are only stored in KAS database.
@@ -128,7 +129,12 @@ func transformToTxs(event blockchain.ChainEvent) []*Tx {
 
 // InsertTransactions inserts transactions in the given chain event into KAS database.
 func (r *repository) InsertTransactions(event blockchain.ChainEvent) error {
-	return r.insertTransactions(transformToTxs(event))
+	txs := transformToTxs(event)
+	if err := r.insertTransactions(txs); err != nil {
+		logger.Error("Failed to insertTransactions", "err", err, "blockNumber", event.Block.NumberU64(), "numTxs", len(txs))
+		return err
+	}
+	return nil
 }
 
 // insertTransactions inserts the given transactions divided into chunkUnit because of the max number of placeholders.
@@ -146,7 +152,6 @@ func (r *repository) insertTransactions(txs []*Tx) error {
 		}
 
 		if err := r.bulkInsertTransactions(chunks); err != nil {
-			logger.Error("failed to insert KAS transactions", "err", err, "numTxs", len(chunks))
 			return err
 		}
 	}

@@ -41,6 +41,7 @@ func filterKIPContracts(api BlockchainAPI, event blockchain.ChainEvent) ([]*FT, 
 		contract := receipt.ContractAddress
 		isKIP13, err := caller.isKIP13(contract, nil)
 		if err != nil {
+			logger.Error("Failed to call isKIP13", "err", err, "contract", contract.String())
 			return nil, nil, nil, err
 		} else if !isKIP13 {
 			others = append(others, &Contract{Address: contract.Bytes()})
@@ -48,6 +49,7 @@ func filterKIPContracts(api BlockchainAPI, event blockchain.ChainEvent) ([]*FT, 
 		}
 
 		if isKIP7, err := caller.isKIP7(contract, nil); err != nil {
+			logger.Error("Failed to call isKIP7", "err", err, "contract", contract.String())
 			return nil, nil, nil, err
 		} else if isKIP7 {
 			kip7s = append(kip7s, &FT{Address: contract.Bytes()})
@@ -55,6 +57,7 @@ func filterKIPContracts(api BlockchainAPI, event blockchain.ChainEvent) ([]*FT, 
 		}
 
 		if isKIP17, err := caller.isKIP17(contract, nil); err != nil {
+			logger.Error("Failed to call isKIP17", "err", err, "contract", contract.String())
 			return nil, nil, nil, err
 		} else if isKIP17 {
 			kip17s = append(kip17s, &NFT{Address: contract.Bytes()})
