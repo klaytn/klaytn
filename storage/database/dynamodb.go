@@ -83,6 +83,7 @@ type batchWriteWorkerInput struct {
 	wg        *sync.WaitGroup
 }
 
+// TODO-Klaytn refactor the structure : there are common configs that are placed separated
 type dynamoDB struct {
 	config DynamoDBConfig
 	fdb    fileDB     // where over size items are stored
