@@ -40,8 +40,8 @@ func (api *PublicChainDataFetcherAPI) StopRangeFetching() error {
 	return api.f.stopRangeFetching()
 }
 
-func (api *PublicChainDataFetcherAPI) Status() {
-	// TODO-ChainDataFetcher update status
+func (api *PublicChainDataFetcherAPI) Status() string {
+	return api.f.status()
 }
 
 func (api *PublicChainDataFetcherAPI) ReadCheckpoint() (int64, error) {

@@ -67,6 +67,11 @@ web3._extend({
 			params: 0
 		}),
 		new web3._extend.Method({
+			name: 'status',
+			call: 'chaindatafetcher_status',
+			params: 0
+		}),
+		new web3._extend.Method({
 			name: 'writeCheckpoint',
 			call: 'chaindatafetcher_writeCheckpoint',
 			params: 1
