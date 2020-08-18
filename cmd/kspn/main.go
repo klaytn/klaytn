@@ -85,7 +85,7 @@ var spnHelpFlagGroups = []utils.FlagGroup{
 			utils.KASServiceChainAnchorOperatorFlag,
 			utils.KASServiceChainAccessKeyFlag,
 			utils.KASServiceChainSecretKeyFlag,
-			utils.KASServiceChainXKRNFlag,
+			utils.KASServiceChainXChainIdFlag,
 		},
 	},
 	{

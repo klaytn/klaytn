@@ -638,9 +638,9 @@ var (
 		Name:  "kas.sc.anchor.operator",
 		Usage: "The operator address for KAS anchor",
 	}
-	KASServiceChainXKRNFlag = cli.StringFlag{
-		Name:  "kas.xkrn",
-		Usage: "The x-krn for KAS",
+	KASServiceChainXChainIdFlag = cli.StringFlag{
+		Name:  "kas.x-chain-id",
+		Usage: "The x-chain-id for KAS",
 	}
 	KASServiceChainAccessKeyFlag = cli.StringFlag{
 		Name:  "kas.accesskey",

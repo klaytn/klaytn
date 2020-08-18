@@ -24,7 +24,7 @@ import (
 var logger = log.NewModuleLogger(log.KAS)
 
 type KASConfig struct {
-	Url, Xkrn, User, Pwd string
+	Url, XChainId, User, Pwd string
 
 	Operator     common.Address
 	Anchor       bool

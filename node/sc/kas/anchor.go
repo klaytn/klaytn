@@ -85,7 +85,7 @@ func (anchor *Anchor) AnchorPeriodicBlock(block *types.Block) {
 	}
 
 	if err := anchor.AnchorBlock(block); err != nil {
-		logger.Warn("Failed to anchor a block via KAS", "blkNum", block.NumberU64())
+		logger.Warn("Failed to anchor a block via KAS", "blkNum", block.NumberU64(), "err", err)
 	}
 }
 
@@ -133,7 +133,7 @@ func (anchor *Anchor) AnchorBlock(block *types.Block) error {
 	if res.Code != codeOK {
 		result, _ := json.Marshal(res)
 		logger.Debug("Failed to anchor a block via KAS", "blkNum", block.NumberU64(), "result", string(result))
-		return fmt.Errorf("error code %v", res.Code)
+		return fmt.Errorf("error code : %v , message : %v", res.Code, res.Message)
 	}
 
 	logger.Info("Anchored a block via KAS", "blkNum", block.NumberU64())
@@ -141,8 +141,9 @@ func (anchor *Anchor) AnchorBlock(block *types.Block) error {
 }
 
 type respBody struct {
-	Code   int         `json:"code"`
-	Result interface{} `json:"result"`
+	Code    int         `json:"code"`
+	Result  interface{} `json:"result"`
+	Message interface{} `json:"message"`
 }
 
 type reqBody struct {
@@ -169,7 +170,7 @@ func dataToPayload(anchorData *types.AnchoringDataInternalType0) *Payload {
 func (anchor *Anchor) sendRequest(payload interface{}) (*respBody, error) {
 	header := map[string]string{
 		"Content-Type": "application/json",
-		"X-Krn":        anchor.kasConfig.Xkrn,
+		"X-chain-id":   anchor.kasConfig.XChainId,
 	}
 
 	bodyData := reqBody{
