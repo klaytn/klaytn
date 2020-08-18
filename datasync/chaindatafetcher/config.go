@@ -16,6 +16,8 @@
 
 package chaindatafetcher
 
+import "github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
+
 const (
 	DefaultNumHandlers      = 10
 	DefaultJobChannelSize   = 50
@@ -31,11 +33,7 @@ type ChainDataFetcherConfig struct {
 	JobChannelSize          int
 	BlockChannelSize        int
 
-	DBHost     string
-	DBPort     string
-	DBName     string
-	DBUser     string
-	DBPassword string
+	KasConfig *kas.KASConfig
 }
 
 var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
@@ -45,5 +43,5 @@ var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
 	JobChannelSize:          DefaultJobChannelSize,
 	BlockChannelSize:        DefaultBlockChannelSize,
 
-	DBPort: DefaultDBPort,
+	KasConfig: kas.DefaultKASConfig,
 }
