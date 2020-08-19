@@ -51,7 +51,7 @@ func testAnchorData() *types.AnchoringDataInternalType0 {
 	}
 }
 
-func TestExampleSendRequest(t *testing.T) {
+func _TestExampleSendRequest(t *testing.T) {
 	url := "http://anchor-api.dev.klaytn.com/v1/anchor"
 	xChainId := "1001"
 	user := ""
