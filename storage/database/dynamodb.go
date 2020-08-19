@@ -62,6 +62,7 @@ const WorkerNum = 10
 const itemChanSize = WorkerNum * 2
 
 var (
+	dynamoOnceClient  sync.Once                   // makes sure dynamo client is created once
 	dynamoDBClient    *dynamodb.DynamoDB          // handles dynamoDB connections
 	dynamoOnceWorker  sync.Once                   // makes sure worker is created once
 	dynamoWriteCh     chan *batchWriteWorkerInput // use global write channel for shared worker
@@ -135,6 +136,15 @@ func NewDynamoDB(config *DynamoDBConfig, dbtype DBEntryType) (*dynamoDB, error) 
 		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName)
 		return nil, err
 	}
+
+	dynamoOnceClient.Do(func() {
+		dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
+			Config: aws.Config{
+				Endpoint: aws.String(config.Endpoint),
+				Region:   aws.String(config.Region),
+			},
+		})))
+	})
 
 	dynamoDB := &dynamoDB{
 		config: *config,
@@ -379,12 +389,6 @@ func (dynamo *dynamoDB) NewIteratorWithPrefix(prefix []byte) Iterator {
 }
 
 func createBatchWriteWorkerPool(endpoint, region string) {
-	dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Endpoint: aws.String(endpoint),
-			Region:   aws.String(region),
-		},
-	})))
 	dynamoWriteCh = make(chan *batchWriteWorkerInput, itemChanSize)
 	for i := 0; i < WorkerNum; i++ {
 		go createBatchWriteWorker(dynamoWriteCh)
