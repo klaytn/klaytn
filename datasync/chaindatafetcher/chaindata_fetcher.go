@@ -264,15 +264,15 @@ func (f *ChainDataFetcher) handleRequestByType(reqType requestType, shouldUpdate
 	now := time.Now()
 	// TODO-ChainDataFetcher parallelize handling data
 	if checkRequestType(reqType, requestTypeTransaction) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTransactions, txInsertionRetryGauge), txInsertionTimeGauge)(ev)
+		f.updateGauge(f.retryFunc(f.repo.InsertTransactions, txsInsertionRetryGauge), txsInsertionTimeGauge)(ev)
 	}
 	if checkRequestType(reqType, requestTypeTokenTransfer) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTokenTransfers, tokenTransferInsertionRetryGauge), tokenTransferInsertionTimeGauge)(ev)
+		f.updateGauge(f.retryFunc(f.repo.InsertTokenTransfers, tokenTransfersInsertionRetryGauge), tokenTransfersInsertionTimeGauge)(ev)
 	}
-	if checkRequestType(reqType, requestTypeContracts) {
+	if checkRequestType(reqType, requestTypeContract) {
 		f.updateGauge(f.retryFunc(f.repo.InsertContracts, contractsInsertionRetryGauge), contractsInsertionTimeGauge)(ev)
 	}
-	if checkRequestType(reqType, requestTypeTraces) {
+	if checkRequestType(reqType, requestTypeTrace) {
 		f.updateGauge(f.retryFunc(f.repo.InsertTraceResults, tracesInsertionRetryGauge), tracesInsertionTimeGauge)(ev)
 	}
 	elapsed := time.Since(now)

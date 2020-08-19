@@ -22,14 +22,14 @@ type requestType uint
 const (
 	requestTypeTransaction = requestType(1) << iota
 	requestTypeTokenTransfer
-	requestTypeContracts
-	requestTypeTraces
+	requestTypeContract
+	requestTypeTrace
 
 	requestTypeLength
 )
 
 const (
-	requestTypeAll = requestTypeTransaction | requestTypeTokenTransfer | requestTypeContracts | requestTypeTraces
+	requestTypeAll = requestTypeTransaction | requestTypeTokenTransfer | requestTypeContract | requestTypeTrace
 )
 
 // request contains a blockNumber which should be handled and the type of data which should be exported.
