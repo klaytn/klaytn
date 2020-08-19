@@ -102,7 +102,7 @@ type SCConfig struct {
 	KASAnchorOperator string
 	KASAccessKey      string
 	KASSecretKey      string
-	KASXKRN           string
+	KASXChainId       string
 }
 
 // NodeName returns the devp2p node identifier.

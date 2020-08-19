@@ -52,8 +52,8 @@ func testAnchorData() *types.AnchoringDataInternalType0 {
 }
 
 func _TestExampleSendRequest(t *testing.T) {
-	url := "http://anchor-anchor-api.dev.klaytn.com/v1/anchor"
-	xkrn := "krn:1001:anchor:test:operator-pool:rp1"
+	url := "http://anchor-api.dev.klaytn.com/v1/anchor"
+	xChainId := "1001"
 	user := ""
 	pwd := ""
 
@@ -64,7 +64,7 @@ func _TestExampleSendRequest(t *testing.T) {
 
 	kasConfig := &KASConfig{
 		Url:          url,
-		Xkrn:         xkrn,
+		XChainId:     xChainId,
 		User:         user,
 		Pwd:          pwd,
 		Operator:     operator,

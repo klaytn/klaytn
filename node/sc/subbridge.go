@@ -327,7 +327,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 
 			kasConfig := &kas.KASConfig{
 				Url:          sb.config.KASAnchorUrl,
-				Xkrn:         sb.config.KASXKRN,
+				XChainId:     sb.config.KASXChainId,
 				User:         sb.config.KASAccessKey,
 				Pwd:          sb.config.KASSecretKey,
 				Operator:     common.HexToAddress(sb.config.KASAnchorOperator),
