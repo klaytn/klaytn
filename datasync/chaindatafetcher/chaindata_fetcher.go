@@ -264,16 +264,16 @@ func (f *ChainDataFetcher) handleRequestByType(reqType requestType, shouldUpdate
 	now := time.Now()
 	// TODO-ChainDataFetcher parallelize handling data
 	if checkRequestType(reqType, requestTypeTransaction) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTransactions), txInsertionTimeGauge)(ev)
+		f.updateGauge(f.retryFunc(f.repo.InsertTransactions, txInsertionRetryGauge), txInsertionTimeGauge)(ev)
 	}
 	if checkRequestType(reqType, requestTypeTokenTransfer) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTokenTransfers), tokenTransferInsertionTimeGauge)(ev)
+		f.updateGauge(f.retryFunc(f.repo.InsertTokenTransfers, tokenTransferInsertionRetryGauge), tokenTransferInsertionTimeGauge)(ev)
 	}
 	if checkRequestType(reqType, requestTypeContracts) {
-		f.updateGauge(f.retryFunc(f.repo.InsertContracts), contractsInsertionTimeGauge)(ev)
+		f.updateGauge(f.retryFunc(f.repo.InsertContracts, contractsInsertionRetryGauge), contractsInsertionTimeGauge)(ev)
 	}
 	if checkRequestType(reqType, requestTypeTraces) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTraceResults), tracesInsertionTimeGauge)(ev)
+		f.updateGauge(f.retryFunc(f.repo.InsertTraceResults, tracesInsertionRetryGauge), tracesInsertionTimeGauge)(ev)
 	}
 	elapsed := time.Since(now)
 	totalInsertionTimeGauge.Update(elapsed.Milliseconds())
@@ -341,7 +341,7 @@ func (f *ChainDataFetcher) updateGauge(insert func(chainEvent blockchain.ChainEv
 	}
 }
 
-func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error) func(blockchain.ChainEvent) {
+func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error, gauge metrics.Gauge) func(blockchain.ChainEvent) {
 	return func(event blockchain.ChainEvent) {
 		i := 0
 		for err := insert(event); err != nil; {
@@ -350,6 +350,7 @@ func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error) f
 				return
 			default:
 				i++
+				gauge.Update(int64(i))
 				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i)
 				time.Sleep(DBInsertRetryInterval)
 			}
