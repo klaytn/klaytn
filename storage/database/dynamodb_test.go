@@ -29,7 +29,7 @@ import (
 )
 
 func testDynamoDB_Put(t *testing.T) {
-	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig(), StateTrieDB)
 	defer dynamo.deletedDB()
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +50,7 @@ func testDynamoDB_Put(t *testing.T) {
 }
 
 func testDynamoBatch_Write(t *testing.T) {
-	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig(), StateTrieDB)
 	defer dynamo.deletedDB()
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +82,7 @@ func testDynamoBatch_Write(t *testing.T) {
 }
 
 func testDynamoBatch_WriteLargeData(t *testing.T) {
-	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig(), StateTrieDB)
 	defer dynamo.deletedDB()
 	if err != nil {
 		t.Fatal(err)

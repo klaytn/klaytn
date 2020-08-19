@@ -383,7 +383,7 @@ func databaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 			fallthrough
 		case StateTrieDB:
 			newDBC := getDBEntryConfig(dbc, entryType, dir)
-			if dbc.NumStateTrieShards > 1 {
+			if dbc.NumStateTrieShards > 1 && !dbc.DBType.selfShardable() { // make non-sharding db if the db is sharding itself
 				db, err = newShardedDB(newDBC, entryType, dbc.NumStateTrieShards)
 			} else {
 				db, err = newDatabase(newDBC, entryType)
@@ -413,7 +413,7 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 	case MemoryDB:
 		return NewMemDB(), nil
 	case DynamoDB:
-		return NewDynamoDB(dbc.DynamoDBConfig)
+		return NewDynamoDB(dbc.DynamoDBConfig, entryType)
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
 		return NewLevelDB(dbc, 0)

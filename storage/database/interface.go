@@ -49,6 +49,15 @@ func (db DBType) ToValid() DBType {
 	return ""
 }
 
+// selfShardable returns if the db is able to shard by itself or not
+func (db DBType) selfShardable() bool {
+	switch db {
+	case DynamoDB:
+		return true
+	}
+	return false
+}
+
 const IdealBatchSize = 100 * 1024
 
 // Putter wraps the database write operation supported by both batches and regular databases.
