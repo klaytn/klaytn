@@ -17,8 +17,9 @@
 package chaindatafetcher
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHasDataType(t *testing.T) {
@@ -26,22 +27,22 @@ func TestHasDataType(t *testing.T) {
 		// single type
 		requestTypeTransaction,
 		requestTypeTokenTransfer,
-		requestTypeTraces,
-		requestTypeContracts,
+		requestTypeTrace,
+		requestTypeContract,
 
 		// 2 composite type
 		requestTypeTransaction | requestTypeTokenTransfer,
-		requestTypeTransaction | requestTypeTraces,
-		requestTypeTransaction | requestTypeContracts,
-		requestTypeTokenTransfer | requestTypeTraces,
-		requestTypeTokenTransfer | requestTypeContracts,
-		requestTypeTraces | requestTypeContracts,
+		requestTypeTransaction | requestTypeTrace,
+		requestTypeTransaction | requestTypeContract,
+		requestTypeTokenTransfer | requestTypeTrace,
+		requestTypeTokenTransfer | requestTypeContract,
+		requestTypeTrace | requestTypeContract,
 
 		// 3 composite type
-		requestTypeTransaction | requestTypeTokenTransfer | requestTypeTraces,
-		requestTypeTransaction | requestTypeTokenTransfer | requestTypeContracts,
-		requestTypeTransaction | requestTypeTraces | requestTypeContracts,
-		requestTypeTokenTransfer | requestTypeTraces | requestTypeContracts,
+		requestTypeTransaction | requestTypeTokenTransfer | requestTypeTrace,
+		requestTypeTransaction | requestTypeTokenTransfer | requestTypeContract,
+		requestTypeTransaction | requestTypeTrace | requestTypeContract,
+		requestTypeTokenTransfer | requestTypeTrace | requestTypeContract,
 
 		// all type
 		requestTypeAll,
@@ -73,7 +74,7 @@ func TestHasDataType(t *testing.T) {
 	}
 
 	targetType := []requestType{
-		requestTypeTransaction, requestTypeTokenTransfer, requestTypeTraces, requestTypeContracts,
+		requestTypeTransaction, requestTypeTokenTransfer, requestTypeTrace, requestTypeContract,
 	}
 
 	for idx, types := range testdata {

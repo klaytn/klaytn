@@ -19,6 +19,7 @@ package chaindatafetcher
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
+	"github.com/rcrowley/go-metrics"
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
@@ -259,22 +261,27 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 }
 
 func (f *ChainDataFetcher) handleRequestByType(reqType requestType, shouldUpdateCheckpoint bool, ev blockchain.ChainEvent) {
+	now := time.Now()
 	// TODO-ChainDataFetcher parallelize handling data
 	if checkRequestType(reqType, requestTypeTransaction) {
-		f.retryFunc(f.repo.InsertTransactions)(ev)
+		f.updateGauge(f.retryFunc(f.repo.InsertTransactions, txsInsertionRetryGauge), txsInsertionTimeGauge)(ev)
 	}
 	if checkRequestType(reqType, requestTypeTokenTransfer) {
-		f.retryFunc(f.repo.InsertTokenTransfers)(ev)
+		f.updateGauge(f.retryFunc(f.repo.InsertTokenTransfers, tokenTransfersInsertionRetryGauge), tokenTransfersInsertionTimeGauge)(ev)
 	}
-	if checkRequestType(reqType, requestTypeContracts) {
-		f.retryFunc(f.repo.InsertContracts)(ev)
+	if checkRequestType(reqType, requestTypeContract) {
+		f.updateGauge(f.retryFunc(f.repo.InsertContracts, contractsInsertionRetryGauge), contractsInsertionTimeGauge)(ev)
 	}
-	if checkRequestType(reqType, requestTypeTraces) {
-		f.retryFunc(f.repo.InsertTraceResults)(ev)
+	if checkRequestType(reqType, requestTypeTrace) {
+		f.updateGauge(f.retryFunc(f.repo.InsertTraceResults, tracesInsertionRetryGauge), tracesInsertionTimeGauge)(ev)
 	}
+	elapsed := time.Since(now)
+	totalInsertionTimeGauge.Update(elapsed.Milliseconds())
+
 	if shouldUpdateCheckpoint {
 		f.updateCheckpoint(ev.Block.Number().Int64())
 	}
+	handledBlockNumberGauge.Update(ev.Block.Number().Int64())
 }
 
 func (f *ChainDataFetcher) handleRequest() {
@@ -286,8 +293,10 @@ func (f *ChainDataFetcher) handleRequest() {
 			logger.Info("handleRequest is stopped")
 			return
 		case ev := <-f.chainCh:
+			numChainEventGauge.Update(int64(len(f.chainCh)))
 			f.handleRequestByType(requestTypeAll, true, ev)
 		case req := <-f.reqCh:
+			numRequestsGauge.Update(int64(len(f.reqCh)))
 			ev, err := f.makeChainEvent(req.blockNumber)
 			if err != nil {
 				// TODO-ChainDataFetcher handle error
@@ -317,12 +326,22 @@ func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
 
 	if updated {
 		f.checkpoint = newCheckpoint
+		checkpointGauge.Update(f.checkpoint)
 		return f.repo.WriteCheckpoint(newCheckpoint)
 	}
 	return nil
 }
 
-func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error) func(blockchain.ChainEvent) {
+func (f *ChainDataFetcher) updateGauge(insert func(chainEvent blockchain.ChainEvent), gauge metrics.Gauge) func(chainEvent blockchain.ChainEvent) {
+	return func(chainEvent blockchain.ChainEvent) {
+		now := time.Now()
+		insert(chainEvent)
+		elapsed := time.Since(now)
+		gauge.Update(elapsed.Milliseconds())
+	}
+}
+
+func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error, gauge metrics.Gauge) func(blockchain.ChainEvent) {
 	return func(event blockchain.ChainEvent) {
 		i := 0
 		for err := insert(event); err != nil; {
@@ -331,9 +350,14 @@ func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error) f
 				return
 			default:
 				i++
+				gauge.Update(int64(i))
 				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i)
 				time.Sleep(DBInsertRetryInterval)
 			}
 		}
 	}
+}
+
+func (f *ChainDataFetcher) status() string {
+	return fmt.Sprintf("{fetching: %v, rangeFetching: %v}", f.fetchingStarted, f.rangeFetchingStarted)
 }
