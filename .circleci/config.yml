@@ -252,6 +252,7 @@ jobs:
   test-linter:
     executor: test-executor
     steps:
+      - install-ssh-alpine
       - checkout
       - run:
           name: "Run golangci-lint"
