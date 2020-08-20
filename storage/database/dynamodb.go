@@ -62,7 +62,6 @@ const WorkerNum = 10
 const itemChanSize = WorkerNum * 2
 
 var (
-	dynamoOnceClient  sync.Once                   // makes sure dynamo client is created once
 	dynamoDBClient    *dynamodb.DynamoDB          // handles dynamoDB connections
 	dynamoOnceWorker  sync.Once                   // makes sure worker is created once
 	dynamoWriteCh     chan *batchWriteWorkerInput // use global write channel for shared worker
@@ -137,14 +136,14 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 		return nil, err
 	}
 
-	dynamoOnceClient.Do(func() {
+	if dynamoDBClient == nil {
 		dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
 			Config: aws.Config{
 				Endpoint: aws.String(config.Endpoint),
 				Region:   aws.String(config.Region),
 			},
 		})))
-	})
+	}
 
 	dynamoDB := &dynamoDB{
 		config: *config,
