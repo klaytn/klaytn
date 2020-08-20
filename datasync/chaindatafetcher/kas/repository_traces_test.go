@@ -17,8 +17,9 @@
 package kas
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 
@@ -43,6 +44,10 @@ func TestRepository_isEmptyTraceResult(t *testing.T) {
 	assert.False(t, isEmptyTraceResult(data))
 }
 
+func makeOffset(offset int64) *int64 {
+	return &offset
+}
+
 func makeEntryTx() *Tx {
 	txhash := genRandomHash()
 	return &Tx{
@@ -54,14 +59,12 @@ func makeEntryTx() *Tx {
 	}
 }
 
-func makeInternalTrace() *vm.InternalTxTrace {
-	from := genRandomAddress()
-	to := genRandomAddress()
+func makeInternalTrace(callType, value string, from *common.Address, to *common.Address) *vm.InternalTxTrace {
 	return &vm.InternalTxTrace{
-		Type:  "TEST",
-		From:  &from,
-		To:    &to,
-		Value: "0x1",
+		Type:  callType,
+		From:  from,
+		To:    to,
+		Value: value,
 	}
 }
 
@@ -79,97 +82,123 @@ func makeExpectedInternalTx(offset int64, entryTx *Tx, trace *vm.InternalTxTrace
 	}
 }
 
-func TestRepository_transformToInternalTx_Success_ValidInternalTx(t *testing.T) {
+func TestRepository_transformToInternalTx(t *testing.T) {
+	type args struct {
+		trace       *vm.InternalTxTrace
+		offset      *int64
+		entryTx     *Tx
+		isFirstCall bool
+	}
+
+	// valid test case
 	entryTx := makeEntryTx()
-	trace := makeInternalTrace()
-	expected := makeExpectedInternalTx(2, entryTx, trace)
+	trace := makeInternalTrace("TEST", "0x1", genRandomAddress(), genRandomAddress())
+	args1 := args{trace, makeOffset(1), entryTx, false}
+	expected1 := []*Tx{makeExpectedInternalTx(2, entryTx, trace)}
 
-	offset := int64(1)
-	txs, err := transformToInternalTx(trace, &offset, entryTx, false)
-	assert.NoError(t, err)
-	assert.True(t, len(txs) == 1)
-	assert.True(t, reflect.DeepEqual(txs[0], expected))
-}
+	// valid test case 2
+	entryTx2 := makeEntryTx()
+	trace2 := makeInternalTrace("TEST", "0x1", genRandomAddress(), genRandomAddress())
+	innerTrace := makeInternalTrace("TEST", "0x2", genRandomAddress(), genRandomAddress())
+	trace2.Calls = []*vm.InternalTxTrace{innerTrace}
+	args2 := args{trace2, makeOffset(0), entryTx2, false}
 
-func TestRepository_transformToInternalTx_Success_ValidInternalTxWithInnerTrace(t *testing.T) {
-	entryTx := makeEntryTx()
-	trace := makeInternalTrace()
-	innerTrace := makeInternalTrace()
-	innerTrace.Value = "0x2"
-	trace.Calls = []*vm.InternalTxTrace{innerTrace}
+	expected2 := []*Tx{
+		makeExpectedInternalTx(1, entryTx2, trace2),
+		makeExpectedInternalTx(2, entryTx2, innerTrace),
+	}
 
-	expected := makeExpectedInternalTx(1, entryTx, trace)
-	expected2 := makeExpectedInternalTx(2, entryTx, innerTrace)
+	tests := []struct {
+		name     string
+		args     args
+		expected []*Tx
+		err      error
+	}{
+		{
+			name:     "success_valid_internal_tx",
+			args:     args1,
+			expected: expected1,
+			err:      nil,
+		},
+		{
+			name:     "success_valid_internal_tx_with_inner_calls",
+			args:     args2,
+			expected: expected2,
+			err:      nil,
+		},
+		{
+			name: "fail_noOpcodeError",
+			args: args{
+				trace:       makeInternalTrace("", "0x1", genRandomAddress(), genRandomAddress()),
+				offset:      makeOffset(0),
+				entryTx:     makeEntryTx(),
+				isFirstCall: false,
+			},
+			expected: nil,
+			err:      noOpcodeError,
+		},
+		{
+			name: "fail_noFromFieldError",
+			args: args{
+				trace:       makeInternalTrace("TEST", "0x1", nil, genRandomAddress()),
+				offset:      makeOffset(0),
+				entryTx:     makeEntryTx(),
+				isFirstCall: false,
+			},
+			expected: nil,
+			err:      noFromFieldError,
+		},
+		{
+			name: "fail_noToFieldError",
+			args: args{
+				trace:       makeInternalTrace("TEST", "0x1", genRandomAddress(), nil),
+				offset:      makeOffset(0),
+				entryTx:     makeEntryTx(),
+				isFirstCall: false,
+			},
+			expected: nil,
+			err:      noToFieldError,
+		},
+		{
+			name: "success_ignore_selfdestruct",
+			args: args{
+				trace:       makeInternalTrace(selfDestructType, "0x1", genRandomAddress(), genRandomAddress()),
+				offset:      makeOffset(0),
+				entryTx:     makeEntryTx(),
+				isFirstCall: false,
+			},
+			expected: nil,
+			err:      nil,
+		},
+		{
+			name: "success_ignore_firstCall",
+			args: args{
+				trace:       makeInternalTrace("TEST", "0x1", genRandomAddress(), genRandomAddress()),
+				offset:      makeOffset(0),
+				entryTx:     makeEntryTx(),
+				isFirstCall: true,
+			},
+			expected: nil,
+			err:      nil,
+		},
+		{
+			name: "success_empty_value",
+			args: args{
+				trace:       makeInternalTrace("TEST", "", genRandomAddress(), genRandomAddress()),
+				offset:      makeOffset(0),
+				entryTx:     makeEntryTx(),
+				isFirstCall: false,
+			},
+			expected: nil,
+			err:      nil,
+		},
+	}
 
-	offset := int64(0)
-	txs, err := transformToInternalTx(trace, &offset, entryTx, false)
-	assert.NoError(t, err)
-	assert.True(t, len(txs) == 2)
-	assert.True(t, reflect.DeepEqual(txs[0], expected))
-	assert.True(t, reflect.DeepEqual(txs[1], expected2))
-}
-
-func TestRepository_transformToInternalTx_Fail_NoOpcode(t *testing.T) {
-	entryTx := makeEntryTx()
-	trace := makeInternalTrace()
-	trace.Type = ""
-
-	offset := int64(0)
-	_, err := transformToInternalTx(trace, &offset, entryTx, false)
-	assert.Error(t, err)
-	assert.Equal(t, noOpcodeError, err)
-}
-
-func TestRepository_transformToInternalTx_Fail_NoFromField(t *testing.T) {
-	entryTx := makeEntryTx()
-	trace := makeInternalTrace()
-	trace.From = nil
-
-	offset := int64(0)
-	_, err := transformToInternalTx(trace, &offset, entryTx, false)
-	assert.Error(t, err)
-	assert.Equal(t, noFromFieldError, err)
-}
-
-func TestRepository_transformToInternalTx_Fail_NoToField(t *testing.T) {
-	entryTx := makeEntryTx()
-	trace := makeInternalTrace()
-	trace.To = nil
-
-	offset := int64(0)
-	_, err := transformToInternalTx(trace, &offset, entryTx, false)
-	assert.Error(t, err)
-	assert.Equal(t, noToFieldError, err)
-}
-
-func TestRepository_transformToInternalTx_Success_SELFDESTRUCT(t *testing.T) {
-	entryTx := makeEntryTx()
-	trace := makeInternalTrace()
-	trace.Type = selfDestructType
-
-	offset := int64(0)
-	txs, err := transformToInternalTx(trace, &offset, entryTx, false)
-	assert.Nil(t, txs)
-	assert.Nil(t, err)
-}
-
-func TestRepository_transformToInternalTx_Success_FirstCall(t *testing.T) {
-	entryTx := makeEntryTx()
-	trace := makeInternalTrace()
-
-	offset := int64(0)
-	txs, err := transformToInternalTx(trace, &offset, entryTx, true)
-	assert.Nil(t, txs)
-	assert.Nil(t, err)
-}
-
-func TestRepository_transformToInternalTx_Success_EmptyValue(t *testing.T) {
-	entryTx := makeEntryTx()
-	trace := makeInternalTrace()
-	trace.Value = ""
-
-	offset := int64(0)
-	txs, err := transformToInternalTx(trace, &offset, entryTx, true)
-	assert.Nil(t, txs)
-	assert.Nil(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := transformToInternalTx(tt.args.trace, tt.args.offset, tt.args.entryTx, tt.args.isFirstCall)
+			assert.Equal(t, tt.expected, got)
+			assert.Equal(t, tt.err, err)
+		})
+	}
 }

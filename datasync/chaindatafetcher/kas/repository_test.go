@@ -2,6 +2,12 @@ package kas
 
 import (
 	"fmt"
+	"math/big"
+	"math/rand"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/jinzhu/gorm"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -14,11 +20,6 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/suite"
-	"math/big"
-	"math/rand"
-	"strings"
-	"testing"
-	"time"
 )
 
 var models = []interface{}{
@@ -46,9 +47,10 @@ type SuiteRepository struct {
 	repo *repository
 }
 
-func genRandomAddress() common.Address {
+func genRandomAddress() *common.Address {
 	key, _ := crypto.GenerateKey()
-	return crypto.PubkeyToAddress(key.PublicKey)
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	return &addr
 }
 
 func genRandomHash() (h common.Hash) {
