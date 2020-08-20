@@ -17,7 +17,10 @@
 package kas
 
 import (
+	"reflect"
 	"testing"
+
+	"github.com/klaytn/klaytn/blockchain/types"
 
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/stretchr/testify/assert"
@@ -38,4 +41,135 @@ func TestRepository_isEmptyTraceResult(t *testing.T) {
 		Value: "0x0",
 	}
 	assert.False(t, isEmptyTraceResult(data))
+}
+
+func makeEntryTx() *Tx {
+	txhash := genRandomHash()
+	return &Tx{
+		TransactionId:   100000000000,
+		TransactionHash: txhash.Bytes(),
+		Status:          int(types.ReceiptStatusSuccessful),
+		Timestamp:       1,
+		TypeInt:         int(types.TxTypeLegacyTransaction),
+	}
+}
+
+func makeInternalTrace() *vm.InternalTxTrace {
+	from := genRandomAddress()
+	to := genRandomAddress()
+	return &vm.InternalTxTrace{
+		Type:  "TEST",
+		From:  &from,
+		To:    &to,
+		Value: "0x1",
+	}
+}
+
+func makeExpectedInternalTx(offset int64, entryTx *Tx, trace *vm.InternalTxTrace) *Tx {
+	return &Tx{
+		TransactionId:   entryTx.TransactionId + offset,
+		FromAddr:        trace.From.Bytes(),
+		ToAddr:          trace.To.Bytes(),
+		Value:           trace.Value,
+		TransactionHash: entryTx.TransactionHash,
+		Status:          entryTx.Status,
+		Timestamp:       entryTx.Timestamp,
+		TypeInt:         entryTx.TypeInt,
+		Internal:        true,
+	}
+}
+
+func TestRepository_transformToInternalTx_Success_ValidInternalTx(t *testing.T) {
+	entryTx := makeEntryTx()
+	trace := makeInternalTrace()
+	expected := makeExpectedInternalTx(2, entryTx, trace)
+
+	offset := int64(1)
+	txs, err := transformToInternalTx(trace, &offset, entryTx, false)
+	assert.NoError(t, err)
+	assert.True(t, len(txs) == 1)
+	assert.True(t, reflect.DeepEqual(txs[0], expected))
+}
+
+func TestRepository_transformToInternalTx_Success_ValidInternalTxWithInnerTrace(t *testing.T) {
+	entryTx := makeEntryTx()
+	trace := makeInternalTrace()
+	innerTrace := makeInternalTrace()
+	innerTrace.Value = "0x2"
+	trace.Calls = []*vm.InternalTxTrace{innerTrace}
+
+	expected := makeExpectedInternalTx(1, entryTx, trace)
+	expected2 := makeExpectedInternalTx(2, entryTx, innerTrace)
+
+	offset := int64(0)
+	txs, err := transformToInternalTx(trace, &offset, entryTx, false)
+	assert.NoError(t, err)
+	assert.True(t, len(txs) == 2)
+	assert.True(t, reflect.DeepEqual(txs[0], expected))
+	assert.True(t, reflect.DeepEqual(txs[1], expected2))
+}
+
+func TestRepository_transformToInternalTx_Fail_NoOpcode(t *testing.T) {
+	entryTx := makeEntryTx()
+	trace := makeInternalTrace()
+	trace.Type = ""
+
+	offset := int64(0)
+	_, err := transformToInternalTx(trace, &offset, entryTx, false)
+	assert.Error(t, err)
+	assert.Equal(t, noOpcodeError, err)
+}
+
+func TestRepository_transformToInternalTx_Fail_NoFromField(t *testing.T) {
+	entryTx := makeEntryTx()
+	trace := makeInternalTrace()
+	trace.From = nil
+
+	offset := int64(0)
+	_, err := transformToInternalTx(trace, &offset, entryTx, false)
+	assert.Error(t, err)
+	assert.Equal(t, noFromFieldError, err)
+}
+
+func TestRepository_transformToInternalTx_Fail_NoToField(t *testing.T) {
+	entryTx := makeEntryTx()
+	trace := makeInternalTrace()
+	trace.To = nil
+
+	offset := int64(0)
+	_, err := transformToInternalTx(trace, &offset, entryTx, false)
+	assert.Error(t, err)
+	assert.Equal(t, noToFieldError, err)
+}
+
+func TestRepository_transformToInternalTx_Success_SELFDESTRUCT(t *testing.T) {
+	entryTx := makeEntryTx()
+	trace := makeInternalTrace()
+	trace.Type = selfDestructType
+
+	offset := int64(0)
+	txs, err := transformToInternalTx(trace, &offset, entryTx, false)
+	assert.Nil(t, txs)
+	assert.Nil(t, err)
+}
+
+func TestRepository_transformToInternalTx_Success_FirstCall(t *testing.T) {
+	entryTx := makeEntryTx()
+	trace := makeInternalTrace()
+
+	offset := int64(0)
+	txs, err := transformToInternalTx(trace, &offset, entryTx, true)
+	assert.Nil(t, txs)
+	assert.Nil(t, err)
+}
+
+func TestRepository_transformToInternalTx_Success_EmptyValue(t *testing.T) {
+	entryTx := makeEntryTx()
+	trace := makeInternalTrace()
+	trace.Value = ""
+
+	offset := int64(0)
+	txs, err := transformToInternalTx(trace, &offset, entryTx, true)
+	assert.Nil(t, txs)
+	assert.Nil(t, err)
 }
