@@ -27,6 +27,8 @@ import (
 	"github.com/klaytn/klaytn/common"
 )
 
+const selfDestructType = "SELFDESTRUCT"
+
 var emptyTraceResult = &vm.InternalTxTrace{
 	Value: "0x0",
 	Calls: []*vm.InternalTxTrace{},
@@ -54,7 +56,7 @@ func getEntryTx(block *types.Block, txIdx int, tx *types.Transaction) *Tx {
 func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, entryTx *Tx, isFirstCall bool) ([]*Tx, error) {
 	if trace.Type == "" {
 		return nil, noOpcodeError
-	} else if trace.Type == "SELFDESTRUCT" {
+	} else if trace.Type == selfDestructType {
 		// TODO-ChainDataFetcher currently, skip it when self-destruct is encountered.
 		return nil, nil
 	}
@@ -68,7 +70,7 @@ func transformToInternalTx(trace *vm.InternalTxTrace, offset *int64, entryTx *Tx
 	}
 
 	var txs []*Tx
-	if !isFirstCall && trace.Value != "0x0" { // filter the internal tx if the value is 0
+	if !isFirstCall && trace.Value != "" && trace.Value != "0x0" { // filter the internal tx if the value is 0
 		*offset++ // adding 1 to calculate the transaction id in the order of internal transactions
 		txs = append(txs, &Tx{
 			TransactionId:   entryTx.TransactionId + *offset,
