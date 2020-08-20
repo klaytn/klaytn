@@ -489,10 +489,11 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 	})
 	batch.size += dataSize
 
-	if len(batch.batchItems) == dynamoBatchSize {
+	if len(batch.batchItems) >= dynamoBatchSize {
+		thisTimeItems := batch.batchItems[:25]
+		batch.batchItems = batch.batchItems[25:]
 		batch.wg.Add(1)
-		dynamoWriteCh <- &batchWriteWorkerInput{batch.tableName, batch.batchItems, batch.wg}
-		batch.Reset()
+		dynamoWriteCh <- &batchWriteWorkerInput{batch.tableName, thisTimeItems, batch.wg}
 	}
 	return nil
 }
