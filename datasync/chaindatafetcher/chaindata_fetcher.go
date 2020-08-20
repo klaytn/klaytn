@@ -358,7 +358,7 @@ func (f *ChainDataFetcher) updateGauge(insert func(chainEvent blockchain.ChainEv
 func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error, gauge metrics.Gauge) func(blockchain.ChainEvent) {
 	return func(event blockchain.ChainEvent) {
 		i := 0
-		for err := insert(event); err != nil; {
+		for err := insert(event); err != nil; err = insert(event) {
 			select {
 			case <-f.stopCh:
 				return

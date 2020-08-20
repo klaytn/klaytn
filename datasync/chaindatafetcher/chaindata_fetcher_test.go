@@ -17,20 +17,19 @@
 package chaindatafetcher
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	eventMocks "github.com/klaytn/klaytn/event/mocks"
-
-	"github.com/klaytn/klaytn/blockchain/types"
-
-	"github.com/klaytn/klaytn/blockchain"
-
 	"github.com/golang/mock/gomock"
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/mocks"
+	eventMocks "github.com/klaytn/klaytn/event/mocks"
+	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -187,4 +186,28 @@ func TestChainDataFetcher_updateCheckpoint(t *testing.T) {
 
 	m.EXPECT().WriteCheckpoint(gomock.Eq(int64(11)))
 	assert.NoError(t, fetcher.updateCheckpoint(10))
+}
+
+func TestChainDataFetcher_retryFunc(t *testing.T) {
+	fetcher := &ChainDataFetcher{}
+	header := &types.Header{
+		Number: big.NewInt(1),
+	}
+	ev := blockchain.ChainEvent{
+		Block: types.NewBlockWithHeader(header),
+	}
+	gauge := metrics.NewGauge()
+
+	i := 0
+	f := func(event blockchain.ChainEvent) error {
+		i++
+		if i == 5 {
+			return nil
+		} else {
+			return errors.New("test")
+		}
+	}
+
+	fetcher.retryFunc(f, gauge)(ev)
+	assert.True(t, i == 5)
 }
