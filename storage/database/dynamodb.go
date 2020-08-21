@@ -409,6 +409,10 @@ func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 		numUnprocessed := len(BatchWriteItemOutput.UnprocessedItems[batchInput.tableName])
 		for err != nil || numUnprocessed != 0 {
 			if err != nil {
+				if strings.Contains(err.Error(), "ValidationException") {
+					logger.Crit("Invalid input for dynamoDB BatchWrite",
+						"err", err, "tableName", batchInput.tableName, "itemNum", len(batchInput.items))
+				}
 				failCount++
 				logger.Warn("dynamoDB failed to write batch items",
 					"tableName", batchInput.tableName, "err", err, "failCnt", failCount)
