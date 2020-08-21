@@ -409,6 +409,10 @@ func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 		numUnprocessed := len(BatchWriteItemOutput.UnprocessedItems[batchInput.tableName])
 		for err != nil || numUnprocessed != 0 {
 			if err != nil {
+				// ValidationException occurs when a required parameter is missing, a value is out of range,
+				// or data types mismatch and so on. If this is the case, check if there is a duplicated key,
+				// batch length out of range, null value and so on.
+				// When ValidationException occurs, retrying won't fix the problem.
 				if strings.Contains(err.Error(), "ValidationException") {
 					logger.Crit("Invalid input for dynamoDB BatchWrite",
 						"err", err, "tableName", batchInput.tableName, "itemNum", len(batchInput.items))
@@ -451,6 +455,7 @@ type dynamoBatch struct {
 	wg         *sync.WaitGroup
 }
 
+// TODO-klaytn need to check for duplicated keys in batch
 func (batch *dynamoBatch) Put(key, val []byte) error {
 	data := DynamoData{Key: key, Val: val}
 	dataSize := len(val)
