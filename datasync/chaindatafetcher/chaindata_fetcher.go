@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klaytn/klaytn/common"
+
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -39,12 +41,19 @@ import (
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
 
+//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher BlockChain
+type BlockChain interface {
+	SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription
+	CurrentHeader() *types.Header
+	GetBlockByNumber(number uint64) *types.Block
+	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
+}
+
 type ChainDataFetcher struct {
 	config *ChainDataFetcherConfig
 
-	blockchain    *blockchain.BlockChain
-	blockchainAPI *api.PublicBlockChainAPI
-	debugAPI      *cn.PrivateDebugAPI
+	blockchain BlockChain
+	debugAPI   *cn.PrivateDebugAPI
 
 	chainCh  chan blockchain.ChainEvent
 	chainSub event.Subscription
@@ -151,18 +160,21 @@ func (f *ChainDataFetcher) startFetching() error {
 	if f.fetchingStarted {
 		return errors.New("fetching is already started")
 	}
+	f.fetchingStarted = true
 
+	// subscribe chain event in order to handle new blocks.
 	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
 	checkpoint := uint64(f.checkpoint)
 	currentBlock := f.blockchain.CurrentHeader().Number.Uint64()
 
 	f.fetchingStopCh = make(chan struct{})
 	f.fetchingWg.Add(1)
+
+	// lanuch a goroutine to handle from checkpoint to the head block.
 	go func() {
 		defer f.fetchingWg.Done()
 		f.sendRequests(uint64(f.checkpoint), currentBlock, requestTypeAll, true, f.fetchingStopCh)
 	}()
-	f.fetchingStarted = true
 	logger.Info("fetching is started", "startedCheckpoint", checkpoint, "currentBlock", currentBlock)
 	return nil
 }
@@ -184,13 +196,15 @@ func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqTy
 	if f.rangeFetchingStarted {
 		return errors.New("range fetching is already started")
 	}
+	f.rangeFetchingStarted = true
+
 	f.rangeFetchingStopCh = make(chan struct{})
 	f.rangeFetchingWg.Add(1)
 	go func() {
 		defer f.rangeFetchingWg.Done()
 		f.sendRequests(startBlock, endBlock, reqType, false, f.rangeFetchingStopCh)
+		f.rangeFetchingStarted = false
 	}()
-	f.rangeFetchingStarted = true
 	logger.Info("range fetching is started", "startBlock", startBlock, "endBlock", endBlock)
 	return nil
 }

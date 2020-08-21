@@ -17,11 +17,137 @@
 package chaindatafetcher
 
 import (
+	"math/big"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	eventMocks "github.com/klaytn/klaytn/event/mocks"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+
+	"github.com/klaytn/klaytn/blockchain"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/mocks"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
+
+func newTestChainDataFetcher() *ChainDataFetcher {
+	return &ChainDataFetcher{
+		config:        DefaultChainDataFetcherConfig,
+		chainCh:       make(chan blockchain.ChainEvent),
+		reqCh:         make(chan *request),
+		stopCh:        make(chan struct{}),
+		numHandlers:   3,
+		checkpoint:    0,
+		checkpointMap: make(map[int64]struct{}),
+		repo:          nil,
+	}
+}
+
+func TestChainDataFetcher_Success_StartAndStop(t *testing.T) {
+	fetcher := newTestChainDataFetcher()
+	fetcher.config.NoDefaultStart = true
+	// Start launches several goroutines.
+	assert.NoError(t, fetcher.Start(nil))
+
+	// Stop waits the all goroutines to be terminated.
+	assert.NoError(t, fetcher.Stop())
+}
+
+func TestChainDataFetcher_Success_sendRequests(t *testing.T) {
+	fetcher := newTestChainDataFetcher()
+	stopCh := make(chan struct{})
+
+	startBlock := uint64(0)
+	endBlock := uint64(10)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		fetcher.sendRequests(startBlock, endBlock, requestTypeAll, false, stopCh)
+	}()
+
+	// take all the items from the reqCh and check them.
+	for i := startBlock; i <= endBlock; i++ {
+		r := <-fetcher.reqCh
+		assert.Equal(t, i, r.blockNumber)
+		assert.Equal(t, requestTypeAll, r.reqType)
+		assert.Equal(t, false, r.shouldUpdateCheckpoint)
+	}
+	wg.Wait()
+}
+
+func TestChainDataFetcher_Success_sendRequestsStop(t *testing.T) {
+	fetcher := newTestChainDataFetcher()
+	stopCh := make(chan struct{})
+
+	startBlock := uint64(0)
+	endBlock := uint64(10)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		fetcher.sendRequests(startBlock, endBlock, requestTypeAll, false, stopCh)
+	}()
+
+	stopCh <- struct{}{}
+	wg.Wait()
+}
+
+func TestChainDataFetcher_Success_fetchingStartAndStop(t *testing.T) {
+	fetcher := newTestChainDataFetcher()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	bc := mocks.NewMockBlockChain(ctrl)
+	bc.EXPECT().SubscribeChainEvent(gomock.Any()).Return(nil).Times(1)
+	// TODO-ChainDataFetcher the below statment is not working, so find out why.
+	//bc.EXPECT().SubscribeChainEvent(gomock.Eq(fetcher.chainCh)).Return(nil).Times(1)
+	bc.EXPECT().CurrentHeader().Return(&types.Header{Number: big.NewInt(1)}).Times(1)
+
+	fetcher.blockchain = bc
+	assert.NoError(t, fetcher.startFetching())
+
+	sub := eventMocks.NewMockSubscription(ctrl)
+	sub.EXPECT().Unsubscribe().Times(1)
+	fetcher.chainSub = sub
+	assert.NoError(t, fetcher.stopFetching())
+}
+
+func TestChainDataFetcher_Success_rangeFetchingStartAndStop(t *testing.T) {
+	fetcher := newTestChainDataFetcher()
+	// start range fetching and the method is waiting for the items to be taken from reqCh
+	assert.NoError(t, fetcher.startRangeFetching(0, 10, requestTypeAll))
+
+	// take only parts of the requests
+	<-fetcher.reqCh
+	<-fetcher.reqCh
+	<-fetcher.reqCh
+
+	// stop fetching while waiting
+	assert.NoError(t, fetcher.stopRangeFetching())
+}
+
+func TestChainDataFetcher_Success_rangeFetchingStartAndFinishedAlready(t *testing.T) {
+	fetcher := newTestChainDataFetcher()
+	assert.NoError(t, fetcher.startRangeFetching(0, 0, requestTypeAll))
+	// skip the request
+	<-fetcher.reqCh
+
+	// sleep to finish sending the request
+	time.Sleep(100 * time.Millisecond)
+
+	// already finished range fetching
+	err := fetcher.stopRangeFetching()
+	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "range fetching is not running"))
+}
 
 func TestChainDataFetcher_updateCheckpoint(t *testing.T) {
 	ctrl := gomock.NewController(t)
