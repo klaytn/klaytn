@@ -216,16 +216,24 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 	var internalTraces []*vm.InternalTxTrace
 	if block.Transactions().Len() > 0 {
 		fct := "fastCallTracer"
+		timeout := "24h"
 		results, err := f.debugAPI.TraceBlockByNumber(context.Background(), rpc.BlockNumber(block.Number().Int64()), &cn.TraceConfig{
-			Tracer: &fct,
+			Tracer:  &fct,
+			Timeout: &timeout,
 		})
 		if err != nil {
-			logger.Error("Failed to call trace block by number", "blockNumber", block.NumberU64())
+			traceAPIErrorCounter.Inc(1)
+			logger.Error("Failed to call trace block by number", "err", err, "blockNumber", block.NumberU64())
 			return blockchain.ChainEvent{}, err
 		}
 		for _, r := range results {
-			// TODO-ChainDataFetcher Assume that the input parameters are valid always.
-			internalTraces = append(internalTraces, r.Result.(*vm.InternalTxTrace))
+			if r.Result != nil {
+				internalTraces = append(internalTraces, r.Result.(*vm.InternalTxTrace))
+			} else {
+				traceAPIErrorCounter.Inc(1)
+				logger.Error("the trace result is nil", "err", r.Error, "blockNumber", blockNumber)
+				internalTraces = append(internalTraces, &vm.InternalTxTrace{Value: "0x0", Calls: []*vm.InternalTxTrace{}})
+			}
 		}
 	}
 
