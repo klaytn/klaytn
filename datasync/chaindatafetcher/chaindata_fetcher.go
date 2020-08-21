@@ -162,12 +162,15 @@ func (f *ChainDataFetcher) startFetching() error {
 	}
 	f.fetchingStarted = true
 
+	// subscribe chain event in order to handle new blocks.
 	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
 	checkpoint := uint64(f.checkpoint)
 	currentBlock := f.blockchain.CurrentHeader().Number.Uint64()
 
 	f.fetchingStopCh = make(chan struct{})
 	f.fetchingWg.Add(1)
+
+	// lanuch a goroutine to handle from checkpoint to the head block.
 	go func() {
 		defer f.fetchingWg.Done()
 		f.sendRequests(uint64(f.checkpoint), currentBlock, requestTypeAll, true, f.fetchingStopCh)
