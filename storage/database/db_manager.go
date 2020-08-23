@@ -280,6 +280,12 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBCon
 
 	// Update dir to each Database specific directory.
 	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDir)
+	// Update dynmao table name to Database specific name.
+	if newDBC.DynamoDBConfig != nil {
+		newDynamoDBConfig := *originalDBC.DynamoDBConfig
+		newDynamoDBConfig.TableName += "-" + dbDir
+		newDBC.DynamoDBConfig = &newDynamoDBConfig
+	}
 
 	return &newDBC
 }
@@ -413,7 +419,7 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 	case MemoryDB:
 		return NewMemDB(), nil
 	case DynamoDB:
-		return NewDynamoDB(dbc.DynamoDBConfig, entryType)
+		return NewDynamoDB(dbc.DynamoDBConfig)
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
 		return NewLevelDB(dbc, 0)

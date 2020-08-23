@@ -119,7 +119,7 @@ func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	}
 }
 
-func NewDynamoDB(config *DynamoDBConfig, dbtype DBEntryType) (*dynamoDB, error) {
+func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if config == nil {
 		return nil, nilDynamoConfigErr
 	}
@@ -136,11 +136,20 @@ func NewDynamoDB(config *DynamoDBConfig, dbtype DBEntryType) (*dynamoDB, error) 
 		return nil, err
 	}
 
+	if dynamoDBClient == nil {
+		dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
+			Config: aws.Config{
+				Endpoint: aws.String(config.Endpoint),
+				Region:   aws.String(config.Region),
+			},
+		})))
+	}
+
 	dynamoDB := &dynamoDB{
 		config: *config,
 		fdb:    s3FileDB,
 	}
-	dynamoDB.config.TableName += "-" + dbBaseDirs[dbtype]
+
 	dynamoDB.logger = logger.NewWith("region", config.Region, "tableName", dynamoDB.config.TableName)
 
 	// Check if the table is ready to serve
@@ -379,12 +388,6 @@ func (dynamo *dynamoDB) NewIteratorWithPrefix(prefix []byte) Iterator {
 }
 
 func createBatchWriteWorkerPool(endpoint, region string) {
-	dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Endpoint: aws.String(endpoint),
-			Region:   aws.String(region),
-		},
-	})))
 	dynamoWriteCh = make(chan *batchWriteWorkerInput, itemChanSize)
 	for i := 0; i < WorkerNum; i++ {
 		go createBatchWriteWorker(dynamoWriteCh)
@@ -406,6 +409,14 @@ func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 		numUnprocessed := len(BatchWriteItemOutput.UnprocessedItems[batchInput.tableName])
 		for err != nil || numUnprocessed != 0 {
 			if err != nil {
+				// ValidationException occurs when a required parameter is missing, a value is out of range,
+				// or data types mismatch and so on. If this is the case, check if there is a duplicated key,
+				// batch length out of range, null value and so on.
+				// When ValidationException occurs, retrying won't fix the problem.
+				if strings.Contains(err.Error(), "ValidationException") {
+					logger.Crit("Invalid input for dynamoDB BatchWrite",
+						"err", err, "tableName", batchInput.tableName, "itemNum", len(batchInput.items))
+				}
 				failCount++
 				logger.Warn("dynamoDB failed to write batch items",
 					"tableName", batchInput.tableName, "err", err, "failCnt", failCount)
@@ -444,6 +455,7 @@ type dynamoBatch struct {
 	wg         *sync.WaitGroup
 }
 
+// TODO-klaytn need to check for duplicated keys in batch
 func (batch *dynamoBatch) Put(key, val []byte) error {
 	data := DynamoData{Key: key, Val: val}
 	dataSize := len(val)
