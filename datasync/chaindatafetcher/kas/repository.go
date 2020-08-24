@@ -17,11 +17,12 @@
 package kas
 
 import (
+	"time"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/log"
-	"time"
 )
 
 const (
@@ -38,8 +39,11 @@ const (
 	placeholdersPerFTItem          = 3
 	placeholdersPerNFTItem         = 3
 
-	maxDBRetryCount = 20
-	DBRetryInterval = 1 * time.Second
+	maxOpenConnection = 100
+	maxIdleConnection = 10
+	connMaxLifetime   = 24 * time.Hour
+	maxDBRetryCount   = 20
+	DBRetryInterval   = 1 * time.Second
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
@@ -67,10 +71,9 @@ func NewRepository(user, password, host, port, name string) (*repository, error)
 			logger.Warn("Retrying to connect DB", "endpoint", endpoint, "err", err)
 			time.Sleep(DBRetryInterval)
 		} else {
-			// TODO-ChainDataFetcher insert other options such as maxOpen, maxIdle, maxLifetime, etc.
-			//db.DB().SetMaxOpenConns(maxOpen)
-			//db.DB().SetMaxIdleConns(maxIdle)
-			//db.DB().SetConnMaxLifetime(time.Duration(maxLifetime) * time.Second)
+			db.DB().SetMaxOpenConns(maxOpenConnection)
+			db.DB().SetMaxIdleConns(maxIdleConnection)
+			db.DB().SetConnMaxLifetime(connMaxLifetime)
 
 			return &repository{db: db}, nil
 		}
