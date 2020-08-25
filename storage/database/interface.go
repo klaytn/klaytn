@@ -42,7 +42,7 @@ func (db DBType) ToValid() DBType {
 
 	for _, vdb := range validDBType {
 		if strings.ToLower(string(vdb)) == strings.ToLower(string(db)) {
-			return db
+			return vdb
 		}
 	}
 
