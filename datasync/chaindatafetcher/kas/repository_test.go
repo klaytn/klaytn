@@ -171,6 +171,12 @@ func Test_repository_InvalidateCacheEOAList(t *testing.T) {
 		var body map[string]interface{}
 
 		assert.NoError(t, json.Unmarshal([]byte(bodyStr), &body))
+		payload := body["payload"].(map[string]interface{})
+		eoaList := payload["addresses"].([]string)
+		for _, eoa := range eoaList {
+			_, ok := testEOAs[common.HexToAddress(eoa)]
+			assert.True(t, ok)
+		}
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("this is test result"))
 	}))
