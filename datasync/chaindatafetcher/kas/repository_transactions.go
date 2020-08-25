@@ -50,7 +50,7 @@ var TxFilteringTypes = map[types.TxType]bool{
 // transformToTxs transforms a chain event to transaction list according to the KAS database scheme.
 func transformToTxs(event blockchain.ChainEvent) ([]*Tx, map[common.Address]struct{}) {
 	var txs []*Tx
-	expiredEOAs := make(map[common.Address]struct{})
+	updatedEOAs := make(map[common.Address]struct{})
 
 	block := event.Block
 	head := block.Header()
@@ -102,8 +102,8 @@ func transformToTxs(event blockchain.ChainEvent) ([]*Tx, map[common.Address]stru
 			}
 		}
 
-		expiredEOAs[from] = struct{}{}
-		expiredEOAs[*to] = struct{}{}
+		updatedEOAs[from] = struct{}{}
+		updatedEOAs[*to] = struct{}{}
 
 		tx := &Tx{
 			Timestamp:       head.Time.Int64(),
@@ -122,17 +122,17 @@ func transformToTxs(event blockchain.ChainEvent) ([]*Tx, map[common.Address]stru
 
 		txs = append(txs, tx)
 	}
-	return txs, expiredEOAs
+	return txs, updatedEOAs
 }
 
 // InsertTransactions inserts transactions in the given chain event into KAS database.
 func (r *repository) InsertTransactions(event blockchain.ChainEvent) error {
-	txs, expiredEOAs := transformToTxs(event)
+	txs, updatedEOAs := transformToTxs(event)
 	if err := r.insertTransactions(txs); err != nil {
 		logger.Error("Failed to insertTransactions", "err", err, "blockNumber", event.Block.NumberU64(), "numTxs", len(txs))
 		return err
 	}
-	r.InvalidateCacheEOAList(expiredEOAs)
+	r.InvalidateCacheEOAList(updatedEOAs)
 	return nil
 }
 

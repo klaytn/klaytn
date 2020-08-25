@@ -49,22 +49,22 @@ func wordToAddress(word common.Hash) common.Address {
 func transformLogsToTokenTransfers(event blockchain.ChainEvent) ([]*KCTTransfer, map[common.Address]struct{}, error) {
 	timestamp := event.Block.Time().Int64()
 	var kctTransfers []*KCTTransfer
-	mergedExpiredEOAs := make(map[common.Address]struct{})
+	mergedUpdatedEOAs := make(map[common.Address]struct{})
 	for _, log := range event.Logs {
 		if len(log.Topics) > 0 && log.Topics[0] == tokenTransferEventHash {
-			transfer, expiredEOAs, err := transformLogToTokenTransfer(log)
+			transfer, updatedEOAs, err := transformLogToTokenTransfer(log)
 			if err != nil {
 				return nil, nil, err
 			}
 			transfer.Timestamp = timestamp
 			kctTransfers = append(kctTransfers, transfer)
-			for key := range expiredEOAs {
-				mergedExpiredEOAs[key] = struct{}{}
+			for key := range updatedEOAs {
+				mergedUpdatedEOAs[key] = struct{}{}
 			}
 		}
 	}
 
-	return kctTransfers, mergedExpiredEOAs, nil
+	return kctTransfers, mergedUpdatedEOAs, nil
 }
 
 // transformLogToTokenTransfer converts the given log to Klaytn Compatible Token transfer.
@@ -88,9 +88,9 @@ func transformLogToTokenTransfer(log *types.Log) (*KCTTransfer, map[common.Addre
 	value := new(big.Int).SetBytes(data[3].Bytes())
 
 	txLogId := int64(log.BlockNumber)*maxTxCountPerBlock*maxTxLogCountPerTx + int64(log.TxIndex)*maxTxLogCountPerTx + int64(log.Index)
-	expiredEOAs := make(map[common.Address]struct{})
-	expiredEOAs[from] = struct{}{}
-	expiredEOAs[to] = struct{}{}
+	updatedEOAs := make(map[common.Address]struct{})
+	updatedEOAs[from] = struct{}{}
+	updatedEOAs[to] = struct{}{}
 
 	return &KCTTransfer{
 		ContractAddress:  log.Address.Bytes(),
@@ -99,13 +99,13 @@ func transformLogToTokenTransfer(log *types.Log) (*KCTTransfer, map[common.Addre
 		TransactionLogId: txLogId,
 		Value:            "0x" + value.Text(16),
 		TransactionHash:  log.TxHash.Bytes(),
-	}, expiredEOAs, nil
+	}, updatedEOAs, nil
 }
 
 // InsertTokenTransfers inserts token transfers in the given chain event into KAS database.
 // The token transfers are divided into chunkUnit because of max number of place holders.
 func (r *repository) InsertTokenTransfers(event blockchain.ChainEvent) error {
-	tokenTransfers, expiredEOAs, err := transformLogsToTokenTransfers(event)
+	tokenTransfers, updatedEOAs, err := transformLogsToTokenTransfers(event)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (r *repository) InsertTokenTransfers(event blockchain.ChainEvent) error {
 		}
 	}
 
-	r.InvalidateCacheEOAList(expiredEOAs)
+	r.InvalidateCacheEOAList(updatedEOAs)
 	return nil
 }
 
