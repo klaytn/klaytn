@@ -110,7 +110,9 @@ func makeEOAListStr(eoaList map[common.Address]struct{}) string {
 }
 
 func (r *repository) InvalidateCacheEOAList(eoaList map[common.Address]struct{}) {
-	if len(eoaList) <= 0 || !r.config.CacheUse {
+	numEOAs := len(eoaList)
+	logger.Trace("the number of EOA list for KAS cache invalidation", "numEOAs", numEOAs)
+	if numEOAs <= 0 || !r.config.CacheUse {
 		return
 	}
 
