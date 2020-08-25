@@ -1,15 +1,16 @@
 package kas
 
 import (
+	"math/big"
+	"strings"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"strings"
-	"testing"
 )
 
 // TODO-ChainDataFetcher add more tx types test cases
@@ -63,7 +64,7 @@ func TestRepository_TransformToTxs_Success(t *testing.T) {
 	checkValidChainEventsPosted(t, numBlocks, numTxsPerBlock, events)
 
 	ev := events[0]
-	txs := transformToTxs(ev)
+	txs, _ := transformToTxs(ev)
 
 	for _, tx := range txs {
 		assert.Equal(t, from.Bytes(), tx.FromAddr)
@@ -148,7 +149,7 @@ func (s *SuiteRepository) TestRepository_bulkInsertTransactions_Fail_TooManyPlac
 	s.NoError(err)
 
 	ev := events[0]
-	txs := transformToTxs(ev)
+	txs, _ := transformToTxs(ev)
 	err = s.repo.bulkInsertTransactions(txs)
 	s.Error(err)
 	s.True(strings.Contains(err.Error(), "Prepared statement contains too many placeholders"))

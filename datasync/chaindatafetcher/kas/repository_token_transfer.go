@@ -46,25 +46,29 @@ func wordToAddress(word common.Hash) common.Address {
 }
 
 // transformLogsToTokenTransfers converts the given event into Klaytn Compatible Token transfers.
-func transformLogsToTokenTransfers(event blockchain.ChainEvent) ([]*KCTTransfer, error) {
+func transformLogsToTokenTransfers(event blockchain.ChainEvent) ([]*KCTTransfer, map[common.Address]struct{}, error) {
 	timestamp := event.Block.Time().Int64()
 	var kctTransfers []*KCTTransfer
+	mergedUpdatedEOAs := make(map[common.Address]struct{})
 	for _, log := range event.Logs {
 		if len(log.Topics) > 0 && log.Topics[0] == tokenTransferEventHash {
-			transfer, err := transformLogToTokenTransfer(log)
+			transfer, updatedEOAs, err := transformLogToTokenTransfer(log)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			transfer.Timestamp = timestamp
 			kctTransfers = append(kctTransfers, transfer)
+			for key := range updatedEOAs {
+				mergedUpdatedEOAs[key] = struct{}{}
+			}
 		}
 	}
 
-	return kctTransfers, nil
+	return kctTransfers, mergedUpdatedEOAs, nil
 }
 
 // transformLogToTokenTransfer converts the given log to Klaytn Compatible Token transfer.
-func transformLogToTokenTransfer(log *types.Log) (*KCTTransfer, error) {
+func transformLogToTokenTransfer(log *types.Log) (*KCTTransfer, map[common.Address]struct{}, error) {
 	// in case of token transfer,
 	// case 1:
 	//   log.LogTopics[0] = token transfer event hash
@@ -76,7 +80,7 @@ func transformLogToTokenTransfer(log *types.Log) (*KCTTransfer, error) {
 	//   log.LogData = value
 	words, err := splitToWords(log.Data)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	data := append(log.Topics, words...)
 	from := wordToAddress(data[1])
@@ -84,6 +88,9 @@ func transformLogToTokenTransfer(log *types.Log) (*KCTTransfer, error) {
 	value := new(big.Int).SetBytes(data[3].Bytes())
 
 	txLogId := int64(log.BlockNumber)*maxTxCountPerBlock*maxTxLogCountPerTx + int64(log.TxIndex)*maxTxLogCountPerTx + int64(log.Index)
+	updatedEOAs := make(map[common.Address]struct{})
+	updatedEOAs[from] = struct{}{}
+	updatedEOAs[to] = struct{}{}
 
 	return &KCTTransfer{
 		ContractAddress:  log.Address.Bytes(),
@@ -92,13 +99,13 @@ func transformLogToTokenTransfer(log *types.Log) (*KCTTransfer, error) {
 		TransactionLogId: txLogId,
 		Value:            "0x" + value.Text(16),
 		TransactionHash:  log.TxHash.Bytes(),
-	}, nil
+	}, updatedEOAs, nil
 }
 
 // InsertTokenTransfers inserts token transfers in the given chain event into KAS database.
 // The token transfers are divided into chunkUnit because of max number of place holders.
 func (r *repository) InsertTokenTransfers(event blockchain.ChainEvent) error {
-	tokenTransfers, err := transformLogsToTokenTransfers(event)
+	tokenTransfers, updatedEOAs, err := transformLogsToTokenTransfers(event)
 	if err != nil {
 		return err
 	}
@@ -121,6 +128,7 @@ func (r *repository) InsertTokenTransfers(event blockchain.ChainEvent) error {
 		}
 	}
 
+	go r.InvalidateCacheEOAList(updatedEOAs)
 	return nil
 }
 

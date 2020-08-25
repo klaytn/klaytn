@@ -80,9 +80,9 @@ type ChainDataFetcher struct {
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
-	repo, err := kas.NewRepository(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	repo, err := kas.NewRepository(cfg.KasConfig)
 	if err != nil {
-		logger.Error("Failed to create new Repository", "err", err, "user", cfg.DBUser, "host", cfg.DBHost, "port", cfg.DBPort, "name", cfg.DBName)
+		logger.Error("Failed to create new Repository", "err", err, "user", cfg.KasConfig.DBUser, "host", cfg.KasConfig.DBHost, "port", cfg.KasConfig.DBPort, "name", cfg.KasConfig.DBName, "cacheUrl", cfg.KasConfig.CacheInvalidationURL, "x-chain-id", cfg.KasConfig.XChainId)
 		return nil, err
 	}
 	checkpoint, err := repo.ReadCheckpoint()

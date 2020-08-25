@@ -1,12 +1,18 @@
 package kas
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"math/rand"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/jinzhu/gorm"
 	"github.com/klaytn/klaytn/blockchain"
@@ -131,9 +137,58 @@ func (s *SuiteRepository) SetupSuite() {
 	}
 
 	setTestDatabase(s.T(), mysql)
-	s.repo = &repository{db: mysql}
+	s.repo = &repository{db: mysql, config: DefaultKASConfig}
 }
 
 func TestSuite(t *testing.T) {
 	suite.Run(t, new(SuiteRepository))
+}
+
+func Test_repository_InvalidateCacheEOAList(t *testing.T) {
+	testXChainId := "test-xkrn"
+	testAuth := "test-auth"
+	testEOAs := make(map[common.Address]struct{})
+	numEOAs := 10
+	for i := 0; i < numEOAs; i++ {
+		testEOAs[*genRandomAddress()] = struct{}{}
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Equal(t, testXChainId, req.Header.Get("x-chain-id"))
+		assert.Equal(t, testAuth, req.Header.Get("Authorization"))
+
+		buffer := make([]byte, 1024)
+		bodyStr := ""
+
+		for {
+			n, err := req.Body.Read(buffer)
+			bodyStr += string(buffer[:n])
+			if err == io.EOF {
+				break
+			}
+		}
+
+		var body map[string]interface{}
+
+		assert.NoError(t, json.Unmarshal([]byte(bodyStr), &body))
+		payload := body["payload"].(map[string]interface{})
+		eoaList := payload["addresses"].([]string)
+		for _, eoa := range eoaList {
+			_, ok := testEOAs[common.HexToAddress(eoa)]
+			assert.True(t, ok)
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("this is test result"))
+	}))
+	defer server.Close()
+
+	r := &repository{
+		config: &KASConfig{
+			XChainId:             testXChainId,
+			Authorization:        testAuth,
+			CacheInvalidationURL: server.URL,
+		},
+	}
+
+	r.InvalidateCacheEOAList(testEOAs)
 }

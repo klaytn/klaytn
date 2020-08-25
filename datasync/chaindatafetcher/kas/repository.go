@@ -17,11 +17,17 @@
 package kas
 
 import (
+	"context"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"github.com/klaytn/klaytn/api"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 )
 
@@ -44,12 +50,15 @@ const (
 	connMaxLifetime   = 24 * time.Hour
 	maxDBRetryCount   = 20
 	DBRetryInterval   = 1 * time.Second
+	apiCtxTimeout     = 200 * time.Millisecond
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
 
 type repository struct {
 	db *gorm.DB
+
+	config *KASConfig
 
 	contractCaller *contractCaller
 	blockchainApi  BlockchainAPI
@@ -59,8 +68,8 @@ func getEndpoint(user, password, host, port, name string) string {
 	return user + ":" + password + "@tcp(" + host + ":" + port + ")/" + name + "?parseTime=True&charset=utf8mb4"
 }
 
-func NewRepository(user, password, host, port, name string) (*repository, error) {
-	endpoint := getEndpoint(user, password, host, port, name)
+func NewRepository(config *KASConfig) (*repository, error) {
+	endpoint := getEndpoint(config.DBUser, config.DBPassword, config.DBHost, config.DBPort, config.DBName)
 	var (
 		db  *gorm.DB
 		err error
@@ -75,7 +84,7 @@ func NewRepository(user, password, host, port, name string) (*repository, error)
 			db.DB().SetMaxIdleConns(maxIdleConnection)
 			db.DB().SetConnMaxLifetime(connMaxLifetime)
 
-			return &repository{db: db}, nil
+			return &repository{db: db, config: config}, nil
 		}
 	}
 	logger.Error("Failed to connect to the database", "endpoint", endpoint, "err", err)
@@ -86,5 +95,57 @@ func (r *repository) SetComponent(component interface{}) {
 	switch c := component.(type) {
 	case *api.PublicBlockChainAPI:
 		r.blockchainApi = c
+	}
+}
+
+func makeEOAListStr(eoaList map[common.Address]struct{}) string {
+	eoaStrList := ""
+	for key := range eoaList {
+		eoaStrList += "\""
+		eoaStrList += strings.ToLower(key.String())
+		eoaStrList += "\""
+		eoaStrList += ","
+	}
+	return eoaStrList[:len(eoaStrList)-1]
+}
+
+func (r *repository) InvalidateCacheEOAList(eoaList map[common.Address]struct{}) {
+	numEOAs := len(eoaList)
+	logger.Trace("the number of EOA list for KAS cache invalidation", "numEOAs", numEOAs)
+	if numEOAs <= 0 || !r.config.CacheUse {
+		return
+	}
+
+	url := r.config.CacheInvalidationURL
+	payloadStr := fmt.Sprintf(`{"type": "stateChange","payload": {"addresses": [%v]}}`, makeEOAListStr(eoaList))
+	payload := strings.NewReader(payloadStr)
+
+	// set up timeout for API call
+	ctx, cancel := context.WithTimeout(context.Background(), apiCtxTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, payload)
+	if err != nil {
+		logger.Error("Creating a new http request is failed", "err", err, "url", url, "payload", payloadStr)
+		return
+	}
+	req.Header.Add("x-chain-id", r.config.XChainId)
+	req.Header.Add("Authorization", r.config.Authorization)
+	req.Header.Add("Content-Type", "text/plain")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		logger.Error("Client do method is failed", "err", err, "url", url, "payload", payloadStr, "header", req.Header)
+		return
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			logger.Error("Reading response body is failed", "err", err, "body", res.Body)
+			return
+		}
+		logger.Error("cache invalidation is failed", "response", string(body))
 	}
 }

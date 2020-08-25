@@ -675,26 +675,42 @@ var (
 		Usage: "Block received channel size",
 		Value: chaindatafetcher.DefaultJobChannelSize,
 	}
-	ChainDataFetcherDBHostFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.db.host",
-		Usage: "db.host in chaindatafetcher",
+	ChainDataFetcherKASDBHostFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.db.host",
+		Usage: "KAS specific DB host in chaindatafetcher",
 	}
-	ChainDataFetcherDBPortFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.db.port",
-		Usage: "db.port in chaindatafetcher",
+	ChainDataFetcherKASDBPortFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.db.port",
+		Usage: "KAS specific DB port in chaindatafetcher",
 		Value: chaindatafetcher.DefaultDBPort,
 	}
-	ChainDataFetcherDBNameFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.db.name",
-		Usage: "db.name in chaindatafetcher",
+	ChainDataFetcherKASDBNameFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.db.name",
+		Usage: "KAS specific DB name in chaindatafetcher",
 	}
-	ChainDataFetcherDBUserFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.db.user",
-		Usage: "db.user in chaindatafetcher",
+	ChainDataFetcherKASDBUserFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.db.user",
+		Usage: "KAS specific DB user in chaindatafetcher",
 	}
-	ChainDataFetcherDBPasswordFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.db.password",
-		Usage: "db.password in chaindatafetcher",
+	ChainDataFetcherKASDBPasswordFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.db.password",
+		Usage: "KAS specific DB password in chaindatafetcher",
+	}
+	ChainDataFetcherKASCacheUse = cli.BoolFlag{
+		Name:  "chaindatafetcher.kas.cache.use",
+		Usage: "Enable KAS cache invalidation",
+	}
+	ChainDataFetcherKASCacheURLFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.cache.url",
+		Usage: "KAS specific cache invalidate API endpoint in chaindatafetcher",
+	}
+	ChainDataFetcherKASXChainIdFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.xchainid",
+		Usage: "KAS specific header x-chain-id in chaindatafetcher",
+	}
+	ChainDataFetcherKASAuthFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.auth",
+		Usage: "KAS specific header authorization in chaindatafetcher",
 	}
 
 	// DBSyncer

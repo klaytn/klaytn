@@ -24,6 +24,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"os"
+	"reflect"
+	"strings"
+	"unicode"
+
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
+
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
 	"github.com/klaytn/klaytn/datasync/dbsyncer"
@@ -33,13 +40,10 @@ import (
 	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"reflect"
-	"strings"
-	"unicode"
+
+	"io"
 
 	"github.com/naoina/toml"
-	"io"
 )
 
 var (
@@ -156,34 +160,58 @@ func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetc
 			cfg.BlockChannelSize = ctx.GlobalInt(utils.ChainDataFetcherChainEventSizeFlag.Name)
 		}
 
-		if ctx.GlobalIsSet(utils.ChainDataFetcherDBHostFlag.Name) {
-			dbhost := ctx.GlobalString(utils.ChainDataFetcherDBHostFlag.Name)
-			cfg.DBHost = dbhost
+		kasConfig := kas.DefaultKASConfig
+		if ctx.GlobalIsSet(utils.ChainDataFetcherKASDBHostFlag.Name) {
+			dbhost := ctx.GlobalString(utils.ChainDataFetcherKASDBHostFlag.Name)
+			kasConfig.DBHost = dbhost
 		} else {
-			logger.Crit("DBHost must be set !", "key", utils.ChainDataFetcherDBHostFlag.Name)
+			logger.Crit("DBHost must be set !", "key", utils.ChainDataFetcherKASDBHostFlag.Name)
 		}
-		if ctx.GlobalIsSet(utils.ChainDataFetcherDBPortFlag.Name) {
-			dbports := ctx.GlobalString(utils.ChainDataFetcherDBPortFlag.Name)
-			cfg.DBPort = dbports
+		if ctx.GlobalIsSet(utils.ChainDataFetcherKASDBPortFlag.Name) {
+			dbport := ctx.GlobalString(utils.ChainDataFetcherKASDBPortFlag.Name)
+			kasConfig.DBPort = dbport
 		}
-		if ctx.GlobalIsSet(utils.ChainDataFetcherDBUserFlag.Name) {
-			dbuser := ctx.GlobalString(utils.ChainDataFetcherDBUserFlag.Name)
-			cfg.DBUser = dbuser
+		if ctx.GlobalIsSet(utils.ChainDataFetcherKASDBUserFlag.Name) {
+			dbuser := ctx.GlobalString(utils.ChainDataFetcherKASDBUserFlag.Name)
+			kasConfig.DBUser = dbuser
 		} else {
-			logger.Crit("DBUser must be set !", "key", utils.ChainDataFetcherDBUserFlag.Name)
+			logger.Crit("DBUser must be set !", "key", utils.ChainDataFetcherKASDBUserFlag.Name)
 		}
-		if ctx.GlobalIsSet(utils.ChainDataFetcherDBPasswordFlag.Name) {
-			dbpasswd := ctx.GlobalString(utils.ChainDataFetcherDBPasswordFlag.Name)
-			cfg.DBPassword = dbpasswd
+		if ctx.GlobalIsSet(utils.ChainDataFetcherKASDBPasswordFlag.Name) {
+			dbpasswd := ctx.GlobalString(utils.ChainDataFetcherKASDBPasswordFlag.Name)
+			kasConfig.DBPassword = dbpasswd
 		} else {
-			logger.Crit("DBPassword must be set !", "key", utils.ChainDataFetcherDBPasswordFlag.Name)
+			logger.Crit("DBPassword must be set !", "key", utils.ChainDataFetcherKASDBPasswordFlag.Name)
 		}
-		if ctx.GlobalIsSet(utils.ChainDataFetcherDBNameFlag.Name) {
-			dbname := ctx.GlobalString(utils.ChainDataFetcherDBNameFlag.Name)
-			cfg.DBName = dbname
+		if ctx.GlobalIsSet(utils.ChainDataFetcherKASDBNameFlag.Name) {
+			dbname := ctx.GlobalString(utils.ChainDataFetcherKASDBNameFlag.Name)
+			kasConfig.DBName = dbname
 		} else {
-			logger.Crit("DBName must be set !", "key", utils.ChainDataFetcherDBNameFlag.Name)
+			logger.Crit("DBName must be set !", "key", utils.ChainDataFetcherKASDBNameFlag.Name)
 		}
+
+		if ctx.GlobalBool(utils.ChainDataFetcherKASCacheUse.Name) {
+			kasConfig.CacheUse = true
+			if ctx.GlobalIsSet(utils.ChainDataFetcherKASCacheURLFlag.Name) {
+				cacheInvalidationUrl := ctx.GlobalString(utils.ChainDataFetcherKASCacheURLFlag.Name)
+				kasConfig.CacheInvalidationURL = cacheInvalidationUrl
+			} else {
+				logger.Crit("The cache invalidation url is not set")
+			}
+			if ctx.GlobalIsSet(utils.ChainDataFetcherKASAuthFlag.Name) {
+				auth := ctx.GlobalString(utils.ChainDataFetcherKASAuthFlag.Name)
+				kasConfig.Authorization = auth
+			} else {
+				logger.Crit("The authorization is not set")
+			}
+			if ctx.GlobalIsSet(utils.ChainDataFetcherKASXChainIdFlag.Name) {
+				xchainid := ctx.GlobalString(utils.ChainDataFetcherKASXChainIdFlag.Name)
+				kasConfig.XChainId = xchainid
+			} else {
+				logger.Crit("The x-chain-id is not set")
+			}
+		}
+		cfg.KasConfig = kasConfig
 	}
 
 	return *cfg
