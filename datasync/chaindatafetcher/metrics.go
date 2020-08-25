@@ -20,4 +20,6 @@ var (
 
 	numChainEventGauge = metrics.NewRegisteredGauge("chaindatafetcher/chainevent/gauge", nil)
 	numRequestsGauge   = metrics.NewRegisteredGauge("chaindatafetcher/requests/gauge", nil)
+
+	traceAPIErrorCounter = metrics.NewRegisteredCounter("chaindatafetcher/trace/error", nil)
 )
