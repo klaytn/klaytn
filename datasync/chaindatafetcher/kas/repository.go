@@ -146,6 +146,6 @@ func (r *repository) InvalidateCacheEOAList(eoaList map[common.Address]struct{})
 			logger.Error("Reading response body is failed", "err", err, "body", res.Body)
 			return
 		}
-		logger.Warn("cache invalidation is failed", "response", string(body))
+		logger.Error("cache invalidation is failed", "response", string(body))
 	}
 }
