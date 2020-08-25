@@ -115,7 +115,6 @@ func (r *repository) InvalidateCacheEOAList(eoaList map[common.Address]struct{})
 	}
 
 	url := r.config.CacheInvalidationURL
-	method := "POST"
 	payloadStr := fmt.Sprintf(`{"type": "stateChange","payload": {"addresses": [%v]}}`, makeEOAListStr(eoaList))
 	payload := strings.NewReader(payloadStr)
 
@@ -123,9 +122,9 @@ func (r *repository) InvalidateCacheEOAList(eoaList map[common.Address]struct{})
 	ctx, cancel := context.WithTimeout(context.Background(), apiCtxTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, method, url, payload)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, payload)
 	if err != nil {
-		logger.Error("Creating a new http request is failed", "err", err, "method", method, "url", url, "payload", payloadStr)
+		logger.Error("Creating a new http request is failed", "err", err, "url", url, "payload", payloadStr)
 		return
 	}
 	req.Header.Add("x-chain-id", r.config.XChainId)
@@ -134,7 +133,7 @@ func (r *repository) InvalidateCacheEOAList(eoaList map[common.Address]struct{})
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		logger.Error("Client do method is failed", "err", err, "method", method, "url", url, "payload", payloadStr, "header", req.Header)
+		logger.Error("Client do method is failed", "err", err, "url", url, "payload", payloadStr, "header", req.Header)
 		return
 	}
 	defer res.Body.Close()
