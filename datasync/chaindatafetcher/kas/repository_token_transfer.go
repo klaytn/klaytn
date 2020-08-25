@@ -128,7 +128,7 @@ func (r *repository) InsertTokenTransfers(event blockchain.ChainEvent) error {
 		}
 	}
 
-	r.InvalidateCacheEOAList(updatedEOAs)
+	go r.InvalidateCacheEOAList(updatedEOAs)
 	return nil
 }
 

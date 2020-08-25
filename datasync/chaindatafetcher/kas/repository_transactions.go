@@ -132,7 +132,7 @@ func (r *repository) InsertTransactions(event blockchain.ChainEvent) error {
 		logger.Error("Failed to insertTransactions", "err", err, "blockNumber", event.Block.NumberU64(), "numTxs", len(txs))
 		return err
 	}
-	r.InvalidateCacheEOAList(updatedEOAs)
+	go r.InvalidateCacheEOAList(updatedEOAs)
 	return nil
 }
 
