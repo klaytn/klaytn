@@ -129,6 +129,10 @@ var (
 		Name:  "lightkdf",
 		Usage: "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
 	}
+	OverwriteGenesisFlag = cli.BoolFlag{
+		Name:  "overwrite-genesis",
+		Usage: "Overwrites genesis block with the given new genesis block for testing purpose",
+	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.nolocals",
@@ -1267,6 +1271,8 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if !database.IsPow2(cfg.NumStateTrieShards) {
 		log.Fatalf("%v should be power of 2 but %v is not!", NumStateTrieShardsFlag.Name, cfg.NumStateTrieShards)
 	}
+
+	cfg.OverwriteGenesis = ctx.GlobalBool(OverwriteGenesisFlag.Name)
 
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))
 	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)

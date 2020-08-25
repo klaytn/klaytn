@@ -19,6 +19,9 @@ package clique
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"sort"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -28,8 +31,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
-	"sort"
-	"testing"
 )
 
 // testerAccountPool is a pool to maintain currently active tester accounts,
@@ -403,7 +404,7 @@ func TestClique(t *testing.T) {
 		}
 		// Create a pristine blockchain with the genesis injected
 		db := database.NewMemoryDBManager()
-		genesis.Commit(db)
+		genesis.Commit(common.Hash{}, db)
 
 		// Assemble a chain of headers from the cast votes
 		config := *params.TestChainConfig
@@ -414,7 +415,7 @@ func TestClique(t *testing.T) {
 		engine := New(config.Clique, db)
 		engine.fakeBlockScore = true
 
-		blocks, _ := blockchain.GenerateChain(&config, genesis.ToBlock(db), engine, db, len(tt.votes), func(j int, gen *blockchain.BlockGen) {
+		blocks, _ := blockchain.GenerateChain(&config, genesis.ToBlock(common.Hash{}, db), engine, db, len(tt.votes), func(j int, gen *blockchain.BlockGen) {
 			vote := new(governance.GovernanceVote)
 			if tt.votes[j].auth {
 				vote.Key = "addvalidator"
