@@ -50,7 +50,7 @@ const (
 	connMaxLifetime   = 24 * time.Hour
 	maxDBRetryCount   = 20
 	DBRetryInterval   = 1 * time.Second
-	cacheTimeout      = 200 * time.Millisecond
+	apiCtxTimeout     = 200 * time.Millisecond
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
@@ -120,7 +120,7 @@ func (r *repository) InvalidateCacheEOAList(eoaList map[common.Address]struct{})
 	payload := strings.NewReader(payloadStr)
 
 	// set up timeout for API call
-	ctx, cancel := context.WithTimeout(context.Background(), cacheTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCtxTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, method, url, payload)
