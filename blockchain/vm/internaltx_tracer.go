@@ -259,7 +259,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		if this.callStack[left-1].Calls == nil {
 			this.callStack[left-1].Calls = []*InternalCall{}
 		}
-		this.callStack = append(this.callStack, &InternalCall{Type: op.String()})
+		this.callStack[left-1].Calls = append(this.callStack[left-1].Calls, &InternalCall{Type: op.String()})
 		return nil
 	}
 	// If a new method invocation is being done, add to the call stack
