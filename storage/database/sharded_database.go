@@ -17,6 +17,8 @@
 package database
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"path"
 	"strconv"
@@ -152,15 +154,11 @@ func (pdb *shardedDB) Close() {
 }
 
 type shardedDBIterator struct {
-	// TODO-Klaytn implement this later.
-	iterators []Iterator
-	key       []byte
-	value     []byte
+	iterators []Iterator // iterators for each shard
+	finish    []bool     // check if each iterator is finished
+	minIdx    int        // iterator index that has min key
 
-	//numBatches uint
-	//
-	//taskCh   chan pdbBatchTask
-	//resultCh chan pdbBatchResult
+	keys [][]byte // keys of each iterator
 }
 
 // NewIterator creates a binary-alphabetical iterator over the entire keyspace
@@ -174,21 +172,13 @@ func (pdb *shardedDB) NewIterator() Iterator {
 // database content starting at a particular initial key (or after, if it does
 // not exist).
 func (pdb *shardedDB) NewIteratorWithStart(start []byte) Iterator {
-	// TODO-Klaytn implement this later.
+	// create iterators for each shard
 	iterators := make([]Iterator, 0, pdb.numShards)
 	for i := 0; i < int(pdb.numShards); i++ {
 		iterators = append(iterators, pdb.shards[i].NewIteratorWithStart(start))
 	}
 
-	for _, iter := range iterators {
-		if iter != nil {
-			if !iter.Next() {
-				iter = nil
-			}
-		}
-	}
-
-	return &shardedDBIterator{iterators, nil, nil}
+	return &shardedDBIterator{iterators, make([]bool, pdb.numShards), -1, make([][]byte, pdb.numShards)}
 }
 
 // NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
@@ -199,54 +189,69 @@ func (pdb *shardedDB) NewIteratorWithPrefix(prefix []byte) Iterator {
 }
 
 func (pdi *shardedDBIterator) Next() bool {
-	// TODO-Klaytn implement this later.
-	//var minIter Iterator
-	//minIdx := -1
-	//minKey := []byte{0}
-	//minKeyValue := []byte{0}
-	//
-	//for idx, iter := range pdi.iterators {
-	//	if iter != nil {
-	//		if bytes.Compare(minKey, iter.Key()) >= 0 {
-	//			minIdx = idx
-	//			minIter = iter
-	//			minKey = iter.Key()
-	//			minKeyValue = iter.Value()
-	//		}
-	//	}
-	//}
-	//
-	//if minIter == nil {
-	//	return false
-	//}
-	//
-	//pdi.key = minKey
-	//pdi.value = minKeyValue
-	//
-	//if !minIter.Next() {
-	//	pdi.iterators[minIdx] = nil
-	//}
-	//
+	if pdi.minIdx == -1 { // it this is the first call if Next, call Next on each one
+		// check if next exists for each iterator
+		for idx, iter := range pdi.iterators {
+			if !iter.Next() {
+				pdi.finish[idx] = true
+			} else {
+				//pdi.keys[idx] = make([]byte, len(iter.Value()))
+				//copy(pdi.keys[idx], iter.Value())
+			}
+		}
+	} else if !pdi.iterators[pdi.minIdx].Next() { // go to next one in previous min iterator
+		//pdi.keys[pdi.minIdx] = pdi.iterators[pdi.minIdx].Value()
+	} else {
+		//pdi.keys[pdi.minIdx] = []byte{255}
+		pdi.finish[pdi.minIdx] = true // if there is no item in iterator, finish it
+	}
+
+	// find the iterator with min key
+	minKey := []byte{255, 255, 255, 255, 255} // TODO default value should be max
+	minIdx := -1
+
+	for idx, iter := range pdi.iterators {
+		if !pdi.finish[idx] {
+			if bytes.Compare(minKey, iter.Key()) >= 0 {
+				minIdx = idx
+				minKey = iter.Key()
+			}
+		}
+	}
+
+	if minIdx == -1 {
+		return false
+	}
+
+	pdi.minIdx = minIdx
+
 	return true
 }
 
 func (pdi *shardedDBIterator) Error() error {
-	// TODO-Klaytn implement this later.
+	errs := errors.New("")
+	for idx, iter := range pdi.iterators {
+		if iter != nil {
+			errs = fmt.Errorf("%v [iter%d]%v", errs.Error(), idx, iter.Error().Error())
+		}
+	}
 	return nil
 }
 
 func (pdi *shardedDBIterator) Key() []byte {
-	// TODO-Klaytn implement this later.
-	return nil
+	return pdi.iterators[pdi.minIdx].Key()
 }
 
 func (pdi *shardedDBIterator) Value() []byte {
-	// TODO-Klaytn implement this later.
-	return nil
+	return pdi.iterators[pdi.minIdx].Value()
 }
 
 func (pdi *shardedDBIterator) Release() {
-	// TODO-Klaytn implement this later.
+	for _, iter := range pdi.iterators {
+		if iter != nil {
+			iter.Release()
+		}
+	}
 }
 
 func (pdb *shardedDB) NewBatch() Batch {
