@@ -215,7 +215,7 @@ func covertToCallTrace(t *testing.T, internalTx *vm.InternalTxTrace) *callTrace 
 	}
 
 	// decodes input and output if they are not an empty string
-	decodedInput := []byte{}
+	var decodedInput []byte
 	var decodedOutput []byte
 	var err error
 	if internalTx.Input != "" {
