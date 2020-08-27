@@ -19,6 +19,11 @@ package blockchain
 import (
 	"errors"
 	"fmt"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/VictoriaMetrics/fastcache"
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
@@ -28,10 +33,6 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type stateTrieMigrationDB struct {
@@ -405,7 +406,8 @@ func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database,
 	return nil
 }
 
-func (bc *BlockChain) warmUpLoop(cache *fastcache.Cache, mainTrieCacheLimit uint64, children []common.Hash, resultHashCh chan common.Hash, resultErrCh chan error) {
+func (bc *BlockChain) warmUpLoop(cache statedb.Cache, mainTrieCacheLimit uint64, children []common.Hash,
+	resultHashCh chan common.Hash, resultErrCh chan error) {
 	logged := time.Now()
 	var context []interface{}
 	var stats fastcache.Stats

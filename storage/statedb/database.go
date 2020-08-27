@@ -22,6 +22,10 @@ package statedb
 
 import (
 	"fmt"
+	"io"
+	"sync"
+	"time"
+
 	"github.com/VictoriaMetrics/fastcache"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
@@ -29,9 +33,6 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pbnjay/memory"
 	"github.com/rcrowley/go-metrics"
-	"io"
-	"sync"
-	"time"
 )
 
 var (
@@ -124,8 +125,8 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache      *fastcache.Cache // GC friendly memory cache of trie node RLPs
-	trieNodeCacheLimit int              // byte size of trieNodeCache
+	trieNodeCache      Cache // GC friendly memory cache of trie node RLPs
+	trieNodeCacheLimit int   // byte size of trieNodeCache
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -318,7 +319,7 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
 func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Database {
-	var trieNodeCache *fastcache.Cache
+	var trieNodeCache Cache
 	var cacheSizeByte int
 
 	if cacheSizeMB == AutoScaling {
@@ -342,7 +343,7 @@ func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Databa
 // NewDatabaseWithExistingCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithExistingCache(diskDB database.DBManager, cache *fastcache.Cache) *Database {
+func NewDatabaseWithExistingCache(diskDB database.DBManager, cache Cache) *Database {
 	return &Database{
 		diskDB:        diskDB,
 		nodes:         map[common.Hash]*cachedNode{{}: {}},
@@ -374,7 +375,7 @@ func (db *Database) DiskDB() database.DBManager {
 }
 
 // TrieNodeCache retrieves the trieNodeCache of the trie database.
-func (db *Database) TrieNodeCache() *fastcache.Cache {
+func (db *Database) TrieNodeCache() Cache {
 	return db.trieNodeCache
 }
 
