@@ -1,0 +1,87 @@
+{
+  "_comment": "This test json file is a contract creation with STATICCALL opcode from an internal transaction. The associated code is under testdata/contracts/StaticCaller.sol.",
+  "context": {
+    "blockscore": "0x1",
+    "number": "36882605",
+    "timestamp": "1598438034"
+  },
+  "genesis": {
+    "alloc": {
+      "0x71562b71999873db5b286df957af199ec94617f7": {
+        "balance": "0x43c0a3594c788000",
+        "code": "0x",
+        "nonce": "39",
+        "storage": {}
+      },
+      "0x920fd5070602feaea2e251e9e7238b6c376bcae5": {
+        "balance": "0x0",
+        "code": "0x6080604052348015600f57600080fd5b506004361060285760003560e01c8063c605f76c14602d575b600080fd5b60336035565b005b56fea165627a7a72305820fa73ba4826b9cad424daca3fe86750de2910b6abc0f009a288f9df6be8256e080029",
+        "nonce": "1",
+        "storage": {}
+      },
+      "0xbadc777c579b497ede07fa6ff93bdf4e31793f24": {
+        "balance": "0x0",
+        "code": "0x608060405234801561001057600080fd5b506004361061002b5760003560e01c80633917b3df14610030575b600080fd5b61003861003a565b005b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166040516024016040516020818303038152906040527fc605f76c000000000000000000000000000000000000000000000000000000007bffffffffffffffffffffffffffffffffffffffffffffffffffffffff19166020820180517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff83818316178352505050506040518082805190602001908083835b602083106101285780518252602082019150602081019050602083039250610105565b6001836020036101000a038019825116818451168082178552505050505050905001915050600060405180830381855afa9150503d8060008114610188576040519150601f19603f3d011682016040523d82523d6000602084013e61018d565b606091505b50505056fea165627a7a723058200a8037f3dac67bd55cafa4a492146647a595bc7ebdb2dbdebdf82c1f7a6f44af0029",
+        "nonce": "1",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x000000000000000000000000920fd5070602feaea2e251e9e7238b6c376bcae5"
+        }
+      }
+    },
+    "blockscore": "0x1",
+    "config": {
+      "chainId": 1001,
+      "deriveShaImpl": 2,
+      "governance": {
+        "governanceMode": "single",
+        "governingNode": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+        "reward": {
+          "deferredTxFee": true,
+          "minimumStake": 5000000,
+          "mintingAmount": 9600000000000000000,
+          "proposerUpdateInterval": 3600,
+          "ratio": "34/54/12",
+          "stakingUpdateInterval": 86400,
+          "useGiniCoeff": true
+        }
+      },
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 2,
+        "sub": 22
+      },
+      "unitPrice": 25000000000
+    },
+    "extraData": "0xd883010501846b6c617988676f312e31342e36856c696e757800000000000000f90164f85494571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c89499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb2b841d62cf99042d6215972f8735fadb5e8116d9ac7f06333409fab02ba9de447bc2369956026d310b36a166dcd416f0fd1a0a108db9f5e455ec98fa696944659f12d00f8c9b8412de6ab11f21b5a6078c09340ddfb002354a60d0295c166d86b5010f3f290905c6e392adab384d68210ce06451852aa9af6c630f029e9374746c658be0505380b01b841281cd24bd66415cdcab3dfdd3c6e79c9a7c65832ce8e2c707428e8022e3650dd78bc1af22bc8161049da84971079a989108830559875817d9461c2d49f78f69a00b84115d9adc655081fd3917c67325dee61550f00c223ed62bb555859064f8ebc26e53ba46ba1d160e24e6228cba180d28720481d2b3fb7e82ab3a4b56d5568deaa4400",
+    "hash": "0x7b63489bb01ccc28edb7722480be643917ce137e7d40df530c7b303cff724f62",
+    "number": "36882604",
+    "reward": "0x82829a60c6eac4e3e9d6ed00891c69e88537fd4d",
+    "stateRoot": "0xcc5386ca6ccd6eff636ad527025db288e5df1e16838451186d612c82deeda235",
+    "timestamp": "1598438033",
+    "timestampFoS": 1,
+    "totalBlockScore": "0x232c8ad",
+    "voteData": "0x"
+  },
+  "input": "0xf86a278505d21dba0082595294badc777c579b497ede07fa6ff93bdf4e31793f2480843917b3df8207f6a08e2c2259134c7390e8272351bfb728faed891ecb7b35c5bdc56a9d4a39695424a0567027ec52e71dd720123eca07dd3d699578aad90669bc3ad932087c9fa4e4bf",
+  "result": {
+    "calls": [
+      {
+        "from": "0xbadc777c579b497ede07fa6ff93bdf4e31793f24",
+        "gas": "0xb3",
+        "gasUsed": "0x7a",
+        "input": "0xc605f76c",
+        "output": "0x",
+        "to": "0x920fd5070602feaea2e251e9e7238b6c376bcae5",
+        "type": "STATICCALL"
+      }
+    ],
+    "from": "0x71562b71999873db5b286df957af199ec94617f7",
+    "gas": "0x63a",
+    "gasUsed": "0x63a",
+    "input": "0x3917b3df",
+    "output": "0x",
+    "to": "0xbadc777c579b497ede07fa6ff93bdf4e31793f24",
+    "type": "CALL",
+    "value": "0x0"
+  }
+}

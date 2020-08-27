@@ -1,0 +1,88 @@
+{
+  "_comment": "This test json file is a contract creation with CALLCODE opcode from an internal transaction. The associated code is under testdata/contracts/CallCodeCaller.sol. CALLCODE opcode is deprecated, so v0.4.24 is used.",
+  "context": {
+    "blockscore": "0x1",
+    "number": "36881545",
+    "timestamp": "1598436974"
+  },
+  "genesis": {
+    "alloc": {
+      "0x71562b71999873db5b286df957af199ec94617f7": {
+        "balance": "0x43f8c04b7006fa00",
+        "code": "0x",
+        "nonce": "33",
+        "storage": {}
+      },
+      "0xb02213def2a4577c6102126146101f012d0162da": {
+        "balance": "0x0",
+        "code": "0x608060405260043610610041576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633917b3df14610046575b600080fd5b34801561005257600080fd5b5061005b61005d565b005b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166040516024016040516020818303038152906040527fc605f76c000000000000000000000000000000000000000000000000000000007bffffffffffffffffffffffffffffffffffffffffffffffffffffffff19166020820180517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff838183161783525050505060405180828051906020019080838360005b8381101561014557808201518184015260208101905061012a565b50505050905090810190601f1680156101725780820380516001836020036101000a031916815260200191505b509150506000604051808303816000865af2915050505600a165627a7a72305820312a550e51077152626a2cd47ba0ef613ea6a7b58ad0e46f86e3ca61e56087f80029",
+        "nonce": "1",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x000000000000000000000000d73f34428098b44a589f13ad15a0e3d2efe92dbd"
+        }
+      },
+      "0xd73f34428098b44a589f13ad15a0e3d2efe92dbd": {
+        "balance": "0x0",
+        "code": "0x608060405260043610603f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063c605f76c146044575b600080fd5b348015604f57600080fd5b5060566058565b005b5600a165627a7a72305820b237f1e131838cc642e4ef25643894bb38f01387287e61967a2fb0f238d27e5f0029",
+        "nonce": "1",
+        "storage": {}
+      }
+    },
+    "blockscore": "0x1",
+    "config": {
+      "chainId": 1001,
+      "deriveShaImpl": 2,
+      "governance": {
+        "governanceMode": "single",
+        "governingNode": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+        "reward": {
+          "deferredTxFee": true,
+          "minimumStake": 5000000,
+          "mintingAmount": 9600000000000000000,
+          "proposerUpdateInterval": 3600,
+          "ratio": "34/54/12",
+          "stakingUpdateInterval": 86400,
+          "useGiniCoeff": true
+        }
+      },
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 2,
+        "sub": 22
+      },
+      "unitPrice": 25000000000
+    },
+    "extraData": "0xd883010501846b6c617988676f312e31342e36856c696e757800000000000000f90164f85494571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c89499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb2b841dd3ecc5dd970176b41a15534ec7eec1f996fae3d6f08b4bb7fae3a8b262231673fec59303a2c0c548764cbf7419e574d4513e44802aeed49d3eb277786319f3700f8c9b8412bd9e8b762900201b78493a972ece4413199fc9c1d10ef9474074b5755d9a116268313f9410b6f3d81aa0773baa46d8f834f988efadea3f201484684878c688a00b84176c4999a869ff13912e985f005098232468c85080a2d622220c49185f61f646f3d33086bab0fd92dfee4ece2a9f68016f42e52b3fb6a49a975cceaac37202ccc01b841e310d0892e89b2202532e81488352b5f85ea344845402896788161d6567655f829a6cd17235d93ce5f482336cad1e9bfe8d269dad175ebd5abdfee3b3c2d79af00",
+    "hash": "0xffc1c6f370644bc3103dbe81e80abe013a1952108256cc1fc05fd044c79a4972",
+    "number": "36881544",
+    "reward": "0xb2bd3178affccd9f9f5189457f1cad7d17a01c9d",
+    "stateRoot": "0x2445fc0a91bac7f0ca6ed237a4c8562e17a1cd188661d78c449a91c1b7d7ab94",
+    "timestamp": "1598436973",
+    "timestampFoS": 1,
+    "totalBlockScore": "0x232c489",
+    "voteData": "0x"
+  },
+  "input": "0xf86a218505d21dba008259b094b02213def2a4577c6102126146101f012d0162da80843917b3df8207f6a0035414b72bae588d1f0707964a0e95fd6517b0e459f4cc10719093067263931fa0195cbad5e5b98d6cd3b086055c4c0d6c80ff8ba6efa89edecb938a32114c5890",
+  "result": {
+    "calls": [
+      {
+        "from": "0xb02213def2a4577c6102126146101f012d0162da",
+        "gas": "0x95",
+        "gasUsed": "0x85",
+        "input": "0xc605f76c00000000000000000000000000000000000000000000000000000000",
+        "output": "0x",
+        "to": "0xd73f34428098b44a589f13ad15a0e3d2efe92dbd",
+        "type": "CALLCODE",
+        "value": "0x0"
+      }
+    ],
+    "from": "0x71562b71999873db5b286df957af199ec94617f7",
+    "gas": "0x698",
+    "gasUsed": "0x698",
+    "input": "0x3917b3df",
+    "output": "0x",
+    "to": "0xb02213def2a4577c6102126146101f012d0162da",
+    "type": "CALL",
+    "value": "0x0"
+  }
+}
