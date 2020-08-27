@@ -157,52 +157,51 @@ type shardedDBIterator struct {
 	iterators []Iterator // iterators for each shard
 	finish    []bool     // check if each iterator is finished
 	minIdx    int        // iterator index that has min key
-
-	keys [][]byte // keys of each iterator
 }
 
 // NewIterator creates a binary-alphabetical iterator over the entire keyspace
 // contained within the key-value database.
 func (pdb *shardedDB) NewIterator() Iterator {
-	// TODO-Klaytn implement this later.
-	return nil
+	iterators := make([]Iterator, 0, pdb.numShards)
+	for i := 0; i < int(pdb.numShards); i++ {
+		iterators = append(iterators, pdb.shards[i].NewIterator())
+	}
+
+	return &shardedDBIterator{iterators, make([]bool, pdb.numShards), -1}
 }
 
 // NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
 // database content starting at a particular initial key (or after, if it does
 // not exist).
 func (pdb *shardedDB) NewIteratorWithStart(start []byte) Iterator {
-	// create iterators for each shard
 	iterators := make([]Iterator, 0, pdb.numShards)
 	for i := 0; i < int(pdb.numShards); i++ {
 		iterators = append(iterators, pdb.shards[i].NewIteratorWithStart(start))
 	}
 
-	return &shardedDBIterator{iterators, make([]bool, pdb.numShards), -1, make([][]byte, pdb.numShards)}
+	return &shardedDBIterator{iterators, make([]bool, pdb.numShards), -1}
 }
 
 // NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix.
 func (pdb *shardedDB) NewIteratorWithPrefix(prefix []byte) Iterator {
-	// TODO-Klaytn implement this later.
-	return nil
+	iterators := make([]Iterator, 0, pdb.numShards)
+	for i := 0; i < int(pdb.numShards); i++ {
+		iterators = append(iterators, pdb.shards[i].NewIteratorWithPrefix(prefix))
+	}
+
+	return &shardedDBIterator{iterators, make([]bool, pdb.numShards), -1}
 }
 
 func (pdi *shardedDBIterator) Next() bool {
-	if pdi.minIdx == -1 { // it this is the first call if Next, call Next on each one
+	if pdi.minIdx == -1 { // if this is the first call of Next, call Next on each iterator
 		// check if next exists for each iterator
 		for idx, iter := range pdi.iterators {
 			if !iter.Next() {
 				pdi.finish[idx] = true
-			} else {
-				//pdi.keys[idx] = make([]byte, len(iter.Value()))
-				//copy(pdi.keys[idx], iter.Value())
 			}
 		}
 	} else if !pdi.iterators[pdi.minIdx].Next() { // go to next one in previous min iterator
-		//pdi.keys[pdi.minIdx] = pdi.iterators[pdi.minIdx].Value()
-	} else {
-		//pdi.keys[pdi.minIdx] = []byte{255}
 		pdi.finish[pdi.minIdx] = true // if there is no item in iterator, finish it
 	}
 
