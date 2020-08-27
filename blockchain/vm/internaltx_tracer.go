@@ -136,24 +136,24 @@ type InternalTxTrace struct {
 	Type  string          `json:"type"`
 	From  *common.Address `json:"from,omitempty"`
 	To    *common.Address `json:"to,omitempty"`
-	Value string          `json:"value"`
+	Value string          `json:"value,omitempty"`
 
-	Gas     uint64 `json:"gas"`
-	GasUsed uint64 `json:"gasUsed"`
+	Gas     uint64 `json:"gas,omitempty"`
+	GasUsed uint64 `json:"gasUsed,omitempty"`
 
-	Input  string `json:"input"`  // hex string
-	Output string `json:"output"` // hex string
+	Input  string `json:"input,omitempty"`  // hex string
+	Output string `json:"output,omitempty"` // hex string
 	Error  error  `json:"error,omitempty"`
 
-	Time  time.Duration      `json:"time"`
+	Time  time.Duration      `json:"time,omitempty"`
 	Calls []*InternalTxTrace `json:"calls,omitempty"`
 
 	Reverted *RevertedInfo `json:"reverted,omitempty"`
 }
 
 type RevertedInfo struct {
-	Contract *common.Address `json:"contract"`
-	Message  string          `json:"message"`
+	Contract *common.Address `json:"contract,omitempty"`
+	Message  string          `json:"message,omitempty"`
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
