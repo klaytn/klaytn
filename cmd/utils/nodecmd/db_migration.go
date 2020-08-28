@@ -1,8 +1,6 @@
 package nodecmd
 
 import (
-	"encoding/json"
-
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pkg/errors"
@@ -52,16 +50,24 @@ Note: This feature is only provided when srcDB is single LevelDB..`,
 )
 
 func startMigration(ctx *cli.Context) error {
-	srcDBManager, dstDBManager, err := createDBConfig(ctx)
+	srcDBManager, dstDBManager, err := createDBManager(ctx)
 	if err != nil {
 		return err
 	}
 
-	s, _ := json.Marshal(srcDBManager)
-	d, _ := json.Marshal(dstDBManager)
-	logger.Info("created DBConfig", "\nsrcDB", string(s), "\ndstDB", string(d))
+	return srcDBManager.StartDBMigration(dstDBManager)
+}
 
-	return errors.New("Not implemented")
+func createDBManager(ctx *cli.Context) (database.DBManager, database.DBManager, error) {
+	// create db config from ctx
+	srcDBConfig, dstDBConfig, dbManagerCreationErr := createDBConfig(ctx)
+	if dbManagerCreationErr != nil {
+		return nil, nil, dbManagerCreationErr
+	}
+	srcDBManager := database.NewDBManager(srcDBConfig)
+	dstDBManager := database.NewDBManager(dstDBConfig)
+
+	return srcDBManager, dstDBManager, nil
 }
 
 func createDBConfig(ctx *cli.Context) (*database.DBConfig, *database.DBConfig, error) {
