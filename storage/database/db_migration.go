@@ -50,7 +50,7 @@ loop:
 				return errors.Wrap(err, "failed to put batch")
 			}
 		}
-		logger.Info("Finish DB migration", "iterNum", iterateNum, "fetched", fetched,
+		logger.Info("DB migrated", "iterNum", iterateNum, "fetched", fetched,
 			"elapsedFetch", elapsedFetchTime, "elapsedPut", time.Since(elapsedPut), "elapsedIter", time.Since(elapsedFetch),
 			"fetchedTotal", fetchedTotal, "elapsedTotal", time.Since(elapsedTotal))
 
