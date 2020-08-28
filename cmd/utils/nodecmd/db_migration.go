@@ -1,6 +1,8 @@
 package nodecmd
 
 import (
+	"encoding/json"
+
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pkg/errors"
@@ -54,6 +56,8 @@ func startMigration(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	defer srcDBManager.Close()
+	defer dstDBManager.Close()
 
 	return srcDBManager.StartDBMigration(dstDBManager)
 }
@@ -64,6 +68,13 @@ func createDBManager(ctx *cli.Context) (database.DBManager, database.DBManager, 
 	if dbManagerCreationErr != nil {
 		return nil, nil, dbManagerCreationErr
 	}
+
+	// log
+	s, _ := json.Marshal(srcDBConfig)
+	d, _ := json.Marshal(dstDBConfig)
+	logger.Info("dbManager created", "\nsrcDB", string(s), "\ndstDB", string(d))
+
+	// create DBManager
 	srcDBManager := database.NewDBManager(srcDBConfig)
 	dstDBManager := database.NewDBManager(dstDBConfig)
 
