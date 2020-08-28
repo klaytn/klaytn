@@ -1,14 +1,26 @@
 package database
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/pkg/errors"
 )
 
 const (
-	fetchNum = 500
+	dbMigrationFetchNum = 500
 )
 
 func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
+	// settings for quit signal from os
+	sigQuit := make(chan os.Signal, 1)
+	signal.Notify(sigQuit,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
 	// TODO enable for all dbs
 	srcDB := dbm.dbs[0]
 	dstDB := dstdbm.getDatabase(DBEntryType(MiscDB))
@@ -17,11 +29,13 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	srcIter := srcDB.NewIterator()
 	dstBatch := dstDB.NewBatch()
 
-	// create iterator and iterate
-	keys, vals, fetched := iterateDB(srcIter, fetchNum)
+	// fetch keys and values
+	keys, vals, fetched := iterateDB(srcIter, dbMigrationFetchNum)
 	iterateNum := 0
 
+loop:
 	for fetched > 0 {
+		// write fetched keys and values to DB
 		for i := 0; i < fetched; i++ {
 			err := dstBatch.Put(keys[i], vals[i])
 			if err != nil {
@@ -29,7 +43,16 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 			}
 		}
 
-		keys, vals, fetched = iterateDB(srcIter, fetchNum)
+		// check for quit signal from OS
+		select {
+		case <-sigQuit:
+			logger.Info("exit called")
+			break loop
+		default:
+		}
+
+		// fetch keys and values
+		keys, vals, fetched = iterateDB(srcIter, dbMigrationFetchNum)
 		iterateNum++
 	}
 
