@@ -135,3 +135,6 @@ func createDBConfig(ctx *cli.Context) (*database.DBConfig, *database.DBConfig, e
 
 	return srcDBC, dstDBC, nil
 }
+
+// TODO When it is stopped, store previous db migration info.
+//      Continue migration on next call with the same setting.
