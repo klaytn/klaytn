@@ -74,10 +74,10 @@ func NewInternalTxTracer() *InternalTxTracer {
 // lists information about the current internal state
 // prior to the execution of the statement.
 type InternalCall struct {
-	Type  string         `json:"type"`
-	From  common.Address `json:"from"`
-	To    common.Address `json:"to"`
-	Value string         `json:"value"`
+	Type  string          `json:"type"`
+	From  *common.Address `json:"from"`
+	To    *common.Address `json:"to"`
+	Value string          `json:"value"`
 
 	Gas     uint64 `json:"gas"`
 	GasIn   uint64 `json:"gasIn"`
@@ -115,8 +115,8 @@ func (s *InternalCall) ToTrace() *InternalTxTrace {
 
 	return &InternalTxTrace{
 		Type:  s.Type,
-		From:  &s.From,
-		To:    &s.To,
+		From:  s.From,
+		To:    s.To,
 		Value: s.Value,
 
 		Gas:     s.Gas,
@@ -238,9 +238,10 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		inEnd := big.NewInt(0).Add(inOff, log.stack.Back(2)).Int64()
 
 		// Assemble the internal call report and store for completion
+		fromAddr := log.contract.Address()
 		call := &InternalCall{
 			Type:    op.String(),
-			From:    log.contract.Address(),
+			From:    &fromAddr,
 			Input:   hexutil.Encode(log.memory.Slice(inOff.Int64(), inEnd)),
 			GasIn:   log.gas,
 			GasCost: log.cost,
@@ -280,10 +281,11 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 		inEnd := big.NewInt(0).Add(inOff, log.stack.Back(3+off)).Int64()
 
 		// Assemble the internal call report and store for completion
+		fromAddr := log.contract.Address()
 		call := &InternalCall{
 			Type:    op.String(),
-			From:    log.contract.Address(),
-			To:      toAddr,
+			From:    &fromAddr,
+			To:      &toAddr,
 			Input:   hexutil.Encode(log.memory.Slice(inOff.Int64(), inEnd)),
 			GasIn:   log.gas,
 			GasCost: log.cost,
@@ -315,10 +317,10 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 	if sysCall && op == REVERT && this.callStackLength() > 0 {
 		this.callStack[this.callStackLength()-1].Error = errExecutionReverted
 		if this.revertedContract == emptyAddr {
-			if this.callStack[this.callStackLength()-1].To == emptyAddr {
+			if this.callStack[this.callStackLength()-1].To == nil {
 				this.revertedContract = log.contract.Address()
 			} else {
-				this.revertedContract = this.callStack[this.callStackLength()-1].To
+				this.revertedContract = *this.callStack[this.callStackLength()-1].To
 			}
 		}
 		return nil
@@ -334,7 +336,8 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 
 			ret := log.stack.Peek()
 			if ret.Cmp(big.NewInt(0)) != 0 {
-				call.To = common.HexToAddress(ret.Text(16))
+				toAddr := common.HexToAddress(ret.Text(16))
+				call.To = &toAddr
 				call.Output = hexutil.Encode(log.env.StateDB.GetCode(common.HexToAddress(ret.Text(16))))
 			} else if call.Error == nil {
 				call.Error = errInternalFailure // TODO(karalabe): surface these faults somehow

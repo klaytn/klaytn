@@ -1,0 +1,72 @@
+{
+  "context": {
+    "blockscore": "0x1",
+    "number": "36932279",
+    "timestamp": "1598487708"
+  },
+  "genesis": {
+    "alloc": {
+      "0x71562b71999873db5b286df957af199ec94617f7": {
+        "balance": "0x43b64ca0d7b5b800",
+        "code": "0x",
+        "nonce": "41",
+        "storage": {}
+      },
+      "0xf0b1b2a91af3b0a0a5389ea80bffdc42cf86b7e3": {
+        "balance": "0x0",
+        "code": "0x6080604052348015600f57600080fd5b506004361060285760003560e01c80633f5a0bdd14602d575b600080fd5b606c60048036036020811015604157600080fd5b81019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050606e565b005b8073ffffffffffffffffffffffffffffffffffffffff16fffea165627a7a723058205a07115694cf6d085e273dfb445dc694641455dff6394df72bc6963b78c5319f0029",
+        "nonce": "1",
+        "storage": {}
+      }
+    },
+    "blockscore": "0x1",
+    "config": {
+      "chainId": 1001,
+      "deriveShaImpl": 2,
+      "governance": {
+        "governanceMode": "single",
+        "governingNode": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+        "reward": {
+          "deferredTxFee": true,
+          "minimumStake": 5000000,
+          "mintingAmount": 9600000000000000000,
+          "proposerUpdateInterval": 3600,
+          "ratio": "34/54/12",
+          "stakingUpdateInterval": 86400,
+          "useGiniCoeff": true
+        }
+      },
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 2,
+        "sub": 22
+      },
+      "unitPrice": 25000000000
+    },
+    "extraData": "0xd883010501846b6c617988676f312e31342e36856c696e757800000000000000f90164f85494571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c89499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb2b841ef53a6ac4c273be54117135ac90c03ad71b78004a949057ac1720e13a543e8b508bef239c0946ef0570c69986bf6587d5eebbfd46c97d12b60726ed66f42d86f00f8c9b8414becd85662fbb6654d47af972411c3d0dc888d3dad6c8064b6792e5656e4d07473a7c6c65fb0c96077e030d26281d361f0bf7625e8ca13823d442b84a395177400b841874f5fc8295d2cab492ba2bd568277a668d02233baed8d3aeeb1947f0de603323a49dca45aa3f8bed450cef7f6fcbdeff15a59b7e059e4ced2eb7a3180e23b5501b841cdb9d1c5dbb22b3ad2e5c94a9fc68bfa18b2cc2af7f3776257451565395bbd911ade9c18dcaa721b63a2d9a85ed59426ec3b856eaeb158006dd3313bad679b2500",
+    "hash": "0x885e83dd7b02665e581be0d999e0dc6a83aa7a2f0b1ba8867239bd6fd3a211be",
+    "number": "36932278",
+    "reward": "0x82829a60c6eac4e3e9d6ed00891c69e88537fd4d",
+    "stateRoot": "0x7b1285a002606301be8e0500f713ae652cea4d0fff2ed2bd6d5a1d0d03e72484",
+    "timestamp": "1598487707",
+    "timestampFoS": 1,
+    "totalBlockScore": "0x2338ab7",
+    "voteData": "0x"
+  },
+  "input": "0xf88a298505d21dba00826cf294f0b1b2a91af3b0a0a5389ea80bffdc42cf86b7e380a43f5a0bdd000000000000000000000000f0b1b2a91af3b0a0a5389ea80bffdc42cf86b7e38207f5a00520c9f3330e786f5d7d8667e21cd21c691bb210ddda74b3ad4b564de0970ac2a0312beb39ff57f90c760f22210f24b70884b041686ce1f2308072a27e95395f3d",
+  "result": {
+    "calls": [
+      {
+        "type": "SELFDESTRUCT"
+      }
+    ],
+    "from": "0x71562b71999873db5b286df957af199ec94617f7",
+    "gas": "0x145a",
+    "gasUsed": "0x145a",
+    "input": "0x3f5a0bdd000000000000000000000000f0b1b2a91af3b0a0a5389ea80bffdc42cf86b7e3",
+    "output": "0x",
+    "to": "0xf0b1b2a91af3b0a0a5389ea80bffdc42cf86b7e3",
+    "type": "CALL",
+    "value": "0x0"
+  }
+}
