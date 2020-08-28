@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -29,37 +30,53 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	srcIter := srcDB.NewIterator()
 	dstBatch := dstDB.NewBatch()
 
+	// vars for log
+	elapsedFetch, elapsedPut, elapsedTotal := time.Now(), time.Now(), time.Now()
+	var elapsedFetchTime time.Duration
+	iterateNum, fetchedTotal := 0, 0
+
 	// fetch keys and values
 	keys, vals, fetched := iterateDB(srcIter, dbMigrationFetchNum)
-	iterateNum := 0
+	elapsedFetchTime = time.Since(elapsedFetch)
+	fetchedTotal += fetched
 
 loop:
 	for fetched > 0 {
 		// write fetched keys and values to DB
+		elapsedPut = time.Now()
 		for i := 0; i < fetched; i++ {
 			err := dstBatch.Put(keys[i], vals[i])
 			if err != nil {
 				return errors.Wrap(err, "failed to put batch")
 			}
 		}
+		logger.Info("Finish DB migration", "iterNum", iterateNum, "fetched", fetched,
+			"elapsedFetch", elapsedFetchTime, "elapsedPut", time.Since(elapsedPut), "elapsedIter", time.Since(elapsedFetch),
+			"fetchedTotal", fetchedTotal, "elapsedTotal", time.Since(elapsedTotal))
 
 		// check for quit signal from OS
 		select {
 		case <-sigQuit:
-			logger.Info("exit called")
+			logger.Info("exit called", "iterNum", iterateNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(elapsedTotal))
 			break loop
 		default:
 		}
 
 		// fetch keys and values
+		elapsedFetch = time.Now()
 		keys, vals, fetched = iterateDB(srcIter, dbMigrationFetchNum)
+		elapsedFetchTime = time.Since(elapsedFetch)
+
 		iterateNum++
+		fetchedTotal += fetched
 	}
 
 	err := dstBatch.Write()
 	if err != nil {
 		return errors.Wrap(err, "failed to write items")
 	}
+
+	logger.Info("Finish DB migration", "iterNum", iterateNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(elapsedTotal))
 
 	srcIter.Release()
 	err = srcIter.Error()
