@@ -237,6 +237,9 @@ func init() {
 
 		// See utils/nodecmd/dumpconfigcmd.go:
 		nodecmd.GetDumpConfigCommand(nodeFlags, rpcFlags),
+
+		// See utils/nodecmd/db_migration.go:
+		nodecmd.MigrationCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
