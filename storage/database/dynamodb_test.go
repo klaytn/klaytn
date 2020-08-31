@@ -21,12 +21,32 @@
 package database
 
 import (
+	"io"
+	"os"
 	"testing"
+
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/log/term"
+	"github.com/mattn/go-colorable"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/stretchr/testify/assert"
 )
+
+func enableLog() {
+	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
+	output := io.Writer(os.Stderr)
+	if usecolor {
+		output = colorable.NewColorableStderr()
+	}
+	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
+	log.PrintOrigins(true)
+	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
+	glogger.Vmodule("")
+	glogger.BacktraceAt("")
+	log.Root().SetHandler(glogger)
+}
 
 func testDynamoDB_Put(t *testing.T) {
 	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
@@ -110,6 +130,80 @@ func testDynamoBatch_WriteLargeData(t *testing.T) {
 		returnedVal, returnedErr := dynamo.Get(testKeys[i])
 		assert.NoError(t, returnedErr)
 		assert.Equal(t, hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
+	}
+}
+
+// testDynamoBatch_WriteMutliTables checks there is no error when working with more than on tables.
+// This also checks if shared workers works as expected.
+func testDynamoBatch_WriteMutliTables(t *testing.T) {
+	// this test might end with Crit, enableLog to find out the log
+	//enableLog()
+
+	// creat DynamoDB1
+	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	defer dynamo.deletedDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("dynamoDB1", dynamo.config.TableName)
+
+	// creat DynamoDB2
+	dynamo2, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	defer dynamo2.deletedDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("dynamoDB2", dynamo2.config.TableName)
+
+	var testKeys, testVals [][]byte
+	var testKeys2, testVals2 [][]byte
+
+	batch := dynamo.NewBatch()
+	batch2 := dynamo2.NewBatch()
+
+	itemNum := WorkerNum * 2
+	for i := 0; i < itemNum; i++ {
+		// write key and val to db1
+		for j := 0; j < 25; j++ {
+			testKey := common.MakeRandomBytes(10)
+			testVal := common.MakeRandomBytes(20)
+
+			testKeys = append(testKeys, testKey)
+			testVals = append(testVals, testVal)
+
+			assert.NoError(t, batch.Put(testKey, testVal))
+		}
+		// write key2 and val2 to db2
+		for j := 0; j < 25; j++ {
+			testKey2 := common.MakeRandomBytes(10)
+			testVal2 := common.MakeRandomBytes(20)
+
+			testKeys2 = append(testKeys2, testKey2)
+			testVals2 = append(testVals2, testVal2)
+
+			assert.NoError(t, batch2.Put(testKey2, testVal2))
+		}
+	}
+	assert.NoError(t, batch.Write())
+	assert.NoError(t, batch2.Write())
+
+	// check if exist
+	for i := 0; i < itemNum; i++ {
+		// dynamodb 1 - check if wrote key and val
+		returnedVal, returnedErr := dynamo.Get(testKeys[i])
+		assert.NoError(t, returnedErr)
+		assert.Equal(t, hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
+		// dynamodb 1 - check if not wrote key2 and val2
+		returnedVal, returnedErr = dynamo.Get(testKeys2[i])
+		assert.Nil(t, returnedVal, "the entry should not be put in this table")
+
+		// dynamodb 2 - check if wrote key2 and val2
+		returnedVal, returnedErr = dynamo2.Get(testKeys2[i])
+		assert.NoError(t, returnedErr)
+		assert.Equal(t, hexutil.Encode(testVals2[i]), hexutil.Encode(returnedVal))
+		// dynamodb 2 - check if not wrote key and val
+		returnedVal, returnedErr = dynamo2.Get(testKeys[i])
+		assert.Nil(t, returnedVal, "the entry should not be put in this table")
 	}
 }
 
