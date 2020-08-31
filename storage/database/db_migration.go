@@ -69,8 +69,7 @@ loop:
 		putStart := time.Now()
 		for i := 0; i < fetched; i++ {
 			// If dstDB is dynamoDB, Put will Write when the number items reach dynamoBatchSize.
-			err := dstBatch.Put(keys[i], vals[i])
-			if err != nil {
+			if err := dstBatch.Put(keys[i], vals[i]); err != nil {
 				return errors.Wrap(err, "failed to put batch")
 			}
 		}
@@ -89,16 +88,14 @@ loop:
 		iterateNum++
 	}
 
-	err := dstBatch.Write()
-	if err != nil {
+	if err := dstBatch.Write(); err != nil {
 		return errors.Wrap(err, "failed to write items")
 	}
 
 	logger.Info("Finish DB migration", "iterNum", iterateNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(start))
 
 	srcIter.Release()
-	err = srcIter.Error()
-	if err != nil { // any accumulated error from iterator
+	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
 		return errors.Wrap(err, "failed to iterate")
 	}
 
