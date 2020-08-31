@@ -69,7 +69,7 @@ Note: This feature is only provided when srcDB is single LevelDB..`,
 )
 
 func startMigration(ctx *cli.Context) error {
-	srcDBManager, dstDBManager, err := createDBManager(ctx)
+	srcDBManager, dstDBManager, err := createDBManagerForMigration(ctx)
 	if err != nil {
 		return err
 	}
@@ -79,9 +79,9 @@ func startMigration(ctx *cli.Context) error {
 	return srcDBManager.StartDBMigration(dstDBManager)
 }
 
-func createDBManager(ctx *cli.Context) (database.DBManager, database.DBManager, error) {
+func createDBManagerForMigration(ctx *cli.Context) (database.DBManager, database.DBManager, error) {
 	// create db config from ctx
-	srcDBConfig, dstDBConfig, dbManagerCreationErr := createDBConfig(ctx)
+	srcDBConfig, dstDBConfig, dbManagerCreationErr := createDBConfigForMigration(ctx)
 	if dbManagerCreationErr != nil {
 		return nil, nil, dbManagerCreationErr
 	}
@@ -98,7 +98,7 @@ func createDBManager(ctx *cli.Context) (database.DBManager, database.DBManager, 
 	return srcDBManager, dstDBManager, nil
 }
 
-func createDBConfig(ctx *cli.Context) (*database.DBConfig, *database.DBConfig, error) {
+func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database.DBConfig, error) {
 	// TODO enable for all dbs
 	if !ctx.GlobalBool(utils.SingleDBFlag.Name) || !ctx.GlobalBool(utils.DstSingleDBFlag.Name) {
 		return nil, nil, errors.New("this feature is provided for single db only")

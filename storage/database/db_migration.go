@@ -30,6 +30,11 @@ const (
 	dbMigrationFetchNum = 500
 )
 
+// StartDBMigration migrates a DB to a different kind of DB.
+// (e.g. LevelDB -> BadgerDB, LevelDB -> DynamoDB)
+//
+// This feature uses Iterator. A src DB should have implementation of Iteratee to use this function.
+// Do not use db migration while a node is executing.
 func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	// settings for quit signal from os
 	sigQuit := make(chan os.Signal, 1)
