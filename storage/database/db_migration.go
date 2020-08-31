@@ -53,19 +53,20 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	dstBatch := dstDB.NewBatch()
 
 	// vars for log
-	elapsedFetch, elapsedPut, elapsedTotal := time.Now(), time.Now(), time.Now()
-	var elapsedFetchTime time.Duration
-	iterateNum, fetchedTotal := 0, 0
-
-	// fetch keys and values
-	keys, vals, fetched := iterateDB(srcIter, dbMigrationFetchNum)
-	elapsedFetchTime = time.Since(elapsedFetch)
-	fetchedTotal += fetched
+	start := time.Now()
+	iterateNum, fetchedTotal, fetched := 0, 0, 1
 
 loop:
 	for fetched > 0 {
+		// fetch keys and values
+		var keys, vals [][]byte
+		iterStart := time.Now()
+		keys, vals, fetched = iterateDB(srcIter, dbMigrationFetchNum)
+		elapsedFetchTime := time.Since(iterStart)
+		fetchedTotal += fetched
+
 		// write fetched keys and values to DB
-		elapsedPut = time.Now()
+		putStart := time.Now()
 		for i := 0; i < fetched; i++ {
 			err := dstBatch.Put(keys[i], vals[i])
 			if err != nil {
@@ -73,24 +74,18 @@ loop:
 			}
 		}
 		logger.Info("DB migrated", "iterNum", iterateNum, "fetched", fetched,
-			"elapsedFetch", elapsedFetchTime, "elapsedPut", time.Since(elapsedPut), "elapsedIter", time.Since(elapsedFetch),
-			"fetchedTotal", fetchedTotal, "elapsedTotal", time.Since(elapsedTotal))
+			"elapsedFetch", elapsedFetchTime, "elapsedPut", time.Since(putStart), "elapsedIter", time.Since(iterStart),
+			"fetchedTotal", fetchedTotal, "elapsedTotal", time.Since(start))
 
 		// check for quit signal from OS
 		select {
 		case <-sigQuit:
-			logger.Info("exit called", "iterNum", iterateNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(elapsedTotal))
+			logger.Info("exit called", "iterNum", iterateNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(start))
 			break loop
 		default:
 		}
 
-		// fetch keys and values
-		elapsedFetch = time.Now()
-		keys, vals, fetched = iterateDB(srcIter, dbMigrationFetchNum)
-		elapsedFetchTime = time.Since(elapsedFetch)
-
 		iterateNum++
-		fetchedTotal += fetched
 	}
 
 	err := dstBatch.Write()
@@ -98,7 +93,7 @@ loop:
 		return errors.Wrap(err, "failed to write items")
 	}
 
-	logger.Info("Finish DB migration", "iterNum", iterateNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(elapsedTotal))
+	logger.Info("Finish DB migration", "iterNum", iterateNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(start))
 
 	srcIter.Release()
 	err = srcIter.Error()
