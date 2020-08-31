@@ -68,6 +68,7 @@ loop:
 		// write fetched keys and values to DB
 		putStart := time.Now()
 		for i := 0; i < fetched; i++ {
+			// If dstDB is dynamoDB, Put will Write when the number items reach dynamoBatchSize.
 			err := dstBatch.Put(keys[i], vals[i])
 			if err != nil {
 				return errors.Wrap(err, "failed to put batch")
@@ -97,7 +98,7 @@ loop:
 
 	srcIter.Release()
 	err = srcIter.Error()
-	if err != nil {
+	if err != nil { // any accumulated error from iterator
 		return errors.Wrap(err, "failed to iterate")
 	}
 
