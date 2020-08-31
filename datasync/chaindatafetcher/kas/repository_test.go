@@ -155,7 +155,7 @@ func Test_repository_InvalidateCacheEOAList(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		assert.Equal(t, testXChainId, req.Header.Get("x-chain-id"))
-		assert.Equal(t, testAuth, req.Header.Get("Authorization"))
+		assert.Equal(t, makeBasicAuthWithParam(testAuth), req.Header.Get("Authorization"))
 
 		buffer := make([]byte, 1024)
 		bodyStr := ""
@@ -185,7 +185,7 @@ func Test_repository_InvalidateCacheEOAList(t *testing.T) {
 	r := &repository{
 		config: &KASConfig{
 			XChainId:             testXChainId,
-			Authorization:        testAuth,
+			BasicAuthParam:       testAuth,
 			CacheInvalidationURL: server.URL,
 		},
 	}

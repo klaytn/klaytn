@@ -27,7 +27,7 @@ type KASConfig struct {
 
 	CacheUse             bool
 	XChainId             string
-	Authorization        string
+	BasicAuthParam       string
 	CacheInvalidationURL string
 }
 
