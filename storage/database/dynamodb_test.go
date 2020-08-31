@@ -163,8 +163,9 @@ func testDynamoBatch_WriteMutliTables(t *testing.T) {
 
 	itemNum := WorkerNum * 2
 	for i := 0; i < itemNum; i++ {
-		// write key and val to db1
-		for j := 0; j < 25; j++ {
+		// write batch items to db1 and db2 in turn
+		for j := 0; j < dynamoBatchSize; j++ {
+			// write key and val to db1
 			testKey := common.MakeRandomBytes(10)
 			testVal := common.MakeRandomBytes(20)
 
@@ -172,9 +173,8 @@ func testDynamoBatch_WriteMutliTables(t *testing.T) {
 			testVals = append(testVals, testVal)
 
 			assert.NoError(t, batch.Put(testKey, testVal))
-		}
-		// write key2 and val2 to db2
-		for j := 0; j < 25; j++ {
+
+			// write key2 and val2 to db2
 			testKey2 := common.MakeRandomBytes(10)
 			testVal2 := common.MakeRandomBytes(20)
 
