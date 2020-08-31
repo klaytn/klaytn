@@ -92,7 +92,7 @@ var (
 	}
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
-		Usage: "Data directory for the databases and keystore",
+		Usage: "Data directory for the databases and keystore. This value is only used in local DB.",
 		Value: DirectoryString{node.DefaultDataDir()},
 	}
 	KeyStoreDirFlag = DirectoryFlag{
