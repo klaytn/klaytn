@@ -30,6 +30,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/klaytn/klaytn/common"
 )
 
@@ -63,10 +65,9 @@ func TestInternalTxTrace_MarshalJSON(t *testing.T) {
 		Reverted *RevertedInfo
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    []byte
-		wantErr bool
+		name   string
+		fields fields
+		want   []byte
 	}{
 		{
 			name: "revert_test",
@@ -230,8 +231,7 @@ func TestInternalTxTrace_MarshalJSON(t *testing.T) {
 			fields: fields{
 				Type: OpCode(SELFDESTRUCT).String(),
 			},
-			want:    []byte(`{"type":"SELFDESTRUCT"}`),
-			wantErr: false,
+			want: []byte(`{"type":"SELFDESTRUCT"}`),
 		},
 	}
 	for _, tt := range tests {
@@ -251,10 +251,7 @@ func TestInternalTxTrace_MarshalJSON(t *testing.T) {
 				Reverted: tt.fields.Reverted,
 			}
 			got, err := i.MarshalJSON()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			assert.Nil(t, err)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MarshalJSON() got = %v, want %v", string(got), string(tt.want))
 			}
