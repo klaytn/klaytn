@@ -817,7 +817,6 @@ var (
 	DstDataDirFlag = DirectoryFlag{
 		Name:  "dst.datadir",
 		Usage: "Data directory for the databases and keystore",
-		Value: DirectoryString{node.DefaultDataDir()},
 	}
 	DstSingleDBFlag = cli.BoolFlag{
 		Name:  "db.dst.single",
