@@ -456,7 +456,11 @@ type dynamoBatch struct {
 	wg         *sync.WaitGroup
 }
 
-// TODO-klaytn need to check for duplicated keys in batch
+// Put adds an item to dynamo batch.
+// If the number of items in batch reaches dynamoBatchSize, a write request to dynamoDB is made.
+// Each batch write is executed in thread. (There is an worker pool for dynamo batch write)
+//
+// Note: If there is a duplicated key in a batch, only the first value is written.
 func (batch *dynamoBatch) Put(key, val []byte) error {
 	// if there is an duplicated key in batch, skip
 	if _, exist := batch.checkDupl[string(key)]; exist {
