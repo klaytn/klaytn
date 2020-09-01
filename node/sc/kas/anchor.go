@@ -126,14 +126,14 @@ func (anchor *Anchor) AnchorBlock(block *types.Block) error {
 	payload := dataToPayload(anchorData)
 
 	res, err := anchor.sendRequest(payload)
-	if err != nil {
+	if err != nil || res.Code != codeOK {
+		if res != nil {
+			result, _ := json.MarshalIndent(res, "", "	")
+			logger.Warn(fmt.Sprintf(`AnchorBlock returns below http raw result
+%v
+`, string(result)))
+		}
 		return err
-	}
-
-	if res.Code != codeOK {
-		result, _ := json.Marshal(res)
-		logger.Debug("Failed to anchor a block via KAS", "blkNum", block.NumberU64(), "result", string(result))
-		return fmt.Errorf("error code : %v , message : %v", res.Code, res.Message)
 	}
 
 	logger.Info("Anchored a block via KAS", "blkNum", block.NumberU64())
@@ -202,6 +202,10 @@ func (anchor *Anchor) sendRequest(payload interface{}) (*respBody, error) {
 
 	v := respBody{}
 	json.NewDecoder(resp.Body).Decode(&v)
+
+	if resp.StatusCode != http.StatusOK {
+		return &v, errors.New("http status : " + resp.Status)
+	}
 
 	return &v, nil
 }
