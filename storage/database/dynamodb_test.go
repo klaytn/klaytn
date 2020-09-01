@@ -133,13 +133,13 @@ func testDynamoBatch_WriteLargeData(t *testing.T) {
 	}
 }
 
-// testDynamoBatch_WriteMutliTables checks there is no error when working with more than on tables.
+// testDynamoBatch_WriteMutliTables checks if there is no error when working with more than one tables.
 // This also checks if shared workers works as expected.
 func testDynamoBatch_WriteMutliTables(t *testing.T) {
 	// this test might end with Crit, enableLog to find out the log
 	//enableLog()
 
-	// creat DynamoDB1
+	// create DynamoDB1
 	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
@@ -147,7 +147,7 @@ func testDynamoBatch_WriteMutliTables(t *testing.T) {
 	}
 	t.Log("dynamoDB1", dynamo.config.TableName)
 
-	// creat DynamoDB2
+	// create DynamoDB2
 	dynamo2, err := NewDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo2.deleteDB()
 	if err != nil {
