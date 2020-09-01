@@ -147,7 +147,9 @@ func findBlockWithState(db database.DBManager) *types.Block {
 	startBlock := headBlock
 	for _, err := state.New(headBlock.Root(), state.NewDatabase(db)); err != nil; {
 		if headBlock.NumberU64() == 0 {
-			logger.Crit("failed to find state")
+			logger.Crit("failed to find state from the head block to the genesis block",
+				"headBlockNum", headBlock.NumberU64(),
+				"headBlockHash", headBlock.Hash().String(), "headBlockRoot", headBlock.Root().String())
 		}
 		headBlock = db.ReadBlockByNumber(headBlock.NumberU64() - 1)
 		if headBlock == nil {
@@ -155,7 +157,7 @@ func findBlockWithState(db database.DBManager) *types.Block {
 		}
 		logger.Warn("found previous block", "blockNum", headBlock.NumberU64())
 	}
-	logger.Warn("found the latest block with state",
+	logger.Info("found the latest block with state",
 		"blockNum", headBlock.NumberU64(), "startedNum", startBlock.NumberU64())
 	return headBlock
 }
