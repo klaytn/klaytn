@@ -444,14 +444,14 @@ func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 }
 
 func (dynamo *dynamoDB) NewBatch() Batch {
-	return &dynamoBatch{db: dynamo, tableName: dynamo.config.TableName, wg: &sync.WaitGroup{}, checkDupl: map[string]bool{}}
+	return &dynamoBatch{db: dynamo, tableName: dynamo.config.TableName, wg: &sync.WaitGroup{}, keyMap: map[string]struct{}{}}
 }
 
 type dynamoBatch struct {
 	db         *dynamoDB
 	tableName  string
 	batchItems []*dynamodb.WriteRequest
-	checkDupl  map[string]bool // checks duplication of keys
+	keyMap     map[string]struct{} // checks duplication of keys
 	size       int
 	wg         *sync.WaitGroup
 }
@@ -463,10 +463,10 @@ type dynamoBatch struct {
 // Note: If there is a duplicated key in a batch, only the first value is written.
 func (batch *dynamoBatch) Put(key, val []byte) error {
 	// if there is an duplicated key in batch, skip
-	if _, exist := batch.checkDupl[string(key)]; exist {
+	if _, exist := batch.keyMap[string(key)]; exist {
 		return nil
 	}
-	batch.checkDupl[string(key)] = true
+	batch.keyMap[string(key)] = struct{}{}
 
 	data := DynamoData{Key: key, Val: val}
 	dataSize := len(val)
@@ -542,6 +542,6 @@ func (batch *dynamoBatch) ValueSize() int {
 
 func (batch *dynamoBatch) Reset() {
 	batch.batchItems = []*dynamodb.WriteRequest{}
-	batch.checkDupl = map[string]bool{}
+	batch.keyMap = map[string]struct{}{}
 	batch.size = 0
 }
