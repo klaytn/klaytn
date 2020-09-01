@@ -129,9 +129,8 @@ func (anchor *Anchor) AnchorBlock(block *types.Block) error {
 	if err != nil || res.Code != codeOK {
 		if res != nil {
 			result, _ := json.MarshalIndent(res, "", "	")
-			logger.Warn(fmt.Sprintf(`AnchorBlock returns below http raw result
-%v
-`, string(result)))
+			logger.Warn(fmt.Sprintf(`AnchorBlock returns below http raw result with the error(%v) :
+%v`, err, string(result)))
 		}
 		return err
 	}
