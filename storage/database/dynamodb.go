@@ -444,19 +444,26 @@ func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 }
 
 func (dynamo *dynamoDB) NewBatch() Batch {
-	return &dynamoBatch{db: dynamo, tableName: dynamo.config.TableName, wg: &sync.WaitGroup{}}
+	return &dynamoBatch{db: dynamo, tableName: dynamo.config.TableName, wg: &sync.WaitGroup{}, checkDupl: map[string]bool{}}
 }
 
 type dynamoBatch struct {
 	db         *dynamoDB
 	tableName  string
 	batchItems []*dynamodb.WriteRequest
+	checkDupl  map[string]bool // checks duplication of keys
 	size       int
 	wg         *sync.WaitGroup
 }
 
 // TODO-klaytn need to check for duplicated keys in batch
 func (batch *dynamoBatch) Put(key, val []byte) error {
+	// if there is an duplicated key in batch, skip
+	if _, exist := batch.checkDupl[string(key)]; exist {
+		return nil
+	}
+	batch.checkDupl[string(key)] = true
+
 	data := DynamoData{Key: key, Val: val}
 	dataSize := len(val)
 	if dataSize == 0 {
@@ -531,5 +538,6 @@ func (batch *dynamoBatch) ValueSize() int {
 
 func (batch *dynamoBatch) Reset() {
 	batch.batchItems = []*dynamodb.WriteRequest{}
+	batch.checkDupl = map[string]bool{}
 	batch.size = 0
 }
