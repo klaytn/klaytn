@@ -26,7 +26,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VictoriaMetrics/fastcache"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/ser/rlp"
@@ -327,7 +326,7 @@ func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Databa
 	}
 	if cacheSizeMB > 0 {
 		cacheSizeByte = cacheSizeMB * 1024 * 1024
-		trieNodeCache = fastcache.New(cacheSizeByte)
+		trieNodeCache = NewLocalCache(cacheSizeByte)
 
 		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
 	}
@@ -494,7 +493,7 @@ func (db *Database) insertPreimage(hash common.Hash, preimage []byte) {
 // getCachedNode finds an encoded node in the trie node cache if enabled.
 func (db *Database) getCachedNode(hash common.Hash) []byte {
 	if db.trieNodeCache != nil {
-		if enc := db.trieNodeCache.Get(nil, hash[:]); enc != nil {
+		if enc := db.trieNodeCache.Get(hash[:]); enc != nil {
 			memcacheCleanHitMeter.Mark(1)
 			memcacheCleanReadMeter.Mark(int64(len(enc)))
 			return enc
@@ -1121,19 +1120,22 @@ func (db *Database) getLastNodeHashInFlushList() common.Hash {
 func (db *Database) UpdateMetricNodes() {
 	memcacheNodesGauge.Update(int64(len(db.nodes)))
 	if db.trieNodeCache != nil {
-		var stats fastcache.Stats
-		db.trieNodeCache.UpdateStats(&stats)
+		switch c := db.trieNodeCache.(type) {
+		case *LocalCache:
+			stats := c.UpdateStats()
 
-		memcacheFastMisses.Update(int64(stats.Misses))
-		memcacheFastCollisions.Update(int64(stats.Collisions))
-		memcacheFastCorruptions.Update(int64(stats.Corruptions))
-		memcacheFastEntriesCount.Update(int64(stats.EntriesCount))
-		memcacheFastBytesSize.Update(int64(stats.BytesSize))
-		memcacheFastGetBigCalls.Update(int64(stats.GetBigCalls))
-		memcacheFastSetBigCalls.Update(int64(stats.SetBigCalls))
-		memcacheFastTooBigKeyErrors.Update(int64(stats.TooBigKeyErrors))
-		memcacheFastInvalidMetavalueErrors.Update(int64(stats.InvalidMetavalueErrors))
-		memcacheFastInvalidValueLenErrors.Update(int64(stats.InvalidValueLenErrors))
-		memcacheFastInvalidValueHashErrors.Update(int64(stats.InvalidValueHashErrors))
+			memcacheFastMisses.Update(int64(stats.Misses))
+			memcacheFastCollisions.Update(int64(stats.Collisions))
+			memcacheFastCorruptions.Update(int64(stats.Corruptions))
+			memcacheFastEntriesCount.Update(int64(stats.EntriesCount))
+			memcacheFastBytesSize.Update(int64(stats.BytesSize))
+			memcacheFastGetBigCalls.Update(int64(stats.GetBigCalls))
+			memcacheFastSetBigCalls.Update(int64(stats.SetBigCalls))
+			memcacheFastTooBigKeyErrors.Update(int64(stats.TooBigKeyErrors))
+			memcacheFastInvalidMetavalueErrors.Update(int64(stats.InvalidMetavalueErrors))
+			memcacheFastInvalidValueLenErrors.Update(int64(stats.InvalidValueLenErrors))
+			memcacheFastInvalidValueHashErrors.Update(int64(stats.InvalidValueHashErrors))
+		default:
+		}
 	}
 }
