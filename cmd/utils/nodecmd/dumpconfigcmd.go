@@ -198,9 +198,9 @@ func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetc
 			} else {
 				logger.Crit("The cache invalidation url is not set")
 			}
-			if ctx.GlobalIsSet(utils.ChainDataFetcherKASAuthFlag.Name) {
-				auth := ctx.GlobalString(utils.ChainDataFetcherKASAuthFlag.Name)
-				kasConfig.Authorization = auth
+			if ctx.GlobalIsSet(utils.ChainDataFetcherKASBasicAuthParamFlag.Name) {
+				auth := ctx.GlobalString(utils.ChainDataFetcherKASBasicAuthParamFlag.Name)
+				kasConfig.BasicAuthParam = auth
 			} else {
 				logger.Crit("The authorization is not set")
 			}

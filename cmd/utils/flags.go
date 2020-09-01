@@ -708,9 +708,9 @@ var (
 		Name:  "chaindatafetcher.kas.xchainid",
 		Usage: "KAS specific header x-chain-id in chaindatafetcher",
 	}
-	ChainDataFetcherKASAuthFlag = cli.StringFlag{
-		Name:  "chaindatafetcher.kas.auth",
-		Usage: "KAS specific header authorization in chaindatafetcher",
+	ChainDataFetcherKASBasicAuthParamFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.basic.auth.param",
+		Usage: "KAS specific header basic authorization parameter in chaindatafetcher",
 	}
 
 	// DBSyncer

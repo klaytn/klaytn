@@ -109,6 +109,10 @@ func makeEOAListStr(eoaList map[common.Address]struct{}) string {
 	return eoaStrList[:len(eoaStrList)-1]
 }
 
+func makeBasicAuthWithParam(param string) string {
+	return "Basic " + param
+}
+
 func (r *repository) InvalidateCacheEOAList(eoaList map[common.Address]struct{}) {
 	numEOAs := len(eoaList)
 	logger.Trace("the number of EOA list for KAS cache invalidation", "numEOAs", numEOAs)
@@ -130,7 +134,7 @@ func (r *repository) InvalidateCacheEOAList(eoaList map[common.Address]struct{})
 		return
 	}
 	req.Header.Add("x-chain-id", r.config.XChainId)
-	req.Header.Add("Authorization", r.config.Authorization)
+	req.Header.Add("Authorization", makeBasicAuthWithParam(r.config.BasicAuthParam))
 	req.Header.Add("Content-Type", "text/plain")
 
 	res, err := http.DefaultClient.Do(req)
