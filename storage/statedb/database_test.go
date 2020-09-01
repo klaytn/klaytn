@@ -17,10 +17,11 @@
 package statedb
 
 import (
+	"testing"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var childHash = common.HexToHash("1341655")  // 20190805 in hexadecimal
@@ -131,7 +132,7 @@ func TestCache(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		key, value := common.MakeRandomBytes(256), common.MakeRandomBytes(63*1024) // fastcache can store entrie under 64KB
 		db.trieNodeCache.Set(key, value)
-		rValue, found := db.trieNodeCache.HasGet(nil, key)
+		rValue, found := db.trieNodeCache.Has(key)
 
 		assert.Equal(t, true, found)
 		assert.Equal(t, value, rValue)

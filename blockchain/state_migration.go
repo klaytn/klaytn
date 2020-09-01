@@ -19,7 +19,11 @@ package blockchain
 import (
 	"errors"
 	"fmt"
-	"github.com/VictoriaMetrics/fastcache"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -28,10 +32,6 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type stateTrieMigrationDB struct {
@@ -405,22 +405,29 @@ func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database,
 	return nil
 }
 
-func (bc *BlockChain) warmUpLoop(cache *fastcache.Cache, mainTrieCacheLimit uint64, children []common.Hash, resultHashCh chan common.Hash, resultErrCh chan error) {
+func (bc *BlockChain) warmUpLoop(cache statedb.Cache, mainTrieCacheLimit uint64, children []common.Hash,
+	resultHashCh chan common.Hash, resultErrCh chan error) {
 	logged := time.Now()
 	var context []interface{}
-	var stats fastcache.Stats
 	var percent uint64
 	var cnt int
 
 	updateContext := func() {
-		stats = fastcache.Stats{}
-		cache.UpdateStats(&stats)
-		percent = stats.BytesSize * 100 / mainTrieCacheLimit
-		context = []interface{}{
-			"warmUpCnt", cnt,
-			"cacheLimit", units.Base2Bytes(mainTrieCacheLimit).String(),
-			"cachedSize", units.Base2Bytes(stats.BytesSize).String(),
-			"percent", percent,
+		switch c := cache.(type) {
+		case *statedb.LocalCache:
+			stats := c.UpdateStats()
+			percent = stats.BytesSize * 100 / mainTrieCacheLimit
+			context = []interface{}{
+				"warmUpCnt", cnt,
+				"cacheLimit", units.Base2Bytes(mainTrieCacheLimit).String(),
+				"cachedSize", units.Base2Bytes(stats.BytesSize).String(),
+				"percent", percent,
+			}
+		default:
+			context = []interface{}{
+				"warmUpCnt", cnt,
+				"cacheLimit", units.Base2Bytes(mainTrieCacheLimit).String(),
+			}
 		}
 	}
 
