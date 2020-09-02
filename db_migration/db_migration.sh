@@ -11,7 +11,7 @@ SRC_DB_DIR=$DATA_DIR/klay/chaindata/$SRC_DB
 
 # Dst DynamoDB
 DST_DB_TYPE=DynamoDBS3
-DST_DB_DIR=~/klaytn/benchmark_data/to
+DST_DB_DIR=~/klaytn/db_migration/dst
 DST_TABLENAME=db-migration
 DST_RCU=100
 DST_WCU=100
@@ -27,4 +27,4 @@ $KLAYTN_BIN/ken db-migration start \
   --datadir $SRC_DB_DIR  \
   --dst.datadir $DST_DB --db.dst.dynamo.tablename $DST_TABLENAME \
   --db.dst.dynamo.is-provisioned --db.dst.dynamo.read-capacity $DST_RCU --db.dst.dynamo.write-capacity $DST_WCU \
-   &> logs.out &
+   &> logs-$SRC_DB.out &
