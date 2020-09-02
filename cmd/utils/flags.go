@@ -92,7 +92,7 @@ var (
 	}
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
-		Usage: "Data directory for the databases and keystore",
+		Usage: "Data directory for the databases and keystore. This value is only used in local DB.",
 		Value: DirectoryString{node.DefaultDataDir()},
 	}
 	KeyStoreDirFlag = DirectoryFlag{
@@ -810,6 +810,59 @@ var (
 		Name:  "autorestart.daemon.path",
 		Usage: "Path of node daemon. Used to give signal to kill",
 		Value: "~/klaytn/bin/kcnd",
+	}
+
+	// db migration vars
+	DstDbTypeFlag = cli.StringFlag{
+		Name:  "dst.dbtype",
+		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "DynamoDBS3")`,
+		Value: "LevelDB",
+	}
+	DstDataDirFlag = DirectoryFlag{
+		Name:  "dst.datadir",
+		Usage: "Data directory for the databases and keystore. This value is only used in local DB.",
+	}
+	DstSingleDBFlag = cli.BoolFlag{
+		Name:  "db.dst.single",
+		Usage: "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
+	}
+	DstLevelDBCacheSizeFlag = cli.IntFlag{
+		Name:  "db.dst.leveldb.cache-size",
+		Usage: "Size of in-memory cache in LevelDB (MiB)",
+		Value: 768,
+	}
+	DstLevelDBCompressionTypeFlag = cli.IntFlag{
+		Name:  "db.dst.leveldb.compression",
+		Usage: "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
+		Value: 0,
+	}
+	DstNumStateTrieShardsFlag = cli.UintFlag{
+		Name:  "db.dst.num-statetrie-shards",
+		Usage: "Number of internal shards of state trie DB shards. Should be power of 2",
+		Value: 4,
+	}
+	DstDynamoDBTableNameFlag = cli.StringFlag{
+		Name:  "db.dst.dynamo.tablename",
+		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
+	}
+	DstDynamoDBRegionFlag = cli.StringFlag{
+		Name:  "db.dst.dynamo.region",
+		Usage: "AWS region where the DynamoDB will be created.",
+		Value: database.GetDefaultDynamoDBConfig().Region,
+	}
+	DstDynamoDBIsProvisionedFlag = cli.BoolFlag{
+		Name:  "db.dst.dynamo.is-provisioned",
+		Usage: "Set DynamoDB billing mode to provision. The default billing mode is on-demand.",
+	}
+	DstDynamoDBReadCapacityFlag = cli.Int64Flag{
+		Name:  "db.dst.dynamo.read-capacity",
+		Usage: "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
+		Value: database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
+	}
+	DstDynamoDBWriteCapacityFlag = cli.Int64Flag{
+		Name:  "db.dst.dynamo.write-capacity",
+		Usage: "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
+		Value: database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
 	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options

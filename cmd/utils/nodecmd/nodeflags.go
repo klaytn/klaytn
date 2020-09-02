@@ -275,3 +275,16 @@ var KSENFlags = []cli.Flag{
 	utils.TxResendCountFlag,
 	utils.TxResendUseLegacyFlag,
 }
+
+var DBMigrationFlags = []cli.Flag{
+	utils.DstDbTypeFlag,
+	utils.DstDataDirFlag,
+	utils.DstSingleDBFlag,
+	utils.DstLevelDBCompressionTypeFlag,
+	utils.DstNumStateTrieShardsFlag,
+	utils.DstDynamoDBTableNameFlag,
+	utils.DstDynamoDBRegionFlag,
+	utils.DstDynamoDBIsProvisionedFlag,
+	utils.DstDynamoDBReadCapacityFlag,
+	utils.DstDynamoDBWriteCapacityFlag,
+}

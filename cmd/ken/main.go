@@ -238,6 +238,9 @@ func init() {
 
 		// See utils/nodecmd/dumpconfigcmd.go:
 		nodecmd.GetDumpConfigCommand(nodeFlags, rpcFlags),
+
+		// See utils/nodecmd/db_migration.go:
+		nodecmd.MigrationCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
@@ -245,6 +248,7 @@ func init() {
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, nodecmd.ConsoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
+	app.Flags = append(app.Flags, nodecmd.DBMigrationFlags...)
 
 	cli.AppHelpTemplate = utils.GlobalAppHelpTemplate
 	cli.HelpPrinter = utils.NewHelpPrinter(enHelpFlagGroups)
