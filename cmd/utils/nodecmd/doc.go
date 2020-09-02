@@ -21,7 +21,7 @@ Source Files
 
 Each file contains following contents
  - accountcmd.go		: Provides functions for creating, updating and importing an account.
- - chaincmd.go			: Provides functions to `init` a block chain,
+ - chaincmd.go		: Provides functions to `init` a block chain,
  - consolecmd.go		: Provides console functions `attach` and `console`
  - migrationcmd.go		: Provides functions of DB migration
  - defaultcmd.go		: Provides functions to start a node
