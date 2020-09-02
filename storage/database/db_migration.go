@@ -54,44 +54,40 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 
 	// vars for log
 	start := time.Now()
-	cycleNum, fetchedTotal, fetchedCycle, fetched := 0, 0, 0, 1
+	cycleNum, fetchedTotal, previousFetchedTotal, fetched := 0, 0, 0, 1
 
 loop:
 	for fetched > 0 {
-		keys := make([][]byte, dbMigrationFetchNum)
-		vals := make([][]byte, dbMigrationFetchNum)
-
 		cycleStart := time.Now()
 		for fetched = 0; fetched < dbMigrationFetchNum && srcIter.Next(); fetched++ {
 			// fetch keys and values
 			// Contents of srcIter.Key() and srcIter.Value() should not be modified, and
 			// only valid until the next call to Next.
-			keys[fetched] = make([]byte, len(srcIter.Key()))
-			vals[fetched] = make([]byte, len(srcIter.Value()))
-			copy(keys[fetched], srcIter.Key())
-			copy(vals[fetched], srcIter.Value())
+			key := make([]byte, len(srcIter.Key()))
+			val := make([]byte, len(srcIter.Value()))
+			copy(key, srcIter.Key())
+			copy(val, srcIter.Value())
 
 			// write fetched keys and values to DB
 			// If dstDB is dynamoDB, Put will Write when the number items reach dynamoBatchSize.
-			if err := dstBatch.Put(keys[fetched], vals[fetched]); err != nil {
+			if err := dstBatch.Put(key, val); err != nil {
 				return errors.Wrap(err, "failed to put batch")
 			}
 		}
 		fetchedTotal += fetched
-		fetchedCycle += fetched
 
 		if fetchedTotal%reportCycle == 0 {
 			logger.Info("DB migrated",
-				"fetched", fetchedCycle, "elapsedIter", time.Since(cycleStart),
+				"fetched", fetchedTotal-previousFetchedTotal, "elapsedIter", time.Since(cycleStart),
 				"fetchedTotal", fetchedTotal, "elapsedTotal", time.Since(start))
 			cycleStart = time.Now()
-			fetchedCycle = 0
+			previousFetchedTotal = fetchedTotal
 		}
 
 		// check for quit signal from OS
 		select {
 		case <-sigQuit:
-			logger.Info("exit called", "iterNum", cycleNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(start))
+			logger.Info("exit called", "iterNum", cycleNum, "fetchedTotal", fetchedTotal, "elapsedTotal", time.Since(start))
 			break loop
 		default:
 		}
