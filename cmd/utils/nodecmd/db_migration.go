@@ -49,7 +49,7 @@ var (
 		Flags:    []cli.Flag{},
 		Category: "DB MIGRATION COMMANDS",
 		Description: `
-The migration commands migrates a DB to another DB.
+The migration command migrates a DB to another DB.
 The type of DBs can be different.
 (e.g. LevelDB -> LevelDB, LevelDB -> BadgerDB, LevelDB -> DynamoDB)
 Note: This feature is only provided when srcDB is single LevelDB.

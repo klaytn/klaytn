@@ -30,8 +30,8 @@ const (
 	reportCycle         = dbMigrationFetchNum * 100
 )
 
-// StartDBMigration migrates a DB to a different kind of DB.
-// (e.g. LevelDB -> BadgerDB, LevelDB -> DynamoDB)
+// StartDBMigration migrates a DB to another DB.
+// (e.g. LevelDB -> LevelDB, LevelDB -> BadgerDB, LevelDB -> DynamoDB)
 //
 // This feature uses Iterator. A src DB should have implementation of Iteratee to use this function.
 // Do not use db migration while a node is executing.
