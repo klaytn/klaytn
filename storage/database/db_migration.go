@@ -54,52 +54,49 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 
 	// vars for log
 	start := time.Now()
-	cycleNum, fetchedTotal, previousFetchedTotal, fetched := 0, 0, 0, 1
+	previousFetched, fetched := 0, 0
 
 loop:
-	for fetched > 0 {
+	for fetched = 0; srcIter.Next(); fetched++ {
 		cycleStart := time.Now()
-		for fetched = 0; fetched < dbMigrationFetchNum && srcIter.Next(); fetched++ {
-			// fetch keys and values
-			// Contents of srcIter.Key() and srcIter.Value() should not be modified, and
-			// only valid until the next call to Next.
-			key := make([]byte, len(srcIter.Key()))
-			val := make([]byte, len(srcIter.Value()))
-			copy(key, srcIter.Key())
-			copy(val, srcIter.Value())
 
-			// write fetched keys and values to DB
-			// If dstDB is dynamoDB, Put will Write when the number items reach dynamoBatchSize.
-			if err := dstBatch.Put(key, val); err != nil {
-				return errors.Wrap(err, "failed to put batch")
-			}
+		// fetch keys and values
+		// Contents of srcIter.Key() and srcIter.Value() should not be modified, and
+		// only valid until the next call to Next.
+		key := make([]byte, len(srcIter.Key()))
+		val := make([]byte, len(srcIter.Value()))
+		copy(key, srcIter.Key())
+		copy(val, srcIter.Value())
+
+		// write fetched keys and values to DB
+		// If dstDB is dynamoDB, Put will Write when the number items reach dynamoBatchSize.
+		if err := dstBatch.Put(key, val); err != nil {
+			return errors.Wrap(err, "failed to put batch")
 		}
-		fetchedTotal += fetched
 
-		if fetchedTotal%reportCycle == 0 {
+		// make a report
+		if fetched%reportCycle == 0 {
 			logger.Info("DB migrated",
-				"fetched", fetchedTotal-previousFetchedTotal, "elapsedIter", time.Since(cycleStart),
-				"fetchedTotal", fetchedTotal, "elapsedTotal", time.Since(start))
+				"fetched", fetched-previousFetched, "elapsedIter", time.Since(cycleStart),
+				"fetchedTotal", fetched, "elapsedTotal", time.Since(start))
 			cycleStart = time.Now()
-			previousFetchedTotal = fetchedTotal
+			previousFetched = fetched
 		}
 
 		// check for quit signal from OS
 		select {
 		case <-sigQuit:
-			logger.Info("exit called", "iterNum", cycleNum, "fetchedTotal", fetchedTotal, "elapsedTotal", time.Since(start))
+			logger.Info("exit called", "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
 			break loop
 		default:
 		}
-
-		cycleNum++
 	}
 
 	if err := dstBatch.Write(); err != nil {
 		return errors.Wrap(err, "failed to write items")
 	}
 
-	logger.Info("Finish DB migration", "iterNum", cycleNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(start))
+	logger.Info("Finish DB migration", "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
 
 	srcIter.Release()
 	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
