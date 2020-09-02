@@ -397,12 +397,12 @@ func createBatchWriteWorkerPool(endpoint, region string) {
 
 func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 	failCount := 0
-	batchWriteInput := &dynamodb.BatchWriteItemInput{
-		RequestItems: map[string][]*dynamodb.WriteRequest{},
-	}
 	logger.Debug("generate a dynamoDB batchWrite worker")
 
 	for batchInput := range writeCh {
+		batchWriteInput := &dynamodb.BatchWriteItemInput{
+			RequestItems: map[string][]*dynamodb.WriteRequest{},
+		}
 		batchWriteInput.RequestItems[batchInput.tableName] = batchInput.items
 
 		BatchWriteItemOutput, err := dynamoDBClient.BatchWriteItem(batchWriteInput)
