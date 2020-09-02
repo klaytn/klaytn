@@ -41,11 +41,8 @@ var (
 		Name:      "attach",
 		Usage:     "Start an interactive JavaScript environment (connect to node)",
 		ArgsUsage: "[endpoint]",
-		Flags: append(ConsoleFlags, utils.SingleDBFlag, utils.DataDirFlag, utils.NumStateTrieShardsFlag,
-			utils.DbTypeFlag, utils.LevelDBCompressionTypeFlag,
-			utils.DynamoDBTableNameFlag, utils.DynamoDBRegionFlag, utils.DynamoDBIsProvisionedFlag,
-			utils.DynamoDBReadCapacityFlag, utils.DynamoDBWriteCapacityFlag),
-		Category: "CONSOLE COMMANDS",
+		Flags:     append(ConsoleFlags, utils.DataDirFlag),
+		Category:  "CONSOLE COMMANDS",
 		Description: `
 The Klaytn console is an interactive shell for the JavaScript runtime environment
 which exposes a node admin interface as well as the Ðapp JavaScript API.
