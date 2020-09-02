@@ -133,6 +133,40 @@ func testDynamoBatch_WriteLargeData(t *testing.T) {
 	}
 }
 
+func testDynamoBatch_DuplicatedKey(t *testing.T) {
+	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	defer dynamo.deleteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("dynamoDB", dynamo.config.TableName)
+
+	var testKeys [][]byte
+	var testVals [][]byte
+	batch := dynamo.NewBatch()
+
+	itemNum := 25
+	for i := 0; i < itemNum; i++ {
+		testKey := common.MakeRandomBytes(256)
+		testVal := common.MakeRandomBytes(600)
+
+		testKeys = append(testKeys, testKey)
+		testVals = append(testVals, testVal)
+
+		assert.NoError(t, batch.Put(testKey, testVal))
+		assert.NoError(t, batch.Put(testKey, testVal))
+		assert.NoError(t, batch.Put(testKey, testVal))
+	}
+	assert.NoError(t, batch.Write())
+
+	// check if exist
+	for i := 0; i < itemNum; i++ {
+		returnedVal, returnedErr := dynamo.Get(testKeys[i])
+		assert.NoError(t, returnedErr)
+		assert.Equal(t, hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
+	}
+}
+
 // testDynamoBatch_WriteMutliTables checks if there is no error when working with more than one tables.
 // This also checks if shared workers works as expected.
 func testDynamoBatch_WriteMutliTables(t *testing.T) {
