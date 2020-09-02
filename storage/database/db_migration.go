@@ -27,6 +27,7 @@ import (
 
 const (
 	dbMigrationFetchNum = 500
+	reportCycle         = dbMigrationFetchNum * 100
 )
 
 // StartDBMigration migrates a DB to a different kind of DB.
@@ -53,45 +54,56 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 
 	// vars for log
 	start := time.Now()
-	iterateNum, fetchedTotal, fetched := 0, 0, 1
+	cycleNum, fetchedTotal, fetchedCycle, fetched := 0, 0, 0, 1
 
 loop:
 	for fetched > 0 {
-		// fetch keys and values
-		var keys, vals [][]byte
-		iterStart := time.Now()
-		keys, vals, fetched = iterateDB(srcIter, dbMigrationFetchNum)
-		elapsedFetchTime := time.Since(iterStart)
-		fetchedTotal += fetched
+		keys := make([][]byte, dbMigrationFetchNum)
+		vals := make([][]byte, dbMigrationFetchNum)
 
-		// write fetched keys and values to DB
-		putStart := time.Now()
-		for i := 0; i < fetched; i++ {
+		cycleStart := time.Now()
+		for fetched = 0; fetched < dbMigrationFetchNum && srcIter.Next(); fetched++ {
+			// fetch keys and values
+			// Contents of srcIter.Key() and srcIter.Value() should not be modified, and
+			// only valid until the next call to Next.
+			keys[fetched] = make([]byte, len(srcIter.Key()))
+			vals[fetched] = make([]byte, len(srcIter.Value()))
+			copy(keys[fetched], srcIter.Key())
+			copy(vals[fetched], srcIter.Value())
+
+			// write fetched keys and values to DB
 			// If dstDB is dynamoDB, Put will Write when the number items reach dynamoBatchSize.
-			if err := dstBatch.Put(keys[i], vals[i]); err != nil {
+			if err := dstBatch.Put(keys[fetched], vals[fetched]); err != nil {
 				return errors.Wrap(err, "failed to put batch")
 			}
 		}
-		logger.Info("DB migrated", "iterNum", iterateNum, "fetched", fetched,
-			"elapsedFetch", elapsedFetchTime, "elapsedPut", time.Since(putStart), "elapsedIter", time.Since(iterStart),
-			"fetchedTotal", fetchedTotal, "elapsedTotal", time.Since(start))
+		fetchedTotal += fetched
+		fetchedCycle += fetched
+
+		if fetchedTotal%reportCycle == 0 {
+			logger.Info("DB migrated",
+				"fetched", fetchedCycle, "elapsedIter", time.Since(cycleStart),
+				"fetchedTotal", fetchedTotal, "elapsedTotal", time.Since(start))
+			cycleStart = time.Now()
+			fetchedCycle = 0
+		}
 
 		// check for quit signal from OS
 		select {
 		case <-sigQuit:
-			logger.Info("exit called", "iterNum", iterateNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(start))
+			logger.Info("exit called", "iterNum", cycleNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(start))
 			break loop
 		default:
 		}
 
-		iterateNum++
+		cycleNum++
 	}
 
 	if err := dstBatch.Write(); err != nil {
 		return errors.Wrap(err, "failed to write items")
 	}
 
-	logger.Info("Finish DB migration", "iterNum", iterateNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(start))
+	logger.Info("Finish DB migration", "iterNum", cycleNum, "fetched", fetchedTotal, "elapsedTotal", time.Since(start))
 
 	srcIter.Release()
 	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
@@ -99,21 +111,4 @@ loop:
 	}
 
 	return nil
-}
-
-func iterateDB(iter Iterator, num int) ([][]byte, [][]byte, int) {
-	keys := make([][]byte, num)
-	vals := make([][]byte, num)
-
-	var i int
-	for i = 0; i < num && iter.Next(); i++ {
-		// Contents of iter.Key() and iter.Value() should not be modified, and
-		// only valid until the next call to Next.
-		keys[i] = make([]byte, len(iter.Key()))
-		vals[i] = make([]byte, len(iter.Value()))
-		copy(keys[i], iter.Key())
-		copy(vals[i], iter.Value())
-	}
-
-	return keys, vals, i
 }
