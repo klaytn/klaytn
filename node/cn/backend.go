@@ -204,7 +204,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	chainDB := CreateDB(ctx, config, "chaindata")
 
-	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDB, config.Genesis, config.NetworkId, config.IsPrivate)
+	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDB, config.Genesis, config.NetworkId, config.IsPrivate, false)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}

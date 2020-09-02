@@ -23,7 +23,16 @@ package blockchain
 import (
 	"errors"
 	"fmt"
-	"github.com/hashicorp/golang-lru"
+	"io"
+	"math/big"
+	mrand "math/rand"
+	"reflect"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -39,14 +48,6 @@ import (
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/rcrowley/go-metrics"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"io"
-	"math/big"
-	mrand "math/rand"
-	"reflect"
-	"strconv"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var (

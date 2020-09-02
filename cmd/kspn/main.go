@@ -62,6 +62,7 @@ var spnHelpFlagGroups = []utils.FlagGroup{
 			utils.SrvTypeFlag,
 			utils.ExtraDataFlag,
 			nodecmd.ConfigFileFlag,
+			utils.OverwriteGenesisFlag,
 		},
 	},
 	{
