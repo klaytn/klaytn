@@ -22,6 +22,7 @@ package nodecmd
 
 import (
 	"fmt"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/api/debug"
@@ -63,15 +64,6 @@ Make sure you backup your keys regularly.`,
 				Usage:  "Print summary of existing accounts",
 				Action: utils.MigrateFlags(accountList),
 				Flags: []cli.Flag{
-					utils.DbTypeFlag,
-					utils.SingleDBFlag,
-					utils.NumStateTrieShardsFlag,
-					utils.LevelDBCompressionTypeFlag,
-					utils.DynamoDBTableNameFlag,
-					utils.DynamoDBRegionFlag,
-					utils.DynamoDBIsProvisionedFlag,
-					utils.DynamoDBReadCapacityFlag,
-					utils.DynamoDBWriteCapacityFlag,
 					utils.DataDirFlag,
 					utils.KeyStoreDirFlag,
 				},
@@ -83,15 +75,6 @@ Print a short summary of all accounts`,
 				Usage:  "Create a new account",
 				Action: utils.MigrateFlags(accountCreate),
 				Flags: []cli.Flag{
-					utils.DbTypeFlag,
-					utils.SingleDBFlag,
-					utils.NumStateTrieShardsFlag,
-					utils.LevelDBCompressionTypeFlag,
-					utils.DynamoDBTableNameFlag,
-					utils.DynamoDBRegionFlag,
-					utils.DynamoDBIsProvisionedFlag,
-					utils.DynamoDBReadCapacityFlag,
-					utils.DynamoDBWriteCapacityFlag,
 					utils.DataDirFlag,
 					utils.KeyStoreDirFlag,
 					utils.PasswordFileFlag,
@@ -118,15 +101,6 @@ password to file or expose in any other way.
 				Action:    utils.MigrateFlags(accountUpdate),
 				ArgsUsage: "<address>",
 				Flags: []cli.Flag{
-					utils.DbTypeFlag,
-					utils.SingleDBFlag,
-					utils.NumStateTrieShardsFlag,
-					utils.LevelDBCompressionTypeFlag,
-					utils.DynamoDBTableNameFlag,
-					utils.DynamoDBRegionFlag,
-					utils.DynamoDBIsProvisionedFlag,
-					utils.DynamoDBReadCapacityFlag,
-					utils.DynamoDBWriteCapacityFlag,
 					utils.DataDirFlag,
 					utils.KeyStoreDirFlag,
 					utils.LightKDFFlag,
@@ -155,15 +129,6 @@ changing your password is only possible interactively.
 				Usage:  "Import a private key into a new account",
 				Action: utils.MigrateFlags(accountImport),
 				Flags: []cli.Flag{
-					utils.DbTypeFlag,
-					utils.SingleDBFlag,
-					utils.NumStateTrieShardsFlag,
-					utils.LevelDBCompressionTypeFlag,
-					utils.DynamoDBTableNameFlag,
-					utils.DynamoDBRegionFlag,
-					utils.DynamoDBIsProvisionedFlag,
-					utils.DynamoDBReadCapacityFlag,
-					utils.DynamoDBWriteCapacityFlag,
 					utils.DataDirFlag,
 					utils.KeyStoreDirFlag,
 					utils.PasswordFileFlag,
