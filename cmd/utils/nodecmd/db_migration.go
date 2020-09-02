@@ -53,7 +53,7 @@ The migration command migrates a DB to another DB.
 The type of DBs can be different.
 (e.g. LevelDB -> LevelDB, LevelDB -> BadgerDB, LevelDB -> DynamoDB)
 Note: This feature is only provided when srcDB is single LevelDB.
-Note: Do not use db migration while a node is executing
+Note: Do not use db migration while a node is executing.
 `,
 		Subcommands: []cli.Command{
 			{
@@ -62,8 +62,8 @@ Note: Do not use db migration while a node is executing
 				Flags:  dbMigrationFlags,
 				Action: utils.MigrateFlags(startMigration),
 				Description: `
-This command starts migration.
-Note: This feature is only provided when srcDB is single LevelDB..`,
+This command starts DB migration.
+Note: This feature is only provided when srcDB is single LevelDB.`,
 			},
 		},
 	}
