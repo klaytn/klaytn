@@ -55,6 +55,7 @@ var (
 			utils.DynamoDBWriteCapacityFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.DataDirFlag,
+			utils.OverwriteGenesisFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -138,6 +139,7 @@ func initGenesis(ctx *cli.Context) error {
 	parallelDBWrite := !ctx.GlobalIsSet(utils.NoParallelDBWriteFlag.Name)
 	singleDB := ctx.GlobalIsSet(utils.SingleDBFlag.Name)
 	numStateTrieShards := ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name)
+	overwriteGenesis := ctx.GlobalBool(utils.OverwriteGenesisFlag.Name)
 	for _, name := range []string{"chaindata", "lightchaindata"} {
 		dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite,
 			SingleDB: singleDB, NumStateTrieShards: numStateTrieShards,
@@ -146,7 +148,7 @@ func initGenesis(ctx *cli.Context) error {
 		// Initialize DeriveSha implementation
 		blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 
-		_, hash, err := blockchain.SetupGenesisBlock(chaindb, genesis, params.UnusedNetworkId, false)
+		_, hash, err := blockchain.SetupGenesisBlock(chaindb, genesis, params.UnusedNetworkId, false, overwriteGenesis)
 		if err != nil {
 			log.Fatalf("Failed to write genesis block: %v", err)
 		}

@@ -17,6 +17,10 @@
 package governance
 
 import (
+	"math/big"
+	"reflect"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -26,9 +30,6 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"reflect"
-	"testing"
 )
 
 type voteValue struct {
@@ -528,7 +529,7 @@ func TestBaoBabGenesisHash(t *testing.T) {
 	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 
 	db := database.NewMemoryDBManager()
-	block, _ := genesis.Commit(db)
+	block, _ := genesis.Commit(common.Hash{}, db)
 	if block.Hash() != baobabHash {
 		t.Errorf("Generated hash is not equal to Baobab's hash. Want %v, Have %v", baobabHash.String(), block.Hash().String())
 	}
@@ -541,7 +542,7 @@ func TestCypressGenesisHash(t *testing.T) {
 	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 
 	db := database.NewMemoryDBManager()
-	block, _ := genesis.Commit(db)
+	block, _ := genesis.Commit(common.Hash{}, db)
 	if block.Hash() != cypressHash {
 		t.Errorf("Generated hash is not equal to Cypress's hash. Want %v, Have %v", cypressHash.String(), block.Hash().String())
 	}

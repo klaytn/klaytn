@@ -20,6 +20,13 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -34,12 +41,6 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"strings"
-	"testing"
-	"time"
 
 	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
 )
@@ -91,7 +92,7 @@ func TestHardForkBlock(t *testing.T) {
 	}()
 
 	gov := generateGovernaceDataForTest()
-	chainConfig, _, err := blockchain.SetupGenesisBlock(chainDb, &genesis, params.UnusedNetworkId, false)
+	chainConfig, _, err := blockchain.SetupGenesisBlock(chainDb, &genesis, params.UnusedNetworkId, false, false)
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
 	engine := istanbulBackend.New(genesisAddr, istanbul.DefaultConfig, genesisKey, chainDb, gov, common.CONSENSUSNODE)
 	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, engine, vm.Config{})
