@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	redisCacheDialTimeout = time.Duration(5 * time.Second)
-	redisCacheTimeout     = time.Duration(3 * time.Second)
+	redisCacheDialTimeout = time.Duration(300 * time.Millisecond)
+	redisCacheTimeout     = time.Duration(100 * time.Millisecond)
 
 	errRedisNoEndpoint = errors.New("redis endpoint not specified")
 )
@@ -43,20 +43,22 @@ func newRedisClient(endpoints []string, isCluster bool) (redis.UniversalClient, 
 	// cluster-enabled redis can have more than one shard
 	if isCluster {
 		return redis.NewClusterClient(&redis.ClusterOptions{
+			// it takes Timeout * (MaxRetries+1) to raise an error
 			Addrs:        endpoints,
 			DialTimeout:  redisCacheDialTimeout,
 			ReadTimeout:  redisCacheTimeout,
 			WriteTimeout: redisCacheTimeout,
-			MaxRetries:   8,
+			MaxRetries:   2,
 		}), nil
 	}
 
 	return redis.NewClient(&redis.Options{
+		// it takes Timeout * (MaxRetries+1) to raise an error
 		Addr:         endpoints[0],
 		DialTimeout:  redisCacheDialTimeout,
 		ReadTimeout:  redisCacheTimeout,
 		WriteTimeout: redisCacheTimeout,
-		MaxRetries:   8,
+		MaxRetries:   2,
 	}), nil
 }
 
