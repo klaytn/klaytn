@@ -105,6 +105,7 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 			utils.DynamoDBIsProvisionedFlag,
 			utils.DynamoDBReadCapacityFlag,
 			utils.DynamoDBWriteCapacityFlag,
+			utils.DynamoDBReadOnlyFlag,
 			utils.NoParallelDBWriteFlag,
 			utils.SenderTxHashIndexingFlag,
 		},
