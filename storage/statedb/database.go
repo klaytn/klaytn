@@ -326,7 +326,7 @@ func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Databa
 	}
 	if cacheSizeMB > 0 {
 		cacheSizeByte = cacheSizeMB * 1024 * 1024
-		trieNodeCache = NewLocalCache(cacheSizeByte)
+		trieNodeCache = NewFastCache(cacheSizeByte)
 
 		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
 	}
@@ -1121,7 +1121,7 @@ func (db *Database) UpdateMetricNodes() {
 	memcacheNodesGauge.Update(int64(len(db.nodes)))
 	if db.trieNodeCache != nil {
 		switch c := db.trieNodeCache.(type) {
-		case *LocalCache:
+		case *FastCache:
 			stats := c.UpdateStats()
 
 			memcacheFastMisses.Update(int64(stats.Misses))
