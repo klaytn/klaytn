@@ -70,7 +70,7 @@ func testDynamoDB_Put(t *testing.T) {
 }
 
 func testDynamoBatch_Write(t *testing.T) {
-	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func testDynamoBatch_Write(t *testing.T) {
 }
 
 func testDynamoBatch_WriteLargeData(t *testing.T) {
-	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -134,7 +134,7 @@ func testDynamoBatch_WriteLargeData(t *testing.T) {
 }
 
 func testDynamoBatch_DuplicatedKey(t *testing.T) {
-	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -174,7 +174,7 @@ func testDynamoBatch_WriteMutliTables(t *testing.T) {
 	//enableLog()
 
 	// create DynamoDB1
-	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -182,7 +182,7 @@ func testDynamoBatch_WriteMutliTables(t *testing.T) {
 	t.Log("dynamoDB1", dynamo.config.TableName)
 
 	// create DynamoDB2
-	dynamo2, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo2, err := newDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo2.deleteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -242,7 +242,9 @@ func testDynamoBatch_WriteMutliTables(t *testing.T) {
 }
 
 func (dynamo *dynamoDB) deleteDB() {
-	dynamo.Close()
+	if !dynamo.config.ReadOnly {
+		dynamo.Close()
+	}
 	dynamo.deleteTable()
 	dynamo.fdb.deleteBucket()
 }

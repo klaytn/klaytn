@@ -75,6 +75,7 @@ type DynamoDBConfig struct {
 	IsProvisioned      bool   // Billing mode
 	ReadCapacityUnits  int64  // read capacity when provisioned
 	WriteCapacityUnits int64  // write capacity when provisioned
+	ReadOnly           bool   // disables write
 }
 
 type batchWriteWorkerInput struct {
@@ -116,10 +117,18 @@ func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 		IsProvisioned:      false,
 		ReadCapacityUnits:  10000,
 		WriteCapacityUnits: 10000,
+		ReadOnly:           false,
 	}
 }
 
-func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
+func NewDynamoDB(config *DynamoDBConfig) (Database, error) {
+	if config.ReadOnly {
+		return newDynamoDBReadOnly(config)
+	}
+	return newDynamoDB(config)
+}
+
+func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if config == nil {
 		return nil, nilDynamoConfigErr
 	}
@@ -171,12 +180,14 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 		switch tableStatus {
 		case dynamodb.TableStatusActive:
 			dynamoDB.logger.Warn("Successfully created dynamoDB table. You will be CHARGED until the DB is deleted.", "endPoint", config.Endpoint)
-			// count successful table creating
-			dynamoOpenedDBNum++
-			// create workers on the first successful table creation
-			dynamoOnceWorker.Do(func() {
-				createBatchWriteWorkerPool(config.Endpoint, config.Region)
-			})
+			if !dynamoDB.config.ReadOnly {
+				// count successful table creating
+				dynamoOpenedDBNum++
+				// create workers on the first successful table creation
+				dynamoOnceWorker.Do(func() {
+					createBatchWriteWorkerPool(config.Endpoint, config.Region)
+				})
+			}
 			return dynamoDB, nil
 		case dynamodb.TableStatusDeleting, dynamodb.TableStatusArchiving, dynamodb.TableStatusArchived:
 			return nil, errors.New("failed to get DynamoDB table, table status : " + tableStatus)
