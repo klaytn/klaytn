@@ -49,7 +49,7 @@ func enableLog() {
 }
 
 func testDynamoDB_Put(t *testing.T) {
-	dynamo, err := NewDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
 		t.Fatal(err)

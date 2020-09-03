@@ -16,7 +16,7 @@
 //
 // Database implementation of AWS DynamoDB READ ONLY.
 // Calling put, delete, batch put and batch write does nothing and returns no error.
-// Other functions such as get and has will call functions in DynamoDB.
+// Other functions such as get and has will call functions in dynamoDB.
 //
 // [WARN] Using this DB may cause pricing in your AWS account.
 // [WARN] DynamoDB creates both Dynamo DB table and S3 bucket.
@@ -27,10 +27,14 @@
 
 package database
 
+// dynamoDBReadOnly uses dynamoDB.
+// Calling put, delete, batch put and batch write does nothing and returns no error.
+// Other functions such as get and has will call functions in dynamoDB.
 type dynamoDBReadOnly struct {
 	dynamoDB
 }
 
+// newDynamoDBReadOnly creates dynamoDBReadOnly. This uses dynamoDB to create dynamoDBReadOnly.
 func newDynamoDBReadOnly(config *DynamoDBConfig) (*dynamoDBReadOnly, error) {
 	config.ReadOnly = true
 	dynamo, err := newDynamoDB(config)

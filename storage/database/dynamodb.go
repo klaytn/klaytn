@@ -121,6 +121,7 @@ func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	}
 }
 
+// NewDynamoDB creates either dynamoDB or dynamoDBReadOnly depending on config.ReadOnly.
 func NewDynamoDB(config *DynamoDBConfig) (Database, error) {
 	if config.ReadOnly {
 		return newDynamoDBReadOnly(config)
@@ -128,6 +129,7 @@ func NewDynamoDB(config *DynamoDBConfig) (Database, error) {
 	return newDynamoDB(config)
 }
 
+// newDynamoDB creates dynamoDB. dynamoDB can be used to create dynamoDBReadOnly.
 func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if config == nil {
 		return nil, nilDynamoConfigErr
