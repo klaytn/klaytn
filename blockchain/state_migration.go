@@ -414,7 +414,7 @@ func (bc *BlockChain) warmUpLoop(cache statedb.Cache, mainTrieCacheLimit uint64,
 
 	updateContext := func() {
 		switch c := cache.(type) {
-		case *statedb.LocalCache:
+		case *statedb.FastCache:
 			stats := c.UpdateStats()
 			percent = stats.BytesSize * 100 / mainTrieCacheLimit
 			context = []interface{}{

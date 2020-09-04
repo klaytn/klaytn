@@ -16,33 +16,29 @@
 
 package statedb
 
-import "github.com/VictoriaMetrics/fastcache"
+import (
+	"reflect"
+	"testing"
 
-type FastCache struct {
-	cache *fastcache.Cache
-}
+	"github.com/docker/docker/pkg/testutil/assert"
+)
 
-func NewFastCache(maxBytes int) Cache {
-	return &FastCache{
-		cache: fastcache.New(maxBytes),
+// TODO-Klaytn: Enable tests when redis is prepared on CI
+
+// TestNewCache tests creating all kinds of supported stateDB caches.
+func _TestNewCache(t *testing.T) {
+	testCases := []struct {
+		cacheType    CacheType
+		expectedType reflect.Type
+	}{
+		{"LocalCache", reflect.TypeOf(&FastCache{})},
+		{"RemoteCache", reflect.TypeOf(&RedisCache{})},
+		{"HybridCache", reflect.TypeOf(&hybridCache{})},
 	}
-}
 
-func (l *FastCache) Get(k []byte) []byte {
-	return l.cache.Get(nil, k)
-}
-
-func (l *FastCache) Set(k, v []byte) {
-	l.cache.Set(k, v)
-}
-
-func (l *FastCache) Has(k []byte) ([]byte, bool) {
-	return l.cache.HasGet(nil, k)
-}
-
-func (l *FastCache) UpdateStats() fastcache.Stats {
-	var stats fastcache.Stats
-	l.cache.UpdateStats(&stats)
-
-	return stats
+	for _, tc := range testCases {
+		cache, err := NewCache(tc.cacheType, testMaxBytes, testRedisEndpoints, testRedisCluster)
+		assert.NilError(t, err)
+		assert.Equal(t, reflect.TypeOf(cache), tc.expectedType)
+	}
 }

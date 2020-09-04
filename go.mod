@@ -16,6 +16,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/fjl/memsize v0.0.0-20180427083637-f6d5545993d6
 	github.com/go-kit/kit v0.9.0 // indirect
+	github.com/go-redis/redis/v7 v7.4.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-stack/stack v1.8.0
 	github.com/golang/mock v1.3.1-0.20190508161146-9fa652df1129
@@ -28,7 +29,6 @@ require (
 	github.com/jinzhu/gorm v1.9.15
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/klauspost/compress v1.4.1 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.2
 	github.com/mattn/go-runewidth v0.0.2 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
@@ -59,7 +59,6 @@ require (
 	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
 	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
-	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20191005014404-c9f9432ec4b2
 	google.golang.org/genproto v0.0.0-20190111180523-db91494dd46c // indirect
 	google.golang.org/grpc v1.23.1
