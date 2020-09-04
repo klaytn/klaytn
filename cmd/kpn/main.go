@@ -61,7 +61,7 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 			utils.LightKDFFlag,
 			utils.SrvTypeFlag,
 			utils.ExtraDataFlag,
-			nodecmd.ConfigFileFlag,
+			utils.ConfigFileFlag,
 			utils.OverwriteGenesisFlag,
 		},
 	},

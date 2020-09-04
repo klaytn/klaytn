@@ -46,13 +46,6 @@ import (
 	"github.com/naoina/toml"
 )
 
-var (
-	ConfigFileFlag = cli.StringFlag{
-		Name:  "config",
-		Usage: "TOML configuration file",
-	}
-)
-
 // These settings ensure that TOML keys use the same names as Go struct fields.
 var tomlSettings = toml.Config{
 	NormFieldName: func(rt reflect.Type, key string) string {
@@ -121,7 +114,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	}
 
 	// Load config file.
-	if file := ctx.GlobalString(ConfigFileFlag.Name); file != "" {
+	if file := ctx.GlobalString(utils.ConfigFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
 			log.Fatalf("%v", err)
 		}

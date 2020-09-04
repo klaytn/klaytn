@@ -23,9 +23,10 @@
 package utils
 
 import (
-	"gopkg.in/urfave/cli.v1"
 	"io"
 	"strings"
+
+	"gopkg.in/urfave/cli.v1"
 )
 
 // FlagGroup is a collection of flags belonging to a single topic.

@@ -869,6 +869,12 @@ var (
 		Value: database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
 	}
 
+	// Config
+	ConfigFileFlag = cli.StringFlag{
+		Name:  "config",
+		Usage: "TOML configuration file",
+	}
+
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
 	// TODO-Klaytn-Bootnode: Implements bootnode's RPC
 )
