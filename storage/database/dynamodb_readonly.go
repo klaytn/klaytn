@@ -41,6 +41,7 @@ func newDynamoDBReadOnly(config *DynamoDBConfig) (*dynamoDBReadOnly, error) {
 	if err != nil {
 		return nil, err
 	}
+	dynamo.logger.Warn("Read only flag is set for dynamoDB. Check for billing method and capacity.")
 	return &dynamoDBReadOnly{*dynamo}, nil
 }
 

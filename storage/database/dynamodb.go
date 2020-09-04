@@ -368,11 +368,13 @@ func (dynamo *dynamoDB) Delete(key []byte) error {
 }
 
 func (dynamo *dynamoDB) Close() {
-	if dynamoOpenedDBNum > 0 {
-		dynamoOpenedDBNum--
-	}
-	if dynamoOpenedDBNum == 0 {
-		close(dynamoWriteCh)
+	if !dynamo.config.ReadOnly {
+		if dynamoOpenedDBNum > 0 {
+			dynamoOpenedDBNum--
+		}
+		if dynamoOpenedDBNum == 0 {
+			close(dynamoWriteCh)
+		}
 	}
 }
 

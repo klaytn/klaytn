@@ -242,9 +242,7 @@ func testDynamoBatch_WriteMutliTables(t *testing.T) {
 }
 
 func (dynamo *dynamoDB) deleteDB() {
-	if !dynamo.config.ReadOnly {
-		dynamo.Close()
-	}
+	dynamo.Close()
 	dynamo.deleteTable()
 	dynamo.fdb.deleteBucket()
 }
