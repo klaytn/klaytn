@@ -87,3 +87,9 @@ func testDynamoDBReadOnly_Write(t *testing.T) {
 		assert.Equal(t, err.Error(), dataNotFoundErr.Error())
 	}
 }
+
+func (dynamo *dynamoDBReadOnly) deleteDB() {
+	dynamo.Close()
+	dynamo.deleteTable()
+	dynamo.fdb.deleteBucket()
+}
