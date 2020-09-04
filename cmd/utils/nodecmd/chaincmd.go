@@ -53,6 +53,7 @@ var (
 			utils.DynamoDBIsProvisionedFlag,
 			utils.DynamoDBReadCapacityFlag,
 			utils.DynamoDBWriteCapacityFlag,
+			utils.DynamoDBReadOnlyFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.DataDirFlag,
 			utils.OverwriteGenesisFlag,

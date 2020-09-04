@@ -243,6 +243,10 @@ var (
 		Usage: "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
 		Value: database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
 	}
+	DynamoDBReadOnlyFlag = cli.BoolFlag{
+		Name:  "db.dynamo.read-only",
+		Usage: "Disables write to DynamoDB. Only read is possible.",
+	}
 	NoParallelDBWriteFlag = cli.BoolFlag{
 		Name:  "db.no-parallel-write",
 		Usage: "Disables parallel writes of block data to persistent database",
@@ -1336,6 +1340,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.DynamoDBConfig.IsProvisioned = ctx.GlobalBool(DynamoDBIsProvisionedFlag.Name)
 	cfg.DynamoDBConfig.ReadCapacityUnits = ctx.GlobalInt64(DynamoDBReadCapacityFlag.Name)
 	cfg.DynamoDBConfig.WriteCapacityUnits = ctx.GlobalInt64(DynamoDBWriteCapacityFlag.Name)
+	cfg.DynamoDBConfig.ReadOnly = ctx.GlobalBool(DynamoDBReadOnlyFlag.Name)
 
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		log.Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
