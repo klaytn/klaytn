@@ -25,6 +25,13 @@ import (
 
 const uncategorized = "MISC" // Uncategorized flags will belong to this group
 
+// FlagGroup is a collection of flags belonging to a single topic.
+type FlagGroup struct {
+	Name  string
+	Flags []cli.Flag
+}
+
+// TODO-Klaytn: consider changing the type of FlagGroups to map
 // FlagGroups categorizes flags into groups to print structured help.
 var FlagGroups = []FlagGroup{
 	{
@@ -255,7 +262,7 @@ var FlagGroups = []FlagGroup{
 	},
 }
 
-// CategorizeFlags classified each flag into pre-defined flagGroups.
+// CategorizeFlags classifies each flag into pre-defined flagGroups.
 func CategorizeFlags(flags []cli.Flag) []FlagGroup {
 	flagGroupsMap := make(map[string][]cli.Flag)
 	isFlagAdded := make(map[string]bool) // Check duplicated flags
@@ -263,24 +270,14 @@ func CategorizeFlags(flags []cli.Flag) []FlagGroup {
 	// Find its group for each flag
 	for _, flag := range flags {
 		if isFlagAdded[flag.GetName()] {
+			logger.Debug("a flag is added in the help description more than one time", "flag", flag.GetName())
 			continue
 		}
 
-		// Find the group of each flag
-		for _, group := range FlagGroups {
-			for _, groupFlag := range group.Flags {
-				if flag == groupFlag && !isFlagAdded[flag.GetName()] {
-					flagGroupsMap[group.Name] = append(flagGroupsMap[group.Name], groupFlag)
-					isFlagAdded[flag.GetName()] = true
-				}
-			}
-		}
-
-		// If a flag doesn't belong to any groups, categorize it as a MISC flag
-		if !isFlagAdded[flag.GetName()] {
-			flagGroupsMap[uncategorized] = append(flagGroupsMap[uncategorized], flag)
-			isFlagAdded[flag.GetName()] = true
-		}
+		// Find a group of the flag. If a flag doesn't belong to any groups, categorize it as a MISC flag
+		group := flagCategory(flag, FlagGroups)
+		flagGroupsMap[group] = append(flagGroupsMap[group], flag)
+		isFlagAdded[flag.GetName()] = true
 	}
 
 	// Convert flagGroupsMap to a slice of FlagGroup
@@ -316,4 +313,16 @@ func sortFlagGroup(flagGroups []FlagGroup, uncategorized string) []FlagGroup {
 	}
 
 	return flagGroups
+}
+
+// flagCategory returns belonged group of the given flag.
+func flagCategory(flag cli.Flag, fg []FlagGroup) string {
+	for _, category := range fg {
+		for _, flg := range category.Flags {
+			if flg.GetName() == flag.GetName() {
+				return category.Name
+			}
+		}
+	}
+	return uncategorized
 }
