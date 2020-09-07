@@ -20,15 +20,6 @@ package setup
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/cmd/homi/docker/compose"
-	"github.com/klaytn/klaytn/cmd/homi/docker/service"
-	"github.com/klaytn/klaytn/cmd/homi/genesis"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -40,7 +31,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klaytn/klaytn/accounts/keystore"
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/cmd/homi/docker/compose"
+	"github.com/klaytn/klaytn/cmd/homi/docker/service"
+	"github.com/klaytn/klaytn/cmd/homi/genesis"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
+	"gopkg.in/urfave/cli.v1"
+
 	"crypto/ecdsa"
+
 	istcommon "github.com/klaytn/klaytn/cmd/homi/common"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
@@ -313,6 +315,12 @@ func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.
 	assignExtraData := genesis.Validators(nodeAddrs...)
 	assignExtraData(genesisJson)
 
+	// To test storage trie with Cypress Chaindata
+	genesisJson.Alloc[genesis.StorageTrieTestAddr] = blockchain.GenesisAccount{
+		Code:    genesis.StorageTrieByteCode,
+		Balance: big.NewInt(0),
+	}
+
 	return genesisJson
 }
 
@@ -403,6 +411,12 @@ func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.G
 	}
 	assignExtraData := genesis.Validators(nodeAddrs...)
 	assignExtraData(genesisJson)
+
+	// To test storage trie with Cypress Chaindata
+	genesisJson.Alloc[genesis.StorageTrieTestAddr] = blockchain.GenesisAccount{
+		Code:    genesis.StorageTrieByteCode,
+		Balance: big.NewInt(0),
+	}
 
 	return genesisJson
 }
