@@ -286,9 +286,9 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		if len(account.Code) != 0 {
 			originalCode := stateDB.GetCode(addr)
 			stateDB.SetCode(addr, account.Code)
-			// If originalCode is not nil and baseStateRoot is not an empty hash,
+			// If originalCode is not nil,
 			// just update the code and don't change the other states
-			if originalCode != nil && !common.EmptyHash(baseStateRoot) {
+			if originalCode != nil {
 				logger.Warn("this address already has a not nil code, now the code of this address has been changed", "addr", addr.String())
 				continue
 			}
