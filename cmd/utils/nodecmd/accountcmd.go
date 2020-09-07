@@ -268,7 +268,7 @@ func accountCreate(ctx *cli.Context) error {
 	}
 	cfg := klayConfig{Node: defaultNodeConfig()}
 	// Load config file.
-	if file := ctx.GlobalString(ConfigFileFlag.Name); file != "" {
+	if file := ctx.GlobalString(utils.ConfigFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
 			log.Fatalf("%v", err)
 		}

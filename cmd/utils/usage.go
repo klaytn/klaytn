@@ -23,27 +23,11 @@
 package utils
 
 import (
-	"gopkg.in/urfave/cli.v1"
 	"io"
 	"strings"
+
+	"gopkg.in/urfave/cli.v1"
 )
-
-// FlagGroup is a collection of flags belonging to a single topic.
-type FlagGroup struct {
-	Name  string
-	Flags []cli.Flag
-}
-
-func flagCategory(flag cli.Flag, fg []FlagGroup) string {
-	for _, category := range fg {
-		for _, flg := range category.Flags {
-			if flg.GetName() == flag.GetName() {
-				return category.Name
-			}
-		}
-	}
-	return "MISC"
-}
 
 func NewHelpPrinter(fg []FlagGroup) func(w io.Writer, tmp string, data interface{}) {
 	originalHelpPrinter := cli.HelpPrinter

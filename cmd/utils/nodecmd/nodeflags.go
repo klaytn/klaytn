@@ -25,6 +25,8 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
+// TODO-Klaytn: Check whether all flags are registered in utils.FlagGroups
+
 // Common flags that configure the node
 var CommonNodeFlags = []cli.Flag{
 	utils.BootnodesFlag,
@@ -102,7 +104,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.AutoRestartFlag,
 	utils.RestartTimeOutFlag,
 	utils.DaemonPathFlag,
-	ConfigFileFlag,
+	utils.ConfigFileFlag,
 }
 
 // Common RPC flags
