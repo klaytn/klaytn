@@ -31,7 +31,7 @@ func TestFlagGroups_Duplication(t *testing.T) {
 	for _, group := range testGroups {
 		for _, flag := range group.Flags {
 			if exist[flag.GetName()] == true {
-				t.Error("a flag belong to more than 2 groups", "flag", flag.GetName())
+				t.Error("a flag belong to more than one group", "flag", flag.GetName())
 			}
 			exist[flag.GetName()] = true
 		}

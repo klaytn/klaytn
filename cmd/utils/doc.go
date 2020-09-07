@@ -31,6 +31,7 @@ Each file contains the following contents
  - customflags.go	: Provides `DirectoryString`, `DirectoryFlags` and marshaling functions to support custom flags
  - files.go		: Provides `WriteFile` function to store contents in a given file
  - flags.go		: Defines various flags which can be used in running a node
+ - flaggroup.go : Categorizes flags into groups to print structured help descriptions.
  - helptemplate.go	: Provides a template for help contents which explains option names and its usages
  - strings.go		: Provides helper functions to handle string manipulations
  - testcmd.go		: Provides test functions to test command arguments
