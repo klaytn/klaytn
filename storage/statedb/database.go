@@ -311,15 +311,17 @@ func expandNode(hash hashNode, n node) node {
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
-	return NewDatabaseWithNewCache(diskDB, 0)
+	return NewDatabaseWithNewCache(diskDB, TrieNodeCacheConfig{LocalCache, 0, nil, false})
 }
 
 // NewDatabaseWithNewCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Database {
+func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig TrieNodeCacheConfig) *Database {
 	var trieNodeCache TrieNodeCache
 	var cacheSizeByte int
+	// TODO-Aidan: use cacheConfig and NewTrieNodeCache
+	cacheSizeMB := cacheConfig.FastCacheSizeMB
 
 	if cacheSizeMB == AutoScaling {
 		cacheSizeMB = getTrieNodeCacheSizeMB()

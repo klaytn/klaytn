@@ -37,7 +37,7 @@ func _TestNewTrieNodeCache(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		cache, err := NewTrieNodeCache(tc.cacheType, testMaxBytes, testRedisEndpoints, testRedisCluster)
+		cache, err := NewTrieNodeCache(testConfig)
 		assert.NilError(t, err)
 		assert.Equal(t, reflect.TypeOf(cache), tc.expectedType)
 	}

@@ -16,13 +16,13 @@
 
 package statedb
 
-func NewHybridCache(maxBytes int, endpoint []string, isCluster bool) (TrieNodeCache, error) {
-	redis, err := NewRedisCache(endpoint, isCluster)
+func NewHybridCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
+	redis, err := NewRedisCache(config.RedisEndpoints, config.RedisClusterEnable)
 	if err != nil {
 		return nil, err
 	}
 	return &hybridCache{
-		local:  NewFastCache(maxBytes),
+		local:  NewFastCache(config.FastCacheSizeMB),
 		remote: redis,
 	}, nil
 }

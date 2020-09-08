@@ -16,9 +16,28 @@
 
 package statedb
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 type TrieNodeCacheType string
+
+// TrieNodeCacheConfig contains configuration values of all TrieNodeCache.
+// The Validity of each value is checked in "New" function of each TrieNodeCache construction.
+type TrieNodeCacheConfig struct {
+	CacheType          TrieNodeCacheType
+	FastCacheSizeMB    int      // Memory allowance (MB) to use for caching trie nodes in fast cache
+	RedisEndpoints     []string // Endpoints of redis cache
+	RedisClusterEnable bool     // Enable cluster-enabled mode of redis cache
+}
+
+// TrieNodeCache interface the cache of stateDB
+type TrieNodeCache interface {
+	Set(k, v []byte)
+	Get(k []byte) []byte
+	Has(k []byte) ([]byte, bool)
+}
 
 const (
 	// Available stateDB cache types
@@ -28,26 +47,29 @@ const (
 )
 
 var (
+	validTrieNodeCacheTypes  = []TrieNodeCacheType{LocalCache, RemoteCache, HybridCache}
 	errNotSupportedCacheType = errors.New("not supported stateDB TrieNodeCache type")
 )
 
-// TrieNodeCache interface the cache of stateDB
-type TrieNodeCache interface {
-	Set(k, v []byte)
-	Get(k []byte) []byte
-	Has(k []byte) ([]byte, bool)
+func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
+	for _, validType := range validTrieNodeCacheTypes {
+		if strings.ToLower(string(cacheType)) == strings.ToLower(string(validType)) {
+			return validType
+		}
+	}
+	return ""
 }
 
 // NewTrieNodeCache creates one type of any supported trie node caches.
-// TODO-Klaytn: refine input parameters after setting node flags
-func NewTrieNodeCache(cacheType TrieNodeCacheType, maxBytes int, redisEndpoint []string, redisCluster bool) (TrieNodeCache, error) {
-	switch cacheType {
+func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
+	// maxBytes int, redisEndpoint []string, redisCluster bool) (TrieNodeCache, error) {
+	switch config.CacheType {
 	case LocalCache:
-		return NewFastCache(maxBytes), nil
+		return NewFastCache(config.FastCacheSizeMB), nil
 	case RemoteCache:
-		return NewRedisCache(redisEndpoint, redisCluster)
+		return NewRedisCache(config.RedisEndpoints, config.RedisClusterEnable)
 	case HybridCache:
-		return NewHybridCache(maxBytes, redisEndpoint, redisCluster)
+		return NewHybridCache(config)
 	default:
 	}
 	return nil, errNotSupportedCacheType
