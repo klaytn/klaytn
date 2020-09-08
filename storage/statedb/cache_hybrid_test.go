@@ -48,7 +48,7 @@ func _TestHybridCache_Get(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var hybrid Cache = &hybridCache{
+	var hybrid TrieNodeCache = &hybridCache{
 		local:  localCache,
 		remote: remoteCache,
 	}
@@ -97,7 +97,7 @@ func _TestHybridCache_Has(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var hybrid Cache = &hybridCache{
+	var hybrid TrieNodeCache = &hybridCache{
 		local:  localCache,
 		remote: remoteCache,
 	}

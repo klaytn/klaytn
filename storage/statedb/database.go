@@ -124,8 +124,8 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache      Cache // GC friendly memory cache of trie node RLPs
-	trieNodeCacheLimit int   // byte size of trieNodeCache
+	trieNodeCache      TrieNodeCache // GC friendly memory cache of trie node RLPs
+	trieNodeCacheLimit int           // byte size of trieNodeCache
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -318,7 +318,7 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
 func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Database {
-	var trieNodeCache Cache
+	var trieNodeCache TrieNodeCache
 	var cacheSizeByte int
 
 	if cacheSizeMB == AutoScaling {
@@ -342,7 +342,7 @@ func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Databa
 // NewDatabaseWithExistingCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithExistingCache(diskDB database.DBManager, cache Cache) *Database {
+func NewDatabaseWithExistingCache(diskDB database.DBManager, cache TrieNodeCache) *Database {
 	return &Database{
 		diskDB:        diskDB,
 		nodes:         map[common.Hash]*cachedNode{{}: {}},
@@ -374,7 +374,7 @@ func (db *Database) DiskDB() database.DBManager {
 }
 
 // TrieNodeCache retrieves the trieNodeCache of the trie database.
-func (db *Database) TrieNodeCache() Cache {
+func (db *Database) TrieNodeCache() TrieNodeCache {
 	return db.trieNodeCache
 }
 

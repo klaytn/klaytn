@@ -22,7 +22,7 @@ type FastCache struct {
 	cache *fastcache.Cache
 }
 
-func NewFastCache(maxBytes int) Cache {
+func NewFastCache(maxBytes int) TrieNodeCache {
 	return &FastCache{
 		cache: fastcache.New(maxBytes),
 	}

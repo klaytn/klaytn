@@ -16,7 +16,7 @@
 
 package statedb
 
-func NewHybridCache(maxBytes int, endpoint []string, isCluster bool) (Cache, error) {
+func NewHybridCache(maxBytes int, endpoint []string, isCluster bool) (TrieNodeCache, error) {
 	redis, err := NewRedisCache(endpoint, isCluster)
 	if err != nil {
 		return nil, err
@@ -30,8 +30,8 @@ func NewHybridCache(maxBytes int, endpoint []string, isCluster bool) (Cache, err
 // hybridCache integrates two kinds of caches: local, remote.
 // local cache uses memory of the local machine and remote cache uses memory of the remote machine.
 type hybridCache struct {
-	local  Cache
-	remote Cache
+	local  TrieNodeCache
+	remote TrieNodeCache
 }
 
 func (cache *hybridCache) Set(k, v []byte) {

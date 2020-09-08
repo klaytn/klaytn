@@ -405,7 +405,7 @@ func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database,
 	return nil
 }
 
-func (bc *BlockChain) warmUpLoop(cache statedb.Cache, mainTrieCacheLimit uint64, children []common.Hash,
+func (bc *BlockChain) warmUpLoop(cache statedb.TrieNodeCache, mainTrieCacheLimit uint64, children []common.Hash,
 	resultHashCh chan common.Hash, resultErrCh chan error) {
 	logged := time.Now()
 	var context []interface{}

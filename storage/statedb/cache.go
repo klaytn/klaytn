@@ -18,29 +18,29 @@ package statedb
 
 import "errors"
 
-type CacheType string
+type TrieNodeCacheType string
 
 const (
 	// Available stateDB cache types
-	LocalCache  CacheType = "LocalCache"
-	RemoteCache           = "RemoteCache"
-	HybridCache           = "HybridCache"
+	LocalCache  TrieNodeCacheType = "LocalCache"
+	RemoteCache                   = "RemoteCache"
+	HybridCache                   = "HybridCache"
 )
 
 var (
-	errNotSupportedCacheType = errors.New("not supported stateDB Cache type")
+	errNotSupportedCacheType = errors.New("not supported stateDB TrieNodeCache type")
 )
 
-// Cache interface the cache of stateDB
-type Cache interface {
+// TrieNodeCache interface the cache of stateDB
+type TrieNodeCache interface {
 	Set(k, v []byte)
 	Get(k []byte) []byte
 	Has(k []byte) ([]byte, bool)
 }
 
-// NewCache creates one type of any supported stateDB caches.
+// NewTrieNodeCache creates one type of any supported trie node caches.
 // TODO-Klaytn: refine input parameters after setting node flags
-func NewCache(cacheType CacheType, maxBytes int, redisEndpoint []string, redisCluster bool) (Cache, error) {
+func NewTrieNodeCache(cacheType TrieNodeCacheType, maxBytes int, redisEndpoint []string, redisCluster bool) (TrieNodeCache, error) {
 	switch cacheType {
 	case LocalCache:
 		return NewFastCache(maxBytes), nil

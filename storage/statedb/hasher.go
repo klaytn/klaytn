@@ -21,11 +21,12 @@
 package statedb
 
 import (
+	"hash"
+	"sync"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/ser/rlp"
-	"hash"
-	"sync"
 )
 
 type hasher struct {
@@ -93,7 +94,7 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 	// Trie not processed yet or needs storage, walk the children
 	collapsed, cached := h.hashChildren(n, db)
 	hashed, lenEncoded := h.store(collapsed, db, force)
-	// Cache the hash of the node for later reuse and remove
+	// TrieNodeCache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
 	// without copying the node first because hashChildren copies it.
 	cachedHash, _ := hashed.(hashNode)
@@ -132,7 +133,7 @@ func (h *hasher) hashRoot(n node, db *Database, force bool) (node, node) {
 	// Trie not processed yet or needs storage, walk the children
 	collapsed, cached := h.hashChildrenFromRoot(n, db)
 	hashed, lenEncoded := h.store(collapsed, db, force)
-	// Cache the hash of the node for later reuse and remove
+	// TrieNodeCache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
 	// without copying the node first because hashChildren copies it.
 	cachedHash, _ := hashed.(hashNode)
