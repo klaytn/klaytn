@@ -23,7 +23,7 @@ type FastCache struct {
 }
 
 // NewFastCache creates a FastCache with given cache size.
-// It returns nil, if the cache size is zero.
+// It returns nil if the cache size is zero.
 func NewFastCache(cacheSizeMB int) TrieNodeCache {
 	var cacheSizeByte int
 
@@ -40,9 +40,7 @@ func NewFastCache(cacheSizeMB int) TrieNodeCache {
 	}
 
 	logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
-	return &FastCache{
-		cache: fastcache.New(cacheSizeByte),
-	}
+	return &FastCache{cache: fastcache.New(cacheSizeByte)}
 }
 
 func (l *FastCache) Get(k []byte) []byte {

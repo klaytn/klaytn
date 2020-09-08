@@ -89,8 +89,7 @@ type CacheConfig struct {
 	BlockInterval        uint                        // Block interval to flush the trie. Each interval state trie will be flushed into disk
 	TriesInMemory        uint64                      // Maximum number of recent state tries according to its block number
 	SenderTxHashIndexing bool                        // Enables saving senderTxHash to txHash mapping information to database and cache
-	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig // Memory allowance (
-	// MB) to use for caching trie nodes in memory
+	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig // Configure trie node cache
 }
 
 // gcBlock is used for priority queue for GC.
