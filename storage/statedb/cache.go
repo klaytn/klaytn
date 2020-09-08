@@ -24,7 +24,7 @@ import (
 type TrieNodeCacheType string
 
 // TrieNodeCacheConfig contains configuration values of all TrieNodeCache.
-// The Validity of each value is checked in "New" function of each TrieNodeCache construction.
+// The validity of each value is checked in "New" function of each TrieNodeCache construction.
 type TrieNodeCacheConfig struct {
 	CacheType          TrieNodeCacheType
 	FastCacheSizeMB    int      // Memory allowance (MB) to use for caching trie nodes in fast cache
@@ -61,8 +61,8 @@ func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
 }
 
 // NewTrieNodeCache creates one type of any supported trie node caches.
+// NOTE: It returns (nil, nil) when the cache type is LocalCache and its size is set to zero.
 func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
-	// maxBytes int, redisEndpoint []string, redisCluster bool) (TrieNodeCache, error) {
 	switch config.CacheType {
 	case LocalCache:
 		return NewFastCache(config.FastCacheSizeMB), nil

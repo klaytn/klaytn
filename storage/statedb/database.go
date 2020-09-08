@@ -124,8 +124,8 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache      TrieNodeCache // GC friendly memory cache of trie node RLPs
-	trieNodeCacheLimit int           // byte size of trieNodeCache
+	trieNodeCache           TrieNodeCache // GC friendly memory cache of trie node RLPs
+	trieNodeLocalCacheLimit int           // byte size of local trieNodeCache
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -318,26 +318,17 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
 func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig TrieNodeCacheConfig) *Database {
-	var trieNodeCache TrieNodeCache
-	var cacheSizeByte int
-	// TODO-Aidan: use cacheConfig and NewTrieNodeCache
-	cacheSizeMB := cacheConfig.FastCacheSizeMB
-
-	if cacheSizeMB == AutoScaling {
-		cacheSizeMB = getTrieNodeCacheSizeMB()
+	trieNodeCache, err := NewTrieNodeCache(cacheConfig)
+	if err != nil {
+		logger.Crit("Invalid trie node cache config", "err", err, "config", cacheConfig)
 	}
-	if cacheSizeMB > 0 {
-		cacheSizeByte = cacheSizeMB * 1024 * 1024
-		trieNodeCache = NewFastCache(cacheSizeByte)
 
-		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
-	}
 	return &Database{
-		diskDB:             diskDB,
-		nodes:              map[common.Hash]*cachedNode{{}: {}},
-		preimages:          make(map[common.Hash][]byte),
-		trieNodeCache:      trieNodeCache,
-		trieNodeCacheLimit: cacheSizeByte,
+		diskDB:                  diskDB,
+		nodes:                   map[common.Hash]*cachedNode{{}: {}},
+		preimages:               make(map[common.Hash][]byte),
+		trieNodeCache:           trieNodeCache,
+		trieNodeLocalCacheLimit: cacheConfig.FastCacheSizeMB,
 	}
 }
 
@@ -380,9 +371,9 @@ func (db *Database) TrieNodeCache() TrieNodeCache {
 	return db.trieNodeCache
 }
 
-// GetTrieNodeCacheLimit returns the byte size of trie node cache.
-func (db *Database) GetTrieNodeCacheLimit() int {
-	return db.trieNodeCacheLimit
+// GetTrieNodeLocalCacheLimit returns the byte size of trie node cache.
+func (db *Database) GetTrieNodeLocalCacheLimit() int {
+	return db.trieNodeLocalCacheLimit
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.
