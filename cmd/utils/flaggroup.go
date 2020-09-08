@@ -149,7 +149,10 @@ var FlagGroups = []FlagGroup{
 			MemorySizeFlag,
 			CacheWriteThroughFlag,
 			TxPoolStateCacheFlag,
+			TrieNodeCacheTypeFlag,
 			TrieNodeCacheLimitFlag,
+			TrieNodeCacheRedisEndpointsFlag,
+			TrieNodeCacheRedisClusterFlag,
 		},
 	},
 	{
