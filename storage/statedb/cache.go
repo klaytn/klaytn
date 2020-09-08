@@ -24,7 +24,6 @@ import (
 type TrieNodeCacheType string
 
 // TrieNodeCacheConfig contains configuration values of all TrieNodeCache.
-// The validity of each value is checked in "New" function of each TrieNodeCache construction.
 type TrieNodeCacheConfig struct {
 	CacheType          TrieNodeCacheType
 	FastCacheSizeMB    int      // Memory allowance (MB) to use for caching trie nodes in fast cache
@@ -40,19 +39,19 @@ type TrieNodeCache interface {
 }
 
 const (
-	// Available stateDB cache types
-	LocalCache  TrieNodeCacheType = "LocalCache"
-	RemoteCache                   = "RemoteCache"
-	HybridCache                   = "HybridCache"
+	// Available trie node cache types
+	CacheTypeFast   TrieNodeCacheType = "FastCache"
+	CacheTypeRedis                    = "RemoteCache"
+	CacheTypeHybrid                   = "HybridCache"
 )
 
 var (
-	validTrieNodeCacheTypes  = []TrieNodeCacheType{LocalCache, RemoteCache, HybridCache}
+	ValidTrieNodeCacheTypes  = []TrieNodeCacheType{CacheTypeFast, CacheTypeRedis, CacheTypeHybrid}
 	errNotSupportedCacheType = errors.New("not supported stateDB TrieNodeCache type")
 )
 
 func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
-	for _, validType := range validTrieNodeCacheTypes {
+	for _, validType := range ValidTrieNodeCacheTypes {
 		if strings.ToLower(string(cacheType)) == strings.ToLower(string(validType)) {
 			return validType
 		}
@@ -61,14 +60,14 @@ func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
 }
 
 // NewTrieNodeCache creates one type of any supported trie node caches.
-// NOTE: It returns (nil, nil) when the cache type is LocalCache and its size is set to zero.
+// NOTE: It returns (nil, nil) when the cache type is CacheTypeFast and its size is set to zero.
 func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
 	switch config.CacheType {
-	case LocalCache:
+	case CacheTypeFast:
 		return NewFastCache(config.FastCacheSizeMB), nil
-	case RemoteCache:
+	case CacheTypeRedis:
 		return NewRedisCache(config.RedisEndpoints, config.RedisClusterEnable)
-	case HybridCache:
+	case CacheTypeHybrid:
 		return NewHybridCache(config)
 	default:
 	}

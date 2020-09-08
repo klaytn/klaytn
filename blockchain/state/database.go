@@ -107,7 +107,7 @@ type Trie interface {
 // historical state in memory, use the NewDatabaseWithNewCache constructor.
 func NewDatabase(db database.DBManager) Database {
 	return NewDatabaseWithNewCache(db, statedb.TrieNodeCacheConfig{
-		CacheType:          statedb.LocalCache,
+		CacheType:          statedb.CacheTypeFast,
 		FastCacheSizeMB:    0,
 		RedisEndpoints:     nil,
 		RedisClusterEnable: false,

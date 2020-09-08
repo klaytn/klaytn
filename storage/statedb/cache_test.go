@@ -31,9 +31,9 @@ func _TestNewTrieNodeCache(t *testing.T) {
 		cacheType    TrieNodeCacheType
 		expectedType reflect.Type
 	}{
-		{"LocalCache", reflect.TypeOf(&FastCache{})},
-		{"RemoteCache", reflect.TypeOf(&RedisCache{})},
-		{"HybridCache", reflect.TypeOf(&hybridCache{})},
+		{"CacheTypeFast", reflect.TypeOf(&FastCache{})},
+		{"CacheTypeRedis", reflect.TypeOf(&RedisCache{})},
+		{"CacheTypeHybrid", reflect.TypeOf(&hybridCache{})},
 	}
 
 	for _, tc := range testCases {

@@ -190,6 +190,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			BlockInterval:  DefaultBlockInterval,
 			TriesInMemory:  DefaultTriesInMemory,
 			TrieNodeCacheConfig: statedb.TrieNodeCacheConfig{
+				CacheType:          statedb.CacheTypeFast,
 				FastCacheSizeMB:    0,
 				RedisEndpoints:     nil,
 				RedisClusterEnable: false,

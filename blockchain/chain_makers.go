@@ -177,6 +177,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 			BlockInterval:  DefaultBlockInterval,
 			TriesInMemory:  DefaultTriesInMemory,
 			TrieNodeCacheConfig: statedb.TrieNodeCacheConfig{
+				CacheType:          statedb.CacheTypeFast,
 				FastCacheSizeMB:    0,
 				RedisEndpoints:     nil,
 				RedisClusterEnable: false,

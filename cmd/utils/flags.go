@@ -295,16 +295,16 @@ var (
 	}
 	TrieNodeCacheTypeFlag = cli.StringFlag{
 		Name:  "statedb.cache.type",
-		Usage: "trie node cache type (....)",
-		Value: string(statedb.LocalCache),
+		Usage: "Set trie node cache type ('FastCache', 'RemoteCache', 'HybridCache') (default = 'FastCache')",
+		Value: string(statedb.CacheTypeFast),
 	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",
-		Usage: "statedb cache redis endpoints",
+		Usage: "Set endpoints of redis trie node cache. More than one endpoints can be set",
 	}
 	TrieNodeCacheRedisClusterFlag = cli.BoolFlag{
 		Name:  "statedb.cache.redis.cluster",
-		Usage: "statedb cache redis enable cluster mode",
+		Usage: "Enables cluster-enabled mode of redis trie node cache",
 	}
 	TrieNodeCacheLimitFlag = cli.IntFlag{
 		Name:  "state.trie-cache-limit",
@@ -1414,6 +1414,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		FastCacheSizeMB:    ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		RedisEndpoints:     ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
 		RedisClusterEnable: ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
+	}
+	if cfg.TrieNodeCacheConfig.CacheType == "" {
+		logger.Warn("Invalid cache type", "ValidTypes", statedb.ValidTrieNodeCacheTypes)
 	}
 
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
