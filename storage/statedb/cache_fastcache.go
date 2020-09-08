@@ -22,9 +22,9 @@ type FastCache struct {
 	cache *fastcache.Cache
 }
 
-func NewFastCache(maxBytes int) Cache {
+func NewFastCache(filePath string, maxBytes int) Cache {
 	return &FastCache{
-		cache: fastcache.New(maxBytes),
+		cache: fastcache.LoadFromFileOrNew(filePath, maxBytes),
 	}
 }
 
@@ -45,4 +45,8 @@ func (l *FastCache) UpdateStats() fastcache.Stats {
 	l.cache.UpdateStats(&stats)
 
 	return stats
+}
+
+func (l *FastCache) SaveToFile(filePath string, concurrency int) error {
+	return l.cache.SaveToFileConcurrent(filePath, concurrency)
 }

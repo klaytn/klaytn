@@ -23,6 +23,7 @@ package statedb
 import (
 	"fmt"
 	"io"
+	"runtime"
 	"sync"
 	"time"
 
@@ -326,9 +327,9 @@ func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Databa
 	}
 	if cacheSizeMB > 0 {
 		cacheSizeByte = cacheSizeMB * 1024 * 1024
-		trieNodeCache = NewFastCache(cacheSizeByte)
-
-		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
+		trieNodeCache = NewFastCache(diskDB.GetDBConfig().Dir, cacheSizeByte)
+		logger.Info("Initialize trie node cache with fastcache",
+			"FilePath", diskDB.GetDBConfig().Dir, "MaxMB", cacheSizeMB)
 	}
 	return &Database{
 		diskDB:             diskDB,
@@ -1138,4 +1139,9 @@ func (db *Database) UpdateMetricNodes() {
 		default:
 		}
 	}
+}
+
+// SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when it restarts
+func (db *Database) SaveTrieNodeCacheToFile() error {
+	return db.trieNodeCache.SaveToFile(db.diskDB.GetDBConfig().Dir, runtime.NumCPU()/2)
 }

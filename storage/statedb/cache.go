@@ -36,18 +36,29 @@ type Cache interface {
 	Set(k, v []byte)
 	Get(k []byte) []byte
 	Has(k []byte) ([]byte, bool)
+	SaveToFile(filePath string, concurrency int) error
+}
+
+type CacheConfig struct {
+	Type CacheType
+	// FastCache related configurations
+	CacheFilePath string
+	MaxBytes      int
+	// RedisCache related configurations
+	RedisEndpoints   []string
+	IsClusteredRedis bool
 }
 
 // NewCache creates one type of any supported stateDB caches.
 // TODO-Klaytn: refine input parameters after setting node flags
-func NewCache(cacheType CacheType, maxBytes int, redisEndpoint []string, redisCluster bool) (Cache, error) {
-	switch cacheType {
+func NewCache(c *CacheConfig) (Cache, error) {
+	switch c.Type {
 	case LocalCache:
-		return NewFastCache(maxBytes), nil
+		return NewFastCache(c.CacheFilePath, c.MaxBytes), nil
 	case RemoteCache:
-		return NewRedisCache(redisEndpoint, redisCluster)
+		return NewRedisCache(c.RedisEndpoints, c.IsClusteredRedis)
 	case HybridCache:
-		return NewHybridCache(maxBytes, redisEndpoint, redisCluster)
+		return NewHybridCache(c.CacheFilePath, c.MaxBytes, c.RedisEndpoints, c.IsClusteredRedis)
 	default:
 	}
 	return nil, errNotSupportedCacheType

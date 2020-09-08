@@ -96,3 +96,7 @@ func (cache *RedisCache) Has(k []byte) ([]byte, bool) {
 	}
 	return val, true
 }
+
+func (cache *RedisCache) SaveToFile(filePath string, concurrency int) error {
+	return nil
+}

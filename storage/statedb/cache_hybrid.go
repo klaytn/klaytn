@@ -16,13 +16,13 @@
 
 package statedb
 
-func NewHybridCache(maxBytes int, endpoint []string, isCluster bool) (Cache, error) {
+func NewHybridCache(filePath string, maxBytes int, endpoint []string, isCluster bool) (Cache, error) {
 	redis, err := NewRedisCache(endpoint, isCluster)
 	if err != nil {
 		return nil, err
 	}
 	return &hybridCache{
-		local:  NewFastCache(maxBytes),
+		local:  NewFastCache(filePath, maxBytes),
 		remote: redis,
 	}, nil
 }
@@ -53,4 +53,18 @@ func (cache *hybridCache) Has(k []byte) ([]byte, bool) {
 		return ret, has
 	}
 	return cache.remote.Has(k)
+}
+
+func (cache *hybridCache) SaveToFile(filePath string, concurrency int) error {
+	if err := cache.local.SaveToFile(filePath, concurrency); err != nil {
+		logger.Error("failed to save local cache to file",
+			"filePath", filePath, "concurrency", concurrency, "err", err)
+		return err
+	}
+	if err := cache.remote.SaveToFile(filePath, concurrency); err != nil {
+		logger.Error("failed to save remote cache to file",
+			"filePath", filePath, "concurrency", concurrency, "err", err)
+		return err
+	}
+	return nil
 }
