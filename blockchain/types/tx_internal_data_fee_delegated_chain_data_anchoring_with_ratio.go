@@ -60,6 +60,7 @@ type TxInternalDataFeeDelegatedChainDataAnchoringWithRatioJSON struct {
 	GasLimit           hexutil.Uint64   `json:"gas"`
 	From               common.Address   `json:"from"`
 	Payload            hexutil.Bytes    `json:"input"`
+	InputJson          interface{}      `json:"inputJSON"`
 	FeeRatio           hexutil.Uint     `json:"feeRatio"`
 	TxSignatures       TxSignaturesJSON `json:"signatures"`
 	FeePayer           common.Address   `json:"feePayer"`
@@ -339,6 +340,11 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) Execute(sender C
 }
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) MakeRPCOutput() map[string]interface{} {
+	decoded, err := DecodeAnchoringDataToJSON(t.Payload)
+	if err != nil {
+		logger.Error("decode anchor payload", "err", err)
+	}
+
 	return map[string]interface{}{
 		"typeInt":            t.Type(),
 		"type":               t.Type().String(),
@@ -346,6 +352,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) MakeRPCOutput() 
 		"gasPrice":           (*hexutil.Big)(t.Price),
 		"nonce":              hexutil.Uint64(t.AccountNonce),
 		"input":              hexutil.Bytes(t.Payload),
+		"inputJSON":          decoded,
 		"feeRatio":           hexutil.Uint(t.FeeRatio),
 		"signatures":         t.TxSignatures.ToJSON(),
 		"feePayer":           t.FeePayer,
@@ -354,6 +361,10 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) MakeRPCOutput() 
 }
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) MarshalJSON() ([]byte, error) {
+	decoded, err := DecodeAnchoringDataToJSON(t.Payload)
+	if err != nil {
+		logger.Error("decode anchor payload", "err", err)
+	}
 	return json.Marshal(TxInternalDataFeeDelegatedChainDataAnchoringWithRatioJSON{
 		t.Type(),
 		t.Type().String(),
@@ -362,6 +373,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) MarshalJSON() ([
 		(hexutil.Uint64)(t.GasLimit),
 		t.From,
 		t.Payload,
+		decoded,
 		(hexutil.Uint)(t.FeeRatio),
 		t.TxSignatures.ToJSON(),
 		t.FeePayer,
