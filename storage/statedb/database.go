@@ -1143,5 +1143,8 @@ func (db *Database) UpdateMetricNodes() {
 
 // SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when it restarts
 func (db *Database) SaveTrieNodeCacheToFile() error {
+	if db.trieNodeCache == nil {
+		return nil
+	}
 	return db.trieNodeCache.SaveToFile(db.diskDB.GetDBConfig().Dir, runtime.NumCPU()/2)
 }
