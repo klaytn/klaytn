@@ -51,6 +51,7 @@ type TxInternalDataChainDataAnchoringJSON struct {
 	GasLimit     hexutil.Uint64   `json:"gas"`
 	From         common.Address   `json:"from"`
 	Payload      hexutil.Bytes    `json:"input"`
+	InputJson    interface{}      `json:"inputJSON"`
 	TxSignatures TxSignaturesJSON `json:"signatures"`
 	Hash         *common.Hash     `json:"hash"`
 }
@@ -280,6 +281,11 @@ func (t *TxInternalDataChainDataAnchoring) Execute(sender ContractRef, vm VM, st
 }
 
 func (t *TxInternalDataChainDataAnchoring) MakeRPCOutput() map[string]interface{} {
+	decoded, err := DecodeAnchoringDataToJSON(t.Payload)
+	if err != nil {
+		logger.Error("decode anchor payload", "err", err)
+	}
+
 	return map[string]interface{}{
 		"typeInt":    t.Type(),
 		"type":       t.Type().String(),
@@ -287,11 +293,16 @@ func (t *TxInternalDataChainDataAnchoring) MakeRPCOutput() map[string]interface{
 		"gasPrice":   (*hexutil.Big)(t.Price),
 		"nonce":      hexutil.Uint64(t.AccountNonce),
 		"input":      hexutil.Bytes(t.Payload),
+		"inputJSON":  decoded,
 		"signatures": t.TxSignatures.ToJSON(),
 	}
 }
 
 func (t *TxInternalDataChainDataAnchoring) MarshalJSON() ([]byte, error) {
+	decoded, err := DecodeAnchoringDataToJSON(t.Payload)
+	if err != nil {
+		logger.Error("decode anchor payload", "err", err)
+	}
 	return json.Marshal(TxInternalDataChainDataAnchoringJSON{
 		t.Type(),
 		t.Type().String(),
@@ -300,6 +311,7 @@ func (t *TxInternalDataChainDataAnchoring) MarshalJSON() ([]byte, error) {
 		(hexutil.Uint64)(t.GasLimit),
 		t.From,
 		t.Payload,
+		decoded,
 		t.TxSignatures.ToJSON(),
 		t.Hash,
 	})
