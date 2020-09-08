@@ -21,6 +21,7 @@ func NewHybridCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &hybridCache{
 		local:  NewFastCache(config.FastCacheSizeMB),
 		remote: redis,

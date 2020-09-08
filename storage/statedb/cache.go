@@ -68,8 +68,10 @@ func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
 	case CacheTypeRedis:
 		return NewRedisCache(config.RedisEndpoints, config.RedisClusterEnable)
 	case CacheTypeHybrid:
+		logger.Info("Set hybrid trie node cache using both of fastCache and redisCache")
 		return NewHybridCache(config)
 	default:
 	}
+	logger.Error("Invalid trie node cache type", "cacheType", config.CacheType)
 	return nil, errNotSupportedCacheType
 }
