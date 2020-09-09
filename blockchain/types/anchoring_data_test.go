@@ -1,4 +1,4 @@
-// Copyright 2019 The klaytn Authors
+// Copyright 2020 The klaytn Authors
 // This file is part of the klaytn library.
 //
 // The klaytn library is free software: you can redistribute it and/or modify
@@ -116,7 +116,7 @@ func TestDecodingAnchoringTxType0(t *testing.T) {
 }
 
 func TestDecodingAnchoringTxJSONType(t *testing.T) {
-	orginData := map[string]interface{}{
+	originalData := map[string]interface{}{
 		"int":    1,
 		"string": "string",
 		"bigInt": big.NewInt(100),
@@ -124,7 +124,7 @@ func TestDecodingAnchoringTxJSONType(t *testing.T) {
 		"addr":   genRandomAddress(),
 	}
 
-	anchoringData, err := NewAnchoringJSONDataType(orginData)
+	anchoringData, err := NewAnchoringJSONDataType(originalData)
 	assert.NoError(t, err)
 
 	data, err := rlp.EncodeToBytes(anchoringData)
@@ -134,7 +134,7 @@ func TestDecodingAnchoringTxJSONType(t *testing.T) {
 	decodedDataJSON, err := DecodeAnchoringDataToJSON(data)
 	assert.NoError(t, err)
 
-	expResult, err := json.Marshal(orginData)
+	expResult, err := json.Marshal(originalData)
 	assert.NoError(t, err)
 	actResult, err := json.Marshal(decodedDataJSON)
 	assert.NoError(t, err)
