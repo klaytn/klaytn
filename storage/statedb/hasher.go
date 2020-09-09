@@ -94,7 +94,7 @@ func (h *hasher) hash(n node, db *Database, force bool) (node, node) {
 	// Trie not processed yet or needs storage, walk the children
 	collapsed, cached := h.hashChildren(n, db)
 	hashed, lenEncoded := h.store(collapsed, db, force)
-	// TrieNodeCache the hash of the node for later reuse and remove
+	// Cache the hash of the node for later reuse and remove
 	// the dirty flag in commit mode. It's fine to assign these values directly
 	// without copying the node first because hashChildren copies it.
 	cachedHash, _ := hashed.(hashNode)
