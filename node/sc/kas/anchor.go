@@ -18,6 +18,7 @@ package kas
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,10 +26,13 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"math/big"
 	"net/http"
+	"time"
 )
 
 const (
 	codeOK = 0
+
+	apiCtxTimeout = 500 * time.Millisecond
 )
 
 var (
@@ -184,7 +188,11 @@ func (anchor *Anchor) sendRequest(payload interface{}) (*respBody, error) {
 
 	body := bytes.NewReader(bodyDataBytes)
 
-	req, err := http.NewRequest("POST", anchor.kasConfig.Url, body)
+	// set up timeout for API call
+	ctx, cancel := context.WithTimeout(context.Background(), apiCtxTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", anchor.kasConfig.Url, body)
 	if err != nil {
 		return nil, err
 	}
