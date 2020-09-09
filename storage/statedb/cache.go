@@ -40,7 +40,7 @@ type TrieNodeCache interface {
 
 const (
 	// Available trie node cache types
-	CacheTypeFast   TrieNodeCacheType = "FastCache"
+	CacheTypeLocal  TrieNodeCacheType = "LocalCache"
 	CacheTypeRedis                    = "RemoteCache"
 	CacheTypeHybrid                   = "HybridCache"
 )
@@ -50,7 +50,7 @@ var (
 )
 
 func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
-	validTrieNodeCacheTypes := []TrieNodeCacheType{CacheTypeFast, CacheTypeRedis, CacheTypeHybrid}
+	validTrieNodeCacheTypes := []TrieNodeCacheType{CacheTypeLocal, CacheTypeRedis, CacheTypeHybrid}
 	for _, validType := range validTrieNodeCacheTypes {
 		if strings.ToLower(string(cacheType)) == strings.ToLower(string(validType)) {
 			return validType
@@ -61,15 +61,15 @@ func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
 }
 
 // NewTrieNodeCache creates one type of any supported trie node caches.
-// NOTE: It returns (nil, nil) when the cache type is CacheTypeFast and its size is set to zero.
+// NOTE: It returns (nil, nil) when the cache type is CacheTypeLocal and its size is set to zero.
 func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
 	switch config.CacheType {
-	case CacheTypeFast:
+	case CacheTypeLocal:
 		return NewFastCache(config.FastCacheSizeMB), nil
 	case CacheTypeRedis:
 		return NewRedisCache(config.RedisEndpoints, config.RedisClusterEnable)
 	case CacheTypeHybrid:
-		logger.Info("Set hybrid trie node cache using both of fastCache and redisCache")
+		logger.Info("Set hybrid trie node cache using both of localCache (fastCache) and redisCache")
 		return NewHybridCache(config)
 	default:
 	}
@@ -79,7 +79,7 @@ func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
 
 func GetEmptyTrieNodeCacheConfig() TrieNodeCacheConfig {
 	return TrieNodeCacheConfig{
-		CacheType:          CacheTypeFast,
+		CacheType:          CacheTypeLocal,
 		FastCacheSizeMB:    0,
 		RedisEndpoints:     nil,
 		RedisClusterEnable: false,

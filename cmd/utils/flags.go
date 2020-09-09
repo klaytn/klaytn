@@ -294,9 +294,10 @@ var (
 		Usage: "Enables caching of nonce and balance for txpool.",
 	}
 	TrieNodeCacheTypeFlag = cli.StringFlag{
-		Name:  "statedb.cache.type",
-		Usage: "Set trie node cache type ('FastCache', 'RemoteCache', 'HybridCache') (default = 'FastCache')",
-		Value: string(statedb.CacheTypeFast),
+		Name: "statedb.cache.type",
+		Usage: "Set trie node cache type ('LocalCache', 'RemoteCache', " +
+			"'HybridCache') (default = 'LocalCache')",
+		Value: string(statedb.CacheTypeLocal),
 	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",

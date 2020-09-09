@@ -40,7 +40,7 @@ func NewFastCache(cacheSizeMB int) TrieNodeCache {
 		cacheSizeByte = cacheSizeMB * 1024 * 1024
 	}
 
-	logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
+	logger.Info("Initialize local trie node cache (fastCache)", "MaxMB", cacheSizeMB)
 	return &FastCache{cache: fastcache.New(cacheSizeByte)}
 }
 
