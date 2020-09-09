@@ -46,16 +46,17 @@ const (
 )
 
 var (
-	ValidTrieNodeCacheTypes  = []TrieNodeCacheType{CacheTypeFast, CacheTypeRedis, CacheTypeHybrid}
 	errNotSupportedCacheType = errors.New("not supported stateDB TrieNodeCache type")
 )
 
 func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
-	for _, validType := range ValidTrieNodeCacheTypes {
+	validTrieNodeCacheTypes := []TrieNodeCacheType{CacheTypeFast, CacheTypeRedis, CacheTypeHybrid}
+	for _, validType := range validTrieNodeCacheTypes {
 		if strings.ToLower(string(cacheType)) == strings.ToLower(string(validType)) {
 			return validType
 		}
 	}
+	logger.Warn("Invalid trie node cache type", "inputType", cacheType, "validTypes", validTrieNodeCacheTypes)
 	return ""
 }
 

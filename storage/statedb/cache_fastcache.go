@@ -23,6 +23,7 @@ type FastCache struct {
 }
 
 // NewFastCache creates a FastCache with given cache size.
+// If you want auto-scaled cache size, set cacheSizeMB to AutoScaling.
 // It returns nil if the cache size is zero.
 func NewFastCache(cacheSizeMB int) TrieNodeCache {
 	var cacheSizeByte int

@@ -1415,9 +1415,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		RedisEndpoints:     ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
 		RedisClusterEnable: ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
 	}
-	if cfg.TrieNodeCacheConfig.CacheType == "" {
-		logger.Warn("Invalid cache type", "ValidTypes", statedb.ValidTrieNodeCacheTypes)
-	}
 
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
