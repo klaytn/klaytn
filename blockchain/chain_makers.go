@@ -171,17 +171,12 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		// TODO(karalabe): This is needed for clique, which depends on multiple blocks.
 		// It's nonetheless ugly to spin up a blockchain here. Get rid of this somehow.
 		cacheConfig := &CacheConfig{
-			StateDBCaching: false,
-			ArchiveMode:    false,
-			CacheSize:      512,
-			BlockInterval:  DefaultBlockInterval,
-			TriesInMemory:  DefaultTriesInMemory,
-			TrieNodeCacheConfig: statedb.TrieNodeCacheConfig{
-				CacheType:          statedb.CacheTypeFast,
-				FastCacheSizeMB:    0,
-				RedisEndpoints:     nil,
-				RedisClusterEnable: false,
-			},
+			StateDBCaching:      false,
+			ArchiveMode:         false,
+			CacheSize:           512,
+			BlockInterval:       DefaultBlockInterval,
+			TriesInMemory:       DefaultTriesInMemory,
+			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 		}
 		blockchain, _ := NewBlockChain(db, cacheConfig, config, engine, vm.Config{})
 		defer blockchain.Stop()

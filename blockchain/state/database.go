@@ -106,12 +106,7 @@ type Trie interface {
 // concurrent use, but does not retain any recent trie nodes in memory. To keep some
 // historical state in memory, use the NewDatabaseWithNewCache constructor.
 func NewDatabase(db database.DBManager) Database {
-	return NewDatabaseWithNewCache(db, statedb.TrieNodeCacheConfig{
-		CacheType:          statedb.CacheTypeFast,
-		FastCacheSizeMB:    0,
-		RedisEndpoints:     nil,
-		RedisClusterEnable: false,
-	})
+	return NewDatabaseWithNewCache(db, statedb.GetEmptyTrieNodeCacheConfig())
 }
 
 func getCodeSizeCache() common.Cache {

@@ -31,13 +31,16 @@ func _TestNewTrieNodeCache(t *testing.T) {
 		cacheType    TrieNodeCacheType
 		expectedType reflect.Type
 	}{
-		{"CacheTypeFast", reflect.TypeOf(&FastCache{})},
-		{"CacheTypeRedis", reflect.TypeOf(&RedisCache{})},
-		{"CacheTypeHybrid", reflect.TypeOf(&hybridCache{})},
+		{CacheTypeFast, reflect.TypeOf(&FastCache{})},
+		{CacheTypeRedis, reflect.TypeOf(&RedisCache{})},
+		{CacheTypeHybrid, reflect.TypeOf(&hybridCache{})},
 	}
 
 	for _, tc := range testCases {
-		cache, err := NewTrieNodeCache(testConfig)
+		config := getTestHybridConfig()
+		config.CacheType = tc.cacheType
+
+		cache, err := NewTrieNodeCache(config)
 		assert.NilError(t, err)
 		assert.Equal(t, reflect.TypeOf(cache), tc.expectedType)
 	}

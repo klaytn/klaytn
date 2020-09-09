@@ -311,7 +311,7 @@ func expandNode(hash hashNode, n node) node {
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
-	return NewDatabaseWithNewCache(diskDB, TrieNodeCacheConfig{CacheTypeFast, 0, nil, false})
+	return NewDatabaseWithNewCache(diskDB, GetEmptyTrieNodeCacheConfig())
 }
 
 // NewDatabaseWithNewCache creates a new trie database to store ephemeral trie content

@@ -76,3 +76,12 @@ func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
 	logger.Error("Invalid trie node cache type", "cacheType", config.CacheType)
 	return nil, errNotSupportedCacheType
 }
+
+func GetEmptyTrieNodeCacheConfig() TrieNodeCacheConfig {
+	return TrieNodeCacheConfig{
+		CacheType:          CacheTypeFast,
+		FastCacheSizeMB:    0,
+		RedisEndpoints:     nil,
+		RedisClusterEnable: false,
+	}
+}

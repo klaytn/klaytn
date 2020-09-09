@@ -183,17 +183,12 @@ type BlockChain struct {
 func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
-			StateDBCaching: false,
-			ArchiveMode:    false,
-			CacheSize:      512,
-			BlockInterval:  DefaultBlockInterval,
-			TriesInMemory:  DefaultTriesInMemory,
-			TrieNodeCacheConfig: statedb.TrieNodeCacheConfig{
-				CacheType:          statedb.CacheTypeFast,
-				FastCacheSizeMB:    0,
-				RedisEndpoints:     nil,
-				RedisClusterEnable: false,
-			},
+			StateDBCaching:      false,
+			ArchiveMode:         false,
+			CacheSize:           512,
+			BlockInterval:       DefaultBlockInterval,
+			TriesInMemory:       DefaultTriesInMemory,
+			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 		}
 	}
 
