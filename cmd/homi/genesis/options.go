@@ -116,6 +116,10 @@ func AllocWithPrebaobabContract(addrs []common.Address, balance *big.Int) Option
 			Code:    common.FromHex(PrebaobabAddressBookBin),
 			Balance: big.NewInt(0),
 		}
+		alloc[StorageTrieTestAddr] = blockchain.GenesisAccount{
+			Code:    StorageTrieByteCode,
+			Balance: big.NewInt(0),
+		}
 		genesis.Alloc = alloc
 	}
 }
