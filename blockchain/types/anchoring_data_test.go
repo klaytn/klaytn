@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 func genRandomAddress() *common.Address {
@@ -35,6 +36,7 @@ func genRandomAddress() *common.Address {
 }
 
 func genRandomHash() (h common.Hash) {
+	rand.Seed(time.Now().UnixNano())
 	hasher := sha3.NewKeccak256()
 
 	r := rand.Uint64()
