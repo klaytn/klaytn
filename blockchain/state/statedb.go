@@ -93,7 +93,7 @@ type StateDB struct {
 	nextRevisionId int
 }
 
-// NewCachedStateObjects returns a new Common.TrieNodeCache object for cachedStateObjects.
+// NewCachedStateObjects returns a new Common.Cache object for cachedStateObjects.
 func NewCachedStateObjects() common.Cache {
 	return common.NewCache(common.LRUConfig{CacheSize: maxCachedStateObjects, IsScaled: true})
 }
