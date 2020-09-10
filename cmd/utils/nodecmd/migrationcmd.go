@@ -77,7 +77,7 @@ func startMigration(ctx *cli.Context) error {
 	defer srcDBManager.Close()
 	defer dstDBManager.Close()
 
-	return srcDBManager.StartDBMigration(dstDBManager)
+	return srcDBManager.StartDBMigration(dstDBManager, ctx.GlobalBool(utils.CleanDBDirNameFlag.Name))
 }
 
 func createDBManagerForMigration(ctx *cli.Context) (database.DBManager, database.DBManager, error) {

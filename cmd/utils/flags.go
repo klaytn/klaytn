@@ -817,6 +817,10 @@ var (
 	}
 
 	// db migration vars
+	CleanDBDirNameFlag = cli.BoolFlag{
+		Name:  "db.dst.clean-db-dir",
+		Usage: "If db dir name is changed, use the original db dir name on migrated db. (e.g. use 'statetrie' instead of 'statetrie_migrated_xxxxx')",
+	}
 	DstDbTypeFlag = cli.StringFlag{
 		Name:  "dst.dbtype",
 		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "DynamoDBS3")`,

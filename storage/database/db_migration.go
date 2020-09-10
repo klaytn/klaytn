@@ -35,7 +35,13 @@ const (
 //
 // This feature uses Iterator. A src DB should have implementation of Iteratee to use this function.
 // Do not use db migration while a node is executing.
-func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
+func (dbm *databaseManager) StartDBMigration(dstdbm DBManager, cleanDBName bool) error {
+	if cleanDBName {
+		for i := uint8(MiscDB); i < uint8(databaseEntryTypeSize); i++ {
+			dbm.setDBDir(DBEntryType(i), "")
+		}
+	}
+
 	// settings for quit signal from os
 	sigQuit := make(chan os.Signal, 1)
 	signal.Notify(sigQuit,
