@@ -22,6 +22,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"math"
+	"math/big"
+	"os"
+	"path"
+	"strconv"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -33,17 +43,9 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/klaytn/klaytn/work"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	"io/ioutil"
-	"math"
-	"math/big"
-	"os"
-	"path"
-	"strconv"
-	"sync"
-	"testing"
-	"time"
 )
 
 const (
@@ -475,7 +477,12 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 		CacheSize:        512,
 		BlockInterval:    blockchain.DefaultBlockInterval,
 		TriesInMemory:    blockchain.DefaultTriesInMemory,
-		TrieCacheLimit:   4096,
+		TrieNodeCacheConfig: statedb.TrieNodeCacheConfig{
+			CacheType:          statedb.CacheTypeLocal,
+			FastCacheSizeMB:    4096,
+			RedisEndpoints:     nil,
+			RedisClusterEnable: false,
+		},
 	}
 }
 

@@ -405,7 +405,7 @@ func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database,
 	return nil
 }
 
-func (bc *BlockChain) warmUpLoop(cache statedb.Cache, mainTrieCacheLimit uint64, children []common.Hash,
+func (bc *BlockChain) warmUpLoop(cache statedb.TrieNodeCache, mainTrieCacheLimit uint64, children []common.Hash,
 	resultHashCh chan common.Hash, resultErrCh chan error) {
 	logged := time.Now()
 	var context []interface{}
@@ -508,7 +508,7 @@ func (bc *BlockChain) StartWarmUp() error {
 			go bc.concurrentIterateTrie(child, db, resultHashCh, resultErrCh)
 		}
 
-		cacheLimitSize := uint64(mainTrieDB.GetTrieNodeCacheLimit())
+		cacheLimitSize := uint64(mainTrieDB.GetTrieNodeLocalCacheLimit())
 		bc.warmUpLoop(mainTrieDB.TrieNodeCache(), cacheLimitSize, children, resultHashCh, resultErrCh)
 	}()
 

@@ -30,6 +30,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klaytn/klaytn/storage/statedb"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/api/debug"
@@ -291,12 +293,25 @@ var (
 		Name:  "statedb.use-txpool-cache",
 		Usage: "Enables caching of nonce and balance for txpool.",
 	}
-	TrieCacheLimitFlag = cli.IntFlag{
+	TrieNodeCacheTypeFlag = cli.StringFlag{
+		Name: "statedb.cache.type",
+		Usage: "Set trie node cache type ('LocalCache', 'RemoteCache', " +
+			"'HybridCache') (default = 'LocalCache')",
+		Value: string(statedb.CacheTypeLocal),
+	}
+	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
+		Name:  "statedb.cache.redis.endpoints",
+		Usage: "Set endpoints of redis trie node cache. More than one endpoints can be set",
+	}
+	TrieNodeCacheRedisClusterFlag = cli.BoolFlag{
+		Name:  "statedb.cache.redis.cluster",
+		Usage: "Enables cluster-enabled mode of redis trie node cache",
+	}
+	TrieNodeCacheLimitFlag = cli.IntFlag{
 		Name:  "state.trie-cache-limit",
 		Usage: "Memory allowance (MB) to use for caching trie nodes in memory. -1 is for auto-scaling",
 		Value: -1,
 	}
-
 	SenderTxHashIndexingFlag = cli.BoolFlag{
 		Name:  "sendertxhashindexing",
 		Usage: "Enables storing mapping information of senderTxHash to txHash",
@@ -1394,7 +1409,13 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.SenderTxHashIndexing = ctx.GlobalIsSet(SenderTxHashIndexingFlag.Name)
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
 	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
-	cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
+	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
+		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
+			Name)).ToValid(),
+		FastCacheSizeMB:    ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
+		RedisEndpoints:     ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
+		RedisClusterEnable: ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
+	}
 
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode

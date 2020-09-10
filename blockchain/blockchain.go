@@ -82,14 +82,14 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	StateDBCaching       bool   // Enables caching of state objects in stateDB.
-	TxPoolStateCache     bool   // Enables caching of nonce and balance for txpool.
-	ArchiveMode          bool   // If true, state trie is not pruned and always written to database.
-	CacheSize            int    // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval        uint   // Block interval to flush the trie. Each interval state trie will be flushed into disk.
-	TriesInMemory        uint64 // Maximum number of recent state tries according to its block number
-	TrieCacheLimit       int    // Memory allowance (MB) to use for caching trie nodes in memory
-	SenderTxHashIndexing bool   // Enables saving senderTxHash to txHash mapping information to database and cache.
+	StateDBCaching       bool                        // Enables caching of state objects in stateDB
+	TxPoolStateCache     bool                        // Enables caching of nonce and balance for txpool
+	ArchiveMode          bool                        // If true, state trie is not pruned and always written to database
+	CacheSize            int                         // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval        uint                        // Block interval to flush the trie. Each interval state trie will be flushed into disk
+	TriesInMemory        uint64                      // Maximum number of recent state tries according to its block number
+	SenderTxHashIndexing bool                        // Enables saving senderTxHash to txHash mapping information to database and cache
+	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig // Configures trie node cache
 }
 
 // gcBlock is used for priority queue for GC.
@@ -183,14 +183,15 @@ type BlockChain struct {
 func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
-			StateDBCaching: false,
-			ArchiveMode:    false,
-			CacheSize:      512,
-			BlockInterval:  DefaultBlockInterval,
-			TriesInMemory:  DefaultTriesInMemory,
-			TrieCacheLimit: 0,
+			StateDBCaching:      false,
+			ArchiveMode:         false,
+			CacheSize:           512,
+			BlockInterval:       DefaultBlockInterval,
+			TriesInMemory:       DefaultTriesInMemory,
+			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 		}
 	}
+
 	// Initialize DeriveSha implementation
 	InitDeriveSha(chainConfig.DeriveShaImpl)
 
@@ -211,7 +212,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		db:                 db,
 		triegc:             prque.New(),
 		chBlock:            make(chan gcBlock, 1000),
-		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieCacheLimit),
+		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieNodeCacheConfig),
 		quit:               make(chan struct{}),
 		futureBlocks:       futureBlocks,
 		engine:             engine,

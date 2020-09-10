@@ -90,7 +90,7 @@ func testNewRedisCache_Timeout(t *testing.T) {
 		}
 	}()
 
-	var redis Cache = &RedisCache{redis.NewClient(&redis.Options{
+	var redis TrieNodeCache = &RedisCache{redis.NewClient(&redis.Options{
 		Addr:         "localhost:11234",
 		DialTimeout:  redisCacheDialTimeout,
 		ReadTimeout:  redisCacheTimeout,

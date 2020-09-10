@@ -22,10 +22,26 @@ type FastCache struct {
 	cache *fastcache.Cache
 }
 
-func NewFastCache(maxBytes int) Cache {
-	return &FastCache{
-		cache: fastcache.New(maxBytes),
+// NewFastCache creates a FastCache with given cache size.
+// If you want auto-scaled cache size, set cacheSizeMB to AutoScaling.
+// It returns nil if the cache size is zero.
+func NewFastCache(cacheSizeMB int) TrieNodeCache {
+	var cacheSizeByte int
+
+	if cacheSizeMB == 0 {
+		return nil
 	}
+
+	if cacheSizeMB == AutoScaling {
+		cacheSizeMB = getTrieNodeCacheSizeMB()
+	}
+
+	if cacheSizeMB > 0 {
+		cacheSizeByte = cacheSizeMB * 1024 * 1024
+	}
+
+	logger.Info("Initialize local trie node cache (fastCache)", "MaxMB", cacheSizeMB)
+	return &FastCache{cache: fastcache.New(cacheSizeByte)}
 }
 
 func (l *FastCache) Get(k []byte) []byte {

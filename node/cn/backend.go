@@ -251,7 +251,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching,
 			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval,
 			TriesInMemory: config.TriesInMemory, TxPoolStateCache: config.TxPoolStateCache,
-			TrieCacheLimit: config.TrieCacheLimit, SenderTxHashIndexing: config.SenderTxHashIndexing}
+			TrieNodeCacheConfig: config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing}
 	)
 
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
@@ -293,7 +293,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.txPool.SetGasPrice(big.NewInt(0).SetUint64(governance.UnitPrice()))
 
 	// Permit the downloader to use the trie cache allowance during fast sync
-	cacheLimit := cacheConfig.TrieCacheLimit
+	cacheLimit := cacheConfig.TrieNodeCacheConfig.FastCacheSizeMB
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
 		return nil, err
 	}

@@ -16,39 +16,72 @@
 
 package statedb
 
-import "errors"
-
-type CacheType string
-
-const (
-	// Available stateDB cache types
-	LocalCache  CacheType = "LocalCache"
-	RemoteCache           = "RemoteCache"
-	HybridCache           = "HybridCache"
+import (
+	"errors"
+	"strings"
 )
 
-var (
-	errNotSupportedCacheType = errors.New("not supported stateDB Cache type")
-)
+type TrieNodeCacheType string
 
-// Cache interface the cache of stateDB
-type Cache interface {
+// TrieNodeCacheConfig contains configuration values of all TrieNodeCache.
+type TrieNodeCacheConfig struct {
+	CacheType          TrieNodeCacheType
+	FastCacheSizeMB    int      // Memory allowance (MB) to use for caching trie nodes in fast cache
+	RedisEndpoints     []string // Endpoints of redis cache
+	RedisClusterEnable bool     // Enable cluster-enabled mode of redis cache
+}
+
+// TrieNodeCache interface the cache of stateDB
+type TrieNodeCache interface {
 	Set(k, v []byte)
 	Get(k []byte) []byte
 	Has(k []byte) ([]byte, bool)
 }
 
-// NewCache creates one type of any supported stateDB caches.
-// TODO-Klaytn: refine input parameters after setting node flags
-func NewCache(cacheType CacheType, maxBytes int, redisEndpoint []string, redisCluster bool) (Cache, error) {
-	switch cacheType {
-	case LocalCache:
-		return NewFastCache(maxBytes), nil
-	case RemoteCache:
-		return NewRedisCache(redisEndpoint, redisCluster)
-	case HybridCache:
-		return NewHybridCache(maxBytes, redisEndpoint, redisCluster)
+const (
+	// Available trie node cache types
+	CacheTypeLocal  TrieNodeCacheType = "LocalCache"
+	CacheTypeRedis                    = "RemoteCache"
+	CacheTypeHybrid                   = "HybridCache"
+)
+
+var (
+	errNotSupportedCacheType = errors.New("not supported stateDB TrieNodeCache type")
+)
+
+func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
+	validTrieNodeCacheTypes := []TrieNodeCacheType{CacheTypeLocal, CacheTypeRedis, CacheTypeHybrid}
+	for _, validType := range validTrieNodeCacheTypes {
+		if strings.ToLower(string(cacheType)) == strings.ToLower(string(validType)) {
+			return validType
+		}
+	}
+	logger.Warn("Invalid trie node cache type", "inputType", cacheType, "validTypes", validTrieNodeCacheTypes)
+	return ""
+}
+
+// NewTrieNodeCache creates one type of any supported trie node caches.
+// NOTE: It returns (nil, nil) when the cache type is CacheTypeLocal and its size is set to zero.
+func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
+	switch config.CacheType {
+	case CacheTypeLocal:
+		return NewFastCache(config.FastCacheSizeMB), nil
+	case CacheTypeRedis:
+		return NewRedisCache(config.RedisEndpoints, config.RedisClusterEnable)
+	case CacheTypeHybrid:
+		logger.Info("Set hybrid trie node cache using both of localCache (fastCache) and redisCache")
+		return NewHybridCache(config)
 	default:
 	}
+	logger.Error("Invalid trie node cache type", "cacheType", config.CacheType)
 	return nil, errNotSupportedCacheType
+}
+
+func GetEmptyTrieNodeCacheConfig() TrieNodeCacheConfig {
+	return TrieNodeCacheConfig{
+		CacheType:          CacheTypeLocal,
+		FastCacheSizeMB:    0,
+		RedisEndpoints:     nil,
+		RedisClusterEnable: false,
+	}
 }

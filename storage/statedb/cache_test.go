@@ -25,19 +25,22 @@ import (
 
 // TODO-Klaytn: Enable tests when redis is prepared on CI
 
-// TestNewCache tests creating all kinds of supported stateDB caches.
-func _TestNewCache(t *testing.T) {
+// TestNewTrieNodeCache tests creating all kinds of supported trie node caches.
+func _TestNewTrieNodeCache(t *testing.T) {
 	testCases := []struct {
-		cacheType    CacheType
+		cacheType    TrieNodeCacheType
 		expectedType reflect.Type
 	}{
-		{"LocalCache", reflect.TypeOf(&FastCache{})},
-		{"RemoteCache", reflect.TypeOf(&RedisCache{})},
-		{"HybridCache", reflect.TypeOf(&hybridCache{})},
+		{CacheTypeLocal, reflect.TypeOf(&FastCache{})},
+		{CacheTypeRedis, reflect.TypeOf(&RedisCache{})},
+		{CacheTypeHybrid, reflect.TypeOf(&hybridCache{})},
 	}
 
 	for _, tc := range testCases {
-		cache, err := NewCache(tc.cacheType, testMaxBytes, testRedisEndpoints, testRedisCluster)
+		config := getTestHybridConfig()
+		config.CacheType = tc.cacheType
+
+		cache, err := NewTrieNodeCache(config)
 		assert.NilError(t, err)
 		assert.Equal(t, reflect.TypeOf(cache), tc.expectedType)
 	}

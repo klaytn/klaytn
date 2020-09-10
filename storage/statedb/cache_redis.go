@@ -69,7 +69,8 @@ func NewRedisCache(endpoints []string, isCluster bool) (*RedisCache, error) {
 			"isCluster", isCluster)
 		return nil, err
 	}
-	logger.Info("create a redis client", "endpoint", endpoints, "isCluster", isCluster)
+
+	logger.Info("Initialize trie node cache with redis", "endpoint", endpoints, "isCluster", isCluster)
 	return &RedisCache{client: cli}, nil
 }
 

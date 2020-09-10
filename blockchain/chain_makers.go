@@ -22,6 +22,8 @@ package blockchain
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -29,7 +31,7 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 // BlockGen creates blocks for testing.
@@ -165,22 +167,22 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		config = params.TestChainConfig
 	}
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
-	genblock := func(i int, parent *types.Block, statedb *state.StateDB) (*types.Block, types.Receipts) {
+	genblock := func(i int, parent *types.Block, stateDB *state.StateDB) (*types.Block, types.Receipts) {
 		// TODO(karalabe): This is needed for clique, which depends on multiple blocks.
 		// It's nonetheless ugly to spin up a blockchain here. Get rid of this somehow.
 		cacheConfig := &CacheConfig{
-			StateDBCaching: false,
-			ArchiveMode:    false,
-			CacheSize:      512,
-			BlockInterval:  DefaultBlockInterval,
-			TriesInMemory:  DefaultTriesInMemory,
-			TrieCacheLimit: 0,
+			StateDBCaching:      false,
+			ArchiveMode:         false,
+			CacheSize:           512,
+			BlockInterval:       DefaultBlockInterval,
+			TriesInMemory:       DefaultTriesInMemory,
+			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 		}
 		blockchain, _ := NewBlockChain(db, cacheConfig, config, engine, vm.Config{})
 		defer blockchain.Stop()
 
-		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: statedb, config: config, engine: engine}
-		b.header = makeHeader(b.chainReader, parent, statedb, b.engine)
+		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
+		b.header = makeHeader(b.chainReader, parent, stateDB, b.engine)
 
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
@@ -188,16 +190,16 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		}
 
 		if b.engine != nil {
-			block, err := b.engine.Finalize(b.chainReader, b.header, statedb, b.txs, b.receipts)
+			block, err := b.engine.Finalize(b.chainReader, b.header, stateDB, b.txs, b.receipts)
 			if err != nil {
 				panic(fmt.Sprintf("block finalize error: %v", err))
 			}
 			// Write state changes to db
-			root, err := statedb.Commit(true)
+			root, err := stateDB.Commit(true)
 			if err != nil {
 				panic(fmt.Sprintf("state write error: %v", err))
 			}
-			if err := statedb.Database().TrieDB().Commit(root, false, block.NumberU64()); err != nil {
+			if err := stateDB.Database().TrieDB().Commit(root, false, block.NumberU64()); err != nil {
 				panic(fmt.Sprintf("trie write error: %v", err))
 			}
 			return block, b.receipts

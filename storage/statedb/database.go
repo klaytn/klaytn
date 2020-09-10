@@ -124,8 +124,8 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache      Cache // GC friendly memory cache of trie node RLPs
-	trieNodeCacheLimit int   // byte size of trieNodeCache
+	trieNodeCache           TrieNodeCache // GC friendly memory cache of trie node RLPs
+	trieNodeLocalCacheLimit int           // byte size of local trieNodeCache
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -311,38 +311,31 @@ func expandNode(hash hashNode, n node) node {
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
-	return NewDatabaseWithNewCache(diskDB, 0)
+	return NewDatabaseWithNewCache(diskDB, GetEmptyTrieNodeCacheConfig())
 }
 
 // NewDatabaseWithNewCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Database {
-	var trieNodeCache Cache
-	var cacheSizeByte int
-
-	if cacheSizeMB == AutoScaling {
-		cacheSizeMB = getTrieNodeCacheSizeMB()
+func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig TrieNodeCacheConfig) *Database {
+	trieNodeCache, err := NewTrieNodeCache(cacheConfig)
+	if err != nil {
+		logger.Error("Invalid trie node cache config", "err", err, "config", cacheConfig)
 	}
-	if cacheSizeMB > 0 {
-		cacheSizeByte = cacheSizeMB * 1024 * 1024
-		trieNodeCache = NewFastCache(cacheSizeByte)
 
-		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
-	}
 	return &Database{
-		diskDB:             diskDB,
-		nodes:              map[common.Hash]*cachedNode{{}: {}},
-		preimages:          make(map[common.Hash][]byte),
-		trieNodeCache:      trieNodeCache,
-		trieNodeCacheLimit: cacheSizeByte,
+		diskDB:                  diskDB,
+		nodes:                   map[common.Hash]*cachedNode{{}: {}},
+		preimages:               make(map[common.Hash][]byte),
+		trieNodeCache:           trieNodeCache,
+		trieNodeLocalCacheLimit: cacheConfig.FastCacheSizeMB,
 	}
 }
 
 // NewDatabaseWithExistingCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithExistingCache(diskDB database.DBManager, cache Cache) *Database {
+func NewDatabaseWithExistingCache(diskDB database.DBManager, cache TrieNodeCache) *Database {
 	return &Database{
 		diskDB:        diskDB,
 		nodes:         map[common.Hash]*cachedNode{{}: {}},
@@ -374,13 +367,13 @@ func (db *Database) DiskDB() database.DBManager {
 }
 
 // TrieNodeCache retrieves the trieNodeCache of the trie database.
-func (db *Database) TrieNodeCache() Cache {
+func (db *Database) TrieNodeCache() TrieNodeCache {
 	return db.trieNodeCache
 }
 
-// GetTrieNodeCacheLimit returns the byte size of trie node cache.
-func (db *Database) GetTrieNodeCacheLimit() int {
-	return db.trieNodeCacheLimit
+// GetTrieNodeLocalCacheLimit returns the byte size of trie node cache.
+func (db *Database) GetTrieNodeLocalCacheLimit() int {
+	return db.trieNodeLocalCacheLimit
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.

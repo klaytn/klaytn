@@ -26,6 +26,8 @@ import (
 	"os/user"
 	"time"
 
+	"github.com/klaytn/klaytn/storage/statedb"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
@@ -112,7 +114,7 @@ type Config struct {
 	ParallelDBWrite      bool
 	StateDBCaching       bool
 	TxPoolStateCache     bool
-	TrieCacheLimit       int
+	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`

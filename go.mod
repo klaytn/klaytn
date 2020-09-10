@@ -33,6 +33,8 @@ require (
 	github.com/mattn/go-runewidth v0.0.2 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
+	github.com/onsi/ginkgo v1.10.3 // indirect
+	github.com/onsi/gomega v1.7.1 // indirect
 	github.com/otiai10/copy v1.0.1
 	github.com/otiai10/curr v0.0.0-20190513014714-f5a3d24e5776 // indirect
 	github.com/pbnjay/memory v0.0.0-20190104145345-974d429e7ae4
@@ -59,7 +61,7 @@ require (
 	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
 	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
-	golang.org/x/tools v0.0.0-20191005014404-c9f9432ec4b2
+	golang.org/x/tools v0.0.0-20191126055441-b0650ceb63d9
 	google.golang.org/genproto v0.0.0-20190111180523-db91494dd46c // indirect
 	google.golang.org/grpc v1.23.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
