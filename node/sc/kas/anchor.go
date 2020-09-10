@@ -31,7 +31,7 @@ import (
 
 const (
 	codeOK              = 0
-	CodeAlreadyAnchored = 1072100
+	codeAlreadyAnchored = 1072100
 
 	apiCtxTimeout = 500 * time.Millisecond
 )
@@ -133,7 +133,7 @@ func (anchor *Anchor) AnchorBlock(block *types.Block) error {
 	res, err := anchor.sendRequest(payload)
 	if err != nil || res.Code != codeOK {
 		if res != nil {
-			if res.Code == CodeAlreadyAnchored {
+			if res.Code == codeAlreadyAnchored {
 				logger.Info("Already anchored a block", "blkNum", block.NumberU64())
 				return nil
 			}
