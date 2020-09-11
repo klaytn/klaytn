@@ -35,7 +35,7 @@ func NewFastCache(cacheSizeMB int) TrieNodeCache {
 	}
 
 	logger.Info("Initialize local trie node cache (fastCache)", "MaxMB", cacheSizeMB)
-	return &FastCache{cache: fastcache.New(cacheSizeMB * 1024 * 1024)} // Covert MB to Byte
+	return &FastCache{cache: fastcache.New(cacheSizeMB * 1024 * 1024)} // Convert MB to Byte
 }
 
 func (l *FastCache) Get(k []byte) []byte {
