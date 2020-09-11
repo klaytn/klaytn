@@ -28,12 +28,12 @@ type FastCache struct {
 func NewFastCache(cacheSizeMB int) TrieNodeCache {
 	var cacheSizeByte int
 
-	if cacheSizeMB == 0 {
-		return nil
-	}
-
 	if cacheSizeMB == AutoScaling {
 		cacheSizeMB = getTrieNodeCacheSizeMB()
+	}
+
+	if cacheSizeMB <= 0 {
+		return nil
 	}
 
 	if cacheSizeMB > 0 {
