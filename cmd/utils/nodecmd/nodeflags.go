@@ -280,7 +280,6 @@ var KSENFlags = []cli.Flag{
 }
 
 var DBMigrationFlags = []cli.Flag{
-	utils.CleanDBDirNameFlag,
 	utils.DstDbTypeFlag,
 	utils.DstDataDirFlag,
 	utils.DstSingleDBFlag,

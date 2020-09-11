@@ -119,7 +119,6 @@ var FlagGroups = []FlagGroup{
 	{
 		Name: "DATABASE MIGRATION",
 		Flags: []cli.Flag{
-			CleanDBDirNameFlag,
 			DstDbTypeFlag,
 			DstDataDirFlag,
 			DstSingleDBFlag,

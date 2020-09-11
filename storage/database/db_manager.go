@@ -46,6 +46,7 @@ type DBManager interface {
 	Close()
 	NewBatch(dbType DBEntryType) Batch
 	getDBDir(dbEntry DBEntryType) string
+	setDBDir(dbEntry DBEntryType, newDBDir string)
 	setStateTrieMigrationStatus(uint64)
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
@@ -215,7 +216,7 @@ type DBManager interface {
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
 
 	// DB migration related function
-	StartDBMigration(DBManager, bool) error
+	StartDBMigration(DBManager) error
 }
 
 type DBEntryType uint8

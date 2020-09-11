@@ -63,6 +63,8 @@ Note: Do not use db migration while a node is executing.
 				Action: utils.MigrateFlags(startMigration),
 				Description: `
 This command starts DB migration.
+If db dir name is changed, use the original db dir name on migrated db.
+(e.g. use 'statetrie' instead of 'statetrie_migrated_xxxxx')
 Note: This feature is only provided when srcDB is single LevelDB.`,
 			},
 		},
@@ -77,7 +79,7 @@ func startMigration(ctx *cli.Context) error {
 	defer srcDBManager.Close()
 	defer dstDBManager.Close()
 
-	return srcDBManager.StartDBMigration(dstDBManager, ctx.GlobalBool(utils.CleanDBDirNameFlag.Name))
+	return srcDBManager.StartDBMigration(dstDBManager)
 }
 
 func createDBManagerForMigration(ctx *cli.Context) (database.DBManager, database.DBManager, error) {

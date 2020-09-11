@@ -19,6 +19,7 @@ package database
 import (
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 
@@ -35,13 +36,7 @@ const (
 //
 // This feature uses Iterator. A src DB should have implementation of Iteratee to use this function.
 // Do not use db migration while a node is executing.
-func (dbm *databaseManager) StartDBMigration(dstdbm DBManager, cleanDBName bool) error {
-	if cleanDBName {
-		for i := uint8(MiscDB); i < uint8(databaseEntryTypeSize); i++ {
-			dbm.setDBDir(DBEntryType(i), "")
-		}
-	}
-
+func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	// settings for quit signal from os
 	sigQuit := make(chan os.Signal, 1)
 	signal.Notify(sigQuit,
@@ -103,6 +98,14 @@ loop:
 	}
 
 	logger.Info("Finish DB migration", "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
+
+	// If the current src DB is misc DB, clear all db dir on dst
+	// TODO: If DB Migration supports non-single db, change the checking logic
+	if path.Base(dbm.config.Dir) == dbBaseDirs[MiscDB] {
+		for i := uint8(MiscDB); i < uint8(databaseEntryTypeSize); i++ {
+			dstdbm.setDBDir(DBEntryType(i), "")
+		}
+	}
 
 	srcIter.Release()
 	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
