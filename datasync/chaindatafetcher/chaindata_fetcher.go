@@ -23,13 +23,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
+	cfTypes "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
@@ -58,7 +58,7 @@ type ChainDataFetcher struct {
 	chainCh  chan blockchain.ChainEvent
 	chainSub event.Subscription
 
-	reqCh  chan *request // TODO-ChainDataFetcher add logic to insert new requests from APIs to this channel
+	reqCh  chan *cfTypes.Request // TODO-ChainDataFetcher add logic to insert new requests from APIs to this channel
 	stopCh chan struct{}
 
 	numHandlers int
@@ -93,7 +93,7 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 	return &ChainDataFetcher{
 		config:        cfg,
 		chainCh:       make(chan blockchain.ChainEvent, cfg.BlockChannelSize),
-		reqCh:         make(chan *request, cfg.JobChannelSize),
+		reqCh:         make(chan *cfTypes.Request, cfg.JobChannelSize),
 		stopCh:        make(chan struct{}),
 		numHandlers:   cfg.NumHandlers,
 		checkpoint:    checkpoint,
@@ -143,14 +143,14 @@ func (f *ChainDataFetcher) Stop() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType requestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
+func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfTypes.RequestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
 	logger.Info("sending requests is started", "startBlock", startBlock, "endBlock", endBlock)
 	for i := startBlock; i <= endBlock; i++ {
 		select {
 		case <-stopCh:
 			logger.Info("stopped making requests", "startBlock", startBlock, "endBlock", endBlock, "stoppedBlock", i)
 			return
-		case f.reqCh <- newRequest(reqType, shouldUpdateCheckpoint, i):
+		case f.reqCh <- cfTypes.NewRequest(reqType, shouldUpdateCheckpoint, i):
 		}
 	}
 	logger.Info("sending requests is finished", "startBlock", startBlock, "endBlock", endBlock)
@@ -173,7 +173,7 @@ func (f *ChainDataFetcher) startFetching() error {
 	// lanuch a goroutine to handle from checkpoint to the head block.
 	go func() {
 		defer f.fetchingWg.Done()
-		f.sendRequests(uint64(f.checkpoint), currentBlock, requestTypeAll, true, f.fetchingStopCh)
+		f.sendRequests(uint64(f.checkpoint), currentBlock, cfTypes.RequestTypeAll, true, f.fetchingStopCh)
 	}()
 	logger.Info("fetching is started", "startedCheckpoint", checkpoint, "currentBlock", currentBlock)
 	return nil
@@ -192,7 +192,7 @@ func (f *ChainDataFetcher) stopFetching() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqType requestType) error {
+func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqType cfTypes.RequestType) error {
 	if f.rangeFetchingStarted {
 		return errors.New("range fetching is already started")
 	}
@@ -282,20 +282,19 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 	}
 }
 
-func (f *ChainDataFetcher) handleRequestByType(reqType requestType, shouldUpdateCheckpoint bool, ev blockchain.ChainEvent) {
+func (f *ChainDataFetcher) handleRequestByType(reqType cfTypes.RequestType, shouldUpdateCheckpoint bool, ev blockchain.ChainEvent) {
 	now := time.Now()
 	// TODO-ChainDataFetcher parallelize handling data
-	if checkRequestType(reqType, requestTypeTransaction) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTransactions, txsInsertionRetryGauge), txsInsertionTimeGauge)(ev)
-	}
-	if checkRequestType(reqType, requestTypeTokenTransfer) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTokenTransfers, tokenTransfersInsertionRetryGauge), tokenTransfersInsertionTimeGauge)(ev)
-	}
-	if checkRequestType(reqType, requestTypeContract) {
-		f.updateGauge(f.retryFunc(f.repo.InsertContracts, contractsInsertionRetryGauge), contractsInsertionTimeGauge)(ev)
-	}
-	if checkRequestType(reqType, requestTypeTrace) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTraceResults, tracesInsertionRetryGauge), tracesInsertionTimeGauge)(ev)
+
+	// iterate over all types of requests
+	// - RequestTypeTransaction
+	// - RequestTypeTokenTransfer
+	// - RequestTypeContract
+	// - RequestTypeTrace
+	for targetType := cfTypes.RequestTypeTransaction; targetType < cfTypes.RequestTypeLength; targetType = targetType << 1 {
+		if cfTypes.CheckRequestType(reqType, targetType) {
+			f.updateInsertionTimeGauge(f.retryFunc(f.repo.HandleChainEvent))(ev, targetType)
+		}
 	}
 	elapsed := time.Since(now)
 	totalInsertionTimeGauge.Update(elapsed.Milliseconds())
@@ -316,16 +315,16 @@ func (f *ChainDataFetcher) handleRequest() {
 			return
 		case ev := <-f.chainCh:
 			numChainEventGauge.Update(int64(len(f.chainCh)))
-			f.handleRequestByType(requestTypeAll, true, ev)
+			f.handleRequestByType(cfTypes.RequestTypeAll, true, ev)
 		case req := <-f.reqCh:
 			numRequestsGauge.Update(int64(len(f.reqCh)))
-			ev, err := f.makeChainEvent(req.blockNumber)
+			ev, err := f.makeChainEvent(req.BlockNumber)
 			if err != nil {
 				// TODO-ChainDataFetcher handle error
 				logger.Error("making chain event is failed", "err", err)
 				break
 			}
-			f.handleRequestByType(req.reqType, req.shouldUpdateCheckpoint, ev)
+			f.handleRequestByType(req.ReqType, req.ShouldUpdateCheckpoint, ev)
 		}
 	}
 }
@@ -354,29 +353,75 @@ func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
 	return nil
 }
 
-func (f *ChainDataFetcher) updateGauge(insert func(chainEvent blockchain.ChainEvent), gauge metrics.Gauge) func(chainEvent blockchain.ChainEvent) {
-	return func(chainEvent blockchain.ChainEvent) {
-		now := time.Now()
-		insert(chainEvent)
-		elapsed := time.Since(now)
-		gauge.Update(elapsed.Milliseconds())
+func getInsertionTimeGauge(reqType cfTypes.RequestType) (metrics.Gauge, error) {
+	switch reqType {
+	case cfTypes.RequestTypeTransaction:
+		return txsInsertionTimeGauge, nil
+	case cfTypes.RequestTypeTokenTransfer:
+		return tokenTransfersInsertionTimeGauge, nil
+	case cfTypes.RequestTypeContract:
+		return contractsInsertionTimeGauge, nil
+	case cfTypes.RequestTypeTrace:
+		return tracesInsertionTimeGauge, nil
+	default:
+		return nil, fmt.Errorf("the request type is not supported. type: %v", reqType)
 	}
 }
 
-func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error, gauge metrics.Gauge) func(blockchain.ChainEvent) {
-	return func(event blockchain.ChainEvent) {
+func (f *ChainDataFetcher) updateInsertionTimeGauge(insert HandleChainEventFn) HandleChainEventFn {
+	return func(chainEvent blockchain.ChainEvent, reqType cfTypes.RequestType) error {
+		now := time.Now()
+		if err := insert(chainEvent, reqType); err != nil {
+			return err
+		}
+		elapsed := time.Since(now)
+		if gauge, err := getInsertionTimeGauge(reqType); err != nil {
+			// ignore handling error since the metrics does not affect the chaindatafetcher logic.
+			// instead, the following log is left.
+			logger.Warn("getInsertionTimeGauge is failed", "err", err, "type", reqType)
+		} else {
+			gauge.Update(elapsed.Milliseconds())
+		}
+		return nil
+	}
+}
+
+func getInsertionRetryGauge(reqType cfTypes.RequestType) (metrics.Gauge, error) {
+	switch reqType {
+	case cfTypes.RequestTypeTransaction:
+		return txsInsertionRetryGauge, nil
+	case cfTypes.RequestTypeTokenTransfer:
+		return tokenTransfersInsertionRetryGauge, nil
+	case cfTypes.RequestTypeContract:
+		return contractsInsertionRetryGauge, nil
+	case cfTypes.RequestTypeTrace:
+		return tracesInsertionRetryGauge, nil
+	default:
+		return nil, fmt.Errorf("the request type is not supported. type: %v", reqType)
+	}
+}
+
+func (f *ChainDataFetcher) retryFunc(insert HandleChainEventFn) HandleChainEventFn {
+	return func(event blockchain.ChainEvent, reqType cfTypes.RequestType) error {
 		i := 0
-		for err := insert(event); err != nil; err = insert(event) {
+		for err := insert(event, reqType); err != nil; err = insert(event, reqType) {
 			select {
 			case <-f.stopCh:
-				return
+				return nil
 			default:
 				i++
-				gauge.Update(int64(i))
-				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i)
+				if gauge, err := getInsertionRetryGauge(reqType); err != nil {
+					// ignore handling error since the metrics does not affect the chaindatafetcher logic.
+					// instead, the following log is left.
+					logger.Warn("getInsertionRetryGauge is failed", "err", err, "type", reqType)
+				} else {
+					gauge.Update(int64(i))
+				}
+				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i, "err", err)
 				time.Sleep(DBInsertRetryInterval)
 			}
 		}
+		return nil
 	}
 }
 

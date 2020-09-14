@@ -27,7 +27,9 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"github.com/klaytn/klaytn/api"
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 	"github.com/klaytn/klaytn/log"
 )
 
@@ -95,6 +97,21 @@ func (r *repository) SetComponent(component interface{}) {
 	switch c := component.(type) {
 	case *api.PublicBlockChainAPI:
 		r.blockchainApi = c
+	}
+}
+
+func (r *repository) HandleChainEvent(event blockchain.ChainEvent, reqType types.RequestType) error {
+	switch reqType {
+	case types.RequestTypeTransaction:
+		return r.InsertTransactions(event)
+	case types.RequestTypeTrace:
+		return r.InsertTraceResults(event)
+	case types.RequestTypeTokenTransfer:
+		return r.InsertTokenTransfers(event)
+	case types.RequestTypeContract:
+		return r.InsertContracts(event)
+	default:
+		return fmt.Errorf("unsupported data type: %v", reqType)
 	}
 }
 
