@@ -19,6 +19,11 @@ package chaindatafetcher
 import "github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 
 const (
+	ModeKAS = iota
+	ModeKafka
+)
+
+const (
 	DefaultNumHandlers      = 10
 	DefaultJobChannelSize   = 50
 	DefaultBlockChannelSize = 500
@@ -28,6 +33,7 @@ const (
 //go:generate gencodec -type ChainDataFetcherConfig -formats toml -out gen_config.go
 type ChainDataFetcherConfig struct {
 	EnabledChainDataFetcher bool
+	Mode                    int
 	NoDefaultStart          bool
 	NumHandlers             int
 	JobChannelSize          int
@@ -38,6 +44,7 @@ type ChainDataFetcherConfig struct {
 
 var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
 	EnabledChainDataFetcher: false,
+	Mode:                    ModeKAS,
 	NoDefaultStart:          false,
 	NumHandlers:             DefaultNumHandlers,
 	JobChannelSize:          DefaultJobChannelSize,

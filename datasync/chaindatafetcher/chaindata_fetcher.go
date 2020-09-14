@@ -80,10 +80,22 @@ type ChainDataFetcher struct {
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
-	repo, err := kas.NewRepository(cfg.KasConfig)
-	if err != nil {
-		logger.Error("Failed to create new Repository", "err", err, "user", cfg.KasConfig.DBUser, "host", cfg.KasConfig.DBHost, "port", cfg.KasConfig.DBPort, "name", cfg.KasConfig.DBName, "cacheUrl", cfg.KasConfig.CacheInvalidationURL, "x-chain-id", cfg.KasConfig.XChainId)
-		return nil, err
+	var (
+		repo Repository
+		err  error
+	)
+	switch cfg.Mode {
+	case ModeKAS:
+		repo, err = kas.NewRepository(cfg.KasConfig)
+		if err != nil {
+			logger.Error("Failed to create new Repository", "err", err, "user", cfg.KasConfig.DBUser, "host", cfg.KasConfig.DBHost, "port", cfg.KasConfig.DBPort, "name", cfg.KasConfig.DBName, "cacheUrl", cfg.KasConfig.CacheInvalidationURL, "x-chain-id", cfg.KasConfig.XChainId)
+			return nil, err
+		}
+	case ModeKafka:
+		// TODO-ChainDataFetcher implement new repository for kafka
+		panic("implement me")
+	default:
+		logger.Crit("the chaindatafetcher mode is not supported", "mode", cfg.Mode)
 	}
 	checkpoint, err := repo.ReadCheckpoint()
 	if err != nil {
