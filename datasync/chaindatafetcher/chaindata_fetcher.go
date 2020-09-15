@@ -40,6 +40,7 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
+var errUnsupportedMode = errors.New("the given chaindatafetcher mode is not supported")
 
 //go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher BlockChain
 type BlockChain interface {
@@ -95,7 +96,8 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 		// TODO-ChainDataFetcher implement new repository for kafka
 		panic("implement me")
 	default:
-		logger.Crit("the chaindatafetcher mode is not supported", "mode", cfg.Mode)
+		logger.Error("the chaindatafetcher mode is not supported", "mode", cfg.Mode)
+		return nil, errUnsupportedMode
 	}
 	checkpoint, err := repo.ReadCheckpoint()
 	if err != nil {
