@@ -365,7 +365,7 @@ func getInsertionTimeGauge(reqType cfTypes.RequestType) metrics.Gauge {
 		return tracesInsertionTimeGauge
 	default:
 		logger.Warn("the request type is not supported", "type", reqType)
-		return metrics.NewGauge()
+		return metrics.NilGauge{}
 	}
 }
 
@@ -394,7 +394,7 @@ func getInsertionRetryGauge(reqType cfTypes.RequestType) metrics.Gauge {
 		return tracesInsertionRetryGauge
 	default:
 		logger.Warn("the request type is not supported", "type", reqType)
-		return metrics.NewGauge()
+		return metrics.NilGauge{}
 	}
 }
 
