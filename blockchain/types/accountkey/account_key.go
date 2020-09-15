@@ -21,7 +21,6 @@ import (
 	"errors"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 )
 
@@ -110,15 +109,7 @@ func NewAccountKey(t AccountKeyType) (AccountKey, error) {
 }
 
 func ValidateAccountKey(from common.Address, accKey AccountKey, recoveredKeys []*ecdsa.PublicKey, roleType RoleType) error {
-	// Special treatment for AccountKeyLegacy.
-	if accKey.Type().IsLegacyAccountKey() {
-		if len(recoveredKeys) != 1 {
-			return errWrongPubkeyLength
-		}
-		if crypto.PubkeyToAddress(*recoveredKeys[0]) != from {
-			return errInvalidSignature
-		}
-	} else if !accKey.Validate(roleType, recoveredKeys, from) {
+	if !accKey.Validate(roleType, recoveredKeys, from) {
 		return errInvalidSignature
 	}
 	return nil

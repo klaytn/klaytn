@@ -457,7 +457,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// RoleBasedKey having LegacyKes for all roles
+	// RoleBasedKey having LegacyKeys for all roles
 	roleBasedKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
 		accountkey.NewAccountKeyLegacy(),
 		accountkey.NewAccountKeyLegacy(),
