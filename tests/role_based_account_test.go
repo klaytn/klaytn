@@ -414,6 +414,8 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 // 3-1. Test RoleUpdate of the RoleBasedKey
 // 3-2. Recover the updated account key to the previously used RoleBasedKey
 // 4. Test RoleFeePayer of the RoleBasedKey
+// 5. Test RoleTransfer of the RoleBasedKey with invalid signature
+// 6. Test RoleTransfer of the RoleBasedKey with invalid number of signatures
 func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
@@ -572,6 +574,53 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 			t.Fatal(err)
 		}
 		anon.Nonce += 1
+	}
+
+	// 5. Test RoleTransfer of the RoleBasedKey with invalid signature
+	{
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       anon.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, anon.Keys) // Sign with an invalid key
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
+	}
+
+	// 6. Test RoleTransfer of the RoleBasedKey with invalid number of signatures
+	{
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       anon.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// invalid number of signatures
+		tx.SetSignature(types.TxSignatures{tx.RawSignatureValues()[0], tx.RawSignatureValues()[0]})
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
 	}
 }
 
