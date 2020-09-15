@@ -109,16 +109,16 @@ func NewAccountKey(t AccountKeyType) (AccountKey, error) {
 	return nil, errUndefinedAccountKeyType
 }
 
-func ValidateAccountKey(from common.Address, accKey AccountKey, recoveredKey []*ecdsa.PublicKey, roleType RoleType) error {
+func ValidateAccountKey(from common.Address, accKey AccountKey, recoveredKeys []*ecdsa.PublicKey, roleType RoleType) error {
 	// Special treatment for AccountKeyLegacy.
 	if accKey.Type().IsLegacyAccountKey() {
-		if len(recoveredKey) != 1 {
+		if len(recoveredKeys) != 1 {
 			return errWrongPubkeyLength
 		}
-		if crypto.PubkeyToAddress(*recoveredKey[0]) != from {
+		if crypto.PubkeyToAddress(*recoveredKeys[0]) != from {
 			return errInvalidSignature
 		}
-	} else if !accKey.Validate(roleType, recoveredKey, from) {
+	} else if !accKey.Validate(roleType, recoveredKeys, from) {
 		return errInvalidSignature
 	}
 	return nil

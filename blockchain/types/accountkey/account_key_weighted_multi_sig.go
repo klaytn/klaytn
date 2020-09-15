@@ -84,7 +84,7 @@ func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, recoveredKeys []*ecdsa
 	for _, bk := range recoveredKeys {
 		b, err := rlp.EncodeToBytes((*PublicKeySerializable)(bk))
 		if err != nil {
-			logger.Warn("Failed to encode public keys in the tx", recoveredKeys)
+			logger.Warn("Failed to encode recovered public keys of the tx", "recoveredKeys", recoveredKeys)
 			continue
 		}
 		pMap[string(b)] = bk
@@ -106,7 +106,7 @@ func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, recoveredKeys []*ecdsa
 		return true
 	}
 
-	logger.Debug("AccountKeyWeightedMultiSig validation is failed", "pubkeys", recoveredKeys,
+	logger.Debug("AccountKeyWeightedMultiSig validation is failed", "recoveredKeys", recoveredKeys,
 		"accountKeys", a.String(), "threshold", a.Threshold, "weighted sum", weightedSum)
 
 	return false
