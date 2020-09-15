@@ -111,7 +111,7 @@ func (r *repository) HandleChainEvent(event blockchain.ChainEvent, reqType types
 	case types.RequestTypeContract:
 		return r.InsertContracts(event)
 	default:
-		return fmt.Errorf("unsupported data type: %v", reqType)
+		return fmt.Errorf("unsupported data type. [blockNumber: %v, reqType: %v]", event.Block.NumberU64(), reqType)
 	}
 }
 
