@@ -19,6 +19,7 @@ package accountkey
 import (
 	"crypto/ecdsa"
 	"errors"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
@@ -63,7 +64,7 @@ type AccountKey interface {
 	Equal(AccountKey) bool
 
 	// Validate returns true if the given public keys are verifiable with the AccountKey.
-	Validate(RoleType, []*ecdsa.PublicKey) bool
+	Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool
 
 	// DeepCopy creates a new object and copies all the attributes to the new object.
 	DeepCopy() AccountKey
@@ -108,16 +109,16 @@ func NewAccountKey(t AccountKeyType) (AccountKey, error) {
 	return nil, errUndefinedAccountKeyType
 }
 
-func ValidateAccountKey(from common.Address, accKey AccountKey, pubkeys []*ecdsa.PublicKey, roleType RoleType) error {
+func ValidateAccountKey(from common.Address, accKey AccountKey, recoveredKey []*ecdsa.PublicKey, roleType RoleType) error {
 	// Special treatment for AccountKeyLegacy.
 	if accKey.Type().IsLegacyAccountKey() {
-		if len(pubkeys) != 1 {
+		if len(recoveredKey) != 1 {
 			return errWrongPubkeyLength
 		}
-		if crypto.PubkeyToAddress(*pubkeys[0]) != from {
+		if crypto.PubkeyToAddress(*recoveredKey[0]) != from {
 			return errInvalidSignature
 		}
-	} else if !accKey.Validate(roleType, pubkeys) {
+	} else if !accKey.Validate(roleType, recoveredKey, from) {
 		return errInvalidSignature
 	}
 	return nil

@@ -18,9 +18,11 @@ package accountkey
 
 import (
 	"crypto/ecdsa"
+	"io"
+
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/ser/rlp"
-	"io"
 )
 
 // AccountKeyNil represents a key having nothing.
@@ -62,7 +64,7 @@ func (a *AccountKeyNil) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (a *AccountKeyNil) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyNil) Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
 	logger.ErrorWithStack("this function should not be called. Validation should be done at ValidateSender or ValidateFeePayer")
 	return false
 }

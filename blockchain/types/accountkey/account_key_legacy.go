@@ -18,8 +18,10 @@ package accountkey
 
 import (
 	"crypto/ecdsa"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
-	"runtime"
 )
 
 // AccountKeyLegacy is used for accounts having no keys.
@@ -53,12 +55,12 @@ func (a *AccountKeyLegacy) Equal(b AccountKey) bool {
 	return true
 }
 
-func (a *AccountKeyLegacy) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
-	buf := make([]byte, 1024*1024)
-	buf = buf[:runtime.Stack(buf, false)]
-	logger.Error("this function should not be called. Validation should be done at ValidateSender or ValidateFeePayer",
-		"callstack", buf)
-	return false
+func (a *AccountKeyLegacy) Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
+	// A valid legacy key generates only one signature
+	if len(recoveredKeys) != 1 {
+		return false
+	}
+	return from == crypto.PubkeyToAddress(*recoveredKeys[0])
 }
 
 func (a *AccountKeyLegacy) String() string {

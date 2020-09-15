@@ -18,6 +18,8 @@ package accountkey
 
 import (
 	"crypto/ecdsa"
+
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
 )
 
@@ -47,7 +49,7 @@ func (a *AccountKeyFail) Equal(b AccountKey) bool {
 	return false
 }
 
-func (a *AccountKeyFail) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyFail) Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
 	// This type of account key always fails to validate.
 	return false
 }
