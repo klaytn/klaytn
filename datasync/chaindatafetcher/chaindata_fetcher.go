@@ -353,18 +353,19 @@ func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
 	return nil
 }
 
-func getInsertionTimeGauge(reqType cfTypes.RequestType) (metrics.Gauge, error) {
+func getInsertionTimeGauge(reqType cfTypes.RequestType) metrics.Gauge {
 	switch reqType {
 	case cfTypes.RequestTypeTransaction:
-		return txsInsertionTimeGauge, nil
+		return txsInsertionTimeGauge
 	case cfTypes.RequestTypeTokenTransfer:
-		return tokenTransfersInsertionTimeGauge, nil
+		return tokenTransfersInsertionTimeGauge
 	case cfTypes.RequestTypeContract:
-		return contractsInsertionTimeGauge, nil
+		return contractsInsertionTimeGauge
 	case cfTypes.RequestTypeTrace:
-		return tracesInsertionTimeGauge, nil
+		return tracesInsertionTimeGauge
 	default:
-		return nil, fmt.Errorf("the request type is not supported. type: %v", reqType)
+		logger.Warn("the request type is not supported", "type", reqType)
+		return metrics.NewGauge()
 	}
 }
 
@@ -375,29 +376,25 @@ func (f *ChainDataFetcher) updateInsertionTimeGauge(insert HandleChainEventFn) H
 			return err
 		}
 		elapsed := time.Since(now)
-		if gauge, err := getInsertionTimeGauge(reqType); err != nil {
-			// ignore handling error since the metrics does not affect the chaindatafetcher logic.
-			// instead, the following log is left.
-			logger.Warn("getInsertionTimeGauge is failed", "err", err, "type", reqType)
-		} else {
-			gauge.Update(elapsed.Milliseconds())
-		}
+		gauge := getInsertionTimeGauge(reqType)
+		gauge.Update(elapsed.Milliseconds())
 		return nil
 	}
 }
 
-func getInsertionRetryGauge(reqType cfTypes.RequestType) (metrics.Gauge, error) {
+func getInsertionRetryGauge(reqType cfTypes.RequestType) metrics.Gauge {
 	switch reqType {
 	case cfTypes.RequestTypeTransaction:
-		return txsInsertionRetryGauge, nil
+		return txsInsertionRetryGauge
 	case cfTypes.RequestTypeTokenTransfer:
-		return tokenTransfersInsertionRetryGauge, nil
+		return tokenTransfersInsertionRetryGauge
 	case cfTypes.RequestTypeContract:
-		return contractsInsertionRetryGauge, nil
+		return contractsInsertionRetryGauge
 	case cfTypes.RequestTypeTrace:
-		return tracesInsertionRetryGauge, nil
+		return tracesInsertionRetryGauge
 	default:
-		return nil, fmt.Errorf("the request type is not supported. type: %v", reqType)
+		logger.Warn("the request type is not supported", "type", reqType)
+		return metrics.NewGauge()
 	}
 }
 
@@ -410,13 +407,8 @@ func (f *ChainDataFetcher) retryFunc(insert HandleChainEventFn) HandleChainEvent
 				return nil
 			default:
 				i++
-				if gauge, err := getInsertionRetryGauge(reqType); err != nil {
-					// ignore handling error since the metrics does not affect the chaindatafetcher logic.
-					// instead, the following log is left.
-					logger.Warn("getInsertionRetryGauge is failed", "err", err, "type", reqType)
-				} else {
-					gauge.Update(int64(i))
-				}
+				gauge := getInsertionRetryGauge(reqType)
+				gauge.Update(int64(i))
 				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i, "err", err)
 				time.Sleep(DBInsertRetryInterval)
 			}
