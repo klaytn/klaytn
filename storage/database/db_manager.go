@@ -216,6 +216,10 @@ type DBManager interface {
 
 	// DB migration related function
 	StartDBMigration(DBManager) error
+
+	// ChainDataFetcher checkpoint function
+	WriteChainDataFetcherCheckpoint(checkpoint uint64) error
+	ReadChainDataFetcherCheckpoint() (uint64, error)
 }
 
 type DBEntryType uint8
@@ -2026,4 +2030,23 @@ func (dbm *databaseManager) WriteGovernanceState(b []byte) error {
 func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	db := dbm.getDatabase(MiscDB)
 	return db.Get(governanceStateKey)
+}
+
+func (dbm *databaseManager) WriteChainDataFetcherCheckpoint(checkpoint uint64) error {
+	db := dbm.getDatabase(MiscDB)
+	return db.Put(chaindatafetcherCheckpointKey, common.Int64ToByteBigEndian(checkpoint))
+}
+
+func (dbm *databaseManager) ReadChainDataFetcherCheckpoint() (uint64, error) {
+	db := dbm.getDatabase(MiscDB)
+	hasCheckpoint, err := db.Has(chaindatafetcherCheckpointKey)
+	if err != nil || !hasCheckpoint {
+		return 0, err
+	}
+
+	data, err := db.Get(chaindatafetcherCheckpointKey)
+	if err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint64(data), nil
 }
