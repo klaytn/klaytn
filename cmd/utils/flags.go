@@ -679,6 +679,11 @@ var (
 		Name:  "chaindatafetcher",
 		Usage: "Enable the ChainDataFetcher Service",
 	}
+	ChainDataFetcherMode = cli.StringFlag{
+		Name:  "chaindatafetcher.mode",
+		Usage: "The mode of chaindatafetcher (\"kas\", \"kafka\")",
+		Value: "kas",
+	}
 	ChainDataFetcherNoDefault = cli.BoolFlag{
 		Name:  "chaindatafetcher.no.default",
 		Usage: "Turn off the starting of the chaindatafetcher",

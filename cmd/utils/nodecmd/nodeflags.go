@@ -151,6 +151,7 @@ var KENFlags = []cli.Flag{
 	utils.MainBridgeListenPortFlag,
 	// ChainDataFetcher
 	utils.EnableChainDataFetcherFlag,
+	utils.ChainDataFetcherMode,
 	utils.ChainDataFetcherNoDefault,
 	utils.ChainDataFetcherNumHandlers,
 	utils.ChainDataFetcherJobChannelSize,

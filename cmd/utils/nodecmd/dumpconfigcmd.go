@@ -153,61 +153,68 @@ func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetc
 			cfg.BlockChannelSize = ctx.GlobalInt(utils.ChainDataFetcherChainEventSizeFlag.Name)
 		}
 
-		kasConfig := kas.DefaultKASConfig
-		if ctx.GlobalIsSet(utils.ChainDataFetcherKASDBHostFlag.Name) {
-			dbhost := ctx.GlobalString(utils.ChainDataFetcherKASDBHostFlag.Name)
-			kasConfig.DBHost = dbhost
-		} else {
-			logger.Crit("DBHost must be set !", "key", utils.ChainDataFetcherKASDBHostFlag.Name)
+		mode := ctx.GlobalString(utils.ChainDataFetcherMode.Name)
+		mode = strings.ToLower(mode)
+		switch mode {
+		case "kas":
+			cfg.Mode = chaindatafetcher.ModeKAS
+			cfg.KasConfig = makeKASConfig(ctx)
+		case "kafka":
+			// TODO-ChainDataFetcher make kafka configuration
+			panic("implement me")
+		default:
+			logger.Crit("unsupported chaindatafetcher mode (\"kas\", \"kafka\")", "mode", cfg.Mode)
 		}
-		if ctx.GlobalIsSet(utils.ChainDataFetcherKASDBPortFlag.Name) {
-			dbport := ctx.GlobalString(utils.ChainDataFetcherKASDBPortFlag.Name)
-			kasConfig.DBPort = dbport
-		}
-		if ctx.GlobalIsSet(utils.ChainDataFetcherKASDBUserFlag.Name) {
-			dbuser := ctx.GlobalString(utils.ChainDataFetcherKASDBUserFlag.Name)
-			kasConfig.DBUser = dbuser
-		} else {
-			logger.Crit("DBUser must be set !", "key", utils.ChainDataFetcherKASDBUserFlag.Name)
-		}
-		if ctx.GlobalIsSet(utils.ChainDataFetcherKASDBPasswordFlag.Name) {
-			dbpasswd := ctx.GlobalString(utils.ChainDataFetcherKASDBPasswordFlag.Name)
-			kasConfig.DBPassword = dbpasswd
-		} else {
-			logger.Crit("DBPassword must be set !", "key", utils.ChainDataFetcherKASDBPasswordFlag.Name)
-		}
-		if ctx.GlobalIsSet(utils.ChainDataFetcherKASDBNameFlag.Name) {
-			dbname := ctx.GlobalString(utils.ChainDataFetcherKASDBNameFlag.Name)
-			kasConfig.DBName = dbname
-		} else {
-			logger.Crit("DBName must be set !", "key", utils.ChainDataFetcherKASDBNameFlag.Name)
-		}
-
-		if ctx.GlobalBool(utils.ChainDataFetcherKASCacheUse.Name) {
-			kasConfig.CacheUse = true
-			if ctx.GlobalIsSet(utils.ChainDataFetcherKASCacheURLFlag.Name) {
-				cacheInvalidationUrl := ctx.GlobalString(utils.ChainDataFetcherKASCacheURLFlag.Name)
-				kasConfig.CacheInvalidationURL = cacheInvalidationUrl
-			} else {
-				logger.Crit("The cache invalidation url is not set")
-			}
-			if ctx.GlobalIsSet(utils.ChainDataFetcherKASBasicAuthParamFlag.Name) {
-				auth := ctx.GlobalString(utils.ChainDataFetcherKASBasicAuthParamFlag.Name)
-				kasConfig.BasicAuthParam = auth
-			} else {
-				logger.Crit("The authorization is not set")
-			}
-			if ctx.GlobalIsSet(utils.ChainDataFetcherKASXChainIdFlag.Name) {
-				xchainid := ctx.GlobalString(utils.ChainDataFetcherKASXChainIdFlag.Name)
-				kasConfig.XChainId = xchainid
-			} else {
-				logger.Crit("The x-chain-id is not set")
-			}
-		}
-		cfg.KasConfig = kasConfig
 	}
 
 	return *cfg
+}
+
+func checkKASDBConfigs(ctx *cli.Context) {
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASDBHostFlag.Name) {
+		logger.Crit("DBHost must be set !", "key", utils.ChainDataFetcherKASDBHostFlag.Name)
+	}
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASDBUserFlag.Name) {
+		logger.Crit("DBUser must be set !", "key", utils.ChainDataFetcherKASDBUserFlag.Name)
+	}
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASDBPasswordFlag.Name) {
+		logger.Crit("DBPassword must be set !", "key", utils.ChainDataFetcherKASDBPasswordFlag.Name)
+	}
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASDBNameFlag.Name) {
+		logger.Crit("DBName must be set !", "key", utils.ChainDataFetcherKASDBNameFlag.Name)
+	}
+}
+
+func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASCacheURLFlag.Name) {
+		logger.Crit("The cache invalidation url is not set")
+	}
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASBasicAuthParamFlag.Name) {
+		logger.Crit("The authorization is not set")
+	}
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASXChainIdFlag.Name) {
+		logger.Crit("The x-chain-id is not set")
+	}
+}
+
+func makeKASConfig(ctx *cli.Context) *kas.KASConfig {
+	kasConfig := kas.DefaultKASConfig
+
+	checkKASDBConfigs(ctx)
+	kasConfig.DBHost = ctx.GlobalString(utils.ChainDataFetcherKASDBHostFlag.Name)
+	kasConfig.DBPort = ctx.GlobalString(utils.ChainDataFetcherKASDBPortFlag.Name)
+	kasConfig.DBUser = ctx.GlobalString(utils.ChainDataFetcherKASDBUserFlag.Name)
+	kasConfig.DBPassword = ctx.GlobalString(utils.ChainDataFetcherKASDBPasswordFlag.Name)
+	kasConfig.DBName = ctx.GlobalString(utils.ChainDataFetcherKASDBNameFlag.Name)
+
+	if ctx.GlobalBool(utils.ChainDataFetcherKASCacheUse.Name) {
+		checkKASCacheInvalidationConfigs(ctx)
+		kasConfig.CacheUse = true
+		kasConfig.CacheInvalidationURL = ctx.GlobalString(utils.ChainDataFetcherKASCacheURLFlag.Name)
+		kasConfig.BasicAuthParam = ctx.GlobalString(utils.ChainDataFetcherKASBasicAuthParamFlag.Name)
+		kasConfig.XChainId = ctx.GlobalString(utils.ChainDataFetcherKASXChainIdFlag.Name)
+	}
+	return kasConfig
 }
 
 func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
