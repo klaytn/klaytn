@@ -30,7 +30,8 @@ import (
 )
 
 const (
-	codeOK = 0
+	codeOK              = 0
+	codeAlreadyAnchored = 1072100
 
 	apiCtxTimeout = 500 * time.Millisecond
 )
@@ -132,9 +133,14 @@ func (anchor *Anchor) AnchorBlock(block *types.Block) error {
 	res, err := anchor.sendRequest(payload)
 	if err != nil || res.Code != codeOK {
 		if res != nil {
+			if res.Code == codeAlreadyAnchored {
+				logger.Info("Already anchored a block", "blkNum", block.NumberU64())
+				return nil
+			}
+
 			result, _ := json.MarshalIndent(res, "", "	")
-			logger.Warn(fmt.Sprintf(`AnchorBlock returns below http raw result with the error(%v) :
-%v`, err, string(result)))
+			logger.Warn(fmt.Sprintf(`AnchorBlock returns below http raw result with the error(%v) at the block(%v) :
+%v`, err, block.NumberU64(), string(result)))
 		}
 		return err
 	}
