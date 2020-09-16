@@ -16,6 +16,8 @@
 
 package chaindatafetcher
 
+import "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
+
 type PublicChainDataFetcherAPI struct {
 	f *ChainDataFetcher
 }
@@ -33,7 +35,7 @@ func (api *PublicChainDataFetcherAPI) StopFetching() error {
 }
 
 func (api *PublicChainDataFetcherAPI) StartRangeFetching(start, end uint64, reqType uint) error {
-	return api.f.startRangeFetching(start, end, requestType(reqType))
+	return api.f.startRangeFetching(start, end, types.RequestType(reqType))
 }
 
 func (api *PublicChainDataFetcherAPI) StopRangeFetching() error {

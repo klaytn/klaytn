@@ -28,8 +28,8 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/mocks"
+	cfTypes "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 	eventMocks "github.com/klaytn/klaytn/event/mocks"
-	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +37,7 @@ func newTestChainDataFetcher() *ChainDataFetcher {
 	return &ChainDataFetcher{
 		config:        DefaultChainDataFetcherConfig,
 		chainCh:       make(chan blockchain.ChainEvent),
-		reqCh:         make(chan *request),
+		reqCh:         make(chan *cfTypes.Request),
 		stopCh:        make(chan struct{}),
 		numHandlers:   3,
 		checkpoint:    0,
@@ -67,15 +67,15 @@ func TestChainDataFetcher_Success_sendRequests(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fetcher.sendRequests(startBlock, endBlock, requestTypeAll, false, stopCh)
+		fetcher.sendRequests(startBlock, endBlock, cfTypes.RequestTypeAll, false, stopCh)
 	}()
 
 	// take all the items from the reqCh and check them.
 	for i := startBlock; i <= endBlock; i++ {
 		r := <-fetcher.reqCh
-		assert.Equal(t, i, r.blockNumber)
-		assert.Equal(t, requestTypeAll, r.reqType)
-		assert.Equal(t, false, r.shouldUpdateCheckpoint)
+		assert.Equal(t, i, r.BlockNumber)
+		assert.Equal(t, cfTypes.RequestTypeAll, r.ReqType)
+		assert.Equal(t, false, r.ShouldUpdateCheckpoint)
 	}
 	wg.Wait()
 }
@@ -91,7 +91,7 @@ func TestChainDataFetcher_Success_sendRequestsStop(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fetcher.sendRequests(startBlock, endBlock, requestTypeAll, false, stopCh)
+		fetcher.sendRequests(startBlock, endBlock, cfTypes.RequestTypeAll, false, stopCh)
 	}()
 
 	stopCh <- struct{}{}
@@ -122,7 +122,7 @@ func TestChainDataFetcher_Success_fetchingStartAndStop(t *testing.T) {
 func TestChainDataFetcher_Success_rangeFetchingStartAndStop(t *testing.T) {
 	fetcher := newTestChainDataFetcher()
 	// start range fetching and the method is waiting for the items to be taken from reqCh
-	assert.NoError(t, fetcher.startRangeFetching(0, 10, requestTypeAll))
+	assert.NoError(t, fetcher.startRangeFetching(0, 10, cfTypes.RequestTypeAll))
 
 	// take only parts of the requests
 	<-fetcher.reqCh
@@ -135,7 +135,7 @@ func TestChainDataFetcher_Success_rangeFetchingStartAndStop(t *testing.T) {
 
 func TestChainDataFetcher_Success_rangeFetchingStartAndFinishedAlready(t *testing.T) {
 	fetcher := newTestChainDataFetcher()
-	assert.NoError(t, fetcher.startRangeFetching(0, 0, requestTypeAll))
+	assert.NoError(t, fetcher.startRangeFetching(0, 0, cfTypes.RequestTypeAll))
 	// skip the request
 	<-fetcher.reqCh
 
@@ -196,10 +196,9 @@ func TestChainDataFetcher_retryFunc(t *testing.T) {
 	ev := blockchain.ChainEvent{
 		Block: types.NewBlockWithHeader(header),
 	}
-	gauge := metrics.NewGauge()
 
 	i := 0
-	f := func(event blockchain.ChainEvent) error {
+	f := func(event blockchain.ChainEvent, reqType cfTypes.RequestType) error {
 		i++
 		if i == 5 {
 			return nil
@@ -208,6 +207,6 @@ func TestChainDataFetcher_retryFunc(t *testing.T) {
 		}
 	}
 
-	fetcher.retryFunc(f, gauge)(ev)
+	assert.NoError(t, fetcher.retryFunc(f)(ev, cfTypes.RequestTypeAll))
 	assert.True(t, i == 5)
 }

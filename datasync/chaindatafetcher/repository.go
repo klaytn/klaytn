@@ -17,18 +17,19 @@
 package chaindatafetcher
 
 import (
-	"github.com/klaytn/klaytn/blockchain"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 )
 
 const DBInsertRetryInterval = 500 * time.Millisecond
 
+type HandleChainEventFn func(blockchain.ChainEvent, types.RequestType) error
+
 //go:generate mockgen -destination=./mocks/repository_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher Repository
 type Repository interface {
-	InsertTransactions(event blockchain.ChainEvent) error
-	InsertTokenTransfers(event blockchain.ChainEvent) error
-	InsertTraceResults(event blockchain.ChainEvent) error
-	InsertContracts(event blockchain.ChainEvent) error
+	HandleChainEvent(event blockchain.ChainEvent, dataType types.RequestType) error
 
 	ReadCheckpoint() (int64, error)
 	WriteCheckpoint(checkpoint int64) error
