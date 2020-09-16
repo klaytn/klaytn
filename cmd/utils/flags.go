@@ -847,7 +847,7 @@ var (
 	}
 	DstDynamoDBTableNameFlag = cli.StringFlag{
 		Name:  "db.dst.dynamo.tablename",
-		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
+		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3). If dstDB is singleDB, tableName should be in form of 'PREFIX-TABLENAME'.(e.g. 'klaytn-misc', 'klaytn-statetrie')",
 	}
 	DstDynamoDBRegionFlag = cli.StringFlag{
 		Name:  "db.dst.dynamo.region",
