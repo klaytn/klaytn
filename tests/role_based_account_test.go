@@ -19,6 +19,10 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
@@ -27,9 +31,6 @@ import (
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
-	"time"
 )
 
 type TestRoleBasedAccountType struct {
@@ -404,6 +405,222 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 		receipt, _, err := applyTransaction(t, bcdata, tx)
 		assert.Equal(t, (*types.Receipt)(nil), receipt)
 		assert.Equal(t, kerrors.ErrAccountKeyNilUninitializable, err)
+	}
+}
+
+// TestAccountUpdateRoleBasedLegacy tests TxInternalDataAccountUpdate with the following scenario:
+// 1. Update key to RoleBasedKey having a LegacyKey for all roles
+// 2. Test RoleTransfer of the RoleBasedKey
+// 3-1. Test RoleUpdate of the RoleBasedKey
+// 3-2. Recover the updated account key to the previously used RoleBasedKey
+// 4. Test RoleFeePayer of the RoleBasedKey
+// 5. Test RoleTransfer of the RoleBasedKey with invalid signature
+// 6. Test RoleTransfer of the RoleBasedKey with invalid number of signatures
+func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	anon, err := createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
+		fmt.Println("anonAddr = ", anon.Addr.String())
+	}
+
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+	// RoleBasedKey having LegacyKeys for all roles
+	roleBasedKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+		accountkey.NewAccountKeyLegacy(),
+		accountkey.NewAccountKeyLegacy(),
+		accountkey.NewAccountKeyLegacy(),
+	})
+
+	// 1. Update key to RoleBasedKey having a LegacyKey for all roles
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      reservoir.Nonce,
+			types.TxValueKeyFrom:       reservoir.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: roleBasedKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, types.Transactions{tx}, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 2. Test RoleTransfer of the RoleBasedKey
+	{
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       anon.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, types.Transactions{tx}, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 3-1. Test RoleUpdate of the RoleBasedKey
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      reservoir.Nonce,
+			types.TxValueKeyFrom:       reservoir.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: accountkey.NewAccountKeyPublicWithValue(&anon.Keys[0].PublicKey),
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, types.Transactions{tx}, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 3-2. Recover the updated account key to the previously used RoleBasedKey
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      reservoir.Nonce,
+			types.TxValueKeyFrom:       reservoir.Addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: roleBasedKey,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, anon.Keys)
+		assert.Equal(t, nil, err)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, types.Transactions{tx}, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.Nonce += 1
+	}
+
+	// 4. Test RoleFeePayer of the RoleBasedKey
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    anon.Nonce,
+			types.TxValueKeyFrom:     anon.Addr,
+			types.TxValueKeyTo:       reservoir.Addr,
+			types.TxValueKeyAmount:   new(big.Int).SetUint64(0),
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+			types.TxValueKeyFeePayer: reservoir.Addr,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, anon.Keys)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, types.Transactions{tx}, prof); err != nil {
+			t.Fatal(err)
+		}
+		anon.Nonce += 1
+	}
+
+	// 5. Test RoleTransfer of the RoleBasedKey with invalid signature
+	{
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       anon.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, anon.Keys) // Sign with an invalid key
+		assert.Equal(t, nil, err)
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
+	}
+
+	// 6. Test RoleTransfer of the RoleBasedKey with invalid number of signatures
+	{
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:    reservoir.Nonce,
+			types.TxValueKeyFrom:     reservoir.Addr,
+			types.TxValueKeyTo:       anon.Addr,
+			types.TxValueKeyAmount:   amount,
+			types.TxValueKeyGasLimit: gasLimit,
+			types.TxValueKeyGasPrice: gasPrice,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		// invalid number of signatures
+		tx.SetSignature(types.TxSignatures{tx.RawSignatureValues()[0], tx.RawSignatureValues()[0]})
+
+		receipt, _, err := applyTransaction(t, bcdata, tx)
+		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.Equal(t, types.ErrInvalidSigSender, err)
 	}
 }
 

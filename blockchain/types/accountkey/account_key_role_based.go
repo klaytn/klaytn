@@ -20,9 +20,11 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"io"
+
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/ser/rlp"
-	"io"
 )
 
 type RoleType int
@@ -150,11 +152,11 @@ func (a *AccountKeyRoleBased) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (a *AccountKeyRoleBased) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyRoleBased) Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
 	if len(*a) > int(r) {
-		return (*a)[r].Validate(r, pubkeys)
+		return (*a)[r].Validate(r, recoveredKeys, from)
 	}
-	return a.getDefaultKey().Validate(r, pubkeys)
+	return a.getDefaultKey().Validate(r, recoveredKeys, from)
 }
 
 func (a *AccountKeyRoleBased) getDefaultKey() AccountKey {

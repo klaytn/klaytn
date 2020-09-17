@@ -19,6 +19,8 @@ package accountkey
 import (
 	"crypto/ecdsa"
 	"fmt"
+
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 )
@@ -62,13 +64,13 @@ func (a *AccountKeyPublic) Equal(b AccountKey) bool {
 	return a.PublicKeySerializable.Equal(tb.PublicKeySerializable)
 }
 
-func (a *AccountKeyPublic) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
-	if len(pubkeys) != 1 {
-		// AccountKeyPublic has only one public key.
+func (a *AccountKeyPublic) Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
+	// AccountKeyPublic has only one public key.
+	if len(recoveredKeys) != 1 {
 		return false
 	}
 
-	return a.PublicKeySerializable.Equal((*PublicKeySerializable)(pubkeys[0]))
+	return a.PublicKeySerializable.Equal((*PublicKeySerializable)(recoveredKeys[0]))
 }
 
 func (a *AccountKeyPublic) String() string {
