@@ -141,6 +141,8 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
 	}
 
+	config.TableName = strings.ReplaceAll(config.TableName, "_", "-")
+
 	s3FileDB, err := newS3FileDB(config.Region, "https://s3."+config.Region+".amazonaws.com", config.TableName)
 	if err != nil {
 		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName)

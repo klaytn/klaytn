@@ -25,6 +25,6 @@ $KLAYTN_BIN/ken db-migration start \
   --db.single --db.dst.single \
   --dbtype $SRC_DB_TYPE --dst.dbtype $DST_DB_TYPE \
   --datadir $SRC_DB_DIR  \
-  --dst.datadir $DST_DB --db.dst.dynamo.tablename $DST_TABLENAME \
+  --dst.datadir $DST_DB_DIR --db.dst.dynamo.tablename $DST_TABLENAME \
   --db.dst.dynamo.is-provisioned --db.dst.dynamo.read-capacity $DST_RCU --db.dst.dynamo.write-capacity $DST_WCU \
    &> logs-$SRC_DB.out &

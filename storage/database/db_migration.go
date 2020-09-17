@@ -19,6 +19,7 @@ package database
 import (
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 
@@ -97,6 +98,14 @@ loop:
 	}
 
 	logger.Info("Finish DB migration", "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
+
+	// If the current src DB is misc DB, clear all db dir on dst
+	// TODO: If DB Migration supports non-single db, change the checking logic
+	if path.Base(dbm.config.Dir) == dbBaseDirs[MiscDB] {
+		for i := uint8(MiscDB); i < uint8(databaseEntryTypeSize); i++ {
+			dstdbm.setDBDir(DBEntryType(i), "")
+		}
+	}
 
 	srcIter.Release()
 	if err := srcIter.Error(); err != nil { // any accumulated error from iterator

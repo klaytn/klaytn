@@ -63,6 +63,13 @@ Note: Do not use db migration while a node is executing.
 				Action: utils.MigrateFlags(startMigration),
 				Description: `
 This command starts DB migration.
+
+Even if db dir names are changed in srcDB, the original db dir names are used in dstDB.
+(e.g. use 'statetrie' instead of 'statetrie_migrated_xxxxx')
+If dst db is singleDB, you should set dst.datadir or db.dst.dynamo.tablename
+to the original db dir name.
+(e.g. Data dir : 'chaindata/klay/statetrie', Dynamo table name : 'klaytn-statetrie')
+
 Note: This feature is only provided when srcDB is single LevelDB.`,
 			},
 		},
