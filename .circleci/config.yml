@@ -29,6 +29,16 @@ executors:
       - image: klaytn/build_base:1.1-go1.14.6-solc0.4.24
       - image: localstack/localstack:0.10.9
       - image: circleci/mysql:5.7
+      - name: zookeeper
+        image: wurstmeister/zookeeper
+      - name: kafka
+        image: wurstmeister/kafka
+        environment:
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
+          KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
@@ -264,16 +274,37 @@ jobs:
       - install-ssh-alpine
       - checkout
       - run:
-        # Our primary container isn't MYSQL so run a sleep command until it's ready.
-            name: "Waiting for MySQL to be ready"
-            command: |
-              for i in `seq 1 10`;
-              do
-                nc -z 127.0.0.1 3306 && echo Success && exit 0
-                echo -n .
-                sleep 1
-              done
-              echo Failed waiting for MySQL && exit 1
+        # Our primary container isn't MYSQL so run a sleep command until it's ready. 
+        ## Please make me as orb to wait container ready
+          name: "Waiting for MySQL to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z 127.0.0.1 3306 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for MySQL && exit 1
+      - run:
+          name: "Waiting for zookeeper to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z zookeeper 2181 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for zookeeper && exit 1
+      - run:
+          name: "Waiting for Kafka to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z kafka 9092 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Kafka && exit 1
       - run:
           name: "Run test datasync"
           command: make test-datasync
