@@ -24,6 +24,8 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 )
 
+const redisSubscriptionChannelSize = 100 // default value of redis client
+
 var (
 	redisCacheDialTimeout = time.Duration(300 * time.Millisecond)
 	redisCacheTimeout     = time.Duration(100 * time.Millisecond)
@@ -96,4 +98,16 @@ func (cache *RedisCache) Has(k []byte) ([]byte, bool) {
 		return nil, false
 	}
 	return val, true
+}
+
+func (cache *RedisCache) Publish(channel string, msg string) error {
+	return cache.client.Publish(channel, msg).Err()
+}
+
+func (cache *RedisCache) Subscribe(channel string) *redis.PubSub {
+	return cache.client.Subscribe(channel)
+}
+
+func (cache *RedisCache) SubscriptionChannel(channel string) <-chan *redis.Message {
+	return cache.Subscribe(channel).ChannelSize(redisSubscriptionChannelSize)
 }
