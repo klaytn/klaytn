@@ -24,14 +24,17 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
+	"github.com/dgraph-io/badger"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/pkg/errors"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
@@ -2039,14 +2042,19 @@ func (dbm *databaseManager) WriteChainDataFetcherCheckpoint(checkpoint uint64) e
 
 func (dbm *databaseManager) ReadChainDataFetcherCheckpoint() (uint64, error) {
 	db := dbm.getDatabase(MiscDB)
-	hasCheckpoint, err := db.Has(chaindatafetcherCheckpointKey)
-	if err != nil || !hasCheckpoint {
-		return 0, err
-	}
-
 	data, err := db.Get(chaindatafetcherCheckpointKey)
 	if err != nil {
+		// if the key is not in the database, 0 is returned as the checkpoint
+		if err == leveldb.ErrNotFound || err == badger.ErrKeyNotFound ||
+			strings.Contains(err.Error(), "not found") { // memoryDB
+			return 0, nil
+		}
 		return 0, err
+	}
+	// in case that error is nil, but the data does not exist
+	if len(data) != 8 {
+		logger.Warn("the returned error is nil, but the data is wrong", "len(data)", len(data))
+		return 0, nil
 	}
 	return binary.BigEndian.Uint64(data), nil
 }
