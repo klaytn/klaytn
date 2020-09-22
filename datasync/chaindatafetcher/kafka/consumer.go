@@ -55,12 +55,11 @@ func (c *Consumer) Subscribe(topic string, handler func(*sarama.ConsumerMessage)
 		for topic := range c.handler {
 			topics = append(topics, topic)
 		}
-		h := func(err chan<- error) {
-			err <- c.members.Consume(c.ctx, topics, c)
-		}
 		res := make(chan error, 1)
 		for {
-			go h(res)
+			go func(err chan<- error) {
+				err <- c.members.Consume(c.ctx, topics, c)
+			}(res)
 			select {
 			case err := <-res:
 				if err != nil {
