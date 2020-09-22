@@ -39,23 +39,15 @@ type kafkaData struct {
 
 type KafkaSuite struct {
 	suite.Suite
-	kfk             types.EventBroker
-	topic           string
-	data            string
-	consumerGroupId string
-	brokers         []string
-	replica         int16
-	partitions      int32
+	kfk   types.EventBroker
+	topic string
+	data  string
 }
 
 func (s *KafkaSuite) SetupSuite() {
 	s.topic = "test-topic"
 	s.data = "test-data"
-	s.consumerGroupId = "test_group_id"
-	s.brokers = []string{"kafka:9094"}
-	s.replica = 1
-	s.partitions = 1
-	s.kfk = kafka.New(s.consumerGroupId, s.brokers, s.replica, s.partitions)
+	s.kfk = kafka.New("test_group_id", []string{"kafka:9094"}, 1, 1)
 }
 
 func (s *KafkaSuite) TearDownSuite() {
