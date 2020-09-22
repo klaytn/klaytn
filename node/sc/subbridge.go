@@ -591,7 +591,7 @@ func (sb *SubBridge) restoreBridgeLoop() {
 			return
 		case <-ticker.C:
 			if err := sb.bridgeManager.RestoreBridges(); err != nil {
-				logger.Error("failed to sb.bridgeManager.RestoreBridges()", "err", err)
+				logger.Debug("failed to sb.bridgeManager.RestoreBridges()", "err", err)
 				continue
 			}
 			return

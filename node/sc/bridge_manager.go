@@ -636,7 +636,7 @@ func (bm *BridgeManager) SetBridgeInfo(addr common.Address, bridge *bridgecontra
 // RestoreBridges setups bridge subscription by using the journal cache.
 func (bm *BridgeManager) RestoreBridges() error {
 	if bm.subBridge.peers.Len() < 1 {
-		logger.Error("check peer connections to restore bridges")
+		logger.Debug("check peer connections to restore bridges")
 		return ErrBridgeRestore
 	}
 

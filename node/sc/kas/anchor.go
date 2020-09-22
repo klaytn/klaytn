@@ -18,6 +18,7 @@ package kas
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,10 +26,14 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"math/big"
 	"net/http"
+	"time"
 )
 
 const (
-	codeOK = 0
+	codeOK              = 0
+	codeAlreadyAnchored = 1072100
+
+	apiCtxTimeout = 500 * time.Millisecond
 )
 
 var (
@@ -126,14 +131,18 @@ func (anchor *Anchor) AnchorBlock(block *types.Block) error {
 	payload := dataToPayload(anchorData)
 
 	res, err := anchor.sendRequest(payload)
-	if err != nil {
-		return err
-	}
+	if err != nil || res.Code != codeOK {
+		if res != nil {
+			if res.Code == codeAlreadyAnchored {
+				logger.Info("Already anchored a block", "blkNum", block.NumberU64())
+				return nil
+			}
 
-	if res.Code != codeOK {
-		result, _ := json.Marshal(res)
-		logger.Debug("Failed to anchor a block via KAS", "blkNum", block.NumberU64(), "result", string(result))
-		return fmt.Errorf("error code : %v , message : %v", res.Code, res.Message)
+			result, _ := json.MarshalIndent(res, "", "	")
+			logger.Warn(fmt.Sprintf(`AnchorBlock returns below http raw result with the error(%v) at the block(%v) :
+%v`, err, block.NumberU64(), string(result)))
+		}
+		return err
 	}
 
 	logger.Info("Anchored a block via KAS", "blkNum", block.NumberU64())
@@ -185,7 +194,11 @@ func (anchor *Anchor) sendRequest(payload interface{}) (*respBody, error) {
 
 	body := bytes.NewReader(bodyDataBytes)
 
-	req, err := http.NewRequest("POST", anchor.kasConfig.Url, body)
+	// set up timeout for API call
+	ctx, cancel := context.WithTimeout(context.Background(), apiCtxTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", anchor.kasConfig.Url, body)
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +215,10 @@ func (anchor *Anchor) sendRequest(payload interface{}) (*respBody, error) {
 
 	v := respBody{}
 	json.NewDecoder(resp.Body).Decode(&v)
+
+	if resp.StatusCode != http.StatusOK {
+		return &v, errors.New("http status : " + resp.Status)
+	}
 
 	return &v, nil
 }
