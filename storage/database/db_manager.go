@@ -1072,12 +1072,11 @@ func (dbm *databaseManager) PutBodyToBatch(batch Batch, hash common.Hash, number
 
 // WriteBodyRLP stores an RLP encoded block body into the database.
 func (dbm *databaseManager) WriteBodyRLP(hash common.Hash, number uint64, rlp rlp.RawValue) {
+	dbm.cm.writeBodyRLPCache(hash, rlp)
+
 	db := dbm.getDatabase(BodyDB)
 	if err := db.Put(blockBodyKey(number, hash), rlp); err != nil {
 		logger.Crit("Failed to store block body", "err", err)
-	}
-	if common.WriteThroughCaching {
-		dbm.cm.writeBodyRLPCache(hash, rlp)
 	}
 }
 
@@ -1188,13 +1187,11 @@ func (dbm *databaseManager) ReadReceiptsByBlockHash(hash common.Hash) types.Rece
 
 // WriteReceipts stores all the transaction receipts belonging to a block.
 func (dbm *databaseManager) WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts) {
+	dbm.cm.writeBlockReceiptsCache(hash, receipts)
+
 	db := dbm.getDatabase(ReceiptsDB)
 	// When putReceiptsToPutter is called from WriteReceipts, txReceipt is cached.
 	dbm.putReceiptsToPutter(db, hash, number, receipts, true)
-	if common.WriteThroughCaching {
-		// TODO-Klaytn goroutine for performance
-		dbm.cm.writeBlockReceiptsCache(hash, receipts)
-	}
 }
 
 func (dbm *databaseManager) PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts) {
@@ -1312,13 +1309,11 @@ func (dbm *databaseManager) HasBlock(hash common.Hash, number uint64) bool {
 }
 
 func (dbm *databaseManager) WriteBlock(block *types.Block) {
+	dbm.cm.writeBodyCache(block.Hash(), block.Body())
+	dbm.cm.blockCache.Add(block.Hash(), block)
+
 	dbm.WriteBody(block.Hash(), block.NumberU64(), block.Body())
 	dbm.WriteHeader(block.Header())
-
-	if common.WriteThroughCaching {
-		dbm.cm.writeBodyCache(block.Hash(), block.Body())
-		dbm.cm.blockCache.Add(block.Hash(), block)
-	}
 }
 
 func (dbm *databaseManager) DeleteBlock(hash common.Hash, number uint64) {

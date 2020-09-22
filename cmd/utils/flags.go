@@ -285,10 +285,6 @@ var (
 		Name:  "cache.memory",
 		Usage: "Set the physical RAM size (GB, Default: 16GB)",
 	}
-	CacheWriteThroughFlag = cli.BoolFlag{
-		Name:  "cache.writethrough",
-		Usage: "Enables write-through writing to database and cache for certain types of cache.",
-	}
 	TxPoolStateCacheFlag = cli.BoolFlag{
 		Name:  "statedb.use-txpool-cache",
 		Usage: "Enables caching of nonce and balance for txpool.",
@@ -1401,7 +1397,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		logger.Debug("Memory settings", "PhysicalMemory(GB)", common.TotalPhysicalMemGB)
 	}
 
-	common.WriteThroughCaching = ctx.GlobalIsSet(CacheWriteThroughFlag.Name)
 	cfg.TxPoolStateCache = ctx.GlobalIsSet(TxPoolStateCacheFlag.Name)
 
 	if ctx.GlobalIsSet(DocRootFlag.Name) {

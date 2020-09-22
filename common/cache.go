@@ -18,10 +18,11 @@ package common
 
 import (
 	"errors"
-	"github.com/hashicorp/golang-lru"
+	"math"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/log"
 	"github.com/pbnjay/memory"
-	"math"
 )
 
 type CacheType int
@@ -66,9 +67,6 @@ func getPhysicalMemorySize() int {
 		return minimumMemorySize
 	}
 }
-
-// TODO-Klaytn-Storage WriteThroughCaching flag should be stored to proper place.
-var WriteThroughCaching = false
 
 type CacheKey interface {
 	getShardIndex(shardMask int) int

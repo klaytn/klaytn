@@ -73,7 +73,6 @@ var CommonNodeFlags = []cli.Flag{
 	utils.CacheScaleFlag,
 	utils.CacheUsageLevelFlag,
 	utils.MemorySizeFlag,
-	utils.CacheWriteThroughFlag,
 	utils.TxPoolStateCacheFlag,
 	utils.TrieNodeCacheTypeFlag,
 	utils.TrieNodeCacheRedisEndpointsFlag,
