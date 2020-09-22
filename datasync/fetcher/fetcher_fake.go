@@ -25,7 +25,10 @@ import (
 
 type FakeFetcher struct{}
 
-func NewFakeFetcher() *FakeFetcher { return &FakeFetcher{} }
+func NewFakeFetcher() *FakeFetcher {
+	logger.Warn("fetcher is disabled; no data will be fetched from peers")
+	return &FakeFetcher{}
+}
 
 func (*FakeFetcher) Enqueue(peer string, block *types.Block) error { return nil }
 func (*FakeFetcher) FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction {

@@ -27,7 +27,10 @@ import (
 // fakeDownloader do nothing
 type FakeDownloader struct{}
 
-func NewFakeDownloader() *FakeDownloader { return &FakeDownloader{} }
+func NewFakeDownloader() *FakeDownloader {
+	logger.Warn("downloader is disabled; no data will be downloaded from peers")
+	return &FakeDownloader{}
+}
 
 func (*FakeDownloader) RegisterPeer(id string, version int, peer Peer) error { return nil }
 func (*FakeDownloader) UnregisterPeer(id string) error                       { return nil }
