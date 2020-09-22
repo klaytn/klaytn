@@ -37,6 +37,7 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
+	"github.com/klaytn/klaytn/node/sc/kas"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
@@ -131,10 +132,10 @@ type SubBridge struct {
 	bridgeTxPool BridgeTxPool
 
 	// chain event
-	chainHeadCh  chan blockchain.ChainHeadEvent
-	chainHeadSub event.Subscription
-	logsCh       chan []*types.Log
-	logsSub      event.Subscription
+	chainCh  chan blockchain.ChainEvent
+	chainSub event.Subscription
+	logsCh   chan []*types.Log
+	logsSub  event.Subscription
 
 	// If this channel can't be read immediately, it can lock service chain tx pool.
 	// Commented out because for now, it doesn't need.
@@ -164,6 +165,9 @@ type SubBridge struct {
 
 	rpcConn   net.Conn
 	rpcSendCh chan []byte
+
+	//KAS Anchor
+	kasAnchor *kas.Anchor
 }
 
 // New creates a new CN object (including the
@@ -183,7 +187,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		accountManager: ctx.AccountManager,
 		networkId:      config.NetworkId,
 		ctx:            ctx,
-		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		chainCh:        make(chan blockchain.ChainEvent, chainEventChanSize),
 		logsCh:         make(chan []*types.Log, chainLogChanSize),
 		// txCh:            make(chan blockchain.NewTxsEvent, transactionChanSize),
 		requestEventCh: make(chan *RequestValueTransferEvent, requestEventChanSize),
@@ -320,8 +324,20 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 		switch v := component.(type) {
 		case *blockchain.BlockChain:
 			sb.blockchain = v
+
+			kasConfig := &kas.KASConfig{
+				Url:          sb.config.KASAnchorUrl,
+				XChainId:     sb.config.KASXChainId,
+				User:         sb.config.KASAccessKey,
+				Pwd:          sb.config.KASSecretKey,
+				Operator:     common.HexToAddress(sb.config.KASAnchorOperator),
+				Anchor:       sb.config.KASAnchor,
+				AnchorPeriod: sb.config.KASAnchorPeriod,
+			}
+			sb.kasAnchor = kas.NewKASAnchor(kasConfig, sb.chainDB, v)
+
 			// event from core-service
-			sb.chainHeadSub = sb.blockchain.SubscribeChainHeadEvent(sb.chainHeadCh)
+			sb.chainSub = sb.blockchain.SubscribeChainEvent(sb.chainCh)
 			sb.logsSub = sb.blockchain.SubscribeLogsEvent(sb.logsCh)
 			sb.bridgeAccounts.cAccount.SetChainID(v.Config().ChainID)
 		case *blockchain.TxPool:
@@ -575,7 +591,7 @@ func (sb *SubBridge) restoreBridgeLoop() {
 			return
 		case <-ticker.C:
 			if err := sb.bridgeManager.RestoreBridges(); err != nil {
-				logger.Error("failed to sb.bridgeManager.RestoreBridges()", "err", err)
+				logger.Debug("failed to sb.bridgeManager.RestoreBridges()", "err", err)
 				continue
 			}
 			return
@@ -592,11 +608,13 @@ func (sb *SubBridge) loop() {
 		case sendData := <-sb.rpcSendCh:
 			sb.SendRPCData(sendData)
 		// Handle ChainHeadEvent
-		case ev := <-sb.chainHeadCh:
+		case ev := <-sb.chainCh:
 			if ev.Block != nil {
 				if err := sb.eventhandler.HandleChainHeadEvent(ev.Block); err != nil {
 					logger.Error("subbridge block event", "err", err)
 				}
+
+				sb.kasAnchor.AnchorPeriodicBlock(ev.Block)
 			} else {
 				logger.Error("subbridge block event is nil")
 			}
@@ -625,7 +643,7 @@ func (sb *SubBridge) loop() {
 			if err := sb.eventhandler.ProcessHandleEvent(ev); err != nil {
 				logger.Error("fail to process handle value transfer event ", "err", err)
 			}
-		case err := <-sb.chainHeadSub.Err():
+		case err := <-sb.chainSub.Err():
 			if err != nil {
 				logger.Error("subbridge block subscription ", "err", err)
 			}
@@ -729,7 +747,7 @@ func (sb *SubBridge) Stop() error {
 	close(sb.quitSync)
 	sb.bridgeManager.stopAllRecoveries()
 
-	sb.chainHeadSub.Unsubscribe()
+	sb.chainSub.Unsubscribe()
 	//sb.txSub.Unsubscribe()
 	sb.logsSub.Unsubscribe()
 	sb.requestEventSub.Unsubscribe()

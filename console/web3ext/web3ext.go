@@ -21,20 +21,70 @@
 package web3ext
 
 var Modules = map[string]string{
-	"admin":      Admin_JS,
-	"debug":      Debug_JS,
-	"klay":       Klay_JS,
-	"net":        Net_JS,
-	"personal":   Personal_JS,
-	"rpc":        RPC_JS,
-	"txpool":     TxPool_JS,
-	"istanbul":   Istanbul_JS,
-	"mainbridge": MainBridge_JS,
-	"subbridge":  SubBridge_JS,
-	"clique":     CliqueJs,
-	"governance": Governance_JS,
-	"bootnode":   Bootnode_JS,
+	"admin":            Admin_JS,
+	"debug":            Debug_JS,
+	"klay":             Klay_JS,
+	"net":              Net_JS,
+	"personal":         Personal_JS,
+	"rpc":              RPC_JS,
+	"txpool":           TxPool_JS,
+	"istanbul":         Istanbul_JS,
+	"mainbridge":       MainBridge_JS,
+	"subbridge":        SubBridge_JS,
+	"clique":           CliqueJs,
+	"governance":       Governance_JS,
+	"bootnode":         Bootnode_JS,
+	"chaindatafetcher": ChainDataFetcher_JS,
 }
+
+const ChainDataFetcher_JS = `
+web3._extend({
+	property: 'chaindatafetcher',
+	methods: [
+		new web3._extend.Method({
+			name: 'startFetching',
+			call: 'chaindatafetcher_startFetching',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'stopFetching',
+			call: 'chaindatafetcher_stopFetching',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'startRangeFetching',
+			call: 'chaindatafetcher_startRangeFetching',
+			params: 3
+		}),
+		new web3._extend.Method({
+			name: 'stopRangeFetching',
+			call: 'chaindatafetcher_stopRangeFetching',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'readCheckpoint',
+			call: 'chaindatafetcher_readCheckpoint',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'status',
+			call: 'chaindatafetcher_status',
+			params: 0
+		}),
+		new web3._extend.Method({
+			name: 'writeCheckpoint',
+			call: 'chaindatafetcher_writeCheckpoint',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getConfig',
+			call: 'chaindatafetcher_getConfig',
+			params: 0
+		})
+	],
+	properties: []
+});
+`
 
 const Bootnode_JS = `
 web3._extend({
@@ -1011,6 +1061,11 @@ web3._extend({
 			name: 'unsubscribeBridge',
 			call: 'subbridge_unsubscribeBridge',
 			params: 2
+		}),
+		new web3._extend.Method({
+			name: 'KASAnchor',
+			call: 'subbridge_kASAnchor',
+			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'anchoring',

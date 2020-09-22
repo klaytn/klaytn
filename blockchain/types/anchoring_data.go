@@ -17,14 +17,17 @@
 package types
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"math/big"
 )
 
 const (
-	AnchoringDataType0 uint8 = 0
+	AnchoringDataType0    uint8 = 0
+	AnchoringJSONDataType uint8 = 128
 )
 
 var (
@@ -43,12 +46,12 @@ type AnchoringData struct {
 
 // AnchoringDataLegacy is an old anchoring type that does not support an data type.
 type AnchoringDataLegacy struct {
-	BlockHash     common.Hash
-	TxHash        common.Hash
-	ParentHash    common.Hash
-	ReceiptHash   common.Hash
-	StateRootHash common.Hash
-	BlockNumber   *big.Int
+	BlockHash     common.Hash `json:"blockHash"`
+	TxHash        common.Hash `json:"transactionsRoot"`
+	ParentHash    common.Hash `json:"parentHash"`
+	ReceiptHash   common.Hash `json:"receiptsRoot"`
+	StateRootHash common.Hash `json:"stateRoot"`
+	BlockNumber   *big.Int    `json:"blockNumber"`
 }
 
 func (data *AnchoringDataLegacy) GetBlockHash() common.Hash {
@@ -60,14 +63,14 @@ func (data *AnchoringDataLegacy) GetBlockNumber() *big.Int {
 }
 
 type AnchoringDataInternalType0 struct {
-	BlockHash     common.Hash
-	TxHash        common.Hash
-	ParentHash    common.Hash
-	ReceiptHash   common.Hash
-	StateRootHash common.Hash
-	BlockNumber   *big.Int
-	BlockCount    *big.Int
-	TxCount       *big.Int
+	BlockHash     common.Hash `json:"blockHash"`
+	TxHash        common.Hash `json:"transactionsRoot"`
+	ParentHash    common.Hash `json:"parentHash"`
+	ReceiptHash   common.Hash `json:"receiptsRoot"`
+	StateRootHash common.Hash `json:"stateRoot"`
+	BlockNumber   *big.Int    `json:"blockNumber"`
+	BlockCount    *big.Int    `json:"blockCount"`
+	TxCount       *big.Int    `json:"txCount"`
 }
 
 func (data *AnchoringDataInternalType0) GetBlockHash() common.Hash {
@@ -78,15 +81,30 @@ func (data *AnchoringDataInternalType0) GetBlockNumber() *big.Int {
 	return data.BlockNumber
 }
 
-func NewAnchoringDataType0(block *Block, blockCount *big.Int, txCount *big.Int) (*AnchoringData, error) {
-	data := &AnchoringDataInternalType0{block.Hash(), block.Header().TxHash,
-		block.Header().ParentHash, block.Header().ReceiptHash,
-		block.Header().Root, block.Header().Number, blockCount, txCount}
+func NewAnchoringDataType0(block *Block, blockCount uint64, txCount uint64) (*AnchoringData, error) {
+	data := &AnchoringDataInternalType0{
+		block.Hash(),
+		block.Header().TxHash,
+		block.Header().ParentHash,
+		block.Header().ReceiptHash,
+		block.Header().Root,
+		block.Header().Number,
+		new(big.Int).SetUint64(blockCount),
+		new(big.Int).SetUint64(txCount),
+	}
 	encodedCCTxData, err := rlp.EncodeToBytes(data)
 	if err != nil {
 		return nil, err
 	}
 	return &AnchoringData{AnchoringDataType0, encodedCCTxData}, nil
+}
+
+func NewAnchoringJSONDataType(v interface{}) (*AnchoringData, error) {
+	encoded, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	return &AnchoringData{AnchoringJSONDataType, encoded}, nil
 }
 
 // DecodeAnchoringData decodes an anchoring data used by main and sub bridges.
@@ -109,4 +127,31 @@ func DecodeAnchoringData(data []byte) (AnchoringDataInternal, error) {
 		return anchoringDataInternal, nil
 	}
 	return nil, errUnknownAnchoringTxType
+}
+
+// DecodeAnchoringDataToJSON decodes an anchoring data.
+func DecodeAnchoringDataToJSON(data []byte) (interface{}, error) {
+	anchoringData := new(AnchoringData)
+	if err := rlp.DecodeBytes(data, anchoringData); err != nil {
+		anchoringDataLegacy := new(AnchoringDataLegacy)
+		if err := rlp.DecodeBytes(data, anchoringDataLegacy); err != nil {
+			return nil, err
+		}
+		return anchoringDataLegacy, nil
+	}
+	if anchoringData.Type == AnchoringDataType0 {
+		anchoringDataInternal := new(AnchoringDataInternalType0)
+		if err := rlp.DecodeBytes(anchoringData.Data, anchoringDataInternal); err != nil {
+			return nil, err
+		}
+		return anchoringDataInternal, nil
+	}
+	if anchoringData.Type == AnchoringJSONDataType {
+		var v map[string]interface{}
+		if err := json.Unmarshal(anchoringData.Data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	}
+	return nil, fmt.Errorf("%w type=%v", errUnknownAnchoringTxType, anchoringData.Type)
 }

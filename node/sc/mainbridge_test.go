@@ -18,6 +18,12 @@ package sc
 
 import (
 	"fmt"
+	"math/big"
+	"path"
+	"reflect"
+	"strings"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api"
@@ -37,11 +43,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"path"
-	"reflect"
-	"strings"
-	"testing"
 )
 
 const testNetVersion = uint64(8888)
@@ -87,7 +88,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	genesis.Config.Istanbul = governance.GetDefaultIstanbulConfig()
 	genesis.Config.UnitPrice = 25 * params.Ston
 
-	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false)
+	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false, false)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
 		t.Fatal(err)
 	}

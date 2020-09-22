@@ -28,11 +28,12 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
 		SkipBcVersionCheck      bool `toml:"-"`
-		PartitionedDB           bool
-		NumStateTriePartitions  uint
+		SingleDB                bool
+		NumStateTrieShards      uint
 		LevelDBCompression      database.LevelDBCompressionType
 		LevelDBBufferPool       bool
 		LevelDBCacheSize        int
+		DynamoDBConfig          database.DynamoDBConfig
 		TrieCacheSize           int
 		TrieTimeout             time.Duration
 		TrieBlockInterval       uint
@@ -70,11 +71,12 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.AnchoringPeriod = c.AnchoringPeriod
 	enc.SentChainTxsLimit = c.SentChainTxsLimit
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
-	enc.PartitionedDB = c.PartitionedDB
-	enc.NumStateTriePartitions = c.NumStateTriePartitions
+	enc.SingleDB = c.SingleDB
+	enc.NumStateTrieShards = c.NumStateTrieShards
 	enc.LevelDBCompression = c.LevelDBCompression
 	enc.LevelDBBufferPool = c.LevelDBBufferPool
 	enc.LevelDBCacheSize = c.LevelDBCacheSize
+	enc.DynamoDBConfig = c.DynamoDBConfig
 	enc.TrieCacheSize = c.TrieCacheSize
 	enc.TrieTimeout = c.TrieTimeout
 	enc.TrieBlockInterval = c.TrieBlockInterval
@@ -116,11 +118,12 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
 		SkipBcVersionCheck      *bool `toml:"-"`
-		PartitionedDB           *bool
-		NumStateTriePartitions  *uint
+		SingleDB                *bool
+		NumStateTrieShards      *uint
 		LevelDBCompression      *database.LevelDBCompressionType
 		LevelDBBufferPool       *bool
 		LevelDBCacheSize        *int
+		DynamoDBConfig          *database.DynamoDBConfig
 		TrieCacheSize           *int
 		TrieTimeout             *time.Duration
 		TrieBlockInterval       *uint
@@ -177,11 +180,11 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.SkipBcVersionCheck != nil {
 		c.SkipBcVersionCheck = *dec.SkipBcVersionCheck
 	}
-	if dec.PartitionedDB != nil {
-		c.PartitionedDB = *dec.PartitionedDB
+	if dec.SingleDB != nil {
+		c.SingleDB = *dec.SingleDB
 	}
-	if dec.NumStateTriePartitions != nil {
-		c.NumStateTriePartitions = *dec.NumStateTriePartitions
+	if dec.NumStateTrieShards != nil {
+		c.NumStateTrieShards = *dec.NumStateTrieShards
 	}
 	if dec.LevelDBCompression != nil {
 		c.LevelDBCompression = *dec.LevelDBCompression
@@ -191,6 +194,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.LevelDBCacheSize != nil {
 		c.LevelDBCacheSize = *dec.LevelDBCacheSize
+	}
+	if dec.DynamoDBConfig != nil {
+		c.DynamoDBConfig = *dec.DynamoDBConfig
 	}
 	if dec.TrieCacheSize != nil {
 		c.TrieCacheSize = *dec.TrieCacheSize

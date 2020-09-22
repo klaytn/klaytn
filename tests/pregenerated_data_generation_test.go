@@ -46,12 +46,12 @@ func init() {
 var errNoOriginalDataDir = errors.New("original data directory does not exist, aborting the test")
 
 const (
-	// All partitions are compressed by Snappy, CompactionTableSize = 2MiB, CompactionTableSizeMultiplier = 1.0
+	// All databases are compressed by Snappy, CompactionTableSize = 2MiB, CompactionTableSizeMultiplier = 1.0
 	aspen500_orig = "aspen500_orig"
-	// All partitions are compressed by Snappy, CompactionTableSize = 4MiB, CompactionTableSizeMultiplier = 2.0
+	// All databases are compressed by Snappy, CompactionTableSize = 4MiB, CompactionTableSizeMultiplier = 2.0
 	baobab500_orig = "baobab500_orig"
 
-	// Only receipt partition is compressed by Snappy, CompactionTableSize = 2MiB, CompactionTableSizeMultiplier = 1.0
+	// Only receipt database is compressed by Snappy, CompactionTableSize = 2MiB, CompactionTableSizeMultiplier = 1.0
 	candidate500LevelDB_orig = "candidate500LevelDB_orig"
 	// Using BadgerDB with its default options.
 	candidate500BadgerDB_orig = "candidate500BadgerDB_orig"

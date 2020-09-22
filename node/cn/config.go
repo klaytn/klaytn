@@ -21,7 +21,13 @@
 package cn
 
 import (
+	"math/big"
+	"os"
+	"os/user"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -30,10 +36,6 @@ import (
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
-	"os"
-	"os/user"
-	"time"
 )
 
 var logger = log.NewModuleLogger(log.NodeCN)
@@ -91,22 +93,26 @@ type Config struct {
 	//LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
 	//LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
 
+	OverwriteGenesis bool
+
 	// Database options
-	SkipBcVersionCheck     bool `toml:"-"`
-	PartitionedDB          bool
-	NumStateTriePartitions uint
-	LevelDBCompression     database.LevelDBCompressionType
-	LevelDBBufferPool      bool
-	LevelDBCacheSize       int
-	TrieCacheSize          int
-	TrieTimeout            time.Duration
-	TrieBlockInterval      uint
-	TriesInMemory          uint64
-	SenderTxHashIndexing   bool
-	ParallelDBWrite        bool
-	StateDBCaching         bool
-	TxPoolStateCache       bool
-	TrieCacheLimit         int
+	DBType               database.DBType
+	SkipBcVersionCheck   bool `toml:"-"`
+	SingleDB             bool
+	NumStateTrieShards   uint
+	LevelDBCompression   database.LevelDBCompressionType
+	LevelDBBufferPool    bool
+	LevelDBCacheSize     int
+	DynamoDBConfig       database.DynamoDBConfig
+	TrieCacheSize        int
+	TrieTimeout          time.Duration
+	TrieBlockInterval    uint
+	TriesInMemory        uint64
+	SenderTxHashIndexing bool
+	ParallelDBWrite      bool
+	StateDBCaching       bool
+	TxPoolStateCache     bool
+	TrieCacheLimit       int
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`
@@ -124,6 +130,8 @@ type Config struct {
 
 	// Enables tracking of SHA3 preimages in the VM
 	EnablePreimageRecording bool
+	// Enables collecting internal transaction data during processing a block
+	EnableInternalTxTracing bool
 	// Istanbul options
 	Istanbul istanbul.Config
 
@@ -151,4 +159,11 @@ type Config struct {
 
 type configMarshaling struct {
 	ExtraData hexutil.Bytes
+}
+
+func (c *Config) getVMConfig() vm.Config {
+	return vm.Config{
+		EnablePreimageRecording: c.EnablePreimageRecording,
+		EnableInternalTxTracing: c.EnableInternalTxTracing,
+	}
 }

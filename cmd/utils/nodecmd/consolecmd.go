@@ -22,14 +22,15 @@ package nodecmd
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
+
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"gopkg.in/urfave/cli.v1"
-	"path/filepath"
-	"strings"
 )
 
 var (
@@ -40,8 +41,11 @@ var (
 		Name:      "attach",
 		Usage:     "Start an interactive JavaScript environment (connect to node)",
 		ArgsUsage: "[endpoint]",
-		Flags:     append(ConsoleFlags, utils.DbTypeFlag, utils.NoPartitionedDBFlag, utils.NumStateTriePartitionsFlag, utils.LevelDBCompressionTypeFlag, utils.DataDirFlag),
-		Category:  "CONSOLE COMMANDS",
+		Flags: append(ConsoleFlags, utils.SingleDBFlag, utils.DataDirFlag, utils.NumStateTrieShardsFlag,
+			utils.DbTypeFlag, utils.LevelDBCompressionTypeFlag,
+			utils.DynamoDBTableNameFlag, utils.DynamoDBRegionFlag, utils.DynamoDBIsProvisionedFlag,
+			utils.DynamoDBReadCapacityFlag, utils.DynamoDBWriteCapacityFlag),
+		Category: "CONSOLE COMMANDS",
 		Description: `
 The Klaytn console is an interactive shell for the JavaScript runtime environment
 which exposes a node admin interface as well as the Ðapp JavaScript API.

@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"runtime"
 	"sync"
 	"time"
@@ -55,6 +56,10 @@ const (
 	// and reexecute to produce missing historical state necessary to run a specific
 	// trace.
 	defaultTraceReexec = uint64(128)
+
+	// fastCallTracer is the go-version callTracer which is lighter and faster than
+	// Javascript version.
+	fastCallTracer = "fastCallTracer"
 )
 
 // TraceConfig holds extra parameters to trace functions.
@@ -295,7 +300,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 				traced += uint64(len(txs))
 			}
 			// Generate the next state snapshot fast without tracing
-			_, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{})
+			_, _, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{})
 			if err != nil {
 				failed = err
 				break
@@ -694,7 +699,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 		if block = api.cn.blockchain.GetBlockByNumber(block.NumberU64() + 1); block == nil {
 			return nil, fmt.Errorf("block #%d not found", block.NumberU64()+1)
 		}
-		_, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{})
+		_, _, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{})
 		if err != nil {
 			return nil, fmt.Errorf("processing block %d failed: %v", block.NumberU64(), err)
 		}
@@ -755,15 +760,27 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 				return nil, err
 			}
 		}
-		// Constuct the JavaScript tracer to execute with
-		if tracer, err = tracers.New(*config.Tracer); err != nil {
-			return nil, err
+
+		if *config.Tracer == fastCallTracer {
+			tracer = vm.NewInternalTxTracer()
+		} else {
+			// Constuct the JavaScript tracer to execute with
+			if tracer, err = tracers.New(*config.Tracer); err != nil {
+				return nil, err
+			}
 		}
 		// Handle timeouts and RPC cancellations
 		deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
 		go func() {
 			<-deadlineCtx.Done()
-			tracer.(*tracers.Tracer).Stop(errors.New("execution timeout"))
+			switch t := tracer.(type) {
+			case *tracers.Tracer:
+				t.Stop(errors.New("execution timeout"))
+			case *vm.InternalTxTracer:
+				t.Stop(errors.New("execution timeout"))
+			default:
+				logger.Warn("unknown tracer type", "type", reflect.TypeOf(t).String())
+			}
 		}()
 		defer cancel()
 
@@ -791,6 +808,8 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 		}, nil
 
 	case *tracers.Tracer:
+		return tracer.GetResult()
+	case *vm.InternalTxTracer:
 		return tracer.GetResult()
 
 	default:

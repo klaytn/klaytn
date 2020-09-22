@@ -20,33 +20,42 @@
 
 package database
 
+import "strings"
+
 // Code using batches should try to add this much data to the batch.
 // The value was determined empirically.
 
-type DBType uint8
+type DBType string
 
 const (
-	_ DBType = iota
-	LevelDB
-	BadgerDB
-	MemoryDB
-	PartitionedDB
+	LevelDB   DBType = "LevelDB"
+	BadgerDB         = "BadgerDB"
+	MemoryDB         = "MemoryDB"
+	DynamoDB         = "DynamoDBS3"
+	ShardedDB        = "ShardedDB"
 )
 
-func (dbType DBType) String() string {
-	switch dbType {
-	case LevelDB:
-		return "LevelDB"
-	case BadgerDB:
-		return "BadgerDB"
-	case MemoryDB:
-		return "MemoryDB"
-	case PartitionedDB:
-		return "PartitionedDB"
-	default:
-		logger.Error("Undefined DBType entered.", "entered DBType", dbType)
-		return "undefined"
+// ToValid converts DBType to a valid one.
+// If it is unable to convert, "" is returned.
+func (db DBType) ToValid() DBType {
+	validDBType := []DBType{LevelDB, BadgerDB, MemoryDB, DynamoDB}
+
+	for _, vdb := range validDBType {
+		if strings.ToLower(string(vdb)) == strings.ToLower(string(db)) {
+			return vdb
+		}
 	}
+
+	return ""
+}
+
+// selfShardable returns if the db is able to shard by itself or not
+func (db DBType) selfShardable() bool {
+	switch db {
+	case DynamoDB:
+		return true
+	}
+	return false
 }
 
 const IdealBatchSize = 100 * 1024

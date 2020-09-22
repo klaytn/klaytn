@@ -22,12 +22,12 @@ import (
 	"strconv"
 )
 
-var errKeyLengthZero = fmt.Errorf("database key for partitioned database should be greater than 0")
+var errKeyLengthZero = fmt.Errorf("database key for sharded database should be greater than 0")
 
-type partitionedDB struct {
-	fn            string
-	partitions    []Database
-	numPartitions uint
+type shardedDB struct {
+	fn        string
+	shards    []Database
+	numShards uint
 
 	pdbBatchTaskCh chan pdbBatchTask
 }
@@ -35,7 +35,7 @@ type partitionedDB struct {
 type pdbBatchTask struct {
 	batch    Batch               // A batch that each worker executes.
 	index    int                 // Index of given batch.
-	resultCh chan pdbBatchResult // Batch result channel for each partitionedDBBatch.
+	resultCh chan pdbBatchResult // Batch result channel for each shardedDBBatch.
 }
 
 type pdbBatchResult struct {
@@ -43,39 +43,41 @@ type pdbBatchResult struct {
 	err   error // Error from the batch write operation.
 }
 
-func newPartitionedDB(dbc *DBConfig, et DBEntryType, numPartitions uint) (*partitionedDB, error) {
-	const numPartitionsLimit = 16
+// newShardedDB creates database with numShards shards, or partitions.
+// The type of database is specified DBConfig.DBType.
+func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, error) {
+	const numShardsLimit = 16
 
-	if numPartitions == 0 {
-		logger.Crit("numPartitions should be greater than 0!")
+	if numShards == 0 {
+		logger.Crit("numShards should be greater than 0!")
 	}
 
-	if numPartitions > numPartitionsLimit {
-		logger.Crit(fmt.Sprintf("numPartitions should be equal to or smaller than %v, but it is %v.", numPartitionsLimit, numPartitions))
+	if numShards > numShardsLimit {
+		logger.Crit(fmt.Sprintf("numShards should be equal to or smaller than %v, but it is %v.", numShardsLimit, numShards))
 	}
 
-	if !IsPow2(numPartitions) {
-		logger.Crit(fmt.Sprintf("numPartitions should be power of two, but it is %v", numPartitions))
+	if !IsPow2(numShards) {
+		logger.Crit(fmt.Sprintf("numShards should be power of two, but it is %v", numShards))
 	}
 
-	partitions := make([]Database, 0, numPartitions)
-	pdbBatchTaskCh := make(chan pdbBatchTask, numPartitions*2)
-	for i := 0; i < int(numPartitions); i++ {
+	shards := make([]Database, 0, numShards)
+	pdbBatchTaskCh := make(chan pdbBatchTask, numShards*2)
+	for i := 0; i < int(numShards); i++ {
 		copiedDBC := *dbc
 		copiedDBC.Dir = path.Join(copiedDBC.Dir, strconv.Itoa(i))
-		copiedDBC.LevelDBCacheSize /= int(numPartitions)
+		copiedDBC.LevelDBCacheSize /= int(numShards)
 
 		db, err := newDatabase(&copiedDBC, et)
 		if err != nil {
 			return nil, err
 		}
-		partitions = append(partitions, db)
+		shards = append(shards, db)
 		go batchWriteWorker(pdbBatchTaskCh)
 	}
 
-	return &partitionedDB{
-		fn: dbc.Dir, partitions: partitions,
-		numPartitions: numPartitions, pdbBatchTaskCh: pdbBatchTaskCh}, nil
+	return &shardedDB{
+		fn: dbc.Dir, shards: shards,
+		numShards: numShards, pdbBatchTaskCh: pdbBatchTaskCh}, nil
 }
 
 // batchWriteWorker executes passed batch tasks.
@@ -90,66 +92,66 @@ func IsPow2(num uint) bool {
 	return (num & (num - 1)) == 0
 }
 
-// calcPartition returns partition index derived from the given key.
+// shardIndexByKey returns shard index derived from the given key.
 // If len(key) is zero, it returns errKeyLengthZero.
-func calcPartition(key []byte, numPartitions uint) (int, error) {
+func shardIndexByKey(key []byte, numShards uint) (int, error) {
 	if len(key) == 0 {
 		return 0, errKeyLengthZero
 	}
 
-	return int(key[0]) & (int(numPartitions) - 1), nil
+	return int(key[0]) & (int(numShards) - 1), nil
 }
 
-// getPartition returns the partition corresponding to the given key.
-func (pdb *partitionedDB) getPartition(key []byte) (Database, error) {
-	if partitionIndex, err := calcPartition(key, uint(pdb.numPartitions)); err != nil {
+// getShardByKey returns the shard corresponding to the given key.
+func (pdb *shardedDB) getShardByKey(key []byte) (Database, error) {
+	if shardIndex, err := shardIndexByKey(key, uint(pdb.numShards)); err != nil {
 		return nil, err
 	} else {
-		return pdb.partitions[partitionIndex], nil
+		return pdb.shards[shardIndex], nil
 	}
 }
 
-func (pdb *partitionedDB) Put(key []byte, value []byte) error {
-	if partition, err := pdb.getPartition(key); err != nil {
+func (pdb *shardedDB) Put(key []byte, value []byte) error {
+	if shard, err := pdb.getShardByKey(key); err != nil {
 		return err
 	} else {
-		return partition.Put(key, value)
+		return shard.Put(key, value)
 	}
 }
 
-func (pdb *partitionedDB) Get(key []byte) ([]byte, error) {
-	if partition, err := pdb.getPartition(key); err != nil {
+func (pdb *shardedDB) Get(key []byte) ([]byte, error) {
+	if shard, err := pdb.getShardByKey(key); err != nil {
 		return nil, err
 	} else {
-		return partition.Get(key)
+		return shard.Get(key)
 	}
 }
 
-func (pdb *partitionedDB) Has(key []byte) (bool, error) {
-	if partition, err := pdb.getPartition(key); err != nil {
+func (pdb *shardedDB) Has(key []byte) (bool, error) {
+	if shard, err := pdb.getShardByKey(key); err != nil {
 		return false, err
 	} else {
-		return partition.Has(key)
+		return shard.Has(key)
 	}
 }
 
-func (pdb *partitionedDB) Delete(key []byte) error {
-	if partition, err := pdb.getPartition(key); err != nil {
+func (pdb *shardedDB) Delete(key []byte) error {
+	if shard, err := pdb.getShardByKey(key); err != nil {
 		return err
 	} else {
-		return partition.Delete(key)
+		return shard.Delete(key)
 	}
 }
 
-func (pdb *partitionedDB) Close() {
+func (pdb *shardedDB) Close() {
 	close(pdb.pdbBatchTaskCh)
 
-	for _, partition := range pdb.partitions {
-		partition.Close()
+	for _, shard := range pdb.shards {
+		shard.Close()
 	}
 }
 
-type partitionedDBIterator struct {
+type shardedDBIterator struct {
 	// TODO-Klaytn implement this later.
 	iterators []Iterator
 	key       []byte
@@ -163,7 +165,7 @@ type partitionedDBIterator struct {
 
 // NewIterator creates a binary-alphabetical iterator over the entire keyspace
 // contained within the key-value database.
-func (pdb *partitionedDB) NewIterator() Iterator {
+func (pdb *shardedDB) NewIterator() Iterator {
 	// TODO-Klaytn implement this later.
 	return nil
 }
@@ -171,11 +173,11 @@ func (pdb *partitionedDB) NewIterator() Iterator {
 // NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
 // database content starting at a particular initial key (or after, if it does
 // not exist).
-func (pdb *partitionedDB) NewIteratorWithStart(start []byte) Iterator {
+func (pdb *shardedDB) NewIteratorWithStart(start []byte) Iterator {
 	// TODO-Klaytn implement this later.
-	iterators := make([]Iterator, 0, pdb.numPartitions)
-	for i := 0; i < int(pdb.numPartitions); i++ {
-		iterators = append(iterators, pdb.partitions[i].NewIteratorWithStart(start))
+	iterators := make([]Iterator, 0, pdb.numShards)
+	for i := 0; i < int(pdb.numShards); i++ {
+		iterators = append(iterators, pdb.shards[i].NewIteratorWithStart(start))
 	}
 
 	for _, iter := range iterators {
@@ -186,17 +188,17 @@ func (pdb *partitionedDB) NewIteratorWithStart(start []byte) Iterator {
 		}
 	}
 
-	return &partitionedDBIterator{iterators, nil, nil}
+	return &shardedDBIterator{iterators, nil, nil}
 }
 
 // NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix.
-func (pdb *partitionedDB) NewIteratorWithPrefix(prefix []byte) Iterator {
+func (pdb *shardedDB) NewIteratorWithPrefix(prefix []byte) Iterator {
 	// TODO-Klaytn implement this later.
 	return nil
 }
 
-func (pdi *partitionedDBIterator) Next() bool {
+func (pdi *shardedDBIterator) Next() bool {
 	// TODO-Klaytn implement this later.
 	//var minIter Iterator
 	//minIdx := -1
@@ -228,46 +230,46 @@ func (pdi *partitionedDBIterator) Next() bool {
 	return true
 }
 
-func (pdi *partitionedDBIterator) Error() error {
+func (pdi *shardedDBIterator) Error() error {
 	// TODO-Klaytn implement this later.
 	return nil
 }
 
-func (pdi *partitionedDBIterator) Key() []byte {
+func (pdi *shardedDBIterator) Key() []byte {
 	// TODO-Klaytn implement this later.
 	return nil
 }
 
-func (pdi *partitionedDBIterator) Value() []byte {
+func (pdi *shardedDBIterator) Value() []byte {
 	// TODO-Klaytn implement this later.
 	return nil
 }
 
-func (pdi *partitionedDBIterator) Release() {
+func (pdi *shardedDBIterator) Release() {
 	// TODO-Klaytn implement this later.
 }
 
-func (pdb *partitionedDB) NewBatch() Batch {
-	batches := make([]Batch, 0, pdb.numPartitions)
-	for i := 0; i < int(pdb.numPartitions); i++ {
-		batches = append(batches, pdb.partitions[i].NewBatch())
+func (pdb *shardedDB) NewBatch() Batch {
+	batches := make([]Batch, 0, pdb.numShards)
+	for i := 0; i < int(pdb.numShards); i++ {
+		batches = append(batches, pdb.shards[i].NewBatch())
 	}
 
-	return &partitionedDBBatch{batches: batches, numBatches: pdb.numPartitions,
-		taskCh: pdb.pdbBatchTaskCh, resultCh: make(chan pdbBatchResult, pdb.numPartitions)}
+	return &shardedDBBatch{batches: batches, numBatches: pdb.numShards,
+		taskCh: pdb.pdbBatchTaskCh, resultCh: make(chan pdbBatchResult, pdb.numShards)}
 }
 
-func (pdb *partitionedDB) Type() DBType {
-	return PartitionedDB
+func (pdb *shardedDB) Type() DBType {
+	return ShardedDB
 }
 
-func (pdb *partitionedDB) Meter(prefix string) {
-	for index, partition := range pdb.partitions {
-		partition.Meter(prefix + strconv.Itoa(index))
+func (pdb *shardedDB) Meter(prefix string) {
+	for index, shard := range pdb.shards {
+		shard.Meter(prefix + strconv.Itoa(index))
 	}
 }
 
-type partitionedDBBatch struct {
+type shardedDBBatch struct {
 	batches    []Batch
 	numBatches uint
 
@@ -275,18 +277,18 @@ type partitionedDBBatch struct {
 	resultCh chan pdbBatchResult
 }
 
-func (pdbBatch *partitionedDBBatch) Put(key []byte, value []byte) error {
-	if partitionIndex, err := calcPartition(key, uint(pdbBatch.numBatches)); err != nil {
+func (pdbBatch *shardedDBBatch) Put(key []byte, value []byte) error {
+	if ShardIndex, err := shardIndexByKey(key, uint(pdbBatch.numBatches)); err != nil {
 		return err
 	} else {
-		return pdbBatch.batches[partitionIndex].Put(key, value)
+		return pdbBatch.batches[ShardIndex].Put(key, value)
 	}
 }
 
 // ValueSize is called to determine whether to write batches when it exceeds
-// certain limit. partitionedDB returns the largest size of its batches to
+// certain limit. shardedDB returns the largest size of its batches to
 // write all batches at once when one of batch exceeds the limit.
-func (pdbBatch *partitionedDBBatch) ValueSize() int {
+func (pdbBatch *shardedDBBatch) ValueSize() int {
 	maxSize := 0
 	for _, batch := range pdbBatch.batches {
 		if batch.ValueSize() > maxSize {
@@ -298,7 +300,7 @@ func (pdbBatch *partitionedDBBatch) ValueSize() int {
 
 // Write passes the list of batch tasks to taskCh so batch can be processed
 // by underlying workers. Write waits until all workers return the result.
-func (pdbBatch *partitionedDBBatch) Write() error {
+func (pdbBatch *shardedDBBatch) Write() error {
 	for index, batch := range pdbBatch.batches {
 		pdbBatch.taskCh <- pdbBatchTask{batch, index, pdbBatch.resultCh}
 	}
@@ -306,7 +308,7 @@ func (pdbBatch *partitionedDBBatch) Write() error {
 	var err error
 	for range pdbBatch.batches {
 		if batchResult := <-pdbBatch.resultCh; batchResult.err != nil {
-			logger.Error("Error while writing partitioned batch", "index", batchResult.index, "err", batchResult.err)
+			logger.Error("Error while writing sharded batch", "index", batchResult.index, "err", batchResult.err)
 			err = batchResult.err
 		}
 	}
@@ -314,7 +316,7 @@ func (pdbBatch *partitionedDBBatch) Write() error {
 	return err
 }
 
-func (pdbBatch *partitionedDBBatch) Reset() {
+func (pdbBatch *shardedDBBatch) Reset() {
 	for _, batch := range pdbBatch.batches {
 		batch.Reset()
 	}

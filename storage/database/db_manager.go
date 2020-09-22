@@ -20,24 +20,25 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"math/big"
+	"os"
+	"path/filepath"
+	"strconv"
+	"sync"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/pkg/errors"
-	"math/big"
-	"os"
-	"path/filepath"
-	"strconv"
-	"sync"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
 
 type DBManager interface {
 	IsParallelDBWrite() bool
-	IsPartitioned() bool
+	IsSingle() bool
 	InMigration() bool
 	MigrationBlockNumber() uint64
 	getStateTrieMigrationInfo() uint64
@@ -279,6 +280,12 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBCon
 
 	// Update dir to each Database specific directory.
 	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDir)
+	// Update dynmao table name to Database specific name.
+	if newDBC.DynamoDBConfig != nil {
+		newDynamoDBConfig := *originalDBC.DynamoDBConfig
+		newDynamoDBConfig.TableName += "-" + dbDir
+		newDBC.DynamoDBConfig = &newDynamoDBConfig
+	}
 
 	return &newDBC
 }
@@ -311,17 +318,20 @@ func NewMemoryDBManager() DBManager {
 // DBConfig handles database related configurations.
 type DBConfig struct {
 	// General configurations for all types of DB.
-	Dir                    string
-	DBType                 DBType
-	Partitioned            bool
-	NumStateTriePartitions uint
-	ParallelDBWrite        bool
-	OpenFilesLimit         int
+	Dir                string
+	DBType             DBType
+	SingleDB           bool // whether dbs (such as MiscDB, headerDB and etc) share one physical DB
+	NumStateTrieShards uint // the number of shards of state trie db
+	ParallelDBWrite    bool
+	OpenFilesLimit     int
 
 	// LevelDB related configurations.
 	LevelDBCacheSize   int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
 	LevelDBCompression LevelDBCompressionType
 	LevelDBBufferPool  bool
+
+	// DynamoDB related configurations
+	DynamoDBConfig *DynamoDBConfig
 }
 
 const dbMetricPrefix = "klay/db/chaindata/"
@@ -354,9 +364,9 @@ func newMiscDB(dbc *DBConfig) Database {
 	return db
 }
 
-// partitionedDatabaseDBManager returns DBManager which handles partitioned Database.
+// databaseDBManager returns DBManager which handles Databases.
 // Each Database will have its own separated Database.
-func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
+func databaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 	dbm := newDatabaseManager(dbc)
 	var db Database
 	var err error
@@ -379,8 +389,8 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 			fallthrough
 		case StateTrieDB:
 			newDBC := getDBEntryConfig(dbc, entryType, dir)
-			if dbc.NumStateTriePartitions > 1 {
-				db, err = newPartitionedDB(newDBC, entryType, dbc.NumStateTriePartitions)
+			if dbc.NumStateTrieShards > 1 && !dbc.DBType.selfShardable() { // make non-sharding db if the db is sharding itself
+				db, err = newShardedDB(newDBC, entryType, dbc.NumStateTrieShards)
 			} else {
 				db, err = newDatabase(newDBC, entryType)
 			}
@@ -390,11 +400,11 @@ func partitionedDatabaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 		}
 
 		if err != nil {
-			logger.Crit("Failed while generating a partition of LevelDB", "partition", dbBaseDirs[et], "err", err)
+			logger.Crit("Failed while generating databases", "DBType", dbBaseDirs[et], "err", err)
 		}
 
 		dbm.dbs[et] = db
-		db.Meter(dbMetricPrefix + dbBaseDirs[et] + "/") // Each partition collects metrics independently.
+		db.Meter(dbMetricPrefix + dbBaseDirs[et] + "/") // Each database collects metrics independently.
 	}
 	return dbm, nil
 }
@@ -408,6 +418,8 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
 		return NewMemDB(), nil
+	case DynamoDB:
+		return NewDynamoDB(dbc.DynamoDBConfig)
 	default:
 		logger.Info("database type is not set, fall back to default LevelDB")
 		return NewLevelDB(dbc, 0)
@@ -424,22 +436,22 @@ func newDatabaseManager(dbc *DBConfig) *databaseManager {
 }
 
 // NewDBManager returns DBManager interface.
-// If Partitioned is true, each Database will have its own LevelDB.
-// If not, each Database will share one common LevelDB.
+// If SingleDB is false, each Database will have its own DB.
+// If not, each Database will share one common DB.
 func NewDBManager(dbc *DBConfig) DBManager {
-	if !dbc.Partitioned {
-		logger.Info("Non-partitioned database is used for persistent storage", "DBType", dbc.DBType)
+	if dbc.SingleDB {
+		logger.Info("Single database is used for persistent storage", "DBType", dbc.DBType)
 		if dbm, err := singleDatabaseDBManager(dbc); err != nil {
-			logger.Crit("Failed to create non-partitioned database", "DBType", dbc.DBType, "err", err)
+			logger.Crit("Failed to create a single database", "DBType", dbc.DBType, "err", err)
 		} else {
 			return dbm
 		}
 	} else {
 		checkDBEntryConfigRatio()
-		logger.Info("Partitioned database is used for persistent storage", "DBType", dbc.DBType)
-		dbm, err := partitionedDatabaseDBManager(dbc)
+		logger.Info("Non-single database is used for persistent storage", "DBType", dbc.DBType)
+		dbm, err := databaseDBManager(dbc)
 		if err != nil {
-			logger.Crit("Failed to partitioned database", "DBType", dbc.DBType, "err", err)
+			logger.Crit("Failed to create databases", "DBType", dbc.DBType, "err", err)
 		}
 		if migrationBlockNum := dbm.getStateTrieMigrationInfo(); migrationBlockNum > 0 {
 			mdb := dbm.getDatabase(StateTrieMigrationDB)
@@ -460,8 +472,8 @@ func (dbm *databaseManager) IsParallelDBWrite() bool {
 	return dbm.config.ParallelDBWrite
 }
 
-func (dbm *databaseManager) IsPartitioned() bool {
-	return dbm.config.Partitioned
+func (dbm *databaseManager) IsSingle() bool {
+	return dbm.config.SingleDB
 }
 
 func (dbm *databaseManager) InMigration() bool {
@@ -586,8 +598,8 @@ func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) 
 	newDBConfig := getDBEntryConfig(dbc, StateTrieMigrationDB, dbDir)
 	var newDB Database
 	var err error
-	if newDBConfig.NumStateTriePartitions > 1 {
-		newDB, err = newPartitionedDB(newDBConfig, StateTrieMigrationDB, newDBConfig.NumStateTriePartitions)
+	if newDBConfig.NumStateTrieShards > 1 {
+		newDB, err = newShardedDB(newDBConfig, StateTrieMigrationDB, newDBConfig.NumStateTrieShards)
 	} else {
 		newDB, err = newDatabase(newDBConfig, StateTrieMigrationDB)
 	}
@@ -595,7 +607,7 @@ func newStateTrieMigrationDB(dbc *DBConfig, blockNum uint64) (Database, string) 
 		logger.Crit("Failed to create a new database for state trie migration", "err", err)
 	}
 
-	newDB.Meter(dbMetricPrefix + dbBaseDirs[StateTrieMigrationDB] + "/") // Each partition collects metrics independently.
+	newDB.Meter(dbMetricPrefix + dbBaseDirs[StateTrieMigrationDB] + "/") // Each database collects metrics independently.
 	logger.Info("Created a new database for state trie migration", "newStateTrieDB", newDBConfig.Dir)
 
 	return newDB, dbDir
@@ -607,9 +619,9 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 		logger.Warn("Failed to set a new state trie migration db. Already in migration")
 		return errors.New("already in migration")
 	}
-	if !dbm.config.Partitioned {
-		logger.Warn("Setting a new database for state trie migration is allowed for partitioned database only")
-		return errors.New("non-partitioned DB does not support state trie migration")
+	if dbm.config.SingleDB {
+		logger.Warn("Setting a new database for state trie migration is allowed for non-single database only")
+		return errors.New("singleDB does not support state trie migration")
 	}
 
 	logger.Info("Start setting a new database for state trie migration", "blockNum", blockNum)
@@ -705,13 +717,13 @@ func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
 }
 
 func (dbm *databaseManager) Close() {
-	// If not partitioned, only close the first database.
-	if !dbm.config.Partitioned {
+	// If single DB, only close the first database.
+	if dbm.config.SingleDB {
 		dbm.dbs[0].Close()
 		return
 	}
 
-	// If partitioned, close all databases.
+	// If not single DB, close all databases.
 	for _, db := range dbm.dbs {
 		if db != nil {
 			db.Close()

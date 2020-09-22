@@ -26,22 +26,22 @@ import (
 )
 
 type multiDiskOption struct {
-	numDisks      int
-	numPartitions int
-	numRows       int
-	numBytes      int
+	numDisks  int
+	numShards int
+	numRows   int
+	numBytes  int
 }
 
 // adjust diskPaths according to your setting
 var diskPaths = [...]string{"", "/disk1", "/disk2", "/disk3", "/disk4", "/disk5", "/disk6", "/disk7"}
 
-func genDirForMDPTest(b *testing.B, numDisks, numPartitions int) []string {
+func genDirForMDPTest(b *testing.B, numDisks, numShards int) []string {
 	if numDisks > len(diskPaths) {
 		b.Fatalf("entered numDisks %v is larger than diskPaths %v", numDisks, len(diskPaths))
 	}
 
-	dirs := make([]string, numPartitions, numPartitions)
-	for i := 0; i < numPartitions; i++ {
+	dirs := make([]string, numShards, numShards)
+	for i := 0; i < numShards; i++ {
 		diskNum := i % numDisks
 		dir, err := ioutil.TempDir(diskPaths[diskNum], "klaytn-db-bench-mdp")
 		if err != nil {
@@ -55,7 +55,7 @@ func genDirForMDPTest(b *testing.B, numDisks, numPartitions int) []string {
 func benchmark_MDP_Put_GoRoutine(b *testing.B, mdo *multiDiskOption) {
 	b.StopTimer()
 
-	dirs := genDirForMDPTest(b, mdo.numDisks, mdo.numPartitions)
+	dirs := genDirForMDPTest(b, mdo.numDisks, mdo.numShards)
 	defer removeDirs(dirs)
 
 	opts := getKlayLDBOptions()
@@ -71,8 +71,8 @@ func benchmark_MDP_Put_GoRoutine(b *testing.B, mdo *multiDiskOption) {
 		wait.Add(mdo.numRows)
 
 		for k := 0; k < mdo.numRows; k++ {
-			partition := getPartitionForTest(keys, k, mdo.numPartitions)
-			db := databases[partition]
+			shard := getShardForTest(keys, k, mdo.numShards)
+			db := databases[shard]
 
 			go func(currDB Database, idx int) {
 				defer wait.Done()
@@ -90,9 +90,9 @@ func benchmark_MDP_Put_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 	numDisks := mdo.numDisks
 	numBytes := mdo.numBytes
 	numRows := mdo.numRows
-	numPartitions := mdo.numPartitions
+	numShards := mdo.numShards
 
-	dirs := genDirForMDPTest(b, numDisks, numPartitions)
+	dirs := genDirForMDPTest(b, numDisks, numShards)
 	defer removeDirs(dirs)
 
 	opts := getKlayLDBOptions()
@@ -105,8 +105,8 @@ func benchmark_MDP_Put_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 		b.StartTimer()
 
 		for k := 0; k < numRows; k++ {
-			partition := getPartitionForTest(keys, k, mdo.numPartitions)
-			db := databases[partition]
+			shard := getShardForTest(keys, k, mdo.numShards)
+			db := databases[shard]
 			db.Put(keys[k], values[k])
 		}
 	}
@@ -120,19 +120,19 @@ var putMDPBenchmarks = [...]struct {
 	name string
 	mdo  multiDiskOption
 }{
-	// 10k Rows, 250 bytes, 1 disk, different number of partitions
+	// 10k Rows, 250 bytes, 1 disk, different number of shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_1D_2P_250", multiDiskOption{1, 2, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_1D_4P_250", multiDiskOption{1, 4, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_1D_8P_250", multiDiskOption{1, 8, numRowsPutMDP, rowSizePutMDP}},
 
-	// 10k Rows, 250 bytes, 8 partitions (fixed), different number of disks
+	// 10k Rows, 250 bytes, 8 shards (fixed), different number of disks
 	{"10k_1D_8P_250", multiDiskOption{1, 8, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_2D_8P_250", multiDiskOption{2, 8, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_4D_8P_250", multiDiskOption{4, 8, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_8D_8P_250", multiDiskOption{8, 8, numRowsPutMDP, rowSizePutMDP}},
 
-	// 10k Rows, 250 bytes, different number of disks & partitions
+	// 10k Rows, 250 bytes, different number of disks & shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_2D_2P_250", multiDiskOption{2, 2, numRowsPutMDP, rowSizePutMDP}},
 	{"10k_4D_4P_250", multiDiskOption{4, 4, numRowsPutMDP, rowSizePutMDP}},
@@ -161,9 +161,9 @@ func benchmark_MDP_Batch_GoRoutine(b *testing.B, mdo *multiDiskOption) {
 	numDisks := mdo.numDisks
 	numBytes := mdo.numBytes
 	numRows := mdo.numRows
-	numPartitions := mdo.numPartitions
+	numShards := mdo.numShards
 
-	dirs := genDirForMDPTest(b, numDisks, numPartitions)
+	dirs := genDirForMDPTest(b, numDisks, numShards)
 	defer removeDirs(dirs)
 
 	opts := getKlayLDBOptions()
@@ -175,16 +175,16 @@ func benchmark_MDP_Batch_GoRoutine(b *testing.B, mdo *multiDiskOption) {
 	numBatches := 0
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// make same number of batches as numPartitions
-		batches := make([]Batch, numPartitions, numPartitions)
-		for k := 0; k < numPartitions; k++ {
+		// make same number of batches as numShards
+		batches := make([]Batch, numShards, numShards)
+		for k := 0; k < numShards; k++ {
 			batches[k] = databases[k].NewBatch()
 		}
 		keys, values := genKeysAndValues(numBytes, numRows)
 		b.StartTimer()
 		for k := 0; k < numRows; k++ {
-			partition := getPartitionForTest(keys, k, numPartitions)
-			batches[partition].Put(keys[k], values[k])
+			shard := getShardForTest(keys, k, numShards)
+			batches[shard].Put(keys[k], values[k])
 		}
 
 		for _, batch := range batches {
@@ -195,7 +195,7 @@ func benchmark_MDP_Batch_GoRoutine(b *testing.B, mdo *multiDiskOption) {
 			numBatches++
 		}
 		var wait sync.WaitGroup
-		wait.Add(numPartitions)
+		wait.Add(numShards)
 		for _, batch := range batches {
 			go func(currBatch Batch) {
 				defer wait.Done()
@@ -216,9 +216,9 @@ func benchmark_MDP_Batch_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 	numDisks := mdo.numDisks
 	numBytes := mdo.numBytes
 	numRows := mdo.numRows
-	numPartitions := mdo.numPartitions
+	numShards := mdo.numShards
 
-	dirs := genDirForMDPTest(b, numDisks, numPartitions)
+	dirs := genDirForMDPTest(b, numDisks, numShards)
 	defer removeDirs(dirs)
 
 	opts := getKlayLDBOptions()
@@ -230,16 +230,16 @@ func benchmark_MDP_Batch_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 	numBatches := 0
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		// make same number of batches as numPartitions
-		batches := make([]Batch, numPartitions, numPartitions)
-		for k := 0; k < numPartitions; k++ {
+		// make same number of batches as numShards
+		batches := make([]Batch, numShards, numShards)
+		for k := 0; k < numShards; k++ {
 			batches[k] = databases[k].NewBatch()
 		}
 		keys, values := genKeysAndValues(numBytes, numRows)
 		b.StartTimer()
 		for k := 0; k < numRows; k++ {
-			partition := getPartitionForTest(keys, k, numPartitions)
-			batches[partition].Put(keys[k], values[k])
+			shard := getShardForTest(keys, k, numShards)
+			batches[shard].Put(keys[k], values[k])
 		}
 
 		for _, batch := range batches {
@@ -269,19 +269,19 @@ var batchMDPBenchmarks = [...]struct {
 	name string
 	mdo  multiDiskOption
 }{
-	// 10k Rows, 250 bytes, 1 disk, different number of partitions
+	// 10k Rows, 250 bytes, 1 disk, different number of shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_1D_2P_250", multiDiskOption{1, 2, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_1D_4P_250", multiDiskOption{1, 4, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_1D_8P_250", multiDiskOption{1, 8, numRowsBatchMDP, rowSizeBatchMDP}},
 
-	// 10k Rows, 250 bytes, 8 partitions (fixed), different number of disks
+	// 10k Rows, 250 bytes, 8 shards (fixed), different number of disks
 	{"10k_1D_8P_250", multiDiskOption{1, 8, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_2D_8P_250", multiDiskOption{2, 8, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_4D_8P_250", multiDiskOption{4, 8, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_8D_8P_250", multiDiskOption{8, 8, numRowsBatchMDP, rowSizeBatchMDP}},
 
-	// 10k Rows, 250 bytes, different number of disks & partitions
+	// 10k Rows, 250 bytes, different number of disks & shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_2D_2P_250", multiDiskOption{2, 2, numRowsBatchMDP, rowSizeBatchMDP}},
 	{"10k_4D_4P_250", multiDiskOption{4, 4, numRowsBatchMDP, rowSizeBatchMDP}},
@@ -310,9 +310,9 @@ func benchmark_MDP_Get_NoGoRotine(b *testing.B, mdo *multiDiskOption, numReads i
 	numDisks := mdo.numDisks
 	numBytes := mdo.numBytes
 	numRows := mdo.numRows
-	numPartitions := mdo.numPartitions
+	numShards := mdo.numShards
 
-	dirs := genDirForMDPTest(b, numDisks, numPartitions)
+	dirs := genDirForMDPTest(b, numDisks, numShards)
 	defer removeDirs(dirs)
 
 	opts := getKlayLDBOptions()
@@ -325,8 +325,8 @@ func benchmark_MDP_Get_NoGoRotine(b *testing.B, mdo *multiDiskOption, numReads i
 		keys, values := genKeysAndValues(numBytes, numRows)
 
 		for k := 0; k < numRows; k++ {
-			partition := getPartitionForTest(keys, k, numPartitions)
-			db := databases[partition]
+			shard := getShardForTest(keys, k, numShards)
+			db := databases[shard]
 			db.Put(keys[k], values[k])
 		}
 
@@ -336,8 +336,8 @@ func benchmark_MDP_Get_NoGoRotine(b *testing.B, mdo *multiDiskOption, numReads i
 			if keyPos >= len(keys) {
 				b.Fatal("index out of range", keyPos)
 			}
-			partition := getPartitionForTest(keys, k, numPartitions)
-			db := databases[partition]
+			shard := getShardForTest(keys, k, numShards)
+			db := databases[shard]
 			db.Get(keys[keyPos])
 		}
 	}
@@ -349,9 +349,9 @@ func benchmark_MDP_Get_GoRoutine(b *testing.B, mdo *multiDiskOption, numReads in
 	numDisks := mdo.numDisks
 	numBytes := mdo.numBytes
 	numRows := mdo.numRows
-	numPartitions := mdo.numPartitions
+	numShards := mdo.numShards
 
-	dirs := genDirForMDPTest(b, numDisks, numPartitions)
+	dirs := genDirForMDPTest(b, numDisks, numShards)
 	defer removeDirs(dirs)
 
 	opts := getKlayLDBOptions()
@@ -364,8 +364,8 @@ func benchmark_MDP_Get_GoRoutine(b *testing.B, mdo *multiDiskOption, numReads in
 		keys, values := genKeysAndValues(numBytes, numRows)
 
 		for k := 0; k < numRows; k++ {
-			partition := getPartitionForTest(keys, k, numPartitions)
-			db := databases[partition]
+			shard := getShardForTest(keys, k, numShards)
+			db := databases[shard]
 			db.Put(keys[k], values[k])
 		}
 
@@ -378,8 +378,8 @@ func benchmark_MDP_Get_GoRoutine(b *testing.B, mdo *multiDiskOption, numReads in
 				b.Fatalf("index out of range: keyPos: %v, k: %v, numRows: %v", keyPos, k, numRows)
 			}
 
-			partition := getPartitionForTest(keys, keyPos, numPartitions)
-			db := databases[partition]
+			shard := getShardForTest(keys, keyPos, numShards)
+			db := databases[shard]
 
 			go func(currDB Database, kPos int) {
 				defer wg.Done()
@@ -404,19 +404,19 @@ var getMDPBenchmarks = [...]struct {
 	mdo      multiDiskOption
 	numReads int
 }{
-	// 10k Rows, 250 bytes, 1 disk, different number of partitions
+	// 10k Rows, 250 bytes, 1 disk, different number of shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_1D_2P_250", multiDiskOption{1, 2, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_1D_4P_250", multiDiskOption{1, 4, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_1D_8P_250", multiDiskOption{1, 8, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 
-	// 10k Rows, 250 bytes, 8 partitions (fixed), different number of disks
+	// 10k Rows, 250 bytes, 8 shards (fixed), different number of disks
 	{"10k_1D_8P_250", multiDiskOption{1, 8, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_2D_8P_250", multiDiskOption{2, 8, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_4D_8P_250", multiDiskOption{4, 8, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_8D_8P_250", multiDiskOption{8, 8, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 
-	// 10k Rows, 250 bytes, different number of disks & partitions
+	// 10k Rows, 250 bytes, different number of disks & shards
 	{"10k_1D_1P_250", multiDiskOption{1, 1, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_2D_2P_250", multiDiskOption{2, 2, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
 	{"10k_4D_4P_250", multiDiskOption{4, 4, insertedRowsBeforeGetMDP, rowSizeGetMDP}, numReadsMDP},
@@ -448,9 +448,9 @@ func Benchmark_MDP_Parallel_Get(b *testing.B) {
 			numDisks := mdo.numDisks
 			numBytes := mdo.numBytes
 			numRows := mdo.numRows
-			numPartitions := mdo.numPartitions
+			numShards := mdo.numShards
 
-			dirs := genDirForMDPTest(b, numDisks, numPartitions)
+			dirs := genDirForMDPTest(b, numDisks, numShards)
 			defer removeDirs(dirs)
 
 			opts := getKlayLDBOptions()
@@ -460,8 +460,8 @@ func Benchmark_MDP_Parallel_Get(b *testing.B) {
 			keys, values := genKeysAndValues(numBytes, numRows)
 
 			for k := 0; k < numRows; k++ {
-				partition := getPartitionForTest(keys, k, numPartitions)
-				db := databases[partition]
+				shard := getShardForTest(keys, k, numShards)
+				db := databases[shard]
 				db.Put(keys[k], values[k])
 			}
 
@@ -470,8 +470,8 @@ func Benchmark_MDP_Parallel_Get(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					idx := rand.Intn(numRows)
-					partition := getPartitionForTest(keys, idx, numPartitions)
-					_, err := databases[partition].Get(keys[idx])
+					shard := getShardForTest(keys, idx, numShards)
+					_, err := databases[shard].Get(keys[idx])
 					if err != nil {
 						b.Fatalf("get failed: %v", err)
 					}
@@ -490,9 +490,9 @@ func Benchmark_MDP_Parallel_Put(b *testing.B) {
 			numDisks := mdo.numDisks
 			numBytes := mdo.numBytes
 			numRows := mdo.numRows * 10 // extend candidate keys and values for randomness
-			numPartitions := mdo.numPartitions
+			numShards := mdo.numShards
 
-			dirs := genDirForMDPTest(b, numDisks, numPartitions)
+			dirs := genDirForMDPTest(b, numDisks, numShards)
 			defer removeDirs(dirs)
 
 			opts := getKlayLDBOptions()
@@ -506,8 +506,8 @@ func Benchmark_MDP_Parallel_Put(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					idx := rand.Intn(numRows)
-					partition := getPartitionForTest(keys, idx, numPartitions)
-					db := databases[partition]
+					shard := getShardForTest(keys, idx, numShards)
+					db := databases[shard]
 					db.Put(keys[idx], values[idx])
 				}
 			})
@@ -526,9 +526,9 @@ func Benchmark_MDP_Parallel_Batch(b *testing.B) {
 			numDisks := mdo.numDisks
 			numBytes := mdo.numBytes
 			numRows := mdo.numRows * 10 // extend candidate keys and values for randomness
-			numPartitions := mdo.numPartitions
+			numShards := mdo.numShards
 
-			dirs := genDirForMDPTest(b, numDisks, numPartitions)
+			dirs := genDirForMDPTest(b, numDisks, numShards)
 			defer removeDirs(dirs)
 
 			opts := getKlayLDBOptions()
@@ -541,8 +541,8 @@ func Benchmark_MDP_Parallel_Batch(b *testing.B) {
 			b.StartTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					partition := rand.Intn(numPartitions)
-					batch := databases[partition].NewBatch()
+					shard := rand.Intn(numShards)
+					batch := databases[shard].NewBatch()
 					for k := 0; k < parallelBatchSizeMDP; k++ {
 						idx := rand.Intn(numRows)
 						batch.Put(keys[idx], values[idx])

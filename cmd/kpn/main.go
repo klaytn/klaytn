@@ -22,6 +22,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+	"sort"
+
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
@@ -30,9 +34,6 @@ import (
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"runtime"
-	"sort"
 )
 
 var (
@@ -61,6 +62,7 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 			utils.SrvTypeFlag,
 			utils.ExtraDataFlag,
 			nodecmd.ConfigFileFlag,
+			utils.OverwriteGenesisFlag,
 		},
 	},
 	{
@@ -74,6 +76,7 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 		Name: "TXPOOL",
 		Flags: []cli.Flag{
 			utils.TxPoolNoLocalsFlag,
+			utils.TxPoolAllowLocalAnchorTxFlag,
 			utils.TxPoolJournalFlag,
 			utils.TxPoolJournalIntervalFlag,
 			utils.TxPoolPriceLimitFlag,
@@ -93,10 +96,15 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 		Name: "DATABASE",
 		Flags: []cli.Flag{
 			utils.LevelDBCacheSizeFlag,
-			utils.NoPartitionedDBFlag,
-			utils.NumStateTriePartitionsFlag,
+			utils.SingleDBFlag,
+			utils.NumStateTrieShardsFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.LevelDBNoBufferPoolFlag,
+			utils.DynamoDBTableNameFlag,
+			utils.DynamoDBRegionFlag,
+			utils.DynamoDBIsProvisionedFlag,
+			utils.DynamoDBReadCapacityFlag,
+			utils.DynamoDBWriteCapacityFlag,
 			utils.NoParallelDBWriteFlag,
 			utils.SenderTxHashIndexingFlag,
 		},
@@ -157,6 +165,7 @@ var pnHelpFlagGroups = []utils.FlagGroup{
 		Flags: []cli.Flag{
 			utils.VMEnableDebugFlag,
 			utils.VMLogTargetFlag,
+			utils.VMTraceInternalTxFlag,
 		},
 	},
 	{

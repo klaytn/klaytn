@@ -21,6 +21,10 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"math/big"
+	"os"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -36,9 +40,6 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
-	"math/big"
-	"os"
-	"time"
 
 	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
@@ -383,7 +384,7 @@ func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 		return database.NewMemoryDBManager()
 	} else {
 		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 768,
-			OpenFilesLimit: 1024, Partitioned: true, NumStateTriePartitions: 4, ParallelDBWrite: true,
+			OpenFilesLimit: 1024, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true,
 			LevelDBCompression: database.AllNoCompression, LevelDBBufferPool: true}
 		return database.NewDBManager(dbc)
 	}
@@ -430,7 +431,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 
 	genesis.Alloc = alloc
 
-	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false)
+	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false, false)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
 		return nil, nil, err
 	}

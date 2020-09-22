@@ -23,6 +23,14 @@ package node
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+
+	"github.com/klaytn/klaytn/storage/database"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/common"
@@ -30,11 +38,6 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 const (
@@ -61,8 +64,8 @@ type Config struct {
 	// in the devp2p node identifier.
 	Version string `toml:"-"`
 
-	// key-value database type [leveldb, badgerdb]
-	DBType string
+	// key-value database type [LevelDB, BadgerDB, MemoryDB, DynamoDB]
+	DBType database.DBType
 
 	// DataDir is the file system folder the node should use for any data storage
 	// requirements. The configured data directory will not be directly shared with

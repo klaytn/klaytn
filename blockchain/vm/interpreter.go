@@ -51,6 +51,9 @@ type Config struct {
 
 	// UseOpcodeComputationCost is to enable applying the opcode computation cost limit.
 	UseOpcodeComputationCost bool
+
+	// Enables collecting internal transaction data during processing a block
+	EnableInternalTxTracing bool
 }
 
 // keccakState wraps sha3.state. In addition to the usual hash methods, it also supports

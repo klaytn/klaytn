@@ -21,6 +21,7 @@
 package blockchain
 
 import (
+	"errors"
 	"fmt"
 	"github.com/klaytn/klaytn/kerrors"
 	"math"
@@ -54,6 +55,8 @@ var (
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
 
 	txPoolIsFullErr = fmt.Errorf("txpool is full")
+
+	errNotAllowedAnchoringTx = errors.New("locally anchoring chaindata tx is not allowed in this node")
 )
 
 var (
@@ -102,9 +105,10 @@ type blockChain interface {
 
 // TxPoolConfig are the configuration parameters of the transaction pool.
 type TxPoolConfig struct {
-	NoLocals        bool          // Whether local transaction handling should be disabled
-	Journal         string        // Journal of local transactions to survive node restarts
-	JournalInterval time.Duration // Time interval to regenerate the local transaction journal
+	NoLocals           bool          // Whether local transaction handling should be disabled
+	AllowLocalAnchorTx bool          // if this is true, the txpool allow locally submitted anchor transactions
+	Journal            string        // Journal of local transactions to survive node restarts
+	JournalInterval    time.Duration // Time interval to regenerate the local transaction journal
 
 	PriceLimit uint64 // Minimum gas price to enforce for acceptance into the pool
 	PriceBump  uint64 // Minimum price bump percentage to replace an already existing transaction (nonce)
@@ -947,6 +951,10 @@ func (pool *TxPool) handleTxMsg() {
 // the sender as a local one in the mean time, ensuring it goes around the local
 // pricing constraints.
 func (pool *TxPool) AddLocal(tx *types.Transaction) error {
+	if tx.Type().IsChainDataAnchoring() && !pool.config.AllowLocalAnchorTx {
+		return errNotAllowedAnchoringTx
+	}
+
 	poolSize := uint64(len(pool.all))
 	if poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		return fmt.Errorf("txpool is full: %d", poolSize)

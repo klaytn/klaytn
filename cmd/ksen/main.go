@@ -22,14 +22,15 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"sort"
+
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
 	"github.com/klaytn/klaytn/console"
 	"github.com/klaytn/klaytn/log"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"sort"
 )
 
 var (
@@ -58,6 +59,7 @@ var senHelpFlagGroups = []utils.FlagGroup{
 			utils.SrvTypeFlag,
 			utils.ExtraDataFlag,
 			nodecmd.ConfigFileFlag,
+			utils.OverwriteGenesisFlag,
 		},
 	},
 	{
@@ -74,6 +76,14 @@ var senHelpFlagGroups = []utils.FlagGroup{
 			utils.VTRecoveryFlag,
 			utils.VTRecoveryIntervalFlag,
 			utils.ServiceChainAnchoringFlag,
+			// KAS
+			utils.KASServiceChainAnchorFlag,
+			utils.KASServiceChainAnchorPeriodFlag,
+			utils.KASServiceChainAnchorUrlFlag,
+			utils.KASServiceChainAnchorOperatorFlag,
+			utils.KASServiceChainAccessKeyFlag,
+			utils.KASServiceChainSecretKeyFlag,
+			utils.KASServiceChainXChainIdFlag,
 		},
 	},
 	{
@@ -87,6 +97,7 @@ var senHelpFlagGroups = []utils.FlagGroup{
 		Name: "TXPOOL",
 		Flags: []cli.Flag{
 			utils.TxPoolNoLocalsFlag,
+			utils.TxPoolAllowLocalAnchorTxFlag,
 			utils.TxPoolJournalFlag,
 			utils.TxPoolJournalIntervalFlag,
 			utils.TxPoolPriceLimitFlag,
@@ -106,10 +117,15 @@ var senHelpFlagGroups = []utils.FlagGroup{
 		Name: "DATABASE",
 		Flags: []cli.Flag{
 			utils.LevelDBCacheSizeFlag,
-			utils.NoPartitionedDBFlag,
-			utils.NumStateTriePartitionsFlag,
+			utils.SingleDBFlag,
+			utils.NumStateTrieShardsFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.LevelDBNoBufferPoolFlag,
+			utils.DynamoDBTableNameFlag,
+			utils.DynamoDBRegionFlag,
+			utils.DynamoDBIsProvisionedFlag,
+			utils.DynamoDBReadCapacityFlag,
+			utils.DynamoDBWriteCapacityFlag,
 			utils.NoParallelDBWriteFlag,
 			utils.SenderTxHashIndexingFlag,
 		},
@@ -174,6 +190,7 @@ var senHelpFlagGroups = []utils.FlagGroup{
 		Flags: []cli.Flag{
 			utils.VMEnableDebugFlag,
 			utils.VMLogTargetFlag,
+			utils.VMTraceInternalTxFlag,
 		},
 	},
 	{
