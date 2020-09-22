@@ -193,7 +193,6 @@ var (
 		Usage: "Maximum amount of time non-executable transaction are queued",
 		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
-
 	// block processing
 	DownloaderDisableFlag = cli.BoolFlag{
 		Name:  "downloader.disable",
@@ -203,7 +202,6 @@ var (
 		Name:  "fetcher.disable",
 		Usage: "Disables fetcher",
 	}
-
 	// Performance tuning settings
 	StateDBCachingFlag = cli.BoolFlag{
 		Name:  "statedb.use-cache",
