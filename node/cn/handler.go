@@ -24,6 +24,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
+	"math/rand"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -40,12 +47,6 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/klaytn/klaytn/work"
-	"math"
-	"math/big"
-	"math/rand"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 const (
@@ -233,32 +234,42 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		return nil, errIncompatibleConfig
 	}
 
-	// Construct the downloader (long sync) and its backing state bloom if fast
-	// sync is requested. The downloader is responsible for deallocating the state
+	// Create and set downloader
+	if cnconfig.DownloaderDisable {
+		manager.downloader = downloader.NewFakeDownloader()
+	} else {
+		// Construct the downloader (long sync) and its backing state bloom if fast
+		// sync is requested. The downloader is responsible for deallocating the state
 
-	// bloom when it's done.
-	var stateBloom *statedb.SyncBloom
-	if atomic.LoadUint32(&manager.fastSync) == 1 {
-		stateBloom = statedb.NewSyncBloom(uint64(cacheLimit), chainDB.GetStateTrieDB())
-	}
-	manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.removePeer)
-
-	validator := func(header *types.Header) error {
-		return engine.VerifyHeader(blockchain, header, true)
-	}
-	heighter := func() uint64 {
-		return blockchain.CurrentBlock().NumberU64()
-	}
-	inserter := func(blocks types.Blocks) (int, error) {
-		// If fast sync is running, deny importing weird blocks
+		// bloom when it's done.
+		var stateBloom *statedb.SyncBloom
 		if atomic.LoadUint32(&manager.fastSync) == 1 {
-			logger.Warn("Discarded bad propagated block", "number", blocks[0].Number(), "hash", blocks[0].Hash())
-			return 0, nil
+			stateBloom = statedb.NewSyncBloom(uint64(cacheLimit), chainDB.GetStateTrieDB())
 		}
-		atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
-		return manager.blockchain.InsertChain(blocks)
+		manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.removePeer)
 	}
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, manager.BroadcastBlockHash, heighter, inserter, manager.removePeer)
+
+	// Create and set fetcher
+	if cnconfig.FetcherDisable {
+		manager.fetcher = fetcher.NewFakeFetcher()
+	} else {
+		validator := func(header *types.Header) error {
+			return engine.VerifyHeader(blockchain, header, true)
+		}
+		heighter := func() uint64 {
+			return blockchain.CurrentBlock().NumberU64()
+		}
+		inserter := func(blocks types.Blocks) (int, error) {
+			// If fast sync is running, deny importing weird blocks
+			if atomic.LoadUint32(&manager.fastSync) == 1 {
+				logger.Warn("Discarded bad propagated block", "number", blocks[0].Number(), "hash", blocks[0].Hash())
+				return 0, nil
+			}
+			atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
+			return manager.blockchain.InsertChain(blocks)
+		}
+		manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, manager.BroadcastBlockHash, heighter, inserter, manager.removePeer)
+	}
 
 	if manager.useTxResend() {
 		go manager.txResendLoop(cnconfig.TxResendInterval, cnconfig.TxResendCount)
