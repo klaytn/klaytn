@@ -23,40 +23,40 @@ import (
 )
 
 type Consumer struct {
-	cancel   chan bool
+	cancelCh chan struct{}
 	handler  map[string]func(*sarama.ConsumerMessage) error
-	consumer sarama.ConsumerGroup
+	members  sarama.ConsumerGroup
 	ctx      context.Context
 	isActive bool
 }
 
-func NewConsumer(ctx context.Context, consumer sarama.ConsumerGroup) *Consumer {
+func NewConsumer(ctx context.Context, members sarama.ConsumerGroup) *Consumer {
 	return &Consumer{
-		cancel:   make(chan bool),
+		cancelCh: make(chan struct{}),
 		handler:  map[string]func(*sarama.ConsumerMessage) error{},
 		ctx:      ctx,
-		consumer: consumer,
+		members:  members,
 		isActive: false,
 	}
 }
 
-func (r *Consumer) Subscribe(topic string, handler func(*sarama.ConsumerMessage) error) error {
-	if r.handler[topic] != nil {
+func (c *Consumer) Subscribe(topic string, handler func(*sarama.ConsumerMessage) error) error {
+	if c.handler[topic] != nil {
 		return nil
 	}
-	r.handler[topic] = handler
+	c.handler[topic] = handler
 
-	if r.isActive {
-		r.cancel <- true
+	if c.isActive {
+		c.cancelCh <- struct{}{}
 	}
 	go func() {
-		defer r.consumer.Close()
+		defer c.members.Close()
 		var topics []string
-		for topic := range r.handler {
+		for topic := range c.handler {
 			topics = append(topics, topic)
 		}
 		h := func(err chan<- error) {
-			err <- r.consumer.Consume(r.ctx, topics, r)
+			err <- c.members.Consume(c.ctx, topics, c)
 		}
 		res := make(chan error, 1)
 		for {
@@ -66,9 +66,9 @@ func (r *Consumer) Subscribe(topic string, handler func(*sarama.ConsumerMessage)
 				if err != nil {
 					logger.Error("consumed messages return an error", "topic", topic, "err", err)
 				}
-			case <-r.cancel:
+			case <-c.cancelCh:
 				return
-			case <-r.ctx.Done():
+			case <-c.ctx.Done():
 				return
 			}
 		}
@@ -77,22 +77,22 @@ func (r *Consumer) Subscribe(topic string, handler func(*sarama.ConsumerMessage)
 	return nil
 }
 
-func (r *Consumer) Setup(sess sarama.ConsumerGroupSession) error {
+func (c *Consumer) Setup(sess sarama.ConsumerGroupSession) error {
 	logger.Info("consumer was initialized", "id", sess.MemberID())
-	r.isActive = true
+	c.isActive = true
 	return nil
 }
 
-func (r *Consumer) Cleanup(sess sarama.ConsumerGroupSession) error {
+func (c *Consumer) Cleanup(sess sarama.ConsumerGroupSession) error {
 	logger.Info("consumer was cleaned up", "id", sess.MemberID())
-	r.isActive = false
+	c.isActive = false
 	return nil
 }
 
-func (r *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for message := range claim.Messages() {
 		logger.Debug("Message claimed", "value", string(message.Value), "timestamp", message.Timestamp, "topic", message.Topic)
-		r.handler[message.Topic](message)
+		c.handler[message.Topic](message)
 		session.MarkMessage(message, "")
 	}
 

@@ -19,8 +19,8 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -58,14 +58,14 @@ func New(groupID string, brokerList []string, replicas int16, partitions int32) 
 		kb.newProducer()
 
 		// TODO-ChainDataFetcher context has to be passed by outside.
-		kb.consumer = NewConsumer(context.Background(), kb.newConsumer(groupID))
+		kb.consumer = NewConsumer(context.Background(), kb.newConsumerGroup(groupID))
 	})
 
 	return kb
 }
 
-func (r *KafkaBroker) Publish(topic string, msg interface{}) error {
-	r.CreateTopic(topic)
+func (k *KafkaBroker) Publish(topic string, msg interface{}) error {
+	k.CreateTopic(topic)
 	item := &sarama.ProducerMessage{
 		Topic: topic,
 		Key:   sarama.StringEncoder(topic),
@@ -79,36 +79,36 @@ func (r *KafkaBroker) Publish(topic string, msg interface{}) error {
 	}
 	item.Value = sarama.StringEncoder(data)
 
-	r.producer.Input() <- item
+	k.producer.Input() <- item
 
 	return nil
 }
 
-func (r *KafkaBroker) Subscribe(topic string, handler interface{}) error {
-	r.CreateTopic(topic)
+func (k *KafkaBroker) Subscribe(topic string, handler interface{}) error {
+	k.CreateTopic(topic)
 	h, ok := handler.(func(*sarama.ConsumerMessage) error)
 	if !ok {
-		return errors.New("unsupported type")
+		return fmt.Errorf("unsupported type. type: %v", reflect.TypeOf(handler))
 	}
 
-	return r.consumer.Subscribe(topic, h)
+	return k.consumer.Subscribe(topic, h)
 }
 
-func (r *KafkaBroker) CreateTopic(topic string) (types.Topic, error) {
-	err := r.admin.CreateTopic(topic, &sarama.TopicDetail{
-		NumPartitions:     r.partitions,
-		ReplicationFactor: r.replicas,
+func (k *KafkaBroker) CreateTopic(topic string) (types.Topic, error) {
+	err := k.admin.CreateTopic(topic, &sarama.TopicDetail{
+		NumPartitions:     k.partitions,
+		ReplicationFactor: k.replicas,
 	}, false)
 
 	return types.Topic{Name: topic}, err
 }
 
-func (r *KafkaBroker) DeleteTopic(topic string) error {
-	return r.admin.DeleteTopic(topic)
+func (k *KafkaBroker) DeleteTopic(topic string) error {
+	return k.admin.DeleteTopic(topic)
 }
 
-func (r *KafkaBroker) ListTopics() ([]types.Topic, error) {
-	topics, err := r.admin.ListTopics()
+func (k *KafkaBroker) ListTopics() ([]types.Topic, error) {
+	topics, err := k.admin.ListTopics()
 	if err != nil {
 		return nil, err
 	}
@@ -121,21 +121,21 @@ func (r *KafkaBroker) ListTopics() ([]types.Topic, error) {
 	return ret, nil
 }
 
-func (r *KafkaBroker) newProducer() {
+func (k *KafkaBroker) newProducer() {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForLocal
 	config.Producer.Compression = sarama.CompressionSnappy
 	config.Producer.Flush.Frequency = 500 * time.Millisecond
 
-	producer, err := sarama.NewAsyncProducer(r.brokers, config)
+	producer, err := sarama.NewAsyncProducer(k.brokers, config)
 	if err != nil {
-		logger.Crit("Failed to start Sarama producer", "err", err)
+		logger.Crit("Failed to start Sarama producer", "err", err, "config", config)
 	}
 
-	r.producer = producer
+	k.producer = producer
 }
 
-func (r *KafkaBroker) newConsumer(groupID string) sarama.ConsumerGroup {
+func (k *KafkaBroker) newConsumerGroup(groupID string) sarama.ConsumerGroup {
 	config := sarama.NewConfig()
 	config.Version = sarama.MaxVersion
 	config.Consumer.Group.Session.Timeout = 6 * time.Second
@@ -144,21 +144,21 @@ func (r *KafkaBroker) newConsumer(groupID string) sarama.ConsumerGroup {
 	id, _ := uuid.GenerateUUID()
 	config.ClientID = fmt.Sprintf("%s-%s", groupID, id)
 
-	consumer, err := sarama.NewConsumerGroup(r.brokers, groupID, config)
+	consumer, err := sarama.NewConsumerGroup(k.brokers, groupID, config)
 	if err != nil {
-		logger.Crit("NewConsumerGroup is failed", "err", err)
+		logger.Crit("NewConsumerGroup is failed", "err", err, "groupId", groupID, "config", config)
 	}
 
 	return consumer
 }
 
-func (r *KafkaBroker) newClusterAdmin() {
+func (k *KafkaBroker) newClusterAdmin() {
 	config := sarama.NewConfig()
 	config.Version = sarama.MaxVersion
 
-	admin, err := sarama.NewClusterAdmin(r.brokers, config)
+	admin, err := sarama.NewClusterAdmin(k.brokers, config)
 	if err != nil {
-		logger.Crit("NewClusterAdmin is failed", "err", err)
+		logger.Crit("NewClusterAdmin is failed", "err", err, "config", config)
 	}
-	r.admin = admin
+	k.admin = admin
 }
