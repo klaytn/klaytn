@@ -193,6 +193,17 @@ var (
 		Usage: "Maximum amount of time non-executable transaction are queued",
 		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
+
+	// block processing
+	DownloaderDisableFlag = cli.BoolFlag{
+		Name:  "downloader.disable",
+		Usage: "Disables downloader",
+	}
+	FetcherDisableFlag = cli.BoolFlag{
+		Name:  "fetcher.disable",
+		Usage: "Disables fetcher",
+	}
+
 	// Performance tuning settings
 	StateDBCachingFlag = cli.BoolFlag{
 		Name:  "statedb.use-cache",
@@ -1341,6 +1352,9 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 			log.Fatalf("only syncmode=full can be used for syncmode!")
 		}
 	}
+
+	cfg.DownloaderDisable = ctx.GlobalBool(DownloaderDisableFlag.Name)
+	cfg.FetcherDisable = ctx.GlobalBool(FetcherDisableFlag.Name)
 
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
 
