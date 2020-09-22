@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/VictoriaMetrics/fastcache"
+
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -415,7 +417,7 @@ func (bc *BlockChain) warmUpLoop(cache statedb.TrieNodeCache, mainTrieCacheLimit
 	updateContext := func() {
 		switch c := cache.(type) {
 		case *statedb.FastCache:
-			stats := c.UpdateStats()
+			stats := c.UpdateStats().(fastcache.Stats)
 			percent = stats.BytesSize * 100 / mainTrieCacheLimit
 			context = []interface{}{
 				"warmUpCnt", cnt,

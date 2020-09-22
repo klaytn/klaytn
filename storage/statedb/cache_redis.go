@@ -111,3 +111,7 @@ func (cache *RedisCache) Subscribe(channel string) *redis.PubSub {
 func (cache *RedisCache) SubscriptionChannel(channel string) <-chan *redis.Message {
 	return cache.Subscribe(channel).ChannelSize(redisSubscriptionChannelSize)
 }
+
+func (cache *RedisCache) UpdateStats() interface{} {
+	return nil
+}

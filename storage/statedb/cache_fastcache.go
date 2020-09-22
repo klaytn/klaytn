@@ -16,7 +16,25 @@
 
 package statedb
 
-import "github.com/VictoriaMetrics/fastcache"
+import (
+	"github.com/VictoriaMetrics/fastcache"
+	"github.com/rcrowley/go-metrics"
+)
+
+var (
+	// metrics
+	memcacheFastMisses                 = metrics.NewRegisteredGauge("trie/memcache/fast/misses", nil)
+	memcacheFastCollisions             = metrics.NewRegisteredGauge("trie/memcache/fast/collisions", nil)
+	memcacheFastCorruptions            = metrics.NewRegisteredGauge("trie/memcache/fast/corruptions", nil)
+	memcacheFastEntriesCount           = metrics.NewRegisteredGauge("trie/memcache/fast/entries", nil)
+	memcacheFastBytesSize              = metrics.NewRegisteredGauge("trie/memcache/fast/size", nil)
+	memcacheFastGetBigCalls            = metrics.NewRegisteredGauge("trie/memcache/fast/get", nil)
+	memcacheFastSetBigCalls            = metrics.NewRegisteredGauge("trie/memcache/fast/set", nil)
+	memcacheFastTooBigKeyErrors        = metrics.NewRegisteredGauge("trie/memcache/fast/error/too/bigkey", nil)
+	memcacheFastInvalidMetavalueErrors = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/matal", nil)
+	memcacheFastInvalidValueLenErrors  = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/valuelen", nil)
+	memcacheFastInvalidValueHashErrors = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/hash", nil)
+)
 
 type FastCache struct {
 	cache *fastcache.Cache
@@ -50,9 +68,21 @@ func (l *FastCache) Has(k []byte) ([]byte, bool) {
 	return l.cache.HasGet(nil, k)
 }
 
-func (l *FastCache) UpdateStats() fastcache.Stats {
+func (l *FastCache) UpdateStats() interface{} {
 	var stats fastcache.Stats
 	l.cache.UpdateStats(&stats)
+
+	memcacheFastMisses.Update(int64(stats.Misses))
+	memcacheFastCollisions.Update(int64(stats.Collisions))
+	memcacheFastCorruptions.Update(int64(stats.Corruptions))
+	memcacheFastEntriesCount.Update(int64(stats.EntriesCount))
+	memcacheFastBytesSize.Update(int64(stats.BytesSize))
+	memcacheFastGetBigCalls.Update(int64(stats.GetBigCalls))
+	memcacheFastSetBigCalls.Update(int64(stats.SetBigCalls))
+	memcacheFastTooBigKeyErrors.Update(int64(stats.TooBigKeyErrors))
+	memcacheFastInvalidMetavalueErrors.Update(int64(stats.InvalidMetavalueErrors))
+	memcacheFastInvalidValueLenErrors.Update(int64(stats.InvalidValueLenErrors))
+	memcacheFastInvalidValueHashErrors.Update(int64(stats.InvalidValueHashErrors))
 
 	return stats
 }

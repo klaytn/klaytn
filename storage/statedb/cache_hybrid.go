@@ -55,3 +55,12 @@ func (cache *hybridCache) Has(k []byte) ([]byte, bool) {
 	}
 	return cache.remote.Has(k)
 }
+
+func (cache *hybridCache) UpdateStats() interface{} {
+	type stats struct {
+		local  interface{}
+		remote interface{}
+	}
+
+	return stats{cache.local.UpdateStats(), cache.remote.UpdateStats()}
+}
