@@ -32,23 +32,24 @@ import (
 
 var (
 	logger = log.NewModuleLogger(log.ChainDataFetcher)
-	kb     *KafkaBroker
+	kb     *Kafka
 	once   sync.Once
 )
 
-type KafkaBroker struct {
-	producer   sarama.AsyncProducer
-	admin      sarama.ClusterAdmin
-	brokers    []string
-	handlers   map[string]func(*sarama.ConsumerMessage) error
-	consumer   *Consumer
-	replicas   int16
-	partitions int32
+// Kafka connects to kafka brokers in an existing kafka cluster.
+type Kafka struct {
+	producer   sarama.AsyncProducer                           // producer creates and push a message to kafka brokers.
+	admin      sarama.ClusterAdmin                            // admin operates CRUD jobs for topics.
+	brokers    []string                                       // brokers a list of broker URLs.
+	handlers   map[string]func(*sarama.ConsumerMessage) error // handlers is a key-value map for topic-handler.
+	consumer   *Consumer                                      // consumer can subscribe a topic pushed by producer.
+	replicas   int16                                          // replicas is the replication factor of kafka settings. This is a number of the replicated partitions in the kafka cluster.
+	partitions int32                                          // partitions is the number of partitions of a topic.
 }
 
 func New(groupID string, brokerList []string, replicas int16, partitions int32) types.EventBroker {
 	once.Do(func() {
-		kb = &KafkaBroker{
+		kb = &Kafka{
 			brokers:    brokerList,
 			handlers:   map[string]func(*sarama.ConsumerMessage) error{},
 			replicas:   replicas,
@@ -64,7 +65,7 @@ func New(groupID string, brokerList []string, replicas int16, partitions int32) 
 	return kb
 }
 
-func (k *KafkaBroker) Publish(topic string, msg interface{}) error {
+func (k *Kafka) Publish(topic string, msg interface{}) error {
 	k.CreateTopic(topic)
 	item := &sarama.ProducerMessage{
 		Topic: topic,
@@ -84,7 +85,7 @@ func (k *KafkaBroker) Publish(topic string, msg interface{}) error {
 	return nil
 }
 
-func (k *KafkaBroker) Subscribe(topic string, handler interface{}) error {
+func (k *Kafka) Subscribe(topic string, handler interface{}) error {
 	k.CreateTopic(topic)
 	h, ok := handler.(func(*sarama.ConsumerMessage) error)
 	if !ok {
@@ -94,7 +95,7 @@ func (k *KafkaBroker) Subscribe(topic string, handler interface{}) error {
 	return k.consumer.Subscribe(topic, h)
 }
 
-func (k *KafkaBroker) CreateTopic(topic string) (types.Topic, error) {
+func (k *Kafka) CreateTopic(topic string) (types.Topic, error) {
 	err := k.admin.CreateTopic(topic, &sarama.TopicDetail{
 		NumPartitions:     k.partitions,
 		ReplicationFactor: k.replicas,
@@ -103,11 +104,11 @@ func (k *KafkaBroker) CreateTopic(topic string) (types.Topic, error) {
 	return types.Topic{Name: topic}, err
 }
 
-func (k *KafkaBroker) DeleteTopic(topic string) error {
+func (k *Kafka) DeleteTopic(topic string) error {
 	return k.admin.DeleteTopic(topic)
 }
 
-func (k *KafkaBroker) ListTopics() ([]types.Topic, error) {
+func (k *Kafka) ListTopics() ([]types.Topic, error) {
 	topics, err := k.admin.ListTopics()
 	if err != nil {
 		return nil, err
@@ -121,7 +122,7 @@ func (k *KafkaBroker) ListTopics() ([]types.Topic, error) {
 	return ret, nil
 }
 
-func (k *KafkaBroker) newProducer() {
+func (k *Kafka) newProducer() {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForLocal
 	config.Producer.Compression = sarama.CompressionSnappy
@@ -135,7 +136,7 @@ func (k *KafkaBroker) newProducer() {
 	k.producer = producer
 }
 
-func (k *KafkaBroker) newConsumerGroup(groupID string) sarama.ConsumerGroup {
+func (k *Kafka) newConsumerGroup(groupID string) sarama.ConsumerGroup {
 	config := sarama.NewConfig()
 	config.Version = sarama.MaxVersion
 	config.Consumer.Group.Session.Timeout = 6 * time.Second
@@ -152,7 +153,7 @@ func (k *KafkaBroker) newConsumerGroup(groupID string) sarama.ConsumerGroup {
 	return consumer
 }
 
-func (k *KafkaBroker) newClusterAdmin() {
+func (k *Kafka) newClusterAdmin() {
 	config := sarama.NewConfig()
 	config.Version = sarama.MaxVersion
 

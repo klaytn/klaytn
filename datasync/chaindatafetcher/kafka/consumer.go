@@ -22,6 +22,7 @@ import (
 	"github.com/Shopify/sarama"
 )
 
+// Consumer subscribes a topic pushed by a producer in the kafka cluster.
 type Consumer struct {
 	cancelCh chan struct{}
 	handler  map[string]func(*sarama.ConsumerMessage) error
