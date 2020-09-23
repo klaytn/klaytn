@@ -69,7 +69,6 @@ func (k *Kafka) Publish(topic string, msg interface{}) error {
 	k.CreateTopic(topic)
 	item := &sarama.ProducerMessage{
 		Topic: topic,
-		Key:   sarama.StringEncoder(topic),
 	}
 	if v, ok := msg.(types.IKey); ok {
 		item.Key = sarama.StringEncoder(v.Key())
