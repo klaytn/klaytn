@@ -149,7 +149,6 @@ var FlagGroups = []FlagGroup{
 			CacheScaleFlag,
 			CacheUsageLevelFlag,
 			MemorySizeFlag,
-			CacheWriteThroughFlag,
 			TxPoolStateCacheFlag,
 			TrieNodeCacheTypeFlag,
 			TrieNodeCacheLimitFlag,

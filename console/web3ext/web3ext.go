@@ -735,10 +735,6 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.utils.toHex]
 		}),
 		new web3._extend.Method({
-			name: 'writeThroughCaching',
-			call: 'klay_writeThroughCaching',
-		}),
-		new web3._extend.Method({
 			name: 'isParallelDBWrite',
 			call: 'klay_isParallelDBWrite',
 		}),
