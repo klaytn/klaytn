@@ -93,7 +93,7 @@ func (s *KafkaSuite) TestKafka_Success_PubSub() {
 	s.NoError(err)
 
 	// sleep for a while for the subscription to be set
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	t := time.NewTicker(10 * time.Second)
 	rand.Seed(time.Now().UnixNano())
@@ -125,7 +125,7 @@ func (s *KafkaSuite) TestKafka_Success_ListTopic() {
 		s.Equal(v, topic.Name)
 	}
 	// wait for the topics available across the brokers
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	topics, err := s.kfk.ListTopics()
 	s.Nil(err)
