@@ -40,10 +40,10 @@ var (
 type Kafka struct {
 	producer   sarama.AsyncProducer                           // producer creates and push a message to kafka brokers.
 	admin      sarama.ClusterAdmin                            // admin operates CRUD jobs for topics.
-	brokers    []string                                       // brokers a list of broker URLs.
+	brokers    []string                                       // brokers is a list of broker URLs.
 	handlers   map[string]func(*sarama.ConsumerMessage) error // handlers is a key-value map for topic-handler.
 	consumer   *Consumer                                      // consumer can subscribe a topic pushed by producer.
-	replicas   int16                                          // replicas is the replication factor of kafka settings. This is a number of the replicated partitions in the kafka cluster.
+	replicas   int16                                          // replicas is a replication factor of kafka settings. This is the number of the replicated partitions in the kafka cluster.
 	partitions int32                                          // partitions is the number of partitions of a topic.
 }
 
