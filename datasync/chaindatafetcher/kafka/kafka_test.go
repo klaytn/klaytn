@@ -44,13 +44,13 @@ type KafkaSuite struct {
 	data  string
 }
 
-func (s *KafkaSuite) SetupSuite() {
+func (s *KafkaSuite) SetupTest() {
 	s.topic = "test-topic"
 	s.data = "test-data"
 	s.kfk = kafka.New("test_group_id", []string{"kafka:9094"}, 1, 1)
 }
 
-func (s *KafkaSuite) TearDownSuite() {
+func (s *KafkaSuite) TearDownTest() {
 	// Assume that the delete topic works properly.
 	s.kfk.DeleteTopic(s.topic)
 }
