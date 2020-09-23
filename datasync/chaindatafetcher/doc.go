@@ -23,6 +23,6 @@ Source Files
   - chaindata_fetcher.go     : implements chaindatafetcher main operations
   - config.go                : includes chaindatafetcher configurations
   - metrics.go               : includes chaindatafetcher metrics
-  - repository.go            : implements repositry interface
+  - repository.go            : implements repository interface
 */
 package chaindatafetcher
