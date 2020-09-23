@@ -3,6 +3,7 @@ module github.com/klaytn/klaytn
 go 1.13
 
 require (
+	github.com/Shopify/sarama v1.23.1
 	github.com/VictoriaMetrics/fastcache v1.5.7
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
