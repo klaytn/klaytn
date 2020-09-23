@@ -70,7 +70,9 @@ type ChainDataFetcher struct {
 
 	wg sync.WaitGroup
 
-	repo Repository
+	repo         Repository
+	checkpointDB CheckpointDB
+	setter       ComponentSetter
 
 	fetchingStarted      bool
 	fetchingStopCh       chan struct{}
@@ -82,16 +84,21 @@ type ChainDataFetcher struct {
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
 	var (
-		repo Repository
-		err  error
+		repo         Repository
+		checkpointDB CheckpointDB
+		setter       ComponentSetter
+		err          error
 	)
 	switch cfg.Mode {
 	case ModeKAS:
-		repo, err = kas.NewRepository(cfg.KasConfig)
+		newRepo, err := kas.NewRepository(cfg.KasConfig)
 		if err != nil {
 			logger.Error("Failed to create new Repository", "err", err, "user", cfg.KasConfig.DBUser, "host", cfg.KasConfig.DBHost, "port", cfg.KasConfig.DBPort, "name", cfg.KasConfig.DBName, "cacheUrl", cfg.KasConfig.CacheInvalidationURL, "x-chain-id", cfg.KasConfig.XChainId)
 			return nil, err
 		}
+		repo = newRepo
+		checkpointDB = newRepo
+		setter = newRepo
 	case ModeKafka:
 		// TODO-ChainDataFetcher implement new repository for kafka
 		panic("implement me")
@@ -99,7 +106,7 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 		logger.Error("the chaindatafetcher mode is not supported", "mode", cfg.Mode)
 		return nil, errUnsupportedMode
 	}
-	checkpoint, err := repo.ReadCheckpoint()
+	checkpoint, err := checkpointDB.ReadCheckpoint()
 	if err != nil {
 		logger.Error("Failed to get checkpoint", "err", err)
 		return nil, err
@@ -113,6 +120,8 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 		checkpoint:    checkpoint,
 		checkpointMap: make(map[int64]struct{}),
 		repo:          repo,
+		checkpointDB:  checkpointDB,
+		setter:        setter,
 	}, nil
 }
 
@@ -287,7 +296,7 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 			for _, a := range v {
 				switch s := a.Service.(type) {
 				case *api.PublicBlockChainAPI:
-					f.repo.SetComponent(s)
+					f.setter.SetComponent(s)
 				case *cn.PrivateDebugAPI:
 					f.debugAPI = s
 				}
@@ -362,7 +371,7 @@ func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
 	if updated {
 		f.checkpoint = newCheckpoint
 		checkpointGauge.Update(f.checkpoint)
-		return f.repo.WriteCheckpoint(newCheckpoint)
+		return f.checkpointDB.WriteCheckpoint(newCheckpoint)
 	}
 	return nil
 }

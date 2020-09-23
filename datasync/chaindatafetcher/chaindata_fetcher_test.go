@@ -152,12 +152,12 @@ func TestChainDataFetcher_updateCheckpoint(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	m := mocks.NewMockRepository(ctrl)
+	m := mocks.NewMockCheckpointDB(ctrl)
 
 	fetcher := &ChainDataFetcher{
 		checkpoint:    0,
 		checkpointMap: make(map[int64]struct{}),
-		repo:          m,
+		checkpointDB:  m,
 	}
 
 	// update checkpoint as follows.

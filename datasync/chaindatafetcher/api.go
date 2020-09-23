@@ -47,11 +47,11 @@ func (api *PublicChainDataFetcherAPI) Status() string {
 }
 
 func (api *PublicChainDataFetcherAPI) ReadCheckpoint() (int64, error) {
-	return api.f.repo.ReadCheckpoint()
+	return api.f.checkpointDB.ReadCheckpoint()
 }
 
 func (api *PublicChainDataFetcherAPI) WriteCheckpoint(checkpoint int64) error {
-	return api.f.repo.WriteCheckpoint(checkpoint)
+	return api.f.checkpointDB.WriteCheckpoint(checkpoint)
 }
 
 // GetConfig returns the configuration setting of the launched chaindata fetcher.
