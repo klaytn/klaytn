@@ -18,10 +18,11 @@ package database
 
 import (
 	"fmt"
-	"github.com/dgraph-io/badger"
-	"github.com/klaytn/klaytn/log"
 	"os"
 	"time"
+
+	"github.com/dgraph-io/badger"
+	"github.com/klaytn/klaytn/log"
 )
 
 const gcThreshold = int64(1 << 30) // GB
@@ -141,6 +142,9 @@ func (bg *badgerDB) Get(key []byte) ([]byte, error) {
 	defer txn.Discard()
 	item, err := txn.Get(key)
 	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, dataNotFoundErr
+		}
 		return nil, err
 	}
 
