@@ -103,16 +103,32 @@ type DynamoData struct {
 	Val []byte `json:"Val" dynamodbav:"Val"`
 }
 
-// TODO-Klaytn: remove the test config when flag setting is completed
-/*
- * Please Run DynamoDB local with docker
- * $ docker pull amazon/dynamodb-local
- * $ docker run -d -p 8000:8000 amazon/dynamodb-local
- */
+// GetTestDynamoConfig gets dynamo config for actual aws DynamoDB test
+//
+// If you use this config, you will be charged for what you use.
+// You need to set AWS credentials to access to dynamoDB.
+//    $ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//    $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
 		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com",
+		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
+		IsProvisioned:      false,
+		ReadCapacityUnits:  10000,
+		WriteCapacityUnits: 10000,
+		ReadOnly:           false,
+	}
+}
+
+// GetTestDynamoConfig gets dynamo config for local test
+//
+// Please Run DynamoDB local with docker
+//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
+func GetTestDynamoConfig() *DynamoDBConfig {
+	return &DynamoDBConfig{
+		Region:             "us-east-1",
+		Endpoint:           "http://localhost:4566",
 		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
 		IsProvisioned:      false,
 		ReadCapacityUnits:  10000,

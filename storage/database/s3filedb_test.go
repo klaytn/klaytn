@@ -13,6 +13,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+//
+// For local test, please run the below.
+//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
 
 package database
 
@@ -35,8 +38,9 @@ type SuiteS3FileDB struct {
 }
 
 func (s *SuiteS3FileDB) SetupSuite() {
-	region := "ap-northeast-2"
-	endpoint := "https://s3.ap-northeast-2.amazonaws.com"
+	// use local test configs
+	region := "us-east-1"
+	endpoint := "http://localhost:4566"
 	testBucketName := aws.String("test-bucket")
 
 	s3DB, err := newS3FileDB(region, endpoint, *testBucketName)
@@ -63,11 +67,11 @@ func (s *SuiteS3FileDB) TearDownSuite() {
 	}
 }
 
-func testSuiteS3FileDB(t *testing.T) {
+func TestSuiteS3FileDB(t *testing.T) {
 	suite.Run(t, new(SuiteS3FileDB))
 }
 
-func (s *SuiteS3FileDB) testS3FileDB() {
+func (s *SuiteS3FileDB) TestS3FileDB() {
 	testKey := common.MakeRandomBytes(32)
 	testVal := common.MakeRandomBytes(1024 * 1024)
 
@@ -97,7 +101,7 @@ func (s *SuiteS3FileDB) testS3FileDB() {
 	}
 }
 
-func (s *SuiteS3FileDB) testS3FileDB_Overwrite() {
+func (s *SuiteS3FileDB) TestS3FileDB_Overwrite() {
 	testKey := common.MakeRandomBytes(32)
 	var testVals [][]byte
 	for i := 0; i < 10; i++ {
@@ -128,7 +132,7 @@ func (s *SuiteS3FileDB) testS3FileDB_Overwrite() {
 	s.Equal(len(testVals), len(uris))
 }
 
-func (s *SuiteS3FileDB) testS3FileDB_EmptyDelete() {
+func (s *SuiteS3FileDB) TestS3FileDB_EmptyDelete() {
 	testKey := common.MakeRandomBytes(256)
 	s.NoError(s.s3DB.delete(testKey))
 	s.NoError(s.s3DB.delete(testKey))

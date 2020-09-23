@@ -14,9 +14,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 //
-// You need to set AWS credentials to access to dynamoDB.
-//    sh$ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
-//    sh$ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
+// For local test, please run the below.
+//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
 
 package database
 
@@ -48,8 +47,8 @@ func enableLog() {
 	log.Root().SetHandler(glogger)
 }
 
-func testDynamoDB_Put(t *testing.T) {
-	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
+func TestDynamoDB_Put(t *testing.T) {
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -69,8 +68,8 @@ func testDynamoDB_Put(t *testing.T) {
 	assert.NoError(t, returnedErr)
 }
 
-func testDynamoBatch_Write(t *testing.T) {
-	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
+func TestDynamoBatch_Write(t *testing.T) {
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -101,8 +100,8 @@ func testDynamoBatch_Write(t *testing.T) {
 	}
 }
 
-func testDynamoBatch_WriteLargeData(t *testing.T) {
-	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
+func TestDynamoBatch_WriteLargeData(t *testing.T) {
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -133,8 +132,8 @@ func testDynamoBatch_WriteLargeData(t *testing.T) {
 	}
 }
 
-func testDynamoBatch_DuplicatedKey(t *testing.T) {
-	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
+func TestDynamoBatch_DuplicatedKey(t *testing.T) {
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -169,12 +168,12 @@ func testDynamoBatch_DuplicatedKey(t *testing.T) {
 
 // testDynamoBatch_WriteMutliTables checks if there is no error when working with more than one tables.
 // This also checks if shared workers works as expected.
-func testDynamoBatch_WriteMutliTables(t *testing.T) {
+func TestDynamoBatch_WriteMutliTables(t *testing.T) {
 	// this test might end with Crit, enableLog to find out the log
 	//enableLog()
 
 	// create DynamoDB1
-	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -182,7 +181,7 @@ func testDynamoBatch_WriteMutliTables(t *testing.T) {
 	t.Log("dynamoDB1", dynamo.config.TableName)
 
 	// create DynamoDB2
-	dynamo2, err := newDynamoDB(GetDefaultDynamoDBConfig())
+	dynamo2, err := newDynamoDB(GetTestDynamoConfig())
 	defer dynamo2.deleteDB()
 	if err != nil {
 		t.Fatal(err)
