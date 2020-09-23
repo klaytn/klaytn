@@ -23,6 +23,7 @@ import (
 )
 
 // Consumer subscribes a topic pushed by a producer in the kafka cluster.
+// It implements samara.ConsumerGroupHandler.
 type Consumer struct {
 	cancelCh chan struct{}
 	handler  map[string]func(*sarama.ConsumerMessage) error
@@ -77,18 +78,24 @@ func (c *Consumer) Subscribe(topic string, handler func(*sarama.ConsumerMessage)
 	return nil
 }
 
+// Setup is run at the beginning of a new session, before ConsumeClaim.
 func (c *Consumer) Setup(sess sarama.ConsumerGroupSession) error {
 	logger.Info("consumer was initialized", "id", sess.MemberID())
 	c.isActive = true
 	return nil
 }
 
+// Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
+// but before the offsets are committed for the very last time.
 func (c *Consumer) Cleanup(sess sarama.ConsumerGroupSession) error {
 	logger.Info("consumer was cleaned up", "id", sess.MemberID())
 	c.isActive = false
 	return nil
 }
 
+// ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
+// Once the Messages() channel is closed, the Handler must finish its processing
+// loop and exit.
 func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for message := range claim.Messages() {
 		logger.Debug("Message claimed", "value", string(message.Value), "timestamp", message.Timestamp, "topic", message.Topic)
