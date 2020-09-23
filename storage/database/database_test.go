@@ -110,8 +110,6 @@ func TestDatabase_NotFoundErr(t *testing.T) {
 }
 
 func testPutGet(db Database, t *testing.T) {
-	t.Parallel()
-
 	// put
 	for _, v := range test_values {
 		err := db.Put([]byte(v), []byte(v))
