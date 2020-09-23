@@ -86,6 +86,10 @@ type Config struct {
 	SyncMode  downloader.SyncMode
 	NoPruning bool
 
+	// block processing options
+	DownloaderDisable bool
+	FetcherDisable    bool
+
 	// Service chain options
 	ParentOperatorAddr *common.Address `toml:",omitempty"` // A hex account address in the parent chain used to sign a child chain transaction.
 	AnchoringPeriod    uint64          // Period when child chain sends an anchoring transaction to the parent chain. Default value is 1.
