@@ -16,6 +16,7 @@
 
 package types
 
+// EventBroker handles event between event producers and consumers in publish-subscribe pattern.
 type EventBroker interface {
 	Publish(topic string, msg interface{}) error
 	Subscribe(topic string, arg interface{}) error
