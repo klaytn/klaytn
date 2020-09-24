@@ -1392,7 +1392,7 @@ func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 		}
 	}
 	val, err := dbm.ReadCachedTrieNodeFromOld(hash)
-	if err != dataNotFoundErr {
+	if err != nil && err != dataNotFoundErr {
 		// TODO-Klaytn-Database Need to be properly handled
 		logger.Error("Unexpected error while reading cached trie node", "err", err)
 	}
