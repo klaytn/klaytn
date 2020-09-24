@@ -137,7 +137,7 @@ var (
 	}
 	WorkerDisableFlag = cli.BoolFlag{
 		Name:  "worker.disable",
-		Usage: "Disables downloader",
+		Usage: "Disables worker",
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
