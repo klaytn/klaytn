@@ -21,11 +21,11 @@
 package database
 
 import (
-	"errors"
-	"github.com/klaytn/klaytn/common"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 /*
@@ -75,7 +75,7 @@ func (db *MemDB) Get(key []byte) ([]byte, error) {
 	if entry, ok := db.db[string(key)]; ok {
 		return common.CopyBytes(entry), nil
 	}
-	return nil, errors.New("not found")
+	return nil, dataNotFoundErr
 }
 
 func (db *MemDB) Keys() [][]byte {

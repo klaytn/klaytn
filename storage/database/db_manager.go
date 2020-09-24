@@ -1386,9 +1386,17 @@ func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 	if dbm.inMigration {
 		if val, err := dbm.GetStateTrieMigrationDB().Get(hash[:]); err == nil {
 			return val, nil
+		} else if err != dataNotFoundErr {
+			// TODO-Klaytn-Database Need to be properly handled
+			logger.Error("Unexpected error while reading cached trie node from state migration database", "err", err)
 		}
 	}
-	return dbm.ReadCachedTrieNodeFromOld(hash)
+	val, err := dbm.ReadCachedTrieNodeFromOld(hash)
+	if err != dataNotFoundErr {
+		// TODO-Klaytn-Database Need to be properly handled
+		logger.Error("Unexpected error while reading cached trie node", "err", err)
+	}
+	return val, err
 }
 
 // Cached Trie Node Preimage operation.

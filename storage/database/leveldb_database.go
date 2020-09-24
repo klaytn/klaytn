@@ -21,10 +21,11 @@
 package database
 
 import (
-	"github.com/klaytn/klaytn/common/fdlimit"
-	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"sync"
 	"time"
+
+	"github.com/klaytn/klaytn/common/fdlimit"
+	metricutils "github.com/klaytn/klaytn/metrics/utils"
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -250,6 +251,9 @@ func (db *levelDB) Get(key []byte) ([]byte, error) {
 	// Retrieve the key and increment the miss counter if not found
 	dat, err := db.db.Get(key, nil)
 	if err != nil {
+		if err == leveldb.ErrNotFound {
+			return nil, dataNotFoundErr
+		}
 		return nil, err
 	}
 	return dat, nil
