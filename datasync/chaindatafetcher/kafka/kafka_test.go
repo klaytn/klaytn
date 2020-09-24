@@ -39,7 +39,7 @@ func (s *KafkaSuite) SetupTest() {
 	config := getDefaultKafkaConfig()
 	config.brokers = []string{"kafka:9094"}
 	kfk, err := NewKafka(config)
-	if err != nil && err == sarama.ErrOutOfBrokers {
+	if err == sarama.ErrOutOfBrokers {
 		s.T().Log("Failed connecting to brokers", config.brokers)
 		s.T().Skip()
 	}
