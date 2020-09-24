@@ -59,6 +59,14 @@ func (k *Kafka) CreateTopic(topic string) error {
 	}, false)
 }
 
+func (k *Kafka) DeleteTopic(topic string) error {
+	return k.admin.DeleteTopic(topic)
+}
+
+func (k *Kafka) ListTopics() (map[string]sarama.TopicDetail, error) {
+	return k.admin.ListTopics()
+}
+
 func (k *Kafka) Publish(topic string, msg interface{}) error {
 	item := &sarama.ProducerMessage{
 		Topic: topic,

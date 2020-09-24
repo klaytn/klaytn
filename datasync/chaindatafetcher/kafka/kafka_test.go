@@ -48,7 +48,7 @@ func (s *KafkaSuite) SetupTest() {
 
 func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {
 	// no topic to be deleted
-	err := s.kfk.admin.DeleteTopic(s.topic)
+	err := s.kfk.DeleteTopic(s.topic)
 	s.Error(err)
 	s.True(strings.Contains(err.Error(), sarama.ErrUnknownTopicOrPartition.Error()))
 
@@ -62,9 +62,9 @@ func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {
 	s.True(strings.Contains(err.Error(), sarama.ErrTopicAlreadyExists.Error()))
 
 	// deleted a topic successfully
-	s.Nil(s.kfk.admin.DeleteTopic(s.topic))
+	s.Nil(s.kfk.DeleteTopic(s.topic))
 
-	topics, err := s.kfk.admin.ListTopics()
+	topics, err := s.kfk.ListTopics()
 	if _, exist := topics[s.topic]; exist {
 		s.Fail("topic must not exist")
 	}
