@@ -5,6 +5,10 @@
 package mocks
 
 import (
+	io "io"
+	big "math/big"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/klaytn/klaytn/blockchain"
 	state "github.com/klaytn/klaytn/blockchain/state"
@@ -15,9 +19,6 @@ import (
 	event "github.com/klaytn/klaytn/event"
 	params "github.com/klaytn/klaytn/params"
 	rlp "github.com/klaytn/klaytn/ser/rlp"
-	io "io"
-	big "math/big"
-	reflect "reflect"
 )
 
 // MockBlockChain is a mock of BlockChain interface
@@ -633,6 +634,18 @@ func (m *MockBlockChain) Rollback(arg0 []common.Hash) {
 func (mr *MockBlockChainMockRecorder) Rollback(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rollback", reflect.TypeOf((*MockBlockChain)(nil).Rollback), arg0)
+}
+
+// SaveTrieNodeCacheToDisk mocks base method
+func (m *MockBlockChain) SaveTrieNodeCacheToDisk(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SaveTrieNodeCacheToDisk", arg0)
+}
+
+// SaveTrieNodeCacheToDisk indicates an expected call of SaveTrieNodeCacheToDisk
+func (mr *MockBlockChainMockRecorder) SaveTrieNodeCacheToDisk(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveTrieNodeCacheToDisk", reflect.TypeOf((*MockBlockChain)(nil).SaveTrieNodeCacheToDisk), arg0)
 }
 
 // SetHead mocks base method

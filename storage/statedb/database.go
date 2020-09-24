@@ -1115,6 +1115,7 @@ func (db *Database) SaveTrieNodeCacheToFile(filePath string) {
 	if db.trieNodeCache == nil {
 		return
 	}
+	filePath = filePath + "/trie_node_cache_backup"
 	start := time.Now()
 	go func() {
 		logger.Info("start saving cache to file", "filePath", filePath)
