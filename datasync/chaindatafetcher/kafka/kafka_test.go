@@ -18,12 +18,11 @@ package kafka
 
 import (
 	"encoding/json"
-	"math/rand"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/klaytn/klaytn/common"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -76,13 +75,6 @@ type kafkaData struct {
 	Data []byte `json:"data"`
 }
 
-func createRandomData(size int) []byte {
-	rand.Seed(time.Now().UnixNano())
-	bytes := make([]byte, size)
-	rand.Read(bytes)
-	return bytes
-}
-
 func (s *KafkaSuite) TestKafka_Publish() {
 	numTests := 10
 	testBytesSize := 100
@@ -91,7 +83,7 @@ func (s *KafkaSuite) TestKafka_Publish() {
 
 	var expected []*kafkaData
 	for i := 0; i < numTests; i++ {
-		testData := &kafkaData{createRandomData(testBytesSize)}
+		testData := &kafkaData{common.MakeRandomBytes(testBytesSize)}
 		s.NoError(s.kfk.Publish(s.topic, testData))
 		expected = append(expected, testData)
 	}
