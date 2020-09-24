@@ -16,23 +16,48 @@
 
 package kafka
 
-import "github.com/Shopify/sarama"
+import (
+	"fmt"
+
+	"github.com/Shopify/sarama"
+)
+
+const (
+	topicProjectName = "klaytn"
+	topicServiceName = "chaindatafetcher"
+	topicVersion     = "v1"
+)
+
+const (
+	DefaultReplicas             = 1
+	DefaultPartitions           = 1
+	DefaultTopicEnvironmentName = "local"
+	DefaultTopicResourceName    = "en-0"
+)
 
 type KafkaConfig struct {
-	saramaConfig *sarama.Config // kafka client configurations.
-	brokers      []string       // brokers is a list of broker URLs.
-	partitions   int32          // partitions is the number of partitions of a topic.
-	replicas     int16          // replicas is a replication factor of kafka settings. This is the number of the replicated partitions in the kafka cluster.
+	SaramaConfig         *sarama.Config // kafka client configurations.
+	Brokers              []string       // Brokers is a list of broker URLs.
+	TopicEnvironmentName string
+	TopicResourceName    string
+	Partitions           int32 // Partitions is the number of partitions of a topic.
+	Replicas             int16 // Replicas is a replication factor of kafka settings. This is the number of the replicated partitions in the kafka cluster.
 }
 
-func getDefaultKafkaConfig() *KafkaConfig {
+func GetDefaultKafkaConfig() *KafkaConfig {
 	// TODO-ChainDataFetcher add more configuration if necessary
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
 	config.Version = sarama.MaxVersion
 	return &KafkaConfig{
-		saramaConfig: config,
-		partitions:   1,
-		replicas:     1,
+		SaramaConfig:         config,
+		TopicEnvironmentName: DefaultTopicEnvironmentName,
+		TopicResourceName:    DefaultTopicResourceName,
+		Partitions:           DefaultPartitions,
+		Replicas:             DefaultReplicas,
 	}
+}
+
+func (c *KafkaConfig) getTopicName(event string) string {
+	return fmt.Sprintf("%v.%v.%v.%v.%v.%v", c.TopicEnvironmentName, topicProjectName, topicServiceName, c.TopicResourceName, event, topicVersion)
 }

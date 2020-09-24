@@ -24,26 +24,24 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"strings"
 	"unicode"
 
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
-
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 	"github.com/klaytn/klaytn/datasync/dbsyncer"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
-
-	"io"
-
 	"github.com/naoina/toml"
+	"gopkg.in/urfave/cli.v1"
 )
 
 // These settings ensure that TOML keys use the same names as Go struct fields.
@@ -160,8 +158,8 @@ func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetc
 			cfg.Mode = chaindatafetcher.ModeKAS
 			cfg.KasConfig = makeKASConfig(ctx)
 		case "kafka":
-			// TODO-ChainDataFetcher make kafka configuration
-			panic("implement me")
+			cfg.Mode = chaindatafetcher.ModeKafka
+			cfg.KafkaConfig = makeKafkaConfig(ctx)
 		default:
 			logger.Crit("unsupported chaindatafetcher mode (\"kas\", \"kafka\")", "mode", cfg.Mode)
 		}
@@ -215,6 +213,20 @@ func makeKASConfig(ctx *cli.Context) *kas.KASConfig {
 		kasConfig.XChainId = ctx.GlobalString(utils.ChainDataFetcherKASXChainIdFlag.Name)
 	}
 	return kasConfig
+}
+
+func makeKafkaConfig(ctx *cli.Context) *kafka.KafkaConfig {
+	kafkaConfig := kafka.GetDefaultKafkaConfig()
+	if ctx.GlobalIsSet(utils.ChainDataFetcherKafkaBrokersFlag.Name) {
+		kafkaConfig.Brokers = ctx.GlobalStringSlice(utils.ChainDataFetcherKafkaBrokersFlag.Name)
+	} else {
+		logger.Crit("The kafka brokers must be set")
+	}
+	kafkaConfig.TopicEnvironmentName = ctx.GlobalString(utils.ChainDataFetcherKafkaTopicEnvironmentFlag.Name)
+	kafkaConfig.TopicResourceName = ctx.GlobalString(utils.ChainDataFetcherKafkaTopicResourceFlag.Name)
+	kafkaConfig.Partitions = int32(ctx.GlobalInt64(utils.ChainDataFetcherKafkaPartitionsFlag.Name))
+	kafkaConfig.Replicas = int16(ctx.GlobalInt64(utils.ChainDataFetcherKafkaReplicasFlag.Name))
+	return kafkaConfig
 }
 
 func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {

@@ -16,7 +16,10 @@
 
 package chaindatafetcher
 
-import "github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
+import (
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
+)
 
 type ChainDataFetcherMode int
 
@@ -41,7 +44,8 @@ type ChainDataFetcherConfig struct {
 	JobChannelSize          int
 	BlockChannelSize        int
 
-	KasConfig *kas.KASConfig
+	KasConfig   *kas.KASConfig
+	KafkaConfig *kafka.KafkaConfig
 }
 
 var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
@@ -52,5 +56,6 @@ var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
 	JobChannelSize:          DefaultJobChannelSize,
 	BlockChannelSize:        DefaultBlockChannelSize,
 
-	KasConfig: kas.DefaultKASConfig,
+	KasConfig:   kas.DefaultKASConfig,
+	KafkaConfig: kafka.GetDefaultKafkaConfig(),
 }
