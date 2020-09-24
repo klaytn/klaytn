@@ -373,7 +373,7 @@ func (dynamo *dynamoDB) Close() {
 	if dynamoOpenedDBNum > 0 {
 		dynamoOpenedDBNum--
 	}
-	if dynamoOpenedDBNum == 0 {
+	if dynamoOpenedDBNum == 0 && dynamoWriteCh != nil {
 		close(dynamoWriteCh)
 	}
 }

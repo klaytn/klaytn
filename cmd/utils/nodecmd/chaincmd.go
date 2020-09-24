@@ -141,10 +141,25 @@ func initGenesis(ctx *cli.Context) error {
 	singleDB := ctx.GlobalIsSet(utils.SingleDBFlag.Name)
 	numStateTrieShards := ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name)
 	overwriteGenesis := ctx.GlobalBool(utils.OverwriteGenesisFlag.Name)
-	for _, name := range []string{"chaindata", "lightchaindata"} {
-		dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite,
+	var dynamoDBConfig *database.DynamoDBConfig
+	dbtype := database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid()
+	if len(dbtype) == 0 {
+		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(utils.DbTypeFlag.Name))
+	} else if dbtype == database.DynamoDB {
+		dynamoDBConfig = &database.DynamoDBConfig{
+			TableName:          ctx.GlobalString(utils.DynamoDBTableNameFlag.Name),
+			Region:             ctx.GlobalString(utils.DynamoDBRegionFlag.Name),
+			IsProvisioned:      ctx.GlobalBool(utils.DynamoDBIsProvisionedFlag.Name),
+			ReadCapacityUnits:  ctx.GlobalInt64(utils.DynamoDBReadCapacityFlag.Name),
+			WriteCapacityUnits: ctx.GlobalInt64(utils.DynamoDBWriteCapacityFlag.Name),
+			ReadOnly:           ctx.GlobalBool(utils.DynamoDBReadOnlyFlag.Name),
+		}
+	}
+
+	for _, name := range []string{"chaindata"} { // Removed "lightchaindata" since Klaytn doesn't use it
+		dbc := &database.DBConfig{Dir: name, DBType: dbtype, ParallelDBWrite: parallelDBWrite,
 			SingleDB: singleDB, NumStateTrieShards: numStateTrieShards,
-			LevelDBCacheSize: 0, OpenFilesLimit: 0}
+			LevelDBCacheSize: 0, OpenFilesLimit: 0, DynamoDBConfig: dynamoDBConfig}
 		chaindb := stack.OpenDatabase(dbc)
 		// Initialize DeriveSha implementation
 		blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
