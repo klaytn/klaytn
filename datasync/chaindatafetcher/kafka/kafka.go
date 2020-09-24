@@ -73,15 +73,15 @@ func (k *Kafka) ListTopics() (map[string]sarama.TopicDetail, error) {
 }
 
 func (k *Kafka) Publish(topic string, msg interface{}) error {
-	item := &sarama.ProducerMessage{
-		Topic: topic,
-	}
-
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}
-	item.Value = sarama.StringEncoder(data)
+
+	item := &sarama.ProducerMessage{
+		Topic: topic,
+		Value: sarama.StringEncoder(data),
+	}
 
 	_, _, err = k.producer.SendMessage(item)
 	return err
