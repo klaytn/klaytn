@@ -53,12 +53,10 @@ func NewKafka(conf *KafkaConfig) (*Kafka, error) {
 }
 
 func (k *Kafka) CreateTopic(topic string) error {
-	err := k.admin.CreateTopic(topic, &sarama.TopicDetail{
+	return k.admin.CreateTopic(topic, &sarama.TopicDetail{
 		NumPartitions:     k.config.partitions,
 		ReplicationFactor: k.config.replicas,
 	}, false)
-
-	return err
 }
 
 func (k *Kafka) Publish(topic string, msg interface{}) error {
