@@ -23,6 +23,7 @@ package statedb
 import (
 	"fmt"
 	"io"
+	"runtime"
 	"sync"
 	"time"
 
@@ -1107,4 +1108,22 @@ func (db *Database) UpdateMetricNodes() {
 	if db.trieNodeCache != nil {
 		db.trieNodeCache.UpdateStats()
 	}
+}
+
+// SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when the node restarts
+func (db *Database) SaveTrieNodeCacheToFile(filePath string) {
+	if db.trieNodeCache == nil {
+		return
+	}
+	start := time.Now()
+	go func() {
+		logger.Info("start saving cache to file", "filePath", filePath)
+		if err := db.trieNodeCache.SaveToFile(filePath, runtime.NumCPU()/2); err != nil {
+			logger.Error("failed to save cache to file",
+				"filePath", filePath, "elapsed", time.Since(start), "err", err)
+		} else {
+			logger.Info("successfully saved cache to file",
+				"filePath", filePath, "elapsed", time.Since(start))
+		}
+	}()
 }

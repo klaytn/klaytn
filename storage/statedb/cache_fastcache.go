@@ -52,8 +52,9 @@ func NewFastCache(config TrieNodeCacheConfig) TrieNodeCache {
 		return nil
 	}
 
-	logger.Info("Initialize local trie node cache (fastCache)", "MaxMB", config.LocalCacheSizeMB)
-	return &FastCache{cache: fastcache.New(config.LocalCacheSizeMB * 1024 * 1024)} // Convert MB to Byte
+	logger.Info("Initialize local trie node cache (fastCache)",
+		"MaxMB", config.LocalCacheSizeMB, "FilePath", config.FastCacheFileDir)
+	return &FastCache{cache: fastcache.LoadFromFileOrNew(config.FastCacheFileDir, config.LocalCacheSizeMB*1024*1024)} // Convert MB to Byte
 }
 
 func (l *FastCache) Get(k []byte) []byte {
@@ -85,4 +86,8 @@ func (l *FastCache) UpdateStats() interface{} {
 	memcacheFastInvalidValueHashErrors.Update(int64(stats.InvalidValueHashErrors))
 
 	return stats
+}
+
+func (l *FastCache) SaveToFile(filePath string, concurrency int) error {
+	return l.cache.SaveToFileConcurrent(filePath, concurrency)
 }
