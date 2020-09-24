@@ -313,18 +313,24 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
 
-	var restartFn func()
-	if config.AutoRestartFlag {
-		restartFn = func() {
-			daemonPath := config.DaemonPathFlag
-			logger.Warn("Restart node", "command", daemonPath+" restart")
-			cmd := exec.Command(daemonPath, "restart")
-			cmd.Run()
+	// set worker
+	if config.WorkerDisable {
+		cn.miner = work.NewFakeWorker()
+	} else {
+		var restartFn func()
+		if config.AutoRestartFlag {
+			restartFn = func() {
+				daemonPath := config.DaemonPathFlag
+				logger.Warn("Restart node", "command", daemonPath+" restart")
+				cmd := exec.Command(daemonPath, "restart")
+				cmd.Run()
+			}
 		}
+
+		// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
+		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy, config.RestartTimeOutFlag, restartFn)
 	}
 
-	// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
-	cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy, config.RestartTimeOutFlag, restartFn)
 	// istanbul BFT
 	cn.miner.SetExtra(makeExtraData(config.ExtraData))
 

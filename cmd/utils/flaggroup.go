@@ -48,6 +48,7 @@ var FlagGroups = []FlagGroup{
 			ExtraDataFlag,
 			ConfigFileFlag,
 			OverwriteGenesisFlag,
+			WorkerDisableFlag,
 			DownloaderDisableFlag,
 			FetcherDisableFlag,
 		},
