@@ -52,6 +52,11 @@ func NewKafka(conf *KafkaConfig) (*Kafka, error) {
 	}, nil
 }
 
+func (k *Kafka) Close() {
+	k.producer.Close()
+	k.admin.Close()
+}
+
 func (k *Kafka) CreateTopic(topic string) error {
 	return k.admin.CreateTopic(topic, &sarama.TopicDetail{
 		NumPartitions:     k.config.partitions,

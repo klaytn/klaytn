@@ -46,6 +46,10 @@ func (s *KafkaSuite) SetupTest() {
 	s.topic = "test-topic"
 }
 
+func (s *KafkaSuite) TearDownTest() {
+	s.kfk.Close()
+}
+
 func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {
 	// no topic to be deleted
 	err := s.kfk.DeleteTopic(s.topic)
