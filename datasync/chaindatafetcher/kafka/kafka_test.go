@@ -34,7 +34,7 @@ type KafkaSuite struct {
 }
 
 func (s *KafkaSuite) SetupTest() {
-	config := GetDefaultKafkaConfig()
+	config := getDefaultKafkaConfig()
 	config.brokers = []string{"kafka:9094"}
 	kfk, err := NewKafka(config)
 	s.NoError(err)

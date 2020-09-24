@@ -25,7 +25,7 @@ type KafkaConfig struct {
 	replicas     int16          // replicas is a replication factor of kafka settings. This is the number of the replicated partitions in the kafka cluster.
 }
 
-func GetDefaultKafkaConfig() *KafkaConfig {
+func getDefaultKafkaConfig() *KafkaConfig {
 	// TODO-ChainDataFetcher add more configuration if necessary
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
