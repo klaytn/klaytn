@@ -119,6 +119,26 @@ var FlagGroups = []FlagGroup{
 		},
 	},
 	{
+		Name: "CHAINDATAFETCHER",
+		Flags: []cli.Flag{
+			EnableChainDataFetcherFlag,
+			ChainDataFetcherMode,
+			ChainDataFetcherNoDefault,
+			ChainDataFetcherNumHandlers,
+			ChainDataFetcherJobChannelSize,
+			ChainDataFetcherChainEventSizeFlag,
+			ChainDataFetcherKASDBHostFlag,
+			ChainDataFetcherKASDBPortFlag,
+			ChainDataFetcherKASDBNameFlag,
+			ChainDataFetcherKASDBUserFlag,
+			ChainDataFetcherKASDBPasswordFlag,
+			ChainDataFetcherKASCacheUse,
+			ChainDataFetcherKASCacheURLFlag,
+			ChainDataFetcherKASXChainIdFlag,
+			ChainDataFetcherKASBasicAuthParamFlag,
+		},
+	},
+	{
 		Name: "DATABASE MIGRATION",
 		Flags: []cli.Flag{
 			DstDbTypeFlag,
