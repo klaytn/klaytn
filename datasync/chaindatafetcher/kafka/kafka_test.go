@@ -34,14 +34,13 @@ type KafkaSuite struct {
 }
 
 func (s *KafkaSuite) SetupTest() {
-	config := DefaultKafkaConfig
+	config := GetDefaultKafkaConfig()
 	config.brokers = []string{"kafka:9094"}
 	kfk, err := NewKafka(config)
 	s.NoError(err)
 	s.kfk = kfk
 
-	consumerConfig := sarama.NewConfig()
-	consumer, err := sarama.NewConsumer(config.brokers, consumerConfig)
+	consumer, err := sarama.NewConsumer(config.brokers, config.saramaConfig)
 	s.NoError(err)
 	s.consumer = consumer
 	s.topic = "test-topic"

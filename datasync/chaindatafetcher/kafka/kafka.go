@@ -33,13 +33,13 @@ type Kafka struct {
 }
 
 func NewKafka(conf *KafkaConfig) (*Kafka, error) {
-	producer, err := newSyncProducer(conf.brokers)
+	producer, err := newSyncProducer(conf)
 	if err != nil {
 		logger.Error("Failed to create a new producer", "brokers", conf.brokers)
 		return nil, err
 	}
 
-	admin, err := newClusterAdmin(conf.brokers)
+	admin, err := newClusterAdmin(conf)
 	if err != nil {
 		logger.Error("Failed to create a new cluster admin", "brokers", conf.brokers)
 		return nil, err
@@ -74,16 +74,10 @@ func (k *Kafka) Publish(topic string, msg interface{}) error {
 	return err
 }
 
-func newSyncProducer(brokers []string) (sarama.SyncProducer, error) {
-	config := sarama.NewConfig()
-	config.Producer.Return.Successes = true
-	// TODO-ChainDataFetcher add more configuration if necessary
-	return sarama.NewSyncProducer(brokers, config)
+func newSyncProducer(config *KafkaConfig) (sarama.SyncProducer, error) {
+	return sarama.NewSyncProducer(config.brokers, config.saramaConfig)
 }
 
-func newClusterAdmin(brokers []string) (sarama.ClusterAdmin, error) {
-	config := sarama.NewConfig()
-	config.Version = sarama.MaxVersion
-	// TODO-ChainDataFetcher add more configuration if necessary
-	return sarama.NewClusterAdmin(brokers, config)
+func newClusterAdmin(config *KafkaConfig) (sarama.ClusterAdmin, error) {
+	return sarama.NewClusterAdmin(config.brokers, config.saramaConfig)
 }

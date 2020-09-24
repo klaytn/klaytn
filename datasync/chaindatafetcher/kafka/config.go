@@ -16,13 +16,23 @@
 
 package kafka
 
+import "github.com/Shopify/sarama"
+
 type KafkaConfig struct {
-	brokers    []string // brokers is a list of broker URLs.
-	partitions int32    // partitions is the number of partitions of a topic.
-	replicas   int16    // replicas is a replication factor of kafka settings. This is the number of the replicated partitions in the kafka cluster.
+	saramaConfig *sarama.Config // kafka client configurations.
+	brokers      []string       // brokers is a list of broker URLs.
+	partitions   int32          // partitions is the number of partitions of a topic.
+	replicas     int16          // replicas is a replication factor of kafka settings. This is the number of the replicated partitions in the kafka cluster.
 }
 
-var DefaultKafkaConfig = &KafkaConfig{
-	partitions: int32(1),
-	replicas:   int16(1),
+func GetDefaultKafkaConfig() *KafkaConfig {
+	// TODO-ChainDataFetcher add more configuration if necessary
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = true
+	config.Version = sarama.MaxVersion
+	return &KafkaConfig{
+		saramaConfig: config,
+		partitions:   1,
+		replicas:     1,
+	}
 }
