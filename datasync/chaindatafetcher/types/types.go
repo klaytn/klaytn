@@ -20,16 +20,22 @@ package types
 type RequestType uint
 
 const (
+	// RequestTypes for KAS
 	RequestTypeTransaction = RequestType(1) << iota
 	RequestTypeTokenTransfer
 	RequestTypeContract
 	RequestTypeTrace
 
+	// RequestTypes for Kafka
+	RequestTypeBlockGroup
+	RequestTypeTraceGroup
+
 	RequestTypeLength
 )
 
 const (
-	RequestTypeAll = RequestTypeTransaction | RequestTypeTokenTransfer | RequestTypeContract | RequestTypeTrace
+	RequestTypeAll      = RequestTypeTransaction | RequestTypeTokenTransfer | RequestTypeContract | RequestTypeTrace
+	RequestTypeGroupAll = RequestTypeBlockGroup | RequestTypeTraceGroup
 )
 
 // Request contains a blockNumber which should be handled and the type of data which should be exported.
