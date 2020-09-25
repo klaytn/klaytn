@@ -136,6 +136,11 @@ var FlagGroups = []FlagGroup{
 			ChainDataFetcherKASCacheURLFlag,
 			ChainDataFetcherKASXChainIdFlag,
 			ChainDataFetcherKASBasicAuthParamFlag,
+			ChainDataFetcherKafkaBrokersFlag,
+			ChainDataFetcherKafkaTopicEnvironmentFlag,
+			ChainDataFetcherKafkaTopicResourceFlag,
+			ChainDataFetcherKafkaReplicasFlag,
+			ChainDataFetcherKafkaPartitionsFlag,
 		},
 	},
 	{

@@ -33,15 +33,15 @@ type Kafka struct {
 }
 
 func NewKafka(conf *KafkaConfig) (*Kafka, error) {
-	producer, err := newSyncProducer(conf)
+	producer, err := sarama.NewSyncProducer(conf.Brokers, conf.SaramaConfig)
 	if err != nil {
-		logger.Error("Failed to create a new producer", "brokers", conf.brokers)
+		logger.Error("Failed to create a new producer", "brokers", conf.Brokers)
 		return nil, err
 	}
 
-	admin, err := newClusterAdmin(conf)
+	admin, err := sarama.NewClusterAdmin(conf.Brokers, conf.SaramaConfig)
 	if err != nil {
-		logger.Error("Failed to create a new cluster admin", "brokers", conf.brokers)
+		logger.Error("Failed to create a new cluster admin", "brokers", conf.Brokers)
 		return nil, err
 	}
 
@@ -57,10 +57,14 @@ func (k *Kafka) Close() {
 	k.admin.Close()
 }
 
+func (k *Kafka) getTopicName(event string) string {
+	return k.config.getTopicName(event)
+}
+
 func (k *Kafka) CreateTopic(topic string) error {
 	return k.admin.CreateTopic(topic, &sarama.TopicDetail{
-		NumPartitions:     k.config.partitions,
-		ReplicationFactor: k.config.replicas,
+		NumPartitions:     k.config.Partitions,
+		ReplicationFactor: k.config.Replicas,
 	}, false)
 }
 
@@ -85,12 +89,4 @@ func (k *Kafka) Publish(topic string, msg interface{}) error {
 
 	_, _, err = k.producer.SendMessage(item)
 	return err
-}
-
-func newSyncProducer(config *KafkaConfig) (sarama.SyncProducer, error) {
-	return sarama.NewSyncProducer(config.brokers, config.saramaConfig)
-}
-
-func newClusterAdmin(config *KafkaConfig) (sarama.ClusterAdmin, error) {
-	return sarama.NewClusterAdmin(config.brokers, config.saramaConfig)
 }
