@@ -26,7 +26,7 @@ type TrieNodeCacheType string
 // TrieNodeCacheConfig contains configuration values of all TrieNodeCache.
 type TrieNodeCacheConfig struct {
 	CacheType          TrieNodeCacheType
-	FastCacheSizeMB    int      // Memory allowance (MB) to use for caching trie nodes in fast cache
+	LocalCacheSizeMB   int      // Memory allowance (MB) to use for caching trie nodes in fast cache
 	RedisEndpoints     []string // Endpoints of redis cache
 	RedisClusterEnable bool     // Enable cluster-enabled mode of redis cache
 }
@@ -81,7 +81,7 @@ func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
 func GetEmptyTrieNodeCacheConfig() TrieNodeCacheConfig {
 	return TrieNodeCacheConfig{
 		CacheType:          CacheTypeLocal,
-		FastCacheSizeMB:    0,
+		LocalCacheSizeMB:   0,
 		RedisEndpoints:     nil,
 		RedisClusterEnable: false,
 	}

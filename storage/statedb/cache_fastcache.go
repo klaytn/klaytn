@@ -41,19 +41,19 @@ type FastCache struct {
 }
 
 // NewFastCache creates a FastCache with given cache size.
-// If you want auto-scaled cache size, set config.FastCacheSizeMB to AutoScaling.
+// If you want auto-scaled cache size, set config.LocalCacheSizeMB to AutoScaling.
 // It returns nil if the cache size is zero.
 func NewFastCache(config TrieNodeCacheConfig) TrieNodeCache {
-	if config.FastCacheSizeMB == AutoScaling {
-		config.FastCacheSizeMB = getTrieNodeCacheSizeMB()
+	if config.LocalCacheSizeMB == AutoScaling {
+		config.LocalCacheSizeMB = getTrieNodeCacheSizeMB()
 	}
 
-	if config.FastCacheSizeMB <= 0 {
+	if config.LocalCacheSizeMB <= 0 {
 		return nil
 	}
 
-	logger.Info("Initialize local trie node cache (fastCache)", "MaxMB", config.FastCacheSizeMB)
-	return &FastCache{cache: fastcache.New(config.FastCacheSizeMB * 1024 * 1024)} // Convert MB to Byte
+	logger.Info("Initialize local trie node cache (fastCache)", "MaxMB", config.LocalCacheSizeMB)
+	return &FastCache{cache: fastcache.New(config.LocalCacheSizeMB * 1024 * 1024)} // Convert MB to Byte
 }
 
 func (l *FastCache) Get(k []byte) []byte {

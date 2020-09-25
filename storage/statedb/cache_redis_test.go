@@ -31,7 +31,7 @@ import (
 func getTestRedisConfig() TrieNodeCacheConfig {
 	return TrieNodeCacheConfig{
 		CacheType:          CacheTypeRedis,
-		FastCacheSizeMB:    1024 * 1024,
+		LocalCacheSizeMB:   1024 * 1024,
 		RedisEndpoints:     []string{"localhost:6379"},
 		RedisClusterEnable: false,
 	}

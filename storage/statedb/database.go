@@ -358,14 +358,14 @@ func (db *Database) TrieNodeCache() TrieNodeCache {
 	return db.trieNodeCache
 }
 
-// GetTrieNodeCacheConfig returns the configuration of TrieNodeCache
+// GetTrieNodeCacheConfig returns the configuration of TrieNodeCache.
 func (db *Database) GetTrieNodeCacheConfig() TrieNodeCacheConfig {
 	return db.trieNodeCacheConfig
 }
 
 // GetTrieNodeLocalCacheByteLimit returns the byte size of trie node cache.
 func (db *Database) GetTrieNodeLocalCacheByteLimit() uint64 {
-	return uint64(db.trieNodeCacheConfig.FastCacheSizeMB) * 1024 * 1024
+	return uint64(db.trieNodeCacheConfig.LocalCacheSizeMB) * 1024 * 1024
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.
