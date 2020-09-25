@@ -111,8 +111,8 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache           TrieNodeCache // GC friendly memory cache of trie node RLPs
-	trieNodeLocalCacheLimit int           // byte size of local trieNodeCache
+	trieNodeCache       TrieNodeCache       // GC friendly memory cache of trie node RLPs
+	trieNodeCacheConfig TrieNodeCacheConfig // Configuration of trieNodeCache
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -311,11 +311,11 @@ func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig TrieNodeCach
 	}
 
 	return &Database{
-		diskDB:                  diskDB,
-		nodes:                   map[common.Hash]*cachedNode{{}: {}},
-		preimages:               make(map[common.Hash][]byte),
-		trieNodeCache:           trieNodeCache,
-		trieNodeLocalCacheLimit: cacheConfig.FastCacheSizeMB,
+		diskDB:              diskDB,
+		nodes:               map[common.Hash]*cachedNode{{}: {}},
+		preimages:           make(map[common.Hash][]byte),
+		trieNodeCache:       trieNodeCache,
+		trieNodeCacheConfig: cacheConfig,
 	}
 }
 
@@ -358,9 +358,14 @@ func (db *Database) TrieNodeCache() TrieNodeCache {
 	return db.trieNodeCache
 }
 
-// GetTrieNodeLocalCacheLimit returns the byte size of trie node cache.
-func (db *Database) GetTrieNodeLocalCacheLimit() int {
-	return db.trieNodeLocalCacheLimit
+// GetTrieNodeCacheConfig returns the configuration of TrieNodeCache
+func (db *Database) GetTrieNodeCacheConfig() TrieNodeCacheConfig {
+	return db.trieNodeCacheConfig
+}
+
+// GetTrieNodeLocalCacheByteLimit returns the byte size of trie node cache.
+func (db *Database) GetTrieNodeLocalCacheByteLimit() uint64 {
+	return uint64(db.trieNodeCacheConfig.FastCacheSizeMB) * 1024 * 1024
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.

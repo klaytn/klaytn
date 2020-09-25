@@ -66,9 +66,9 @@ func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
 func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
 	switch config.CacheType {
 	case CacheTypeLocal:
-		return NewFastCache(config.FastCacheSizeMB), nil
+		return NewFastCache(config), nil
 	case CacheTypeRedis:
-		return NewRedisCache(config.RedisEndpoints, config.RedisClusterEnable)
+		return NewRedisCache(config)
 	case CacheTypeHybrid:
 		logger.Info("Set hybrid trie node cache using both of localCache (fastCache) and redisCache")
 		return NewHybridCache(config)

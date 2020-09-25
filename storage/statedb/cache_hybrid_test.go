@@ -45,8 +45,8 @@ func _TestHybridCache_Set(t *testing.T) {
 // TestHybridCache_Get tests whether a hybrid cache can get an item from both of local and remote caches.
 func _TestHybridCache_Get(t *testing.T) {
 	// Prepare caches to be integrated with a hybrid cache
-	localCache := NewFastCache(getTestHybridConfig().FastCacheSizeMB)
-	remoteCache, err := NewRedisCache(getTestHybridConfig().RedisEndpoints, getTestHybridConfig().RedisClusterEnable)
+	localCache := NewFastCache(getTestHybridConfig())
+	remoteCache, err := NewRedisCache(getTestHybridConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,8 +94,8 @@ func _TestHybridCache_Get(t *testing.T) {
 // TestHybridCache_Has tests whether a hybrid cache can check an item from both of local and remote caches.
 func _TestHybridCache_Has(t *testing.T) {
 	// Prepare caches to be integrated with a hybrid cache
-	localCache := NewFastCache(getTestHybridConfig().FastCacheSizeMB)
-	remoteCache, err := NewRedisCache(getTestHybridConfig().RedisEndpoints, getTestHybridConfig().RedisClusterEnable)
+	localCache := NewFastCache(getTestHybridConfig())
+	remoteCache, err := NewRedisCache(getTestHybridConfig())
 	if err != nil {
 		t.Fatal(err)
 	}

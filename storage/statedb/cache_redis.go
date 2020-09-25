@@ -64,15 +64,16 @@ func newRedisClient(endpoints []string, isCluster bool) (redis.UniversalClient, 
 	}), nil
 }
 
-func NewRedisCache(endpoints []string, isCluster bool) (*RedisCache, error) {
-	cli, err := newRedisClient(endpoints, isCluster)
+func NewRedisCache(config TrieNodeCacheConfig) (*RedisCache, error) {
+	cli, err := newRedisClient(config.RedisEndpoints, config.RedisClusterEnable)
 	if err != nil {
-		logger.Error("failed to create a redis client", "err", err, "endpoint", endpoints,
-			"isCluster", isCluster)
+		logger.Error("failed to create a redis client", "err", err, "endpoint", config.RedisEndpoints,
+			"isCluster", config.RedisClusterEnable)
 		return nil, err
 	}
 
-	logger.Info("Initialize trie node cache with redis", "endpoint", endpoints, "isCluster", isCluster)
+	logger.Info("Initialize trie node cache with redis", "endpoint", config.RedisEndpoints,
+		"isCluster", config.RedisClusterEnable)
 	return &RedisCache{client: cli}, nil
 }
 

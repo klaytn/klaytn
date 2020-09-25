@@ -510,7 +510,7 @@ func (bc *BlockChain) StartWarmUp() error {
 			go bc.concurrentIterateTrie(child, db, resultHashCh, resultErrCh)
 		}
 
-		cacheLimitSize := uint64(mainTrieDB.GetTrieNodeLocalCacheLimit())
+		cacheLimitSize := mainTrieDB.GetTrieNodeLocalCacheByteLimit()
 		bc.warmUpLoop(mainTrieDB.TrieNodeCache(), cacheLimitSize, children, resultHashCh, resultErrCh)
 	}()
 

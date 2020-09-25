@@ -28,7 +28,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testHosts = []string{"localhost:6379"}
+func getTestRedisConfig() TrieNodeCacheConfig {
+	return TrieNodeCacheConfig{
+		CacheType:          CacheTypeRedis,
+		FastCacheSizeMB:    1024 * 1024,
+		RedisEndpoints:     []string{"localhost:6379"},
+		RedisClusterEnable: false,
+	}
+}
 
 // TODO-Klaytn: Enable tests when redis is prepared on CI
 
@@ -41,7 +48,7 @@ func _TestSubscription(t *testing.T) {
 	wg.Add(1)
 
 	go func() {
-		cache, err := NewRedisCache(testHosts, false)
+		cache, err := NewRedisCache(getTestRedisConfig())
 		assert.Nil(t, err)
 
 		ch := cache.SubscriptionChannel(channelName)
@@ -56,7 +63,7 @@ func _TestSubscription(t *testing.T) {
 	}()
 	time.Sleep(100 * time.Millisecond)
 
-	cache, err := NewRedisCache(testHosts, false)
+	cache, err := NewRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
 	if err := cache.Publish(channelName, msg1); err != nil {
@@ -78,7 +85,7 @@ func _TestSubscription(t *testing.T) {
 
 // TestNewRedisCache tests basic operations of redis cache
 func _TestNewRedisCache(t *testing.T) {
-	cache, err := NewRedisCache(testHosts, false)
+	cache, err := NewRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
 	key, value := randBytes(32), randBytes(500)
@@ -94,7 +101,7 @@ func _TestNewRedisCache(t *testing.T) {
 
 // TestNewRedisCache_Set_LargeData check whether redis cache can store an large data (5MB).
 func _TestNewRedisCache_Set_LargeData(t *testing.T) {
-	cache, err := NewRedisCache(testHosts, false)
+	cache, err := NewRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
