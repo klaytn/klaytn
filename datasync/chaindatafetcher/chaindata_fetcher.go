@@ -86,17 +86,17 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 	var (
 		repo         Repository
 		checkpointDB CheckpointDB
-		setter       []ComponentSetter
+		setters      []ComponentSetter
 		err          error
 	)
 	switch cfg.Mode {
 	case ModeKAS:
-		repo, checkpointDB, setter, err = getKasComponents(cfg.KasConfig)
+		repo, checkpointDB, setters, err = getKasComponents(cfg.KasConfig)
 		if err != nil {
 			return nil, err
 		}
 	case ModeKafka:
-		repo, checkpointDB, setter, err = getKafkaComponents(cfg.KafkaConfig)
+		repo, checkpointDB, setters, err = getKafkaComponents(cfg.KafkaConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +113,7 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 		checkpointMap: make(map[int64]struct{}),
 		repo:          repo,
 		checkpointDB:  checkpointDB,
-		setters:       setter,
+		setters:       setters,
 	}, nil
 }
 
