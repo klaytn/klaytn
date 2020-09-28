@@ -23,11 +23,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 	cfTypes "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 	"github.com/klaytn/klaytn/event"
@@ -72,7 +72,7 @@ type ChainDataFetcher struct {
 
 	repo         Repository
 	checkpointDB CheckpointDB
-	setter       ComponentSetter
+	setters      []ComponentSetter
 
 	fetchingStarted      bool
 	fetchingStopCh       chan struct{}
@@ -86,30 +86,23 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 	var (
 		repo         Repository
 		checkpointDB CheckpointDB
-		setter       ComponentSetter
+		setters      []ComponentSetter
 		err          error
 	)
 	switch cfg.Mode {
 	case ModeKAS:
-		newRepo, err := kas.NewRepository(cfg.KasConfig)
+		repo, checkpointDB, setters, err = getKasComponents(cfg.KasConfig)
 		if err != nil {
-			logger.Error("Failed to create new Repository", "err", err, "user", cfg.KasConfig.DBUser, "host", cfg.KasConfig.DBHost, "port", cfg.KasConfig.DBPort, "name", cfg.KasConfig.DBName, "cacheUrl", cfg.KasConfig.CacheInvalidationURL, "x-chain-id", cfg.KasConfig.XChainId)
 			return nil, err
 		}
-		repo = newRepo
-		checkpointDB = newRepo
-		setter = newRepo
 	case ModeKafka:
-		// TODO-ChainDataFetcher implement new repository for kafka
-		panic("implement me")
+		repo, checkpointDB, setters, err = getKafkaComponents(cfg.KafkaConfig)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		logger.Error("the chaindatafetcher mode is not supported", "mode", cfg.Mode)
 		return nil, errUnsupportedMode
-	}
-	checkpoint, err := checkpointDB.ReadCheckpoint()
-	if err != nil {
-		logger.Error("Failed to get checkpoint", "err", err)
-		return nil, err
 	}
 	return &ChainDataFetcher{
 		config:        cfg,
@@ -117,12 +110,28 @@ func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) 
 		reqCh:         make(chan *cfTypes.Request, cfg.JobChannelSize),
 		stopCh:        make(chan struct{}),
 		numHandlers:   cfg.NumHandlers,
-		checkpoint:    checkpoint,
 		checkpointMap: make(map[int64]struct{}),
 		repo:          repo,
 		checkpointDB:  checkpointDB,
-		setter:        setter,
+		setters:       setters,
 	}, nil
+}
+
+func getKasComponents(cfg *kas.KASConfig) (Repository, CheckpointDB, []ComponentSetter, error) {
+	repo, err := kas.NewRepository(cfg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return repo, repo, []ComponentSetter{repo}, nil
+}
+
+func getKafkaComponents(cfg *kafka.KafkaConfig) (Repository, CheckpointDB, []ComponentSetter, error) {
+	repo, err := kafka.NewRepository(cfg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	checkpointDB := kafka.NewCheckpointDB()
+	return repo, checkpointDB, []ComponentSetter{repo, checkpointDB}, nil
 }
 
 func (f *ChainDataFetcher) Protocols() []p2p.Protocol {
@@ -196,7 +205,14 @@ func (f *ChainDataFetcher) startFetching() error {
 	// lanuch a goroutine to handle from checkpoint to the head block.
 	go func() {
 		defer f.fetchingWg.Done()
-		f.sendRequests(uint64(f.checkpoint), currentBlock, cfTypes.RequestTypeAll, true, f.fetchingStopCh)
+		switch f.config.Mode {
+		case ModeKAS:
+			f.sendRequests(uint64(f.checkpoint), currentBlock, cfTypes.RequestTypeAll, true, f.fetchingStopCh)
+		case ModeKafka:
+			f.sendRequests(uint64(f.checkpoint), currentBlock, cfTypes.RequestTypeGroupAll, true, f.fetchingStopCh)
+		default:
+			logger.Error("the chaindatafetcher mode is not supported", "mode", f.config.Mode, "checkpoint", f.checkpoint, "currentBlock", currentBlock)
+		}
 	}()
 	logger.Info("fetching is started", "startedCheckpoint", checkpoint, "currentBlock", currentBlock)
 	return nil
@@ -287,22 +303,40 @@ func (f *ChainDataFetcher) Components() []interface{} {
 	return nil
 }
 
-func (f *ChainDataFetcher) SetComponents(components []interface{}) {
-	for _, component := range components {
-		switch v := component.(type) {
-		case *blockchain.BlockChain:
-			f.blockchain = v
-		case []rpc.API:
-			for _, a := range v {
-				switch s := a.Service.(type) {
-				case *api.PublicBlockChainAPI:
-					f.setter.SetComponent(s)
-				case *cn.PrivateDebugAPI:
-					f.debugAPI = s
-				}
-			}
+func (f *ChainDataFetcher) setAPIs(apis []rpc.API) {
+	for _, a := range apis {
+		switch s := a.Service.(type) {
+		case *cn.PrivateDebugAPI:
+			f.debugAPI = s
 		}
 	}
+}
+
+func (f *ChainDataFetcher) setCheckpoint() {
+	checkpoint, err := f.checkpointDB.ReadCheckpoint()
+	if err != nil {
+		logger.Crit("ReadCheckpoint is failed", "err", err)
+	}
+	f.checkpoint = checkpoint
+}
+
+func (f *ChainDataFetcher) setComponent(component interface{}) {
+	switch v := component.(type) {
+	case *blockchain.BlockChain:
+		f.blockchain = v
+	case []rpc.API:
+		f.setAPIs(v)
+	}
+}
+
+func (f *ChainDataFetcher) SetComponents(components []interface{}) {
+	for _, component := range components {
+		f.setComponent(component)
+		for _, setter := range f.setters {
+			setter.SetComponent(component)
+		}
+	}
+	f.setCheckpoint()
 }
 
 func (f *ChainDataFetcher) handleRequestByType(reqType cfTypes.RequestType, shouldUpdateCheckpoint bool, ev blockchain.ChainEvent) {
@@ -314,6 +348,8 @@ func (f *ChainDataFetcher) handleRequestByType(reqType cfTypes.RequestType, shou
 	// - RequestTypeTokenTransfer
 	// - RequestTypeContract
 	// - RequestTypeTrace
+	// - RequestTypeBlockGroup
+	// - RequestTypeTraceGroup
 	for targetType := cfTypes.RequestTypeTransaction; targetType < cfTypes.RequestTypeLength; targetType = targetType << 1 {
 		if cfTypes.CheckRequestType(reqType, targetType) {
 			f.updateInsertionTimeGauge(f.retryFunc(f.repo.HandleChainEvent))(ev, targetType)
@@ -338,7 +374,14 @@ func (f *ChainDataFetcher) handleRequest() {
 			return
 		case ev := <-f.chainCh:
 			numChainEventGauge.Update(int64(len(f.chainCh)))
-			f.handleRequestByType(cfTypes.RequestTypeAll, true, ev)
+			switch f.config.Mode {
+			case ModeKAS:
+				f.handleRequestByType(cfTypes.RequestTypeAll, true, ev)
+			case ModeKafka:
+				f.handleRequestByType(cfTypes.RequestTypeGroupAll, true, ev)
+			default:
+				logger.Error("the chaindatafetcher mode is not supported", "mode", f.config.Mode, "blockNumber", ev.Block.NumberU64())
+			}
 		case req := <-f.reqCh:
 			numRequestsGauge.Update(int64(len(f.reqCh)))
 			ev, err := f.makeChainEvent(req.BlockNumber)
@@ -386,6 +429,10 @@ func getInsertionTimeGauge(reqType cfTypes.RequestType) metrics.Gauge {
 		return contractsInsertionTimeGauge
 	case cfTypes.RequestTypeTrace:
 		return tracesInsertionTimeGauge
+	case cfTypes.RequestTypeBlockGroup:
+		return blockGroupInsertionTimeGauge
+	case cfTypes.RequestTypeTraceGroup:
+		return traceGroupInsertionTimeGauge
 	default:
 		logger.Warn("the request type is not supported", "type", reqType)
 		return metrics.NilGauge{}
@@ -415,6 +462,10 @@ func getInsertionRetryGauge(reqType cfTypes.RequestType) metrics.Gauge {
 		return contractsInsertionRetryGauge
 	case cfTypes.RequestTypeTrace:
 		return tracesInsertionRetryGauge
+	case cfTypes.RequestTypeBlockGroup:
+		return blockGroupInsertionRetryGauge
+	case cfTypes.RequestTypeTraceGroup:
+		return traceGroupInsertionRetryGauge
 	default:
 		logger.Warn("the request type is not supported", "type", reqType)
 		return metrics.NilGauge{}

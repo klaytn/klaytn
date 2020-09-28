@@ -341,6 +341,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
 	cn.addComponent(cn.APIs())
+	cn.addComponent(cn.ChainDB())
 
 	return cn, nil
 }
