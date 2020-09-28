@@ -73,7 +73,7 @@ func checkAndRaiseFDLimit() {
 	// try increasing file descriptor limit
 	targetLimit := limit + minFDLimit
 	if err := fdlimit.Raise(uint64(targetLimit)); err != nil {
-		logger.Error("fail to increase fd limit. you may suffer fd exhaustion", "err", err)
+		logger.Warn("fail to increase fd limit. you may suffer fd exhaustion", "err", err)
 		return
 	}
 	// check if new fd limit is applied
@@ -85,7 +85,7 @@ func checkAndRaiseFDLimit() {
 	}
 	// if the retrieved limit does not match the expected one, leave an error log
 	if newLimit != targetLimit {
-		logger.Error("Tried increasing the file descriptor limit of the process for RPC servers, but it didn't work",
+		logger.Warn("Tried increasing the file descriptor limit of the process for RPC servers, but it didn't work",
 			"oldLimit", limit, "targetLimit", targetLimit, "actualLimit", newLimit)
 	} else {
 		logger.Warn("Increase the file descriptor limit of the process for RPC servers",
