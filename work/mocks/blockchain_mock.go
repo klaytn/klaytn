@@ -637,9 +637,11 @@ func (mr *MockBlockChainMockRecorder) Rollback(arg0 interface{}) *gomock.Call {
 }
 
 // SaveTrieNodeCacheToDisk mocks base method
-func (m *MockBlockChain) SaveTrieNodeCacheToDisk(arg0 string) {
+func (m *MockBlockChain) SaveTrieNodeCacheToDisk(arg0 string) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SaveTrieNodeCacheToDisk", arg0)
+	ret := m.ctrl.Call(m, "SaveTrieNodeCacheToDisk", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // SaveTrieNodeCacheToDisk indicates an expected call of SaveTrieNodeCacheToDisk
