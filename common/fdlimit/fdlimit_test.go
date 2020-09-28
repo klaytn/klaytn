@@ -24,7 +24,7 @@ import (
 // TestFileDescriptorLimits simply tests whether the file descriptor allowance
 // per this process can be retrieved.
 func TestFileDescriptorLimits(t *testing.T) {
-	target := 4096
+	target := 20000
 	hardlimit, err := Maximum()
 	if err != nil {
 		t.Fatal(err)
