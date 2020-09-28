@@ -58,7 +58,7 @@ const (
 // pendingRequestCount is a total number of concurrent RPC method calls
 var pendingRequestCount int64 = 0
 
-// checkAndRaiseFDLimit checks the filed descriptor limit and
+// checkAndRaiseFDLimit checks the file descriptor limit and
 // increases the file descriptor limit if the process has a small limit
 func checkAndRaiseFDLimit() {
 	limit, err := fdlimit.Current()
