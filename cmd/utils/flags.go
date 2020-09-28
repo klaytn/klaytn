@@ -1447,7 +1447,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
-		FastCacheSizeMB:    ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
+		LocalCacheSizeMB:   ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		RedisEndpoints:     ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
 		RedisClusterEnable: ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
 	}

@@ -17,13 +17,13 @@
 package statedb
 
 func NewHybridCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
-	redis, err := NewRedisCache(config.RedisEndpoints, config.RedisClusterEnable)
+	redis, err := NewRedisCache(config)
 	if err != nil {
 		return nil, err
 	}
 
 	return &hybridCache{
-		local:  NewFastCache(config.FastCacheSizeMB),
+		local:  NewFastCache(config),
 		remote: redis,
 	}, nil
 }
