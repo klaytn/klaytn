@@ -21,8 +21,11 @@
 package statedb
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -1110,12 +1113,27 @@ func (db *Database) UpdateMetricNodes() {
 	}
 }
 
+var errDisabledTrieNodeCache = errors.New("trie node cache is disabled, nothing to save to file")
+var errNonEmptyDirectory = errors.New("target directory should be an empty directory")
+
 // SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when the node restarts
-func (db *Database) SaveTrieNodeCacheToFile(filePath string) {
+func (db *Database) SaveTrieNodeCacheToFile(filePath string) error {
 	if db.trieNodeCache == nil {
-		return
+		return errDisabledTrieNodeCache
 	}
-	filePath = filePath + "/trie_node_cache_backup"
+	// Save the cache only if the given directory is an empty one
+	files, err := ioutil.ReadDir(filePath)
+	if err != nil && !os.IsNotExist(err) {
+		logger.Error("failed to read directory for saving cache to file",
+			"err", err, "filePath", filePath)
+		return err
+	}
+	if len(files) != 0 {
+		logger.Error("target directory should be an empty directory",
+			"filePath", filePath, "numFiles", len(files))
+		return errNonEmptyDirectory
+	}
+
 	start := time.Now()
 	go func() {
 		logger.Info("start saving cache to file", "filePath", filePath)
@@ -1127,4 +1145,5 @@ func (db *Database) SaveTrieNodeCacheToFile(filePath string) {
 				"filePath", filePath, "elapsed", time.Since(start))
 		}
 	}()
+	return nil
 }

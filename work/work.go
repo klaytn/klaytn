@@ -301,5 +301,5 @@ type BlockChain interface {
 	StopWarmUp() error
 
 	// Save trie node cache to this
-	SaveTrieNodeCacheToDisk(filePath string)
+	SaveTrieNodeCacheToDisk(filePath string) error
 }

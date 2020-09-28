@@ -2101,8 +2101,13 @@ func (bc *BlockChain) GetNonceInCache(addr common.Address) (uint64, bool) {
 	return 0, false
 }
 
-func (bc *BlockChain) SaveTrieNodeCacheToDisk(filePath string) {
-	bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(filePath)
+func (bc *BlockChain) SaveTrieNodeCacheToDisk(filePath string) error {
+	if filePath == "" {
+		filePath = bc.db.GetDBConfig().Dir + "/fastcache"
+		logger.Warn("file path is not given, save the cache to the database dir",
+			"filePath", filePath)
+	}
+	return bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(filePath)
 }
 
 // ApplyTransaction attempts to apply a transaction to the given state database
