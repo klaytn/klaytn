@@ -168,8 +168,9 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if dynamoDBClient == nil {
 		dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
 			Config: aws.Config{
-				Endpoint: aws.String(config.Endpoint),
-				Region:   aws.String(config.Region),
+				Endpoint:         aws.String(config.Endpoint),
+				Region:           aws.String(config.Region),
+				S3ForcePathStyle: aws.Bool(true),
 			},
 		})))
 	}
