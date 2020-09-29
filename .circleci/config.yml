@@ -344,7 +344,10 @@ jobs:
             done'
       - run:
           name: "Run test others"
-          command: make test-others
+          command: |
+            export AWS_ACCESS_KEY_ID=foobar
+            export AWS_SECRET_ACCESS_KEY=foobar
+            make test-others
 
   pass-tests:
     executor: default
