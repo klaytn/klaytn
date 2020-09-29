@@ -23,13 +23,14 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"github.com/klaytn/klaytn/common/fdlimit"
-	"gopkg.in/fatih/set.v0"
 	"reflect"
 	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/klaytn/klaytn/common/fdlimit"
+	"gopkg.in/fatih/set.v0"
 )
 
 const MetadataApi = "rpc"
@@ -57,21 +58,44 @@ const (
 // pendingRequestCount is a total number of concurrent RPC method calls
 var pendingRequestCount int64 = 0
 
-// NewServer will create a new server instance with no registered handlers.
-func NewServer() *Server {
-	// increase the file descriptor limit if the process has a small limit
+// checkAndRaiseFDLimit checks the file descriptor limit and
+// increases the file descriptor limit if the process has a small limit
+func checkAndRaiseFDLimit() {
 	limit, err := fdlimit.Current()
 	if err != nil {
-		logger.Warn("fail to read fd limit. you may suffer fd exhaustion", "err", err)
-	} else {
-		if limit < minFDLimit {
-			err := fdlimit.Raise(uint64(limit + minFDLimit))
-			if err != nil {
-				logger.Warn("fail to increase fd limit. you may suffer fd exhaustion", "err", err)
-			}
-			logger.Warn("Increase the file descriptor limit of the process for RPC servers", "oldLimit", limit, "newLimit", limit+minFDLimit)
-		}
+		logger.Error("fail to read fd limit. you may suffer fd exhaustion", "err", err)
+		return
 	}
+	// if it has enough file descriptor limit, do nothing
+	if limit >= minFDLimit {
+		return
+	}
+	// try increasing file descriptor limit
+	targetLimit := limit + minFDLimit
+	if err := fdlimit.Raise(uint64(targetLimit)); err != nil {
+		logger.Warn("fail to increase fd limit. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	// check if new fd limit is applied
+	newLimit, err := fdlimit.Current()
+	if err != nil {
+		logger.Error("fail to read fd limit after increasing fd limit, current limit may not be accurate",
+			"err", err, "oldLimit", limit, "newLimit", limit+minFDLimit)
+		return
+	}
+	// if the retrieved limit does not match the expected one, leave an error log
+	if newLimit != targetLimit {
+		logger.Warn("Tried increasing the file descriptor limit of the process for RPC servers, but it didn't work",
+			"oldLimit", limit, "targetLimit", targetLimit, "actualLimit", newLimit)
+	} else {
+		logger.Warn("Increase the file descriptor limit of the process for RPC servers",
+			"oldLimit", limit, "newLimit", newLimit)
+	}
+}
+
+// NewServer will create a new server instance with no registered handlers.
+func NewServer() *Server {
+	checkAndRaiseFDLimit()
 
 	server := &Server{
 		services: make(serviceRegistry),
