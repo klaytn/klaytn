@@ -27,7 +27,7 @@ executors:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.1-go1.14.6-solc0.4.24
-      - image: localstack/localstack:0.10.9
+      - image: localstack/localstack:0.11.5
       - image: circleci/mysql:5.7
       - name: zookeeper
         image: wurstmeister/zookeeper
