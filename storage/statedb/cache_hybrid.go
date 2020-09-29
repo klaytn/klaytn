@@ -64,3 +64,12 @@ func (cache *hybridCache) UpdateStats() interface{} {
 
 	return stats{cache.local.UpdateStats(), cache.remote.UpdateStats()}
 }
+
+func (cache *hybridCache) SaveToFile(filePath string, concurrency int) error {
+	if err := cache.local.SaveToFile(filePath, concurrency); err != nil {
+		logger.Error("failed to save local cache to file",
+			"filePath", filePath, "concurrency", concurrency, "err", err)
+		return err
+	}
+	return nil
+}

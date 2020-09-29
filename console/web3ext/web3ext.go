@@ -291,6 +291,11 @@ web3._extend({
 			name: 'stopStateMigration',
 			call: 'admin_stopStateMigration',
 		}),
+		new web3._extend.Method({
+			name: 'saveTrieNodeCacheToDisk',
+			call: 'admin_saveTrieNodeCacheToDisk',
+			params: 1,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

@@ -480,6 +480,7 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 		TrieNodeCacheConfig: statedb.TrieNodeCacheConfig{
 			CacheType:          statedb.CacheTypeLocal,
 			LocalCacheSizeMB:   4096,
+			FastCacheFileDir:   "",
 			RedisEndpoints:     nil,
 			RedisClusterEnable: false,
 		},

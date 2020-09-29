@@ -116,3 +116,7 @@ func (cache *RedisCache) SubscriptionChannel(channel string) <-chan *redis.Messa
 func (cache *RedisCache) UpdateStats() interface{} {
 	return nil
 }
+
+func (cache *RedisCache) SaveToFile(filePath string, concurrency int) error {
+	return nil
+}
