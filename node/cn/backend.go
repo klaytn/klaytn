@@ -343,6 +343,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.APIs())
 	cn.addComponent(cn.ChainDB())
 
+	// Only for KES nodes
+	if config.TrieNodeCacheConfig.RedisSubscribeBlock {
+		go cn.blockchain.BlockSubscriptionLoop(cn.txPool.(*blockchain.TxPool))
+	}
+
 	return cn, nil
 }
 

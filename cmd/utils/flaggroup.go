@@ -50,6 +50,8 @@ var FlagGroups = []FlagGroup{
 			OverwriteGenesisFlag,
 			DownloaderDisableFlag,
 			FetcherDisableFlag,
+			TrieNodeCacheRedisPublishBlockFlag,
+			TrieNodeCacheRedisSubscribeBlockFlag,
 		},
 	},
 	{

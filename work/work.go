@@ -302,4 +302,8 @@ type BlockChain interface {
 
 	// Save trie node cache to this
 	SaveTrieNodeCacheToDisk(filePath string) error
+
+	// KES
+	BlockSubscriptionLoop(pool *blockchain.TxPool)
+	CloseBlockSubscriptionLoop()
 }

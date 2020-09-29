@@ -40,7 +40,6 @@ func getTestRedisConfig() TrieNodeCacheConfig {
 // TODO-Klaytn: Enable tests when redis is prepared on CI
 
 func _TestSubscription(t *testing.T) {
-	channelName := "channel"
 	msg1 := "testMessage1"
 	msg2 := "testMessage2"
 
@@ -51,7 +50,7 @@ func _TestSubscription(t *testing.T) {
 		cache, err := NewRedisCache(getTestRedisConfig())
 		assert.Nil(t, err)
 
-		ch := cache.SubscriptionChannel(channelName)
+		ch := cache.SubscribeBlockCh()
 
 		actualMsg := <-ch
 		assert.Equal(t, msg1, actualMsg.Payload)
@@ -66,11 +65,11 @@ func _TestSubscription(t *testing.T) {
 	cache, err := NewRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
-	if err := cache.Publish(channelName, msg1); err != nil {
+	if err := cache.PublishBlock(msg1); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := cache.Publish(channelName, msg2); err != nil {
+	if err := cache.PublishBlock(msg2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -113,9 +112,8 @@ func _TestNewRedisCache_Set_LargeData(t *testing.T) {
 	assert.Equal(t, bytes.Compare(value, retValue), 0)
 }
 
-// testNewRedisCache_Timeout test timout feature of redis client.
-// INFO: Enable it just when you want to test.
-func testNewRedisCache_Timeout(t *testing.T) {
+// TestNewRedisCache_Timeout test timout feature of redis client.
+func _TestNewRedisCache_Timeout(t *testing.T) {
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:11234")
 		if err != nil {
@@ -148,7 +146,7 @@ func testNewRedisCache_Timeout(t *testing.T) {
 		ReadTimeout:  redisCacheTimeout,
 		WriteTimeout: redisCacheTimeout,
 		MaxRetries:   0,
-	})}
+	}), nil}
 
 	key, value := randBytes(32), randBytes(500)
 

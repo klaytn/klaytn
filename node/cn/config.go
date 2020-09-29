@@ -86,7 +86,7 @@ type Config struct {
 	SyncMode  downloader.SyncMode
 	NoPruning bool
 
-	// block processing options
+	// KES options
 	DownloaderDisable bool
 	FetcherDisable    bool
 

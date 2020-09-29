@@ -31,7 +31,7 @@ func _TestHybridCache_Set(t *testing.T) {
 	cache.Set(key, value)
 
 	// Type assertion to check both of local cache and remote cache
-	hybrid, ok := cache.(*hybridCache)
+	hybrid, ok := cache.(*HybridCache)
 	assert.Equal(t, ok, true)
 
 	// Check whether the item is set in the local cache
@@ -52,7 +52,7 @@ func _TestHybridCache_Get(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var hybrid TrieNodeCache = &hybridCache{
+	var hybrid TrieNodeCache = &HybridCache{
 		local:  localCache,
 		remote: remoteCache,
 	}
@@ -101,7 +101,7 @@ func _TestHybridCache_Has(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var hybrid TrieNodeCache = &hybridCache{
+	var hybrid TrieNodeCache = &HybridCache{
 		local:  localCache,
 		remote: remoteCache,
 	}
