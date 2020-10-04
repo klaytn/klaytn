@@ -23,6 +23,11 @@ import (
 )
 
 const (
+	EventBlockGroup = "blockgroup"
+	EventTraceBroup = "tracegroup"
+)
+
+const (
 	topicProjectName = "klaytn"
 	topicServiceName = "chaindatafetcher"
 	topicVersion     = "v1"

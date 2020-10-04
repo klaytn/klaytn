@@ -17,6 +17,7 @@
 package kafka
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -117,6 +118,55 @@ func (s *KafkaSuite) TestKafka_Publish() {
 	for idx, v := range expected {
 		s.Equal(v, actual[idx])
 	}
+}
+
+func (s *KafkaSuite) TestKafka_Subscribe() {
+	numTests := 10
+	numCheckCh := make(chan struct{}, numTests)
+	testBytesSize := 100
+
+	testEvent := EventBlockGroup
+	topic := s.kfk.config.getTopicName(testEvent)
+	s.kfk.CreateTopic(topic)
+
+	// publish random data
+	var expected []*kafkaData
+	for i := 0; i < numTests; i++ {
+		testData := &kafkaData{common.MakeRandomBytes(testBytesSize)}
+		expected = append(expected, testData)
+		s.NoError(s.kfk.Publish(topic, testData))
+	}
+
+	// make a test consumer group
+	s.kfk.config.SaramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	consumer, err := NewConsumer(s.kfk.config, "test-groupId")
+	s.NoError(err)
+	defer consumer.Close()
+
+	// add handler for the test event group
+	var actual []*kafkaData
+	err = consumer.AddTopicAndHandler(EventBlockGroup, func(message *sarama.ConsumerMessage) error {
+		var d *kafkaData
+		json.Unmarshal(message.Value, &d)
+		actual = append(actual, d)
+		numCheckCh <- struct{}{}
+		return nil
+	})
+	s.NoError(err)
+
+	// subscribe the added topics
+	go func() {
+		err := consumer.Subscribe(context.Background())
+		s.NoError(err)
+	}()
+
+	// wait for all data to be consumed
+	for i := 0; i < numTests; i++ {
+		<-numCheckCh
+	}
+
+	// compare the results with the published data
+	s.Equal(expected, actual)
 }
 
 func TestKafkaSuite(t *testing.T) {
