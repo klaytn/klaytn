@@ -87,6 +87,9 @@ func (c *Consumer) Subscribe(ctx context.Context) error {
 	}
 }
 
+// The following 3 methods implements ConsumerGroupHandler, and they are called in the order of Setup, Cleanup and ConsumeClaim.
+// In Subscribe function, Consume method triggers the functions to handle published messages.
+
 // Setup is called at the beginning of a new session, before ConsumeClaim.
 func (c *Consumer) Setup(s sarama.ConsumerGroupSession) error {
 	return nil
