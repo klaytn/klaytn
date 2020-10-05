@@ -338,15 +338,13 @@ jobs:
           name: "Wait until localstack container running"
           command: |
             timeout -t 60 sh -c \
-            'until curl --silent --fail "http://localhost:4572"; do
-              echo "Waiting for Localstack S3 ..."
+            'until curl --silent --fail "http://localhost:4566"; do
+              echo "Waiting for Localstack ..."
               sleep 1
             done'
       - run:
           name: "Run test others"
           command: |
-            export AWS_ACCESS_KEY_ID=foobar
-            export AWS_SECRET_ACCESS_KEY=foobar
             make test-others
 
   pass-tests:
