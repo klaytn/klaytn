@@ -19,8 +19,10 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/klaytn/klaytn/common"
@@ -85,18 +87,57 @@ type kafkaData struct {
 	Data []byte `json:"data"`
 }
 
+func (s *KafkaSuite) publishRandomData(topic string, numTests, testBytesSize int) []*kafkaData {
+	var expected []*kafkaData
+	for i := 0; i < numTests; i++ {
+		testData := &kafkaData{common.MakeRandomBytes(testBytesSize)}
+		s.NoError(s.kfk.Publish(topic, testData))
+		expected = append(expected, testData)
+	}
+	return expected
+}
+
+func (s *KafkaSuite) subscribeData(topic, groupId string, numTests int, handler func(message *sarama.ConsumerMessage) error) {
+	numCheckCh := make(chan struct{}, numTests)
+
+	// make a test consumer group
+	s.kfk.config.SaramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	consumer, err := NewConsumer(s.kfk.config, groupId)
+	s.NoError(err)
+	defer consumer.Close()
+
+	// add handler for the test event group
+	consumer.topics = append(consumer.topics, topic)
+	consumer.handlers[topic] = func(message *sarama.ConsumerMessage) error {
+		err := handler(message)
+		numCheckCh <- struct{}{}
+		return err
+	}
+
+	// subscribe the added topics
+	go func() {
+		err := consumer.Subscribe(context.Background())
+		s.NoError(err)
+	}()
+
+	// wait for all data to be consumed
+	timeout := time.NewTimer(3 * time.Second)
+	for i := 0; i < numTests; i++ {
+		select {
+		case <-numCheckCh:
+		case <-timeout.C:
+			s.Fail("timeout")
+		}
+	}
+}
+
 func (s *KafkaSuite) TestKafka_Publish() {
 	numTests := 10
 	testBytesSize := 100
 
 	s.kfk.CreateTopic(s.topic)
 
-	var expected []*kafkaData
-	for i := 0; i < numTests; i++ {
-		testData := &kafkaData{common.MakeRandomBytes(testBytesSize)}
-		s.NoError(s.kfk.Publish(s.topic, testData))
-		expected = append(expected, testData)
-	}
+	expected := s.publishRandomData(s.topic, numTests, testBytesSize)
 
 	// consume from the first partition and the first item
 	partitionConsumer, err := s.consumer.ConsumePartition(s.topic, int32(0), int64(0))
@@ -122,51 +163,93 @@ func (s *KafkaSuite) TestKafka_Publish() {
 
 func (s *KafkaSuite) TestKafka_Subscribe() {
 	numTests := 10
-	numCheckCh := make(chan struct{}, numTests)
 	testBytesSize := 100
 
-	testEvent := EventBlockGroup
-	topic := s.kfk.config.getTopicName(testEvent)
+	topic := "test-subscribe"
 	s.kfk.CreateTopic(topic)
 
-	// publish random data
-	var expected []*kafkaData
-	for i := 0; i < numTests; i++ {
-		testData := &kafkaData{common.MakeRandomBytes(testBytesSize)}
-		expected = append(expected, testData)
-		s.NoError(s.kfk.Publish(topic, testData))
-	}
+	expected := s.publishRandomData(topic, numTests, testBytesSize)
 
-	// make a test consumer group
-	s.kfk.config.SaramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
-	consumer, err := NewConsumer(s.kfk.config, "test-groupId")
-	s.NoError(err)
-	defer consumer.Close()
-
-	// add handler for the test event group
 	var actual []*kafkaData
-	err = consumer.AddTopicAndHandler(EventBlockGroup, func(message *sarama.ConsumerMessage) error {
+	s.subscribeData(topic, "test-group-id", numTests, func(message *sarama.ConsumerMessage) error {
 		var d *kafkaData
 		json.Unmarshal(message.Value, &d)
 		actual = append(actual, d)
-		numCheckCh <- struct{}{}
 		return nil
 	})
-	s.NoError(err)
-
-	// subscribe the added topics
-	go func() {
-		err := consumer.Subscribe(context.Background())
-		s.NoError(err)
-	}()
-
-	// wait for all data to be consumed
-	for i := 0; i < numTests; i++ {
-		<-numCheckCh
-	}
 
 	// compare the results with the published data
 	s.Equal(expected, actual)
+}
+
+func (s *KafkaSuite) TestKafka_PubSubWith2Partitions() {
+	numTests := 10
+	testBytesSize := 100
+
+	s.kfk.config.Partitions = 2
+	defer func() { s.kfk.config.Partitions = DefaultPartitions }()
+
+	topicPartition := "test-2-partition-topic"
+	s.kfk.CreateTopic(topicPartition)
+
+	// publish random data
+	expected := s.publishRandomData(topicPartition, numTests, testBytesSize)
+
+	var actual []*kafkaData
+	s.subscribeData(topicPartition, "test-group-id", numTests, func(message *sarama.ConsumerMessage) error {
+		var d *kafkaData
+		json.Unmarshal(message.Value, &d)
+		actual = append(actual, d)
+		return nil
+	})
+
+	// the number of partitions is not 1, so the order may be changed after subscription.
+	// compare the results with the published data
+	s.Equal(len(expected), len(actual))
+
+	for _, e := range expected {
+		has := false
+		for _, a := range actual {
+			if reflect.DeepEqual(e, a) {
+				has = true
+			}
+		}
+		if !has {
+			s.Fail("the expected data is not contained in the actual data", "expected", e)
+		}
+	}
+}
+
+func (s *KafkaSuite) TestKafka_PubSubWith2DifferentGroups() {
+	numTests := 10
+	testBytesSize := 100
+
+	topic := "test-different-groups"
+	s.kfk.CreateTopic(topic)
+
+	// publish random data
+	expected := s.publishRandomData(topic, numTests, testBytesSize)
+
+	var actual []*kafkaData
+	s.subscribeData(topic, "test-group-id-1", numTests, func(message *sarama.ConsumerMessage) error {
+		var d *kafkaData
+		json.Unmarshal(message.Value, &d)
+		actual = append(actual, d)
+		return nil
+	})
+
+	var actual2 []*kafkaData
+	s.subscribeData(topic, "test-group-id-2", numTests, func(message *sarama.ConsumerMessage) error {
+		var d *kafkaData
+		json.Unmarshal(message.Value, &d)
+		actual2 = append(actual2, d)
+		return nil
+	})
+
+	// the number of partitions is not 1, so the order may be changed after subscription.
+	// compare the results with the published data
+	s.Equal(expected, actual)
+	s.Equal(expected, actual2)
 }
 
 func TestKafkaSuite(t *testing.T) {
