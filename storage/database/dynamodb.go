@@ -72,6 +72,7 @@ type DynamoDBConfig struct {
 	TableName          string
 	Region             string // AWS region
 	Endpoint           string // Where DynamoDB reside
+	S3Endpoint         string // Where S3 reside
 	IsProvisioned      bool   // Billing mode
 	ReadCapacityUnits  int64  // read capacity when provisioned
 	WriteCapacityUnits int64  // write capacity when provisioned
@@ -129,6 +130,7 @@ func GetTestDynamoConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "us-east-1",
 		Endpoint:           "http://localhost:4566",
+		S3Endpoint:         "http://localhost:4566",
 		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
 		IsProvisioned:      false,
 		ReadCapacityUnits:  10000,
@@ -156,10 +158,13 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if len(config.Endpoint) == 0 {
 		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
 	}
+	if len(config.S3Endpoint) == 0 {
+		config.S3Endpoint = "https://s3." + config.Region + ".amazonaws.com"
+	}
 
 	config.TableName = strings.ReplaceAll(config.TableName, "_", "-")
 
-	s3FileDB, err := newS3FileDB(config.Region, "https://s3."+config.Region+".amazonaws.com", config.TableName)
+	s3FileDB, err := newS3FileDB(config.Region, config.S3Endpoint, config.TableName)
 	if err != nil {
 		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName)
 		return nil, err
