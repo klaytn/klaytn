@@ -252,6 +252,32 @@ func (s *KafkaSuite) TestKafka_PubSubWith2DifferentGroups() {
 	s.Equal(expected, actual2)
 }
 
+func (s *KafkaSuite) TestKafka_Consumer_AddTopicAndHandler() {
+	consumer, err := NewConsumer(s.kfk.config, "test-group-id")
+	s.NoError(err)
+
+	blockGroupHandler := func(msg *sarama.ConsumerMessage) error { return nil }
+	s.NoError(consumer.AddTopicAndHandler(EventBlockGroup, blockGroupHandler))
+	traceGroupHandler := func(msg *sarama.ConsumerMessage) error { return nil }
+	s.NoError(consumer.AddTopicAndHandler(EventTraceBroup, traceGroupHandler))
+
+	blockGroupTopic := s.kfk.config.getTopicName(EventBlockGroup)
+	traceGroupTopic := s.kfk.config.getTopicName(EventTraceBroup)
+	expectedTopics := []string{blockGroupTopic, traceGroupTopic}
+	s.Equal(expectedTopics, consumer.topics)
+	s.Equal(reflect.ValueOf(blockGroupHandler).Pointer(), reflect.ValueOf(consumer.handlers[blockGroupTopic]).Pointer())
+	s.Equal(reflect.ValueOf(traceGroupHandler).Pointer(), reflect.ValueOf(consumer.handlers[traceGroupTopic]).Pointer())
+}
+
+func (s *KafkaSuite) TestKafka_Consumer_AddTopicAndHandler_Error() {
+	consumer, err := NewConsumer(s.kfk.config, "test-group-id")
+	s.NoError(err)
+
+	err = consumer.AddTopicAndHandler("not-available-event", nil)
+	s.Error(err)
+	s.True(strings.Contains(err.Error(), eventNameErrorMsg))
+}
+
 func TestKafkaSuite(t *testing.T) {
 	suite.Run(t, new(KafkaSuite))
 }

@@ -24,6 +24,8 @@ import (
 	"github.com/Shopify/sarama"
 )
 
+var eventNameErrorMsg = "the event name must be either 'blockgroup' or 'tracegroup'"
+
 // TopicHandler is a handler function in order to consume published messages.
 type TopicHandler func(message *sarama.ConsumerMessage) error
 
@@ -56,7 +58,7 @@ func (c *Consumer) Close() error {
 // AddTopicAndHandler adds a topic associated the given event and its handler function to consume published messages of the topic.
 func (c *Consumer) AddTopicAndHandler(event string, handler TopicHandler) error {
 	if event != EventBlockGroup && event != EventTraceBroup {
-		return fmt.Errorf("the event name must be either 'blockgroup' or 'tracegroup'. given: %v", event)
+		return fmt.Errorf("%v [given: %v]", eventNameErrorMsg, event)
 	}
 	topic := c.config.getTopicName(event)
 	c.topics = append(c.topics, topic)
