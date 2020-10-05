@@ -35,7 +35,6 @@ func NewHybridCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
 type HybridCache struct {
 	local  TrieNodeCache
 	remote *RedisCache
-	pubSub *redis.PubSub
 }
 
 func (cache *HybridCache) Set(k, v []byte) {
@@ -85,7 +84,7 @@ func (cache *HybridCache) SubscribeBlockCh() <-chan *redis.Message {
 }
 
 func (cache *HybridCache) UnsubscribeBlock() error {
-	return cache.pubSub.Unsubscribe()
+	return cache.remote.UnsubscribeBlock()
 }
 
 func (cache *HybridCache) Close() error {

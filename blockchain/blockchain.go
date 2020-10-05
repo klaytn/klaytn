@@ -822,7 +822,7 @@ func (bc *BlockChain) Stop() {
 	}
 	// Unsubscribe all subscriptions registered from blockchain
 	bc.scope.Close()
-	if bc.cacheConfig.TrieNodeCacheConfig.RedisSubscribeBlock {
+	if bc.cacheConfig.TrieNodeCacheConfig.RedisSubscribeBlockEnable {
 		bc.CloseBlockSubscriptionLoop()
 	}
 
@@ -1247,7 +1247,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 	// Publish the committed Block to the redis cache of stateDB.
 	// The cache uses the block to distinguish the latest state.
-	if bc.cacheConfig.TrieNodeCacheConfig.RedisPublishBlock {
+	if bc.cacheConfig.TrieNodeCacheConfig.RedisPublishBlockEnable {
 		blockRlp, err := rlp.EncodeToBytes(block)
 		if err != nil {
 			logger.Error("failed to encode lastCommittedBlock", "blockNumber", block.NumberU64(), "err", err)

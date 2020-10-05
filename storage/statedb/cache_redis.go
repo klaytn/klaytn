@@ -109,6 +109,8 @@ func (cache *RedisCache) publish(channel string, msg string) error {
 	return cache.client.Publish(channel, msg).Err()
 }
 
+// subscribe subscribes the redis client to the given channel.
+// It returns an existing *redis.PubSub subscribing previously registered channels also.
 func (cache *RedisCache) subscribe(channel string) *redis.PubSub {
 	if cache.pubSub == nil {
 		cache.pubSub = cache.client.Subscribe()

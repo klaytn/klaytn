@@ -27,13 +27,13 @@ type TrieNodeCacheType string
 
 // TrieNodeCacheConfig contains configuration values of all TrieNodeCache.
 type TrieNodeCacheConfig struct {
-	CacheType           TrieNodeCacheType
-	LocalCacheSizeMB    int      // Memory allowance (MB) to use for caching trie nodes in fast cache
-	FastCacheFileDir    string   // Directory where the persistent fastcache data is stored
-	RedisEndpoints      []string // Endpoints of redis cache
-	RedisClusterEnable  bool     // Enable cluster-enabled mode of redis cache
-	RedisPublishBlock   bool     // Enable publishing every inserted block to the redis server
-	RedisSubscribeBlock bool     // Enable subscribing blocks from the redis server
+	CacheType                 TrieNodeCacheType
+	LocalCacheSizeMB          int      // Memory allowance (MB) to use for caching trie nodes in fast cache
+	FastCacheFileDir          string   // Directory where the persistent fastcache data is stored
+	RedisEndpoints            []string // Endpoints of redis cache
+	RedisClusterEnable        bool     // Enable cluster-enabled mode of redis cache
+	RedisPublishBlockEnable   bool     // Enable publishing every inserted block to the redis server
+	RedisSubscribeBlockEnable bool     // Enable subscribing blocks from the redis server
 }
 
 // TrieNodeCache interface the cache of stateDB
