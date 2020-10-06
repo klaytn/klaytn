@@ -27,7 +27,7 @@ executors:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.1-go1.14.6-solc0.4.24
-      - image: localstack/localstack:0.10.9
+      - image: localstack/localstack:0.11.5
       - image: circleci/mysql:5.7
       - name: zookeeper
         image: wurstmeister/zookeeper
@@ -338,13 +338,14 @@ jobs:
           name: "Wait until localstack container running"
           command: |
             timeout -t 60 sh -c \
-            'until curl --silent --fail "http://localhost:4572"; do
-              echo "Waiting for Localstack S3 ..."
+            'until nc -z localhost 4566; do
+              echo "Waiting for Localstack ..."
               sleep 1
             done'
       - run:
           name: "Run test others"
-          command: make test-others
+          command: |
+            make test-others
 
   pass-tests:
     executor: default

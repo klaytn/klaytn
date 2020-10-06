@@ -14,9 +14,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 //
-// You need to set AWS credentials to access to dynamoDB.
-//    sh$ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
-//    sh$ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
+// For local test, please run the below.
+//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
 
 package database
 
@@ -25,13 +24,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/log/term"
 	"github.com/mattn/go-colorable"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/stretchr/testify/assert"
 )
 
 func enableLog() {
@@ -48,34 +48,49 @@ func enableLog() {
 	log.Root().SetHandler(glogger)
 }
 
-func testDynamoDB_Put(t *testing.T) {
-	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
-	defer dynamo.deleteDB()
-	if err != nil {
-		t.Fatal(err)
+type SuiteDynamoDB struct {
+	suite.Suite
+	dynamoDBs []*dynamoDB
+}
+
+func (s *SuiteDynamoDB) TearDownSuite() {
+	for _, dynamo := range s.dynamoDBs {
+		dynamo.deleteDB()
 	}
+}
+
+func TestDynamoDB(t *testing.T) {
+	suite.Run(t, new(SuiteDynamoDB))
+}
+
+func (s *SuiteDynamoDB) TestDynamoDB_Put() {
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
+	if err != nil {
+		s.FailNow("failed to create dynamoDB", err)
+	}
+	s.dynamoDBs = append(s.dynamoDBs, dynamo)
+
 	testKey := common.MakeRandomBytes(32)
 	testVal := common.MakeRandomBytes(500)
 
 	val, err := dynamo.Get(testKey)
 
-	assert.Nil(t, val)
-	assert.Error(t, err)
-	assert.Equal(t, err.Error(), dataNotFoundErr.Error())
+	s.Nil(val)
+	s.Error(err)
+	s.Equal(err.Error(), dataNotFoundErr.Error())
 
-	assert.NoError(t, dynamo.Put(testKey, testVal))
+	s.NoError(dynamo.Put(testKey, testVal))
 	returnedVal, returnedErr := dynamo.Get(testKey)
-	assert.Equal(t, testVal, returnedVal)
-	assert.NoError(t, returnedErr)
+	s.Equal(testVal, returnedVal)
+	s.NoError(returnedErr)
 }
 
-func testDynamoBatch_Write(t *testing.T) {
-	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
-	defer dynamo.deleteDB()
+func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
-		t.Fatal(err)
+		s.FailNow("failed to create dynamoDB", err)
 	}
-	t.Log("dynamoDB", dynamo.config.TableName)
+	s.dynamoDBs = append(s.dynamoDBs, dynamo)
 
 	var testKeys [][]byte
 	var testVals [][]byte
@@ -89,25 +104,24 @@ func testDynamoBatch_Write(t *testing.T) {
 		testKeys = append(testKeys, testKey)
 		testVals = append(testVals, testVal)
 
-		assert.NoError(t, batch.Put(testKey, testVal))
+		s.NoError(batch.Put(testKey, testVal))
 	}
-	assert.NoError(t, batch.Write())
+	s.NoError(batch.Write())
 
 	// check if exist
 	for i := 0; i < itemNum; i++ {
 		returnedVal, returnedErr := dynamo.Get(testKeys[i])
-		assert.NoError(t, returnedErr)
-		assert.Equal(t, hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
+		s.NoError(returnedErr)
+		s.Equal(hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
 	}
 }
 
-func testDynamoBatch_WriteLargeData(t *testing.T) {
-	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
-	defer dynamo.deleteDB()
+func (s *SuiteDynamoDB) TestDynamoBatch_WriteLargeData() {
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
-		t.Fatal(err)
+		s.FailNow("failed to create dynamoDB", err)
 	}
-	t.Log("dynamoDB", dynamo.config.TableName)
+	s.dynamoDBs = append(s.dynamoDBs, dynamo)
 
 	var testKeys [][]byte
 	var testVals [][]byte
@@ -121,25 +135,24 @@ func testDynamoBatch_WriteLargeData(t *testing.T) {
 		testKeys = append(testKeys, testKey)
 		testVals = append(testVals, testVal)
 
-		assert.NoError(t, batch.Put(testKey, testVal))
+		s.NoError(batch.Put(testKey, testVal))
 	}
-	assert.NoError(t, batch.Write())
+	s.NoError(batch.Write())
 
 	// check if exist
 	for i := 0; i < itemNum; i++ {
 		returnedVal, returnedErr := dynamo.Get(testKeys[i])
-		assert.NoError(t, returnedErr)
-		assert.Equal(t, hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
+		s.NoError(returnedErr)
+		s.Equal(hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
 	}
 }
 
-func testDynamoBatch_DuplicatedKey(t *testing.T) {
-	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
-	defer dynamo.deleteDB()
+func (s *SuiteDynamoDB) TestDynamoBatch_DuplicatedKey() {
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
-		t.Fatal(err)
+		s.FailNow("failed to create dynamoDB", err)
 	}
-	t.Log("dynamoDB", dynamo.config.TableName)
+	s.dynamoDBs = append(s.dynamoDBs, dynamo)
 
 	var testKeys [][]byte
 	var testVals [][]byte
@@ -153,41 +166,39 @@ func testDynamoBatch_DuplicatedKey(t *testing.T) {
 		testKeys = append(testKeys, testKey)
 		testVals = append(testVals, testVal)
 
-		assert.NoError(t, batch.Put(testKey, testVal))
-		assert.NoError(t, batch.Put(testKey, testVal))
-		assert.NoError(t, batch.Put(testKey, testVal))
+		s.NoError(batch.Put(testKey, testVal))
+		s.NoError(batch.Put(testKey, testVal))
+		s.NoError(batch.Put(testKey, testVal))
 	}
-	assert.NoError(t, batch.Write())
+	s.NoError(batch.Write())
 
 	// check if exist
 	for i := 0; i < itemNum; i++ {
 		returnedVal, returnedErr := dynamo.Get(testKeys[i])
-		assert.NoError(t, returnedErr)
-		assert.Equal(t, hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
+		s.NoError(returnedErr)
+		s.Equal(hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
 	}
 }
 
 // testDynamoBatch_WriteMutliTables checks if there is no error when working with more than one tables.
 // This also checks if shared workers works as expected.
-func testDynamoBatch_WriteMutliTables(t *testing.T) {
+func (s *SuiteDynamoDB) TestDynamoBatch_WriteMutliTables() {
 	// this test might end with Crit, enableLog to find out the log
 	//enableLog()
 
 	// create DynamoDB1
-	dynamo, err := newDynamoDB(GetDefaultDynamoDBConfig())
-	defer dynamo.deleteDB()
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
-		t.Fatal(err)
+		s.FailNow("failed to create dynamoDB", err)
 	}
-	t.Log("dynamoDB1", dynamo.config.TableName)
+	s.dynamoDBs = append(s.dynamoDBs, dynamo)
 
 	// create DynamoDB2
-	dynamo2, err := newDynamoDB(GetDefaultDynamoDBConfig())
-	defer dynamo2.deleteDB()
+	dynamo2, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
-		t.Fatal(err)
+		s.FailNow("failed to create dynamoDB", err)
 	}
-	t.Log("dynamoDB2", dynamo2.config.TableName)
+	s.dynamoDBs = append(s.dynamoDBs, dynamo2)
 
 	var testKeys, testVals [][]byte
 	var testKeys2, testVals2 [][]byte
@@ -206,7 +217,7 @@ func testDynamoBatch_WriteMutliTables(t *testing.T) {
 			testKeys = append(testKeys, testKey)
 			testVals = append(testVals, testVal)
 
-			assert.NoError(t, batch.Put(testKey, testVal))
+			s.NoError(batch.Put(testKey, testVal))
 
 			// write key2 and val2 to db2
 			testKey2 := common.MakeRandomBytes(10)
@@ -215,29 +226,29 @@ func testDynamoBatch_WriteMutliTables(t *testing.T) {
 			testKeys2 = append(testKeys2, testKey2)
 			testVals2 = append(testVals2, testVal2)
 
-			assert.NoError(t, batch2.Put(testKey2, testVal2))
+			s.NoError(batch2.Put(testKey2, testVal2))
 		}
 	}
-	assert.NoError(t, batch.Write())
-	assert.NoError(t, batch2.Write())
+	s.NoError(batch.Write())
+	s.NoError(batch2.Write())
 
 	// check if exist
 	for i := 0; i < itemNum; i++ {
 		// dynamodb 1 - check if wrote key and val
 		returnedVal, returnedErr := dynamo.Get(testKeys[i])
-		assert.NoError(t, returnedErr)
-		assert.Equal(t, hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
+		s.NoError(returnedErr)
+		s.Equal(hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
 		// dynamodb 1 - check if not wrote key2 and val2
 		returnedVal, returnedErr = dynamo.Get(testKeys2[i])
-		assert.Nil(t, returnedVal, "the entry should not be put in this table")
+		s.Nil(returnedVal, "the entry should not be put in this table")
 
 		// dynamodb 2 - check if wrote key2 and val2
 		returnedVal, returnedErr = dynamo2.Get(testKeys2[i])
-		assert.NoError(t, returnedErr)
-		assert.Equal(t, hexutil.Encode(testVals2[i]), hexutil.Encode(returnedVal))
+		s.NoError(returnedErr)
+		s.Equal(hexutil.Encode(testVals2[i]), hexutil.Encode(returnedVal))
 		// dynamodb 2 - check if not wrote key and val
 		returnedVal, returnedErr = dynamo2.Get(testKeys[i])
-		assert.Nil(t, returnedVal, "the entry should not be put in this table")
+		s.Nil(returnedVal, "the entry should not be put in this table")
 	}
 }
 

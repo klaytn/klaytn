@@ -72,6 +72,7 @@ type DynamoDBConfig struct {
 	TableName          string
 	Region             string // AWS region
 	Endpoint           string // Where DynamoDB reside
+	S3Endpoint         string // Where S3 reside
 	IsProvisioned      bool   // Billing mode
 	ReadCapacityUnits  int64  // read capacity when provisioned
 	WriteCapacityUnits int64  // write capacity when provisioned
@@ -103,16 +104,33 @@ type DynamoData struct {
 	Val []byte `json:"Val" dynamodbav:"Val"`
 }
 
-// TODO-Klaytn: remove the test config when flag setting is completed
-/*
- * Please Run DynamoDB local with docker
- * $ docker pull amazon/dynamodb-local
- * $ docker run -d -p 8000:8000 amazon/dynamodb-local
- */
+// GetTestDynamoConfig gets dynamo config for actual aws DynamoDB test
+//
+// If you use this config, you will be charged for what you use.
+// You need to set AWS credentials to access to dynamoDB.
+//    $ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//    $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
 		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com",
+		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
+		IsProvisioned:      false,
+		ReadCapacityUnits:  10000,
+		WriteCapacityUnits: 10000,
+		ReadOnly:           false,
+	}
+}
+
+// GetTestDynamoConfig gets dynamo config for local test
+//
+// Please Run DynamoDB local with docker
+//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
+func GetTestDynamoConfig() *DynamoDBConfig {
+	return &DynamoDBConfig{
+		Region:             "us-east-1",
+		Endpoint:           "http://localhost:4566",
+		S3Endpoint:         "http://localhost:4566",
 		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
 		IsProvisioned:      false,
 		ReadCapacityUnits:  10000,
@@ -140,10 +158,13 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if len(config.Endpoint) == 0 {
 		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
 	}
+	if len(config.S3Endpoint) == 0 {
+		config.S3Endpoint = "https://s3." + config.Region + ".amazonaws.com"
+	}
 
 	config.TableName = strings.ReplaceAll(config.TableName, "_", "-")
 
-	s3FileDB, err := newS3FileDB(config.Region, "https://s3."+config.Region+".amazonaws.com", config.TableName)
+	s3FileDB, err := newS3FileDB(config.Region, config.S3Endpoint, config.TableName)
 	if err != nil {
 		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName)
 		return nil, err
@@ -152,8 +173,9 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if dynamoDBClient == nil {
 		dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
 			Config: aws.Config{
-				Endpoint: aws.String(config.Endpoint),
-				Region:   aws.String(config.Region),
+				Endpoint:         aws.String(config.Endpoint),
+				Region:           aws.String(config.Region),
+				S3ForcePathStyle: aws.Bool(true),
 			},
 		})))
 	}
