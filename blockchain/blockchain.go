@@ -1711,8 +1711,9 @@ func (bc *BlockChain) BlockSubscriptionLoop(pool *TxPool) {
 	logger.Info("subscribe blocks from redis cache")
 
 	pubSub, ok := bc.stateCache.TrieDB().TrieNodeCache().(statedb.BlockPubSub)
-	if !ok {
-		logger.Error("invalid block pub/sub configure", "trieNodeCacheConfig", bc.stateCache.TrieDB().GetTrieNodeCacheConfig())
+	if !ok || pubSub == nil {
+		logger.Crit("invalid block pub/sub configure", "trieNodeCacheConfig",
+			bc.stateCache.TrieDB().GetTrieNodeCacheConfig())
 	}
 
 	ch = pubSub.SubscribeBlockCh()
@@ -1747,6 +1748,7 @@ func (bc *BlockChain) BlockSubscriptionLoop(pool *TxPool) {
 		// 	pool.lockedReset(oldHead, bc.CurrentHeader())
 		// }
 	}
+	logger.Info("close the block subscription loop")
 }
 
 // CloseBlockSubscriptionLoop closes BlockSubscriptionLoop.
