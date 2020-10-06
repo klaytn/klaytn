@@ -315,6 +315,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// set worker
 	if config.WorkerDisable {
+		// TODO Klaytn: implement auto restart when the fake worker is used
 		cn.miner = work.NewFakeWorker()
 	} else {
 		var restartFn func()
