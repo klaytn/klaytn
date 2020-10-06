@@ -137,7 +137,7 @@ var (
 	}
 	WorkerDisableFlag = cli.BoolFlag{
 		Name:  "worker.disable",
-		Usage: "Disables worker",
+		Usage: "Disables worker. This flag results in block processing failure.",
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{

@@ -85,7 +85,7 @@ type Config struct {
 	NetworkId     uint64 // Network ID to use for selecting peers to connect to
 	SyncMode      downloader.SyncMode
 	NoPruning     bool
-	WorkerDisable bool
+	WorkerDisable bool // disables worker and does not start istanbul
 
 	// block processing options
 	DownloaderDisable bool
