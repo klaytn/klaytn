@@ -1245,7 +1245,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		bc.cachedStateDB = stateDB
 	}
 
-	// Publish the committed Block to the redis cache of stateDB.
+	// Publish the committed block to the redis cache of stateDB.
 	// The cache uses the block to distinguish the latest state.
 	if bc.cacheConfig.TrieNodeCacheConfig.RedisPublishBlockEnable {
 		blockRlp, err := rlp.EncodeToBytes(block)
