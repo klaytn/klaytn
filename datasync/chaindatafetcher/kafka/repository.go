@@ -58,14 +58,14 @@ func (r *repository) HandleChainEvent(event blockchain.ChainEvent, dataType type
 	switch dataType {
 	case types.RequestTypeBlockGroup:
 		output := makeBlockGroupOutput(r.blockchain, event.Block, event.Receipts)
-		return r.kafka.Publish(r.kafka.getTopicName("blockgroup"), output)
+		return r.kafka.Publish(r.kafka.getTopicName(EventBlockGroup), output)
 	case types.RequestTypeTraceGroup:
 		if len(event.InternalTxTraces) > 0 {
 			result := &blockTraceResult{
 				BlockNumber:      event.Block.Number(),
 				InternalTxTraces: event.InternalTxTraces,
 			}
-			return r.kafka.Publish(r.kafka.getTopicName("tracegroup"), result)
+			return r.kafka.Publish(r.kafka.getTopicName(EventTraceBroup), result)
 		}
 		return nil
 	default:
