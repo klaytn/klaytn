@@ -50,8 +50,6 @@ var FlagGroups = []FlagGroup{
 			OverwriteGenesisFlag,
 			DownloaderDisableFlag,
 			FetcherDisableFlag,
-			TrieNodeCacheRedisPublishBlockFlag,
-			TrieNodeCacheRedisSubscribeBlockFlag,
 		},
 	},
 	{
@@ -181,6 +179,8 @@ var FlagGroups = []FlagGroup{
 			TrieNodeCacheLimitFlag,
 			TrieNodeCacheRedisEndpointsFlag,
 			TrieNodeCacheRedisClusterFlag,
+			TrieNodeCacheRedisPublishBlockFlag,
+			TrieNodeCacheRedisSubscribeBlockFlag,
 		},
 	},
 	{
