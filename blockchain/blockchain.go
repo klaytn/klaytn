@@ -1755,7 +1755,10 @@ func (bc *BlockChain) BlockSubscriptionLoop(pool *TxPool) {
 func (bc *BlockChain) CloseBlockSubscriptionLoop() {
 	pubSub, ok := bc.stateCache.TrieDB().TrieNodeCache().(statedb.BlockPubSub)
 	if ok {
-		_ = pubSub.UnsubscribeBlock()
+		if err := pubSub.UnsubscribeBlock(); err != nil {
+			logger.Error("failed to unsubscribe blocks", "err", err, "trieNodeCacheConfig",
+				bc.stateCache.TrieDB().GetTrieNodeCacheConfig())
+		}
 	}
 }
 
