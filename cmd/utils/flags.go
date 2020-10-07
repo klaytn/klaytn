@@ -769,7 +769,7 @@ var (
 		Usage: "The number of partitions in a topic",
 		Value: kafka.DefaultPartitions,
 	}
-	ChainDataFetcherKafkaMaxMessageBytes = cli.Int64Flag{
+	ChainDataFetcherKafkaMaxMessageBytesFlag = cli.Int64Flag{
 		Name:  "chaindatafetcher.kafka.max.message.bytes",
 		Usage: "Kafka producer max size of a message",
 		Value: kafka.DefaultMaxMessageBytes,
