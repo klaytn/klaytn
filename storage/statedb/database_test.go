@@ -29,7 +29,7 @@ var parentHash = common.HexToHash("1343A3F") // 20199999 in hexadecimal
 
 func TestDatabase_Reference(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithNewCache(memDB, TrieNodeCacheConfig{CacheTypeLocal, 128, "", nil, false})
+	db := NewDatabaseWithNewCache(memDB, TrieNodeCacheConfig{CacheType: CacheTypeLocal, LocalCacheSizeMB: 128})
 
 	assert.Equal(t, memDB, db.DiskDB())
 	assert.Equal(t, 1, len(db.nodes)) // {} : {}
@@ -57,7 +57,7 @@ func TestDatabase_Reference(t *testing.T) {
 
 func TestDatabase_DeReference(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithNewCache(memDB, TrieNodeCacheConfig{CacheTypeLocal, 128, "", nil, false})
+	db := NewDatabaseWithNewCache(memDB, TrieNodeCacheConfig{CacheType: CacheTypeLocal, LocalCacheSizeMB: 128})
 	assert.Equal(t, 1, len(db.nodes)) // {} : {}
 
 	db.Dereference(parentHash)
@@ -87,7 +87,7 @@ func TestDatabase_DeReference(t *testing.T) {
 
 func TestDatabase_Size(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithNewCache(memDB, TrieNodeCacheConfig{CacheTypeLocal, 128, "", nil, false})
+	db := NewDatabaseWithNewCache(memDB, TrieNodeCacheConfig{CacheType: CacheTypeLocal, LocalCacheSizeMB: 128})
 
 	totalMemorySize, preimagesSize := db.Size()
 	assert.Equal(t, common.StorageSize(0), totalMemorySize)
@@ -112,7 +112,7 @@ func TestDatabase_Size(t *testing.T) {
 
 func TestDatabase_SecureKey(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithNewCache(memDB, TrieNodeCacheConfig{CacheTypeLocal, 128, "", nil, false})
+	db := NewDatabaseWithNewCache(memDB, TrieNodeCacheConfig{CacheType: CacheTypeLocal, LocalCacheSizeMB: 128})
 
 	secKey1 := db.secureKey(childHash[:])
 	copiedSecKey := make([]byte, 0, len(secKey1))
@@ -126,7 +126,7 @@ func TestDatabase_SecureKey(t *testing.T) {
 
 func TestCache(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
-	db := NewDatabaseWithNewCache(memDB, TrieNodeCacheConfig{CacheTypeLocal, 10, "", nil, false})
+	db := NewDatabaseWithNewCache(memDB, TrieNodeCacheConfig{CacheType: CacheTypeLocal, LocalCacheSizeMB: 10})
 
 	for i := 0; i < 100; i++ {
 		key, value := common.MakeRandomBytes(256), common.MakeRandomBytes(63*1024) // fastcache can store entrie under 64KB

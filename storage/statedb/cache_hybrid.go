@@ -16,31 +16,33 @@
 
 package statedb
 
+import "github.com/go-redis/redis/v7"
+
 func NewHybridCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
 	redis, err := NewRedisCache(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &hybridCache{
+	return &HybridCache{
 		local:  NewFastCache(config),
 		remote: redis,
 	}, nil
 }
 
-// hybridCache integrates two kinds of caches: local, remote.
+// HybridCache integrates two kinds of caches: local, remote.
 // local cache uses memory of the local machine and remote cache uses memory of the remote machine.
-type hybridCache struct {
+type HybridCache struct {
 	local  TrieNodeCache
-	remote TrieNodeCache
+	remote *RedisCache
 }
 
-func (cache *hybridCache) Set(k, v []byte) {
+func (cache *HybridCache) Set(k, v []byte) {
 	cache.local.Set(k, v)
 	cache.remote.Set(k, v)
 }
 
-func (cache *hybridCache) Get(k []byte) []byte {
+func (cache *HybridCache) Get(k []byte) []byte {
 	ret := cache.local.Get(k)
 	if ret != nil {
 		return ret
@@ -48,7 +50,7 @@ func (cache *hybridCache) Get(k []byte) []byte {
 	return cache.remote.Get(k)
 }
 
-func (cache *hybridCache) Has(k []byte) ([]byte, bool) {
+func (cache *HybridCache) Has(k []byte) ([]byte, bool) {
 	ret, has := cache.local.Has(k)
 	if has {
 		return ret, has
@@ -56,20 +58,39 @@ func (cache *hybridCache) Has(k []byte) ([]byte, bool) {
 	return cache.remote.Has(k)
 }
 
-func (cache *hybridCache) UpdateStats() interface{} {
+func (cache *HybridCache) UpdateStats() interface{} {
 	type stats struct {
 		local  interface{}
 		remote interface{}
 	}
-
 	return stats{cache.local.UpdateStats(), cache.remote.UpdateStats()}
 }
 
-func (cache *hybridCache) SaveToFile(filePath string, concurrency int) error {
+func (cache *HybridCache) SaveToFile(filePath string, concurrency int) error {
 	if err := cache.local.SaveToFile(filePath, concurrency); err != nil {
 		logger.Error("failed to save local cache to file",
 			"filePath", filePath, "concurrency", concurrency, "err", err)
 		return err
 	}
 	return nil
+}
+
+func (cache *HybridCache) PublishBlock(msg string) error {
+	return cache.remote.PublishBlock(msg)
+}
+
+func (cache *HybridCache) SubscribeBlockCh() <-chan *redis.Message {
+	return cache.remote.SubscribeBlockCh()
+}
+
+func (cache *HybridCache) UnsubscribeBlock() error {
+	return cache.remote.UnsubscribeBlock()
+}
+
+func (cache *HybridCache) Close() error {
+	err := cache.local.Close()
+	if err != nil {
+		return err
+	}
+	return cache.remote.Close()
 }

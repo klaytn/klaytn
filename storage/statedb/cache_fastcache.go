@@ -37,7 +37,7 @@ var (
 )
 
 type FastCache struct {
-	cache *fastcache.Cache
+	fast *fastcache.Cache
 }
 
 // NewFastCache creates a FastCache with given cache size.
@@ -52,7 +52,7 @@ func NewFastCache(config TrieNodeCacheConfig) TrieNodeCache {
 		return nil
 	}
 
-	fc := &FastCache{cache: fastcache.LoadFromFileOrNew(config.FastCacheFileDir, config.LocalCacheSizeMB*1024*1024)} // Convert MB to Byte
+	fc := &FastCache{fast: fastcache.LoadFromFileOrNew(config.FastCacheFileDir, config.LocalCacheSizeMB*1024*1024)} // Convert MB to Byte
 	stats := fc.UpdateStats().(fastcache.Stats)
 
 	logger.Info("Initialize local trie node cache (fastCache)",
@@ -61,21 +61,21 @@ func NewFastCache(config TrieNodeCacheConfig) TrieNodeCache {
 	return fc
 }
 
-func (l *FastCache) Get(k []byte) []byte {
-	return l.cache.Get(nil, k)
+func (cache *FastCache) Get(k []byte) []byte {
+	return cache.fast.Get(nil, k)
 }
 
-func (l *FastCache) Set(k, v []byte) {
-	l.cache.Set(k, v)
+func (cache *FastCache) Set(k, v []byte) {
+	cache.fast.Set(k, v)
 }
 
-func (l *FastCache) Has(k []byte) ([]byte, bool) {
-	return l.cache.HasGet(nil, k)
+func (cache *FastCache) Has(k []byte) ([]byte, bool) {
+	return cache.fast.HasGet(nil, k)
 }
 
-func (l *FastCache) UpdateStats() interface{} {
+func (cache *FastCache) UpdateStats() interface{} {
 	var stats fastcache.Stats
-	l.cache.UpdateStats(&stats)
+	cache.fast.UpdateStats(&stats)
 
 	memcacheFastMisses.Update(int64(stats.Misses))
 	memcacheFastCollisions.Update(int64(stats.Collisions))
@@ -92,6 +92,10 @@ func (l *FastCache) UpdateStats() interface{} {
 	return stats
 }
 
-func (l *FastCache) SaveToFile(filePath string, concurrency int) error {
-	return l.cache.SaveToFileConcurrent(filePath, concurrency)
+func (cache *FastCache) SaveToFile(filePath string, concurrency int) error {
+	return cache.fast.SaveToFileConcurrent(filePath, concurrency)
+}
+
+func (cache *FastCache) Close() error {
+	return nil
 }

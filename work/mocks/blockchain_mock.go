@@ -76,6 +76,30 @@ func (mr *MockBlockChainMockRecorder) BadBlocks() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BadBlocks", reflect.TypeOf((*MockBlockChain)(nil).BadBlocks))
 }
 
+// BlockSubscriptionLoop mocks base method
+func (m *MockBlockChain) BlockSubscriptionLoop(arg0 *blockchain.TxPool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "BlockSubscriptionLoop", arg0)
+}
+
+// BlockSubscriptionLoop indicates an expected call of BlockSubscriptionLoop
+func (mr *MockBlockChainMockRecorder) BlockSubscriptionLoop(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockSubscriptionLoop", reflect.TypeOf((*MockBlockChain)(nil).BlockSubscriptionLoop), arg0)
+}
+
+// CloseBlockSubscriptionLoop mocks base method
+func (m *MockBlockChain) CloseBlockSubscriptionLoop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CloseBlockSubscriptionLoop")
+}
+
+// CloseBlockSubscriptionLoop indicates an expected call of CloseBlockSubscriptionLoop
+func (mr *MockBlockChainMockRecorder) CloseBlockSubscriptionLoop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseBlockSubscriptionLoop", reflect.TypeOf((*MockBlockChain)(nil).CloseBlockSubscriptionLoop))
+}
+
 // Config mocks base method
 func (m *MockBlockChain) Config() *params.ChainConfig {
 	m.ctrl.T.Helper()

@@ -312,6 +312,14 @@ var (
 		Name:  "statedb.cache.redis.cluster",
 		Usage: "Enables cluster-enabled mode of redis trie node cache",
 	}
+	TrieNodeCacheRedisPublishBlockFlag = cli.BoolFlag{
+		Name:  "statedb.cache.redis.publish",
+		Usage: "Publishes every committed block to redis trie node cache",
+	}
+	TrieNodeCacheRedisSubscribeBlockFlag = cli.BoolFlag{
+		Name:  "statedb.cache.redis.subscribe",
+		Usage: "Subscribes blocks from redis trie node cache",
+	}
 	TrieNodeCacheLimitFlag = cli.IntFlag{
 		Name:  "state.trie-cache-limit",
 		Usage: "Memory allowance (MB) to use for caching trie nodes in memory. -1 is for auto-scaling",
@@ -1447,10 +1455,12 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
-		LocalCacheSizeMB:   ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
-		FastCacheFileDir:   ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
-		RedisEndpoints:     ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
-		RedisClusterEnable: ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
+		LocalCacheSizeMB:          ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
+		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
+		RedisEndpoints:            ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
+		RedisClusterEnable:        ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
+		RedisPublishBlockEnable:   ctx.GlobalBool(TrieNodeCacheRedisPublishBlockFlag.Name),
+		RedisSubscribeBlockEnable: ctx.GlobalBool(TrieNodeCacheRedisSubscribeBlockFlag.Name),
 	}
 
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {

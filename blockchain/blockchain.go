@@ -32,6 +32,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/go-redis/redis/v7"
+	"github.com/klaytn/klaytn/common/hexutil"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -819,14 +822,17 @@ func (bc *BlockChain) Stop() {
 	}
 	// Unsubscribe all subscriptions registered from blockchain
 	bc.scope.Close()
+	if bc.cacheConfig.TrieNodeCacheConfig.RedisSubscribeBlockEnable {
+		bc.CloseBlockSubscriptionLoop()
+	}
+
 	close(bc.quit)
 	atomic.StoreInt32(&bc.procInterrupt, 1)
 
 	bc.wg.Wait()
 
+	triedb := bc.stateCache.TrieDB()
 	if !bc.isArchiveMode() {
-		triedb := bc.stateCache.TrieDB()
-
 		number := bc.CurrentBlock().NumberU64()
 		recent := bc.GetBlockByNumber(number)
 		if recent == nil {
@@ -846,6 +852,10 @@ func (bc *BlockChain) Stop() {
 			logger.Error("Dangling trie nodes after full cleanup")
 		}
 	}
+	if triedb.TrieNodeCache() != nil {
+		_ = triedb.TrieNodeCache().Close()
+	}
+
 	logger.Info("Blockchain manager stopped")
 }
 
@@ -1233,6 +1243,24 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		bc.lastUpdatedRootHash = block.Root()
 		stateDB.UpdateCachedStateObjects(block.Root())
 		bc.cachedStateDB = stateDB
+	}
+
+	// Publish the committed block to the redis cache of stateDB.
+	// The cache uses the block to distinguish the latest state.
+	if bc.cacheConfig.TrieNodeCacheConfig.RedisPublishBlockEnable {
+		blockRlp, err := rlp.EncodeToBytes(block)
+		if err != nil {
+			logger.Error("failed to encode lastCommittedBlock", "blockNumber", block.NumberU64(), "err", err)
+		}
+
+		pubSub, ok := bc.stateCache.TrieDB().TrieNodeCache().(statedb.BlockPubSub)
+		if ok {
+			if err := pubSub.PublishBlock(hexutil.Encode(blockRlp)); err != nil {
+				logger.Error("failed to publish block to redis", "blockNumber", block.NumberU64(), "err", err)
+			}
+		} else {
+			logger.Error("invalid TrieNodeCache type", "trieNodeCacheConfig", bc.cacheConfig.TrieNodeCacheConfig)
+		}
 	}
 
 	return status, err
@@ -1675,6 +1703,98 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	}
 	return 0, events, coalescedLogs, nil
 }
+
+// BlockSubscriptionLoop subscribes blocks from a redis server and processes them.
+// This method is only for KES nodes.
+func (bc *BlockChain) BlockSubscriptionLoop(pool *TxPool) {
+	var ch <-chan *redis.Message
+	logger.Info("subscribe blocks from redis cache")
+
+	pubSub, ok := bc.stateCache.TrieDB().TrieNodeCache().(statedb.BlockPubSub)
+	if !ok || pubSub == nil {
+		logger.Crit("invalid block pub/sub configure", "trieNodeCacheConfig",
+			bc.stateCache.TrieDB().GetTrieNodeCacheConfig())
+	}
+
+	ch = pubSub.SubscribeBlockCh()
+	if ch == nil {
+		logger.Crit("failed to create redis subscription channel")
+	}
+
+	for msg := range ch {
+		logger.Debug("msg from redis subscription channel", "msg", msg.Payload)
+
+		blockRlp, err := hexutil.Decode(msg.Payload)
+		if err != nil {
+			logger.Error("failed to decode redis subscription msg", "msg", msg.Payload)
+			continue
+		}
+
+		block := &types.Block{}
+		if err := rlp.DecodeBytes(blockRlp, block); err != nil {
+			logger.Error("failed to rlp decode block", "msg", msg.Payload, "block", string(blockRlp))
+			continue
+		}
+
+		// TODO-Klaytn-KES: implement block handling logic
+		// if bc.cacheConfig.TrieNodeCacheConfig.ProcessBlock {
+		// 	_, err := bc.InsertChain(types.Blocks{block})
+		// 	if err != nil {
+		// 		logger.Crit("failed to insert a block", "err", err)
+		// 	}
+		// } else {
+		// 	oldHead := bc.CurrentHeader()
+		// 	bc.replaceCurrentBlock(block)
+		// 	pool.lockedReset(oldHead, bc.CurrentHeader())
+		// }
+	}
+	logger.Info("close the block subscription loop")
+}
+
+// CloseBlockSubscriptionLoop closes BlockSubscriptionLoop.
+func (bc *BlockChain) CloseBlockSubscriptionLoop() {
+	pubSub, ok := bc.stateCache.TrieDB().TrieNodeCache().(statedb.BlockPubSub)
+	if ok {
+		if err := pubSub.UnsubscribeBlock(); err != nil {
+			logger.Error("failed to unsubscribe blocks", "err", err, "trieNodeCacheConfig",
+				bc.stateCache.TrieDB().GetTrieNodeCacheConfig())
+		}
+	}
+}
+
+// replaceCurrentBlock replaces bc.currentBlock to the given block.
+// func (bc *BlockChain) replaceCurrentBlock(latestBlock *types.Block) {
+// 	bc.mu.Lock()
+// 	defer bc.mu.Unlock()
+//
+// 	if latestBlock == nil {
+// 		logger.Error("no latest block")
+// 		return
+// 	}
+//
+// 	// Return early if it is the first block update.
+// 	currentBlock := bc.CurrentBlock()
+// 	if currentBlock == nil {
+// 		bc.insert(latestBlock)
+// 		logger.Info("inserted an initial block", "blockNumber", latestBlock.NumberU64(),
+// 			"hash", latestBlock.Hash().String(), "stateRoot", latestBlock.Root().String())
+// 		return
+// 	}
+//
+// 	// Don't update current block if the latest block is not newer than current block.
+// 	if currentBlock.NumberU64() >= latestBlock.NumberU64() {
+// 		logger.Debug("")
+// 		return
+// 	}
+//
+// 	// Insert a new block and update metrics
+// 	bc.insert(latestBlock)
+// 	headBlockNumberGauge.Update(latestBlock.Number().Int64())
+// 	bc.stateCache.TrieDB().UpdateMetricNodes()
+//
+// 	logger.Info("inserted a new block", "prevBlockNumber", currentBlock.NumberU64(), "blockNumber",
+// 		latestBlock.NumberU64(), "hash", latestBlock.Hash().String(), "stateRoot", latestBlock.Root().String())
+// }
 
 // insertStats tracks and reports on block insertion.
 type insertStats struct {
