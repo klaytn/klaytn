@@ -24,7 +24,6 @@ import (
 type FakeWorker struct{}
 
 // NewFakeWorker disables mining and block processing
-//
 // worker and istanbul engine will not be started.
 func NewFakeWorker() *FakeWorker {
 	logger.Warn("worker is disabled; no processing according to consensus logic")
