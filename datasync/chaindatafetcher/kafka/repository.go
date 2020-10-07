@@ -39,7 +39,7 @@ type repository struct {
 func NewRepository(config *KafkaConfig) (*repository, error) {
 	kafka, err := NewKafka(config)
 	if err != nil {
-		logger.Error("Failed to create a new Kafka structure", "err", err, "brokers", config.Brokers, "partitions", config.Partitions, "replicas")
+		logger.Error("Failed to create a new Kafka structure", "err", err, "brokers", config.Brokers, "partitions", config.Partitions, "replicas", config.Replicas, "maxMessageBytes", config.SaramaConfig.Producer.MaxMessageBytes, "requiredAcks", config.SaramaConfig.Producer.RequiredAcks)
 		return nil, err
 	}
 	return &repository{

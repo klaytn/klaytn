@@ -171,6 +171,8 @@ var KENFlags = []cli.Flag{
 	utils.ChainDataFetcherKafkaPartitionsFlag,
 	utils.ChainDataFetcherKafkaTopicResourceFlag,
 	utils.ChainDataFetcherKafkaTopicEnvironmentFlag,
+	utils.ChainDataFetcherKafkaMaxMessageBytes,
+	utils.ChainDataFetcherKafkaRequiredAcksFlag,
 	// DBSyncer
 	utils.EnableDBSyncerFlag,
 	utils.DBHostFlag,

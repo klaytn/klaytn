@@ -30,6 +30,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/Shopify/sarama"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
@@ -226,6 +227,12 @@ func makeKafkaConfig(ctx *cli.Context) *kafka.KafkaConfig {
 	kafkaConfig.TopicResourceName = ctx.GlobalString(utils.ChainDataFetcherKafkaTopicResourceFlag.Name)
 	kafkaConfig.Partitions = int32(ctx.GlobalInt64(utils.ChainDataFetcherKafkaPartitionsFlag.Name))
 	kafkaConfig.Replicas = int16(ctx.GlobalInt64(utils.ChainDataFetcherKafkaReplicasFlag.Name))
+	kafkaConfig.SaramaConfig.Producer.MaxMessageBytes = ctx.GlobalInt(utils.ChainDataFetcherKafkaMaxMessageBytes.Name)
+	requiredAcks := sarama.RequiredAcks(ctx.GlobalInt(utils.ChainDataFetcherKafkaRequiredAcksFlag.Name))
+	if requiredAcks != sarama.NoResponse && requiredAcks != sarama.WaitForLocal && requiredAcks != sarama.WaitForAll {
+		logger.Crit("not supported requiredAcks. it must be NoResponse(0), WaitForLocal(1), or WaitForAll(-1)", "given", requiredAcks)
+	}
+	kafkaConfig.SaramaConfig.Producer.RequiredAcks = requiredAcks
 	return kafkaConfig
 }
 
