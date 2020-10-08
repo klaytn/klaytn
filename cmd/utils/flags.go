@@ -773,13 +773,23 @@ var (
 	}
 	ChainDataFetcherKafkaReplicasFlag = cli.Int64Flag{
 		Name:  "chaindatafetcher.kafka.replicas",
-		Usage: "Kafka replicas",
+		Usage: "Kafka partition replication factor",
 		Value: kafka.DefaultReplicas,
 	}
-	ChainDataFetcherKafkaPartitionsFlag = cli.Int64Flag{
+	ChainDataFetcherKafkaPartitionsFlag = cli.IntFlag{
 		Name:  "chaindatafetcher.kafka.partitions",
-		Usage: "Kafka broker partition number",
+		Usage: "The number of partitions in a topic",
 		Value: kafka.DefaultPartitions,
+	}
+	ChainDataFetcherKafkaMaxMessageBytesFlag = cli.Int64Flag{
+		Name:  "chaindatafetcher.kafka.max.message.bytes",
+		Usage: "The max size of a message produced by Kafka producer ",
+		Value: kafka.DefaultMaxMessageBytes,
+	}
+	ChainDataFetcherKafkaRequiredAcksFlag = cli.IntFlag{
+		Name:  "chaindatafetcher.kafka.required.acks",
+		Usage: "The level of acknowledgement reliability needed from Kafka broker (0: NoResponse, 1: WaitForLocal, -1: WaitForAll)",
+		Value: kafka.DefaultRequiredAcks,
 	}
 	// DBSyncer
 	EnableDBSyncerFlag = cli.BoolFlag{

@@ -142,6 +142,8 @@ var FlagGroups = []FlagGroup{
 			ChainDataFetcherKafkaTopicResourceFlag,
 			ChainDataFetcherKafkaReplicasFlag,
 			ChainDataFetcherKafkaPartitionsFlag,
+			ChainDataFetcherKafkaMaxMessageBytesFlag,
+			ChainDataFetcherKafkaRequiredAcksFlag,
 		},
 	},
 	{

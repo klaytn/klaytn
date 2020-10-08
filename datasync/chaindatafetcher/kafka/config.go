@@ -38,6 +38,8 @@ const (
 	DefaultPartitions           = 1
 	DefaultTopicEnvironmentName = "local"
 	DefaultTopicResourceName    = "en-0"
+	DefaultMaxMessageBytes      = 1000000
+	DefaultRequiredAcks         = 1
 )
 
 type KafkaConfig struct {
@@ -52,8 +54,12 @@ type KafkaConfig struct {
 func GetDefaultKafkaConfig() *KafkaConfig {
 	// TODO-ChainDataFetcher add more configuration if necessary
 	config := sarama.NewConfig()
+	// The following configurations should be true
+	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
 	config.Version = sarama.MaxVersion
+	config.Producer.MaxMessageBytes = DefaultMaxMessageBytes
+	config.Producer.RequiredAcks = sarama.RequiredAcks(DefaultRequiredAcks)
 	return &KafkaConfig{
 		SaramaConfig:         config,
 		TopicEnvironmentName: DefaultTopicEnvironmentName,
@@ -65,4 +71,9 @@ func GetDefaultKafkaConfig() *KafkaConfig {
 
 func (c *KafkaConfig) getTopicName(event string) string {
 	return fmt.Sprintf("%v.%v.%v.%v.%v.%v", c.TopicEnvironmentName, topicProjectName, topicServiceName, c.TopicResourceName, event, topicVersion)
+}
+
+func (c *KafkaConfig) String() string {
+	return fmt.Sprintf("brokers: %v, topicEnvironment: %v, topicResourceName: %v, partitions: %v, replicas: %v, maxMessageBytes: %v, requiredAcks: %v",
+		c.Brokers, c.TopicEnvironmentName, c.TopicResourceName, c.Partitions, c.Replicas, c.SaramaConfig.Producer.MaxMessageBytes, c.SaramaConfig.Producer.RequiredAcks)
 }
