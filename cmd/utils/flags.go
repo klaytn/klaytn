@@ -771,7 +771,7 @@ var (
 	}
 	ChainDataFetcherKafkaMaxMessageBytesFlag = cli.Int64Flag{
 		Name:  "chaindatafetcher.kafka.max.message.bytes",
-		Usage: "Kafka producer max size of a message",
+		Usage: "The max size of a message produced by Kafka producer ",
 		Value: kafka.DefaultMaxMessageBytes,
 	}
 	ChainDataFetcherKafkaRequiredAcksFlag = cli.IntFlag{
