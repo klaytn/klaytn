@@ -593,8 +593,6 @@ func (dbm *databaseManager) setStateTrieMigrationStatus(blockNum uint64) {
 	if err := miscDB.Put(migrationStatusKey, common.Int64ToByteBigEndian(blockNum)); err != nil {
 		logger.Crit("Failed to set state trie migration status", "err", err)
 	}
-	dbm.lockInMigration.Lock()
-	defer dbm.lockInMigration.Unlock()
 
 	if blockNum == 0 {
 		dbm.inMigration = false
@@ -640,6 +638,8 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 	// Create a new database for migration process.
 	newDB, newDBDir := newStateTrieMigrationDB(dbm.config, blockNum)
 
+	dbm.lockInMigration.Lock()
+
 	// Store migration db path in misc db
 	dbm.setDBDir(StateTrieMigrationDB, newDBDir)
 
@@ -648,6 +648,7 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 
 	// Store the migration status
 	dbm.setStateTrieMigrationStatus(blockNum)
+	dbm.lockInMigration.Unlock()
 
 	return nil
 }
@@ -655,6 +656,8 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 // FinishStateMigration updates stateTrieDB and removes the old one.
 // The function should be called only after when state trie migration is finished.
 func (dbm *databaseManager) FinishStateMigration(succeed bool) {
+	dbm.lockInMigration.Lock()
+
 	dbRemoved := StateTrieDB
 	dbUsed := StateTrieMigrationDB
 
@@ -678,6 +681,9 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) {
 
 	dbPathToBeRemoved := filepath.Join(dbm.config.Dir, dbDirToBeRemoved)
 	dbToBeRemoved.Close()
+
+	dbm.lockInMigration.Unlock()
+
 	removeDB(dbPathToBeRemoved)
 }
 
