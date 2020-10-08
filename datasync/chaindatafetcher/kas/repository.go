@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/networks/rpc"
 )
 
 const (
@@ -93,10 +94,19 @@ func NewRepository(config *KASConfig) (*repository, error) {
 	return nil, err
 }
 
+func (r *repository) setBlockchainAPI(apis []rpc.API) {
+	for _, a := range apis {
+		switch s := a.Service.(type) {
+		case *api.PublicBlockChainAPI:
+			r.blockchainApi = s
+		}
+	}
+}
+
 func (r *repository) SetComponent(component interface{}) {
 	switch c := component.(type) {
-	case *api.PublicBlockChainAPI:
-		r.blockchainApi = c
+	case []rpc.API:
+		r.setBlockchainAPI(c)
 	}
 }
 

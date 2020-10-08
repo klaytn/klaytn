@@ -303,7 +303,7 @@ func (f *ChainDataFetcher) Components() []interface{} {
 	return nil
 }
 
-func (f *ChainDataFetcher) setAPIs(apis []rpc.API) {
+func (f *ChainDataFetcher) setDebugAPI(apis []rpc.API) {
 	for _, a := range apis {
 		switch s := a.Service.(type) {
 		case *cn.PrivateDebugAPI:
@@ -325,7 +325,7 @@ func (f *ChainDataFetcher) setComponent(component interface{}) {
 	case *blockchain.BlockChain:
 		f.blockchain = v
 	case []rpc.API:
-		f.setAPIs(v)
+		f.setDebugAPI(v)
 	}
 }
 
