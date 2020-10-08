@@ -82,9 +82,10 @@ type Config struct {
 	Genesis *blockchain.Genesis `toml:",omitempty"`
 
 	// Protocol options
-	NetworkId uint64 // Network ID to use for selecting peers to connect to
-	SyncMode  downloader.SyncMode
-	NoPruning bool
+	NetworkId     uint64 // Network ID to use for selecting peers to connect to
+	SyncMode      downloader.SyncMode
+	NoPruning     bool
+	WorkerDisable bool // disables worker and does not start istanbul
 
 	// KES options
 	DownloaderDisable bool

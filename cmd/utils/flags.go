@@ -135,6 +135,10 @@ var (
 		Name:  "overwrite-genesis",
 		Usage: "Overwrites genesis block with the given new genesis block for testing purpose",
 	}
+	WorkerDisableFlag = cli.BoolFlag{
+		Name:  "worker.disable",
+		Usage: "Disables worker. This flag results in block processing failure.",
+	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.nolocals",
@@ -1378,6 +1382,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		}
 	}
 
+	cfg.WorkerDisable = ctx.GlobalBool(WorkerDisableFlag.Name)
 	cfg.DownloaderDisable = ctx.GlobalBool(DownloaderDisableFlag.Name)
 	cfg.FetcherDisable = ctx.GlobalBool(FetcherDisableFlag.Name)
 
