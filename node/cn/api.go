@@ -196,8 +196,8 @@ func (api *PrivateAdminAPI) StateMigrationStatus() map[string]interface{} {
 	}
 }
 
-func (api *PrivateAdminAPI) SaveTrieNodeCacheToDisk(filePath string) error {
-	return api.cn.BlockChain().SaveTrieNodeCacheToDisk(filePath)
+func (api *PrivateAdminAPI) SaveTrieNodeCacheToDisk() error {
+	return api.cn.BlockChain().SaveTrieNodeCacheToDisk()
 }
 
 // PublicDebugAPI is the collection of Klaytn full node APIs exposed

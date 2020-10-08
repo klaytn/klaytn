@@ -24,8 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -115,8 +113,9 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache       TrieNodeCache       // GC friendly memory cache of trie node RLPs
-	trieNodeCacheConfig TrieNodeCacheConfig // Configuration of trieNodeCache
+	trieNodeCache                TrieNodeCache       // GC friendly memory cache of trie node RLPs
+	trieNodeCacheConfig          TrieNodeCacheConfig // Configuration of trieNodeCache
+	savingTrieNodeCacheTriggered bool                // Whether saving trie node cache has been triggered or not
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -1114,26 +1113,17 @@ func (db *Database) UpdateMetricNodes() {
 }
 
 var errDisabledTrieNodeCache = errors.New("trie node cache is disabled, nothing to save to file")
-var errNonEmptyDirectory = errors.New("target directory should be an empty directory")
+var errSavingTrieNodeCacheInProgress = errors.New("saving trie node cache has been triggered already")
 
 // SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when the node restarts
 func (db *Database) SaveTrieNodeCacheToFile(filePath string) error {
 	if db.trieNodeCache == nil {
 		return errDisabledTrieNodeCache
 	}
-	// Save the cache only if the given directory is an empty one
-	files, err := ioutil.ReadDir(filePath)
-	if err != nil && !os.IsNotExist(err) {
-		logger.Error("failed to read directory for saving cache to file",
-			"err", err, "filePath", filePath)
-		return err
+	if db.savingTrieNodeCacheTriggered {
+		return errSavingTrieNodeCacheInProgress
 	}
-	if len(files) != 0 {
-		logger.Error("target directory should be an empty directory",
-			"filePath", filePath, "numFiles", len(files))
-		return errNonEmptyDirectory
-	}
-
+	db.savingTrieNodeCacheTriggered = true
 	start := time.Now()
 	go func() {
 		logger.Info("start saving cache to file", "filePath", filePath)
@@ -1144,6 +1134,7 @@ func (db *Database) SaveTrieNodeCacheToFile(filePath string) error {
 			logger.Info("successfully saved cache to file",
 				"filePath", filePath, "elapsed", time.Since(start))
 		}
+		db.savingTrieNodeCacheTriggered = false
 	}()
 	return nil
 }
