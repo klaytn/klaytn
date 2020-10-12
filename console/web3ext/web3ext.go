@@ -294,7 +294,6 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'saveTrieNodeCacheToDisk',
 			call: 'admin_saveTrieNodeCacheToDisk',
-			params: 1,
 		}),
 	],
 	properties: [

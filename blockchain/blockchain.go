@@ -2221,12 +2221,8 @@ func (bc *BlockChain) GetNonceInCache(addr common.Address) (uint64, bool) {
 	return 0, false
 }
 
-func (bc *BlockChain) SaveTrieNodeCacheToDisk(filePath string) error {
-	if filePath == "" {
-		filePath = bc.db.GetDBConfig().Dir + "/fastcache"
-		logger.Warn("file path is not given, save the cache to the database dir",
-			"filePath", filePath)
-	}
+func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
+	filePath := bc.db.GetDBConfig().Dir + "/fastcache"
 	return bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(filePath)
 }
 

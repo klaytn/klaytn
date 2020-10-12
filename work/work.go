@@ -301,7 +301,7 @@ type BlockChain interface {
 	StopWarmUp() error
 
 	// Save trie node cache to this
-	SaveTrieNodeCacheToDisk(filePath string) error
+	SaveTrieNodeCacheToDisk() error
 
 	// KES
 	BlockSubscriptionLoop(pool *blockchain.TxPool)
