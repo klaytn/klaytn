@@ -656,6 +656,7 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 // FinishStateMigration updates stateTrieDB and removes the old one.
 // The function should be called only after when state trie migration is finished.
 func (dbm *databaseManager) FinishStateMigration(succeed bool) {
+	// lock to prevent from a conflict of state DB reading and state DB changing
 	dbm.lockInMigration.Lock()
 
 	dbRemoved := StateTrieDB
