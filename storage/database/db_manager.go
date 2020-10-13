@@ -26,7 +26,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/dgraph-io/badger"
 	"github.com/klaytn/klaytn/blockchain/types"
