@@ -361,7 +361,7 @@ jobs:
       - tagger-verify
 
   coverage:
-    executor: test-executor
+    executor: test-others-executor
     resource_class: xlarge
     steps:
       - install-ssh-alpine
