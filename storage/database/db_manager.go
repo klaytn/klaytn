@@ -686,7 +686,7 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) {
 
 	dbm.lockInMigration.Unlock()
 
-	removeDB(dbPathToBeRemoved)
+	go removeDB(dbPathToBeRemoved)
 }
 
 func removeDB(dbPath string) {
