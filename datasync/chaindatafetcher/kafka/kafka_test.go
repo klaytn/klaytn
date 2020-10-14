@@ -18,7 +18,9 @@ package kafka
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/json"
+	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
@@ -57,6 +59,43 @@ func (s *KafkaSuite) SetupTest() {
 
 func (s *KafkaSuite) TearDownTest() {
 	s.kfk.Close()
+}
+
+func (s *KafkaSuite) TestKafka_split() {
+	segmentSize := 3
+	s.kfk.config.SegmentSize = segmentSize
+
+	bytes := common.MakeRandomBytes(segmentSize - 1)
+	parts, size := s.kfk.split(bytes)
+	s.Equal(bytes, parts[0])
+	s.Equal(1, size)
+
+	bytes = common.MakeRandomBytes(segmentSize)
+	parts, size = s.kfk.split(bytes)
+	s.Equal(bytes, parts[0])
+	s.Equal(1, size)
+
+	bytes = common.MakeRandomBytes(2*segmentSize + 2)
+	parts, size = s.kfk.split(bytes)
+	s.Equal(bytes[:segmentSize], parts[0])
+	s.Equal(bytes[segmentSize:2*segmentSize], parts[1])
+	s.Equal(bytes[2*segmentSize:], parts[2])
+	s.Equal(3, size)
+}
+
+func (s *KafkaSuite) TestKafka_makeProducerMessage() {
+	data := common.MakeRandomBytes(100)
+	checksum := md5.Sum(data)
+	rand.Seed(time.Now().UnixNano())
+	totalSegments := rand.Uint64()
+	idx := rand.Uint64() % totalSegments
+	msg := s.kfk.makeProducerMessage(s.topic, data, idx, totalSegments)
+
+	s.Equal(s.topic, msg.Topic)
+	s.Equal(sarama.ByteEncoder(data), msg.Value)
+	s.Equal(totalSegments, bytesToInt(msg.Headers[MsgIdxTotalSegments].Value))
+	s.Equal(idx, bytesToInt(msg.Headers[MsgIdxSegmentIdx].Value))
+	s.Equal(checksum[:], msg.Headers[MsgIdxCheckSum].Value)
 }
 
 func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {
@@ -250,6 +289,44 @@ func (s *KafkaSuite) TestKafka_PubSubWith2DifferentGroups() {
 	// compare the results with the published data
 	s.Equal(expected, actual)
 	s.Equal(expected, actual2)
+}
+
+func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
+	numTests := 1
+	testBytesSize := 10
+	segmentSize := 3
+
+	// to calculate data length
+	data, _ := json.Marshal(&kafkaData{common.MakeRandomBytes(testBytesSize)})
+	totalSegments := len(data) / segmentSize
+
+	s.kfk.config.SegmentSize = segmentSize
+	topic := "test-message-segments"
+	s.kfk.CreateTopic(topic)
+
+	// publish random data
+	expected := s.publishRandomData(topic, numTests, testBytesSize)
+
+	var msgs []*sarama.ConsumerMessage
+	s.subscribeData(topic, "test-group-id", totalSegments, func(message *sarama.ConsumerMessage) error {
+		msgs = append(msgs, message)
+		return nil
+	})
+
+	s.Equal(totalSegments, len(msgs))
+	var actual []byte
+	for idx, msg := range msgs {
+		actual = append(actual, msg.Value...)
+		s.Equal(uint64(totalSegments), bytesToInt(msg.Headers[MsgIdxTotalSegments].Value))
+		s.Equal(uint64(idx), bytesToInt(msg.Headers[MsgIdxSegmentIdx].Value))
+		checksum := md5.Sum(msg.Value)
+		s.Equal(checksum[:], msg.Headers[MsgIdxCheckSum].Value)
+		s.Equal(topic, msg.Topic)
+	}
+
+	var d *kafkaData
+	json.Unmarshal(actual, &d)
+	s.Equal(expected, []*kafkaData{d})
 }
 
 func (s *KafkaSuite) TestKafka_Consumer_AddTopicAndHandler() {

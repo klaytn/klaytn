@@ -17,6 +17,7 @@
 package kafka
 
 import (
+	"crypto/md5"
 	"encoding/json"
 
 	"github.com/Shopify/sarama"
@@ -24,6 +25,18 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
+
+const (
+	MsgIdxTotalSegments = iota
+	MsgIdxSegmentIdx
+	MsgIdxCheckSum
+)
+
+const (
+	KeyTotalSegments = "totalSegments"
+	KeySegmentIdx    = "segmentIdx"
+	KeyCheckSum      = "checksum"
+)
 
 // Kafka connects to the brokers in an existing kafka cluster.
 type Kafka struct {
@@ -76,17 +89,53 @@ func (k *Kafka) ListTopics() (map[string]sarama.TopicDetail, error) {
 	return k.admin.ListTopics()
 }
 
+func (k *Kafka) split(data []byte) ([][]byte, int) {
+	size := k.config.SegmentSize
+	var segments [][]byte
+	for len(data) > size {
+		segments = append(segments, data[:size])
+		data = data[size:]
+	}
+	segments = append(segments, data)
+	return segments, len(segments)
+}
+
+func (k *Kafka) makeProducerMessage(topic string, segment []byte, segmentIdx, totalSegments uint64) *sarama.ProducerMessage {
+	checkSum := md5.Sum(segment)
+	return &sarama.ProducerMessage{
+		Topic: topic,
+		Headers: []sarama.RecordHeader{
+			{
+				Key:   []byte(KeyTotalSegments),
+				Value: intToBytes(totalSegments),
+			},
+			{
+				Key:   []byte(KeySegmentIdx),
+				Value: intToBytes(segmentIdx),
+			},
+			{
+				Key:   []byte(KeyCheckSum),
+				Value: checkSum[:],
+			},
+		},
+		Value: sarama.ByteEncoder(segment),
+	}
+}
+
 func (k *Kafka) Publish(topic string, msg interface{}) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}
-
-	item := &sarama.ProducerMessage{
-		Topic: topic,
-		Value: sarama.StringEncoder(data),
+	segments, totalSegments := k.split(data)
+	for idx, segment := range segments {
+		item := k.makeProducerMessage(topic, segment, uint64(idx), uint64(totalSegments))
+		_, _, err = k.producer.SendMessage(item)
+		if err != nil {
+			logger.Error("sending kafka message is failed", "err", err, "segmentIdx", idx, "segment", string(segment))
+			return err
+		}
 	}
 
-	_, _, err = k.producer.SendMessage(item)
 	return err
 }

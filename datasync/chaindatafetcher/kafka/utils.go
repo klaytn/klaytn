@@ -17,6 +17,7 @@
 package kafka
 
 import (
+	"encoding/binary"
 	"strings"
 
 	klaytnApi "github.com/klaytn/klaytn/api"
@@ -95,4 +96,14 @@ func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block,
 	r["proposer"] = proposer
 	r["transactions"] = rpcTransactions
 	return r
+}
+
+func intToBytes(num uint64) []byte {
+	buffer := make([]byte, 8)
+	binary.BigEndian.PutUint64(buffer, num)
+	return buffer
+}
+
+func bytesToInt(bytes []byte) uint64 {
+	return binary.BigEndian.Uint64(bytes)
 }
