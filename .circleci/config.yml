@@ -229,6 +229,46 @@ commands:
               else
                 echo "Need to delete branch manually"
               fi
+  wait-other-containers-ready:
+    steps:
+      - run:
+          name: "Waiting for MySQL to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z 127.0.0.1 3306 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for MySQL && exit 1
+      - run:
+          name: "Waiting for zookeeper to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z zookeeper 2181 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for zookeeper && exit 1
+      - run:
+          name: "Waiting for Kafka to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z kafka 9092 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Kafka && exit 1
+      - run:
+          name: "Wait until localstack container running"
+          command: |
+            timeout -t 60 sh -c \
+            'until nc -z localhost 4566; do
+              echo "Waiting for Localstack ..."
+              sleep 1
+            done'
   notify-success:
     steps:
       - run:
@@ -273,38 +313,7 @@ jobs:
     steps:
       - install-ssh-alpine
       - checkout
-      - run:
-        # Our primary container isn't MYSQL so run a sleep command until it's ready. 
-        ## Please make me as orb to wait container ready
-          name: "Waiting for MySQL to be ready"
-          command: |
-            for i in `seq 1 10`;
-            do
-              nc -z 127.0.0.1 3306 && echo Success && exit 0
-              echo -n .
-              sleep 1
-            done
-            echo Failed waiting for MySQL && exit 1
-      - run:
-          name: "Waiting for zookeeper to be ready"
-          command: |
-            for i in `seq 1 10`;
-            do
-              nc -z zookeeper 2181 && echo Success && exit 0
-              echo -n .
-              sleep 1
-            done
-            echo Failed waiting for zookeeper && exit 1
-      - run:
-          name: "Waiting for Kafka to be ready"
-          command: |
-            for i in `seq 1 10`;
-            do
-              nc -z kafka 9092 && echo Success && exit 0
-              echo -n .
-              sleep 1
-            done
-            echo Failed waiting for Kafka && exit 1
+      - wait-other-containers-ready
       - run:
           name: "Run test datasync"
           command: make test-datasync
@@ -334,14 +343,7 @@ jobs:
     steps:
       - install-ssh-alpine
       - checkout
-      - run:
-          name: "Wait until localstack container running"
-          command: |
-            timeout -t 60 sh -c \
-            'until nc -z localhost 4566; do
-              echo "Waiting for Localstack ..."
-              sleep 1
-            done'
+      - wait-other-containers-ready
       - run:
           name: "Run test others"
           command: |
@@ -361,11 +363,12 @@ jobs:
       - tagger-verify
 
   coverage:
-    executor: test-executor
+    executor: test-others-executor
     resource_class: xlarge
     steps:
       - install-ssh-alpine
       - checkout
+      - wait-other-containers-ready
       - run:
           shell: /bin/bash
           name: "Run coverage tests"
@@ -618,3 +621,4 @@ workflows:
               only: dev
     jobs:
       - linters
+
