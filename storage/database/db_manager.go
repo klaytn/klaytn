@@ -639,6 +639,7 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 	newDB, newDBDir := newStateTrieMigrationDB(dbm.config, blockNum)
 
 	dbm.lockInMigration.Lock()
+	defer dbm.lockInMigration.Unlock()
 
 	// Store migration db path in misc db
 	dbm.setDBDir(StateTrieMigrationDB, newDBDir)
@@ -648,7 +649,6 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 
 	// Store the migration status
 	dbm.setStateTrieMigrationStatus(blockNum)
-	dbm.lockInMigration.Unlock()
 
 	return nil
 }
@@ -658,6 +658,7 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 func (dbm *databaseManager) FinishStateMigration(succeed bool) {
 	// lock to prevent from a conflict of reading state DB and changing state DB
 	dbm.lockInMigration.Lock()
+	defer dbm.lockInMigration.Unlock()
 
 	dbRemoved := StateTrieDB
 	dbUsed := StateTrieMigrationDB
@@ -682,8 +683,6 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) {
 
 	dbPathToBeRemoved := filepath.Join(dbm.config.Dir, dbDirToBeRemoved)
 	dbToBeRemoved.Close()
-
-	dbm.lockInMigration.Unlock()
 
 	go removeDB(dbPathToBeRemoved)
 }
