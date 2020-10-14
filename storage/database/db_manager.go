@@ -638,6 +638,7 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 	// Create a new database for migration process.
 	newDB, newDBDir := newStateTrieMigrationDB(dbm.config, blockNum)
 
+	// lock to prevent from a conflict of reading state DB and changing state DB
 	dbm.lockInMigration.Lock()
 	defer dbm.lockInMigration.Unlock()
 
