@@ -30,6 +30,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 var dbManagers []DBManager
@@ -845,7 +846,9 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
 
 			// check if old db is deleted on migration success
-			dbm.FinishStateMigration(true) // migration success
+			dbm.FinishStateMigration(true)     // migration success
+			time.Sleep(100 * time.Millisecond) // wait for removing DB
+
 			newDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
 			assert.Equal(t, 1, len(newDirNames))
 			assert.Equal(t, NewMigrationPath, newDirNames[0], "new DB should remain")
@@ -869,7 +872,9 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
 
 			// check if new db is deleted on migration fail
-			dbm.FinishStateMigration(false) // migration fail
+			dbm.FinishStateMigration(false)    // migration fail
+			time.Sleep(100 * time.Millisecond) // wait for removing DB
+
 			newDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
 			assert.Equal(t, 1, len(newDirNames))
 			assert.Equal(t, initialDirNames[0], newDirNames[0], "old DB should remain")
