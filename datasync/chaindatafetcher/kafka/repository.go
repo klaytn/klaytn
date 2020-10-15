@@ -26,9 +26,22 @@ import (
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 )
 
-type blockTraceResult struct {
+type traceGroupResult struct {
 	BlockNumber      *big.Int              `json:"blockNumber"`
 	InternalTxTraces []*vm.InternalTxTrace `json:"result"`
+}
+
+func (r *traceGroupResult) Key() string {
+	return r.BlockNumber.String()
+}
+
+type blockGroupResult struct {
+	BlockNumber *big.Int               `json:"blockNumber"`
+	Result      map[string]interface{} `json:"result"`
+}
+
+func (r *blockGroupResult) Key() string {
+	return r.BlockNumber.String()
 }
 
 type repository struct {
@@ -57,11 +70,14 @@ func (r *repository) SetComponent(component interface{}) {
 func (r *repository) HandleChainEvent(event blockchain.ChainEvent, dataType types.RequestType) error {
 	switch dataType {
 	case types.RequestTypeBlockGroup:
-		output := makeBlockGroupOutput(r.blockchain, event.Block, event.Receipts)
-		return r.kafka.Publish(r.kafka.getTopicName(EventBlockGroup), output)
+		result := &blockGroupResult{
+			BlockNumber: event.Block.Number(),
+			Result:      makeBlockGroupOutput(r.blockchain, event.Block, event.Receipts),
+		}
+		return r.kafka.Publish(r.kafka.getTopicName(EventBlockGroup), result)
 	case types.RequestTypeTraceGroup:
 		if len(event.InternalTxTraces) > 0 {
-			result := &blockTraceResult{
+			result := &traceGroupResult{
 				BlockNumber:      event.Block.Number(),
 				InternalTxTraces: event.InternalTxTraces,
 			}

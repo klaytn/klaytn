@@ -94,7 +94,7 @@ func (s *KafkaSuite) TestKafka_makeProducerMessage() {
 	idx := rand.Uint64() % totalSegments
 
 	// make a producer message with the random input
-	msg := s.kfk.makeProducerMessage(s.topic, data, idx, totalSegments)
+	msg := s.kfk.makeProducerMessage(s.topic, "", data, idx, totalSegments)
 
 	// compare the data is correctly inserted
 	s.Equal(s.topic, msg.Topic)

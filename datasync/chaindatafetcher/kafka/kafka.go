@@ -36,6 +36,10 @@ const (
 	KeySegmentIdx    = "segmentIdx"
 )
 
+type IKey interface {
+	Key() string
+}
+
 // Kafka connects to the brokers in an existing kafka cluster.
 type Kafka struct {
 	config   *KafkaConfig
@@ -98,9 +102,10 @@ func (k *Kafka) split(data []byte) ([][]byte, int) {
 	return segments, len(segments)
 }
 
-func (k *Kafka) makeProducerMessage(topic string, segment []byte, segmentIdx, totalSegments uint64) *sarama.ProducerMessage {
+func (k *Kafka) makeProducerMessage(topic, key string, segment []byte, segmentIdx, totalSegments uint64) *sarama.ProducerMessage {
 	return &sarama.ProducerMessage{
 		Topic: topic,
+		Key:   sarama.StringEncoder(key),
 		Headers: []sarama.RecordHeader{
 			{
 				Key:   []byte(KeyTotalSegments),
@@ -120,9 +125,13 @@ func (k *Kafka) Publish(topic string, data interface{}) error {
 	if err != nil {
 		return err
 	}
+	key := ""
+	if v, ok := data.(IKey); ok {
+		key = v.Key()
+	}
 	segments, totalSegments := k.split(dataBytes)
 	for idx, segment := range segments {
-		msg := k.makeProducerMessage(topic, segment, uint64(idx), uint64(totalSegments))
+		msg := k.makeProducerMessage(topic, key, segment, uint64(idx), uint64(totalSegments))
 		_, _, err = k.producer.SendMessage(msg)
 		if err != nil {
 			logger.Error("sending kafka message is failed", "err", err, "segmentIdx", idx, "segment", string(segment))
