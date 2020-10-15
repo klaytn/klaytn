@@ -1736,19 +1736,12 @@ func (bc *BlockChain) BlockSubscriptionLoop(pool *TxPool) {
 			continue
 		}
 
-		// TODO-Klaytn-KES: implement block handling logic
-		// if bc.cacheConfig.TrieNodeCacheConfig.ProcessBlock {
-		// 	_, err := bc.InsertChain(types.Blocks{block})
-		// 	if err != nil {
-		// 		logger.Crit("failed to insert a block", "err", err)
-		// 	}
-		// } else {
-		// 	oldHead := bc.CurrentHeader()
-		// 	bc.replaceCurrentBlock(block)
-		// 	pool.lockedReset(oldHead, bc.CurrentHeader())
-		// }
+		oldHead := bc.CurrentHeader()
+		bc.replaceCurrentBlock(block)
+		pool.lockedReset(oldHead, bc.CurrentHeader())
 	}
-	logger.Info("close the block subscription loop")
+
+	logger.Info("closed the block subscription loop")
 }
 
 // CloseBlockSubscriptionLoop closes BlockSubscriptionLoop.
@@ -1763,38 +1756,40 @@ func (bc *BlockChain) CloseBlockSubscriptionLoop() {
 }
 
 // replaceCurrentBlock replaces bc.currentBlock to the given block.
-// func (bc *BlockChain) replaceCurrentBlock(latestBlock *types.Block) {
-// 	bc.mu.Lock()
-// 	defer bc.mu.Unlock()
-//
-// 	if latestBlock == nil {
-// 		logger.Error("no latest block")
-// 		return
-// 	}
-//
-// 	// Return early if it is the first block update.
-// 	currentBlock := bc.CurrentBlock()
-// 	if currentBlock == nil {
-// 		bc.insert(latestBlock)
-// 		logger.Info("inserted an initial block", "blockNumber", latestBlock.NumberU64(),
-// 			"hash", latestBlock.Hash().String(), "stateRoot", latestBlock.Root().String())
-// 		return
-// 	}
-//
-// 	// Don't update current block if the latest block is not newer than current block.
-// 	if currentBlock.NumberU64() >= latestBlock.NumberU64() {
-// 		logger.Debug("")
-// 		return
-// 	}
-//
-// 	// Insert a new block and update metrics
-// 	bc.insert(latestBlock)
-// 	headBlockNumberGauge.Update(latestBlock.Number().Int64())
-// 	bc.stateCache.TrieDB().UpdateMetricNodes()
-//
-// 	logger.Info("inserted a new block", "prevBlockNumber", currentBlock.NumberU64(), "blockNumber",
-// 		latestBlock.NumberU64(), "hash", latestBlock.Hash().String(), "stateRoot", latestBlock.Root().String())
-// }
+func (bc *BlockChain) replaceCurrentBlock(latestBlock *types.Block) {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
+	if latestBlock == nil {
+		logger.Error("no latest block")
+		return
+	}
+
+	// Return early if it is the first block update.
+	currentBlock := bc.CurrentBlock()
+	if currentBlock == nil {
+		bc.insert(latestBlock)
+		logger.Info("inserted an initial block", "blockNumber", latestBlock.NumberU64(),
+			"hash", latestBlock.Hash().String(), "stateRoot", latestBlock.Root().String())
+		return
+	}
+
+	// Don't update current block if the latest block is not newer than current block.
+	if currentBlock.NumberU64() >= latestBlock.NumberU64() {
+		logger.Debug("")
+		return
+	}
+
+	// Insert a new block and update metrics
+	bc.insert(latestBlock)
+	bc.hc.SetCurrentHeader(latestBlock.Header())
+
+	headBlockNumberGauge.Update(latestBlock.Number().Int64())
+	bc.stateCache.TrieDB().UpdateMetricNodes()
+
+	logger.Info("inserted a new block", "prevBlockNumber", currentBlock.NumberU64(), "blockNumber",
+		latestBlock.NumberU64(), "hash", latestBlock.Hash().String(), "stateRoot", latestBlock.Root().String())
+}
 
 // insertStats tracks and reports on block insertion.
 type insertStats struct {
