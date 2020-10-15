@@ -63,27 +63,27 @@ func (s *KafkaSuite) TearDownTest() {
 }
 
 func (s *KafkaSuite) TestKafka_split() {
-	segmentSize := 3
-	s.kfk.config.SegmentSize = segmentSize
+	segmentSizeBytes := 3
+	s.kfk.config.SegmentSizeBytes = segmentSizeBytes
 
 	// test with the size less than the segment size
-	bytes := common.MakeRandomBytes(segmentSize - 1)
+	bytes := common.MakeRandomBytes(segmentSizeBytes - 1)
 	parts, size := s.kfk.split(bytes)
 	s.Equal(bytes, parts[0])
 	s.Equal(1, size)
 
 	// test with the given segment size
-	bytes = common.MakeRandomBytes(segmentSize)
+	bytes = common.MakeRandomBytes(segmentSizeBytes)
 	parts, size = s.kfk.split(bytes)
 	s.Equal(bytes, parts[0])
 	s.Equal(1, size)
 
 	// test with the size greater than the segment size
-	bytes = common.MakeRandomBytes(2*segmentSize + 2)
+	bytes = common.MakeRandomBytes(2*segmentSizeBytes + 2)
 	parts, size = s.kfk.split(bytes)
-	s.Equal(bytes[:segmentSize], parts[0])
-	s.Equal(bytes[segmentSize:2*segmentSize], parts[1])
-	s.Equal(bytes[2*segmentSize:], parts[2])
+	s.Equal(bytes[:segmentSizeBytes], parts[0])
+	s.Equal(bytes[segmentSizeBytes:2*segmentSizeBytes], parts[1])
+	s.Equal(bytes[2*segmentSizeBytes:], parts[2])
 	s.Equal(3, size)
 }
 
@@ -308,7 +308,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
 	data, _ := json.Marshal(&kafkaData{common.MakeRandomBytes(testBytesSize)})
 	totalSegments := len(data) / segmentSize
 
-	s.kfk.config.SegmentSize = segmentSize
+	s.kfk.config.SegmentSizeBytes = segmentSize
 	topic := "test-message-segments"
 	s.kfk.CreateTopic(topic)
 

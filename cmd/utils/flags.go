@@ -786,10 +786,10 @@ var (
 		Usage: "The max size of a message produced by Kafka producer ",
 		Value: kafka.DefaultMaxMessageBytes,
 	}
-	ChainDataFetcherKafkaSegmentSizeFlag = cli.IntFlag{
+	ChainDataFetcherKafkaSegmentSizeBytesFlag = cli.IntFlag{
 		Name:  "chaindatafetcher.kafka.segment.size",
-		Usage: "The kafka data segment size",
-		Value: kafka.DefaultSegmentSize,
+		Usage: "The kafka data segment size (in byte)",
+		Value: kafka.DefaultSegmentSizeBytes,
 	}
 	ChainDataFetcherKafkaRequiredAcksFlag = cli.IntFlag{
 		Name:  "chaindatafetcher.kafka.required.acks",

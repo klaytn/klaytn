@@ -91,7 +91,7 @@ func (k *Kafka) ListTopics() (map[string]sarama.TopicDetail, error) {
 }
 
 func (k *Kafka) split(data []byte) ([][]byte, int) {
-	size := k.config.SegmentSize
+	size := k.config.SegmentSizeBytes
 	var segments [][]byte
 	for len(data) > size {
 		segments = append(segments, data[:size])
@@ -123,15 +123,15 @@ func (k *Kafka) makeProducerMessage(topic string, segment []byte, segmentIdx, to
 	}
 }
 
-func (k *Kafka) Publish(topic string, msg interface{}) error {
-	data, err := json.Marshal(msg)
+func (k *Kafka) Publish(topic string, data interface{}) error {
+	dataBytes, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-	segments, totalSegments := k.split(data)
+	segments, totalSegments := k.split(dataBytes)
 	for idx, segment := range segments {
-		item := k.makeProducerMessage(topic, segment, uint64(idx), uint64(totalSegments))
-		_, _, err = k.producer.SendMessage(item)
+		msg := k.makeProducerMessage(topic, segment, uint64(idx), uint64(totalSegments))
+		_, _, err = k.producer.SendMessage(msg)
 		if err != nil {
 			logger.Error("sending kafka message is failed", "err", err, "segmentIdx", idx, "segment", string(segment))
 			return err

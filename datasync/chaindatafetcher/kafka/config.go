@@ -40,7 +40,7 @@ const (
 	DefaultTopicResourceName    = "en-0"
 	DefaultMaxMessageBytes      = 1000000
 	DefaultRequiredAcks         = 1
-	DefaultSegmentSize          = 1000000 // 1 MB
+	DefaultSegmentSizeBytes     = 1000000 // 1 MB
 )
 
 type KafkaConfig struct {
@@ -50,7 +50,7 @@ type KafkaConfig struct {
 	TopicResourceName    string
 	Partitions           int32 // Partitions is the number of partitions of a topic.
 	Replicas             int16 // Replicas is a replication factor of kafka settings. This is the number of the replicated partitions in the kafka cluster.
-	SegmentSize          int   // SegmentSize is the size of kafka message segment
+	SegmentSizeBytes     int   // SegmentSizeBytes is the size of kafka message segment
 }
 
 func GetDefaultKafkaConfig() *KafkaConfig {
@@ -68,7 +68,7 @@ func GetDefaultKafkaConfig() *KafkaConfig {
 		TopicResourceName:    DefaultTopicResourceName,
 		Partitions:           DefaultPartitions,
 		Replicas:             DefaultReplicas,
-		SegmentSize:          DefaultSegmentSize,
+		SegmentSizeBytes:     DefaultSegmentSizeBytes,
 	}
 }
 
@@ -78,5 +78,5 @@ func (c *KafkaConfig) getTopicName(event string) string {
 
 func (c *KafkaConfig) String() string {
 	return fmt.Sprintf("brokers: %v, topicEnvironment: %v, topicResourceName: %v, partitions: %v, replicas: %v, maxMessageBytes: %v, requiredAcks: %v, segmentSize: %v",
-		c.Brokers, c.TopicEnvironmentName, c.TopicResourceName, c.Partitions, c.Replicas, c.SaramaConfig.Producer.MaxMessageBytes, c.SaramaConfig.Producer.RequiredAcks, c.SegmentSize)
+		c.Brokers, c.TopicEnvironmentName, c.TopicResourceName, c.Partitions, c.Replicas, c.SaramaConfig.Producer.MaxMessageBytes, c.SaramaConfig.Producer.RequiredAcks, c.SegmentSizeBytes)
 }
