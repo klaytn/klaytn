@@ -66,16 +66,19 @@ func (s *KafkaSuite) TestKafka_split() {
 	segmentSize := 3
 	s.kfk.config.SegmentSize = segmentSize
 
+	// test with the size less than the segment size
 	bytes := common.MakeRandomBytes(segmentSize - 1)
 	parts, size := s.kfk.split(bytes)
 	s.Equal(bytes, parts[0])
 	s.Equal(1, size)
 
+	// test with the given segment size
 	bytes = common.MakeRandomBytes(segmentSize)
 	parts, size = s.kfk.split(bytes)
 	s.Equal(bytes, parts[0])
 	s.Equal(1, size)
 
+	// test with the size greater than the segment size
 	bytes = common.MakeRandomBytes(2*segmentSize + 2)
 	parts, size = s.kfk.split(bytes)
 	s.Equal(bytes[:segmentSize], parts[0])
@@ -85,13 +88,17 @@ func (s *KafkaSuite) TestKafka_split() {
 }
 
 func (s *KafkaSuite) TestKafka_makeProducerMessage() {
+	// make test data
 	data := common.MakeRandomBytes(100)
 	checksum := md5.Sum(data)
 	rand.Seed(time.Now().UnixNano())
 	totalSegments := rand.Uint64()
 	idx := rand.Uint64() % totalSegments
+
+	// make a producer message with the random input
 	msg := s.kfk.makeProducerMessage(s.topic, data, idx, totalSegments)
 
+	// compare the data is correctly inserted
 	s.Equal(s.topic, msg.Topic)
 	s.Equal(sarama.ByteEncoder(data), msg.Value)
 	s.Equal(totalSegments, binary.BigEndian.Uint64(msg.Headers[MsgIdxTotalSegments].Value))
@@ -308,12 +315,14 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
 	// publish random data
 	expected := s.publishRandomData(topic, numTests, testBytesSize)
 
+	// gather the published data segments
 	var msgs []*sarama.ConsumerMessage
 	s.subscribeData(topic, "test-group-id", totalSegments, func(message *sarama.ConsumerMessage) error {
 		msgs = append(msgs, message)
 		return nil
 	})
 
+	// check the data segments are correctly inserted with the order
 	s.Equal(totalSegments, len(msgs))
 	var actual []byte
 	for idx, msg := range msgs {
@@ -325,6 +334,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
 		s.Equal(topic, msg.Topic)
 	}
 
+	// check the result after resembling the segments
 	var d *kafkaData
 	json.Unmarshal(actual, &d)
 	s.Equal(expected, []*kafkaData{d})
