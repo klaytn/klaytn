@@ -19,6 +19,7 @@ package kafka
 import (
 	"context"
 	"crypto/md5"
+	"encoding/binary"
 	"encoding/json"
 	"math/rand"
 	"reflect"
@@ -93,8 +94,8 @@ func (s *KafkaSuite) TestKafka_makeProducerMessage() {
 
 	s.Equal(s.topic, msg.Topic)
 	s.Equal(sarama.ByteEncoder(data), msg.Value)
-	s.Equal(totalSegments, bytesToInt(msg.Headers[MsgIdxTotalSegments].Value))
-	s.Equal(idx, bytesToInt(msg.Headers[MsgIdxSegmentIdx].Value))
+	s.Equal(totalSegments, binary.BigEndian.Uint64(msg.Headers[MsgIdxTotalSegments].Value))
+	s.Equal(idx, binary.BigEndian.Uint64(msg.Headers[MsgIdxSegmentIdx].Value))
 	s.Equal(checksum[:], msg.Headers[MsgIdxCheckSum].Value)
 }
 
@@ -317,8 +318,8 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
 	var actual []byte
 	for idx, msg := range msgs {
 		actual = append(actual, msg.Value...)
-		s.Equal(uint64(totalSegments), bytesToInt(msg.Headers[MsgIdxTotalSegments].Value))
-		s.Equal(uint64(idx), bytesToInt(msg.Headers[MsgIdxSegmentIdx].Value))
+		s.Equal(uint64(totalSegments), binary.BigEndian.Uint64(msg.Headers[MsgIdxTotalSegments].Value))
+		s.Equal(uint64(idx), binary.BigEndian.Uint64(msg.Headers[MsgIdxSegmentIdx].Value))
 		checksum := md5.Sum(msg.Value)
 		s.Equal(checksum[:], msg.Headers[MsgIdxCheckSum].Value)
 		s.Equal(topic, msg.Topic)

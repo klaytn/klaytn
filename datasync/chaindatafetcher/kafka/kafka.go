@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/Shopify/sarama"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 )
 
@@ -107,11 +108,11 @@ func (k *Kafka) makeProducerMessage(topic string, segment []byte, segmentIdx, to
 		Headers: []sarama.RecordHeader{
 			{
 				Key:   []byte(KeyTotalSegments),
-				Value: intToBytes(totalSegments),
+				Value: common.Int64ToByteBigEndian(totalSegments),
 			},
 			{
 				Key:   []byte(KeySegmentIdx),
-				Value: intToBytes(segmentIdx),
+				Value: common.Int64ToByteBigEndian(segmentIdx),
 			},
 			{
 				Key:   []byte(KeyCheckSum),
