@@ -203,6 +203,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	}
 
 	stats.stateMigrationReport(true, trieSync.Pending(), trieSync.CalcProgressPercentage())
+	bc.readCnt, bc.committedCnt, bc.pendingCnt, bc.progress = stats.totalRead, stats.totalCommitted, trieSync.Pending(), stats.progress
 
 	// Clear memory of trieSync
 	trieSync = nil
