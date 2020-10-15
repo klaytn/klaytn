@@ -17,7 +17,6 @@
 package kafka
 
 import (
-	"crypto/md5"
 	"encoding/json"
 
 	"github.com/Shopify/sarama"
@@ -30,13 +29,11 @@ var logger = log.NewModuleLogger(log.ChainDataFetcher)
 const (
 	MsgIdxTotalSegments = iota
 	MsgIdxSegmentIdx
-	MsgIdxCheckSum
 )
 
 const (
 	KeyTotalSegments = "totalSegments"
 	KeySegmentIdx    = "segmentIdx"
-	KeyCheckSum      = "checksum"
 )
 
 // Kafka connects to the brokers in an existing kafka cluster.
@@ -102,7 +99,6 @@ func (k *Kafka) split(data []byte) ([][]byte, int) {
 }
 
 func (k *Kafka) makeProducerMessage(topic string, segment []byte, segmentIdx, totalSegments uint64) *sarama.ProducerMessage {
-	checkSum := md5.Sum(segment)
 	return &sarama.ProducerMessage{
 		Topic: topic,
 		Headers: []sarama.RecordHeader{
@@ -113,10 +109,6 @@ func (k *Kafka) makeProducerMessage(topic string, segment []byte, segmentIdx, to
 			{
 				Key:   []byte(KeySegmentIdx),
 				Value: common.Int64ToByteBigEndian(segmentIdx),
-			},
-			{
-				Key:   []byte(KeyCheckSum),
-				Value: checkSum[:],
 			},
 		},
 		Value: sarama.ByteEncoder(segment),
