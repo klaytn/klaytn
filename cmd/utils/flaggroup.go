@@ -143,6 +143,7 @@ var FlagGroups = []FlagGroup{
 			ChainDataFetcherKafkaReplicasFlag,
 			ChainDataFetcherKafkaPartitionsFlag,
 			ChainDataFetcherKafkaMaxMessageBytesFlag,
+			ChainDataFetcherKafkaSegmentSizeBytesFlag,
 			ChainDataFetcherKafkaRequiredAcksFlag,
 		},
 	},

@@ -18,7 +18,9 @@ package kafka
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
+	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
@@ -57,6 +59,48 @@ func (s *KafkaSuite) SetupTest() {
 
 func (s *KafkaSuite) TearDownTest() {
 	s.kfk.Close()
+}
+
+func (s *KafkaSuite) TestKafka_split() {
+	segmentSizeBytes := 3
+	s.kfk.config.SegmentSizeBytes = segmentSizeBytes
+
+	// test with the size less than the segment size
+	bytes := common.MakeRandomBytes(segmentSizeBytes - 1)
+	parts, size := s.kfk.split(bytes)
+	s.Equal(bytes, parts[0])
+	s.Equal(1, size)
+
+	// test with the given segment size
+	bytes = common.MakeRandomBytes(segmentSizeBytes)
+	parts, size = s.kfk.split(bytes)
+	s.Equal(bytes, parts[0])
+	s.Equal(1, size)
+
+	// test with the size greater than the segment size
+	bytes = common.MakeRandomBytes(2*segmentSizeBytes + 2)
+	parts, size = s.kfk.split(bytes)
+	s.Equal(bytes[:segmentSizeBytes], parts[0])
+	s.Equal(bytes[segmentSizeBytes:2*segmentSizeBytes], parts[1])
+	s.Equal(bytes[2*segmentSizeBytes:], parts[2])
+	s.Equal(3, size)
+}
+
+func (s *KafkaSuite) TestKafka_makeProducerMessage() {
+	// make test data
+	data := common.MakeRandomBytes(100)
+	rand.Seed(time.Now().UnixNano())
+	totalSegments := rand.Uint64()
+	idx := rand.Uint64() % totalSegments
+
+	// make a producer message with the random input
+	msg := s.kfk.makeProducerMessage(s.topic, data, idx, totalSegments)
+
+	// compare the data is correctly inserted
+	s.Equal(s.topic, msg.Topic)
+	s.Equal(sarama.ByteEncoder(data), msg.Value)
+	s.Equal(totalSegments, binary.BigEndian.Uint64(msg.Headers[MsgIdxTotalSegments].Value))
+	s.Equal(idx, binary.BigEndian.Uint64(msg.Headers[MsgIdxSegmentIdx].Value))
 }
 
 func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {
@@ -250,6 +294,45 @@ func (s *KafkaSuite) TestKafka_PubSubWith2DifferentGroups() {
 	// compare the results with the published data
 	s.Equal(expected, actual)
 	s.Equal(expected, actual2)
+}
+
+func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
+	numTests := 1
+	testBytesSize := 10
+	segmentSize := 3
+
+	// to calculate data length
+	data, _ := json.Marshal(&kafkaData{common.MakeRandomBytes(testBytesSize)})
+	totalSegments := len(data) / segmentSize
+
+	s.kfk.config.SegmentSizeBytes = segmentSize
+	topic := "test-message-segments"
+	s.kfk.CreateTopic(topic)
+
+	// publish random data
+	expected := s.publishRandomData(topic, numTests, testBytesSize)
+
+	// gather the published data segments
+	var msgs []*sarama.ConsumerMessage
+	s.subscribeData(topic, "test-group-id", totalSegments, func(message *sarama.ConsumerMessage) error {
+		msgs = append(msgs, message)
+		return nil
+	})
+
+	// check the data segments are correctly inserted with the order
+	s.Equal(totalSegments, len(msgs))
+	var actual []byte
+	for idx, msg := range msgs {
+		actual = append(actual, msg.Value...)
+		s.Equal(uint64(totalSegments), binary.BigEndian.Uint64(msg.Headers[MsgIdxTotalSegments].Value))
+		s.Equal(uint64(idx), binary.BigEndian.Uint64(msg.Headers[MsgIdxSegmentIdx].Value))
+		s.Equal(topic, msg.Topic)
+	}
+
+	// check the result after resembling the segments
+	var d *kafkaData
+	json.Unmarshal(actual, &d)
+	s.Equal(expected, []*kafkaData{d})
 }
 
 func (s *KafkaSuite) TestKafka_Consumer_AddTopicAndHandler() {

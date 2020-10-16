@@ -20,10 +20,21 @@ import (
 	"encoding/json"
 
 	"github.com/Shopify/sarama"
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
+
+const (
+	MsgIdxTotalSegments = iota
+	MsgIdxSegmentIdx
+)
+
+const (
+	KeyTotalSegments = "totalSegments"
+	KeySegmentIdx    = "segmentIdx"
+)
 
 // Kafka connects to the brokers in an existing kafka cluster.
 type Kafka struct {
@@ -76,17 +87,48 @@ func (k *Kafka) ListTopics() (map[string]sarama.TopicDetail, error) {
 	return k.admin.ListTopics()
 }
 
-func (k *Kafka) Publish(topic string, msg interface{}) error {
-	data, err := json.Marshal(msg)
+func (k *Kafka) split(data []byte) ([][]byte, int) {
+	size := k.config.SegmentSizeBytes
+	var segments [][]byte
+	for len(data) > size {
+		segments = append(segments, data[:size])
+		data = data[size:]
+	}
+	segments = append(segments, data)
+	return segments, len(segments)
+}
+
+func (k *Kafka) makeProducerMessage(topic string, segment []byte, segmentIdx, totalSegments uint64) *sarama.ProducerMessage {
+	return &sarama.ProducerMessage{
+		Topic: topic,
+		Headers: []sarama.RecordHeader{
+			{
+				Key:   []byte(KeyTotalSegments),
+				Value: common.Int64ToByteBigEndian(totalSegments),
+			},
+			{
+				Key:   []byte(KeySegmentIdx),
+				Value: common.Int64ToByteBigEndian(segmentIdx),
+			},
+		},
+		Value: sarama.ByteEncoder(segment),
+	}
+}
+
+func (k *Kafka) Publish(topic string, data interface{}) error {
+	dataBytes, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-
-	item := &sarama.ProducerMessage{
-		Topic: topic,
-		Value: sarama.StringEncoder(data),
+	segments, totalSegments := k.split(dataBytes)
+	for idx, segment := range segments {
+		msg := k.makeProducerMessage(topic, segment, uint64(idx), uint64(totalSegments))
+		_, _, err = k.producer.SendMessage(msg)
+		if err != nil {
+			logger.Error("sending kafka message is failed", "err", err, "segmentIdx", idx, "segment", string(segment))
+			return err
+		}
 	}
 
-	_, _, err = k.producer.SendMessage(item)
 	return err
 }
