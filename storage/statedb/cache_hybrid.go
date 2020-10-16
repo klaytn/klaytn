@@ -47,7 +47,11 @@ func (cache *HybridCache) Get(k []byte) []byte {
 	if ret != nil {
 		return ret
 	}
-	return cache.remote.Get(k)
+	ret = cache.remote.Get(k)
+	if ret != nil {
+		cache.local.Set(k, ret)
+	}
+	return ret
 }
 
 func (cache *HybridCache) Has(k []byte) ([]byte, bool) {
