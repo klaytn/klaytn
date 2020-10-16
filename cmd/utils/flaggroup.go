@@ -48,9 +48,6 @@ var FlagGroups = []FlagGroup{
 			ExtraDataFlag,
 			ConfigFileFlag,
 			OverwriteGenesisFlag,
-			WorkerDisableFlag,
-			DownloaderDisableFlag,
-			FetcherDisableFlag,
 		},
 	},
 	{
@@ -292,6 +289,7 @@ var FlagGroups = []FlagGroup{
 			AutoRestartFlag,
 			RestartTimeOutFlag,
 			DaemonPathFlag,
+			KESNodeTypeServiceFlag,
 		},
 	},
 }

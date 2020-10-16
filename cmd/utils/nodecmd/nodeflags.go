@@ -109,9 +109,6 @@ var CommonNodeFlags = []cli.Flag{
 	utils.RestartTimeOutFlag,
 	utils.DaemonPathFlag,
 	utils.ConfigFileFlag,
-	utils.WorkerDisableFlag,
-	utils.DownloaderDisableFlag,
-	utils.FetcherDisableFlag,
 }
 
 // Common RPC flags
@@ -153,6 +150,7 @@ var KENFlags = []cli.Flag{
 	utils.ChildChainIndexingFlag,
 	utils.MainBridgeFlag,
 	utils.MainBridgeListenPortFlag,
+	utils.KESNodeTypeServiceFlag,
 	// ChainDataFetcher
 	utils.EnableChainDataFetcherFlag,
 	utils.ChainDataFetcherMode,
@@ -263,6 +261,7 @@ var KSENFlags = []cli.Flag{
 	utils.VTRecoveryFlag,
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainAnchoringFlag,
+	utils.KESNodeTypeServiceFlag,
 	// KAS
 	utils.KASServiceChainAnchorFlag,
 	utils.KASServiceChainAnchorPeriodFlag,
