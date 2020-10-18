@@ -18,16 +18,73 @@ package kafka
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 
 	"github.com/Shopify/sarama"
 )
 
-var eventNameErrorMsg = "the event name must be either 'blockgroup' or 'tracegroup'"
+//go:generate mockgen -destination=./mocks/consumer_group_session_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka ConsumerGroupSession
+// ConsumerGroupSession is for mocking sarama.ConsumerGroupSession for better testing.
+type ConsumerGroupSession interface {
+	MarkOffset(topic string, partition int32, offset int64, metadata string)
+	MarkMessage(msg *sarama.ConsumerMessage, metadata string)
+}
+
+var (
+	eventNameErrorMsg          = "the event name must be either 'blockgroup' or 'tracegroup'"
+	nilConsumerMessageErrorMsg = "the given message should not be nil"
+	wrongHeaderNumberErrorMsg  = "the number of header is not expected"
+	wrongHeaderKeyErrorMsg     = "the header key is not expected"
+	wrongSegmentErrorMsg       = "there is a missing segment"
+	noHandlerErrorMsg          = "the handler does not exist for the given topic"
+	emptySegmentErrorMsg       = "there is no segment in the segment slice"
+)
 
 // TopicHandler is a handler function in order to consume published messages.
 type TopicHandler func(message *sarama.ConsumerMessage) error
+
+// Segment represents a message segment with the parsed headers.
+type Segment struct {
+	orig  *sarama.ConsumerMessage
+	key   string
+	total uint64
+	index uint64
+	value []byte
+}
+
+func (s *Segment) String() string {
+	return fmt.Sprintf("key: %v, total: %v, index: %v, value %v", s.key, s.total, s.index, string(s.value))
+}
+
+// newSegment creates a new segment structure after parsing the headers.
+func newSegment(msg *sarama.ConsumerMessage) (*Segment, error) {
+	if msg == nil {
+		return nil, errors.New(nilConsumerMessageErrorMsg)
+	}
+
+	if len(msg.Headers) != MsgIdxLength {
+		return nil, fmt.Errorf("%v [header length: %v]", wrongHeaderNumberErrorMsg, len(msg.Headers))
+	}
+
+	// parse the number of total segments
+	keyTotalSegments := string(msg.Headers[MsgIdxTotalSegments].Key)
+	if keyTotalSegments != KeyTotalSegments {
+		return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeyTotalSegments, keyTotalSegments)
+	}
+
+	// parse the segment index
+	keySegmentIdx := string(msg.Headers[MsgIdxSegmentIdx].Key)
+	if keySegmentIdx != KeySegmentIdx {
+		return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeySegmentIdx, keySegmentIdx)
+	}
+
+	key := string(msg.Key)
+	totalSegments := binary.BigEndian.Uint64(msg.Headers[MsgIdxTotalSegments].Value)
+	segmentIdx := binary.BigEndian.Uint64(msg.Headers[MsgIdxSegmentIdx].Value)
+	return &Segment{orig: msg, key: key, total: totalSegments, index: segmentIdx, value: msg.Value}, nil
+}
 
 // Consumer is a reference structure to subscribe block or trace group produced by EN.
 type Consumer struct {
@@ -101,20 +158,131 @@ func (c *Consumer) Cleanup(s sarama.ConsumerGroupSession) error {
 	return nil
 }
 
+// insertSegment inserts the given segment to the given buffer.
+// Assumption:
+//  1. it is guaranteed that the order of segments is correct.
+//  2. the inserted messages may be duplicated.
+//
+// We can consider the following cases.
+// case1. new segment with index 0 is inserted into newly created segment slice.
+// case2. new consecutive segment is inserted into the right position.
+// case3. duplicated segment is ignored.
+// case4. new sparse segment shouldn't be given, so return an error.
+func insertSegment(segment *Segment, buffer [][]*Segment) ([][]*Segment, error) {
+	for idx, segments := range buffer {
+		length := len(segments)
+		if length > 0 && segments[0].key == segment.key {
+			// the segment is already inserted to buffer.
+			if segment.index < uint64(length) {
+				logger.Warn("the message is duplicated", "segment", segment)
+				return buffer, nil
+			}
+
+			// the segment is inserted.
+			if segment.index == uint64(length) {
+				buffer[idx] = append(segments, segment)
+				return buffer, nil
+			}
+
+			// there is a missing segment which should not be occurred.
+			return buffer, errors.New(wrongSegmentErrorMsg)
+		}
+	}
+
+	if segment.index == 0 {
+		// create a segment slice and append it.
+		buffer = append(buffer, []*Segment{segment})
+	} else {
+		// the segment may be already handled.
+		logger.Warn("the message may be inserted already. drop the segment", "segment", segment)
+	}
+	return buffer, nil
+}
+
+// handleBufferedMessages handles all consecutive complete messages in the buffer.
+func (c *Consumer) handleBufferedMessages(buffer [][]*Segment) ([][]*Segment, error) {
+	// base case
+	if len(buffer) <= 0 {
+		return buffer, nil
+	}
+
+	// if any message exists in the buffer
+	oldestMsg, firstSegment, total := buffer[0], buffer[0][0], len(buffer[0])
+	if total > 0 {
+		if uint64(total) != firstSegment.total {
+			// not ready for assembling messages
+			return buffer, nil
+		}
+
+		// ready for assembling message
+		var msgBuffer []byte
+		for _, segment := range oldestMsg {
+			msgBuffer = append(msgBuffer, segment.value...)
+		}
+		msg := &sarama.ConsumerMessage{
+			Key:   []byte(firstSegment.key),
+			Value: msgBuffer,
+		}
+
+		f, ok := c.handlers[firstSegment.orig.Topic]
+		if !ok {
+			return buffer, fmt.Errorf("%v: %v", noHandlerErrorMsg, msg.Topic)
+		}
+
+		if err := f(msg); err != nil {
+			return buffer, err
+		}
+
+		buffer = buffer[1:]
+	}
+	return c.handleBufferedMessages(buffer)
+}
+
+// updateOffset updates offset after handling messages.
+// The offset should be marked for the oldest message (which is not read) in the given buffer.
+// If there is no segment in the buffer, the last consumed message offset should be marked.
+func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMessage, session ConsumerGroupSession) error {
+	if len(buffer) > 0 {
+		if len(buffer[0]) <= 0 {
+			return errors.New(emptySegmentErrorMsg)
+		}
+
+		oldestMsg := buffer[0][0].orig
+		session.MarkOffset(oldestMsg.Topic, oldestMsg.Partition, oldestMsg.Offset, "")
+	} else {
+		session.MarkMessage(lastMsg, "")
+	}
+
+	return nil
+}
+
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 // Once the Messages() channel is closed, the Handler must finish its processing
 // loop and exit.
 func (c *Consumer) ConsumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.ConsumerGroupClaim) error {
+	var buffer [][]*Segment
 	for msg := range cgc.Messages() {
-		f, ok := c.handlers[msg.Topic]
-		if !ok {
-			return fmt.Errorf("the handler does not exist for the given topic: %v", msg.Topic)
-		}
-		if err := f(msg); err != nil {
+		segment, err := newSegment(msg)
+		if err != nil {
 			return err
 		}
-		// mark the message as consumed
-		cgs.MarkMessage(msg, "")
+
+		// insert a new message segment into the buffer
+		buffer, err = insertSegment(segment, buffer)
+		if err != nil {
+			return err
+		}
+
+		// handle the buffered messages if any message can be reassembled
+		buffer, err = c.handleBufferedMessages(buffer)
+		if err != nil {
+			return err
+		}
+
+		// mark offset of the oldest message to be read
+		if err := c.updateOffset(buffer, msg, cgs); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -29,6 +29,7 @@ var logger = log.NewModuleLogger(log.ChainDataFetcher)
 const (
 	MsgIdxTotalSegments = iota
 	MsgIdxSegmentIdx
+	MsgIdxLength
 )
 
 const (
