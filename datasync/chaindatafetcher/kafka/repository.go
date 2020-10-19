@@ -81,7 +81,7 @@ func (r *repository) HandleChainEvent(event blockchain.ChainEvent, dataType type
 				BlockNumber:      event.Block.Number(),
 				InternalTxTraces: event.InternalTxTraces,
 			}
-			return r.kafka.Publish(r.kafka.getTopicName(EventTraceBroup), result)
+			return r.kafka.Publish(r.kafka.getTopicName(EventTraceGroup), result)
 		}
 		return nil
 	default:

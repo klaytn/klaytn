@@ -297,13 +297,9 @@ func (s *KafkaSuite) TestKafka_PubSubWith2DifferentGroups() {
 }
 
 func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
-	numTests := 1
+	numTests := 5
 	testBytesSize := 10
 	segmentSize := 3
-
-	// to calculate data length
-	data, _ := json.Marshal(&kafkaData{common.MakeRandomBytes(testBytesSize)})
-	totalSegments := len(data) / segmentSize
 
 	s.kfk.config.SegmentSizeBytes = segmentSize
 	topic := "test-message-segments"
@@ -312,27 +308,14 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
 	// publish random data
 	expected := s.publishRandomData(topic, numTests, testBytesSize)
 
-	// gather the published data segments
-	var msgs []*sarama.ConsumerMessage
-	s.subscribeData(topic, "test-group-id", totalSegments, func(message *sarama.ConsumerMessage) error {
-		msgs = append(msgs, message)
+	var actual []*kafkaData
+	s.subscribeData(topic, "test-group-id", numTests, func(message *sarama.ConsumerMessage) error {
+		var d *kafkaData
+		json.Unmarshal(message.Value, &d)
+		actual = append(actual, d)
 		return nil
 	})
-
-	// check the data segments are correctly inserted with the order
-	s.Equal(totalSegments, len(msgs))
-	var actual []byte
-	for idx, msg := range msgs {
-		actual = append(actual, msg.Value...)
-		s.Equal(uint64(totalSegments), binary.BigEndian.Uint64(msg.Headers[MsgIdxTotalSegments].Value))
-		s.Equal(uint64(idx), binary.BigEndian.Uint64(msg.Headers[MsgIdxSegmentIdx].Value))
-		s.Equal(topic, msg.Topic)
-	}
-
-	// check the result after resembling the segments
-	var d *kafkaData
-	json.Unmarshal(actual, &d)
-	s.Equal(expected, []*kafkaData{d})
+	s.Equal(expected, actual)
 }
 
 func (s *KafkaSuite) TestKafka_Consumer_AddTopicAndHandler() {
@@ -342,10 +325,10 @@ func (s *KafkaSuite) TestKafka_Consumer_AddTopicAndHandler() {
 	blockGroupHandler := func(msg *sarama.ConsumerMessage) error { return nil }
 	s.NoError(consumer.AddTopicAndHandler(EventBlockGroup, blockGroupHandler))
 	traceGroupHandler := func(msg *sarama.ConsumerMessage) error { return nil }
-	s.NoError(consumer.AddTopicAndHandler(EventTraceBroup, traceGroupHandler))
+	s.NoError(consumer.AddTopicAndHandler(EventTraceGroup, traceGroupHandler))
 
 	blockGroupTopic := s.kfk.config.getTopicName(EventBlockGroup)
-	traceGroupTopic := s.kfk.config.getTopicName(EventTraceBroup)
+	traceGroupTopic := s.kfk.config.getTopicName(EventTraceGroup)
 	expectedTopics := []string{blockGroupTopic, traceGroupTopic}
 	s.Equal(expectedTopics, consumer.topics)
 	s.Equal(reflect.ValueOf(blockGroupHandler).Pointer(), reflect.ValueOf(consumer.handlers[blockGroupTopic]).Pointer())

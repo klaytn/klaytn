@@ -114,7 +114,7 @@ func (c *Consumer) Close() error {
 
 // AddTopicAndHandler adds a topic associated the given event and its handler function to consume published messages of the topic.
 func (c *Consumer) AddTopicAndHandler(event string, handler TopicHandler) error {
-	if event != EventBlockGroup && event != EventTraceBroup {
+	if event != EventBlockGroup && event != EventTraceGroup {
 		return fmt.Errorf("%v [given: %v]", eventNameErrorMsg, event)
 	}
 	topic := c.config.getTopicName(event)
