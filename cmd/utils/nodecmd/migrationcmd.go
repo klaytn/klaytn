@@ -120,8 +120,9 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 		NumStateTrieShards: ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name),
 		OpenFilesLimit:     database.GetOpenFilesLimit(),
 
-		LevelDBCacheSize:   ctx.GlobalInt(utils.LevelDBCacheSizeFlag.Name),
-		LevelDBCompression: database.LevelDBCompressionType(ctx.GlobalInt(utils.LevelDBCompressionTypeFlag.Name)),
+		LevelDBCacheSize:    ctx.GlobalInt(utils.LevelDBCacheSizeFlag.Name),
+		LevelDBCompression:  database.LevelDBCompressionType(ctx.GlobalInt(utils.LevelDBCompressionTypeFlag.Name)),
+		EnableDBPerfMetrics: !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
 
 		DynamoDBConfig: &database.DynamoDBConfig{
 			TableName:          ctx.GlobalString(utils.DynamoDBTableNameFlag.Name),
@@ -129,6 +130,7 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 			IsProvisioned:      ctx.GlobalBool(utils.DynamoDBIsProvisionedFlag.Name),
 			ReadCapacityUnits:  ctx.GlobalInt64(utils.DynamoDBReadCapacityFlag.Name),
 			WriteCapacityUnits: ctx.GlobalInt64(utils.DynamoDBWriteCapacityFlag.Name),
+			PerfCheck:          !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
 		},
 	}
 	if len(srcDBC.DBType) == 0 { // changed to invalid type
@@ -143,8 +145,9 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 		NumStateTrieShards: ctx.GlobalUint(utils.DstNumStateTrieShardsFlag.Name),
 		OpenFilesLimit:     database.GetOpenFilesLimit(),
 
-		LevelDBCacheSize:   ctx.GlobalInt(utils.DstLevelDBCacheSizeFlag.Name),
-		LevelDBCompression: database.LevelDBCompressionType(ctx.GlobalInt(utils.DstLevelDBCompressionTypeFlag.Name)),
+		LevelDBCacheSize:    ctx.GlobalInt(utils.DstLevelDBCacheSizeFlag.Name),
+		LevelDBCompression:  database.LevelDBCompressionType(ctx.GlobalInt(utils.DstLevelDBCompressionTypeFlag.Name)),
+		EnableDBPerfMetrics: !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
 
 		DynamoDBConfig: &database.DynamoDBConfig{
 			TableName:          ctx.GlobalString(utils.DstDynamoDBTableNameFlag.Name),
@@ -152,6 +155,7 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 			IsProvisioned:      ctx.GlobalBool(utils.DstDynamoDBIsProvisionedFlag.Name),
 			ReadCapacityUnits:  ctx.GlobalInt64(utils.DstDynamoDBReadCapacityFlag.Name),
 			WriteCapacityUnits: ctx.GlobalInt64(utils.DstDynamoDBWriteCapacityFlag.Name),
+			PerfCheck:          !ctx.IsSet(utils.DBNoPerformanceMetricsFlag.Name),
 		},
 	}
 	if len(dstDBC.DBType) == 0 { // changed to invalid type

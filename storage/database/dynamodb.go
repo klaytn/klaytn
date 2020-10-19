@@ -47,6 +47,10 @@ import (
 
 var overSizedDataPrefix = []byte("oversizeditem")
 
+// Performance of batch operations of DynamoDB are collected by default.
+var dynamoBatchWriteTimeMeter metrics.Meter
+var dynamoBatchWriteSizeMeter metrics.Meter
+
 // errors
 var dataNotFoundErr = errors.New("data is not found with the given key")
 var nilDynamoConfigErr = errors.New("attempt to create DynamoDB with nil configuration")
@@ -77,6 +81,7 @@ type DynamoDBConfig struct {
 	ReadCapacityUnits  int64  // read capacity when provisioned
 	WriteCapacityUnits int64  // write capacity when provisioned
 	ReadOnly           bool   // disables write
+	PerfCheck          bool
 }
 
 type batchWriteWorkerInput struct {
@@ -92,11 +97,8 @@ type dynamoDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 
 	// metrics
-	batchWriteTimeMeter       metrics.Meter
-	batchWriteCountMeter      metrics.Meter
-	batchWriteSizeMeter       metrics.Meter
-	batchWriteSecPerItemMeter metrics.Meter
-	batchWriteSecPerByteMeter metrics.Meter
+	getTimeMeter metrics.Meter
+	putTimeMeter metrics.Meter
 }
 
 type DynamoData struct {
@@ -119,6 +121,7 @@ func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 		ReadCapacityUnits:  10000,
 		WriteCapacityUnits: 10000,
 		ReadOnly:           false,
+		PerfCheck:          true,
 	}
 }
 
@@ -136,6 +139,7 @@ func GetTestDynamoConfig() *DynamoDBConfig {
 		ReadCapacityUnits:  10000,
 		WriteCapacityUnits: 10000,
 		ReadOnly:           false,
+		PerfCheck:          false,
 	}
 }
 
@@ -295,6 +299,16 @@ func (dynamo *dynamoDB) Type() DBType {
 
 // Put inserts the given key and value pair to the database.
 func (dynamo *dynamoDB) Put(key []byte, val []byte) error {
+	if dynamo.config.PerfCheck {
+		start := time.Now()
+		err := dynamo.put(key, val)
+		dynamo.putTimeMeter.Mark(int64(time.Since(start)))
+		return err
+	}
+	return dynamo.put(key, val)
+}
+
+func (dynamo *dynamoDB) put(key []byte, val []byte) error {
 	if len(key) == 0 {
 		return nil
 	}
@@ -337,6 +351,16 @@ func (dynamo *dynamoDB) Has(key []byte) (bool, error) {
 
 // Get returns the corresponding value to the given key if exists.
 func (dynamo *dynamoDB) Get(key []byte) ([]byte, error) {
+	if dynamo.config.PerfCheck {
+		start := time.Now()
+		val, err := dynamo.get(key)
+		dynamo.getTimeMeter.Mark(int64(time.Since(start)))
+		return val, err
+	}
+	return dynamo.get(key)
+}
+
+func (dynamo *dynamoDB) get(key []byte) ([]byte, error) {
 	params := &dynamodb.GetItemInput{
 		TableName: aws.String(dynamo.config.TableName),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -402,12 +426,10 @@ func (dynamo *dynamoDB) Close() {
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
-	// TODO-Klaytn: implement this later. Consider the return values of bathItemWrite
-	dynamo.batchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
-	dynamo.batchWriteCountMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/count", nil)
-	dynamo.batchWriteSizeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/size", nil)
-	dynamo.batchWriteSecPerItemMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/secperitem", nil)
-	dynamo.batchWriteSecPerByteMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/secperbyte", nil)
+	dynamo.getTimeMeter = metrics.NewRegisteredMeter(prefix+"get/time", nil)
+	dynamo.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
+	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
+	dynamoBatchWriteSizeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/size", nil)
 }
 
 func (dynamo *dynamoDB) NewIterator() Iterator {
@@ -471,7 +493,9 @@ func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 				batchWriteInput.RequestItems[batchInput.tableName] = BatchWriteItemOutput.UnprocessedItems[batchInput.tableName]
 			}
 
+			start := time.Now()
 			BatchWriteItemOutput, err = dynamoDBClient.BatchWriteItem(batchWriteInput)
+			dynamoBatchWriteTimeMeter.Mark(int64(time.Since(start)))
 			numUnprocessed = len(BatchWriteItemOutput.UnprocessedItems)
 		}
 
@@ -513,6 +537,7 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 	}
 
 	// If the size of the item is larger than the limit, it should be handled in different way
+	dynamoBatchWriteSizeMeter.Mark(int64(dataSize))
 	if dataSize > dynamoWriteSizeLimit {
 		batch.wg.Add(1)
 		go func() {
