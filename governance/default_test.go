@@ -120,8 +120,8 @@ var goodVotes = []voteValue{
 
 func getTestConfig() *params.ChainConfig {
 	config := params.TestChainConfig
-	config.Governance = GetDefaultGovernanceConfig(params.UseIstanbul)
-	config.Istanbul = GetDefaultIstanbulConfig()
+	config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	config.Istanbul = params.GetDefaultIstanbulConfig()
 	return config
 }
 
@@ -132,7 +132,7 @@ func getGovernance() *Governance {
 }
 
 func TestGetDefaultGovernanceConfig(t *testing.T) {
-	tstGovernance := GetDefaultGovernanceConfig(params.UseIstanbul)
+	tstGovernance := params.GetDefaultGovernanceConfig(params.UseIstanbul)
 
 	want := []interface{}{
 		params.DefaultUseGiniCoeff,

@@ -22,8 +22,9 @@ package params
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"math/big"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 // Genesis hashes to enforce below configs on.
@@ -337,4 +338,40 @@ func (c *IstanbulConfig) Copy() *IstanbulConfig {
 	newIC.ProposerPolicy = c.ProposerPolicy
 
 	return newIC
+}
+
+func GetDefaultGovernanceConfig(engine EngineType) *GovernanceConfig {
+	gov := &GovernanceConfig{
+		GovernanceMode: DefaultGovernanceMode,
+		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
+		Reward:         GetDefaultRewardConfig(),
+	}
+	return gov
+}
+
+func GetDefaultIstanbulConfig() *IstanbulConfig {
+	return &IstanbulConfig{
+		Epoch:          DefaultEpoch,
+		ProposerPolicy: DefaultProposerPolicy,
+		SubGroupSize:   DefaultSubGroupSize,
+	}
+}
+
+func GetDefaultRewardConfig() *RewardConfig {
+	return &RewardConfig{
+		MintingAmount:          big.NewInt(DefaultMintingAmount),
+		Ratio:                  DefaultRatio,
+		UseGiniCoeff:           DefaultUseGiniCoeff,
+		DeferredTxFee:          DefaultDefferedTxFee,
+		StakingUpdateInterval:  uint64(86400),
+		ProposerUpdateInterval: uint64(3600),
+		MinimumStake:           big.NewInt(2000000),
+	}
+}
+
+func GetDefaultCliqueConfig() *CliqueConfig {
+	return &CliqueConfig{
+		Epoch:  DefaultEpoch,
+		Period: DefaultPeriod,
+	}
 }

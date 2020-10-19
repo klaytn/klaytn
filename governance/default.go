@@ -20,6 +20,12 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"reflect"
+	"strings"
+	"sync"
+	"sync/atomic"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
@@ -27,11 +33,6 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pkg/errors"
-	"math/big"
-	"reflect"
-	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 var (
@@ -548,42 +549,6 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 		logger.Warn("Unknown key was given", "key", vote.Key)
 	}
 	return false
-}
-
-func GetDefaultGovernanceConfig(engine params.EngineType) *params.GovernanceConfig {
-	gov := &params.GovernanceConfig{
-		GovernanceMode: params.DefaultGovernanceMode,
-		GoverningNode:  common.HexToAddress(params.DefaultGoverningNode),
-		Reward:         GetDefaultRewardConfig(),
-	}
-	return gov
-}
-
-func GetDefaultIstanbulConfig() *params.IstanbulConfig {
-	return &params.IstanbulConfig{
-		Epoch:          params.DefaultEpoch,
-		ProposerPolicy: params.DefaultProposerPolicy,
-		SubGroupSize:   params.DefaultSubGroupSize,
-	}
-}
-
-func GetDefaultRewardConfig() *params.RewardConfig {
-	return &params.RewardConfig{
-		MintingAmount:          big.NewInt(params.DefaultMintingAmount),
-		Ratio:                  params.DefaultRatio,
-		UseGiniCoeff:           params.DefaultUseGiniCoeff,
-		DeferredTxFee:          params.DefaultDefferedTxFee,
-		StakingUpdateInterval:  uint64(86400),
-		ProposerUpdateInterval: uint64(3600),
-		MinimumStake:           big.NewInt(2000000),
-	}
-}
-
-func GetDefaultCliqueConfig() *params.CliqueConfig {
-	return &params.CliqueConfig{
-		Epoch:  params.DefaultEpoch,
-		Period: params.DefaultPeriod,
-	}
 }
 
 func CheckGenesisValues(c *params.ChainConfig) error {

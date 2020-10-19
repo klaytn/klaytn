@@ -243,12 +243,12 @@ func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain
 	if genesis.Config.Istanbul == nil && genesis.Config.Clique != nil {
 		engine = params.UseClique
 		if genesis.Config.Governance == nil {
-			genesis.Config.Governance = governance.GetDefaultGovernanceConfig(engine)
+			genesis.Config.Governance = params.GetDefaultGovernanceConfig(engine)
 		}
 		valueChanged = true
 	} else if genesis.Config.Istanbul == nil && genesis.Config.Clique == nil {
 		engine = params.UseIstanbul
-		genesis.Config.Istanbul = governance.GetDefaultIstanbulConfig()
+		genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 		valueChanged = true
 	} else if genesis.Config.Istanbul != nil && genesis.Config.Clique != nil {
 		// Error case. Both istanbul and Clique exists
@@ -257,7 +257,7 @@ func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain
 
 	// If we don't have governance config
 	if genesis.Config.Governance == nil {
-		genesis.Config.Governance = governance.GetDefaultGovernanceConfig(engine)
+		genesis.Config.Governance = params.GetDefaultGovernanceConfig(engine)
 		valueChanged = true
 	}
 
