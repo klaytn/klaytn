@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"gopkg.in/urfave/cli.v1"
 	"net"
 	"os"
@@ -70,6 +71,7 @@ func bootnode(ctx *cli.Context) error {
 			HTTPPort:         DefaultHTTPPort,
 			HTTPModules:      []string{"net"},
 			HTTPVirtualHosts: []string{"localhost"},
+			HTTPTimeouts:     rpc.DefaultHTTPTimeouts,
 			WSPort:           DefaultWSPort,
 			WSModules:        []string{"net"},
 			GRPCPort:         DefaultGRPCPort,

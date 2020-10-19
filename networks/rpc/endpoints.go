@@ -25,7 +25,7 @@ import (
 )
 
 // StartHTTPEndpoint starts the HTTP RPC endpoint, configured with cors/vhosts/modules
-func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []string, vhosts []string) (net.Listener, *Server, error) {
+func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []string, vhosts []string, timeouts HTTPTimeouts) (net.Listener, *Server, error) {
 	// Generate the whitelist based on the allowed modules
 	whitelist := make(map[string]bool)
 	for _, module := range modules {
@@ -49,12 +49,12 @@ func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []str
 	if listener, err = net.Listen("tcp", endpoint); err != nil {
 		return nil, nil, err
 	}
-	go NewHTTPServer(cors, vhosts, handler).Serve(listener)
+	go NewHTTPServer(cors, vhosts, timeouts, handler).Serve(listener)
 	return listener, handler, err
 }
 
 // StartHTTPEndpoint starts the HTTP RPC endpoint, configured with cors/vhosts/modules
-func StartFastHTTPEndpoint(endpoint string, apis []API, modules []string, cors []string, vhosts []string) (net.Listener, *Server, error) {
+func StartFastHTTPEndpoint(endpoint string, apis []API, modules []string, cors []string, vhosts []string, timeouts HTTPTimeouts) (net.Listener, *Server, error) {
 	// Generate the whitelist based on the allowed modules
 	whitelist := make(map[string]bool)
 	for _, module := range modules {
@@ -78,12 +78,12 @@ func StartFastHTTPEndpoint(endpoint string, apis []API, modules []string, cors [
 	if listener, err = net.Listen("tcp4", endpoint); err != nil {
 		return nil, nil, err
 	}
-	go NewFastHTTPServer(cors, vhosts, handler).Serve(listener)
+	go NewFastHTTPServer(cors, vhosts, timeouts, handler).Serve(listener)
 	return listener, handler, err
 }
 
 // StartWSEndpoint starts a websocket endpoint
-func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool) (net.Listener, *Server, error) {
+func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool, timeouts HTTPTimeouts) (net.Listener, *Server, error) {
 
 	// Generate the whitelist based on the allowed modules
 	whitelist := make(map[string]bool)
@@ -108,12 +108,12 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 	if listener, err = net.Listen("tcp", endpoint); err != nil {
 		return nil, nil, err
 	}
-	go NewWSServer(wsOrigins, handler).Serve(listener)
+	go NewWSServer(wsOrigins, timeouts, handler).Serve(listener)
 	return listener, handler, err
 
 }
 
-func StartFastWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool) (net.Listener, *Server, error) {
+func StartFastWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool, timeouts HTTPTimeouts) (net.Listener, *Server, error) {
 
 	// Generate the whitelist based on the allowed modules
 	whitelist := make(map[string]bool)
@@ -138,7 +138,7 @@ func StartFastWSEndpoint(endpoint string, apis []API, modules []string, wsOrigin
 	if listener, err = net.Listen("tcp4", endpoint); err != nil {
 		return nil, nil, err
 	}
-	go NewFastWSServer(wsOrigins, handler).Serve(listener)
+	go NewFastWSServer(wsOrigins, timeouts, handler).Serve(listener)
 	return listener, handler, err
 
 }
