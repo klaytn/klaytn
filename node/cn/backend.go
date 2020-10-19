@@ -258,6 +258,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if err != nil {
 		return nil, err
 	}
+	bc.SetCanonicalBlock(config.StartBlockNumber)
+
 	cn.blockchain = bc
 	governance.SetBlockchain(cn.blockchain)
 	// Synchronize proposerpolicy & useGiniCoeff

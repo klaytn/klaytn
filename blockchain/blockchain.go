@@ -267,6 +267,27 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	return bc, nil
 }
 
+// SetCanonicalBlock resets the canonical as the block with the given block number.
+// It works as rewinding the head block the the previous one, but does not delete the data.
+func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
+	// If the given block number is zero (it is zero by default), it does nothing
+	if blockNum == 0 {
+		return
+	}
+	// Read the block with the given block number and set it as canonical block
+	targetBlock := bc.db.ReadBlockByNumber(blockNum)
+	if targetBlock == nil {
+		logger.Error("failed to retrieve the block", "blockNum", blockNum)
+		return
+	}
+	bc.insert(targetBlock)
+	if err := bc.loadLastState(); err != nil {
+		logger.Error("failed to load last state after setting the canonical block", "err", err)
+		return
+	}
+	logger.Info("successfully set the canonical block", "blockNum", blockNum)
+}
+
 func (bc *BlockChain) UseGiniCoeff() bool {
 	bc.chainConfigMu.RLock()
 	defer bc.chainConfigMu.RUnlock()
