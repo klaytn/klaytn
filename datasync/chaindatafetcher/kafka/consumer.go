@@ -172,6 +172,11 @@ func insertSegment(segment *Segment, buffer [][]*Segment) ([][]*Segment, error) 
 	for idx, segments := range buffer {
 		length := len(segments)
 		if length > 0 && segments[0].key == segment.key {
+			// there is a missing segment which should not exist.
+			if segment.index > uint64(length) {
+				return buffer, errors.New(wrongSegmentErrorMsg)
+			}
+
 			// the segment is already inserted to buffer.
 			if segment.index < uint64(length) {
 				logger.Warn("the message is duplicated", "segment", segment)
@@ -179,13 +184,8 @@ func insertSegment(segment *Segment, buffer [][]*Segment) ([][]*Segment, error) 
 			}
 
 			// insert the segment to the buffer.
-			if segment.index == uint64(length) {
-				buffer[idx] = append(segments, segment)
-				return buffer, nil
-			}
-
-			// there is a missing segment which should not be occurred.
-			return buffer, errors.New(wrongSegmentErrorMsg)
+			buffer[idx] = append(segments, segment)
+			return buffer, nil
 		}
 	}
 
