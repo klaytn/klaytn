@@ -58,7 +58,7 @@ Functions and variables related to Block and Transaction are defined in the file
   - tx_internal_data_account_creation.go : implements the transaction creating an EOA account
   - tx_internal_data_account_update.go : implements the transaction updating account key of an account
   - tx_internal_data_cancel.go : implements the transaction canceling a transaction in the txpool
-  - tx_internal_data_chain_data_anchoring.go : implements the transaction transfering data to service chain
+  - tx_internal_data_chain_data_anchoring.go : implements the transaction transferring data to service chain
   - tx_internal_data_fee_delegated_account_update.go : implements the fee-delegated version of account update transaction
   - tx_internal_data_fee_delegated_account_update_with_ratio.go : implements the partially fee-delegated version of account update transaction
   - tx_internal_data_fee_delegated_cancel.go: implements the fee-delegated version of cancel transaction
