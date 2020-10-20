@@ -29,6 +29,7 @@ executors:
       - image: klaytn/build_base:1.1-go1.14.6-solc0.4.24
       - image: localstack/localstack:0.11.5
       - image: circleci/mysql:5.7
+      - image: circleci/redis:6.0.8-alpine
       - name: zookeeper
         image: wurstmeister/zookeeper
       - name: kafka
@@ -241,6 +242,16 @@ commands:
               sleep 1
             done
             echo Failed waiting for MySQL && exit 1
+      - run:
+          name: "Waiting for Redis to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z 127.0.0.1 6379 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Redis && exit 1
       - run:
           name: "Waiting for zookeeper to be ready"
           command: |
