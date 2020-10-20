@@ -20,7 +20,6 @@
 
 package params
 
-import "C"
 import (
 	"fmt"
 	"math/big"
