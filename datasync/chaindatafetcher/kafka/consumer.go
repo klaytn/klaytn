@@ -207,9 +207,9 @@ func (c *Consumer) handleBufferedMessages(buffer [][]*Segment) ([][]*Segment, er
 	}
 
 	// if any message exists in the buffer
-	oldestMsg, firstSegment, total := buffer[0], buffer[0][0], len(buffer[0])
-	if total > 0 {
-		if uint64(total) != firstSegment.total {
+	oldestMsg, firstSegment, buffered := buffer[0], buffer[0][0], len(buffer[0])
+	if buffered > 0 {
+		if uint64(buffered) != firstSegment.total {
 			// not ready for assembling messages
 			return buffer, nil
 		}
