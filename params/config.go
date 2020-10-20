@@ -20,11 +20,13 @@
 
 package params
 
+import "C"
 import (
 	"fmt"
 	"math/big"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 )
 
 // Genesis hashes to enforce below configs on.
@@ -120,7 +122,7 @@ type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
 	// Various consensus engines
-	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"`
+	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
 
@@ -159,6 +161,7 @@ type IstanbulConfig struct {
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.
+// Deprecated: Use IstanbulConfig or CliqueConfig.
 type GxhashConfig struct{}
 
 // String implements the stringer interface, returning the consensus engine details.
@@ -240,6 +243,49 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
 	return nil
+}
+
+// GetConsensusEngine returns the consensus engine type specified in ChainConfig.
+// It returns Unknown type if none of engine type is configured or more than one type is configured.
+func (c *ChainConfig) GetConsensusEngine() EngineType {
+	if c.Clique != nil {
+		if c.Istanbul != nil {
+			return Unknown
+		}
+		return UseClique
+	}
+	if c.Istanbul != nil {
+		return UseIstanbul
+	}
+	return Unknown
+}
+
+// Enhance updates consensus and governance related configs to the default values when they are not configured.
+func (c *ChainConfig) Enhance() {
+	logger := log.NewModuleLogger(log.Governance)
+
+	if c.GetConsensusEngine() == Unknown {
+		logger.Warn("Override the default Istanbul config to genesis config")
+		c.Istanbul = GetDefaultIstanbulConfig()
+	}
+
+	if c.Governance == nil {
+		engineType := c.GetConsensusEngine()
+		logger.Warn("Override the default governance config", "engineType", engineType)
+		c.Governance = GetDefaultGovernanceConfig(engineType)
+	}
+
+	if c.Governance.Reward == nil {
+		c.Governance.Reward = GetDefaultRewardConfig()
+	}
+
+	if c.Governance.Reward.StakingUpdateInterval == 0 {
+		c.Governance.Reward.StakingUpdateInterval = StakingUpdateInterval()
+	}
+
+	if c.Governance.Reward.ProposerUpdateInterval == 0 {
+		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
+	}
 }
 
 // isForkIncompatible returns true if a fork scheduled at s1 cannot be rescheduled to
