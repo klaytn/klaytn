@@ -135,10 +135,6 @@ var (
 		Name:  "overwrite-genesis",
 		Usage: "Overwrites genesis block with the given new genesis block for testing purpose",
 	}
-	WorkerDisableFlag = cli.BoolFlag{
-		Name:  "worker.disable",
-		Usage: "Disables worker. This flag results in block processing failure.",
-	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.nolocals",
@@ -197,14 +193,10 @@ var (
 		Usage: "Maximum amount of time non-executable transaction are queued",
 		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
-	// block processing
-	DownloaderDisableFlag = cli.BoolFlag{
-		Name:  "downloader.disable",
-		Usage: "Disables downloader",
-	}
-	FetcherDisableFlag = cli.BoolFlag{
-		Name:  "fetcher.disable",
-		Usage: "Disables fetcher",
+	// KES
+	KESNodeTypeServiceFlag = cli.BoolFlag{
+		Name:  "kes.nodetype.service",
+		Usage: "Run as a KES Service Node (Disable fetcher, downloader, and worker)",
 	}
 	// Performance tuning settings
 	StateDBCachingFlag = cli.BoolFlag{
@@ -1397,9 +1389,11 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		}
 	}
 
-	cfg.WorkerDisable = ctx.GlobalBool(WorkerDisableFlag.Name)
-	cfg.DownloaderDisable = ctx.GlobalBool(DownloaderDisableFlag.Name)
-	cfg.FetcherDisable = ctx.GlobalBool(FetcherDisableFlag.Name)
+	if ctx.GlobalBool(KESNodeTypeServiceFlag.Name) {
+		cfg.FetcherDisable = true
+		cfg.DownloaderDisable = true
+		cfg.WorkerDisable = true
+	}
 
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
 
