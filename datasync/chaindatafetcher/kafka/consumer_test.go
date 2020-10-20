@@ -38,12 +38,13 @@ func Test_newSegment_Success(t *testing.T) {
 	idx := rand.Uint64() % total
 	totalBytes := common.Int64ToByteBigEndian(total)
 	idxBytes := common.Int64ToByteBigEndian(idx)
+	key := "test-key"
 	msg := &sarama.ConsumerMessage{
 		Headers: []*sarama.RecordHeader{
 			{Key: []byte(KeyTotalSegments), Value: totalBytes},
 			{Key: []byte(KeySegmentIdx), Value: idxBytes},
 		},
-		Key:   []byte("test-key"),
+		Key:   []byte(key),
 		Value: value,
 	}
 
@@ -53,6 +54,7 @@ func Test_newSegment_Success(t *testing.T) {
 	assert.Equal(t, value, segment.value)
 	assert.Equal(t, total, segment.total)
 	assert.Equal(t, idx, segment.index)
+	assert.Equal(t, key, segment.key)
 }
 
 func Test_newSegment_Fail(t *testing.T) {
