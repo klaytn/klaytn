@@ -85,22 +85,22 @@ func initGenesis(ctx *cli.Context) error {
 
 	genesis := new(blockchain.Genesis)
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
-		logger.Crit("invalid genesis file", "err", err)
+		logger.Crit("Invalid genesis file", "err", err)
 		return err
 	}
 
 	if genesis.Config == nil {
-		logger.Crit("invalid genesis config")
+		logger.Crit("Invalid genesis config")
 	}
 
 	// Update undefined config with default values and validate config
 	genesis.Config.Enhance()
 	if err := ValidateGenesisConfig(genesis); err != nil {
-		logger.Crit("invalid genesis", "err", err)
+		logger.Crit("Invalid genesis", "err", err)
 	}
 
 	// Set genesis.Governance and reward intervals
-	govSet := getGovernanceItemSetFromGenesis(genesis)
+	govSet := governance.GetGovernanceItemsFromChainConfig(genesis.Config)
 	govItemBytes, err := json.Marshal(govSet.Items())
 	if err != nil {
 		logger.Crit("Failed to json marshaling governance data", "err", err)
@@ -139,76 +139,26 @@ func initGenesis(ctx *cli.Context) error {
 		dbc := &database.DBConfig{Dir: name, DBType: dbtype, ParallelDBWrite: parallelDBWrite,
 			SingleDB: singleDB, NumStateTrieShards: numStateTrieShards,
 			LevelDBCacheSize: 0, OpenFilesLimit: 0, DynamoDBConfig: dynamoDBConfig}
-		chaindb := stack.OpenDatabase(dbc)
+		chainDB := stack.OpenDatabase(dbc)
+
 		// Initialize DeriveSha implementation
 		blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 
-		_, hash, err := blockchain.SetupGenesisBlock(chaindb, genesis, params.UnusedNetworkId, false, overwriteGenesis)
+		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis, params.UnusedNetworkId, false, overwriteGenesis)
 		if err != nil {
-			log.Fatalf("Failed to write genesis block: %v", err)
+			logger.Crit("Failed to write genesis block", "err", err)
 		}
-		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
 
-		chaindb.Close()
+		// Write governance items to database
+		if err := governance.NewGovernance(genesis.Config, chainDB).WriteGovernance(0, govSet,
+			governance.NewGovernanceSet()); err != nil {
+			logger.Crit("Failed to write governance items", "err", err)
+		}
+
+		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
+		chainDB.Close()
 	}
 	return nil
-}
-
-func getGovernanceItemSetFromGenesis(genesis *blockchain.Genesis) governance.GovernanceSet {
-	g := governance.NewGovernanceSet()
-
-	if genesis.Config.Governance != nil {
-		governance := genesis.Config.Governance
-		if err := g.SetValue(params.GovernanceMode, governance.GovernanceMode); err != nil {
-			writeFailLog(params.GovernanceMode, err)
-		}
-		if err := g.SetValue(params.GoverningNode, governance.GoverningNode); err != nil {
-			writeFailLog(params.GoverningNode, err)
-		}
-		if err := g.SetValue(params.UnitPrice, genesis.Config.UnitPrice); err != nil {
-			writeFailLog(params.UnitPrice, err)
-		}
-		if err := g.SetValue(params.MintingAmount, governance.Reward.MintingAmount.String()); err != nil {
-			writeFailLog(params.MintingAmount, err)
-		}
-		if err := g.SetValue(params.Ratio, governance.Reward.Ratio); err != nil {
-			writeFailLog(params.Ratio, err)
-		}
-		if err := g.SetValue(params.UseGiniCoeff, governance.Reward.UseGiniCoeff); err != nil {
-			writeFailLog(params.UseGiniCoeff, err)
-		}
-		if err := g.SetValue(params.DeferredTxFee, governance.Reward.DeferredTxFee); err != nil {
-			writeFailLog(params.DeferredTxFee, err)
-		}
-		if err := g.SetValue(params.MinimumStake, governance.Reward.MinimumStake.String()); err != nil {
-			writeFailLog(params.MinimumStake, err)
-		}
-		if err := g.SetValue(params.StakeUpdateInterval, governance.Reward.StakingUpdateInterval); err != nil {
-			writeFailLog(params.StakeUpdateInterval, err)
-		}
-		if err := g.SetValue(params.ProposerRefreshInterval, governance.Reward.ProposerUpdateInterval); err != nil {
-			writeFailLog(params.ProposerRefreshInterval, err)
-		}
-	}
-
-	if genesis.Config.Istanbul != nil {
-		istanbul := genesis.Config.Istanbul
-		if err := g.SetValue(params.Epoch, istanbul.Epoch); err != nil {
-			writeFailLog(params.Epoch, err)
-		}
-		if err := g.SetValue(params.Policy, istanbul.ProposerPolicy); err != nil {
-			writeFailLog(params.Policy, err)
-		}
-		if err := g.SetValue(params.CommitteeSize, istanbul.SubGroupSize); err != nil {
-			writeFailLog(params.CommitteeSize, err)
-		}
-	}
-	return g
-}
-
-func writeFailLog(key int, err error) {
-	msg := "Failed to set " + governance.GovernanceKeyMapReverse[key]
-	logger.Crit(msg, "err", err)
 }
 
 func ValidateGenesisConfig(g *blockchain.Genesis) error {

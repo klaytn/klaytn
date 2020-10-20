@@ -402,6 +402,21 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 }
 
 func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
+	return &Governance{
+		ChainConfig:              chainConfig,
+		voteMap:                  NewVoteMap(),
+		db:                       dbm,
+		itemCache:                newGovernanceCache(),
+		currentSet:               NewGovernanceSet(),
+		changeSet:                NewGovernanceSet(),
+		lastGovernanceStateBlock: 0,
+		GovernanceTallies:        NewGovernanceTallies(),
+		GovernanceVotes:          NewGovernanceVotes(),
+		idxCacheLock:             new(sync.RWMutex),
+	}
+}
+
+func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
 	ret := Governance{
 		ChainConfig:              chainConfig,
 		voteMap:                  NewVoteMap(),
@@ -418,7 +433,7 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 	if dbm != nil {
 		if err := ret.initializeCache(); err != nil {
 			// If this is the first time to run, store governance information for genesis block on database
-			cfg := getGovernanceItemsFromChainConfig(chainConfig)
+			cfg := GetGovernanceItemsFromChainConfig(chainConfig)
 			if err := ret.WriteGovernance(0, cfg, NewGovernanceSet()); err != nil {
 				logger.Crit("Error in writing governance information", "err", err)
 			}
@@ -552,7 +567,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 }
 
 func CheckGenesisValues(c *params.ChainConfig) error {
-	gov := NewGovernance(c, nil)
+	gov := NewGovernanceInitialize(c, nil)
 
 	var tstMap = map[string]interface{}{
 		"istanbul.epoch":                c.Istanbul.Epoch,
@@ -917,7 +932,7 @@ func (gov *Governance) SetTxPool(txpool txPool) {
 	gov.TxPool = txpool
 }
 
-func getGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
+func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
 	g := NewGovernanceSet()
 
 	if config.Governance != nil {
@@ -967,7 +982,7 @@ func writeFailLog(key int, err error) {
 func AddGovernanceCacheForTest(g *Governance, num uint64, config *params.ChainConfig) {
 	// Don't update cache if num (block number) is smaller than the biggest number of cached block number
 
-	data := getGovernanceItemsFromChainConfig(config)
+	data := GetGovernanceItemsFromChainConfig(config)
 	g.addGovernanceCache(num, data)
 }
 

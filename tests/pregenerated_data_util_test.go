@@ -491,7 +491,7 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 func generateGovernaceDataForTest() *governance.Governance {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 
-	return governance.NewGovernance(&params.ChainConfig{
+	return governance.NewGovernanceInitialize(&params.ChainConfig{
 		ChainID:       big.NewInt(2018),
 		UnitPrice:     25000000000,
 		DeriveShaImpl: 0,
