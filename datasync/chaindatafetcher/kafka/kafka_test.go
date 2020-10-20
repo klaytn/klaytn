@@ -165,10 +165,11 @@ func (s *KafkaSuite) subscribeData(topic, groupId string, numTests int, handler 
 	}()
 
 	// wait for all data to be consumed
-	timeout := time.NewTimer(3 * time.Second)
+	timeout := time.NewTimer(5 * time.Second)
 	for i := 0; i < numTests; i++ {
 		select {
 		case <-numCheckCh:
+			s.T().Logf("test count: %v, total tests: %v", i+1, numTests)
 		case <-timeout.C:
 			s.Fail("timeout")
 		}
