@@ -196,7 +196,8 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 				return nil, err
 			}
 
-			dynamoDB.logger.Info("creating a DynamoDB table", "endPoint", config.Endpoint)
+			dynamoDB.logger.Warn("creating a DynamoDB table. You will be CHARGED until the DB is deleted",
+				"endPoint", config.Endpoint)
 			if err := dynamoDB.createTable(); err != nil {
 				dynamoDB.logger.Error("unable to create a DynamoDB table", "err", err.Error())
 				return nil, err
@@ -205,7 +206,6 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 
 		switch tableStatus {
 		case dynamodb.TableStatusActive:
-			dynamoDB.logger.Warn("Successfully created dynamoDB table. You will be CHARGED until the DB is deleted.", "endPoint", config.Endpoint)
 			if !dynamoDB.config.ReadOnly {
 				// count successful table creating
 				dynamoOpenedDBNum++
@@ -214,6 +214,7 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 					createBatchWriteWorkerPool(config.Endpoint, config.Region)
 				})
 			}
+			dynamoDB.logger.Info("successfully created dynamoDB session", "endPoint", config.Endpoint)
 			return dynamoDB, nil
 		case dynamodb.TableStatusDeleting, dynamodb.TableStatusArchiving, dynamodb.TableStatusArchived:
 			return nil, errors.New("failed to get DynamoDB table, table status : " + tableStatus)
