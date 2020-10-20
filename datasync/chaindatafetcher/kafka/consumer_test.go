@@ -252,7 +252,7 @@ func Test_insertSegment_Fail_WrongSegmentError(t *testing.T) {
 	assert.NoError(t, err)
 	buffer, err = insertSegment(m1s2, buffer)
 	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), wrongSegmentErrorMsg))
+	assert.True(t, strings.Contains(err.Error(), missingSegmentErrorMsg))
 }
 
 func TestConsumer_handleBufferedMessages_Success_NotCompleteMessage(t *testing.T) {

@@ -37,7 +37,7 @@ var (
 	nilConsumerMessageErrorMsg = "the given message should not be nil"
 	wrongHeaderNumberErrorMsg  = "the number of header is not expected"
 	wrongHeaderKeyErrorMsg     = "the header key is not expected"
-	wrongSegmentErrorMsg       = "there is a missing segment"
+	missingSegmentErrorMsg     = "there is a missing segment"
 	noHandlerErrorMsg          = "the handler does not exist for the given topic"
 	emptySegmentErrorMsg       = "there is no segment in the segment slice"
 )
@@ -174,7 +174,7 @@ func insertSegment(segment *Segment, buffer [][]*Segment) ([][]*Segment, error) 
 		if length > 0 && segments[0].key == segment.key {
 			// there is a missing segment which should not exist.
 			if segment.index > uint64(length) {
-				return buffer, errors.New(wrongSegmentErrorMsg)
+				return buffer, errors.New(missingSegmentErrorMsg)
 			}
 
 			// the segment is already inserted to buffer.
