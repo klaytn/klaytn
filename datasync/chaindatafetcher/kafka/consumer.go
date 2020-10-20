@@ -174,6 +174,7 @@ func insertSegment(segment *Segment, buffer [][]*Segment) ([][]*Segment, error) 
 		if length > 0 && segments[0].key == segment.key {
 			// there is a missing segment which should not exist.
 			if segment.index > uint64(length) {
+				logger.Error("there may be a missing segment", "length", length, "segment", segment)
 				return buffer, errors.New(missingSegmentErrorMsg)
 			}
 
@@ -244,8 +245,10 @@ func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMes
 		}
 
 		oldestMsg := buffer[0][0].orig
+		// mark the offset as the oldest message has not been read
 		session.MarkOffset(oldestMsg.Topic, oldestMsg.Partition, oldestMsg.Offset, "")
 	} else {
+		// mark the offset as the last message has been read
 		session.MarkMessage(lastMsg, "")
 	}
 
