@@ -178,6 +178,11 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 		return errors.New("governance and reward policies should be configured")
 	}
 
+	if g.Config.Governance.Reward.ProposerUpdateInterval == 0 || g.Config.Governance.Reward.
+		StakingUpdateInterval == 0 {
+		return errors.New("proposerUpdateInterval and stakingUpdateInterval cannot be zero")
+	}
+
 	if g.Config.GetConsensusEngine() == params.UseIstanbul {
 		if err := governance.CheckGenesisValues(g.Config); err != nil {
 			return err
