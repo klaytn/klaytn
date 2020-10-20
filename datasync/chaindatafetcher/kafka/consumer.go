@@ -178,7 +178,7 @@ func insertSegment(segment *Segment, buffer [][]*Segment) ([][]*Segment, error) 
 				return buffer, nil
 			}
 
-			// the segment is inserted.
+			// insert the segment to the buffer.
 			if segment.index == uint64(length) {
 				buffer[idx] = append(segments, segment)
 				return buffer, nil
