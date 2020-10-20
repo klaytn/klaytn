@@ -23,9 +23,10 @@ package statedb
 import (
 	"errors"
 	"fmt"
+	"strconv"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/common"
-	"strconv"
 
 	"github.com/klaytn/klaytn/storage/database"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
@@ -396,7 +397,7 @@ func (s *TrieSync) commit(req *request) (err error) {
 }
 
 // RetrievedByDepth returns the retrieved trie count by given depth.
-// This number is same as the number of nodes that needs to be commited to complete trie sync.
+// This number is same as the number of nodes that needs to be committed to complete trie sync.
 func (s *TrieSync) RetrievedByDepth(depth int) int {
 	return s.retrievedByDepth[depth]
 }

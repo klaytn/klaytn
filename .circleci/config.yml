@@ -156,7 +156,7 @@ commands:
   tag-verify:
     steps:
       - run:
-          name: "Verify tag and file verison match"
+          name: "Verify tag and file version match"
           command: |
             echo "tag version is " $CIRCLE_TAG
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
@@ -170,7 +170,7 @@ commands:
   tagger-verify:
     steps:
       - run:
-          name: "Verify tag and file verison match"
+          name: "Verify tag and file version match"
           command: |
               TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG | sed 's/ .*//')
               if [ $TAGGER == 'circleci-klaytn' ]; then
