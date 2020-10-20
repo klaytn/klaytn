@@ -99,8 +99,8 @@ func (s *KafkaSuite) TestKafka_makeProducerMessage() {
 	// compare the data is correctly inserted
 	s.Equal(s.topic, msg.Topic)
 	s.Equal(sarama.ByteEncoder(data), msg.Value)
-	s.Equal(totalSegments, binary.BigEndian.Uint64(msg.Headers[MsgIdxTotalSegments].Value))
-	s.Equal(idx, binary.BigEndian.Uint64(msg.Headers[MsgIdxSegmentIdx].Value))
+	s.Equal(totalSegments, binary.BigEndian.Uint64(msg.Headers[MsgHeaderTotalSegments].Value))
+	s.Equal(idx, binary.BigEndian.Uint64(msg.Headers[MsgHeaderSegmentIdx].Value))
 }
 
 func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {

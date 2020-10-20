@@ -64,25 +64,25 @@ func newSegment(msg *sarama.ConsumerMessage) (*Segment, error) {
 		return nil, errors.New(nilConsumerMessageErrorMsg)
 	}
 
-	if len(msg.Headers) != MsgIdxLength {
+	if len(msg.Headers) != MsgHeaderLength {
 		return nil, fmt.Errorf("%v [header length: %v]", wrongHeaderNumberErrorMsg, len(msg.Headers))
 	}
 
 	// parse the number of total segments
-	keyTotalSegments := string(msg.Headers[MsgIdxTotalSegments].Key)
+	keyTotalSegments := string(msg.Headers[MsgHeaderTotalSegments].Key)
 	if keyTotalSegments != KeyTotalSegments {
 		return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeyTotalSegments, keyTotalSegments)
 	}
 
 	// parse the segment index
-	keySegmentIdx := string(msg.Headers[MsgIdxSegmentIdx].Key)
+	keySegmentIdx := string(msg.Headers[MsgHeaderSegmentIdx].Key)
 	if keySegmentIdx != KeySegmentIdx {
 		return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeySegmentIdx, keySegmentIdx)
 	}
 
 	key := string(msg.Key)
-	totalSegments := binary.BigEndian.Uint64(msg.Headers[MsgIdxTotalSegments].Value)
-	segmentIdx := binary.BigEndian.Uint64(msg.Headers[MsgIdxSegmentIdx].Value)
+	totalSegments := binary.BigEndian.Uint64(msg.Headers[MsgHeaderTotalSegments].Value)
+	segmentIdx := binary.BigEndian.Uint64(msg.Headers[MsgHeaderSegmentIdx].Value)
 	return &Segment{orig: msg, key: key, total: totalSegments, index: segmentIdx, value: msg.Value}, nil
 }
 
