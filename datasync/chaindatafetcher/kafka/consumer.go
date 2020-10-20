@@ -201,14 +201,9 @@ func insertSegment(segment *Segment, buffer [][]*Segment) ([][]*Segment, error) 
 
 // handleBufferedMessages handles all consecutive complete messages in the buffer.
 func (c *Consumer) handleBufferedMessages(buffer [][]*Segment) ([][]*Segment, error) {
-	// base case
-	if len(buffer) <= 0 {
-		return buffer, nil
-	}
-
-	// if any message exists in the buffer
-	oldestMsg, firstSegment, buffered := buffer[0], buffer[0][0], len(buffer[0])
-	if buffered > 0 {
+	for len(buffer) > 0 {
+		// if any message exists in the buffer
+		oldestMsg, firstSegment, buffered := buffer[0], buffer[0][0], len(buffer[0])
 		if uint64(buffered) != firstSegment.total {
 			// not ready for assembling messages
 			return buffer, nil
@@ -235,7 +230,8 @@ func (c *Consumer) handleBufferedMessages(buffer [][]*Segment) ([][]*Segment, er
 
 		buffer = buffer[1:]
 	}
-	return c.handleBufferedMessages(buffer)
+
+	return buffer, nil
 }
 
 // updateOffset updates offset after handling messages.
