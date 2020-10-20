@@ -37,9 +37,7 @@ func getTestRedisConfig() TrieNodeCacheConfig {
 	}
 }
 
-// TODO-Klaytn: Enable tests when redis is prepared on CI
-
-func _TestSubscription(t *testing.T) {
+func TestSubscription(t *testing.T) {
 	msg1 := "testMessage1"
 	msg2 := "testMessage2"
 
@@ -52,11 +50,19 @@ func _TestSubscription(t *testing.T) {
 
 		ch := cache.SubscribeBlockCh()
 
-		actualMsg := <-ch
-		assert.Equal(t, msg1, actualMsg.Payload)
+		select {
+		case actualMsg := <-ch:
+			assert.Equal(t, msg1, actualMsg.Payload)
+		case <-time.After(time.Second):
+			panic("timeout")
+		}
 
-		actualMsg = <-ch
-		assert.Equal(t, msg2, actualMsg.Payload)
+		select {
+		case actualMsg := <-ch:
+			assert.Equal(t, msg2, actualMsg.Payload)
+		case <-time.After(time.Second):
+			panic("timeout")
+		}
 
 		wg.Done()
 	}()
@@ -73,17 +79,11 @@ func _TestSubscription(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// to prevent continuous waiting
-	go func() {
-		time.Sleep(time.Second)
-		wg.Done()
-	}()
-
 	wg.Wait()
 }
 
 // TestNewRedisCache tests basic operations of redis cache
-func _TestNewRedisCache(t *testing.T) {
+func TestNewRedisCache(t *testing.T) {
 	cache, err := NewRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
@@ -99,7 +99,7 @@ func _TestNewRedisCache(t *testing.T) {
 }
 
 // TestNewRedisCache_Set_LargeData check whether redis cache can store an large data (5MB).
-func _TestNewRedisCache_Set_LargeData(t *testing.T) {
+func TestNewRedisCache_Set_LargeData(t *testing.T) {
 	cache, err := NewRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -113,7 +113,7 @@ func _TestNewRedisCache_Set_LargeData(t *testing.T) {
 }
 
 // TestNewRedisCache_Timeout test timout feature of redis client.
-func _TestNewRedisCache_Timeout(t *testing.T) {
+func TestNewRedisCache_Timeout(t *testing.T) {
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:11234")
 		if err != nil {
@@ -152,13 +152,13 @@ func _TestNewRedisCache_Timeout(t *testing.T) {
 
 	start := time.Now()
 	cache.Set(key, value)
-	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(time.Second))
+	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 
 	start = time.Now()
 	_ = cache.Get(key)
-	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(time.Second))
+	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 
 	start = time.Now()
 	_, _ = cache.Has(key)
-	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(time.Second))
+	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 }

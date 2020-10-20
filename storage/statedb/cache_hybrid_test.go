@@ -7,8 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO-Klaytn: Enable tests when redis is prepared on CI
-
 func getTestHybridConfig() TrieNodeCacheConfig {
 	return TrieNodeCacheConfig{
 		CacheType:          CacheTypeHybrid,
@@ -20,7 +18,7 @@ func getTestHybridConfig() TrieNodeCacheConfig {
 }
 
 // TestHybridCache_Set tests whether a hybrid cache can set an item into both of local and remote caches.
-func _TestHybridCache_Set(t *testing.T) {
+func TestHybridCache_Set(t *testing.T) {
 	cache, err := NewHybridCache(getTestHybridConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -44,7 +42,7 @@ func _TestHybridCache_Set(t *testing.T) {
 }
 
 // TestHybridCache_Get tests whether a hybrid cache can get an item from both of local and remote caches.
-func _TestHybridCache_Get(t *testing.T) {
+func TestHybridCache_Get(t *testing.T) {
 	// Prepare caches to be integrated with a hybrid cache
 	localCache := NewFastCache(getTestHybridConfig())
 	remoteCache, err := NewRedisCache(getTestHybridConfig())
@@ -74,9 +72,15 @@ func _TestHybridCache_Get(t *testing.T) {
 		key, value := randBytes(32), randBytes(500)
 		remoteCache.Set(key, value)
 
+		// Make sure the item is not stored in the local cache.
+		assert.Equal(t, len(localCache.Get(key)), 0)
+
 		// Get the item from the hybrid cache and check the validity
 		returnedVal := hybrid.Get(key)
 		assert.Equal(t, bytes.Compare(returnedVal, value), 0)
+
+		// Make sure that the item retrieved from the remote cache is also stored in the local cache
+		assert.Equal(t, bytes.Compare(localCache.Get(key), value), 0)
 	}
 
 	// Test the priority of local and remote caches
@@ -93,7 +97,7 @@ func _TestHybridCache_Get(t *testing.T) {
 }
 
 // TestHybridCache_Has tests whether a hybrid cache can check an item from both of local and remote caches.
-func _TestHybridCache_Has(t *testing.T) {
+func TestHybridCache_Has(t *testing.T) {
 	// Prepare caches to be integrated with a hybrid cache
 	localCache := NewFastCache(getTestHybridConfig())
 	remoteCache, err := NewRedisCache(getTestHybridConfig())
