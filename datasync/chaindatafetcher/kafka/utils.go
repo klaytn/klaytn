@@ -17,8 +17,6 @@
 package kafka
 
 import (
-	"strings"
-
 	klaytnApi "github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -28,35 +26,31 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 )
 
-func getProposerAndValidatorsFromBlock(block *types.Block) (string, string, error) {
+func getProposerAndValidatorsFromBlock(block *types.Block) (common.Address, []common.Address, error) {
 	blockNumber := block.NumberU64()
 	if blockNumber == 0 {
-		return "", "", nil
+		return common.Address{}, []common.Address{}, nil
 	}
 	// Retrieve the signature from the header extra-data
 	istanbulExtra, err := types.ExtractIstanbulExtra(block.Header())
 	if err != nil {
-		return "", "", err
+		return common.Address{}, []common.Address{}, err
 	}
 
 	sigHash, err := sigHash(block.Header())
 	if err != nil {
-		return "", "", err
+		return common.Address{}, []common.Address{}, err
 	}
 	proposerAddr, err := istanbul.GetSignatureAddress(sigHash.Bytes(), istanbulExtra.Seal)
 	if err != nil {
-		return "", "", err
+		return common.Address{}, []common.Address{}, err
 	}
 	commiteeAddrs := make([]common.Address, len(istanbulExtra.Validators))
 	for i, addr := range istanbulExtra.Validators {
 		commiteeAddrs[i] = addr
 	}
-	var strValidators []string
-	for _, validator := range istanbulExtra.Validators {
-		strValidators = append(strValidators, validator.Hex())
-	}
 
-	return proposerAddr.Hex(), strings.Join(strValidators, ","), nil
+	return proposerAddr, commiteeAddrs, nil
 }
 
 func sigHash(header *types.Header) (hash common.Hash, err error) {
