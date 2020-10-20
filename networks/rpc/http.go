@@ -215,11 +215,11 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 		for _, vhost := range vhosts {
 			if vhost == "*" {
 				return &fasthttp.Server{
-					Concurrency:          concurrencyLimit,
-					Handler:              srv.HandleFastHTTP,
-					ReadTimeout:          timeouts.ReadTimeout,
-					WriteTimeout:         timeouts.WriteTimeout,
-					MaxKeepaliveDuration: timeouts.IdleTimeout,
+					Concurrency:  concurrencyLimit,
+					Handler:      srv.HandleFastHTTP,
+					ReadTimeout:  timeouts.ReadTimeout,
+					WriteTimeout: timeouts.WriteTimeout,
+					IdleTimeout:  timeouts.IdleTimeout,
 				}
 			}
 		}
@@ -231,7 +231,13 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
-	return &fasthttp.Server{Concurrency: concurrencyLimit, Handler: fhandler}
+	return &fasthttp.Server{
+		Concurrency:  concurrencyLimit,
+		Handler:      fhandler,
+		ReadTimeout:  timeouts.ReadTimeout,
+		WriteTimeout: timeouts.WriteTimeout,
+		IdleTimeout:  timeouts.IdleTimeout,
+	}
 }
 
 // ServeHTTP serves JSON-RPC requests over HTTP.

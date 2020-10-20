@@ -145,12 +145,12 @@ func NewFastWSServer(allowedOrigins []string, timeouts HTTPTimeouts, srv *Server
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
 	return &fasthttp.Server{
-		Concurrency:          concurrencyLimit,
-		MaxRequestBodySize:   common.MaxRequestContentLength,
-		Handler:              srv.FastWebsocketHandler,
-		ReadTimeout:          timeouts.ReadTimeout,
-		WriteTimeout:         timeouts.WriteTimeout,
-		MaxKeepaliveDuration: timeouts.IdleTimeout,
+		Concurrency:        concurrencyLimit,
+		MaxRequestBodySize: common.MaxRequestContentLength,
+		Handler:            srv.FastWebsocketHandler,
+		ReadTimeout:        timeouts.ReadTimeout,
+		WriteTimeout:       timeouts.WriteTimeout,
+		IdleTimeout:        timeouts.IdleTimeout,
 	}
 }
 
