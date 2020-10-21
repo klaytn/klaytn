@@ -45,12 +45,8 @@ func getProposerAndValidatorsFromBlock(block *types.Block) (common.Address, []co
 	if err != nil {
 		return common.Address{}, []common.Address{}, err
 	}
-	commiteeAddrs := make([]common.Address, len(istanbulExtra.Validators))
-	for i, addr := range istanbulExtra.Validators {
-		commiteeAddrs[i] = addr
-	}
 
-	return proposerAddr, commiteeAddrs, nil
+	return proposerAddr, istanbulExtra.Validators, nil
 }
 
 func sigHash(header *types.Header) (hash common.Hash, err error) {
