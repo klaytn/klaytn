@@ -168,34 +168,34 @@ func (c *Consumer) Cleanup(s sarama.ConsumerGroupSession) error {
 // case2. new consecutive segment is inserted into the right position.
 // case3. duplicated segment is ignored.
 // case4. new sparse segment shouldn't be given, so return an error.
-func insertSegment(segment *Segment, buffer [][]*Segment) ([][]*Segment, error) {
-	for idx, segments := range buffer {
-		length := len(segments)
-		if length > 0 && segments[0].key == segment.key {
+func insertSegment(newSegment *Segment, buffer [][]*Segment) ([][]*Segment, error) {
+	for idx, bufferedSegments := range buffer {
+		numBuffered := len(bufferedSegments)
+		if numBuffered > 0 && bufferedSegments[0].key == newSegment.key {
 			// there is a missing segment which should not exist.
-			if segment.index > uint64(length) {
-				logger.Error("there may be a missing segment", "length", length, "segment", segment)
+			if newSegment.index > uint64(numBuffered) {
+				logger.Error("there may be a missing segment", "numBuffered", numBuffered, "newSegment", newSegment)
 				return buffer, errors.New(missingSegmentErrorMsg)
 			}
 
 			// the segment is already inserted to buffer.
-			if segment.index < uint64(length) {
-				logger.Warn("the message is duplicated", "segment", segment)
+			if newSegment.index < uint64(numBuffered) {
+				logger.Warn("the message is duplicated", "newSegment", newSegment)
 				return buffer, nil
 			}
 
 			// insert the segment to the buffer.
-			buffer[idx] = append(segments, segment)
+			buffer[idx] = append(bufferedSegments, newSegment)
 			return buffer, nil
 		}
 	}
 
-	if segment.index == 0 {
+	if newSegment.index == 0 {
 		// create a segment slice and append it.
-		buffer = append(buffer, []*Segment{segment})
+		buffer = append(buffer, []*Segment{newSegment})
 	} else {
 		// the segment may be already handled.
-		logger.Warn("the message may be inserted already. drop the segment", "segment", segment)
+		logger.Warn("the message may be inserted already. drop the segment", "segment", newSegment)
 	}
 	return buffer, nil
 }
