@@ -27,6 +27,7 @@ import (
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
 
 const (
+	// item indices of message header
 	MsgHeaderTotalSegments = iota
 	MsgHeaderSegmentIdx
 	MsgHeaderLength
