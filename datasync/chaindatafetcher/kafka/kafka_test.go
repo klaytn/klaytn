@@ -103,6 +103,18 @@ func (s *KafkaSuite) TestKafka_makeProducerMessage() {
 	s.Equal(idx, binary.BigEndian.Uint64(msg.Headers[MsgHeaderSegmentIdx].Value))
 }
 
+func (s *KafkaSuite) TestKafka_setupTopic() {
+	topicName := "test-setup-topic"
+
+	// create a new topic
+	err := s.kfk.setupTopic(topicName)
+	s.NoError(err)
+
+	// try to create duplicated topic
+	err = s.kfk.setupTopic(topicName)
+	s.NoError(err)
+}
+
 func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {
 	// no topic to be deleted
 	err := s.kfk.DeleteTopic(s.topic)
