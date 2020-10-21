@@ -68,13 +68,13 @@ func newSegment(msg *sarama.ConsumerMessage) (*Segment, error) {
 		return nil, fmt.Errorf("%v [header length: %v]", wrongHeaderNumberErrorMsg, len(msg.Headers))
 	}
 
-	// parse the number of total segments
+	// check the existence of KeyTotalSegments header
 	keyTotalSegments := string(msg.Headers[MsgHeaderTotalSegments].Key)
 	if keyTotalSegments != KeyTotalSegments {
 		return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeyTotalSegments, keyTotalSegments)
 	}
 
-	// parse the segment index
+	// check the existence of MsgHeaderSegmentIdx header
 	keySegmentIdx := string(msg.Headers[MsgHeaderSegmentIdx].Key)
 	if keySegmentIdx != KeySegmentIdx {
 		return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeySegmentIdx, keySegmentIdx)
