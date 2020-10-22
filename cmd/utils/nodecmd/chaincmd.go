@@ -90,7 +90,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	if genesis.Config == nil {
-		logger.Crit("Invalid genesis config")
+		logger.Crit("Genesis config is not set")
 	}
 
 	// Update undefined config with default values and validate config

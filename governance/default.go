@@ -416,6 +416,8 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 	}
 }
 
+// NewGovernanceInitialize creates Governance with the given configuration and read governance state from DB.
+// It also write governance items of the genesis block to DB if any items are stored in DB.
 func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
 	ret := Governance{
 		ChainConfig:              chainConfig,

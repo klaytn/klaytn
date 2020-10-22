@@ -247,16 +247,14 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 // GetConsensusEngine returns the consensus engine type specified in ChainConfig.
 // It returns Unknown type if none of engine type is configured or more than one type is configured.
 func (c *ChainConfig) GetConsensusEngine() EngineType {
-	if c.Clique != nil {
-		if c.Istanbul != nil {
-			return Unknown
-		}
+	switch {
+	case c.Clique != nil && c.Istanbul == nil:
 		return UseClique
-	}
-	if c.Istanbul != nil {
+	case c.Clique == nil && c.Istanbul != nil:
 		return UseIstanbul
+	default:
+		return Unknown
 	}
-	return Unknown
 }
 
 // Enhance updates consensus and governance related configs to the default values when they are not configured.
@@ -385,6 +383,7 @@ func (c *IstanbulConfig) Copy() *IstanbulConfig {
 	return newIC
 }
 
+// TODO-Klaytn-Governance: Remove input parameter if not needed anymore
 func GetDefaultGovernanceConfig(engine EngineType) *GovernanceConfig {
 	gov := &GovernanceConfig{
 		GovernanceMode: DefaultGovernanceMode,
