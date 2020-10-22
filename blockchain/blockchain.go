@@ -268,7 +268,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 }
 
 // SetCanonicalBlock resets the canonical as the block with the given block number.
-// It works as rewinding the head block the the previous one, but does not delete the data.
+// It works as rewinding the head block to the previous one, but does not delete the data.
 func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
 	// If the given block number is zero (it is zero by default), it does nothing
 	if blockNum == 0 {
