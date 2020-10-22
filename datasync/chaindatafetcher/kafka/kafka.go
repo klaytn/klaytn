@@ -73,7 +73,7 @@ func (k *Kafka) Close() {
 }
 
 func (k *Kafka) getTopicName(event string) string {
-	return k.config.getTopicName(event)
+	return k.config.GetTopicName(event)
 }
 
 func (k *Kafka) CreateTopic(topic string) error {

@@ -345,8 +345,8 @@ func (s *KafkaSuite) TestKafka_Consumer_AddTopicAndHandler() {
 	traceGroupHandler := func(msg *sarama.ConsumerMessage) error { return nil }
 	s.NoError(consumer.AddTopicAndHandler(EventTraceBroup, traceGroupHandler))
 
-	blockGroupTopic := s.kfk.config.getTopicName(EventBlockGroup)
-	traceGroupTopic := s.kfk.config.getTopicName(EventTraceBroup)
+	blockGroupTopic := s.kfk.config.GetTopicName(EventBlockGroup)
+	traceGroupTopic := s.kfk.config.GetTopicName(EventTraceBroup)
 	expectedTopics := []string{blockGroupTopic, traceGroupTopic}
 	s.Equal(expectedTopics, consumer.topics)
 	s.Equal(reflect.ValueOf(blockGroupHandler).Pointer(), reflect.ValueOf(consumer.handlers[blockGroupTopic]).Pointer())
