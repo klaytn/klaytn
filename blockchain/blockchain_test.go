@@ -30,6 +30,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/storage/statedb"
+
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/stretchr/testify/assert"
 
@@ -1564,4 +1566,64 @@ func TestCallTraceChainEventSubscription(t *testing.T) {
 		assert.Equal(t, 3, len(ev.InternalTxTraces[1].Calls))
 		assert.Equal(t, fmt.Sprintf("0x%x", 0), ev.InternalTxTraces[1].Value)
 	}
+}
+
+// TestBlockChain_SetCanonicalBlock tests SetCanonicalBlock.
+// It first generates the chain and then call SetCanonicalBlock to change CurrentBlock.
+func TestBlockChain_SetCanonicalBlock(t *testing.T) {
+	// configure and generate a sample block chain
+	var (
+		gendb       = database.NewMemoryDBManager()
+		key, _      = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		address     = crypto.PubkeyToAddress(key.PublicKey)
+		funds       = big.NewInt(100000000000000000)
+		testGenesis = &Genesis{
+			Config: params.TestChainConfig,
+			Alloc:  GenesisAlloc{address: {Balance: funds}},
+		}
+		genesis = testGenesis.MustCommit(gendb)
+		signer  = types.NewEIP155Signer(testGenesis.Config.ChainID)
+	)
+	db := database.NewMemoryDBManager()
+	testGenesis.MustCommit(db)
+
+	// Archive mode is given to avoid mismatching between the given starting block number and
+	// the actual block number where the blockchain has been rolled back to due to 128 blocks interval commit.
+	cacheConfig := &CacheConfig{
+		StateDBCaching:      false,
+		ArchiveMode:         true,
+		CacheSize:           512,
+		BlockInterval:       DefaultBlockInterval,
+		TriesInMemory:       DefaultTriesInMemory,
+		TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
+	}
+	// create new blockchain with enabled internal tx tracing option
+	blockchain, _ := NewBlockChain(db, cacheConfig, testGenesis.Config, gxhash.NewFaker(), vm.Config{Debug: true, EnableInternalTxTracing: true})
+	defer blockchain.Stop()
+
+	rand.Seed(time.Now().UnixNano())
+	chainLength := rand.Int63n(500) + 100
+
+	// generate blocks
+	blocks, _ := GenerateChain(testGenesis.Config, genesis, gxhash.NewFaker(), gendb, int(chainLength), func(i int, block *BlockGen) {
+		// Deploy a contract which can trigger internal transactions
+		genInternalTxTransaction(t, block, address, signer, key)
+	})
+
+	// insert the generated blocks into the test chain
+	if n, err := blockchain.InsertChain(blocks); err != nil {
+		t.Fatalf("failed to process block %d: %v", n, err)
+	}
+
+	// target block number is 1/2 of the original chain length
+	targetBlockNum := uint64(chainLength / 2)
+	targetBlock := blockchain.db.ReadBlockByNumber(targetBlockNum)
+
+	// set the canonical block with the target block number
+	blockchain.SetCanonicalBlock(targetBlockNum)
+
+	// compare the current block to the target block
+	newHeadBlock := blockchain.CurrentBlock()
+	assert.Equal(t, targetBlock.Hash(), newHeadBlock.Hash())
+	assert.EqualValues(t, targetBlock, newHeadBlock)
 }
