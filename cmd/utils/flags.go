@@ -135,6 +135,10 @@ var (
 		Name:  "overwrite-genesis",
 		Usage: "Overwrites genesis block with the given new genesis block for testing purpose",
 	}
+	StartBlockNumberFlag = cli.Uint64Flag{
+		Name:  "start-block-num",
+		Usage: "Starts the node from the given block number. Starting from 0 is not supported.",
+	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.nolocals",
@@ -1409,6 +1413,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	cfg.OverwriteGenesis = ctx.GlobalBool(OverwriteGenesisFlag.Name)
+	cfg.StartBlockNumber = ctx.GlobalUint64(StartBlockNumberFlag.Name)
 
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))
 	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)

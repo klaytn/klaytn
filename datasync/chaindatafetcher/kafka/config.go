@@ -24,7 +24,7 @@ import (
 
 const (
 	EventBlockGroup = "blockgroup"
-	EventTraceBroup = "tracegroup"
+	EventTraceGroup = "tracegroup"
 )
 
 const (

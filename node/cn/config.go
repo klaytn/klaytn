@@ -101,6 +101,7 @@ type Config struct {
 	//LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
 
 	OverwriteGenesis bool
+	StartBlockNumber uint64
 
 	// Database options
 	DBType               database.DBType
