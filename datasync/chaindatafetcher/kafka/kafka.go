@@ -75,7 +75,7 @@ func (k *Kafka) Close() {
 }
 
 func (k *Kafka) getTopicName(event string) string {
-	return k.config.getTopicName(event)
+	return k.config.GetTopicName(event)
 }
 
 func (k *Kafka) CreateTopic(topic string) error {
@@ -136,7 +136,7 @@ func (k *Kafka) Publish(topic string, data interface{}) error {
 		msg := k.makeProducerMessage(topic, key, segment, uint64(idx), uint64(totalSegments))
 		_, _, err = k.producer.SendMessage(msg)
 		if err != nil {
-			logger.Error("sending kafka message is failed", "err", err, "segmentIdx", idx, "segment", string(segment))
+			logger.Error("sending kafka message is failed", "err", err, "segmentIdx", idx, "key", key)
 			return err
 		}
 	}

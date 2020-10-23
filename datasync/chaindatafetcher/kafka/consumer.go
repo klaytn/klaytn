@@ -117,7 +117,7 @@ func (c *Consumer) AddTopicAndHandler(event string, handler TopicHandler) error 
 	if event != EventBlockGroup && event != EventTraceGroup {
 		return fmt.Errorf("%v [given: %v]", eventNameErrorMsg, event)
 	}
-	topic := c.config.getTopicName(event)
+	topic := c.config.GetTopicName(event)
 	c.topics = append(c.topics, topic)
 	c.handlers[topic] = handler
 	return nil

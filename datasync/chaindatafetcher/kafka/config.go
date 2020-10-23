@@ -72,7 +72,7 @@ func GetDefaultKafkaConfig() *KafkaConfig {
 	}
 }
 
-func (c *KafkaConfig) getTopicName(event string) string {
+func (c *KafkaConfig) GetTopicName(event string) string {
 	return fmt.Sprintf("%v.%v.%v.%v.%v.%v", c.TopicEnvironmentName, topicProjectName, topicServiceName, c.TopicResourceName, event, topicVersion)
 }
 
