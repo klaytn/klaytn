@@ -210,3 +210,45 @@ func TestChainDataFetcher_retryFunc(t *testing.T) {
 	assert.NoError(t, fetcher.retryFunc(f)(ev, cfTypes.RequestTypeAll))
 	assert.True(t, i == 5)
 }
+
+func TestChainDataFetcher_handleRequestByType_WhileRetrying(t *testing.T) {
+	fetcher := &ChainDataFetcher{
+		config:        &ChainDataFetcherConfig{NumHandlers: 1}, // prevent panic with nil reference
+		checkpoint:    1,
+		checkpointMap: make(map[int64]struct{}), // in order to call CheckpointDB WriteCheckpoint method
+		stopCh:        make(chan struct{}),      // in order to stop retrying
+	}
+	header1 := &types.Header{Number: big.NewInt(1)} // next block to be handled is 1
+	block1 := blockchain.ChainEvent{Block: types.NewBlockWithHeader(header1)}
+	header2 := &types.Header{Number: big.NewInt(2)} // next block to be handled is 2
+	block2 := blockchain.ChainEvent{Block: types.NewBlockWithHeader(header2)}
+	testError := errors.New("test-error") // fake error to call retrying infinitely
+
+	// set up mocks
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockRepo, checkpointDB := mocks.NewMockRepository(ctrl), mocks.NewMockCheckpointDB(ctrl)
+
+	// update checkpoint to 2
+	precall := mockRepo.EXPECT().HandleChainEvent(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+	checkpointDB.EXPECT().WriteCheckpoint(gomock.Eq(int64(2))).Return(nil).Times(1)
+
+	// retrying indefinitely
+	mockRepo.EXPECT().HandleChainEvent(gomock.Any(), gomock.Any()).Return(testError).AnyTimes().After(precall)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	// trigger stop function after 3 seconds
+	go func() {
+		defer wg.Done()
+		time.Sleep(3 * time.Second)
+		fetcher.Stop()
+	}()
+
+	fetcher.repo, fetcher.checkpointDB = mockRepo, checkpointDB
+	fetcher.handleRequestByType(cfTypes.RequestTypeAll, true, block1)
+	fetcher.handleRequestByType(cfTypes.RequestTypeAll, true, block2)
+
+	wg.Wait()
+	assert.Equal(t, int64(2), fetcher.checkpoint)
+}

@@ -352,7 +352,10 @@ func (f *ChainDataFetcher) handleRequestByType(reqType cfTypes.RequestType, shou
 	// - RequestTypeTraceGroup
 	for targetType := cfTypes.RequestTypeTransaction; targetType < cfTypes.RequestTypeLength; targetType = targetType << 1 {
 		if cfTypes.CheckRequestType(reqType, targetType) {
-			f.updateInsertionTimeGauge(f.retryFunc(f.repo.HandleChainEvent))(ev, targetType)
+			if err := f.updateInsertionTimeGauge(f.retryFunc(f.repo.HandleChainEvent))(ev, targetType); err != nil {
+				logger.Error("the chaindatafetcher is stopped by user", "blockNumber", ev.Block.NumberU64(), "err", err)
+				return
+			}
 		}
 	}
 	elapsed := time.Since(now)
@@ -478,7 +481,7 @@ func (f *ChainDataFetcher) retryFunc(insert HandleChainEventFn) HandleChainEvent
 		for err := insert(event, reqType); err != nil; err = insert(event, reqType) {
 			select {
 			case <-f.stopCh:
-				return nil
+				return err
 			default:
 				i++
 				gauge := getInsertionRetryGauge(reqType)
