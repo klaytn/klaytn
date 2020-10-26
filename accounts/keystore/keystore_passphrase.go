@@ -107,7 +107,7 @@ func (ks keyStorePassphrase) StoreKey(filename string, key Key, auth string) err
 	if err != nil {
 		return err
 	}
-	if !ks.skipKeyFileVerification {
+	if ks.skipKeyFileVerification == false { //do not skip file verification
 		// Verify that we can decrypt the file with the given password.
 		_, err = ks.GetKey(key.GetAddress(), tmpName, auth)
 		if err != nil {
