@@ -75,7 +75,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
 			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
 		},
-		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
+		Governance: params.GetDefaultGovernanceConfig(params.UseIstanbul),
 	}, db)
 
 	prvKey, _ := crypto.GenerateKey()
@@ -84,8 +84,8 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	var genesis *blockchain.Genesis
 	genesis = blockchain.DefaultGenesisBlock()
 	genesis.BlockScore = big.NewInt(1)
-	genesis.Config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
-	genesis.Config.Istanbul = governance.GetDefaultIstanbulConfig()
+	genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 	genesis.Config.UnitPrice = 25 * params.Ston
 
 	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false, false)

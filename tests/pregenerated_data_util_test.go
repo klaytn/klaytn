@@ -500,7 +500,7 @@ func generateGovernaceDataForTest() *governance.Governance {
 			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
 			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
 		},
-		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
+		Governance: params.GetDefaultGovernanceConfig(params.UseIstanbul),
 	}, dbm)
 }
 

@@ -432,7 +432,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov *governance.Governance, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
-		chainConfig.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
+		chainConfig.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
 	}
 	return istanbulBackend.New(config.Rewardbase, &config.Istanbul, ctx.NodeKey(), db, gov, nodetype)
 }
