@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -329,6 +330,44 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
 		return nil
 	})
 	s.Equal(expected, actual)
+}
+
+func (s *KafkaSuite) TestKafka_PubSubWithSegements_BufferOverflow() {
+	// create a topic
+	topic := "test-message-segments-buffer-overflow"
+	err := s.kfk.setupTopic(topic)
+	s.NoError(err)
+
+	// insert incomplete message segments
+	for i := 0; i < 3; i++ {
+		msg := s.kfk.makeProducerMessage(topic, "test-key-"+strconv.Itoa(i), common.MakeRandomBytes(10), 0, 2)
+		_, _, err = s.kfk.producer.SendMessage(msg)
+		s.NoError(err)
+	}
+
+	// setup consumer to handle errors
+	s.kfk.config.ConsumerBufferSize = 1 // if buffer size is greater than 1, then it returns an error
+	s.kfk.config.SaramaConfig.Consumer.Return.Errors = true
+	s.kfk.config.SaramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	consumer, err := NewConsumer(s.kfk.config, "test-group-id")
+	s.NoError(err)
+	consumer.topics = append(consumer.topics, topic)
+	consumer.handlers[topic] = func(message *sarama.ConsumerMessage) error { return nil }
+	errCh := consumer.Errors()
+
+	go func() {
+		err = consumer.Subscribe(context.Background())
+		s.NoError(err)
+	}()
+
+	// checkout the returned error is buffer overflow error
+	timeout := time.NewTimer(3 * time.Second)
+	select {
+	case <-timeout.C:
+		s.Fail("timeout")
+	case err := <-errCh:
+		s.True(strings.Contains(err.Error(), bufferOverflowErrorMsg))
+	}
 }
 
 func (s *KafkaSuite) TestKafka_Consumer_AddTopicAndHandler() {

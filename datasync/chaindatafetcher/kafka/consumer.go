@@ -40,6 +40,7 @@ var (
 	missingSegmentErrorMsg     = "there is a missing segment"
 	noHandlerErrorMsg          = "the handler does not exist for the given topic"
 	emptySegmentErrorMsg       = "there is no segment in the segment slice"
+	bufferOverflowErrorMsg     = "the number of items in buffer exceeded the maximum"
 )
 
 // TopicHandler is a handler function in order to consume published messages.
@@ -123,13 +124,15 @@ func (c *Consumer) AddTopicAndHandler(event string, handler TopicHandler) error 
 	return nil
 }
 
-// Subscribe subscribes the registered topics with the handlers until the consumer is closed.
-func (c *Consumer) Subscribe(ctx context.Context) error {
-	// TODO-ChainDataFetcher consider error handling if necessary
+func (c *Consumer) Errors() <-chan error {
 	// c.config.SaramaConfig.Consumer.Return.Errors has to be set to true, and
 	// read the errors from c.member.Errors() channel.
 	// Currently, it leaves only error logs as default.
+	return c.group.Errors()
+}
 
+// Subscribe subscribes the registered topics with the handlers until the consumer is closed.
+func (c *Consumer) Subscribe(ctx context.Context) error {
 	if len(c.handlers) == 0 || len(c.topics) == 0 {
 		return errors.New("there is no registered handler")
 	}
@@ -261,6 +264,10 @@ func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMes
 func (c *Consumer) ConsumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.ConsumerGroupClaim) error {
 	var buffer [][]*Segment
 	for msg := range cgc.Messages() {
+		if len(buffer) > c.config.ConsumerBufferSize {
+			return fmt.Errorf("%v [max: %v, current: %v]", bufferOverflowErrorMsg, c.config.ConsumerBufferSize, len(buffer))
+		}
+
 		segment, err := newSegment(msg)
 		if err != nil {
 			return err
