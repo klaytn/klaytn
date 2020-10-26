@@ -48,8 +48,8 @@ import (
 var overSizedDataPrefix = []byte("oversizeditem")
 
 // Performance of batch operations of DynamoDB are collected by default.
-var dynamoBatchWriteTimeMeter metrics.Meter
-var dynamoBatchWriteSizeMeter metrics.Meter
+var dynamoBatchWriteTimeMeter metrics.Meter = &metrics.NilMeter{}
+var dynamoBatchWriteSizeMeter metrics.Meter = &metrics.NilMeter{}
 
 // errors
 var dataNotFoundErr = errors.New("data is not found with the given key")
