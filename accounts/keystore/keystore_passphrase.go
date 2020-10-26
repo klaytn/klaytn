@@ -116,7 +116,7 @@ func (ks keyStorePassphrase) StoreKey(filename string, key Key, auth string) err
 				"The corrupted file is stored at \n%v\n" +
 				"Please file a ticket at:\n\n" +
 				"https://github.com/klaytn/klaytn/issues" +
-				"The error was : %s"
+				"The error was : %w"
 			return fmt.Errorf(msg, tmpName, err)
 		}
 	}
