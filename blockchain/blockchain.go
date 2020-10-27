@@ -160,8 +160,7 @@ type BlockChain struct {
 
 	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
-	cachedStateDB       *state.StateDB
-	lastUpdatedRootHash common.Hash
+	cachedStateDB *state.StateDB
 
 	nonceCache   common.Cache
 	balanceCache common.Cache
@@ -546,7 +545,6 @@ func (bc *BlockChain) StateAtWithCache(root common.Hash) (*state.StateDB, error)
 }
 
 // TryGetCachedStateDB tries to get cachedStateDB, if StateDBCaching flag is true and it exists.
-// It checks the validity of cachedStateDB by comparing saved lastUpdatedRootHash and passed headRootHash.
 func (bc *BlockChain) TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB, error) {
 	if !bc.cacheConfig.StateDBCaching {
 		return bc.StateAt(rootHash)
@@ -557,19 +555,6 @@ func (bc *BlockChain) TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB,
 
 	// When cachedStateDB is nil, set cachedStateDB with a new StateDB.
 	if bc.cachedStateDB == nil {
-		if !common.EmptyHash(bc.lastUpdatedRootHash) {
-			logger.Error("cachedStateDB is nil, but lastUpdatedRootHash is not common.Hash{}!",
-				"lastUpdatedRootHash", bc.lastUpdatedRootHash.String())
-			bc.lastUpdatedRootHash = common.Hash{}
-		}
-		return bc.StateAtWithCache(rootHash)
-	}
-
-	// If cachedStateDB exists, check if we can use cachedStateDB.
-	// If given rootHash is different from lastUpdatedRootHash, return stateDB without cache.
-	if rootHash != bc.lastUpdatedRootHash {
-		logger.Trace("Given rootHash is different from lastUpdatedRootHash",
-			"givenRootHash", rootHash, "lastUpdatedRootHash", bc.lastUpdatedRootHash)
 		return bc.StateAt(rootHash)
 	}
 	return bc.StateAtWithCache(rootHash)
@@ -1250,15 +1235,14 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		stateDB.UpdateTxPoolStateCache(bc.nonceCache, bc.balanceCache)
 	}
 
-	// Update lastUpdatedRootHash and cachedStateDB after successful WriteBlockWithState.
+	// Update cachedStateDB after successful WriteBlockWithState.
 	if stateDB.UseCachedStateObjects() {
 		bc.mu.Lock()
 		defer bc.mu.Unlock()
 
-		logger.Trace("Update cached StateDB information", "prevRootHash", bc.lastUpdatedRootHash.String(),
+		logger.Trace("Update cached StateDB information",
 			"newRootHash", block.Root().String(), "newBlockNum", block.NumberU64())
 
-		bc.lastUpdatedRootHash = block.Root()
 		stateDB.UpdateCachedStateObjects(block.Root())
 		bc.cachedStateDB = stateDB
 	}
