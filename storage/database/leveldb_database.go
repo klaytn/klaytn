@@ -419,21 +419,15 @@ hasError:
 			currCompRead += s.LevelRead[i]
 			currCompWrite += s.LevelWrite[i]
 		}
-
 		db.compTimeMeter.Mark(int64(currCompTime.Seconds() - prevCompTime.Seconds()))
-		db.compReadMeter.Mark(int64(currCompRead - prevCompRead))
-		db.compWriteMeter.Mark(int64(currCompWrite - prevCompWrite))
-
-		prevCompTime = currCompTime
-		prevCompRead = currCompRead
-		prevCompWrite = currCompWrite
+		db.compReadMeter.Mark(currCompRead - prevCompRead)
+		db.compWriteMeter.Mark(currCompWrite - prevCompWrite)
+		prevCompTime, prevCompRead, prevCompWrite = currCompTime, currCompRead, currCompWrite
 
 		// IO related stats
 		currRead, currWrite := s.IORead, s.IOWrite
-
 		db.diskReadMeter.Mark(int64(currRead - prevRead))
 		db.diskWriteMeter.Mark(int64(currWrite - prevWrite))
-
 		prevRead, prevWrite = currRead, currWrite
 
 		// BlockCache size
