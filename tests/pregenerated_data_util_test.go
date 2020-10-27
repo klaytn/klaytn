@@ -270,7 +270,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return err
 	}
 
-	stateDB, err := bcdata.bc.TryGetCachedStateDB(bcdata.bc.CurrentBlock().Root())
+	stateDB, err := bcdata.bc.StateAt(bcdata.bc.CurrentBlock().Root())
 	if err != nil {
 		return err
 	}
