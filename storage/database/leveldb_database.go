@@ -92,11 +92,11 @@ type levelDB struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
 
-	writeDelayCountMeter    metrics.Meter
-	writeDelayDurationMeter metrics.Meter
+	writeDelayCountMeter    metrics.Meter // Meter for measuring the cumulative number of write delays
+	writeDelayDurationMeter metrics.Meter // Meter for measuring the cumulative duration of write delays
 
-	aliveSnapshotsMeter metrics.Meter
-	aliveIteratorsMeter metrics.Meter
+	aliveSnapshotsMeter metrics.Meter // Meter for measuring the number of alive snapshots
+	aliveIteratorsMeter metrics.Meter // Meter for measuring the number of alive iterators
 
 	compTimeMeter          metrics.Meter // Meter for measuring the total time spent in database compaction
 	compReadMeter          metrics.Meter // Meter for measuring the data read during compaction
