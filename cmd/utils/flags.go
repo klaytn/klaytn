@@ -262,6 +262,10 @@ var (
 		Name:  "db.no-parallel-write",
 		Usage: "Disables parallel writes of block data to persistent database",
 	}
+	DBNoPerformanceMetricsFlag = cli.BoolFlag{
+		Name:  "db.no-perf-metrics",
+		Usage: "Disables performance metrics of database's read and write operations",
+	}
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
 		Name:  "state.cache-size",
 		Usage: "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
@@ -1417,6 +1421,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))
 	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)
+	cfg.EnableDBPerfMetrics = !ctx.GlobalIsSet(DBNoPerformanceMetricsFlag.Name)
 	cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
 
 	cfg.DynamoDBConfig.TableName = ctx.GlobalString(DynamoDBTableNameFlag.Name)

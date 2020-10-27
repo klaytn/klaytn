@@ -58,6 +58,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.NumStateTrieShardsFlag,
 	utils.LevelDBCompressionTypeFlag,
 	utils.LevelDBNoBufferPoolFlag,
+	utils.DBNoPerformanceMetricsFlag,
 	utils.DynamoDBTableNameFlag,
 	utils.DynamoDBRegionFlag,
 	utils.DynamoDBIsProvisionedFlag,

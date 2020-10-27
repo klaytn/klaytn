@@ -99,6 +99,11 @@ type levelDB struct {
 	diskWriteMeter  metrics.Meter // Meter for measuring the effective amount of data written
 	blockCacheGauge metrics.Gauge // Gauge for measuring the current size of block cache
 
+	perfCheck           bool
+	getTimeMeter        metrics.Meter
+	putTimeMeter        metrics.Meter
+	batchWriteTimeMeter metrics.Meter
+
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
 
@@ -135,7 +140,7 @@ func NewLevelDB(dbc *DBConfig, entryType DBEntryType) (*levelDB, error) {
 
 	localLogger.Info("LevelDB configurations",
 		"levelDBCacheSize", (ldbOpts.WriteBuffer+ldbOpts.BlockCacheCapacity)/opt.MiB, "openFilesLimit", ldbOpts.OpenFilesCacheCapacity,
-		"useBufferPool", !ldbOpts.DisableBufferPool, "compressionType", ldbOpts.Compression,
+		"useBufferPool", !ldbOpts.DisableBufferPool, "usePerfCheck", dbc.EnableDBPerfMetrics, "compressionType", ldbOpts.Compression,
 		"compactionTableSize(MB)", ldbOpts.CompactionTableSize/opt.MiB, "compactionTableSizeMultiplier", ldbOpts.CompactionTableSizeMultiplier)
 
 	// Open the db and recover any potential corruptions
@@ -148,9 +153,10 @@ func NewLevelDB(dbc *DBConfig, entryType DBEntryType) (*levelDB, error) {
 		return nil, err
 	}
 	return &levelDB{
-		fn:     dbc.Dir,
-		db:     db,
-		logger: localLogger,
+		fn:        dbc.Dir,
+		db:        db,
+		logger:    localLogger,
+		perfCheck: dbc.EnableDBPerfMetrics,
 	}, nil
 }
 
@@ -238,7 +244,16 @@ func (db *levelDB) Path() string {
 func (db *levelDB) Put(key []byte, value []byte) error {
 	// Generate the data to write to disk, update the meter and write
 	//value = rle.Compress(value)
+	if db.perfCheck {
+		start := time.Now()
+		err := db.put(key, value)
+		db.putTimeMeter.Mark(int64(time.Since(start)))
+		return err
+	}
+	return db.put(key, value)
+}
 
+func (db *levelDB) put(key []byte, value []byte) error {
 	return db.db.Put(key, value, nil)
 }
 
@@ -248,7 +263,17 @@ func (db *levelDB) Has(key []byte) (bool, error) {
 
 // Get returns the given key if it's present.
 func (db *levelDB) Get(key []byte) ([]byte, error) {
-	// Retrieve the key and increment the miss counter if not found
+	if db.perfCheck {
+		start := time.Now()
+		val, err := db.get(key)
+		db.getTimeMeter.Mark(int64(time.Since(start)))
+		return val, err
+	}
+	return db.get(key)
+	//return rle.Decompress(dat)
+}
+
+func (db *levelDB) get(key []byte) ([]byte, error) {
 	dat, err := db.db.Get(key, nil)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
@@ -257,7 +282,6 @@ func (db *levelDB) Get(key []byte) ([]byte, error) {
 		return nil, err
 	}
 	return dat, nil
-	//return rle.Decompress(dat)
 }
 
 // Delete deletes the key from the queue and database
@@ -318,6 +342,10 @@ func (db *levelDB) Meter(prefix string) {
 	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
 	db.diskWriteMeter = metrics.NewRegisteredMeter(prefix+"disk/write", nil)
 	db.blockCacheGauge = metrics.NewRegisteredGauge(prefix+"blockcache", nil)
+
+	db.getTimeMeter = metrics.NewRegisteredMeter(prefix+"get/time", nil)
+	db.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
+	db.batchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 
 	// Short circuit metering if the metrics system is disabled
 	// Above meters are initialized by NilMeter if metricutils.Enabled == false
@@ -415,12 +443,12 @@ hasError:
 }
 
 func (db *levelDB) NewBatch() Batch {
-	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
+	return &ldbBatch{b: new(leveldb.Batch), ldb: db}
 }
 
 type ldbBatch struct {
-	db   *leveldb.DB
 	b    *leveldb.Batch
+	ldb  *levelDB
 	size int
 }
 
@@ -431,7 +459,17 @@ func (b *ldbBatch) Put(key, value []byte) error {
 }
 
 func (b *ldbBatch) Write() error {
-	return b.db.Write(b.b, nil)
+	if b.ldb.perfCheck {
+		start := time.Now()
+		err := b.write()
+		b.ldb.batchWriteTimeMeter.Mark(int64(time.Since(start)))
+		return err
+	}
+	return b.write()
+}
+
+func (b *ldbBatch) write() error {
+	return b.ldb.db.Write(b.b, nil)
 }
 
 func (b *ldbBatch) ValueSize() int {

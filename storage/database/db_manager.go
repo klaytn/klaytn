@@ -329,12 +329,13 @@ func NewMemoryDBManager() DBManager {
 // DBConfig handles database related configurations.
 type DBConfig struct {
 	// General configurations for all types of DB.
-	Dir                string
-	DBType             DBType
-	SingleDB           bool // whether dbs (such as MiscDB, headerDB and etc) share one physical DB
-	NumStateTrieShards uint // the number of shards of state trie db
-	ParallelDBWrite    bool
-	OpenFilesLimit     int
+	Dir                 string
+	DBType              DBType
+	SingleDB            bool // whether dbs (such as MiscDB, headerDB and etc) share one physical DB
+	NumStateTrieShards  uint // the number of shards of state trie db
+	ParallelDBWrite     bool
+	OpenFilesLimit      int
+	EnableDBPerfMetrics bool // If true, read and write performance will be logged
 
 	// LevelDB related configurations.
 	LevelDBCacheSize   int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
