@@ -346,7 +346,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegements_BufferOverflow() {
 	}
 
 	// setup consumer to handle errors
-	s.kfk.config.ConsumerBufferSize = 1 // if buffer size is greater than 1, then it returns an error
+	s.kfk.config.MaxMessageNumber = 1 // if buffer size is greater than 1, then it returns an error
 	s.kfk.config.SaramaConfig.Consumer.Return.Errors = true
 	s.kfk.config.SaramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
 	consumer, err := NewConsumer(s.kfk.config, "test-group-id")
