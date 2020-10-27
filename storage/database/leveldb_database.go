@@ -95,12 +95,16 @@ type levelDB struct {
 	writeDelayCountMeter    metrics.Meter
 	writeDelayDurationMeter metrics.Meter
 
-	compTimeMeter   metrics.Meter // Meter for measuring the total time spent in database compaction
-	compReadMeter   metrics.Meter // Meter for measuring the data read during compaction
-	compWriteMeter  metrics.Meter // Meter for measuring the data written during compaction
-	diskReadMeter   metrics.Meter // Meter for measuring the effective amount of data read
-	diskWriteMeter  metrics.Meter // Meter for measuring the effective amount of data written
-	blockCacheGauge metrics.Gauge // Gauge for measuring the current size of block cache
+	aliveSnapshotsMeter metrics.Meter
+	aliveIteratorsMeter metrics.Meter
+
+	compTimeMeter          metrics.Meter // Meter for measuring the total time spent in database compaction
+	compReadMeter          metrics.Meter // Meter for measuring the data read during compaction
+	compWriteMeter         metrics.Meter // Meter for measuring the data written during compaction
+	diskReadMeter          metrics.Meter // Meter for measuring the effective amount of data read
+	diskWriteMeter         metrics.Meter // Meter for measuring the effective amount of data written
+	blockCacheGauge        metrics.Gauge // Gauge for measuring the current size of block cache
+	openedTablesCountMeter metrics.Meter
 
 	perfCheck           bool
 	getTimeMeter        metrics.Meter
@@ -341,12 +345,15 @@ func (db *levelDB) Meter(prefix string) {
 	// Initialize all the metrics collector at the requested prefix
 	db.writeDelayCountMeter = metrics.NewRegisteredMeter(prefix+"writedelay/count", nil)
 	db.writeDelayDurationMeter = metrics.NewRegisteredMeter(prefix+"writedelay/duration", nil)
+	db.aliveSnapshotsMeter = metrics.NewRegisteredMeter(prefix+"snapshots", nil)
+	db.aliveIteratorsMeter = metrics.NewRegisteredMeter(prefix+"iterators", nil)
 	db.compTimeMeter = metrics.NewRegisteredMeter(prefix+"compaction/time", nil)
 	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compaction/read", nil)
 	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compaction/write", nil)
 	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
 	db.diskWriteMeter = metrics.NewRegisteredMeter(prefix+"disk/write", nil)
 	db.blockCacheGauge = metrics.NewRegisteredGauge(prefix+"blockcache", nil)
+	db.openedTablesCountMeter = metrics.NewRegisteredMeter(prefix+"opendedtables", nil)
 
 	db.getTimeMeter = metrics.NewRegisteredMeter(prefix+"get/time", nil)
 	db.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
@@ -387,6 +394,9 @@ func (db *levelDB) meter(refresh time.Duration) {
 	var prevWriteDelayCount int32
 	var prevWriteDelayDuration time.Duration
 
+	// Alive snapshots/iterators
+	var prevAliveSnapshots, prevAliveIterators int32
+
 	// Compaction related stats
 	var prevCompRead, prevCompWrite int64
 	var prevCompTime time.Duration
@@ -411,6 +421,11 @@ hasError:
 		db.writeDelayDurationMeter.Mark(int64(s.WriteDelayDuration - prevWriteDelayDuration))
 		prevWriteDelayCount, prevWriteDelayDuration = s.WriteDelayCount, s.WriteDelayDuration
 
+		// Alive snapshots/iterators
+		db.aliveSnapshotsMeter.Mark(int64(s.AliveSnapshots - prevAliveSnapshots))
+		db.aliveIteratorsMeter.Mark(int64(s.AliveIterators - prevAliveIterators))
+		prevAliveSnapshots, prevAliveIterators = s.AliveSnapshots, s.AliveIterators
+
 		// Compaction related stats
 		var currCompRead, currCompWrite int64
 		var currCompTime time.Duration
@@ -430,8 +445,9 @@ hasError:
 		db.diskWriteMeter.Mark(int64(currWrite - prevWrite))
 		prevRead, prevWrite = currRead, currWrite
 
-		// BlockCache size
+		// BlockCache/OpenedTables related stats
 		db.blockCacheGauge.Update(int64(s.BlockCacheSize))
+		db.openedTablesCountMeter.Mark(int64(s.OpenedTablesCount))
 
 		// Sleep a bit, then repeat the stats collection
 		select {
