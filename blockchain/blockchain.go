@@ -160,8 +160,6 @@ type BlockChain struct {
 
 	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
-	cachedStateDB *state.StateDB
-
 	nonceCache   common.Cache
 	balanceCache common.Cache
 
@@ -537,11 +535,7 @@ func (bc *BlockChain) StateCache() state.Database {
 // StateAtWithCache returns a new mutable state based on a particular point in time.
 // If different from StateAt() in that it uses state object caching.
 func (bc *BlockChain) StateAtWithCache(root common.Hash) (*state.StateDB, error) {
-	if bc.cachedStateDB == nil {
-		return state.NewWithCache(root, bc.stateCache, state.NewCachedStateObjects())
-	} else {
-		return state.NewWithCache(root, bc.stateCache, bc.cachedStateDB.GetCachedStateObjects())
-	}
+	return state.NewWithCache(root, bc.stateCache, state.NewCachedStateObjects())
 }
 
 // TryGetCachedStateDB tries to get cachedStateDB, if StateDBCaching flag is true and it exists.
@@ -550,13 +544,6 @@ func (bc *BlockChain) TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB,
 		return bc.StateAt(rootHash)
 	}
 
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
-
-	// When cachedStateDB is nil, set cachedStateDB with a new StateDB.
-	if bc.cachedStateDB == nil {
-		return bc.StateAt(rootHash)
-	}
 	return bc.StateAtWithCache(rootHash)
 }
 
@@ -1233,18 +1220,6 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 	if bc.cacheConfig.TxPoolStateCache {
 		stateDB.UpdateTxPoolStateCache(bc.nonceCache, bc.balanceCache)
-	}
-
-	// Update cachedStateDB after successful WriteBlockWithState.
-	if stateDB.UseCachedStateObjects() {
-		bc.mu.Lock()
-		defer bc.mu.Unlock()
-
-		logger.Trace("Update cached StateDB information",
-			"newRootHash", block.Root().String(), "newBlockNum", block.NumberU64())
-
-		stateDB.UpdateCachedStateObjects(block.Root())
-		bc.cachedStateDB = stateDB
 	}
 
 	// Publish the committed block to the redis cache of stateDB.
