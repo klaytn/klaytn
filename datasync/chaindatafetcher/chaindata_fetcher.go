@@ -353,7 +353,7 @@ func (f *ChainDataFetcher) handleRequestByType(reqType cfTypes.RequestType, shou
 	for targetType := cfTypes.RequestTypeTransaction; targetType < cfTypes.RequestTypeLength; targetType = targetType << 1 {
 		if cfTypes.CheckRequestType(reqType, targetType) {
 			if err := f.updateInsertionTimeGauge(f.retryFunc(f.repo.HandleChainEvent))(ev, targetType); err != nil {
-				logger.Error("the chaindatafetcher is stopped by user while the error occurring", "blockNumber", ev.Block.NumberU64(), "err", err)
+				logger.Error("the chaindatafetcher is stopped by user while an error is occurring", "blockNumber", ev.Block.NumberU64(), "err", err)
 				return
 			}
 		}
