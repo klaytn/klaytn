@@ -264,8 +264,8 @@ func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMes
 func (c *Consumer) ConsumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.ConsumerGroupClaim) error {
 	var buffer [][]*Segment
 	for msg := range cgc.Messages() {
-		if len(buffer) > c.config.ConsumerBufferSize {
-			return fmt.Errorf("%v [max: %v, current: %v]", bufferOverflowErrorMsg, c.config.ConsumerBufferSize, len(buffer))
+		if len(buffer) > c.config.MaxMessageNumber {
+			return fmt.Errorf("%v: increasing buffer size may resolve this problem. [max: %v, current: %v]", bufferOverflowErrorMsg, c.config.MaxMessageNumber, len(buffer))
 		}
 
 		segment, err := newSegment(msg)

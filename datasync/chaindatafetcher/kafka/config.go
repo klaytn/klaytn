@@ -41,7 +41,7 @@ const (
 	DefaultMaxMessageBytes      = 1000000
 	DefaultRequiredAcks         = 1
 	DefaultSegmentSizeBytes     = 1000000 // 1 MB
-	DefaultConsumerBufferSize   = 100
+	DefaultConsumerBufferSize   = 100     // max number of messages in buffer
 )
 
 type KafkaConfig struct {
@@ -52,7 +52,9 @@ type KafkaConfig struct {
 	Partitions           int32 // Partitions is the number of partitions of a topic.
 	Replicas             int16 // Replicas is a replication factor of kafka settings. This is the number of the replicated partitions in the kafka cluster.
 	SegmentSizeBytes     int   // SegmentSizeBytes is the size of kafka message segment
-	ConsumerBufferSize   int   // ConsumerBufferSize is the maximum size of consumer buffer
+	// (number of partitions) * (average size of segments) * buffer size should not be greater than memory size.
+	// DefaultConsumerBuffer size is 100
+	ConsumerBufferSize int // ConsumerBufferSize is the maximum size of consumer buffer
 }
 
 func GetDefaultKafkaConfig() *KafkaConfig {
