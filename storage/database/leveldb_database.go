@@ -21,7 +21,6 @@
 package database
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -107,10 +106,10 @@ type levelDB struct {
 	diskWriteMeter         metrics.Meter // Meter for measuring the effective amount of data written
 	blockCacheGauge        metrics.Gauge // Gauge for measuring the current size of block cache
 	openedTablesCountMeter metrics.Meter
-	memCompGauge       metrics.Gauge // Gauge for tracking the number of memory compaction
-	level0CompGauge    metrics.Gauge // Gauge for tracking the number of table compaction in level0
-	nonlevel0CompGauge metrics.Gauge // Gauge for tracking the number of table compaction in non0 level
-	seekCompGauge      metrics.Gauge // Gauge for tracking the number of table compaction caused by read opt
+	memCompGauge           metrics.Gauge // Gauge for tracking the number of memory compaction
+	level0CompGauge        metrics.Gauge // Gauge for tracking the number of table compaction in level0
+	nonlevel0CompGauge     metrics.Gauge // Gauge for tracking the number of table compaction in non0 level
+	seekCompGauge          metrics.Gauge // Gauge for tracking the number of table compaction caused by read opt
 
 	perfCheck           bool
 	getTimeMeter        metrics.Meter
@@ -372,7 +371,6 @@ func (db *levelDB) Meter(prefix string) {
 	db.nonlevel0CompGauge = metrics.NewRegisteredGauge(prefix+"compact/nonlevel0", nil)
 	db.seekCompGauge = metrics.NewRegisteredGauge(prefix+"compact/seek", nil)
 
-
 	// Short circuit metering if the metrics system is disabled
 	// Above meters are initialized by NilMeter if metricutils.Enabled == false
 	if !metricutils.Enabled {
@@ -464,28 +462,10 @@ hasError:
 		db.openedTablesCountMeter.Mark(int64(s.OpenedTablesCount))
 
 		// Compaction related stats
-		compCount, err := db.db.GetProperty("leveldb.compcount")
-		if err != nil {
-			db.logger.Error("Failed to read database iostats", "err", err)
-			merr = err
-			continue
-		}
-
-		var (
-			memComp       uint32
-			level0Comp    uint32
-			nonLevel0Comp uint32
-			seekComp      uint32
-		)
-		if n, err := fmt.Sscanf(compCount, "MemComp:%d Level0Comp:%d NonLevel0Comp:%d SeekComp:%d", &memComp, &level0Comp, &nonLevel0Comp, &seekComp); n != 4 || err != nil {
-			db.logger.Error("Compaction count statistic not found")
-			merr = err
-			continue
-		}
-		db.memCompGauge.Update(int64(memComp))
-		db.level0CompGauge.Update(int64(level0Comp))
-		db.nonlevel0CompGauge.Update(int64(nonLevel0Comp))
-		db.seekCompGauge.Update(int64(seekComp))
+		db.memCompGauge.Update(int64(s.MemComp))
+		db.level0CompGauge.Update(int64(s.Level0Comp))
+		db.nonlevel0CompGauge.Update(int64(s.NonLevel0Comp))
+		db.seekCompGauge.Update(int64(s.SeekComp))
 
 		// Sleep a bit, then repeat the stats collection
 		select {
