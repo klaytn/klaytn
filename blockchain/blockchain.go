@@ -532,21 +532,6 @@ func (bc *BlockChain) StateCache() state.Database {
 	return bc.stateCache
 }
 
-// StateAtWithCache returns a new mutable state based on a particular point in time.
-// If different from StateAt() in that it uses state object caching.
-func (bc *BlockChain) StateAtWithCache(root common.Hash) (*state.StateDB, error) {
-	return state.NewWithCache(root, bc.stateCache, state.NewCachedStateObjects())
-}
-
-// TryGetCachedStateDB tries to get cachedStateDB, if StateDBCaching flag is true and it exists.
-func (bc *BlockChain) TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB, error) {
-	if !bc.cacheConfig.StateDBCaching {
-		return bc.StateAt(rootHash)
-	}
-
-	return bc.StateAtWithCache(rootHash)
-}
-
 // Reset purges the entire blockchain, restoring it to its genesis state.
 func (bc *BlockChain) Reset() error {
 	return bc.ResetWithGenesisBlock(bc.genesisBlock)
@@ -1607,7 +1592,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			parent = chain[i-1]
 		}
 
-		stateDB, err := bc.TryGetCachedStateDB(parent.Root())
+		stateDB, err := bc.StateAt(parent.Root())
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
