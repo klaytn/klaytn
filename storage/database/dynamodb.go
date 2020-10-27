@@ -49,7 +49,6 @@ var overSizedDataPrefix = []byte("oversizeditem")
 
 // Performance of batch operations of DynamoDB are collected by default.
 var dynamoBatchWriteTimeMeter metrics.Meter = &metrics.NilMeter{}
-var dynamoBatchWriteSizeMeter metrics.Meter = &metrics.NilMeter{}
 
 // errors
 var dataNotFoundErr = errors.New("data is not found with the given key")
@@ -429,7 +428,6 @@ func (dynamo *dynamoDB) Meter(prefix string) {
 	dynamo.getTimeMeter = metrics.NewRegisteredMeter(prefix+"get/time", nil)
 	dynamo.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
 	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
-	dynamoBatchWriteSizeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/size", nil)
 }
 
 func (dynamo *dynamoDB) NewIterator() Iterator {
@@ -537,7 +535,6 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 	}
 
 	// If the size of the item is larger than the limit, it should be handled in different way
-	dynamoBatchWriteSizeMeter.Mark(int64(dataSize))
 	if dataSize > dynamoWriteSizeLimit {
 		batch.wg.Add(1)
 		go func() {

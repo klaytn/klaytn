@@ -103,7 +103,6 @@ type levelDB struct {
 	getTimeMeter        metrics.Meter
 	putTimeMeter        metrics.Meter
 	batchWriteTimeMeter metrics.Meter
-	batchWriteSizeMeter metrics.Meter
 
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
@@ -347,7 +346,6 @@ func (db *levelDB) Meter(prefix string) {
 	db.getTimeMeter = metrics.NewRegisteredMeter(prefix+"get/time", nil)
 	db.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
 	db.batchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
-	db.batchWriteSizeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/size", nil)
 
 	// Short circuit metering if the metrics system is disabled
 	// Above meters are initialized by NilMeter if metricutils.Enabled == false
