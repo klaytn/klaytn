@@ -85,7 +85,6 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	StateDBCaching       bool                        // Enables caching of state objects in stateDB
 	TxPoolStateCache     bool                        // Enables caching of nonce and balance for txpool
 	ArchiveMode          bool                        // If true, state trie is not pruned and always written to database
 	CacheSize            int                         // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
@@ -183,7 +182,6 @@ type BlockChain struct {
 func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
-			StateDBCaching:      false,
 			ArchiveMode:         false,
 			CacheSize:           512,
 			BlockInterval:       DefaultBlockInterval,
