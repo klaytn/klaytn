@@ -92,6 +92,9 @@ type levelDB struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
 
+	writeDelayCountMeter    metrics.Meter
+	writeDelayDurationMeter metrics.Meter
+
 	compTimeMeter   metrics.Meter // Meter for measuring the total time spent in database compaction
 	compReadMeter   metrics.Meter // Meter for measuring the data read during compaction
 	compWriteMeter  metrics.Meter // Meter for measuring the data written during compaction
@@ -336,6 +339,8 @@ func (db *levelDB) LDB() *leveldb.DB {
 // Meter configures the database metrics collectors and
 func (db *levelDB) Meter(prefix string) {
 	// Initialize all the metrics collector at the requested prefix
+	db.writeDelayCountMeter = metrics.NewRegisteredMeter(prefix+"writedelay/count", nil)
+	db.writeDelayDurationMeter = metrics.NewRegisteredMeter(prefix+"writedelay/duration", nil)
 	db.compTimeMeter = metrics.NewRegisteredMeter(prefix+"compaction/time", nil)
 	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compaction/read", nil)
 	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compaction/write", nil)
@@ -378,6 +383,10 @@ func (db *levelDB) Meter(prefix string) {
 func (db *levelDB) meter(refresh time.Duration) {
 	s := new(leveldb.DBStats)
 
+	// Write delay related stats
+	var prevWriteDelayCount int32
+	var prevWriteDelayDuration time.Duration
+
 	// Compaction related stats
 	var prevCompRead, prevCompWrite int64
 	var prevCompTime time.Duration
@@ -397,6 +406,10 @@ hasError:
 		if merr != nil {
 			break
 		}
+		// Write delay related stats
+		db.writeDelayCountMeter.Mark(int64(s.WriteDelayCount - prevWriteDelayCount))
+		db.writeDelayDurationMeter.Mark(int64(s.WriteDelayDuration - prevWriteDelayDuration))
+		prevWriteDelayCount, prevWriteDelayDuration = s.WriteDelayCount, s.WriteDelayDuration
 
 		// Compaction related stats
 		var currCompRead, currCompWrite int64
