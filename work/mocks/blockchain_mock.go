@@ -5,6 +5,10 @@
 package mocks
 
 import (
+	io "io"
+	big "math/big"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/klaytn/klaytn/blockchain"
 	state "github.com/klaytn/klaytn/blockchain/state"
@@ -15,9 +19,6 @@ import (
 	event "github.com/klaytn/klaytn/event"
 	params "github.com/klaytn/klaytn/params"
 	rlp "github.com/klaytn/klaytn/ser/rlp"
-	io "io"
-	big "math/big"
-	reflect "reflect"
 )
 
 // MockBlockChain is a mock of BlockChain interface
@@ -73,6 +74,30 @@ func (m *MockBlockChain) BadBlocks() ([]blockchain.BadBlockArgs, error) {
 func (mr *MockBlockChainMockRecorder) BadBlocks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BadBlocks", reflect.TypeOf((*MockBlockChain)(nil).BadBlocks))
+}
+
+// BlockSubscriptionLoop mocks base method
+func (m *MockBlockChain) BlockSubscriptionLoop(arg0 *blockchain.TxPool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "BlockSubscriptionLoop", arg0)
+}
+
+// BlockSubscriptionLoop indicates an expected call of BlockSubscriptionLoop
+func (mr *MockBlockChainMockRecorder) BlockSubscriptionLoop(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockSubscriptionLoop", reflect.TypeOf((*MockBlockChain)(nil).BlockSubscriptionLoop), arg0)
+}
+
+// CloseBlockSubscriptionLoop mocks base method
+func (m *MockBlockChain) CloseBlockSubscriptionLoop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CloseBlockSubscriptionLoop")
+}
+
+// CloseBlockSubscriptionLoop indicates an expected call of CloseBlockSubscriptionLoop
+func (mr *MockBlockChainMockRecorder) CloseBlockSubscriptionLoop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseBlockSubscriptionLoop", reflect.TypeOf((*MockBlockChain)(nil).CloseBlockSubscriptionLoop))
 }
 
 // Config mocks base method
@@ -633,6 +658,20 @@ func (m *MockBlockChain) Rollback(arg0 []common.Hash) {
 func (mr *MockBlockChainMockRecorder) Rollback(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rollback", reflect.TypeOf((*MockBlockChain)(nil).Rollback), arg0)
+}
+
+// SaveTrieNodeCacheToDisk mocks base method
+func (m *MockBlockChain) SaveTrieNodeCacheToDisk() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveTrieNodeCacheToDisk")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveTrieNodeCacheToDisk indicates an expected call of SaveTrieNodeCacheToDisk
+func (mr *MockBlockChainMockRecorder) SaveTrieNodeCacheToDisk() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveTrieNodeCacheToDisk", reflect.TypeOf((*MockBlockChain)(nil).SaveTrieNodeCacheToDisk))
 }
 
 // SetHead mocks base method

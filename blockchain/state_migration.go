@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/VictoriaMetrics/fastcache"
+
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -201,6 +203,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	}
 
 	stats.stateMigrationReport(true, trieSync.Pending(), trieSync.CalcProgressPercentage())
+	bc.readCnt, bc.committedCnt, bc.pendingCnt, bc.progress = stats.totalRead, stats.totalCommitted, trieSync.Pending(), stats.progress
 
 	// Clear memory of trieSync
 	trieSync = nil
@@ -405,7 +408,7 @@ func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database,
 	return nil
 }
 
-func (bc *BlockChain) warmUpLoop(cache statedb.Cache, mainTrieCacheLimit uint64, children []common.Hash,
+func (bc *BlockChain) warmUpLoop(cache statedb.TrieNodeCache, mainTrieCacheLimit uint64, children []common.Hash,
 	resultHashCh chan common.Hash, resultErrCh chan error) {
 	logged := time.Now()
 	var context []interface{}
@@ -414,8 +417,8 @@ func (bc *BlockChain) warmUpLoop(cache statedb.Cache, mainTrieCacheLimit uint64,
 
 	updateContext := func() {
 		switch c := cache.(type) {
-		case *statedb.LocalCache:
-			stats := c.UpdateStats()
+		case *statedb.FastCache:
+			stats := c.UpdateStats().(fastcache.Stats)
 			percent = stats.BytesSize * 100 / mainTrieCacheLimit
 			context = []interface{}{
 				"warmUpCnt", cnt,
@@ -508,7 +511,7 @@ func (bc *BlockChain) StartWarmUp() error {
 			go bc.concurrentIterateTrie(child, db, resultHashCh, resultErrCh)
 		}
 
-		cacheLimitSize := uint64(mainTrieDB.GetTrieNodeCacheLimit())
+		cacheLimitSize := mainTrieDB.GetTrieNodeLocalCacheByteLimit()
 		bc.warmUpLoop(mainTrieDB.TrieNodeCache(), cacheLimitSize, children, resultHashCh, resultErrCh)
 	}()
 

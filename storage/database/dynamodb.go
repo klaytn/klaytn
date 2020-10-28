@@ -47,6 +47,9 @@ import (
 
 var overSizedDataPrefix = []byte("oversizeditem")
 
+// Performance of batch operations of DynamoDB are collected by default.
+var dynamoBatchWriteTimeMeter metrics.Meter = &metrics.NilMeter{}
+
 // errors
 var dataNotFoundErr = errors.New("data is not found with the given key")
 var nilDynamoConfigErr = errors.New("attempt to create DynamoDB with nil configuration")
@@ -72,9 +75,12 @@ type DynamoDBConfig struct {
 	TableName          string
 	Region             string // AWS region
 	Endpoint           string // Where DynamoDB reside
+	S3Endpoint         string // Where S3 reside
 	IsProvisioned      bool   // Billing mode
 	ReadCapacityUnits  int64  // read capacity when provisioned
 	WriteCapacityUnits int64  // write capacity when provisioned
+	ReadOnly           bool   // disables write
+	PerfCheck          bool
 }
 
 type batchWriteWorkerInput struct {
@@ -90,11 +96,8 @@ type dynamoDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 
 	// metrics
-	batchWriteTimeMeter       metrics.Meter
-	batchWriteCountMeter      metrics.Meter
-	batchWriteSizeMeter       metrics.Meter
-	batchWriteSecPerItemMeter metrics.Meter
-	batchWriteSecPerByteMeter metrics.Meter
+	getTimeMeter metrics.Meter
+	putTimeMeter metrics.Meter
 }
 
 type DynamoData struct {
@@ -102,12 +105,12 @@ type DynamoData struct {
 	Val []byte `json:"Val" dynamodbav:"Val"`
 }
 
-// TODO-Klaytn: remove the test config when flag setting is completed
-/*
- * Please Run DynamoDB local with docker
- * $ docker pull amazon/dynamodb-local
- * $ docker run -d -p 8000:8000 amazon/dynamodb-local
- */
+// GetTestDynamoConfig gets dynamo config for actual aws DynamoDB test
+//
+// If you use this config, you will be charged for what you use.
+// You need to set AWS credentials to access to dynamoDB.
+//    $ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//    $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
@@ -116,10 +119,39 @@ func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 		IsProvisioned:      false,
 		ReadCapacityUnits:  10000,
 		WriteCapacityUnits: 10000,
+		ReadOnly:           false,
+		PerfCheck:          true,
 	}
 }
 
-func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
+// GetTestDynamoConfig gets dynamo config for local test
+//
+// Please Run DynamoDB local with docker
+//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
+func GetTestDynamoConfig() *DynamoDBConfig {
+	return &DynamoDBConfig{
+		Region:             "us-east-1",
+		Endpoint:           "http://localhost:4566",
+		S3Endpoint:         "http://localhost:4566",
+		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
+		IsProvisioned:      false,
+		ReadCapacityUnits:  10000,
+		WriteCapacityUnits: 10000,
+		ReadOnly:           false,
+		PerfCheck:          false,
+	}
+}
+
+// NewDynamoDB creates either dynamoDB or dynamoDBReadOnly depending on config.ReadOnly.
+func NewDynamoDB(config *DynamoDBConfig) (Database, error) {
+	if config.ReadOnly {
+		return newDynamoDBReadOnly(config)
+	}
+	return newDynamoDB(config)
+}
+
+// newDynamoDB creates dynamoDB. dynamoDB can be used to create dynamoDBReadOnly.
+func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if config == nil {
 		return nil, nilDynamoConfigErr
 	}
@@ -129,8 +161,13 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if len(config.Endpoint) == 0 {
 		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
 	}
+	if len(config.S3Endpoint) == 0 {
+		config.S3Endpoint = "https://s3." + config.Region + ".amazonaws.com"
+	}
 
-	s3FileDB, err := newS3FileDB(config.Region, "https://s3."+config.Region+".amazonaws.com", config.TableName)
+	config.TableName = strings.ReplaceAll(config.TableName, "_", "-")
+
+	s3FileDB, err := newS3FileDB(config.Region, config.S3Endpoint, config.TableName)
 	if err != nil {
 		logger.Error("Unable to create/get S3FileDB", "DB", config.TableName)
 		return nil, err
@@ -139,8 +176,9 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if dynamoDBClient == nil {
 		dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
 			Config: aws.Config{
-				Endpoint: aws.String(config.Endpoint),
-				Region:   aws.String(config.Region),
+				Endpoint:         aws.String(config.Endpoint),
+				Region:           aws.String(config.Region),
+				S3ForcePathStyle: aws.Bool(true),
 			},
 		})))
 	}
@@ -161,7 +199,8 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 				return nil, err
 			}
 
-			dynamoDB.logger.Info("creating a DynamoDB table", "endPoint", config.Endpoint)
+			dynamoDB.logger.Warn("creating a DynamoDB table. You will be CHARGED until the DB is deleted",
+				"endPoint", config.Endpoint)
 			if err := dynamoDB.createTable(); err != nil {
 				dynamoDB.logger.Error("unable to create a DynamoDB table", "err", err.Error())
 				return nil, err
@@ -170,13 +209,15 @@ func NewDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 
 		switch tableStatus {
 		case dynamodb.TableStatusActive:
-			dynamoDB.logger.Warn("Successfully created dynamoDB table. You will be CHARGED until the DB is deleted.", "endPoint", config.Endpoint)
-			// count successful table creating
-			dynamoOpenedDBNum++
-			// create workers on the first successful table creation
-			dynamoOnceWorker.Do(func() {
-				createBatchWriteWorkerPool(config.Endpoint, config.Region)
-			})
+			if !dynamoDB.config.ReadOnly {
+				// count successful table creating
+				dynamoOpenedDBNum++
+				// create workers on the first successful table creation
+				dynamoOnceWorker.Do(func() {
+					createBatchWriteWorkerPool(config.Endpoint, config.Region)
+				})
+			}
+			dynamoDB.logger.Info("successfully created dynamoDB session", "endPoint", config.Endpoint)
 			return dynamoDB, nil
 		case dynamodb.TableStatusDeleting, dynamodb.TableStatusArchiving, dynamodb.TableStatusArchived:
 			return nil, errors.New("failed to get DynamoDB table, table status : " + tableStatus)
@@ -257,6 +298,16 @@ func (dynamo *dynamoDB) Type() DBType {
 
 // Put inserts the given key and value pair to the database.
 func (dynamo *dynamoDB) Put(key []byte, val []byte) error {
+	if dynamo.config.PerfCheck {
+		start := time.Now()
+		err := dynamo.put(key, val)
+		dynamo.putTimeMeter.Mark(int64(time.Since(start)))
+		return err
+	}
+	return dynamo.put(key, val)
+}
+
+func (dynamo *dynamoDB) put(key []byte, val []byte) error {
 	if len(key) == 0 {
 		return nil
 	}
@@ -299,6 +350,16 @@ func (dynamo *dynamoDB) Has(key []byte) (bool, error) {
 
 // Get returns the corresponding value to the given key if exists.
 func (dynamo *dynamoDB) Get(key []byte) ([]byte, error) {
+	if dynamo.config.PerfCheck {
+		start := time.Now()
+		val, err := dynamo.get(key)
+		dynamo.getTimeMeter.Mark(int64(time.Since(start)))
+		return val, err
+	}
+	return dynamo.get(key)
+}
+
+func (dynamo *dynamoDB) get(key []byte) ([]byte, error) {
 	params := &dynamodb.GetItemInput{
 		TableName: aws.String(dynamo.config.TableName),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -358,18 +419,15 @@ func (dynamo *dynamoDB) Close() {
 	if dynamoOpenedDBNum > 0 {
 		dynamoOpenedDBNum--
 	}
-	if dynamoOpenedDBNum == 0 {
+	if dynamoOpenedDBNum == 0 && dynamoWriteCh != nil {
 		close(dynamoWriteCh)
 	}
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
-	// TODO-Klaytn: implement this later. Consider the return values of bathItemWrite
-	dynamo.batchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
-	dynamo.batchWriteCountMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/count", nil)
-	dynamo.batchWriteSizeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/size", nil)
-	dynamo.batchWriteSecPerItemMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/secperitem", nil)
-	dynamo.batchWriteSecPerByteMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/secperbyte", nil)
+	dynamo.getTimeMeter = metrics.NewRegisteredMeter(prefix+"get/time", nil)
+	dynamo.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
+	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 }
 
 func (dynamo *dynamoDB) NewIterator() Iterator {
@@ -397,12 +455,12 @@ func createBatchWriteWorkerPool(endpoint, region string) {
 
 func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 	failCount := 0
-	batchWriteInput := &dynamodb.BatchWriteItemInput{
-		RequestItems: map[string][]*dynamodb.WriteRequest{},
-	}
 	logger.Debug("generate a dynamoDB batchWrite worker")
 
 	for batchInput := range writeCh {
+		batchWriteInput := &dynamodb.BatchWriteItemInput{
+			RequestItems: map[string][]*dynamodb.WriteRequest{},
+		}
 		batchWriteInput.RequestItems[batchInput.tableName] = batchInput.items
 
 		BatchWriteItemOutput, err := dynamoDBClient.BatchWriteItem(batchWriteInput)
@@ -433,7 +491,9 @@ func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 				batchWriteInput.RequestItems[batchInput.tableName] = BatchWriteItemOutput.UnprocessedItems[batchInput.tableName]
 			}
 
+			start := time.Now()
 			BatchWriteItemOutput, err = dynamoDBClient.BatchWriteItem(batchWriteInput)
+			dynamoBatchWriteTimeMeter.Mark(int64(time.Since(start)))
 			numUnprocessed = len(BatchWriteItemOutput.UnprocessedItems)
 		}
 
@@ -444,19 +504,30 @@ func createBatchWriteWorker(writeCh <-chan *batchWriteWorkerInput) {
 }
 
 func (dynamo *dynamoDB) NewBatch() Batch {
-	return &dynamoBatch{db: dynamo, tableName: dynamo.config.TableName, wg: &sync.WaitGroup{}}
+	return &dynamoBatch{db: dynamo, tableName: dynamo.config.TableName, wg: &sync.WaitGroup{}, keyMap: map[string]struct{}{}}
 }
 
 type dynamoBatch struct {
 	db         *dynamoDB
 	tableName  string
 	batchItems []*dynamodb.WriteRequest
+	keyMap     map[string]struct{} // checks duplication of keys
 	size       int
 	wg         *sync.WaitGroup
 }
 
-// TODO-klaytn need to check for duplicated keys in batch
+// Put adds an item to dynamo batch.
+// If the number of items in batch reaches dynamoBatchSize, a write request to dynamoDB is made.
+// Each batch write is executed in thread. (There is an worker pool for dynamo batch write)
+//
+// Note: If there is a duplicated key in a batch, only the first value is written.
 func (batch *dynamoBatch) Put(key, val []byte) error {
+	// if there is an duplicated key in batch, skip
+	if _, exist := batch.keyMap[string(key)]; exist {
+		return nil
+	}
+	batch.keyMap[string(key)] = struct{}{}
+
 	data := DynamoData{Key: key, Val: val}
 	dataSize := len(val)
 	if dataSize == 0 {
@@ -531,5 +602,6 @@ func (batch *dynamoBatch) ValueSize() int {
 
 func (batch *dynamoBatch) Reset() {
 	batch.batchItems = []*dynamodb.WriteRequest{}
+	batch.keyMap = map[string]struct{}{}
 	batch.size = 0
 }

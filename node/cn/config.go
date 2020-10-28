@@ -26,6 +26,8 @@ import (
 	"os/user"
 	"time"
 
+	"github.com/klaytn/klaytn/storage/statedb"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
@@ -80,9 +82,14 @@ type Config struct {
 	Genesis *blockchain.Genesis `toml:",omitempty"`
 
 	// Protocol options
-	NetworkId uint64 // Network ID to use for selecting peers to connect to
-	SyncMode  downloader.SyncMode
-	NoPruning bool
+	NetworkId     uint64 // Network ID to use for selecting peers to connect to
+	SyncMode      downloader.SyncMode
+	NoPruning     bool
+	WorkerDisable bool // disables worker and does not start istanbul
+
+	// KES options
+	DownloaderDisable bool
+	FetcherDisable    bool
 
 	// Service chain options
 	ParentOperatorAddr *common.Address `toml:",omitempty"` // A hex account address in the parent chain used to sign a child chain transaction.
@@ -94,12 +101,14 @@ type Config struct {
 	//LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
 
 	OverwriteGenesis bool
+	StartBlockNumber uint64
 
 	// Database options
 	DBType               database.DBType
 	SkipBcVersionCheck   bool `toml:"-"`
 	SingleDB             bool
 	NumStateTrieShards   uint
+	EnableDBPerfMetrics  bool
 	LevelDBCompression   database.LevelDBCompressionType
 	LevelDBBufferPool    bool
 	LevelDBCacheSize     int
@@ -112,7 +121,7 @@ type Config struct {
 	ParallelDBWrite      bool
 	StateDBCaching       bool
 	TxPoolStateCache     bool
-	TrieCacheLimit       int
+	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`

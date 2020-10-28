@@ -278,10 +278,6 @@ var flagsWithValues = []struct {
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue},
 	},
 	{
-		flag:     "--cache.writethrough",
-		flagType: FlagTypeBoolean,
-	},
-	{
 		flag:     "--statedb.use-txpool-cache",
 		flagType: FlagTypeBoolean,
 	},

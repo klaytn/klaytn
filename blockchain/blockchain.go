@@ -32,6 +32,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/go-redis/redis/v7"
+	"github.com/klaytn/klaytn/common/hexutil"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -82,14 +85,14 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	StateDBCaching       bool   // Enables caching of state objects in stateDB.
-	TxPoolStateCache     bool   // Enables caching of nonce and balance for txpool.
-	ArchiveMode          bool   // If true, state trie is not pruned and always written to database.
-	CacheSize            int    // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval        uint   // Block interval to flush the trie. Each interval state trie will be flushed into disk.
-	TriesInMemory        uint64 // Maximum number of recent state tries according to its block number
-	TrieCacheLimit       int    // Memory allowance (MB) to use for caching trie nodes in memory
-	SenderTxHashIndexing bool   // Enables saving senderTxHash to txHash mapping information to database and cache.
+	StateDBCaching       bool                        // Enables caching of state objects in stateDB
+	TxPoolStateCache     bool                        // Enables caching of nonce and balance for txpool
+	ArchiveMode          bool                        // If true, state trie is not pruned and always written to database
+	CacheSize            int                         // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval        uint                        // Block interval to flush the trie. Each interval state trie will be flushed into disk
+	TriesInMemory        uint64                      // Maximum number of recent state tries according to its block number
+	SenderTxHashIndexing bool                        // Enables saving senderTxHash to txHash mapping information to database and cache
+	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig // Configures trie node cache
 }
 
 // gcBlock is used for priority queue for GC.
@@ -183,14 +186,15 @@ type BlockChain struct {
 func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
-			StateDBCaching: false,
-			ArchiveMode:    false,
-			CacheSize:      512,
-			BlockInterval:  DefaultBlockInterval,
-			TriesInMemory:  DefaultTriesInMemory,
-			TrieCacheLimit: 0,
+			StateDBCaching:      false,
+			ArchiveMode:         false,
+			CacheSize:           512,
+			BlockInterval:       DefaultBlockInterval,
+			TriesInMemory:       DefaultTriesInMemory,
+			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 		}
 	}
+
 	// Initialize DeriveSha implementation
 	InitDeriveSha(chainConfig.DeriveShaImpl)
 
@@ -211,7 +215,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		db:                 db,
 		triegc:             prque.New(),
 		chBlock:            make(chan gcBlock, 1000),
-		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieCacheLimit),
+		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieNodeCacheConfig),
 		quit:               make(chan struct{}),
 		futureBlocks:       futureBlocks,
 		engine:             engine,
@@ -261,6 +265,27 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	go bc.restartStateMigration()
 
 	return bc, nil
+}
+
+// SetCanonicalBlock resets the canonical as the block with the given block number.
+// It works as rewinding the head block to the previous one, but does not delete the data.
+func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
+	// If the given block number is zero (it is zero by default), it does nothing
+	if blockNum == 0 {
+		return
+	}
+	// Read the block with the given block number and set it as canonical block
+	targetBlock := bc.db.ReadBlockByNumber(blockNum)
+	if targetBlock == nil {
+		logger.Error("failed to retrieve the block", "blockNum", blockNum)
+		return
+	}
+	bc.insert(targetBlock)
+	if err := bc.loadLastState(); err != nil {
+		logger.Error("failed to load last state after setting the canonical block", "err", err)
+		return
+	}
+	logger.Info("successfully set the canonical block", "blockNum", blockNum)
 }
 
 func (bc *BlockChain) UseGiniCoeff() bool {
@@ -818,14 +843,17 @@ func (bc *BlockChain) Stop() {
 	}
 	// Unsubscribe all subscriptions registered from blockchain
 	bc.scope.Close()
+	if bc.cacheConfig.TrieNodeCacheConfig.RedisSubscribeBlockEnable {
+		bc.CloseBlockSubscriptionLoop()
+	}
+
 	close(bc.quit)
 	atomic.StoreInt32(&bc.procInterrupt, 1)
 
 	bc.wg.Wait()
 
+	triedb := bc.stateCache.TrieDB()
 	if !bc.isArchiveMode() {
-		triedb := bc.stateCache.TrieDB()
-
 		number := bc.CurrentBlock().NumberU64()
 		recent := bc.GetBlockByNumber(number)
 		if recent == nil {
@@ -845,6 +873,10 @@ func (bc *BlockChain) Stop() {
 			logger.Error("Dangling trie nodes after full cleanup")
 		}
 	}
+	if triedb.TrieNodeCache() != nil {
+		_ = triedb.TrieNodeCache().Close()
+	}
+
 	logger.Info("Blockchain manager stopped")
 }
 
@@ -1232,6 +1264,24 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		bc.lastUpdatedRootHash = block.Root()
 		stateDB.UpdateCachedStateObjects(block.Root())
 		bc.cachedStateDB = stateDB
+	}
+
+	// Publish the committed block to the redis cache of stateDB.
+	// The cache uses the block to distinguish the latest state.
+	if bc.cacheConfig.TrieNodeCacheConfig.RedisPublishBlockEnable {
+		blockRlp, err := rlp.EncodeToBytes(block)
+		if err != nil {
+			logger.Error("failed to encode lastCommittedBlock", "blockNumber", block.NumberU64(), "err", err)
+		}
+
+		pubSub, ok := bc.stateCache.TrieDB().TrieNodeCache().(statedb.BlockPubSub)
+		if ok {
+			if err := pubSub.PublishBlock(hexutil.Encode(blockRlp)); err != nil {
+				logger.Error("failed to publish block to redis", "blockNumber", block.NumberU64(), "err", err)
+			}
+		} else {
+			logger.Error("invalid TrieNodeCache type", "trieNodeCacheConfig", bc.cacheConfig.TrieNodeCacheConfig)
+		}
 	}
 
 	return status, err
@@ -1675,6 +1725,88 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	return 0, events, coalescedLogs, nil
 }
 
+// BlockSubscriptionLoop subscribes blocks from a redis server and processes them.
+// This method is only for KES nodes.
+func (bc *BlockChain) BlockSubscriptionLoop(pool *TxPool) {
+	var ch <-chan *redis.Message
+	logger.Info("subscribe blocks from redis cache")
+
+	pubSub, ok := bc.stateCache.TrieDB().TrieNodeCache().(statedb.BlockPubSub)
+	if !ok || pubSub == nil {
+		logger.Crit("invalid block pub/sub configure", "trieNodeCacheConfig",
+			bc.stateCache.TrieDB().GetTrieNodeCacheConfig())
+	}
+
+	ch = pubSub.SubscribeBlockCh()
+	if ch == nil {
+		logger.Crit("failed to create redis subscription channel")
+	}
+
+	for msg := range ch {
+		logger.Debug("msg from redis subscription channel", "msg", msg.Payload)
+
+		blockRlp, err := hexutil.Decode(msg.Payload)
+		if err != nil {
+			logger.Error("failed to decode redis subscription msg", "msg", msg.Payload)
+			continue
+		}
+
+		block := &types.Block{}
+		if err := rlp.DecodeBytes(blockRlp, block); err != nil {
+			logger.Error("failed to rlp decode block", "msg", msg.Payload, "block", string(blockRlp))
+			continue
+		}
+
+		oldHead := bc.CurrentHeader()
+		bc.replaceCurrentBlock(block)
+		pool.lockedReset(oldHead, bc.CurrentHeader())
+	}
+
+	logger.Info("closed the block subscription loop")
+}
+
+// CloseBlockSubscriptionLoop closes BlockSubscriptionLoop.
+func (bc *BlockChain) CloseBlockSubscriptionLoop() {
+	pubSub, ok := bc.stateCache.TrieDB().TrieNodeCache().(statedb.BlockPubSub)
+	if ok {
+		if err := pubSub.UnsubscribeBlock(); err != nil {
+			logger.Error("failed to unsubscribe blocks", "err", err, "trieNodeCacheConfig",
+				bc.stateCache.TrieDB().GetTrieNodeCacheConfig())
+		}
+	}
+}
+
+// replaceCurrentBlock replaces bc.currentBlock to the given block.
+func (bc *BlockChain) replaceCurrentBlock(latestBlock *types.Block) {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
+	if latestBlock == nil {
+		logger.Error("no latest block")
+		return
+	}
+
+	// Don't update current block if the latest block is not newer than current block.
+	currentBlock := bc.CurrentBlock()
+	if currentBlock.NumberU64() >= latestBlock.NumberU64() {
+		logger.Warn("ignore an old block", "currentBlockNumber", currentBlock.NumberU64(), "oldBlockNumber",
+			latestBlock.NumberU64())
+		return
+	}
+
+	// Insert a new block and update metrics
+	bc.insert(latestBlock)
+	bc.hc.SetCurrentHeader(latestBlock.Header())
+
+	headBlockNumberGauge.Update(latestBlock.Number().Int64())
+	blockTxCountsGauge.Update(int64(latestBlock.Transactions().Len()))
+	blockTxCountsCounter.Inc(int64(latestBlock.Transactions().Len()))
+	bc.stateCache.TrieDB().UpdateMetricNodes()
+
+	logger.Info("inserted a new block", "prevBlockNumber", currentBlock.NumberU64(), "blockNumber",
+		latestBlock.NumberU64(), "hash", latestBlock.Hash().String(), "stateRoot", latestBlock.Root().String())
+}
+
 // insertStats tracks and reports on block insertion.
 type insertStats struct {
 	queued, processed, ignored int
@@ -2098,6 +2230,11 @@ func (bc *BlockChain) GetNonceInCache(addr common.Address) (uint64, bool) {
 		}
 	}
 	return 0, false
+}
+
+func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
+	filePath := bc.db.GetDBConfig().Dir + "/fastcache"
+	return bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(filePath)
 }
 
 // ApplyTransaction attempts to apply a transaction to the given state database

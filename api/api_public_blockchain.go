@@ -23,6 +23,9 @@ package api
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
@@ -35,8 +38,6 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
-	"time"
 )
 
 const defaultGasPrice = 25 * params.Ston
@@ -206,12 +207,6 @@ func (s *PublicBlockChainAPI) GetAccountKey(ctx context.Context, address common.
 	accountKey := state.GetKey(address)
 	serAccKey := accountkey.NewAccountKeySerializerWithAccountKey(accountKey)
 	return serAccKey, state.Error()
-}
-
-// WriteThroughCaching returns if write through caching is enabled or not.
-// If enabled, when data write happens, cache write happens at the same time.
-func (s *PublicBlockChainAPI) WriteThroughCaching() bool {
-	return common.WriteThroughCaching
 }
 
 // IsParallelDBWrite returns if parallel write is enabled or not.

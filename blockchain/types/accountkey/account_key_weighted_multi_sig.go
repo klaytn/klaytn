@@ -19,6 +19,8 @@ package accountkey
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
@@ -73,16 +75,16 @@ func (a *AccountKeyWeightedMultiSig) Equal(b AccountKey) bool {
 		a.Keys.Equal(tb.Keys)
 }
 
-func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, pubkeys []*ecdsa.PublicKey) bool {
+func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
 	weightedSum := uint(0)
 
 	// To prohibit making a signature with the same key, make a map.
 	// TODO-Klaytn: find another way for better performance
 	pMap := make(map[string]*ecdsa.PublicKey)
-	for _, bk := range pubkeys {
+	for _, bk := range recoveredKeys {
 		b, err := rlp.EncodeToBytes((*PublicKeySerializable)(bk))
 		if err != nil {
-			logger.Warn("Failed to encode public keys in the tx", pubkeys)
+			logger.Warn("Failed to encode recovered public keys of the tx", "recoveredKeys", recoveredKeys)
 			continue
 		}
 		pMap[string(b)] = bk
@@ -104,7 +106,7 @@ func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, pubkeys []*ecdsa.Publi
 		return true
 	}
 
-	logger.Debug("AccountKeyWeightedMultiSig validation is failed", "pubkeys", pubkeys,
+	logger.Debug("AccountKeyWeightedMultiSig validation is failed", "recoveredKeys", recoveredKeys,
 		"accountKeys", a.String(), "threshold", a.Threshold, "weighted sum", weightedSum)
 
 	return false

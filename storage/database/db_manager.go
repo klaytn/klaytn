@@ -24,14 +24,17 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
+	"github.com/dgraph-io/badger"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/pkg/errors"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var logger = log.NewModuleLogger(log.StorageDatabase)
@@ -46,6 +49,7 @@ type DBManager interface {
 	Close()
 	NewBatch(dbType DBEntryType) Batch
 	getDBDir(dbEntry DBEntryType) string
+	setDBDir(dbEntry DBEntryType, newDBDir string)
 	setStateTrieMigrationStatus(uint64)
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
@@ -213,6 +217,13 @@ type DBManager interface {
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
+
+	// DB migration related function
+	StartDBMigration(DBManager) error
+
+	// ChainDataFetcher checkpoint function
+	WriteChainDataFetcherCheckpoint(checkpoint uint64) error
+	ReadChainDataFetcherCheckpoint() (uint64, error)
 }
 
 type DBEntryType uint8
@@ -318,12 +329,13 @@ func NewMemoryDBManager() DBManager {
 // DBConfig handles database related configurations.
 type DBConfig struct {
 	// General configurations for all types of DB.
-	Dir                string
-	DBType             DBType
-	SingleDB           bool // whether dbs (such as MiscDB, headerDB and etc) share one physical DB
-	NumStateTrieShards uint // the number of shards of state trie db
-	ParallelDBWrite    bool
-	OpenFilesLimit     int
+	Dir                 string
+	DBType              DBType
+	SingleDB            bool // whether dbs (such as MiscDB, headerDB and etc) share one physical DB
+	NumStateTrieShards  uint // the number of shards of state trie db
+	ParallelDBWrite     bool
+	OpenFilesLimit      int
+	EnableDBPerfMetrics bool // If true, read and write performance will be logged
 
 	// LevelDB related configurations.
 	LevelDBCacheSize   int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
@@ -582,8 +594,6 @@ func (dbm *databaseManager) setStateTrieMigrationStatus(blockNum uint64) {
 	if err := miscDB.Put(migrationStatusKey, common.Int64ToByteBigEndian(blockNum)); err != nil {
 		logger.Crit("Failed to set state trie migration status", "err", err)
 	}
-	dbm.lockInMigration.Lock()
-	defer dbm.lockInMigration.Unlock()
 
 	if blockNum == 0 {
 		dbm.inMigration = false
@@ -629,6 +639,10 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 	// Create a new database for migration process.
 	newDB, newDBDir := newStateTrieMigrationDB(dbm.config, blockNum)
 
+	// lock to prevent from a conflict of reading state DB and changing state DB
+	dbm.lockInMigration.Lock()
+	defer dbm.lockInMigration.Unlock()
+
 	// Store migration db path in misc db
 	dbm.setDBDir(StateTrieMigrationDB, newDBDir)
 
@@ -644,6 +658,10 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 // FinishStateMigration updates stateTrieDB and removes the old one.
 // The function should be called only after when state trie migration is finished.
 func (dbm *databaseManager) FinishStateMigration(succeed bool) {
+	// lock to prevent from a conflict of reading state DB and changing state DB
+	dbm.lockInMigration.Lock()
+	defer dbm.lockInMigration.Unlock()
+
 	dbRemoved := StateTrieDB
 	dbUsed := StateTrieMigrationDB
 
@@ -667,7 +685,8 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) {
 
 	dbPathToBeRemoved := filepath.Join(dbm.config.Dir, dbDirToBeRemoved)
 	dbToBeRemoved.Close()
-	removeDB(dbPathToBeRemoved)
+
+	go removeDB(dbPathToBeRemoved)
 }
 
 func removeDB(dbPath string) {
@@ -1068,12 +1087,11 @@ func (dbm *databaseManager) PutBodyToBatch(batch Batch, hash common.Hash, number
 
 // WriteBodyRLP stores an RLP encoded block body into the database.
 func (dbm *databaseManager) WriteBodyRLP(hash common.Hash, number uint64, rlp rlp.RawValue) {
+	dbm.cm.writeBodyRLPCache(hash, rlp)
+
 	db := dbm.getDatabase(BodyDB)
 	if err := db.Put(blockBodyKey(number, hash), rlp); err != nil {
 		logger.Crit("Failed to store block body", "err", err)
-	}
-	if common.WriteThroughCaching {
-		dbm.cm.writeBodyRLPCache(hash, rlp)
 	}
 }
 
@@ -1184,13 +1202,11 @@ func (dbm *databaseManager) ReadReceiptsByBlockHash(hash common.Hash) types.Rece
 
 // WriteReceipts stores all the transaction receipts belonging to a block.
 func (dbm *databaseManager) WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts) {
+	dbm.cm.writeBlockReceiptsCache(hash, receipts)
+
 	db := dbm.getDatabase(ReceiptsDB)
 	// When putReceiptsToPutter is called from WriteReceipts, txReceipt is cached.
 	dbm.putReceiptsToPutter(db, hash, number, receipts, true)
-	if common.WriteThroughCaching {
-		// TODO-Klaytn goroutine for performance
-		dbm.cm.writeBlockReceiptsCache(hash, receipts)
-	}
 }
 
 func (dbm *databaseManager) PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts) {
@@ -1308,13 +1324,11 @@ func (dbm *databaseManager) HasBlock(hash common.Hash, number uint64) bool {
 }
 
 func (dbm *databaseManager) WriteBlock(block *types.Block) {
+	dbm.cm.writeBodyCache(block.Hash(), block.Body())
+	dbm.cm.blockCache.Add(block.Hash(), block)
+
 	dbm.WriteBody(block.Hash(), block.NumberU64(), block.Body())
 	dbm.WriteHeader(block.Header())
-
-	if common.WriteThroughCaching {
-		dbm.cm.writeBodyCache(block.Hash(), block.Body())
-		dbm.cm.blockCache.Add(block.Hash(), block)
-	}
 }
 
 func (dbm *databaseManager) DeleteBlock(hash common.Hash, number uint64) {
@@ -1380,9 +1394,17 @@ func (dbm *databaseManager) ReadCachedTrieNode(hash common.Hash) ([]byte, error)
 	if dbm.inMigration {
 		if val, err := dbm.GetStateTrieMigrationDB().Get(hash[:]); err == nil {
 			return val, nil
+		} else if err != dataNotFoundErr {
+			// TODO-Klaytn-Database Need to be properly handled
+			logger.Error("Unexpected error while reading cached trie node from state migration database", "err", err)
 		}
 	}
-	return dbm.ReadCachedTrieNodeFromOld(hash)
+	val, err := dbm.ReadCachedTrieNodeFromOld(hash)
+	if err != nil && err != dataNotFoundErr {
+		// TODO-Klaytn-Database Need to be properly handled
+		logger.Error("Unexpected error while reading cached trie node", "err", err)
+	}
+	return val, err
 }
 
 // Cached Trie Node Preimage operation.
@@ -2023,4 +2045,28 @@ func (dbm *databaseManager) WriteGovernanceState(b []byte) error {
 func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	db := dbm.getDatabase(MiscDB)
 	return db.Get(governanceStateKey)
+}
+
+func (dbm *databaseManager) WriteChainDataFetcherCheckpoint(checkpoint uint64) error {
+	db := dbm.getDatabase(MiscDB)
+	return db.Put(chaindatafetcherCheckpointKey, common.Int64ToByteBigEndian(checkpoint))
+}
+
+func (dbm *databaseManager) ReadChainDataFetcherCheckpoint() (uint64, error) {
+	db := dbm.getDatabase(MiscDB)
+	data, err := db.Get(chaindatafetcherCheckpointKey)
+	if err != nil {
+		// if the key is not in the database, 0 is returned as the checkpoint
+		if err == leveldb.ErrNotFound || err == badger.ErrKeyNotFound ||
+			strings.Contains(err.Error(), "not found") { // memoryDB
+			return 0, nil
+		}
+		return 0, err
+	}
+	// in case that error is nil, but the data does not exist
+	if len(data) != 8 {
+		logger.Warn("the returned error is nil, but the data is wrong", "len(data)", len(data))
+		return 0, nil
+	}
+	return binary.BigEndian.Uint64(data), nil
 }

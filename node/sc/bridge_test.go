@@ -20,6 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"math/big"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
@@ -32,11 +38,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"log"
-	"math/big"
-	"strconv"
-	"testing"
-	"time"
 )
 
 const (
@@ -1171,7 +1172,7 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 				"status", receipt.Status)
 		case <-time.After(1 * time.Second):
 			if receipt != nil {
-				t.Log("handle event ommited Tx gas used=", receipt.GasUsed)
+				t.Log("handle event omitted Tx gas used=", receipt.GasUsed)
 			}
 			t.Fatal("handle event omitted")
 		}

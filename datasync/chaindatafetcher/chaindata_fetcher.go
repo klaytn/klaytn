@@ -23,13 +23,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-
-	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
+	cfTypes "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
@@ -40,6 +40,7 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
+var errUnsupportedMode = errors.New("the given chaindatafetcher mode is not supported")
 
 //go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher BlockChain
 type BlockChain interface {
@@ -58,7 +59,7 @@ type ChainDataFetcher struct {
 	chainCh  chan blockchain.ChainEvent
 	chainSub event.Subscription
 
-	reqCh  chan *request // TODO-ChainDataFetcher add logic to insert new requests from APIs to this channel
+	reqCh  chan *cfTypes.Request // TODO-ChainDataFetcher add logic to insert new requests from APIs to this channel
 	stopCh chan struct{}
 
 	numHandlers int
@@ -69,7 +70,9 @@ type ChainDataFetcher struct {
 
 	wg sync.WaitGroup
 
-	repo Repository
+	repo         Repository
+	checkpointDB CheckpointDB
+	setters      []ComponentSetter
 
 	fetchingStarted      bool
 	fetchingStopCh       chan struct{}
@@ -80,26 +83,55 @@ type ChainDataFetcher struct {
 }
 
 func NewChainDataFetcher(ctx *node.ServiceContext, cfg *ChainDataFetcherConfig) (*ChainDataFetcher, error) {
-	repo, err := kas.NewRepository(cfg.KasConfig)
-	if err != nil {
-		logger.Error("Failed to create new Repository", "err", err, "user", cfg.KasConfig.DBUser, "host", cfg.KasConfig.DBHost, "port", cfg.KasConfig.DBPort, "name", cfg.KasConfig.DBName, "cacheUrl", cfg.KasConfig.CacheInvalidationURL, "x-chain-id", cfg.KasConfig.XChainId)
-		return nil, err
-	}
-	checkpoint, err := repo.ReadCheckpoint()
-	if err != nil {
-		logger.Error("Failed to get checkpoint", "err", err)
-		return nil, err
+	var (
+		repo         Repository
+		checkpointDB CheckpointDB
+		setters      []ComponentSetter
+		err          error
+	)
+	switch cfg.Mode {
+	case ModeKAS:
+		repo, checkpointDB, setters, err = getKasComponents(cfg.KasConfig)
+		if err != nil {
+			return nil, err
+		}
+	case ModeKafka:
+		repo, checkpointDB, setters, err = getKafkaComponents(cfg.KafkaConfig)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		logger.Error("the chaindatafetcher mode is not supported", "mode", cfg.Mode)
+		return nil, errUnsupportedMode
 	}
 	return &ChainDataFetcher{
 		config:        cfg,
 		chainCh:       make(chan blockchain.ChainEvent, cfg.BlockChannelSize),
-		reqCh:         make(chan *request, cfg.JobChannelSize),
+		reqCh:         make(chan *cfTypes.Request, cfg.JobChannelSize),
 		stopCh:        make(chan struct{}),
 		numHandlers:   cfg.NumHandlers,
-		checkpoint:    checkpoint,
 		checkpointMap: make(map[int64]struct{}),
 		repo:          repo,
+		checkpointDB:  checkpointDB,
+		setters:       setters,
 	}, nil
+}
+
+func getKasComponents(cfg *kas.KASConfig) (Repository, CheckpointDB, []ComponentSetter, error) {
+	repo, err := kas.NewRepository(cfg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return repo, repo, []ComponentSetter{repo}, nil
+}
+
+func getKafkaComponents(cfg *kafka.KafkaConfig) (Repository, CheckpointDB, []ComponentSetter, error) {
+	repo, err := kafka.NewRepository(cfg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	checkpointDB := kafka.NewCheckpointDB()
+	return repo, checkpointDB, []ComponentSetter{repo, checkpointDB}, nil
 }
 
 func (f *ChainDataFetcher) Protocols() []p2p.Protocol {
@@ -143,14 +175,14 @@ func (f *ChainDataFetcher) Stop() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType requestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
+func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfTypes.RequestType, shouldUpdateCheckpoint bool, stopCh chan struct{}) {
 	logger.Info("sending requests is started", "startBlock", startBlock, "endBlock", endBlock)
 	for i := startBlock; i <= endBlock; i++ {
 		select {
 		case <-stopCh:
 			logger.Info("stopped making requests", "startBlock", startBlock, "endBlock", endBlock, "stoppedBlock", i)
 			return
-		case f.reqCh <- newRequest(reqType, shouldUpdateCheckpoint, i):
+		case f.reqCh <- cfTypes.NewRequest(reqType, shouldUpdateCheckpoint, i):
 		}
 	}
 	logger.Info("sending requests is finished", "startBlock", startBlock, "endBlock", endBlock)
@@ -173,7 +205,14 @@ func (f *ChainDataFetcher) startFetching() error {
 	// lanuch a goroutine to handle from checkpoint to the head block.
 	go func() {
 		defer f.fetchingWg.Done()
-		f.sendRequests(uint64(f.checkpoint), currentBlock, requestTypeAll, true, f.fetchingStopCh)
+		switch f.config.Mode {
+		case ModeKAS:
+			f.sendRequests(uint64(f.checkpoint), currentBlock, cfTypes.RequestTypeAll, true, f.fetchingStopCh)
+		case ModeKafka:
+			f.sendRequests(uint64(f.checkpoint), currentBlock, cfTypes.RequestTypeGroupAll, true, f.fetchingStopCh)
+		default:
+			logger.Error("the chaindatafetcher mode is not supported", "mode", f.config.Mode, "checkpoint", f.checkpoint, "currentBlock", currentBlock)
+		}
 	}()
 	logger.Info("fetching is started", "startedCheckpoint", checkpoint, "currentBlock", currentBlock)
 	return nil
@@ -192,7 +231,7 @@ func (f *ChainDataFetcher) stopFetching() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqType requestType) error {
+func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqType cfTypes.RequestType) error {
 	if f.rangeFetchingStarted {
 		return errors.New("range fetching is already started")
 	}
@@ -264,38 +303,60 @@ func (f *ChainDataFetcher) Components() []interface{} {
 	return nil
 }
 
-func (f *ChainDataFetcher) SetComponents(components []interface{}) {
-	for _, component := range components {
-		switch v := component.(type) {
-		case *blockchain.BlockChain:
-			f.blockchain = v
-		case []rpc.API:
-			for _, a := range v {
-				switch s := a.Service.(type) {
-				case *api.PublicBlockChainAPI:
-					f.repo.SetComponent(s)
-				case *cn.PrivateDebugAPI:
-					f.debugAPI = s
-				}
-			}
+func (f *ChainDataFetcher) setDebugAPI(apis []rpc.API) {
+	for _, a := range apis {
+		switch s := a.Service.(type) {
+		case *cn.PrivateDebugAPI:
+			f.debugAPI = s
 		}
 	}
 }
 
-func (f *ChainDataFetcher) handleRequestByType(reqType requestType, shouldUpdateCheckpoint bool, ev blockchain.ChainEvent) {
+func (f *ChainDataFetcher) setCheckpoint() {
+	checkpoint, err := f.checkpointDB.ReadCheckpoint()
+	if err != nil {
+		logger.Crit("ReadCheckpoint is failed", "err", err)
+	}
+	f.checkpoint = checkpoint
+}
+
+func (f *ChainDataFetcher) setComponent(component interface{}) {
+	switch v := component.(type) {
+	case *blockchain.BlockChain:
+		f.blockchain = v
+	case []rpc.API:
+		f.setDebugAPI(v)
+	}
+}
+
+func (f *ChainDataFetcher) SetComponents(components []interface{}) {
+	for _, component := range components {
+		f.setComponent(component)
+		for _, setter := range f.setters {
+			setter.SetComponent(component)
+		}
+	}
+	f.setCheckpoint()
+}
+
+func (f *ChainDataFetcher) handleRequestByType(reqType cfTypes.RequestType, shouldUpdateCheckpoint bool, ev blockchain.ChainEvent) {
 	now := time.Now()
 	// TODO-ChainDataFetcher parallelize handling data
-	if checkRequestType(reqType, requestTypeTransaction) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTransactions, txsInsertionRetryGauge), txsInsertionTimeGauge)(ev)
-	}
-	if checkRequestType(reqType, requestTypeTokenTransfer) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTokenTransfers, tokenTransfersInsertionRetryGauge), tokenTransfersInsertionTimeGauge)(ev)
-	}
-	if checkRequestType(reqType, requestTypeContract) {
-		f.updateGauge(f.retryFunc(f.repo.InsertContracts, contractsInsertionRetryGauge), contractsInsertionTimeGauge)(ev)
-	}
-	if checkRequestType(reqType, requestTypeTrace) {
-		f.updateGauge(f.retryFunc(f.repo.InsertTraceResults, tracesInsertionRetryGauge), tracesInsertionTimeGauge)(ev)
+
+	// iterate over all types of requests
+	// - RequestTypeTransaction
+	// - RequestTypeTokenTransfer
+	// - RequestTypeContract
+	// - RequestTypeTrace
+	// - RequestTypeBlockGroup
+	// - RequestTypeTraceGroup
+	for targetType := cfTypes.RequestTypeTransaction; targetType < cfTypes.RequestTypeLength; targetType = targetType << 1 {
+		if cfTypes.CheckRequestType(reqType, targetType) {
+			if err := f.updateInsertionTimeGauge(f.retryFunc(f.repo.HandleChainEvent))(ev, targetType); err != nil {
+				logger.Error("the chaindatafetcher is stopped by user while an error is occurring", "blockNumber", ev.Block.NumberU64(), "err", err)
+				return
+			}
+		}
 	}
 	elapsed := time.Since(now)
 	totalInsertionTimeGauge.Update(elapsed.Milliseconds())
@@ -316,16 +377,23 @@ func (f *ChainDataFetcher) handleRequest() {
 			return
 		case ev := <-f.chainCh:
 			numChainEventGauge.Update(int64(len(f.chainCh)))
-			f.handleRequestByType(requestTypeAll, true, ev)
+			switch f.config.Mode {
+			case ModeKAS:
+				f.handleRequestByType(cfTypes.RequestTypeAll, true, ev)
+			case ModeKafka:
+				f.handleRequestByType(cfTypes.RequestTypeGroupAll, true, ev)
+			default:
+				logger.Error("the chaindatafetcher mode is not supported", "mode", f.config.Mode, "blockNumber", ev.Block.NumberU64())
+			}
 		case req := <-f.reqCh:
 			numRequestsGauge.Update(int64(len(f.reqCh)))
-			ev, err := f.makeChainEvent(req.blockNumber)
+			ev, err := f.makeChainEvent(req.BlockNumber)
 			if err != nil {
 				// TODO-ChainDataFetcher handle error
 				logger.Error("making chain event is failed", "err", err)
 				break
 			}
-			f.handleRequestByType(req.reqType, req.shouldUpdateCheckpoint, ev)
+			f.handleRequestByType(req.ReqType, req.ShouldUpdateCheckpoint, ev)
 		}
 	}
 }
@@ -349,34 +417,80 @@ func (f *ChainDataFetcher) updateCheckpoint(num int64) error {
 	if updated {
 		f.checkpoint = newCheckpoint
 		checkpointGauge.Update(f.checkpoint)
-		return f.repo.WriteCheckpoint(newCheckpoint)
+		return f.checkpointDB.WriteCheckpoint(newCheckpoint)
 	}
 	return nil
 }
 
-func (f *ChainDataFetcher) updateGauge(insert func(chainEvent blockchain.ChainEvent), gauge metrics.Gauge) func(chainEvent blockchain.ChainEvent) {
-	return func(chainEvent blockchain.ChainEvent) {
-		now := time.Now()
-		insert(chainEvent)
-		elapsed := time.Since(now)
-		gauge.Update(elapsed.Milliseconds())
+func getInsertionTimeGauge(reqType cfTypes.RequestType) metrics.Gauge {
+	switch reqType {
+	case cfTypes.RequestTypeTransaction:
+		return txsInsertionTimeGauge
+	case cfTypes.RequestTypeTokenTransfer:
+		return tokenTransfersInsertionTimeGauge
+	case cfTypes.RequestTypeContract:
+		return contractsInsertionTimeGauge
+	case cfTypes.RequestTypeTrace:
+		return tracesInsertionTimeGauge
+	case cfTypes.RequestTypeBlockGroup:
+		return blockGroupInsertionTimeGauge
+	case cfTypes.RequestTypeTraceGroup:
+		return traceGroupInsertionTimeGauge
+	default:
+		logger.Warn("the request type is not supported", "type", reqType)
+		return metrics.NilGauge{}
 	}
 }
 
-func (f *ChainDataFetcher) retryFunc(insert func(blockchain.ChainEvent) error, gauge metrics.Gauge) func(blockchain.ChainEvent) {
-	return func(event blockchain.ChainEvent) {
+func (f *ChainDataFetcher) updateInsertionTimeGauge(insert HandleChainEventFn) HandleChainEventFn {
+	return func(chainEvent blockchain.ChainEvent, reqType cfTypes.RequestType) error {
+		now := time.Now()
+		if err := insert(chainEvent, reqType); err != nil {
+			return err
+		}
+		elapsed := time.Since(now)
+		gauge := getInsertionTimeGauge(reqType)
+		gauge.Update(elapsed.Milliseconds())
+		return nil
+	}
+}
+
+func getInsertionRetryGauge(reqType cfTypes.RequestType) metrics.Gauge {
+	switch reqType {
+	case cfTypes.RequestTypeTransaction:
+		return txsInsertionRetryGauge
+	case cfTypes.RequestTypeTokenTransfer:
+		return tokenTransfersInsertionRetryGauge
+	case cfTypes.RequestTypeContract:
+		return contractsInsertionRetryGauge
+	case cfTypes.RequestTypeTrace:
+		return tracesInsertionRetryGauge
+	case cfTypes.RequestTypeBlockGroup:
+		return blockGroupInsertionRetryGauge
+	case cfTypes.RequestTypeTraceGroup:
+		return traceGroupInsertionRetryGauge
+	default:
+		logger.Warn("the request type is not supported", "type", reqType)
+		return metrics.NilGauge{}
+	}
+}
+
+func (f *ChainDataFetcher) retryFunc(insert HandleChainEventFn) HandleChainEventFn {
+	return func(event blockchain.ChainEvent, reqType cfTypes.RequestType) error {
 		i := 0
-		for err := insert(event); err != nil; err = insert(event) {
+		for err := insert(event, reqType); err != nil; err = insert(event, reqType) {
 			select {
 			case <-f.stopCh:
-				return
+				return err
 			default:
 				i++
+				gauge := getInsertionRetryGauge(reqType)
 				gauge.Update(int64(i))
-				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i)
+				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i, "err", err)
 				time.Sleep(DBInsertRetryInterval)
 			}
 		}
+		return nil
 	}
 }
 

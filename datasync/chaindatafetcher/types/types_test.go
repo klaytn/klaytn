@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-package chaindatafetcher
+package types
 
 import (
 	"testing"
@@ -23,29 +23,29 @@ import (
 )
 
 func TestHasDataType(t *testing.T) {
-	testdata := []requestType{
+	testdata := []RequestType{
 		// single type
-		requestTypeTransaction,
-		requestTypeTokenTransfer,
-		requestTypeTrace,
-		requestTypeContract,
+		RequestTypeTransaction,
+		RequestTypeTokenTransfer,
+		RequestTypeTrace,
+		RequestTypeContract,
 
 		// 2 composite type
-		requestTypeTransaction | requestTypeTokenTransfer,
-		requestTypeTransaction | requestTypeTrace,
-		requestTypeTransaction | requestTypeContract,
-		requestTypeTokenTransfer | requestTypeTrace,
-		requestTypeTokenTransfer | requestTypeContract,
-		requestTypeTrace | requestTypeContract,
+		RequestTypeTransaction | RequestTypeTokenTransfer,
+		RequestTypeTransaction | RequestTypeTrace,
+		RequestTypeTransaction | RequestTypeContract,
+		RequestTypeTokenTransfer | RequestTypeTrace,
+		RequestTypeTokenTransfer | RequestTypeContract,
+		RequestTypeTrace | RequestTypeContract,
 
 		// 3 composite type
-		requestTypeTransaction | requestTypeTokenTransfer | requestTypeTrace,
-		requestTypeTransaction | requestTypeTokenTransfer | requestTypeContract,
-		requestTypeTransaction | requestTypeTrace | requestTypeContract,
-		requestTypeTokenTransfer | requestTypeTrace | requestTypeContract,
+		RequestTypeTransaction | RequestTypeTokenTransfer | RequestTypeTrace,
+		RequestTypeTransaction | RequestTypeTokenTransfer | RequestTypeContract,
+		RequestTypeTransaction | RequestTypeTrace | RequestTypeContract,
+		RequestTypeTokenTransfer | RequestTypeTrace | RequestTypeContract,
 
 		// all type
-		requestTypeAll,
+		RequestTypeAll,
 	}
 
 	expected := [][]bool{
@@ -73,14 +73,14 @@ func TestHasDataType(t *testing.T) {
 		{true, true, true, true},
 	}
 
-	targetType := []requestType{
-		requestTypeTransaction, requestTypeTokenTransfer, requestTypeTrace, requestTypeContract,
+	targetType := []RequestType{
+		RequestTypeTransaction, RequestTypeTokenTransfer, RequestTypeTrace, RequestTypeContract,
 	}
 
 	for idx, types := range testdata {
 		expectedTypes := expected[idx]
 		for idx, target := range targetType {
-			assert.Equal(t, expectedTypes[idx], checkRequestType(types, target))
+			assert.Equal(t, expectedTypes[idx], CheckRequestType(types, target))
 		}
 	}
 }

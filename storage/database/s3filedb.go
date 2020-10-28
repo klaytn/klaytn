@@ -27,7 +27,7 @@ package database
 import (
 	"bytes"
 	"fmt"
-	"strings"
+	"io/ioutil"
 
 	"github.com/klaytn/klaytn/common/hexutil"
 
@@ -76,6 +76,7 @@ func newS3FileDB(region, endpoint, bucketName string) (*s3FileDB, error) {
 	}
 
 	if !exist {
+		localLogger.Warn("creating a S3 bucket. You will be CHARGED until the bucket is deleted")
 		_, err = s3DB.s3.CreateBucket(&s3.CreateBucketInput{
 			Bucket: aws.String(bucketName),
 		})
@@ -84,7 +85,7 @@ func newS3FileDB(region, endpoint, bucketName string) (*s3FileDB, error) {
 			return nil, err
 		}
 	}
-	localLogger.Warn("Successfully created S3 bucket. You will be CHARGED until the bucket is deleted.")
+	localLogger.Info("successfully created S3 session")
 	return s3DB, nil
 }
 
@@ -123,8 +124,6 @@ func (s3DB *s3FileDB) write(item item) (string, error) {
 
 // read gets the data from the bucket with the given key.
 func (s3DB *s3FileDB) read(key []byte) ([]byte, error) {
-	var returnVal []byte
-
 	output, err := s3DB.s3.GetObject(&s3.GetObjectInput{
 		Bucket:              aws.String(s3DB.bucket),
 		Key:                 aws.String(hexutil.Encode(key)),
@@ -134,20 +133,9 @@ func (s3DB *s3FileDB) read(key []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	bodySize := int(*output.ContentLength)
-	totalReadSize, currReadSize := 0, 0
-
-	// Below loop is to load all the data with the given key,
-	// as `Read` method does not read all the data when the data is large.
-	// The loop continues until there's nothing remaining.
-	for totalReadSize < bodySize {
-		buf := make([]byte, bodySize)
-		currReadSize, err = output.Body.Read(buf)
-		if err != nil && !strings.Contains(err.Error(), "EOF") {
-			return nil, err
-		}
-		returnVal = append(returnVal, buf[:currReadSize]...)
-		totalReadSize += currReadSize
+	returnVal, err := ioutil.ReadAll(output.Body)
+	if err != nil {
+		return nil, err
 	}
 
 	return returnVal, nil

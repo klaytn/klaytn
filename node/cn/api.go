@@ -26,6 +26,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -36,9 +40,6 @@ import (
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/klaytn/klaytn/work"
-	"io"
-	"os"
-	"strings"
 )
 
 // PublicKlayAPI provides an API to access Klaytn CN-related
@@ -193,6 +194,10 @@ func (api *PrivateAdminAPI) StateMigrationStatus() map[string]interface{} {
 		"progress":             progress,
 		"err":                  errStr,
 	}
+}
+
+func (api *PrivateAdminAPI) SaveTrieNodeCacheToDisk() error {
+	return api.cn.BlockChain().SaveTrieNodeCacheToDisk()
 }
 
 // PublicDebugAPI is the collection of Klaytn full node APIs exposed

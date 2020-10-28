@@ -25,6 +25,8 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
+// TODO-Klaytn: Check whether all flags are registered in utils.FlagGroups
+
 // Common flags that configure the node
 var CommonNodeFlags = []cli.Flag{
 	utils.BootnodesFlag,
@@ -34,6 +36,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.DbTypeFlag,
 	utils.DataDirFlag,
 	utils.OverwriteGenesisFlag,
+	utils.StartBlockNumberFlag,
 	utils.KeyStoreDirFlag,
 	utils.TxPoolNoLocalsFlag,
 	utils.TxPoolAllowLocalAnchorTxFlag,
@@ -55,11 +58,13 @@ var CommonNodeFlags = []cli.Flag{
 	utils.NumStateTrieShardsFlag,
 	utils.LevelDBCompressionTypeFlag,
 	utils.LevelDBNoBufferPoolFlag,
+	utils.DBNoPerformanceMetricsFlag,
 	utils.DynamoDBTableNameFlag,
 	utils.DynamoDBRegionFlag,
 	utils.DynamoDBIsProvisionedFlag,
 	utils.DynamoDBReadCapacityFlag,
 	utils.DynamoDBWriteCapacityFlag,
+	utils.DynamoDBReadOnlyFlag,
 	utils.LevelDBCacheSizeFlag,
 	utils.NoParallelDBWriteFlag,
 	utils.SenderTxHashIndexingFlag,
@@ -70,9 +75,13 @@ var CommonNodeFlags = []cli.Flag{
 	utils.CacheScaleFlag,
 	utils.CacheUsageLevelFlag,
 	utils.MemorySizeFlag,
-	utils.CacheWriteThroughFlag,
 	utils.TxPoolStateCacheFlag,
-	utils.TrieCacheLimitFlag,
+	utils.TrieNodeCacheTypeFlag,
+	utils.TrieNodeCacheLimitFlag,
+	utils.TrieNodeCacheRedisEndpointsFlag,
+	utils.TrieNodeCacheRedisClusterFlag,
+	utils.TrieNodeCacheRedisPublishBlockFlag,
+	utils.TrieNodeCacheRedisSubscribeBlockFlag,
 	utils.ListenPortFlag,
 	utils.SubListenPortFlag,
 	utils.MultiChannelUseFlag,
@@ -101,7 +110,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.AutoRestartFlag,
 	utils.RestartTimeOutFlag,
 	utils.DaemonPathFlag,
-	ConfigFileFlag,
+	utils.ConfigFileFlag,
 }
 
 // Common RPC flags
@@ -143,8 +152,10 @@ var KENFlags = []cli.Flag{
 	utils.ChildChainIndexingFlag,
 	utils.MainBridgeFlag,
 	utils.MainBridgeListenPortFlag,
+	utils.KESNodeTypeServiceFlag,
 	// ChainDataFetcher
 	utils.EnableChainDataFetcherFlag,
+	utils.ChainDataFetcherMode,
 	utils.ChainDataFetcherNoDefault,
 	utils.ChainDataFetcherNumHandlers,
 	utils.ChainDataFetcherJobChannelSize,
@@ -158,6 +169,14 @@ var KENFlags = []cli.Flag{
 	utils.ChainDataFetcherKASCacheURLFlag,
 	utils.ChainDataFetcherKASXChainIdFlag,
 	utils.ChainDataFetcherKASBasicAuthParamFlag,
+	utils.ChainDataFetcherKafkaReplicasFlag,
+	utils.ChainDataFetcherKafkaBrokersFlag,
+	utils.ChainDataFetcherKafkaPartitionsFlag,
+	utils.ChainDataFetcherKafkaTopicResourceFlag,
+	utils.ChainDataFetcherKafkaTopicEnvironmentFlag,
+	utils.ChainDataFetcherKafkaMaxMessageBytesFlag,
+	utils.ChainDataFetcherKafkaSegmentSizeBytesFlag,
+	utils.ChainDataFetcherKafkaRequiredAcksFlag,
 	// DBSyncer
 	utils.EnableDBSyncerFlag,
 	utils.DBHostFlag,
@@ -245,6 +264,7 @@ var KSENFlags = []cli.Flag{
 	utils.VTRecoveryFlag,
 	utils.VTRecoveryIntervalFlag,
 	utils.ServiceChainAnchoringFlag,
+	utils.KESNodeTypeServiceFlag,
 	// KAS
 	utils.KASServiceChainAnchorFlag,
 	utils.KASServiceChainAnchorPeriodFlag,
@@ -274,4 +294,17 @@ var KSENFlags = []cli.Flag{
 	utils.TxResendIntervalFlag,
 	utils.TxResendCountFlag,
 	utils.TxResendUseLegacyFlag,
+}
+
+var DBMigrationFlags = []cli.Flag{
+	utils.DstDbTypeFlag,
+	utils.DstDataDirFlag,
+	utils.DstSingleDBFlag,
+	utils.DstLevelDBCompressionTypeFlag,
+	utils.DstNumStateTrieShardsFlag,
+	utils.DstDynamoDBTableNameFlag,
+	utils.DstDynamoDBRegionFlag,
+	utils.DstDynamoDBIsProvisionedFlag,
+	utils.DstDynamoDBReadCapacityFlag,
+	utils.DstDynamoDBWriteCapacityFlag,
 }

@@ -48,163 +48,6 @@ var (
 	rpcFlags = nodecmd.CommonRPCFlags
 )
 
-var pnHelpFlagGroups = []utils.FlagGroup{
-	{
-		Name: "KLAY",
-		Flags: []cli.Flag{
-			utils.DbTypeFlag,
-			utils.DataDirFlag,
-			utils.KeyStoreDirFlag,
-			utils.IdentityFlag,
-			utils.SyncModeFlag,
-			utils.GCModeFlag,
-			utils.LightKDFFlag,
-			utils.SrvTypeFlag,
-			utils.ExtraDataFlag,
-			nodecmd.ConfigFileFlag,
-			utils.OverwriteGenesisFlag,
-		},
-	},
-	{
-		Name: "ACCOUNT",
-		Flags: []cli.Flag{
-			utils.UnlockedAccountFlag,
-			utils.PasswordFileFlag,
-		},
-	},
-	{
-		Name: "TXPOOL",
-		Flags: []cli.Flag{
-			utils.TxPoolNoLocalsFlag,
-			utils.TxPoolAllowLocalAnchorTxFlag,
-			utils.TxPoolJournalFlag,
-			utils.TxPoolJournalIntervalFlag,
-			utils.TxPoolPriceLimitFlag,
-			utils.TxPoolPriceBumpFlag,
-			utils.TxPoolExecSlotsAccountFlag,
-			utils.TxPoolExecSlotsAllFlag,
-			utils.TxPoolNonExecSlotsAccountFlag,
-			utils.TxPoolNonExecSlotsAllFlag,
-			utils.TxPoolLifetimeFlag,
-			utils.TxPoolKeepLocalsFlag,
-			utils.TxResendIntervalFlag,
-			utils.TxResendCountFlag,
-			utils.TxResendUseLegacyFlag,
-		},
-	},
-	{
-		Name: "DATABASE",
-		Flags: []cli.Flag{
-			utils.LevelDBCacheSizeFlag,
-			utils.SingleDBFlag,
-			utils.NumStateTrieShardsFlag,
-			utils.LevelDBCompressionTypeFlag,
-			utils.LevelDBNoBufferPoolFlag,
-			utils.DynamoDBTableNameFlag,
-			utils.DynamoDBRegionFlag,
-			utils.DynamoDBIsProvisionedFlag,
-			utils.DynamoDBReadCapacityFlag,
-			utils.DynamoDBWriteCapacityFlag,
-			utils.NoParallelDBWriteFlag,
-			utils.SenderTxHashIndexingFlag,
-		},
-	},
-	{
-		Name: "STATE",
-		Flags: []cli.Flag{
-			utils.StateDBCachingFlag,
-			utils.TrieMemoryCacheSizeFlag,
-			utils.TrieBlockIntervalFlag,
-			utils.TriesInMemoryFlag,
-		},
-	},
-	{
-		Name: "CACHE",
-		Flags: []cli.Flag{
-			utils.CacheTypeFlag,
-			utils.CacheScaleFlag,
-			utils.CacheUsageLevelFlag,
-			utils.MemorySizeFlag,
-			utils.CacheWriteThroughFlag,
-			utils.TxPoolStateCacheFlag,
-			utils.TrieCacheLimitFlag,
-		},
-	},
-	{
-		Name: "NETWORKING",
-		Flags: []cli.Flag{
-			utils.BootnodesFlag,
-			utils.ListenPortFlag,
-			utils.SubListenPortFlag,
-			utils.MultiChannelUseFlag,
-			utils.MaxConnectionsFlag,
-			utils.MaxPendingPeersFlag,
-			utils.TargetGasLimitFlag,
-			utils.NATFlag,
-			utils.NoDiscoverFlag,
-			utils.RWTimerWaitTimeFlag,
-			utils.RWTimerIntervalFlag,
-			utils.NetrestrictFlag,
-			utils.NodeKeyFileFlag,
-			utils.NodeKeyHexFlag,
-			utils.NetworkIdFlag,
-			utils.BaobabFlag,
-			utils.CypressFlag,
-		},
-	},
-	{
-		Name: "METRICS",
-		Flags: []cli.Flag{
-			utils.MetricsEnabledFlag,
-			utils.PrometheusExporterFlag,
-			utils.PrometheusExporterPortFlag,
-		},
-	},
-	{
-		Name: "VIRTUAL MACHINE",
-		Flags: []cli.Flag{
-			utils.VMEnableDebugFlag,
-			utils.VMLogTargetFlag,
-			utils.VMTraceInternalTxFlag,
-		},
-	},
-	{
-		Name: "API AND CONSOLE",
-		Flags: []cli.Flag{
-			utils.RPCEnabledFlag,
-			utils.RPCListenAddrFlag,
-			utils.RPCPortFlag,
-			utils.RPCCORSDomainFlag,
-			utils.RPCVirtualHostsFlag,
-			utils.RPCApiFlag,
-			utils.IPCDisabledFlag,
-			utils.IPCPathFlag,
-			utils.WSEnabledFlag,
-			utils.WSListenAddrFlag,
-			utils.WSPortFlag,
-			utils.WSApiFlag,
-			utils.WSAllowedOriginsFlag,
-			utils.GRPCEnabledFlag,
-			utils.GRPCListenAddrFlag,
-			utils.GRPCPortFlag,
-			utils.JSpathFlag,
-			utils.ExecFlag,
-			utils.PreloadJSFlag,
-		},
-	},
-	{
-		Name:  "LOGGING AND DEBUGGING",
-		Flags: debug.Flags,
-	},
-	{
-		Name: "MISC",
-		Flags: []cli.Flag{
-			utils.GenKeyFlag,
-			utils.WriteAddressFlag,
-		},
-	},
-}
-
 func init() {
 	utils.InitHelper()
 	// Initialize the CLI app and start kpn
@@ -227,6 +70,9 @@ func init() {
 
 		// See utils/nodecmd/dumpconfigcmd.go:
 		nodecmd.GetDumpConfigCommand(nodeFlags, rpcFlags),
+
+		// See utils/nodecmd/db_migration.go:
+		nodecmd.MigrationCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
@@ -234,9 +80,10 @@ func init() {
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, nodecmd.ConsoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
+	app.Flags = append(app.Flags, nodecmd.DBMigrationFlags...)
 
 	cli.AppHelpTemplate = utils.GlobalAppHelpTemplate
-	cli.HelpPrinter = utils.NewHelpPrinter(pnHelpFlagGroups)
+	cli.HelpPrinter = utils.NewHelpPrinter(utils.CategorizeFlags(app.Flags))
 
 	app.CommandNotFound = nodecmd.CommandNotExist
 

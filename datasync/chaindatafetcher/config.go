@@ -16,7 +16,17 @@
 
 package chaindatafetcher
 
-import "github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
+import (
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
+)
+
+type ChainDataFetcherMode int
+
+const (
+	ModeKAS = ChainDataFetcherMode(iota)
+	ModeKafka
+)
 
 const (
 	DefaultNumHandlers      = 10
@@ -28,20 +38,24 @@ const (
 //go:generate gencodec -type ChainDataFetcherConfig -formats toml -out gen_config.go
 type ChainDataFetcherConfig struct {
 	EnabledChainDataFetcher bool
+	Mode                    ChainDataFetcherMode
 	NoDefaultStart          bool
 	NumHandlers             int
 	JobChannelSize          int
 	BlockChannelSize        int
 
-	KasConfig *kas.KASConfig
+	KasConfig   *kas.KASConfig
+	KafkaConfig *kafka.KafkaConfig
 }
 
 var DefaultChainDataFetcherConfig = &ChainDataFetcherConfig{
 	EnabledChainDataFetcher: false,
+	Mode:                    ModeKAS,
 	NoDefaultStart:          false,
 	NumHandlers:             DefaultNumHandlers,
 	JobChannelSize:          DefaultJobChannelSize,
 	BlockChannelSize:        DefaultBlockChannelSize,
 
-	KasConfig: kas.DefaultKASConfig,
+	KasConfig:   kas.DefaultKASConfig,
+	KafkaConfig: kafka.GetDefaultKafkaConfig(),
 }

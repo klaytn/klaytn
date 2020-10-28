@@ -22,6 +22,11 @@ package work
 
 import (
 	"fmt"
+	"io"
+	"math/big"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -35,10 +40,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
-	"io"
-	"math/big"
-	"sync/atomic"
-	"time"
 )
 
 var logger = log.NewModuleLogger(log.Work)
@@ -298,4 +299,11 @@ type BlockChain interface {
 	// Warm up
 	StartWarmUp() error
 	StopWarmUp() error
+
+	// Save trie node cache to this
+	SaveTrieNodeCacheToDisk() error
+
+	// KES
+	BlockSubscriptionLoop(pool *blockchain.TxPool)
+	CloseBlockSubscriptionLoop()
 }

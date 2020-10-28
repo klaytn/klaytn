@@ -27,8 +27,19 @@ executors:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
       - image: klaytn/build_base:1.1-go1.14.6-solc0.4.24
-      - image: localstack/localstack:0.10.9
+      - image: localstack/localstack:0.11.5
       - image: circleci/mysql:5.7
+      - image: circleci/redis:6.0.8-alpine
+      - name: zookeeper
+        image: wurstmeister/zookeeper
+      - name: kafka
+        image: wurstmeister/kafka
+        environment:
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
+          KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
@@ -145,7 +156,7 @@ commands:
   tag-verify:
     steps:
       - run:
-          name: "Verify tag and file verison match"
+          name: "Verify tag and file version match"
           command: |
             echo "tag version is " $CIRCLE_TAG
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
@@ -159,7 +170,7 @@ commands:
   tagger-verify:
     steps:
       - run:
-          name: "Verify tag and file verison match"
+          name: "Verify tag and file version match"
           command: |
               TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG | sed 's/ .*//')
               if [ $TAGGER == 'circleci-klaytn' ]; then
@@ -219,6 +230,56 @@ commands:
               else
                 echo "Need to delete branch manually"
               fi
+  wait-other-containers-ready:
+    steps:
+      - run:
+          name: "Waiting for MySQL to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z 127.0.0.1 3306 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for MySQL && exit 1
+      - run:
+          name: "Waiting for Redis to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z 127.0.0.1 6379 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Redis && exit 1
+      - run:
+          name: "Waiting for zookeeper to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z zookeeper 2181 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for zookeeper && exit 1
+      - run:
+          name: "Waiting for Kafka to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z kafka 9092 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Kafka && exit 1
+      - run:
+          name: "Wait until localstack container running"
+          command: |
+            timeout -t 60 sh -c \
+            'until nc -z localhost 4566; do
+              echo "Waiting for Localstack ..."
+              sleep 1
+            done'
   notify-success:
     steps:
       - run:
@@ -263,17 +324,7 @@ jobs:
     steps:
       - install-ssh-alpine
       - checkout
-      - run:
-        # Our primary container isn't MYSQL so run a sleep command until it's ready.
-            name: "Waiting for MySQL to be ready"
-            command: |
-              for i in `seq 1 10`;
-              do
-                nc -z 127.0.0.1 3306 && echo Success && exit 0
-                echo -n .
-                sleep 1
-              done
-              echo Failed waiting for MySQL && exit 1
+      - wait-other-containers-ready
       - run:
           name: "Run test datasync"
           command: make test-datasync
@@ -303,17 +354,11 @@ jobs:
     steps:
       - install-ssh-alpine
       - checkout
-      - run:
-          name: "Wait until localstack container running"
-          command: |
-            timeout -t 60 sh -c \
-            'until curl --silent --fail "http://localhost:4572"; do
-              echo "Waiting for Localstack S3 ..."
-              sleep 1
-            done'
+      - wait-other-containers-ready
       - run:
           name: "Run test others"
-          command: make test-others
+          command: |
+            make test-others
 
   pass-tests:
     executor: default
@@ -329,11 +374,12 @@ jobs:
       - tagger-verify
 
   coverage:
-    executor: test-executor
+    executor: test-others-executor
     resource_class: xlarge
     steps:
       - install-ssh-alpine
       - checkout
+      - wait-other-containers-ready
       - run:
           shell: /bin/bash
           name: "Run coverage tests"
@@ -586,3 +632,4 @@ workflows:
               only: dev
     jobs:
       - linters
+

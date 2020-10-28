@@ -28,8 +28,8 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/mocks"
+	cfTypes "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 	eventMocks "github.com/klaytn/klaytn/event/mocks"
-	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +37,7 @@ func newTestChainDataFetcher() *ChainDataFetcher {
 	return &ChainDataFetcher{
 		config:        DefaultChainDataFetcherConfig,
 		chainCh:       make(chan blockchain.ChainEvent),
-		reqCh:         make(chan *request),
+		reqCh:         make(chan *cfTypes.Request),
 		stopCh:        make(chan struct{}),
 		numHandlers:   3,
 		checkpoint:    0,
@@ -67,15 +67,15 @@ func TestChainDataFetcher_Success_sendRequests(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fetcher.sendRequests(startBlock, endBlock, requestTypeAll, false, stopCh)
+		fetcher.sendRequests(startBlock, endBlock, cfTypes.RequestTypeAll, false, stopCh)
 	}()
 
 	// take all the items from the reqCh and check them.
 	for i := startBlock; i <= endBlock; i++ {
 		r := <-fetcher.reqCh
-		assert.Equal(t, i, r.blockNumber)
-		assert.Equal(t, requestTypeAll, r.reqType)
-		assert.Equal(t, false, r.shouldUpdateCheckpoint)
+		assert.Equal(t, i, r.BlockNumber)
+		assert.Equal(t, cfTypes.RequestTypeAll, r.ReqType)
+		assert.Equal(t, false, r.ShouldUpdateCheckpoint)
 	}
 	wg.Wait()
 }
@@ -91,7 +91,7 @@ func TestChainDataFetcher_Success_sendRequestsStop(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fetcher.sendRequests(startBlock, endBlock, requestTypeAll, false, stopCh)
+		fetcher.sendRequests(startBlock, endBlock, cfTypes.RequestTypeAll, false, stopCh)
 	}()
 
 	stopCh <- struct{}{}
@@ -106,7 +106,7 @@ func TestChainDataFetcher_Success_fetchingStartAndStop(t *testing.T) {
 
 	bc := mocks.NewMockBlockChain(ctrl)
 	bc.EXPECT().SubscribeChainEvent(gomock.Any()).Return(nil).Times(1)
-	// TODO-ChainDataFetcher the below statment is not working, so find out why.
+	// TODO-ChainDataFetcher the below statement is not working, so find out why.
 	//bc.EXPECT().SubscribeChainEvent(gomock.Eq(fetcher.chainCh)).Return(nil).Times(1)
 	bc.EXPECT().CurrentHeader().Return(&types.Header{Number: big.NewInt(1)}).Times(1)
 
@@ -122,7 +122,7 @@ func TestChainDataFetcher_Success_fetchingStartAndStop(t *testing.T) {
 func TestChainDataFetcher_Success_rangeFetchingStartAndStop(t *testing.T) {
 	fetcher := newTestChainDataFetcher()
 	// start range fetching and the method is waiting for the items to be taken from reqCh
-	assert.NoError(t, fetcher.startRangeFetching(0, 10, requestTypeAll))
+	assert.NoError(t, fetcher.startRangeFetching(0, 10, cfTypes.RequestTypeAll))
 
 	// take only parts of the requests
 	<-fetcher.reqCh
@@ -135,7 +135,7 @@ func TestChainDataFetcher_Success_rangeFetchingStartAndStop(t *testing.T) {
 
 func TestChainDataFetcher_Success_rangeFetchingStartAndFinishedAlready(t *testing.T) {
 	fetcher := newTestChainDataFetcher()
-	assert.NoError(t, fetcher.startRangeFetching(0, 0, requestTypeAll))
+	assert.NoError(t, fetcher.startRangeFetching(0, 0, cfTypes.RequestTypeAll))
 	// skip the request
 	<-fetcher.reqCh
 
@@ -152,12 +152,12 @@ func TestChainDataFetcher_updateCheckpoint(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	m := mocks.NewMockRepository(ctrl)
+	m := mocks.NewMockCheckpointDB(ctrl)
 
 	fetcher := &ChainDataFetcher{
 		checkpoint:    0,
 		checkpointMap: make(map[int64]struct{}),
-		repo:          m,
+		checkpointDB:  m,
 	}
 
 	// update checkpoint as follows.
@@ -196,10 +196,9 @@ func TestChainDataFetcher_retryFunc(t *testing.T) {
 	ev := blockchain.ChainEvent{
 		Block: types.NewBlockWithHeader(header),
 	}
-	gauge := metrics.NewGauge()
 
 	i := 0
-	f := func(event blockchain.ChainEvent) error {
+	f := func(event blockchain.ChainEvent, reqType cfTypes.RequestType) error {
 		i++
 		if i == 5 {
 			return nil
@@ -208,6 +207,48 @@ func TestChainDataFetcher_retryFunc(t *testing.T) {
 		}
 	}
 
-	fetcher.retryFunc(f, gauge)(ev)
+	assert.NoError(t, fetcher.retryFunc(f)(ev, cfTypes.RequestTypeAll))
 	assert.True(t, i == 5)
+}
+
+func TestChainDataFetcher_handleRequestByType_WhileRetrying(t *testing.T) {
+	fetcher := &ChainDataFetcher{
+		config:        &ChainDataFetcherConfig{NumHandlers: 1}, // prevent panic with nil reference
+		checkpoint:    1,
+		checkpointMap: make(map[int64]struct{}), // in order to call CheckpointDB WriteCheckpoint method
+		stopCh:        make(chan struct{}),      // in order to stop retrying
+	}
+	header1 := &types.Header{Number: big.NewInt(1)} // next block to be handled is 1
+	block1 := blockchain.ChainEvent{Block: types.NewBlockWithHeader(header1)}
+	header2 := &types.Header{Number: big.NewInt(2)} // next block to be handled is 2
+	block2 := blockchain.ChainEvent{Block: types.NewBlockWithHeader(header2)}
+	testError := errors.New("test-error") // fake error to call retrying infinitely
+
+	// set up mocks
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockRepo, checkpointDB := mocks.NewMockRepository(ctrl), mocks.NewMockCheckpointDB(ctrl)
+
+	// update checkpoint to 2
+	precall := mockRepo.EXPECT().HandleChainEvent(gomock.Any(), gomock.Any()).Return(nil).Times(6)
+	checkpointDB.EXPECT().WriteCheckpoint(gomock.Eq(int64(2))).Return(nil).Times(1)
+
+	// retrying indefinitely
+	mockRepo.EXPECT().HandleChainEvent(gomock.Any(), gomock.Any()).Return(testError).AnyTimes().After(precall)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	// trigger stop function after 3 seconds
+	go func() {
+		defer wg.Done()
+		time.Sleep(3 * time.Second)
+		fetcher.Stop()
+	}()
+
+	fetcher.repo, fetcher.checkpointDB = mockRepo, checkpointDB
+	fetcher.handleRequestByType(cfTypes.RequestTypeAll, true, block1)
+	fetcher.handleRequestByType(cfTypes.RequestTypeAll, true, block2)
+
+	wg.Wait()
+	assert.Equal(t, int64(2), fetcher.checkpoint)
 }
