@@ -33,13 +33,12 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v7"
-	"github.com/klaytn/klaytn/common/hexutil"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/mclock"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/crypto"

@@ -23,9 +23,9 @@ package blockchain
 import (
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/kerrors"
 	"math"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
@@ -33,10 +33,10 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/rcrowley/go-metrics"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"sort"
 )
 
 const (
@@ -98,9 +98,6 @@ type blockChain interface {
 	TryGetCachedStateDB(root common.Hash) (*state.StateDB, error)
 
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
-
-	GetNonceCache() common.Cache
-	GetBalanceCache() common.Cache
 }
 
 // TxPoolConfig are the configuration parameters of the transaction pool.
@@ -198,9 +195,6 @@ type TxPool struct {
 
 	wg sync.WaitGroup // for shutdown sync
 
-	nonceCache   common.Cache
-	balanceCache common.Cache
-
 	txMsgCh chan types.Transactions
 }
 
@@ -224,10 +218,8 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
 		// TODO-Klaytn We use ChainConfig.UnitPrice to initialize TxPool.gasPrice,
 		//         later we have to change this rule when governance of UnitPrice is determined.
-		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
-		nonceCache:   chain.GetNonceCache(),
-		balanceCache: chain.GetBalanceCache(),
-		txMsgCh:      make(chan types.Transactions, txMsgChSize),
+		gasPrice: new(big.Int).SetUint64(chainconfig.UnitPrice),
+		txMsgCh:  make(chan types.Transactions, txMsgChSize),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
@@ -1382,23 +1374,11 @@ func (pool *TxPool) demoteUnexecutables() {
 
 // getNonce returns the nonce of the account from the cache. If it is not in the cache, it gets the nonce from the stateDB.
 func (pool *TxPool) getNonce(addr common.Address) uint64 {
-	if pool.nonceCache != nil {
-		if obj, exist := pool.nonceCache.Get(addr); exist && obj != nil {
-			nonce, _ := obj.(uint64)
-			return nonce
-		}
-	}
 	return pool.currentState.GetNonce(addr)
 }
 
 // getBalance returns the balance of the account from the cache. If it is not in the cache, it gets the balance from the stateDB.
 func (pool *TxPool) getBalance(addr common.Address) *big.Int {
-	if pool.balanceCache != nil {
-		if obj, exist := pool.balanceCache.Get(addr); exist && obj != nil {
-			balance, _ := obj.(*big.Int)
-			return balance
-		}
-	}
 	return pool.currentState.GetBalance(addr)
 }
 
