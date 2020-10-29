@@ -22,6 +22,7 @@ package nodecmd
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 
@@ -74,78 +75,57 @@ func initGenesis(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
 	genesisPath := ctx.Args().First()
 	if len(genesisPath) == 0 {
-		log.Fatalf("Must supply path to genesis JSON file")
+		logger.Crit("Must supply path to genesis JSON file")
 	}
 	file, err := os.Open(genesisPath)
 	if err != nil {
-		log.Fatalf("Failed to read genesis file: %v", err)
+		logger.Crit("Failed to read genesis file", "err", err)
 	}
 	defer file.Close()
 
 	genesis := new(blockchain.Genesis)
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
-		log.Fatalf("invalid genesis file: %v", err)
+		logger.Crit("Invalid genesis file", "err", err)
 		return err
 	}
-
-	genesis = checkGenesisAndFillDefaultIfNeeded(genesis)
-
-	if genesis.Config.Istanbul != nil {
-		if err := governance.CheckGenesisValues(genesis.Config); err != nil {
-			logger.Crit("Error in genesis json values", "err", err)
-		}
-
-		// Check if governingNode is properly set
-		if strings.ToLower(genesis.Config.Governance.GovernanceMode) == "single" {
-			if istanbulExtra, err := decodeExtra(genesis.ExtraData); err != nil {
-				logger.Crit("Extra data couldn't be decoded. Please check if your extra data is correct", "err", err)
-			} else {
-				var found bool
-				for _, v := range istanbulExtra.Validators {
-					if v == genesis.Config.Governance.GoverningNode {
-						found = true
-						break
-					}
-				}
-				if !found {
-					logger.Crit("GoverningNode is not in the validator list. Please check if your governingNode address is correct")
-				}
-			}
-		}
+	if genesis.Config == nil {
+		logger.Crit("Genesis config is not set")
 	}
 
-	if genesis.Config.Governance.Reward.StakingUpdateInterval != 0 {
-		params.SetStakingUpdateInterval(genesis.Config.Governance.Reward.StakingUpdateInterval)
-	} else {
-		genesis.Config.Governance.Reward.StakingUpdateInterval = params.StakingUpdateInterval()
+	// Update undefined config with default values
+	genesis.Config.SetDefaults()
+
+	// Validate config values
+	if err := ValidateGenesisConfig(genesis); err != nil {
+		logger.Crit("Invalid genesis", "err", err)
 	}
 
-	if genesis.Config.Governance.Reward.ProposerUpdateInterval != 0 {
-		params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
-	} else {
-		genesis.Config.Governance.Reward.ProposerUpdateInterval = params.ProposerUpdateInterval()
-	}
-
-	data := getGovernanceItemsFromGenesis(genesis)
-	gbytes, err := json.Marshal(data.Items())
+	// Set genesis.Governance and reward intervals
+	govSet := getGovernanceItemSetFromGenesis(genesis)
+	govItemBytes, err := json.Marshal(govSet.Items())
 	if err != nil {
 		logger.Crit("Failed to json marshaling governance data", "err", err)
 	}
-	if genesis.Governance, err = rlp.EncodeToBytes(gbytes); err != nil {
+	if genesis.Governance, err = rlp.EncodeToBytes(govItemBytes); err != nil {
 		logger.Crit("Failed to encode initial settings. Check your genesis.json", "err", err)
 	}
+	params.SetStakingUpdateInterval(genesis.Config.Governance.Reward.StakingUpdateInterval)
+	params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
+
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
-
 	parallelDBWrite := !ctx.GlobalIsSet(utils.NoParallelDBWriteFlag.Name)
 	singleDB := ctx.GlobalIsSet(utils.SingleDBFlag.Name)
 	numStateTrieShards := ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name)
 	overwriteGenesis := ctx.GlobalBool(utils.OverwriteGenesisFlag.Name)
-	var dynamoDBConfig *database.DynamoDBConfig
+
 	dbtype := database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid()
 	if len(dbtype) == 0 {
 		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(utils.DbTypeFlag.Name))
-	} else if dbtype == database.DynamoDB {
+	}
+
+	var dynamoDBConfig *database.DynamoDBConfig
+	if dbtype == database.DynamoDB {
 		dynamoDBConfig = &database.DynamoDBConfig{
 			TableName:          ctx.GlobalString(utils.DynamoDBTableNameFlag.Name),
 			Region:             ctx.GlobalString(utils.DynamoDBRegionFlag.Name),
@@ -175,7 +155,7 @@ func initGenesis(ctx *cli.Context) error {
 	return nil
 }
 
-func getGovernanceItemsFromGenesis(genesis *blockchain.Genesis) governance.GovernanceSet {
+func getGovernanceItemSetFromGenesis(genesis *blockchain.Genesis) governance.GovernanceSet {
 	g := governance.NewGovernanceSet()
 
 	if genesis.Config.Governance != nil {
@@ -232,45 +212,53 @@ func writeFailLog(key int, err error) {
 	logger.Crit(msg, "err", err)
 }
 
-func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain.Genesis {
-	engine := params.UseIstanbul
-	valueChanged := false
-	if genesis.Config == nil {
-		genesis.Config = new(params.ChainConfig)
+func ValidateGenesisConfig(g *blockchain.Genesis) error {
+	if g.Config.ChainID == nil {
+		return errors.New("chainID is not specified")
 	}
 
-	// using Clique as a consensus engine
-	if genesis.Config.Istanbul == nil && genesis.Config.Clique != nil {
-		engine = params.UseClique
-		if genesis.Config.Governance == nil {
-			genesis.Config.Governance = params.GetDefaultGovernanceConfig(engine)
+	if g.Config.Clique == nil && g.Config.Istanbul == nil {
+		return errors.New("consensus engine should be configured")
+	}
+
+	if g.Config.Clique != nil && g.Config.Istanbul != nil {
+		return errors.New("only one consensus engine can be configured")
+	}
+
+	if g.Config.Governance == nil || g.Config.Governance.Reward == nil {
+		return errors.New("governance and reward policies should be configured")
+	}
+
+	if g.Config.Governance.Reward.ProposerUpdateInterval == 0 || g.Config.Governance.Reward.
+		StakingUpdateInterval == 0 {
+		return errors.New("proposerUpdateInterval and stakingUpdateInterval cannot be zero")
+	}
+
+	if g.Config.GetConsensusEngine() == params.UseIstanbul {
+		if err := governance.CheckGenesisValues(g.Config); err != nil {
+			return err
 		}
-		valueChanged = true
-	} else if genesis.Config.Istanbul == nil && genesis.Config.Clique == nil {
-		engine = params.UseIstanbul
-		genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
-		valueChanged = true
-	} else if genesis.Config.Istanbul != nil && genesis.Config.Clique != nil {
-		// Error case. Both istanbul and Clique exists
-		logger.Crit("Both clique and istanbul configuration exists. Only one configuration can be applied. Exiting..")
-	}
 
-	// If we don't have governance config
-	if genesis.Config.Governance == nil {
-		genesis.Config.Governance = params.GetDefaultGovernanceConfig(engine)
-		valueChanged = true
-	}
+		// TODO-Klaytn: Add validation logic for other GovernanceModes
+		// Check if governingNode is properly set
+		if strings.ToLower(g.Config.Governance.GovernanceMode) == "single" {
+			var found bool
 
-	if valueChanged {
-		logger.Warn("Some input value of genesis.json have been set to default or changed")
-	}
-	return genesis
-}
+			istanbulExtra, err := types.ExtractIstanbulExtra(&types.Header{Extra: g.ExtraData})
+			if err != nil {
+				return err
+			}
 
-func decodeExtra(extraData []byte) (*types.IstanbulExtra, error) {
-	istanbulExtra, err := types.ExtractIstanbulExtra(&types.Header{Extra: extraData})
-	if err != nil {
-		return nil, err
+			for _, v := range istanbulExtra.Validators {
+				if v == g.Config.Governance.GoverningNode {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return errors.New("governingNode is not in the validator list")
+			}
+		}
 	}
-	return istanbulExtra, nil
+	return nil
 }
