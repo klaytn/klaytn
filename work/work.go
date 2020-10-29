@@ -275,7 +275,6 @@ type BlockChain interface {
 	StateAtWithGCLock(root common.Hash) (*state.StateDB, error)
 	Export(w io.Writer) error
 	Engine() consensus.Engine
-	GetNonceInCache(addr common.Address) (uint64, bool)
 	GetTxLookupInfoAndReceipt(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts

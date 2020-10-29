@@ -162,9 +162,6 @@ type BlockChain struct {
 	cachedStateDB       *state.StateDB
 	lastUpdatedRootHash common.Hash
 
-	nonceCache   common.Cache
-	balanceCache common.Cache
-
 	// State migration
 	prepareStateMigration bool
 	stopStateMigration    chan struct{}
@@ -200,13 +197,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 	badBlocks, _ := lru.New(maxBadBlocks)
 
-	var nonceCache common.Cache
-	var balanceCache common.Cache
-	if cacheConfig.TxPoolStateCache {
-		nonceCache = common.NewCache(common.FIFOCacheConfig{CacheSize: maxAccountForCache})
-		balanceCache = common.NewCache(common.FIFOCacheConfig{CacheSize: maxAccountForCache})
-	}
-
 	bc := &BlockChain{
 		chainConfig:        chainConfig,
 		chainConfigMu:      new(sync.RWMutex),
@@ -221,8 +211,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		vmConfig:           vmConfig,
 		badBlocks:          badBlocks,
 		parallelDBWrite:    db.IsParallelDBWrite(),
-		nonceCache:         nonceCache,
-		balanceCache:       balanceCache,
 		stopStateMigration: make(chan struct{}),
 	}
 
@@ -1248,10 +1236,6 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		return status, err
 	}
 
-	if bc.cacheConfig.TxPoolStateCache {
-		stateDB.UpdateTxPoolStateCache(bc.nonceCache, bc.balanceCache)
-	}
-
 	// Update lastUpdatedRootHash and cachedStateDB after successful WriteBlockWithState.
 	if stateDB.UseCachedStateObjects() {
 		bc.mu.Lock()
@@ -2205,30 +2189,6 @@ func (bc *BlockChain) IsParallelDBWrite() bool {
 // is enabled or not.
 func (bc *BlockChain) IsSenderTxHashIndexingEnabled() bool {
 	return bc.cacheConfig.SenderTxHashIndexing
-}
-
-// GetNonceCache returns a nonceCache.
-func (bc *BlockChain) GetNonceCache() common.Cache {
-	return bc.nonceCache
-}
-
-// GetBalanceCache returns a balanceCache.
-func (bc *BlockChain) GetBalanceCache() common.Cache {
-	return bc.balanceCache
-}
-
-// GetNonceInCache returns (cachedNonce, true) if nonce exists in cache.
-// If not, it returns (0, false).
-func (bc *BlockChain) GetNonceInCache(addr common.Address) (uint64, bool) {
-	nonceCache := bc.GetNonceCache()
-
-	if nonceCache != nil {
-		if obj, exist := nonceCache.Get(addr); exist && obj != nil {
-			nonce, _ := obj.(uint64)
-			return nonce, true
-		}
-	}
-	return 0, false
 }
 
 func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {

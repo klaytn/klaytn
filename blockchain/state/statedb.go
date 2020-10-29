@@ -177,24 +177,6 @@ func (self *StateDB) ResetExceptCachedStateObjects(root common.Hash) {
 	self.cachedStateObjects = cachedStateObjects
 }
 
-// UpdateTxPoolStateCache updates the caches used in TxPool.
-func (self *StateDB) UpdateTxPoolStateCache(nonceCache common.Cache, balanceCache common.Cache) {
-	if nonceCache == nil || balanceCache == nil {
-		logger.ErrorWithStack("UpdateTxPoolStateCache should not be called! If nonceCache or balanceCache is nil")
-		return
-	}
-
-	for addr, stateObj := range self.stateObjects {
-		if stateObj.suicided || stateObj.deleted || stateObj.dbErr != nil {
-			nonceCache.Add(addr, nil)
-			balanceCache.Add(addr, nil)
-		} else {
-			nonceCache.Add(addr, stateObj.Nonce())
-			balanceCache.Add(addr, stateObj.Balance())
-		}
-	}
-}
-
 // UpdateCachedStateObjects copies stateObjects to cachedStateObjects.
 // And then, call ResetExceptCachedStateObjects() to clear out all ephemeral state objects,
 // except for 1) underlying state trie and 2) cachedStateObjects.

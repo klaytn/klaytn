@@ -25,6 +25,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -32,7 +34,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
 )
 
 // PublicTransactionPoolAPI exposes methods for the RPC interface
@@ -108,14 +109,6 @@ func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, addr
 	if blockNr == rpc.PendingBlockNumber {
 		nonce := s.b.GetPoolNonce(ctx, address)
 		return (*hexutil.Uint64)(&nonce), nil
-	}
-
-	// Ask NonceCache for the nonce if blockNumber is lastestBlockNumber
-	if blockNr == rpc.LatestBlockNumber {
-		nonce, ok := s.b.GetNonceInCache(address)
-		if ok {
-			return (*hexutil.Uint64)(&nonce), nil
-		}
 	}
 
 	// Resolve block number and use its state to ask for the nonce
