@@ -120,7 +120,6 @@ type Config struct {
 	SenderTxHashIndexing bool
 	ParallelDBWrite      bool
 	StateDBCaching       bool
-	TxPoolStateCache     bool
 	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
 
 	// Mining-related options

@@ -298,10 +298,6 @@ var (
 		Name:  "cache.memory",
 		Usage: "Set the physical RAM size (GB, Default: 16GB)",
 	}
-	TxPoolStateCacheFlag = cli.BoolFlag{
-		Name:  "statedb.use-txpool-cache",
-		Usage: "Enables caching of nonce and balance for txpool.",
-	}
 	TrieNodeCacheTypeFlag = cli.StringFlag{
 		Name: "statedb.cache.type",
 		Usage: "Set trie node cache type ('LocalCache', 'RemoteCache', " +
@@ -1463,8 +1459,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	} else {
 		logger.Debug("Memory settings", "PhysicalMemory(GB)", common.TotalPhysicalMemGB)
 	}
-
-	cfg.TxPoolStateCache = ctx.GlobalIsSet(TxPoolStateCacheFlag.Name)
 
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)

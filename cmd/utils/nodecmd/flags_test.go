@@ -278,10 +278,6 @@ var flagsWithValues = []struct {
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue},
 	},
 	{
-		flag:     "--statedb.use-txpool-cache",
-		flagType: FlagTypeBoolean,
-	},
-	{
 		flag:        "--state.trie-cache-limit",
 		flagType:    FlagTypeArgument,
 		values:      []string{"512", "1024", "2048", "4096"},

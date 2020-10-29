@@ -471,12 +471,11 @@ func getChainConfig(chainDB database.DBManager) (*params.ChainConfig, error) {
 // defaultCacheConfig returns cache config for data generation tests.
 func defaultCacheConfig() *blockchain.CacheConfig {
 	return &blockchain.CacheConfig{
-		StateDBCaching:   true,
-		TxPoolStateCache: true,
-		ArchiveMode:      false,
-		CacheSize:        512,
-		BlockInterval:    blockchain.DefaultBlockInterval,
-		TriesInMemory:    blockchain.DefaultTriesInMemory,
+		StateDBCaching: true,
+		ArchiveMode:    false,
+		CacheSize:      512,
+		BlockInterval:  blockchain.DefaultBlockInterval,
+		TriesInMemory:  blockchain.DefaultTriesInMemory,
 		TrieNodeCacheConfig: statedb.TrieNodeCacheConfig{
 			CacheType:          statedb.CacheTypeLocal,
 			LocalCacheSizeMB:   4096,

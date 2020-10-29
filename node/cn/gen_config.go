@@ -44,7 +44,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		SenderTxHashIndexing    bool
 		ParallelDBWrite         bool
 		StateDBCaching          bool
-		TxPoolStateCache        bool
 		TrieNodeCacheConfig     statedb.TrieNodeCacheConfig
 		ServiceChainSigner      common.Address `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
@@ -90,7 +89,6 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.SenderTxHashIndexing = c.SenderTxHashIndexing
 	enc.ParallelDBWrite = c.ParallelDBWrite
 	enc.StateDBCaching = c.StateDBCaching
-	enc.TxPoolStateCache = c.TxPoolStateCache
 	enc.TrieNodeCacheConfig = c.TrieNodeCacheConfig
 	enc.ServiceChainSigner = c.ServiceChainSigner
 	enc.ExtraData = c.ExtraData
@@ -140,7 +138,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		SenderTxHashIndexing    *bool
 		ParallelDBWrite         *bool
 		StateDBCaching          *bool
-		TxPoolStateCache        *bool
 		TrieNodeCacheConfig     *statedb.TrieNodeCacheConfig
 		ServiceChainSigner      *common.Address `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
@@ -234,9 +231,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.StateDBCaching != nil {
 		c.StateDBCaching = *dec.StateDBCaching
-	}
-	if dec.TxPoolStateCache != nil {
-		c.TxPoolStateCache = *dec.TxPoolStateCache
 	}
 	if dec.TrieNodeCacheConfig != nil {
 		c.TrieNodeCacheConfig = *dec.TrieNodeCacheConfig

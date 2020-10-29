@@ -250,7 +250,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		vmConfig    = config.getVMConfig()
 		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching,
 			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval,
-			TriesInMemory: config.TriesInMemory, TxPoolStateCache: config.TxPoolStateCache,
+			TriesInMemory:       config.TriesInMemory,
 			TrieNodeCacheConfig: config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing}
 	)
 
