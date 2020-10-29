@@ -23,11 +23,14 @@ package blockchain
 import (
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/kerrors"
 	"math"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/klaytn/klaytn/kerrors"
+
+	"sort"
 
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -36,7 +39,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/rcrowley/go-metrics"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-	"sort"
 )
 
 const (
@@ -95,7 +97,6 @@ type blockChain interface {
 	CurrentBlock() *types.Block
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	StateAt(root common.Hash) (*state.StateDB, error)
-	TryGetCachedStateDB(root common.Hash) (*state.StateDB, error)
 
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
 
@@ -411,7 +412,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	if newHead == nil {
 		newHead = pool.chain.CurrentBlock().Header() // Special case during testing
 	}
-	stateDB, err := pool.chain.TryGetCachedStateDB(newHead.Root)
+	stateDB, err := pool.chain.StateAt(newHead.Root)
 	if err != nil {
 		logger.Error("Failed to reset txpool state", "err", err)
 		return

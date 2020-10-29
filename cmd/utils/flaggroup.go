@@ -164,7 +164,6 @@ var FlagGroups = []FlagGroup{
 	{
 		Name: "STATE",
 		Flags: []cli.Flag{
-			StateDBCachingFlag,
 			TrieMemoryCacheSizeFlag,
 			TrieBlockIntervalFlag,
 			TriesInMemoryFlag,

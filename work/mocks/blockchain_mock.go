@@ -959,21 +959,6 @@ func (mr *MockBlockChainMockRecorder) TrieNode(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrieNode", reflect.TypeOf((*MockBlockChain)(nil).TrieNode), arg0)
 }
 
-// TryGetCachedStateDB mocks base method
-func (m *MockBlockChain) TryGetCachedStateDB(arg0 common.Hash) (*state.StateDB, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryGetCachedStateDB", arg0)
-	ret0, _ := ret[0].(*state.StateDB)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TryGetCachedStateDB indicates an expected call of TryGetCachedStateDB
-func (mr *MockBlockChainMockRecorder) TryGetCachedStateDB(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryGetCachedStateDB", reflect.TypeOf((*MockBlockChain)(nil).TryGetCachedStateDB), arg0)
-}
-
 // Validator mocks base method
 func (m *MockBlockChain) Validator() blockchain.Validator {
 	m.ctrl.T.Helper()

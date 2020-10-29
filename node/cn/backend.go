@@ -248,7 +248,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	var (
 		vmConfig    = config.getVMConfig()
-		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching,
+		cacheConfig = &blockchain.CacheConfig{
 			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval,
 			TriesInMemory: config.TriesInMemory, TxPoolStateCache: config.TxPoolStateCache,
 			TrieNodeCacheConfig: config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing}

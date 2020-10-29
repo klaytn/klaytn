@@ -287,7 +287,6 @@ type BlockChain interface {
 	HasBadBlock(hash common.Hash) bool
 	WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (blockchain.WriteStatus, error)
 	PostChainEvents(events []interface{}, logs []*types.Log)
-	TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB, error)
 	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error)
 
 	// State Migration
