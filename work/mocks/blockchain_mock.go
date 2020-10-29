@@ -352,12 +352,6 @@ func (mr *MockBlockChainMockRecorder) GetLogsByHash(arg0 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogsByHash", reflect.TypeOf((*MockBlockChain)(nil).GetLogsByHash), arg0)
 }
 
-// GetNonceInCache indicates an expected call of GetNonceInCache
-func (mr *MockBlockChainMockRecorder) GetNonceInCache(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNonceInCache", reflect.TypeOf((*MockBlockChain)(nil).GetNonceInCache), arg0)
-}
-
 // GetReceiptsByBlockHash mocks base method
 func (m *MockBlockChain) GetReceiptsByBlockHash(arg0 common.Hash) types.Receipts {
 	m.ctrl.T.Helper()
