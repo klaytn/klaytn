@@ -29,10 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/kerrors"
-
-	"sort"
-
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
