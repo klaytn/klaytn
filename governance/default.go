@@ -401,7 +401,7 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 	}
 }
 
-// NewGovernanceInitialize creates Governance with the given configuration.
+// NewGovernance creates Governance with the given configuration.
 func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
 	return &Governance{
 		ChainConfig:              chainConfig,
