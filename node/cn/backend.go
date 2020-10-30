@@ -216,7 +216,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
 	logger.Info("Initialised chain configuration", "config", chainConfig)
-	governance := governance.NewGovernance(chainConfig, chainDB)
+	governance := governance.NewGovernanceInitialize(chainConfig, chainDB)
 
 	cn := &CN{
 		config:            config,
