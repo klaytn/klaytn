@@ -218,7 +218,6 @@ func BenchmarkDataGeneration_CandidateLevelDB(b *testing.B) {
 	tc := getGenerationTestDefaultTC()
 	tc.testName = "BenchmarkDataGeneration_CandidateLevelDB"
 	tc.originalDataDir = candidate500LevelDB_orig
-	tc.cacheConfig.TxPoolStateCache = false
 
 	tc.cacheConfig = defaultCacheConfig()
 

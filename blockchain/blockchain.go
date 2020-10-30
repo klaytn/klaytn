@@ -33,13 +33,12 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v7"
-	"github.com/klaytn/klaytn/common/hexutil"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/mclock"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/crypto"
@@ -85,7 +84,6 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	TxPoolStateCache     bool                        // Enables caching of nonce and balance for txpool
 	ArchiveMode          bool                        // If true, state trie is not pruned and always written to database
 	CacheSize            int                         // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
 	BlockInterval        uint                        // Block interval to flush the trie. Each interval state trie will be flushed into disk
@@ -159,9 +157,6 @@ type BlockChain struct {
 
 	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
-	nonceCache   common.Cache
-	balanceCache common.Cache
-
 	// State migration
 	prepareStateMigration bool
 	stopStateMigration    chan struct{}
@@ -196,13 +191,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 	badBlocks, _ := lru.New(maxBadBlocks)
 
-	var nonceCache common.Cache
-	var balanceCache common.Cache
-	if cacheConfig.TxPoolStateCache {
-		nonceCache = common.NewCache(common.FIFOCacheConfig{CacheSize: maxAccountForCache})
-		balanceCache = common.NewCache(common.FIFOCacheConfig{CacheSize: maxAccountForCache})
-	}
-
 	bc := &BlockChain{
 		chainConfig:        chainConfig,
 		chainConfigMu:      new(sync.RWMutex),
@@ -217,8 +205,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		vmConfig:           vmConfig,
 		badBlocks:          badBlocks,
 		parallelDBWrite:    db.IsParallelDBWrite(),
-		nonceCache:         nonceCache,
-		balanceCache:       balanceCache,
 		stopStateMigration: make(chan struct{}),
 	}
 
@@ -1196,13 +1182,8 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		status, err = bc.writeBlockWithStateSerial(block, receipts, stateDB)
 	}
 
-	// TODO-Klaytn-Issue1911 After reviewing the behavior and performance, change the UpdateCacheStateObjects to update at the same time.
 	if err != nil {
 		return status, err
-	}
-
-	if bc.cacheConfig.TxPoolStateCache {
-		stateDB.UpdateTxPoolStateCache(bc.nonceCache, bc.balanceCache)
 	}
 
 	// Publish the committed block to the redis cache of stateDB.
@@ -2145,30 +2126,6 @@ func (bc *BlockChain) IsParallelDBWrite() bool {
 // is enabled or not.
 func (bc *BlockChain) IsSenderTxHashIndexingEnabled() bool {
 	return bc.cacheConfig.SenderTxHashIndexing
-}
-
-// GetNonceCache returns a nonceCache.
-func (bc *BlockChain) GetNonceCache() common.Cache {
-	return bc.nonceCache
-}
-
-// GetBalanceCache returns a balanceCache.
-func (bc *BlockChain) GetBalanceCache() common.Cache {
-	return bc.balanceCache
-}
-
-// GetNonceInCache returns (cachedNonce, true) if nonce exists in cache.
-// If not, it returns (0, false).
-func (bc *BlockChain) GetNonceInCache(addr common.Address) (uint64, bool) {
-	nonceCache := bc.GetNonceCache()
-
-	if nonceCache != nil {
-		if obj, exist := nonceCache.Get(addr); exist && obj != nil {
-			nonce, _ := obj.(uint64)
-			return nonce, true
-		}
-	}
-	return 0, false
 }
 
 func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {

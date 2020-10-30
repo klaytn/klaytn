@@ -146,24 +146,6 @@ func (self *StateDB) Reset(root common.Hash) error {
 	return nil
 }
 
-// UpdateTxPoolStateCache updates the caches used in TxPool.
-func (self *StateDB) UpdateTxPoolStateCache(nonceCache common.Cache, balanceCache common.Cache) {
-	if nonceCache == nil || balanceCache == nil {
-		logger.ErrorWithStack("UpdateTxPoolStateCache should not be called! If nonceCache or balanceCache is nil")
-		return
-	}
-
-	for addr, stateObj := range self.stateObjects {
-		if stateObj.suicided || stateObj.deleted || stateObj.dbErr != nil {
-			nonceCache.Add(addr, nil)
-			balanceCache.Add(addr, nil)
-		} else {
-			nonceCache.Add(addr, stateObj.Nonce())
-			balanceCache.Add(addr, stateObj.Balance())
-		}
-	}
-}
-
 func (self *StateDB) AddLog(log *types.Log) {
 	self.journal.append(addLogChange{txhash: self.thash})
 

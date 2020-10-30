@@ -71,14 +71,6 @@ func (bc *testBlockChain) SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) even
 	return bc.chainHeadFeed.Subscribe(ch)
 }
 
-func (bc *testBlockChain) GetNonceCache() common.Cache {
-	return nil
-}
-
-func (bc *testBlockChain) GetBalanceCache() common.Cache {
-	return nil
-}
-
 func transaction(nonce uint64, gaslimit uint64, key *ecdsa.PrivateKey) *types.Transaction {
 	return pricedTransaction(nonce, gaslimit, big.NewInt(1), key)
 }

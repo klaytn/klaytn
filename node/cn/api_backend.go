@@ -23,6 +23,8 @@ package cn
 import (
 	"context"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
@@ -36,19 +38,12 @@ import (
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
 )
 
 // CNAPIBackend implements api.Backend for full nodes
 type CNAPIBackend struct {
 	cn  *CN
 	gpo *gasprice.Oracle
-}
-
-// GetNonceInCache returns (cachedNonce, true) if nonce exists in cache.
-// If not, it returns (0, false).
-func (b *CNAPIBackend) GetNonceInCache(addr common.Address) (uint64, bool) {
-	return b.cn.blockchain.GetNonceInCache(addr)
 }
 
 // GetTxLookupInfoAndReceipt retrieves a tx and lookup info and receipt for a given transaction hash.
