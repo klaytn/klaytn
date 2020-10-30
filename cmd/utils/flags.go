@@ -202,11 +202,6 @@ var (
 		Name:  "kes.nodetype.service",
 		Usage: "Run as a KES Service Node (Disable fetcher, downloader, and worker)",
 	}
-	// Performance tuning settings
-	StateDBCachingFlag = cli.BoolFlag{
-		Name:  "statedb.use-cache",
-		Usage: "Enables caching of state objects in stateDB",
-	}
 	SingleDBFlag = cli.BoolFlag{
 		Name:  "db.single",
 		Usage: "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
@@ -1469,7 +1464,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	cfg.SenderTxHashIndexing = ctx.GlobalIsSet(SenderTxHashIndexingFlag.Name)
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
-	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
 	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),

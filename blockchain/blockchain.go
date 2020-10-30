@@ -84,7 +84,6 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	StateDBCaching       bool                        // Enables caching of state objects in stateDB
 	ArchiveMode          bool                        // If true, state trie is not pruned and always written to database
 	CacheSize            int                         // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
 	BlockInterval        uint                        // Block interval to flush the trie. Each interval state trie will be flushed into disk
@@ -158,9 +157,6 @@ type BlockChain struct {
 
 	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
-	cachedStateDB       *state.StateDB
-	lastUpdatedRootHash common.Hash
-
 	// State migration
 	prepareStateMigration bool
 	stopStateMigration    chan struct{}
@@ -181,7 +177,6 @@ type BlockChain struct {
 func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
-			StateDBCaching:      false,
 			ArchiveMode:         false,
 			CacheSize:           512,
 			BlockInterval:       DefaultBlockInterval,
@@ -519,49 +514,6 @@ func (bc *BlockChain) StateAtWithGCLock(root common.Hash) (*state.StateDB, error
 // StateCache returns the caching database underpinning the blockchain instance.
 func (bc *BlockChain) StateCache() state.Database {
 	return bc.stateCache
-}
-
-// StateAtWithCache returns a new mutable state based on a particular point in time.
-// If different from StateAt() in that it uses state object caching.
-func (bc *BlockChain) StateAtWithCache(root common.Hash) (*state.StateDB, error) {
-	if bc.cachedStateDB == nil {
-		return state.NewWithCache(root, bc.stateCache, state.NewCachedStateObjects())
-	} else {
-		return state.NewWithCache(root, bc.stateCache, bc.cachedStateDB.GetCachedStateObjects())
-	}
-}
-
-// TryGetCachedStateDB tries to get cachedStateDB, if StateDBCaching flag is true and it exists.
-// It checks the validity of cachedStateDB by comparing saved lastUpdatedRootHash and passed headRootHash.
-func (bc *BlockChain) TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB, error) {
-	if !bc.cacheConfig.StateDBCaching {
-		return bc.StateAt(rootHash)
-	}
-
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
-
-	// When cachedStateDB is nil, set cachedStateDB with a new StateDB.
-	if bc.cachedStateDB == nil {
-		if !common.EmptyHash(bc.lastUpdatedRootHash) {
-			logger.Error("cachedStateDB is nil, but lastUpdatedRootHash is not common.Hash{}!",
-				"lastUpdatedRootHash", bc.lastUpdatedRootHash.String())
-			bc.lastUpdatedRootHash = common.Hash{}
-		}
-		cacheGetStateDBMissMeter.Mark(1)
-		return bc.StateAtWithCache(rootHash)
-	}
-
-	// If cachedStateDB exists, check if we can use cachedStateDB.
-	// If given rootHash is different from lastUpdatedRootHash, return stateDB without cache.
-	if rootHash != bc.lastUpdatedRootHash {
-		logger.Trace("Given rootHash is different from lastUpdatedRootHash",
-			"givenRootHash", rootHash, "lastUpdatedRootHash", bc.lastUpdatedRootHash)
-		cacheGetStateDBMissMeter.Mark(1)
-		return bc.StateAt(rootHash)
-	}
-	cacheGetStateDBHitMeter.Mark(1)
-	return bc.StateAtWithCache(rootHash)
 }
 
 // Reset purges the entire blockchain, restoring it to its genesis state.
@@ -1230,22 +1182,8 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		status, err = bc.writeBlockWithStateSerial(block, receipts, stateDB)
 	}
 
-	// TODO-Klaytn-Issue1911 After reviewing the behavior and performance, change the UpdateCacheStateObjects to update at the same time.
 	if err != nil {
 		return status, err
-	}
-
-	// Update lastUpdatedRootHash and cachedStateDB after successful WriteBlockWithState.
-	if stateDB.UseCachedStateObjects() {
-		bc.mu.Lock()
-		defer bc.mu.Unlock()
-
-		logger.Trace("Update cached StateDB information", "prevRootHash", bc.lastUpdatedRootHash.String(),
-			"newRootHash", block.Root().String(), "newBlockNum", block.NumberU64())
-
-		bc.lastUpdatedRootHash = block.Root()
-		stateDB.UpdateCachedStateObjects(block.Root())
-		bc.cachedStateDB = stateDB
 	}
 
 	// Publish the committed block to the redis cache of stateDB.
@@ -1633,7 +1571,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			parent = chain[i-1]
 		}
 
-		stateDB, err := bc.TryGetCachedStateDB(parent.Root())
+		stateDB, err := bc.StateAt(parent.Root())
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}

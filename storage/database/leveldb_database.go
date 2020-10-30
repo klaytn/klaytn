@@ -61,6 +61,7 @@ var defaultLevelDBOption = &opt.Options{
 	OpenFilesCacheCapacity: MinOpenFilesCacheCapacity,
 	Filter:                 filter.NewBloomFilter(minBitsPerKeyForFilter),
 	DisableBufferPool:      false,
+	DisableSeeksCompaction: true,
 }
 
 // GetDefaultLevelDBOption returns default LevelDB option copied from defaultLevelDBOption.
@@ -92,12 +93,23 @@ type levelDB struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
 
-	compTimeMeter   metrics.Meter // Meter for measuring the total time spent in database compaction
-	compReadMeter   metrics.Meter // Meter for measuring the data read during compaction
-	compWriteMeter  metrics.Meter // Meter for measuring the data written during compaction
-	diskReadMeter   metrics.Meter // Meter for measuring the effective amount of data read
-	diskWriteMeter  metrics.Meter // Meter for measuring the effective amount of data written
-	blockCacheGauge metrics.Gauge // Gauge for measuring the current size of block cache
+	writeDelayCountMeter    metrics.Meter // Meter for measuring the cumulative number of write delays
+	writeDelayDurationMeter metrics.Meter // Meter for measuring the cumulative duration of write delays
+
+	aliveSnapshotsMeter metrics.Meter // Meter for measuring the number of alive snapshots
+	aliveIteratorsMeter metrics.Meter // Meter for measuring the number of alive iterators
+
+	compTimeMeter          metrics.Meter // Meter for measuring the total time spent in database compaction
+	compReadMeter          metrics.Meter // Meter for measuring the data read during compaction
+	compWriteMeter         metrics.Meter // Meter for measuring the data written during compaction
+	diskReadMeter          metrics.Meter // Meter for measuring the effective amount of data read
+	diskWriteMeter         metrics.Meter // Meter for measuring the effective amount of data written
+	blockCacheGauge        metrics.Gauge // Gauge for measuring the current size of block cache
+	openedTablesCountMeter metrics.Meter
+	memCompGauge           metrics.Gauge // Gauge for tracking the number of memory compaction
+	level0CompGauge        metrics.Gauge // Gauge for tracking the number of table compaction in level0
+	nonlevel0CompGauge     metrics.Gauge // Gauge for tracking the number of table compaction in non0 level
+	seekCompGauge          metrics.Gauge // Gauge for tracking the number of table compaction caused by read opt
 
 	perfCheck           bool
 	getTimeMeter        metrics.Meter
@@ -119,6 +131,7 @@ func getLevelDBOptions(dbc *DBConfig) *opt.Options {
 		DisableBufferPool:             !dbc.LevelDBBufferPool,
 		CompactionTableSize:           2 * opt.MiB,
 		CompactionTableSizeMultiplier: 1.0,
+		DisableSeeksCompaction:        true,
 	}
 
 	return newOption
@@ -336,6 +349,10 @@ func (db *levelDB) LDB() *leveldb.DB {
 // Meter configures the database metrics collectors and
 func (db *levelDB) Meter(prefix string) {
 	// Initialize all the metrics collector at the requested prefix
+	db.writeDelayCountMeter = metrics.NewRegisteredMeter(prefix+"writedelay/count", nil)
+	db.writeDelayDurationMeter = metrics.NewRegisteredMeter(prefix+"writedelay/duration", nil)
+	db.aliveSnapshotsMeter = metrics.NewRegisteredMeter(prefix+"snapshots", nil)
+	db.aliveIteratorsMeter = metrics.NewRegisteredMeter(prefix+"iterators", nil)
 	db.compTimeMeter = metrics.NewRegisteredMeter(prefix+"compaction/time", nil)
 	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compaction/read", nil)
 	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compaction/write", nil)
@@ -343,9 +360,16 @@ func (db *levelDB) Meter(prefix string) {
 	db.diskWriteMeter = metrics.NewRegisteredMeter(prefix+"disk/write", nil)
 	db.blockCacheGauge = metrics.NewRegisteredGauge(prefix+"blockcache", nil)
 
+	db.openedTablesCountMeter = metrics.NewRegisteredMeter(prefix+"opendedtables", nil)
+
 	db.getTimeMeter = metrics.NewRegisteredMeter(prefix+"get/time", nil)
 	db.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
 	db.batchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
+
+	db.memCompGauge = metrics.NewRegisteredGauge(prefix+"compact/memory", nil)
+	db.level0CompGauge = metrics.NewRegisteredGauge(prefix+"compact/level0", nil)
+	db.nonlevel0CompGauge = metrics.NewRegisteredGauge(prefix+"compact/nonlevel0", nil)
+	db.seekCompGauge = metrics.NewRegisteredGauge(prefix+"compact/seek", nil)
 
 	// Short circuit metering if the metrics system is disabled
 	// Above meters are initialized by NilMeter if metricutils.Enabled == false
@@ -378,6 +402,13 @@ func (db *levelDB) Meter(prefix string) {
 func (db *levelDB) meter(refresh time.Duration) {
 	s := new(leveldb.DBStats)
 
+	// Write delay related stats
+	var prevWriteDelayCount int32
+	var prevWriteDelayDuration time.Duration
+
+	// Alive snapshots/iterators
+	var prevAliveSnapshots, prevAliveIterators int32
+
 	// Compaction related stats
 	var prevCompRead, prevCompWrite int64
 	var prevCompTime time.Duration
@@ -397,6 +428,15 @@ hasError:
 		if merr != nil {
 			break
 		}
+		// Write delay related stats
+		db.writeDelayCountMeter.Mark(int64(s.WriteDelayCount - prevWriteDelayCount))
+		db.writeDelayDurationMeter.Mark(int64(s.WriteDelayDuration - prevWriteDelayDuration))
+		prevWriteDelayCount, prevWriteDelayDuration = s.WriteDelayCount, s.WriteDelayDuration
+
+		// Alive snapshots/iterators
+		db.aliveSnapshotsMeter.Mark(int64(s.AliveSnapshots - prevAliveSnapshots))
+		db.aliveIteratorsMeter.Mark(int64(s.AliveIterators - prevAliveIterators))
+		prevAliveSnapshots, prevAliveIterators = s.AliveSnapshots, s.AliveIterators
 
 		// Compaction related stats
 		var currCompRead, currCompWrite int64
@@ -406,25 +446,26 @@ hasError:
 			currCompRead += s.LevelRead[i]
 			currCompWrite += s.LevelWrite[i]
 		}
-
 		db.compTimeMeter.Mark(int64(currCompTime.Seconds() - prevCompTime.Seconds()))
-		db.compReadMeter.Mark(int64(currCompRead - prevCompRead))
-		db.compWriteMeter.Mark(int64(currCompWrite - prevCompWrite))
-
-		prevCompTime = currCompTime
-		prevCompRead = currCompRead
-		prevCompWrite = currCompWrite
+		db.compReadMeter.Mark(currCompRead - prevCompRead)
+		db.compWriteMeter.Mark(currCompWrite - prevCompWrite)
+		prevCompTime, prevCompRead, prevCompWrite = currCompTime, currCompRead, currCompWrite
 
 		// IO related stats
 		currRead, currWrite := s.IORead, s.IOWrite
-
 		db.diskReadMeter.Mark(int64(currRead - prevRead))
 		db.diskWriteMeter.Mark(int64(currWrite - prevWrite))
-
 		prevRead, prevWrite = currRead, currWrite
 
-		// BlockCache size
+		// BlockCache/OpenedTables related stats
 		db.blockCacheGauge.Update(int64(s.BlockCacheSize))
+		db.openedTablesCountMeter.Mark(int64(s.OpenedTablesCount))
+
+		// Compaction related stats
+		db.memCompGauge.Update(int64(s.MemComp))
+		db.level0CompGauge.Update(int64(s.Level0Comp))
+		db.nonlevel0CompGauge.Update(int64(s.NonLevel0Comp))
+		db.seekCompGauge.Update(int64(s.SeekComp))
 
 		// Sleep a bit, then repeat the stats collection
 		select {

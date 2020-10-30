@@ -270,7 +270,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return err
 	}
 
-	stateDB, err := bcdata.bc.TryGetCachedStateDB(bcdata.bc.CurrentBlock().Root())
+	stateDB, err := bcdata.bc.StateAt(bcdata.bc.CurrentBlock().Root())
 	if err != nil {
 		return err
 	}
@@ -471,11 +471,10 @@ func getChainConfig(chainDB database.DBManager) (*params.ChainConfig, error) {
 // defaultCacheConfig returns cache config for data generation tests.
 func defaultCacheConfig() *blockchain.CacheConfig {
 	return &blockchain.CacheConfig{
-		StateDBCaching: true,
-		ArchiveMode:    false,
-		CacheSize:      512,
-		BlockInterval:  blockchain.DefaultBlockInterval,
-		TriesInMemory:  blockchain.DefaultTriesInMemory,
+		ArchiveMode:   false,
+		CacheSize:     512,
+		BlockInterval: blockchain.DefaultBlockInterval,
+		TriesInMemory: blockchain.DefaultTriesInMemory,
 		TrieNodeCacheConfig: statedb.TrieNodeCacheConfig{
 			CacheType:          statedb.CacheTypeLocal,
 			LocalCacheSizeMB:   4096,

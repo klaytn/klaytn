@@ -198,10 +198,6 @@ var flagsWithValues = []struct {
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue, ErrorInvalidValue},
 	},
 	{
-		flag:     "--statedb.use-cache",
-		flagType: FlagTypeBoolean,
-	},
-	{
 		flag:     "--db.single",
 		flagType: FlagTypeBoolean,
 	},

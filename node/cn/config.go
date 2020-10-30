@@ -119,7 +119,6 @@ type Config struct {
 	TriesInMemory        uint64
 	SenderTxHashIndexing bool
 	ParallelDBWrite      bool
-	StateDBCaching       bool
 	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
 
 	// Mining-related options

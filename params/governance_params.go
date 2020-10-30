@@ -66,6 +66,7 @@ const (
 	// Engine type
 	UseIstanbul EngineType = iota
 	UseClique
+	Unknown
 )
 
 const (
