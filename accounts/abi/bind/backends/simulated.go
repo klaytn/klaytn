@@ -208,11 +208,11 @@ func (b *SimulatedBackend) CallContract(ctx context.Context, call klaytn.CallMsg
 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
-	state, err := b.blockchain.State()
+	currentState, err := b.blockchain.State()
 	if err != nil {
 		return nil, err
 	}
-	rval, _, _, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), state)
+	rval, _, _, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), currentState)
 	return rval, err
 }
 
@@ -263,11 +263,11 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg)
 	executable := func(gas uint64) bool {
 		call.Gas = gas
 
-		state, err := b.blockchain.State()
+		currentState, err := b.blockchain.State()
 		if err != nil {
 			return false
 		}
-		_, _, failed, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), state)
+		_, _, failed, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), currentState)
 		if err != nil || failed {
 			return false
 		}
