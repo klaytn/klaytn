@@ -24,6 +24,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
+	"time"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
@@ -37,8 +40,6 @@ import (
 	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
-	"time"
 )
 
 const defaultGasPrice = 50 * params.Ston
@@ -174,6 +175,9 @@ func (lb *LocalBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (g
 		call.Gas = gas
 
 		state, err := lb.subbrige.blockchain.State()
+		if err != nil {
+			return false
+		}
 		_, _, failed, err := lb.callContract(ctx, call, lb.subbrige.blockchain.CurrentBlock(), state)
 		if err != nil || failed {
 			return false
