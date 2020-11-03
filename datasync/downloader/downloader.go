@@ -23,6 +23,11 @@ package downloader
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -32,10 +37,6 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/rcrowley/go-metrics"
-	"math/big"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var (
@@ -68,8 +69,6 @@ var (
 	fsHeaderContCheck      = 3 * time.Second // Time interval to check for header continuations during state download
 	fsMinFullBlocks        = 64              // Number of blocks to retrieve fully even in fast sync
 
-	spawnTimeOut = 1 * time.Minute // Maximum waiting time for completion of spawned d.processes
-
 	logger = log.NewModuleLogger(log.DatasyncDownloader)
 )
 
@@ -96,7 +95,6 @@ var (
 	errCancelContentProcessing = errors.New("content processing canceled (requested)")
 	errNoSyncActive            = errors.New("no sync active")
 	errTooOld                  = errors.New("peer doesn't speak recent enough protocol version (need version >= 62)")
-	errSpawnTimeOut            = errors.New("spawn time out")
 )
 
 type Downloader struct {
@@ -500,22 +498,6 @@ func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 	}
 	// Wait for the first error, then terminate the others.
 	var err error
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	quit := make(chan struct{})
-	// This timeout goroutine will terminate running fetchers without error after spawnTimeOut.
-	go func() {
-		defer wg.Done()
-		select {
-		case <-time.After(spawnTimeOut):
-			logger.Warn("spawnSync timeout", "peerID", peerID)
-			errc <- errSpawnTimeOut
-		case <-quit:
-			logger.Debug("spawnSync timeout goroutine is quited", "peerID", peerID)
-		}
-	}()
-
 	for i := 0; i < len(fetchers); i++ {
 		if i == len(fetchers)-1 {
 			// Close the queue when all fetchers have exited.
@@ -528,16 +510,9 @@ func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 		}
 	}
 
-	// Generally, before timeout, all spawned fetchers will be terminated.
-	// In that case, timeout goroutine will quit by closing quit channel.
-	close(quit)
-
 	d.queue.Close()
 	d.Cancel()
 
-	// Waiting for quit of timeout goroutine.
-	logger.Debug("spawnSync is waiting timeout goroutine", "peerID", peerID)
-	wg.Wait()
 	logger.Debug("spawnSync terminated", "peerID", peerID)
 
 	return err
