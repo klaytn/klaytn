@@ -25,6 +25,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -32,7 +34,6 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
 )
 
 // TODO-Klaytn Needs to separate APIs along with each namespaces.
@@ -445,7 +446,7 @@ func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 }
 
 // EstimateGas tries to estimate the gas needed to execute a specific transaction based on
-// the current pending state of the backend blockchain. There is no guarantee that this is
+// the latest state of the backend blockchain. There is no guarantee that this is
 // the true gas limit requirement as other transactions may be added or removed by miners,
 // but it should provide a basis for setting a reasonable default.
 func (ec *Client) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (uint64, error) {

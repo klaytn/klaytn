@@ -24,6 +24,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain"
@@ -39,9 +43,6 @@ import (
 	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
-	"sync"
-	"time"
 )
 
 // This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
@@ -207,11 +208,11 @@ func (b *SimulatedBackend) CallContract(ctx context.Context, call klaytn.CallMsg
 	if blockNumber != nil && blockNumber.Cmp(b.blockchain.CurrentBlock().Number()) != 0 {
 		return nil, errBlockNumberUnsupported
 	}
-	state, err := b.blockchain.State()
+	currentState, err := b.blockchain.State()
 	if err != nil {
 		return nil, err
 	}
-	rval, _, _, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), state)
+	rval, _, _, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), currentState)
 	return rval, err
 }
 
@@ -240,8 +241,7 @@ func (b *SimulatedBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error
 	return new(big.Int).SetUint64(b.config.UnitPrice), nil
 }
 
-// EstimateGas executes the requested code against the currently pending block/state and
-// returns the used amount of gas.
+// EstimateGas executes the requested code against the latest block/state and returns the used amount of gas.
 func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (uint64, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -263,10 +263,11 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg)
 	executable := func(gas uint64) bool {
 		call.Gas = gas
 
-		snapshot := b.pendingState.Snapshot()
-		_, _, failed, err := b.callContract(ctx, call, b.pendingBlock, b.pendingState)
-		b.pendingState.RevertToSnapshot(snapshot)
-
+		currentState, err := b.blockchain.State()
+		if err != nil {
+			return false
+		}
+		_, _, failed, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), currentState)
 		if err != nil || failed {
 			return false
 		}
