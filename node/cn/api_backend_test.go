@@ -20,6 +20,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/klaytn/klaytn/kerrors"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -162,13 +164,12 @@ func TestCNAPIBackend_HeaderByNumber(t *testing.T) {
 	block := newBlock(int(blockNum))
 	expectedHeader := block.Header()
 	{
-		mockCtrl, _, mockMiner, api := newCNAPIBackend(t)
-		mockMiner.EXPECT().PendingBlock().Return(block).Times(1)
+		mockCtrl, _, _, api := newCNAPIBackend(t)
 
 		header, err := api.HeaderByNumber(context.Background(), rpc.PendingBlockNumber)
 
-		assert.Equal(t, expectedHeader, header)
-		assert.NoError(t, err)
+		assert.Nil(t, header)
+		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
 
 		mockCtrl.Finish()
 	}
@@ -212,13 +213,12 @@ func TestCNAPIBackend_BlockByNumber(t *testing.T) {
 	block := newBlock(int(blockNum))
 	expectedBlock := block
 	{
-		mockCtrl, _, mockMiner, api := newCNAPIBackend(t)
-		mockMiner.EXPECT().PendingBlock().Return(block).Times(1)
+		mockCtrl, _, _, api := newCNAPIBackend(t)
 
 		block, err := api.BlockByNumber(context.Background(), rpc.PendingBlockNumber)
 
-		assert.Equal(t, expectedBlock, block)
-		assert.NoError(t, err)
+		assert.Nil(t, block)
+		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
 
 		mockCtrl.Finish()
 	}
@@ -270,14 +270,13 @@ func TestCNAPIBackend_StateAndHeaderByNumber(t *testing.T) {
 
 	expectedHeader := block.Header()
 	{
-		mockCtrl, _, mockMiner, api := newCNAPIBackend(t)
-		mockMiner.EXPECT().Pending().Return(block, stateDB).Times(1)
+		mockCtrl, _, _, api := newCNAPIBackend(t)
 
 		returnedStateDB, header, err := api.StateAndHeaderByNumber(context.Background(), rpc.PendingBlockNumber)
 
-		assert.Equal(t, stateDB, returnedStateDB)
-		assert.Equal(t, expectedHeader, header)
-		assert.NoError(t, err)
+		assert.Nil(t, returnedStateDB)
+		assert.Nil(t, header)
+		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
 
 		mockCtrl.Finish()
 	}
