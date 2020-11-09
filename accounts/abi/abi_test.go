@@ -729,3 +729,21 @@ func TestABI_MethodById(t *testing.T) {
 		}
 	*/
 }
+
+func TestMaliciousABIStrings(t *testing.T) {
+	// methods defined in tests are generated from method signatures below
+	//	"func(uint256,uint256,[]uint256)"
+	//	"func(uint256,uint256,uint256,)"
+	//	"func(,uint256,uint256,uint256)"
+	tests := []string{
+		"[{\"name\":\"func\",\"type\":\"function\",\"inputs\":[{\"type\":\"uint256\"},{\"type\":\"uint256\"},{\"type\":\"[]uint256\"}]}]",
+		"[{\"name\":\"func\",\"type\":\"function\",\"inputs\":[{\"type\":\"uint256\"},{\"type\":\"uint256\"},{\"type\":\"uint256\"},{\"type\":\"\"}]}]",
+		"[{\"name\":\"func\",\"type\":\"function\",\"inputs\":[{\"type\":\"\"},{\"type\":\"uint256\"},{\"type\":\"uint256\"},{\"type\":\"uint256\"}]}]",
+	}
+	for i, tt := range tests {
+		_, err := JSON(strings.NewReader(tt))
+		if err == nil {
+			t.Errorf("test %d: expected error from JSON '%v'", i, tt)
+		}
+	}
+}
