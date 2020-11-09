@@ -149,27 +149,20 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, blockNr)
-	if block != nil && err == nil {
-		response, err := s.rpcOutputBlock(block, true, fullTx)
-		if err == nil && blockNr == rpc.PendingBlockNumber {
-			// Pending blocks need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
-				response[field] = nil
-			}
-		}
-		return response, err
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	return s.rpcOutputBlock(block, true, fullTx)
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
 	block, err := s.b.GetBlock(ctx, blockHash)
-	if block != nil && err == nil {
-		return s.rpcOutputBlock(block, true, fullTx)
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	return s.rpcOutputBlock(block, true, fullTx)
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number.
