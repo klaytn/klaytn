@@ -51,6 +51,7 @@ var (
 	ErrNestedCompositeType                  = errors.New("nested composite type")
 	ErrLegacyTransactionMustBeWithLegacyKey = errors.New("a legacy transaction must be with a legacy account key")
 
-	ErrDeprecated   = errors.New("deprecated feature")
-	ErrNotSupported = errors.New("not supported")
+	ErrDeprecated               = errors.New("deprecated feature")
+	ErrNotSupported             = errors.New("not supported")
+	ErrPendingBlockNotSupported = errors.New("pending block is not supported")
 )

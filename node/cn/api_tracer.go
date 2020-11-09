@@ -26,7 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/log"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -41,6 +40,8 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/tracers"
 	"github.com/klaytn/klaytn/ser/rlp"
@@ -116,7 +117,7 @@ func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.Block
 
 	switch start {
 	case rpc.PendingBlockNumber:
-		from = api.cn.miner.PendingBlock()
+		return nil, kerrors.ErrPendingBlockNotSupported
 	case rpc.LatestBlockNumber:
 		from = api.cn.blockchain.CurrentBlock()
 	default:
@@ -124,7 +125,7 @@ func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.Block
 	}
 	switch end {
 	case rpc.PendingBlockNumber:
-		to = api.cn.miner.PendingBlock()
+		return nil, kerrors.ErrPendingBlockNotSupported
 	case rpc.LatestBlockNumber:
 		to = api.cn.blockchain.CurrentBlock()
 	default:
@@ -365,7 +366,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(ctx context.Context, number rpc.B
 
 	switch number {
 	case rpc.PendingBlockNumber:
-		block = api.cn.miner.PendingBlock()
+		return nil, kerrors.ErrPendingBlockNotSupported
 	case rpc.LatestBlockNumber:
 		block = api.cn.blockchain.CurrentBlock()
 	default:
