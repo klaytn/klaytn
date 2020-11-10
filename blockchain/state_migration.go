@@ -582,7 +582,7 @@ func collectChildrenStats(db state.Database, child common.Hash, resultCh chan<- 
 }
 
 // collectTrieStats is the main function of collecting trie statistics.
-// It spawns goroutines for the upper-most children and
+// It spawns goroutines for the upper-most children and iterates each sub-trie.
 func collectTrieStats(db state.Database, startNode common.Hash) {
 	children, err := db.TrieDB().NodeChildren(startNode)
 	if err != nil {
@@ -606,6 +606,12 @@ func collectTrieStats(db state.Database, startNode common.Hash) {
 		case result := <-resultCh:
 			if result.Err == errFinishedCollecting {
 				numGoRoutines--
+				if numGoRoutines == 0 {
+					logger.Info("Finished collecting trie statistics", "elapsed", time.Since(begin),
+						"numNodes", numNodes, "numLeafNodes", numLeafNodes, "maxDepth", maxDepth)
+					printDepthStats(depthCounter)
+					return
+				}
 				continue
 			}
 			numNodes++
@@ -622,14 +628,6 @@ func collectTrieStats(db state.Database, startNode common.Hash) {
 			logger.Info("Collecting trie statistics is in progress...", "elapsed", time.Since(begin),
 				"numGoRoutines", numGoRoutines, "numNodes", numNodes, "numLeafNodes", numLeafNodes, "maxDepth", maxDepth)
 			printDepthStats(depthCounter)
-		default:
-			if numGoRoutines != 0 {
-				continue
-			}
-			logger.Info("Finished collecting trie statistics", "elapsed", time.Since(begin),
-				"numNodes", numNodes, "numLeafNodes", numLeafNodes, "maxDepth", maxDepth)
-			printDepthStats(depthCounter)
-			return
 		}
 	}
 }

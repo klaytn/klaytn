@@ -287,6 +287,7 @@ func (api *PublicDebugAPI) StopWarmUp() error {
 	return api.cn.blockchain.StopWarmUp()
 }
 
+// StartCollectingTrieStats  collects state/storage trie statistics and print in the log.
 func (api *PublicDebugAPI) StartCollectingTrieStats(contractAddr common.Address) error {
 	return api.cn.blockchain.StartCollectingTrieStats(contractAddr)
 }
