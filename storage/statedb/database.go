@@ -499,7 +499,7 @@ func (db *Database) setCachedNode(hash, enc []byte) {
 	}
 }
 
-// node retrieves a cached trie node from memory, or returns nil if none can be
+// node retrieves a cached trie node from memory, or returns nil if node can be
 // found in the memory cache.
 func (db *Database) node(hash common.Hash) node {
 	// Retrieve the node from the trie node cache if available
@@ -1137,4 +1137,36 @@ func (db *Database) SaveTrieNodeCacheToFile(filePath string) error {
 		db.savingTrieNodeCacheTriggered = false
 	}()
 	return nil
+}
+
+// NodeInfo is a struct used for collecting trie statistics
+type NodeInfo struct {
+	Depth int // 0 if not a leaf node
+	Err   error
+}
+
+// CollectChildrenStats collects the depth of the trie recursively
+func (db *Database) CollectChildrenStats(node common.Hash, depth int, resultCh chan<- NodeInfo) {
+	n := db.node(node)
+	if n == nil {
+		return
+	}
+	// retrieve the children of the given node
+	childrenNodes, err := db.NodeChildren(node)
+	if err != nil {
+		logger.Error("failed to retrieve the children nodes",
+			"node", node.String(), "err", err)
+		resultCh <- NodeInfo{Err: err}
+		return
+	}
+	// write the depth of the node only if the node is a leaf node, otherwise set 0
+	resultDepth := 0
+	if len(childrenNodes) == 0 {
+		resultDepth = depth
+	}
+	// send the result to the channel and iterate its children
+	resultCh <- NodeInfo{Depth: resultDepth}
+	for _, child := range childrenNodes {
+		db.CollectChildrenStats(child, depth+1, resultCh)
+	}
 }

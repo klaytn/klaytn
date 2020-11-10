@@ -287,6 +287,10 @@ func (api *PublicDebugAPI) StopWarmUp() error {
 	return api.cn.blockchain.StopWarmUp()
 }
 
+func (api *PublicDebugAPI) StartCollectingTrieStats(contractAddr common.Address) error {
+	return api.cn.blockchain.StartCollectingTrieStats(contractAddr)
+}
+
 // PrivateDebugAPI is the collection of CN full node APIs exposed over
 // the private debugging endpoint.
 type PrivateDebugAPI struct {
