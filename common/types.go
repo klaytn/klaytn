@@ -25,11 +25,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/crypto/sha3"
 	"math/big"
 	"math/rand"
 	"reflect"
+
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/crypto/sha3"
 )
 
 const (
@@ -161,6 +162,10 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 
 // Address represents the 20 byte address of a Klaytn account.
 type Address [AddressLength]byte
+
+func EmptyAddress(a Address) bool {
+	return a == Address{}
+}
 
 // BytesToAddress returns Address with value b.
 // If b is larger than len(h), b will be cropped from the left.

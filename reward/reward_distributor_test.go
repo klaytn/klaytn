@@ -17,11 +17,12 @@
 package reward
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
 )
 
 type testBalanceAdder struct {
@@ -75,7 +76,7 @@ func Test_isEmptyAddress(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		assert.Equal(t, testCase.result, isEmptyAddress(testCase.address))
+		assert.Equal(t, testCase.result, common.EmptyAddress(testCase.address))
 	}
 }
 
