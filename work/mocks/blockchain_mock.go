@@ -296,6 +296,21 @@ func (mr *MockBlockChainMockRecorder) GetBodyRLP(arg0 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBodyRLP", reflect.TypeOf((*MockBlockChain)(nil).GetBodyRLP), arg0)
 }
 
+// GetContractStorageRoot mocks base method
+func (m *MockBlockChain) GetContractStorageRoot(arg0 *types.Block, arg1 state.Database, arg2 common.Address) (common.Hash, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContractStorageRoot", arg0, arg1, arg2)
+	ret0, _ := ret[0].(common.Hash)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetContractStorageRoot indicates an expected call of GetContractStorageRoot
+func (mr *MockBlockChainMockRecorder) GetContractStorageRoot(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContractStorageRoot", reflect.TypeOf((*MockBlockChain)(nil).GetContractStorageRoot), arg0, arg1, arg2)
+}
+
 // GetHeader mocks base method
 func (m *MockBlockChain) GetHeader(arg0 common.Hash, arg1 uint64) *types.Header {
 	m.ctrl.T.Helper()

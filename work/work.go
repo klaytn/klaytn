@@ -299,6 +299,7 @@ type BlockChain interface {
 
 	// Collect state/storage trie statistics
 	StartCollectingTrieStats(contractAddr common.Address) error
+	GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error)
 
 	// Save trie node cache to this
 	SaveTrieNodeCacheToDisk() error

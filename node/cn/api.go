@@ -368,30 +368,15 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 	return result, nil
 }
 
-// GetModifiedAccountsByumber returns all accounts that have changed between the
+// GetModifiedAccountsByNumber returns all accounts that have changed between the
 // two blocks specified. A change is defined as a difference in nonce, balance,
 // code hash, or storage hash.
 //
 // With one parameter, returns the list of accounts modified in the specified block.
 func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(startNum uint64, endNum *uint64) ([]common.Address, error) {
-	var startBlock, endBlock *types.Block
-
-	startBlock = api.cn.blockchain.GetBlockByNumber(startNum)
-	if startBlock == nil {
-		return nil, fmt.Errorf("start block number %d not found", startNum)
-	}
-
-	if endNum == nil {
-		endBlock = startBlock
-		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
-		if startBlock == nil {
-			return nil, fmt.Errorf("block number %d has no parent", startNum)
-		}
-	} else {
-		endBlock = api.cn.blockchain.GetBlockByNumber(*endNum)
-		if endBlock == nil {
-			return nil, fmt.Errorf("end block number %d not found", *endNum)
-		}
+	startBlock, endBlock, err := api.getStartAndEndBlock(startNum, endNum)
+	if err != nil {
+		return nil, err
 	}
 	return api.getModifiedAccounts(startBlock, endBlock)
 }
@@ -451,4 +436,87 @@ func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Bloc
 		dirty = append(dirty, common.BytesToAddress(key))
 	}
 	return dirty, nil
+}
+
+// getStartAndEndBlock returns start and end block based on the given startNum and endNum.
+func (api *PrivateDebugAPI) getStartAndEndBlock(startNum uint64, endNum *uint64) (*types.Block, *types.Block, error) {
+	var startBlock, endBlock *types.Block
+
+	startBlock = api.cn.blockchain.GetBlockByNumber(startNum)
+	if startBlock == nil {
+		return nil, nil, fmt.Errorf("start block number %d not found", startNum)
+	}
+
+	if endNum == nil {
+		endBlock = startBlock
+		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
+		if startBlock == nil {
+			return nil, nil, fmt.Errorf("block number %d has no parent", startNum)
+		}
+	} else {
+		endBlock = api.cn.blockchain.GetBlockByNumber(*endNum)
+		if endBlock == nil {
+			return nil, nil, fmt.Errorf("end block number %d not found", *endNum)
+		}
+	}
+
+	return startBlock, endBlock, nil
+}
+
+// GetModifiedStorageNodesByNumber returns all storage nodes of a contract account
+// that have been changed between the two blocks specified.
+//
+// With one parameter, returns the list of accounts modified in the specified block.
+func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(contractAddr common.Address, startNum uint64, endNum *uint64, returnDiffList *bool) ([]common.Address, error) {
+	startBlock, endBlock, err := api.getStartAndEndBlock(startNum, endNum)
+	if err != nil {
+		return nil, err
+	}
+	return api.getModifiedStorageNodes(contractAddr, startBlock, endBlock, returnDiffList)
+}
+
+func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, returnDiffList *bool) ([]common.Address, error) {
+	if startBlock.Number().Uint64() >= endBlock.Number().Uint64() {
+		return nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
+	}
+
+	startBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(startBlock, api.cn.blockchain.StateCache(), contractAddr)
+	if err != nil {
+		return nil, err
+	}
+	endBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(endBlock, api.cn.blockchain.StateCache(), contractAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	trieDB := api.cn.blockchain.StateCache().TrieDB()
+	oldTrie, err := statedb.NewSecureTrie(startBlockRoot, trieDB)
+	if err != nil {
+		return nil, err
+	}
+	newTrie, err := statedb.NewSecureTrie(endBlockRoot, trieDB)
+	if err != nil {
+		return nil, err
+	}
+
+	diff, _ := statedb.NewDifferenceIterator(oldTrie.NodeIterator([]byte{}), newTrie.NodeIterator([]byte{}))
+	iter := statedb.NewIterator(diff)
+
+	var dirty []common.Address
+	for iter.Next() {
+		key := newTrie.GetKey(iter.Key)
+		if key == nil {
+			return nil, fmt.Errorf("no preimage found for hash %x", iter.Key)
+		}
+		dirty = append(dirty, common.BytesToAddress(key))
+	}
+
+	for _, d := range dirty {
+		logger.Info("modified storage trie nodes", "nodeHash", d.Hash().String())
+	}
+	// Return the diff list to the console only if returnDiffList is specified
+	if returnDiffList != nil && *returnDiffList {
+		return dirty, nil
+	}
+	return nil, nil
 }
