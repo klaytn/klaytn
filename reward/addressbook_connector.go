@@ -19,6 +19,9 @@ package reward
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -26,8 +29,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
 	"github.com/klaytn/klaytn/params"
-	"math/big"
-	"strings"
 )
 
 // addressType defined in AddressBook
@@ -144,8 +145,8 @@ func (ac *addressBookConnector) parseAllAddresses(result []byte) (nodeIds []comm
 	// validate parsed node information
 	if len(nodeIds) != len(stakingAddrs) ||
 		len(nodeIds) != len(rewardAddrs) ||
-		isEmptyAddress(pocAddr) ||
-		isEmptyAddress(kirAddr) {
+		common.EmptyAddress(pocAddr) ||
+		common.EmptyAddress(kirAddr) {
 		err = errAddressBookIncomplete
 		return
 	}

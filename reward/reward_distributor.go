@@ -17,10 +17,11 @@
 package reward
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
-	"math/big"
 )
 
 var logger = log.NewModuleLogger(log.Reward)
@@ -35,10 +36,6 @@ type governanceHelper interface {
 	DeferredTxFee() bool
 	ProposerPolicy() uint64
 	StakingUpdateInterval() uint64
-}
-
-func isEmptyAddress(addr common.Address) bool {
-	return addr == common.Address{}
 }
 
 type RewardDistributor struct {
@@ -118,13 +115,13 @@ func (rd *RewardDistributor) distributeBlockReward(b BalanceAdder, header *types
 
 	// Proposer gets PoC incentive and KIR incentive, if there is no PoC/KIR address.
 	// PoC
-	if isEmptyAddress(pocAddr) {
+	if common.EmptyAddress(pocAddr) {
 		pocAddr = proposer
 	}
 	b.AddBalance(pocAddr, pocIncentive)
 
 	// KIR
-	if isEmptyAddress(kirAddr) {
+	if common.EmptyAddress(kirAddr) {
 		kirAddr = proposer
 	}
 	b.AddBalance(kirAddr, kirIncentive)
