@@ -572,13 +572,10 @@ func (bc *BlockChain) StartCollectingTrieStats(contractAddr common.Address) erro
 	return nil
 }
 
-// errFinishedCollecting is used to indicate that a collectChildrenStats call is finished.
-var errFinishedCollecting = errors.New("finished collecting stats")
-
 // collectChildrenStats wraps CollectChildrenStats, in order to send finish signal to resultCh.
 func collectChildrenStats(db state.Database, child common.Hash, resultCh chan<- statedb.NodeInfo) {
 	db.TrieDB().CollectChildrenStats(child, 2, resultCh)
-	resultCh <- statedb.NodeInfo{Err: errFinishedCollecting}
+	resultCh <- statedb.NodeInfo{Finished: true}
 }
 
 // collectTrieStats is the main function of collecting trie statistics.
@@ -604,7 +601,7 @@ func collectTrieStats(db state.Database, startNode common.Hash) {
 	for {
 		select {
 		case result := <-resultCh:
-			if result.Err == errFinishedCollecting {
+			if result.Finished {
 				numGoRoutines--
 				if numGoRoutines == 0 {
 					logger.Info("Finished collecting trie statistics", "elapsed", time.Since(begin),

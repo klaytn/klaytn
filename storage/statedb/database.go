@@ -1141,8 +1141,8 @@ func (db *Database) SaveTrieNodeCacheToFile(filePath string) error {
 
 // NodeInfo is a struct used for collecting trie statistics
 type NodeInfo struct {
-	Depth int // 0 if not a leaf node
-	Err   error
+	Depth    int  // 0 if not a leaf node
+	Finished bool // true if the uppermost call is finished
 }
 
 // CollectChildrenStats collects the depth of the trie recursively
@@ -1156,7 +1156,6 @@ func (db *Database) CollectChildrenStats(node common.Hash, depth int, resultCh c
 	if err != nil {
 		logger.Error("failed to retrieve the children nodes",
 			"node", node.String(), "err", err)
-		resultCh <- NodeInfo{Err: err}
 		return
 	}
 	// write the depth of the node only if the node is a leaf node, otherwise set 0
