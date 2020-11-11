@@ -297,6 +297,9 @@ type BlockChain interface {
 	StartWarmUp() error
 	StopWarmUp() error
 
+	// Collect state/storage trie statistics
+	StartCollectingTrieStats(contractAddr common.Address) error
+
 	// Save trie node cache to this
 	SaveTrieNodeCacheToDisk() error
 

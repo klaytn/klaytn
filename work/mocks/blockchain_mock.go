@@ -697,6 +697,20 @@ func (mr *MockBlockChainMockRecorder) SetUseGiniCoeff(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUseGiniCoeff", reflect.TypeOf((*MockBlockChain)(nil).SetUseGiniCoeff), arg0)
 }
 
+// StartCollectingTrieStats mocks base method
+func (m *MockBlockChain) StartCollectingTrieStats(arg0 common.Address) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartCollectingTrieStats", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartCollectingTrieStats indicates an expected call of StartCollectingTrieStats
+func (mr *MockBlockChainMockRecorder) StartCollectingTrieStats(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartCollectingTrieStats", reflect.TypeOf((*MockBlockChain)(nil).StartCollectingTrieStats), arg0)
+}
+
 // StartStateMigration mocks base method
 func (m *MockBlockChain) StartStateMigration(arg0 uint64, arg1 common.Hash) error {
 	m.ctrl.T.Helper()
