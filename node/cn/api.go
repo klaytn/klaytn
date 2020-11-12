@@ -409,10 +409,6 @@ func (api *PrivateDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, end
 }
 
 func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
-	if startBlock.Number().Uint64() >= endBlock.Number().Uint64() {
-		return nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
-	}
-
 	trieDB := api.cn.blockchain.StateCache().TrieDB()
 
 	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), trieDB)
@@ -460,6 +456,10 @@ func (api *PrivateDebugAPI) getStartAndEndBlock(startNum uint64, endNum *uint64)
 		}
 	}
 
+	if startBlock.Number().Uint64() >= endBlock.Number().Uint64() {
+		return nil, nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
+	}
+
 	return startBlock, endBlock, nil
 }
 
@@ -476,10 +476,6 @@ func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(contractAddr common.
 }
 
 func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, returnDiffList *bool) ([]common.Address, error) {
-	if startBlock.Number().Uint64() >= endBlock.Number().Uint64() {
-		return nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
-	}
-
 	startBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(startBlock, api.cn.blockchain.StateCache(), contractAddr)
 	if err != nil {
 		return nil, err
