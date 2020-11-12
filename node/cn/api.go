@@ -502,17 +502,15 @@ func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address,
 	logger.Info("Start collecting the modified storage nodes", "contractAddr", contractAddr.String(),
 		"startBlock", startBlock.NumberU64(), "endBlock", endBlock.NumberU64())
 	start := time.Now()
-	var dirty []common.Hash
+	numModifiedNodes := 0
 	for iter.Next() {
-		dirty = append(dirty, common.BytesToHash(iter.Key))
-	}
-	logger.Info("Finished collecting the modified storage nodes", "contractAddr", contractAddr.String(),
-		"startBlock", startBlock.NumberU64(), "endBlock", endBlock.NumberU64(), "numModifiedNodes", len(dirty), "elapsed", time.Since(start))
-	for _, d := range dirty {
+		numModifiedNodes++
 		if printDetail != nil && *printDetail {
-			logger.Info("modified storage trie nodes", "contractAddr", contractAddr.String(), "nodeHash", d.String())
+			logger.Info("modified storage trie nodes", "contractAddr", contractAddr.String(),
+				"nodeHash", common.BytesToHash(iter.Key).String())
 		}
 	}
-
-	return len(dirty), nil
+	logger.Info("Finished collecting the modified storage nodes", "contractAddr", contractAddr.String(),
+		"startBlock", startBlock.NumberU64(), "endBlock", endBlock.NumberU64(), "numModifiedNodes", numModifiedNodes, "elapsed", time.Since(start))
+	return numModifiedNodes, nil
 }
