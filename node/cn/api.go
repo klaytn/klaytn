@@ -29,6 +29,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -463,52 +464,55 @@ func (api *PrivateDebugAPI) getStartAndEndBlock(startNum uint64, endNum *uint64)
 	return startBlock, endBlock, nil
 }
 
-// GetModifiedStorageNodesByNumber returns all storage nodes of a contract account
+// GetModifiedStorageNodesByNumber returns the number of storage nodes of a contract account
 // that have been changed between the two blocks specified.
 //
-// With one parameter, returns the list of accounts modified in the specified block.
-func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(contractAddr common.Address, startNum uint64, endNum *uint64, returnDiffList *bool) ([]common.Hash, error) {
+// With the first two parameters, it returns the number of storage trie nodes modified in the specified block.
+func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(contractAddr common.Address, startNum uint64, endNum *uint64, printDetail *bool) (int, error) {
 	startBlock, endBlock, err := api.getStartAndEndBlock(startNum, endNum)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return api.getModifiedStorageNodes(contractAddr, startBlock, endBlock, returnDiffList)
+	return api.getModifiedStorageNodes(contractAddr, startBlock, endBlock, printDetail)
 }
 
-func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, returnDiffList *bool) ([]common.Hash, error) {
+func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, printDetail *bool) (int, error) {
 	startBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(startBlock, api.cn.blockchain.StateCache(), contractAddr)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	endBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(endBlock, api.cn.blockchain.StateCache(), contractAddr)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	trieDB := api.cn.blockchain.StateCache().TrieDB()
 	oldTrie, err := statedb.NewSecureTrie(startBlockRoot, trieDB)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	newTrie, err := statedb.NewSecureTrie(endBlockRoot, trieDB)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	diff, _ := statedb.NewDifferenceIterator(oldTrie.NodeIterator([]byte{}), newTrie.NodeIterator([]byte{}))
 	iter := statedb.NewIterator(diff)
 
+	logger.Info("Start collecting the modified storage nodes", "contractAddr", contractAddr.String(),
+		"startBlock", startBlock.NumberU64(), "endBlock", endBlock.NumberU64())
+	start := time.Now()
 	var dirty []common.Hash
 	for iter.Next() {
 		dirty = append(dirty, common.BytesToHash(iter.Key))
 	}
-
+	logger.Info("Finished collecting the modified storage nodes", "contractAddr", contractAddr.String(),
+		"startBlock", startBlock.NumberU64(), "endBlock", endBlock.NumberU64(), "numModifiedNodes", len(dirty), "elapsed", time.Since(start))
 	for _, d := range dirty {
-		logger.Info("modified storage trie nodes", "nodeHash", d.String())
+		if printDetail != nil && *printDetail {
+			logger.Info("modified storage trie nodes", "contractAddr", contractAddr.String(), "nodeHash", d.String())
+		}
 	}
-	// Return the diff list to the console only if returnDiffList is specified
-	if returnDiffList != nil && *returnDiffList {
-		return dirty, nil
-	}
-	return nil, nil
+
+	return len(dirty), nil
 }
