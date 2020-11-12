@@ -467,7 +467,7 @@ func (api *PrivateDebugAPI) getStartAndEndBlock(startNum uint64, endNum *uint64)
 // that have been changed between the two blocks specified.
 //
 // With one parameter, returns the list of accounts modified in the specified block.
-func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(contractAddr common.Address, startNum uint64, endNum *uint64, returnDiffList *bool) ([]common.Address, error) {
+func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(contractAddr common.Address, startNum uint64, endNum *uint64, returnDiffList *bool) ([]common.Hash, error) {
 	startBlock, endBlock, err := api.getStartAndEndBlock(startNum, endNum)
 	if err != nil {
 		return nil, err
@@ -475,7 +475,7 @@ func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(contractAddr common.
 	return api.getModifiedStorageNodes(contractAddr, startBlock, endBlock, returnDiffList)
 }
 
-func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, returnDiffList *bool) ([]common.Address, error) {
+func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, returnDiffList *bool) ([]common.Hash, error) {
 	startBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(startBlock, api.cn.blockchain.StateCache(), contractAddr)
 	if err != nil {
 		return nil, err
@@ -498,17 +498,13 @@ func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address,
 	diff, _ := statedb.NewDifferenceIterator(oldTrie.NodeIterator([]byte{}), newTrie.NodeIterator([]byte{}))
 	iter := statedb.NewIterator(diff)
 
-	var dirty []common.Address
+	var dirty []common.Hash
 	for iter.Next() {
-		key := newTrie.GetKey(iter.Key)
-		if key == nil {
-			return nil, fmt.Errorf("no preimage found for hash %x", iter.Key)
-		}
-		dirty = append(dirty, common.BytesToAddress(key))
+		dirty = append(dirty, common.BytesToHash(iter.Key))
 	}
 
 	for _, d := range dirty {
-		logger.Info("modified storage trie nodes", "nodeHash", d.Hash().String())
+		logger.Info("modified storage trie nodes", "nodeHash", d.String())
 	}
 	// Return the diff list to the console only if returnDiffList is specified
 	if returnDiffList != nil && *returnDiffList {
