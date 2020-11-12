@@ -597,7 +597,7 @@ func (bc *BlockChain) ExportN(w io.Writer, first uint64, last uint64) error {
 		if err := block.EncodeRLP(w); err != nil {
 			return err
 		}
-		if time.Since(reported) >= statsReportLimit {
+		if time.Since(reported) >= log.StatsReportLimit {
 			logger.Info("Exporting blocks", "exported", block.NumberU64()-first, "elapsed", common.PrettyDuration(time.Since(start)))
 			reported = time.Now()
 		}
@@ -1738,10 +1738,6 @@ type insertStats struct {
 	lastIndex                  int
 	startTime                  mclock.AbsTime
 }
-
-// statsReportLimit is the time limit during import and export after which we always print
-// always print out progress. This avoids the user wondering what's going on.
-const statsReportLimit = 8 * time.Second
 
 // report prints statistics if some number of blocks have been processed
 // or more than a few seconds have passed since the last message.
