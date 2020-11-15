@@ -588,6 +588,12 @@ web3._extend({
 			inputFormatter:[null, null],
 		}),
 		new web3._extend.Method({
+			name: 'getModifiedStorageNodesByNumber',
+			call: 'debug_getModifiedStorageNodesByNumber',
+			params: 4,
+			inputFormatter: [null, null, null, null],
+		}),
+		new web3._extend.Method({
 			name: 'setVMLogTarget',
 			call: 'debug_setVMLogTarget',
 			params: 1
