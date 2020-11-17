@@ -1113,6 +1113,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 
 			// numTotalPeers means the number of peers satisfying the protocol requirement.
 			idlePeers, numTotalPeers := idlePeers()
+			pendCount := pending()
 
 			for _, peer := range idlePeers {
 				// Short circuit if throttling activated
@@ -1121,7 +1122,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 					break
 				}
 				// Short circuit if there is no more available task.
-				if pending() == 0 {
+				if pendCount = pending(); pendCount == 0 {
 					break
 				}
 				// Reserve a chunk of fetches for a peer. A nil can mean either that
@@ -1158,7 +1159,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 			}
 			// Make sure that we have peers available for fetching. If all peers have been tried
 			// and all failed throw an error
-			if !progressed && !throttled && !running && len(idlePeers) == numTotalPeers && pending() > 0 {
+			if !progressed && !throttled && !running && len(idlePeers) == numTotalPeers && pendCount > 0 {
 				return errPeersUnavailable
 			}
 		}
