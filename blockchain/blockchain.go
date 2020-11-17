@@ -859,6 +859,13 @@ const (
 	SideStatTy
 )
 
+// WriteResult includes the block write status and related statistics.
+type WriteResult struct {
+	Status         WriteStatus
+	TotalWriteTime time.Duration
+	TrieWriteTime  time.Duration
+}
+
 // Rollback is designed to remove a chain of links from the database that aren't
 // certain enough to be valid.
 func (bc *BlockChain) Rollback(chain []common.Hash) {
@@ -1177,8 +1184,8 @@ func isReorganizationRequired(localTd, externTd *big.Int, currentBlock, block *t
 // WriteBlockWithState writes the block and all associated state to the database.
 // If BlockChain.parallelDBWrite is true, it calls writeBlockWithStateParallel.
 // If not, it calls writeBlockWithStateSerial.
-func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteStatus, error) {
-	var status WriteStatus
+func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteResult, error) {
+	var status WriteResult
 	var err error
 	if bc.parallelDBWrite {
 		status, err = bc.writeBlockWithStateParallel(block, receipts, stateDB)
@@ -1212,7 +1219,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 }
 
 // writeBlockWithStateSerial writes the block and all associated state to the database in serial manner.
-func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (WriteStatus, error) {
+func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (WriteResult, error) {
 	start := time.Now()
 	bc.wg.Add(1)
 	defer bc.wg.Done()
@@ -1223,14 +1230,14 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 	if ptd == nil {
 		logger.Error("unknown ancestor (writeBlockWithStateSerial)", "num", block.NumberU64(),
 			"hash", block.Hash(), "parentHash", block.ParentHash())
-		return NonStatTy, consensus.ErrUnknownAncestor
+		return WriteResult{Status: NonStatTy}, consensus.ErrUnknownAncestor
 	}
 	// Make sure no inconsistent state is leaked during insertion
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
 	if !bc.ShouldTryInserting(block) {
-		return NonStatTy, ErrKnownBlock
+		return WriteResult{Status: NonStatTy}, ErrKnownBlock
 	}
 
 	currentBlock := bc.CurrentBlock()
@@ -1243,9 +1250,11 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 	// Write other block data.
 	bc.writeBlock(block)
 
+	trieWriteStart := time.Now()
 	if err := bc.writeStateTrie(block, state); err != nil {
-		return NonStatTy, err
+		return WriteResult{Status: NonStatTy}, err
 	}
+	trieWriteTime := time.Since(trieWriteStart)
 
 	bc.writeReceipts(block.Hash(), block.NumberU64(), receipts)
 
@@ -1261,12 +1270,12 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != currentBlock.Hash() {
 			if err := bc.reorg(currentBlock, block); err != nil {
-				return NonStatTy, err
+				return WriteResult{Status: NonStatTy}, err
 			}
 		}
 		// Write the positional metadata for transaction/receipt lookups and preimages
 		if err := bc.writeTxLookupEntries(block); err != nil {
-			return NonStatTy, err
+			return WriteResult{Status: NonStatTy}, err
 		}
 		bc.db.WritePreimages(block.NumberU64(), state.Preimages())
 		status = CanonStatTy
@@ -1274,11 +1283,11 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 		status = SideStatTy
 	}
 
-	return bc.finalizeWriteBlockWithState(block, status, start)
+	return bc.finalizeWriteBlockWithState(block, status, start, trieWriteTime)
 }
 
 // writeBlockWithStateParallel writes the block and all associated state to the database using goroutines.
-func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (WriteStatus, error) {
+func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (WriteResult, error) {
 	start := time.Now()
 	bc.wg.Add(1)
 	defer bc.wg.Done()
@@ -1289,14 +1298,14 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	if ptd == nil {
 		logger.Error("unknown ancestor (writeBlockWithStateParallel)", "num", block.NumberU64(),
 			"hash", block.Hash(), "parentHash", block.ParentHash())
-		return NonStatTy, consensus.ErrUnknownAncestor
+		return WriteResult{Status: NonStatTy}, consensus.ErrUnknownAncestor
 	}
 	// Make sure no inconsistent state is leaked during insertion
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
 	if !bc.ShouldTryInserting(block) {
-		return NonStatTy, ErrKnownBlock
+		return WriteResult{Status: NonStatTy}, ErrKnownBlock
 	}
 
 	currentBlock := bc.CurrentBlock()
@@ -1319,11 +1328,14 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 		bc.writeBlock(block)
 	}()
 
+	var trieWriteTime time.Duration
+	trieWriteStart := time.Now()
 	go func() {
 		defer parallelDBWriteWG.Done()
 		if err := bc.writeStateTrie(block, state); err != nil {
 			parallelDBWriteErrCh <- err
 		}
+		trieWriteTime = time.Since(trieWriteStart)
 	}()
 
 	go func() {
@@ -1335,7 +1347,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	parallelDBWriteWG.Wait()
 	select {
 	case err := <-parallelDBWriteErrCh:
-		return NonStatTy, err
+		return WriteResult{Status: NonStatTy}, err
 	default:
 	}
 
@@ -1351,7 +1363,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != currentBlock.Hash() {
 			if err := bc.reorg(currentBlock, block); err != nil {
-				return NonStatTy, err
+				return WriteResult{Status: NonStatTy}, err
 			}
 		}
 
@@ -1380,15 +1392,15 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 
 	select {
 	case err := <-parallelDBWriteErrCh:
-		return NonStatTy, err
+		return WriteResult{Status: NonStatTy}, err
 	default:
 	}
 
-	return bc.finalizeWriteBlockWithState(block, status, start)
+	return bc.finalizeWriteBlockWithState(block, status, start, trieWriteTime)
 }
 
 // finalizeWriteBlockWithState updates metrics and inserts block when status is CanonStatTy.
-func (bc *BlockChain) finalizeWriteBlockWithState(block *types.Block, status WriteStatus, startTime time.Time) (WriteStatus, error) {
+func (bc *BlockChain) finalizeWriteBlockWithState(block *types.Block, status WriteStatus, startTime time.Time, trieWriteTime time.Duration) (WriteResult, error) {
 	// Set new head.
 	if status == CanonStatTy {
 		bc.insert(block)
@@ -1397,11 +1409,7 @@ func (bc *BlockChain) finalizeWriteBlockWithState(block *types.Block, status Wri
 		blockTxCountsCounter.Inc(int64(block.Transactions().Len()))
 	}
 	bc.futureBlocks.Remove(block.Hash())
-
-	elapsed := time.Since(startTime)
-	logger.Debug("WriteBlockWithState", "blockNum", block.Number(), "parentHash", block.Header().ParentHash, "txs", len(block.Transactions()), "elapsed", elapsed)
-
-	return status, nil
+	return WriteResult{status, time.Since(startTime), trieWriteTime}, nil
 }
 
 func (bc *BlockChain) writeTxLookupEntries(block *types.Block) error {
@@ -1580,32 +1588,23 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
-		// for debug
-		start := time.Now()
-
 		// Process block using the parent state as reference point.
-		receipts, logs, usedGas, internalTxTraces, err := bc.processor.Process(block, stateDB, bc.vmConfig)
+		receipts, logs, usedGas, internalTxTraces, procStats, err := bc.processor.Process(block, stateDB, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
-		}
-
-		if block.Transactions().Len() > 0 {
-
-			elapsed := time.Since(start)
-			logger.Debug("blockchain.blockchain processing block", "elapsed", elapsed, "txs", block.Transactions().Len())
 		}
 
 		// Validate the state using the default validator
 		err = bc.Validator().ValidateState(block, parent, stateDB, receipts, usedGas)
 		if err != nil {
-
 			bc.reportBlock(block, receipts, err)
 			return i, events, coalescedLogs, err
 		}
+		afterValidate := time.Now()
 
-		// Write the block to the chain and get the status.
-		status, err := bc.WriteBlockWithState(block, receipts, stateDB)
+		// Write the block to the chain and get the writeResult.
+		writeResult, err := bc.WriteBlockWithState(block, receipts, stateDB)
 		if err != nil {
 			if err == ErrKnownBlock {
 				logger.Debug("Tried to insert already known block", "num", block.NumberU64(), "hash", block.Hash().String())
@@ -1614,10 +1613,15 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
-		switch status {
+		switch writeResult.Status {
 		case CanonStatTy:
-			logger.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(),
-				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)))
+			processTxsTime := procStats.AfterApplyTxs.Sub(procStats.BeforeApplyTxs)
+			processFinalizeTime := procStats.AfterFinalize.Sub(procStats.AfterApplyTxs)
+			validateTime := afterValidate.Sub(procStats.AfterFinalize)
+			logger.Info("Inserted a new block", "number", block.Number(), "hash", block.Hash(),
+				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)),
+				"processTxs", processTxsTime, "processFinalize", processFinalizeTime, "validateState", validateTime,
+				"totalWriteTime", writeResult.TotalWriteTime, "trieWriteTime", writeResult.TrieWriteTime)
 
 			coalescedLogs = append(coalescedLogs, logs...)
 			events = append(events, ChainEvent{

@@ -378,7 +378,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				log.BlockHash = block.Hash()
 			}
 
-			stat, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
+			result, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
 			work.stateMu.Unlock()
 			if err != nil {
 				if err == blockchain.ErrKnownBlock {
@@ -393,7 +393,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			//         Later we may be able to refine below code.
 
 			// check if canon block and write transactions
-			if stat == blockchain.CanonStatTy {
+			if result.Status == blockchain.CanonStatTy {
 				// implicit by posting ChainHeadEvent
 				mustCommitNewWork = false
 			}
@@ -408,7 +408,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			work.stateMu.RUnlock()
 
 			events = append(events, blockchain.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
-			if stat == blockchain.CanonStatTy {
+			if result.Status == blockchain.CanonStatTy {
 				events = append(events, blockchain.ChainHeadEvent{Block: block})
 			}
 

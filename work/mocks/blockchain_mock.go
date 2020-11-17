@@ -988,10 +988,10 @@ func (mr *MockBlockChainMockRecorder) Validator() *gomock.Call {
 }
 
 // WriteBlockWithState mocks base method
-func (m *MockBlockChain) WriteBlockWithState(arg0 *types.Block, arg1 []*types.Receipt, arg2 *state.StateDB) (blockchain.WriteStatus, error) {
+func (m *MockBlockChain) WriteBlockWithState(arg0 *types.Block, arg1 []*types.Receipt, arg2 *state.StateDB) (blockchain.WriteResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteBlockWithState", arg0, arg1, arg2)
-	ret0, _ := ret[0].(blockchain.WriteStatus)
+	ret0, _ := ret[0].(blockchain.WriteResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

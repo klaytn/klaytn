@@ -21,6 +21,8 @@
 package blockchain
 
 import (
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -38,6 +40,13 @@ type StateProcessor struct {
 	engine consensus.Engine    // Consensus engine used for block rewards
 }
 
+// ProcessStats includes the time statistics regarding StateProcessor.Process.
+type ProcessStats struct {
+	BeforeApplyTxs time.Time
+	AfterApplyTxs  time.Time
+	AfterFinalize  time.Time
+}
+
 // NewStateProcessor initialises a new StateProcessor.
 func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consensus.Engine) *StateProcessor {
 	return &StateProcessor{
@@ -53,13 +62,14 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
-func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, []*vm.InternalTxTrace, error) {
+func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, []*vm.InternalTxTrace, ProcessStats, error) {
 	var (
 		receipts         types.Receipts
 		usedGas          = new(uint64)
 		header           = block.Header()
 		allLogs          []*types.Log
 		internalTxTraces []*vm.InternalTxTrace
+		processStats     ProcessStats
 	)
 
 	// Enable the opcode computation cost limit
@@ -68,22 +78,25 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// Extract author from the header
 	author, _ := p.bc.Engine().Author(header) // Ignore error, we're past header validation
 
+	processStats.BeforeApplyTxs = time.Now()
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
 		receipt, _, internalTxTrace, err := p.bc.ApplyTransaction(p.config, &author, statedb, header, tx, usedGas, &cfg)
 		if err != nil {
-			return nil, nil, 0, nil, err
+			return nil, nil, 0, nil, processStats, err
 		}
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 		internalTxTraces = append(internalTxTraces, internalTxTrace)
 	}
+	processStats.AfterApplyTxs = time.Now()
 
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	if _, err := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), receipts); err != nil {
-		return nil, nil, 0, nil, err
+		return nil, nil, 0, nil, processStats, err
 	}
+	processStats.AfterFinalize = time.Now()
 
-	return receipts, allLogs, *usedGas, internalTxTraces, nil
+	return receipts, allLogs, *usedGas, internalTxTraces, processStats, nil
 }

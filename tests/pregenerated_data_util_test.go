@@ -297,12 +297,12 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	}
 
 	// Write the block with state.
-	status, err := bcdata.bc.WriteBlockWithState(b, receipts, stateDB)
+	result, err := bcdata.bc.WriteBlockWithState(b, receipts, stateDB)
 	if err != nil {
 		return fmt.Errorf("err = %s", err)
 	}
 
-	if status == blockchain.SideStatTy {
+	if result.Status == blockchain.SideStatTy {
 		return fmt.Errorf("forked block is generated! number: %v, hash: %v, txs: %v", b.Number(), b.Hash(), len(b.Transactions()))
 	}
 
