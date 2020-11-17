@@ -111,21 +111,21 @@ var bindTests = []struct {
 		`,
 		`
 			"fmt"
-	
+
 			"github.com/klaytn/klaytn/common"
 		`,
 		`if b, err := NewInputChecker(common.Address{}, nil); b == nil || err != nil {
 			 t.Fatalf("binding (%v) nil or error (%v) not nil", b, nil)
 		 } else if false { // Don't run, just compile and test types
 			 var err error
-	
+
 			 err = b.NoInput(nil)
 			 err = b.NamedInput(nil, "")
 			 err = b.AnonInput(nil, "")
 			 err = b.NamedInputs(nil, "", "")
 			 err = b.AnonInputs(nil, "", "")
 			 err = b.MixedInputs(nil, "", "")
-	
+
 			 fmt.Println(err)
 		 }`,
 	},
@@ -145,7 +145,7 @@ var bindTests = []struct {
 		`,
 		`
 			"fmt"
-	
+
 			"github.com/klaytn/klaytn/common"
 		`,
 		`if b, err := NewOutputChecker(common.Address{}, nil); b == nil || err != nil {
@@ -153,7 +153,7 @@ var bindTests = []struct {
 		 } else if false { // Don't run, just compile and test types
 			 var str1, str2 string
 			 var err error
-	
+
 			 err              = b.NoOutput(nil)
 			 str1, err        = b.NamedOutput(nil)
 			 str1, err        = b.AnonOutput(nil)
@@ -161,7 +161,7 @@ var bindTests = []struct {
 			 str1, str2, err  = b.CollidingOutputs(nil)
 			 str1, str2, err  = b.AnonOutputs(nil)
 			 str1, str2, err  = b.MixedOutputs(nil)
-	
+
 			 fmt.Println(str1, str2, res.Str1, res.Str2, err)
 		 }`,
 	},
@@ -181,7 +181,7 @@ var bindTests = []struct {
 			"fmt"
 			"math/big"
 			"reflect"
-	
+
 			"github.com/klaytn/klaytn/common"
 		`,
 		`if e, err := NewEventChecker(common.Address{}, nil); e == nil || err != nil {
@@ -196,33 +196,33 @@ var bindTests = []struct {
 			 )
 			 _, err = e.FilterEmpty(nil)
 			 _, err = e.FilterIndexed(nil, []common.Address{}, []*big.Int{})
-	
+
 			 mit, err := e.FilterMixed(nil, []common.Address{})
-	
+
 			 res = mit.Next()  // Make sure the iterator has a Next method
 			 err = mit.Error() // Make sure the iterator has an Error method
 			 err = mit.Close() // Make sure the iterator has a Close method
-	
+
 			 fmt.Println(mit.Event.Raw.BlockHash) // Make sure the raw log is contained within the results
 			 fmt.Println(mit.Event.Num)           // Make sure the unpacked non-indexed fields are present
 			 fmt.Println(mit.Event.Addr)          // Make sure the reconstructed indexed fields are present
-	
+
 			 dit, err := e.FilterDynamic(nil, []string{}, [][]byte{})
-	
+
 			 str  = dit.Event.Str    // Make sure non-indexed strings retain their type
 			 dat  = dit.Event.Dat    // Make sure non-indexed bytes retain their type
 			 hash = dit.Event.IdxStr // Make sure indexed strings turn into hashes
 			 hash = dit.Event.IdxDat // Make sure indexed bytes turn into hashes
-	
+
 			 sink := make(chan *EventCheckerMixed)
 			 sub, err := e.WatchMixed(nil, sink, []common.Address{})
 			 defer sub.Unsubscribe()
-	
+
 			 event := <-sink
 			 fmt.Println(event.Raw.BlockHash) // Make sure the raw log is contained within the results
 			 fmt.Println(event.Num)           // Make sure the unpacked non-indexed fields are present
 			 fmt.Println(event.Addr)          // Make sure the reconstructed indexed fields are present
-	
+
 			 fmt.Println(res, str, dat, hash, err)
 		 }
 		 // Run a tiny reflection test to ensure disallowed methods don't appear
@@ -237,11 +237,11 @@ var bindTests = []struct {
 			contract Interactor {
 				string public deployString;
 				string public transactString;
-	
+
 				function Interactor(string str) {
 				  deployString = str;
 				}
-	
+
 				function transact(string str) {
 				  transactString = str;
 				}
@@ -251,7 +251,7 @@ var bindTests = []struct {
 		`[{"constant":true,"inputs":[],"name":"transactString","outputs":[{"name":"","type":"string"}],"type":"function"},{"constant":true,"inputs":[],"name":"deployString","outputs":[{"name":"","type":"string"}],"type":"function"},{"constant":false,"inputs":[{"name":"str","type":"string"}],"name":"transact","outputs":[],"type":"function"},{"inputs":[{"name":"str","type":"string"}],"type":"constructor"}]`,
 		`
 			"math/big"
-	
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/blockchain"
@@ -262,7 +262,7 @@ var bindTests = []struct {
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-	
+
 			// Deploy an interaction tester contract
 			_, _, interactor, err := DeployInteractor(auth, sim, "Deploy string")
 			if err != nil {
@@ -275,7 +275,7 @@ var bindTests = []struct {
 				t.Fatalf("Failed to transact with interactor contract: %v", err)
 			}
 			sim.Commit()
-	
+
 			// Read deployString and transactString
 			if str, err := interactor.DeployString(nil); err != nil {
 				t.Fatalf("Failed to retrieve deploy string: %v", err)
@@ -303,7 +303,7 @@ var bindTests = []struct {
 		`[{"constant":true,"inputs":[],"name":"getter","outputs":[{"name":"","type":"string"},{"name":"","type":"int256"},{"name":"","type":"bytes32"}],"type":"function"}]`,
 		`
 			"math/big"
-	
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/blockchain"
@@ -314,14 +314,14 @@ var bindTests = []struct {
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-	
+
 			// Deploy a tuple tester contract and execute a structured call on it
 			_, _, getter, err := DeployGetter(auth, sim)
 			if err != nil {
 				t.Fatalf("Failed to deploy getter contract: %v", err)
 			}
 			sim.Commit()
-	
+
 			if str, num, _, err := getter.Getter(nil); err != nil {
 				t.Fatalf("Failed to call anonymous field retriever: %v", err)
 			} else if str != "Hi" || num.Cmp(big.NewInt(1)) != 0 {
@@ -343,7 +343,7 @@ var bindTests = []struct {
 		`[{"constant":true,"inputs":[],"name":"tuple","outputs":[{"name":"a","type":"string"},{"name":"b","type":"int256"},{"name":"c","type":"bytes32"}],"type":"function"}]`,
 		`
 			"math/big"
-	
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/blockchain"
@@ -354,14 +354,14 @@ var bindTests = []struct {
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-	
+
 			// Deploy a tuple tester contract and execute a structured call on it
 			_, _, tupler, err := DeployTupler(auth, sim)
 			if err != nil {
 				t.Fatalf("Failed to deploy tupler contract: %v", err)
 			}
 			sim.Commit()
-	
+
 			if res, err := tupler.Tuple(nil); err != nil {
 				t.Fatalf("Failed to call structure retriever: %v", err)
 			} else if res.A != "Hi" || res.B.Cmp(big.NewInt(1)) != 0 {
@@ -394,7 +394,7 @@ var bindTests = []struct {
 		`
 			"math/big"
 			"reflect"
-	
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/common"
@@ -406,14 +406,14 @@ var bindTests = []struct {
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-	
+
 			// Deploy a slice tester contract and execute a n array call on it
 			_, _, slicer, err := DeploySlicer(auth, sim)
 			if err != nil {
 					t.Fatalf("Failed to deploy slicer contract: %v", err)
 			}
 			sim.Commit()
-	
+
 			if out, err := slicer.EchoAddresses(nil, []common.Address{auth.From, common.Address{}}); err != nil {
 					t.Fatalf("Failed to call slice echoer: %v", err)
 			} else if !reflect.DeepEqual(out, []common.Address{auth.From, common.Address{}}) {
@@ -427,7 +427,7 @@ var bindTests = []struct {
 		`
 			contract Defaulter {
 				address public caller;
-	
+
 				function() {
 					caller = msg.sender;
 				}
@@ -437,7 +437,7 @@ var bindTests = []struct {
 		`[{"constant":true,"inputs":[],"name":"caller","outputs":[{"name":"","type":"address"}],"type":"function"}]`,
 		`
 			"math/big"
-	
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/blockchain"
@@ -448,7 +448,7 @@ var bindTests = []struct {
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-	
+
 			// Deploy a default method invoker contract 
 			_, _, defaulter, err := DeployDefaulter(auth, sim)
 			if err != nil {
@@ -488,7 +488,7 @@ var bindTests = []struct {
 		`
 			// Create a simulator and wrap a non-deployed contract
 			sim := backends.NewSimulatedBackend(nil)
-	
+
 			nonexistent, err := NewNonExistent(common.Address{}, sim)
 			if err != nil {
 				t.Fatalf("Failed to access non-existent contract: %v", err)
@@ -507,7 +507,7 @@ var bindTests = []struct {
 		`
 			contract FunkyGasPattern {
 				string public field;
-	
+
 				function SetField(string value) {
 					// This check will screw gas estimation! Good, good!
 					if (msg.gas < 100000) {
@@ -521,7 +521,7 @@ var bindTests = []struct {
 		`[{"constant":false,"inputs":[{"name":"value","type":"string"}],"name":"SetField","outputs":[],"type":"function"},{"constant":true,"inputs":[],"name":"field","outputs":[{"name":"","type":"string"}],"type":"function"}]`,
 		`
 			"math/big"
-	
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/blockchain"
@@ -532,20 +532,20 @@ var bindTests = []struct {
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-	
+
 			// Deploy a funky gas pattern contract
 			_, _, limiter, err := DeployFunkyGasPattern(auth, sim)
 			if err != nil {
 				t.Fatalf("Failed to deploy funky contract: %v", err)
 			}
 			sim.Commit()
-	
+
 			// Set the field with automatic estimation and check that it succeeds
 			if _, err := limiter.SetField(auth, "automatic"); err != nil {
 				t.Fatalf("Failed to call automatically gased transaction: %v", err)
 			}
 			sim.Commit()
-	
+
 			if field, _ := limiter.Field(nil); field != "automatic" {
 				t.Fatalf("Field mismatch: have %v, want %v", field, "automatic")
 			}
@@ -564,7 +564,7 @@ var bindTests = []struct {
 		`[{"constant":true,"inputs":[],"name":"callFrom","outputs":[{"name":"","type":"address"}],"payable":false,"type":"function"}]`,
 		`
 			"math/big"
-	
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/common"
@@ -576,20 +576,20 @@ var bindTests = []struct {
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-	
+
 			// Deploy a sender tester contract and execute a structured call on it
 			_, _, callfrom, err := DeployCallFrom(auth, sim)
 			if err != nil {
 				t.Fatalf("Failed to deploy sender contract: %v", err)
 			}
 			sim.Commit()
-	
+
 			if res, err := callfrom.CallFrom(nil); err != nil {
 				t.Errorf("Failed to call constant function: %v", err)
 			} else if res != (common.Address{}) {
 				t.Errorf("Invalid address returned, want: %x, got: %x", (common.Address{}), res)
 			}
-	
+
 			for _, addr := range []common.Address{common.Address{}, common.Address{1}, common.Address{2}} {
 				if res, err := callfrom.CallFrom(&bind.CallOpts{From: addr}); err != nil {
 					t.Fatalf("Failed to call constant function: %v", err)
@@ -634,7 +634,7 @@ var bindTests = []struct {
 		`
 			"fmt"
 			"math/big"
-	
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/blockchain"
@@ -645,14 +645,14 @@ var bindTests = []struct {
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-	
+
 			// Deploy a underscorer tester contract and execute a structured call on it
 			_, _, underscorer, err := DeployUnderscorer(auth, sim)
 			if err != nil {
 				t.Fatalf("Failed to deploy underscorer contract: %v", err)
 			}
 			sim.Commit()
-	
+
 			// Verify that underscored return values correctly parse into structs
 			if res, err := underscorer.UnderscoredOutput(nil); err != nil {
 				t.Errorf("Failed to call constant function: %v", err)
@@ -661,7 +661,7 @@ var bindTests = []struct {
 			}
 			// Verify that underscored and non-underscored name collisions force tuple outputs
 			var a, b *big.Int
-	
+
 			a, b, _ = underscorer.LowerLowerCollision(nil)
 			a, b, _ = underscorer.LowerUpperCollision(nil)
 			a, b, _ = underscorer.UpperLowerCollision(nil)
@@ -669,7 +669,7 @@ var bindTests = []struct {
 			a, b, _ = underscorer.PurelyUnderscoredOutput(nil)
 			a, b, _ = underscorer.AllPurelyUnderscoredOutput(nil)
 			a, _ = underscorer.UnderScoredFunc(nil)
-	
+
 			fmt.Println(a, b, err)
 		`,
 	},
@@ -687,7 +687,7 @@ var bindTests = []struct {
 				function raiseSimpleEvent(address addr, bytes32 id, bool flag, uint value) {
 					SimpleEvent(addr, id, flag, value);
 				}
-	
+
 				event NodataEvent (
 					uint   indexed Number,
 					int16  indexed Short,
@@ -696,7 +696,7 @@ var bindTests = []struct {
 				function raiseNodataEvent(uint number, int16 short, uint32 long) {
 					NodataEvent(number, short, long);
 				}
-	
+
 				event DynamicEvent (
 					string indexed IndexedString,
 					bytes  indexed IndexedBytes,
@@ -713,7 +713,7 @@ var bindTests = []struct {
 		`
 			"math/big"
 			"time"
-	
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/common"
@@ -725,14 +725,14 @@ var bindTests = []struct {
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-	
+
 			// Deploy an eventer contract
 			_, _, eventer, err := DeployEventer(auth, sim)
 			if err != nil {
 				t.Fatalf("Failed to deploy eventer contract: %v", err)
 			}
 			sim.Commit()
-	
+
 			// Inject a few events into the contract, gradually more in each block
 			for i := 1; i <= 3; i++ {
 				for j := 1; j <= i; j++ {
@@ -748,7 +748,7 @@ var bindTests = []struct {
 				t.Fatalf("failed to filter for simple events: %v", err)
 			}
 			defer sit.Close()
-	
+
 			sit.Next()
 			if sit.Event.Value.Uint64() != 11 || !sit.Event.Flag {
 				t.Errorf("simple log content mismatch: have %v, want {11, true}", sit.Event)
@@ -765,7 +765,7 @@ var bindTests = []struct {
 			if sit.Event.Value.Uint64() != 33 || !sit.Event.Flag {
 				t.Errorf("simple log content mismatch: have %v, want {33, true}", sit.Event)
 			}
-	
+
 			if sit.Next() {
 				t.Errorf("unexpected simple event found: %+v", sit.Event)
 			}
@@ -777,13 +777,13 @@ var bindTests = []struct {
 				t.Fatalf("failed to raise nodata event: %v", err)
 			}
 			sim.Commit()
-	
+
 			nit, err := eventer.FilterNodataEvent(nil, []*big.Int{big.NewInt(314)}, []int16{140, 141, 142}, []uint32{271})
 			if err != nil {
 				t.Fatalf("failed to filter for nodata events: %v", err)
 			}
 			defer nit.Close()
-	
+
 			if !nit.Next() {
 				t.Fatalf("nodata log not found: %v", nit.Error())
 			}
@@ -801,13 +801,13 @@ var bindTests = []struct {
 				t.Fatalf("failed to raise dynamic event: %v", err)
 			}
 			sim.Commit()
-	
+
 			dit, err := eventer.FilterDynamicEvent(nil, []string{"Hi", "Hello", "Bye"}, [][]byte{[]byte("World")})
 			if err != nil {
 				t.Fatalf("failed to filter for dynamic events: %v", err)
 			}
 			defer dit.Close()
-	
+
 			if !dit.Next() {
 				t.Fatalf("dynamic log not found: %v", dit.Error())
 			}
@@ -830,7 +830,7 @@ var bindTests = []struct {
 				t.Fatalf("failed to raise subscribed simple event: %v", err)
 			}
 			sim.Commit()
-	
+
 			select {
 			case event := <-ch:
 				if event.Value.Uint64() != 255 {
@@ -841,12 +841,12 @@ var bindTests = []struct {
 			}
 			// Unsubscribe from the event and make sure we're not delivered more
 			sub.Unsubscribe()
-	
+
 			if _, err := eventer.RaiseSimpleEvent(auth, common.Address{254}, [32]byte{254}, true, big.NewInt(254)); err != nil {
 				t.Fatalf("failed to raise subscribed simple event: %v", err)
 			}
 			sim.Commit()
-	
+
 			select {
 			case event := <-ch:
 				t.Fatalf("unsubscribed simple event arrived: %v", event)
@@ -871,7 +871,7 @@ var bindTests = []struct {
 		`[{"constant":false,"inputs":[{"name":"arr","type":"uint64[3][4][5]"}],"name":"storeDeepUintArray","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"retrieveDeepArray","outputs":[{"name":"","type":"uint64[3][4][5]"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"","type":"uint256"},{"name":"","type":"uint256"},{"name":"","type":"uint256"}],"name":"deepUint64Array","outputs":[{"name":"","type":"uint64"}],"payable":false,"stateMutability":"view","type":"function"}]`,
 		`
 			"math/big"
-	
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/blockchain"
@@ -882,16 +882,16 @@ var bindTests = []struct {
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-	
+
 			//deploy the test contract
 			_, _, testContract, err := DeployDeeplyNestedArray(auth, sim)
 			if err != nil {
 				t.Fatalf("Failed to deploy test contract: %v", err)
 			}
-	
+
 			// Finish deploy.
 			sim.Commit()
-	
+
 			//Create coordinate-filled array, for testing purposes.
 			testArr := [5][4][3]uint64{}
 			for i := 0; i < 5; i++ {
@@ -904,16 +904,16 @@ var bindTests = []struct {
 					}
 				}
 			}
-	
+
 			if _, err := testContract.StoreDeepUintArray(&bind.TransactOpts{
 				From: auth.From,
 				Signer: auth.Signer,
 			}, testArr); err != nil {
 				t.Fatalf("Failed to store nested array in test contract: %v", err)
 			}
-	
+
 			sim.Commit()
-	
+
 			retrievedArr, err := testContract.RetrieveDeepArray(&bind.CallOpts{
 				From: auth.From,
 				Pending: false,
@@ -921,7 +921,7 @@ var bindTests = []struct {
 			if err != nil {
 				t.Fatalf("Failed to retrieve nested array from test contract: %v", err)
 			}
-	
+
 			//quick check to see if contents were copied
 			// (See accounts/abi/unpack_test.go for more extensive testing)
 			if retrievedArr[4][3][2] != testArr[4][3][2] {
