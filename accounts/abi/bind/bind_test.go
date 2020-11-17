@@ -263,17 +263,20 @@ var bindTests = []struct {
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
 	
-			// Deploy an interaction tester contract and call a transaction on it
+			// Deploy an interaction tester contract
 			_, _, interactor, err := DeployInteractor(auth, sim, "Deploy string")
 			if err != nil {
 				t.Fatalf("Failed to deploy interactor contract: %v", err)
 			}
+			sim.Commit()
+
+			// Publish Transact trasaction on a deployed contract
 			if _, err := interactor.Transact(auth, "Transact string"); err != nil {
 				t.Fatalf("Failed to transact with interactor contract: %v", err)
 			}
-			// Commit all pending transactions in the simulator and check the contract state
 			sim.Commit()
 	
+			// Read deployString and transactString
 			if str, err := interactor.DeployString(nil); err != nil {
 				t.Fatalf("Failed to retrieve deploy string: %v", err)
 			} else if str != "Deploy string" {
@@ -446,16 +449,18 @@ var bindTests = []struct {
 			auth := bind.NewKeyedTransactor(key)
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
 	
-			// Deploy a default method invoker contract and execute its default method
+			// Deploy a default method invoker contract 
 			_, _, defaulter, err := DeployDefaulter(auth, sim)
 			if err != nil {
 				t.Fatalf("Failed to deploy defaulter contract: %v", err)
 			}
+			sim.Commit()
+
+			// Publish Transfer trasaction on deployed contract
 			if _, err := (&DefaulterRaw{defaulter}).Transfer(auth); err != nil {
 				t.Fatalf("Failed to invoke default method: %v", err)
 			}
-			sim.Commit()
-	
+			sim.Commit()	
 			if caller, err := defaulter.Caller(nil); err != nil {
 				t.Fatalf("Failed to call address retriever: %v", err)
 			} else if (caller != auth.From) {
