@@ -583,13 +583,13 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 		case packet := <-d.headerCh:
 			// Discard anything not from the origin peer
 			if packet.PeerId() != p.id {
-				logger.Debug("Received headers from incorrect peer", "peer", packet.PeerId())
+				logger.Warn("Received headers from incorrect peer", "peer", packet.PeerId())
 				break
 			}
 			// Make sure the peer actually gave something valid
 			headers := packet.(*headerPack).headers
 			if len(headers) != 1 {
-				p.logger.Debug("Multiple headers for single request", "headers", len(headers))
+				p.logger.Warn("Multiple headers for single request", "headers", len(headers))
 				return nil, errBadPeer
 			}
 			head := headers[0]
@@ -658,7 +658,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 		case packet := <-d.headerCh:
 			// Discard anything not from the origin peer
 			if packet.PeerId() != p.id {
-				logger.Debug("Received headers from incorrect peer", "peer", packet.PeerId())
+				logger.Warn("Received headers from incorrect peer", "peer", packet.PeerId())
 				break
 			}
 			// Make sure the peer actually gave something valid
@@ -735,13 +735,13 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 			case packer := <-d.headerCh:
 				// Discard anything not from the origin peer
 				if packer.PeerId() != p.id {
-					logger.Debug("Received headers from incorrect peer", "peer", packer.PeerId())
+					logger.Warn("Received headers from incorrect peer", "peer", packer.PeerId())
 					break
 				}
 				// Make sure the peer actually gave something valid
 				headers := packer.(*headerPack).headers
 				if len(headers) != 1 {
-					p.logger.Debug("Multiple headers for single request", "headers", len(headers))
+					p.logger.Warn("Multiple headers for single request", "headers", len(headers))
 					return 0, errBadPeer
 				}
 				arrived = true
@@ -824,7 +824,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, pivot uint64) 
 		case packet := <-d.headerCh:
 			// Make sure the active peer is giving us the skeleton headers
 			if packet.PeerId() != p.id {
-				logger.Debug("Received skeleton from incorrect peer", "peer", packet.PeerId())
+				logger.Warn("Received skeleton from incorrect peer", "peer", packet.PeerId())
 				break
 			}
 			headerReqTimer.UpdateSince(request)
