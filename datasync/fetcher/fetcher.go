@@ -22,13 +22,14 @@ package fetcher
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/log"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math/rand"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/prque"
+	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/log"
 )
 
 const (
@@ -317,7 +318,7 @@ func (f *Fetcher) loop() {
 			// If too high up the chain or phase, continue later
 			number := op.block.NumberU64()
 			if number > height+1 {
-				f.queue.Push(op, -float32(op.block.NumberU64()))
+				f.queue.Push(op, -int64(op.block.NumberU64()))
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(op.block.Hash(), true)
 				}
@@ -337,7 +338,7 @@ func (f *Fetcher) loop() {
 				logger.Debug("Importing propagated block", "peer", peer, "number", number, "hash", hash)
 			default:
 				logger.Warn("Failed to import propagated block as the channel is full", "peer", peer, "number", number, "hash", hash)
-				f.queue.Push(op, -float32(number))
+				f.queue.Push(op, -int64(number))
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(hash, true)
 				}
@@ -656,7 +657,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		}
 		f.queues[peer] = count
 		f.queued[hash] = op
-		f.queue.Push(op, -float32(block.NumberU64()))
+		f.queue.Push(op, -int64(block.NumberU64()))
 		if f.queueChangeHook != nil {
 			f.queueChangeHook(op.block.Hash(), true)
 		}

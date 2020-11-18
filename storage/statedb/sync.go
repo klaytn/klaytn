@@ -27,9 +27,8 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/common"
-
+	"github.com/klaytn/klaytn/common/prque"
 	"github.com/klaytn/klaytn/storage/database"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a
@@ -295,7 +294,7 @@ func (s *TrieSync) schedule(req *request) {
 	s.retrievedByDepth[req.depth]++
 
 	// Schedule the request for future retrieval
-	s.queue.Push(req.hash, float32(req.depth))
+	s.queue.Push(req.hash, int64(req.depth))
 	s.requests[req.hash] = req
 }
 
