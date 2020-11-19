@@ -590,7 +590,6 @@ func (q *queue) CancelReceipts(request *fetchRequest) {
 
 // Cancel aborts a fetch request, returning all pending hashes to the task queue.
 func (q *queue) cancel(request *fetchRequest, taskQueue *prque.Prque, pendPool map[string]*fetchRequest) {
-
 	if request.From > 0 {
 		taskQueue.Push(request.From, -float32(request.From))
 	}
