@@ -1,3 +1,4 @@
+// Modifications Copyright 2020 The klaytn Authors
 // Copyright 2018 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -13,7 +14,21 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
+//
+// This file is derived from eth/tracers/internal/tracers/bigram_tracer.js (2020/11/18).
+// Modified and improved for the klaytn development.
+//
+// bigramTracer returns bigram(a pair of consecutive written units such as letters, syllables, or words.) counting number
+// Example:
+//  > debug.traceTransaction( "0x214e597e35da083692f5386141e69f47e973b2c56e7a8073b1ea08fd7571e9de", {tracer: "bigramTracer"})
+//  {
+//     ADD-SWAP1: 2,
+//     CALLDATALOAD-PUSH1: 1,
+//     CALLDATALOAD-SWAP1: 1,
+//     CALLDATASIZE-LT: 1,
+//     CALLDATASIZE-SUB: 1,
+//     CALLVALUE-DUP1: 1,
+//  }
 {
     // hist is the counters of opcode bigrams
     hist: {},
