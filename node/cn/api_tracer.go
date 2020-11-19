@@ -322,7 +322,9 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 				database.TrieDB().Reference(root, common.Hash{})
 			}
 			// Dereference all past tries we ourselves are done working with
-			database.TrieDB().Dereference(proot)
+			if proot != (common.Hash{}) {
+				database.TrieDB().Dereference(proot)
+			}
 			proot = root
 		}
 	}()

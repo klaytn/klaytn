@@ -677,6 +677,12 @@ func (db *Database) Dereference(root common.Hash) {
 	db.gcLock.Lock()
 	defer db.gcLock.Unlock()
 
+	// Sanity check to ensure that the meta-root is not removed
+	if root == (common.Hash{}) {
+		logger.Error("Attempted to dereference the trie cache meta root")
+		return
+	}
+
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
