@@ -551,33 +551,44 @@ func (f *Fetcher) loop() {
 			bodyFilterInMeter.Mark(int64(len(task.transactions)))
 
 			blocks := []*types.Block{}
-			for i := 0; i < len(task.transactions); i++ {
-				// Match up a body to any possible completion request
-				matched := false
+			// abort early if there's nothing explicitly requested
+			if len(f.completing) > 0 {
+				for i := 0; i < len(task.transactions); i++ {
+					// Match up a body to any possible completion request
+					var (
+						matched = false
+						txnHash common.Hash // calculated lazily and reused
+					)
 
-				for hash, announce := range f.completing {
-					if f.queued[hash] == nil {
-						txnHash := types.DeriveSha(types.Transactions(task.transactions[i]))
+					for hash, announce := range f.completing {
+						if f.queued[hash] != nil || announce.origin != task.peer {
+							continue
+						}
 
-						if txnHash == announce.header.TxHash && announce.origin == task.peer {
-							// Mark the body matched, reassemble if still unknown
-							matched = true
+						if common.EmptyHash(txnHash) {
+							txnHash = types.DeriveSha(types.Transactions(task.transactions[i]))
+						}
 
-							if f.getBlock(hash) == nil {
-								block := types.NewBlockWithHeader(announce.header).WithBody(task.transactions[i])
-								block.ReceivedAt = task.time
+						if txnHash != announce.header.TxHash {
+							continue
+						}
 
-								blocks = append(blocks, block)
-							} else {
-								f.forgetHash(hash)
-							}
+						// Mark the body matched, reassemble if still unknown
+						matched = true
+						if f.getBlock(hash) == nil {
+							block := types.NewBlockWithHeader(announce.header).WithBody(task.transactions[i])
+							block.ReceivedAt = task.time
+
+							blocks = append(blocks, block)
+						} else {
+							f.forgetHash(hash)
 						}
 					}
-				}
-				if matched {
-					task.transactions = append(task.transactions[:i], task.transactions[i+1:]...)
-					i--
-					continue
+					if matched {
+						task.transactions = append(task.transactions[:i], task.transactions[i+1:]...)
+						i--
+						continue
+					}
 				}
 			}
 
