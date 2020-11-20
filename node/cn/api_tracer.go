@@ -556,13 +556,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block *types.Block, config *StdTraceConfig) ([]string, error) {
 	// If we're tracing a single transaction, make sure it's present
 	if config != nil && !common.EmptyHash(config.TxHash) {
-		var exists bool
-		for _, tx := range block.Transactions() {
-			if exists = (tx.Hash() == config.TxHash); exists {
-				break
-			}
-		}
-		if !exists {
+		if !containsTx(block, config.TxHash) {
 			return nil, fmt.Errorf("transaction %#x not found in block", config.TxHash)
 		}
 	}
