@@ -18,6 +18,7 @@ package cn
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -74,11 +75,20 @@ func TestPrivateDebugAPI_TraceChain(t *testing.T) {
 		mockCtrl.Finish()
 	}
 	{
-		endBlockNumber := rpc.BlockNumber(123)
 		mockCtrl, api, _, _, _ := createCNMocks(t)
 		sub, err := api.TraceChain(context.Background(), rpc.PendingBlockNumber, endBlockNumber, nil)
 		assert.Nil(t, sub)
 		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
+		mockCtrl.Finish()
+	}
+	{
+		startBlockNumber := rpc.BlockNumber(130)
+		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
+		mockBlockChain.EXPECT().GetBlockByNumber(uint64(startBlockNumber)).Return(newBlock(130))
+		mockBlockChain.EXPECT().GetBlockByNumber(uint64(endBlockNumber)).Return(newBlock(123))
+		sub, err := api.TraceChain(context.Background(), startBlockNumber, endBlockNumber, nil)
+		assert.Nil(t, sub)
+		assert.Equal(t, fmt.Errorf("end block #%d needs to come after start block #%d", endBlockNumber, startBlockNumber), err)
 		mockCtrl.Finish()
 	}
 }
