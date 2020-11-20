@@ -40,4 +40,6 @@ var (
 
 	stateInMeter   = metrics.NewRegisteredMeter("klay/downloader/states/in", nil)
 	stateDropMeter = metrics.NewRegisteredMeter("klay/downloader/states/drop", nil)
+
+	throttleCounter = metrics.NewRegisteredCounter("klay/downloader/throttle", nil)
 )
