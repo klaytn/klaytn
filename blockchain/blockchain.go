@@ -1746,6 +1746,10 @@ type insertStats struct {
 // report prints statistics if some number of blocks have been processed
 // or more than a few seconds have passed since the last message.
 func (st *insertStats) report(chain []*types.Block, index int, cache common.StorageSize) {
+	// report will leave a log only if inserting two or more blocks at once
+	if len(chain) <= 1 {
+		return
+	}
 	// Fetch the timings for the batch
 	var (
 		now     = mclock.Now()
