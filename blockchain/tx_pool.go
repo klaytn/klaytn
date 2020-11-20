@@ -32,11 +32,11 @@ import (
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/prque"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/rcrowley/go-metrics"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 const (
@@ -1212,7 +1212,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		for addr, list := range pool.pending {
 			// Only evict transactions from high rollers
 			if !pool.locals.contains(addr) && uint64(list.Len()) > pool.config.ExecSlotsAccount {
-				spammers.Push(addr, float32(list.Len()))
+				spammers.Push(addr, int64(list.Len()))
 			}
 		}
 		// Gradually drop transactions from offenders

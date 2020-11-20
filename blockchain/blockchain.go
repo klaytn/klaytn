@@ -40,6 +40,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/mclock"
+	"github.com/klaytn/klaytn/common/prque"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
@@ -49,7 +50,6 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/rcrowley/go-metrics"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 var (
@@ -1119,7 +1119,7 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 		for {
 			select {
 			case block := <-bc.chBlock:
-				bc.triegc.Push(block.root, -float32(block.blockNum))
+				bc.triegc.Push(block.root, -int64(block.blockNum))
 				logger.Trace("Push GC block", "blkNum", block.blockNum, "hash", block.root.String())
 
 				blkNum := block.blockNum
