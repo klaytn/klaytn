@@ -317,7 +317,12 @@ func (f *ChainDataFetcher) setCheckpoint() {
 	if err != nil {
 		logger.Crit("ReadCheckpoint is failed", "err", err)
 	}
+
+	if checkpoint == 0 {
+		checkpoint = f.blockchain.CurrentHeader().Number.Int64()
+	}
 	f.checkpoint = checkpoint
+	logger.Info("Chaindatafetcher checkpoint is set", "checkpoint", f.checkpoint)
 }
 
 func (f *ChainDataFetcher) setComponent(component interface{}) {

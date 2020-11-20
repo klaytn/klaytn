@@ -252,3 +252,29 @@ func TestChainDataFetcher_handleRequestByType_WhileRetrying(t *testing.T) {
 	wg.Wait()
 	assert.Equal(t, int64(2), fetcher.checkpoint)
 }
+
+func TestChainDataFetcher_setComponents(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	bc, db := mocks.NewMockBlockChain(ctrl), mocks.NewMockCheckpointDB(ctrl)
+
+	fetcher := &ChainDataFetcher{
+		blockchain:   bc,
+		checkpointDB: db,
+	}
+
+	// if checkpoint no exist
+	testBlockNumber := new(big.Int).SetInt64(5)
+	db.EXPECT().ReadCheckpoint().Return(int64(0), nil).Times(1)
+	testHeader := &types.Header{Number: testBlockNumber}
+	bc.EXPECT().CurrentHeader().Return(testHeader).Times(1)
+	fetcher.setCheckpoint()
+	assert.Equal(t, testBlockNumber.Int64(), fetcher.checkpoint)
+
+	// if checkpoint exist
+	testCheckpoint := int64(10)
+	db.EXPECT().ReadCheckpoint().Return(int64(10), nil).Times(1)
+	fetcher.setCheckpoint()
+	assert.Equal(t, testCheckpoint, fetcher.checkpoint)
+}
