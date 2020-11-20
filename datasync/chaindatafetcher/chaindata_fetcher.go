@@ -322,7 +322,7 @@ func (f *ChainDataFetcher) setCheckpoint() {
 		checkpoint = f.blockchain.CurrentHeader().Number.Int64()
 	}
 	f.checkpoint = checkpoint
-	logger.Info("Chaindatafetcher checkpoint is set", "checkpoint", f.checkpoint)
+	logger.Info("Chaindatafetcher initial checkpoint is set", "checkpoint", f.checkpoint)
 }
 
 func (f *ChainDataFetcher) setComponent(component interface{}) {
