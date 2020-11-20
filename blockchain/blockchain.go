@@ -1563,6 +1563,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			}
 
 		case err != nil:
+			bc.futureBlocks.Remove(block.Hash())
 			bc.reportBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}

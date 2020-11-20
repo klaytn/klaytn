@@ -658,6 +658,17 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 	return dumps, nil
 }
 
+// containsTx reports whether the transaction with a certain hash
+// is contained within the specified block.
+func containsTx(block *types.Block, hash common.Hash) bool {
+	for _, tx := range block.Transactions() {
+		if tx.Hash() == hash {
+			return true
+		}
+	}
+	return false
+}
+
 // computeStateDB retrieves the state database associated with a certain block.
 // A number of blocks are attempted to be reexecuted to generate the desired state.
 func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*state.StateDB, error) {
