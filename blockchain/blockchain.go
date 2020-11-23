@@ -1728,7 +1728,7 @@ func (bc *BlockChain) replaceCurrentBlock(latestBlock *types.Block) {
 	blockTxCountsCounter.Inc(int64(latestBlock.Transactions().Len()))
 	bc.stateCache.TrieDB().UpdateMetricNodes()
 
-	logger.Info("Replaced current block",
+	logger.Info("Replaced the current block",
 		"blkNum", latestBlock.NumberU64(), "blkHash", latestBlock.Hash().String())
 }
 
