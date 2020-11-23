@@ -1714,7 +1714,7 @@ func (bc *BlockChain) replaceCurrentBlock(latestBlock *types.Block) {
 	// Don't update current block if the latest block is not newer than current block.
 	currentBlock := bc.CurrentBlock()
 	if currentBlock.NumberU64() >= latestBlock.NumberU64() {
-		logger.Warn("ignore an old block", "currentBlockNumber", currentBlock.NumberU64(), "oldBlockNumber",
+		logger.Debug("ignore an old block", "currentBlockNumber", currentBlock.NumberU64(), "oldBlockNumber",
 			latestBlock.NumberU64())
 		return
 	}
@@ -1728,8 +1728,8 @@ func (bc *BlockChain) replaceCurrentBlock(latestBlock *types.Block) {
 	blockTxCountsCounter.Inc(int64(latestBlock.Transactions().Len()))
 	bc.stateCache.TrieDB().UpdateMetricNodes()
 
-	logger.Info("inserted a new block", "prevBlockNumber", currentBlock.NumberU64(), "blockNumber",
-		latestBlock.NumberU64(), "hash", latestBlock.Hash().String(), "stateRoot", latestBlock.Root().String())
+	logger.Info("Replaced the current block",
+		"blkNum", latestBlock.NumberU64(), "blkHash", latestBlock.Hash().String())
 }
 
 // insertStats tracks and reports on block insertion.
