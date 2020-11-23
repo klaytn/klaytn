@@ -324,9 +324,7 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	r["committee"] = cInfo.committee
 	r["proposer"] = cInfo.proposer
 	r["round"] = cInfo.round
-	//if cInfo.round > 0 {
 	r["originProposer"] = cInfo.originProposer
-	//}
 	r["transactions"] = rpcTransactions
 
 	return r
