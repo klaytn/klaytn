@@ -216,7 +216,7 @@ func (api *APIExtension) GetCommitteeSize(number *rpc.BlockNumber) (int, error) 
 
 type ConsensusInfo struct {
 	proposer       common.Address
-	originProposal common.Address
+	originProposer common.Address
 	committee      []common.Address
 	round          byte
 }
@@ -291,7 +291,7 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 
 	cInfo := ConsensusInfo{
 		proposer:       proposer,
-		originProposal: originProposer,
+		originProposer: originProposer,
 		committee:      committeeAddrs,
 		round:          round,
 	}
@@ -325,7 +325,7 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	r["proposer"] = cInfo.proposer
 	r["round"] = cInfo.round
 	//if cInfo.round > 0 {
-	r["originProposer"] = cInfo.originProposal
+	r["originProposer"] = cInfo.originProposer
 	//}
 	r["transactions"] = rpcTransactions
 
