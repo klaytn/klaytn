@@ -70,6 +70,8 @@ const tmplSourceGo = `
 package {{.Package}}
 
 import (
+	"math/big"
+	"strings"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
@@ -77,6 +79,18 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/event"
+)
+
+// Reference imports to suppress errors if they are not otherwise used.
+var (
+	_ = big.NewInt
+	_ = strings.NewReader
+	_ = klaytn.NotFound
+	_ = abi.U256
+	_ = bind.Bind
+	_ = common.Big1
+	_ = types.BloomLookup
+	_ = event.NewSubscription
 )
 
 {{range $contract := .Contracts}}
