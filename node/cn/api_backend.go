@@ -259,3 +259,7 @@ func (b *CNAPIBackend) IsParallelDBWrite() bool {
 func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 	return b.cn.BlockChain().IsSenderTxHashIndexingEnabled()
 }
+
+func (b *CNAPIBackend) RPCGasCap() *big.Int {
+	return b.cn.config.RPCGasCap
+}

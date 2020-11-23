@@ -388,6 +388,20 @@ func (mr *MockBackendMockRecorder) ProtocolVersion() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProtocolVersion", reflect.TypeOf((*MockBackend)(nil).ProtocolVersion))
 }
 
+// RPCGasCap mocks base method
+func (m *MockBackend) RPCGasCap() *big.Int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RPCGasCap")
+	ret0, _ := ret[0].(*big.Int)
+	return ret0
+}
+
+// RPCGasCap indicates an expected call of RPCGasCap
+func (mr *MockBackendMockRecorder) RPCGasCap() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RPCGasCap", reflect.TypeOf((*MockBackend)(nil).RPCGasCap))
+}
+
 // SendTx mocks base method
 func (m *MockBackend) SendTx(arg0 context.Context, arg1 *types.Transaction) error {
 	m.ctrl.T.Helper()
