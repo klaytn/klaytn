@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -336,8 +337,6 @@ var unpackTests = []unpackTest{
 	},
 }
 
-// TODO-Klaytn-FailedTest Enable this test later
-/*
 func TestUnpack(t *testing.T) {
 	for i, test := range unpackTests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
@@ -363,7 +362,6 @@ func TestUnpack(t *testing.T) {
 		})
 	}
 }
-*/
 
 type methodMultiOutput struct {
 	Int    *big.Int
