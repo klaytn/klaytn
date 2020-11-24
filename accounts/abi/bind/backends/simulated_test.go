@@ -49,7 +49,7 @@ func TestSimulatedBackend(t *testing.T) {
 		t.Fatal("transaction should not be pending")
 	}
 	if err != klaytn.NotFound {
-		t.Fatalf("err should be `ethereum.NotFound` but received %v", err)
+		t.Fatalf("err should be `klaytn.NotFound` but received %v", err)
 	}
 
 	// generate a transaction and confirm you can retrieve it
@@ -73,7 +73,7 @@ func TestSimulatedBackend(t *testing.T) {
 	}
 
 	sim.Commit()
-	tx, isPending, err = sim.TransactionByHash(context.Background(), txHash)
+	_, isPending, err = sim.TransactionByHash(context.Background(), txHash)
 	if err != nil {
 		t.Fatalf("error getting transaction with hash: %v", txHash.String())
 	}
