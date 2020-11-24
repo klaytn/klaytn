@@ -465,14 +465,24 @@ func (pm *ProtocolManager) handle(p Peer) error {
 }
 
 func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
-	for msg := range msgCh {
-		if err := pm.handleMsg(p, addr, msg); err != nil {
-			p.GetP2PPeer().Log().Error("ProtocolManager failed to handle message", "msg", msg, "err", err)
-			errCh <- err
-			return
+	_, fakeF := pm.fetcher.(*fetcher.FakeFetcher)
+	_, fakeD := pm.downloader.(*downloader.FakeDownloader)
+	if fakeD || fakeF {
+		p.GetP2PPeer().Log().Warn("ProtocolManager does not handle p2p messages", "fakeFetcher", fakeF, "fakeDownloader", fakeD)
+		for msg := range msgCh {
+			msg.Discard()
 		}
-		msg.Discard()
+	} else {
+		for msg := range msgCh {
+			if err := pm.handleMsg(p, addr, msg); err != nil {
+				p.GetP2PPeer().Log().Error("ProtocolManager failed to handle message", "msg", msg, "err", err)
+				errCh <- err
+				return
+			}
+			msg.Discard()
+		}
 	}
+
 	p.GetP2PPeer().Log().Info("ProtocolManager.processMsg closed", "PeerName", p.GetP2PPeer().Name())
 }
 
