@@ -674,6 +674,12 @@ func (db *Database) reference(child common.Hash, parent common.Hash) {
 
 // Dereference removes an existing reference from a root node.
 func (db *Database) Dereference(root common.Hash) {
+	// Sanity check to ensure that the meta-root is not removed
+	if common.EmptyHash(root) {
+		logger.Error("Attempted to dereference the trie cache meta root")
+		return
+	}
+
 	db.gcLock.Lock()
 	defer db.gcLock.Unlock()
 

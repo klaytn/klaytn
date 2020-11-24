@@ -325,7 +325,9 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 				database.TrieDB().Reference(root, common.Hash{})
 			}
 			// Dereference all past tries we ourselves are done working with
-			database.TrieDB().Dereference(proot)
+			if !common.EmptyHash(proot) {
+				database.TrieDB().Dereference(proot)
+			}
 			proot = root
 		}
 	}()
@@ -556,7 +558,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 // be one filename per transaction traced.
 func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block *types.Block, config *StdTraceConfig) ([]string, error) {
 	// If we're tracing a single transaction, make sure it's present
-	if config != nil && config.TxHash != (common.Hash{}) {
+	if config != nil && !common.EmptyHash(config.TxHash) {
 		if !containsTx(block, config.TxHash) {
 			return nil, fmt.Errorf("transaction %#x not found in block", config.TxHash)
 		}
@@ -614,7 +616,7 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 		)
 
 		// If the transaction needs tracing, swap out the configs
-		if tx.Hash() == txHash || txHash == (common.Hash{}) {
+		if tx.Hash() == txHash || common.EmptyHash(txHash) {
 			// Generate a unique temporary file to dump it into
 			prefix := fmt.Sprintf("block_%#x-%d-%#x-", block.Hash().Bytes()[:4], i, tx.Hash().Bytes()[:4])
 
@@ -721,7 +723,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 			return nil, fmt.Errorf("state reset after block %d failed: %v", block.NumberU64(), err)
 		}
 		database.TrieDB().Reference(root, common.Hash{})
-		if proot != (common.Hash{}) {
+		if !common.EmptyHash(proot) {
 			database.TrieDB().Dereference(proot)
 		}
 		proot = root
