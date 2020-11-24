@@ -21,15 +21,16 @@
 package vm
 
 import (
+	"math/big"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
-	"math/big"
-	"sync/atomic"
-	"time"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -200,6 +201,11 @@ func (evm *EVM) Cancel(reason int32) {
 			break
 		}
 	}
+}
+
+// Cancelled returns true if Cancel has been called
+func (evm *EVM) Cancelled() bool {
+	return atomic.LoadInt32(&evm.abort) == 1
 }
 
 // Call executes the contract associated with the addr with the given input as
