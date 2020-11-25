@@ -23,12 +23,13 @@ package bind
 import (
 	"bytes"
 	"fmt"
-	"github.com/klaytn/klaytn/accounts/abi"
 	"go/format"
 	"regexp"
 	"strings"
 	"text/template"
 	"unicode"
+
+	"github.com/klaytn/klaytn/accounts/abi"
 )
 
 // Lang is a target programming language selector to generate bindings for.
@@ -315,7 +316,7 @@ var bindTopicType = map[Lang]func(kind abi.Type) string{
 	LangJava: bindTopicTypeJava,
 }
 
-// bindTypeGo converts a Solidity topic type to a Go one. It is almost the same
+// bindTopicTypeGo converts a Solidity topic type to a Go one. It is almost the same
 // funcionality as for simple types, but dynamic types get converted to hashes.
 func bindTopicTypeGo(kind abi.Type) string {
 	bound := bindTypeGo(kind)
@@ -325,7 +326,7 @@ func bindTopicTypeGo(kind abi.Type) string {
 	return bound
 }
 
-// bindTypeGo converts a Solidity topic type to a Java one. It is almost the same
+// bindTopicTypeJava converts a Solidity topic type to a Java one. It is almost the same
 // funcionality as for simple types, but dynamic types get converted to hashes.
 func bindTopicTypeJava(kind abi.Type) string {
 	bound := bindTypeJava(kind)
