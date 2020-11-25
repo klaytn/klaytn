@@ -22,8 +22,9 @@ package abi
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/crypto"
 	"strings"
+
+	"github.com/klaytn/klaytn/crypto"
 )
 
 // Method represents a callable given a `Name` and whether the method is a constant.
@@ -32,7 +33,7 @@ import (
 // For example a `Balance()` method only needs to retrieve something
 // from the storage and therefore requires no Tx to be send to the
 // network. A method such as `Transact` does require a Tx and thus will
-// be flagged `true`.
+// be flagged `false`.
 // Input specifies the required input parameters for this gives method.
 type Method struct {
 	Name    string
