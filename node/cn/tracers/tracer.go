@@ -24,16 +24,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"sync/atomic"
+	"time"
+	"unsafe"
+
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"gopkg.in/olebedev/go-duktape.v3"
-	"math/big"
-	"sync/atomic"
-	"time"
-	"unsafe"
 )
 
 // bigIntegerJS is the minified version of https://github.com/peterolson/BigInteger.js.
@@ -104,7 +105,7 @@ func (mw *memoryWrapper) slice(begin, end int64) []byte {
 		logger.Warn("Tracer accessed out of bound memory", "available", mw.memory.Len(), "offset", begin, "size", end-begin)
 		return nil
 	}
-	return mw.memory.Get(begin, end-begin)
+	return mw.memory.GetCopy(begin, end-begin)
 }
 
 // getUint returns the 32 bytes at the specified address interpreted as a uint.
