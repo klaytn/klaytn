@@ -23,15 +23,16 @@ package downloader
 import (
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/log"
 	"math"
 	"math/big"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/log"
 )
 
 const (
@@ -530,22 +531,20 @@ func (ps *peerSet) idlePeers(minProtocol, maxProtocol int, idleCheck func(*peerC
 	defer ps.lock.RUnlock()
 
 	idlePeers, numTotalPeers := make([]*peerConnection, 0, len(ps.peers)), 0
+	tps := make([]float64, 0, len(ps.peers))
 	for _, p := range ps.peers {
 		if p.version >= minProtocol && p.version <= maxProtocol {
 			if idleCheck(p) {
 				idlePeers = append(idlePeers, p)
+				tps = append(tps, throughput(p))
 			}
 			numTotalPeers++
 		}
 	}
-	for i := 0; i < len(idlePeers); i++ {
-		for j := i + 1; j < len(idlePeers); j++ {
-			if throughput(idlePeers[i]) < throughput(idlePeers[j]) {
-				idlePeers[i], idlePeers[j] = idlePeers[j], idlePeers[i]
-			}
-		}
-	}
-	return idlePeers, numTotalPeers
+	// sort peers in the descending order of throughput
+	sortPeers := &peerThroughputSort{idlePeers, tps}
+	sort.Sort(sortPeers)
+	return sortPeers.p, numTotalPeers
 }
 
 // medianRTT returns the median RTT of the peerset, considering only the tuning
@@ -577,4 +576,25 @@ func (ps *peerSet) medianRTT() time.Duration {
 		median = rttMaxEstimate
 	}
 	return median
+}
+
+// peerThroughputSort implements the Sort interface, and allows for
+// sorting a set of peers by their throughput
+// The sorted data is with the _highest_ throughput first
+type peerThroughputSort struct {
+	p  []*peerConnection
+	tp []float64
+}
+
+func (ps *peerThroughputSort) Len() int {
+	return len(ps.p)
+}
+
+func (ps *peerThroughputSort) Less(i, j int) bool {
+	return ps.tp[i] > ps.tp[j]
+}
+
+func (ps *peerThroughputSort) Swap(i, j int) {
+	ps.p[i], ps.p[j] = ps.p[j], ps.p[i]
+	ps.tp[i], ps.tp[j] = ps.tp[j], ps.tp[i]
 }
