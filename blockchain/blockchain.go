@@ -1620,8 +1620,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			validateTime := afterValidate.Sub(procStats.AfterFinalize)
 			logger.Info("Inserted a new block", "number", block.Number(), "hash", block.Hash(),
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", common.PrettyDuration(time.Since(bstart)),
-				"processTxs", processTxsTime, "processFinalize", processFinalizeTime, "validateState", validateTime,
-				"totalWriteTime", writeResult.TotalWriteTime, "trieWriteTime", writeResult.TrieWriteTime)
+				"processTxs", processTxsTime, "finalize", processFinalizeTime, "validateState", validateTime,
+				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
 
 			coalescedLogs = append(coalescedLogs, logs...)
 			events = append(events, ChainEvent{
