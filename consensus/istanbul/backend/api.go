@@ -216,7 +216,7 @@ func (api *APIExtension) GetCommitteeSize(number *rpc.BlockNumber) (int, error) 
 
 type ConsensusInfo struct {
 	proposer       common.Address
-	originProposer common.Address
+	originProposer common.Address // the proposal of 0 round at the same block number
 	committee      []common.Address
 	round          byte
 }
