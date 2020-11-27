@@ -650,28 +650,24 @@ func TestUnpackEvent(t *testing.T) {
 	}
 
 	type ReceivedEvent struct {
-		Address common.Address
-		Amount  *big.Int
-		Memo    []byte
+		Sender common.Address
+		Amount *big.Int
+		Memo   []byte
 	}
 	var ev ReceivedEvent
 
 	err = abi.Unpack(&ev, "received", data)
 	if err != nil {
 		t.Error(err)
-	} else {
-		t.Logf("len(data): %d; received event: %+v", len(data), ev)
 	}
 
 	type ReceivedAddrEvent struct {
-		Address common.Address
+		Sender common.Address
 	}
 	var receivedAddrEv ReceivedAddrEvent
 	err = abi.Unpack(&receivedAddrEv, "receivedAddr", data)
 	if err != nil {
 		t.Error(err)
-	} else {
-		t.Logf("len(data): %d; received event: %+v", len(data), receivedAddrEv)
 	}
 }
 

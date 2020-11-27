@@ -195,7 +195,7 @@ func (t Type) pack(v reflect.Value) ([]byte, error) {
 		offset := 0
 		offsetReq := isDynamicType(*t.Elem)
 		if offsetReq {
-			offset = getDynamicTypeOffset(*t.Elem) * v.Len()
+			offset = getTypeSize(*t.Elem) * v.Len()
 		}
 		var tail []byte
 		for i := 0; i < v.Len(); i++ {
@@ -234,16 +234,21 @@ func isDynamicType(t Type) bool {
 	return t.T == StringTy || t.T == BytesTy || t.T == SliceTy || (t.T == ArrayTy && isDynamicType(*t.Elem))
 }
 
-// getDynamicTypeOffset returns the offset for the type.
-// See `isDynamicType` to know which types are considered dynamic.
-// If the type t is an array and element type is not a dynamic type, then we consider it a static type and
-// return 32 * size of array since length prefix is not required.
-// If t is a dynamic type or element type(for slices and arrays) is dynamic, then we simply return 32 as offset.
-func getDynamicTypeOffset(t Type) int {
-	// if it is an array and there are no dynamic types
-	// then the array is static type
+// getTypeSize returns the size that this type needs to occupy.
+// We distinguish static and dynamic types. Static types are encoded in-place
+// and dynamic types are encoded at a separately allocated location after the
+// current block.
+// So for a static variable, the size returned represents the size that the
+// variable actually occupies.
+// For a dynamic variable, the returned size is fixed 32 bytes, which is used
+// to store the location reference for actual value storage.
+func getTypeSize(t Type) int {
 	if t.T == ArrayTy && !isDynamicType(*t.Elem) {
-		return 32 * t.Size
+		// Recursively calculate type size if it is a nested array
+		if t.Elem.T == ArrayTy {
+			return t.Size * getTypeSize(*t.Elem)
+		}
+		return t.Size * 32
 	}
 	return 32
 }
