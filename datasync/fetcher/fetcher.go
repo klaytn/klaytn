@@ -578,7 +578,6 @@ func (f *Fetcher) loop() {
 						if f.getBlock(hash) == nil {
 							block := types.NewBlockWithHeader(announce.header).WithBody(task.transactions[i])
 							block.ReceivedAt = task.time
-
 							blocks = append(blocks, block)
 						} else {
 							f.forgetHash(hash)
