@@ -249,7 +249,7 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 	// get origin proposer at 0 round.
 	originProposer := common.Address{}
 	lastProposer := common.Address{}
-	// TODO-Klaytn add the logic to get the last proposer for other policy. Weighted round robin doesn't need it.
+	// TODO-Klaytn add the logic to get the last proposer for other policies. Weighted Random doesn't need it.
 	if istanbul.ProposerPolicy(snap.Policy) == istanbul.WeightedRandom {
 		newValSet := snap.ValSet.Copy()
 		newValSet.CalcProposer(lastProposer, 0)
