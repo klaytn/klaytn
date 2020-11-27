@@ -22,14 +22,15 @@ package downloader
 
 import (
 	"fmt"
+	"hash"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"hash"
-	"sync"
-	"time"
 )
 
 // stateReq represents a batch of state fetch requests grouped together into
@@ -302,7 +303,7 @@ func (s *stateSync) loop() (err error) {
 			return errCancelStateFetch
 
 		case <-s.d.cancelCh:
-			return errCancelStateFetch
+			return errCanceled
 
 		case req := <-s.deliver:
 			// Response, disconnect or timeout triggered, drop the peer if stalling
@@ -312,6 +313,16 @@ func (s *stateSync) loop() (err error) {
 				// this peer at the moment.
 				logger.Warn("Stalling state sync, dropping peer", "peer", req.peer.id)
 				s.d.dropPeer(req.peer.id)
+
+				// If this peer was the master peer, abort sync immediately
+				s.d.cancelLock.RLock()
+				master := req.peer.id == s.d.cancelPeer
+				s.d.cancelLock.RUnlock()
+
+				if master {
+					s.d.cancel()
+					return errTimeout
+				}
 			}
 			// Process all the received blobs and check for stale delivery
 			if err = s.process(req); err != nil {
