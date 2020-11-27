@@ -58,7 +58,7 @@ var (
 )
 
 // NewType creates a new reflection type of abi type given in t.
-func NewType(t string) (typ Type, err error) {
+func NewType(t string, components []ArgumentMarshaling) (typ Type, err error) {
 	// check that array brackets are equal if they exist
 	if strings.Count(t, "[") != strings.Count(t, "]") {
 		return Type{}, fmt.Errorf("invalid arg type in abi")
@@ -71,7 +71,7 @@ func NewType(t string) (typ Type, err error) {
 	if strings.Count(t, "[") != 0 {
 		i := strings.LastIndex(t, "[")
 		// recursively embed the type
-		embeddedType, err := NewType(t[:i])
+		embeddedType, err := NewType(t[:i], components)
 		if err != nil {
 			return Type{}, err
 		}

@@ -60,7 +60,7 @@ const jsondata2 = `
 ]`
 
 func TestReader(t *testing.T) {
-	Uint256, _ := NewType("uint256")
+	Uint256, _ := NewType("uint256", nil)
 	exp := ABI{
 		Methods: map[string]Method{
 			"balance": {
@@ -181,7 +181,7 @@ func TestTestSlice(t *testing.T) {
 }
 
 func TestMethodSignature(t *testing.T) {
-	String, _ := NewType("string")
+	String, _ := NewType("string", nil)
 	m := Method{"foo", false, []Argument{{"bar", String, false}, {"baz", String, false}}, nil}
 	exp := "foo(string,string)"
 	if m.Sig() != exp {
@@ -193,7 +193,7 @@ func TestMethodSignature(t *testing.T) {
 		t.Errorf("expected ids to match %x != %x", m.Id(), idexp)
 	}
 
-	uintt, _ := NewType("uint256")
+	uintt, _ := NewType("uint256", nil)
 	m = Method{"foo", false, []Argument{{"bar", uintt, false}}, nil}
 	exp = "foo(uint256)"
 	if m.Sig() != exp {
@@ -571,8 +571,8 @@ func TestBareEvents(t *testing.T) {
 	{ "type" : "event", "name" : "args", "inputs" : [{ "indexed":false, "name":"arg0", "type":"uint256" }, { "indexed":true, "name":"arg1", "type":"address" }] }
 	]`
 
-	arg0, _ := NewType("uint256")
-	arg1, _ := NewType("address")
+	arg0, _ := NewType("uint256", nil)
+	arg1, _ := NewType("address", nil)
 
 	expectedEvents := map[string]struct {
 		Anonymous bool
