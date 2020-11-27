@@ -929,7 +929,9 @@ func (d *Downloader) fillHeaderSkeleton(from uint64, skeleton []*types.Header) (
 		}
 		fetch    = func(p *peerConnection, req *fetchRequest) error { return p.FetchHeaders(req.From, MaxHeaderFetch) }
 		capacity = func(p *peerConnection) int { return p.HeaderCapacity(d.requestRTT()) }
-		setIdle  = func(p *peerConnection, accepted int) { p.SetHeadersIdle(accepted) }
+		setIdle  = func(p *peerConnection, accepted int, deliveryTime time.Time) {
+			p.SetHeadersIdle(accepted, deliveryTime)
+		}
 	)
 	err := d.fetchParts(errCancelHeaderFetch, d.headerCh, deliver, d.queue.headerContCh, expire,
 		d.queue.PendingHeaders, d.queue.InFlightHeaders, throttle, reserve,
@@ -956,7 +958,9 @@ func (d *Downloader) fetchBodies(from uint64) error {
 		expire   = func() map[string]int { return d.queue.ExpireBodies(d.requestTTL()) }
 		fetch    = func(p *peerConnection, req *fetchRequest) error { return p.FetchBodies(req) }
 		capacity = func(p *peerConnection) int { return p.BlockCapacity(d.requestRTT()) }
-		setIdle  = func(p *peerConnection, accepted int) { p.SetBodiesIdle(accepted) }
+		setIdle  = func(p *peerConnection, accepted int, deliveryTime time.Time) {
+			p.SetBodiesIdle(accepted, deliveryTime)
+		}
 	)
 	err := d.fetchParts(errCancelBodyFetch, d.bodyCh, deliver, d.bodyWakeCh, expire,
 		d.queue.PendingBlocks, d.queue.InFlightBlocks, d.queue.ShouldThrottleBlocks, d.queue.ReserveBodies,
@@ -981,7 +985,9 @@ func (d *Downloader) fetchReceipts(from uint64) error {
 		expire   = func() map[string]int { return d.queue.ExpireReceipts(d.requestTTL()) }
 		fetch    = func(p *peerConnection, req *fetchRequest) error { return p.FetchReceipts(req) }
 		capacity = func(p *peerConnection) int { return p.ReceiptCapacity(d.requestRTT()) }
-		setIdle  = func(p *peerConnection, accepted int) { p.SetReceiptsIdle(accepted) }
+		setIdle  = func(p *peerConnection, accepted int, deliveryTime time.Time) {
+			p.SetReceiptsIdle(accepted, deliveryTime)
+		}
 	)
 	err := d.fetchParts(errCancelReceiptFetch, d.receiptCh, deliver, d.receiptWakeCh, expire,
 		d.queue.PendingReceipts, d.queue.InFlightReceipts, d.queue.ShouldThrottleReceipts, d.queue.ReserveReceipts,
@@ -1019,7 +1025,7 @@ func (d *Downloader) fetchReceipts(from uint64) error {
 func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliver func(dataPack) (int, error), wakeCh chan bool,
 	expire func() map[string]int, pending func() int, inFlight func() bool, throttle func() bool, reserve func(*peerConnection, int) (*fetchRequest, bool, error),
 	fetchHook func([]*types.Header), fetch func(*peerConnection, *fetchRequest) error, cancel func(*fetchRequest), capacity func(*peerConnection) int,
-	idlePeers func() ([]*peerConnection, int), setIdle func(*peerConnection, int), kind string) error {
+	idlePeers func() ([]*peerConnection, int), setIdle func(*peerConnection, int, time.Time), kind string) error {
 
 	// Create a ticker to detect expired retrieval tasks
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -1035,6 +1041,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 			return errCancel
 
 		case packet := <-deliveryCh:
+			deliveryTime := time.Now()
 			// If the peer was previously banned and failed to deliver its pack
 			// in a reasonable time frame, ignore its message.
 			if peer := d.peers.Peer(packet.PeerId()); peer != nil {
@@ -1047,7 +1054,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 				// caused by a timed out request which came through in the end), set it to
 				// idle. If the delivery's stale, the peer should have already been idled.
 				if err != errStaleDelivery {
-					setIdle(peer, accepted)
+					setIdle(peer, accepted, deliveryTime)
 				}
 				// Issue a log to the user to see what's going on
 				switch {
@@ -1100,7 +1107,7 @@ func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliv
 					// how response times reacts, to it always requests one more than the minimum (i.e. min 2).
 					if fails > 2 {
 						peer.logger.Trace("Data delivery timed out", "type", kind)
-						setIdle(peer, 0)
+						setIdle(peer, 0, time.Now())
 					} else {
 						peer.logger.Debug("Stalling delivery, dropping", "type", kind)
 						d.dropPeer(pid)
