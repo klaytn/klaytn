@@ -317,10 +317,10 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the given transaction against the latest block.
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (hexutil.Uint64, error) {
-	return s.DoEstimateGas(ctx, s.b, args, s.b.RPCGasCap())
+	return DoEstimateGas(ctx, s.b, args, s.b.RPCGasCap())
 }
 
-func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args CallArgs, gasCap *big.Int) (hexutil.Uint64, error) {
+func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, gasCap *big.Int) (hexutil.Uint64, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
 		lo  uint64 = params.TxGas - 1

@@ -109,8 +109,8 @@ type SendTxArgs struct {
 	Price        *hexutil.Big    `json:"gasPrice"`
 	Amount       *hexutil.Big    `json:"value"`
 	AccountNonce *hexutil.Uint64 `json:"nonce"`
-	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
-	// newer name and should be preferred by clients.
+	// We accept "data" and "payload(=input)" for backwards-compatibility reasons.
+	// "payload(=input)" is the newer name and should be preferred by clients.
 	Data    *hexutil.Bytes `json:"data"`
 	Payload *hexutil.Bytes `json:"input"`
 
@@ -131,10 +131,6 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		args.TypeInt = new(types.TxType)
 		*args.TypeInt = types.TxTypeLegacyTransaction
 	}
-	if args.GasLimit == nil {
-		args.GasLimit = new(hexutil.Uint64)
-		*args.GasLimit = hexutil.Uint64(90000)
-	}
 	if args.Price == nil {
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {
@@ -146,7 +142,27 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 		nonce := b.GetPoolNonce(ctx, args.From)
 		args.AccountNonce = (*hexutil.Uint64)(&nonce)
 	}
-
+	// Estimate the gas usage if necessary.
+	if args.GasLimit == nil {
+		// We accept "data" and "payload(=input)" for backwards-compatibility reasons.
+		// "payload(=input)" is the newer name and should be preferred by clients.
+		input := args.Payload
+		if input == nil {
+			input = args.Data
+		}
+		callArgs := CallArgs{
+			From:  args.From, // From shouldn't be nil
+			To:    args.Recipient,
+			Value: *args.Amount,
+			Data:  *input,
+		}
+		estimated, err := DoEstimateGas(ctx, b, callArgs, b.RPCGasCap())
+		if err != nil {
+			return err
+		}
+		args.GasLimit = &estimated
+		logger.Trace("Estimate gas usage automatically", "gas", args.GasLimit)
+	}
 	return nil
 }
 
