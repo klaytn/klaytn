@@ -24,6 +24,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -432,6 +433,10 @@ var (
 		Name:  "rpcapi",
 		Usage: "API's offered over the HTTP-RPC interface",
 		Value: "",
+	}
+	RPCGlobalGasCap = cli.Uint64Flag{
+		Name:  "rpc.gascap",
+		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
 	}
 	IPCDisabledFlag = cli.BoolFlag{
 		Name:  "ipcdisable",
@@ -1489,6 +1494,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.AutoRestartFlag = ctx.GlobalBool(AutoRestartFlag.Name)
 	cfg.RestartTimeOutFlag = ctx.GlobalDuration(RestartTimeOutFlag.Name)
 	cfg.DaemonPathFlag = ctx.GlobalString(DaemonPathFlag.Name)
+
+	if ctx.GlobalIsSet(RPCGlobalGasCap.Name) {
+		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
+	}
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block

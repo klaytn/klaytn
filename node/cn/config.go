@@ -162,6 +162,9 @@ type Config struct {
 	AutoRestartFlag    bool
 	RestartTimeOutFlag time.Duration
 	DaemonPathFlag     string
+
+	// RPCGasCap is the global gas cap for eth-call variants.
+	RPCGasCap *big.Int `toml:",omitempty"`
 }
 
 type configMarshaling struct {
