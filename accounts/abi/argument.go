@@ -99,11 +99,69 @@ func (arguments Arguments) Unpack(v interface{}, data []byte) error {
 	if arguments.isTuple() {
 		return arguments.unpackTuple(v, marshalledValues)
 	}
-	return arguments.unpackAtomic(v, marshalledValues)
+	return arguments.unpackAtomic(v, marshalledValues[0])
+}
+
+// unpack sets the unmarshalled value to go format.
+// Note the dst here must be settable.
+func unpack(t *Type, dst interface{}, src interface{}) error {
+	var (
+		dstVal = reflect.ValueOf(dst).Elem()
+		srcVal = reflect.ValueOf(src)
+	)
+
+	if t.T != TupleTy && !((t.T == SliceTy || t.T == ArrayTy) && t.Elem.T == TupleTy) {
+		return set(dstVal, srcVal)
+	}
+
+	switch t.T {
+	case TupleTy:
+		if dstVal.Kind() != reflect.Struct {
+			return fmt.Errorf("abi: invalid dst value for unpack, want struct, got %s", dstVal.Kind())
+		}
+		fieldmap, err := mapArgNamesToStructFields(t.TupleRawNames, dstVal)
+		if err != nil {
+			return err
+		}
+		for i, elem := range t.TupleElems {
+			fname := fieldmap[t.TupleRawNames[i]]
+			field := dstVal.FieldByName(fname)
+			if !field.IsValid() {
+				return fmt.Errorf("abi: field %s can't found in the given value", t.TupleRawNames[i])
+			}
+			if err := unpack(elem, field.Addr().Interface(), srcVal.Field(i).Interface()); err != nil {
+				return err
+			}
+		}
+		return nil
+	case SliceTy:
+		if dstVal.Kind() != reflect.Slice {
+			return fmt.Errorf("abi: invalid dst value for unpack, want slice, got %s", dstVal.Kind())
+		}
+		slice := reflect.MakeSlice(dstVal.Type(), srcVal.Len(), srcVal.Len())
+		for i := 0; i < slice.Len(); i++ {
+			if err := unpack(t.Elem, slice.Index(i).Addr().Interface(), srcVal.Index(i).Interface()); err != nil {
+				return err
+			}
+		}
+		dstVal.Set(slice)
+	case ArrayTy:
+		if dstVal.Kind() != reflect.Array {
+			return fmt.Errorf("abi: invalid dst value for unpack, want array, got %s", dstVal.Kind())
+		}
+		array := reflect.New(dstVal.Type()).Elem()
+		for i := 0; i < array.Len(); i++ {
+			if err := unpack(t.Elem, array.Index(i).Addr().Interface(), srcVal.Index(i).Interface()); err != nil {
+				return err
+			}
+		}
+		dstVal.Set(array)
+	}
+	return nil
 }
 
 // unpackAtomic unpacks ( hexdata -> go ) a single value
-func (arguments Arguments) unpackAtomic(v interface{}, marshalledValues []interface{}) error {
+func (arguments Arguments) unpackAtomic(v interface{}, marshalledValues interface{}) error {
 	if arguments.LengthNonIndexed() == 0 {
 		return nil
 	}
@@ -119,10 +177,10 @@ func (arguments Arguments) unpackAtomic(v interface{}, marshalledValues []interf
 		if !field.IsValid() {
 			return fmt.Errorf("abi: field %s can't be found in the given value", argument.Name)
 		}
-		return set(field, reflect.ValueOf(marshalledValues[0]))
+		return unpack(&argument.Type, field.Addr().Interface(), marshalledValues)
 	}
 
-	return set(elem, reflect.ValueOf(marshalledValues[0]))
+	return unpack(&argument.Type, elem.Addr().Interface(), marshalledValues)
 
 }
 
@@ -138,7 +196,6 @@ func (arguments Arguments) unpackTuple(v interface{}, marshalledValues []interfa
 	}
 
 	// If the interface is a struct, get of abi->struct_field mapping
-
 	var abi2struct map[string]string
 	if kind == reflect.Struct {
 		var (
@@ -160,7 +217,7 @@ func (arguments Arguments) unpackTuple(v interface{}, marshalledValues []interfa
 			if !field.IsValid() {
 				return fmt.Errorf("abi: field %s can't be found in the given value", arg.Name)
 			}
-			if err := set(field, reflect.ValueOf(marshalledValues[i])); err != nil {
+			if err := unpack(&arg.Type, field.Addr().Interface(), marshalledValues[i]); err != nil {
 				return err
 			}
 		case reflect.Slice, reflect.Array:
@@ -171,8 +228,7 @@ func (arguments Arguments) unpackTuple(v interface{}, marshalledValues []interfa
 			if err := requireAssignable(v, reflect.ValueOf(marshalledValues[i])); err != nil {
 				return err
 			}
-
-			if err := set(v.Elem(), reflect.ValueOf(marshalledValues[i])); err != nil {
+			if err := unpack(&arg.Type, v.Addr().Interface(), marshalledValues[i]); err != nil {
 				return err
 			}
 		default:
@@ -201,6 +257,10 @@ func (arguments Arguments) UnpackValues(data []byte) ([]interface{}, error) {
 			//
 			// Calculate the full array size to get the correct offset for the next argument.
 			// Decrement it by 1, as the normal index increment is still applied.
+			virtualArgs += getTypeSize(arg.Type)/32 - 1
+		} else if arg.Type.T == TupleTy && !isDynamicType(arg.Type) {
+			// If we have a static tuple, like (uint256, bool, uint256), these are
+			// coded as just like uint256,bool,uint256
 			virtualArgs += getTypeSize(arg.Type)/32 - 1
 		}
 		if err != nil {

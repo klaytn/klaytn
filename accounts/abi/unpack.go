@@ -159,6 +159,36 @@ func forEachUnpack(t Type, output []byte, start, size int) (interface{}, error) 
 	return refSlice.Interface(), nil
 }
 
+func forTupleUnpack(t Type, output []byte) (interface{}, error) {
+	retval := reflect.New(t.Type).Elem()
+	virtualArgs := 0
+	for index, elem := range t.TupleElems {
+		marshalledValue, err := toGoType((index+virtualArgs)*32, *elem, output)
+		if elem.T == ArrayTy && !isDynamicType(*elem) {
+			// If we have a static array, like [3]uint256, these are coded as
+			// just like uint256,uint256,uint256.
+			// This means that we need to add two 'virtual' arguments when
+			// we count the index from now on.
+			//
+			// Array values nested multiple levels deep are also encoded inline:
+			// [2][3]uint256: uint256,uint256,uint256,uint256,uint256,uint256
+			//
+			// Calculate the full array size to get the correct offset for the next argument.
+			// Decrement it by 1, as the normal index increment is still applied.
+			virtualArgs += getTypeSize(*elem)/32 - 1
+		} else if elem.T == TupleTy && !isDynamicType(*elem) {
+			// If we have a static tuple, like (uint256, bool, uint256), these are
+			// coded as just like uint256,bool,uint256
+			virtualArgs += getTypeSize(*elem)/32 - 1
+		}
+		if err != nil {
+			return nil, err
+		}
+		retval.Field(index).Set(reflect.ValueOf(marshalledValue))
+	}
+	return retval.Interface(), nil
+}
+
 // toGoType parses the output bytes and recursively assigns the value of these bytes
 // into a go type with accordance with the ABI spec.
 func toGoType(index int, t Type, output []byte) (interface{}, error) {
@@ -183,17 +213,24 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	}
 
 	switch t.T {
-	case SliceTy:
-		if (*t.Elem).T == StringTy {
-			return forEachUnpack(t, output[begin:], 0, length)
+	case TupleTy:
+		if isDynamicType(t) {
+			begin, err := tuplePointsTo(index, output)
+			if err != nil {
+				return nil, err
+			}
+			return forTupleUnpack(t, output[begin:])
+		} else {
+			return forTupleUnpack(t, output[index:])
 		}
-		return forEachUnpack(t, output, begin, length)
+	case SliceTy:
+		return forEachUnpack(t, output[begin:], 0, length)
 	case ArrayTy:
-		if (*t.Elem).T == StringTy {
+		if isDynamicType(*t.Elem) {
 			offset := int64(binary.BigEndian.Uint64(returnOutput[len(returnOutput)-8:]))
 			return forEachUnpack(t, output[offset:], 0, t.Size)
 		}
-		return forEachUnpack(t, output, index, t.Size)
+		return forEachUnpack(t, output[index:], 0, t.Size)
 	case StringTy: // variable arrays are written at the end of the return bytes
 		return string(output[begin : begin+length]), nil
 	case IntTy, UintTy:
@@ -245,4 +282,18 @@ func lengthPrefixPointsTo(index int, output []byte) (start int, length int, err 
 	start = int(bigOffsetEnd.Uint64())
 	length = int(lengthBig.Uint64())
 	return
+}
+
+// tuplePointsTo resolves the location reference for dynamic tuple.
+func tuplePointsTo(index int, output []byte) (start int, err error) {
+	offset := big.NewInt(0).SetBytes(output[index : index+32])
+	outputLen := big.NewInt(int64(len(output)))
+
+	if offset.Cmp(big.NewInt(int64(len(output)))) > 0 {
+		return 0, fmt.Errorf("abi: cannot marshal in to go slice: offset %v would go over slice boundary (len=%v)", offset, outputLen)
+	}
+	if offset.BitLen() > 63 {
+		return 0, fmt.Errorf("abi offset larger than int64: %v", offset)
+	}
+	return int(offset.Uint64()), nil
 }
