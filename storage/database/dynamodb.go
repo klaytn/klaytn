@@ -27,22 +27,19 @@ package database
 
 import (
 	"bytes"
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-
-	"github.com/rcrowley/go-metrics"
-
-	"github.com/pkg/errors"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
+	"github.com/pkg/errors"
+	"github.com/rcrowley/go-metrics"
 )
 
 var overSizedDataPrefix = []byte("oversizeditem")
@@ -333,7 +330,7 @@ func (dynamo *dynamoDB) put(key []byte, val []byte) error {
 
 	_, err = dynamoDBClient.PutItem(params)
 	if err != nil {
-		fmt.Printf("Put ERROR: %v\n", err.Error())
+		dynamo.logger.Error("failed to put an item", "err", err, "key", hexutil.Encode(data.Key))
 		return err
 	}
 
@@ -372,7 +369,7 @@ func (dynamo *dynamoDB) get(key []byte) ([]byte, error) {
 
 	result, err := dynamoDBClient.GetItem(params)
 	if err != nil {
-		fmt.Printf("Get ERROR: %v\n", err.Error())
+		dynamo.logger.Error("failed to get an item", "err", err, "key", hexutil.Encode(key))
 		return nil, err
 	}
 
@@ -409,7 +406,7 @@ func (dynamo *dynamoDB) Delete(key []byte) error {
 
 	_, err := dynamoDBClient.DeleteItem(params)
 	if err != nil {
-		fmt.Printf("ERROR: %v\n", err.Error())
+		dynamo.logger.Error("failed to delete an item", "err", err, "key", hexutil.Encode(key))
 		return err
 	}
 	return nil
