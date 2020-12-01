@@ -22,14 +22,15 @@ package downloader
 
 import (
 	"fmt"
+	"hash"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"hash"
-	"sync"
-	"time"
 )
 
 // stateReq represents a batch of state fetch requests grouped together into
@@ -100,7 +101,7 @@ func (d *Downloader) runStateSync(s *stateSync) *stateSync {
 		// available for the next sync.
 		for _, req := range active {
 			req.timer.Stop()
-			req.peer.SetNodeDataIdle(len(req.items))
+			req.peer.SetNodeDataIdle(len(req.items), time.Now())
 		}
 	}()
 	// Run the state sync.
@@ -305,6 +306,7 @@ func (s *stateSync) loop() (err error) {
 			return errCancelStateFetch
 
 		case req := <-s.deliver:
+			deliveryTime := time.Now()
 			// Response, disconnect or timeout triggered, drop the peer if stalling
 			logger.Trace("Received node data response", "peer", req.peer.id, "count", len(req.response), "dropped", req.dropped, "timeout", !req.dropped && req.timedOut())
 			if len(req.items) <= 2 && !req.dropped && req.timedOut() {
@@ -318,7 +320,7 @@ func (s *stateSync) loop() (err error) {
 				logger.Error("Node data write error", "err", err)
 				return err
 			}
-			req.peer.SetNodeDataIdle(len(req.response))
+			req.peer.SetNodeDataIdle(len(req.response), deliveryTime)
 		}
 	}
 	return nil
