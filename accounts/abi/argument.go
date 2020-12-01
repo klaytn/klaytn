@@ -34,9 +34,10 @@ type Argument struct {
 type Arguments []Argument
 
 type ArgumentMarshaling struct {
-	Name    string
-	Type    string
-	Indexed bool
+	Name       string
+	Type       string
+	Components []ArgumentMarshaling
+	Indexed    bool
 }
 
 // UnmarshalJSON implements json.Unmarshaler interface
@@ -47,7 +48,7 @@ func (argument *Argument) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("argument json err: %v", err)
 	}
 
-	argument.Type, err = NewType(arg.Type, nil)
+	argument.Type, err = NewType(arg.Type, arg.Components)
 	if err != nil {
 		return err
 	}
