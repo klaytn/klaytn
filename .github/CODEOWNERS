@@ -39,15 +39,15 @@
 /accounts/      @aidan-kwon
 /api/           @aidan-kwon
 /blockchain/    @aidan-kwon
-/build/
+/build/         @jeongkyun-oh
 /client/
-/cmd/
+/cmd/           @jeongkyun-oh
 /common/
 /consensus/     @aidan-kwon
 /console/
 /contracts/
 /crypto/        @aidan-kwon
-/datasync/
+/datasync/      @jeongkyun-oh
 /db_migration/
 /event/
 /fork/
@@ -55,12 +55,12 @@
 /kerrors/
 /log/
 /metrics/
-/networks/
-/node/
+/networks/      @jeongkyun-oh
+/node/          @jeongkyun-oh
 /params/
 /reward/
 /ser/
 /storage/
 /tests/
 /utils/
-/work/
+/work/          @jeongkyun-oh
