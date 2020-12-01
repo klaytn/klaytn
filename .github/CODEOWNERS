@@ -39,15 +39,15 @@
 /accounts/      @aidan-kwon
 /api/           @aidan-kwon
 /blockchain/    @aidan-kwon @ehnuje
-/build/
+/build/         @jeongkyun-oh
 /client/
-/cmd/
+/cmd/           @jeongkyun-oh
 /common/
 /consensus/     @aidan-kwon
 /console/
 /contracts/
 /crypto/        @aidan-kwon
-/datasync/      @ehnuje
+/datasync/      @ehnuje @jeongkyun-oh
 /db_migration/
 /event/
 /fork/
@@ -55,12 +55,12 @@
 /kerrors/
 /log/
 /metrics/       @ehnuje
-/networks/
-/node/          @ehnuje
+/networks/      @jeongkyun-oh
+/node/          @ehnuje @jeongkyun-oh
 /params/
 /reward/
 /ser/
 /storage/       @ehnuje
 /tests/
 /utils/
-/work/          @ehnuje
+/work/          @ehnuje @jeongkyun-oh
