@@ -38,7 +38,7 @@
 #/docs/ @doctocat
 /accounts/      @aidan-kwon
 /api/           @aidan-kwon
-/blockchain/    @aidan-kwon @ehnuje
+/blockchain/    @aidan-kwon @ehnuje @winnie-byun
 /build/         @jeongkyun-oh
 /client/
 /cmd/           @jeongkyun-oh
@@ -48,19 +48,19 @@
 /contracts/
 /crypto/        @aidan-kwon
 /datasync/      @ehnuje @jeongkyun-oh
-/db_migration/
+/db_migration/  @winnie-byun
 /event/
 /fork/
 /governance/    @aidan-kwon
 /kerrors/
-/log/
+/log/           @winnie-byun
 /metrics/       @ehnuje
-/networks/      @jeongkyun-oh
+/networks/      @jeongkyun-oh @winnie-byun
 /node/          @ehnuje @jeongkyun-oh
-/params/
+/params/        @winnie-byun
 /reward/
 /ser/
-/storage/       @ehnuje
+/storage/       @ehnuje @winnie-byun
 /tests/
 /utils/
 /work/          @ehnuje @jeongkyun-oh
