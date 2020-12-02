@@ -1186,8 +1186,11 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 		logger.Debug("Processing headers terminated", "origin", origin, "pivot", pivot, "td", td, "elapsed", time.Since(start))
 	}(time.Now())
 	// Keep a count of uncertain headers to roll back
-	rollback := []*types.Header{}
-	mode := d.getMode()
+	var (
+		rollback    []*types.Header
+		rollbackErr error
+		mode        = d.getMode()
+	)
 	defer func() {
 		if len(rollback) > 0 {
 			// Flatten the headers and roll them back
@@ -1209,7 +1212,7 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 			logger.Info("Rolled back headers", "count", len(hashes),
 				"header", fmt.Sprintf("%d->%d", lastHeader, d.lightchain.CurrentHeader().Number),
 				"fast", fmt.Sprintf("%d->%d", lastFastBlock, curFastBlock),
-				"block", fmt.Sprintf("%d->%d", lastBlock, curBlock))
+				"block", fmt.Sprintf("%d->%d", lastBlock, curBlock), "reason", rollbackErr)
 		}
 	}()
 
@@ -1219,6 +1222,7 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 	for {
 		select {
 		case <-d.cancelCh:
+			rollbackErr = errCanceled
 			return errCanceled
 
 		case headers := <-d.headerProcCh:
@@ -1298,11 +1302,12 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 						frequency = 1
 					}
 					if n, err := d.lightchain.InsertHeaderChain(chunk, frequency); err != nil {
+						rollbackErr = err
 						// If some headers were inserted, add them too to the rollback list
 						if n > 0 {
 							rollback = append(rollback, chunk[:n]...)
 						}
-						logger.Debug("Invalid header encountered", "number", chunk[n].Number, "hash", chunk[n].Hash(), "err", err)
+						logger.Debug("Invalid header encountered", "number", chunk[n].Number, "hash", chunk[n].Hash(), "parent", chunk[n].ParentHash, "err", err)
 						return errInvalidChain
 					}
 					// All verifications passed, store newly found uncertain headers
@@ -1317,6 +1322,7 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 					for d.queue.PendingBlocks() >= maxQueuedHeaders || d.queue.PendingReceipts() >= maxQueuedHeaders {
 						select {
 						case <-d.cancelCh:
+							rollbackErr = errCanceled
 							return errCanceled
 						case <-time.After(time.Second):
 						}
@@ -1324,7 +1330,7 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 					// Otherwise insert the headers for content retrieval
 					inserts := d.queue.Schedule(chunk, origin)
 					if len(inserts) != len(chunk) {
-						logger.Debug("Stale headers")
+						rollbackErr = fmt.Errorf("stale headers: len(inserts) - %v, len(chunk) - %v", len(inserts), len(chunk))
 						return errBadPeer
 					}
 				}
