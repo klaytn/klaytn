@@ -45,11 +45,12 @@ const NodeIDBits = 512
 // Node represents a host on the network.
 // The fields of Node may not be modified.
 type Node struct {
-	IP       net.IP   // len 4 for IPv4 or 16 for IPv6
-	UDP, TCP uint16   // port numbers
-	TCPs     []uint16 // port numbers
-	ID       NodeID   // the node's public key
-	NType    NodeType // the node's type (cn, pn, en, bn)
+	IP    net.IP   // len 4 for IPv4 or 16 for IPv6
+	UDP   uint16   // discovery port numbers
+	TCP   uint16   // TCP listening port number
+	TCPs  []uint16 // TCP listening port number including both main port and subports
+	ID    NodeID   // the node's public key
+	NType NodeType // the node's type (cn, pn, en, bn)
 
 	// This is a cached copy of sha3(ID) which is used for node
 	// distance calculations. This is part of Node in order to make it
