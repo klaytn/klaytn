@@ -90,6 +90,10 @@ func (s *SuiteDynamoDB) TestDynamoDB_Put() {
 	s.NoError(returnedErr)
 }
 
+// TestDynamoDB_Timeout tests if a timeout error occurs.
+// When there is no answer from DynamoDB server due to network failure, 
+// a timeout error should occur.
+// A fake server is setup to simulate a server with a response latency.
 func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
 	// fakeEndpoint allows TCP handshakes, but doesn't answer anything to client.
 	// The fake server is used to produce a network failure scenario.
