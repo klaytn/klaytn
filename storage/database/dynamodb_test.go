@@ -91,13 +91,15 @@ func (s *SuiteDynamoDB) TestDynamoDB_Put() {
 }
 
 // TestDynamoDB_Timeout tests if a timeout error occurs.
-// When there is no answer from DynamoDB server due to network failure, 
+// When there is no answer from DynamoDB server due to network failure,
 // a timeout error should occur.
 // A fake server is setup to simulate a server with a response latency.
 func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
 	// fakeEndpoint allows TCP handshakes, but doesn't answer anything to client.
 	// The fake server is used to produce a network failure scenario.
 	fakeEndpoint := "127.0.0.1:14566"
+	maxRetries := 2
+	timeout := 1 * time.Second
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", fakeEndpoint)
 		if err != nil {
@@ -132,11 +134,11 @@ func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
 		Config: aws.Config{
 			Endpoint:   aws.String(conf.Endpoint),
 			Region:     aws.String(conf.Region),
-			MaxRetries: aws.Int(2),
-			HTTPClient: &http.Client{Timeout: 1 * time.Second},
+			MaxRetries: aws.Int(maxRetries),
+			HTTPClient: &http.Client{Timeout: timeout},
 		},
 	})))
-	expectedElapsed := time.Duration(*dynamoDBClient.Config.MaxRetries+1) * dynamoDBClient.Config.HTTPClient.Timeout
+	expectedElapsed := time.Duration(maxRetries+1) * timeout
 
 	dynamoDB := &dynamoDB{
 		config: *conf,
