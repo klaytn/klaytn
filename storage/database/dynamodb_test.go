@@ -91,6 +91,8 @@ func (s *SuiteDynamoDB) TestDynamoDB_Put() {
 }
 
 func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
+	// fakeEndpoint allows TCP handshakes, but doesn't answer anything to client.
+	// The fake server is used to produce a network failure scenario.
 	fakeEndpoint := "127.0.0.1:14566"
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", fakeEndpoint)
@@ -105,6 +107,7 @@ func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
 		defer listen.Close()
 
 		for {
+			// Deadline prevents infinite waiting of the fake server
 			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
 				s.FailNow(err.Error())
 			}
@@ -117,14 +120,14 @@ func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
 		}
 	}()
 
-	conf := GetTestDynamoConfig()
+	conf := GetTestDynamoConfig() // dummy values to create dynamoDB
 	conf.Endpoint = fakeEndpoint
 	conf.TableName = "test-table"
 
 	dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Endpoint:   aws.String(conf.Endpoint),
-			Region:     aws.String("ap-northeast-2"),
+			Region:     aws.String(conf.Region),
 			MaxRetries: aws.Int(2),
 			HTTPClient: &http.Client{Timeout: 1 * time.Second},
 		},
