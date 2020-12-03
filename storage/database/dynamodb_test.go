@@ -114,6 +114,7 @@ func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
 
 		for {
 			// Deadline prevents infinite waiting of the fake server
+			// Wait longer than (maxRetries+1) * timeout
 			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
 				s.FailNow(err.Error())
 			}
