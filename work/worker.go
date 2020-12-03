@@ -540,7 +540,7 @@ func (self *worker) commitNewWork() {
 			logger.Info("Commit new mining work",
 				"number", work.Block.Number(), "hash", work.Block.Hash(),
 				"txs", work.tcount, "elapsed", common.PrettyDuration(blockMiningTime),
-				"commitTime", commitTxTime, "finalizeTime", finalizeTime)
+				"commitTime", common.PrettyDuration(commitTxTime), "finalizeTime", common.PrettyDuration(finalizeTime))
 		}
 	}
 
