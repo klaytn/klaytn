@@ -520,18 +520,27 @@ func (self *worker) commitNewWork() {
 	if self.nodetype == common.CONSENSUSNODE {
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
+		finishedCommitTx := time.Now()
 
 		// Create the new block to seal with the consensus engine
 		if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
 			logger.Error("Failed to finalize block for sealing", "err", err)
 			return
 		}
+		finishedFinalize := time.Now()
+
 		// We only care about logging if we're actually mining.
 		if atomic.LoadInt32(&self.mining) == 1 {
 			tCountGauge.Update(int64(work.tcount))
 			blockMiningTime := time.Since(tstart)
 			blockMiningTimeGauge.Update(int64(blockMiningTime))
-			logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(blockMiningTime))
+
+			commitTxTime := finishedCommitTx.Sub(tstart)
+			finalizeTime := finishedFinalize.Sub(finishedCommitTx)
+			logger.Info("Commit new mining work",
+				"number", work.Block.Number(), "hash", work.Block.Hash(),
+				"txs", work.tcount, "elapsed", common.PrettyDuration(blockMiningTime),
+				"commitTime", commitTxTime, "finalizeTime", finalizeTime)
 		}
 	}
 
