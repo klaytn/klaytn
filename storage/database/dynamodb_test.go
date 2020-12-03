@@ -20,32 +20,37 @@
 package database
 
 import (
-	"io"
-	"os"
+	"net"
+	"net/http"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/suite"
-
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/log/term"
-	"github.com/mattn/go-colorable"
-
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/stretchr/testify/suite"
 )
 
-func enableLog() {
-	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
-	output := io.Writer(os.Stderr)
-	if usecolor {
-		output = colorable.NewColorableStderr()
+// GetTestDynamoConfig gets dynamo config for local test
+//
+// Please Run DynamoDB local with docker
+//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
+func GetTestDynamoConfig() *DynamoDBConfig {
+	return &DynamoDBConfig{
+		Region:             "us-east-1",
+		Endpoint:           "http://localhost:4566",
+		S3Endpoint:         "http://localhost:4566",
+		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
+		IsProvisioned:      false,
+		ReadCapacityUnits:  10000,
+		WriteCapacityUnits: 10000,
+		ReadOnly:           false,
+		PerfCheck:          false,
 	}
-	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
-	log.PrintOrigins(true)
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
-	glogger.Vmodule("")
-	glogger.BacktraceAt("")
-	log.Root().SetHandler(glogger)
 }
 
 type SuiteDynamoDB struct {
@@ -83,6 +88,59 @@ func (s *SuiteDynamoDB) TestDynamoDB_Put() {
 	returnedVal, returnedErr := dynamo.Get(testKey)
 	s.Equal(testVal, returnedVal)
 	s.NoError(returnedErr)
+}
+
+func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
+	fakeEndpoint := "127.0.0.1:14566"
+	go func() {
+		tcpAddr, err := net.ResolveTCPAddr("tcp", fakeEndpoint)
+		if err != nil {
+			s.FailNow(err.Error())
+		}
+
+		listen, err := net.ListenTCP("tcp", tcpAddr)
+		if err != nil {
+			s.FailNow(err.Error())
+		}
+		defer listen.Close()
+
+		for {
+			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
+				s.FailNow(err.Error())
+			}
+			if _, err := listen.AcceptTCP(); err != nil {
+				if strings.Contains(err.Error(), "timeout") {
+					s.FailNow("timeout. err:" + err.Error())
+				}
+				s.FailNow(err.Error())
+			}
+		}
+	}()
+
+	conf := GetTestDynamoConfig()
+	conf.Endpoint = fakeEndpoint
+	conf.TableName = "test-table"
+
+	dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			Endpoint:   aws.String(conf.Endpoint),
+			Region:     aws.String("ap-northeast-2"),
+			MaxRetries: aws.Int(2),
+			HTTPClient: &http.Client{Timeout: 1 * time.Second},
+		},
+	})))
+	expectedElapsed := time.Duration(*dynamoDBClient.Config.MaxRetries+1) * dynamoDBClient.Config.HTTPClient.Timeout
+
+	dynamoDB := &dynamoDB{
+		config: *conf,
+		logger: logger.NewWith("logger"),
+	}
+
+	start := time.Now()
+	_, err := dynamoDB.get([]byte{0x1, 0x2})
+	s.NotNil(err)
+	s.True(strings.Contains(err.Error(), "Timeout"))
+	s.Equal(expectedElapsed, time.Since(start).Round(time.Second))
 }
 
 func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
