@@ -168,7 +168,7 @@ func ParseNode(rawurl string) (*Node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid node ID (%v)", err)
 		}
-		return NewNode(id, nil, 0, 0, NodeTypeUnknown), nil
+		return NewNode(id, nil, 0, 0, nil, NodeTypeUnknown), nil
 	}
 	return parseComplete(rawurl)
 }
