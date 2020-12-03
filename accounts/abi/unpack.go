@@ -119,17 +119,6 @@ func readFixedBytes(t Type, word []byte) (interface{}, error) {
 
 }
 
-func getFullElemSize(elem *Type) int {
-	//all other should be counted as 32 (slices have pointers to respective elements)
-	size := 32
-	//arrays wrap it, each element being the same size
-	for elem.T == ArrayTy {
-		size *= elem.Size
-		elem = elem.Elem
-	}
-	return size
-}
-
 // iteratively unpack elements
 func forEachUnpack(t Type, output []byte, start, size int) (interface{}, error) {
 	if size < 0 {
@@ -154,13 +143,9 @@ func forEachUnpack(t Type, output []byte, start, size int) (interface{}, error) 
 
 	// Arrays have packed elements, resulting in longer unpack steps.
 	// Slices have just 32 bytes per element (pointing to the contents).
-	elemSize := 32
-	if t.T == ArrayTy || t.T == SliceTy {
-		elemSize = getFullElemSize(t.Elem)
-	}
+	elemSize := getTypeSize(*t.Elem)
 
 	for i, j := start, 0; j < size; i, j = i+elemSize, j+1 {
-
 		inter, err := toGoType(i, *t.Elem, output)
 		if err != nil {
 			return nil, err
@@ -182,14 +167,14 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	}
 
 	var (
-		returnOutput []byte
-		begin, end   int
-		err          error
+		returnOutput  []byte
+		begin, length int
+		err           error
 	)
 
 	// if we require a length prefix, find the beginning word and size returned.
 	if t.requiresLengthPrefix() {
-		begin, end, err = lengthPrefixPointsTo(index, output)
+		begin, length, err = lengthPrefixPointsTo(index, output)
 		if err != nil {
 			return nil, err
 		}
@@ -200,9 +185,9 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	switch t.T {
 	case SliceTy:
 		if (*t.Elem).T == StringTy {
-			return forEachUnpack(t, output[begin:], 0, end)
+			return forEachUnpack(t, output[begin:], 0, length)
 		}
-		return forEachUnpack(t, output, begin, end)
+		return forEachUnpack(t, output, begin, length)
 	case ArrayTy:
 		if (*t.Elem).T == StringTy {
 			offset := int64(binary.BigEndian.Uint64(returnOutput[len(returnOutput)-8:]))
@@ -210,7 +195,7 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 		}
 		return forEachUnpack(t, output, index, t.Size)
 	case StringTy: // variable arrays are written at the end of the return bytes
-		return string(output[begin : begin+end]), nil
+		return string(output[begin : begin+length]), nil
 	case IntTy, UintTy:
 		return readInteger(t.T, t.Kind, returnOutput), nil
 	case BoolTy:
@@ -220,7 +205,7 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	case HashTy:
 		return common.BytesToHash(returnOutput), nil
 	case BytesTy:
-		return output[begin : begin+end], nil
+		return output[begin : begin+length], nil
 	case FixedBytesTy:
 		return readFixedBytes(t, returnOutput)
 	case FunctionTy:

@@ -33,24 +33,27 @@ type Argument struct {
 
 type Arguments []Argument
 
+type ArgumentMarshaling struct {
+	Name       string
+	Type       string
+	Components []ArgumentMarshaling
+	Indexed    bool
+}
+
 // UnmarshalJSON implements json.Unmarshaler interface
 func (argument *Argument) UnmarshalJSON(data []byte) error {
-	var extarg struct {
-		Name    string
-		Type    string
-		Indexed bool
-	}
-	err := json.Unmarshal(data, &extarg)
+	var arg ArgumentMarshaling
+	err := json.Unmarshal(data, &arg)
 	if err != nil {
 		return fmt.Errorf("argument json err: %v", err)
 	}
 
-	argument.Type, err = NewType(extarg.Type)
+	argument.Type, err = NewType(arg.Type, arg.Components)
 	if err != nil {
 		return err
 	}
-	argument.Name = extarg.Name
-	argument.Indexed = extarg.Indexed
+	argument.Name = arg.Name
+	argument.Indexed = arg.Indexed
 
 	return nil
 }
@@ -85,7 +88,6 @@ func (arguments Arguments) isTuple() bool {
 
 // Unpack performs the operation hexdata -> Go format
 func (arguments Arguments) Unpack(v interface{}, data []byte) error {
-
 	// make sure the passed value is arguments pointer
 	if reflect.Ptr != reflect.ValueOf(v).Kind() {
 		return fmt.Errorf("abi: Unpack(non-pointer %T)", v)
@@ -100,14 +102,37 @@ func (arguments Arguments) Unpack(v interface{}, data []byte) error {
 	return arguments.unpackAtomic(v, marshalledValues)
 }
 
-func (arguments Arguments) unpackTuple(v interface{}, marshalledValues []interface{}) error {
+// unpackAtomic unpacks ( hexdata -> go ) a single value
+func (arguments Arguments) unpackAtomic(v interface{}, marshalledValues []interface{}) error {
+	if arguments.LengthNonIndexed() == 0 {
+		return nil
+	}
+	argument := arguments.NonIndexed()[0]
+	elem := reflect.ValueOf(v).Elem()
 
+	if elem.Kind() == reflect.Struct {
+		fieldmap, err := mapArgNamesToStructFields([]string{argument.Name}, elem)
+		if err != nil {
+			return err
+		}
+		field := elem.FieldByName(fieldmap[argument.Name])
+		if !field.IsValid() {
+			return fmt.Errorf("abi: field %s can't be found in the given value", argument.Name)
+		}
+		return set(field, reflect.ValueOf(marshalledValues[0]))
+	}
+
+	return set(elem, reflect.ValueOf(marshalledValues[0]))
+
+}
+
+// unpackTuple unpacks ( hexdata -> go ) a batch of values.
+func (arguments Arguments) unpackTuple(v interface{}, marshalledValues []interface{}) error {
 	var (
 		value = reflect.ValueOf(v).Elem()
 		typ   = value.Type()
 		kind  = value.Kind()
 	)
-
 	if err := requireUnpackKind(value, typ, kind, arguments); err != nil {
 		return err
 	}
@@ -116,33 +141,38 @@ func (arguments Arguments) unpackTuple(v interface{}, marshalledValues []interfa
 
 	var abi2struct map[string]string
 	if kind == reflect.Struct {
-		var err error
-		abi2struct, err = mapAbiToStructFields(arguments, value)
+		var (
+			argNames []string
+			err      error
+		)
+		for _, arg := range arguments.NonIndexed() {
+			argNames = append(argNames, arg.Name)
+		}
+		abi2struct, err = mapArgNamesToStructFields(argNames, value)
 		if err != nil {
 			return err
 		}
 	}
 	for i, arg := range arguments.NonIndexed() {
-
-		reflectValue := reflect.ValueOf(marshalledValues[i])
-
 		switch kind {
 		case reflect.Struct:
-			if structField, ok := abi2struct[arg.Name]; ok {
-				if err := set(value.FieldByName(structField), reflectValue, arg); err != nil {
-					return err
-				}
+			field := value.FieldByName(abi2struct[arg.Name])
+			if !field.IsValid() {
+				return fmt.Errorf("abi: field %s can't be found in the given value", arg.Name)
+			}
+			if err := set(field, reflect.ValueOf(marshalledValues[i])); err != nil {
+				return err
 			}
 		case reflect.Slice, reflect.Array:
 			if value.Len() < i {
 				return fmt.Errorf("abi: insufficient number of arguments for unpack, want %d, got %d", len(arguments), value.Len())
 			}
 			v := value.Index(i)
-			if err := requireAssignable(v, reflectValue); err != nil {
+			if err := requireAssignable(v, reflect.ValueOf(marshalledValues[i])); err != nil {
 				return err
 			}
 
-			if err := set(v.Elem(), reflectValue, arg); err != nil {
+			if err := set(v.Elem(), reflect.ValueOf(marshalledValues[i])); err != nil {
 				return err
 			}
 		default:
@@ -150,48 +180,6 @@ func (arguments Arguments) unpackTuple(v interface{}, marshalledValues []interfa
 		}
 	}
 	return nil
-}
-
-// unpackAtomic unpacks ( hexdata -> go ) a single value
-func (arguments Arguments) unpackAtomic(v interface{}, marshalledValues []interface{}) error {
-	if len(marshalledValues) != 1 {
-		return fmt.Errorf("abi: wrong length, expected single value, got %d", len(marshalledValues))
-	}
-
-	elem := reflect.ValueOf(v).Elem()
-	kind := elem.Kind()
-	reflectValue := reflect.ValueOf(marshalledValues[0])
-
-	var abi2struct map[string]string
-	if kind == reflect.Struct {
-		var err error
-		if abi2struct, err = mapAbiToStructFields(arguments, elem); err != nil {
-			return err
-		}
-		arg := arguments.NonIndexed()[0]
-		if structField, ok := abi2struct[arg.Name]; ok {
-			return set(elem.FieldByName(structField), reflectValue, arg)
-		}
-		return nil
-	}
-
-	return set(elem, reflectValue, arguments.NonIndexed()[0])
-
-}
-
-// Computes the full size of an array;
-// i.e. counting nested arrays, which count towards size for unpacking.
-func getArraySize(arr *Type) int {
-	size := arr.Size
-	// Arrays can be nested, with each element being the same size
-	arr = arr.Elem
-	for arr.T == ArrayTy {
-		// Keep multiplying by elem.Size while the elem is an array.
-		size *= arr.Size
-		arr = arr.Elem
-	}
-	// Now we have the full array size, including its children.
-	return size
 }
 
 // UnpackValues can be used to unpack ABI-encoded hexdata according to the ABI-specification,
@@ -202,7 +190,7 @@ func (arguments Arguments) UnpackValues(data []byte) ([]interface{}, error) {
 	virtualArgs := 0
 	for index, arg := range arguments.NonIndexed() {
 		marshalledValue, err := toGoType((index+virtualArgs)*32, arg.Type, data)
-		if arg.Type.T == ArrayTy && (*arg.Type.Elem).T != StringTy {
+		if arg.Type.T == ArrayTy && !isDynamicType(arg.Type) {
 			// If we have a static array, like [3]uint256, these are coded as
 			// just like uint256,uint256,uint256.
 			// This means that we need to add two 'virtual' arguments when
@@ -213,7 +201,7 @@ func (arguments Arguments) UnpackValues(data []byte) ([]interface{}, error) {
 			//
 			// Calculate the full array size to get the correct offset for the next argument.
 			// Decrement it by 1, as the normal index increment is still applied.
-			virtualArgs += getArraySize(&arg.Type) - 1
+			virtualArgs += getTypeSize(arg.Type)/32 - 1
 		}
 		if err != nil {
 			return nil, err
@@ -243,7 +231,7 @@ func (arguments Arguments) Pack(args ...interface{}) ([]byte, error) {
 	// input offset is the bytes offset for packed output
 	inputOffset := 0
 	for _, abiArg := range abiArgs {
-		inputOffset += getDynamicTypeOffset(abiArg.Type)
+		inputOffset += getTypeSize(abiArg.Type)
 	}
 	var ret []byte
 	for i, a := range args {

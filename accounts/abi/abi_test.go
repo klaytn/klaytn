@@ -56,11 +56,14 @@ const jsondata2 = `
 	{ "type" : "function", "name" : "slice", "constant" : false, "inputs" : [ { "name" : "inputs", "type" : "uint32[2]" } ] },
 	{ "type" : "function", "name" : "slice256", "constant" : false, "inputs" : [ { "name" : "inputs", "type" : "uint256[2]" } ] },
 	{ "type" : "function", "name" : "sliceAddress", "constant" : false, "inputs" : [ { "name" : "inputs", "type" : "address[]" } ] },
-	{ "type" : "function", "name" : "sliceMultiAddress", "constant" : false, "inputs" : [ { "name" : "a", "type" : "address[]" }, { "name" : "b", "type" : "address[]" } ] }
+	{ "type" : "function", "name" : "sliceMultiAddress", "constant" : false, "inputs" : [ { "name" : "a", "type" : "address[]" }, { "name" : "b", "type" : "address[]" } ] },
+	{ "type" : "function", "name" : "nestedArray", "constant" : false, "inputs" : [ { "name" : "a", "type" : "uint256[2][2]" }, { "name" : "b", "type" : "address[]" } ] },
+	{ "type" : "function", "name" : "nestedArray2", "constant" : false, "inputs" : [ { "name" : "a", "type" : "uint8[][2]" } ] },
+	{ "type" : "function", "name" : "nestedSlice", "constant" : false, "inputs" : [ { "name" : "a", "type" : "uint8[][]" } ] }
 ]`
 
 func TestReader(t *testing.T) {
-	Uint256, _ := NewType("uint256")
+	Uint256, _ := NewType("uint256", nil)
 	exp := ABI{
 		Methods: map[string]Method{
 			"balance": {
@@ -181,7 +184,7 @@ func TestTestSlice(t *testing.T) {
 }
 
 func TestMethodSignature(t *testing.T) {
-	String, _ := NewType("string")
+	String, _ := NewType("string", nil)
 	m := Method{"foo", false, []Argument{{"bar", String, false}, {"baz", String, false}}, nil}
 	exp := "foo(string,string)"
 	if m.Sig() != exp {
@@ -193,7 +196,7 @@ func TestMethodSignature(t *testing.T) {
 		t.Errorf("expected ids to match %x != %x", m.Id(), idexp)
 	}
 
-	uintt, _ := NewType("uint256")
+	uintt, _ := NewType("uint256", nil)
 	m = Method{"foo", false, []Argument{{"bar", uintt, false}}, nil}
 	exp = "foo(uint256)"
 	if m.Sig() != exp {
@@ -571,8 +574,8 @@ func TestBareEvents(t *testing.T) {
 	{ "type" : "event", "name" : "args", "inputs" : [{ "indexed":false, "name":"arg0", "type":"uint256" }, { "indexed":true, "name":"arg1", "type":"address" }] }
 	]`
 
-	arg0, _ := NewType("uint256")
-	arg1, _ := NewType("address")
+	arg0, _ := NewType("uint256", nil)
+	arg1, _ := NewType("address", nil)
 
 	expectedEvents := map[string]struct {
 		Anonymous bool
@@ -650,28 +653,24 @@ func TestUnpackEvent(t *testing.T) {
 	}
 
 	type ReceivedEvent struct {
-		Address common.Address
-		Amount  *big.Int
-		Memo    []byte
+		Sender common.Address
+		Amount *big.Int
+		Memo   []byte
 	}
 	var ev ReceivedEvent
 
 	err = abi.Unpack(&ev, "received", data)
 	if err != nil {
 		t.Error(err)
-	} else {
-		t.Logf("len(data): %d; received event: %+v", len(data), ev)
 	}
 
 	type ReceivedAddrEvent struct {
-		Address common.Address
+		Sender common.Address
 	}
 	var receivedAddrEv ReceivedAddrEvent
 	err = abi.Unpack(&receivedAddrEv, "receivedAddr", data)
 	if err != nil {
 		t.Error(err)
-	} else {
-		t.Logf("len(data): %d; received event: %+v", len(data), receivedAddrEv)
 	}
 }
 
