@@ -27,6 +27,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -465,6 +466,14 @@ func (pm *ProtocolManager) handle(p Peer) error {
 }
 
 func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Error("stacktrace from panic: \n" + string(debug.Stack()))
+			logger.Warn("the panic is recovered", "panicErr", err)
+			errCh <- errors.New("unknown error during the msg processing")
+		}
+	}()
+
 	_, fakeF := pm.fetcher.(*fetcher.FakeFetcher)
 	_, fakeD := pm.downloader.(*downloader.FakeDownloader)
 	if fakeD || fakeF {
