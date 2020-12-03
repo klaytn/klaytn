@@ -67,19 +67,21 @@ type Node struct {
 
 // NewNode creates a new node. It is mostly meant to be used for
 // testing purposes.
-func NewNode(id NodeID, ip net.IP, udpPort, tcpPort uint16, nType NodeType) *Node {
+func NewNode(id NodeID, ip net.IP, udpPort, tcpPort uint16, tcpSubports []uint16, nType NodeType) *Node {
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
 	}
-	return &Node{
+	node := &Node{
 		IP:    ip,
 		UDP:   udpPort,
 		TCP:   tcpPort,
-		TCPs:  []uint16{},
+		TCPs:  tcpSubports,
 		ID:    id,
 		NType: nType,
 		sha:   crypto.Keccak256Hash(id[:]),
 	}
+	node.AddSubport(tcpPort)
+	return node
 }
 
 func (n *Node) addr() *net.UDPAddr {
@@ -175,6 +177,7 @@ func parseComplete(rawurl string) (*Node, error) {
 	var (
 		id               NodeID
 		tcpPort, udpPort uint64
+		tcpSubports      []uint16
 	)
 	u, err := url.Parse(rawurl)
 	if err != nil {
@@ -209,8 +212,19 @@ func parseComplete(rawurl string) (*Node, error) {
 	if tcpPort, err = strconv.ParseUint(u.Port(), 10, 16); err != nil {
 		return nil, errors.New("invalid port")
 	}
-	udpPort = tcpPort
+	// Extract subport from query
 	qv := u.Query()
+	if qv.Get("subport") != "" {
+		for _, subport := range qv["subport"] {
+			if p, err := strconv.ParseUint(subport, 10, 16); err != nil {
+				logger.Warn("skipping invalid subport in query", "id", id, "ip", ip, "subport", p)
+			} else {
+				tcpSubports = append(tcpSubports, uint16(p))
+			}
+		}
+	}
+	// Extract discovery port from query
+	udpPort = tcpPort
 	if qv.Get("discport") != "" {
 		udpPort, err = strconv.ParseUint(qv.Get("discport"), 10, 16)
 		if err != nil {
@@ -222,7 +236,7 @@ func parseComplete(rawurl string) (*Node, error) {
 	if qv.Get("ntype") != "" {
 		nType = ParseNodeType(qv.Get("ntype"))
 	}
-	return NewNode(id, ip, uint16(udpPort), uint16(tcpPort), nType), nil
+	return NewNode(id, ip, uint16(udpPort), uint16(tcpPort), tcpSubports, nType), nil
 }
 
 // MustParseNode parses a node URL. It panics if the URL is not valid.
@@ -260,6 +274,20 @@ func (n *Node) CompareNode(tn *Node) bool {
 		return false
 	}
 	return true
+}
+
+// AddSubport add a new port to TCPs
+// TCPs contains unique ports
+func (n *Node) AddSubport(port uint16) {
+	if n.TCPs == nil {
+		n.TCPs = []uint16{}
+	}
+	for _, val := range n.TCPs {
+		if val == port {
+			return
+		}
+	}
+	n.TCPs = append(n.TCPs, port)
 }
 
 // NodeID is a unique identifier for each node.
