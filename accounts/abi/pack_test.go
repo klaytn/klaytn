@@ -443,6 +443,177 @@ func TestPack(t *testing.T) {
 				"0400000000000000000000000000000000000000000000000000000000000000" + // array[1][1]
 				"0500000000000000000000000000000000000000000000000000000000000000"), // array[1][2]
 		},
+		{
+			// static tuple
+			"tuple",
+			[]ArgumentMarshaling{
+				{Name: "a", Type: "int64"},
+				{Name: "b", Type: "int256"},
+				{Name: "c", Type: "int256"},
+				{Name: "d", Type: "bool"},
+				{Name: "e", Type: "bytes32[3][2]"},
+			},
+			struct {
+				A int64
+				B *big.Int
+				C *big.Int
+				D bool
+				E [][]common.Hash
+			}{1, big.NewInt(1), big.NewInt(-1), true, [][]common.Hash{{{1}, {2}, {3}}, {{3}, {4}, {5}}}},
+			common.Hex2Bytes("0000000000000000000000000000000000000000000000000000000000000001" + // struct[a]
+				"0000000000000000000000000000000000000000000000000000000000000001" + // struct[b]
+				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" + // struct[c]
+				"0000000000000000000000000000000000000000000000000000000000000001" + // struct[d]
+				"0100000000000000000000000000000000000000000000000000000000000000" + // struct[e] array[0][0]
+				"0200000000000000000000000000000000000000000000000000000000000000" + // struct[e] array[0][1]
+				"0300000000000000000000000000000000000000000000000000000000000000" + // struct[e] array[0][2]
+				"0300000000000000000000000000000000000000000000000000000000000000" + // struct[e] array[1][0]
+				"0400000000000000000000000000000000000000000000000000000000000000" + // struct[e] array[1][1]
+				"0500000000000000000000000000000000000000000000000000000000000000"), // struct[e] array[1][2]
+		},
+		{
+			// dynamic tuple
+			"tuple",
+			[]ArgumentMarshaling{
+				{Name: "a", Type: "string"},
+				{Name: "b", Type: "int64"},
+				{Name: "c", Type: "bytes"},
+				{Name: "d", Type: "string[]"},
+				{Name: "e", Type: "int256[]"},
+				{Name: "f", Type: "address[]"},
+			},
+			struct {
+				FieldA string `abi:"a"` // Test whether abi tag works
+				FieldB int64  `abi:"b"`
+				C      []byte
+				D      []string
+				E      []*big.Int
+				F      []common.Address
+			}{"foobar", 1, []byte{1}, []string{"foo", "bar"}, []*big.Int{big.NewInt(1), big.NewInt(-1)}, []common.Address{{1}, {2}}},
+			common.Hex2Bytes("00000000000000000000000000000000000000000000000000000000000000c0" + // struct[a] offset
+				"0000000000000000000000000000000000000000000000000000000000000001" + // struct[b]
+				"0000000000000000000000000000000000000000000000000000000000000100" + // struct[c] offset
+				"0000000000000000000000000000000000000000000000000000000000000140" + // struct[d] offset
+				"0000000000000000000000000000000000000000000000000000000000000220" + // struct[e] offset
+				"0000000000000000000000000000000000000000000000000000000000000280" + // struct[f] offset
+				"0000000000000000000000000000000000000000000000000000000000000006" + // struct[a] length
+				"666f6f6261720000000000000000000000000000000000000000000000000000" + // struct[a] "foobar"
+				"0000000000000000000000000000000000000000000000000000000000000001" + // struct[c] length
+				"0100000000000000000000000000000000000000000000000000000000000000" + // []byte{1}
+				"0000000000000000000000000000000000000000000000000000000000000002" + // struct[d] length
+				"0000000000000000000000000000000000000000000000000000000000000040" + // foo offset
+				"0000000000000000000000000000000000000000000000000000000000000080" + // bar offset
+				"0000000000000000000000000000000000000000000000000000000000000003" + // foo length
+				"666f6f0000000000000000000000000000000000000000000000000000000000" + // foo
+				"0000000000000000000000000000000000000000000000000000000000000003" + // bar offset
+				"6261720000000000000000000000000000000000000000000000000000000000" + // bar
+				"0000000000000000000000000000000000000000000000000000000000000002" + // struct[e] length
+				"0000000000000000000000000000000000000000000000000000000000000001" + // 1
+				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" + // -1
+				"0000000000000000000000000000000000000000000000000000000000000002" + // struct[f] length
+				"0000000000000000000000000100000000000000000000000000000000000000" + // common.Address{1}
+				"0000000000000000000000000200000000000000000000000000000000000000"), // common.Address{2}
+		},
+		{
+			// nested tuple
+			"tuple",
+			[]ArgumentMarshaling{
+				{Name: "a", Type: "tuple", Components: []ArgumentMarshaling{{Name: "a", Type: "uint256"}, {Name: "b", Type: "uint256[]"}}},
+				{Name: "b", Type: "int256[]"},
+			},
+			struct {
+				A struct {
+					FieldA *big.Int `abi:"a"`
+					B      []*big.Int
+				}
+				B []*big.Int
+			}{
+				A: struct {
+					FieldA *big.Int `abi:"a"` // Test whether abi tag works for nested tuple
+					B      []*big.Int
+				}{big.NewInt(1), []*big.Int{big.NewInt(1), big.NewInt(0)}},
+				B: []*big.Int{big.NewInt(1), big.NewInt(0)}},
+			common.Hex2Bytes("0000000000000000000000000000000000000000000000000000000000000040" + // a offset
+				"00000000000000000000000000000000000000000000000000000000000000e0" + // b offset
+				"0000000000000000000000000000000000000000000000000000000000000001" + // a.a value
+				"0000000000000000000000000000000000000000000000000000000000000040" + // a.b offset
+				"0000000000000000000000000000000000000000000000000000000000000002" + // a.b length
+				"0000000000000000000000000000000000000000000000000000000000000001" + // a.b[0] value
+				"0000000000000000000000000000000000000000000000000000000000000000" + // a.b[1] value
+				"0000000000000000000000000000000000000000000000000000000000000002" + // b length
+				"0000000000000000000000000000000000000000000000000000000000000001" + // b[0] value
+				"0000000000000000000000000000000000000000000000000000000000000000"), // b[1] value
+		},
+		{
+			// tuple slice
+			"tuple[]",
+			[]ArgumentMarshaling{
+				{Name: "a", Type: "int256"},
+				{Name: "b", Type: "int256[]"},
+			},
+			[]struct {
+				A *big.Int
+				B []*big.Int
+			}{
+				{big.NewInt(-1), []*big.Int{big.NewInt(1), big.NewInt(0)}},
+				{big.NewInt(1), []*big.Int{big.NewInt(2), big.NewInt(-1)}},
+			},
+			common.Hex2Bytes("0000000000000000000000000000000000000000000000000000000000000002" + // tuple length
+				"0000000000000000000000000000000000000000000000000000000000000040" + // tuple[0] offset
+				"00000000000000000000000000000000000000000000000000000000000000e0" + // tuple[1] offset
+				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" + // tuple[0].A
+				"0000000000000000000000000000000000000000000000000000000000000040" + // tuple[0].B offset
+				"0000000000000000000000000000000000000000000000000000000000000002" + // tuple[0].B length
+				"0000000000000000000000000000000000000000000000000000000000000001" + // tuple[0].B[0] value
+				"0000000000000000000000000000000000000000000000000000000000000000" + // tuple[0].B[1] value
+				"0000000000000000000000000000000000000000000000000000000000000001" + // tuple[1].A
+				"0000000000000000000000000000000000000000000000000000000000000040" + // tuple[1].B offset
+				"0000000000000000000000000000000000000000000000000000000000000002" + // tuple[1].B length
+				"0000000000000000000000000000000000000000000000000000000000000002" + // tuple[1].B[0] value
+				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), // tuple[1].B[1] value
+		},
+		{
+			// static tuple array
+			"tuple[2]",
+			[]ArgumentMarshaling{
+				{Name: "a", Type: "int256"},
+				{Name: "b", Type: "int256"},
+			},
+			[2]struct {
+				A *big.Int
+				B *big.Int
+			}{
+				{big.NewInt(-1), big.NewInt(1)},
+				{big.NewInt(1), big.NewInt(-1)},
+			},
+			common.Hex2Bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" + // tuple[0].a
+				"0000000000000000000000000000000000000000000000000000000000000001" + // tuple[0].b
+				"0000000000000000000000000000000000000000000000000000000000000001" + // tuple[1].a
+				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), // tuple[1].b
+		},
+		{
+			// dynamic tuple array
+			"tuple[2]",
+			[]ArgumentMarshaling{
+				{Name: "a", Type: "int256[]"},
+			},
+			[2]struct {
+				A []*big.Int
+			}{
+				{[]*big.Int{big.NewInt(-1), big.NewInt(1)}},
+				{[]*big.Int{big.NewInt(1), big.NewInt(-1)}},
+			},
+			common.Hex2Bytes("0000000000000000000000000000000000000000000000000000000000000040" + // tuple[0] offset
+				"00000000000000000000000000000000000000000000000000000000000000c0" + // tuple[1] offset
+				"0000000000000000000000000000000000000000000000000000000000000020" + // tuple[0].A offset
+				"0000000000000000000000000000000000000000000000000000000000000002" + // tuple[0].A length
+				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" + // tuple[0].A[0]
+				"0000000000000000000000000000000000000000000000000000000000000001" + // tuple[0].A[1]
+				"0000000000000000000000000000000000000000000000000000000000000020" + // tuple[1].A offset
+				"0000000000000000000000000000000000000000000000000000000000000002" + // tuple[1].A length
+				"0000000000000000000000000000000000000000000000000000000000000001" + // tuple[1].A[0]
+				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), // tuple[1].A[1]
+		},
 	} {
 		typ, err := NewType(test.typ, test.components)
 		if err != nil {
@@ -521,6 +692,59 @@ func TestMethodPack(t *testing.T) {
 		t.Error(err)
 	}
 
+	if !bytes.Equal(packed, sig) {
+		t.Errorf("expected %x got %x", sig, packed)
+	}
+
+	a := [2][2]*big.Int{{big.NewInt(1), big.NewInt(1)}, {big.NewInt(2), big.NewInt(0)}}
+	sig = abi.Methods["nestedArray"].Id()
+	sig = append(sig, common.LeftPadBytes([]byte{1}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{1}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{2}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{0}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{0xa0}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{2}, 32)...)
+	sig = append(sig, common.LeftPadBytes(addrC[:], 32)...)
+	sig = append(sig, common.LeftPadBytes(addrD[:], 32)...)
+	packed, err = abi.Pack("nestedArray", a, []common.Address{addrC, addrD})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(packed, sig) {
+		t.Errorf("expected %x got %x", sig, packed)
+	}
+
+	sig = abi.Methods["nestedArray2"].Id()
+	sig = append(sig, common.LeftPadBytes([]byte{0x20}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{0x40}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{0x80}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{1}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{1}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{1}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{1}, 32)...)
+	packed, err = abi.Pack("nestedArray2", [2][]uint8{{1}, {1}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(packed, sig) {
+		t.Errorf("expected %x got %x", sig, packed)
+	}
+
+	sig = abi.Methods["nestedSlice"].Id()
+	sig = append(sig, common.LeftPadBytes([]byte{0x20}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{0x02}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{0x40}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{0xa0}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{2}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{1}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{2}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{2}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{1}, 32)...)
+	sig = append(sig, common.LeftPadBytes([]byte{2}, 32)...)
+	packed, err = abi.Pack("nestedSlice", [][]uint8{{1, 2}, {1, 2}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !bytes.Equal(packed, sig) {
 		t.Errorf("expected %x got %x", sig, packed)
 	}
