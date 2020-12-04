@@ -28,7 +28,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 )
 
-func Test_makeTopics(t *testing.T) {
+func TestMakeTopics(t *testing.T) {
 	type args struct {
 		query [][]interface{}
 	}
@@ -59,7 +59,7 @@ func Test_makeTopics(t *testing.T) {
 	}
 }
 
-func Test_parseTopics(t *testing.T) {
+func TestParseTopics(t *testing.T) {
 	type bytesStruct struct {
 		StaticBytes [5]byte
 	}
