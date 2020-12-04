@@ -294,7 +294,7 @@ func TestProtocolManager_processMsg_panicRecover(t *testing.T) {
 		func() { panic("panic test") },
 	)
 
-	// pm.processMsg will be panicked byt the mockPeer
+	// pm.processMsg will be panicked by the mockPeer
 	go pm.processMsg(msgCh, mockPeer, addr, errCh)
 
 	msgCh <- p2p.Msg{Code: NodeDataMsg}
