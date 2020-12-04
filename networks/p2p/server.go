@@ -577,8 +577,8 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 			dialDest.TCPs = append(dialDest.TCPs, uint16(listenPort))
 		}
 		srv.AddPeer(dialDest)
-		logger.Info("[Dial] Try to update dial candidate with a multichannel peer", "id", dialDest.ID, "addr", dialDest.IP, "port", dialDest.TCPs)
-		return nil
+		logger.Info("[Dial] "+errUpdateDial.Error(), "id", dialDest.ID, "addr", dialDest.IP, "port", dialDest.TCPs)
+		return errUpdateDial
 	}
 
 	err = srv.checkpoint(c, srv.addpeer)

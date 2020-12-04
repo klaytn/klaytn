@@ -22,14 +22,14 @@ package p2p
 
 import (
 	"container/heap"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common/math"
 	"net"
 	"time"
 
-	"crypto/ecdsa"
+	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
 )
@@ -132,6 +132,7 @@ type dialTask struct {
 	resolveDelay time.Duration
 	failedTry    int
 	dialType     dialType
+	err          error
 }
 
 // discoverTask runs discovery table operations.
@@ -442,6 +443,7 @@ var (
 	errNotWhitelisted     = errors.New("not contained in netrestrict whitelist")
 	errExpired            = errors.New("is expired")
 	errExceedMaxTypedDial = errors.New("exceeded max typed dial")
+	errUpdateDial         = errors.New("Try to update dial candidate with a multichannel peer")
 )
 
 func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*Peer) error {
@@ -464,7 +466,12 @@ func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*Peer)
 func (s *dialstate) taskDone(t task, now time.Time) {
 	switch t := t.(type) {
 	case *dialTask:
-		s.hist.add(t.dest.ID, now.Add(dialHistoryExpiration))
+		// Updated dial can be redialed right away
+		if t.err != errUpdateDial {
+			logger.Error("add dialing history", "ID", t.dest.ID, "ip", t.dest.IP)
+			s.hist.add(t.dest.ID, now.Add(dialHistoryExpiration))
+		}
+		t.err = nil
 		delete(s.dialing, t.dest.ID)
 	case *discoverTask:
 		s.lookupRunning = false
@@ -485,24 +492,23 @@ func (t *dialTask) Do(srv Server) {
 			return
 		}
 	}
-	var err error
 	if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
-		err = t.dialMulti(srv, t.dest)
+		t.err = t.dialMulti(srv, t.dest)
 	} else {
-		err = t.dial(srv, t.dest)
+		t.err = t.dial(srv, t.dest)
 	}
 
-	if err != nil {
-		logger.Debug("[Dial] Failed dialing", "task", t, "err", err)
+	if t.err != nil && t.err != errUpdateDial {
+		logger.Debug("[Dial] Failed dialing", "task", t, "err", t.err)
 		// Try resolving the ID of static nodes if dialing failed.
-		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
+		if _, ok := t.err.(*dialError); ok && t.flags&staticDialedConn != 0 {
 			if t.resolve(srv, t.dest.NType) {
 				if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
-					err = t.dialMulti(srv, t.dest)
+					t.err = t.dialMulti(srv, t.dest)
 				} else {
-					err = t.dial(srv, t.dest)
+					t.err = t.dial(srv, t.dest)
 				}
-				if err != nil {
+				if t.err != nil {
 					t.failedTry++
 				}
 			} else {
