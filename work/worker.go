@@ -378,6 +378,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				log.BlockHash = block.Hash()
 			}
 
+			start := time.Now()
 			result, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
 			work.stateMu.Unlock()
 			if err != nil {
@@ -388,6 +389,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				}
 				continue
 			}
+			blockWriteTime := time.Since(start)
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
@@ -413,7 +415,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			}
 
 			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
-				"hash", block.Hash(), "txs", len(block.Transactions()))
+				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
