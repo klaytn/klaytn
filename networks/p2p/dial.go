@@ -468,7 +468,6 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 	case *dialTask:
 		// Updated dial can be redialed right away
 		if t.err != errUpdateDial {
-			logger.Error("add dialing history", "ID", t.dest.ID, "ip", t.dest.IP)
 			s.hist.add(t.dest.ID, now.Add(dialHistoryExpiration))
 		}
 		t.err = nil
