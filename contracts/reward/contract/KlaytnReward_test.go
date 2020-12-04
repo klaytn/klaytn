@@ -43,6 +43,7 @@ func TestSmartContract(t *testing.T) {
 
 	alloc := blockchain.GenesisAlloc{auth.From: {Balance: initialValue}, auth2.From: {Balance: initialValue}}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	// Deploy a token contract on the simulated blockchain
 	_, _, reward, err := DeployKlaytnReward(auth, sim)

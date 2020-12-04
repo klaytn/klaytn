@@ -22,6 +22,10 @@ package bind_test
 
 import (
 	"context"
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
@@ -29,9 +33,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
-	"math/big"
-	"testing"
-	"time"
 )
 
 var testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
@@ -96,5 +97,6 @@ func TestWaitDeployed(t *testing.T) {
 		case <-time.After(2 * time.Second):
 			t.Errorf("test %q: timeout", name)
 		}
+		defer backend.Close()
 	}
 }
