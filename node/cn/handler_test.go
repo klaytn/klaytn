@@ -299,7 +299,7 @@ func TestProtocolManager_processMsg_panicRecover(t *testing.T) {
 
 	msgCh <- p2p.Msg{Code: NodeDataMsg}
 
-	// panic will be recovered and errCh will received an error
+	// panic will be recovered and errCh will receive an error
 	err := <-errCh
 	assert.Equal(t, errUnknownProcessingError, err)
 }
