@@ -24,11 +24,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/common/compiler"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/klaytn/klaytn/common/compiler"
 )
 
 var (
@@ -67,8 +68,6 @@ func main() {
 		lang = bind.LangGo
 	case "java":
 		lang = bind.LangJava
-	case "objc":
-		lang = bind.LangObjC
 	default:
 		fmt.Printf("Unsupported destination language \"%s\" (--lang)\n", *langFlag)
 		os.Exit(-1)
