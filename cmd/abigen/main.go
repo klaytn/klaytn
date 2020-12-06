@@ -78,6 +78,7 @@ func main() {
 		bins        []string
 		binruntimes []string
 		types       []string
+		sigs        []map[string]string
 	)
 	if *solFlag != "" || *abiFlag == "-" {
 		// Generate the list of types to exclude from binding
@@ -116,6 +117,7 @@ func main() {
 			abis = append(abis, string(abi))
 			bins = append(bins, contract.Code)
 			binruntimes = append(binruntimes, contract.RuntimeCode)
+			sigs = append(sigs, contract.Hashes)
 
 			nameParts := strings.Split(name, ":")
 			types = append(types, nameParts[len(nameParts)-1])
@@ -155,7 +157,7 @@ func main() {
 		types = append(types, kind)
 	}
 	// Generate the contract binding
-	code, err := bind.Bind(types, abis, bins, binruntimes, *pkgFlag, lang)
+	code, err := bind.Bind(types, abis, bins, binruntimes, sigs, *pkgFlag, lang)
 	if err != nil {
 		fmt.Printf("Failed to generate ABI binding: %v\n", err)
 		os.Exit(-1)

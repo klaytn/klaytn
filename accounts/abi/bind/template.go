@@ -33,6 +33,7 @@ type tmplContract struct {
 	Type            string                 // Type name of the main contract binding
 	InputABI        string                 // JSON ABI used as the input to generate the binding from
 	InputBin        string                 // Optional EVM bytecode used to denetare deploy code from
+	FuncSigs        map[string]string      // Optional map: string signature -> 4-byte signature
 	InputBinRuntime string                 // Optional EVM-Runtime bytecode used to add genesis block
 	Constructor     abi.Method             // Contract constructor for deploy parametrization
 	Calls           map[string]*tmplMethod // Contract calls that only read state data
@@ -99,6 +100,15 @@ var (
 
     // {{.Type}}BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
     const {{.Type}}BinRuntime = ` + "`" + `{{.InputBinRuntime}}` + "`" + `
+
+	{{if $contract.FuncSigs}}
+		// {{.Type}}FuncSigs maps the 4-byte function signature to its string representation.
+		var {{.Type}}FuncSigs = map[string]string{
+			{{range $strsig, $binsig := .FuncSigs}}
+				"{{$binsig}}": "{{$strsig}}",
+			{{end}}
+		}
+	{{end}}
 
 	{{if .InputBin}}
 		// {{.Type}}Bin is the compiled bytecode used for deploying new contracts.
@@ -460,12 +470,23 @@ const tmplSourceJava = `
 package {{.Package}};
 
 import org.ethereum.geth.*;
+import java.util.*;
 
 {{range $contract := .Contracts}}
 public class {{.Type}} {
 	// ABI is the input ABI used to generate the binding from.
 	public final static String ABI = "{{.InputABI}}";
-
+	{{if $contract.FuncSigs}}
+		// {{.Type}}FuncSigs maps the 4-byte function signature to its string representation.
+		public final static Map<String, String> {{.Type}}FuncSigs;
+		static {
+			Hashtable<String, String> temp = new Hashtable<String, String>();
+			{{range $strsig, $binsig := .FuncSigs}}
+				temp.put("{{$binsig}}", "{{$strsig}}");
+			{{end}}
+			{{.Type}}FuncSigs = Collections.unmodifiableMap(temp);
+		}
+	{{end}}
 	{{if .InputBin}}
 	// BYTECODE is the compiled bytecode used for deploying new contracts.
 	public final static String BYTECODE = "0x{{.InputBin}}";
