@@ -1,5 +1,5 @@
 // Modifications Copyright 2018 The klaytn Authors
-// Copyright 2016 The go-ethereum Authors
+// Copyright 2019 The go-ethereum Authors
 // This file is part of go-ethereum.
 //
 // go-ethereum is free software: you can redistribute it and/or modify
@@ -55,7 +55,7 @@ func main() {
 		fmt.Printf("No contract ABI (--abi) or Solidity source (--sol) specified\n")
 		os.Exit(-1)
 	} else if (*abiFlag != "" || *binFlag != "" || *typFlag != "") && *solFlag != "" {
-		fmt.Printf("Contract ABI (--abi), bytecode (--bin), runtime-bytecode (--bin-runtime) and type (--type) flags are mutually exclusive with the Solidity source (--sol) flag\n")
+		fmt.Printf("Contract ABI (--abi), bytecode (--bin), and type (--type) flags are mutually exclusive with the Solidity source (--sol) flag\n")
 		os.Exit(-1)
 	}
 	if *pkgFlag == "" {
@@ -88,13 +88,15 @@ func main() {
 
 		var contracts map[string]*compiler.Contract
 		var err error
-		if *solFlag != "" {
+
+		switch {
+		case *solFlag != "":
 			contracts, err = compiler.CompileSolidity(*solcFlag, *solFlag)
 			if err != nil {
 				fmt.Printf("Failed to build Solidity contract: %v\n", err)
 				os.Exit(-1)
 			}
-		} else {
+		default:
 			contracts, err = contractsFromStdin()
 			if err != nil {
 				fmt.Printf("Failed to read input ABIs from STDIN: %v\n", err)
@@ -106,7 +108,11 @@ func main() {
 			if exclude[strings.ToLower(name)] {
 				continue
 			}
-			abi, _ := json.Marshal(contract.Info.AbiDefinition) // Flatten the compiler parse
+			abi, err := json.Marshal(contract.Info.AbiDefinition) // Flatten the compiler parse
+			if err != nil {
+				fmt.Printf("Failed to parse ABIs from compiler output: %v\n", err)
+				os.Exit(-1)
+			}
 			abis = append(abis, string(abi))
 			bins = append(bins, contract.Code)
 			binruntimes = append(binruntimes, contract.RuntimeCode)
