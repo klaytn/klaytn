@@ -33,10 +33,10 @@ import (
 )
 
 var (
-	abiFlag         = flag.String("abi", "", "Path to the Klaytn contract ABI json to bind, - for STDIN")
-	binFlag         = flag.String("bin", "", "Path to the Klaytn contract bytecode (generate deploy method")
-	binruntimesFlag = flag.String("bin-runtime", "", "Path to the Klaytn contract runtime-bytecode")
-	typFlag         = flag.String("type", "", "Struct name for the binding (default = package name)")
+	abiFlag        = flag.String("abi", "", "Path to the Klaytn contract ABI json to bind, - for STDIN")
+	binFlag        = flag.String("bin", "", "Path to the Klaytn contract bytecode (generate deploy method")
+	binruntimeFlag = flag.String("bin-runtime", "", "Path to the Klaytn contract runtime-bytecode")
+	typFlag        = flag.String("type", "", "Struct name for the binding (default = package name)")
 
 	solFlag  = flag.String("sol", "", "Path to the Klaytn contract Solidity source to build and bind")
 	solcFlag = flag.String("solc", "", "Solidity compiler to use if source builds are requested")
@@ -109,7 +109,7 @@ func main() {
 			abi, _ := json.Marshal(contract.Info.AbiDefinition) // Flatten the compiler parse
 			abis = append(abis, string(abi))
 			bins = append(bins, contract.Code)
-			binruntimes = append(binruntimes, contract.RCode)
+			binruntimes = append(binruntimes, contract.RuntimeCode)
 
 			nameParts := strings.Split(name, ":")
 			types = append(types, nameParts[len(nameParts)-1])
@@ -133,8 +133,8 @@ func main() {
 		bins = append(bins, string(bin))
 
 		binruntime := []byte{}
-		if *binruntimesFlag != "" {
-			if binruntime, err = ioutil.ReadFile(*binruntimesFlag); err != nil {
+		if *binruntimeFlag != "" {
+			if binruntime, err = ioutil.ReadFile(*binruntimeFlag); err != nil {
 				fmt.Printf("Failed to read input runtime-bytecode: %v\n", err)
 				os.Exit(-1)
 			}
