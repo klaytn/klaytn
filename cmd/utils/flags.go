@@ -1120,7 +1120,7 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 // setIPC creates an IPC path configuration from the set command line flags,
 // returning an empty string if IPC was explicitly disabled, or the set path.
 func setIPC(ctx *cli.Context, cfg *node.Config) {
-	checkExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
+	CheckExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
 	switch {
 	case ctx.GlobalBool(IPCDisabledFlag.Name):
 		cfg.IPCPath = ""
@@ -1338,10 +1338,10 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	}
 }
 
-// checkExclusive verifies that only a single instance of the provided flags was
+// CheckExclusive verifies that only a single instance of the provided flags was
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.
-func checkExclusive(ctx *cli.Context, args ...interface{}) {
+func CheckExclusive(ctx *cli.Context, args ...interface{}) {
 	set := make([]string, 0, 1)
 	for i := 0; i < len(args); i++ {
 		// Make sure the next argument is a flag and skip if not set
@@ -1379,8 +1379,7 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 // SetKlayConfig applies klay-related command line flags to the config.
 func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
-	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
-
+	// CheckExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setServiceChainSigner(ctx, ks, cfg)
 	setRewardbase(ctx, ks, cfg)
