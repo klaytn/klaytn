@@ -30,6 +30,7 @@ import (
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/common/compiler"
+	"github.com/klaytn/klaytn/crypto"
 )
 
 var (
@@ -81,6 +82,7 @@ func main() {
 		binruntimes []string
 		types       []string
 		sigs        []map[string]string
+		libs        = make(map[string]string)
 	)
 	if *solFlag != "" || *abiFlag == "-" {
 		// Generate the list of types to exclude from binding
@@ -123,6 +125,9 @@ func main() {
 
 			nameParts := strings.Split(name, ":")
 			types = append(types, nameParts[len(nameParts)-1])
+
+			libPattern := crypto.Keccak256Hash([]byte(name)).String()[2:36]
+			libs[libPattern] = nameParts[len(nameParts)-1]
 		}
 	} else {
 		// Otherwise load up the ABI, optional bytecode and type name from the parameters
@@ -159,7 +164,7 @@ func main() {
 		types = append(types, kind)
 	}
 	// Generate the contract binding
-	code, err := bind.Bind(types, abis, bins, binruntimes, sigs, *pkgFlag, lang)
+	code, err := bind.Bind(types, abis, bins, binruntimes, sigs, *pkgFlag, lang, libs)
 	if err != nil {
 		fmt.Printf("Failed to generate ABI binding: %v\n", err)
 		os.Exit(-1)
