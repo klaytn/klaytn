@@ -24,13 +24,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
-	"math/big"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to
@@ -352,6 +353,22 @@ func (c *BoundContract) UnpackLog(out interface{}, event string, log types.Log) 
 		}
 	}
 	return parseTopics(out, indexed, log.Topics[1:])
+}
+
+// UnpackLogIntoMap unpacks a retrieved log into the provided map.
+func (c *BoundContract) UnpackLogIntoMap(out map[string]interface{}, event string, log types.Log) error {
+	if len(log.Data) > 0 {
+		if err := c.abi.UnpackIntoMap(out, event, log.Data); err != nil {
+			return err
+		}
+	}
+	var indexed abi.Arguments
+	for _, arg := range c.abi.Events[event].Inputs {
+		if arg.Indexed {
+			indexed = append(indexed, arg)
+		}
+	}
+	return parseTopicsIntoMap(out, indexed, log.Topics[1:])
 }
 
 // ensureContext is a helper method to ensure a context is not nil, even if the
