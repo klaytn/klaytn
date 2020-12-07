@@ -40,6 +40,7 @@ func TestSimulatedBackend(t *testing.T) {
 	genAlloc[auth.From] = blockchain.GenesisAccount{Balance: big.NewInt(9223372036854775807)}
 
 	sim := NewSimulatedBackend(genAlloc)
+	defer sim.Close()
 
 	// should return an error if the tx is not found
 	txHash := common.HexToHash("2")

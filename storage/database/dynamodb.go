@@ -27,6 +27,7 @@ package database
 
 import (
 	"bytes"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -56,6 +57,7 @@ var noTableNameErr = errors.New("dynamoDB table name not provided")
 const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB including attribute names and values
 const dynamoBatchSize = 25
 const dynamoMaxRetry = 5
+const dynamoTimeout = 10 * time.Second
 
 // batch write
 const WorkerNum = 10
@@ -121,24 +123,6 @@ func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	}
 }
 
-// GetTestDynamoConfig gets dynamo config for local test
-//
-// Please Run DynamoDB local with docker
-//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
-func GetTestDynamoConfig() *DynamoDBConfig {
-	return &DynamoDBConfig{
-		Region:             "us-east-1",
-		Endpoint:           "http://localhost:4566",
-		S3Endpoint:         "http://localhost:4566",
-		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
-		IsProvisioned:      false,
-		ReadCapacityUnits:  10000,
-		WriteCapacityUnits: 10000,
-		ReadOnly:           false,
-		PerfCheck:          false,
-	}
-}
-
 // NewDynamoDB creates either dynamoDB or dynamoDBReadOnly depending on config.ReadOnly.
 func NewDynamoDB(config *DynamoDBConfig) (Database, error) {
 	if config.ReadOnly {
@@ -176,6 +160,8 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 				Endpoint:         aws.String(config.Endpoint),
 				Region:           aws.String(config.Region),
 				S3ForcePathStyle: aws.Bool(true),
+				MaxRetries:       aws.Int(dynamoMaxRetry),
+				HTTPClient:       &http.Client{Timeout: dynamoTimeout}, // default client is &http.Client{}
 			},
 		})))
 	}
