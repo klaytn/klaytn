@@ -505,21 +505,21 @@ func (bc *BlockChain) startWarmUp(contractAddr common.Address) error {
 
 	bc.quitWarmUp = make(chan struct{})
 
+	root := block.Root()
+	if !common.EmptyAddress(contractAddr) {
+		var err error
+		root, err = bc.GetContractStorageRoot(block, db, contractAddr)
+		if err != nil {
+			logger.Error("failed to retrieve the storage root",
+				"err", err, "contractAddr", contractAddr.String())
+			return err
+		}
+	}
+
 	go func() {
 		defer func() {
 			bc.quitWarmUp = nil
 		}()
-
-		root := block.Root()
-		if !common.EmptyAddress(contractAddr) {
-			var err error
-			root, err = bc.GetContractStorageRoot(block, db, contractAddr)
-			if err != nil {
-				logger.Error("failed to retrieve the storage root",
-					"err", err, "contractAddr", contractAddr.String())
-				return
-			}
-		}
 
 		children, err := db.TrieDB().NodeChildren(root)
 		if err != nil {
