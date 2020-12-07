@@ -443,7 +443,7 @@ var (
 	errNotWhitelisted     = errors.New("not contained in netrestrict whitelist")
 	errExpired            = errors.New("is expired")
 	errExceedMaxTypedDial = errors.New("exceeded max typed dial")
-	errUpdateDial         = errors.New("Try to update dial candidate with a multichannel peer")
+	errUpdateDial         = errors.New("updated to be multichannel peer")
 )
 
 func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*Peer) error {
