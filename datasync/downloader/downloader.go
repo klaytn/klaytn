@@ -322,7 +322,11 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode 
 
 	if errors.Is(err, errInvalidChain) {
 		logger.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
-		d.dropPeer(id)
+		if d.dropPeer == nil {
+			logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", id)
+		} else {
+			d.dropPeer(id)
+		}
 		return err
 	}
 
@@ -331,7 +335,11 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode 
 		errEmptyHeaderSet, errPeersUnavailable, errTooOld,
 		errInvalidAncestor:
 		logger.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
-		d.dropPeer(id)
+		if d.dropPeer == nil {
+			logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", id)
+		} else {
+			d.dropPeer(id)
+		}
 
 	default:
 		logger.Warn("Synchronisation failed, retrying", "err", err)
@@ -878,6 +886,10 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, pivot uint64) 
 			getHeaders(from)
 
 		case <-timeout.C:
+			if d.dropPeer == nil {
+				logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", p.id)
+				break
+			}
 			// Header retrieval timed out, consider the peer bad and drop
 			p.logger.Debug("Header request timed out", "elapsed", ttl)
 			headerTimeoutMeter.Mark(1)
@@ -1105,16 +1117,21 @@ func (d *Downloader) fetchParts(deliveryCh chan dataPack, deliver func(dataPack)
 						setIdle(peer, 0, time.Now())
 					} else {
 						peer.logger.Debug("Stalling delivery, dropping", "type", kind)
-						d.dropPeer(pid)
 
-						// If this peer was the master peer, abort sync immediately
-						d.cancelLock.RLock()
-						master := pid == d.cancelPeer
-						d.cancelLock.RUnlock()
+						if d.dropPeer == nil {
+							logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", pid)
+						} else {
+							d.dropPeer(pid)
 
-						if master {
-							d.cancel()
-							return errTimeout
+							// If this peer was the master peer, abort sync immediately
+							d.cancelLock.RLock()
+							master := pid == d.cancelPeer
+							d.cancelLock.RUnlock()
+
+							if master {
+								d.cancel()
+								return errTimeout
+							}
 						}
 					}
 				}
