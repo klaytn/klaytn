@@ -132,7 +132,7 @@ type dialTask struct {
 	resolveDelay time.Duration
 	failedTry    int
 	dialType     dialType
-	err          error
+	updating     bool // if a conn needs an update, redial can be done at once
 }
 
 // discoverTask runs discovery table operations.
@@ -467,10 +467,10 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 	switch t := t.(type) {
 	case *dialTask:
 		// Updated dial can be redialed right away
-		if t.err != errUpdateDial {
+		if t.updating {
 			s.hist.add(t.dest.ID, now.Add(dialHistoryExpiration))
 		}
-		t.err = nil
+		t.updating = false
 		delete(s.dialing, t.dest.ID)
 	case *discoverTask:
 		s.lookupRunning = false
@@ -491,23 +491,26 @@ func (t *dialTask) Do(srv Server) {
 			return
 		}
 	}
+	var err error
 	if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
-		t.err = t.dialMulti(srv, t.dest)
+		err = t.dialMulti(srv, t.dest)
 	} else {
-		t.err = t.dial(srv, t.dest)
+		err = t.dial(srv, t.dest)
 	}
 
-	if t.err != nil && t.err != errUpdateDial {
-		logger.Debug("[Dial] Failed dialing", "task", t, "err", t.err)
+	if err == errUpdateDial {
+		t.updating = true
+	} else if err != nil {
+		logger.Debug("[Dial] Failed dialing", "task", t, "err", err)
 		// Try resolving the ID of static nodes if dialing failed.
-		if _, ok := t.err.(*dialError); ok && t.flags&staticDialedConn != 0 {
+		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
 			if t.resolve(srv, t.dest.NType) {
 				if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
-					t.err = t.dialMulti(srv, t.dest)
+					err = t.dialMulti(srv, t.dest)
 				} else {
-					t.err = t.dial(srv, t.dest)
+					err = t.dial(srv, t.dest)
 				}
-				if t.err != nil {
+				if err != nil {
 					t.failedTry++
 				}
 			} else {
