@@ -358,6 +358,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'startContractWarmUp',
 			call: 'debug_startContractWarmUp',
+			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'stopWarmUp',
