@@ -467,7 +467,7 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 	switch t := t.(type) {
 	case *dialTask:
 		// Updated dial can be redialed right away
-		if t.updating {
+		if !t.updating {
 			s.hist.add(t.dest.ID, now.Add(dialHistoryExpiration))
 		}
 		t.updating = false
