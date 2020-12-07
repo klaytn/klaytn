@@ -283,6 +283,10 @@ func (api *PublicDebugAPI) StartWarmUp() error {
 	return api.cn.blockchain.StartWarmUp()
 }
 
+func (api *PublicDebugAPI) StartContractWarmUp(contractAddr common.Address) error {
+	return api.cn.blockchain.StartContractWarmUp(contractAddr)
+}
+
 // StopWarmUp stops the warming up process.
 func (api *PublicDebugAPI) StopWarmUp() error {
 	return api.cn.blockchain.StopWarmUp()

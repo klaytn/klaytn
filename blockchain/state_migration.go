@@ -473,8 +473,19 @@ func (bc *BlockChain) warmUpLoop(cache statedb.TrieNodeCache, mainTrieCacheLimit
 	logger.Info("Warm up is completed", context...)
 }
 
-// StartWarmUp retrieves all state/storage tries of the latest state root and caches the tries.
 func (bc *BlockChain) StartWarmUp() error {
+	return bc.startWarmUp(common.Address{})
+}
+
+func (bc *BlockChain) StartContractWarmUp(contractAddr common.Address) error {
+	if common.EmptyAddress(contractAddr) {
+		return errors.New("cannot call StartContractWarmUp with an empty contract address")
+	}
+	return bc.startWarmUp(contractAddr)
+}
+
+// StartWarmUp retrieves all state/storage tries of the latest state root and caches the tries.
+func (bc *BlockChain) startWarmUp(contractAddr common.Address) error {
 	// There is a chance of concurrent access to quitWarmUp, though not likely to happen.
 	if bc.quitWarmUp != nil {
 		return fmt.Errorf("already warming up")
@@ -499,13 +510,25 @@ func (bc *BlockChain) StartWarmUp() error {
 			bc.quitWarmUp = nil
 		}()
 
-		children, err := db.TrieDB().NodeChildren(block.Root())
+		root := block.Root()
+		if !common.EmptyAddress(contractAddr) {
+			var err error
+			root, err = bc.GetContractStorageRoot(block, db, contractAddr)
+			if err != nil {
+				logger.Error("failed to retrieve the storage root",
+					"err", err, "contractAddr", contractAddr.String())
+				return
+			}
+		}
+
+		children, err := db.TrieDB().NodeChildren(root)
 		if err != nil {
 			logger.Error("Cannot start warming up", "err", err)
 			return
 		}
 
-		logger.Info("Warm up is started", "blockNum", block.NumberU64(), "root", block.Root().String(), "len(children)", len(children))
+		logger.Info("Warm up is started", "blockNum", block.NumberU64(),
+			"root", root.String(), "len(children)", len(children))
 
 		resultHashCh := make(chan common.Hash, 10000)
 		resultErrCh := make(chan error)
