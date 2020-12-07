@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
@@ -97,6 +98,10 @@ var (
 		Usage: "Destination language for the bindings (go, java, objc)",
 		Value: "go",
 	}
+	aliasFlag = cli.StringFlag{
+		Name:  "alias",
+		Usage: "Comma separated aliases for function and event renaming, e.g. foo=bar",
+	}
 )
 
 func init() {
@@ -112,6 +117,7 @@ func init() {
 		pkgFlag,
 		outFlag,
 		langFlag,
+		aliasFlag,
 	}
 	app.Action = utils.MigrateFlags(abigen)
 	cli.CommandHelpTemplate = commandHelperTemplate
@@ -142,6 +148,7 @@ func abigen(c *cli.Context) error {
 		types       []string
 		sigs        []map[string]string
 		libs        = make(map[string]string)
+		aliases     = make(map[string]string)
 	)
 	if c.GlobalString(abiFlag.Name) != "" {
 		// Load up the ABI, optional bytecode and type name from the parameters
@@ -221,8 +228,20 @@ func abigen(c *cli.Context) error {
 			libs[libPattern] = nameParts[len(nameParts)-1]
 		}
 	}
+	// Extract all aliases from the flags
+	if c.GlobalIsSet(aliasFlag.Name) {
+		// We support multi-versions for aliasing
+		// e.g.
+		//      foo=bar,foo2=bar2
+		//      foo:bar,foo2:bar2
+		re := regexp.MustCompile(`(?:(\w+)[:=](\w+))`)
+		submatches := re.FindAllStringSubmatch(c.GlobalString(aliasFlag.Name), -1)
+		for _, match := range submatches {
+			aliases[match[1]] = match[2]
+		}
+	}
 	// Generate the contract binding
-	code, err := bind.Bind(types, abis, bins, binruntimes, sigs, c.GlobalString(pkgFlag.Name), lang, libs)
+	code, err := bind.Bind(types, abis, bins, binruntimes, sigs, c.GlobalString(pkgFlag.Name), lang, libs, aliases)
 	if err != nil {
 		log.Fatalf("Failed to generate ABI binding: %v", err)
 	}
