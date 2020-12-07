@@ -250,6 +250,28 @@ var parseNodeTests = []struct {
 			NodeTypeUnknown,
 		),
 	},
+	{
+		rawurl: "kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@127.0.0.1:52150?subport=1",
+		wantResult: NewNode(
+			MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
+			net.IP{0x7f, 0x0, 0x0, 0x1},
+			52150,
+			52150,
+			[]uint16{1, 52150},
+			NodeTypeUnknown,
+		),
+	},
+	{
+		rawurl: "kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@127.0.0.1:52150?discport=123&subport=1&subport=2",
+		wantResult: NewNode(
+			MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
+			net.IP{0x7f, 0x0, 0x0, 0x1},
+			123,
+			52150,
+			[]uint16{1, 2, 52150},
+			NodeTypeUnknown,
+		),
+	},
 	// Invalid URLs
 	{
 		rawurl:    "01010101",
