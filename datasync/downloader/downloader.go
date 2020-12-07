@@ -316,12 +316,20 @@ func (d *Downloader) UnregisterPeer(id string) error {
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	err := d.synchronise(id, head, td, mode)
 	switch err {
-	case nil:
-	case errBusy, errCanceled:
+	case nil, errBusy, errCanceled:
+		return err
+	}
 
+	if errors.Is(err, errInvalidChain) {
+		logger.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
+		d.dropPeer(id)
+		return err
+	}
+
+	switch err {
 	case errTimeout, errBadPeer, errStallingPeer,
 		errEmptyHeaderSet, errPeersUnavailable, errTooOld,
-		errInvalidAncestor, errInvalidChain:
+		errInvalidAncestor:
 		logger.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
 		d.dropPeer(id)
 
@@ -658,7 +666,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 			for i := 0; i < len(headers); i++ {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
 					p.logger.Error("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
-					return 0, errInvalidChain
+					return 0, fmt.Errorf("%w: %v", errInvalidChain, errors.New("head headers broke chain ordering"))
 				}
 			}
 			// Check if a common ancestor was found
@@ -852,7 +860,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, pivot uint64) 
 				filled, proced, err := d.fillHeaderSkeleton(from, headers)
 				if err != nil {
 					p.logger.Debug("Skeleton chain invalid", "err", err)
-					return errInvalidChain
+					return fmt.Errorf("%w: %v", errInvalidChain, err)
 				}
 				headers = filled[proced:]
 				from += uint64(proced)
@@ -1034,13 +1042,13 @@ func (d *Downloader) fetchParts(deliveryCh chan dataPack, deliver func(dataPack)
 			if peer := d.peers.Peer(packet.PeerId()); peer != nil {
 				// Deliver the received chunk of data and check chain validity
 				accepted, err := deliver(packet)
-				if err == errInvalidChain {
+				if errors.Is(err, errInvalidChain) {
 					return err
 				}
 				// Unless a peer delivered something completely else than requested (usually
 				// caused by a timed out request which came through in the end), set it to
 				// idle. If the delivery's stale, the peer should have already been idled.
-				if err != errStaleDelivery {
+				if !errors.Is(err, errStaleDelivery) {
 					setIdle(peer, accepted, deliveryTime)
 				}
 				// Issue a log to the user to see what's going on
@@ -1308,7 +1316,7 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 							rollback = append(rollback, chunk[:n]...)
 						}
 						logger.Debug("Invalid header encountered", "number", chunk[n].Number, "hash", chunk[n].Hash(), "parent", chunk[n].ParentHash, "err", err)
-						return errInvalidChain
+						return fmt.Errorf("%w: %v", errInvalidChain, err)
 					}
 					// All verifications passed, store newly found uncertain headers
 					rollback = append(rollback, unknown...)
@@ -1398,7 +1406,7 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 	}
 	if index, err := d.blockchain.InsertChain(blocks); err != nil {
 		logger.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
-		return errInvalidChain
+		return fmt.Errorf("%w: %v", errInvalidChain, err)
 	}
 	return nil
 }
@@ -1546,7 +1554,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 	}
 	if index, err := d.blockchain.InsertReceiptChain(blocks, receipts); err != nil {
 		logger.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
-		return errInvalidChain
+		return fmt.Errorf("%w: %v", errInvalidChain, err)
 	}
 	return nil
 }
