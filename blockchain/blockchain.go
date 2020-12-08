@@ -52,16 +52,21 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+// If total insertion time of a block exceeds insertTimeLimit,
+// that time will be logged by blockLongInsertTimeGauge.
+const insertTimeLimit = common.PrettyDuration(time.Second)
+
 var (
-	blockInsertTimeMeter   = metrics.NewRegisteredMeter("chain/inserts", nil)
-	blockProcessTimeMeter  = metrics.NewRegisteredMeter("chain/process", nil)
-	blockFinalizeTimeMeter = metrics.NewRegisteredMeter("chain/finalize", nil)
-	blockValidateTimeMeter = metrics.NewRegisteredMeter("chain/validate", nil)
-	ErrNoGenesis           = errors.New("Genesis not found in chain")
-	ErrNotExistNode        = errors.New("the node does not exist in cached node")
-	ErrQuitBySignal        = errors.New("quit by signal")
-	ErrNotInWarmUp         = errors.New("not in warm up")
-	logger                 = log.NewModuleLogger(log.Blockchain)
+	blockInsertTimeMeter     = metrics.NewRegisteredMeter("chain/inserts", nil)
+	blockLongInsertTimeGauge = metrics.NewRegisteredGauge("chain/inserts/long", nil)
+	blockProcessTimeMeter    = metrics.NewRegisteredMeter("chain/process", nil)
+	blockFinalizeTimeMeter   = metrics.NewRegisteredMeter("chain/finalize", nil)
+	blockValidateTimeMeter   = metrics.NewRegisteredMeter("chain/validate", nil)
+	ErrNoGenesis             = errors.New("Genesis not found in chain")
+	ErrNotExistNode          = errors.New("the node does not exist in cached node")
+	ErrQuitBySignal          = errors.New("quit by signal")
+	ErrNotInWarmUp           = errors.New("not in warm up")
+	logger                   = log.NewModuleLogger(log.Blockchain)
 )
 
 // Below is the list of the constants for cache size.
@@ -1632,6 +1637,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			blockFinalizeTimeMeter.Mark(int64(processFinalizeTime))
 			blockValidateTimeMeter.Mark(int64(validateTime))
 			blockInsertTimeMeter.Mark(int64(totalTime))
+			if totalTime >= insertTimeLimit {
+				blockLongInsertTimeGauge.Update(int64(totalTime))
+			}
 
 			coalescedLogs = append(coalescedLogs, logs...)
 			events = append(events, ChainEvent{
