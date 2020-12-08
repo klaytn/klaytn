@@ -55,18 +55,20 @@ const (
 
 var (
 	// Metrics for miner
-	timeLimitReachedCounter = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
-	tooLongTxCounter        = metrics.NewRegisteredCounter("miner/toolongtx", nil)
-	ResultChGauge           = metrics.NewRegisteredGauge("miner/resultch", nil)
-	resentTxGauge           = metrics.NewRegisteredGauge("miner/tx/resend/gauge", nil)
-	usedAllTxsCounter       = metrics.NewRegisteredCounter("miner/usedalltxs", nil)
-	checkedTxsGauge         = metrics.NewRegisteredGauge("miner/checkedtxs", nil)
-	tCountGauge             = metrics.NewRegisteredGauge("miner/tcount", nil)
-	nonceTooLowTxsGauge     = metrics.NewRegisteredGauge("miner/nonce/low/txs", nil)
-	nonceTooHighTxsGauge    = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
-	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
-	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
-	blockMiningTimeGauge    = metrics.NewRegisteredGauge("miner/block/mining/time", nil)
+	timeLimitReachedCounter      = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
+	tooLongTxCounter             = metrics.NewRegisteredCounter("miner/toolongtx", nil)
+	ResultChGauge                = metrics.NewRegisteredGauge("miner/resultch", nil)
+	resentTxGauge                = metrics.NewRegisteredGauge("miner/tx/resend/gauge", nil)
+	usedAllTxsCounter            = metrics.NewRegisteredCounter("miner/usedalltxs", nil)
+	checkedTxsGauge              = metrics.NewRegisteredGauge("miner/checkedtxs", nil)
+	tCountGauge                  = metrics.NewRegisteredGauge("miner/tcount", nil)
+	nonceTooLowTxsGauge          = metrics.NewRegisteredGauge("miner/nonce/low/txs", nil)
+	nonceTooHighTxsGauge         = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
+	gasLimitReachedTxsGauge      = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
+	strangeErrorTxsCounter       = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
+	blockMiningTimeMeter         = metrics.NewRegisteredMeter("miner/block/mining/time", nil)
+	blockMiningCommitTxTimeMeter = metrics.NewRegisteredMeter("miner/block/committx/time", nil)
+	blockMiningFinalizeTimeMeter = metrics.NewRegisteredMeter("miner/block/finalize/time", nil)
 )
 
 // Agent can register themself with the worker
@@ -532,15 +534,16 @@ func (self *worker) commitNewWork() {
 		// We only care about logging if we're actually mining.
 		if atomic.LoadInt32(&self.mining) == 1 {
 			tCountGauge.Update(int64(work.tcount))
-			blockMiningTime := time.Since(tstart)
-			blockMiningTimeGauge.Update(int64(blockMiningTime))
+			blockMiningTime := common.PrettyDuration(time.Since(tstart))
+			commitTxTime := common.PrettyDuration(finishedCommitTx.Sub(tstart))
+			finalizeTime := common.PrettyDuration(finishedFinalize.Sub(finishedCommitTx))
 
-			commitTxTime := finishedCommitTx.Sub(tstart)
-			finalizeTime := finishedFinalize.Sub(finishedCommitTx)
+			blockMiningTimeMeter.Mark(int64(blockMiningTime))
+			blockMiningCommitTxTimeMeter.Mark(int64(commitTxTime))
+			blockMiningFinalizeTimeMeter.Mark(int64(finalizeTime))
 			logger.Info("Commit new mining work",
 				"number", work.Block.Number(), "hash", work.Block.Hash(),
-				"txs", work.tcount, "elapsed", common.PrettyDuration(blockMiningTime),
-				"commitTime", common.PrettyDuration(commitTxTime), "finalizeTime", common.PrettyDuration(finalizeTime))
+				"txs", work.tcount, "elapsed", blockMiningTime, "commitTime", commitTxTime, "finalizeTime", finalizeTime)
 		}
 	}
 
