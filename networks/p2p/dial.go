@@ -572,7 +572,6 @@ func (t *dialTask) dial(srv Server, dest *discover.Node) error {
 		return &dialError{err}
 	}
 	mfd := newMeteredConn(fd, false)
-	// TODO close failed fd if needed
 	return srv.SetupConn(mfd, t.flags, dest)
 }
 
