@@ -481,7 +481,7 @@ func (t *dialTask) Do(srv Server) {
 		}
 	}
 	var err error
-	if t.dest.TCPs != nil && len(t.dest.TCPs) > 1 {
+	if len(t.dest.TCPs) > 1 {
 		err = t.dialMulti(srv, t.dest)
 	} else {
 		err = t.dial(srv, t.dest)
