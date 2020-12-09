@@ -18,8 +18,9 @@ package account
 
 import (
 	"encoding/json"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
+
+	"github.com/klaytn/klaytn/ser/rlp"
 )
 
 // AccountSerializer serializes an Account object using RLP/JSON.
@@ -64,14 +65,7 @@ func (ser *AccountSerializer) GetAccount() Account {
 
 func (ser *AccountSerializer) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&ser.accType); err != nil {
-		// fallback to decoding a LegacyAccount object.
-		acc := newLegacyAccount()
-		if err := s.Decode(acc); err != nil {
-			return err
-		}
-		ser.accType = LegacyAccountType
-		ser.account = acc
-		return nil
+		return err
 	}
 
 	var err error

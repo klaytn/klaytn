@@ -22,13 +22,14 @@ package state
 import (
 	"bytes"
 	"fmt"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/pkg/errors"
-	"time"
 )
 
 var (
@@ -116,7 +117,7 @@ func (it *NodeIterator) step() error {
 	if !it.stateIt.Leaf() {
 		return nil
 	}
-	// Otherwise we've reached an account node, initiate data iteration
+	// Otherwise we've reached an account node or a leaf of storage trie, initiate data iteration
 
 	serializer := account.NewAccountSerializer()
 	if err := rlp.Decode(bytes.NewReader(it.stateIt.LeafBlob()), serializer); err != nil {
