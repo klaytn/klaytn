@@ -108,7 +108,6 @@ var (
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = klaytn.NotFound
-	_ = abi.U256
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
