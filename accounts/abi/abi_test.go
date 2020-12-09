@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"math/big"
 	"strings"
 	"testing"
@@ -101,8 +100,7 @@ func TestReader(t *testing.T) {
 func TestTestNumbers(t *testing.T) {
 	abi, err := JSON(strings.NewReader(jsondata2))
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatal(err)
 	}
 
 	if _, err := abi.Pack("balance"); err != nil {
@@ -139,8 +137,7 @@ func TestTestNumbers(t *testing.T) {
 func TestTestString(t *testing.T) {
 	abi, err := JSON(strings.NewReader(jsondata2))
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatal(err)
 	}
 
 	if _, err := abi.Pack("string", "hello world"); err != nil {
@@ -151,8 +148,7 @@ func TestTestString(t *testing.T) {
 func TestTestBool(t *testing.T) {
 	abi, err := JSON(strings.NewReader(jsondata2))
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatal(err)
 	}
 
 	if _, err := abi.Pack("bool", true); err != nil {
@@ -163,8 +159,7 @@ func TestTestBool(t *testing.T) {
 func TestTestSlice(t *testing.T) {
 	abi, err := JSON(strings.NewReader(jsondata2))
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatal(err)
 	}
 	slice := make([]uint64, 2)
 	if _, err := abi.Pack("uint64[2]", slice); err != nil {
@@ -241,8 +236,7 @@ func TestOverloadedMethodSignature(t *testing.T) {
 func TestMultiPack(t *testing.T) {
 	abi, err := JSON(strings.NewReader(jsondata2))
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatal(err)
 	}
 
 	sig := crypto.Keccak256([]byte("bar(uint32,uint16)"))[:4]
@@ -252,10 +246,8 @@ func TestMultiPack(t *testing.T) {
 
 	packed, err := abi.Pack("bar", uint32(10), uint16(11))
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatal(err)
 	}
-
 	if !bytes.Equal(packed, sig) {
 		t.Errorf("expected %x got %x", sig, packed)
 	}
@@ -266,11 +258,11 @@ func ExampleJSON() {
 
 	abi, err := JSON(strings.NewReader(definition))
 	if err != nil {
-		log.Fatalln(err)
+		panic(err)
 	}
 	out, err := abi.Pack("isBar", common.HexToAddress("01"))
 	if err != nil {
-		log.Fatalln(err)
+		panic(err)
 	}
 
 	fmt.Printf("%x\n", out)
