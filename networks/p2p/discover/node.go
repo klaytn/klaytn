@@ -280,7 +280,7 @@ func (n *Node) CompareNode(tn *Node) bool {
 	return true
 }
 
-// AddSubport add a new port to TCPs
+// AddSubport adds a new port to TCPs
 // TCPs contains unique ports
 func (n *Node) AddSubport(port uint16) {
 	if n.TCPs == nil {
