@@ -132,7 +132,6 @@ type dialTask struct {
 	resolveDelay time.Duration
 	failedTry    int
 	dialType     dialType
-	updating     bool // if a conn needs an update, redial can be done at once
 }
 
 // discoverTask runs discovery table operations.
@@ -466,11 +465,7 @@ func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*Peer)
 func (s *dialstate) taskDone(t task, now time.Time) {
 	switch t := t.(type) {
 	case *dialTask:
-		// Updated dial can be redialed right away
-		if !t.updating {
-			s.hist.add(t.dest.ID, now.Add(dialHistoryExpiration))
-		}
-		t.updating = false
+		s.hist.add(t.dest.ID, now.Add(dialHistoryExpiration))
 		delete(s.dialing, t.dest.ID)
 	case *discoverTask:
 		s.lookupRunning = false
@@ -496,11 +491,13 @@ func (t *dialTask) Do(srv Server) {
 		err = t.dialMulti(srv, t.dest)
 	} else {
 		err = t.dial(srv, t.dest)
+		// redial with updated connection
+		if err == errUpdateDial {
+			err = t.dialMulti(srv, t.dest)
+		}
 	}
 
-	if err == errUpdateDial {
-		t.updating = true
-	} else if err != nil {
+	if err != nil {
 		logger.Debug("[Dial] Failed dialing", "task", t, "err", err)
 		// Try resolving the ID of static nodes if dialing failed.
 		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
