@@ -492,7 +492,7 @@ func (t *dialTask) Do(srv Server) {
 		// Try resolving the ID of static nodes if dialing failed.
 		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
 			if t.resolve(srv, t.dest.NType) {
-				if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
+				if len(t.dest.TCPs) > 1 {
 					err = t.dialMulti(srv, t.dest)
 				} else {
 					err = t.dial(srv, t.dest)
