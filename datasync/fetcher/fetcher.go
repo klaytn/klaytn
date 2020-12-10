@@ -33,9 +33,10 @@ import (
 )
 
 const (
-	arriveTimeout = 500 * time.Millisecond // Time allowance before an announced block is explicitly requested
-	gatherSlack   = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
-	fetchTimeout  = 5 * time.Second        // Maximum allotted time to return an explicitly requested block
+	arriveTimeout       = 500 * time.Millisecond // Time allowance before an announced block is explicitly requested
+	gatherSlack         = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
+	fetchTimeout        = 5 * time.Second        // Maximum allotted time to return an explicitly requested block
+	insertTasksWaitTime = 100 * time.Millisecond // Waiting time when the insertTasks channel is full
 	// TODO-Klaytn Klaytn is 20 times faster than ethereum, so check block height is 20 times
 	maxQueueDist = 32 * 20  // Maximum allowed distance from the chain head to queue
 	hashLimit    = 256 * 20 // Maximum number of unique blocks a peer may have announced
@@ -309,7 +310,6 @@ func (f *Fetcher) loop() {
 		}
 		// Import any queued blocks that could potentially fit
 		height := f.chainHeight()
-	insertFailed:
 		for !f.queue.Empty() {
 			op := f.queue.PopItem().(*inject)
 			if f.queueChangeHook != nil {
@@ -336,13 +336,13 @@ func (f *Fetcher) loop() {
 			select {
 			case f.insertTasks <- insertTask{peer, block}:
 				logger.Debug("Importing propagated block", "peer", peer, "number", number, "hash", hash)
-			default:
+			case <-time.NewTimer(insertTasksWaitTime).C: // in case the insertTasks is full, it waits for a bit
 				logger.Warn("Failed to import propagated block as the channel is full", "peer", peer, "number", number, "hash", hash)
 				f.queue.Push(op, -int64(number))
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(hash, true)
 				}
-				break insertFailed
+				break
 			}
 		}
 		// Wait for an outside event to occur
