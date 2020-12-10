@@ -691,8 +691,8 @@ func TestSimulatedBackend_TransactionReceipt(t *testing.T) {
 }
 
 func TestSimulatedBackend_SuggestGasPrice(t *testing.T) {
-	sim := NewSimulatedBackend(
-		blockchain.GenesisAlloc{},
+	sim := NewSimulatedBackendWithGasPrice(
+		blockchain.GenesisAlloc{}, 1,
 	)
 	defer sim.Close()
 	bgCtx := context.Background()
