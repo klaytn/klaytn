@@ -166,7 +166,6 @@ func TestBasics(t *testing.T) {
 		if got, exp := fetchReq.Headers[0].Number.Uint64(), uint64(1); got != exp {
 			t.Fatalf("expected header %d, got %d", exp, got)
 		}
-
 	}
 	fmt.Printf("blockTaskQueue len: %d\n", q.blockTaskQueue.Size())
 	fmt.Printf("receiptTaskQueue len: %d\n", q.receiptTaskQueue.Size())

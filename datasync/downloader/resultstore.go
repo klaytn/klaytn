@@ -72,7 +72,7 @@ func (r *resultStore) SetThrottleThreshold(threshold uint64) uint64 {
 //
 // It returns the following:
 //   stale     - if true, this item is already passed, and should not be requested again
-//   throttled - if true, the store is at capacity, this particular header is not prio now
+//   throttled - if true, the store is at capacity, this particular header is not prior now
 //   item      - the result to store data into
 //   err       - any error that occurred
 func (r *resultStore) AddFetch(header *types.Header, fastSync bool) (stale, throttled bool, item *fetchResult, err error) {
@@ -141,7 +141,7 @@ func (r *resultStore) HasCompletedItems() bool {
 // countCompleted returns the number of items ready for delivery, stopping at
 // the first non-complete item.
 //
-// The mthod assumes (at least) rlock is held.
+// The method assumes (at least) rlock is held.
 func (r *resultStore) countCompleted() int {
 	// We iterate from the already known complete point, and see
 	// if any more has completed since last count

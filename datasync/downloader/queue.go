@@ -373,7 +373,7 @@ func (q *queue) Results(block bool) []*fetchResult {
 		q.resultSize = common.StorageSize(blockCacheSizeWeight)*size +
 			(1-common.StorageSize(blockCacheSizeWeight))*q.resultSize
 	}
-	// Using the newly calibrated resultsize, figure out the new throttle limit
+	// Using the newly calibrated resultSize, figure out the new throttle limit
 	// on the result cache
 	throttleThreshold := uint64((common.StorageSize(blockCacheMemory) + q.resultSize - 1) / q.resultSize)
 	throttleThreshold = q.resultCache.SetThrottleThreshold(throttleThreshold)
@@ -493,11 +493,11 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 	progress := false
 	throttled := false
 	for proc := 0; len(send) < count && !taskQueue.Empty(); proc++ {
-		// the task queue will pop items in order, so the highest prio block
+		// the task queue will pop items in order, so the highest prior block
 		// is also the lowest block number.
 		h, _ := taskQueue.Peek()
 		header := h.(*types.Header)
-		// we can ask the resultcache if this header is within the
+		// we can ask the resultCache if this header is within the
 		// "prioritized" segment of blocks. If it is not, we need to throttle
 		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode == FastSync)
 		if stale {
@@ -511,7 +511,7 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 			continue
 		}
 		if throttle {
-			// There are no resultslots available. Leave it in the task queue
+			// There are no result slots available. Leave it in the task queue
 			// However, if there are any left as 'skipped', we should not tell
 			// the caller to throttle, since we still want some other
 			// peer to fetch those for us
@@ -521,7 +521,6 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 		if err != nil {
 			// this most definitely should _not_ happen
 			logger.Warn("Failed to reserve headers", "err", err)
-			// There are no resultslots available. Leave it in the task queue
 			break
 		}
 		if item.Done(kind) {
@@ -853,7 +852,7 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 		if res, stale, err := q.resultCache.GetDeliverySlot(header.Number.Uint64()); err == nil {
 			reconstruct(accepted, res)
 		} else {
-			// else: betweeen here and above, some other peer filled this result,
+			// else: between here and above, some other peer filled this result,
 			// or it was indeed a no-op. This should not happen, but if it does it's
 			// not something to panic about
 			logger.Error("Delivery stale", "stale", stale, "number", header.Number.Uint64(), "err", err)
