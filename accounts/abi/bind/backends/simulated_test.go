@@ -62,7 +62,7 @@ func TestSimulatedBackend(t *testing.T) {
 	code := `6060604052600a8060106000396000f360606040526008565b00`
 	var gas uint64 = 3000000
 	tx := types.NewContractCreation(0, big.NewInt(0), gas, big.NewInt(1), common.FromHex(code))
-	tx, _ = types.SignTx(tx, types.EIP155Signer{}, key)
+	tx, _ = types.SignTx(tx, types.NewEIP155Signer(sim.config.ChainID), key)
 
 	err = sim.SendTransaction(context.Background(), tx)
 	if err != nil {
@@ -250,7 +250,7 @@ func TestSimulatedBackend_NonceAt(t *testing.T) {
 
 	// create a signed transaction to send
 	tx := types.NewTransaction(nonce, testAddr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil)
-	signedTx, err := types.SignTx(tx, types.EIP155Signer{}, testKey)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(sim.config.ChainID), testKey)
 	if err != nil {
 		t.Errorf("could not sign tx: %v", err)
 	}
@@ -285,7 +285,7 @@ func TestSimulatedBackend_SendTransaction(t *testing.T) {
 
 	// create a signed transaction to send
 	tx := types.NewTransaction(uint64(0), testAddr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil)
-	signedTx, err := types.SignTx(tx, types.EIP155Signer{}, testKey)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(sim.config.ChainID), testKey)
 	if err != nil {
 		t.Errorf("could not sign tx: %v", err)
 	}
@@ -320,7 +320,7 @@ func TestSimulatedBackend_TransactionByHash(t *testing.T) {
 
 	// create a signed transaction to send
 	tx := types.NewTransaction(uint64(0), testAddr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil)
-	signedTx, err := types.SignTx(tx, types.EIP155Signer{}, testKey)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(sim.config.ChainID), testKey)
 	if err != nil {
 		t.Errorf("could not sign tx: %v", err)
 	}
@@ -483,7 +483,7 @@ func TestSimulatedBackend_TransactionCount(t *testing.T) {
 
 	// create a signed transaction to send
 	tx := types.NewTransaction(uint64(0), testAddr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil)
-	signedTx, err := types.SignTx(tx, types.EIP155Signer{}, testKey)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(sim.config.ChainID), testKey)
 	if err != nil {
 		t.Errorf("could not sign tx: %v", err)
 	}
@@ -542,7 +542,7 @@ func TestSimulatedBackend_TransactionInBlock(t *testing.T) {
 
 	// create a signed transaction to send
 	tx := types.NewTransaction(uint64(0), testAddr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil)
-	signedTx, err := types.SignTx(tx, types.EIP155Signer{}, testKey)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(sim.config.ChainID), testKey)
 	if err != nil {
 		t.Errorf("could not sign tx: %v", err)
 	}
@@ -601,7 +601,7 @@ func TestSimulatedBackend_PendingNonceAt(t *testing.T) {
 
 	// create a signed transaction to send
 	tx := types.NewTransaction(uint64(0), testAddr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil)
-	signedTx, err := types.SignTx(tx, types.EIP155Signer{}, testKey)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(sim.config.ChainID), testKey)
 	if err != nil {
 		t.Errorf("could not sign tx: %v", err)
 	}
@@ -624,7 +624,7 @@ func TestSimulatedBackend_PendingNonceAt(t *testing.T) {
 
 	// make a new transaction with a nonce of 1
 	tx = types.NewTransaction(uint64(1), testAddr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil)
-	signedTx, err = types.SignTx(tx, types.EIP155Signer{}, testKey)
+	signedTx, err = types.SignTx(tx, types.NewEIP155Signer(sim.config.ChainID), testKey)
 	if err != nil {
 		t.Errorf("could not sign tx: %v", err)
 	}
@@ -657,7 +657,7 @@ func TestSimulatedBackend_TransactionReceipt(t *testing.T) {
 
 	// create a signed transaction to send
 	tx := types.NewTransaction(uint64(0), testAddr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil)
-	signedTx, err := types.SignTx(tx, types.EIP155Signer{}, testKey)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(sim.config.ChainID), testKey)
 	if err != nil {
 		t.Errorf("could not sign tx: %v", err)
 	}
