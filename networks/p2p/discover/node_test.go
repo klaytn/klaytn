@@ -53,13 +53,13 @@ func ExampleNewNode() {
 	id := MustHexID("1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439")
 
 	// Complete nodes contain UDP and TCP endpoints:
-	n1 := NewNode(id, net.ParseIP("2001:db8:3c4d:15::abcd:ef12"), 52150, 30303, NodeTypeUnknown)
+	n1 := NewNode(id, net.ParseIP("2001:db8:3c4d:15::abcd:ef12"), 52150, 30303, nil, NodeTypeUnknown)
 	fmt.Println("n1:", n1)
 	fmt.Println("n1.Incomplete() ->", n1.Incomplete())
 
 	// An incomplete node can be created by passing zero values
 	// for all parameters except id.
-	n2 := NewNode(id, nil, 0, 0, NodeTypeUnknown)
+	n2 := NewNode(id, nil, 0, 0, nil, NodeTypeUnknown)
 	fmt.Println("n2:", n2)
 	fmt.Println("n2.Incomplete() ->", n2.Incomplete())
 
@@ -108,6 +108,7 @@ var parseNodeTests = []struct {
 			net.IP{127, 0, 0, 1},
 			52150,
 			52150,
+			nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -119,6 +120,7 @@ var parseNodeTests = []struct {
 			net.IP{33, 44, 55, 66},
 			52150,
 			52150,
+			nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -130,6 +132,7 @@ var parseNodeTests = []struct {
 			net.IP{11, 22, 33, 44},
 			52150,
 			52150,
+			nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -140,6 +143,7 @@ var parseNodeTests = []struct {
 			net.ParseIP("::"),
 			52150,
 			52150,
+			nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -150,6 +154,7 @@ var parseNodeTests = []struct {
 			net.ParseIP("2001:db8:3c4d:15::abcd:ef12"),
 			52150,
 			52150,
+			nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -160,6 +165,7 @@ var parseNodeTests = []struct {
 			net.IP{0x7f, 0x0, 0x0, 0x1},
 			22334,
 			52150,
+			nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -182,6 +188,7 @@ var parseNodeTests = []struct {
 			net.IP{0x7f, 0x0, 0x0, 0x1},
 			52150,
 			52150,
+			nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -192,6 +199,7 @@ var parseNodeTests = []struct {
 			net.ParseIP("::"),
 			52150,
 			52150,
+			nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -202,6 +210,7 @@ var parseNodeTests = []struct {
 			net.ParseIP("2001:db8:3c4d:15::abcd:ef12"),
 			52150,
 			52150,
+			nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -212,6 +221,7 @@ var parseNodeTests = []struct {
 			net.IP{0x7f, 0x0, 0x0, 0x1},
 			22334,
 			52150,
+			nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -220,7 +230,7 @@ var parseNodeTests = []struct {
 		rawurl: "1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439",
 		wantResult: NewNode(
 			MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
-			nil, 0, 0,
+			nil, 0, 0, nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -228,7 +238,7 @@ var parseNodeTests = []struct {
 		rawurl: "enode://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439",
 		wantResult: NewNode(
 			MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
-			nil, 0, 0,
+			nil, 0, 0, nil,
 			NodeTypeUnknown,
 		),
 	},
@@ -236,7 +246,29 @@ var parseNodeTests = []struct {
 		rawurl: "kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439",
 		wantResult: NewNode(
 			MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
-			nil, 0, 0,
+			nil, 0, 0, nil,
+			NodeTypeUnknown,
+		),
+	},
+	{
+		rawurl: "kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@127.0.0.1:52150?subport=1",
+		wantResult: NewNode(
+			MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
+			net.IP{0x7f, 0x0, 0x0, 0x1},
+			52150,
+			52150,
+			[]uint16{1, 52150},
+			NodeTypeUnknown,
+		),
+	},
+	{
+		rawurl: "kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@127.0.0.1:52150?discport=123&subport=1&subport=2",
+		wantResult: NewNode(
+			MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439"),
+			net.IP{0x7f, 0x0, 0x0, 0x1},
+			123,
+			52150,
+			[]uint16{1, 2, 52150},
 			NodeTypeUnknown,
 		),
 	},

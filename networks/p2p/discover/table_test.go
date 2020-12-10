@@ -71,7 +71,7 @@ func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding
 
 	// fill up the sender's bucket.
 	pingSender := NewNode(MustHexID("a502af0f59b2aab7746995408c79e9ca312d2793cc997e44fc55eda62f0150bbb8c59a6f9269ba3a081518b62699ee807c7c19c20125ddfccca872608af9e370"),
-		net.IP{}, 99, 99, NodeTypeUnknown)
+		net.IP{}, 99, 99, nil, NodeTypeUnknown)
 	last := fillBucket(tab, pingSender)
 
 	// this call to bond should replace the last node
@@ -404,7 +404,7 @@ func TestTable_Lookup(t *testing.T) {
 		t.Fatalf("lookup on empty table returned %d results: %#v", len(results), results)
 	}
 	// seed table with initial node (otherwise lookup will terminate immediately)
-	seed := NewNode(lookupTestnet.dists[256][0], net.IP{}, 256, 0, NodeTypeUnknown)
+	seed := NewNode(lookupTestnet.dists[256][0], net.IP{}, 256, 0, nil, NodeTypeUnknown)
 	tab.stuff([]*Node{seed}, NodeTypeUnknown)
 
 	results := tab.Lookup(lookupTestnet.target, NodeTypeUnknown)
@@ -634,7 +634,7 @@ func (tn *preminedTestnet) findnode(toid NodeID, toaddr *net.UDPAddr, target Nod
 	next := uint16(toaddr.Port) - 1
 	var result []*Node
 	for i, id := range tn.dists[toaddr.Port] {
-		result = append(result, NewNode(id, net.ParseIP("127.0.0.1"), next, uint16(i), NodeTypeUnknown))
+		result = append(result, NewNode(id, net.ParseIP("127.0.0.1"), next, uint16(i), nil, NodeTypeUnknown))
 	}
 	return result, nil
 }

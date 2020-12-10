@@ -21,6 +21,11 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net"
+	"os"
+	"path"
+
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
 	"github.com/klaytn/klaytn/common"
@@ -28,10 +33,6 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"gopkg.in/urfave/cli.v1"
-	"io/ioutil"
-	"net"
-	"os"
-	"path"
 )
 
 type validatorInfo struct {
@@ -127,6 +128,7 @@ func makeNodeInfo(nodeAddr common.Address, nodeKey string, privKey *ecdsa.Privat
 			net.ParseIP(ip),
 			0,
 			port,
+			nil,
 			discover.NodeTypeUnknown).String(),
 	}
 }
