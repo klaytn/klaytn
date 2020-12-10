@@ -99,6 +99,8 @@ func TestTypeRegexp(t *testing.T) {
 		// {"fixed[2]", nil, Type{}},
 		// {"fixed128x128[]", nil, Type{}},
 		// {"fixed128x128[2]", nil, Type{}},
+		{"tuple", []ArgumentMarshaling{{Name: "a", Type: "int64"}}, Type{Kind: reflect.Struct, T: TupleTy, Type: reflect.TypeOf(struct{ A int64 }{}), stringKind: "(int64)",
+			TupleElems: []*Type{{Kind: reflect.Int64, T: IntTy, Type: reflect.TypeOf(int64(0)), Size: 64, stringKind: "int64"}}, TupleRawNames: []string{"a"}}},
 	}
 
 	for _, tt := range tests {
@@ -261,6 +263,21 @@ func TestTypeCheck(t *testing.T) {
 		{"bytes32[]]", nil, "", "invalid arg type in abi"},
 		{"invalidType", nil, "", "unsupported arg type: invalidType"},
 		{"invalidSlice[]", nil, "", "unsupported arg type: invalidSlice"},
+		// simple tuple
+		{"tuple", []ArgumentMarshaling{{Name: "a", Type: "uint256"}, {Name: "b", Type: "uint256"}}, struct {
+			A *big.Int
+			B *big.Int
+		}{}, ""},
+		// tuple slice
+		{"tuple[]", []ArgumentMarshaling{{Name: "a", Type: "uint256"}, {Name: "b", Type: "uint256"}}, []struct {
+			A *big.Int
+			B *big.Int
+		}{}, ""},
+		// tuple array
+		{"tuple[2]", []ArgumentMarshaling{{Name: "a", Type: "uint256"}, {Name: "b", Type: "uint256"}}, []struct {
+			A *big.Int
+			B *big.Int
+		}{{big.NewInt(0), big.NewInt(0)}, {big.NewInt(0), big.NewInt(0)}}, ""},
 	} {
 		typ, err := NewType(test.typ, test.components)
 		if err != nil && len(test.err) == 0 {

@@ -571,9 +571,10 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 	}
 	c.caps, c.name, c.multiChannel = phs.Caps, phs.Name, phs.Multichannel
 
-	if c.multiChannel && dialDest != nil && (dialDest.TCPs == nil || len(dialDest.TCPs) == 0) && len(phs.ListenPort) == 2 {
+	if c.multiChannel && dialDest != nil && (dialDest.TCPs == nil || len(dialDest.TCPs) < 2) && len(dialDest.TCPs) < len(phs.ListenPort) {
 		logger.Debug("[Dial] update and retry the dial candidate as a multichannel",
 			"id", dialDest.ID, "addr", dialDest.IP, "previous", dialDest.TCPs, "new", phs.ListenPort)
+
 		dialDest.TCPs = make([]uint16, 0, len(phs.ListenPort))
 		for _, listenPort := range phs.ListenPort {
 			dialDest.TCPs = append(dialDest.TCPs, uint16(listenPort))

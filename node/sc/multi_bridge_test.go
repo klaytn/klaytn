@@ -17,6 +17,10 @@
 package sc
 
 import (
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
@@ -28,9 +32,6 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
-	"time"
 )
 
 type bridgeTestInfo struct {
@@ -113,6 +114,8 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 // - the specified operator is deregistered by the contract method DeregisterOperator.
 func TestRegisterDeregisterOperator(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
+	defer info.sim.Close()
+
 	testAddrs := []common.Address{{10}, {20}}
 
 	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
@@ -173,6 +176,7 @@ func TestRegisterDeregisterOperator(t *testing.T) {
 // - the bridge contract method Stop.
 func TestStartStop(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
+	defer info.sim.Close()
 
 	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
 	tx, err := info.b.Start(opts, true)
@@ -199,6 +203,8 @@ func TestStartStop(t *testing.T) {
 // - the bridge contract method TestSetCounterPartBridge.
 func TestSetCounterPartBridge(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
+	defer info.sim.Close()
+
 	dummy := common.Address{10}
 
 	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
@@ -216,6 +222,8 @@ func TestSetCounterPartBridge(t *testing.T) {
 // - the bridge contract method RegisterToken and DeregisterToken.
 func TestRegisterDeregisterToken(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
+	defer info.sim.Close()
+
 	dummy1 := common.Address{10}
 	dummy2 := common.Address{20}
 
@@ -259,6 +267,8 @@ func TestRegisterDeregisterToken(t *testing.T) {
 // - successful value transfer with proper transaction counts.
 func TestMultiBridgeKLAYTransfer1(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 
@@ -303,6 +313,8 @@ func TestMultiBridgeKLAYTransfer1(t *testing.T) {
 // - timeout is expected since operator threshold will not be satisfied.
 func TestMultiBridgeKLAYTransfer2(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 
@@ -339,6 +351,8 @@ func TestMultiBridgeKLAYTransfer2(t *testing.T) {
 // - no double spending is made due to additional tx.
 func TestMultiBridgeKLAYTransfer3(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 
@@ -382,6 +396,8 @@ func TestMultiBridgeKLAYTransfer3(t *testing.T) {
 // - successful value transfer with proper transaction counts.
 func TestMultiBridgeERC20Transfer(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 
@@ -450,6 +466,8 @@ func TestMultiBridgeERC20Transfer(t *testing.T) {
 // - successful value transfer with proper transaction counts.
 func TestMultiBridgeERC721Transfer(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 
@@ -511,6 +529,8 @@ func TestMultiBridgeERC721Transfer(t *testing.T) {
 // - successfully setting KLAY fee
 func TestMultiBridgeSetKLAYFee(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	const confThreshold = uint8(2)
 	const fee = 1000
@@ -548,6 +568,8 @@ func TestMultiBridgeSetKLAYFee(t *testing.T) {
 // - successfully setting ERC20 fee
 func TestMultiBridgeSetERC20Fee(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	const confThreshold = uint8(2)
 	const fee = 1000
@@ -586,6 +608,8 @@ func TestMultiBridgeSetERC20Fee(t *testing.T) {
 // - the bridge contract method SetFeeReceiver.
 func TestSetFeeReceiver(t *testing.T) {
 	info := prepareMultiBridgeTest(t)
+	defer info.sim.Close()
+
 	dummy := common.Address{10}
 
 	opts := &bind.TransactOpts{From: info.acc.From, Signer: info.acc.Signer, GasLimit: DefaultBridgeTxGasLimit}
@@ -604,8 +628,9 @@ func TestSetFeeReceiver(t *testing.T) {
 // - non-operator failed to handle value transfer.
 func TestMultiBridgeErrNotOperator1(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
-	to := common.Address{100}
+	defer info.sim.Close()
 
+	to := common.Address{100}
 	nonceOffset := uint64(17)
 	sentNonce := nonceOffset
 	transferAmount := uint64(100)
@@ -625,6 +650,8 @@ func TestMultiBridgeErrNotOperator1(t *testing.T) {
 // - non-operator fails to handle value transfer.
 func TestMultiBridgeErrNotOperator2(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	to := common.Address{100}
 	acc := info.accounts[0]
 
@@ -657,6 +684,8 @@ func TestMultiBridgeErrNotOperator2(t *testing.T) {
 // - second operator fails to handle value transfer with invalid tx.
 func TestMultiBridgeErrInvalTx(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	to := common.Address{100}
 	acc := info.accounts[0]
 
@@ -698,6 +727,8 @@ func TestMultiBridgeErrInvalTx(t *testing.T) {
 // - the last operator fails to handle value transfer because of vote closing.
 func TestMultiBridgeErrOverSign(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	to := common.Address{100}
 	acc := info.accounts[0]
 
@@ -734,6 +765,8 @@ func TestMultiBridgeErrOverSign(t *testing.T) {
 // - another operator (different auth) fails to handle value transfer because of vote closing (duplicated).
 func TestMultiOperatorKLAYTransferDup(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	to := common.Address{100}
 	acc := info.accounts[0]
 
@@ -766,6 +799,8 @@ func TestMultiOperatorKLAYTransferDup(t *testing.T) {
 // - failed to set KLAY fee because of the wrong nonce.
 func TestMultiBridgeSetKLAYFeeErrNonce(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	const confThreshold = uint8(2)
 	const fee = 1000
@@ -808,6 +843,8 @@ func TestMultiBridgeSetKLAYFeeErrNonce(t *testing.T) {
 // - jump 100 nonce and successfully handle value transfer.
 func TestMultiBridgeKLAYTransferNonceJump(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 
@@ -854,6 +891,8 @@ func TestMultiBridgeKLAYTransferNonceJump(t *testing.T) {
 // - two different value transfers succeed to handle the value transfer.
 func TestMultiBridgeKLAYTransferParallel(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	to := common.Address{100}
 	acc := info.accounts[0]
 
@@ -916,6 +955,8 @@ func TestMultiBridgeKLAYTransferParallel(t *testing.T) {
 // - the second operator successfully handles the value transfer.
 func TestMultiBridgeKLAYTransferMixConfig1(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 
@@ -965,6 +1006,8 @@ func TestMultiBridgeKLAYTransferMixConfig1(t *testing.T) {
 // - remain operators successfully handle the value transfer.
 func TestMultiBridgeKLAYTransferMixConfig2(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 
@@ -1019,6 +1062,8 @@ func TestMultiBridgeKLAYTransferMixConfig2(t *testing.T) {
 // - the first operator successfully handles the value transfer if retry.
 func TestMultiBridgeKLAYTransferMixConfig3(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 
@@ -1066,6 +1111,8 @@ func TestMultiBridgeKLAYTransferMixConfig3(t *testing.T) {
 // - the second transfer is done and check nonces and block number (req 1, blk 100100)
 func TestNoncesAndBlockNumber(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 
@@ -1133,6 +1180,8 @@ func TestNoncesAndBlockNumber(t *testing.T) {
 // - check if reversed request nonce from 2 to 0 fail.
 func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
+	defer info.sim.Close()
+
 	acc := info.accounts[0]
 	to := common.Address{100}
 

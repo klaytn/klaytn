@@ -55,18 +55,20 @@ const (
 
 var (
 	// Metrics for miner
-	timeLimitReachedCounter = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
-	tooLongTxCounter        = metrics.NewRegisteredCounter("miner/toolongtx", nil)
-	ResultChGauge           = metrics.NewRegisteredGauge("miner/resultch", nil)
-	resentTxGauge           = metrics.NewRegisteredGauge("miner/tx/resend/gauge", nil)
-	usedAllTxsCounter       = metrics.NewRegisteredCounter("miner/usedalltxs", nil)
-	checkedTxsGauge         = metrics.NewRegisteredGauge("miner/checkedtxs", nil)
-	tCountGauge             = metrics.NewRegisteredGauge("miner/tcount", nil)
-	nonceTooLowTxsGauge     = metrics.NewRegisteredGauge("miner/nonce/low/txs", nil)
-	nonceTooHighTxsGauge    = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
-	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
-	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
-	blockMiningTimeGauge    = metrics.NewRegisteredGauge("miner/block/mining/time", nil)
+	timeLimitReachedCounter      = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
+	tooLongTxCounter             = metrics.NewRegisteredCounter("miner/toolongtx", nil)
+	ResultChGauge                = metrics.NewRegisteredGauge("miner/resultch", nil)
+	resentTxGauge                = metrics.NewRegisteredGauge("miner/tx/resend/gauge", nil)
+	usedAllTxsCounter            = metrics.NewRegisteredCounter("miner/usedalltxs", nil)
+	checkedTxsGauge              = metrics.NewRegisteredGauge("miner/checkedtxs", nil)
+	tCountGauge                  = metrics.NewRegisteredGauge("miner/tcount", nil)
+	nonceTooLowTxsGauge          = metrics.NewRegisteredGauge("miner/nonce/low/txs", nil)
+	nonceTooHighTxsGauge         = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
+	gasLimitReachedTxsGauge      = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
+	strangeErrorTxsCounter       = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
+	blockMiningTimeMeter         = metrics.NewRegisteredMeter("miner/block/mining/time", nil)
+	blockMiningCommitTxTimeMeter = metrics.NewRegisteredMeter("miner/block/committx/time", nil)
+	blockMiningFinalizeTimeMeter = metrics.NewRegisteredMeter("miner/block/finalize/time", nil)
 )
 
 // Agent can register themself with the worker
@@ -378,6 +380,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				log.BlockHash = block.Hash()
 			}
 
+			start := time.Now()
 			result, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
 			work.stateMu.Unlock()
 			if err != nil {
@@ -388,6 +391,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				}
 				continue
 			}
+			blockWriteTime := time.Since(start)
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
@@ -413,7 +417,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			}
 
 			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
-				"hash", block.Hash(), "txs", len(block.Transactions()))
+				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
@@ -520,18 +524,28 @@ func (self *worker) commitNewWork() {
 	if self.nodetype == common.CONSENSUSNODE {
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
+		finishedCommitTx := time.Now()
 
 		// Create the new block to seal with the consensus engine
 		if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
 			logger.Error("Failed to finalize block for sealing", "err", err)
 			return
 		}
+		finishedFinalize := time.Now()
+
 		// We only care about logging if we're actually mining.
 		if atomic.LoadInt32(&self.mining) == 1 {
 			tCountGauge.Update(int64(work.tcount))
-			blockMiningTime := time.Since(tstart)
-			blockMiningTimeGauge.Update(int64(blockMiningTime))
-			logger.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "elapsed", common.PrettyDuration(blockMiningTime))
+			blockMiningTime := common.PrettyDuration(time.Since(tstart))
+			commitTxTime := common.PrettyDuration(finishedCommitTx.Sub(tstart))
+			finalizeTime := common.PrettyDuration(finishedFinalize.Sub(finishedCommitTx))
+
+			blockMiningTimeMeter.Mark(int64(blockMiningTime))
+			blockMiningCommitTxTimeMeter.Mark(int64(commitTxTime))
+			blockMiningFinalizeTimeMeter.Mark(int64(finalizeTime))
+			logger.Info("Commit new mining work",
+				"number", work.Block.Number(), "hash", work.Block.Hash(),
+				"txs", work.tcount, "elapsed", blockMiningTime, "commitTime", commitTxTime, "finalizeTime", finalizeTime)
 		}
 	}
 

@@ -19,6 +19,10 @@ package cn
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -34,9 +38,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	workmocks "github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
-	"time"
 )
 
 const blockNum1 = 20190902
@@ -277,6 +278,30 @@ func TestProtocolManager_getChainID(t *testing.T) {
 	pm.blockchain = mockBlockChain
 
 	assert.Equal(t, cfg.ChainID, pm.getChainID())
+}
+
+func TestProtocolManager_processMsg_panicRecover(t *testing.T) {
+	pm := &ProtocolManager{}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	msgCh := make(chan p2p.Msg)
+	errCh := make(chan error)
+	addr := common.Address{}
+
+	mockPeer := NewMockPeer(mockCtrl)
+	mockPeer.EXPECT().GetVersion().Do(
+		func() { panic("panic test") },
+	)
+
+	// pm.processMsg will be panicked by the mockPeer
+	go pm.processMsg(msgCh, mockPeer, addr, errCh)
+
+	msgCh <- p2p.Msg{Code: NodeDataMsg}
+
+	// panic will be recovered and errCh will receive an error
+	err := <-errCh
+	assert.Equal(t, errUnknownProcessingError, err)
 }
 
 func TestSampleSize(t *testing.T) {

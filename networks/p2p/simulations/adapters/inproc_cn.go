@@ -175,7 +175,7 @@ func (sn *CnNode) Addr() []byte {
 // Node returns a discover.Node representing the CnNode
 func (sn *CnNode) Node() *discover.Node {
 	//return discover.NewNode(sn.ID, net.IP{127, 0, 0, 1}, 30303, 30303)
-	return discover.NewNode(sn.ID, net.IP{127, 0, 0, 1}, sn.config.Port, sn.config.Port, discover.NodeTypeCN)
+	return discover.NewNode(sn.ID, net.IP{127, 0, 0, 1}, sn.config.Port, sn.config.Port, nil, discover.NodeTypeCN)
 }
 
 // Client returns an rpc.Client which can be used to communicate with the

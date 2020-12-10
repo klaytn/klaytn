@@ -19,6 +19,15 @@ package sc
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"math/big"
+	"os"
+	"path"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
@@ -29,23 +38,15 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
-	"github.com/klaytn/klaytn/contracts/sc_erc20"
-	"github.com/klaytn/klaytn/contracts/sc_erc721"
-	"github.com/klaytn/klaytn/contracts/sc_erc721_no_uri"
+	sctoken "github.com/klaytn/klaytn/contracts/sc_erc20"
+	scnft "github.com/klaytn/klaytn/contracts/sc_erc721"
+	scnft_no_uri "github.com/klaytn/klaytn/contracts/sc_erc721_no_uri"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/ser/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"log"
-	"math/big"
-	"os"
-	"path"
-	"sync"
-	"testing"
-	"time"
 )
 
 // WaitGroupWithTimeOut waits the given wait group until the timout duration.
@@ -114,6 +115,7 @@ func TestBridgeManager(t *testing.T) {
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
@@ -357,6 +359,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
@@ -548,6 +551,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		bacc.pAccount.address: {Balance: big.NewInt(initialValue)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		chainDB:        database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
@@ -948,6 +952,7 @@ func TestBasicJournal(t *testing.T) {
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		config:         config,
@@ -1027,6 +1032,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		config:         config,
@@ -1250,6 +1256,7 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		config:         config,
@@ -1314,6 +1321,7 @@ func TestScenarioSubUnsub(t *testing.T) {
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		config:         config,
@@ -1418,6 +1426,7 @@ func TestErrorDupSubscription(t *testing.T) {
 		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		config:         config,
@@ -1468,6 +1477,7 @@ func TestAnchoringBasic(t *testing.T) {
 	}()
 
 	sim, sc, bAcc, _, _, _ := generateAnchoringEnv(t, tempDir)
+	defer sim.Close()
 
 	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
 	assert.Equal(t, uint64(0), sc.handler.latestTxCountAddedBlockNumber)
@@ -1520,6 +1530,7 @@ func TestAnchoringBasicWithFeePayer(t *testing.T) {
 	}()
 
 	sim, sc, bAcc, parentOperator, feePayer, tester := generateAnchoringEnv(t, tempDir)
+	defer sim.Close()
 
 	invalidAccount := common.HexToAddress("0x1")
 	bAcc.SetParentOperatorFeePayer(feePayer.Address)
@@ -1606,6 +1617,7 @@ func TestAnchoringBasicWithBridgeTxPoolMock(t *testing.T) {
 	}()
 
 	sim, sc, bAcc, _, feePayer, _ := generateAnchoringEnv(t, tempDir)
+	defer sim.Close()
 
 	// mock BridgeTxPool
 	{
@@ -1728,6 +1740,7 @@ func TestAnchoringStart(t *testing.T) {
 
 	alloc := blockchain.GenesisAlloc{}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		config:         config,
@@ -1810,6 +1823,7 @@ func TestAnchoringPeriod(t *testing.T) {
 
 	alloc := blockchain.GenesisAlloc{}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		config:         config,
@@ -1933,6 +1947,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 
 	alloc := blockchain.GenesisAlloc{}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	sc := &SubBridge{
 		config:         config,

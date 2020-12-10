@@ -27,6 +27,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -73,6 +74,7 @@ const (
 // errIncompatibleConfig is returned if the requested protocols and configs are
 // not compatible (low protocol version restrictions and high requirements).
 var errIncompatibleConfig = errors.New("incompatible configuration")
+var errUnknownProcessingError = errors.New("unknown error during the msg processing")
 
 func errResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
@@ -465,6 +467,14 @@ func (pm *ProtocolManager) handle(p Peer) error {
 }
 
 func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Error("stacktrace from panic: \n" + string(debug.Stack()))
+			logger.Warn("the panic is recovered", "panicErr", err)
+			errCh <- errUnknownProcessingError
+		}
+	}()
+
 	_, fakeF := pm.fetcher.(*fetcher.FakeFetcher)
 	_, fakeD := pm.downloader.(*downloader.FakeDownloader)
 	if fakeD || fakeF {

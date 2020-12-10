@@ -363,13 +363,8 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 			case nil:
 				s.dialing[id] = t.flags
 				newtasks = append(newtasks, t)
-				if len(t.dest.TCPs) > 0 { // Check if the server use multi-port.
-					logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID,
-						"NodeType", t.dest.NType, "ip", t.dest.IP, "port", t.dest.TCPs)
-				} else {
-					logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID,
-						"NodeType", t.dest.NType, "ip", t.dest.IP, "port", t.dest.TCP)
-				}
+				logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID,
+					"NodeType", t.dest.NType, "ip", t.dest.IP, "mainPort", t.dest.TCP, "port", t.dest.TCPs)
 			default:
 				logger.Trace("[Dial] Skipped addStaticDial", "reason", err, "to", t.dest)
 			}
@@ -487,7 +482,7 @@ func (t *dialTask) Do(srv Server) {
 		}
 	}
 	var err error
-	if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
+	if len(t.dest.TCPs) > 1 {
 		err = t.dialMulti(srv, t.dest)
 	} else {
 		err = t.dial(srv, t.dest)
@@ -497,7 +492,7 @@ func (t *dialTask) Do(srv Server) {
 		logger.Debug("[Dial] Failed dialing", "task", t, "err", err)
 		// Try resolving the ID of static nodes if dialing failed.
 		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 && t.resolve(srv, t.dest.NType) {
-			if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
+			if len(t.dest.TCPs) > 1 {
 				err = t.dialMulti(srv, t.dest)
 			} else {
 				err = t.dial(srv, t.dest)

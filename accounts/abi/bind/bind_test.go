@@ -22,7 +22,6 @@ package bind
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -30,6 +29,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 var bindTests = []struct {
@@ -261,7 +262,9 @@ var bindTests = []struct {
 			// Generate a new random account and a funded simulator
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
+
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
 
 			// Deploy an interaction tester contract
 			_, _, interactor, err := DeployInteractor(auth, sim, "Deploy string")
@@ -313,7 +316,9 @@ var bindTests = []struct {
 			// Generate a new random account and a funded simulator
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
+
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
 
 			// Deploy a tuple tester contract and execute a structured call on it
 			_, _, getter, err := DeployGetter(auth, sim)
@@ -353,7 +358,9 @@ var bindTests = []struct {
 			// Generate a new random account and a funded simulator
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
+
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
 
 			// Deploy a tuple tester contract and execute a structured call on it
 			_, _, tupler, err := DeployTupler(auth, sim)
@@ -405,7 +412,9 @@ var bindTests = []struct {
 			// Generate a new random account and a funded simulator
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
+
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
 
 			// Deploy a slice tester contract and execute a n array call on it
 			_, _, slicer, err := DeploySlicer(auth, sim)
@@ -447,7 +456,9 @@ var bindTests = []struct {
 			// Generate a new random account and a funded simulator
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
+
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
 
 			// Deploy a default method invoker contract 
 			_, _, defaulter, err := DeployDefaulter(auth, sim)
@@ -488,6 +499,7 @@ var bindTests = []struct {
 		`
 			// Create a simulator and wrap a non-deployed contract
 			sim := backends.NewSimulatedBackend(nil)
+			defer sim.Close()
 
 			nonexistent, err := NewNonExistent(common.Address{}, sim)
 			if err != nil {
@@ -531,7 +543,9 @@ var bindTests = []struct {
 			// Generate a new random account and a funded simulator
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
+
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
 
 			// Deploy a funky gas pattern contract
 			_, _, limiter, err := DeployFunkyGasPattern(auth, sim)
@@ -575,7 +589,9 @@ var bindTests = []struct {
 			// Generate a new random account and a funded simulator
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
+
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
 
 			// Deploy a sender tester contract and execute a structured call on it
 			_, _, callfrom, err := DeployCallFrom(auth, sim)
@@ -644,7 +660,9 @@ var bindTests = []struct {
 			// Generate a new random account and a funded simulator
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
+
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
 
 			// Deploy a underscorer tester contract and execute a structured call on it
 			_, _, underscorer, err := DeployUnderscorer(auth, sim)
@@ -724,7 +742,9 @@ var bindTests = []struct {
 			// Generate a new random account and a funded simulator
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
+
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
 
 			// Deploy an eventer contract
 			_, _, eventer, err := DeployEventer(auth, sim)
@@ -881,7 +901,9 @@ var bindTests = []struct {
 			// Generate a new random account and a funded simulator
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
+
 			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
 
 			//deploy the test contract
 			_, _, testContract, err := DeployDeeplyNestedArray(auth, sim)

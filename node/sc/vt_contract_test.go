@@ -17,16 +17,17 @@
 package sc
 
 import (
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/sc_erc20"
-	"github.com/klaytn/klaytn/contracts/sc_erc721"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"strconv"
 	"testing"
+
+	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/klaytn/klaytn/common"
+	sctoken "github.com/klaytn/klaytn/contracts/sc_erc20"
+	scnft "github.com/klaytn/klaytn/contracts/sc_erc721"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestTokenPublicVariables checks the results of the public variables.
@@ -44,6 +45,7 @@ func TestTokenPublicVariables(t *testing.T) {
 			ops[KLAY].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
 
 	initSupply, err := info.tokenLocalBridge.INITIALSUPPLY(nil)
 	assert.NoError(t, err)
@@ -90,6 +92,7 @@ func TestNFTPublicVariables(t *testing.T) {
 			ops[KLAY].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
 
 	_, tx, _, err := scnft.DeployServiceChainNFT(info.nodeAuth, info.sim, common.Address{0})
 	assert.NoError(t, err)

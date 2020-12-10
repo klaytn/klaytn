@@ -202,6 +202,25 @@ func TestMethodSignature(t *testing.T) {
 	if m.Sig() != exp {
 		t.Error("signature mismatch", exp, "!=", m.Sig())
 	}
+
+	// Method with tuple arguments
+	s, _ := NewType("tuple", []ArgumentMarshaling{
+		{Name: "a", Type: "int256"},
+		{Name: "b", Type: "int256[]"},
+		{Name: "c", Type: "tuple[]", Components: []ArgumentMarshaling{
+			{Name: "x", Type: "int256"},
+			{Name: "y", Type: "int256"},
+		}},
+		{Name: "d", Type: "tuple[2]", Components: []ArgumentMarshaling{
+			{Name: "x", Type: "int256"},
+			{Name: "y", Type: "int256"},
+		}},
+	})
+	m = Method{"foo", false, []Argument{{"s", s, false}, {"bar", String, false}}, nil}
+	exp = "foo((int256,int256[],(int256,int256)[],(int256,int256)[2]),string)"
+	if m.Sig() != exp {
+		t.Error("signature mismatch", exp, "!=", m.Sig())
+	}
 }
 
 func TestMultiPack(t *testing.T) {
@@ -571,11 +590,13 @@ func TestBareEvents(t *testing.T) {
 	const definition = `[
 	{ "type" : "event", "name" : "balance" },
 	{ "type" : "event", "name" : "anon", "anonymous" : true},
-	{ "type" : "event", "name" : "args", "inputs" : [{ "indexed":false, "name":"arg0", "type":"uint256" }, { "indexed":true, "name":"arg1", "type":"address" }] }
+	{ "type" : "event", "name" : "args", "inputs" : [{ "indexed":false, "name":"arg0", "type":"uint256" }, { "indexed":true, "name":"arg1", "type":"address" }] },
+	{ "type" : "event", "name" : "tuple", "inputs" : [{ "indexed":false, "name":"t", "type":"tuple", "components":[{"name":"a", "type":"uint256"}] }, { "indexed":true, "name":"arg1", "type":"address" }] }
 	]`
 
 	arg0, _ := NewType("uint256", nil)
 	arg1, _ := NewType("address", nil)
+	tuple, _ := NewType("tuple", []ArgumentMarshaling{{Name: "a", Type: "uint256"}})
 
 	expectedEvents := map[string]struct {
 		Anonymous bool
@@ -585,6 +606,10 @@ func TestBareEvents(t *testing.T) {
 		"anon":    {true, nil},
 		"args": {false, []Argument{
 			{Name: "arg0", Type: arg0, Indexed: false},
+			{Name: "arg1", Type: arg1, Indexed: true},
+		}},
+		"tuple": {false, []Argument{
+			{Name: "t", Type: tuple, Indexed: false},
 			{Name: "arg1", Type: arg1, Indexed: true},
 		}},
 	}
