@@ -61,11 +61,12 @@ var (
 	blockProcessTimer  = metrics.NewRegisteredTimer("chain/process", nil)
 	blockFinalizeTimer = metrics.NewRegisteredTimer("chain/finalize", nil)
 	blockValidateTimer = metrics.NewRegisteredTimer("chain/validate", nil)
-	ErrNoGenesis       = errors.New("Genesis not found in chain")
+	ErrNoGenesis       = errors.New("genesis not found in chain")
 	ErrNotExistNode    = errors.New("the node does not exist in cached node")
 	ErrQuitBySignal    = errors.New("quit by signal")
 	ErrNotInWarmUp     = errors.New("not in warm up")
 	logger             = log.NewModuleLogger(log.Blockchain)
+	blockLogsPrefix    = []byte("blockLogs")
 )
 
 // Below is the list of the constants for cache size.
@@ -1207,6 +1208,9 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Publish the committed block to the redis cache of stateDB.
 	// The cache uses the block to distinguish the latest state.
 	if bc.cacheConfig.TrieNodeCacheConfig.RedisPublishBlockEnable {
+		blockLogsKey := append(blockLogsPrefix, block.Number().Bytes()...)
+		bc.writeBlockLogsToRemoteCache(blockLogsKey, receipts)
+
 		blockRlp, err := rlp.EncodeToBytes(block)
 		if err != nil {
 			logger.Error("failed to encode lastCommittedBlock", "blockNumber", block.NumberU64(), "err", err)
@@ -1223,6 +1227,26 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	}
 
 	return status, err
+}
+
+// writeBlockLogsToRemoteCache writes block logs to remote cache.
+// The stored logs will be used by KES service nodes to subscribe log events.
+// This method is only for KES nodes.
+func (bc *BlockChain) writeBlockLogsToRemoteCache(blockLogsKey []byte, receipts []*types.Receipt) {
+	var entireBlockLogs []*types.LogForStorage
+	for _, receipt := range receipts {
+		for _, log := range receipt.Logs {
+			// convert Log to LogForStorage to encode entire data
+			entireBlockLogs = append(entireBlockLogs, (*types.LogForStorage)(log))
+		}
+	}
+	encodedBlockLogs, err := rlp.EncodeToBytes(entireBlockLogs)
+	if err != nil {
+		logger.Error("rlp encoding error", "err", err)
+		return
+	}
+	// TODO-Klaytn-KES: refine this not to use trieNodeCache
+	bc.stateCache.TrieDB().TrieNodeCache().Set(blockLogsKey, encodedBlockLogs)
 }
 
 // writeBlockWithStateSerial writes the block and all associated state to the database in serial manner.
@@ -1701,9 +1725,70 @@ func (bc *BlockChain) BlockSubscriptionLoop(pool *TxPool) {
 		oldHead := bc.CurrentHeader()
 		bc.replaceCurrentBlock(block)
 		pool.lockedReset(oldHead, bc.CurrentHeader())
+
+		// just in case the block number jumps up more than one, iterates all missed blocks
+		for blockNum := oldHead.Number.Uint64(); blockNum < block.Number().Uint64()-1; blockNum++ {
+			retrievedBlock := bc.GetBlockByNumber(blockNum)
+			bc.sendKESSubscriptionData(retrievedBlock)
+		}
+		bc.sendKESSubscriptionData(block)
 	}
 
 	logger.Info("closed the block subscription loop")
+}
+
+// sendKESSubscriptionData sends data to chainFeed and logsFeed.
+// ChainEvent containing only Block and Hash is sent to chainFeed.
+// []*types.Log containing entire logs of a block is set to logsFeed.
+// The logs are expected to be delivered from remote cache.
+// If it failed to read log data from remote cache, it will read the data from database.
+// This method is only for KES nodes.
+func (bc *BlockChain) sendKESSubscriptionData(block *types.Block) {
+	bc.chainFeed.Send(ChainEvent{
+		Block: block,
+		Hash:  block.Hash(),
+		// TODO-Klaytn-KES: fill the following data if needed
+		Receipts:         types.Receipts{},
+		Logs:             []*types.Log{},
+		InternalTxTraces: []*vm.InternalTxTrace{},
+	})
+
+	// TODO-Klaytn-KES: refine this not to use trieNodeCache
+	logKey := append(blockLogsPrefix, block.Number().Bytes()...)
+	encodedLogs := bc.stateCache.TrieDB().TrieNodeCache().Get(logKey)
+	if encodedLogs == nil {
+		logger.Warn("cannot get a block log from the remote cache", "blockNum", block.NumberU64())
+
+		// read log data from database and send it
+		logsList := bc.GetLogsByHash(block.Header().Hash())
+		var logs []*types.Log
+		for _, list := range logsList {
+			logs = append(logs, list...)
+		}
+		bc.logsFeed.Send(logs)
+		return
+	}
+
+	entireLogs := []*types.LogForStorage{}
+	if err := rlp.DecodeBytes(encodedLogs, &entireLogs); err != nil {
+		logger.Warn("failed to decode a block log", "blockNum", block.NumberU64(), "err", err)
+
+		// read log data from database and send it
+		logsList := bc.GetLogsByHash(block.Header().Hash())
+		var logs []*types.Log
+		for _, list := range logsList {
+			logs = append(logs, list...)
+		}
+		bc.logsFeed.Send(logs)
+		return
+	}
+
+	// covert LogForStorage to Log
+	logs := make([]*types.Log, len(entireLogs))
+	for i, log := range entireLogs {
+		logs[i] = (*types.Log)(log)
+	}
+	bc.logsFeed.Send(logs)
 }
 
 // CloseBlockSubscriptionLoop closes BlockSubscriptionLoop.
