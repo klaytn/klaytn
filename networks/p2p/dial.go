@@ -491,29 +491,25 @@ func (t *dialTask) Do(srv Server) {
 		err = t.dialMulti(srv, t.dest)
 	} else {
 		err = t.dial(srv, t.dest)
-		// redial with updated connection
-		if err == errUpdateDial {
-			err = t.dialMulti(srv, t.dest)
-		}
 	}
 
 	if err != nil {
 		logger.Debug("[Dial] Failed dialing", "task", t, "err", err)
 		// Try resolving the ID of static nodes if dialing failed.
-		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
-			if t.resolve(srv, t.dest.NType) {
-				if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
-					err = t.dialMulti(srv, t.dest)
-				} else {
-					err = t.dial(srv, t.dest)
-				}
-				if err != nil {
-					t.failedTry++
-				}
+		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 && t.resolve(srv, t.dest.NType) {
+			if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
+				err = t.dialMulti(srv, t.dest)
 			} else {
-				t.failedTry++
+				err = t.dial(srv, t.dest)
 			}
-		} else {
+		}
+
+		// redial with updated connection
+		if err == errUpdateDial {
+			err = t.dialMulti(srv, t.dest)
+		}
+
+		if err != nil {
 			t.failedTry++
 		}
 	}
