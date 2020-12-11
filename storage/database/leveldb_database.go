@@ -446,7 +446,7 @@ hasError:
 			currCompRead += s.LevelRead[i]
 			currCompWrite += s.LevelWrite[i]
 		}
-		db.compTimer.Update(time.Duration(currCompTime.Nanoseconds() - prevCompTime.Nanoseconds()))
+		db.compTimer.Update(currCompTime - prevCompTime)
 		db.compReadMeter.Mark(currCompRead - prevCompRead)
 		db.compWriteMeter.Mark(currCompWrite - prevCompWrite)
 		prevCompTime, prevCompRead, prevCompWrite = currCompTime, currCompRead, currCompWrite
