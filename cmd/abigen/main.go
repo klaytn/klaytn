@@ -64,6 +64,10 @@ var (
 		Name:  "bin",
 		Usage: "Path to the Klaytn contract bytecode (generate deploy method)",
 	}
+	binruntimeFlag = cli.StringFlag{
+		Name:  "binruntime",
+		Usage: "Path to the GXP contract runtime-bytecode",
+	}
 	typeFlag = cli.StringFlag{
 		Name:  "type",
 		Usage: "Struct name for the binding (default = package name)",
@@ -109,6 +113,7 @@ func init() {
 	app.Flags = []cli.Flag{
 		abiFlag,
 		binFlag,
+		binruntimeFlag,
 		typeFlag,
 		jsonFlag,
 		solFlag,
@@ -177,6 +182,16 @@ func abigen(c *cli.Context) error {
 			}
 		}
 		bins = append(bins, string(bin))
+		var binruntime []byte
+		if binruntimeFile := c.GlobalString(binruntimeFlag.Name); binruntimeFile != "" {
+			if binruntime, err = ioutil.ReadFile(binruntimeFile); err != nil {
+				log.Fatalf("Failed to read input runtime-bytecode: %v", err)
+			}
+			if strings.Contains(string(binruntime), "//") {
+				log.Fatalf("Contract has additional library references, please use other ")
+			}
+		}
+		binruntimes = append(binruntimes, string(binruntime))
 
 		kind := c.GlobalString(typeFlag.Name)
 		if kind == "" {
