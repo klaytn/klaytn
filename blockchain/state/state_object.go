@@ -24,15 +24,17 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"math/big"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/ser/rlp"
-	"io"
-	"math/big"
-	"sync/atomic"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -176,6 +178,10 @@ func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
 		return value
 	}
 	// Load from DB in case it is missing.
+	// Track the amount of time wasted on reading the storge trie
+	if EnabledExpensive {
+		defer func(start time.Time) { self.db.StorageReads += time.Since(start) }(time.Now())
+	}
 	enc, err := self.getStorageTrie(db).TryGet(key[:])
 	if err != nil {
 		self.setError(err)
@@ -243,6 +249,10 @@ func (self *stateObject) UpdateKey(newKey accountkey.AccountKey, currentBlockNum
 
 // updateStorageTrie writes cached storage modifications into the object's storage trie.
 func (self *stateObject) updateStorageTrie(db Database) Trie {
+	// Track the amount of time wasted on updating the storage trie
+	if EnabledExpensive {
+		defer func(start time.Time) { self.db.StorageUpdates += time.Since(start) }(time.Now())
+	}
 	tr := self.getStorageTrie(db)
 	for key, value := range self.dirtyStorage {
 		delete(self.dirtyStorage, key)
@@ -260,6 +270,10 @@ func (self *stateObject) updateStorageTrie(db Database) Trie {
 // updateStorageRoot sets the storage trie root to the newly updated one.
 func (self *stateObject) updateStorageRoot(db Database) {
 	if acc := account.GetProgramAccount(self.account); acc != nil {
+		// Track the amount of time wasted on hashing the storage trie
+		if EnabledExpensive {
+			defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
+		}
 		acc.SetStorageRoot(self.storageTrie.Hash())
 	}
 }
@@ -269,6 +283,10 @@ func (self *stateObject) updateStorageRoot(db Database) {
 func (self *stateObject) setStorageRoot(updateStorageRoot bool, objectsToUpdate map[common.Address]struct{}) {
 	if acc := account.GetProgramAccount(self.account); acc != nil {
 		if updateStorageRoot {
+			// Track the amount of time wasted on hashing the storage trie
+			if EnabledExpensive {
+				defer func(start time.Time) { self.db.StorageHashes += time.Since(start) }(time.Now())
+			}
 			acc.SetStorageRoot(self.storageTrie.Hash())
 			return
 		}
@@ -283,6 +301,10 @@ func (self *stateObject) CommitStorageTrie(db Database) error {
 	self.updateStorageTrie(db)
 	if self.dbErr != nil {
 		return self.dbErr
+	}
+	// Track the amount of time wasted on committing the storage trie
+	if EnabledExpensive {
+		defer func(start time.Time) { self.db.StorageCommits += time.Since(start) }(time.Now())
 	}
 	if acc := account.GetProgramAccount(self.account); acc != nil {
 		root, err := self.storageTrie.Commit(nil)

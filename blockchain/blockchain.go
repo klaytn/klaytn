@@ -57,8 +57,19 @@ import (
 const insertTimeLimit = common.PrettyDuration(time.Second)
 
 var (
+	accountReadTimer   = metrics.NewRegisteredTimer("state/account/reads", nil)
+	accountHashTimer   = metrics.NewRegisteredTimer("state/account/hashes", nil)
+	accountUpdateTimer = metrics.NewRegisteredTimer("state/account/updates", nil)
+	accountCommitTimer = metrics.NewRegisteredTimer("state/account/commits", nil)
+
+	storageReadTimer   = metrics.NewRegisteredTimer("state/storage/reads", nil)
+	storageHashTimer   = metrics.NewRegisteredTimer("state/storage/hashes", nil)
+	storageUpdateTimer = metrics.NewRegisteredTimer("state/storage/updates", nil)
+	storageCommitTimer = metrics.NewRegisteredTimer("state/storage/commits", nil)
+
 	blockInsertTimer        = metrics.NewRegisteredTimer("chain/inserts", nil)
 	blockProcessTimer       = metrics.NewRegisteredTimer("chain/process", nil)
+	blockExecutionTimer     = metrics.NewRegisteredTimer("chain/execution", nil)
 	blockFinalizeTimer      = metrics.NewRegisteredTimer("chain/finalize", nil)
 	blockValidateTimer      = metrics.NewRegisteredTimer("chain/validate", nil)
 	ErrNoGenesis            = errors.New("genesis not found in chain")
@@ -192,6 +203,8 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 		}
 	}
+
+	state.EnabledExpensive = db.GetDBConfig().EnableDBPerfMetrics
 
 	// Initialize DeriveSha implementation
 	InitDeriveSha(chainConfig.DeriveShaImpl)
@@ -1645,6 +1658,20 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
+		// Update the metrics subsystem with all the measurements
+		accountReadTimer.Update(stateDB.AccountReads)
+		accountHashTimer.Update(stateDB.AccountHashes)
+		accountUpdateTimer.Update(stateDB.AccountUpdates)
+		accountCommitTimer.Update(stateDB.AccountCommits)
+
+		storageReadTimer.Update(stateDB.StorageReads)
+		storageHashTimer.Update(stateDB.StorageHashes)
+		storageUpdateTimer.Update(stateDB.StorageUpdates)
+		storageCommitTimer.Update(stateDB.StorageCommits)
+
+		trieAccess := stateDB.AccountReads + stateDB.AccountHashes + stateDB.AccountUpdates + stateDB.AccountCommits
+		trieAccess += stateDB.StorageReads + stateDB.StorageHashes + stateDB.StorageUpdates + stateDB.StorageCommits
+
 		switch writeResult.Status {
 		case CanonStatTy:
 			processTxsTime := common.PrettyDuration(procStats.AfterApplyTxs.Sub(procStats.BeforeApplyTxs))
@@ -1657,6 +1684,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
 
 			blockProcessTimer.Update(time.Duration(processTxsTime))
+			blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)
 			blockFinalizeTimer.Update(time.Duration(processFinalizeTime))
 			blockValidateTimer.Update(time.Duration(validateTime))
 			blockInsertTimer.Update(time.Duration(totalTime))
