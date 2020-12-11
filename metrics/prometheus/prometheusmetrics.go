@@ -71,7 +71,7 @@ func (c *PrometheusConfig) UpdatePrometheusMetrics() {
 }
 
 var pv = []float64{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999}
-var pv_str = []string{"0.5", "0.75", "0.95", "0.99", "0.999", "0.9999"}
+var pv_str = []string{"_0_5", "_0_75", "_0_95", "_0_99", "_0_999", "_0_9999"}
 
 func (c *PrometheusConfig) UpdatePrometheusMetricsOnce() error {
 	c.Registry.Each(func(name string, i interface{}) {
