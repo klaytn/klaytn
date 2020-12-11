@@ -437,6 +437,7 @@ var (
 	errNotWhitelisted     = errors.New("not contained in netrestrict whitelist")
 	errExpired            = errors.New("is expired")
 	errExceedMaxTypedDial = errors.New("exceeded max typed dial")
+	errUpdateDial         = errors.New("updated to be multichannel peer")
 )
 
 func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*Peer) error {
@@ -490,20 +491,20 @@ func (t *dialTask) Do(srv Server) {
 	if err != nil {
 		logger.Debug("[Dial] Failed dialing", "task", t, "err", err)
 		// Try resolving the ID of static nodes if dialing failed.
-		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
-			if t.resolve(srv, t.dest.NType) {
-				if len(t.dest.TCPs) > 1 {
-					err = t.dialMulti(srv, t.dest)
-				} else {
-					err = t.dial(srv, t.dest)
-				}
-				if err != nil {
-					t.failedTry++
-				}
+		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 && t.resolve(srv, t.dest.NType) {
+			if len(t.dest.TCPs) > 1 {
+				err = t.dialMulti(srv, t.dest)
 			} else {
-				t.failedTry++
+				err = t.dial(srv, t.dest)
 			}
-		} else {
+		}
+
+		// redial with updated connection
+		if err == errUpdateDial {
+			err = t.dialMulti(srv, t.dest)
+		}
+
+		if err != nil {
 			t.failedTry++
 		}
 	}
