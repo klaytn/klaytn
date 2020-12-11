@@ -24,15 +24,17 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"math/big"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/ser/rlp"
-	"io"
-	"math/big"
-	"sync/atomic"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -176,6 +178,7 @@ func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
 		return value
 	}
 	// Load from DB in case it is missing.
+	defer func(start time.Time) { storageReadTimer.UpdateSince(start) }(time.Now())
 	enc, err := self.getStorageTrie(db).TryGet(key[:])
 	if err != nil {
 		self.setError(err)
@@ -243,6 +246,7 @@ func (self *stateObject) UpdateKey(newKey accountkey.AccountKey, currentBlockNum
 
 // updateStorageTrie writes cached storage modifications into the object's storage trie.
 func (self *stateObject) updateStorageTrie(db Database) Trie {
+	defer func(start time.Time) { storageUpdateTimer.UpdateSince(start) }(time.Now())
 	tr := self.getStorageTrie(db)
 	for key, value := range self.dirtyStorage {
 		delete(self.dirtyStorage, key)
@@ -260,6 +264,7 @@ func (self *stateObject) updateStorageTrie(db Database) Trie {
 // updateStorageRoot sets the storage trie root to the newly updated one.
 func (self *stateObject) updateStorageRoot(db Database) {
 	if acc := account.GetProgramAccount(self.account); acc != nil {
+		defer func(start time.Time) { storageHashTimer.UpdateSince(start) }(time.Now())
 		acc.SetStorageRoot(self.storageTrie.Hash())
 	}
 }
@@ -269,6 +274,7 @@ func (self *stateObject) updateStorageRoot(db Database) {
 func (self *stateObject) setStorageRoot(updateStorageRoot bool, objectsToUpdate map[common.Address]struct{}) {
 	if acc := account.GetProgramAccount(self.account); acc != nil {
 		if updateStorageRoot {
+			defer func(start time.Time) { storageHashTimer.UpdateSince(start) }(time.Now())
 			acc.SetStorageRoot(self.storageTrie.Hash())
 			return
 		}
@@ -284,6 +290,7 @@ func (self *stateObject) CommitStorageTrie(db Database) error {
 	if self.dbErr != nil {
 		return self.dbErr
 	}
+	defer func(start time.Time) { storageCommitTimer.UpdateSince(start) }(time.Now())
 	if acc := account.GetProgramAccount(self.account); acc != nil {
 		root, err := self.storageTrie.Commit(nil)
 		if err != nil {
