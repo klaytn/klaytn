@@ -1783,7 +1783,7 @@ func (bc *BlockChain) sendKESSubscriptionData(block *types.Block) {
 		return
 	}
 
-	// covert LogForStorage to Log
+	// convert LogForStorage to Log
 	logs := make([]*types.Log, len(entireLogs))
 	for i, log := range entireLogs {
 		logs[i] = (*types.Log)(log)
