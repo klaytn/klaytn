@@ -15,17 +15,16 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
-// This file is derived from accounts/abi/bind/topics_test.go (2020/12/04).
+// This file is derived from accounts/abi/topics_test.go (2020/12/04).
 // Modified and improved for the klaytn development.
 
-package bind
+package abi
 
 import (
 	"math/big"
 	"reflect"
 	"testing"
 
-	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 )
@@ -123,7 +122,7 @@ func TestMakeTopics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := makeTopics(tt.args.query...)
+			got, err := MakeTopics(tt.args.query...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("makeTopics() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -139,7 +138,7 @@ type args struct {
 	createObj func() interface{}
 	resultObj func() interface{}
 	resultMap func() map[string]interface{}
-	fields    abi.Arguments
+	fields    Arguments
 	topics    []common.Hash
 }
 
@@ -153,6 +152,14 @@ type int256Struct struct {
 	Int256Value *big.Int
 }
 
+type hashStruct struct {
+	HashValue common.Hash
+}
+
+type funcStruct struct {
+	FuncValue [24]byte
+}
+
 type topicTest struct {
 	name    string
 	args    args
@@ -160,10 +167,12 @@ type topicTest struct {
 }
 
 func setupTopicsTests() []topicTest {
-	bytesType, _ := abi.NewType("bytes5", "", nil)
-	int8Type, _ := abi.NewType("int8", "", nil)
-	int256Type, _ := abi.NewType("int256", "", nil)
-	tupleType, _ := abi.NewType("tuple(int256,int8)", "", nil)
+	bytesType, _ := NewType("bytes5", "", nil)
+	int8Type, _ := NewType("int8", "", nil)
+	int256Type, _ := NewType("int256", "", nil)
+	tupleType, _ := NewType("tuple(int256,int8)", "", nil)
+	stringType, _ := NewType("string", "", nil)
+	funcType, _ := NewType("function", "", nil)
 
 	tests := []topicTest{
 		{
@@ -174,7 +183,7 @@ func setupTopicsTests() []topicTest {
 				resultMap: func() map[string]interface{} {
 					return map[string]interface{}{"staticBytes": [5]byte{1, 2, 3, 4, 5}}
 				},
-				fields: abi.Arguments{abi.Argument{
+				fields: Arguments{Argument{
 					Name:    "staticBytes",
 					Type:    bytesType,
 					Indexed: true,
@@ -193,7 +202,7 @@ func setupTopicsTests() []topicTest {
 				resultMap: func() map[string]interface{} {
 					return map[string]interface{}{"int8Value": int8(-1)}
 				},
-				fields: abi.Arguments{abi.Argument{
+				fields: Arguments{Argument{
 					Name:    "int8Value",
 					Type:    int8Type,
 					Indexed: true,
@@ -213,7 +222,7 @@ func setupTopicsTests() []topicTest {
 				resultMap: func() map[string]interface{} {
 					return map[string]interface{}{"int256Value": big.NewInt(-1)}
 				},
-				fields: abi.Arguments{abi.Argument{
+				fields: Arguments{Argument{
 					Name:    "int256Value",
 					Type:    int256Type,
 					Indexed: true,
@@ -226,17 +235,113 @@ func setupTopicsTests() []topicTest {
 			wantErr: false,
 		},
 		{
-			name: "tuple(int256, int8)",
+			name: "hash type",
+			args: args{
+				createObj: func() interface{} { return &hashStruct{} },
+				resultObj: func() interface{} { return &hashStruct{crypto.Keccak256Hash([]byte("stringtopic"))} },
+				resultMap: func() map[string]interface{} {
+					return map[string]interface{}{"hashValue": crypto.Keccak256Hash([]byte("stringtopic"))}
+				},
+				fields: Arguments{Argument{
+					Name:    "hashValue",
+					Type:    stringType,
+					Indexed: true,
+				}},
+				topics: []common.Hash{
+					crypto.Keccak256Hash([]byte("stringtopic")),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "function type",
+			args: args{
+				createObj: func() interface{} { return &funcStruct{} },
+				resultObj: func() interface{} {
+					return &funcStruct{[24]byte{255, 255, 255, 255, 255, 255, 255, 255,
+						255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}}
+				},
+				resultMap: func() map[string]interface{} {
+					return map[string]interface{}{"funcValue": [24]byte{255, 255, 255, 255, 255, 255, 255, 255,
+						255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}}
+				},
+				fields: Arguments{Argument{
+					Name:    "funcValue",
+					Type:    funcType,
+					Indexed: true,
+				}},
+				topics: []common.Hash{
+					{0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255,
+						255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "error on topic/field count mismatch",
 			args: args{
 				createObj: func() interface{} { return nil },
 				resultObj: func() interface{} { return nil },
 				resultMap: func() map[string]interface{} { return make(map[string]interface{}) },
-				fields: abi.Arguments{abi.Argument{
+				fields: Arguments{Argument{
 					Name:    "tupletype",
 					Type:    tupleType,
 					Indexed: true,
 				}},
 				topics: []common.Hash{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "error on unindexed arguments",
+			args: args{
+				createObj: func() interface{} { return &int256Struct{} },
+				resultObj: func() interface{} { return &int256Struct{} },
+				resultMap: func() map[string]interface{} { return make(map[string]interface{}) },
+				fields: Arguments{Argument{
+					Name:    "int256Value",
+					Type:    int256Type,
+					Indexed: false,
+				}},
+				topics: []common.Hash{
+					{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+						255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "error on tuple in topic reconstruction",
+			args: args{
+				createObj: func() interface{} { return &tupleType },
+				resultObj: func() interface{} { return &tupleType },
+				resultMap: func() map[string]interface{} { return make(map[string]interface{}) },
+				fields: Arguments{Argument{
+					Name:    "tupletype",
+					Type:    tupleType,
+					Indexed: true,
+				}},
+				topics: []common.Hash{{0}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "error on improper encoded function",
+			args: args{
+				createObj: func() interface{} { return &funcStruct{} },
+				resultObj: func() interface{} { return &funcStruct{} },
+				resultMap: func() map[string]interface{} {
+					return make(map[string]interface{})
+				},
+				fields: Arguments{Argument{
+					Name:    "funcValue",
+					Type:    funcType,
+					Indexed: true,
+				}},
+				topics: []common.Hash{
+					{0, 0, 0, 0, 0, 0, 0, 128, 255, 255, 255, 255, 255, 255, 255, 255,
+						255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				},
 			},
 			wantErr: true,
 		},
@@ -251,7 +356,7 @@ func TestParseTopics(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			createObj := tt.args.createObj()
-			if err := parseTopics(createObj, tt.args.fields, tt.args.topics); (err != nil) != tt.wantErr {
+			if err := ParseTopics(createObj, tt.args.fields, tt.args.topics); (err != nil) != tt.wantErr {
 				t.Errorf("parseTopics() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			resultObj := tt.args.resultObj()
@@ -268,7 +373,7 @@ func TestParseTopicsIntoMap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			outMap := make(map[string]interface{})
-			if err := parseTopicsIntoMap(outMap, tt.args.fields, tt.args.topics); (err != nil) != tt.wantErr {
+			if err := ParseTopicsIntoMap(outMap, tt.args.fields, tt.args.topics); (err != nil) != tt.wantErr {
 				t.Errorf("parseTopicsIntoMap() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			resultMap := tt.args.resultMap()

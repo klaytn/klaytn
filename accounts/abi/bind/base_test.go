@@ -38,8 +38,10 @@ import (
 )
 
 type mockCaller struct {
-	codeAtBlockNumber       *big.Int
-	callContractBlockNumber *big.Int
+	codeAtBlockNumber         *big.Int
+	callContractBlockNumber   *big.Int
+	pendingCodeAtCalled       bool
+	pendingCallContractCalled bool
 }
 
 func (mc *mockCaller) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
@@ -52,6 +54,15 @@ func (mc *mockCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blo
 	return nil, nil
 }
 
+func (mc *mockCaller) PendingCodeAt(ctx context.Context, contract common.Address) ([]byte, error) {
+	mc.pendingCodeAtCalled = true
+	return nil, nil
+}
+
+func (mc *mockCaller) PendingCallContract(ctx context.Context, call klaytn.CallMsg) ([]byte, error) {
+	mc.pendingCallContractCalled = true
+	return nil, nil
+}
 func TestPassingBlockNumber(t *testing.T) {
 
 	mc := &mockCaller{}
@@ -86,6 +97,16 @@ func TestPassingBlockNumber(t *testing.T) {
 
 	if mc.codeAtBlockNumber != nil {
 		t.Fatalf("CodeAt() was passed a block number when it should not have been")
+	}
+
+	bc.Call(&bind.CallOpts{BlockNumber: blockNumber, Pending: true}, &ret, "something")
+
+	if !mc.pendingCallContractCalled {
+		t.Fatalf("CallContract() was not passed the block number")
+	}
+
+	if !mc.pendingCodeAtCalled {
+		t.Fatalf("CodeAt() was not passed the block number")
 	}
 }
 
