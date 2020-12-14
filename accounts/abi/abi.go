@@ -1,3 +1,4 @@
+// Modifications Copyright 2020 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -13,6 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from accounts/abi/abi_test.go (2020/12/14).
+// Modified and improved for the klaytn development.
 
 package abi
 
@@ -24,6 +28,7 @@ import (
 	"io"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
 )
 
 // The ABI holds information about a contract's context and available
@@ -233,4 +238,26 @@ func (abi *ABI) HasFallback() bool {
 // HasReceive returns an indicator whether a receive function is included.
 func (abi *ABI) HasReceive() bool {
 	return abi.Receive.Type == Receive
+}
+
+// revertSelector is a special function selector for revert reason unpacking.
+var revertSelector = crypto.Keccak256([]byte("Error(string)"))[:4]
+
+// UnpackRevert resolves the abi-encoded revert reason. According to the solidity
+// spec https://solidity.readthedocs.io/en/latest/control-structures.html#revert,
+// the provided revert reason is abi-encoded as if it were a call to a function
+// `Error(string)`. So it's a special tool for it.
+func UnpackRevert(data []byte) (string, error) {
+	if len(data) < 4 {
+		return "", errors.New("invalid data for unpacking")
+	}
+	if !bytes.Equal(data[:4], revertSelector) {
+		return "", errors.New("invalid data for unpacking")
+	}
+	var reason string
+	typ, _ := NewType("string", "", nil)
+	if err := (Arguments{{Type: typ}}).Unpack(&reason, data[4:]); err != nil {
+		return "", err
+	}
+	return reason, nil
 }
