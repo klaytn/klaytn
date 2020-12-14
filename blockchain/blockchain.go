@@ -1727,7 +1727,7 @@ func (bc *BlockChain) BlockSubscriptionLoop(pool *TxPool) {
 		pool.lockedReset(oldHead, bc.CurrentHeader())
 
 		// just in case the block number jumps up more than one, iterates all missed blocks
-		for blockNum := oldHead.Number.Uint64(); blockNum < block.Number().Uint64()-1; blockNum++ {
+		for blockNum := oldHead.Number.Uint64() + 1; blockNum < block.Number().Uint64(); blockNum++ {
 			retrievedBlock := bc.GetBlockByNumber(blockNum)
 			bc.sendKESSubscriptionData(retrievedBlock)
 		}
