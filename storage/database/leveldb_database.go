@@ -99,7 +99,7 @@ type levelDB struct {
 	aliveSnapshotsMeter metrics.Meter // Meter for measuring the number of alive snapshots
 	aliveIteratorsMeter metrics.Meter // Meter for measuring the number of alive iterators
 
-	compTimeMeter          metrics.Meter // Meter for measuring the total time spent in database compaction
+	compTimer              metrics.Timer // Meter for measuring the total time spent in database compaction
 	compReadMeter          metrics.Meter // Meter for measuring the data read during compaction
 	compWriteMeter         metrics.Meter // Meter for measuring the data written during compaction
 	diskReadMeter          metrics.Meter // Meter for measuring the effective amount of data read
@@ -111,10 +111,10 @@ type levelDB struct {
 	nonlevel0CompGauge     metrics.Gauge // Gauge for tracking the number of table compaction in non0 level
 	seekCompGauge          metrics.Gauge // Gauge for tracking the number of table compaction caused by read opt
 
-	perfCheck           bool
-	getTimeMeter        metrics.Meter
-	putTimeMeter        metrics.Meter
-	batchWriteTimeMeter metrics.Meter
+	perfCheck       bool
+	getTimer        metrics.Timer
+	putTimer        metrics.Timer
+	batchWriteTimer metrics.Timer
 
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
@@ -260,7 +260,7 @@ func (db *levelDB) Put(key []byte, value []byte) error {
 	if db.perfCheck {
 		start := time.Now()
 		err := db.put(key, value)
-		db.putTimeMeter.Mark(int64(time.Since(start)))
+		db.putTimer.Update(time.Since(start))
 		return err
 	}
 	return db.put(key, value)
@@ -279,7 +279,7 @@ func (db *levelDB) Get(key []byte) ([]byte, error) {
 	if db.perfCheck {
 		start := time.Now()
 		val, err := db.get(key)
-		db.getTimeMeter.Mark(int64(time.Since(start)))
+		db.getTimer.Update(time.Since(start))
 		return val, err
 	}
 	return db.get(key)
@@ -353,7 +353,7 @@ func (db *levelDB) Meter(prefix string) {
 	db.writeDelayDurationMeter = metrics.NewRegisteredMeter(prefix+"writedelay/duration", nil)
 	db.aliveSnapshotsMeter = metrics.NewRegisteredMeter(prefix+"snapshots", nil)
 	db.aliveIteratorsMeter = metrics.NewRegisteredMeter(prefix+"iterators", nil)
-	db.compTimeMeter = metrics.NewRegisteredMeter(prefix+"compaction/time", nil)
+	db.compTimer = metrics.NewRegisteredTimer(prefix+"compaction/time", nil)
 	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compaction/read", nil)
 	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compaction/write", nil)
 	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
@@ -362,9 +362,9 @@ func (db *levelDB) Meter(prefix string) {
 
 	db.openedTablesCountMeter = metrics.NewRegisteredMeter(prefix+"opendedtables", nil)
 
-	db.getTimeMeter = metrics.NewRegisteredMeter(prefix+"get/time", nil)
-	db.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
-	db.batchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
+	db.getTimer = metrics.NewRegisteredTimer(prefix+"get/time", nil)
+	db.putTimer = metrics.NewRegisteredTimer(prefix+"put/time", nil)
+	db.batchWriteTimer = metrics.NewRegisteredTimer(prefix+"batchwrite/time", nil)
 
 	db.memCompGauge = metrics.NewRegisteredGauge(prefix+"compact/memory", nil)
 	db.level0CompGauge = metrics.NewRegisteredGauge(prefix+"compact/level0", nil)
@@ -446,7 +446,7 @@ hasError:
 			currCompRead += s.LevelRead[i]
 			currCompWrite += s.LevelWrite[i]
 		}
-		db.compTimeMeter.Mark(int64(currCompTime.Seconds() - prevCompTime.Seconds()))
+		db.compTimer.Update(currCompTime - prevCompTime)
 		db.compReadMeter.Mark(currCompRead - prevCompRead)
 		db.compWriteMeter.Mark(currCompWrite - prevCompWrite)
 		prevCompTime, prevCompRead, prevCompWrite = currCompTime, currCompRead, currCompWrite
@@ -503,7 +503,7 @@ func (b *ldbBatch) Write() error {
 	if b.ldb.perfCheck {
 		start := time.Now()
 		err := b.write()
-		b.ldb.batchWriteTimeMeter.Mark(int64(time.Since(start)))
+		b.ldb.batchWriteTimer.Update(time.Since(start))
 		return err
 	}
 	return b.write()
