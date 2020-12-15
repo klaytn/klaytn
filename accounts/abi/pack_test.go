@@ -65,7 +65,7 @@ func TestPack(t *testing.T) {
 				t.Fatalf("test %d (%v) failed: %v", i, test.def, err)
 			}
 			if !reflect.DeepEqual(packed[4:], encb) {
-				t.Errorf("test %d (%v) failed: expected %v, got %v", i, test.def, encb, packed[4:])
+				t.Errorf("test %d (%v) failed: expected %x, got %x", i, test.def, encb, packed[4:])
 			}
 		})
 	}
