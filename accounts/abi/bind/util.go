@@ -31,7 +31,7 @@ import (
 	"github.com/klaytn/klaytn/log"
 )
 
-var logger = log.NewModuleLogger(log.AccountsAbiBind)
+var Logger = log.NewModuleLogger(log.AccountsAbiBind)
 
 // WaitMined waits for tx to be mined on the blockchain.
 // It stops waiting when the context is canceled.
@@ -39,7 +39,7 @@ func WaitMined(ctx context.Context, b DeployBackend, tx *types.Transaction) (*ty
 	queryTicker := time.NewTicker(time.Second)
 	defer queryTicker.Stop()
 
-	localLogger := logger.NewWith("hash", tx.Hash())
+	localLogger := Logger.NewWith("hash", tx.Hash())
 	for {
 		receipt, err := b.TransactionReceipt(ctx, tx.Hash())
 		if receipt != nil {

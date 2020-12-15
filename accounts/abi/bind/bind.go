@@ -191,7 +191,7 @@ func Bind(types []string, abis []string, bytecodes []string, runtimebytecodes []
 		for pattern, name := range libs {
 			matched, err := regexp.Match("__\\$"+pattern+"\\$__", []byte(contracts[types[i]].InputBin))
 			if err != nil {
-				logger.Error("Could not search for pattern", "pattern", pattern, "contract", contracts[types[i]], "err", err)
+				Logger.Error("Could not search for pattern", "pattern", pattern, "contract", contracts[types[i]], "err", err)
 			}
 			if matched {
 				contracts[types[i]].Libraries[pattern] = name
