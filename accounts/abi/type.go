@@ -98,7 +98,7 @@ func NewType(t string, internalType string, components []ArgumentMarshaling) (ty
 			typ.Elem = &embeddedType
 			typ.stringKind = embeddedType.stringKind + sliced
 		} else if len(intz) == 1 {
-			// is a array
+			// is an array
 			typ.T = ArrayTy
 			typ.Elem = &embeddedType
 			typ.Size, err = strconv.Atoi(intz[0])
@@ -117,6 +117,7 @@ func NewType(t string, internalType string, components []ArgumentMarshaling) (ty
 		return Type{}, fmt.Errorf("invalid type '%v'", t)
 	}
 	parsedType := matches[0]
+
 	// varSize is the size of the variable
 	var varSize int
 	if len(parsedType[3]) > 0 {
@@ -300,7 +301,6 @@ func (t Type) pack(v reflect.Value) ([]byte, error) {
 				ret = append(ret, val...)
 				continue
 			}
-
 			ret = append(ret, packNum(reflect.ValueOf(offset))...)
 			offset += len(val)
 			tail = append(tail, val...)

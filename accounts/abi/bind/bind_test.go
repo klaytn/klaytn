@@ -526,7 +526,8 @@ var bindTests = []struct {
 			if _, err := (&DefaulterRaw{defaulter}).Transfer(auth); err != nil {
 				t.Fatalf("Failed to invoke default method: %v", err)
 			}
-			sim.Commit()	
+			sim.Commit()
+
 			if caller, err := defaulter.Caller(nil); err != nil {
 				t.Fatalf("Failed to call address retriever: %v", err)
 			} else if (caller != auth.From) {
@@ -1116,7 +1117,7 @@ var bindTests = []struct {
 		`
 		pragma solidity >=0.4.19 <0.6.0;
 		pragma experimental ABIEncoderV2;
-		
+
 		contract Tuple {
 			struct S { uint a; uint[] b; T[] c; }
 			struct T { uint x; uint y; }
@@ -1141,7 +1142,7 @@ var bindTests = []struct {
 		`
 			"math/big"
 			"reflect"
-		
+
 			"github.com/klaytn/klaytn/accounts/abi/bind"
 			"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 			"github.com/klaytn/klaytn/blockchain"
@@ -1151,14 +1152,15 @@ var bindTests = []struct {
 		`
 			key, _ := crypto.GenerateKey()
 			auth := bind.NewKeyedTransactor(key)
-			backend := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
-			defer backend.Close()
 
-			_, _, contract, err := DeployTuple(auth, backend)
+			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(10000000000)}})
+			defer sim.Close()
+
+			_, _, contract, err := DeployTuple(auth, sim)
 			if err != nil {
 				t.Fatalf("deploy contract failed %v", err)
 			}
-			backend.Commit()
+			sim.Commit()
 
 			check := func(a, b interface{}, errMsg string) {
 				if !reflect.DeepEqual(a, b) {
@@ -1230,7 +1232,7 @@ var bindTests = []struct {
 			if err != nil {
 				t.Fatalf("invoke contract failed, err %v", err)
 			}
-			backend.Commit()
+			sim.Commit()
 
 			iter, err := contract.FilterTupleEvent(nil)
 			if err != nil {
@@ -1333,7 +1335,7 @@ var bindTests = []struct {
 
 		  event bar(uint256 i);
 		  event bar(uint256 i, uint256 j);
-			
+
 		  function foo(uint256 i) public {
 			  emit bar(i);
 		  }
@@ -1397,7 +1399,7 @@ var bindTests = []struct {
 			if n != 3 {
 				t.Fatalf("Invalid bar0 event")
 			}
-		case <-time.NewTimer(100 * time.Millisecond).C:
+		case <-time.NewTimer(3 * time.Second).C:
 			t.Fatalf("Wait bar0 event timeout")
 		}
 
@@ -1408,7 +1410,7 @@ var bindTests = []struct {
 			if n != 1 {
 				t.Fatalf("Invalid bar event")
 			}
-		case <-time.NewTimer(100 * time.Millisecond).C:
+		case <-time.NewTimer(3 * time.Second).C:
 			t.Fatalf("Wait bar event timeout")
 		}
 		close(stopCh)
@@ -1734,10 +1736,12 @@ func TestGolangBindings(t *testing.T) {
 		// Generate the test file with the injected test code
 		code := fmt.Sprintf(`
 			package bindtest
+
 			import (
 				"testing"
 				%s
 			)
+
 			func Test%s(t *testing.T) {
 				%s
 			}
@@ -1746,7 +1750,7 @@ func TestGolangBindings(t *testing.T) {
 			t.Fatalf("test %d: failed to write tests: %v", i, err)
 		}
 	}
-	// Convert the package to go modules and use the current source
+	// Convert the package to go modules and use the current source for klaytn
 	moder := exec.Command(gocmd, "mod", "init", "bindtest")
 	moder.Dir = pkg
 	if out, err := moder.CombinedOutput(); err != nil {

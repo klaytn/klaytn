@@ -48,7 +48,7 @@ func NewTransactor(keyin io.Reader, passphrase string) (*TransactOpts, error) {
 	return NewKeyedTransactor(key.GetPrivateKey()), nil
 }
 
-// NewKeystoreTransactor is a utility method to easily create a transaction signer from
+// NewKeyStoreTransactor is a utility method to easily create a transaction signer from
 // an decrypted key from a keystore
 func NewKeyStoreTransactor(keystore *keystore.KeyStore, account accounts.Account) (*TransactOpts, error) {
 	return &TransactOpts{

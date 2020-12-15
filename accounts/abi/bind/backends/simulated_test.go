@@ -123,15 +123,15 @@ func TestNewSimulatedBackend(t *testing.T) {
 	defer sim.Close()
 
 	if sim.config != params.AllGxhashProtocolChanges {
-		t.Errorf("expected sim config to equal params.AllEthashProtocolChanges, got %v", sim.config)
+		t.Errorf("expected sim config to equal params.AllGxhashProtocolChanges, got %v", sim.config)
 	}
 
 	if sim.blockchain.Config() != params.AllGxhashProtocolChanges {
-		t.Errorf("expected sim blockchain config to equal params.AllEthashProtocolChanges, got %v", sim.config)
+		t.Errorf("expected sim blockchain config to equal params.AllGxhashProtocolChanges, got %v", sim.config)
 	}
 
-	statedb, _ := sim.blockchain.State()
-	bal := statedb.GetBalance(testAddr)
+	stateDB, _ := sim.blockchain.State()
+	bal := stateDB.GetBalance(testAddr)
 	if bal.Cmp(expectedBal) != 0 {
 		t.Errorf("expected balance for test address not received. expected: %v actual: %v", expectedBal, bal)
 	}
@@ -691,8 +691,8 @@ func TestSimulatedBackend_TransactionReceipt(t *testing.T) {
 }
 
 func TestSimulatedBackend_SuggestGasPrice(t *testing.T) {
-	sim := NewSimulatedBackendWithGasPrice(
-		blockchain.GenesisAlloc{}, 1,
+	sim := NewSimulatedBackend(
+		blockchain.GenesisAlloc{},
 	)
 	defer sim.Close()
 	bgCtx := context.Background()
@@ -700,8 +700,8 @@ func TestSimulatedBackend_SuggestGasPrice(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get gas price: %v", err)
 	}
-	if gasPrice.Uint64() != uint64(1) {
-		t.Errorf("gas price was not expected value of 1. actual: %v", gasPrice.Uint64())
+	if gasPrice.Uint64() != uint64(0) {
+		t.Errorf("gas price was not expected value of 0. actual: %v", gasPrice.Uint64())
 	}
 }
 
@@ -798,7 +798,7 @@ func TestSimulatedBackend_PendingAndCallContract(t *testing.T) {
 
 	input, err := parsed.Pack("receive", []byte("X"))
 	if err != nil {
-		t.Errorf("could pack receive function on contract: %v", err)
+		t.Errorf("could not pack receive function on contract: %v", err)
 	}
 
 	// make sure you can call the contract in pending state

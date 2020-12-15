@@ -60,6 +60,7 @@ func TestPack(t *testing.T) {
 				}
 				packed, err = inAbi.Pack("method", values...)
 			}
+
 			if err != nil {
 				t.Fatalf("test %d (%v) failed: %v", i, test.def, err)
 			}
