@@ -64,7 +64,6 @@ func TestWaitDeployed(t *testing.T) {
 				crypto.PubkeyToAddress(testKey.PublicKey): {Balance: big.NewInt(10000000000)},
 			},
 		)
-		defer backend.Close()
 
 		// Create the transaction.
 		tx := types.NewContractCreation(0, big.NewInt(0), test.gas, big.NewInt(1), common.FromHex(test.code))
@@ -97,6 +96,7 @@ func TestWaitDeployed(t *testing.T) {
 		case <-time.After(2 * time.Second):
 			t.Errorf("test %q: timeout", name)
 		}
+		backend.Close()
 	}
 }
 
@@ -110,7 +110,7 @@ func TestWaitDeployedCornerCases(t *testing.T) {
 
 	// Create a transaction to an account.
 	code := "6060604052600a8060106000396000f360606040526008565b00"
-	tx := types.NewTransaction(0, common.HexToAddress("0x00"), big.NewInt(0), 3000000, big.NewInt(1), common.FromHex(code))
+	tx := types.NewTransaction(0, common.HexToAddress("0x0"), big.NewInt(0), 3000000, big.NewInt(1), common.FromHex(code))
 	tx, _ = types.SignTx(tx, types.NewEIP155Signer(params.AllGxhashProtocolChanges.ChainID), testKey)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
