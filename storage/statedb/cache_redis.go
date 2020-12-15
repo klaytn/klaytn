@@ -18,6 +18,7 @@ package statedb
 
 import (
 	"errors"
+	"runtime"
 	"time"
 
 	"github.com/go-redis/redis/v7"
@@ -25,6 +26,7 @@ import (
 )
 
 const (
+	redisSetItemChannelSize       = 1024
 	redisSubscriptionChannelSize  = 100 // default value of redis client
 	redisSubscriptionChannelBlock = "latestBlock"
 )
@@ -37,8 +39,14 @@ var (
 )
 
 type RedisCache struct {
-	client redis.UniversalClient
-	pubSub *redis.PubSub
+	client    redis.UniversalClient
+	setItemCh chan setItem
+	pubSub    *redis.PubSub
+}
+
+type setItem struct {
+	key   []byte
+	value []byte
 }
 
 func newRedisClient(endpoints []string, isCluster bool) (redis.UniversalClient, error) {
@@ -68,6 +76,8 @@ func newRedisClient(endpoints []string, isCluster bool) (redis.UniversalClient, 
 	}), nil
 }
 
+// NewRedisCache creates a redis cache containing redis client, setItemCh and pubSub.
+// It generates worker goroutines to process Set commands asynchronously.
 func NewRedisCache(config *TrieNodeCacheConfig) (*RedisCache, error) {
 	cli, err := newRedisClient(config.RedisEndpoints, config.RedisClusterEnable)
 	if err != nil {
@@ -76,15 +86,29 @@ func NewRedisCache(config *TrieNodeCacheConfig) (*RedisCache, error) {
 		return nil, err
 	}
 
-	logger.Info("Initialize trie node cache with redis", "endpoint", config.RedisEndpoints,
+	cache := &RedisCache{
+		client:    cli,
+		setItemCh: make(chan setItem, redisSetItemChannelSize),
+		pubSub:    cli.Subscribe(),
+	}
+
+	workerNum := runtime.NumCPU() / 2
+	for i := 0; i < workerNum; i++ {
+		go func() {
+			for item := range cache.setItemCh {
+				cache.set(item.key, item.value)
+			}
+		}()
+	}
+
+	logger.Info("Initialized trie node cache with redis", "endpoint", config.RedisEndpoints,
 		"isCluster", config.RedisClusterEnable)
-	return &RedisCache{client: cli, pubSub: nil}, nil
+	return cache, nil
 }
 
 func (cache *RedisCache) Get(k []byte) []byte {
 	val, err := cache.client.Get(hexutil.Encode(k)).Bytes()
 	if err != nil {
-		// TODO-Klyatn: Print specific errors if needed
 		logger.Debug("cannot get an item from redis cache", "err", err, "key", hexutil.Encode(k))
 		return nil
 	}
@@ -92,6 +116,15 @@ func (cache *RedisCache) Get(k []byte) []byte {
 }
 
 func (cache *RedisCache) Set(k, v []byte) {
+	item := setItem{key: k, value: v}
+	select {
+	case cache.setItemCh <- item:
+	default:
+		logger.Error("redis setItem channel is full")
+	}
+}
+
+func (cache *RedisCache) set(k, v []byte) {
 	if err := cache.client.Set(hexutil.Encode(k), v, 0).Err(); err != nil {
 		logger.Warn("failed to set an item on redis cache", "err", err, "key", hexutil.Encode(k))
 	}
@@ -112,9 +145,6 @@ func (cache *RedisCache) publish(channel string, msg string) error {
 // subscribe subscribes the redis client to the given channel.
 // It returns an existing *redis.PubSub subscribing previously registered channels also.
 func (cache *RedisCache) subscribe(channel string) *redis.PubSub {
-	if cache.pubSub == nil {
-		cache.pubSub = cache.client.Subscribe()
-	}
 	if err := cache.pubSub.Subscribe(channel); err != nil {
 		logger.Error("failed to subscribe channel", "err", err, "channel", channel)
 	}
@@ -130,9 +160,6 @@ func (cache *RedisCache) SubscribeBlockCh() <-chan *redis.Message {
 }
 
 func (cache *RedisCache) UnsubscribeBlock() error {
-	if cache.pubSub == nil {
-		return nil
-	}
 	return cache.pubSub.Unsubscribe(redisSubscriptionChannelBlock)
 }
 
@@ -145,5 +172,7 @@ func (cache *RedisCache) SaveToFile(filePath string, concurrency int) error {
 }
 
 func (cache *RedisCache) Close() error {
+	cache.pubSub.Close()
+	close(cache.setItemCh)
 	return cache.client.Close()
 }

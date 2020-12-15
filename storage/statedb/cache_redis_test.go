@@ -31,7 +31,7 @@ import (
 func getTestRedisConfig() *TrieNodeCacheConfig {
 	return &TrieNodeCacheConfig{
 		CacheType:          CacheTypeRedis,
-		LocalCacheSizeMB:   1024 * 1024,
+		LocalCacheSizeMB:   1024,
 		RedisEndpoints:     []string{"localhost:6379"},
 		RedisClusterEnable: false,
 	}
@@ -82,13 +82,14 @@ func TestSubscription(t *testing.T) {
 	wg.Wait()
 }
 
-// TestNewRedisCache tests basic operations of redis cache
-func TestNewRedisCache(t *testing.T) {
+// TestRedisCache tests basic operations of redis cache
+func TestRedisCache(t *testing.T) {
 	cache, err := NewRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
 	key, value := randBytes(32), randBytes(500)
 	cache.Set(key, value)
+	time.Sleep(100 * time.Millisecond)
 
 	getValue := cache.Get(key)
 	assert.Equal(t, bytes.Compare(value, getValue), 0)
@@ -98,8 +99,8 @@ func TestNewRedisCache(t *testing.T) {
 	assert.Equal(t, bytes.Compare(value, hasValue), 0)
 }
 
-// TestNewRedisCache_Set_LargeData check whether redis cache can store an large data (5MB).
-func TestNewRedisCache_Set_LargeData(t *testing.T) {
+// TestRedisCache_Set_LargeData check whether redis cache can store an large data (5MB).
+func TestRedisCache_Set_LargeData(t *testing.T) {
 	cache, err := NewRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -107,13 +108,57 @@ func TestNewRedisCache_Set_LargeData(t *testing.T) {
 
 	key, value := randBytes(32), randBytes(5*1024*1024) // 5MB value
 	cache.Set(key, value)
+	time.Sleep(100 * time.Millisecond)
 
 	retValue := cache.Get(key)
 	assert.Equal(t, bytes.Compare(value, retValue), 0)
 }
 
-// TestNewRedisCache_Timeout test timout feature of redis client.
-func TestNewRedisCache_Timeout(t *testing.T) {
+func TestRedisCache_Set_LargeNumberItems(t *testing.T) {
+	cache, err := NewRedisCache(getTestRedisConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	itemsLen := redisSetItemChannelSize * 2
+	items := make([]setItem, itemsLen)
+	for i := 0; i < itemsLen; i++ {
+		items[i].key = randBytes(32)
+		items[i].value = randBytes(500)
+	}
+
+	// successCh returns struct{} when the following goroutine checks all items are set in the redis
+	successCh := make(chan struct{})
+	go func() {
+		for i := 0; i < itemsLen; i++ {
+			v := cache.Get(items[i].key)
+			if !bytes.Equal(v, items[i].value) {
+				// if the item is not set yet, wait and retry
+				time.Sleep(100 * time.Millisecond)
+				i--
+			}
+		}
+		successCh <- struct{}{}
+	}()
+
+	for i := 0; i < itemsLen; i++ {
+		if i == redisSetItemChannelSize {
+			// sleep for a while because Set command can drop an item if setItem channel is full
+			time.Sleep(2 * time.Second)
+		}
+		// Set writes items asynchronously
+		cache.Set(items[i].key, items[i].value)
+	}
+
+	select {
+	case <-successCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+// TestRedisCache_Timeout test timout feature of redis client.
+func TestRedisCache_Timeout(t *testing.T) {
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:11234")
 		if err != nil {
@@ -146,13 +191,13 @@ func TestNewRedisCache_Timeout(t *testing.T) {
 		ReadTimeout:  redisCacheTimeout,
 		WriteTimeout: redisCacheTimeout,
 		MaxRetries:   0,
-	}), nil}
+	}), nil, nil}
 
 	key, value := randBytes(32), randBytes(500)
 
 	start := time.Now()
 	cache.Set(key, value)
-	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
+	time.Sleep(100 * time.Millisecond) // redis cache set item asynchronously
 
 	start = time.Now()
 	_ = cache.Get(key)
