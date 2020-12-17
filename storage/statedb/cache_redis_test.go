@@ -147,7 +147,7 @@ func TestRedisCache_Set_LargeNumberItems(t *testing.T) {
 	for i := 0; i < itemsLen; i++ {
 		// terminate if test lasts long
 		if time.Since(start) > 5*time.Second {
-			t.Fatal("timeout")
+			t.Fatalf("timeout checking %dth item", i+1)
 		}
 
 		v := cache.Get(items[i].key)

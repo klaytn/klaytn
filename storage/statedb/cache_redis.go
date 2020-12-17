@@ -115,6 +115,8 @@ func (cache *RedisCache) Get(k []byte) []byte {
 	return val
 }
 
+// Set writes data asynchronously. Not all data is written if a setItemCh is full.
+// To write data synchronously, use set instead.
 func (cache *RedisCache) Set(k, v []byte) {
 	item := setItem{key: k, value: v}
 	select {
@@ -124,6 +126,8 @@ func (cache *RedisCache) Set(k, v []byte) {
 	}
 }
 
+// set writes data synchronously.
+// To write data asynchronously, use Set instead.
 func (cache *RedisCache) set(k, v []byte) {
 	if err := cache.client.Set(hexutil.Encode(k), v, 0).Err(); err != nil {
 		logger.Warn("failed to set an item on redis cache", "err", err, "key", hexutil.Encode(k))
