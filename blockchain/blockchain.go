@@ -57,16 +57,16 @@ import (
 const insertTimeLimit = common.PrettyDuration(time.Second)
 
 var (
-	blockInsertTimer   = metrics.NewRegisteredTimer("chain/inserts", nil)
-	blockProcessTimer  = metrics.NewRegisteredTimer("chain/process", nil)
-	blockFinalizeTimer = metrics.NewRegisteredTimer("chain/finalize", nil)
-	blockValidateTimer = metrics.NewRegisteredTimer("chain/validate", nil)
-	ErrNoGenesis       = errors.New("genesis not found in chain")
-	ErrNotExistNode    = errors.New("the node does not exist in cached node")
-	ErrQuitBySignal    = errors.New("quit by signal")
-	ErrNotInWarmUp     = errors.New("not in warm up")
-	logger             = log.NewModuleLogger(log.Blockchain)
-	blockLogsPrefix    = []byte("blockLogs")
+	blockInsertTimer        = metrics.NewRegisteredTimer("chain/inserts", nil)
+	blockProcessTimer       = metrics.NewRegisteredTimer("chain/process", nil)
+	blockFinalizeTimer      = metrics.NewRegisteredTimer("chain/finalize", nil)
+	blockValidateTimer      = metrics.NewRegisteredTimer("chain/validate", nil)
+	ErrNoGenesis            = errors.New("genesis not found in chain")
+	ErrNotExistNode         = errors.New("the node does not exist in cached node")
+	ErrQuitBySignal         = errors.New("quit by signal")
+	ErrNotInWarmUp          = errors.New("not in warm up")
+	logger                  = log.NewModuleLogger(log.Blockchain)
+	kesCachePrefixBlockLogs = []byte("blockLogs")
 )
 
 // Below is the list of the constants for cache size.
@@ -1208,7 +1208,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Publish the committed block to the redis cache of stateDB.
 	// The cache uses the block to distinguish the latest state.
 	if bc.cacheConfig.TrieNodeCacheConfig.RedisPublishBlockEnable {
-		blockLogsKey := append(blockLogsPrefix, block.Number().Bytes()...)
+		blockLogsKey := append(kesCachePrefixBlockLogs, block.Number().Bytes()...)
 		bc.writeBlockLogsToRemoteCache(blockLogsKey, receipts)
 
 		blockRlp, err := rlp.EncodeToBytes(block)
@@ -1754,7 +1754,7 @@ func (bc *BlockChain) sendKESSubscriptionData(block *types.Block) {
 	})
 
 	// TODO-Klaytn-KES: refine this not to use trieNodeCache
-	logKey := append(blockLogsPrefix, block.Number().Bytes()...)
+	logKey := append(kesCachePrefixBlockLogs, block.Number().Bytes()...)
 	encodedLogs := bc.stateCache.TrieDB().TrieNodeCache().Get(logKey)
 	if encodedLogs == nil {
 		logger.Warn("cannot get a block log from the remote cache", "blockNum", block.NumberU64())

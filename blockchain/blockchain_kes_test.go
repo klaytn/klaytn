@@ -113,7 +113,7 @@ func TestBlockChain_sendKESSubscriptionData(t *testing.T) {
 
 	// prepare test data to be send by sendKESSubscriptionData
 	block := getTestBlock(t)
-	blockLogsKey := append(blockLogsPrefix, block.Number().Bytes()...)
+	blockLogsKey := append(kesCachePrefixBlockLogs, block.Number().Bytes()...)
 	receipts, blockLogs, encodedBlockLogs := getTestLogs(t)
 
 	// resultCh receive data when checkSubscribedData finished successfully
