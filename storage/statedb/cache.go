@@ -36,6 +36,7 @@ type TrieNodeCacheConfig struct {
 	RedisSubscribeBlockEnable bool     // Enable subscribing blocks from the redis server
 }
 
+//go:generate mockgen -destination=storage/statedb/mocks/trie_node_cache_mock.go github.com/klaytn/klaytn/storage/statedb TrieNodeCache
 // TrieNodeCache interface the cache of stateDB
 type TrieNodeCache interface {
 	Set(k, v []byte)
