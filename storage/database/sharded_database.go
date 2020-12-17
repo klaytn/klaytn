@@ -160,7 +160,7 @@ const shardedDBSubChannelSize = 128   // Size of each channel of resultChs
 // shardedDBIterator iterates all items of each shardDB.
 // This is useful when you want to get items in serial.
 type shardedDBIterator struct {
-	shardedDBChIterator
+	shardedDBChanIterator
 
 	resultCh chan entry
 	key      []byte // current key
@@ -169,7 +169,7 @@ type shardedDBIterator struct {
 
 // NewIterator creates a iterator over the entire keyspace contained within
 // the key-value database.
-// If you want to get items in parallel from channels, checkout shardedDB.NewshardedDBChIterator()
+// If you want to get items in parallel from channels, checkout shardedDB.NewChanIterator()
 func (pdb *shardedDB) NewIterator() Iterator {
 	return pdb.newIterator(func(db Database) Iterator { return db.NewIterator() })
 }
@@ -188,7 +188,7 @@ func (pdb *shardedDB) NewIteratorWithPrefix(prefix []byte) Iterator {
 
 func (pdb *shardedDB) newIterator(newIterator func(Database) Iterator) Iterator {
 	it := &shardedDBIterator{
-		pdb.NewshardedDBChIterator(context.Background(), newIterator),
+		pdb.NewChanIterator(context.Background(), newIterator),
 		make(chan entry, shardedDBCombineChanSize),
 		nil, nil}
 
@@ -277,21 +277,21 @@ type entry struct {
 	key, val []byte
 }
 
-// shardedDBChIterator creates iterators for each shard DB.
+// shardedDBChanIterator creates iterators for each shard DB.
 // Channels subscribing each iterators can be gained.
 // This is useful when you want to operate on each items in parallel.
-type shardedDBChIterator struct {
+type shardedDBChanIterator struct {
 	ctx context.Context
 
 	iterators []Iterator
 	resultChs []chan entry
 }
 
-// NewshardedDBChIterator creates iterators for each shard DB.
+// NewChanIterator creates iterators for each shard DB.
 // This is useful when you want to operate on each items in parallel.
 // If you want to get items in serial, checkout shardedDB.NewIterator()
-func (pdb *shardedDB) NewshardedDBChIterator(ctx context.Context, newIterator func(Database) Iterator) shardedDBChIterator {
-	it := shardedDBChIterator{ctx,
+func (pdb *shardedDB) NewChanIterator(ctx context.Context, newIterator func(Database) Iterator) shardedDBChanIterator {
+	it := shardedDBChanIterator{ctx,
 		make([]Iterator, len(pdb.shards)),
 		make([]chan entry, len(pdb.shards))}
 
@@ -308,7 +308,7 @@ func (pdb *shardedDB) NewshardedDBChIterator(ctx context.Context, newIterator fu
 	return it
 }
 
-func (*shardedDBChIterator) newChanWorker(it Iterator, resultCh chan entry, ctx context.Context) {
+func (*shardedDBChanIterator) newChanWorker(it Iterator, resultCh chan entry, ctx context.Context) {
 	for it.Next() {
 		select {
 		case <-ctx.Done():
@@ -325,12 +325,12 @@ func (*shardedDBChIterator) newChanWorker(it Iterator, resultCh chan entry, ctx 
 }
 
 // Channels returns channels that can subscribe on.
-func (it *shardedDBChIterator) Channels() []chan entry {
+func (it *shardedDBChanIterator) Channels() []chan entry {
 	return it.resultChs
 }
 
 // Release stops all iterators, channels and workers
-func (it *shardedDBChIterator) Release() {
+func (it *shardedDBChanIterator) Release() {
 	for _, i := range it.iterators {
 		i.Release()
 	}
