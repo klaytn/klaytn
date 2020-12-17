@@ -127,35 +127,35 @@ func TestRedisCache_Set_LargeNumberItems(t *testing.T) {
 		items[i].value = randBytes(500)
 	}
 
-	// successCh returns struct{} when the following goroutine checks all items are set in the redis
-	successCh := make(chan struct{})
 	go func() {
+		// wait for a while to avoid redis setItem channel full
+		time.Sleep(100 * time.Millisecond)
+
 		for i := 0; i < itemsLen; i++ {
-			v := cache.Get(items[i].key)
-			if v == nil {
-				// if the item is not set yet, wait and retry
-				time.Sleep(100 * time.Millisecond)
-				i--
-			} else {
-				assert.Equal(t, v, items[i].value)
+			if i == redisSetItemChannelSize {
+				// sleep for a while because Set command can drop an item if setItem channel is full
+				time.Sleep(2 * time.Second)
 			}
+			// set writes items asynchronously
+			cache.Set(items[i].key, items[i].value)
 		}
-		successCh <- struct{}{}
 	}()
 
+	start := time.Now()
 	for i := 0; i < itemsLen; i++ {
-		if i == redisSetItemChannelSize {
-			// sleep for a while because Set command can drop an item if setItem channel is full
-			time.Sleep(2 * time.Second)
+		// terminate if test lasts long
+		if time.Since(start) > 5*time.Second {
+			t.Fatal("timeout")
 		}
-		// Set writes items asynchronously
-		cache.Set(items[i].key, items[i].value)
-	}
 
-	select {
-	case <-successCh:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timeout")
+		v := cache.Get(items[i].key)
+		if v == nil {
+			// if the item is not set yet, wait and retry
+			time.Sleep(100 * time.Millisecond)
+			i--
+		} else {
+			assert.Equal(t, v, items[i].value)
+		}
 	}
 }
 
