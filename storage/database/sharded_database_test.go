@@ -74,6 +74,7 @@ func testIterator(t *testing.T, entriesFromIterator func(db shardedDB, entryNum 
 	}
 }
 
+// TODO implement TestShardedDBChIteratorWithStart and TestShardedDBChIteratorWithPrefix
 func TestShardedDBChIterator(t *testing.T) {
 	testIterator(t, func(db shardedDB, entryNum int) []entry {
 		entries := make([]entry, 0, entryNum) // store all items
@@ -105,6 +106,7 @@ func TestShardedDBChIterator(t *testing.T) {
 	})
 }
 
+// TODO implement TestShardedDBIteratorWithStart and TestShardedDBIteratorWithPrefix
 func TestShardedDBIterator(t *testing.T) {
 	testIterator(t, func(db shardedDB, entryNum int) []entry {
 		entries := make([]entry, 0, entryNum)
