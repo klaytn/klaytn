@@ -31,7 +31,7 @@ const (
 
 var (
 	redisCacheDialTimeout = time.Duration(900 * time.Millisecond)
-	redisCacheTimeout     = time.Duration(300 * time.Millisecond)
+	redisCacheTimeout     = time.Duration(900 * time.Millisecond)
 
 	errRedisNoEndpoint = errors.New("redis endpoint not specified")
 )
