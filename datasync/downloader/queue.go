@@ -297,8 +297,6 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 	inserts := make([]*types.Header, 0, len(headers))
 	for _, header := range headers {
 		// Make sure chain order is honoured and preserved throughout
-		// We cannot skip this, even if the block is empty, since this is
-		// what triggers the fetchResult creation.
 		hash := header.Hash()
 		if header.Number == nil || header.Number.Uint64() != from {
 			logger.Trace("Header broke chain ordering", "number", header.Number, "hash", hash, "expected", from)
@@ -309,6 +307,8 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 			break
 		}
 		// Make sure no duplicate requests are executed
+		// We cannot skip this, even if the block is empty, since this is
+		// what triggers the fetchResult creation.
 		if _, ok := q.blockTaskPool[hash]; ok {
 			logger.Trace("Header already scheduled for block fetch", "number", header.Number, "hash", hash)
 		} else {
