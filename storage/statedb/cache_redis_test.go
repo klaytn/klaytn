@@ -200,7 +200,7 @@ func TestRedisCache_Timeout(t *testing.T) {
 	key, value := randBytes(32), randBytes(500)
 
 	start := time.Now()
-	redisCache := cache.(*RedisCache) // Because RedisCache.Set item asynchronously, use RedisCache.set
+	redisCache := cache.(*RedisCache) // Because RedisCache.Set writes item asynchronously, use RedisCache.set
 	redisCache.set(key, value)
 	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 
