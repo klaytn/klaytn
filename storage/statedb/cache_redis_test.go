@@ -161,7 +161,7 @@ func TestRedisCache_Set_LargeNumberItems(t *testing.T) {
 	}
 }
 
-// TestRedisCache_Timeout test timout feature of redis client.
+// TestRedisCache_Timeout tests timout feature of redis client.
 func TestRedisCache_Timeout(t *testing.T) {
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:11234")
