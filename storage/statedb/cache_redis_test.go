@@ -132,10 +132,12 @@ func TestRedisCache_Set_LargeNumberItems(t *testing.T) {
 	go func() {
 		for i := 0; i < itemsLen; i++ {
 			v := cache.Get(items[i].key)
-			if !bytes.Equal(v, items[i].value) {
+			if v == nil {
 				// if the item is not set yet, wait and retry
 				time.Sleep(100 * time.Millisecond)
 				i--
+			} else {
+				assert.Equal(t, v, items[i].value)
 			}
 		}
 		successCh <- struct{}{}
@@ -196,8 +198,9 @@ func TestRedisCache_Timeout(t *testing.T) {
 	key, value := randBytes(32), randBytes(500)
 
 	start := time.Now()
-	cache.Set(key, value)
-	time.Sleep(100 * time.Millisecond) // redis cache set item asynchronously
+	redisCache := cache.(*RedisCache) // Because RedisCache.Set item asynchronously, use RedisCache.set
+	redisCache.set(key, value)
+	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 
 	start = time.Now()
 	_ = cache.Get(key)

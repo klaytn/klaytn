@@ -92,7 +92,7 @@ func NewRedisCache(config *TrieNodeCacheConfig) (*RedisCache, error) {
 		pubSub:    cli.Subscribe(),
 	}
 
-	workerNum := runtime.NumCPU() / 2
+	workerNum := runtime.NumCPU()/2 + 1
 	for i := 0; i < workerNum; i++ {
 		go func() {
 			for item := range cache.setItemCh {
