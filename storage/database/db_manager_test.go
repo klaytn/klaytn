@@ -18,12 +18,6 @@ package database
 
 import (
 	"crypto/ecdsa"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -31,6 +25,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 var dbManagers []DBManager
@@ -842,12 +843,11 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 			assert.NoError(t, err)
 			dirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
 			assert.Equal(t, 2, len(dirNames))
-
 			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
 
 			// check if old db is deleted on migration success
 			dbm.FinishStateMigration(true)     // migration success
-			time.Sleep(100 * time.Millisecond) // wait for removing DB
+			time.Sleep(200 * time.Millisecond) // wait for removing DB
 
 			newDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
 			assert.Equal(t, 1, len(newDirNames))
@@ -873,7 +873,7 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 
 			// check if new db is deleted on migration fail
 			dbm.FinishStateMigration(false)    // migration fail
-			time.Sleep(100 * time.Millisecond) // wait for removing DB
+			time.Sleep(200 * time.Millisecond) // wait for removing DB
 
 			newDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
 			assert.Equal(t, 1, len(newDirNames))
