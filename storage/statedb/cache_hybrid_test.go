@@ -11,7 +11,7 @@ import (
 func getTestHybridConfig() *TrieNodeCacheConfig {
 	return &TrieNodeCacheConfig{
 		CacheType:          CacheTypeHybrid,
-		LocalCacheSizeMB:   1024 * 1024,
+		LocalCacheSizeMB:   1024,
 		FastCacheFileDir:   "",
 		RedisEndpoints:     []string{"localhost:6379"},
 		RedisClusterEnable: false,
@@ -28,7 +28,7 @@ func TestHybridCache_Set(t *testing.T) {
 	// Set an item
 	key, value := randBytes(32), randBytes(500)
 	cache.Set(key, value)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(sleepDurationForAsyncBehavior)
 
 	// Type assertion to check both of local cache and remote cache
 	hybrid, ok := cache.(*HybridCache)
@@ -73,7 +73,7 @@ func TestHybridCache_Get(t *testing.T) {
 		// Store an item into remote cache
 		key, value := randBytes(32), randBytes(500)
 		remoteCache.Set(key, value)
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Make sure the item is not stored in the local cache.
 		assert.Equal(t, len(localCache.Get(key)), 0)
@@ -92,7 +92,7 @@ func TestHybridCache_Get(t *testing.T) {
 		key, value := randBytes(32), randBytes(500)
 		localCache.Set(key, value)
 		remoteCache.Set(key, []byte{0x11})
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Get the item from the hybrid cache and check the validity
 		returnedVal := hybrid.Get(key)
@@ -131,7 +131,7 @@ func TestHybridCache_Has(t *testing.T) {
 		// Store an item into remote cache
 		key, value := randBytes(32), randBytes(500)
 		remoteCache.Set(key, value)
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Get the item from the hybrid cache and check the validity
 		returnedVal, returnedExist := hybrid.Has(key)
@@ -145,7 +145,7 @@ func TestHybridCache_Has(t *testing.T) {
 		key, value := randBytes(32), randBytes(500)
 		localCache.Set(key, value)
 		remoteCache.Set(key, []byte{0x11})
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Get the item from the hybrid cache and check the validity
 		returnedVal, returnedExist := hybrid.Has(key)

@@ -28,6 +28,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const sleepDurationForAsyncBehavior = 100 * time.Millisecond
+
 func getTestRedisConfig() *TrieNodeCacheConfig {
 	return &TrieNodeCacheConfig{
 		CacheType:          CacheTypeRedis,
@@ -66,7 +68,7 @@ func TestSubscription(t *testing.T) {
 
 		wg.Done()
 	}()
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(sleepDurationForAsyncBehavior)
 
 	cache, err := NewRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
@@ -89,7 +91,7 @@ func TestRedisCache(t *testing.T) {
 
 	key, value := randBytes(32), randBytes(500)
 	cache.Set(key, value)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(sleepDurationForAsyncBehavior)
 
 	getValue := cache.Get(key)
 	assert.Equal(t, bytes.Compare(value, getValue), 0)
@@ -108,7 +110,7 @@ func TestRedisCache_Set_LargeData(t *testing.T) {
 
 	key, value := randBytes(32), randBytes(5*1024*1024) // 5MB value
 	cache.Set(key, value)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(sleepDurationForAsyncBehavior)
 
 	retValue := cache.Get(key)
 	assert.Equal(t, bytes.Compare(value, retValue), 0)
@@ -129,7 +131,7 @@ func TestRedisCache_Set_LargeNumberItems(t *testing.T) {
 
 	go func() {
 		// wait for a while to avoid redis setItem channel full
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(sleepDurationForAsyncBehavior)
 
 		for i := 0; i < itemsLen; i++ {
 			if i == redisSetItemChannelSize {
@@ -151,7 +153,7 @@ func TestRedisCache_Set_LargeNumberItems(t *testing.T) {
 		v := cache.Get(items[i].key)
 		if v == nil {
 			// if the item is not set yet, wait and retry
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(sleepDurationForAsyncBehavior)
 			i--
 		} else {
 			assert.Equal(t, v, items[i].value)
