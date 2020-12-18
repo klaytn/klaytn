@@ -150,7 +150,7 @@ var (
 
 	dockerImageIdFlag = cli.StringFlag{
 		Name:        "docker-image-id",
-		Value:       "428948643293.dkr.ecr.ap-northeast-2.amazonaws.com/gxp/client-go:latest",
+		Value:       "klaytn/klaytn",
 		Usage:       "Base docker image ID (Image[:tag])",
 		Destination: &dockerImageId,
 	}
