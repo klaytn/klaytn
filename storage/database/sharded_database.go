@@ -170,25 +170,25 @@ type shardedDBIterator struct {
 // NewIterator creates a iterator over the entire keyspace contained within
 // the key-value database.
 // If you want to get items in parallel from channels, checkout shardedDB.NewChanIterator()
-func (pdb *shardedDB) NewIterator() Iterator {
-	return pdb.newIterator(func(db Database) Iterator { return db.NewIterator() })
+func (db *shardedDB) NewIterator() Iterator {
+	return db.newIterator(func(db Database) Iterator { return db.NewIterator() })
 }
 
 // NewIteratorWithStart creates a iterator over a subset of database content
 // starting at a particular initial key (or after, if it does not exist).
-func (pdb *shardedDB) NewIteratorWithStart(start []byte) Iterator {
-	return pdb.newIterator(func(db Database) Iterator { return db.NewIteratorWithStart(start) })
+func (db *shardedDB) NewIteratorWithStart(start []byte) Iterator {
+	return db.newIterator(func(db Database) Iterator { return db.NewIteratorWithStart(start) })
 }
 
 // NewIteratorWithPrefix creates a iterator over a subset of database content
 // with a particular key prefix.
-func (pdb *shardedDB) NewIteratorWithPrefix(prefix []byte) Iterator {
-	return pdb.newIterator(func(db Database) Iterator { return db.NewIteratorWithPrefix(prefix) })
+func (db *shardedDB) NewIteratorWithPrefix(prefix []byte) Iterator {
+	return db.newIterator(func(db Database) Iterator { return db.NewIteratorWithPrefix(prefix) })
 }
 
-func (pdb *shardedDB) newIterator(newIterator func(Database) Iterator) Iterator {
+func (db *shardedDB) newIterator(newIterator func(Database) Iterator) Iterator {
 	it := &shardedDBIterator{
-		pdb.NewChanIterator(context.Background(), newIterator),
+		db.NewChanIterator(context.Background(), newIterator),
 		make(chan entry, shardedDBCombineChanSize),
 		nil, nil}
 
@@ -226,13 +226,13 @@ func (it shardedDBIterator) newCombineWorker() {
 
 // Next gets the next item from iterators.
 // The first call of Next() might take 50ms.
-func (pdi *shardedDBIterator) Next() bool {
+func (it *shardedDBIterator) Next() bool {
 	maxRetry := 5
 	for i := 0; i < maxRetry; i++ {
 		select {
-		case e, ok := <-pdi.resultCh:
+		case e, ok := <-it.resultCh:
 			if ok {
-				pdi.key, pdi.value = e.key, e.val
+				it.key, it.value = e.key, e.val
 				return true
 			} else {
 				logger.Error("[shardedDBIterator] Next is called on closed channel")
@@ -249,28 +249,28 @@ func (pdi *shardedDBIterator) Next() bool {
 	return false
 }
 
-func (pdi *shardedDBIterator) Error() error {
+func (it *shardedDBIterator) Error() error {
 	var err error
-	for i, iter := range pdi.iterators {
+	for i, iter := range it.iterators {
 		if iter.Error() != nil {
 			logger.Error("[shardedDBIterator] error from iterator",
-				"err", err, "shardNum", i, "key", pdi.key, "val", pdi.value)
+				"err", err, "shardNum", i, "key", it.key, "val", it.value)
 			err = iter.Error()
 		}
 	}
 	return err
 }
 
-func (pdi *shardedDBIterator) Key() []byte {
-	return pdi.key
+func (it *shardedDBIterator) Key() []byte {
+	return it.key
 }
 
-func (pdi *shardedDBIterator) Value() []byte {
-	return pdi.value
+func (it *shardedDBIterator) Value() []byte {
+	return it.value
 }
 
-func (pdi *shardedDBIterator) Release() {
-	pdi.ctx.Done()
+func (it *shardedDBIterator) Release() {
+	it.ctx.Done()
 }
 
 type entry struct {
@@ -290,17 +290,17 @@ type shardedDBChanIterator struct {
 // NewChanIterator creates iterators for each shard DB.
 // This is useful when you want to operate on each items in parallel.
 // If you want to get items in serial, checkout shardedDB.NewIterator()
-func (pdb *shardedDB) NewChanIterator(ctx context.Context, newIterator func(Database) Iterator) shardedDBChanIterator {
+func (db *shardedDB) NewChanIterator(ctx context.Context, newIterator func(Database) Iterator) shardedDBChanIterator {
 	it := shardedDBChanIterator{ctx,
-		make([]Iterator, len(pdb.shards)),
-		make([]chan entry, len(pdb.shards))}
+		make([]Iterator, len(db.shards)),
+		make([]chan entry, len(db.shards))}
 
 	if it.ctx == nil {
 		it.ctx = context.Background()
 	}
 
-	for i := 0; i < len(pdb.shards); i++ {
-		it.iterators[i] = newIterator(pdb.shards[i])
+	for i := 0; i < len(db.shards); i++ {
+		it.iterators[i] = newIterator(db.shards[i])
 		it.resultChs[i] = make(chan entry, shardedDBSubChannelSize)
 		go it.newChanWorker(it.iterators[i], it.resultChs[i], ctx)
 	}
