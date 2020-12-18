@@ -16,7 +16,6 @@ import (
 )
 
 var ShardedDBConfig = []*DBConfig{
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: true},
 	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
 	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 8, ParallelDBWrite: true},
 	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 16, ParallelDBWrite: true},
@@ -30,6 +29,7 @@ func createEntries(entryNum int) []entry {
 	return entries
 }
 
+// testIterator tests if given iterator iterates all entries
 func testIterator(t *testing.T, entriesFromIterator func(db shardedDB, entryNum int) []entry) {
 	entryNum := 500
 	entries := createEntries(entryNum)
@@ -67,10 +67,11 @@ func testIterator(t *testing.T, entriesFromIterator func(db shardedDB, entryNum 
 	for _, db := range dbs {
 		// create iterator
 		entriesFromIt := entriesFromIterator(db, entryNum)
+		sort.Slice(entriesFromIt, func(i, j int) bool { return bytes.Compare(entriesFromIt[i].key, entriesFromIt[j].key) < 0 })
 
 		// compare if entries generated and entries from iterator is same
 		assert.Equal(t, len(entries), len(entriesFromIt))
-		reflect.DeepEqual(entries, entriesFromIt)
+		assert.True(t, reflect.DeepEqual(entries, entriesFromIt))
 	}
 }
 
