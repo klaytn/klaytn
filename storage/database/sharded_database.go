@@ -200,6 +200,8 @@ func (db *shardedDB) newIterator(newIterator func(Database) Iterator) Iterator {
 	return it
 }
 
+// newCombineWorker fetches any key/value from resultChs and put the data in resultCh
+// in binary-alphabetical order.
 func (it shardedDBIterator) newCombineWorker() {
 	entries := make([]entry, len(it.resultChs)) // contains smallest values from each iterators
 
@@ -341,31 +343,28 @@ func (db *shardedDB) newIteratorUnsorted(newIterator func(Database) Iterator) It
 	return it
 }
 
+// newCombineWorker fetches any key/value from resultChs and put the data in resultCh
 func (it shardedDBIteratorUnsorted) newCombineWorker() {
-	for {
-	chanIter:
+chanIter:
+	for len(it.resultChs) != 0 {
 		for i, ch := range it.resultChs {
 			select {
 			case <-it.ctx.Done():
-				logger.Trace("[shardedDBIterator] combine worker ends due to ctx")
-				close(it.resultCh)
-				return
+				logger.Trace("[shardedDBIteratorUnsorted] combine worker ends due to ctx")
+				break chanIter
 			case e, ok := <-ch:
 				if !ok { // channel is closed
 					it.resultChs = append(it.resultChs[:i], it.resultChs[i+1:]...)
-					break chanIter
+				} else {
+					it.resultCh <- e
 				}
-				it.resultCh <- e
 			default:
 				// no item in ch
 			}
 		}
-		if len(it.resultChs) == 0 {
-			logger.Trace("[shardedDBIterator] combine worker finishes iterating")
-			close(it.resultCh)
-			return
-		}
 	}
+	logger.Trace("[shardedDBIteratorUnsorted] combine worker finishes")
+	close(it.resultCh)
 }
 
 // shardedDBChanIterator creates iterators for each shard DB.
