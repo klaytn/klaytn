@@ -17,6 +17,7 @@
 package database
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"path"
@@ -158,7 +159,7 @@ const shardedDBCombineChanSize = 1024 // Size of resultCh
 const shardedDBSubChannelSize = 128   // Size of each channel of resultChs
 
 // shardedDBIterator iterates all items of each shardDB.
-// This is useful when you want to get items in serial.
+// This is useful when you want to get items in serial in binary-alphabetical order.
 type shardedDBIterator struct {
 	shardedDBChanIterator
 
@@ -167,21 +168,23 @@ type shardedDBIterator struct {
 	value    []byte // current value
 }
 
-// NewIterator creates a iterator over the entire keyspace contained within
-// the key-value database.
+// NewIterator creates a binary-alphabetical iterator over the entire keyspace
+// contained within the key-value database.
+// If you want to get unordered items faster in serial, checkout shardedDB.NewChanIteratorUnsorted().
 // If you want to get items in parallel from channels, checkout shardedDB.NewChanIterator()
 func (db *shardedDB) NewIterator() Iterator {
 	return db.newIterator(func(db Database) Iterator { return db.NewIterator() })
 }
 
-// NewIteratorWithStart creates a iterator over a subset of database content
-// starting at a particular initial key (or after, if it does not exist).
+// NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
+// database content starting at a particular initial key (or after, if it does
+// not exist).
 func (db *shardedDB) NewIteratorWithStart(start []byte) Iterator {
 	return db.newIterator(func(db Database) Iterator { return db.NewIteratorWithStart(start) })
 }
 
-// NewIteratorWithPrefix creates a iterator over a subset of database content
-// with a particular key prefix.
+// NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix.
 func (db *shardedDB) NewIteratorWithPrefix(prefix []byte) Iterator {
 	return db.newIterator(func(db Database) Iterator { return db.NewIteratorWithPrefix(prefix) })
 }
@@ -198,30 +201,53 @@ func (db *shardedDB) newIterator(newIterator func(Database) Iterator) Iterator {
 }
 
 func (it shardedDBIterator) newCombineWorker() {
-	// TODO Put all items in biary-alphabetical order.
-	for {
-	chanIter:
-		for i, ch := range it.resultChs {
-			select {
-			case <-it.ctx.Done():
-				logger.Trace("[shardedDBIterator] combine worker ends due to ctx")
-				close(it.resultCh)
-				return
-			case e, ok := <-ch:
-				if !ok {
-					it.resultChs = append(it.resultChs[:i], it.resultChs[i+1:]...)
-					break chanIter
-				}
-				it.resultCh <- e
-			default:
-			}
-		}
-		if len(it.resultChs) == 0 {
-			logger.Trace("[shardedDBIterator] combine worker finishes iterating")
-			close(it.resultCh)
-			return
+	entries := make([]entry, len(it.resultChs)) // contains smallest values from each iterators
+
+	// fill initial values for entries
+	for i := len(it.resultChs) - 1; i >= 0; i-- {
+		ch := it.resultChs[i]
+		e, ok := <-ch
+		if !ok { // channel is closed
+			it.resultChs = append(it.resultChs[:i], it.resultChs[i+1:]...)
+			entries = append(entries[:i], entries[i+1:]...)
+		} else {
+			entries[i] = e
 		}
 	}
+
+chanIter:
+	for len(it.resultChs) != 0 {
+		// check if done
+		select {
+		case <-it.ctx.Done():
+			logger.Trace("[shardedDBIterator] combine worker ends due to ctx")
+			break chanIter
+		default:
+		}
+
+		// look for smallest key
+		minEntry, minIdx := entries[0], 0
+		for i, e := range entries[1:] {
+			if bytes.Compare(minEntry.key, e.key) > 0 {
+				minEntry = e
+				minIdx = i + 1
+			}
+		}
+
+		// fill resultCh with smallest key
+		it.resultCh <- minEntry
+
+		// fill used entry with new entry
+		e, ok := <-it.resultChs[minIdx]
+		if !ok { // channel is closed
+			it.resultChs = append(it.resultChs[:minIdx], it.resultChs[minIdx+1:]...)
+			entries = append(entries[:minIdx], entries[minIdx+1:]...)
+		} else {
+			entries[minIdx] = e
+		}
+	}
+	logger.Trace("[shardedDBIterator] combine worker finishes")
+	close(it.resultCh)
 }
 
 // Next gets the next item from iterators.
@@ -277,8 +303,74 @@ type entry struct {
 	key, val []byte
 }
 
+// shardedDBIterator iterates all items of each shardDB.
+// This is useful when you want to get items in serial.
+type shardedDBIteratorUnsorted struct {
+	shardedDBIterator
+}
+
+// NewIteratorUnsorted creates a iterator over the entire keyspace contained within
+// the key-value database.
+// If you want to get ordered items in serial, checkout shardedDB.NewIterator()
+// If you want to get items in parallel from channels, checkout shardedDB.NewChanIterator()
+func (db *shardedDB) NewIteratorUnsorted() Iterator {
+	return db.newIteratorUnsorted(func(db Database) Iterator { return db.NewIterator() })
+}
+
+// NewIteratorWithStartUnsorted creates a iterator over a subset of database content
+// starting at a particular initial key (or after, if it does not exist).
+func (db *shardedDB) NewIteratorWithStartUnsorted(start []byte) Iterator {
+	return db.newIteratorUnsorted(func(db Database) Iterator { return db.NewIteratorWithStart(start) })
+}
+
+// NewIteratorWithPrefixUnsorted creates a iterator over a subset of database content
+// with a particular key prefix.
+func (db *shardedDB) NewIteratorWithPrefixUnsorted(prefix []byte) Iterator {
+	return db.newIteratorUnsorted(func(db Database) Iterator { return db.NewIteratorWithPrefix(prefix) })
+}
+
+func (db *shardedDB) newIteratorUnsorted(newIterator func(Database) Iterator) Iterator {
+	it := &shardedDBIteratorUnsorted{
+		shardedDBIterator{
+			db.NewChanIterator(context.Background(), newIterator),
+			make(chan entry, shardedDBCombineChanSize),
+			nil, nil}}
+
+	go it.newCombineWorker()
+
+	return it
+}
+
+func (it shardedDBIteratorUnsorted) newCombineWorker() {
+	for {
+	chanIter:
+		for i, ch := range it.resultChs {
+			select {
+			case <-it.ctx.Done():
+				logger.Trace("[shardedDBIterator] combine worker ends due to ctx")
+				close(it.resultCh)
+				return
+			case e, ok := <-ch:
+				if !ok { // channel is closed
+					it.resultChs = append(it.resultChs[:i], it.resultChs[i+1:]...)
+					break chanIter
+				}
+				it.resultCh <- e
+			default:
+				// no item in ch
+			}
+		}
+		if len(it.resultChs) == 0 {
+			logger.Trace("[shardedDBIterator] combine worker finishes iterating")
+			close(it.resultCh)
+			return
+		}
+	}
+}
+
 // shardedDBChanIterator creates iterators for each shard DB.
 // Channels subscribing each iterators can be gained.
+// Each iterators fetch values in binary-alphabetical order.
 // This is useful when you want to operate on each items in parallel.
 type shardedDBChanIterator struct {
 	ctx context.Context
@@ -289,7 +381,8 @@ type shardedDBChanIterator struct {
 
 // NewChanIterator creates iterators for each shard DB.
 // This is useful when you want to operate on each items in parallel.
-// If you want to get items in serial, checkout shardedDB.NewIterator()
+// If you want to get ordered items in serial, checkout shardedDB.NewIterator()
+// If you want to get unordered items in serial, checkout shardedDB.NewChanIteratorUnsorted().
 func (db *shardedDB) NewChanIterator(ctx context.Context, newIterator func(Database) Iterator) shardedDBChanIterator {
 	it := shardedDBChanIterator{ctx,
 		make([]Iterator, len(db.shards)),

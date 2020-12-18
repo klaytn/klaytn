@@ -10,9 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/klaytn/klaytn/common"
+	"github.com/stretchr/testify/assert"
 )
 
 var ShardedDBConfig = []*DBConfig{
@@ -24,13 +23,14 @@ var ShardedDBConfig = []*DBConfig{
 func createEntries(entryNum int) []entry {
 	entries := make([]entry, entryNum)
 	for i := 0; i < entryNum; i++ {
+		//entries[i] = entry{common.MakeRandomBytes(10), common.MakeRandomBytes(10)}
 		entries[i] = entry{common.MakeRandomBytes(256), common.MakeRandomBytes(600)}
 	}
 	return entries
 }
 
 // testIterator tests if given iterator iterates all entries
-func testIterator(t *testing.T, entriesFromIterator func(db shardedDB, entryNum int) []entry) {
+func testIterator(t *testing.T, checkOrder bool, entriesFromIterator func(db shardedDB, entryNum int) []entry) {
 	entryNum := 500
 	entries := createEntries(entryNum)
 	dbs := make([]shardedDB, len(ShardedDBConfig))
@@ -67,17 +67,37 @@ func testIterator(t *testing.T, entriesFromIterator func(db shardedDB, entryNum 
 	for _, db := range dbs {
 		// create iterator
 		entriesFromIt := entriesFromIterator(db, entryNum)
-		sort.Slice(entriesFromIt, func(i, j int) bool { return bytes.Compare(entriesFromIt[i].key, entriesFromIt[j].key) < 0 })
+		if !checkOrder {
+			sort.Slice(entriesFromIt, func(i, j int) bool { return bytes.Compare(entriesFromIt[i].key, entriesFromIt[j].key) < 0 })
+		}
 
 		// compare if entries generated and entries from iterator is same
 		assert.Equal(t, len(entries), len(entriesFromIt))
+		assert.Equal(t, entries[0], entriesFromIt[0])
 		assert.True(t, reflect.DeepEqual(entries, entriesFromIt))
 	}
 }
 
+// TestShardedDBChanIterator tests if shardedDBIterator iterates all entries
+// TODO implement TestShardedDBIteratorWithStart and TestShardedDBIteratorWithPrefix
+func TestShardedDBIterator(t *testing.T) {
+	testIterator(t, true, func(db shardedDB, entryNum int) []entry {
+		entries := make([]entry, 0, entryNum)
+		it := db.NewIterator()
+
+		for it.Next() {
+			entries = append(entries, entry{it.Key(), it.Value()})
+		}
+		it.Release()
+		assert.NoError(t, it.Error())
+		return entries
+	})
+}
+
+// TestShardedDBChanIterator tests if shardedDBChanIterator iterates all entries
 // TODO implement TestShardedDBChanIteratorWithStart and TestShardedDBChanIteratorWithStartWitPrefix
 func TestShardedDBChanIterator(t *testing.T) {
-	testIterator(t, func(db shardedDB, entryNum int) []entry {
+	testIterator(t, false, func(db shardedDB, entryNum int) []entry {
 		entries := make([]entry, 0, entryNum) // store all items
 		var l sync.RWMutex                    // mutex for entries
 
@@ -107,11 +127,12 @@ func TestShardedDBChanIterator(t *testing.T) {
 	})
 }
 
-// TODO implement TestShardedDBIteratorWithStart and TestShardedDBIteratorWithPrefix
-func TestShardedDBIterator(t *testing.T) {
-	testIterator(t, func(db shardedDB, entryNum int) []entry {
+// TestShardedDBChanIterator tests if shardedDBIteratorUnsorted iterates all entries
+// TODO implement TestShardedDBIteratorWithStartUnsorted and TestShardedDBIteratorWithPrefixUnsorted
+func TestShardedDBIteratorUnsorted(t *testing.T) {
+	testIterator(t, false, func(db shardedDB, entryNum int) []entry {
 		entries := make([]entry, 0, entryNum)
-		it := db.NewIterator()
+		it := db.NewIteratorUnsorted()
 
 		for it.Next() {
 			entries = append(entries, entry{it.Key(), it.Value()})
