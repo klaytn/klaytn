@@ -298,7 +298,7 @@ func (it *shardedDBIterator) Value() []byte {
 }
 
 func (it *shardedDBIterator) Release() {
-	it.ctx.Done()
+	it.cancel()
 }
 
 type entry struct {
@@ -345,16 +345,18 @@ func (db *shardedDB) newIteratorUnsorted(newIterator func(Database) Iterator) It
 
 // newCombineWorker fetches any key/value from resultChs and put the data in resultCh
 func (it shardedDBIteratorUnsorted) newCombineWorker() {
-chanIter:
+Iter:
 	for len(it.resultChs) != 0 {
+	chanIter:
 		for i, ch := range it.resultChs {
 			select {
 			case <-it.ctx.Done():
 				logger.Trace("[shardedDBIteratorUnsorted] combine worker ends due to ctx")
-				break chanIter
+				break Iter
 			case e, ok := <-ch:
 				if !ok { // channel is closed
 					it.resultChs = append(it.resultChs[:i], it.resultChs[i+1:]...)
+					break chanIter
 				} else {
 					it.resultCh <- e
 				}
@@ -372,7 +374,8 @@ chanIter:
 // Each iterators fetch values in binary-alphabetical order.
 // This is useful when you want to operate on each items in parallel.
 type shardedDBChanIterator struct {
-	ctx context.Context
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	iterators []Iterator
 	resultChs []chan entry
@@ -383,28 +386,30 @@ type shardedDBChanIterator struct {
 // If you want to get ordered items in serial, checkout shardedDB.NewIterator()
 // If you want to get unordered items in serial, checkout shardedDB.NewChanIteratorUnsorted().
 func (db *shardedDB) NewChanIterator(ctx context.Context, newIterator func(Database) Iterator) shardedDBChanIterator {
-	it := shardedDBChanIterator{ctx,
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	it := shardedDBChanIterator{ctx, nil,
 		make([]Iterator, len(db.shards)),
 		make([]chan entry, len(db.shards))}
-
-	if it.ctx == nil {
-		it.ctx = context.Background()
-	}
+	it.ctx, it.cancel = context.WithCancel(ctx)
 
 	for i := 0; i < len(db.shards); i++ {
 		it.iterators[i] = newIterator(db.shards[i])
 		it.resultChs[i] = make(chan entry, shardedDBSubChannelSize)
-		go it.newChanWorker(it.iterators[i], it.resultChs[i], ctx)
+		go it.newChanWorker(it.iterators[i], it.resultChs[i], it.ctx)
 	}
 
 	return it
 }
 
 func (*shardedDBChanIterator) newChanWorker(it Iterator, resultCh chan entry, ctx context.Context) {
+iter:
 	for it.Next() {
 		select {
 		case <-ctx.Done():
-			return
+			break iter
 		default:
 		}
 		key := make([]byte, len(it.Key()))
@@ -413,6 +418,7 @@ func (*shardedDBChanIterator) newChanWorker(it Iterator, resultCh chan entry, ct
 		copy(val, it.Value())
 		resultCh <- entry{key, val}
 	}
+	it.Release()
 	close(resultCh)
 }
 
@@ -422,11 +428,9 @@ func (it *shardedDBChanIterator) Channels() []chan entry {
 }
 
 // Release stops all iterators, channels and workers
+// Even Release() is called, there could be
 func (it *shardedDBChanIterator) Release() {
-	for _, i := range it.iterators {
-		i.Release()
-	}
-	it.ctx.Done()
+	it.cancel()
 }
 
 func (pdb *shardedDB) NewBatch() Batch {

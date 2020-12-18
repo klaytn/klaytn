@@ -55,7 +55,7 @@ func testIterator(t *testing.T, checkOrder bool, entriesFromIterator func(db sha
 		// write entries data in DB
 		batch := db.NewBatch()
 		for _, entry := range entries {
-			batch.Put(entry.key, entry.val)
+			assert.NoError(t, batch.Put(entry.key, entry.val))
 		}
 		assert.NoError(t, batch.Write())
 	}
@@ -73,7 +73,6 @@ func testIterator(t *testing.T, checkOrder bool, entriesFromIterator func(db sha
 
 		// compare if entries generated and entries from iterator is same
 		assert.Equal(t, len(entries), len(entriesFromIt))
-		assert.Equal(t, entries[0], entriesFromIt[0])
 		assert.True(t, reflect.DeepEqual(entries, entriesFromIt))
 	}
 }
@@ -84,6 +83,22 @@ func TestShardedDBIterator(t *testing.T) {
 	testIterator(t, true, func(db shardedDB, entryNum int) []entry {
 		entries := make([]entry, 0, entryNum)
 		it := db.NewIterator()
+
+		for it.Next() {
+			entries = append(entries, entry{it.Key(), it.Value()})
+		}
+		it.Release()
+		assert.NoError(t, it.Error())
+		return entries
+	})
+}
+
+// TestShardedDBChanIterator tests if shardedDBIteratorUnsorted iterates all entries
+// TODO implement TestShardedDBIteratorWithStartUnsorted and TestShardedDBIteratorWithPrefixUnsorted
+func TestShardedDBIteratorUnsorted(t *testing.T) {
+	testIterator(t, false, func(db shardedDB, entryNum int) []entry {
+		entries := make([]entry, 0, entryNum)
+		it := db.NewIteratorUnsorted()
 
 		for it.Next() {
 			entries = append(entries, entry{it.Key(), it.Value()})
@@ -127,18 +142,130 @@ func TestShardedDBChanIterator(t *testing.T) {
 	})
 }
 
-// TestShardedDBChanIterator tests if shardedDBIteratorUnsorted iterates all entries
-// TODO implement TestShardedDBIteratorWithStartUnsorted and TestShardedDBIteratorWithPrefixUnsorted
-func TestShardedDBIteratorUnsorted(t *testing.T) {
-	testIterator(t, false, func(db shardedDB, entryNum int) []entry {
-		entries := make([]entry, 0, entryNum)
-		it := db.NewIteratorUnsorted()
+func testShardedIterator_Release(t *testing.T, entryNum int, checkFunc func(db shardedDB)) {
+	entries := createEntries(entryNum)
 
-		for it.Next() {
-			entries = append(entries, entry{it.Key(), it.Value()})
+	// create DB and write data for testing
+	for _, config := range ShardedDBConfig {
+		config.Dir, _ = ioutil.TempDir(os.TempDir(), "test-shardedDB-iterator")
+		defer func(dir string) {
+			if err := os.RemoveAll(dir); err != nil {
+				t.Fatalf("fail to delete file %v", err)
+			}
+		}(config.Dir)
+
+		// create sharded DB
+		db, err := newShardedDB(config, 0, config.NumStateTrieShards)
+		if err != nil {
+			t.Log("Error occured while creating DB")
+			t.FailNow()
 		}
-		it.Release()
-		assert.NoError(t, it.Error())
-		return entries
+
+		// write entries data in DB
+		batch := db.NewBatch()
+		for _, entry := range entries {
+			assert.NoError(t, batch.Put(entry.key, entry.val))
+		}
+		assert.NoError(t, batch.Write())
+
+		// check if Release quits iterator
+		checkFunc(*db)
+	}
+}
+
+func TestShardedDBIterator_Release(t *testing.T) {
+	testShardedIterator_Release(t, shardedDBCombineChanSize+10, func(db shardedDB) {
+		// Next() returns True if Release() is not called
+		{
+			it := db.NewIterator()
+			defer it.Release()
+
+			// check if data exists
+			for i := 0; i < shardedDBCombineChanSize+1; i++ {
+				assert.True(t, it.Next())
+			}
+		}
+
+		//  Next() returns False if Release() is called
+		{
+			it := db.NewIterator()
+			it.Release()
+
+			// flush data in channel
+			for i := 0; i < shardedDBCombineChanSize; i++ {
+				it.Next()
+			}
+
+			// check if Next returns false
+			assert.False(t, it.Next())
+		}
 	})
+}
+
+func TestShardedDBIteratorUnsorted_Release(t *testing.T) {
+	testShardedIterator_Release(t, shardedDBCombineChanSize+10, func(db shardedDB) {
+		// Next() returns True if Release() is not called
+		{
+			it := db.NewIteratorUnsorted()
+			defer it.Release()
+
+			// check if data exists
+			for i := 0; i < shardedDBCombineChanSize+1; i++ {
+				assert.True(t, it.Next())
+			}
+		}
+
+		//  Next() returns False if Release() is called
+		{
+			it := db.NewIteratorUnsorted()
+			it.Release()
+
+			// flush data in channel
+			for i := 0; i < shardedDBCombineChanSize; i++ {
+				it.Next()
+			}
+
+			// check if Next returns false
+			assert.False(t, it.Next())
+		}
+	})
+}
+
+func TestShardedDBChanIterator_Release(t *testing.T) {
+	testShardedIterator_Release(t,
+		int(ShardedDBConfig[len(ShardedDBConfig)-1].NumStateTrieShards*shardedDBSubChannelSize*2),
+		func(db shardedDB) {
+			// Next() returns True if Release() is not called
+			{
+				it := db.NewChanIterator(context.Background(), func(db Database) Iterator { return db.NewIterator() })
+				defer it.Release()
+
+				for _, ch := range it.Channels() {
+
+					// check if channel is not closed
+					for i := 0; i < shardedDBSubChannelSize+1; i++ {
+						e, ok := <-ch
+						assert.NotNil(t, e)
+						assert.True(t, ok)
+					}
+				}
+			}
+
+			//  Next() returns False if Release() is called
+			{
+				it := db.NewChanIterator(context.Background(), func(db Database) Iterator { return db.NewIterator() })
+				it.Release()
+				for _, ch := range it.Channels() {
+
+					// flush data in channel
+					for i := 0; i < shardedDBSubChannelSize; i++ {
+						<-ch
+					}
+
+					// check if channel is closed
+					_, ok := <-ch
+					assert.False(t, ok)
+				}
+			}
+		})
 }
