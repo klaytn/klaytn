@@ -535,8 +535,7 @@ func gen(ctx *cli.Context) error {
 		}
 		scnGenesisJsonBytes, _ := json.MarshalIndent(genIstanbulGenesis(ctx, scnAddress, nil, serviceChainId), "", "\t")
 
-		var dockerImageId string
-		dockerImageId = ctx.String(dockerImageIdFlag.Name)
+		dockerImageId := ctx.String(dockerImageIdFlag.Name)
 
 		compose := compose.New(
 			"172.16.239",
