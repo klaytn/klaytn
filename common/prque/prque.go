@@ -37,7 +37,7 @@ func (p *Prque) Push(data interface{}, priority int64) {
 	heap.Push(p.cont, &item{data, priority})
 }
 
-// Peek returns the value with the greates priority but does not pop it off.
+// Peek returns the value with the greatest priority but does not pop it off.
 func (p *Prque) Peek() (interface{}, int64) {
 	item := p.cont.blocks[0][0]
 	return item.value, item.priority
