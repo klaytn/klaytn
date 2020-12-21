@@ -150,7 +150,7 @@ var (
 
 	dockerImageIdFlag = cli.StringFlag{
 		Name:        "docker-image-id",
-		Value:       "klaytn/klaytn:latest",	// https://hub.docker.com/r/klaytn/klaytn
+		Value:       "klaytn/klaytn:latest", // https://hub.docker.com/r/klaytn/klaytn
 		Usage:       "Base docker image ID (Image[:tag]), e.g., klaytn/klaytn:v1.5.3",
 		Destination: &dockerImageId,
 	}
