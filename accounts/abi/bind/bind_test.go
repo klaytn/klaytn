@@ -1655,7 +1655,7 @@ var bindTests = []struct {
 				if iter.Event.Addr != addr {
 					t.Fatal("Msg.sender mismatch")
 				}
-				if iter.Event.Value.Uint64() != 100 {
+				if iter.Event.Value.Cmp(opts.Value) != 0 {
 					t.Fatal("Msg.value mismatch")
 				}
 				gotEvent = true
