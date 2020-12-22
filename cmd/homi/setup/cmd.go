@@ -534,12 +534,9 @@ func gen(ctx *cli.Context) error {
 			bridgeNodesJsonBytes, _ = json.MarshalIndent(enInfos[:1], "", "\t")
 		}
 		scnGenesisJsonBytes, _ := json.MarshalIndent(genIstanbulGenesis(ctx, scnAddress, nil, serviceChainId), "", "\t")
-		var dockerImageId string
-		if scnNum > 0 {
-			dockerImageId = "klaytn-base"
-		} else {
-			dockerImageId = ctx.String(dockerImageIdFlag.Name)
-		}
+
+		dockerImageId := ctx.String(dockerImageIdFlag.Name)
+
 		compose := compose.New(
 			"172.16.239",
 			cnNum,
