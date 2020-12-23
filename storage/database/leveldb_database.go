@@ -53,6 +53,7 @@ const (
 	minBlockCacheCapacity     = 2 * minWriteBufferSize
 	MinOpenFilesCacheCapacity = 16
 	minBitsPerKeyForFilter    = 10
+	minFileDescriptors        = 2048
 )
 
 var defaultLevelDBOption = &opt.Options{
@@ -78,13 +79,11 @@ func GetOpenFilesLimit() int {
 	if err != nil {
 		logger.Crit("Failed to retrieve file descriptor allowance", "err", err)
 	}
-	if limit < 2048 {
-		if err := fdlimit.Raise(2048); err != nil {
-			logger.Crit("Failed to raise file descriptor allowance", "err", err)
+	if limit < minFileDescriptors {
+		if err := fdlimit.Raise(minFileDescriptors); err != nil {
+			logger.Crit("Failed to raise file descriptor allowance to the minimum value",
+				"err", err, "minFileDescriptors", minFileDescriptors)
 		}
-	}
-	if limit > 2048 { // cap database file descriptors even if more is available
-		limit = 2048
 	}
 	return limit / 2 // Leave half for networking and other stuff
 }
