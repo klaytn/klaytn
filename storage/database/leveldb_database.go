@@ -49,11 +49,12 @@ const (
 )
 
 const (
-	minWriteBufferSize        = 2 * opt.MiB
-	minBlockCacheCapacity     = 2 * minWriteBufferSize
-	MinOpenFilesCacheCapacity = 16
-	minBitsPerKeyForFilter    = 10
-	minFileDescriptors        = 2048
+	minWriteBufferSize             = 2 * opt.MiB
+	minBlockCacheCapacity          = 2 * minWriteBufferSize
+	MinOpenFilesCacheCapacity      = 16
+	minBitsPerKeyForFilter         = 10
+	minFileDescriptorsForDBManager = 2048
+	minFileDescriptorsForLevelDB   = 16
 )
 
 var defaultLevelDBOption = &opt.Options{
@@ -79,11 +80,9 @@ func GetOpenFilesLimit() int {
 	if err != nil {
 		logger.Crit("Failed to retrieve file descriptor allowance", "err", err)
 	}
-	if limit < minFileDescriptors {
-		if err := fdlimit.Raise(minFileDescriptors); err != nil {
-			logger.Crit("Failed to raise file descriptor allowance to the minimum value",
-				"err", err, "minFileDescriptors", minFileDescriptors)
-		}
+	if limit < minFileDescriptorsForDBManager {
+		logger.Crit("Failed to raise file descriptor allowance to the minimum value",
+			"currFileDescriptorsLimit", limit, "minFileDescriptorsForDBManager", minFileDescriptorsForDBManager)
 	}
 	return limit / 2 // Leave half for networking and other stuff
 }
@@ -143,8 +142,8 @@ func NewLevelDB(dbc *DBConfig, entryType DBEntryType) (*levelDB, error) {
 	if dbc.LevelDBCacheSize < 16 {
 		dbc.LevelDBCacheSize = 16
 	}
-	if dbc.OpenFilesLimit < 16 {
-		dbc.OpenFilesLimit = 16
+	if dbc.OpenFilesLimit < minFileDescriptorsForLevelDB {
+		dbc.OpenFilesLimit = minFileDescriptorsForLevelDB
 	}
 
 	ldbOpts := getLevelDBOptions(dbc)
