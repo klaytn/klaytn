@@ -25,7 +25,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -35,8 +34,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klaytn/klaytn/common"
+
 	"bufio"
 	"errors"
+
 	"github.com/rs/cors"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
@@ -177,7 +179,7 @@ func NewFastHTTPServer(cors []string, vhosts []string, srv *Server) *fasthttp.Se
 	if len(cors) == 0 {
 		for _, vhost := range vhosts {
 			if vhost == "*" {
-				return &fasthttp.Server{Concurrency: concurrencyLimit, Handler: srv.HandleFastHTTP}
+				return &fasthttp.Server{Concurrency: ConcurrencyLimit, Handler: srv.HandleFastHTTP}
 			}
 		}
 	}
@@ -188,7 +190,7 @@ func NewFastHTTPServer(cors []string, vhosts []string, srv *Server) *fasthttp.Se
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
-	return &fasthttp.Server{Concurrency: concurrencyLimit, Handler: fhandler}
+	return &fasthttp.Server{Concurrency: ConcurrencyLimit, Handler: fhandler}
 }
 
 // ServeHTTP serves JSON-RPC requests over HTTP.

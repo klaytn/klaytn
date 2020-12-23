@@ -31,6 +31,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klaytn/klaytn/common/fdlimit"
+	"github.com/klaytn/klaytn/networks/rpc"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/api/debug"
@@ -55,6 +58,9 @@ import (
 	"github.com/klaytn/klaytn/storage/statedb"
 	"gopkg.in/urfave/cli.v1"
 )
+
+// minFDLimit is the minimum file descriptor limit for RPC servers (heuristic value. concurrency limit of RPC and WS servers)
+var minFDLimit = rpc.ConcurrencyLimit * 2
 
 func InitHelper() {
 	cli.AppHelpTemplate = AppHelpTemplate
@@ -1376,10 +1382,46 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 	}
 }
 
+// checkAndRaiseFDLimit checks the file descriptor limit and
+// increases the file descriptor limit if the process has a small limit
+func checkAndRaiseFDLimit() {
+	limit, err := fdlimit.Current()
+	if err != nil {
+		logger.Error("fail to read fd limit. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	// if it has enough file descriptor limit, do nothing
+	if limit >= minFDLimit {
+		return
+	}
+	// try increasing file descriptor limit
+	targetLimit := limit + minFDLimit
+	if err := fdlimit.Raise(uint64(targetLimit)); err != nil {
+		logger.Warn("fail to increase fd limit. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	// check if new fd limit is applied
+	newLimit, err := fdlimit.Current()
+	if err != nil {
+		logger.Error("fail to read fd limit after increasing fd limit, current limit may not be accurate",
+			"err", err, "oldLimit", limit, "newLimit", limit+minFDLimit)
+		return
+	}
+	// if the retrieved limit does not match the expected one, leave an error log
+	if newLimit != targetLimit {
+		logger.Warn("Tried increasing the file descriptor limit of the process for RPC servers, but it didn't work",
+			"oldLimit", limit, "targetLimit", targetLimit, "actualLimit", newLimit)
+	} else {
+		logger.Warn("Increase the file descriptor limit of the process for RPC servers",
+			"oldLimit", limit, "newLimit", newLimit)
+	}
+}
+
 // SetKlayConfig applies klay-related command line flags to the config.
 func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
+	checkAndRaiseFDLimit()
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setServiceChainSigner(ctx, ks, cfg)

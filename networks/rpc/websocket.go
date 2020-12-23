@@ -26,9 +26,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"golang.org/x/net/websocket"
-	"gopkg.in/fatih/set.v0"
 	"net"
 	"net/http"
 	"net/url"
@@ -36,7 +33,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klaytn/klaytn/common"
+	"golang.org/x/net/websocket"
+	"gopkg.in/fatih/set.v0"
+
 	"bufio"
+
 	fastws "github.com/clevergo/websocket"
 	"github.com/valyala/fasthttp"
 )
@@ -139,7 +141,7 @@ func NewFastWSServer(allowedOrigins []string, srv *Server) *fasthttp.Server {
 	upgrader.CheckOrigin = wsFastHandshakeValidator(allowedOrigins)
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
-	return &fasthttp.Server{Concurrency: concurrencyLimit, MaxRequestBodySize: common.MaxRequestContentLength, Handler: srv.FastWebsocketHandler}
+	return &fasthttp.Server{Concurrency: ConcurrencyLimit, MaxRequestBodySize: common.MaxRequestContentLength, Handler: srv.FastWebsocketHandler}
 }
 
 func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.RequestCtx) bool {
