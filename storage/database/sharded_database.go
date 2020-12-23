@@ -195,14 +195,14 @@ func (db *shardedDB) newIterator(newIterator func(Database) Iterator) Iterator {
 		make(chan entry, shardedDBCombineChanSize),
 		nil, nil}
 
-	go it.newCombineWorker()
+	go it.runCombineWorker()
 
 	return it
 }
 
-// newCombineWorker fetches any key/value from resultChs and put the data in resultCh
+// runCombineWorker fetches any key/value from resultChs and put the data in resultCh
 // in binary-alphabetical order.
-func (it shardedDBIterator) newCombineWorker() {
+func (it shardedDBIterator) runCombineWorker() {
 	entries := make([]entry, len(it.resultChs)) // contains smallest values from each iterators
 
 	// fill initial values for entries
@@ -263,7 +263,7 @@ func (it *shardedDBIterator) Next() bool {
 				it.key, it.value = e.key, e.val
 				return true
 			} else {
-				logger.Error("[shardedDBIterator] Next is called on closed channel")
+				logger.Debug("[shardedDBIterator] Next is called on closed channel")
 				return false
 			}
 		default:
@@ -278,15 +278,14 @@ func (it *shardedDBIterator) Next() bool {
 }
 
 func (it *shardedDBIterator) Error() error {
-	var err error
 	for i, iter := range it.iterators {
 		if iter.Error() != nil {
 			logger.Error("[shardedDBIterator] error from iterator",
-				"err", err, "shardNum", i, "key", it.key, "val", it.value)
-			err = iter.Error()
+				"err", iter.Error(), "shardNum", i, "key", it.key, "val", it.value)
+			return iter.Error()
 		}
 	}
-	return err
+	return nil
 }
 
 func (it *shardedDBIterator) Key() []byte {
@@ -305,8 +304,8 @@ type entry struct {
 	key, val []byte
 }
 
-// shardedDBIterator iterates all items of each shardDB.
-// This is useful when you want to get items in serial.
+// shardedDBIteratorUnsorted iterates all items of each shardDB.
+// This is useful when you want to get items fast in serial.
 type shardedDBIteratorUnsorted struct {
 	shardedDBIterator
 }
@@ -343,7 +342,7 @@ func (db *shardedDB) newIteratorUnsorted(newIterator func(Database) Iterator) It
 	return it
 }
 
-// newCombineWorker fetches any key/value from resultChs and put the data in resultCh
+// runCombineWorker fetches any key/value from resultChs and put the data in resultCh
 func (it shardedDBIteratorUnsorted) newCombineWorker() {
 Iter:
 	for len(it.resultChs) != 0 {
@@ -360,8 +359,6 @@ Iter:
 				} else {
 					it.resultCh <- e
 				}
-			default:
-				// no item in ch
 			}
 		}
 	}
@@ -428,7 +425,7 @@ func (it *shardedDBChanIterator) Channels() []chan entry {
 }
 
 // Release stops all iterators, channels and workers
-// Even Release() is called, there could be
+// Even Release() is called, there could be some items left in the channel.
 func (it *shardedDBChanIterator) Release() {
 	it.cancel()
 }
