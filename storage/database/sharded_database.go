@@ -62,10 +62,13 @@ func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, er
 
 	shards := make([]Database, 0, numShards)
 	sdbBatchTaskCh := make(chan sdbBatchTask, numShards*2)
+	sdbLevelDBCacheSize := dbc.LevelDBCacheSize / int(numShards)
+	sdbOpenFilesLimit := dbc.OpenFilesLimit / int(numShards)
 	for i := 0; i < int(numShards); i++ {
 		copiedDBC := *dbc
 		copiedDBC.Dir = path.Join(copiedDBC.Dir, strconv.Itoa(i))
-		copiedDBC.LevelDBCacheSize /= int(numShards)
+		copiedDBC.LevelDBCacheSize = sdbLevelDBCacheSize
+		copiedDBC.OpenFilesLimit = sdbOpenFilesLimit
 
 		db, err := newDatabase(&copiedDBC, et)
 		if err != nil {
@@ -75,6 +78,7 @@ func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, er
 		go batchWriteWorker(sdbBatchTaskCh)
 	}
 
+	logger.Info("Created a sharded database", "dbType", et, "numShards", numShards)
 	return &shardedDB{
 		fn: dbc.Dir, shards: shards,
 		numShards: numShards, sdbBatchTaskCh: sdbBatchTaskCh}, nil

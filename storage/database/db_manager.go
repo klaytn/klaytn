@@ -241,6 +241,10 @@ const (
 	databaseEntryTypeSize
 )
 
+func (et DBEntryType) String() string {
+	return dbBaseDirs[et]
+}
+
 const notInMigrationFlag = 0
 const inMigrationFlag = 1
 
