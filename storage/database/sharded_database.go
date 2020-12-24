@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"path"
 	"strconv"
-	"time"
 
 	"github.com/klaytn/klaytn/common/prque"
 )
@@ -236,36 +235,22 @@ chanIter:
 		// fill used entry with new entry
 		// skip this if channel is closed
 		if e, ok := <-it.resultChs[minEntry.shardNum]; ok {
-			entries.Push(entryWithNum{e, minEntry.shardNum}, e.key)
+			entries.Push(entryWithShardNum{e, minEntry.shardNum}, e.key)
 		}
 	}
-	logger.Trace("[shardedDBIterator] combine worker finishes")
+	logger.Trace("[shardedDBIterator] combine worker finished")
 	close(it.resultCh)
 }
 
 // Next gets the next item from iterators.
-// The first call of Next() might take 50ms.
 func (it *shardedDBIterator) Next() bool {
-	maxRetry := 5
-	for i := 0; i < maxRetry; i++ {
-		select {
-		case e, ok := <-it.resultCh:
-			if ok {
-				it.key, it.value = e.key, e.val
-				return true
-			} else {
-				logger.Debug("[shardedDBIterator] Next is called on closed channel")
-				return false
-			}
-		default:
-			logger.Debug("[shardedDBIterator] no value is ready")
-			// shardedDBIterator needs some time for workers to fill channels
-			// If there is no sleep here, there should a sleep after NewIterator()
-			time.Sleep(10 * time.Millisecond)
-		}
+	e, ok := <-it.resultCh
+	if !ok {
+		logger.Debug("[shardedDBIterator] Next is called on closed channel")
+		return false
 	}
-	logger.Error("[shardedDBIterator] Next() takes more than 50ms on unclosed subchannels")
-	return false
+	it.key, it.value = e.key, e.val
+	return true
 }
 
 func (it *shardedDBIterator) Error() error {
