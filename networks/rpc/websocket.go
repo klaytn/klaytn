@@ -141,7 +141,7 @@ func NewFastWSServer(allowedOrigins []string, srv *Server) *fasthttp.Server {
 	upgrader.CheckOrigin = wsFastHandshakeValidator(allowedOrigins)
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
-	return &fasthttp.Server{Concurrency: ConcurrencyLimit, MaxRequestBodySize: common.MaxRequestContentLength, Handler: srv.FastWebsocketHandler}
+	return &fasthttp.Server{Concurrency: concurrencyLimit, MaxRequestBodySize: common.MaxRequestContentLength, Handler: srv.FastWebsocketHandler}
 }
 
 func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.RequestCtx) bool {
