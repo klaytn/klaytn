@@ -208,11 +208,10 @@ func (it shardedDBIterator) runCombineWorker() {
 		entry
 		shardNum int
 	}
-	entries := prque.NewByteSlice(true) // contains smallest values from each iterators
 
-	// fill initial values for entries
-	for i := len(it.resultChs) - 1; i >= 0; i-- {
-		ch := it.resultChs[i]
+	// creates min-priority queue smallest values from each iterators
+	entries := prque.NewByteSlice(true)
+	for i, ch := range it.resultChs {
 		if e, ok := <-ch; ok {
 			entries.Push(entryWithNum{e, i}, e.key)
 		}
