@@ -17,12 +17,13 @@
 package database
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/klaytn/klaytn/common/prque"
 )
 
 var errKeyLengthZero = fmt.Errorf("database key for sharded database should be greater than 0")
@@ -203,22 +204,22 @@ func (db *shardedDB) newIterator(newIterator func(Database) Iterator) Iterator {
 // runCombineWorker fetches any key/value from resultChs and put the data in resultCh
 // in binary-alphabetical order.
 func (it shardedDBIterator) runCombineWorker() {
-	entries := make([]entry, len(it.resultChs)) // contains smallest values from each iterators
+	type entryWithNum struct {
+		entry
+		shardNum int
+	}
+	entries := prque.NewByteSlice(true) // contains smallest values from each iterators
 
 	// fill initial values for entries
 	for i := len(it.resultChs) - 1; i >= 0; i-- {
 		ch := it.resultChs[i]
-		e, ok := <-ch
-		if !ok { // channel is closed
-			it.resultChs = append(it.resultChs[:i], it.resultChs[i+1:]...)
-			entries = append(entries[:i], entries[i+1:]...)
-		} else {
-			entries[i] = e
+		if e, ok := <-ch; ok {
+			entries.Push(entryWithNum{e, i}, e.key)
 		}
 	}
 
 chanIter:
-	for len(it.resultChs) != 0 {
+	for !entries.Empty() {
 		// check if done
 		select {
 		case <-it.ctx.Done():
@@ -228,24 +229,15 @@ chanIter:
 		}
 
 		// look for smallest key
-		minEntry, minIdx := entries[0], 0
-		for i, e := range entries[1:] {
-			if bytes.Compare(minEntry.key, e.key) > 0 {
-				minEntry = e
-				minIdx = i + 1
-			}
-		}
+		minEntry := entries.PopItem().(entryWithNum)
 
 		// fill resultCh with smallest key
-		it.resultCh <- minEntry
+		it.resultCh <- minEntry.entry
 
 		// fill used entry with new entry
-		e, ok := <-it.resultChs[minIdx]
-		if !ok { // channel is closed
-			it.resultChs = append(it.resultChs[:minIdx], it.resultChs[minIdx+1:]...)
-			entries = append(entries[:minIdx], entries[minIdx+1:]...)
-		} else {
-			entries[minIdx] = e
+		// skip this if channel is closed
+		if e, ok := <-it.resultChs[minEntry.shardNum]; ok {
+			entries.Push(entryWithNum{e, minEntry.shardNum}, e.key)
 		}
 	}
 	logger.Trace("[shardedDBIterator] combine worker finishes")
@@ -337,28 +329,33 @@ func (db *shardedDB) newIteratorUnsorted(newIterator func(Database) Iterator) It
 			make(chan entry, shardedDBCombineChanSize),
 			nil, nil}}
 
-	go it.newCombineWorker()
+	go it.runCombineWorker()
 
 	return it
 }
 
 // runCombineWorker fetches any key/value from resultChs and put the data in resultCh
-func (it shardedDBIteratorUnsorted) newCombineWorker() {
+func (it shardedDBIteratorUnsorted) runCombineWorker() {
+	// Copy `it.resultChs` before using
+	// The slice is changed in this function
+	resultChs := it.resultChs[:]
+
 Iter:
-	for len(it.resultChs) != 0 {
+	for len(resultChs) != 0 {
 	chanIter:
-		for i, ch := range it.resultChs {
+		for i, ch := range resultChs {
 			select {
 			case <-it.ctx.Done():
 				logger.Trace("[shardedDBIteratorUnsorted] combine worker ends due to ctx")
 				break Iter
 			case e, ok := <-ch:
 				if !ok { // channel is closed
-					it.resultChs = append(it.resultChs[:i], it.resultChs[i+1:]...)
+					resultChs = append(resultChs[:i], resultChs[i+1:]...)
 					break chanIter
 				} else {
 					it.resultCh <- e
 				}
+
 			}
 		}
 	}
