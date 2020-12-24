@@ -23,7 +23,6 @@ var ShardedDBConfig = []*DBConfig{
 func createEntries(entryNum int) []entry {
 	entries := make([]entry, entryNum)
 	for i := 0; i < entryNum; i++ {
-		//entries[i] = entry{common.MakeRandomBytes(10), common.MakeRandomBytes(10)}
 		entries[i] = entry{common.MakeRandomBytes(256), common.MakeRandomBytes(600)}
 	}
 	return entries
@@ -117,7 +116,7 @@ func TestShardedDBChanIterator(t *testing.T) {
 		var l sync.RWMutex                    // mutex for entries
 
 		// create chan Iterator and get channels
-		it := db.NewChanIterator(context.Background(), func(db Database) Iterator { return db.NewIterator() })
+		it := db.NewChanIterator(context.Background(), nil, func(db Database) Iterator { return db.NewIterator() })
 		chans := it.Channels()
 
 		// listen all channels and get key/value
@@ -237,7 +236,7 @@ func TestShardedDBChanIterator_Release(t *testing.T) {
 		func(db shardedDB) {
 			// Next() returns True if Release() is not called
 			{
-				it := db.NewChanIterator(context.Background(), func(db Database) Iterator { return db.NewIterator() })
+				it := db.NewChanIterator(context.Background(), nil, func(db Database) Iterator { return db.NewIterator() })
 				defer it.Release()
 
 				for _, ch := range it.Channels() {
@@ -253,7 +252,7 @@ func TestShardedDBChanIterator_Release(t *testing.T) {
 
 			//  Next() returns False if Release() is called
 			{
-				it := db.NewChanIterator(context.Background(), func(db Database) Iterator { return db.NewIterator() })
+				it := db.NewChanIterator(context.Background(), nil, func(db Database) Iterator { return db.NewIterator() })
 				it.Release()
 				for _, ch := range it.Channels() {
 
