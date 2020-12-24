@@ -204,7 +204,7 @@ func (db *shardedDB) newIterator(newIterator func(Database) Iterator) Iterator {
 // runCombineWorker fetches any key/value from resultChs and put the data in resultCh
 // in binary-alphabetical order.
 func (it shardedDBIterator) runCombineWorker() {
-	type entryWithNum struct {
+	type entryWithShardNum struct {
 		entry
 		shardNum int
 	}
@@ -213,7 +213,7 @@ func (it shardedDBIterator) runCombineWorker() {
 	entries := prque.NewByteSlice(true)
 	for i, ch := range it.resultChs {
 		if e, ok := <-ch; ok {
-			entries.Push(entryWithNum{e, i}, e.key)
+			entries.Push(entryWithShardNum{e, i}, e.key)
 		}
 	}
 
@@ -228,7 +228,7 @@ chanIter:
 		}
 
 		// look for smallest key
-		minEntry := entries.PopItem().(entryWithNum)
+		minEntry := entries.PopItem().(entryWithShardNum)
 
 		// fill resultCh with smallest key
 		it.resultCh <- minEntry.entry
