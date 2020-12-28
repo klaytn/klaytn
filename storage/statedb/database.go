@@ -115,9 +115,9 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache                TrieNodeCache       // GC friendly memory cache of trie node RLPs
-	trieNodeCacheConfig          TrieNodeCacheConfig // Configuration of trieNodeCache
-	savingTrieNodeCacheTriggered bool                // Whether saving trie node cache has been triggered or not
+	trieNodeCache                TrieNodeCache        // GC friendly memory cache of trie node RLPs
+	trieNodeCacheConfig          *TrieNodeCacheConfig // Configuration of trieNodeCache
+	savingTrieNodeCacheTriggered bool                 // Whether saving trie node cache has been triggered or not
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -309,7 +309,7 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // NewDatabaseWithNewCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig TrieNodeCacheConfig) *Database {
+func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig *TrieNodeCacheConfig) *Database {
 	trieNodeCache, err := NewTrieNodeCache(cacheConfig)
 	if err != nil {
 		logger.Error("Invalid trie node cache config", "err", err, "config", cacheConfig)
@@ -364,7 +364,7 @@ func (db *Database) TrieNodeCache() TrieNodeCache {
 }
 
 // GetTrieNodeCacheConfig returns the configuration of TrieNodeCache.
-func (db *Database) GetTrieNodeCacheConfig() TrieNodeCacheConfig {
+func (db *Database) GetTrieNodeCacheConfig() *TrieNodeCacheConfig {
 	return db.trieNodeCacheConfig
 }
 
@@ -1151,6 +1151,21 @@ func (db *Database) SaveTrieNodeCacheToFile(filePath string) error {
 		db.savingTrieNodeCacheTriggered = false
 	}()
 	return nil
+}
+
+// DumpPeriodically atomically saves fast cache data to the given dir with the specified interval.
+func (db *Database) SaveCachePeriodically(c *TrieNodeCacheConfig, stopCh <-chan struct{}) {
+	ticker := time.NewTicker(c.FastCacheSavePeriod)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			db.SaveTrieNodeCacheToFile(c.FastCacheFileDir)
+		case <-stopCh:
+			return
+		}
+	}
 }
 
 // NodeInfo is a struct used for collecting trie statistics

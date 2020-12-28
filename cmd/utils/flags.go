@@ -322,6 +322,11 @@ var (
 		Usage: "Memory allowance (MB) to use for caching trie nodes in memory. -1 is for auto-scaling",
 		Value: -1,
 	}
+	TrieNodeCacheSavePeriodFlag = cli.DurationFlag{
+		Name:  "state.trie-cache-save-period",
+		Usage: "Period of saving in memory trie cache to file if fastcache is used",
+		Value: 24 * time.Hour,
+	}
 	SenderTxHashIndexingFlag = cli.BoolFlag{
 		Name:  "sendertxhashindexing",
 		Usage: "Enables storing mapping information of senderTxHash to txHash",
@@ -1491,6 +1496,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 			Name)).ToValid(),
 		LocalCacheSizeMB:          ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
+		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),
 		RedisEndpoints:            ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
 		RedisClusterEnable:        ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
 		RedisPublishBlockEnable:   ctx.GlobalBool(TrieNodeCacheRedisPublishBlockFlag.Name),

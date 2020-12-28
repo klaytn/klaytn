@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getTestHybridConfig() TrieNodeCacheConfig {
-	return TrieNodeCacheConfig{
+func getTestHybridConfig() *TrieNodeCacheConfig {
+	return &TrieNodeCacheConfig{
 		CacheType:          CacheTypeHybrid,
 		LocalCacheSizeMB:   1024 * 1024,
 		FastCacheFileDir:   "",

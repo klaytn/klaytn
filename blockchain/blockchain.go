@@ -103,12 +103,12 @@ const (
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	ArchiveMode          bool                        // If true, state trie is not pruned and always written to database
-	CacheSize            int                         // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval        uint                        // Block interval to flush the trie. Each interval state trie will be flushed into disk
-	TriesInMemory        uint64                      // Maximum number of recent state tries according to its block number
-	SenderTxHashIndexing bool                        // Enables saving senderTxHash to txHash mapping information to database and cache
-	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig // Configures trie node cache
+	ArchiveMode          bool                         // If true, state trie is not pruned and always written to database
+	CacheSize            int                          // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval        uint                         // Block interval to flush the trie. Each interval state trie will be flushed into disk
+	TriesInMemory        uint64                       // Maximum number of recent state tries according to its block number
+	SenderTxHashIndexing bool                         // Enables saving senderTxHash to txHash mapping information to database and cache
+	TrieNodeCacheConfig  *statedb.TrieNodeCacheConfig // Configures trie node cache
 }
 
 // gcBlock is used for priority queue for GC.
@@ -265,6 +265,18 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	go bc.update()
 	go bc.gcCachedNodeLoop()
 	go bc.restartStateMigration()
+
+	if cacheConfig.TrieNodeCacheConfig.DumpPeriodically() {
+		logger.Info("LocalCache is used for trie node cache, start saving cache to file periodically",
+			"dir", bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir,
+			"period", bc.cacheConfig.TrieNodeCacheConfig.FastCacheSavePeriod)
+		trieDB := bc.stateCache.TrieDB()
+		bc.wg.Add(1)
+		go func() {
+			defer bc.wg.Done()
+			trieDB.SaveCachePeriodically(bc.cacheConfig.TrieNodeCacheConfig, bc.quit)
+		}()
+	}
 
 	return bc, nil
 }

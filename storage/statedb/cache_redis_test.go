@@ -28,8 +28,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getTestRedisConfig() TrieNodeCacheConfig {
-	return TrieNodeCacheConfig{
+func getTestRedisConfig() *TrieNodeCacheConfig {
+	return &TrieNodeCacheConfig{
 		CacheType:          CacheTypeRedis,
 		LocalCacheSizeMB:   1024 * 1024,
 		RedisEndpoints:     []string{"localhost:6379"},
