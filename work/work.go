@@ -295,6 +295,7 @@ type BlockChain interface {
 
 	// Warm up
 	StartWarmUp() error
+	StartContractWarmUp(contractAddr common.Address) error
 	StopWarmUp() error
 
 	// Collect state/storage trie statistics

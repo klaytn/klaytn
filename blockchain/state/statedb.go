@@ -890,3 +890,24 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ha
 	}
 	return contract.GetStorageRoot(), nil
 }
+
+// NewStorageTrieIterators returns a list of storage trie iterators from the given
+// storage trie root. Returned iterators are children of storage trie root node.
+func (s *StateDB) NewStorageTrieIterators(storageTrieRoot common.Hash) ([]*statedb.Iterator, error) {
+	storageTrie, err := s.db.OpenStorageTrie(storageTrieRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	children, err := s.db.TrieDB().NodeChildren(storageTrieRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	var its []*statedb.Iterator
+	for _, child := range children {
+		its = append(its, statedb.NewIterator(storageTrie.NodeIterator(child[:])))
+	}
+
+	return its, nil
+}

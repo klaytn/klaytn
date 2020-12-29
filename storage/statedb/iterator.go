@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"container/heap"
 	"errors"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/ser/rlp"
 )
