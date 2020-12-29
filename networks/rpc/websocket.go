@@ -26,9 +26,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"golang.org/x/net/websocket"
-	"gopkg.in/fatih/set.v0"
 	"net"
 	"net/http"
 	"net/url"
@@ -36,7 +33,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klaytn/klaytn/common"
+	"golang.org/x/net/websocket"
+	"gopkg.in/fatih/set.v0"
+
 	"bufio"
+
 	fastws "github.com/clevergo/websocket"
 	"github.com/valyala/fasthttp"
 )

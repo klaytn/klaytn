@@ -36,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/fdlimit"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
@@ -1376,10 +1377,26 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 	}
 }
 
+// raiseFDLimit increases the file descriptor limit to process's maximum value
+func raiseFDLimit() {
+	limit, err := fdlimit.Maximum()
+	if err != nil {
+		logger.Error("Failed to read maximum fd. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	raised, err := fdlimit.Raise(uint64(limit))
+	if err != nil {
+		logger.Warn("Failed to increase fd limit. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	logger.Info("Raised fd limit to process's maximum value", "fd", raised)
+}
+
 // SetKlayConfig applies klay-related command line flags to the config.
 func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
+	raiseFDLimit()
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setServiceChainSigner(ctx, ks, cfg)
