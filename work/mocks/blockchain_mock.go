@@ -18,7 +18,7 @@ import (
 	consensus "github.com/klaytn/klaytn/consensus"
 	event "github.com/klaytn/klaytn/event"
 	params "github.com/klaytn/klaytn/params"
-	rlp "github.com/klaytn/klaytn/ser/rlp"
+	rlp "github.com/klaytn/klaytn/rlp"
 )
 
 // MockBlockChain is a mock of BlockChain interface

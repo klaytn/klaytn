@@ -17,15 +17,16 @@
 package backend
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	"github.com/stretchr/testify/assert"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 func TestBackend_HandleMsg(t *testing.T) {

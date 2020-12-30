@@ -32,7 +32,7 @@ import (
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
 )

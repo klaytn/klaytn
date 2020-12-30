@@ -33,7 +33,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // TODO-Klaytn Needs to separate APIs along with each namespaces.

@@ -23,12 +23,13 @@ package clique
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/hashicorp/golang-lru"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 )
 

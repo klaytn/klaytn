@@ -24,10 +24,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // PublicKlayAPI provides an API to access Klaytn related information.

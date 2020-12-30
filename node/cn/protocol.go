@@ -22,15 +22,16 @@ package cn
 
 import (
 	"fmt"
+	"io"
+	"math/big"
+	"time"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/datasync/fetcher"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"io"
-	"math/big"
-	"time"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // Constants to match up protocol versions and messages

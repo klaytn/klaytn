@@ -17,11 +17,12 @@
 package types
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestEncodeAndDecode_Receipt_Slice_StreamDecoding checks if encoding and decoding works

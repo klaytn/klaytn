@@ -24,6 +24,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -31,8 +33,7 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"time"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // PrivateAccountAPI provides an API to access accounts managed by this node.

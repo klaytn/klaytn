@@ -23,15 +23,16 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/params"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/params"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // The values in those tests are from the Transaction Tests

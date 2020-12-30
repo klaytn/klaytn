@@ -32,7 +32,7 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 const Version = 4

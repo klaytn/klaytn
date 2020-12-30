@@ -21,6 +21,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"math/rand"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -31,14 +37,9 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"math/rand"
-	"strings"
-	"testing"
-	"time"
 )
 
 var (

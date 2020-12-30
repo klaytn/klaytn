@@ -22,12 +22,13 @@ package types
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io/ioutil"
 	"math/big"
 	"reflect"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 func genHeader() *Header {

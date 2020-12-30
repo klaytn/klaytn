@@ -18,15 +18,16 @@ package types
 
 import (
 	"encoding/json"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 func genRandomAddress() *common.Address {

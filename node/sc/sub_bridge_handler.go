@@ -20,12 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 const (

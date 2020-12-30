@@ -21,11 +21,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"math/big"
+
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 var (

@@ -19,6 +19,12 @@ package sc
 import (
 	"context"
 	"errors"
+	"io"
+	"math/big"
+	"path"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -27,13 +33,8 @@ import (
 	scnft "github.com/klaytn/klaytn/contracts/sc_erc721"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
-	"io"
-	"math/big"
-	"path"
-	"sync"
-	"time"
 )
 
 const (
