@@ -262,14 +262,14 @@ var dbBaseDirs = [databaseEntryTypeSize]string{
 // Sum of dbConfigRatio should be 100.
 // Otherwise, logger.Crit will be called at checkDBEntryConfigRatio.
 var dbConfigRatio = [databaseEntryTypeSize]int{
-	3,  // MiscDB
-	6,  // headerDB
-	16, // BodyDB
-	16, // ReceiptsDB
-	19, // StateTrieDB
-	19, // StateTrieMigrationDB
-	17, // TXLookUpEntryDB
-	4,  // bridgeServiceDB
+	2,  // MiscDB
+	5,  // headerDB
+	5,  // BodyDB
+	5,  // ReceiptsDB
+	40, // StateTrieDB
+	40, // StateTrieMigrationDB
+	2,  // TXLookUpEntryDB
+	1,  // bridgeServiceDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
