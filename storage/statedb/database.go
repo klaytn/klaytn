@@ -1129,28 +1129,29 @@ func (db *Database) UpdateMetricNodes() {
 var errDisabledTrieNodeCache = errors.New("trie node cache is disabled, nothing to save to file")
 var errSavingTrieNodeCacheInProgress = errors.New("saving trie node cache has been triggered already")
 
-// SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when the node restarts
-func (db *Database) SaveTrieNodeCacheToFile(filePath string) error {
+func (db *Database) CanSaveTrieNodeCacheToFile() error {
 	if db.trieNodeCache == nil {
 		return errDisabledTrieNodeCache
 	}
 	if db.savingTrieNodeCacheTriggered {
 		return errSavingTrieNodeCacheInProgress
 	}
+	return nil
+}
+
+// SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when the node restarts
+func (db *Database) SaveTrieNodeCacheToFile(filePath string) {
 	db.savingTrieNodeCacheTriggered = true
 	start := time.Now()
-	go func() {
-		logger.Info("start saving cache to file", "filePath", filePath)
-		if err := db.trieNodeCache.SaveToFile(filePath, runtime.NumCPU()/2); err != nil {
-			logger.Error("failed to save cache to file",
-				"filePath", filePath, "elapsed", time.Since(start), "err", err)
-		} else {
-			logger.Info("successfully saved cache to file",
-				"filePath", filePath, "elapsed", time.Since(start))
-		}
-		db.savingTrieNodeCacheTriggered = false
-	}()
-	return nil
+	logger.Info("start saving cache to file", "filePath", filePath)
+	if err := db.trieNodeCache.SaveToFile(filePath, runtime.NumCPU()/2); err != nil {
+		logger.Error("failed to save cache to file",
+			"filePath", filePath, "elapsed", time.Since(start), "err", err)
+	} else {
+		logger.Info("successfully saved cache to file",
+			"filePath", filePath, "elapsed", time.Since(start))
+	}
+	db.savingTrieNodeCacheTriggered = false
 }
 
 // DumpPeriodically atomically saves fast cache data to the given dir with the specified interval.
@@ -1161,6 +1162,10 @@ func (db *Database) SaveCachePeriodically(c *TrieNodeCacheConfig, stopCh <-chan 
 	for {
 		select {
 		case <-ticker.C:
+			if err := db.CanSaveTrieNodeCacheToFile(); err != nil {
+				logger.Warn("failed to trigger periodic cache saving", "err", err)
+				continue
+			}
 			db.SaveTrieNodeCacheToFile(c.FastCacheFileDir)
 		case <-stopCh:
 			return

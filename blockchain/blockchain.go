@@ -2279,7 +2279,11 @@ func (bc *BlockChain) IsSenderTxHashIndexingEnabled() bool {
 }
 
 func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
-	return bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir)
+	if err := bc.stateCache.TrieDB().CanSaveTrieNodeCacheToFile(); err != nil {
+		return err
+	}
+	go bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir)
+	return nil
 }
 
 // ApplyTransaction attempts to apply a transaction to the given state database
