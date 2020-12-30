@@ -25,6 +25,7 @@ import (
 	"math/big"
 	"sort"
 	"sync/atomic"
+	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
@@ -50,6 +51,9 @@ var (
 	emptyCode = crypto.Keccak256Hash(nil)
 
 	logger = log.NewModuleLogger(log.BlockchainState)
+
+	// TODO-Klaytn EnabledExpensive and DBConfig.EnableDBPerfMetrics will be merged
+	EnabledExpensive = false
 )
 
 // StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
@@ -85,6 +89,16 @@ type StateDB struct {
 	journal        *journal
 	validRevisions []revision
 	nextRevisionId int
+
+	// Measurements gathered during execution for debugging purposes
+	AccountReads   time.Duration
+	AccountHashes  time.Duration
+	AccountUpdates time.Duration
+	AccountCommits time.Duration
+	StorageReads   time.Duration
+	StorageHashes  time.Duration
+	StorageUpdates time.Duration
+	StorageCommits time.Duration
 }
 
 // Create a new state from a given trie.
@@ -439,6 +453,10 @@ func (self *StateDB) Suicide(addr common.Address) bool {
 
 // updateStateObject writes the given object to the statedb.
 func (self *StateDB) updateStateObject(stateObject *stateObject) {
+	// Track the amount of time wasted on updating the account from the trie
+	if EnabledExpensive {
+		defer func(start time.Time) { self.AccountUpdates += time.Since(start) }(time.Now())
+	}
 	addr := stateObject.Address()
 	if data := stateObject.encoded.Load(); data != nil {
 		encodedData := data.(*encodedData)
@@ -459,6 +477,10 @@ func (self *StateDB) updateStateObject(stateObject *stateObject) {
 
 // deleteStateObject removes the given object from the state trie.
 func (self *StateDB) deleteStateObject(stateObject *stateObject) {
+	// Track the amount of time wasted on deleting the account from the trie
+	if EnabledExpensive {
+		defer func(start time.Time) { self.AccountUpdates += time.Since(start) }(time.Now())
+	}
 	stateObject.deleted = true
 	addr := stateObject.Address()
 	self.setError(self.trie.TryDelete(addr[:]))
@@ -473,7 +495,10 @@ func (self *StateDB) getStateObject(addr common.Address) *stateObject {
 		}
 		return obj
 	}
-
+	// Track the amount of time wasted on loading the object from the database
+	if EnabledExpensive {
+		defer func(start time.Time) { self.AccountReads += time.Since(start) }(time.Now())
+	}
 	// Second, the object for given address is not cached.
 	// Load the object from the database.
 	enc, err := self.trie.TryGet(addr[:])
@@ -756,6 +781,10 @@ func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
 // goes into transaction receipts.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	s.Finalise(deleteEmptyObjects, true)
+	// Track the amount of time wasted on hashing the account trie
+	if EnabledExpensive {
+		defer func(start time.Time) { s.AccountHashes += time.Since(start) }(time.Now())
+	}
 	return s.trie.Hash()
 }
 
@@ -814,7 +843,10 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		s.updateStateObject(so)
 	}
 
-	// Write trie changes.
+	// Write the account trie changes, measuring the amount of wasted time
+	if EnabledExpensive {
+		defer func(start time.Time) { s.AccountCommits += time.Since(start) }(time.Now())
+	}
 	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {

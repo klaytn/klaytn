@@ -55,20 +55,32 @@ const (
 
 var (
 	// Metrics for miner
-	timeLimitReachedCounter  = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
-	tooLongTxCounter         = metrics.NewRegisteredCounter("miner/toolongtx", nil)
-	ResultChGauge            = metrics.NewRegisteredGauge("miner/resultch", nil)
-	resentTxGauge            = metrics.NewRegisteredGauge("miner/tx/resend/gauge", nil)
-	usedAllTxsCounter        = metrics.NewRegisteredCounter("miner/usedalltxs", nil)
-	checkedTxsGauge          = metrics.NewRegisteredGauge("miner/checkedtxs", nil)
-	tCountGauge              = metrics.NewRegisteredGauge("miner/tcount", nil)
-	nonceTooLowTxsGauge      = metrics.NewRegisteredGauge("miner/nonce/low/txs", nil)
-	nonceTooHighTxsGauge     = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
-	gasLimitReachedTxsGauge  = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
-	strangeErrorTxsCounter   = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
-	blockMiningTimer         = metrics.NewRegisteredTimer("miner/block/mining/time", nil)
-	blockMiningCommitTxTimer = metrics.NewRegisteredTimer("miner/block/committx/time", nil)
-	blockMiningFinalizeTimer = metrics.NewRegisteredTimer("miner/block/finalize/time", nil)
+	timeLimitReachedCounter = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
+	tooLongTxCounter        = metrics.NewRegisteredCounter("miner/toolongtx", nil)
+	ResultChGauge           = metrics.NewRegisteredGauge("miner/resultch", nil)
+	resentTxGauge           = metrics.NewRegisteredGauge("miner/tx/resend/gauge", nil)
+	usedAllTxsCounter       = metrics.NewRegisteredCounter("miner/usedalltxs", nil)
+	checkedTxsGauge         = metrics.NewRegisteredGauge("miner/checkedtxs", nil)
+	tCountGauge             = metrics.NewRegisteredGauge("miner/tcount", nil)
+	nonceTooLowTxsGauge     = metrics.NewRegisteredGauge("miner/nonce/low/txs", nil)
+	nonceTooHighTxsGauge    = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
+	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
+	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
+
+	blockMiningTimer          = metrics.NewRegisteredTimer("miner/block/mining/time", nil)
+	blockMiningExecuteTxTimer = metrics.NewRegisteredTimer("miner/block/execute/time", nil)
+	blockMiningCommitTxTimer  = metrics.NewRegisteredTimer("miner/block/commit/time", nil)
+	blockMiningFinalizeTimer  = metrics.NewRegisteredTimer("miner/block/finalize/time", nil)
+
+	accountReadTimer   = metrics.NewRegisteredTimer("miner/block/account/reads", nil)
+	accountHashTimer   = metrics.NewRegisteredTimer("miner/block/account/hashes", nil)
+	accountUpdateTimer = metrics.NewRegisteredTimer("miner/block/account/updates", nil)
+	accountCommitTimer = metrics.NewRegisteredTimer("miner/block/account/commits", nil)
+
+	storageReadTimer   = metrics.NewRegisteredTimer("miner/block/storage/reads", nil)
+	storageHashTimer   = metrics.NewRegisteredTimer("miner/block/storage/hashes", nil)
+	storageUpdateTimer = metrics.NewRegisteredTimer("miner/block/storage/updates", nil)
+	storageCommitTimer = metrics.NewRegisteredTimer("miner/block/storage/commits", nil)
 )
 
 // Agent can register themself with the worker
@@ -535,6 +547,20 @@ func (self *worker) commitNewWork() {
 
 		// We only care about logging if we're actually mining.
 		if atomic.LoadInt32(&self.mining) == 1 {
+			// Update the metrics subsystem with all the measurements
+			accountReadTimer.Update(work.state.AccountReads)
+			accountHashTimer.Update(work.state.AccountHashes)
+			accountUpdateTimer.Update(work.state.AccountUpdates)
+			accountCommitTimer.Update(work.state.AccountCommits)
+
+			storageReadTimer.Update(work.state.StorageReads)
+			storageHashTimer.Update(work.state.StorageHashes)
+			storageUpdateTimer.Update(work.state.StorageUpdates)
+			storageCommitTimer.Update(work.state.StorageCommits)
+
+			trieAccess := work.state.AccountReads + work.state.AccountHashes + work.state.AccountUpdates + work.state.AccountCommits
+			trieAccess += work.state.StorageReads + work.state.StorageHashes + work.state.StorageUpdates + work.state.StorageCommits
+
 			tCountGauge.Update(int64(work.tcount))
 			blockMiningTime := time.Since(tstart)
 			commitTxTime := finishedCommitTx.Sub(tstart)
@@ -542,6 +568,7 @@ func (self *worker) commitNewWork() {
 
 			blockMiningTimer.Update(blockMiningTime)
 			blockMiningCommitTxTimer.Update(commitTxTime)
+			blockMiningExecuteTxTimer.Update(commitTxTime - trieAccess)
 			blockMiningFinalizeTimer.Update(finalizeTime)
 			logger.Info("Commit new mining work",
 				"number", work.Block.Number(), "hash", work.Block.Hash(),
