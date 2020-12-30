@@ -301,6 +301,10 @@ var (
 			"'HybridCache') (default = 'LocalCache')",
 		Value: string(statedb.CacheTypeLocal),
 	}
+	TrieNodeCacheNoPrefetchFlag = cli.BoolFlag{
+		Name:  "statedb.cache.noprefetch",
+		Usage: "Disable heuristic state prefetch during block import (less CPU and disk IO, more time waiting for data)",
+	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",
 		Usage: "Set endpoints of redis trie node cache. More than one endpoints can be set",
