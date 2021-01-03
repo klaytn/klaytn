@@ -95,8 +95,8 @@ type dynamoDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 
 	// metrics
-	getTimeMeter metrics.Meter
-	putTimeMeter metrics.Meter
+	getTimer metrics.Timer
+	putTimer metrics.Timer
 }
 
 type DynamoData struct {
@@ -284,7 +284,7 @@ func (dynamo *dynamoDB) Put(key []byte, val []byte) error {
 	if dynamo.config.PerfCheck {
 		start := time.Now()
 		err := dynamo.put(key, val)
-		dynamo.putTimeMeter.Mark(int64(time.Since(start)))
+		dynamo.putTimer.Update(time.Since(start))
 		return err
 	}
 	return dynamo.put(key, val)
@@ -336,7 +336,7 @@ func (dynamo *dynamoDB) Get(key []byte) ([]byte, error) {
 	if dynamo.config.PerfCheck {
 		start := time.Now()
 		val, err := dynamo.get(key)
-		dynamo.getTimeMeter.Mark(int64(time.Since(start)))
+		dynamo.getTimer.Update(time.Since(start))
 		return val, err
 	}
 	return dynamo.get(key)
@@ -408,8 +408,8 @@ func (dynamo *dynamoDB) Close() {
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
-	dynamo.getTimeMeter = metrics.NewRegisteredMeter(prefix+"get/time", nil)
-	dynamo.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
+	dynamo.getTimer = metrics.NewRegisteredTimer(prefix+"get/time", nil)
+	dynamo.putTimer = metrics.NewRegisteredTimer(prefix+"put/time", nil)
 	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 }
 

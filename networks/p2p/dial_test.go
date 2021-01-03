@@ -22,15 +22,16 @@ package p2p
 
 import (
 	"encoding/binary"
+	"net"
+	"reflect"
+	"testing"
+	"time"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
-	"net"
-	"reflect"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -827,12 +828,12 @@ func TestDialStateCache(t *testing.T) {
 }
 
 func TestDialResolve(t *testing.T) {
-	resolved := discover.NewNode(uintID(1), net.IP{127, 0, 55, 234}, 3333, 4444, discover.NodeTypeUnknown)
+	resolved := discover.NewNode(uintID(1), net.IP{127, 0, 55, 234}, 3333, 4444, nil, discover.NodeTypeUnknown)
 	table := &resolveMock{answer: resolved}
 	state := newDialState(nil, nil, table, 0, nil, nil, nil)
 
 	// Check that the task is generated with an incomplete ID.
-	dest := discover.NewNode(uintID(1), nil, 0, 0, discover.NodeTypeUnknown)
+	dest := discover.NewNode(uintID(1), nil, 0, 0, nil, discover.NodeTypeUnknown)
 	state.addStatic(dest)
 	tasks := state.newTasks(0, nil, time.Time{})
 	if !reflect.DeepEqual(tasks, []task{&dialTask{flags: staticDialedConn, dest: dest, dialType: DT_UNLIMITED}}) {

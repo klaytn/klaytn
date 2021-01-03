@@ -66,7 +66,21 @@ var (
 	nonceTooHighTxsGauge    = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
-	blockMiningTimeGauge    = metrics.NewRegisteredGauge("miner/block/mining/time", nil)
+
+	blockMiningTimer          = metrics.NewRegisteredTimer("miner/block/mining/time", nil)
+	blockMiningExecuteTxTimer = metrics.NewRegisteredTimer("miner/block/execute/time", nil)
+	blockMiningCommitTxTimer  = metrics.NewRegisteredTimer("miner/block/commit/time", nil)
+	blockMiningFinalizeTimer  = metrics.NewRegisteredTimer("miner/block/finalize/time", nil)
+
+	accountReadTimer   = metrics.NewRegisteredTimer("miner/block/account/reads", nil)
+	accountHashTimer   = metrics.NewRegisteredTimer("miner/block/account/hashes", nil)
+	accountUpdateTimer = metrics.NewRegisteredTimer("miner/block/account/updates", nil)
+	accountCommitTimer = metrics.NewRegisteredTimer("miner/block/account/commits", nil)
+
+	storageReadTimer   = metrics.NewRegisteredTimer("miner/block/storage/reads", nil)
+	storageHashTimer   = metrics.NewRegisteredTimer("miner/block/storage/hashes", nil)
+	storageUpdateTimer = metrics.NewRegisteredTimer("miner/block/storage/updates", nil)
+	storageCommitTimer = metrics.NewRegisteredTimer("miner/block/storage/commits", nil)
 )
 
 // Agent can register themself with the worker
@@ -378,6 +392,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				log.BlockHash = block.Hash()
 			}
 
+			start := time.Now()
 			result, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
 			work.stateMu.Unlock()
 			if err != nil {
@@ -388,6 +403,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				}
 				continue
 			}
+			blockWriteTime := time.Since(start)
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
@@ -413,7 +429,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			}
 
 			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
-				"hash", block.Hash(), "txs", len(block.Transactions()))
+				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
@@ -531,12 +547,29 @@ func (self *worker) commitNewWork() {
 
 		// We only care about logging if we're actually mining.
 		if atomic.LoadInt32(&self.mining) == 1 {
+			// Update the metrics subsystem with all the measurements
+			accountReadTimer.Update(work.state.AccountReads)
+			accountHashTimer.Update(work.state.AccountHashes)
+			accountUpdateTimer.Update(work.state.AccountUpdates)
+			accountCommitTimer.Update(work.state.AccountCommits)
+
+			storageReadTimer.Update(work.state.StorageReads)
+			storageHashTimer.Update(work.state.StorageHashes)
+			storageUpdateTimer.Update(work.state.StorageUpdates)
+			storageCommitTimer.Update(work.state.StorageCommits)
+
+			trieAccess := work.state.AccountReads + work.state.AccountHashes + work.state.AccountUpdates + work.state.AccountCommits
+			trieAccess += work.state.StorageReads + work.state.StorageHashes + work.state.StorageUpdates + work.state.StorageCommits
+
 			tCountGauge.Update(int64(work.tcount))
 			blockMiningTime := time.Since(tstart)
-			blockMiningTimeGauge.Update(int64(blockMiningTime))
-
 			commitTxTime := finishedCommitTx.Sub(tstart)
 			finalizeTime := finishedFinalize.Sub(finishedCommitTx)
+
+			blockMiningTimer.Update(blockMiningTime)
+			blockMiningCommitTxTimer.Update(commitTxTime)
+			blockMiningExecuteTxTimer.Update(commitTxTime - trieAccess)
+			blockMiningFinalizeTimer.Update(finalizeTime)
 			logger.Info("Commit new mining work",
 				"number", work.Block.Number(), "hash", work.Block.Hash(),
 				"txs", work.tcount, "elapsed", common.PrettyDuration(blockMiningTime),

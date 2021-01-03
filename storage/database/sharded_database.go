@@ -29,16 +29,16 @@ type shardedDB struct {
 	shards    []Database
 	numShards uint
 
-	pdbBatchTaskCh chan pdbBatchTask
+	sdbBatchTaskCh chan sdbBatchTask
 }
 
-type pdbBatchTask struct {
+type sdbBatchTask struct {
 	batch    Batch               // A batch that each worker executes.
 	index    int                 // Index of given batch.
-	resultCh chan pdbBatchResult // Batch result channel for each shardedDBBatch.
+	resultCh chan sdbBatchResult // Batch result channel for each shardedDBBatch.
 }
 
-type pdbBatchResult struct {
+type sdbBatchResult struct {
 	index int   // Index of the batch result.
 	err   error // Error from the batch write operation.
 }
@@ -61,29 +61,33 @@ func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, er
 	}
 
 	shards := make([]Database, 0, numShards)
-	pdbBatchTaskCh := make(chan pdbBatchTask, numShards*2)
+	sdbBatchTaskCh := make(chan sdbBatchTask, numShards*2)
+	sdbLevelDBCacheSize := dbc.LevelDBCacheSize / int(numShards)
+	sdbOpenFilesLimit := dbc.OpenFilesLimit / int(numShards)
 	for i := 0; i < int(numShards); i++ {
 		copiedDBC := *dbc
 		copiedDBC.Dir = path.Join(copiedDBC.Dir, strconv.Itoa(i))
-		copiedDBC.LevelDBCacheSize /= int(numShards)
+		copiedDBC.LevelDBCacheSize = sdbLevelDBCacheSize
+		copiedDBC.OpenFilesLimit = sdbOpenFilesLimit
 
 		db, err := newDatabase(&copiedDBC, et)
 		if err != nil {
 			return nil, err
 		}
 		shards = append(shards, db)
-		go batchWriteWorker(pdbBatchTaskCh)
+		go batchWriteWorker(sdbBatchTaskCh)
 	}
 
+	logger.Info("Created a sharded database", "dbType", et, "numShards", numShards)
 	return &shardedDB{
 		fn: dbc.Dir, shards: shards,
-		numShards: numShards, pdbBatchTaskCh: pdbBatchTaskCh}, nil
+		numShards: numShards, sdbBatchTaskCh: sdbBatchTaskCh}, nil
 }
 
 // batchWriteWorker executes passed batch tasks.
-func batchWriteWorker(batchTasks <-chan pdbBatchTask) {
+func batchWriteWorker(batchTasks <-chan sdbBatchTask) {
 	for task := range batchTasks {
-		task.resultCh <- pdbBatchResult{task.index, task.batch.Write()}
+		task.resultCh <- sdbBatchResult{task.index, task.batch.Write()}
 	}
 }
 
@@ -103,50 +107,50 @@ func shardIndexByKey(key []byte, numShards uint) (int, error) {
 }
 
 // getShardByKey returns the shard corresponding to the given key.
-func (pdb *shardedDB) getShardByKey(key []byte) (Database, error) {
-	if shardIndex, err := shardIndexByKey(key, uint(pdb.numShards)); err != nil {
+func (db *shardedDB) getShardByKey(key []byte) (Database, error) {
+	if shardIndex, err := shardIndexByKey(key, uint(db.numShards)); err != nil {
 		return nil, err
 	} else {
-		return pdb.shards[shardIndex], nil
+		return db.shards[shardIndex], nil
 	}
 }
 
-func (pdb *shardedDB) Put(key []byte, value []byte) error {
-	if shard, err := pdb.getShardByKey(key); err != nil {
+func (db *shardedDB) Put(key []byte, value []byte) error {
+	if shard, err := db.getShardByKey(key); err != nil {
 		return err
 	} else {
 		return shard.Put(key, value)
 	}
 }
 
-func (pdb *shardedDB) Get(key []byte) ([]byte, error) {
-	if shard, err := pdb.getShardByKey(key); err != nil {
+func (db *shardedDB) Get(key []byte) ([]byte, error) {
+	if shard, err := db.getShardByKey(key); err != nil {
 		return nil, err
 	} else {
 		return shard.Get(key)
 	}
 }
 
-func (pdb *shardedDB) Has(key []byte) (bool, error) {
-	if shard, err := pdb.getShardByKey(key); err != nil {
+func (db *shardedDB) Has(key []byte) (bool, error) {
+	if shard, err := db.getShardByKey(key); err != nil {
 		return false, err
 	} else {
 		return shard.Has(key)
 	}
 }
 
-func (pdb *shardedDB) Delete(key []byte) error {
-	if shard, err := pdb.getShardByKey(key); err != nil {
+func (db *shardedDB) Delete(key []byte) error {
+	if shard, err := db.getShardByKey(key); err != nil {
 		return err
 	} else {
 		return shard.Delete(key)
 	}
 }
 
-func (pdb *shardedDB) Close() {
-	close(pdb.pdbBatchTaskCh)
+func (db *shardedDB) Close() {
+	close(db.sdbBatchTaskCh)
 
-	for _, shard := range pdb.shards {
+	for _, shard := range db.shards {
 		shard.Close()
 	}
 }
@@ -249,22 +253,22 @@ func (pdi *shardedDBIterator) Release() {
 	// TODO-Klaytn implement this later.
 }
 
-func (pdb *shardedDB) NewBatch() Batch {
-	batches := make([]Batch, 0, pdb.numShards)
-	for i := 0; i < int(pdb.numShards); i++ {
-		batches = append(batches, pdb.shards[i].NewBatch())
+func (db *shardedDB) NewBatch() Batch {
+	batches := make([]Batch, 0, db.numShards)
+	for i := 0; i < int(db.numShards); i++ {
+		batches = append(batches, db.shards[i].NewBatch())
 	}
 
-	return &shardedDBBatch{batches: batches, numBatches: pdb.numShards,
-		taskCh: pdb.pdbBatchTaskCh, resultCh: make(chan pdbBatchResult, pdb.numShards)}
+	return &shardedDBBatch{batches: batches, numBatches: db.numShards,
+		taskCh: db.sdbBatchTaskCh, resultCh: make(chan sdbBatchResult, db.numShards)}
 }
 
-func (pdb *shardedDB) Type() DBType {
+func (db *shardedDB) Type() DBType {
 	return ShardedDB
 }
 
-func (pdb *shardedDB) Meter(prefix string) {
-	for index, shard := range pdb.shards {
+func (db *shardedDB) Meter(prefix string) {
+	for index, shard := range db.shards {
 		shard.Meter(prefix + strconv.Itoa(index))
 	}
 }
@@ -273,24 +277,24 @@ type shardedDBBatch struct {
 	batches    []Batch
 	numBatches uint
 
-	taskCh   chan pdbBatchTask
-	resultCh chan pdbBatchResult
+	taskCh   chan sdbBatchTask
+	resultCh chan sdbBatchResult
 }
 
-func (pdbBatch *shardedDBBatch) Put(key []byte, value []byte) error {
-	if ShardIndex, err := shardIndexByKey(key, uint(pdbBatch.numBatches)); err != nil {
+func (sdbBatch *shardedDBBatch) Put(key []byte, value []byte) error {
+	if ShardIndex, err := shardIndexByKey(key, uint(sdbBatch.numBatches)); err != nil {
 		return err
 	} else {
-		return pdbBatch.batches[ShardIndex].Put(key, value)
+		return sdbBatch.batches[ShardIndex].Put(key, value)
 	}
 }
 
 // ValueSize is called to determine whether to write batches when it exceeds
 // certain limit. shardedDB returns the largest size of its batches to
 // write all batches at once when one of batch exceeds the limit.
-func (pdbBatch *shardedDBBatch) ValueSize() int {
+func (sdbBatch *shardedDBBatch) ValueSize() int {
 	maxSize := 0
-	for _, batch := range pdbBatch.batches {
+	for _, batch := range sdbBatch.batches {
 		if batch.ValueSize() > maxSize {
 			maxSize = batch.ValueSize()
 		}
@@ -300,14 +304,14 @@ func (pdbBatch *shardedDBBatch) ValueSize() int {
 
 // Write passes the list of batch tasks to taskCh so batch can be processed
 // by underlying workers. Write waits until all workers return the result.
-func (pdbBatch *shardedDBBatch) Write() error {
-	for index, batch := range pdbBatch.batches {
-		pdbBatch.taskCh <- pdbBatchTask{batch, index, pdbBatch.resultCh}
+func (sdbBatch *shardedDBBatch) Write() error {
+	for index, batch := range sdbBatch.batches {
+		sdbBatch.taskCh <- sdbBatchTask{batch, index, sdbBatch.resultCh}
 	}
 
 	var err error
-	for range pdbBatch.batches {
-		if batchResult := <-pdbBatch.resultCh; batchResult.err != nil {
+	for range sdbBatch.batches {
+		if batchResult := <-sdbBatch.resultCh; batchResult.err != nil {
 			logger.Error("Error while writing sharded batch", "index", batchResult.index, "err", batchResult.err)
 			err = batchResult.err
 		}
@@ -316,8 +320,8 @@ func (pdbBatch *shardedDBBatch) Write() error {
 	return err
 }
 
-func (pdbBatch *shardedDBBatch) Reset() {
-	for _, batch := range pdbBatch.batches {
+func (sdbBatch *shardedDBBatch) Reset() {
+	for _, batch := range sdbBatch.batches {
 		batch.Reset()
 	}
 }

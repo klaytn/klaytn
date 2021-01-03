@@ -25,7 +25,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -35,8 +34,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klaytn/klaytn/common"
+
 	"bufio"
 	"errors"
+
 	"github.com/rs/cors"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"

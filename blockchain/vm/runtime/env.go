@@ -23,14 +23,13 @@ package runtime
 import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {
 	context := vm.Context{
 		CanTransfer: blockchain.CanTransfer,
 		Transfer:    blockchain.Transfer,
-		GetHash:     func(uint64) common.Hash { return common.Hash{} },
+		GetHash:     cfg.GetHashFn,
 
 		Origin:      cfg.Origin,
 		Coinbase:    cfg.Coinbase,

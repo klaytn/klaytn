@@ -22,14 +22,14 @@ package p2p
 
 import (
 	"container/heap"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common/math"
 	"net"
 	"time"
 
-	"crypto/ecdsa"
+	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
 )
@@ -363,13 +363,8 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 			case nil:
 				s.dialing[id] = t.flags
 				newtasks = append(newtasks, t)
-				if len(t.dest.TCPs) > 0 { // Check if the server use multi-port.
-					logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID,
-						"NodeType", t.dest.NType, "ip", t.dest.IP, "port", t.dest.TCPs)
-				} else {
-					logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID,
-						"NodeType", t.dest.NType, "ip", t.dest.IP, "port", t.dest.TCP)
-				}
+				logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID,
+					"NodeType", t.dest.NType, "ip", t.dest.IP, "mainPort", t.dest.TCP, "port", t.dest.TCPs)
 			default:
 				logger.Trace("[Dial] Skipped addStaticDial", "reason", err, "to", t.dest)
 			}
@@ -442,6 +437,7 @@ var (
 	errNotWhitelisted     = errors.New("not contained in netrestrict whitelist")
 	errExpired            = errors.New("is expired")
 	errExceedMaxTypedDial = errors.New("exceeded max typed dial")
+	errUpdateDial         = errors.New("updated to be multichannel peer")
 )
 
 func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*Peer) error {
@@ -486,7 +482,7 @@ func (t *dialTask) Do(srv Server) {
 		}
 	}
 	var err error
-	if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
+	if len(t.dest.TCPs) > 1 {
 		err = t.dialMulti(srv, t.dest)
 	} else {
 		err = t.dial(srv, t.dest)
@@ -495,20 +491,20 @@ func (t *dialTask) Do(srv Server) {
 	if err != nil {
 		logger.Debug("[Dial] Failed dialing", "task", t, "err", err)
 		// Try resolving the ID of static nodes if dialing failed.
-		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 {
-			if t.resolve(srv, t.dest.NType) {
-				if t.dest.TCPs != nil && len(t.dest.TCPs) != 0 {
-					err = t.dialMulti(srv, t.dest)
-				} else {
-					err = t.dial(srv, t.dest)
-				}
-				if err != nil {
-					t.failedTry++
-				}
+		if _, ok := err.(*dialError); ok && t.flags&staticDialedConn != 0 && t.resolve(srv, t.dest.NType) {
+			if len(t.dest.TCPs) > 1 {
+				err = t.dialMulti(srv, t.dest)
 			} else {
-				t.failedTry++
+				err = t.dial(srv, t.dest)
 			}
-		} else {
+		}
+
+		// redial with updated connection
+		if err == errUpdateDial {
+			err = t.dialMulti(srv, t.dest)
+		}
+
+		if err != nil {
 			t.failedTry++
 		}
 	}
