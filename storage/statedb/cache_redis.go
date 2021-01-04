@@ -30,8 +30,8 @@ const (
 )
 
 var (
-	redisCacheDialTimeout = time.Duration(300 * time.Millisecond)
-	redisCacheTimeout     = time.Duration(100 * time.Millisecond)
+	redisCacheDialTimeout = time.Duration(900 * time.Millisecond)
+	redisCacheTimeout     = time.Duration(900 * time.Millisecond)
 
 	errRedisNoEndpoint = errors.New("redis endpoint not specified")
 )
@@ -93,7 +93,7 @@ func (cache *RedisCache) Get(k []byte) []byte {
 
 func (cache *RedisCache) Set(k, v []byte) {
 	if err := cache.client.Set(hexutil.Encode(k), v, 0).Err(); err != nil {
-		logger.Error("failed to set an item on redis cache", "err", err, "key", hexutil.Encode(k))
+		logger.Warn("failed to set an item on redis cache", "err", err, "key", hexutil.Encode(k))
 	}
 }
 
