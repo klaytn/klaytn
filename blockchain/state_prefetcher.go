@@ -45,10 +45,10 @@ func newStatePrefetcher(config *params.ChainConfig, bc *BlockChain, engine conse
 	}
 }
 
-// Prefetch processes the state changes according to the Ethereum rules by running
+// Prefetch processes the state changes according to the Klaytn rules by running
 // the transaction messages using the statedb, but any changes are discarded. The
 // only goal is to pre-cache transaction signatures and state trie nodes.
-func (p *statePrefetcher) Prefetch(block *types.Block, statedb *state.StateDB, cfg vm.Config, interrupt *uint32) {
+func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, cfg vm.Config, interrupt *uint32) {
 	var (
 		header = block.Header()
 	)
@@ -59,8 +59,8 @@ func (p *statePrefetcher) Prefetch(block *types.Block, statedb *state.StateDB, c
 			return
 		}
 		// Block precaching permitted to continue, execute the transaction
-		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		if err := precacheTransaction(p.config, p.bc, nil, statedb, header, tx, cfg); err != nil {
+		stateDB.Prepare(tx.Hash(), block.Hash(), i)
+		if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
 			return // Ugh, something went horribly wrong, bail out
 		}
 	}
