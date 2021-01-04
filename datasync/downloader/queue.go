@@ -875,9 +875,6 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 	if failure == nil {
 		return accepted, nil
 	}
-	if errors.Is(failure, errInvalidChain) {
-		return accepted, failure
-	}
 	if accepted > 0 {
 		return accepted, fmt.Errorf("partial failure: %v", failure)
 	}
