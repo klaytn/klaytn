@@ -202,7 +202,7 @@ func (db *shardedDB) newIterator(newIterator func(Database) Iterator) Iterator {
 
 // runCombineWorker fetches any key/value from resultChs and put the data in resultCh
 // in binary-alphabetical order.
-func (it shardedDBIterator) runCombineWorker() {
+func (it *shardedDBIterator) runCombineWorker() {
 	type entryWithShardNum struct {
 		entry
 		shardNum int
@@ -272,6 +272,8 @@ func (it *shardedDBIterator) Value() []byte {
 	return it.value
 }
 
+// Release calls context cancel to stop `runCombineWorker` and `runChanWorker`.
+// Each iterator.Release() is called in `runChanWorker`.
 func (it *shardedDBIterator) Release() {
 	it.cancel()
 }
@@ -366,6 +368,10 @@ func (db *shardedDB) NewChanIterator(ctx context.Context, resultCh chan entry, n
 	return it
 }
 
+// runChanWorker runs a worker. The worker gets key/value pair from
+// `it` and push the value to `resultCh`.
+// `iterator.Release()` is called after all iterating is finished.
+// `resultCh` is closed after the iterating is finished.
 func (sit *shardedDBChanIterator) runChanWorker(it Iterator, resultCh chan entry, ctx context.Context) {
 iter:
 	for it.Next() {
@@ -380,7 +386,10 @@ iter:
 		copy(val, it.Value())
 		resultCh <- entry{key, val}
 	}
+	// Release the iterator. There is nothing to iterate anymore.
 	it.Release()
+	// Close `resultCh`. If it is `combinedChan`, the close only happens
+	// when this is the last living worker.
 	if sit.shardNum--; sit.combinedChan && sit.shardNum > 0 {
 		return
 	}
@@ -394,6 +403,7 @@ func (it *shardedDBChanIterator) Channels() []chan entry {
 
 // Release stops all iterators, channels and workers
 // Even Release() is called, there could be some items left in the channel.
+// Each iterator.Release() is called in `runChanWorker`.
 func (it *shardedDBChanIterator) Release() {
 	it.cancel()
 }
