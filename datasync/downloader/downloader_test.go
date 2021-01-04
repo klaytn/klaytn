@@ -42,7 +42,7 @@ import (
 // Reduce some of the parameters to make the tester faster.
 func init() {
 	MaxForkAncestry = uint64(10000)
-	blockCacheItems = 1024
+	blockCacheMaxItems = 1024
 	fsHeaderContCheck = 500 * time.Millisecond
 }
 
@@ -669,7 +669,7 @@ func testCanonicalSynchronisation(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
-	targetBlocks := blockCacheItems - 15
+	targetBlocks := blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
 	tester.newPeer("peer", protocol, hashes, headers, blocks, receipts)
@@ -695,7 +695,7 @@ func testThrottling(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a long block chain to download and the tester
-	targetBlocks := 8 * blockCacheItems
+	targetBlocks := 8 * blockCacheMaxItems
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
 	tester.newPeer("peer", protocol, hashes, headers, blocks, receipts)
@@ -726,21 +726,16 @@ func testThrottling(t *testing.T, protocol int, mode SyncMode) {
 			time.Sleep(25 * time.Millisecond)
 
 			tester.lock.Lock()
-			tester.downloader.queue.lock.Lock()
-			cached = len(tester.downloader.queue.blockDonePool)
-			if mode == FastSync {
-				if receipts := len(tester.downloader.queue.receiptDonePool); receipts < cached {
-					//if tester.downloader.queue.resultCache[receipts].Header.Number.Uint64() < tester.downloader.queue.fastSyncPivot {
-					cached = receipts
-					//}
-				}
+			{
+				tester.downloader.queue.resultCache.lock.Lock()
+				cached = tester.downloader.queue.resultCache.countCompleted()
+				tester.downloader.queue.resultCache.lock.Unlock()
+				frozen = int(atomic.LoadUint32(&blocked))
+				retrieved = len(tester.ownBlocks)
 			}
-			frozen = int(atomic.LoadUint32(&blocked))
-			retrieved = len(tester.ownBlocks)
-			tester.downloader.queue.lock.Unlock()
 			tester.lock.Unlock()
 
-			if cached == blockCacheItems || retrieved+cached+frozen == targetBlocks+1 {
+			if cached == blockCacheMaxItems || retrieved+cached+frozen == targetBlocks+1 {
 				break
 			}
 		}
@@ -750,8 +745,8 @@ func testThrottling(t *testing.T, protocol int, mode SyncMode) {
 		tester.lock.RLock()
 		retrieved = len(tester.ownBlocks)
 		tester.lock.RUnlock()
-		if cached != blockCacheItems && retrieved+cached+frozen != targetBlocks+1 {
-			t.Fatalf("block count mismatch: have %v, want %v (owned %v, blocked %v, target %v)", cached, blockCacheItems, retrieved, frozen, targetBlocks+1)
+		if cached != blockCacheMaxItems && retrieved+cached+frozen != targetBlocks+1 {
+			t.Fatalf("block count mismatch: have %v, want %v (owned %v, blocked %v, target %v)", cached, blockCacheMaxItems, retrieved, frozen, targetBlocks+1)
 		}
 		// Permit the blocked blocks to import
 		if atomic.LoadUint32(&blocked) > 0 {
@@ -959,7 +954,7 @@ func testCancel(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download and the tester
-	targetBlocks := blockCacheItems - 15
+	targetBlocks := blockCacheMaxItems - 15
 	if targetBlocks >= MaxHashFetch {
 		targetBlocks = MaxHashFetch - 15
 	}
@@ -1001,12 +996,12 @@ func testMultiSynchronisation(t *testing.T, protocol int, mode SyncMode) {
 
 	// Create various peers with various parts of the chain
 	targetPeers := 8
-	targetBlocks := targetPeers*blockCacheItems - 15
+	targetBlocks := targetPeers*blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
 	for i := 0; i < targetPeers; i++ {
 		id := fmt.Sprintf("peer #%d", i)
-		tester.newPeer(id, protocol, hashes[i*blockCacheItems:], headers, blocks, receipts)
+		tester.newPeer(id, protocol, hashes[i*blockCacheMaxItems:], headers, blocks, receipts)
 	}
 	if err := tester.sync("peer #0", nil, mode); err != nil {
 		t.Fatalf("failed to synchronise blocks: %v", err)
@@ -1030,7 +1025,7 @@ func testMultiProtoSync(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
-	targetBlocks := blockCacheItems - 15
+	targetBlocks := blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
 	// Create peers of every type
@@ -1069,7 +1064,7 @@ func testEmptyShortCircuit(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a block chain to download
-	targetBlocks := 2*blockCacheItems - 15
+	targetBlocks := 2*blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
 	tester.newPeer("peer", protocol, hashes, headers, blocks, receipts)
@@ -1124,7 +1119,7 @@ func testMissingHeaderAttack(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
-	targetBlocks := blockCacheItems - 15
+	targetBlocks := blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
 	// Attempt a full sync with an attacker feeding gapped headers
@@ -1159,7 +1154,7 @@ func testShiftedHeaderAttack(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
-	targetBlocks := blockCacheItems - 15
+	targetBlocks := blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
 	// Attempt a full sync with an attacker feeding shifted headers
@@ -1359,7 +1354,7 @@ func testSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
-	targetBlocks := blockCacheItems - 15
+	targetBlocks := blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
 	// Set a sync init hook to catch progress changes
@@ -1508,7 +1503,7 @@ func testFailedSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
-	targetBlocks := blockCacheItems - 15
+	targetBlocks := blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
 	// Set a sync init hook to catch progress changes
@@ -1585,7 +1580,7 @@ func testFakedSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 	defer tester.terminate()
 
 	// Create a small block chain
-	targetBlocks := blockCacheItems - 15
+	targetBlocks := blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts := tester.makeChain(targetBlocks+3, 0, tester.genesis, nil, false)
 
 	// Set a sync init hook to catch progress changes
