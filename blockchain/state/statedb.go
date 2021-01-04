@@ -872,3 +872,21 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 func (s *StateDB) GetTxHash() common.Hash {
 	return s.thash
 }
+
+var errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
+var errNotContractAddress = fmt.Errorf("given address is not a contract address")
+
+func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Hash, error) {
+	acc := s.GetAccount(contractAddr)
+	if acc == nil {
+		return common.Hash{}, errNotExistingAddress
+	}
+	if acc.Type() != account.SmartContractAccountType {
+		return common.Hash{}, errNotContractAddress
+	}
+	contract, true := acc.(*account.SmartContractAccount)
+	if !true {
+		return common.Hash{}, errNotContractAddress
+	}
+	return contract.GetStorageRoot(), nil
+}

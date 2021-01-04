@@ -24,10 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/types/account"
-
 	"github.com/VictoriaMetrics/fastcache"
+	"github.com/klaytn/klaytn/blockchain/types"
 
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
@@ -385,9 +383,9 @@ func (bc *BlockChain) StateMigrationStatus() (bool, uint64, int, int, int, float
 	return bc.db.InMigration(), bc.db.MigrationBlockNumber(), bc.readCnt, bc.committedCnt, bc.pendingCnt, bc.progress, bc.migrationErr
 }
 
-func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database, resultCh chan common.Hash, finishCh chan error) (resultErr error) {
+func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database, resultCh chan struct{}, errCh chan error) (resultErr error) {
 	defer func() {
-		finishCh <- resultErr
+		errCh <- resultErr
 	}()
 
 	stateDB, err := state.New(root, db)
@@ -397,7 +395,7 @@ func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database,
 
 	it := state.NewNodeIterator(stateDB)
 	for it.Next() {
-		resultCh <- it.Hash
+		resultCh <- struct{}{}
 
 		select {
 		case <-bc.quitWarmUp:
@@ -412,7 +410,7 @@ func (bc *BlockChain) concurrentIterateTrie(root common.Hash, db state.Database,
 }
 
 func (bc *BlockChain) warmUpLoop(cache statedb.TrieNodeCache, mainTrieCacheLimit uint64, children []common.Hash,
-	resultHashCh chan common.Hash, resultErrCh chan error) {
+	resultCh chan struct{}, errCh chan error) {
 	logged := time.Now()
 	var context []interface{}
 	var percent uint64
@@ -440,7 +438,7 @@ func (bc *BlockChain) warmUpLoop(cache statedb.TrieNodeCache, mainTrieCacheLimit
 	var resultErr error
 	for childCnt := 0; childCnt < len(children); {
 		select {
-		case <-resultHashCh:
+		case <-resultCh:
 			cnt++
 			if time.Since(logged) < log.StatsReportLimit {
 				continue
@@ -456,8 +454,8 @@ func (bc *BlockChain) warmUpLoop(cache statedb.TrieNodeCache, mainTrieCacheLimit
 			}
 
 			logger.Info("Warm up progress", context...)
-		case err := <-resultErrCh:
-			// if resultErrCh is nil, it means success.
+		case err := <-errCh:
+			// if errCh returns nil, it means success.
 			if err != nil {
 				resultErr = err
 				logger.Warn("Warm up got an error", "err", err)
@@ -491,31 +489,24 @@ func (bc *BlockChain) StartWarmUp() error {
 		return fmt.Errorf("target cache is nil")
 	}
 	db := state.NewDatabaseWithExistingCache(bc.db, cache)
+	children, err := db.TrieDB().NodeChildren(block.Root())
+	if err != nil {
+		return err
+	}
 
 	bc.quitWarmUp = make(chan struct{})
+	logger.Info("Warm up is started", "blockNum", block.NumberU64(), "root", block.Root().String(), "len(children)", len(children))
+
+	resultCh := make(chan struct{}, 10000)
+	errCh := make(chan error)
+	for _, child := range children {
+		go bc.concurrentIterateTrie(child, db, resultCh, errCh)
+	}
 
 	go func() {
-		defer func() {
-			bc.quitWarmUp = nil
-		}()
-
-		children, err := db.TrieDB().NodeChildren(block.Root())
-		if err != nil {
-			logger.Error("Cannot start warming up", "err", err)
-			return
-		}
-
-		logger.Info("Warm up is started", "blockNum", block.NumberU64(), "root", block.Root().String(), "len(children)", len(children))
-
-		resultHashCh := make(chan common.Hash, 10000)
-		resultErrCh := make(chan error)
-
-		for _, child := range children {
-			go bc.concurrentIterateTrie(child, db, resultHashCh, resultErrCh)
-		}
-
+		defer func() { bc.quitWarmUp = nil }()
 		cacheLimitSize := mainTrieDB.GetTrieNodeLocalCacheByteLimit()
-		bc.warmUpLoop(mainTrieDB.TrieNodeCache(), cacheLimitSize, children, resultHashCh, resultErrCh)
+		bc.warmUpLoop(mainTrieDB.TrieNodeCache(), cacheLimitSize, children, resultCh, errCh)
 	}()
 
 	return nil
@@ -641,26 +632,11 @@ func printDepthStats(depthCounter map[int]int) {
 	}
 }
 
-var errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
-var errNotContractAddress = fmt.Errorf("given address is not a contract address")
-
 // GetContractStorageRoot returns the storage root of a contract based on the given block.
 func (bc *BlockChain) GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error) {
 	stateDB, err := state.New(block.Root(), db)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed to get StateDB - %w", err)
 	}
-
-	acc := stateDB.GetAccount(contractAddr)
-	if acc == nil {
-		return common.Hash{}, errNotExistingAddress
-	}
-	if acc.Type() != account.SmartContractAccountType {
-		return common.Hash{}, errNotContractAddress
-	}
-	contract, true := acc.(*account.SmartContractAccount)
-	if !true {
-		return common.Hash{}, errNotContractAddress
-	}
-	return contract.GetStorageRoot(), nil
+	return stateDB.GetContractStorageRoot(contractAddr)
 }
