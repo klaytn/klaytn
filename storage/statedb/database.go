@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"runtime"
 	"sync"
 	"time"
 
@@ -1140,11 +1139,12 @@ func (db *Database) CanSaveTrieNodeCacheToFile() error {
 }
 
 // SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when the node restarts
-func (db *Database) SaveTrieNodeCacheToFile(filePath string) {
+func (db *Database) SaveTrieNodeCacheToFile(filePath string, concurrency int) {
 	db.savingTrieNodeCacheTriggered = true
 	start := time.Now()
-	logger.Info("start saving cache to file", "filePath", filePath)
-	if err := db.trieNodeCache.SaveToFile(filePath, runtime.NumCPU()/2); err != nil {
+	logger.Info("start saving cache to file",
+		"filePath", filePath, "concurrency", concurrency)
+	if err := db.trieNodeCache.SaveToFile(filePath, concurrency); err != nil {
 		logger.Error("failed to save cache to file",
 			"filePath", filePath, "elapsed", time.Since(start), "err", err)
 	} else {
@@ -1166,7 +1166,7 @@ func (db *Database) SaveCachePeriodically(c *TrieNodeCacheConfig, stopCh <-chan 
 				logger.Warn("failed to trigger periodic cache saving", "err", err)
 				continue
 			}
-			db.SaveTrieNodeCacheToFile(c.FastCacheFileDir)
+			db.SaveTrieNodeCacheToFile(c.FastCacheFileDir, 1)
 		case <-stopCh:
 			return
 		}

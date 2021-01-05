@@ -27,6 +27,7 @@ import (
 	"math/big"
 	mrand "math/rand"
 	"reflect"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -2282,7 +2283,7 @@ func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
 	if err := bc.stateCache.TrieDB().CanSaveTrieNodeCacheToFile(); err != nil {
 		return err
 	}
-	go bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir)
+	go bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir, runtime.NumCPU()/2)
 	return nil
 }
 
