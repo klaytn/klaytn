@@ -133,7 +133,7 @@ func TestBasics(t *testing.T) {
 			// queue size is only 10, so throttling should occur
 			t.Fatal("should throttle")
 		}
-		// But we should still get the first things to fetch.
+		// But we should still get the first things to fetch
 		if got, exp := len(fetchReq.Headers), 5; got != exp {
 			t.Fatalf("expected %d requests, got %d", exp, got)
 		}
@@ -142,10 +142,10 @@ func TestBasics(t *testing.T) {
 		}
 	}
 	if got, exp := q.blockTaskQueue.Size(), numOfBlocks-10; got != exp {
-		t.Errorf("expected block task queue to be %d, got %d", len(emptyChain.blocks)-10, q.blockTaskQueue.Size())
+		t.Errorf("expected block task queue to be %d, got %d", exp, got)
 	}
 	if got, exp := q.receiptTaskQueue.Size(), numOfReceipts; got != exp {
-		t.Errorf("expected block task queue to be %d, got %d", numOfReceipts, q.receiptTaskQueue.Size())
+		t.Errorf("expected block task queue to be %d, got %d", exp, got)
 	}
 	{
 		peer := dummyPeer("peer-2")
@@ -161,10 +161,10 @@ func TestBasics(t *testing.T) {
 		}
 	}
 	if got, exp := q.blockTaskQueue.Size(), numOfBlocks-10; got != exp {
-		t.Errorf("expected block task queue to be %d, got %d", numOfBlocks-10, q.blockTaskQueue.Size())
+		t.Errorf("expected block task queue to be %d, got %d", exp, got)
 	}
 	if got, exp := q.receiptTaskQueue.Size(), numOfReceipts; got != exp {
-		t.Errorf("expected block task queue to be %d, got %d", numOfReceipts, q.receiptTaskQueue.Size())
+		t.Errorf("expected block task queue to be %d, got %d", exp, got)
 	}
 	{
 		// The receipt delivering peer should not be affected
