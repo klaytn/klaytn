@@ -205,6 +205,10 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		}
 	}
 
+	if cacheConfig.TrieNodeCacheConfig == nil {
+		cacheConfig.TrieNodeCacheConfig = statedb.GetEmptyTrieNodeCacheConfig()
+	}
+
 	state.EnabledExpensive = db.GetDBConfig().EnableDBPerfMetrics
 
 	// Initialize DeriveSha implementation
