@@ -25,16 +25,14 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/common/fdlimit"
+	"github.com/klaytn/klaytn/log"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
-
+	"github.com/rcrowley/go-metrics"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
-
-	"github.com/klaytn/klaytn/log"
-	"github.com/rcrowley/go-metrics"
 )
 
 var OpenFileLimit = 64
@@ -301,22 +299,11 @@ func (db *levelDB) Delete(key []byte) error {
 	return db.db.Delete(key, nil)
 }
 
-// NewIterator creates a binary-alphabetical iterator over the entire keyspace
-// contained within the leveldb database.
-func (db *levelDB) NewIterator() Iterator {
-	return db.db.NewIterator(nil, nil)
-}
-
-// NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
-// database content starting at a particular initial key (or after, if it does
-// not exist).
-func (db *levelDB) NewIteratorWithStart(start []byte) Iterator {
-	return db.db.NewIterator(&util.Range{Start: start}, nil)
-}
-
-// NewIteratorWithPrefix returns a iterator to iterate over subset of database content with a particular prefix.
-func (db *levelDB) NewIteratorWithPrefix(prefix []byte) Iterator {
-	return db.db.NewIterator(util.BytesPrefix(prefix), nil)
+// NewIterator creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix, starting at a particular
+// initial key (or after, if it does not exist).
+func (db *levelDB) NewIterator(prefix []byte, start []byte) Iterator {
+	return db.db.NewIterator(bytesPrefixRange(prefix, start), nil)
 }
 
 func (db *levelDB) Close() {
@@ -518,4 +505,13 @@ func (b *ldbBatch) ValueSize() int {
 func (b *ldbBatch) Reset() {
 	b.b.Reset()
 	b.size = 0
+}
+
+// bytesPrefixRange returns key range that satisfy
+// - the given prefix, and
+// - the given seek position
+func bytesPrefixRange(prefix, start []byte) *util.Range {
+	r := util.BytesPrefix(prefix)
+	r.Start = append(r.Start, start...)
+	return r
 }
