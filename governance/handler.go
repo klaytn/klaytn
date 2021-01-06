@@ -17,16 +17,17 @@
 package governance
 
 import (
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 type check struct {

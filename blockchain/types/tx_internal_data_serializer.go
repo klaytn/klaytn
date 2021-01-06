@@ -18,8 +18,9 @@ package types
 
 import (
 	"encoding/json"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
+
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // TxInternalDataSerializer serializes an object that implements `TxInternalData`.

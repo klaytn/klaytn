@@ -33,7 +33,7 @@ import (
 
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"

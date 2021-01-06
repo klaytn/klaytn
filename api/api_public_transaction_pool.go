@@ -33,7 +33,7 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // PublicTransactionPoolAPI exposes methods for the RPC interface

@@ -25,14 +25,15 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"io"
+	"math/big"
+	"sync/atomic"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"io"
-	"math/big"
-	"sync/atomic"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 var (

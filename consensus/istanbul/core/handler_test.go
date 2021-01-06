@@ -2,22 +2,23 @@ package core
 
 import (
 	"crypto/ecdsa"
+	"math/big"
+	"math/rand"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/consensus/istanbul/mocks"
+	mock_istanbul "github.com/klaytn/klaytn/consensus/istanbul/mocks"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"math/rand"
-	"testing"
-	"time"
 )
 
 // newMockBackend create a mock-backend initialized with default values

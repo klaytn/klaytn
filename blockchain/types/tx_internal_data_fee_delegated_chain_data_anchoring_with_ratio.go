@@ -21,13 +21,14 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // TxInternalDataFeeDelegatedChainDataAnchoringWithRatio represents the fee-delegated transaction

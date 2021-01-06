@@ -32,7 +32,8 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/ser/rlp"
+
+	"github.com/klaytn/klaytn/rlp"
 )
 
 const (

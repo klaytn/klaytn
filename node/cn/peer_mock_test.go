@@ -5,14 +5,15 @@
 package cn
 
 import (
+	big "math/big"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	p2p "github.com/klaytn/klaytn/networks/p2p"
 	discover "github.com/klaytn/klaytn/networks/p2p/discover"
-	rlp "github.com/klaytn/klaytn/ser/rlp"
-	big "math/big"
-	reflect "reflect"
+	rlp "github.com/klaytn/klaytn/rlp"
 )
 
 // MockPeer is a mock of Peer interface

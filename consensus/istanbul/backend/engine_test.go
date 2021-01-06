@@ -23,6 +23,11 @@ package backend
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"math/big"
+	"reflect"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -32,11 +37,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
-	"reflect"
-	"testing"
-	"time"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a

@@ -17,10 +17,11 @@
 package state
 
 import (
-	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/klaytn/klaytn/storage/statedb"
 	"math"
 	"runtime"
+
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 var stateObjEncoderDefaultWorkers = calcNumStateObjectEncoderWorkers()

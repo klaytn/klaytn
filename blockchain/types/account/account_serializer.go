@@ -18,8 +18,9 @@ package account
 
 import (
 	"encoding/json"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
+
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // AccountSerializer serializes an Account object using RLP/JSON.

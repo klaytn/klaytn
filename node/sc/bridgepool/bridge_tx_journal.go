@@ -22,11 +22,12 @@ package bridgepool
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"os"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted

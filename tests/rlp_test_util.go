@@ -28,7 +28,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // RLPTest is the JSON structure of a single RLP test.

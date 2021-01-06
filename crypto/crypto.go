@@ -27,14 +27,15 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/math"
+	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 //SignatureLength indicates the byte length required to carry a signature with recovery id.

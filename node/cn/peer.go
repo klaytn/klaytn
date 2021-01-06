@@ -23,6 +23,10 @@ package cn
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
@@ -30,10 +34,7 @@ import (
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
-	"sync"
-	"time"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 var (

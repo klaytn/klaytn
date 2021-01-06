@@ -31,7 +31,7 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // TransactionTest checks RLP decoding and sender derivation of transactions.

@@ -23,7 +23,12 @@ package clique
 import (
 	"bytes"
 	"errors"
-	"github.com/hashicorp/golang-lru"
+	"math/big"
+	"math/rand"
+	"sync"
+	"time"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -36,12 +41,8 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
-	"math/rand"
-	"sync"
-	"time"
 )
 
 const (

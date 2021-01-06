@@ -22,10 +22,11 @@ package types
 
 import (
 	"fmt"
+	"io"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"io"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 //go:generate gencodec -type Log -field-override logMarshaling -out gen_log_json.go

@@ -22,9 +22,10 @@ package statedb
 
 import (
 	"bytes"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 type DeriveShaOrig struct{}
