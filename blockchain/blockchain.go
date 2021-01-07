@@ -195,7 +195,13 @@ type BlockChain struct {
 	quitWarmUp         chan struct{}
 
 	prefetchCh        chan *types.Block
+	prefetchTxCh      chan prefetchTx
 	followupInterrupt uint64
+}
+
+type prefetchTx struct {
+	ti    int
+	block *types.Block
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -290,6 +296,13 @@ func (bc *BlockChain) prefetchWorker() {
 		throwaway, _ := state.New(bc.CurrentBlock().Root(), bc.stateCache)
 		bc.prefetcher.Prefetch(followup, throwaway, bc.vmConfig, &bc.followupInterrupt)
 		blockPrefetchExecuteTimer.Update(time.Since(start))
+	}
+}
+
+func (bc *BlockChain) prefetchTxWorker() {
+	for followup := range bc.prefetchTxCh {
+		throwaway, _ := state.New(bc.CurrentBlock().Root(), bc.stateCache)
+		bc.prefetcher.PrefetchTx(followup.block, followup.ti, throwaway, bc.vmConfig, &bc.followupInterrupt)
 	}
 }
 
@@ -1644,10 +1657,18 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		if !bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch {
 			if i == 0 {
-				for k := i + 1; k < len(chain); k++ {
-					bc.prefetchCh <- chain[k]
+				if len(chain) > 1 {
+					// when downloader works
+					for k := i + 1; k < len(chain); k++ {
+						bc.prefetchCh <- chain[k]
+					}
+					logger.Info("sent blocks to prefetch channel", "numBlocks", len(chain)-1)
+				} else {
+					// when fetcher works
+					for ti := range block.Transactions() {
+						bc.prefetchTxCh <- prefetchTx{ti, block}
+					}
 				}
-				logger.Info("sent blocks to prefetch channel", "numBlocks", len(chain)-1)
 			}
 		}
 

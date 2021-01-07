@@ -77,6 +77,32 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, c
 	}
 }
 
+func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.StateDB, cfg vm.Config, interrupt *uint64) {
+	var (
+		header = block.Header()
+	)
+	tx := block.Transactions()[ti]
+	// Iterate over and process the individual transactions
+
+	// If block precaching was interrupted, abort
+	if interrupt != nil {
+		val := atomic.LoadUint64(interrupt)
+		if val == 1 {
+			return
+		}
+		// already processed block, skip
+		if val >= block.NumberU64() {
+			return
+		}
+	}
+	// Block precaching permitted to continue, execute the transaction
+	stateDB.Prepare(tx.Hash(), block.Hash(), ti)
+	if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
+		return // Ugh, something went horribly wrong, bail out
+	}
+
+}
+
 // precacheTransaction attempts to apply a transaction to the given state database
 // and uses the input parameters for its environment. The goal is not to execute
 // the transaction successfully, rather to warm up touched data slots.
