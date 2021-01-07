@@ -52,15 +52,22 @@ func newStatePrefetcher(config *params.ChainConfig, bc *BlockChain, engine conse
 // Prefetch processes the state changes according to the Klaytn rules by running
 // the transaction messages using the statedb, but any changes are discarded. The
 // only goal is to pre-cache transaction signatures and state trie nodes.
-func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, cfg vm.Config, interrupt *uint32) {
+func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, cfg vm.Config, interrupt *uint64) {
 	var (
 		header = block.Header()
 	)
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		// If block precaching was interrupted, abort
-		if interrupt != nil && atomic.LoadUint32(interrupt) == 1 {
-			return
+		if interrupt != nil {
+			val := atomic.LoadUint64(interrupt)
+			if val == 1 {
+				return
+			}
+			// already processed block, skip
+			if val >= block.NumberU64() {
+				return
+			}
 		}
 		// Block precaching permitted to continue, execute the transaction
 		stateDB.Prepare(tx.Hash(), block.Hash(), i)

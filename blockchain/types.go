@@ -44,7 +44,7 @@ type Prefetcher interface {
 	// Prefetch processes the state changes according to the Klaytn rules by running
 	// the transaction messages using the statedb, but any changes are discarded. The
 	// only goal is to pre-cache transaction signatures and state trie nodes.
-	Prefetch(block *types.Block, stateDB *state.StateDB, cfg vm.Config, interrupt *uint32)
+	Prefetch(block *types.Block, stateDB *state.StateDB, cfg vm.Config, interrupt *uint64)
 }
 
 // Processor is an interface for processing blocks using a given initial state.
