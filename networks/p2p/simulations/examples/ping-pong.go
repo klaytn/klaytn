@@ -70,7 +70,7 @@ func main() {
 	case "exec":
 		tmpdir, err := ioutil.TempDir("", "p2p-example")
 		if err != nil {
-			log.Crit("error creating temp dir", "err", err)
+			logger.Crit("error creating temp dir", "err", err)
 		}
 		defer os.RemoveAll(tmpdir)
 		log.Info("using exec adapter", "tmpdir", tmpdir)
@@ -81,11 +81,11 @@ func main() {
 		var err error
 		adapter, err = adapters.NewDockerAdapter()
 		if err != nil {
-			log.Crit("error creating docker adapter", "err", err)
+			logger.Crit("error creating docker adapter", "err", err)
 		}
 
 	default:
-		log.Crit(fmt.Sprintf("unknown node adapter %q", *adapterType))
+		logger.Crit(fmt.Sprintf("unknown node adapter %q", *adapterType))
 	}
 
 	// start the HTTP API
@@ -94,7 +94,7 @@ func main() {
 		DefaultService: "ping-pong",
 	})
 	if err := http.ListenAndServe(":8888", simulations.NewServer(network)); err != nil {
-		log.Crit("error starting simulation server", "err", err)
+		logger.Crit("error starting simulation server", "err", err)
 	}
 }
 

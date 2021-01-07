@@ -58,6 +58,18 @@ func (db DBType) selfShardable() bool {
 	return false
 }
 
+// Compacter wraps the Compact method of a backing data store.
+type Compacter interface {
+	// Compact flattens the underlying data store for the given key range. In essence,
+	// deleted and overwritten versions are discarded, and the data is rearranged to
+	// reduce the cost of operations needed to access them.
+	//
+	// A nil start is treated as a key before all keys in the data store; a nil limit
+	// is treated as a key after all keys in the data store. If both is nil then it
+	// will compact entire data store.
+	Compact(start []byte, limit []byte) error
+}
+
 // KeyValueWriter wraps the Put method of a backing data store.
 type KeyValueWriter interface {
 	// Put inserts the given value into the key-value data store.
@@ -76,6 +88,7 @@ type Database interface {
 	NewBatch() Batch
 	Type() DBType
 	Meter(prefix string)
+	Compacter
 	Iteratee
 }
 

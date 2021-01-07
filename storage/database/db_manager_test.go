@@ -729,13 +729,13 @@ func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
 
 			// check migration DB path in MiscDB
 			migrationDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
-			fetchedMigrationPath, err := dbm.getDatabase(MiscDB).Get(migrationDBPathKey)
+			fetchedMigrationPath, err := dbm.GetDatabase(MiscDB).Get(migrationDBPathKey)
 			assert.NoError(t, err)
 			expectedMigrationPath := "statetrie_migrated_" + strconv.FormatUint(migrationBlockNum, 10)
 			assert.Equal(t, expectedMigrationPath, string(fetchedMigrationPath))
 
 			// check block number in MiscDB
-			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+			fetchedBlockNum, err := dbm.GetDatabase(MiscDB).Get(migrationStatusKey)
 			assert.NoError(t, err)
 			assert.Equal(t, common.Int64ToByteBigEndian(migrationBlockNum), fetchedBlockNum)
 
@@ -772,18 +772,18 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 
 			// check if state DB Path is set to old DB in MiscDB
 			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
-			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
+			fetchedStateDBPath, err := dbm.GetDatabase(MiscDB).Get(statDBPathKey)
 			assert.NoError(t, err)
 			assert.Equal(t, initialDirNames[0], string(fetchedStateDBPath), "old DB should remain")
 
 			// check if migration DB Path is not set in MiscDB
 			migrationDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
-			fetchedMigrationPath, err := dbm.getDatabase(MiscDB).Get(migrationDBPathKey)
+			fetchedMigrationPath, err := dbm.GetDatabase(MiscDB).Get(migrationDBPathKey)
 			assert.NoError(t, err)
 			assert.Equal(t, "", string(fetchedMigrationPath))
 
 			// check if block number is not set in MiscDB
-			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+			fetchedBlockNum, err := dbm.GetDatabase(MiscDB).Get(migrationStatusKey)
 			assert.NoError(t, err)
 			assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
 		}
@@ -803,19 +803,19 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 
 			// check if state DB Path is set to new DB in MiscDB
 			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
-			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
+			fetchedStateDBPath, err := dbm.GetDatabase(MiscDB).Get(statDBPathKey)
 			assert.NoError(t, err)
 			expectedStateDBPath := "statetrie_migrated_" + strconv.FormatUint(migrationBlockNum2, 10) // new DB format
 			assert.Equal(t, expectedStateDBPath, string(fetchedStateDBPath), "new DB should remain")
 
 			// check if migration DB Path is not set in MiscDB
 			migrationDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieMigrationDB))...)
-			fetchedMigrationPath, err := dbm.getDatabase(MiscDB).Get(migrationDBPathKey)
+			fetchedMigrationPath, err := dbm.GetDatabase(MiscDB).Get(migrationDBPathKey)
 			assert.NoError(t, err)
 			assert.Equal(t, "", string(fetchedMigrationPath))
 
 			// check if block number is not set in MiscDB
-			fetchedBlockNum, err := dbm.getDatabase(MiscDB).Get(migrationStatusKey)
+			fetchedBlockNum, err := dbm.GetDatabase(MiscDB).Get(migrationStatusKey)
 			assert.NoError(t, err)
 			assert.Equal(t, common.Int64ToByteBigEndian(0), fetchedBlockNum)
 		}

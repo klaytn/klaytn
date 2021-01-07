@@ -468,6 +468,17 @@ hasError:
 	errc <- merr
 }
 
+// Compact flattens the underlying data store for the given key range. In essence,
+// deleted and overwritten versions are discarded, and the data is rearranged to
+// reduce the cost of operations needed to access them.
+//
+// A nil start is treated as a key before all keys in the data store; a nil limit
+// is treated as a key after all keys in the data store. If both is nil then it
+// will compact entire data store.
+func (db *levelDB) Compact(start []byte, limit []byte) error {
+	return db.db.CompactRange(util.Range{Start: start, Limit: limit})
+}
+
 func (db *levelDB) NewBatch() Batch {
 	return &ldbBatch{b: new(leveldb.Batch), ldb: db}
 }

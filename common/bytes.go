@@ -160,3 +160,25 @@ func Int64ToByteBigEndian(number uint64) []byte {
 
 	return enc
 }
+
+// TrimLeftZeroes returns a subslice of s without leading zeroes
+func TrimLeftZeroes(s []byte) []byte {
+	idx := 0
+	for ; idx < len(s); idx++ {
+		if s[idx] != 0 {
+			break
+		}
+	}
+	return s[idx:]
+}
+
+// TrimRightZeroes returns a subslice of s without trailing zeroes
+func TrimRightZeroes(s []byte) []byte {
+	idx := len(s)
+	for ; idx > 0; idx-- {
+		if s[idx-1] != 0 {
+			break
+		}
+	}
+	return s[:idx]
+}

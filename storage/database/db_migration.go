@@ -46,8 +46,8 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 		syscall.SIGQUIT)
 
 	// TODO enable for all dbs
-	srcDB := dbm.getDatabase(MiscDB) // first DB
-	dstDB := dstdbm.getDatabase(MiscDB)
+	srcDB := dbm.GetDatabase(MiscDB) // first DB
+	dstDB := dstdbm.GetDatabase(MiscDB)
 
 	// create src iterator and dst batch
 	srcIter := srcDB.NewIterator(nil, nil)

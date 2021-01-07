@@ -155,6 +155,11 @@ func (db *shardedDB) Close() {
 	}
 }
 
+// Compact is not supported on a shardedDB database.
+func (db *shardedDB) Compact(start []byte, limit []byte) error {
+	return nil
+}
+
 type shardedDBIterator struct {
 	// TODO-Klaytn implement this later.
 	iterators []Iterator
