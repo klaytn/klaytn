@@ -29,8 +29,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/klaytn/klaytn/storage/database"
-
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/common"
@@ -38,6 +36,8 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/storage/database"
 )
 
 const (
@@ -126,6 +126,10 @@ type Config struct {
 	// If the module list is empty, all RPC API endpoints designated public will be
 	// exposed.
 	HTTPModules []string `toml:",omitempty"`
+
+	// HTTPTimeouts allows for customization of the timeout values used by the HTTP RPC
+	// interface.
+	HTTPTimeouts rpc.HTTPTimeouts
 
 	// WSHost is the host interface on which to start the websocket RPC server. If
 	// this field is empty, no websocket API endpoint will be started.
