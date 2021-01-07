@@ -283,6 +283,12 @@ func (api *PublicDebugAPI) StartWarmUp() error {
 	return api.cn.blockchain.StartWarmUp()
 }
 
+// StartContractWarmUp retrieves a storage trie of the latest state root and caches the trie
+// corresponding to the given contract address.
+func (api *PublicDebugAPI) StartContractWarmUp(contractAddr common.Address) error {
+	return api.cn.blockchain.StartContractWarmUp(contractAddr)
+}
+
 // StopWarmUp stops the warming up process.
 func (api *PublicDebugAPI) StopWarmUp() error {
 	return api.cn.blockchain.StopWarmUp()
