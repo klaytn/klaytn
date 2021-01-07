@@ -167,37 +167,10 @@ type shardedDBIterator struct {
 	//resultCh chan pdbBatchResult
 }
 
-// NewIterator creates a binary-alphabetical iterator over the entire keyspace
-// contained within the key-value database.
-func (pdb *shardedDB) NewIterator() Iterator {
-	// TODO-Klaytn implement this later.
-	return nil
-}
-
-// NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
-// database content starting at a particular initial key (or after, if it does
-// not exist).
-func (pdb *shardedDB) NewIteratorWithStart(start []byte) Iterator {
-	// TODO-Klaytn implement this later.
-	iterators := make([]Iterator, 0, pdb.numShards)
-	for i := 0; i < int(pdb.numShards); i++ {
-		iterators = append(iterators, pdb.shards[i].NewIteratorWithStart(start))
-	}
-
-	for _, iter := range iterators {
-		if iter != nil {
-			if !iter.Next() {
-				iter = nil
-			}
-		}
-	}
-
-	return &shardedDBIterator{iterators, nil, nil}
-}
-
-// NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
-// of database content with a particular key prefix.
-func (pdb *shardedDB) NewIteratorWithPrefix(prefix []byte) Iterator {
+// NewIterator creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix, starting at a particular
+// initial key (or after, if it does not exist).
+func (pdb *shardedDB) NewIterator(prefix []byte, start []byte) Iterator {
 	// TODO-Klaytn implement this later.
 	return nil
 }

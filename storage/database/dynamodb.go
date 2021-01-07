@@ -413,17 +413,7 @@ func (dynamo *dynamoDB) Meter(prefix string) {
 	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 }
 
-func (dynamo *dynamoDB) NewIterator() Iterator {
-	// TODO-Klaytn: implement this later.
-	return nil
-}
-
-func (dynamo *dynamoDB) NewIteratorWithStart(start []byte) Iterator {
-	// TODO-Klaytn: implement this later.
-	return nil
-}
-
-func (dynamo *dynamoDB) NewIteratorWithPrefix(prefix []byte) Iterator {
+func (dynamo *dynamoDB) NewIterator(prefix []byte, start []byte) Iterator {
 	// TODO-Klaytn: implement this later.
 	return nil
 }
