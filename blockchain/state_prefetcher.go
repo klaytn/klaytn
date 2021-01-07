@@ -70,6 +70,29 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, c
 	}
 }
 
+// PrefetchTx processes the state changes according to the Klaytn rules by running
+// a single transaction message using the statedb, but any changes are discarded. The
+// only goal is to pre-cache transaction signatures and state trie nodes. It is used
+// when fetcher works, so it fetches only a block.
+func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.StateDB, cfg vm.Config, interrupt *uint32) {
+	var (
+		header = block.Header()
+	)
+	tx := block.Transactions()[ti]
+	// Iterate over and process the individual transactions
+
+	// If block precaching was interrupted, abort
+	if interrupt != nil && atomic.LoadUint32(interrupt) == 1 {
+		return
+	}
+
+	// Block precaching permitted to continue, execute the transaction
+	stateDB.Prepare(tx.Hash(), block.Hash(), ti)
+	if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
+		return // Ugh, something went horribly wrong, bail out
+	}
+}
+
 // precacheTransaction attempts to apply a transaction to the given state database
 // and uses the input parameters for its environment. The goal is not to execute
 // the transaction successfully, rather to warm up touched data slots.
