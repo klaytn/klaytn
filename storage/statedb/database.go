@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -1156,17 +1157,23 @@ func (db *Database) SaveTrieNodeCacheToFile(filePath string, concurrency int) {
 
 // DumpPeriodically atomically saves fast cache data to the given dir with the specified interval.
 func (db *Database) SaveCachePeriodically(c *TrieNodeCacheConfig, stopCh <-chan struct{}) {
-	ticker := time.NewTicker(c.FastCacheSavePeriod)
-	defer ticker.Stop()
+	rand.Seed(time.Now().UnixNano())
+	randomVal := 0.5 + rand.Float64()/2.0 // 0.5 <= randomVal < 1.0
+	startTime := time.Duration(int(randomVal * float64(c.FastCacheSavePeriod)))
+	logger.Info("first periodic cache saving will be triggered", "after", startTime)
+
+	timer := time.NewTimer(startTime)
+	defer timer.Stop()
 
 	for {
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 			if err := db.CanSaveTrieNodeCacheToFile(); err != nil {
 				logger.Warn("failed to trigger periodic cache saving", "err", err)
 				continue
 			}
 			db.SaveTrieNodeCacheToFile(c.FastCacheFileDir, 1)
+			timer.Reset(c.FastCacheSavePeriod)
 		case <-stopCh:
 			return
 		}
