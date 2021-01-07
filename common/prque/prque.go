@@ -28,24 +28,28 @@ type Prque struct {
 }
 
 // New creates a new priority queue.
-func New() *Prque {
-	return &Prque{newSstack()}
+// The priority queue can have any type specified  in sstack.Less.
+func New(reverse bool) *Prque {
+	return &Prque{newSstack(reverse)}
 }
 
 // Pushes a value with a given priority into the queue, expanding if necessary.
-func (p *Prque) Push(data interface{}, priority int64) {
+// The priority queue can have any type specified  in sstack.Less.
+// In a queue, same type should be pushed. Otherwise, a type assertion error
+// will occur. Number types (int, int64, uint64) are different types.
+func (p *Prque) Push(data interface{}, priority interface{}) {
 	heap.Push(p.cont, &item{data, priority})
 }
 
 // Peek returns the value with the greatest priority but does not pop it off.
-func (p *Prque) Peek() (interface{}, int64) {
+func (p *Prque) Peek() (interface{}, interface{}) {
 	item := p.cont.blocks[0][0]
 	return item.value, item.priority
 }
 
 // Pops the value with the greates priority off the stack and returns it.
 // Currently no shrinking is done.
-func (p *Prque) Pop() (interface{}, int64) {
+func (p *Prque) Pop() (interface{}, interface{}) {
 	item := heap.Pop(p.cont).(*item)
 	return item.value, item.priority
 }
@@ -67,5 +71,5 @@ func (p *Prque) Size() int {
 
 // Clears the contents of the priority queue.
 func (p *Prque) Reset() {
-	*p = *New()
+	*p = *New(p.cont.reverse)
 }

@@ -50,7 +50,7 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		backend:            backend,
 		backlogs:           make(map[common.Address]*prque.Prque),
 		backlogsMu:         new(sync.Mutex),
-		pendingRequests:    prque.New(),
+		pendingRequests:    prque.New(true),
 		pendingRequestsMu:  new(sync.Mutex),
 		consensusTimestamp: time.Time{},
 

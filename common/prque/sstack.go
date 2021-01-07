@@ -10,6 +10,10 @@
 
 package prque
 
+import (
+	"bytes"
+)
+
 // The size of a block of data
 const blockSize = 4096
 
@@ -19,28 +23,34 @@ const blockSize = 4096
 // The difference between the lowest and highest priorities in the queue at any point should be less than 2^63.
 type item struct {
 	value    interface{}
-	priority int64
+	priority interface{}
 }
 
 // Internal sortable stack data structure. Implements the Push and Pop ops for
 // the stack (heap) functionality and the Len, Less and Swap methods for the
 // sortability requirements of the heaps.
+// To support a new type, add a code in Less().
 type sstack struct {
 	size     int
 	capacity int
 	offset   int
+	reverse  bool // reverse the result of Less()
 
 	blocks [][]*item
 	active []*item
 }
 
 // Creates a new, empty stack.
-func newSstack() *sstack {
-	result := new(sstack)
-	result.active = make([]*item, blockSize)
-	result.blocks = [][]*item{result.active}
-	result.capacity = blockSize
-	return result
+func newSstack(reverse bool) *sstack {
+	active := make([]*item, blockSize)
+	return &sstack{
+		size:     0,
+		capacity: blockSize,
+		offset:   0,
+		reverse:  reverse,
+		blocks:   [][]*item{active},
+		active:   active,
+	}
 }
 
 // Pushes a value onto the stack, expanding it if necessary. Required by
@@ -80,8 +90,33 @@ func (s *sstack) Len() int {
 
 // Compares the priority of two elements of the stack (higher is first).
 // Required by sort.Interface.
+// To support a new type, add a switch case.
 func (s *sstack) Less(i, j int) bool {
-	return (s.blocks[i/blockSize][i%blockSize].priority - s.blocks[j/blockSize][j%blockSize].priority) > 0
+	iIntfPriority := s.blocks[i/blockSize][i%blockSize].priority
+	jIntfPriority := s.blocks[j/blockSize][j%blockSize].priority
+
+	var result bool
+	switch iPriority := iIntfPriority.(type) {
+	case int:
+		// If an type assertion error occurred, check types in Push().
+		// Same type should be pushed.
+		jPriority := jIntfPriority.(int)
+		result = iPriority > jPriority
+	case int64:
+		jPriority := jIntfPriority.(int64)
+		result = iPriority > jPriority
+	case uint64:
+		jPriority := jIntfPriority.(uint64)
+		result = iPriority > jPriority
+	case []byte:
+		jPriority := jIntfPriority.([]byte)
+		result = bytes.Compare(iPriority, jPriority) > 0
+	}
+
+	if s.reverse {
+		return !result
+	}
+	return result
 }
 
 // Swaps two elements in the stack. Required by sort.Interface.
@@ -92,5 +127,5 @@ func (s *sstack) Swap(i, j int) {
 
 // Resets the stack, effectively clearing its contents.
 func (s *sstack) Reset() {
-	*s = *newSstack()
+	*s = *newSstack(s.reverse)
 }

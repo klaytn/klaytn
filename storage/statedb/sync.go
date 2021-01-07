@@ -101,7 +101,7 @@ func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallba
 		database:         database,
 		membatch:         newSyncMemBatch(),
 		requests:         make(map[common.Hash]*request),
-		queue:            prque.New(),
+		queue:            prque.New(false),
 		retrievedByDepth: make(map[int]int),
 		committedByDepth: make(map[int]int),
 		bloom:            bloom,
@@ -294,7 +294,7 @@ func (s *TrieSync) schedule(req *request) {
 	s.retrievedByDepth[req.depth]++
 
 	// Schedule the request for future retrieval
-	s.queue.Push(req.hash, int64(req.depth))
+	s.queue.Push(req.hash, req.depth)
 	s.requests[req.hash] = req
 }
 

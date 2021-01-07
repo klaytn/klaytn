@@ -173,7 +173,7 @@ func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBloc
 		fetching:           make(map[common.Hash]*announce),
 		fetched:            make(map[common.Hash][]*announce),
 		completing:         make(map[common.Hash]*announce),
-		queue:              prque.New(),
+		queue:              prque.New(true),
 		queues:             make(map[string]int),
 		queued:             make(map[common.Hash]*inject),
 		getBlock:           getBlock,
@@ -318,7 +318,7 @@ func (f *Fetcher) loop() {
 			// If too high up the chain or phase, continue later
 			number := op.block.NumberU64()
 			if number > height+1 {
-				f.queue.Push(op, -int64(op.block.NumberU64()))
+				f.queue.Push(op, op.block.NumberU64())
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(op.block.Hash(), true)
 				}
@@ -338,7 +338,7 @@ func (f *Fetcher) loop() {
 				logger.Debug("Importing propagated block", "peer", peer, "number", number, "hash", hash)
 			case <-time.NewTimer(insertTasksWaitTime).C: // in case the insertTasks is full, it waits for a bit
 				logger.Warn("Failed to import propagated block as the channel is full", "peer", peer, "number", number, "hash", hash)
-				f.queue.Push(op, -int64(number))
+				f.queue.Push(op, number)
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(hash, true)
 				}
@@ -667,7 +667,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		}
 		f.queues[peer] = count
 		f.queued[hash] = op
-		f.queue.Push(op, -int64(block.NumberU64()))
+		f.queue.Push(op, block.NumberU64())
 		if f.queueChangeHook != nil {
 			f.queueChangeHook(op.block.Hash(), true)
 		}

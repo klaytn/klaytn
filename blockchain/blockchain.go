@@ -217,7 +217,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		chainConfigMu:      new(sync.RWMutex),
 		cacheConfig:        cacheConfig,
 		db:                 db,
-		triegc:             prque.New(),
+		triegc:             prque.New(true),
 		chBlock:            make(chan gcBlock, 1000),
 		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieNodeCacheConfig),
 		quit:               make(chan struct{}),
@@ -1147,7 +1147,7 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 		for {
 			select {
 			case block := <-bc.chBlock:
-				bc.triegc.Push(block.root, -int64(block.blockNum))
+				bc.triegc.Push(block.root, block.blockNum)
 				logger.Trace("Push GC block", "blkNum", block.blockNum, "hash", block.root.String())
 
 				blkNum := block.blockNum
@@ -1160,7 +1160,7 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 				cnt := 0
 				for !bc.triegc.Empty() {
 					root, number := bc.triegc.Pop()
-					if uint64(-number) > chosen {
+					if number.(uint64) > chosen {
 						bc.triegc.Push(root, number)
 						break
 					}
