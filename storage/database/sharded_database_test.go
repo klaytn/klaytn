@@ -30,49 +30,45 @@ func createEntries(entryNum int) []entry {
 
 // testIterator tests if given iterator iterates all entries
 func testIterator(t *testing.T, checkOrder bool, entriesFromIterator func(db shardedDB, entryNum int) []entry) {
-	entryNum := 500
-	entries := createEntries(entryNum)
-	dbs := make([]shardedDB, len(ShardedDBConfig))
+	for _, config := range ShardedDBConfig {
+		shardNum := int(config.NumStateTrieShards)
+		entryNums := []int{shardedDBCombineChanSize + 10, shardNum - 1, shardNum, shardNum + 1}
+		for _, entryNum := range entryNums {
+			entries := createEntries(entryNum)
 
-	// create DB and write data for testing
-	for i, config := range ShardedDBConfig {
-		config.Dir, _ = ioutil.TempDir(os.TempDir(), "test-shardedDB-iterator")
-		defer func(dir string) {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Fatalf("fail to delete file %v", err)
+			// create sharded DB
+			config.Dir, _ = ioutil.TempDir(os.TempDir(), "test-shardedDB-iterator")
+			defer func(dir string) {
+				if err := os.RemoveAll(dir); err != nil {
+					t.Fatalf("fail to delete file %v", err)
+				}
+			}(config.Dir)
+			db, err := newShardedDB(config, MiscDB, config.NumStateTrieShards)
+			if err != nil {
+				t.Log("Error occured while creating DB")
+				t.FailNow()
 			}
-		}(config.Dir)
 
-		// create sharded DB
-		db, err := newShardedDB(config, 0, config.NumStateTrieShards)
-		dbs[i] = *db
-		if err != nil {
-			t.Log("Error occured while creating DB")
-			t.FailNow()
+			// write entries data in DB
+			batch := db.NewBatch()
+			for _, entry := range entries {
+				assert.NoError(t, batch.Put(entry.key, entry.val))
+			}
+			assert.NoError(t, batch.Write())
+
+			// sort entries for each compare
+			sort.Slice(entries, func(i, j int) bool { return bytes.Compare(entries[i].key, entries[j].key) < 0 })
+
+			// create iterator
+			entriesFromIt := entriesFromIterator(*db, entryNum)
+			if !checkOrder {
+				sort.Slice(entriesFromIt, func(i, j int) bool { return bytes.Compare(entriesFromIt[i].key, entriesFromIt[j].key) < 0 })
+			}
+
+			// compare if entries generated and entries from iterator is same
+			assert.Equal(t, len(entries), len(entriesFromIt))
+			assert.True(t, reflect.DeepEqual(entries, entriesFromIt))
 		}
-
-		// write entries data in DB
-		batch := db.NewBatch()
-		for _, entry := range entries {
-			assert.NoError(t, batch.Put(entry.key, entry.val))
-		}
-		assert.NoError(t, batch.Write())
-	}
-
-	// sort entries for each compare
-	sort.Slice(entries, func(i, j int) bool { return bytes.Compare(entries[i].key, entries[j].key) < 0 })
-
-	// get data from iterator and compare
-	for _, db := range dbs {
-		// create iterator
-		entriesFromIt := entriesFromIterator(db, entryNum)
-		if !checkOrder {
-			sort.Slice(entriesFromIt, func(i, j int) bool { return bytes.Compare(entriesFromIt[i].key, entriesFromIt[j].key) < 0 })
-		}
-
-		// compare if entries generated and entries from iterator is same
-		assert.Equal(t, len(entries), len(entriesFromIt))
-		assert.True(t, reflect.DeepEqual(entries, entriesFromIt))
 	}
 }
 
