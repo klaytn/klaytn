@@ -1673,9 +1673,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		trieAccess := stateDB.AccountReads + stateDB.AccountHashes + stateDB.AccountUpdates + stateDB.AccountCommits
 		trieAccess += stateDB.StorageReads + stateDB.StorageHashes + stateDB.StorageUpdates + stateDB.StorageCommits
-		block.TimeFoS()
-		timestamp := time.Unix(int64(block.Time().Uint64()), 0)
-		BlockAgeTimer.Update(time.Since(timestamp))
+
+		BlockAgeTimer.Update(time.Since(time.Unix(int64(block.Time().Uint64()), 0)))
 
 		switch writeResult.Status {
 		case CanonStatTy:
