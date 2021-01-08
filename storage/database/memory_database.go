@@ -33,10 +33,6 @@ var (
 	// errMemorydbClosed is returned if a memory database was already closed at the
 	// invocation of a data access operation.
 	errMemorydbClosed = errors.New("database closed")
-
-	// errMemorydbNotFound is returned if a key is requested that is not found in
-	// the provided memory database.
-	errMemorydbNotFound = errors.New("not found")
 )
 
 /*
@@ -95,7 +91,7 @@ func (db *MemDB) Get(key []byte) ([]byte, error) {
 	if entry, ok := db.db[string(key)]; ok {
 		return common.CopyBytes(entry), nil
 	}
-	return nil, errMemorydbNotFound
+	return nil, dataNotFoundErr
 }
 
 // Put inserts the given value into the key-value store.
