@@ -1,5 +1,5 @@
 // Modifications Copyright 2018 The klaytn Authors
-// Copyright 2015 The go-ethereum Authors
+// Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -18,6 +18,7 @@
 // This file is derived from common/compiler/solidity.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
+// Package compiler wraps the Solidity compiler executables (solc).
 package compiler
 
 import (
@@ -25,32 +26,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 )
-
-var versionRegexp = regexp.MustCompile(`([0-9]+)\.([0-9]+)\.([0-9]+)`)
-
-type Contract struct {
-	Code  string       `json:"code"`
-	RCode string       `json:"runtime-code"`
-	Info  ContractInfo `json:"info"`
-}
-
-type ContractInfo struct {
-	Source          string      `json:"source"`
-	Language        string      `json:"language"`
-	LanguageVersion string      `json:"languageVersion"`
-	CompilerVersion string      `json:"compilerVersion"`
-	CompilerOptions string      `json:"compilerOptions"`
-	AbiDefinition   interface{} `json:"abiDefinition"`
-	UserDoc         interface{} `json:"userDoc"`
-	DeveloperDoc    interface{} `json:"developerDoc"`
-	Metadata        string      `json:"metadata"`
-}
 
 // Solidity contains information about the solidity compiler.
 type Solidity struct {
@@ -61,20 +40,22 @@ type Solidity struct {
 // --combined-output format
 type solcOutput struct {
 	Contracts map[string]struct {
-		Bin, Abi, Devdoc, Userdoc, Metadata string
-		BinRuntime                          string `json:"bin-runtime"`
+		BinRuntime                                  string `json:"bin-runtime"`
+		SrcMapRuntime                               string `json:"srcmap-runtime"`
+		Bin, SrcMap, Abi, Devdoc, Userdoc, Metadata string
+		Hashes                                      map[string]string
 	}
 	Version string
 }
 
 func (s *Solidity) makeArgs() []string {
 	p := []string{
-		"--combined-json", "bin,bin-runtime,abi,userdoc,devdoc",
-		"--optimize", // code optimizer switched on
-		"--allow-paths", ".",
+		"--combined-json", "bin,bin-runtime,srcmap,srcmap-runtime,abi,userdoc,devdoc",
+		"--optimize",                  // code optimizer switched on
+		"--allow-paths", "., ./, ../", //default to support relative path： ./  ../  .
 	}
 	if s.Major > 0 || s.Minor > 4 || s.Patch > 6 {
-		p[1] += ",metadata"
+		p[1] += ",metadata,hashes"
 	}
 	return p
 }
@@ -148,11 +129,24 @@ func (s *Solidity) run(cmd *exec.Cmd, source string) (map[string]*Contract, erro
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("solc: %v\n%s", err, stderr.Bytes())
 	}
+
+	return ParseCombinedJSON(stdout.Bytes(), source, s.Version, s.Version, strings.Join(s.makeArgs(), " "))
+}
+
+// ParseCombinedJSON takes the direct output of a solc --combined-output run and
+// parses it into a map of string contract name to Contract structs. The
+// provided source, language and compiler version, and compiler options are all
+// passed through into the Contract structs.
+//
+// The solc output is expected to contain ABI, source mapping, user docs, and dev docs.
+//
+// Returns an error if the JSON is malformed or missing data, or if the JSON
+// embedded within the JSON is malformed.
+func ParseCombinedJSON(combinedJSON []byte, source string, languageVersion string, compilerVersion string, compilerOptions string) (map[string]*Contract, error) {
 	var output solcOutput
-	if err := json.Unmarshal(stdout.Bytes(), &output); err != nil {
+	if err := json.Unmarshal(combinedJSON, &output); err != nil {
 		return nil, err
 	}
-
 	// Compilation succeeded, assemble and return the contracts.
 	contracts := make(map[string]*Contract)
 	for name, info := range output.Contracts {
@@ -161,23 +155,22 @@ func (s *Solidity) run(cmd *exec.Cmd, source string) (map[string]*Contract, erro
 		if err := json.Unmarshal([]byte(info.Abi), &abi); err != nil {
 			return nil, fmt.Errorf("solc: error reading abi definition (%v)", err)
 		}
-		var userdoc interface{}
-		if err := json.Unmarshal([]byte(info.Userdoc), &userdoc); err != nil {
-			return nil, fmt.Errorf("solc: error reading user doc: %v", err)
-		}
-		var devdoc interface{}
-		if err := json.Unmarshal([]byte(info.Devdoc), &devdoc); err != nil {
-			return nil, fmt.Errorf("solc: error reading dev doc: %v", err)
-		}
+		var userdoc, devdoc interface{}
+		json.Unmarshal([]byte(info.Userdoc), &userdoc)
+		json.Unmarshal([]byte(info.Devdoc), &devdoc)
+
 		contracts[name] = &Contract{
-			Code:  "0x" + info.Bin,
-			RCode: "0x" + info.BinRuntime,
+			Code:        "0x" + info.Bin,
+			RuntimeCode: "0x" + info.BinRuntime,
+			Hashes:      info.Hashes,
 			Info: ContractInfo{
 				Source:          source,
 				Language:        "Solidity",
-				LanguageVersion: s.Version,
-				CompilerVersion: s.Version,
-				CompilerOptions: strings.Join(s.makeArgs(), " "),
+				LanguageVersion: languageVersion,
+				CompilerVersion: compilerVersion,
+				CompilerOptions: compilerOptions,
+				SrcMap:          info.SrcMap,
+				SrcMapRuntime:   info.SrcMapRuntime,
 				AbiDefinition:   abi,
 				UserDoc:         userdoc,
 				DeveloperDoc:    devdoc,
@@ -186,16 +179,4 @@ func (s *Solidity) run(cmd *exec.Cmd, source string) (map[string]*Contract, erro
 		}
 	}
 	return contracts, nil
-}
-
-func slurpFiles(files []string) (string, error) {
-	var concat bytes.Buffer
-	for _, file := range files {
-		content, err := ioutil.ReadFile(file)
-		if err != nil {
-			return "", err
-		}
-		concat.Write(content)
-	}
-	return concat.String(), nil
 }

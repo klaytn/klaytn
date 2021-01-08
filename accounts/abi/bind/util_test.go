@@ -22,6 +22,7 @@ package bind_test
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"testing"
 	"time"
@@ -46,19 +47,17 @@ var waitDeployedTests = map[string]struct {
 	"successful deploy": {
 		code:        `6060604052600a8060106000396000f360606040526008565b00`,
 		gas:         3000000,
-		wantAddress: common.HexToAddress("0x3A220f351252089D385b29beca14e27F204c296A"),
+		wantAddress: common.HexToAddress("0x3a220f351252089d385b29beca14e27f204c296a"),
 	},
 	"empty code": {
 		code:        ``,
 		gas:         300000,
 		wantErr:     bind.ErrNoCodeAfterDeploy,
-		wantAddress: common.HexToAddress("0x3A220f351252089D385b29beca14e27F204c296A"),
+		wantAddress: common.HexToAddress("0x3a220f351252089d385b29beca14e27f204c296a"),
 	},
 }
 
 func TestWaitDeployed(t *testing.T) {
-	signer := types.NewEIP155Signer(params.AllGxhashProtocolChanges.ChainID)
-
 	for name, test := range waitDeployedTests {
 		backend := backends.NewSimulatedBackend(
 			blockchain.GenesisAlloc{
@@ -68,7 +67,7 @@ func TestWaitDeployed(t *testing.T) {
 
 		// Create the transaction.
 		tx := types.NewContractCreation(0, big.NewInt(0), test.gas, big.NewInt(1), common.FromHex(test.code))
-		tx, _ = types.SignTx(tx, signer, testKey)
+		tx, _ = types.SignTx(tx, types.NewEIP155Signer(params.AllGxhashProtocolChanges.ChainID), testKey)
 
 		// Wait for it to get mined in the background.
 		var (
@@ -89,7 +88,7 @@ func TestWaitDeployed(t *testing.T) {
 		select {
 		case <-mined:
 			if err != test.wantErr {
-				t.Errorf("test %q: error mismatch: got %q, want %q", name, err, test.wantErr)
+				t.Errorf("test %q: error mismatch: want %q, got %q", name, test.wantErr, err)
 			}
 			if address != test.wantAddress {
 				t.Errorf("test %q: unexpected contract address %s", name, address.Hex())
@@ -97,6 +96,42 @@ func TestWaitDeployed(t *testing.T) {
 		case <-time.After(2 * time.Second):
 			t.Errorf("test %q: timeout", name)
 		}
-		defer backend.Close()
+		backend.Close()
 	}
+}
+
+func TestWaitDeployedCornerCases(t *testing.T) {
+	backend := backends.NewSimulatedBackend(
+		blockchain.GenesisAlloc{
+			crypto.PubkeyToAddress(testKey.PublicKey): {Balance: big.NewInt(10000000000)},
+		},
+	)
+	defer backend.Close()
+
+	// Create a transaction to an account.
+	code := "6060604052600a8060106000396000f360606040526008565b00"
+	tx := types.NewTransaction(0, common.HexToAddress("0x0"), big.NewInt(0), 3000000, big.NewInt(1), common.FromHex(code))
+	tx, _ = types.SignTx(tx, types.NewEIP155Signer(params.AllGxhashProtocolChanges.ChainID), testKey)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	backend.SendTransaction(ctx, tx)
+	backend.Commit()
+	notContentCreation := errors.New("tx is not contract creation")
+	if _, err := bind.WaitDeployed(ctx, backend, tx); err.Error() != notContentCreation.Error() {
+		t.Errorf("error missmatch: want %q, got %q, ", notContentCreation, err)
+	}
+
+	// Create a transaction that is not mined.
+	tx = types.NewContractCreation(1, big.NewInt(0), 3000000, big.NewInt(1), common.FromHex(code))
+	tx, _ = types.SignTx(tx, types.NewEIP155Signer(params.AllGxhashProtocolChanges.ChainID), testKey)
+
+	go func() {
+		contextCanceled := errors.New("context canceled")
+		if _, err := bind.WaitDeployed(ctx, backend, tx); err.Error() != contextCanceled.Error() {
+			t.Errorf("error missmatch: want %q, got %q, ", contextCanceled, err)
+		}
+	}()
+
+	backend.SendTransaction(ctx, tx)
+	cancel()
 }

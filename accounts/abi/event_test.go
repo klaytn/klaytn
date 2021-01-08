@@ -91,12 +91,12 @@ func TestEventId(t *testing.T) {
 	}{
 		{
 			definition: `[
-			{ "type" : "event", "name" : "balance", "inputs": [{ "name" : "in", "type": "uint256" }] },
-			{ "type" : "event", "name" : "check", "inputs": [{ "name" : "t", "type": "address" }, { "name": "b", "type": "uint256" }] }
+			{ "type" : "event", "name" : "Balance", "inputs": [{ "name" : "in", "type": "uint256" }] },
+			{ "type" : "event", "name" : "Check", "inputs": [{ "name" : "t", "type": "address" }, { "name": "b", "type": "uint256" }] }
 			]`,
 			expectations: map[string]common.Hash{
-				"balance": crypto.Keccak256Hash([]byte("balance(uint256)")),
-				"check":   crypto.Keccak256Hash([]byte("check(address,uint256)")),
+				"Balance": crypto.Keccak256Hash([]byte("Balance(uint256)")),
+				"Check":   crypto.Keccak256Hash([]byte("Check(address,uint256)")),
 			},
 		},
 	}
@@ -108,8 +108,41 @@ func TestEventId(t *testing.T) {
 		}
 
 		for name, event := range abi.Events {
-			if event.Id() != test.expectations[name] {
-				t.Errorf("expected id to be %x, got %x", test.expectations[name], event.Id())
+			if event.ID != test.expectations[name] {
+				t.Errorf("expected id to be %x, got %x", test.expectations[name], event.ID)
+			}
+		}
+	}
+}
+
+func TestEventString(t *testing.T) {
+	var table = []struct {
+		definition   string
+		expectations map[string]string
+	}{
+		{
+			definition: `[
+			{ "type" : "event", "name" : "Balance", "inputs": [{ "name" : "in", "type": "uint256" }] },
+			{ "type" : "event", "name" : "Check", "inputs": [{ "name" : "t", "type": "address" }, { "name": "b", "type": "uint256" }] },
+			{ "type" : "event", "name" : "Transfer", "inputs": [{ "name": "from", "type": "address", "indexed": true }, { "name": "to", "type": "address", "indexed": true }, { "name": "value", "type": "uint256" }] }
+			]`,
+			expectations: map[string]string{
+				"Balance":  "event Balance(uint256 in)",
+				"Check":    "event Check(address t, uint256 b)",
+				"Transfer": "event Transfer(address indexed from, address indexed to, uint256 value)",
+			},
+		},
+	}
+
+	for _, test := range table {
+		abi, err := JSON(strings.NewReader(test.definition))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for name, event := range abi.Events {
+			if event.String() != test.expectations[name] {
+				t.Errorf("expected string to be %s, got %s", test.expectations[name], event.String())
 			}
 		}
 	}
@@ -144,7 +177,7 @@ func TestEventTupleUnpack(t *testing.T) {
 	type EventTransferWithTag struct {
 		// this is valid because `value` is not exportable,
 		// so value is only unmarshalled into `Value1`.
-		value  *big.Int
+		value  *big.Int //lint:ignore U1000 unused field is part of test
 		Value1 *big.Int `abi:"value"`
 	}
 
@@ -283,14 +316,14 @@ func TestEventTupleUnpack(t *testing.T) {
 		&[]interface{}{common.Address{}, new(big.Int)},
 		&[]interface{}{},
 		jsonEventPledge,
-		"abi: insufficient number of elements in the list/array for unpack, want 3, got 2",
+		"abi: insufficient number of arguments for unpack, want 3, got 2",
 		"Can not unpack Pledge event into too short slice",
 	}, {
 		pledgeData1,
 		new(map[string]interface{}),
 		&[]interface{}{},
 		jsonEventPledge,
-		"abi: cannot unmarshal tuple into map[string]interface {}",
+		"abi:[2] cannot unmarshal tuple in to map[string]interface {}",
 		"Can not unpack Pledge event into map",
 	}, {
 		mixedCaseData1,
@@ -323,40 +356,6 @@ func unpackTestEventData(dest interface{}, hexData string, jsonEvent []byte, ass
 	assert.NoError(json.Unmarshal(jsonEvent, &e), "Should be able to unmarshal event ABI")
 	a := ABI{Events: map[string]Event{"e": e}}
 	return a.Unpack(dest, "e", data)
-}
-
-/*
-Taken from
-https://github.com/ethereum/go-ethereum/pull/15568
-*/
-
-type testResult struct {
-	Values [2]*big.Int
-	Value1 *big.Int
-	Value2 *big.Int
-}
-
-type testCase struct {
-	definition string
-	want       testResult
-}
-
-func (tc testCase) encoded(intType, arrayType Type) []byte {
-	var b bytes.Buffer
-	if tc.want.Value1 != nil {
-		val, _ := intType.pack(reflect.ValueOf(tc.want.Value1))
-		b.Write(val)
-	}
-
-	if !reflect.DeepEqual(tc.want.Values, [2]*big.Int{nil, nil}) {
-		val, _ := arrayType.pack(reflect.ValueOf(tc.want.Values))
-		b.Write(val)
-	}
-	if tc.want.Value2 != nil {
-		val, _ := intType.pack(reflect.ValueOf(tc.want.Value2))
-		b.Write(val)
-	}
-	return b.Bytes()
 }
 
 // TestEventUnpackIndexed verifies that indexed field will be skipped by event decoder.
