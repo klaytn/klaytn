@@ -25,7 +25,7 @@ package database
 const IdealBatchSize = 100 * 1024
 
 // Batch is a write-only database that commits changes to its host database
-// when Write is called. A memBatch cannot be used concurrently.
+// when Write is called. A Batch cannot be used concurrently.
 type Batch interface {
 	KeyValueWriter
 
@@ -35,10 +35,10 @@ type Batch interface {
 	// Write flushes any accumulated data to disk.
 	Write() error
 
-	// Reset resets the memBatch for reuse.
+	// Reset resets the Batch for reuse.
 	Reset()
 
-	// Replay replays the memBatch contents.
+	// Replay replays the Batch contents.
 	Replay(w KeyValueWriter) error
 }
 
