@@ -122,7 +122,7 @@ func (cache *RedisCache) Set(k, v []byte) {
 	select {
 	case cache.setItemCh <- item:
 	default:
-		logger.Error("redis setItem channel is full")
+		logger.Warn("redis setItem channel is full")
 	}
 }
 
