@@ -67,11 +67,13 @@ var (
 	storageUpdateTimer = metrics.NewRegisteredTimer("state/storage/updates", nil)
 	storageCommitTimer = metrics.NewRegisteredTimer("state/storage/commits", nil)
 
-	blockInsertTimer        = metrics.NewRegisteredTimer("chain/inserts", nil)
-	blockProcessTimer       = metrics.NewRegisteredTimer("chain/process", nil)
-	blockExecutionTimer     = metrics.NewRegisteredTimer("chain/execution", nil)
-	blockFinalizeTimer      = metrics.NewRegisteredTimer("chain/finalize", nil)
-	blockValidateTimer      = metrics.NewRegisteredTimer("chain/validate", nil)
+	blockInsertTimer    = metrics.NewRegisteredTimer("chain/inserts", nil)
+	blockProcessTimer   = metrics.NewRegisteredTimer("chain/process", nil)
+	blockExecutionTimer = metrics.NewRegisteredTimer("chain/execution", nil)
+	blockFinalizeTimer  = metrics.NewRegisteredTimer("chain/finalize", nil)
+	blockValidateTimer  = metrics.NewRegisteredTimer("chain/validate", nil)
+	BlockAgeTimer       = metrics.NewRegisteredTimer("chain/age", nil)
+
 	ErrNoGenesis            = errors.New("genesis not found in chain")
 	ErrNotExistNode         = errors.New("the node does not exist in cached node")
 	ErrQuitBySignal         = errors.New("quit by signal")
@@ -375,9 +377,9 @@ func (bc *BlockChain) loadLastState() error {
 	blockTd := bc.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
 	fastTd := bc.GetTd(currentFastBlock.Hash(), currentFastBlock.NumberU64())
 
-	logger.Info("Loaded most recent local header", "number", currentHeader.Number, "hash", currentHeader.Hash(), "td", headerTd)
-	logger.Info("Loaded most recent local full block", "number", currentBlock.Number(), "hash", currentBlock.Hash(), "td", blockTd)
-	logger.Info("Loaded most recent local fast block", "number", currentFastBlock.Number(), "hash", currentFastBlock.Hash(), "td", fastTd)
+	logger.Info("Loaded most recent local header", "number", currentHeader.Number, "hash", currentHeader.Hash(), "td", headerTd, "age", common.PrettyAge(time.Unix(int64(currentHeader.Time.Uint64()), 0)))
+	logger.Info("Loaded most recent local full block", "number", currentBlock.Number(), "hash", currentBlock.Hash(), "td", blockTd, "age", common.PrettyAge(time.Unix(int64(currentHeader.Time.Uint64()), 0)))
+	logger.Info("Loaded most recent local fast block", "number", currentFastBlock.Number(), "hash", currentFastBlock.Hash(), "td", fastTd, "age", common.PrettyAge(time.Unix(int64(currentHeader.Time.Uint64()), 0)))
 
 	return nil
 }
@@ -1672,6 +1674,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		trieAccess := stateDB.AccountReads + stateDB.AccountHashes + stateDB.AccountUpdates + stateDB.AccountCommits
 		trieAccess += stateDB.StorageReads + stateDB.StorageHashes + stateDB.StorageUpdates + stateDB.StorageCommits
 
+		BlockAgeTimer.Update(time.Since(time.Unix(int64(block.Time().Uint64()), 0)))
+
 		switch writeResult.Status {
 		case CanonStatTy:
 			processTxsTime := common.PrettyDuration(procStats.AfterApplyTxs.Sub(procStats.BeforeApplyTxs))
@@ -1891,6 +1895,10 @@ func (st *insertStats) report(chain []*types.Block, index int, cache common.Stor
 			"number", end.Number(), "hash", end.Hash(), "blocks", st.processed, "txs", txs, "elapsed", common.PrettyDuration(elapsed),
 			"trieDBSize", cache, "mgas", float64(st.usedGas) / 1000000, "mgasps", float64(st.usedGas) * 1000 / float64(elapsed),
 		}
+
+		timestamp := time.Unix(int64(end.Time().Uint64()), 0)
+		context = append(context, []interface{}{"age", common.PrettyAge(timestamp)}...)
+
 		if st.queued > 0 {
 			context = append(context, []interface{}{"queued", st.queued}...)
 		}
