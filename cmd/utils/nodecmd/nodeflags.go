@@ -200,6 +200,7 @@ var KENFlags = []cli.Flag{
 }
 
 var KSCNFlags = []cli.Flag{
+	utils.RewardbaseFlag,
 	utils.ServiceChainSignerFlag,
 	utils.AnchoringPeriodFlag,
 	utils.SentChainTxsLimit,
