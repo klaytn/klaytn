@@ -18,7 +18,7 @@ package statedb
 
 import "github.com/go-redis/redis/v7"
 
-func NewHybridCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
+func NewHybridCache(config *TrieNodeCacheConfig) (TrieNodeCache, error) {
 	redis, err := NewRedisCache(config)
 	if err != nil {
 		return nil, err

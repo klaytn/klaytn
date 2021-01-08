@@ -178,6 +178,7 @@ var FlagGroups = []FlagGroup{
 			MemorySizeFlag,
 			TrieNodeCacheTypeFlag,
 			TrieNodeCacheLimitFlag,
+			TrieNodeCacheSavePeriodFlag,
 			TrieNodeCacheRedisEndpointsFlag,
 			TrieNodeCacheRedisClusterFlag,
 			TrieNodeCacheRedisPublishBlockFlag,

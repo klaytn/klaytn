@@ -24,7 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"runtime"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -115,9 +115,9 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache                TrieNodeCache       // GC friendly memory cache of trie node RLPs
-	trieNodeCacheConfig          TrieNodeCacheConfig // Configuration of trieNodeCache
-	savingTrieNodeCacheTriggered bool                // Whether saving trie node cache has been triggered or not
+	trieNodeCache                TrieNodeCache        // GC friendly memory cache of trie node RLPs
+	trieNodeCacheConfig          *TrieNodeCacheConfig // Configuration of trieNodeCache
+	savingTrieNodeCacheTriggered bool                 // Whether saving trie node cache has been triggered or not
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -309,7 +309,7 @@ func NewDatabase(diskDB database.DBManager) *Database {
 // NewDatabaseWithNewCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig TrieNodeCacheConfig) *Database {
+func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig *TrieNodeCacheConfig) *Database {
 	trieNodeCache, err := NewTrieNodeCache(cacheConfig)
 	if err != nil {
 		logger.Error("Invalid trie node cache config", "err", err, "config", cacheConfig)
@@ -364,7 +364,7 @@ func (db *Database) TrieNodeCache() TrieNodeCache {
 }
 
 // GetTrieNodeCacheConfig returns the configuration of TrieNodeCache.
-func (db *Database) GetTrieNodeCacheConfig() TrieNodeCacheConfig {
+func (db *Database) GetTrieNodeCacheConfig() *TrieNodeCacheConfig {
 	return db.trieNodeCacheConfig
 }
 
@@ -1129,28 +1129,55 @@ func (db *Database) UpdateMetricNodes() {
 var errDisabledTrieNodeCache = errors.New("trie node cache is disabled, nothing to save to file")
 var errSavingTrieNodeCacheInProgress = errors.New("saving trie node cache has been triggered already")
 
-// SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when the node restarts
-func (db *Database) SaveTrieNodeCacheToFile(filePath string) error {
+func (db *Database) CanSaveTrieNodeCacheToFile() error {
 	if db.trieNodeCache == nil {
 		return errDisabledTrieNodeCache
 	}
 	if db.savingTrieNodeCacheTriggered {
 		return errSavingTrieNodeCacheInProgress
 	}
+	return nil
+}
+
+// SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when the node restarts
+func (db *Database) SaveTrieNodeCacheToFile(filePath string, concurrency int) {
 	db.savingTrieNodeCacheTriggered = true
 	start := time.Now()
-	go func() {
-		logger.Info("start saving cache to file", "filePath", filePath)
-		if err := db.trieNodeCache.SaveToFile(filePath, runtime.NumCPU()/2); err != nil {
-			logger.Error("failed to save cache to file",
-				"filePath", filePath, "elapsed", time.Since(start), "err", err)
-		} else {
-			logger.Info("successfully saved cache to file",
-				"filePath", filePath, "elapsed", time.Since(start))
+	logger.Info("start saving cache to file",
+		"filePath", filePath, "concurrency", concurrency)
+	if err := db.trieNodeCache.SaveToFile(filePath, concurrency); err != nil {
+		logger.Error("failed to save cache to file",
+			"filePath", filePath, "elapsed", time.Since(start), "err", err)
+	} else {
+		logger.Info("successfully saved cache to file",
+			"filePath", filePath, "elapsed", time.Since(start))
+	}
+	db.savingTrieNodeCacheTriggered = false
+}
+
+// DumpPeriodically atomically saves fast cache data to the given dir with the specified interval.
+func (db *Database) SaveCachePeriodically(c *TrieNodeCacheConfig, stopCh <-chan struct{}) {
+	rand.Seed(time.Now().UnixNano())
+	randomVal := 0.5 + rand.Float64()/2.0 // 0.5 <= randomVal < 1.0
+	startTime := time.Duration(int(randomVal * float64(c.FastCacheSavePeriod)))
+	logger.Info("first periodic cache saving will be triggered", "after", startTime)
+
+	timer := time.NewTimer(startTime)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			if err := db.CanSaveTrieNodeCacheToFile(); err != nil {
+				logger.Warn("failed to trigger periodic cache saving", "err", err)
+				continue
+			}
+			db.SaveTrieNodeCacheToFile(c.FastCacheFileDir, 1)
+			timer.Reset(c.FastCacheSavePeriod)
+		case <-stopCh:
+			return
 		}
-		db.savingTrieNodeCacheTriggered = false
-	}()
-	return nil
+	}
 }
 
 // NodeInfo is a struct used for collecting trie statistics

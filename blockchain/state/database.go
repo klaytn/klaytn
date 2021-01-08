@@ -128,7 +128,7 @@ func getCodeSizeCache() common.Cache {
 // NewDatabaseWithNewCache creates a backing store for state. The returned database
 // is safe for concurrent use and retains a lot of collapsed RLP trie nodes in a
 // large memory cache.
-func NewDatabaseWithNewCache(db database.DBManager, cacheConfig statedb.TrieNodeCacheConfig) Database {
+func NewDatabaseWithNewCache(db database.DBManager, cacheConfig *statedb.TrieNodeCacheConfig) Database {
 	return &cachingDB{
 		db:            statedb.NewDatabaseWithNewCache(db, cacheConfig),
 		codeSizeCache: getCodeSizeCache(),
