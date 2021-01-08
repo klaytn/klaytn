@@ -1,3 +1,4 @@
+// Modifications Copyright 2020 The klaytn Authors
 // Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -13,6 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from eth/downloader/queue_test.go (2020/07/24).
+// Modified and improved for the klaytn development.
 
 package downloader
 
@@ -24,11 +28,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/consensus/gxhash"
-
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -40,7 +43,7 @@ var (
 )
 
 // makeChain creates a chain of n blocks starting at and including parent.
-// the returned hash chain is ordered head->parent. In addition, every 3rd block
+// the returned hash chain is ordered head->parent. In addition, every 2nd block
 // contains a transaction.
 func makeChain(n int, seed byte, parent *types.Block, empty bool) ([]*types.Block, []types.Receipts) {
 	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), testdb, n, func(i int, block *blockchain.BlockGen) {
@@ -67,7 +70,7 @@ var chain *chainData
 var emptyChain *chainData
 
 func init() {
-	// Create a chain of blocks to import
+	// Create a chain of blocks to import. 128 blocks are created and a transaction is contained on every 2nd block
 	targetBlocks := 128
 	blocks, _ := makeChain(targetBlocks, 0, genesis, false)
 	chain = &chainData{blocks, 0}
@@ -97,6 +100,9 @@ func dummyPeer(id string) *peerConnection {
 }
 
 func TestBasics(t *testing.T) {
+	numOfBlocks := len(emptyChain.blocks)
+	numOfReceipts := len(emptyChain.blocks) / 2
+
 	q := newQueue(10, 10)
 	if !q.Idle() {
 		t.Errorf("new queue should be idle")
@@ -135,6 +141,12 @@ func TestBasics(t *testing.T) {
 			t.Fatalf("expected header %d, got %d", exp, got)
 		}
 	}
+	if got, exp := q.blockTaskQueue.Size(), numOfBlocks-10; got != exp {
+		t.Errorf("expected block task queue to be %d, got %d", exp, got)
+	}
+	if got, exp := q.receiptTaskQueue.Size(), numOfReceipts; got != exp {
+		t.Errorf("expected block task queue to be %d, got %d", exp, got)
+	}
 	{
 		peer := dummyPeer("peer-2")
 		fetchReq, _, throttle := q.ReserveBodies(peer, 50)
@@ -148,8 +160,12 @@ func TestBasics(t *testing.T) {
 			t.Fatalf("should have no fetches, got %d", len(fetchReq.Headers))
 		}
 	}
-	fmt.Printf("blockTaskQueue len: %d\n", q.blockTaskQueue.Size())
-	fmt.Printf("receiptTaskQueue len: %d\n", q.receiptTaskQueue.Size())
+	if got, exp := q.blockTaskQueue.Size(), numOfBlocks-10; got != exp {
+		t.Errorf("expected block task queue to be %d, got %d", exp, got)
+	}
+	if got, exp := q.receiptTaskQueue.Size(), numOfReceipts; got != exp {
+		t.Errorf("expected block task queue to be %d, got %d", exp, got)
+	}
 	{
 		// The receipt delivering peer should not be affected
 		// by the throttling of body deliveries
@@ -167,12 +183,20 @@ func TestBasics(t *testing.T) {
 			t.Fatalf("expected header %d, got %d", exp, got)
 		}
 	}
-	fmt.Printf("blockTaskQueue len: %d\n", q.blockTaskQueue.Size())
-	fmt.Printf("receiptTaskQueue len: %d\n", q.receiptTaskQueue.Size())
-	fmt.Printf("processable: %d\n", q.resultCache.countCompleted())
+	if got, exp := q.blockTaskQueue.Size(), numOfBlocks-10; got != exp {
+		t.Fatalf("expected block task queue size %d, got %d", exp, got)
+	}
+	if got, exp := q.receiptTaskQueue.Size(), numOfReceipts-5; got != exp {
+		t.Fatalf("expected receipt task queue size %d, got %d", exp, got)
+	}
+	if got, exp := q.resultCache.countCompleted(), 0; got != exp {
+		t.Errorf("wrong processable count, got %d, exp %d", got, exp)
+	}
 }
 
 func TestEmptyBlocks(t *testing.T) {
+	numOfBlocks := len(emptyChain.blocks)
+
 	q := newQueue(10, 10)
 
 	q.Prepare(1, FastSync)
@@ -205,15 +229,13 @@ func TestEmptyBlocks(t *testing.T) {
 		if fetchReq != nil {
 			t.Fatal("there should be no body fetch tasks remaining")
 		}
-
 	}
-	if q.blockTaskQueue.Size() != len(emptyChain.blocks)-10 {
-		t.Errorf("expected block task queue to be 0, got %d", q.blockTaskQueue.Size())
+	if q.blockTaskQueue.Size() != numOfBlocks-10 {
+		t.Errorf("expected block task queue to be %d, got %d", numOfBlocks-10, q.blockTaskQueue.Size())
 	}
 	if q.receiptTaskQueue.Size() != 0 {
-		t.Errorf("expected receipt task queue to be 0, got %d", q.receiptTaskQueue.Size())
+		t.Errorf("expected receipt task queue to be %d, got %d", 0, q.receiptTaskQueue.Size())
 	}
-	//fmt.Printf("receiptTaskQueue len: %d\n", q.receiptTaskQueue.Size())
 	{
 		peer := dummyPeer("peer-3")
 		fetchReq, _, _ := q.ReserveReceipts(peer, 50)
@@ -222,6 +244,12 @@ func TestEmptyBlocks(t *testing.T) {
 		if fetchReq != nil {
 			t.Fatal("there should be no body fetch tasks remaining")
 		}
+	}
+	if q.blockTaskQueue.Size() != numOfBlocks-10 {
+		t.Errorf("expected block task queue to be %d, got %d", numOfBlocks-10, q.blockTaskQueue.Size())
+	}
+	if q.receiptTaskQueue.Size() != 0 {
+		t.Errorf("expected receipt task queue to be %d, got %d", 0, q.receiptTaskQueue.Size())
 	}
 	if got, exp := q.resultCache.countCompleted(), 10; got != exp {
 		t.Errorf("wrong processable count, got %d, exp %d", got, exp)
