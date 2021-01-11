@@ -534,7 +534,16 @@ func (stdBatch *stateTrieDBBatch) Put(key []byte, value []byte) error {
 			errResult = err
 		}
 	}
+	return errResult
+}
 
+func (stdBatch *stateTrieDBBatch) Delete(key []byte) error {
+	var errResult error
+	for _, batch := range stdBatch.batches {
+		if err := batch.Delete(key); err != nil {
+			errResult = err
+		}
+	}
 	return errResult
 }
 
@@ -562,6 +571,16 @@ func (stdBatch *stateTrieDBBatch) Reset() {
 	for _, batch := range stdBatch.batches {
 		batch.Reset()
 	}
+}
+
+func (stdBatch *stateTrieDBBatch) Replay(w KeyValueWriter) error {
+	var errResult error
+	for _, batch := range stdBatch.batches {
+		if err := batch.Replay(w); err != nil {
+			errResult = err
+		}
+	}
+	return errResult
 }
 
 func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
@@ -1218,7 +1237,7 @@ func (dbm *databaseManager) PutReceiptsToBatch(batch Batch, hash common.Hash, nu
 	dbm.putReceiptsToPutter(batch, hash, number, receipts, false)
 }
 
-func (dbm *databaseManager) putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipts types.Receipts, addToCache bool) {
+func (dbm *databaseManager) putReceiptsToPutter(putter KeyValueWriter, hash common.Hash, number uint64, receipts types.Receipts, addToCache bool) {
 	// Convert the receipts into their database form and serialize them
 	storageReceipts := make([]*types.ReceiptForStorage, len(receipts))
 	for i, receipt := range receipts {
@@ -1588,7 +1607,7 @@ func (dbm *databaseManager) PutTxLookupEntriesToBatch(batch Batch, block *types.
 	putTxLookupEntriesToPutter(batch, block)
 }
 
-func putTxLookupEntriesToPutter(putter Putter, block *types.Block) {
+func putTxLookupEntriesToPutter(putter KeyValueWriter, block *types.Block) {
 	for i, tx := range block.Transactions() {
 		entry := TxLookupEntry{
 			BlockHash:  block.Hash(),
