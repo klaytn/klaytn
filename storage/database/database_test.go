@@ -105,7 +105,7 @@ func TestDatabase_NotFoundErr(t *testing.T) {
 		val, err := db.Get(randStrBytes(100))
 		assert.Nil(t, val)
 		assert.Error(t, err)
-		assert.Equal(t, err, dataNotFoundErr)
+		assert.Equal(t, dataNotFoundErr, err)
 	}
 }
 
