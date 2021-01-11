@@ -34,20 +34,20 @@ type sstack struct {
 	size     int
 	capacity int
 	offset   int
-	reverse  bool // reverse the result of Less()
+	invert   bool // min-priority queue
 
 	blocks [][]*item
 	active []*item
 }
 
 // Creates a new, empty stack.
-func newSstack(reverse bool) *sstack {
+func newSstack(invert bool) *sstack {
 	active := make([]*item, blockSize)
 	return &sstack{
 		size:     0,
 		capacity: blockSize,
 		offset:   0,
-		reverse:  reverse,
+		invert:   invert,
 		blocks:   [][]*item{active},
 		active:   active,
 	}
@@ -113,7 +113,7 @@ func (s *sstack) Less(i, j int) bool {
 		result = bytes.Compare(iPriority, jPriority) > 0
 	}
 
-	if s.reverse {
+	if s.invert {
 		return !result
 	}
 	return result
@@ -127,5 +127,5 @@ func (s *sstack) Swap(i, j int) {
 
 // Resets the stack, effectively clearing its contents.
 func (s *sstack) Reset() {
-	*s = *newSstack(s.reverse)
+	*s = *newSstack(s.invert)
 }

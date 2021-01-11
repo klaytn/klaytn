@@ -11,7 +11,7 @@
 // Package prque implements a priority queue data structure supporting arbitrary
 // value and priorities types.
 //
-// If you would like to use a min-priority queue, simply put false as a reverse parameter.
+// If you would like to use a min-priority queue, simply put false as a invert parameter.
 //
 // Internally the queue is based on the standard heap package working on a
 // sortable version of the block based stack.
@@ -31,8 +31,8 @@ type Prque struct {
 
 // New creates a new priority queue.
 // The priority queue can have any type specified in sstack.Less.
-func New(reverse bool) *Prque {
-	return &Prque{newSstack(reverse)}
+func New(invert bool) *Prque {
+	return &Prque{newSstack(invert)}
 }
 
 // Pushes a value with a given priority into the queue, expanding if necessary.
@@ -73,5 +73,5 @@ func (p *Prque) Size() int {
 
 // Clears the contents of the priority queue.
 func (p *Prque) Reset() {
-	*p = *New(p.cont.reverse)
+	*p = *New(p.cont.invert)
 }
