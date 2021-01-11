@@ -22,7 +22,9 @@ import (
 	"container/heap"
 )
 
-// Priority queue data structure.
+// Priority queue data structure. The item's type can be int, int64, uint64,
+// []byte and etc.
+// An type assertion error could occur if different type of items are pushed.
 type Prque struct {
 	cont *sstack
 }
