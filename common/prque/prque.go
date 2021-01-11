@@ -9,9 +9,9 @@
 // This is a duplicated and slightly modified version of "gopkg.in/karalabe/cookiejar.v2/collections/prque".
 
 // Package prque implements a priority queue data structure supporting arbitrary
-// value types and int64 priorities.
+// value and priorities types.
 //
-// If you would like to use a min-priority queue, simply negate the priorities.
+// If you would like to use a min-priority queue, simply put false as a reverse parameter.
 //
 // Internally the queue is based on the standard heap package working on a
 // sortable version of the block based stack.
