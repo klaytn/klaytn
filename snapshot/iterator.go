@@ -344,7 +344,7 @@ func (dl *diskLayer) StorageIterator(account common.Hash, seek common.Hash) (Sto
 	return &diskStorageIterator{
 		layer:   dl,
 		account: account,
-		it:      dl.diskdb.GetDatabase(database.SnapshotDB).NewIterator(append(database.SnapshotAccountPrefix, account.Bytes()...), pos),
+		it:      dl.diskdb.GetDatabase(database.SnapshotDB).NewIterator(append(database.SnapshotStoragePrefix, account.Bytes()...), pos),
 	}, false
 }
 
@@ -361,7 +361,7 @@ func (it *diskStorageIterator) Next() bool {
 			it.it = nil
 			return false
 		}
-		if len(it.it.Key()) == len(database.SnapshotAccountPrefix)+common.HashLength+common.HashLength {
+		if len(it.it.Key()) == len(database.SnapshotStoragePrefix)+common.HashLength+common.HashLength {
 			break
 		}
 	}
