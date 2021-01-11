@@ -318,7 +318,7 @@ func (f *Fetcher) loop() {
 			// If too high up the chain or phase, continue later
 			number := op.block.NumberU64()
 			if number > height+1 {
-				f.queue.Push(op, op.block.NumberU64())
+				f.queue.Push(op, number)
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(op.block.Hash(), true)
 				}

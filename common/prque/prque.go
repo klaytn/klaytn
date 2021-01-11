@@ -28,13 +28,13 @@ type Prque struct {
 }
 
 // New creates a new priority queue.
-// The priority queue can have any type specified  in sstack.Less.
+// The priority queue can have any type specified in sstack.Less.
 func New(reverse bool) *Prque {
 	return &Prque{newSstack(reverse)}
 }
 
 // Pushes a value with a given priority into the queue, expanding if necessary.
-// The priority queue can have any type specified  in sstack.Less.
+// The priority queue can have any type specified in sstack.Less.
 // In a queue, same type should be pushed. Otherwise, a type assertion error
 // will occur. Number types (int, int64, uint64) are different types.
 func (p *Prque) Push(data interface{}, priority interface{}) {
