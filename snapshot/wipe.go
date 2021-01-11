@@ -55,7 +55,7 @@ func wipeContent(db database.DBManager) error {
 	if err := wipeKeyRange(db, "accounts", database.SnapshotAccountPrefix, len(database.SnapshotAccountPrefix)+common.HashLength); err != nil {
 		return err
 	}
-	if err := wipeKeyRange(db, "storage", database.SnapshotAccountPrefix, len(database.SnapshotAccountPrefix)+2*common.HashLength); err != nil {
+	if err := wipeKeyRange(db, "storage", database.SnapshotStoragePrefix, len(database.SnapshotStoragePrefix)+2*common.HashLength); err != nil {
 		return err
 	}
 	// Compact the snapshot section of the database to get rid of unused space
@@ -69,10 +69,10 @@ func wipeContent(db database.DBManager) error {
 		return err
 	}
 	logger.Info("Compacting snapshot storage area ")
-	end = common.CopyBytes(database.SnapshotAccountPrefix)
+	end = common.CopyBytes(database.SnapshotStoragePrefix)
 	end[len(end)-1]++
 
-	if err := db.GetDatabase(database.SnapshotDB).Compact(database.SnapshotAccountPrefix, end); err != nil {
+	if err := db.GetDatabase(database.SnapshotDB).Compact(database.SnapshotStoragePrefix, end); err != nil {
 		return err
 	}
 	logger.Info("Compacted snapshot area in database", "elapsed", common.PrettyDuration(time.Since(start)))

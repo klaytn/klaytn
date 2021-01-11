@@ -26,7 +26,7 @@ import (
 )
 
 // Tests that given a database with random data content, all parts of a snapshot
-// can be crrectly wiped without touching anything else.
+// can be correctly wiped without touching anything else.
 func TestWipe(t *testing.T) {
 	// Create a database with some random snapshot data
 	db := database.NewMemoryDBManager()
@@ -40,8 +40,8 @@ func TestWipe(t *testing.T) {
 	}
 	db.WriteSnapshotRoot(randomHash())
 
-	snapshotDB := db.GetDatabase(database.SnapshotDB)
 	// Add some random non-snapshot data too to make wiping harder
+	snapshotDB := db.GetDatabase(database.SnapshotDB)
 	for i := 0; i < 65536; i++ {
 		// Generate a key that's the wrong length for a state snapshot item
 		var keysize int
@@ -55,7 +55,7 @@ func TestWipe(t *testing.T) {
 		if rand.Int31n(2) == 0 {
 			snapshotDB.Put(append(database.SnapshotAccountPrefix, keysuffix...), randomHash().Bytes())
 		} else {
-			snapshotDB.Put(append(database.SnapshotAccountPrefix, keysuffix...), randomHash().Bytes())
+			snapshotDB.Put(append(database.SnapshotStoragePrefix, keysuffix...), randomHash().Bytes())
 		}
 	}
 	// Sanity check that all the keys are present
@@ -70,12 +70,12 @@ func TestWipe(t *testing.T) {
 			items++
 		}
 	}
-	it = snapshotDB.NewIterator(database.SnapshotAccountPrefix, nil)
+	it = snapshotDB.NewIterator(database.SnapshotStoragePrefix, nil)
 	defer it.Release()
 
 	for it.Next() {
 		key := it.Key()
-		if len(key) == len(database.SnapshotAccountPrefix)+2*common.HashLength {
+		if len(key) == len(database.SnapshotStoragePrefix)+2*common.HashLength {
 			items++
 		}
 	}
@@ -98,12 +98,12 @@ func TestWipe(t *testing.T) {
 			t.Errorf("snapshot entry remained after wipe: %x", key)
 		}
 	}
-	it = snapshotDB.NewIterator(database.SnapshotAccountPrefix, nil)
+	it = snapshotDB.NewIterator(database.SnapshotStoragePrefix, nil)
 	defer it.Release()
 
 	for it.Next() {
 		key := it.Key()
-		if len(key) == len(database.SnapshotAccountPrefix)+2*common.HashLength {
+		if len(key) == len(database.SnapshotStoragePrefix)+2*common.HashLength {
 			t.Errorf("snapshot entry remained after wipe: %x", key)
 		}
 	}
