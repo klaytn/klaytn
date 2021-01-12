@@ -26,7 +26,7 @@ import (
 )
 
 // wipeSnapshot starts a goroutine to iterate over the entire key-value database
-// and delete all the  data associated with the snapshot (accounts, storage,
+// and delete all the data associated with the snapshot (accounts, storage,
 // metadata). After all is done, the snapshot range of the database is compacted
 // to free up unused data blocks.
 func wipeSnapshot(db database.DBManager, full bool) chan struct{} {

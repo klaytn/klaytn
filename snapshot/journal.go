@@ -99,7 +99,7 @@ func loadAndParseJournal(db database.DBManager, base *diskLayer) (snapshot, jour
 		return nil, journalGenerator{}, fmt.Errorf("failed to decode snapshot generator: %v", err)
 	}
 	// Retrieve the diff layer journal. It's possible that the journal is
-	// not existent, e.g. the disk layer is generating while that the Geth
+	// not existent, e.g. the disk layer is generating while that the node
 	// crashes without persisting the diff journal.
 	// So if there is no journal, or the journal is invalid(e.g. the journal
 	// is not matched with disk layer; or the it's the legacy-format journal,

@@ -650,7 +650,7 @@ func (t *Tree) Rebuild(root common.Hash) {
 			panic(fmt.Sprintf("unknown layer type: %T", layer))
 		}
 	}
-	// Start generating a new snapshot from scratch on a backgroung thread. The
+	// Start generating a new snapshot from scratch on a background thread. The
 	// generator will run a wiper first if there's not one running right now.
 	logger.Info("Rebuilding state snapshot")
 	t.layers = map[common.Hash]snapshot{
