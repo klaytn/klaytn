@@ -194,8 +194,13 @@ type BlockChain struct {
 	lastCommittedBlock uint64
 	quitWarmUp         chan struct{}
 
-	prefetchCh        chan *types.Block
+	prefetchCh        chan prefetchItem
 	followupInterrupt uint64
+}
+
+type prefetchItem struct {
+	prefetchBlock *types.Block
+	parentRoot    common.Hash
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -235,7 +240,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		badBlocks:          badBlocks,
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
-		prefetchCh:         make(chan *types.Block, 2048),
+		prefetchCh:         make(chan prefetchItem, 2048),
 	}
 
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
@@ -285,10 +290,11 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 }
 
 func (bc *BlockChain) prefetchWorker() {
-	for followup := range bc.prefetchCh {
+	logger.Info("prefetchWorker started")
+	for item := range bc.prefetchCh {
 		start := time.Now()
-		throwaway, _ := state.New(bc.CurrentBlock().Root(), bc.stateCache)
-		bc.prefetcher.Prefetch(followup, throwaway, bc.vmConfig, &bc.followupInterrupt)
+		throwaway, _ := state.New(item.parentRoot, bc.stateCache)
+		bc.prefetcher.Prefetch(item.prefetchBlock, throwaway, bc.vmConfig, &bc.followupInterrupt)
 		blockPrefetchExecuteTimer.Update(time.Since(start))
 	}
 }
@@ -1544,6 +1550,20 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	// Start a parallel signature recovery (signer will fluke on fork transition, minimal perf loss)
 	senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
 
+	// If we have a followup block, run that against the current state to pre-cache
+	// transactions and probabilistically some of the account/storage trie nodes.
+	bc.followupInterrupt = 0
+
+	if !bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch {
+		root := bc.CurrentBlock().Root()
+		for i, block := range chain {
+			if i != 0 {
+				bc.prefetchCh <- prefetchItem{prefetchBlock: block, parentRoot: root}
+			}
+		}
+		defer atomic.StoreUint64(&bc.followupInterrupt, 1)
+	}
+
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
 		// If the chain is terminating, stop processing blocks
@@ -1638,24 +1658,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
-		// If we have a followup block, run that against the current state to pre-cache
-		// transactions and probabilistically some of the account/storage trie nodes.
-		bc.followupInterrupt = 0
-
-		if !bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch {
-			if i == 0 {
-				for k := i + 1; k < len(chain); k++ {
-					bc.prefetchCh <- chain[k]
-				}
-				logger.Info("sent blocks to prefetch channel", "numBlocks", len(chain)-1)
-			}
-		}
 
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, internalTxTraces, procStats, err := bc.processor.Process(block, stateDB, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
-			atomic.StoreUint64(&bc.followupInterrupt, 1)
+
 			return i, events, coalescedLogs, err
 		}
 
@@ -1663,7 +1671,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		err = bc.validator.ValidateState(block, parent, stateDB, receipts, usedGas)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
-			atomic.StoreUint64(&bc.followupInterrupt, 1)
 			return i, events, coalescedLogs, err
 		}
 		afterValidate := time.Now()
@@ -1671,14 +1678,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Write the block to the chain and get the writeResult.
 		writeResult, err := bc.WriteBlockWithState(block, receipts, stateDB)
 		if err != nil {
-			atomic.StoreUint64(&bc.followupInterrupt, 1)
 			if err == ErrKnownBlock {
 				logger.Debug("Tried to insert already known block", "num", block.NumberU64(), "hash", block.Hash().String())
 				continue
 			}
 			return i, events, coalescedLogs, err
 		}
-		atomic.StoreUint64(&bc.followupInterrupt, block.NumberU64())
 
 		// Update the metrics subsystem with all the measurements
 		accountReadTimer.Update(stateDB.AccountReads)

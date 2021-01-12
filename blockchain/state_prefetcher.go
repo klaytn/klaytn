@@ -64,10 +64,6 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, c
 			if val == 1 {
 				return
 			}
-			// already processed block, skip
-			if val >= block.NumberU64() {
-				return
-			}
 		}
 		// Block precaching permitted to continue, execute the transaction
 		stateDB.Prepare(tx.Hash(), block.Hash(), i)
