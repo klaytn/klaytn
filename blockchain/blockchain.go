@@ -280,6 +280,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 	for i := 0; i < runtime.NumCPU()/2; i++ {
 		go bc.prefetchWorker()
+		go bc.prefetchTxWorker()
 	}
 
 	// Take ownership of this particular state
@@ -300,6 +301,7 @@ func (bc *BlockChain) prefetchWorker() {
 }
 
 func (bc *BlockChain) prefetchTxWorker() {
+	logger.Info("prefetchTxWorker started")
 	for followup := range bc.prefetchTxCh {
 		throwaway, _ := state.New(bc.CurrentBlock().Root(), bc.stateCache)
 		bc.prefetcher.PrefetchTx(followup.block, followup.ti, throwaway, bc.vmConfig, &bc.followupInterrupt)

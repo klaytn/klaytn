@@ -37,4 +37,9 @@ var (
 
 	txPoolPendingGauge = metrics.NewRegisteredGauge("tx/pool/pending/gauge", nil)
 	txPoolQueueGauge   = metrics.NewRegisteredGauge("tx/pool/queue/gauge", nil)
+
+	txPrefetchTotalMeter        = metrics.NewRegisteredMeter("txprefetch/total", nil)
+	txPrefetchSuccessMeter      = metrics.NewRegisteredMeter("txprefetch/success", nil)
+	txPrefetchProcessErrorMeter = metrics.NewRegisteredMeter("txprefetch/processerror", nil)
+	txPrefetchFailMeter         = metrics.NewRegisteredMeter("txprefetch/fail", nil)
 )

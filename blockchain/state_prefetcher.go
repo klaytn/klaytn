@@ -78,6 +78,7 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, c
 }
 
 func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.StateDB, cfg vm.Config, interrupt *uint64) {
+	txPrefetchTotalMeter.Mark(1)
 	var (
 		header = block.Header()
 	)
@@ -88,19 +89,23 @@ func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.
 	if interrupt != nil {
 		val := atomic.LoadUint64(interrupt)
 		if val == 1 {
+			txPrefetchFailMeter.Mark(1)
 			return
 		}
 		// already processed block, skip
 		if val >= block.NumberU64() {
+			txPrefetchFailMeter.Mark(1)
 			return
 		}
 	}
+
 	// Block precaching permitted to continue, execute the transaction
 	stateDB.Prepare(tx.Hash(), block.Hash(), ti)
 	if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
+		txPrefetchProcessErrorMeter.Mark(1)
 		return // Ugh, something went horribly wrong, bail out
 	}
-
+	txPrefetchSuccessMeter.Mark(1)
 }
 
 // precacheTransaction attempts to apply a transaction to the given state database
