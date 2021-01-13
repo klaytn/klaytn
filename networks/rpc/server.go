@@ -51,7 +51,7 @@ const (
 	concurrencyLimit = 3000
 
 	// maxSubscriptionPerConn is a maximum number of subscription for a server connection
-	maxSubscriptionPerConn = 10
+	maxSubscriptionPerConn = 5
 )
 
 // pendingRequestCount is a total number of concurrent RPC method calls
