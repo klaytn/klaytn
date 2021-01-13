@@ -194,13 +194,8 @@ type BlockChain struct {
 	lastCommittedBlock uint64
 	quitWarmUp         chan struct{}
 
-	prefetchCh        chan prefetchItem
+	prefetchCh        chan *types.Block
 	followupInterrupt uint64
-}
-
-type prefetchItem struct {
-	prefetchBlock *types.Block
-	parentRoot    common.Hash
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -240,7 +235,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		badBlocks:          badBlocks,
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
-		prefetchCh:         make(chan prefetchItem, 2048),
+		prefetchCh:         make(chan *types.Block, 2048),
 	}
 
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
@@ -291,14 +286,15 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 func (bc *BlockChain) prefetchWorker() {
 	logger.Info("prefetchWorker started")
-	for item := range bc.prefetchCh {
+	for block := range bc.prefetchCh {
 		start := time.Now()
-		throwaway, err := state.New(item.parentRoot, bc.stateCache)
+		root := bc.CurrentBlock().Root()
+		throwaway, err := state.New(root, bc.stateCache)
 		if err != nil {
-			logger.Error("failed to retrieve stateDB", "err", err, "parentRoot", item.parentRoot.String())
+			logger.Error("failed to retrieve stateDB", "err", err, "parentRoot", root.String())
 			continue
 		}
-		bc.prefetcher.Prefetch(item.prefetchBlock, throwaway, bc.vmConfig, &bc.followupInterrupt)
+		bc.prefetcher.Prefetch(block, throwaway, bc.vmConfig, &bc.followupInterrupt)
 		blockPrefetchExecuteTimer.Update(time.Since(start))
 	}
 }
@@ -1559,10 +1555,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	bc.followupInterrupt = 0
 
 	if !bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch {
-		root := bc.CurrentBlock().Root()
 		for i, block := range chain {
 			if i != 0 {
-				bc.prefetchCh <- prefetchItem{prefetchBlock: block, parentRoot: root}
+				bc.prefetchCh <- block
 			}
 		}
 		defer atomic.StoreUint64(&bc.followupInterrupt, 1)
