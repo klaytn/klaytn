@@ -293,7 +293,11 @@ func (bc *BlockChain) prefetchWorker() {
 	logger.Info("prefetchWorker started")
 	for item := range bc.prefetchCh {
 		start := time.Now()
-		throwaway, _ := state.New(item.parentRoot, bc.stateCache)
+		throwaway, err := state.New(item.parentRoot, bc.stateCache)
+		if err != nil {
+			logger.Error("failed to retrieve stateDB", "err", err, "parentRoot", item.parentRoot.String())
+			continue
+		}
 		bc.prefetcher.Prefetch(item.prefetchBlock, throwaway, bc.vmConfig, &bc.followupInterrupt)
 		blockPrefetchExecuteTimer.Update(time.Since(start))
 	}
