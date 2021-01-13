@@ -150,7 +150,7 @@ func testShardedIterator_Release(t *testing.T, entryNum int, checkFunc func(db s
 		}(config.Dir)
 
 		// create sharded DB
-		db, err := newShardedDB(config, 0, config.NumStateTrieShards)
+		db, err := newShardedDB(config, MiscDB, config.NumStateTrieShards)
 		if err != nil {
 			t.Log("Error occured while creating DB")
 			t.FailNow()
