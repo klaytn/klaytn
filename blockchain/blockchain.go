@@ -73,7 +73,10 @@ var (
 	blockExecutionTimer = metrics.NewRegisteredTimer("chain/execution", nil)
 	blockFinalizeTimer  = metrics.NewRegisteredTimer("chain/finalize", nil)
 	blockValidateTimer  = metrics.NewRegisteredTimer("chain/validate", nil)
-	BlockAgeTimer       = metrics.NewRegisteredTimer("chain/age", nil)
+	blockAgeTimer       = metrics.NewRegisteredTimer("chain/age", nil)
+
+	blockPrefetchExecuteTimer   = metrics.NewRegisteredTimer("chain/prefetch/executes", nil)
+	blockPrefetchInterruptMeter = metrics.NewRegisteredMeter("chain/prefetch/interrupts", nil)
 
 	ErrNoGenesis            = errors.New("genesis not found in chain")
 	ErrNotExistNode         = errors.New("the node does not exist in cached node")
@@ -155,7 +158,6 @@ type BlockChain struct {
 
 	mu      sync.RWMutex // global mutex for locking chain operations
 	chainmu sync.RWMutex // blockchain insertion lock
-	procmu  sync.RWMutex // block processor lock
 
 	checkpoint       int          // checkpoint counts towards the new checkpoint
 	currentBlock     atomic.Value // Current head of the block chain
@@ -170,10 +172,11 @@ type BlockChain struct {
 	procInterrupt int32          // interrupt signaler for block processing
 	wg            sync.WaitGroup // chain processing wait group for shutting down
 
-	engine    consensus.Engine
-	processor Processor // block processor interface
-	validator Validator // block and state validator interface
-	vmConfig  vm.Config
+	engine     consensus.Engine
+	processor  Processor  // block processor interface
+	prefetcher Prefetcher // Block state prefetcher interface
+	validator  Validator  // block and state validator interface
+	vmConfig   vm.Config
 
 	badBlocks *lru.Cache // Bad block cache
 
@@ -236,8 +239,9 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		stopStateMigration: make(chan struct{}),
 	}
 
-	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
-	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
+	bc.validator = NewBlockValidator(chainConfig, bc, engine)
+	bc.prefetcher = newStatePrefetcher(chainConfig, bc, engine)
+	bc.processor = NewStateProcessor(chainConfig, bc, engine)
 
 	var err error
 	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
@@ -485,31 +489,13 @@ func (bc *BlockChain) CurrentFastBlock() *types.Block {
 	return bc.currentFastBlock.Load().(*types.Block)
 }
 
-// SetProcessor sets the processor required for making state modifications.
-func (bc *BlockChain) SetProcessor(processor Processor) {
-	bc.procmu.Lock()
-	defer bc.procmu.Unlock()
-	bc.processor = processor
-}
-
-// SetValidator sets the validator which is used to validate incoming blocks.
-func (bc *BlockChain) SetValidator(validator Validator) {
-	bc.procmu.Lock()
-	defer bc.procmu.Unlock()
-	bc.validator = validator
-}
-
 // Validator returns the current validator.
 func (bc *BlockChain) Validator() Validator {
-	bc.procmu.RLock()
-	defer bc.procmu.RUnlock()
 	return bc.validator
 }
 
 // Processor returns the current processor.
 func (bc *BlockChain) Processor() Processor {
-	bc.procmu.RLock()
-	defer bc.procmu.RUnlock()
 	return bc.processor
 }
 
@@ -1574,7 +1560,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		err := <-results
 		if err == nil {
-			err = bc.Validator().ValidateBody(block)
+			err = bc.validator.ValidateBody(block)
 		}
 
 		switch {
@@ -1651,18 +1637,38 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
+		// If we have a followup block, run that against the current state to pre-cache
+		// transactions and probabilistically some of the account/storage trie nodes.
+		var followupInterrupt uint32
+
+		if !bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch {
+			if i < len(chain)-1 {
+				followup := chain[i+1]
+				go func(start time.Time) {
+					throwaway, _ := state.New(parent.Root(), bc.stateCache)
+					bc.prefetcher.Prefetch(followup, throwaway, bc.vmConfig, &followupInterrupt)
+
+					blockPrefetchExecuteTimer.Update(time.Since(start))
+					if atomic.LoadUint32(&followupInterrupt) == 1 {
+						blockPrefetchInterruptMeter.Mark(1)
+					}
+				}(time.Now())
+			}
+		}
 
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, internalTxTraces, procStats, err := bc.processor.Process(block, stateDB, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
+			atomic.StoreUint32(&followupInterrupt, 1)
 			return i, events, coalescedLogs, err
 		}
 
 		// Validate the state using the default validator
-		err = bc.Validator().ValidateState(block, parent, stateDB, receipts, usedGas)
+		err = bc.validator.ValidateState(block, parent, stateDB, receipts, usedGas)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
+			atomic.StoreUint32(&followupInterrupt, 1)
 			return i, events, coalescedLogs, err
 		}
 		afterValidate := time.Now()
@@ -1670,12 +1676,14 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Write the block to the chain and get the writeResult.
 		writeResult, err := bc.WriteBlockWithState(block, receipts, stateDB)
 		if err != nil {
+			atomic.StoreUint32(&followupInterrupt, 1)
 			if err == ErrKnownBlock {
 				logger.Debug("Tried to insert already known block", "num", block.NumberU64(), "hash", block.Hash().String())
 				continue
 			}
 			return i, events, coalescedLogs, err
 		}
+		atomic.StoreUint32(&followupInterrupt, 1)
 
 		// Update the metrics subsystem with all the measurements
 		accountReadTimer.Update(stateDB.AccountReads)
@@ -1691,7 +1699,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		trieAccess := stateDB.AccountReads + stateDB.AccountHashes + stateDB.AccountUpdates + stateDB.AccountCommits
 		trieAccess += stateDB.StorageReads + stateDB.StorageHashes + stateDB.StorageUpdates + stateDB.StorageCommits
 
-		BlockAgeTimer.Update(time.Since(time.Unix(int64(block.Time().Uint64()), 0)))
+		blockAgeTimer.Update(time.Since(time.Unix(int64(block.Time().Uint64()), 0)))
 
 		switch writeResult.Status {
 		case CanonStatTy:
