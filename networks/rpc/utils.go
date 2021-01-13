@@ -224,3 +224,22 @@ func NewID() ID {
 
 	return ID("0x" + rpcId)
 }
+
+// sanitizeTimeouts sets timeouts to default one if timeout is too short.
+func sanitizeTimeouts(timeouts HTTPTimeouts) HTTPTimeouts {
+	// Make sure timeout values are meaningful
+	if timeouts.ReadTimeout < time.Second {
+		logger.Warn("Sanitizing invalid HTTP read timeout", "provided", timeouts.ReadTimeout, "updated", DefaultHTTPTimeouts.ReadTimeout)
+		timeouts.ReadTimeout = DefaultHTTPTimeouts.ReadTimeout
+	}
+	if timeouts.WriteTimeout < time.Second {
+		logger.Warn("Sanitizing invalid HTTP write timeout", "provided", timeouts.WriteTimeout, "updated", DefaultHTTPTimeouts.WriteTimeout)
+		timeouts.WriteTimeout = DefaultHTTPTimeouts.WriteTimeout
+	}
+	if timeouts.IdleTimeout < time.Second {
+		logger.Warn("Sanitizing invalid HTTP idle timeout", "provided", timeouts.IdleTimeout, "updated", DefaultHTTPTimeouts.IdleTimeout)
+		timeouts.IdleTimeout = DefaultHTTPTimeouts.IdleTimeout
+	}
+
+	return timeouts
+}

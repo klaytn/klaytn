@@ -201,6 +201,7 @@ func (t *httpReadWriteNopCloser) Close() error {
 //
 // Deprecated: Server implements http.Handler
 func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *http.Server {
+	timeouts = sanitizeTimeouts(timeouts)
 	// Wrap the CORS-handler within a host-handler
 	handler := newCorsHandler(srv, cors)
 	handler = newVHostHandler(vhosts, handler)
@@ -213,6 +214,7 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *S
 }
 
 func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *fasthttp.Server {
+	timeouts = sanitizeTimeouts(timeouts)
 	if len(cors) == 0 {
 		for _, vhost := range vhosts {
 			if vhost == "*" {

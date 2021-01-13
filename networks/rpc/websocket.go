@@ -164,6 +164,7 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 //
 // Deprecated: use Server.WebsocketHandler
 func NewWSServer(allowedOrigins []string, timeouts HTTPTimeouts, srv *Server) *http.Server {
+	timeouts = sanitizeTimeouts(timeouts)
 	return &http.Server{
 		Handler:      srv.WebsocketHandler(allowedOrigins),
 		ReadTimeout:  timeouts.ReadTimeout,
@@ -173,6 +174,7 @@ func NewWSServer(allowedOrigins []string, timeouts HTTPTimeouts, srv *Server) *h
 }
 
 func NewFastWSServer(allowedOrigins []string, timeouts HTTPTimeouts, srv *Server) *fasthttp.Server {
+	timeouts = sanitizeTimeouts(timeouts)
 	upgrader.CheckOrigin = wsFastHandshakeValidator(allowedOrigins)
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
