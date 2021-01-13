@@ -49,6 +49,9 @@ const (
 
 	// concurrencyLimit is a limit for the number of concurrency connection for RPC servers
 	concurrencyLimit = 3000
+
+	// maxSubscriptionPerConn is a maximum number of subscription for a server connection
+	maxSubscriptionPerConn = 10
 )
 
 // pendingRequestCount is a total number of concurrent RPC method calls
@@ -181,6 +184,9 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 	s.codecs.Add(codec)
 	s.codecsMu.Unlock()
 
+	// subscriptionCount counts and limits active subscriptions to avoid resource exhaustion
+	subscriptionCount := uint(0)
+
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
 		reqs, batch, err := s.readRequest(codec)
@@ -232,9 +238,9 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		// If a single shot request is executing, run and return immediately
 		if singleShot {
 			if batch {
-				s.execBatch(ctx, codec, reqs)
+				s.execBatch(ctx, codec, reqs, &subscriptionCount)
 			} else {
-				s.exec(ctx, codec, reqs[0])
+				s.exec(ctx, codec, reqs[0], &subscriptionCount)
 			}
 			return nil
 		}
@@ -255,9 +261,9 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 
 			defer pend.Done()
 			if batch {
-				s.execBatch(ctx, codec, reqs)
+				s.execBatch(ctx, codec, reqs, &subscriptionCount)
 			} else {
-				s.exec(ctx, codec, reqs[0])
+				s.exec(ctx, codec, reqs[0], &subscriptionCount)
 			}
 		}(reqs, batch)
 	}
@@ -311,7 +317,7 @@ var callCount = 0
 var callSendTx = 0
 
 // handle executes a request and returns the response from the callback.
-func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
+func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest, subCnt *uint) (interface{}, func()) {
 	if req.err != nil {
 		rpcErrorResponsesCounter.Inc(1)
 		return codec.CreateErrorResponse(&req.id, req.err), nil
@@ -331,6 +337,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 				return codec.CreateErrorResponse(&req.id, &callbackError{err.Error()}), nil
 			}
 
+			*subCnt--
 			rpcSuccessResponsesCounter.Inc(1)
 			return codec.CreateResponse(req.id, true), nil
 		}
@@ -339,6 +346,12 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	}
 
 	if req.callb.isSubscribe {
+		if *subCnt >= maxSubscriptionPerConn {
+			return codec.CreateErrorResponse(&req.id, &callbackError{
+				fmt.Sprintf("Maximum %d subscriptions are allowed for a websocket connection", maxSubscriptionPerConn),
+			}), nil
+		}
+
 		subid, err := s.createSubscription(ctx, codec, req)
 		if err != nil {
 			rpcErrorResponsesCounter.Inc(1)
@@ -350,6 +363,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 			notifier, _ := NotifierFromContext(ctx)
 			notifier.activate(subid, req.svcname)
 		}
+		*subCnt++
 		rpcSuccessResponsesCounter.Inc(1)
 		return codec.CreateResponse(req.id, subid), activateSub
 	}
@@ -400,14 +414,14 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 }
 
 // exec executes the given request and writes the result back using the codec.
-func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest) {
+func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest, subCnt *uint) {
 	var response interface{}
 	var callback func()
 	if req.err != nil {
 		rpcErrorResponsesCounter.Inc(1)
 		response = codec.CreateErrorResponse(&req.id, req.err)
 	} else {
-		response, callback = s.handle(ctx, codec, req)
+		response, callback = s.handle(ctx, codec, req, subCnt)
 	}
 
 	if err := codec.Write(response); err != nil {
@@ -423,7 +437,7 @@ func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest
 
 // execBatch executes the given requests and writes the result back using the codec.
 // It will only write the response back when the last request is processed.
-func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
+func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest, subCnt *uint) {
 	responses := make([]interface{}, len(requests))
 	var callbacks []func()
 	for i, req := range requests {
@@ -432,7 +446,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
 		} else {
 			var callback func()
-			if responses[i], callback = s.handle(ctx, codec, req); callback != nil {
+			if responses[i], callback = s.handle(ctx, codec, req, subCnt); callback != nil {
 				callbacks = append(callbacks, callback)
 			}
 		}
