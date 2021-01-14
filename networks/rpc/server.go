@@ -350,7 +350,8 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	if req.callb.isSubscribe {
 		if atomic.LoadInt32(subCnt) >= MaxSubscriptionPerConn {
 			return codec.CreateErrorResponse(&req.id, &callbackError{
-				fmt.Sprintf("Maximum %d subscriptions are allowed for a websocket connection", MaxSubscriptionPerConn),
+				fmt.Sprintf("Maximum %d subscriptions are allowed for a websocket connection. "+
+					"The limit can be updated with 'admin_setMaxSubscriptionPerConn' API", MaxSubscriptionPerConn),
 			}), nil
 		}
 
