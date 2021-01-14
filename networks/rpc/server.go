@@ -49,13 +49,15 @@ const (
 
 	// concurrencyLimit is a limit for the number of concurrency connection for RPC servers
 	concurrencyLimit = 3000
-
-	// maxSubscriptionPerConn is a maximum number of subscription for a server connection
-	maxSubscriptionPerConn = 5
 )
 
-// pendingRequestCount is a total number of concurrent RPC method calls
-var pendingRequestCount int64 = 0
+var (
+	// pendingRequestCount is a total number of concurrent RPC method calls
+	pendingRequestCount int64 = 0
+
+	// MaxSubscriptionPerConn is a maximum number of subscription for a server connection
+	MaxSubscriptionPerConn int32 = 5
+)
 
 // NewServer will create a new server instance with no registered handlers.
 func NewServer() *Server {
@@ -346,9 +348,9 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	}
 
 	if req.callb.isSubscribe {
-		if atomic.LoadInt32(subCnt) >= maxSubscriptionPerConn {
+		if atomic.LoadInt32(subCnt) >= MaxSubscriptionPerConn {
 			return codec.CreateErrorResponse(&req.id, &callbackError{
-				fmt.Sprintf("Maximum %d subscriptions are allowed for a websocket connection", maxSubscriptionPerConn),
+				fmt.Sprintf("Maximum %d subscriptions are allowed for a websocket connection", MaxSubscriptionPerConn),
 			}), nil
 		}
 

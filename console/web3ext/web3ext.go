@@ -295,6 +295,11 @@ web3._extend({
 			name: 'saveTrieNodeCacheToDisk',
 			call: 'admin_saveTrieNodeCacheToDisk',
 		}),
+		new web3._extend.Method({
+			name: 'setMaxSubscriptionPerConn',
+			call: 'admin_setMaxSubscriptionPerConn',
+			params: 1
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
