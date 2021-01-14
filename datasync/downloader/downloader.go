@@ -1387,13 +1387,17 @@ func (d *Downloader) processFullSyncContent() error {
 		logger.Debug("Processing full sync content terminated", "elapsed", time.Since(start))
 	}(time.Now())
 	for {
+		logger.Info("results := d.queue.Results(true)")
 		results := d.queue.Results(true)
 		if len(results) == 0 {
 			return nil
 		}
+
 		if d.chainInsertHook != nil {
+			logger.Info("d.chainInsertHook != nil")
 			d.chainInsertHook(results)
 		}
+		logger.Info("if err := d.importBlockResults(results); err != nil {")
 		if err := d.importBlockResults(results); err != nil {
 			return err
 		}
@@ -1420,6 +1424,7 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 	for i, result := range results {
 		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions)
 	}
+	logger.Info("if index, err := d.blockchain.InsertChain(blocks); err != nil {", "numBlocks", len(blocks), "startNum", blocks[0].NumberU64())
 	if index, err := d.blockchain.InsertChain(blocks); err != nil {
 		logger.Debug("Downloaded item processing failed", "number", results[index].Header.Number, "hash", results[index].Header.Hash(), "err", err)
 		return fmt.Errorf("%w: %v", errInvalidChain, err)

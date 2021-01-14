@@ -336,11 +336,14 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 // Results can be called concurrently with Deliver and Schedule,
 // but assumes that there are not two simultaneous callers to Results
 func (q *queue) Results(block bool) []*fetchResult {
+	logger.Info("queue.Results started")
+	defer logger.Info("queue.Results ended")
 	// Abort early if there are no items and non-blocking requested
 	if !block && !q.resultCache.HasCompletedItems() {
 		return nil
 	}
 	closed := false
+	logger.Info("!closed && !q.resultCache.HasCompletedItems()")
 	for !closed && !q.resultCache.HasCompletedItems() {
 		// In order to wait on 'active', we need to obtain the lock.
 		// That may take a while, if someone is delivering at the same
@@ -359,6 +362,7 @@ func (q *queue) Results(block bool) []*fetchResult {
 		closed = q.closed
 		q.lock.Unlock()
 	}
+	logger.Info("q.resultCache.GetCompleted(maxResultsProcess)")
 	// Regardless if closed or not, we can still deliver whatever we have
 	results := q.resultCache.GetCompleted(maxResultsProcess)
 	for _, result := range results {
