@@ -160,3 +160,16 @@ func Int64ToByteBigEndian(number uint64) []byte {
 
 	return enc
 }
+
+type Entry struct {
+	Key, Val []byte
+}
+
+// CreateEntries creates random key/value pairs.
+func CreateEntries(entryNum int) []Entry {
+	entries := make([]Entry, entryNum)
+	for i := 0; i < entryNum; i++ {
+		entries[i] = Entry{MakeRandomBytes(256), MakeRandomBytes(600)}
+	}
+	return entries
+}
