@@ -96,6 +96,8 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	err := upgrader.Upgrade(ctx, func(conn *fastws.Conn) {
+		conn.SetReadDeadline(time.Now().Add(5 * time.Minute)) // Each connection will be closed after the deadline
+
 		//Create a custom encode/decode pair to enforce payload size and number encoding
 		encoder := func(v interface{}) error {
 			msg, err := json.Marshal(v)
