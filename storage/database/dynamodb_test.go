@@ -119,7 +119,7 @@ func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
 				s.FailNow(err.Error())
 			}
 			if _, err := listen.AcceptTCP(); err != nil {
-				// timeout is expected
+				// the fake server ends silently when it meets deadline
 				if strings.Contains(err.Error(), "timeout") {
 					return
 				}
