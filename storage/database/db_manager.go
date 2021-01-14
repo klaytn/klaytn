@@ -271,14 +271,20 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 	5,  // BodyDB
 	5,  // ReceiptsDB
 	40, // StateTrieDB
-	40, // StateTrieMigrationDB
+	35, // StateTrieMigrationDB
 	2,  // TXLookUpEntryDB
 	1,  // bridgeServiceDB
+	5,  // SnapshotDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
 // If it isn't, logger.Crit is called.
 func checkDBEntryConfigRatio() {
+	if len(dbBaseDirs) != len(dbConfigRatio) {
+		logger.Crit("len(dbBaseDirs) != len(dbConfigRatio)",
+			"len(dbBaseDirs)", len(dbBaseDirs), "len(dbConfigRatio)", len(dbConfigRatio))
+	}
+
 	entryConfigRatioSum := 0
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
 		entryConfigRatioSum += dbConfigRatio[i]
