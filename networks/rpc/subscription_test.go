@@ -230,6 +230,12 @@ func waitForMessages(t *testing.T, in *json.Decoder, successes chan<- jsonSucces
 // TestSubscriptionMultipleNamespaces ensures that subscriptions can exists
 // for multiple different namespaces.
 func TestSubscriptionMultipleNamespaces(t *testing.T) {
+	oldMaxSubscription := MaxSubscriptionPerConn
+	MaxSubscriptionPerConn = 100
+	defer func() {
+		MaxSubscriptionPerConn = oldMaxSubscription
+	}()
+
 	var (
 		namespaces             = []string{"klay", "shh", "bzz"}
 		server                 = NewServer()
