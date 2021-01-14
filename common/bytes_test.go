@@ -103,3 +103,21 @@ func TestNoPrefixShortHexOddLength(t *testing.T) {
 		t.Errorf("Expected %x got %x", expected, result)
 	}
 }
+
+func TestInt64ToByteBigEndian(t *testing.T) {
+	input := uint64(789456123)
+	b := Int64ToByteBigEndian(input)
+	n := ByteBigEndianToInt64(b)
+	if input != n {
+		t.Errorf("Expected %x got %x", input, n)
+	}
+}
+
+func TestByteBigEndianToInt64(t *testing.T) {
+	input := MakeRandomBytes(8)
+	n := ByteBigEndianToInt64(input)
+	b := Int64ToByteBigEndian(n)
+	if !bytes.Equal(input, b) {
+		t.Errorf("Expected %x got %x", input, b)
+	}
+}

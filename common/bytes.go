@@ -160,3 +160,8 @@ func Int64ToByteBigEndian(number uint64) []byte {
 
 	return enc
 }
+
+// Int64ToByteBigEndian encodes a number as big endian uint64
+func ByteBigEndianToInt64(b []byte) uint64 {
+	return binary.BigEndian.Uint64(b)
+}
