@@ -242,6 +242,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchCh:         make(chan *types.Block, 2048),
+		prefetchTxCh:       make(chan prefetchTx, 20000),
 	}
 
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
@@ -1558,6 +1559,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		seals[i] = true
 	}
 
+	logger.Info("BlockChain.insertChain VerifyHeaders", "id", id)
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)
 
@@ -1654,6 +1656,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			parent = chain[i-1]
 		}
 
+		logger.Info("BlockChain.insertChain StateAt", "id", id)
 		stateDB, err := bc.StateAt(parent.Root())
 		if err != nil {
 			return i, events, coalescedLogs, err
@@ -1667,7 +1670,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				if len(chain) > 1 {
 					// when downloader works
 					for k := i + 1; k < len(chain); k++ {
-						bc.prefetchCh <- chain[k]
+						select {
+						case bc.prefetchCh <- chain[k]:
+						default:
+						}
+
 					}
 					logger.Info("sent blocks to prefetch channel", "numBlocks", len(chain)-1)
 				} else {
