@@ -18,6 +18,13 @@ package sc
 
 import (
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"reflect"
+	"strings"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/crypto"
@@ -26,12 +33,6 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"reflect"
-	"strings"
-	"testing"
 )
 
 // testNewSubBridge returns a test SubBridge.
@@ -40,6 +41,7 @@ func testNewSubBridge(t *testing.T) *SubBridge {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(tempDir)
 
 	sCtx := node.NewServiceContext(&node.DefaultConfig, map[reflect.Type]node.Service{}, &event.TypeMux{}, &accounts.Manager{})
 	sBridge, err := NewSubBridge(sCtx, &SCConfig{NetworkId: testNetVersion, DataDir: tempDir})
