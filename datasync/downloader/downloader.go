@@ -1399,8 +1399,10 @@ func (d *Downloader) processFullSyncContent() error {
 		}
 		logger.Info("if err := d.importBlockResults(results); err != nil {")
 		if err := d.importBlockResults(results); err != nil {
+			logger.Info("importBlockResults", "err", err)
 			return err
 		}
+		logger.Info("processFullSyncContent for loop end")
 	}
 }
 

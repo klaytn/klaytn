@@ -1512,10 +1512,14 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 // only reason this method exists as a separate one is to make locking cleaner
 // with deferred statements.
 func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
+
 	// Sanity check that we have something meaningful to import
 	if len(chain) == 0 {
 		return 0, nil, nil, nil
 	}
+	id := time.Now().UnixNano()
+	logger.Info("BlockChain.insertChain started", "id", id,
+		"startBlock", chain[0].NumberU64(), "numBlocks", len(chain))
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(chain); i++ {
 		if chain[i].NumberU64() != chain[i-1].NumberU64()+1 || chain[i].ParentHash() != chain[i-1].Hash() {
@@ -1535,6 +1539,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	bc.chainmu.Lock()
 	defer bc.chainmu.Unlock()
 
+	logger.Info("BlockChain.insertChain took chainmu.Lock()", "id", id)
 	// A queued approach to delivering events. This is generally
 	// faster than direct delivery and requires much less mutex
 	// acquiring.
