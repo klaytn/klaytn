@@ -206,7 +206,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// All checks passed, create a codec that reads direct from the request body
 	// untilEOF and writes the response to w and order the server to process a
 	// single request.
-	ctx := context.Background()
+	ctx := r.Context()
 	ctx = context.WithValue(ctx, "remote", r.RemoteAddr)
 	ctx = context.WithValue(ctx, "scheme", r.Proto)
 	ctx = context.WithValue(ctx, "local", r.Host)
@@ -238,7 +238,8 @@ func (srv *Server) HandleFastHTTP(requestCtx *fasthttp.RequestCtx) {
 	// All checks passed, create a codec that reads direct from the request body
 	// untilEOF and writes the response to w and order the server to process a
 	// single request.
-	ctx := context.Background()
+	var ctx context.Context
+	ctx = requestCtx
 	ctx = context.WithValue(ctx, "remote", requestCtx.RemoteAddr().String())
 	ctx = context.WithValue(ctx, "scheme", string(requestCtx.URI().Scheme()))
 	ctx = context.WithValue(ctx, "local", requestCtx.LocalAddr().String())
