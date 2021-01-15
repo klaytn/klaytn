@@ -245,8 +245,7 @@ __check_option() {
         OPTIONS="$OPTIONS --kes.nodetype.service"
     fi
 
-    if [[ ! -z $INIT_PRIVATE_NETWORK ]] && [[ $INIT_PRIVATE_NETWORK != "" ]];
-    then
+    if [[ ! -z $INIT_PRIVATE_NETWORK ]] && [[ $INIT_PRIVATE_NETWORK -eq 1 ]]; then
         echo "$STATIC_NODE_KNI" > $DATA_DIR/statis-node.json
         echo "$BIN/ken init --datadir $DATA_DIR genesis.json"
         $BIN/ken init --datadir $DATA_DIR genesis.json
