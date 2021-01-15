@@ -104,8 +104,8 @@ func TestNoPrefixShortHexOddLength(t *testing.T) {
 	}
 }
 
-func TestInt64ToByteBigEndian(t *testing.T) {
-	expected := []byte{1, 3, 4, 2}
+func TestUint64ToByteBigEndian(t *testing.T) {
+	expected := []byte{9, 1, 5, 3, 4, 2, 8, 6}
 	input := uint64(
 		9*256*256*256*256*256*256*256 +
 			1*256*256*256*256*256*256 +
@@ -121,7 +121,7 @@ func TestInt64ToByteBigEndian(t *testing.T) {
 	}
 }
 
-func TestByteBigEndianToInt64(t *testing.T) {
+func TestByteBigEndianToUint64(t *testing.T) {
 	expected := uint64(
 		9*256*256*256*256*256*256*256 +
 			1*256*256*256*256*256*256 +
@@ -138,7 +138,7 @@ func TestByteBigEndianToInt64(t *testing.T) {
 	}
 }
 
-func TestInt64ToByteBigEndian_Convert(t *testing.T) {
+func TestUint64ToByteBigEndian_Convert(t *testing.T) {
 	input := uint64(789456123)
 	b := Uint64ToByteBigEndian(input)
 	n := ByteBigEndianToUint64(b)
@@ -147,7 +147,7 @@ func TestInt64ToByteBigEndian_Convert(t *testing.T) {
 	}
 }
 
-func TestByteBigEndianToInt64_Convert(t *testing.T) {
+func TestByteBigEndianToUint64_Convert(t *testing.T) {
 	input := MakeRandomBytes(8)
 	n := ByteBigEndianToUint64(input)
 	b := Uint64ToByteBigEndian(n)

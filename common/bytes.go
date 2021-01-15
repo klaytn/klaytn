@@ -145,7 +145,7 @@ func MakeRandomBytes(n int) []byte {
 	return s
 }
 
-// IntToByteLittleEndian encodes a number as little endian uint64
+// Uint64ToByteLittleEndian encodes a number as little endian uint64
 func Uint64ToByteLittleEndian(num uint64) []byte {
 	enc := make([]byte, 8)
 	binary.LittleEndian.PutUint64(enc, num)
