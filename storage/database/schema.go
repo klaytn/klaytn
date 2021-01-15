@@ -107,7 +107,7 @@ type TxLookupEntry struct {
 
 // headerKey = headerPrefix + num (uint64 big endian) + hash
 func headerKey(number uint64, hash common.Hash) []byte {
-	return append(append(headerPrefix, common.Int64ToByteBigEndian(number)...), hash.Bytes()...)
+	return append(append(headerPrefix, common.Uint64ToByteBigEndian(number)...), hash.Bytes()...)
 }
 
 // headerTDKey = headerPrefix + num (uint64 big endian) + hash + headerTDSuffix
@@ -117,7 +117,7 @@ func headerTDKey(number uint64, hash common.Hash) []byte {
 
 // headerHashKey = headerPrefix + num (uint64 big endian) + headerHashSuffix
 func headerHashKey(number uint64) []byte {
-	return append(append(headerPrefix, common.Int64ToByteBigEndian(number)...), headerHashSuffix...)
+	return append(append(headerPrefix, common.Uint64ToByteBigEndian(number)...), headerHashSuffix...)
 }
 
 // headerNumberKey = headerNumberPrefix + hash
@@ -127,12 +127,12 @@ func headerNumberKey(hash common.Hash) []byte {
 
 // blockBodyKey = blockBodyPrefix + num (uint64 big endian) + hash
 func blockBodyKey(number uint64, hash common.Hash) []byte {
-	return append(append(blockBodyPrefix, common.Int64ToByteBigEndian(number)...), hash.Bytes()...)
+	return append(append(blockBodyPrefix, common.Uint64ToByteBigEndian(number)...), hash.Bytes()...)
 }
 
 // blockReceiptsKey = blockReceiptsPrefix + num (uint64 big endian) + hash
 func blockReceiptsKey(number uint64, hash common.Hash) []byte {
-	return append(append(blockReceiptsPrefix, common.Int64ToByteBigEndian(number)...), hash.Bytes()...)
+	return append(append(blockReceiptsPrefix, common.Uint64ToByteBigEndian(number)...), hash.Bytes()...)
 }
 
 // TxLookupKey = txLookupPrefix + hash
@@ -185,10 +185,10 @@ func BloomBitsKey(bit uint, section uint64, hash common.Hash) []byte {
 }
 
 func makeKey(prefix []byte, num uint64) []byte {
-	byteKey := common.Int64ToByteLittleEndian(num)
+	byteKey := common.Uint64ToByteLittleEndian(num)
 	return append(prefix, byteKey...)
 }
 
 func databaseDirKey(dbEntryType uint64) []byte {
-	return append(databaseDirPrefix, common.Int64ToByteBigEndian(dbEntryType)...)
+	return append(databaseDirPrefix, common.Uint64ToByteBigEndian(dbEntryType)...)
 }

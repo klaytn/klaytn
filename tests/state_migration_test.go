@@ -17,18 +17,19 @@
 package tests
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/stretchr/testify/assert"
-	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/node/cn"
+	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // continuous occurrence of state trie migration and node restart must success
@@ -54,7 +55,7 @@ func TestMigration_ContinuousRestartAndMigration(t *testing.T) {
 		waitMigrationEnds(t, node)
 
 		// check if migration succeeds (StateTrieDB changes when migration finishes)
-		newPathKey := append([]byte("databaseDirectory"), common.Int64ToByteBigEndian(uint64(database.StateTrieDB))...)
+		newPathKey := append([]byte("databaseDirectory"), common.Uint64ToByteBigEndian(uint64(database.StateTrieDB))...)
 		newStateTriePath, err := node.ChainDB().GetMiscDB().Get(newPathKey)
 		assert.NoError(t, err)
 		assert.NotEqual(t, stateTriePath, newStateTriePath, "migration failed")
@@ -69,7 +70,7 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 	fullNode, cn, validator, _, workspace, _, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 
-	stateTriePathKey := append([]byte("databaseDirectory"), common.Int64ToByteBigEndian(uint64(database.StateTrieDB))...)
+	stateTriePathKey := append([]byte("databaseDirectory"), common.Uint64ToByteBigEndian(uint64(database.StateTrieDB))...)
 
 	// use the default StateTrie DB if it is not set on miscDB
 	{
@@ -142,11 +143,11 @@ func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 
 	// set migration status in miscDB
 	migrationBlockNum := node.BlockChain().CurrentBlock().Header().Number.Uint64()
-	err := miscDB.Put([]byte("migrationStatus"), common.Int64ToByteBigEndian(migrationBlockNum))
+	err := miscDB.Put([]byte("migrationStatus"), common.Uint64ToByteBigEndian(migrationBlockNum))
 	assert.NoError(t, err)
 
 	// set migration db path in miscDB
-	migrationPathKey := append([]byte("databaseDirectory"), common.Int64ToByteBigEndian(uint64(database.StateTrieMigrationDB))...)
+	migrationPathKey := append([]byte("databaseDirectory"), common.Uint64ToByteBigEndian(uint64(database.StateTrieMigrationDB))...)
 	migrationPath := []byte("statetrie_migrated_" + strconv.FormatUint(migrationBlockNum, 10))
 	err = miscDB.Put(migrationPathKey, migrationPath)
 	assert.NoError(t, err)
@@ -167,7 +168,7 @@ func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 	waitMigrationEnds(t, node)
 
 	// state trie path should not be "statetrie" in miscDB
-	newPathKey := append([]byte("databaseDirectory"), common.Int64ToByteBigEndian(uint64(database.StateTrieDB))...)
+	newPathKey := append([]byte("databaseDirectory"), common.Uint64ToByteBigEndian(uint64(database.StateTrieDB))...)
 	dir, err := miscDB.Get(newPathKey)
 	assert.NoError(t, err)
 	assert.NotEqual(t, "statetrie", string(dir), "migration failed")

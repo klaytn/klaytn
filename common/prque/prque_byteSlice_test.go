@@ -38,16 +38,16 @@ func TestPrqueByteSlice(t *testing.T) {
 		// Create a map the values to the priorities for easier verification
 		dict := make(map[uint64]int)
 		for i := 0; i < size; i++ {
-			dict[common.ByteBigEndianToInt64(prio[i])] = data[i]
+			dict[common.ByteBigEndianToUint64(prio[i])] = data[i]
 		}
 		// Pop out the elements in priority order and verify them
 		prevPrio := uint64(math.MaxUint64)
 		for !queue.Empty() {
 			val, prio := queue.Pop()
-			if common.ByteBigEndianToInt64(prio) > prevPrio {
+			if common.ByteBigEndianToUint64(prio) > prevPrio {
 				t.Errorf("invalid priority order: %v after %v.", prio, prevPrio)
 			}
-			prevPrio = common.ByteBigEndianToInt64(prio)
+			prevPrio = common.ByteBigEndianToUint64(prio)
 			if val != dict[prevPrio] {
 				t.Errorf("push/pop mismatch: have %v, want %v.", val, dict[prevPrio])
 			}

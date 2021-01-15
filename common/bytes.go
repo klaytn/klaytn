@@ -146,22 +146,22 @@ func MakeRandomBytes(n int) []byte {
 }
 
 // IntToByteLittleEndian encodes a number as little endian uint64
-func Int64ToByteLittleEndian(num uint64) []byte {
+func Uint64ToByteLittleEndian(num uint64) []byte {
 	enc := make([]byte, 8)
 	binary.LittleEndian.PutUint64(enc, num)
 
 	return enc
 }
 
-// Int64ToByteBigEndian encodes a number as big endian uint64
-func Int64ToByteBigEndian(number uint64) []byte {
+// Uint64ToByteBigEndian encodes a number as big endian uint64
+func Uint64ToByteBigEndian(number uint64) []byte {
 	enc := make([]byte, 8)
 	binary.BigEndian.PutUint64(enc, number)
 
 	return enc
 }
 
-// Int64ToByteBigEndian encodes a number as big endian uint64
-func ByteBigEndianToInt64(b []byte) uint64 {
+// ByteBigEndianToUint64 decodes big endian uint64 to a number
+func ByteBigEndianToUint64(b []byte) uint64 {
 	return binary.BigEndian.Uint64(b)
 }

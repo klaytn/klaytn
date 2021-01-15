@@ -36,8 +36,8 @@ func Test_newSegment_Success(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	total := uint64(10)
 	idx := rand.Uint64() % total
-	totalBytes := common.Int64ToByteBigEndian(total)
-	idxBytes := common.Int64ToByteBigEndian(idx)
+	totalBytes := common.Uint64ToByteBigEndian(total)
+	idxBytes := common.Uint64ToByteBigEndian(idx)
 	key := "test-key"
 	msg := &sarama.ConsumerMessage{
 		Headers: []*sarama.RecordHeader{

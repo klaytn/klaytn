@@ -142,11 +142,11 @@ func (k *Kafka) makeProducerMessage(topic, key string, segment []byte, segmentId
 		Headers: []sarama.RecordHeader{
 			{
 				Key:   []byte(KeyTotalSegments),
-				Value: common.Int64ToByteBigEndian(totalSegments),
+				Value: common.Uint64ToByteBigEndian(totalSegments),
 			},
 			{
 				Key:   []byte(KeySegmentIdx),
-				Value: common.Int64ToByteBigEndian(segmentIdx),
+				Value: common.Uint64ToByteBigEndian(segmentIdx),
 			},
 		},
 		Value: sarama.ByteEncoder(segment),
