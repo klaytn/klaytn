@@ -437,7 +437,6 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 		// There is no datadir.
 		keydir, err = ioutil.TempDir("", "klaytn-keystore")
 		ephemeral = keydir
-		defer os.RemoveAll(keydir)
 	}
 
 	if err != nil {

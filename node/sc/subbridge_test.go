@@ -41,7 +41,6 @@ func testNewSubBridge(t *testing.T) *SubBridge {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(tempDir)
 
 	sCtx := node.NewServiceContext(&node.DefaultConfig, map[reflect.Type]node.Service{}, &event.TypeMux{}, &accounts.Manager{})
 	sBridge, err := NewSubBridge(sCtx, &SCConfig{NetworkId: testNetVersion, DataDir: tempDir})
@@ -107,8 +106,8 @@ func TestSubBridge_basic(t *testing.T) {
 func TestSubBridge_removePeer(t *testing.T) {
 	// Create a test SubBridge (it may have 0 peers)
 	sBridge := testNewSubBridge(t)
-	defer sBridge.chainDB.Close()
 	defer sBridge.removeData(t)
+	defer sBridge.chainDB.Close()
 
 	// Set components of SubBridge
 	bc := testBlockChain(t)
@@ -160,6 +159,7 @@ func TestSubBridge_removePeer(t *testing.T) {
 func TestSubBridge_handleMsg(t *testing.T) {
 	// Create a test SubBridge
 	sBridge := testNewSubBridge(t)
+	defer sBridge.removeData(t)
 	defer sBridge.chainDB.Close()
 
 	// Elements for a bridgePeer
@@ -214,8 +214,8 @@ func TestSubBridge_handleMsg(t *testing.T) {
 func TestSubBridge_handle(t *testing.T) {
 	// Create a test SubBridge
 	sBridge := testNewSubBridge(t)
-	defer sBridge.chainDB.Close()
 	defer sBridge.removeData(t)
+	defer sBridge.chainDB.Close()
 
 	// Set components of SubBridge
 	bc := testBlockChain(t)
@@ -296,8 +296,8 @@ func TestSubBridge_handle(t *testing.T) {
 func TestSubBridge_SendRPCData(t *testing.T) {
 	// Create a test SubBridge
 	sBridge := testNewSubBridge(t)
-	defer sBridge.chainDB.Close()
 	defer sBridge.removeData(t)
+	defer sBridge.chainDB.Close()
 
 	// Test data used as a parameter of SendResponseRPC function
 	data := []byte{0x11, 0x22, 0x33}
