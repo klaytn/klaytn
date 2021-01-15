@@ -115,7 +115,7 @@ func TestUint64ToByteBigEndian(t *testing.T) {
 			2*256*256 +
 			8*256 +
 			6)
-	result := Uint64ToByteBigEndian(input)[4:]
+	result := Uint64ToByteBigEndian(input)
 	if !bytes.Equal(expected, result) {
 		t.Errorf("Expected %x got %x", expected, result)
 	}
