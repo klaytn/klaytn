@@ -285,8 +285,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	for i := 1; i <= runtime.NumCPU()/2; i++ {
-		logger.Info("prefetchTxWorker started", "num", i)
-		go bc.prefetchTxWorker()
+		go bc.prefetchTxWorker(i)
 	}
 
 	// Take ownership of this particular state
@@ -311,7 +310,11 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 // prefetchTxWorker receives a block and a transaction index, which it pre-executes
 // to retrieve and cache the data for the actual block processing.
-func (bc *BlockChain) prefetchTxWorker() {
+func (bc *BlockChain) prefetchTxWorker(index int) {
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
+	logger.Info("prefetchTxWorker is started", "num", index)
 	for followup := range bc.prefetchTxCh {
 		stateDB, err := state.New(bc.CurrentBlock().Root(), bc.stateCache)
 		if err != nil {
@@ -320,6 +323,7 @@ func (bc *BlockChain) prefetchTxWorker() {
 		}
 		bc.prefetcher.PrefetchTx(followup.block, followup.ti, stateDB, bc.vmConfig, followup.followupInterrupt)
 	}
+	logger.Info("prefetchTxWorker is terminated", "num", index)
 }
 
 // SetCanonicalBlock resets the canonical as the block with the given block number.
@@ -845,6 +849,7 @@ func (bc *BlockChain) Stop() {
 		bc.CloseBlockSubscriptionLoop()
 	}
 
+	close(bc.prefetchTxCh)
 	close(bc.quit)
 	atomic.StoreInt32(&bc.procInterrupt, 1)
 
