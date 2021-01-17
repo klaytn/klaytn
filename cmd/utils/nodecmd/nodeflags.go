@@ -131,6 +131,7 @@ var CommonRPCFlags = []cli.Flag{
 	utils.WSMaxSubscriptionPerConn,
 	utils.WSReadDeadLine,
 	utils.WSWriteDeadLine,
+	utils.WSMaxConnections,
 	utils.IPCDisabledFlag,
 	utils.IPCPathFlag,
 }
