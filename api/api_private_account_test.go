@@ -18,12 +18,14 @@ package api
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"testing"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/common"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"testing"
 )
 
 // TestPrivateAccountAPI_ImportRawKey tests ImportRawKey() and ReplaceRawKey().
@@ -35,6 +37,7 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 	//keydir := filepath.Join(".", "keystore")
 	keydir, err := ioutil.TempDir("", "klay-test")
 	require.NoError(t, err)
+	defer os.RemoveAll(keydir)
 
 	// Assemble the account manager and supported backends
 	backends := []accounts.Backend{
