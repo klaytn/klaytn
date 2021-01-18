@@ -5580,9 +5580,9 @@ var properties = function () {
           outputFormatter: formatters.outputBigNumberFormatter
         }),
         new Property({
-        name: 'chainId',
-        getter: 'klay_chainId',
-        outputFormatter: formatters.outputBigNumberFormatter
+          name: 'chainId',
+          getter: 'klay_chainId',
+          outputFormatter: formatters.outputBigNumberFormatter
         }),
         new Property({
             name: 'protocolVersion',
