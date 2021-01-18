@@ -40,10 +40,10 @@ type FastCache struct {
 	fast *fastcache.Cache
 }
 
-// NewFastCache creates a FastCache with given cache size.
+// newFastCache creates a FastCache with given cache size.
 // If you want auto-scaled cache size, set config.LocalCacheSizeMB to AutoScaling.
 // It returns nil if the cache size is zero.
-func NewFastCache(config *TrieNodeCacheConfig) TrieNodeCache {
+func newFastCache(config *TrieNodeCacheConfig) TrieNodeCache {
 	if config.LocalCacheSizeMB == AutoScaling {
 		config.LocalCacheSizeMB = getTrieNodeCacheSizeMB()
 	}

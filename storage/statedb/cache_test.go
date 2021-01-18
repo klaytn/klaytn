@@ -71,7 +71,7 @@ func TestFastCache_SaveAndLoad(t *testing.T) {
 	config.FastCacheFileDir = dirName
 
 	// Create a fastcache from the file and save the data to the cache
-	fastCache := NewFastCache(config)
+	fastCache := newFastCache(config)
 	for idx, key := range keys {
 		assert.DeepEqual(t, fastCache.Get(key), []byte(nil))
 		fastCache.Set(key, vals[idx])
@@ -81,7 +81,7 @@ func TestFastCache_SaveAndLoad(t *testing.T) {
 	assert.NilError(t, fastCache.SaveToFile(dirName, runtime.NumCPU()))
 
 	// Create a fastcache from the file and check if the data exists
-	fastCacheFromFile := NewFastCache(config)
+	fastCacheFromFile := newFastCache(config)
 	for idx, key := range keys {
 		assert.DeepEqual(t, fastCacheFromFile.Get(key), vals[idx])
 	}
