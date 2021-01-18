@@ -194,6 +194,8 @@ type BlockChain struct {
 	// Warm up
 	lastCommittedBlock uint64
 	quitWarmUp         chan struct{}
+
+	prefetchJobCh chan prefetchJob
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -237,6 +239,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		badBlocks:          badBlocks,
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
+		prefetchJobCh:      make(chan prefetchJob, 1024),
 	}
 
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
@@ -277,6 +280,13 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	go bc.gcCachedNodeLoop()
 	go bc.restartStateMigration()
 
+	logger.Info("Prefetch Settings", "NoPrefetch", bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch,
+		"NumPrefetch", bc.cacheConfig.TrieNodeCacheConfig.NumPrefetch)
+	for i := 1; i <= bc.cacheConfig.TrieNodeCacheConfig.NumPrefetch; i++ {
+		logger.Info("prefetchBlockWorker started", "idx", i)
+		go bc.prefetchBlockWorker()
+	}
+
 	if cacheConfig.TrieNodeCacheConfig.DumpPeriodically() {
 		logger.Info("LocalCache is used for trie node cache, start saving cache to file periodically",
 			"dir", bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir,
@@ -290,6 +300,29 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	return bc, nil
+}
+
+type prefetchJob struct {
+	parent            *types.Block
+	current           *types.Block
+	followupInterrupt *uint32
+}
+
+func (bc *BlockChain) prefetchBlockWorker() {
+	for job := range bc.prefetchJobCh {
+		start := time.Now()
+		throwaway, err := state.New(job.parent.Root(), bc.stateCache)
+		if err != nil {
+			logger.Error("failed to get stateDB", "err", err)
+			continue
+		}
+		bc.prefetcher.Prefetch(job.current, throwaway, bc.vmConfig, job.followupInterrupt)
+
+		blockPrefetchExecuteTimer.Update(time.Since(start))
+		if atomic.LoadUint32(job.followupInterrupt) == 1 {
+			blockPrefetchInterruptMeter.Mark(1)
+		}
+	}
 }
 
 // SetCanonicalBlock resets the canonical as the block with the given block number.
@@ -1643,16 +1676,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		if !bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch {
 			if i < len(chain)-1 {
-				followup := chain[i+1]
-				go func(start time.Time) {
-					throwaway, _ := state.New(parent.Root(), bc.stateCache)
-					bc.prefetcher.Prefetch(followup, throwaway, bc.vmConfig, &followupInterrupt)
-
-					blockPrefetchExecuteTimer.Update(time.Since(start))
-					if atomic.LoadUint32(&followupInterrupt) == 1 {
-						blockPrefetchInterruptMeter.Mark(1)
-					}
-				}(time.Now())
+				for k := i + 1; k < len(chain); k++ {
+					bc.prefetchJobCh <- prefetchJob{parent, chain[k], &followupInterrupt}
+				}
 			}
 		}
 
@@ -1707,7 +1733,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			processFinalizeTime := common.PrettyDuration(procStats.AfterFinalize.Sub(procStats.AfterApplyTxs))
 			validateTime := common.PrettyDuration(afterValidate.Sub(procStats.AfterFinalize))
 			totalTime := common.PrettyDuration(time.Since(bstart))
-			logger.Info("Inserted a new block", "number", block.Number(), "hash", block.Hash(),
+			logger.Debug("Inserted a new block", "number", block.Number(), "hash", block.Hash(),
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", totalTime,
 				"processTxs", processTxsTime, "finalize", processFinalizeTime, "validateState", validateTime,
 				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
