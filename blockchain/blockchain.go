@@ -1676,8 +1676,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		if !bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch {
 			if i < len(chain)-1 {
+				prefetch := 0
 				for k := i + 1; k < len(chain); k++ {
 					bc.prefetchJobCh <- prefetchJob{parent, chain[k], &followupInterrupt}
+					prefetch++
+					if prefetch >= bc.cacheConfig.TrieNodeCacheConfig.NumPrefetch {
+						break
+					}
 				}
 			}
 		}
