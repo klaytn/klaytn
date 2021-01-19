@@ -17,6 +17,9 @@
 package statedb
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/VictoriaMetrics/fastcache"
 	"github.com/rcrowley/go-metrics"
 )
@@ -36,8 +39,15 @@ var (
 	memcacheFastInvalidValueHashErrors = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/hash", nil)
 )
 
+const (
+	useNew = iota
+	useBoth
+	useOld
+)
+
 type FastCache struct {
-	fast *fastcache.Cache
+	new *fastcache.Cache // newly created, empty one
+	old *fastcache.Cache // created from saved fastcache, if exists
 }
 
 // NewFastCache creates a FastCache with given cache size.
@@ -52,30 +62,64 @@ func NewFastCache(config *TrieNodeCacheConfig) TrieNodeCache {
 		return nil
 	}
 
-	fc := &FastCache{fast: fastcache.LoadFromFileOrNew(config.FastCacheFileDir, config.LocalCacheSizeMB*1024*1024)} // Convert MB to Byte
-	stats := fc.UpdateStats().(fastcache.Stats)
+	fc := &FastCache{new: fastcache.New(config.LocalCacheSizeMB * 1024 * 1024)} // Convert MB to Byte
+	go fc.loadFromBackground(config)
 
-	logger.Info("Initialize local trie node cache (fastCache)",
-		"MaxMB", config.LocalCacheSizeMB, "FilePath", config.FastCacheFileDir,
-		"LoadedBytes", stats.BytesSize, "LoadedEntries", stats.EntriesCount)
+	fmt.Println("Initialize local trie node cache (fastCache)",
+		"MaxMB", config.LocalCacheSizeMB, "FilePath", config.FastCacheFileDir)
 	return fc
 }
 
+func (cache *FastCache) loadFromBackground(config *TrieNodeCacheConfig) {
+	start := time.Now()
+	cache.old = fastcache.LoadFromFileOrNew(config.FastCacheFileDir, config.LocalCacheSizeMB*1024*1024)
+	stats := cache.UpdateStats().(fastcache.Stats)
+	// if there is no saved cache, use only new cache
+	if stats.EntriesCount == 0 {
+		logger.Info("There is no saved cache in the fastcache directory",
+			"FilePath", config.FastCacheFileDir)
+		cache.old = nil
+		return
+	}
+	// if we loaded the saved cache successfully, reset new cache to reclaim the memory
+	cache.new.Reset()
+	fmt.Println("Finished loading fastcache from background", "elapsed", time.Since(start),
+		"LoadedBytes", stats.BytesSize, "LoadedEntries", stats.EntriesCount)
+}
+
 func (cache *FastCache) Get(k []byte) []byte {
-	return cache.fast.Get(nil, k)
+	if cache.old != nil {
+		if data := cache.old.Get(nil, k); data != nil {
+			return data
+		}
+	}
+	return cache.new.Get(nil, k)
 }
 
 func (cache *FastCache) Set(k, v []byte) {
-	cache.fast.Set(k, v)
+	if cache.old != nil {
+		cache.old.Set(k, v)
+		return
+	}
+	cache.new.Set(k, v)
 }
 
 func (cache *FastCache) Has(k []byte) ([]byte, bool) {
-	return cache.fast.HasGet(nil, k)
+	if cache.old != nil {
+		if data, exist := cache.old.HasGet(nil, k); exist {
+			return data, exist
+		}
+	}
+	return cache.new.HasGet(nil, k)
 }
 
 func (cache *FastCache) UpdateStats() interface{} {
 	var stats fastcache.Stats
-	cache.fast.UpdateStats(&stats)
+	if cache.old != nil {
+		cache.old.UpdateStats(&stats)
+	} else {
+		cache.new.UpdateStats(&stats)
+	}
 
 	memcacheFastMisses.Update(int64(stats.Misses))
 	memcacheFastCollisions.Update(int64(stats.Collisions))
@@ -93,7 +137,10 @@ func (cache *FastCache) UpdateStats() interface{} {
 }
 
 func (cache *FastCache) SaveToFile(filePath string, concurrency int) error {
-	return cache.fast.SaveToFileConcurrent(filePath, concurrency)
+	if cache.old != nil {
+		return cache.old.SaveToFileConcurrent(filePath, concurrency)
+	}
+	return cache.new.SaveToFileConcurrent(filePath, concurrency)
 }
 
 func (cache *FastCache) Close() error {

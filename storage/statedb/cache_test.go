@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/klaytn/klaytn/common"
 
@@ -82,6 +83,7 @@ func TestFastCache_SaveAndLoad(t *testing.T) {
 
 	// Create a fastcache from the file and check if the data exists
 	fastCacheFromFile := NewFastCache(config)
+	time.Sleep(100 * time.Millisecond) // to ensure finishing background fastache loading
 	for idx, key := range keys {
 		assert.DeepEqual(t, fastCacheFromFile.Get(key), vals[idx])
 	}
