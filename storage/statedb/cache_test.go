@@ -28,25 +28,22 @@ import (
 	"github.com/docker/docker/pkg/testutil/assert"
 )
 
-// TODO-Klaytn: Enable tests when redis is prepared on CI
-
 // TestNewTrieNodeCache tests creating all kinds of supported trie node caches.
-func _TestNewTrieNodeCache(t *testing.T) {
+func TestNewTrieNodeCache(t *testing.T) {
 	testCases := []struct {
-		cacheType    TrieNodeCacheType
+		cacheConfig  *TrieNodeCacheConfig
 		expectedType reflect.Type
+		err          error
 	}{
-		{CacheTypeLocal, reflect.TypeOf(&FastCache{})},
-		{CacheTypeRedis, reflect.TypeOf(&RedisCache{})},
-		{CacheTypeHybrid, reflect.TypeOf(&HybridCache{})},
+		{getTestFastCacheConfig(), reflect.TypeOf(&FastCache{}), nil},
+		{getTestRedisConfig(), reflect.TypeOf(&RedisCache{}), nil},
+		{getTestHybridConfig(), reflect.TypeOf(&HybridCache{}), nil},
+		{nil, nil, errNilTrieNodeCacheConfig},
 	}
 
 	for _, tc := range testCases {
-		config := getTestHybridConfig()
-		config.CacheType = tc.cacheType
-
-		cache, err := NewTrieNodeCache(config)
-		assert.NilError(t, err)
+		cache, err := NewTrieNodeCache(tc.cacheConfig)
+		assert.Equal(t, err, tc.err)
 		assert.Equal(t, reflect.TypeOf(cache), tc.expectedType)
 	}
 }
