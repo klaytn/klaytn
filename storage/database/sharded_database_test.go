@@ -127,7 +127,7 @@ func newShardedDBIterator(t *testing.T, db shardedDB, entryNum uint) []common.En
 	it := db.NewIterator(nil, nil)
 
 	for it.Next() {
-		entries = append(entries, common.Entry{it.Key(), it.Value()})
+		entries = append(entries, common.Entry{Key: it.Key(), Val: it.Value()})
 	}
 	it.Release()
 	assert.NoError(t, it.Error())
@@ -139,7 +139,7 @@ func newShardedDBIteratorUnsorted(t *testing.T, db shardedDB, entryNum uint) []c
 	it := db.NewIteratorUnsorted(nil, nil)
 
 	for it.Next() {
-		entries = append(entries, common.Entry{it.Key(), it.Value()})
+		entries = append(entries, common.Entry{Key: it.Key(), Val: it.Value()})
 	}
 	it.Release()
 	assert.NoError(t, it.Error())
