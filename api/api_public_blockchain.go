@@ -64,6 +64,12 @@ func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
 
 // ChainID returns the chain ID of the chain from genesis file.
 func (s *PublicBlockChainAPI) ChainID() *big.Int {
+	return s.ChainId()
+}
+
+// ChainId returns the chain ID of the chain from genesis file.
+// This is for compatibility with ethereum client
+func (s *PublicBlockChainAPI) ChainId() *big.Int {
 	if s.b.ChainConfig() != nil {
 		return s.b.ChainConfig().ChainID
 	}
