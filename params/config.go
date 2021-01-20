@@ -155,7 +155,7 @@ type RewardConfig struct {
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
 type IstanbulConfig struct {
 	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection
+	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection; 0: Round Robin, 1: Sticky, 2: Weighted Random
 	SubGroupSize   uint64 `json:"sub"`
 }
 
@@ -198,19 +198,19 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v Engine: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d}",
+		return fmt.Sprintf("{ChainID: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
-			engine,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
+			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v Engine: %v UnitPrice: %d DeriveShaImpl: %d}",
+		return fmt.Sprintf("{ChainID: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
-			engine,
 			c.UnitPrice,
 			c.DeriveShaImpl,
+			engine,
 		)
 	}
 }
@@ -346,7 +346,7 @@ func (err *ConfigCompatError) Error() string {
 	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
 }
 
-// Rules wraps ChainConfig and is merely syntatic sugar or can be used for functions
+// Rules wraps ChainConfig and is merely syntactic sugar or can be used for functions
 // that do not have or require information about the block.
 //
 // Rules is a one time interface meaning that it shouldn't be used in between transition

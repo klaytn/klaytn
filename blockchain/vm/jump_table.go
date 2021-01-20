@@ -60,17 +60,17 @@ type operation struct {
 	returns bool // determines whether the operations sets the return data content
 }
 
+// TODO-IncompatibleChange: define new InstructionSet for first incompatible change
 var (
-	frontierInstructionSet       = newFrontierInstructionSet()
-	homesteadInstructionSet      = newHomesteadInstructionSet()
-	byzantiumInstructionSet      = newByzantiumInstructionSet()
 	ConstantinopleInstructionSet = newConstantinopleInstructionSet()
 )
 
-// NewConstantinopleInstructionSet returns the frontier, homestead
-// byzantium and contantinople instructions.
-func newConstantinopleInstructionSet() [256]operation {
-	// instructions that can be executed during the byzantium phase.
+// JumpTable contains the EVM opcodes supported at a given fork.
+type JumpTable [256]operation
+
+// newConstantinopleInstructionSet returns the frontier, homestead
+// byzantium and constantinople instructions.
+func newConstantinopleInstructionSet() JumpTable {
 	instructionSet := newByzantiumInstructionSet()
 	instructionSet[SHL] = operation{
 		execute:         opSHL,
@@ -118,9 +118,9 @@ func newConstantinopleInstructionSet() [256]operation {
 	return instructionSet
 }
 
-// NewByzantiumInstructionSet returns the frontier, homestead and
+// newByzantiumInstructionSet returns the frontier, homestead and
 // byzantium instructions.
-func newByzantiumInstructionSet() [256]operation {
+func newByzantiumInstructionSet() JumpTable {
 	// instructions that can be executed during the homestead phase.
 	instructionSet := newHomesteadInstructionSet()
 	instructionSet[STATICCALL] = operation{
@@ -164,9 +164,9 @@ func newByzantiumInstructionSet() [256]operation {
 	return instructionSet
 }
 
-// NewHomesteadInstructionSet returns the frontier and homestead
+// newHomesteadInstructionSet returns the frontier and homestead
 // instructions that can be executed during the homestead phase.
-func newHomesteadInstructionSet() [256]operation {
+func newHomesteadInstructionSet() JumpTable {
 	instructionSet := newFrontierInstructionSet()
 	instructionSet[DELEGATECALL] = operation{
 		execute:         opDelegateCall,
@@ -181,10 +181,10 @@ func newHomesteadInstructionSet() [256]operation {
 	return instructionSet
 }
 
-// NewFrontierInstructionSet returns the frontier instructions
+// newFrontierInstructionSet returns the frontier instructions
 // that can be executed during the frontier phase.
-func newFrontierInstructionSet() [256]operation {
-	return [256]operation{
+func newFrontierInstructionSet() JumpTable {
+	return JumpTable{
 		STOP: {
 			execute:         opStop,
 			constantGas:     0,
