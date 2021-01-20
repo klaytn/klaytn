@@ -296,6 +296,9 @@ type shardedDBIteratorUnsorted struct {
 // the key-value database.
 // If you want to get ordered items in serial, checkout shardedDB.NewIterator()
 // If you want to get items in parallel from channels, checkout shardedDB.NewChanIterator()
+// IteratorUnsorted is a implementation of Iterator and data are accessed with
+// Next(), Key() and Value() methods. With ChanIterator, data can be accessed with
+// channels. The channels are gained with Channels() method.
 func (db *shardedDB) NewIteratorUnsorted(prefix []byte, start []byte) Iterator {
 	resultCh := make(chan common.Entry, shardedDBCombineChanSize)
 	it := &shardedDBIteratorUnsorted{
