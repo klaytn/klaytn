@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"path"
 	"strconv"
+	"sync"
 
 	"github.com/klaytn/klaytn/common"
 )
@@ -321,6 +322,7 @@ type shardedDBChanIterator struct {
 
 	combinedChan bool // all workers put items to one resultChan
 	shardNum     int  // num of shards left to iterate
+	shardNumMu   sync.Mutex
 	resultChs    []chan common.Entry
 }
 
@@ -385,6 +387,8 @@ iter:
 	it.Release()
 	// Close `resultCh`. If it is `combinedChan`, the close only happens
 	// when this is the last living worker.
+	sit.shardNumMu.Lock()
+	defer sit.shardNumMu.Unlock()
 	if sit.shardNum--; sit.combinedChan && sit.shardNum > 0 {
 		return
 	}
