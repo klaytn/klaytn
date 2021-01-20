@@ -73,7 +73,7 @@ var (
 type DynamoDBConfig struct {
 	TableName          string
 	Region             string // AWS region
-	Endpoint           string // Where DynamoDB reside (nil or "" means the default generated endpoint)
+	Endpoint           string // Where DynamoDB reside (Used to specify the localstack endpoint on the test)
 	S3Endpoint         string // Where S3 reside
 	IsProvisioned      bool   // Billing mode
 	ReadCapacityUnits  int64  // read capacity when provisioned
@@ -113,7 +113,7 @@ type DynamoData struct {
 func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
-		Endpoint:           "",
+		Endpoint:           "", // nil or "" means the default generated endpoint
 		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
 		IsProvisioned:      false,
 		ReadCapacityUnits:  10000,
