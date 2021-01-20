@@ -55,8 +55,15 @@ var (
 	// pendingRequestCount is a total number of concurrent RPC method calls
 	pendingRequestCount int64 = 0
 
+	// TODO-Klaytn: move websocket configurations to Config struct in /network/rpc/server.go
 	// MaxSubscriptionPerConn is a maximum number of subscription for a server connection
 	MaxSubscriptionPerConn int32 = 5
+
+	// WebsocketReadDeadline is the read deadline on the underlying network connection in seconds. 0 means read will not timeout
+	WebsocketReadDeadline int64 = 0
+
+	// WebsocketWriteDeadline is the write deadline on the underlying network connection in seconds. 0 means write will not timeout
+	WebsocketWriteDeadline int64 = 0
 )
 
 // NewServer will create a new server instance with no registered handlers.
