@@ -76,9 +76,9 @@ func newRedisClient(endpoints []string, isCluster bool) (redis.UniversalClient, 
 	}), nil
 }
 
-// NewRedisCache creates a redis cache containing redis client, setItemCh and pubSub.
+// newRedisCache creates a redis cache containing redis client, setItemCh and pubSub.
 // It generates worker goroutines to process Set commands asynchronously.
-func NewRedisCache(config *TrieNodeCacheConfig) (*RedisCache, error) {
+func newRedisCache(config *TrieNodeCacheConfig) (*RedisCache, error) {
 	cli, err := newRedisClient(config.RedisEndpoints, config.RedisClusterEnable)
 	if err != nil {
 		logger.Error("failed to create a redis client", "err", err, "endpoint", config.RedisEndpoints,

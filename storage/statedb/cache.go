@@ -71,7 +71,8 @@ const (
 )
 
 var (
-	errNotSupportedCacheType = errors.New("not supported stateDB TrieNodeCache type")
+	errNotSupportedCacheType  = errors.New("not supported stateDB TrieNodeCache type")
+	errNilTrieNodeCacheConfig = errors.New("TrieNodeCacheConfig is nil")
 )
 
 func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
@@ -88,14 +89,17 @@ func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
 // NewTrieNodeCache creates one type of any supported trie node caches.
 // NOTE: It returns (nil, nil) when the cache type is CacheTypeLocal and its size is set to zero.
 func NewTrieNodeCache(config *TrieNodeCacheConfig) (TrieNodeCache, error) {
+	if config == nil {
+		return nil, errNilTrieNodeCacheConfig
+	}
 	switch config.CacheType {
 	case CacheTypeLocal:
-		return NewFastCache(config), nil
+		return newFastCache(config), nil
 	case CacheTypeRedis:
-		return NewRedisCache(config)
+		return newRedisCache(config)
 	case CacheTypeHybrid:
 		logger.Info("Set hybrid trie node cache using both of localCache (fastCache) and redisCache")
-		return NewHybridCache(config)
+		return newHybridCache(config)
 	default:
 	}
 	logger.Error("Invalid trie node cache type", "cacheType", config.CacheType)
