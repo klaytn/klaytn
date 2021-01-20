@@ -195,7 +195,7 @@ func TestShardDB(t *testing.T) {
 
 	idx := common.BytesToHash(key).Big().Mod(common.BytesToHash(key).Big(), big.NewInt(4))
 
-	fmt.Printf("idx %d   %d   %d", idx, shard, seed)
+	fmt.Printf("idx %d   %d   %d\n", idx, shard, seed)
 
 }
 

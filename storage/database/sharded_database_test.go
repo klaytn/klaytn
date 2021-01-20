@@ -53,11 +53,11 @@ func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*D
 
 			// create sharded DB
 			db, err := newShardedDB(config, 0, config.NumStateTrieShards)
-			dbs[i] = *db
 			if err != nil {
-				t.Log("Error occured while creating DB")
+				t.Log("Error occured while creating DB :", err)
 				t.FailNow()
 			}
+			dbs[i] = *db
 
 			// write entries data in DB
 			batch := db.NewBatch()
@@ -87,37 +87,37 @@ func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*D
 
 // TestShardedDBIterator tests if shardedDBIterator iterates all entries with diverse shard size
 func TestShardedDBIterator(t *testing.T) {
-	testIterator(t, true, []uint{500}, ShardedDBConfig, newShardedDBIterator)
+	testIterator(t, true, []uint{100}, ShardedDBConfig, newShardedDBIterator)
 }
 
 // TestShardedDBIteratorUnsorted tests if shardedDBIteratorUnsorted iterates all entries with diverse shard size
 func TestShardedDBIteratorUnsorted(t *testing.T) {
-	testIterator(t, false, []uint{500}, ShardedDBConfig, newShardedDBIteratorUnsorted)
+	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBIteratorUnsorted)
 }
 
 // TestShardedDBChanIterator tests if shardedDBChanIterator iterates all entries with diverse shard size
 func TestShardedDBChanIterator(t *testing.T) {
-	testIterator(t, false, []uint{500}, ShardedDBConfig, newShardedDBChanIterator)
+	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBChanIterator)
 }
 
 // TestShardedDBIteratorSize tests if shardedDBIterator iterates all entries for different
 // entry sizes
 func TestShardedDBIteratorSize(t *testing.T) {
-	config := ShardedDBConfig[len(ShardedDBConfig)-1]
+	config := ShardedDBConfig[0]
 	size := config.NumStateTrieShards
 	testIterator(t, true, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBIterator)
 }
 
 // TestShardedDBIteratorUnsortedSize tests if shardedDBIteratorUnsorted iterates all entries
 func TestShardedDBIteratorUnsortedSize(t *testing.T) {
-	config := ShardedDBConfig[len(ShardedDBConfig)-1]
+	config := ShardedDBConfig[0]
 	size := config.NumStateTrieShards
 	testIterator(t, false, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBIteratorUnsorted)
 }
 
 // TestShardedDBChanIteratorSize tests if shardedDBChanIterator iterates all entries
 func TestShardedDBChanIteratorSize(t *testing.T) {
-	config := ShardedDBConfig[len(ShardedDBConfig)-1]
+	config := ShardedDBConfig[0]
 	size := config.NumStateTrieShards
 	testIterator(t, false, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBChanIterator)
 }
@@ -190,7 +190,7 @@ func testShardedIterator_Release(t *testing.T, entryNum int, checkFunc func(db s
 		// create sharded DB
 		db, err := newShardedDB(config, MiscDB, config.NumStateTrieShards)
 		if err != nil {
-			t.Log("Error occured while creating DB")
+			t.Log("Error occured while creating DB :", err)
 			t.FailNow()
 		}
 
