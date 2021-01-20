@@ -225,7 +225,7 @@ func TestShardedDBIterator_Release(t *testing.T) {
 			it.Release()
 
 			// flush data in channel
-			for i := 0; i < shardedDBCombineChanSize; i++ {
+			for i := 0; i < shardedDBCombineChanSize+1; i++ {
 				it.Next()
 			}
 
@@ -254,7 +254,7 @@ func TestShardedDBIteratorUnsorted_Release(t *testing.T) {
 			it.Release()
 
 			// flush data in channel
-			for i := 0; i < shardedDBCombineChanSize; i++ {
+			for i := 0; i < shardedDBCombineChanSize+1; i++ {
 				it.Next()
 			}
 
@@ -291,7 +291,7 @@ func TestShardedDBChanIterator_Release(t *testing.T) {
 				for _, ch := range it.Channels() {
 
 					// flush data in channel
-					for i := 0; i < shardedDBSubChannelSize; i++ {
+					for i := 0; i < shardedDBSubChannelSize+1; i++ {
 						<-ch
 					}
 
