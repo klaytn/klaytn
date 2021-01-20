@@ -73,7 +73,7 @@ var (
 type DynamoDBConfig struct {
 	TableName          string
 	Region             string // AWS region
-	Endpoint           string // Where DynamoDB reside
+	Endpoint           string // Where DynamoDB reside (Used to specify the localstack endpoint on the test)
 	S3Endpoint         string // Where S3 reside
 	IsProvisioned      bool   // Billing mode
 	ReadCapacityUnits  int64  // read capacity when provisioned
@@ -113,7 +113,7 @@ type DynamoData struct {
 func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
-		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com",
+		Endpoint:           "", // nil or "" means the default generated endpoint
 		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
 		IsProvisioned:      false,
 		ReadCapacityUnits:  10000,
@@ -138,12 +138,6 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	}
 	if len(config.TableName) == 0 {
 		return nil, noTableNameErr
-	}
-	if len(config.Endpoint) == 0 {
-		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
-	}
-	if len(config.S3Endpoint) == 0 {
-		config.S3Endpoint = "https://s3." + config.Region + ".amazonaws.com"
 	}
 
 	config.TableName = strings.ReplaceAll(config.TableName, "_", "-")
@@ -182,8 +176,7 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 				return nil, err
 			}
 
-			dynamoDB.logger.Warn("creating a DynamoDB table. You will be CHARGED until the DB is deleted",
-				"endPoint", config.Endpoint)
+			dynamoDB.logger.Warn("creating a DynamoDB table. You will be CHARGED until the DB is deleted")
 			if err := dynamoDB.createTable(); err != nil {
 				dynamoDB.logger.Error("unable to create a DynamoDB table", "err", err.Error())
 				return nil, err
@@ -197,10 +190,10 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 				dynamoOpenedDBNum++
 				// create workers on the first successful table creation
 				dynamoOnceWorker.Do(func() {
-					createBatchWriteWorkerPool(config.Endpoint, config.Region)
+					createBatchWriteWorkerPool()
 				})
 			}
-			dynamoDB.logger.Info("successfully created dynamoDB session", "endPoint", config.Endpoint)
+			dynamoDB.logger.Info("successfully created dynamoDB session")
 			return dynamoDB, nil
 		case dynamodb.TableStatusDeleting, dynamodb.TableStatusArchiving, dynamodb.TableStatusArchived:
 			return nil, errors.New("failed to get DynamoDB table, table status : " + tableStatus)
@@ -418,7 +411,7 @@ func (dynamo *dynamoDB) NewIterator(prefix []byte, start []byte) Iterator {
 	return nil
 }
 
-func createBatchWriteWorkerPool(endpoint, region string) {
+func createBatchWriteWorkerPool() {
 	dynamoWriteCh = make(chan *batchWriteWorkerInput, itemChanSize)
 	for i := 0; i < WorkerNum; i++ {
 		go createBatchWriteWorker(dynamoWriteCh)
