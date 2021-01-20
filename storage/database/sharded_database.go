@@ -322,7 +322,7 @@ type shardedDBChanIterator struct {
 
 	combinedChan bool // all workers put items to one resultChan
 	shardNum     int  // num of shards left to iterate
-	shardNumMu   sync.Mutex
+	shardNumMu   *sync.Mutex
 	resultChs    []chan common.Entry
 }
 
@@ -348,6 +348,7 @@ func (db *shardedDB) NewChanIterator(ctx context.Context, prefix []byte, start [
 		iterators:    make([]Iterator, len(db.shards)),
 		combinedChan: resultCh != nil,
 		shardNum:     len(db.shards),
+		shardNumMu:   &sync.Mutex{},
 		resultChs:    make([]chan common.Entry, len(db.shards)),
 	}
 	it.ctx, it.cancel = context.WithCancel(ctx)
