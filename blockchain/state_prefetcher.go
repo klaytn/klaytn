@@ -1,3 +1,4 @@
+// Modifications Copyright 2020 The klaytn Authors
 // Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -13,6 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from core/state_prefetcher.go (2019/04/02).
+// Modified and improved for the klaytn development.
 
 package blockchain
 
@@ -63,6 +67,28 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, c
 		if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
 			return // Ugh, something went horribly wrong, bail out
 		}
+	}
+}
+
+// PrefetchTx processes the state changes according to the Klaytn rules by running
+// a single transaction message using the statedb, but any changes are discarded. The
+// only goal is to pre-cache transaction signatures and state trie nodes. It is used
+// when fetcher works, so it fetches only a block.
+func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.StateDB, cfg vm.Config, interrupt *uint32) {
+	var (
+		header = block.Header()
+		tx     = block.Transactions()[ti]
+	)
+
+	// If block precaching was interrupted, abort
+	if interrupt != nil && atomic.LoadUint32(interrupt) == 1 {
+		return
+	}
+
+	// Block precaching permitted to continue, execute the transaction
+	stateDB.Prepare(tx.Hash(), block.Hash(), ti)
+	if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
+		return // Ugh, something went horribly wrong, bail out
 	}
 }
 
