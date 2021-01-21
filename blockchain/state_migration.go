@@ -104,7 +104,6 @@ func (bc *BlockChain) concurrentRead(db *statedb.Database, quitCh chan struct{},
 // Before this function is called, StateTrieMigrationDB should be set.
 // After the migration finish, the original StateTrieDB is removed and StateTrieMigrationDB becomes a new StateTrieDB.
 func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
-	bc.wg.Add(1)
 	bc.migrationErr = nil
 	defer func() {
 		bc.migrationErr = returnErr
@@ -115,7 +114,6 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 			bc.db.FinishStateMigration(returnErr == nil)
 			bc.mu.Unlock()
 		}
-		bc.wg.Done()
 	}()
 
 	start := time.Now()
@@ -310,7 +308,11 @@ func (bc *BlockChain) restartStateMigration() {
 		root := block.Root()
 		logger.Warn("State migration : Restarted", "blockNumber", number, "root", root.String())
 
-		go bc.migrateState(root)
+		bc.wg.Add(1)
+		go func() {
+			bc.migrateState(root)
+			bc.wg.Done()
+		}()
 	}
 }
 
@@ -367,7 +369,11 @@ func (bc *BlockChain) StartStateMigration(number uint64, root common.Hash) error
 		return err
 	}
 
-	go bc.migrateState(root)
+	bc.wg.Add(1)
+	go func() {
+		bc.migrateState(root)
+		bc.wg.Done()
+	}()
 
 	return nil
 }
