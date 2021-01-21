@@ -57,21 +57,21 @@ func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
 }
 
 // BlockNumber returns the block number of the chain head.
-func (s *PublicBlockChainAPI) BlockNumber() *big.Int {
+func (s *PublicBlockChainAPI) BlockNumber() hexutil.Uint64 {
 	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
-	return header.Number
+	return hexutil.Uint64(header.Number.Uint64())
 }
 
 // ChainID returns the chain ID of the chain from genesis file.
-func (s *PublicBlockChainAPI) ChainID() *big.Int {
+func (s *PublicBlockChainAPI) ChainID() *hexutil.Big {
 	return s.ChainId()
 }
 
 // ChainId returns the chain ID of the chain from genesis file.
 // This is for compatibility with ethereum client
-func (s *PublicBlockChainAPI) ChainId() *big.Int {
+func (s *PublicBlockChainAPI) ChainId() *hexutil.Big {
 	if s.b.ChainConfig() != nil {
-		return s.b.ChainConfig().ChainID
+		return (*hexutil.Big)(s.b.ChainConfig().ChainID)
 	}
 	return nil
 }
@@ -118,13 +118,12 @@ func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash co
 // GetBalance returns the amount of peb for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
-func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*big.Int, error) {
+func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if err != nil {
 		return nil, err
 	}
-	b := state.GetBalance(address)
-	return b, state.Error()
+	return (*hexutil.Big)(state.GetBalance(address)), state.Error()
 }
 
 // AccountCreated returns true if the account associated with the address is created.

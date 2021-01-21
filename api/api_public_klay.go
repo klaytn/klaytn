@@ -24,8 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math/big"
-
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/rlp"
@@ -43,8 +41,9 @@ func NewPublicKlayAPI(b Backend) *PublicKlayAPI {
 }
 
 // GasPrice returns a suggestion for a gas price.
-func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*big.Int, error) {
-	return s.b.SuggestPrice(ctx)
+func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
+	price, err := s.b.SuggestPrice(ctx)
+	return (*hexutil.Big)(price), err
 }
 
 // ProtocolVersion returns the current Klaytn protocol version this node supports.

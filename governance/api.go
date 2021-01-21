@@ -18,6 +18,7 @@ package governance
 
 import (
 	"errors"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"math/big"
 	"reflect"
 	"strings"
@@ -62,10 +63,10 @@ var (
 )
 
 // TODO-Klaytn-Governance: Refine this API and consider the gas price of txpool
-func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error) {
+func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
 	if num == nil || *num == rpc.LatestBlockNumber {
 		ret := api.governance.UnitPrice()
-		return big.NewInt(0).SetUint64(ret), nil
+		return (*hexutil.Big)(big.NewInt(0).SetUint64(ret)), nil
 	} else if *num == rpc.PendingBlockNumber {
 		return nil, kerrors.ErrPendingBlockNotSupported
 	} else {
@@ -78,14 +79,14 @@ func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*big.Int, error)
 		if ret, err := api.GasPriceAtNumber(blockNum); err != nil {
 			return nil, err
 		} else {
-			return big.NewInt(0).SetUint64(ret), nil
+			return (*hexutil.Big)(big.NewInt(0).SetUint64(ret)), nil
 		}
 	}
 }
 
-func (api *GovernanceKlayAPI) GasPrice() *big.Int {
+func (api *GovernanceKlayAPI) GasPrice() *hexutil.Big {
 	ret := api.governance.UnitPrice()
-	return big.NewInt(0).SetUint64(ret)
+	return (*hexutil.Big)(big.NewInt(0).SetUint64(ret))
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.

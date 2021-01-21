@@ -409,7 +409,6 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 		rpcSuccessResponsesCounter.Inc(1)
 		return codec.CreateResponse(req.id, nil), nil
 	}
-
 	if req.callb.errPos >= 0 { // test if method returned an error
 		if !reply[req.callb.errPos].IsNil() {
 			e := reply[req.callb.errPos].Interface().(error)
