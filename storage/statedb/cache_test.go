@@ -28,25 +28,22 @@ import (
 	"github.com/docker/docker/pkg/testutil/assert"
 )
 
-// TODO-Klaytn: Enable tests when redis is prepared on CI
-
 // TestNewTrieNodeCache tests creating all kinds of supported trie node caches.
-func _TestNewTrieNodeCache(t *testing.T) {
+func TestNewTrieNodeCache(t *testing.T) {
 	testCases := []struct {
-		cacheType    TrieNodeCacheType
+		cacheConfig  *TrieNodeCacheConfig
 		expectedType reflect.Type
+		err          error
 	}{
-		{CacheTypeLocal, reflect.TypeOf(&FastCache{})},
-		{CacheTypeRedis, reflect.TypeOf(&RedisCache{})},
-		{CacheTypeHybrid, reflect.TypeOf(&HybridCache{})},
+		{getTestFastCacheConfig(), reflect.TypeOf(&FastCache{}), nil},
+		{getTestRedisConfig(), reflect.TypeOf(&RedisCache{}), nil},
+		{getTestHybridConfig(), reflect.TypeOf(&HybridCache{}), nil},
+		{nil, nil, errNilTrieNodeCacheConfig},
 	}
 
 	for _, tc := range testCases {
-		config := getTestHybridConfig()
-		config.CacheType = tc.cacheType
-
-		cache, err := NewTrieNodeCache(config)
-		assert.NilError(t, err)
+		cache, err := NewTrieNodeCache(tc.cacheConfig)
+		assert.Equal(t, err, tc.err)
 		assert.Equal(t, reflect.TypeOf(cache), tc.expectedType)
 	}
 }
@@ -71,7 +68,7 @@ func TestFastCache_SaveAndLoad(t *testing.T) {
 	config.FastCacheFileDir = dirName
 
 	// Create a fastcache from the file and save the data to the cache
-	fastCache := NewFastCache(config)
+	fastCache := newFastCache(config)
 	for idx, key := range keys {
 		assert.DeepEqual(t, fastCache.Get(key), []byte(nil))
 		fastCache.Set(key, vals[idx])
@@ -81,7 +78,7 @@ func TestFastCache_SaveAndLoad(t *testing.T) {
 	assert.NilError(t, fastCache.SaveToFile(dirName, runtime.NumCPU()))
 
 	// Create a fastcache from the file and check if the data exists
-	fastCacheFromFile := NewFastCache(config)
+	fastCacheFromFile := newFastCache(config)
 	for idx, key := range keys {
 		assert.DeepEqual(t, fastCacheFromFile.Get(key), vals[idx])
 	}

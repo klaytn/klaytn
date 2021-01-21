@@ -45,12 +45,7 @@ __kill_timeout() {
     kill -9 $PIDNUM && echo "Killed"
 }
 
-start() {
-    __pid_run
-    [ -n "$pid" ] && echo "kend already running...[$pid]" && return
-
-    echo -n "Starting kend: "
-
+__check_option() {
     if [ ! -d $LOG_DIR ]; then
         mkdir -p $LOG_DIR
     fi
@@ -203,6 +198,68 @@ start() {
         OPTIONS="$OPTIONS --autorestart.enable"
     fi
 
+    if [[ ! -z $DB_TYPE ]] && [[ $DB_TYPE != "" ]]; then
+        OPTIONS="$OPTIONS --dbtype $DB_TYPE"
+    fi
+
+    if [[ ! -z $DB_SINGLE ]] && [[ $DB_SINGLE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --db.single"
+    fi
+
+    if [[ ! -z $DB_DYNAMO_TABLENAME ]] && [[ $DB_DYNAMO_TABLENAME != "" ]]; then
+        OPTIONS="$OPTIONS --db.dynamo.tablename $DB_DYNAMO_TABLENAME"
+    fi
+
+    if [[ ! -z $DB_DYNAMO_READONLY ]] && [[ $DB_DYNAMO_READONLY -eq 1 ]]; then
+        OPTIONS="$OPTIONS --db.dynamo.read-only"
+    fi
+
+    if [[ ! -z $GCMODE ]] && [[ $GCMODE != "" ]]; then
+        OPTIONS="$OPTIONS --gcmode $GCMODE"
+    fi
+
+    if [[ ! -z $STATE_TRIE_CACHE_LIMIT ]] && [[ $STATE_TRIE_CACHE_LIMIT != "" ]]; then
+        OPTIONS="$OPTIONS --state.trie-cache-limit $STATE_TRIE_CACHE_LIMIT"
+    fi
+
+    if [[ ! -z $STATEDB_CACHE_TYPE ]] && [[ $STATEDB_CACHE_TYPE != "" ]]; then
+        OPTIONS="$OPTIONS --statedb.cache.type $STATEDB_CACHE_TYPE"
+        if [[ ! -z $STATEDB_REDIS_ENDPOINT ]] && [[ $STATEDB_REDIS_ENDPOINT != "" ]]; then
+            OPTIONS="$OPTIONS --statedb.cache.redis.endpoints $STATEDB_REDIS_ENDPOINT"
+        fi
+
+        if [[ ! -z $STATEDB_REDIS_PUBLISH ]] && [[ $STATEDB_REDIS_PUBLISH -eq 1 ]]; then
+            OPTIONS="$OPTIONS --statedb.cache.redis.publish"
+        fi
+
+        if [[ ! -z $STATEDB_REDIS_SUBSCRIBE ]] && [[ $STATEDB_REDIS_SUBSCRIBE -eq 1 ]]; then
+            OPTIONS="$OPTIONS --statedb.cache.redis.subscribe"
+        fi
+    fi
+
+    if [[ ! -z $VM_INTERNALTX ]] && [[ $VM_INTERNALTX -eq 1 ]]; then
+        OPTIONS="$OPTIONS --vm.internaltx"
+    fi
+
+    if [[ ! -z $KES_NODETYPE_SERVICE_ENABLE ]] && [[ $KES_NODETYPE_SERVICE_ENABLE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --kes.nodetype.service"
+    fi
+
+    if [[ ! -z $INIT_PRIVATE_NETWORK ]] && [[ $INIT_PRIVATE_NETWORK -eq 1 ]]; then
+        echo "$STATIC_NODE_KNI" > $DATA_DIR/statis-node.json
+        echo "$BIN/ken init --datadir $DATA_DIR genesis.json"
+        $BIN/ken init --datadir $DATA_DIR genesis.json
+    fi
+}
+
+start() {
+    __pid_run
+    [ -n "$pid" ] && echo "kend already running...[$pid]" && return
+
+    echo -n "Starting kend: "
+
+    __check_option
+
     BASEDIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
     CURRENTFILE=`basename "$0"`
     OPTIONS="$OPTIONS --autorestart.daemon.path $BASEDIR/$CURRENTFILE"
@@ -218,6 +275,14 @@ start() {
         echo "Fail"
     fi
     return $RETVAL
+}
+
+start_docker() {
+    echo -n "Starting kend: "
+    __check_option
+
+    echo "$BIN/ken $OPTIONS"
+    $BIN/ken $OPTIONS
 }
 
 stop() {
@@ -246,6 +311,9 @@ case "$1" in
     start)
         start
         ;;
+    start-docker)
+        start_docker
+        ;;
     stop)
         stop
         ;;
@@ -256,7 +324,7 @@ case "$1" in
         restart
         ;;
     *)
-        echo "Usages: kend {start|stop|restart|status}"
+        echo "Usages: kend {start|start-docker|stop|restart|status}"
         exit 1
         ;;
 esac

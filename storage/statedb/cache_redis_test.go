@@ -47,7 +47,7 @@ func TestSubscription(t *testing.T) {
 	wg.Add(1)
 
 	go func() {
-		cache, err := NewRedisCache(getTestRedisConfig())
+		cache, err := newRedisCache(getTestRedisConfig())
 		assert.Nil(t, err)
 
 		ch := cache.SubscribeBlockCh()
@@ -70,7 +70,7 @@ func TestSubscription(t *testing.T) {
 	}()
 	time.Sleep(sleepDurationForAsyncBehavior)
 
-	cache, err := NewRedisCache(getTestRedisConfig())
+	cache, err := newRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
 	if err := cache.PublishBlock(msg1); err != nil {
@@ -86,7 +86,7 @@ func TestSubscription(t *testing.T) {
 
 // TestRedisCache tests basic operations of redis cache
 func TestRedisCache(t *testing.T) {
-	cache, err := NewRedisCache(getTestRedisConfig())
+	cache, err := newRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
 	key, value := randBytes(32), randBytes(500)
@@ -103,7 +103,7 @@ func TestRedisCache(t *testing.T) {
 
 // TestRedisCache_Set_LargeData check whether redis cache can store an large data (5MB).
 func TestRedisCache_Set_LargeData(t *testing.T) {
-	cache, err := NewRedisCache(getTestRedisConfig())
+	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestRedisCache_Set_LargeData(t *testing.T) {
 }
 
 func TestRedisCache_Set_LargeNumberItems(t *testing.T) {
-	cache, err := NewRedisCache(getTestRedisConfig())
+	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
