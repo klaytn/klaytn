@@ -285,6 +285,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	for i := 1; i <= runtime.NumCPU()/2; i++ {
+		bc.wg.Add(1)
 		go bc.prefetchTxWorker(i)
 	}
 
@@ -311,7 +312,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 // prefetchTxWorker receives a block and a transaction index, which it pre-executes
 // to retrieve and cache the data for the actual block processing.
 func (bc *BlockChain) prefetchTxWorker(index int) {
-	bc.wg.Add(1)
 	defer bc.wg.Done()
 
 	logger.Info("prefetchTxWorker is started", "num", index)
