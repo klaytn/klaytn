@@ -291,8 +291,8 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 	// Take ownership of this particular state
 	go bc.update()
-	go bc.gcCachedNodeLoop()
-	go bc.restartStateMigration()
+	bc.gcCachedNodeLoop()
+	bc.restartStateMigration()
 
 	if cacheConfig.TrieNodeCacheConfig.DumpPeriodically() {
 		logger.Info("LocalCache is used for trie node cache, start saving cache to file periodically",
