@@ -488,6 +488,11 @@ var (
 		Usage: "Set the Write deadline on the underlying network connection in seconds. 0 means write will not timeout",
 		Value: rpc.WebsocketWriteDeadline,
 	}
+	WSMaxConnections = cli.IntFlag{
+		Name:  "wsmaxconnections",
+		Usage: "Allowed maximum websocket connection number",
+		Value: 3000,
+	}
 	GRPCEnabledFlag = cli.BoolFlag{
 		Name:  "grpc",
 		Usage: "Enable the gRPC server",
@@ -1144,6 +1149,7 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 	rpc.MaxSubscriptionPerConn = int32(ctx.GlobalInt(WSMaxSubscriptionPerConn.Name))
 	rpc.WebsocketReadDeadline = ctx.GlobalInt64(WSReadDeadLine.Name)
 	rpc.WebsocketWriteDeadline = ctx.GlobalInt64(WSWriteDeadLine.Name)
+	rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(WSMaxConnections.Name))
 }
 
 // setIPC creates an IPC path configuration from the set command line flags,

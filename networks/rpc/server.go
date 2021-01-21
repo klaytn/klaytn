@@ -64,14 +64,18 @@ var (
 
 	// WebsocketWriteDeadline is the write deadline on the underlying network connection in seconds. 0 means write will not timeout
 	WebsocketWriteDeadline int64 = 0
+
+	// MaxSubscription is a maximum number of websocket connections
+	MaxWebsocketConnections int32 = 3000
 )
 
 // NewServer will create a new server instance with no registered handlers.
 func NewServer() *Server {
 	server := &Server{
-		services: make(serviceRegistry),
-		codecs:   set.New(),
-		run:      1,
+		services:    make(serviceRegistry),
+		codecs:      set.New(),
+		run:         1,
+		wsConnCount: 0,
 	}
 
 	// register a default service which will provide meta information about the RPC service such as the services and
@@ -351,6 +355,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 			return codec.CreateResponse(req.id, true), nil
 		}
 		rpcErrorResponsesCounter.Inc(1)
+		wsUnsubscriptionReqCounter.Inc(1)
 		return codec.CreateErrorResponse(&req.id, &invalidParamsError{"Expected subscription id as first argument"}), nil
 	}
 
@@ -375,6 +380,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 		}
 		atomic.AddInt32(subCnt, 1)
 		rpcSuccessResponsesCounter.Inc(1)
+		wsSubscriptionReqCounter.Inc(1)
 		return codec.CreateResponse(req.id, subid), activateSub
 	}
 
