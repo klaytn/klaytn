@@ -435,7 +435,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 		assert.True(t, hasStateTrieNode)
 		assert.True(t, hasOldStateTrieNode)
 
-		dbm.FinishStateMigration(true, nil)
+		dbm.FinishStateMigration(true)
 	}
 }
 
@@ -740,7 +740,7 @@ func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
 			assert.Equal(t, common.Int64ToByteBigEndian(migrationBlockNum), fetchedBlockNum)
 
 			// reset migration status for next test
-			dbm.FinishStateMigration(false, nil) // migration fail
+			dbm.FinishStateMigration(false) // migration fail
 		}
 	}
 }
@@ -765,8 +765,7 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			// finish migration with failure
 			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
 			assert.NoError(t, err)
-			endCheck := make(chan struct{})
-			dbm.FinishStateMigration(false, endCheck) // migration fail
+			endCheck := dbm.FinishStateMigration(false) // migration fail
 			select {
 			case <-endCheck: // wait for removing DB
 			case <-time.After(1 * time.Second):
@@ -805,8 +804,7 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			// finish migration successfully
 			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum2)
 			assert.NoError(t, err)
-			endCheck := make(chan struct{})
-			dbm.FinishStateMigration(true, endCheck) // migration succeed
+			endCheck := dbm.FinishStateMigration(true) // migration succeed
 			select {
 			case <-endCheck: // wait for removing DB
 			case <-time.After(1 * time.Second):
@@ -864,8 +862,7 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
 
 			// check if old db is deleted on migration success
-			endCheck := make(chan struct{})
-			dbm.FinishStateMigration(true, endCheck) // migration succeed
+			endCheck := dbm.FinishStateMigration(true) // migration succeed
 			select {
 			case <-endCheck: // wait for removing DB
 			case <-time.After(1 * time.Second):
@@ -896,8 +893,7 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
 
 			// check if new db is deleted on migration fail
-			endCheck := make(chan struct{})
-			dbm.FinishStateMigration(false, endCheck) // migration fail
+			endCheck := dbm.FinishStateMigration(false) // migration fail
 			select {
 			case <-endCheck: // wait for removing DB
 			case <-time.After(1 * time.Second):
