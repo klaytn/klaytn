@@ -55,7 +55,7 @@ type DBManager interface {
 	GetDBConfig() *DBConfig
 	getDatabase(DBEntryType) Database
 	CreateMigrationDBAndSetStatus(blockNum uint64) error
-	FinishStateMigration(succeed bool)
+	FinishStateMigration(succeed bool, endCheck chan struct{})
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
@@ -680,7 +680,7 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 
 // FinishStateMigration updates stateTrieDB and removes the old one.
 // The function should be called only after when state trie migration is finished.
-func (dbm *databaseManager) FinishStateMigration(succeed bool) {
+func (dbm *databaseManager) FinishStateMigration(succeed bool, endCheck chan struct{}) {
 	// lock to prevent from a conflict of reading state DB and changing state DB
 	dbm.lockInMigration.Lock()
 	defer dbm.lockInMigration.Unlock()
@@ -709,10 +709,15 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) {
 	dbPathToBeRemoved := filepath.Join(dbm.config.Dir, dbDirToBeRemoved)
 	dbToBeRemoved.Close()
 
-	go removeDB(dbPathToBeRemoved)
+	go removeDB(dbPathToBeRemoved, endCheck)
 }
 
-func removeDB(dbPath string) {
+func removeDB(dbPath string, endCheck chan struct{}) {
+	defer func() {
+		if endCheck != nil {
+			close(endCheck)
+		}
+	}()
 	if err := os.RemoveAll(dbPath); err != nil {
 		logger.Error("Failed to remove the database due to an error", "err", err, "dir", dbPath)
 		return

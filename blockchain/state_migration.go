@@ -111,7 +111,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 		if returnErr != ErrQuitBySignal {
 			// lock to prevent from a conflict of state DB close and state DB write
 			bc.mu.Lock()
-			bc.db.FinishStateMigration(returnErr == nil)
+			bc.db.FinishStateMigration(returnErr == nil, nil)
 			bc.mu.Unlock()
 		}
 	}()
