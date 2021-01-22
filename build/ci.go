@@ -270,7 +270,7 @@ func doTest(cmdline []string) {
 	build.MustRun(goTool("vet", packages...))
 
 	// Run the actual tests.
-	gotest := goTool("test", buildFlags(env)...)
+	gotest := goTool("test --timeout=30m", buildFlags(env)...)
 	if *parallel != 0 {
 		gotest.Args = append(gotest.Args, "-p", strconv.Itoa(*parallel))
 	}
@@ -319,7 +319,7 @@ func doCover(cmdline []string) {
 	build.MustRunCommand("sh", "-c", "echo 'mode: atomic' > "+*outputFile)
 
 	// Run the actual tests.
-	gotest := goTool("test", buildFlags(env)...)
+	gotest := goTool("test --timeout=30m", buildFlags(env)...)
 	if *parallel != 0 {
 		gotest.Args = append(gotest.Args, "-p", strconv.Itoa(*parallel))
 	}
