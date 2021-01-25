@@ -270,10 +270,11 @@ func doTest(cmdline []string) {
 	build.MustRun(goTool("vet", packages...))
 
 	// Run the actual tests.
-	gotest := goTool("test --timeout=30m", buildFlags(env)...)
+	gotest := goTool("test", buildFlags(env)...)
 	if *parallel != 0 {
 		gotest.Args = append(gotest.Args, "-p", strconv.Itoa(*parallel))
 	}
+	gotest.Args = append(gotest.Args, "--timeout=30m")
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)
 }
@@ -319,13 +320,14 @@ func doCover(cmdline []string) {
 	build.MustRunCommand("sh", "-c", "echo 'mode: atomic' > "+*outputFile)
 
 	// Run the actual tests.
-	gotest := goTool("test --timeout=30m", buildFlags(env)...)
+	gotest := goTool("test", buildFlags(env)...)
 	if *parallel != 0 {
 		gotest.Args = append(gotest.Args, "-p", strconv.Itoa(*parallel))
 	}
 
 	gotest.Args = append(gotest.Args, "-cover", "-covermode=atomic", "-coverprofile="+*outputFile)
 	gotest.Args = append(gotest.Args, "-coverpkg", coverPackagesString)
+	gotest.Args = append(gotest.Args, "--timeout=30m")
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)
 }
