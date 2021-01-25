@@ -306,6 +306,11 @@ var (
 		Name:  "statedb.cache.noprefetch",
 		Usage: "Disable heuristic state prefetch during block import (less CPU and disk IO, more time waiting for data)",
 	}
+	NumFetcherPrefetchWorkerFlag = cli.IntFlag{
+		Name:  "statedb.cache.num-fetcher-prefetch-worker",
+		Usage: "Number of workers used to prefetch block when fetcher fetches block",
+		Value: 1,
+	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",
 		Usage: "Set endpoints of redis trie node cache. More than one endpoints can be set",
@@ -1524,6 +1529,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
 		NoPrefetch:                ctx.GlobalBool(TrieNodeCacheNoPrefetchFlag.Name),
+		NumFetcherPrefetchWorker:  ctx.GlobalInt(NumFetcherPrefetchWorkerFlag.Name),
 		LocalCacheSizeMB:          ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
 		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),

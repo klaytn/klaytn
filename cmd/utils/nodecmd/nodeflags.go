@@ -76,6 +76,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.MemorySizeFlag,
 	utils.TrieNodeCacheTypeFlag,
 	utils.TrieNodeCacheNoPrefetchFlag,
+	utils.NumFetcherPrefetchWorkerFlag,
 	utils.TrieNodeCacheLimitFlag,
 	utils.TrieNodeCacheSavePeriodFlag,
 	utils.TrieNodeCacheRedisEndpointsFlag,

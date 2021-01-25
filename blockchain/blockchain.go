@@ -284,7 +284,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		}
 	}
 
-	for i := 1; i <= runtime.NumCPU()/2; i++ {
+	for i := 1; i <= bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker; i++ {
 		bc.wg.Add(1)
 		go bc.prefetchTxWorker(i)
 	}
