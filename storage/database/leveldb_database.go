@@ -79,8 +79,12 @@ func GetOpenFilesLimit() int {
 		logger.Crit("Failed to retrieve file descriptor allowance", "err", err)
 	}
 	if limit < minFileDescriptorsForDBManager {
-		logger.Crit("Raised number of file descriptor  is below the minimum value",
-			"currFileDescriptorsLimit", limit, "minFileDescriptorsForDBManager", minFileDescriptorsForDBManager)
+		raised, err := fdlimit.Raise(minFileDescriptorsForDBManager)
+		if err != nil || raised < minFileDescriptorsForDBManager {
+			logger.Crit("Raised number of file descriptor is below the minimum value",
+				"currFileDescriptorsLimit", limit, "minFileDescriptorsForDBManager", minFileDescriptorsForDBManager)
+		}
+		limit = int(raised)
 	}
 	return limit / 2 // Leave half for networking and other stuff
 }
