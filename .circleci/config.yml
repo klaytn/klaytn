@@ -22,11 +22,11 @@ executors:
   test-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.1-go1.14.6-solc0.4.24
+      - image: klaytn/build_base:1.1-go1.15.7-solc0.4.24
   test-others-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.1-go1.14.6-solc0.4.24
+      - image: klaytn/build_base:1.1-go1.15.7-solc0.4.24
       - image: localstack/localstack:0.11.5
       - image: circleci/mysql:5.7
       - image: circleci/redis:6.0.8-alpine
@@ -43,7 +43,7 @@ executors:
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/circleci-rpmbuild:1.14.6
+      - image: klaytn/circleci-rpmbuild:1.15.7
   default:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
@@ -59,9 +59,9 @@ commands:
       - run:
           name: "Install golang on machine"
           command: |
-            curl -O https://dl.google.com/go/go1.14.6.linux-amd64.tar.gz
-            mkdir $HOME/go1.14.6
-            tar -C $HOME/go1.14.6 -xzf go1.14.6.linux-amd64.tar.gz
+            curl -O https://dl.google.com/go/go1.15.7.linux-amd64.tar.gz
+            mkdir $HOME/go1.15.7
+            tar -C $HOME/go1.15.7 -xzf go1.15.7.linux-amd64.tar.gz
   pre-build:
     description: "before build, set version"
     steps:
@@ -69,7 +69,7 @@ commands:
           name: "set variables"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.14.6/go/bin:$PATH
+            export PATH=$HOME/go1.15.7/go/bin:$PATH
             pat="^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*"
 
             if [[ $CIRCLE_TAG =~ $pat ]]; then
@@ -92,7 +92,7 @@ commands:
           name: "build new(Cross compile)"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.14.6/go/bin:$PATH
+            export PATH=$HOME/go1.15.7/go/bin:$PATH
             make << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
@@ -105,7 +105,7 @@ commands:
           name: "upload S3 repo"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.14.6/go/bin:$PATH
+            export PATH=$HOME/go1.15.7/go/bin:$PATH
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
             for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
@@ -306,7 +306,7 @@ jobs:
       - run:
           name: "Build"
           command: |
-            export PATH=$HOME/go1.14.6/go/bin:$PATH
+            export PATH=$HOME/go1.15.7/go/bin:$PATH
             make fmt
             make all
 
