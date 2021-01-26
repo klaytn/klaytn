@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -100,6 +101,9 @@ func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
 	fakeEndpoint := "127.0.0.1:14566"
 	maxRetries := 2
 	timeout := 1 * time.Second
+	serverReadyWg := sync.WaitGroup{}
+	serverReadyWg.Add(1)
+
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", fakeEndpoint)
 		if err != nil {
@@ -111,6 +115,7 @@ func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
 			s.FailNow(err.Error())
 		}
 		defer listen.Close()
+		serverReadyWg.Done()
 
 		for i := 0; i < maxRetries+1; i++ {
 			// Deadline prevents infinite waiting of the fake server
@@ -146,6 +151,7 @@ func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
 		config: *conf,
 		logger: logger.NewWith("logger"),
 	}
+	serverReadyWg.Wait()
 
 	start := time.Now()
 	_, err := dynamoDB.get([]byte{0x1, 0x2})
