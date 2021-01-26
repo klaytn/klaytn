@@ -740,7 +740,7 @@ func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
 			assert.Equal(t, common.Int64ToByteBigEndian(migrationBlockNum), fetchedBlockNum)
 
 			// reset migration status for next test
-			dbm.FinishStateMigration(false)
+			dbm.FinishStateMigration(false) // migration fail
 		}
 	}
 }
@@ -765,7 +765,13 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			// finish migration with failure
 			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
 			assert.NoError(t, err)
-			dbm.FinishStateMigration(false)
+			endCheck := dbm.FinishStateMigration(false) // migration fail
+			select {
+			case <-endCheck: // wait for removing DB
+			case <-time.After(1 * time.Second):
+				t.Log("Take too long for a DB to be removed")
+				t.FailNow()
+			}
 
 			// check if in migration state
 			assert.False(t, dbm.InMigration())
@@ -774,6 +780,8 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
 			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
 			assert.NoError(t, err)
+			dirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
+			assert.Equal(t, 1, len(dirNames)) // check if DB is removed
 			assert.Equal(t, initialDirNames[0], string(fetchedStateDBPath), "old DB should remain")
 
 			// check if migration DB Path is not set in MiscDB
@@ -796,7 +804,13 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			// finish migration successfully
 			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum2)
 			assert.NoError(t, err)
-			dbm.FinishStateMigration(true)
+			endCheck := dbm.FinishStateMigration(true) // migration succeed
+			select {
+			case <-endCheck: // wait for removing DB
+			case <-time.After(1 * time.Second):
+				t.Log("Take too long for a DB to be removed")
+				t.FailNow()
+			}
 
 			// check if in migration state
 			assert.False(t, dbm.InMigration())
@@ -805,6 +819,8 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
 			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
 			assert.NoError(t, err)
+			dirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
+			assert.Equal(t, 1, len(dirNames))                                                         // check if DB is removed
 			expectedStateDBPath := "statetrie_migrated_" + strconv.FormatUint(migrationBlockNum2, 10) // new DB format
 			assert.Equal(t, expectedStateDBPath, string(fetchedStateDBPath), "new DB should remain")
 
@@ -846,11 +862,16 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
 
 			// check if old db is deleted on migration success
-			dbm.FinishStateMigration(true)     // migration success
-			time.Sleep(200 * time.Millisecond) // wait for removing DB
+			endCheck := dbm.FinishStateMigration(true) // migration succeed
+			select {
+			case <-endCheck: // wait for removing DB
+			case <-time.After(1 * time.Second):
+				t.Log("Take too long for a DB to be removed")
+				t.FailNow()
+			}
 
 			newDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
-			assert.Equal(t, 1, len(newDirNames))
+			assert.Equal(t, 1, len(newDirNames)) // check if DB is removed
 			assert.Equal(t, NewMigrationPath, newDirNames[0], "new DB should remain")
 		}
 
@@ -872,11 +893,16 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
 
 			// check if new db is deleted on migration fail
-			dbm.FinishStateMigration(false)    // migration fail
-			time.Sleep(200 * time.Millisecond) // wait for removing DB
+			endCheck := dbm.FinishStateMigration(false) // migration fail
+			select {
+			case <-endCheck: // wait for removing DB
+			case <-time.After(1 * time.Second):
+				t.Log("Take too long for a DB to be removed")
+				t.FailNow()
+			}
 
 			newDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
-			assert.Equal(t, 1, len(newDirNames))
+			assert.Equal(t, 1, len(newDirNames)) // check if DB is removed
 			assert.Equal(t, initialDirNames[0], newDirNames[0], "old DB should remain")
 		}
 	}
