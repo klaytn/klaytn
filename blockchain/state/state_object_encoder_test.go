@@ -19,12 +19,21 @@ package state
 import (
 	"testing"
 
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestResetStateObjectEncoder(t *testing.T) {
+	defer func() {
+		resetStateObjectEncoder(stateObjEncoderDefaultWorkers, stateObjEncoderDefaultCap)
+	}()
+
 	firstChSize := 1
 	secondChSize := 2
+	testAcc, err := account.NewAccountWithType(account.LegacyAccountType)
+	if err != nil {
+		t.Fatal("failed to create a test account", "err", err)
+	}
 
 	// reset stateObjectEncoder for test
 	resetStateObjectEncoder(1, firstChSize)
@@ -34,13 +43,13 @@ func TestResetStateObjectEncoder(t *testing.T) {
 	// getStateObjectEncoder(firstChSize) should not assign a new channel
 	soe := getStateObjectEncoder(firstChSize)
 	assert.Equal(t, firstChSize, cap(stateObjEncoder.tasksCh))
-	soe.encode(&stateObject{})
+	soe.encode(&stateObject{account: testAcc})
 
 	// getStateObjectEncoder(secondChSize) should assign a new channel
 	soe = getStateObjectEncoder(secondChSize)
 	assert.Equal(t, secondChSize, cap(stateObjEncoder.tasksCh))
 	assert.Equal(t, 0, len(stateObjEncoder.tasksCh))
 
-	soe.encode(&stateObject{})
-	soe.encode(&stateObject{})
+	soe.encode(&stateObject{account: testAcc})
+	soe.encode(&stateObject{account: testAcc})
 }
