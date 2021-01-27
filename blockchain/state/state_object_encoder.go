@@ -63,7 +63,8 @@ func getStateObjectEncoder(requiredChSize int) *stateObjectEncoder {
 // resetStateObjectEncoder closes existing tasksCh and assigns a new stateObjectEncoder.
 func resetStateObjectEncoder(numGoRoutines, tasksChSize int) *stateObjectEncoder {
 	close(stateObjEncoder.tasksCh)
-	return newStateObjectEncoder(numGoRoutines, tasksChSize)
+	stateObjEncoder = newStateObjectEncoder(numGoRoutines, tasksChSize)
+	return stateObjEncoder
 }
 
 // stateObjectEncoder handles tasksCh and resultsCh
