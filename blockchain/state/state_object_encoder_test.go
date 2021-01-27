@@ -30,7 +30,7 @@ func TestResetStateObjectEncoder(t *testing.T) {
 
 	firstChSize := 1
 	secondChSize := 2
-	testAcc, err := account.NewAccountWithType(account.LegacyAccountType)
+	testAcc, err := account.NewAccountWithType(account.ExternallyOwnedAccountType)
 	if err != nil {
 		t.Fatal("failed to create a test account", "err", err)
 	}
