@@ -302,10 +302,6 @@ var (
 			"'HybridCache') (default = 'LocalCache')",
 		Value: string(statedb.CacheTypeLocal),
 	}
-	TrieNodeCacheNoPrefetchFlag = cli.BoolFlag{
-		Name:  "statedb.cache.noprefetch",
-		Usage: "Disable heuristic state prefetch during block import (less CPU and disk IO, more time waiting for data)",
-	}
 	NumFetcherPrefetchWorkerFlag = cli.IntFlag{
 		Name:  "statedb.cache.num-fetcher-prefetch-worker",
 		Usage: "Number of workers used to prefetch block when fetcher fetches block",
@@ -1528,7 +1524,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
-		NoPrefetch:                ctx.GlobalBool(TrieNodeCacheNoPrefetchFlag.Name),
 		NumFetcherPrefetchWorker:  ctx.GlobalInt(NumFetcherPrefetchWorkerFlag.Name),
 		LocalCacheSizeMB:          ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",

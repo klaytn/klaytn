@@ -1678,7 +1678,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// transactions and probabilistically some of the account/storage trie nodes.
 		var followupInterrupt uint32
 
-		if !bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch {
+		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 {
 			// if fetcher works and only a block is given, use prefetchTxWorker
 			if len(chain) == 1 {
 				for ti := range block.Transactions() {
