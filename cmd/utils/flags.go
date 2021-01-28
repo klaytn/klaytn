@@ -305,7 +305,7 @@ var (
 	NumFetcherPrefetchWorkerFlag = cli.IntFlag{
 		Name:  "statedb.cache.num-fetcher-prefetch-worker",
 		Usage: "Number of workers used to prefetch block when fetcher fetches block",
-		Value: 1,
+		Value: 32,
 	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",
