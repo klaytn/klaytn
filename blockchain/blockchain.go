@@ -393,8 +393,7 @@ func (bc *BlockChain) loadLastState() error {
 	currentBlock := bc.GetBlockByHash(head)
 	if currentBlock == nil {
 		// Corrupt or empty database, init from scratch
-		logger.Error("Head block missing, resetting chain",
-			"number", currentBlock.NumberU64(), "hash", head.String())
+		logger.Error("Head block missing, resetting chain", "hash", head.String())
 		return bc.Reset()
 	}
 	// Make sure the state associated with the block is available
