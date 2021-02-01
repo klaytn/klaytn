@@ -284,7 +284,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		}
 	}
 
-	for i := 1; i <= runtime.NumCPU()/2; i++ {
+	for i := 1; i <= bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker; i++ {
 		bc.wg.Add(1)
 		go bc.prefetchTxWorker(i)
 	}
@@ -393,13 +393,14 @@ func (bc *BlockChain) loadLastState() error {
 	currentBlock := bc.GetBlockByHash(head)
 	if currentBlock == nil {
 		// Corrupt or empty database, init from scratch
-		logger.Error("Head block missing, resetting chain", "hash", head)
+		logger.Error("Head block missing, resetting chain", "hash", head.String())
 		return bc.Reset()
 	}
 	// Make sure the state associated with the block is available
 	if _, err := state.New(currentBlock.Root(), bc.stateCache); err != nil {
 		// Dangling block without a state associated, init from scratch
-		logger.Error("Head state missing, repairing chain", "number", currentBlock.Number(), "hash", currentBlock.Hash())
+		logger.Error("Head state missing, repairing chain",
+			"number", currentBlock.NumberU64(), "hash", currentBlock.Hash().String())
 		if err := bc.repair(&currentBlock); err != nil {
 			return err
 		}
@@ -1676,7 +1677,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// transactions and probabilistically some of the account/storage trie nodes.
 		var followupInterrupt uint32
 
-		if !bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch {
+		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 {
 			// if fetcher works and only a block is given, use prefetchTxWorker
 			if len(chain) == 1 {
 				for ti := range block.Transactions() {

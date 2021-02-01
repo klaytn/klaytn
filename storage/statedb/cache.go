@@ -29,7 +29,7 @@ type TrieNodeCacheType string
 // TrieNodeCacheConfig contains configuration values of all TrieNodeCache.
 type TrieNodeCacheConfig struct {
 	CacheType                 TrieNodeCacheType
-	NoPrefetch                bool          // Whether to disable heuristic state prefetching for followup blocks
+	NumFetcherPrefetchWorker  int           // Number of workers used to prefetch a block when fetcher works
 	LocalCacheSizeMB          int           // Memory allowance (MB) to use for caching trie nodes in fast cache
 	FastCacheFileDir          string        // Directory where the persistent fastcache data is stored
 	FastCacheSavePeriod       time.Duration // Period of saving in memory trie cache to file if fastcache is used
