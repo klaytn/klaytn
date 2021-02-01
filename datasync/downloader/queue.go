@@ -507,7 +507,7 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 			progress = true
 			delete(taskPool, header.Hash())
 			proc = proc - 1
-			logger.Error("Fetch reservation already delivered", "number", header.Number.Uint64())
+			logger.Debug("Fetch reservation already delivered", "number", header.Number.Uint64())
 			continue
 		}
 		if throttle {
