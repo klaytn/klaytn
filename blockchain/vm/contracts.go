@@ -85,9 +85,6 @@ func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contr
 		ret, err = p.Run(input, contract, evm)
 		return ret, computationCost, err
 	}
-	if p == (&validateSender{}) {
-		return []byte{0}, computationCost, kerrors.ErrOutOfGas
-	}
 	return nil, computationCost, kerrors.ErrOutOfGas
 }
 
@@ -447,7 +444,7 @@ func (c *validateSender) GetRequiredGasAndComputationCost(input []byte) (uint64,
 }
 
 func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	if err := validate(input, evm.StateDB); err != nil {
+	if err := c.validateSender(input, evm.StateDB); err != nil {
 		// If return error makes contract execution failed, do not return the error.
 		// Instead, print log.
 		logger.Trace("validateSender failed", "err", err)
@@ -456,7 +453,7 @@ func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte
 	return []byte{1}, nil
 }
 
-func validate(input []byte, picker types.AccountKeyPicker) error {
+func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPicker) error {
 	ptr := input
 
 	// Parse the first 20 bytes. They represent an address to be verified.
