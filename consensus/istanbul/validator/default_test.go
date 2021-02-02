@@ -22,14 +22,15 @@ package validator
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -137,39 +138,39 @@ func TestEmptyValSet(t *testing.T) {
 
 func TestAddAndRemoveValidator(t *testing.T) {
 	valSet := NewSet(ExtractValidators([]byte{}), istanbul.RoundRobin)
-	if !valSet.AddValidator(common.StringToAddress(string(2))) {
+	if !valSet.AddValidator(common.StringToAddress(string(rune(2)))) {
 		t.Error("the validator should be added")
 	}
-	if valSet.AddValidator(common.StringToAddress(string(2))) {
+	if valSet.AddValidator(common.StringToAddress(string(rune(2)))) {
 		t.Error("the existing validator should not be added")
 	}
-	valSet.AddValidator(common.StringToAddress(string(1)))
-	valSet.AddValidator(common.StringToAddress(string(0)))
+	valSet.AddValidator(common.StringToAddress(string(rune(1))))
+	valSet.AddValidator(common.StringToAddress(string(rune(0))))
 	if len(valSet.List()) != 3 {
 		t.Error("the size of validator set should be 3")
 	}
 
 	for i, v := range valSet.List() {
-		expected := common.StringToAddress(string(i))
+		expected := common.StringToAddress(string(rune(i)))
 		if v.Address() != expected {
 			t.Errorf("the order of validators is wrong: have %v, want %v", v.Address().Hex(), expected.Hex())
 		}
 	}
 
-	if !valSet.RemoveValidator(common.StringToAddress(string(2))) {
+	if !valSet.RemoveValidator(common.StringToAddress(string(rune(2)))) {
 		t.Error("the validator should be removed")
 	}
-	if valSet.RemoveValidator(common.StringToAddress(string(2))) {
+	if valSet.RemoveValidator(common.StringToAddress(string(rune(2)))) {
 		t.Error("the non-existing validator should not be removed")
 	}
 	if len(valSet.List()) != 2 {
 		t.Error("the size of validator set should be 2")
 	}
-	valSet.RemoveValidator(common.StringToAddress(string(1)))
+	valSet.RemoveValidator(common.StringToAddress(string(rune(1))))
 	if len(valSet.List()) != 1 {
 		t.Error("the size of validator set should be 1")
 	}
-	valSet.RemoveValidator(common.StringToAddress(string(0)))
+	valSet.RemoveValidator(common.StringToAddress(string(rune(0))))
 	if len(valSet.List()) != 0 {
 		t.Error("the size of validator set should be 0")
 	}

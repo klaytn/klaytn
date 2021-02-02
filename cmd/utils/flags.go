@@ -48,6 +48,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/node/sc"
@@ -301,6 +302,11 @@ var (
 			"'HybridCache') (default = 'LocalCache')",
 		Value: string(statedb.CacheTypeLocal),
 	}
+	NumFetcherPrefetchWorkerFlag = cli.IntFlag{
+		Name:  "statedb.cache.num-fetcher-prefetch-worker",
+		Usage: "Number of workers used to prefetch block when fetcher fetches block",
+		Value: 32,
+	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",
 		Usage: "Set endpoints of redis trie node cache. More than one endpoints can be set",
@@ -321,6 +327,11 @@ var (
 		Name:  "state.trie-cache-limit",
 		Usage: "Memory allowance (MB) to use for caching trie nodes in memory. -1 is for auto-scaling",
 		Value: -1,
+	}
+	TrieNodeCacheSavePeriodFlag = cli.DurationFlag{
+		Name:  "state.trie-cache-save-period",
+		Usage: "Period of saving in memory trie cache to file if fastcache is used, 0 means disabled",
+		Value: 0,
 	}
 	SenderTxHashIndexingFlag = cli.BoolFlag{
 		Name:  "sendertxhashindexing",
@@ -439,14 +450,6 @@ var (
 		Name:  "rpc.gascap",
 		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
 	}
-	IPCDisabledFlag = cli.BoolFlag{
-		Name:  "ipcdisable",
-		Usage: "Disable the IPC-RPC server",
-	}
-	IPCPathFlag = DirectoryFlag{
-		Name:  "ipcpath",
-		Usage: "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
-	}
 	WSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
 		Usage: "Enable the WS-RPC server",
@@ -460,6 +463,36 @@ var (
 		Name:  "wsport",
 		Usage: "WS-RPC server listening port",
 		Value: node.DefaultWSPort,
+	}
+	WSApiFlag = cli.StringFlag{
+		Name:  "wsapi",
+		Usage: "API's offered over the WS-RPC interface",
+		Value: "",
+	}
+	WSAllowedOriginsFlag = cli.StringFlag{
+		Name:  "wsorigins",
+		Usage: "Origins from which to accept websockets requests",
+		Value: "",
+	}
+	WSMaxSubscriptionPerConn = cli.IntFlag{
+		Name:  "wsmaxsubscriptionperconn",
+		Usage: "Allowed maximum subscription number per a websocket connection",
+		Value: 5,
+	}
+	WSReadDeadLine = cli.Int64Flag{
+		Name:  "wsreaddeadline",
+		Usage: "Set the read deadline on the underlying network connection in seconds. 0 means read will not timeout",
+		Value: rpc.WebsocketReadDeadline,
+	}
+	WSWriteDeadLine = cli.Int64Flag{
+		Name:  "wswritedeadline",
+		Usage: "Set the Write deadline on the underlying network connection in seconds. 0 means write will not timeout",
+		Value: rpc.WebsocketWriteDeadline,
+	}
+	WSMaxConnections = cli.IntFlag{
+		Name:  "wsmaxconnections",
+		Usage: "Allowed maximum websocket connection number",
+		Value: 3000,
 	}
 	GRPCEnabledFlag = cli.BoolFlag{
 		Name:  "grpc",
@@ -475,15 +508,13 @@ var (
 		Usage: "gRPC server listening port",
 		Value: node.DefaultGRPCPort,
 	}
-	WSApiFlag = cli.StringFlag{
-		Name:  "wsapi",
-		Usage: "API's offered over the WS-RPC interface",
-		Value: "",
+	IPCDisabledFlag = cli.BoolFlag{
+		Name:  "ipcdisable",
+		Usage: "Disable the IPC-RPC server",
 	}
-	WSAllowedOriginsFlag = cli.StringFlag{
-		Name:  "wsorigins",
-		Usage: "Origins from which to accept websockets requests",
-		Value: "",
+	IPCPathFlag = DirectoryFlag{
+		Name:  "ipcpath",
+		Usage: "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
 	}
 	ExecFlag = cli.StringFlag{
 		Name:  "exec",
@@ -1116,6 +1147,10 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(WSApiFlag.Name) {
 		cfg.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
 	}
+	rpc.MaxSubscriptionPerConn = int32(ctx.GlobalInt(WSMaxSubscriptionPerConn.Name))
+	rpc.WebsocketReadDeadline = ctx.GlobalInt64(WSReadDeadLine.Name)
+	rpc.WebsocketWriteDeadline = ctx.GlobalInt64(WSWriteDeadLine.Name)
+	rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(WSMaxConnections.Name))
 }
 
 // setIPC creates an IPC path configuration from the set command line flags,
@@ -1489,8 +1524,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
+		NumFetcherPrefetchWorker:  ctx.GlobalInt(NumFetcherPrefetchWorkerFlag.Name),
 		LocalCacheSizeMB:          ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
+		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),
 		RedisEndpoints:            ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
 		RedisClusterEnable:        ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
 		RedisPublishBlockEnable:   ctx.GlobalBool(TrieNodeCacheRedisPublishBlockFlag.Name),

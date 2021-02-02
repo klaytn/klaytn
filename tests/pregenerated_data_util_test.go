@@ -475,7 +475,7 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 		CacheSize:     512,
 		BlockInterval: blockchain.DefaultBlockInterval,
 		TriesInMemory: blockchain.DefaultTriesInMemory,
-		TrieNodeCacheConfig: statedb.TrieNodeCacheConfig{
+		TrieNodeCacheConfig: &statedb.TrieNodeCacheConfig{
 			CacheType:          statedb.CacheTypeLocal,
 			LocalCacheSizeMB:   4096,
 			FastCacheFileDir:   "",

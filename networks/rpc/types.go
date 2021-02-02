@@ -79,6 +79,8 @@ type Server struct {
 	run      int32
 	codecsMu sync.Mutex
 	codecs   *set.Set
+
+	wsConnCount int32
 }
 
 // rpcRequest represents a raw incoming RPC request

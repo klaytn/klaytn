@@ -262,6 +262,14 @@ func (sdbBatch *shardedDBBatch) Put(key []byte, value []byte) error {
 	}
 }
 
+func (sdbBatch *shardedDBBatch) Delete(key []byte) error {
+	if ShardIndex, err := shardIndexByKey(key, uint(sdbBatch.numBatches)); err != nil {
+		return err
+	} else {
+		return sdbBatch.batches[ShardIndex].Delete(key)
+	}
+}
+
 // ValueSize is called to determine whether to write batches when it exceeds
 // certain limit. shardedDB returns the largest size of its batches to
 // write all batches at once when one of batch exceeds the limit.
@@ -297,4 +305,13 @@ func (sdbBatch *shardedDBBatch) Reset() {
 	for _, batch := range sdbBatch.batches {
 		batch.Reset()
 	}
+}
+
+func (sdbBatch *shardedDBBatch) Replay(w KeyValueWriter) error {
+	for _, batch := range sdbBatch.batches {
+		if err := batch.Replay(w); err != nil {
+			return err
+		}
+	}
+	return nil
 }

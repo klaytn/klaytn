@@ -27,6 +27,7 @@ import (
 	"math/big"
 	mrand "math/rand"
 	"reflect"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -72,7 +73,10 @@ var (
 	blockExecutionTimer = metrics.NewRegisteredTimer("chain/execution", nil)
 	blockFinalizeTimer  = metrics.NewRegisteredTimer("chain/finalize", nil)
 	blockValidateTimer  = metrics.NewRegisteredTimer("chain/validate", nil)
-	BlockAgeTimer       = metrics.NewRegisteredTimer("chain/age", nil)
+	blockAgeTimer       = metrics.NewRegisteredTimer("chain/age", nil)
+
+	blockPrefetchExecuteTimer   = metrics.NewRegisteredTimer("chain/prefetch/executes", nil)
+	blockPrefetchInterruptMeter = metrics.NewRegisteredMeter("chain/prefetch/interrupts", nil)
 
 	ErrNoGenesis            = errors.New("genesis not found in chain")
 	ErrNotExistNode         = errors.New("the node does not exist in cached node")
@@ -99,18 +103,19 @@ const (
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion    = 3
 	DefaultBlockInterval = 128
+	MaxPrefetchTxs       = 20000
 )
 
 // CacheConfig contains the configuration values for the 1) stateDB caching and
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
 	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
-	ArchiveMode          bool                        // If true, state trie is not pruned and always written to database
-	CacheSize            int                         // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
-	BlockInterval        uint                        // Block interval to flush the trie. Each interval state trie will be flushed into disk
-	TriesInMemory        uint64                      // Maximum number of recent state tries according to its block number
-	SenderTxHashIndexing bool                        // Enables saving senderTxHash to txHash mapping information to database and cache
-	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig // Configures trie node cache
+	ArchiveMode          bool                         // If true, state trie is not pruned and always written to database
+	CacheSize            int                          // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
+	BlockInterval        uint                         // Block interval to flush the trie. Each interval state trie will be flushed into disk
+	TriesInMemory        uint64                       // Maximum number of recent state tries according to its block number
+	SenderTxHashIndexing bool                         // Enables saving senderTxHash to txHash mapping information to database and cache
+	TrieNodeCacheConfig  *statedb.TrieNodeCacheConfig // Configures trie node cache
 }
 
 // gcBlock is used for priority queue for GC.
@@ -154,7 +159,6 @@ type BlockChain struct {
 
 	mu      sync.RWMutex // global mutex for locking chain operations
 	chainmu sync.RWMutex // blockchain insertion lock
-	procmu  sync.RWMutex // block processor lock
 
 	checkpoint       int          // checkpoint counts towards the new checkpoint
 	currentBlock     atomic.Value // Current head of the block chain
@@ -169,10 +173,11 @@ type BlockChain struct {
 	procInterrupt int32          // interrupt signaler for block processing
 	wg            sync.WaitGroup // chain processing wait group for shutting down
 
-	engine    consensus.Engine
-	processor Processor // block processor interface
-	validator Validator // block and state validator interface
-	vmConfig  vm.Config
+	engine     consensus.Engine
+	processor  Processor  // block processor interface
+	prefetcher Prefetcher // Block state prefetcher interface
+	validator  Validator  // block and state validator interface
+	vmConfig   vm.Config
 
 	badBlocks *lru.Cache // Bad block cache
 
@@ -190,6 +195,15 @@ type BlockChain struct {
 	// Warm up
 	lastCommittedBlock uint64
 	quitWarmUp         chan struct{}
+
+	prefetchTxCh chan prefetchTx
+}
+
+// prefetchTx is used to prefetch transactions, when fetcher works.
+type prefetchTx struct {
+	ti                int
+	block             *types.Block
+	followupInterrupt *uint32
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -204,6 +218,10 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			TriesInMemory:       DefaultTriesInMemory,
 			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 		}
+	}
+
+	if cacheConfig.TrieNodeCacheConfig == nil {
+		cacheConfig.TrieNodeCacheConfig = statedb.GetEmptyTrieNodeCacheConfig()
 	}
 
 	state.EnabledExpensive = db.GetDBConfig().EnableDBPerfMetrics
@@ -229,10 +247,12 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		badBlocks:          badBlocks,
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
+		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
 	}
 
-	bc.SetValidator(NewBlockValidator(chainConfig, bc, engine))
-	bc.SetProcessor(NewStateProcessor(chainConfig, bc, engine))
+	bc.validator = NewBlockValidator(chainConfig, bc, engine)
+	bc.prefetcher = newStatePrefetcher(chainConfig, bc, engine)
+	bc.processor = NewStateProcessor(chainConfig, bc, engine)
 
 	var err error
 	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
@@ -263,12 +283,47 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			}
 		}
 	}
+
+	for i := 1; i <= bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker; i++ {
+		bc.wg.Add(1)
+		go bc.prefetchTxWorker(i)
+	}
+
 	// Take ownership of this particular state
 	go bc.update()
-	go bc.gcCachedNodeLoop()
-	go bc.restartStateMigration()
+	bc.gcCachedNodeLoop()
+	bc.restartStateMigration()
+
+	if cacheConfig.TrieNodeCacheConfig.DumpPeriodically() {
+		logger.Info("LocalCache is used for trie node cache, start saving cache to file periodically",
+			"dir", bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir,
+			"period", bc.cacheConfig.TrieNodeCacheConfig.FastCacheSavePeriod)
+		trieDB := bc.stateCache.TrieDB()
+		bc.wg.Add(1)
+		go func() {
+			defer bc.wg.Done()
+			trieDB.SaveCachePeriodically(bc.cacheConfig.TrieNodeCacheConfig, bc.quit)
+		}()
+	}
 
 	return bc, nil
+}
+
+// prefetchTxWorker receives a block and a transaction index, which it pre-executes
+// to retrieve and cache the data for the actual block processing.
+func (bc *BlockChain) prefetchTxWorker(index int) {
+	defer bc.wg.Done()
+
+	logger.Info("prefetchTxWorker is started", "num", index)
+	for followup := range bc.prefetchTxCh {
+		stateDB, err := state.New(bc.CurrentBlock().Root(), bc.stateCache)
+		if err != nil {
+			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
+			continue
+		}
+		bc.prefetcher.PrefetchTx(followup.block, followup.ti, stateDB, bc.vmConfig, followup.followupInterrupt)
+	}
+	logger.Info("prefetchTxWorker is terminated", "num", index)
 }
 
 // SetCanonicalBlock resets the canonical as the block with the given block number.
@@ -338,13 +393,14 @@ func (bc *BlockChain) loadLastState() error {
 	currentBlock := bc.GetBlockByHash(head)
 	if currentBlock == nil {
 		// Corrupt or empty database, init from scratch
-		logger.Error("Head block missing, resetting chain", "hash", head)
+		logger.Error("Head block missing, resetting chain", "hash", head.String())
 		return bc.Reset()
 	}
 	// Make sure the state associated with the block is available
 	if _, err := state.New(currentBlock.Root(), bc.stateCache); err != nil {
 		// Dangling block without a state associated, init from scratch
-		logger.Error("Head state missing, repairing chain", "number", currentBlock.Number(), "hash", currentBlock.Hash())
+		logger.Error("Head state missing, repairing chain",
+			"number", currentBlock.NumberU64(), "hash", currentBlock.Hash().String())
 		if err := bc.repair(&currentBlock); err != nil {
 			return err
 		}
@@ -468,31 +524,13 @@ func (bc *BlockChain) CurrentFastBlock() *types.Block {
 	return bc.currentFastBlock.Load().(*types.Block)
 }
 
-// SetProcessor sets the processor required for making state modifications.
-func (bc *BlockChain) SetProcessor(processor Processor) {
-	bc.procmu.Lock()
-	defer bc.procmu.Unlock()
-	bc.processor = processor
-}
-
-// SetValidator sets the validator which is used to validate incoming blocks.
-func (bc *BlockChain) SetValidator(validator Validator) {
-	bc.procmu.Lock()
-	defer bc.procmu.Unlock()
-	bc.validator = validator
-}
-
 // Validator returns the current validator.
 func (bc *BlockChain) Validator() Validator {
-	bc.procmu.RLock()
-	defer bc.procmu.RUnlock()
 	return bc.validator
 }
 
 // Processor returns the current processor.
 func (bc *BlockChain) Processor() Processor {
-	bc.procmu.RLock()
-	defer bc.procmu.RUnlock()
 	return bc.processor
 }
 
@@ -812,6 +850,7 @@ func (bc *BlockChain) Stop() {
 		bc.CloseBlockSubscriptionLoop()
 	}
 
+	close(bc.prefetchTxCh)
 	close(bc.quit)
 	atomic.StoreInt32(&bc.procInterrupt, 1)
 
@@ -1557,7 +1596,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		err := <-results
 		if err == nil {
-			err = bc.Validator().ValidateBody(block)
+			err = bc.validator.ValidateBody(block)
 		}
 
 		switch {
@@ -1634,18 +1673,47 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		if err != nil {
 			return i, events, coalescedLogs, err
 		}
+		// If we have a followup block, run that against the current state to pre-cache
+		// transactions and probabilistically some of the account/storage trie nodes.
+		var followupInterrupt uint32
+
+		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 {
+			// if fetcher works and only a block is given, use prefetchTxWorker
+			if len(chain) == 1 {
+				for ti := range block.Transactions() {
+					select {
+					case bc.prefetchTxCh <- prefetchTx{ti, block, &followupInterrupt}:
+					default:
+					}
+				}
+			} else if i < len(chain)-1 {
+				// current block is not the last one, so prefetch the right next block
+				followup := chain[i+1]
+				go func(start time.Time) {
+					throwaway, _ := state.New(parent.Root(), bc.stateCache)
+					bc.prefetcher.Prefetch(followup, throwaway, bc.vmConfig, &followupInterrupt)
+
+					blockPrefetchExecuteTimer.Update(time.Since(start))
+					if atomic.LoadUint32(&followupInterrupt) == 1 {
+						blockPrefetchInterruptMeter.Mark(1)
+					}
+				}(time.Now())
+			}
+		}
 
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, internalTxTraces, procStats, err := bc.processor.Process(block, stateDB, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
+			atomic.StoreUint32(&followupInterrupt, 1)
 			return i, events, coalescedLogs, err
 		}
 
 		// Validate the state using the default validator
-		err = bc.Validator().ValidateState(block, parent, stateDB, receipts, usedGas)
+		err = bc.validator.ValidateState(block, parent, stateDB, receipts, usedGas)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
+			atomic.StoreUint32(&followupInterrupt, 1)
 			return i, events, coalescedLogs, err
 		}
 		afterValidate := time.Now()
@@ -1653,12 +1721,14 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Write the block to the chain and get the writeResult.
 		writeResult, err := bc.WriteBlockWithState(block, receipts, stateDB)
 		if err != nil {
+			atomic.StoreUint32(&followupInterrupt, 1)
 			if err == ErrKnownBlock {
 				logger.Debug("Tried to insert already known block", "num", block.NumberU64(), "hash", block.Hash().String())
 				continue
 			}
 			return i, events, coalescedLogs, err
 		}
+		atomic.StoreUint32(&followupInterrupt, 1)
 
 		// Update the metrics subsystem with all the measurements
 		accountReadTimer.Update(stateDB.AccountReads)
@@ -1674,7 +1744,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		trieAccess := stateDB.AccountReads + stateDB.AccountHashes + stateDB.AccountUpdates + stateDB.AccountCommits
 		trieAccess += stateDB.StorageReads + stateDB.StorageHashes + stateDB.StorageUpdates + stateDB.StorageCommits
 
-		BlockAgeTimer.Update(time.Since(time.Unix(int64(block.Time().Uint64()), 0)))
+		blockAgeTimer.Update(time.Since(time.Unix(int64(block.Time().Uint64()), 0)))
 
 		switch writeResult.Status {
 		case CanonStatTy:
@@ -2275,7 +2345,11 @@ func (bc *BlockChain) IsSenderTxHashIndexingEnabled() bool {
 }
 
 func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
-	return bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir)
+	if err := bc.stateCache.TrieDB().CanSaveTrieNodeCacheToFile(); err != nil {
+		return err
+	}
+	go bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir, runtime.NumCPU()/2)
+	return nil
 }
 
 // ApplyTransaction attempts to apply a transaction to the given state database

@@ -19,6 +19,7 @@ package statedb
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/go-redis/redis/v7"
 )
@@ -28,12 +29,21 @@ type TrieNodeCacheType string
 // TrieNodeCacheConfig contains configuration values of all TrieNodeCache.
 type TrieNodeCacheConfig struct {
 	CacheType                 TrieNodeCacheType
-	LocalCacheSizeMB          int      // Memory allowance (MB) to use for caching trie nodes in fast cache
-	FastCacheFileDir          string   // Directory where the persistent fastcache data is stored
-	RedisEndpoints            []string // Endpoints of redis cache
-	RedisClusterEnable        bool     // Enable cluster-enabled mode of redis cache
-	RedisPublishBlockEnable   bool     // Enable publishing every inserted block to the redis server
-	RedisSubscribeBlockEnable bool     // Enable subscribing blocks from the redis server
+	NumFetcherPrefetchWorker  int           // Number of workers used to prefetch a block when fetcher works
+	LocalCacheSizeMB          int           // Memory allowance (MB) to use for caching trie nodes in fast cache
+	FastCacheFileDir          string        // Directory where the persistent fastcache data is stored
+	FastCacheSavePeriod       time.Duration // Period of saving in memory trie cache to file if fastcache is used
+	RedisEndpoints            []string      // Endpoints of redis cache
+	RedisClusterEnable        bool          // Enable cluster-enabled mode of redis cache
+	RedisPublishBlockEnable   bool          // Enable publishing every inserted block to the redis server
+	RedisSubscribeBlockEnable bool          // Enable subscribing blocks from the redis server
+}
+
+func (c *TrieNodeCacheConfig) DumpPeriodically() bool {
+	if c.CacheType == CacheTypeLocal && c.LocalCacheSizeMB > 0 && c.FastCacheSavePeriod > 0 {
+		return true
+	}
+	return false
 }
 
 //go:generate mockgen -destination=storage/statedb/mocks/trie_node_cache_mock.go github.com/klaytn/klaytn/storage/statedb TrieNodeCache
@@ -61,7 +71,8 @@ const (
 )
 
 var (
-	errNotSupportedCacheType = errors.New("not supported stateDB TrieNodeCache type")
+	errNotSupportedCacheType  = errors.New("not supported stateDB TrieNodeCache type")
+	errNilTrieNodeCacheConfig = errors.New("TrieNodeCacheConfig is nil")
 )
 
 func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
@@ -77,23 +88,26 @@ func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
 
 // NewTrieNodeCache creates one type of any supported trie node caches.
 // NOTE: It returns (nil, nil) when the cache type is CacheTypeLocal and its size is set to zero.
-func NewTrieNodeCache(config TrieNodeCacheConfig) (TrieNodeCache, error) {
+func NewTrieNodeCache(config *TrieNodeCacheConfig) (TrieNodeCache, error) {
+	if config == nil {
+		return nil, errNilTrieNodeCacheConfig
+	}
 	switch config.CacheType {
 	case CacheTypeLocal:
-		return NewFastCache(config), nil
+		return newFastCache(config), nil
 	case CacheTypeRedis:
-		return NewRedisCache(config)
+		return newRedisCache(config)
 	case CacheTypeHybrid:
 		logger.Info("Set hybrid trie node cache using both of localCache (fastCache) and redisCache")
-		return NewHybridCache(config)
+		return newHybridCache(config)
 	default:
 	}
 	logger.Error("Invalid trie node cache type", "cacheType", config.CacheType)
 	return nil, errNotSupportedCacheType
 }
 
-func GetEmptyTrieNodeCacheConfig() TrieNodeCacheConfig {
-	return TrieNodeCacheConfig{
+func GetEmptyTrieNodeCacheConfig() *TrieNodeCacheConfig {
+	return &TrieNodeCacheConfig{
 		CacheType:          CacheTypeLocal,
 		LocalCacheSizeMB:   0,
 		FastCacheFileDir:   "",

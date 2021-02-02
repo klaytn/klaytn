@@ -18,6 +18,13 @@ package sc
 
 import (
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"reflect"
+	"strings"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/crypto"
@@ -26,12 +33,6 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"reflect"
-	"strings"
-	"testing"
 )
 
 // testNewSubBridge returns a test SubBridge.
@@ -105,8 +106,8 @@ func TestSubBridge_basic(t *testing.T) {
 func TestSubBridge_removePeer(t *testing.T) {
 	// Create a test SubBridge (it may have 0 peers)
 	sBridge := testNewSubBridge(t)
-	defer sBridge.chainDB.Close()
 	defer sBridge.removeData(t)
+	defer sBridge.chainDB.Close()
 
 	// Set components of SubBridge
 	bc := testBlockChain(t)
@@ -158,6 +159,7 @@ func TestSubBridge_removePeer(t *testing.T) {
 func TestSubBridge_handleMsg(t *testing.T) {
 	// Create a test SubBridge
 	sBridge := testNewSubBridge(t)
+	defer sBridge.removeData(t)
 	defer sBridge.chainDB.Close()
 
 	// Elements for a bridgePeer
@@ -212,8 +214,8 @@ func TestSubBridge_handleMsg(t *testing.T) {
 func TestSubBridge_handle(t *testing.T) {
 	// Create a test SubBridge
 	sBridge := testNewSubBridge(t)
-	defer sBridge.chainDB.Close()
 	defer sBridge.removeData(t)
+	defer sBridge.chainDB.Close()
 
 	// Set components of SubBridge
 	bc := testBlockChain(t)
@@ -294,8 +296,8 @@ func TestSubBridge_handle(t *testing.T) {
 func TestSubBridge_SendRPCData(t *testing.T) {
 	// Create a test SubBridge
 	sBridge := testNewSubBridge(t)
-	defer sBridge.chainDB.Close()
 	defer sBridge.removeData(t)
+	defer sBridge.chainDB.Close()
 
 	// Test data used as a parameter of SendResponseRPC function
 	data := []byte{0x11, 0x22, 0x33}

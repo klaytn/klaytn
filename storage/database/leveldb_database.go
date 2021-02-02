@@ -79,8 +79,12 @@ func GetOpenFilesLimit() int {
 		logger.Crit("Failed to retrieve file descriptor allowance", "err", err)
 	}
 	if limit < minFileDescriptorsForDBManager {
-		logger.Crit("Raised number of file descriptor  is below the minimum value",
-			"currFileDescriptorsLimit", limit, "minFileDescriptorsForDBManager", minFileDescriptorsForDBManager)
+		raised, err := fdlimit.Raise(minFileDescriptorsForDBManager)
+		if err != nil || raised < minFileDescriptorsForDBManager {
+			logger.Crit("Raised number of file descriptor is below the minimum value",
+				"currFileDescriptorsLimit", limit, "minFileDescriptorsForDBManager", minFileDescriptorsForDBManager)
+		}
+		limit = int(raised)
 	}
 	return limit / 2 // Leave half for networking and other stuff
 }
@@ -472,18 +476,29 @@ func (db *levelDB) NewBatch() Batch {
 	return &ldbBatch{b: new(leveldb.Batch), ldb: db}
 }
 
+// ldbBatch is a write-only leveldb batch that commits changes to its host database
+// when Write is called. A batch cannot be used concurrently.
 type ldbBatch struct {
 	b    *leveldb.Batch
 	ldb  *levelDB
 	size int
 }
 
+// Put inserts the given value into the batch for later committing.
 func (b *ldbBatch) Put(key, value []byte) error {
 	b.b.Put(key, value)
 	b.size += len(value)
 	return nil
 }
 
+// Delete inserts the a key removal into the batch for later committing.
+func (b *ldbBatch) Delete(key []byte) error {
+	b.b.Delete(key)
+	b.size++
+	return nil
+}
+
+// Write flushes any accumulated data to disk.
 func (b *ldbBatch) Write() error {
 	if b.ldb.perfCheck {
 		start := time.Now()
@@ -498,10 +513,12 @@ func (b *ldbBatch) write() error {
 	return b.ldb.db.Write(b.b, nil)
 }
 
+// ValueSize retrieves the amount of data queued up for writing.
 func (b *ldbBatch) ValueSize() int {
 	return b.size
 }
 
+// Reset resets the batch for reuse.
 func (b *ldbBatch) Reset() {
 	b.b.Reset()
 	b.size = 0
@@ -514,4 +531,33 @@ func bytesPrefixRange(prefix, start []byte) *util.Range {
 	r := util.BytesPrefix(prefix)
 	r.Start = append(r.Start, start...)
 	return r
+}
+
+// Replay replays the batch contents.
+func (b *ldbBatch) Replay(w KeyValueWriter) error {
+	return b.b.Replay(&replayer{writer: w})
+}
+
+// replayer is a small wrapper to implement the correct replay methods.
+type replayer struct {
+	writer  KeyValueWriter
+	failure error
+}
+
+// Put inserts the given value into the key-value data store.
+func (r *replayer) Put(key, value []byte) {
+	// If the replay already failed, stop executing ops
+	if r.failure != nil {
+		return
+	}
+	r.failure = r.writer.Put(key, value)
+}
+
+// Delete removes the key from the key-value data store.
+func (r *replayer) Delete(key []byte) {
+	// If the replay already failed, stop executing ops
+	if r.failure != nil {
+		return
+	}
+	r.failure = r.writer.Delete(key)
 }

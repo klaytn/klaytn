@@ -255,6 +255,12 @@ func (api *PrivateAdminAPI) StopWS() (bool, error) {
 	return true, nil
 }
 
+func (api *PrivateAdminAPI) SetMaxSubscriptionPerConn(num int32) {
+	logger.Info("Change the max subscription number for a websocket connection",
+		"old", rpc.MaxSubscriptionPerConn, "new", num)
+	rpc.MaxSubscriptionPerConn = num
+}
+
 // PublicAdminAPI is the collection of administrative API methods exposed over
 // both secure and unsecure RPC channels.
 type PublicAdminAPI struct {

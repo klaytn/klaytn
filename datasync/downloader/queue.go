@@ -507,7 +507,7 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 			progress = true
 			delete(taskPool, header.Hash())
 			proc = proc - 1
-			logger.Error("Fetch reservation already delivered", "number", header.Number.Uint64())
+			logger.Debug("Fetch reservation already delivered", "number", header.Number.Uint64())
 			continue
 		}
 		if throttle {
@@ -874,9 +874,6 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 	// If none of the data was good, it's a stale delivery
 	if failure == nil {
 		return accepted, nil
-	}
-	if errors.Is(failure, errInvalidChain) {
-		return accepted, failure
 	}
 	if accepted > 0 {
 		return accepted, fmt.Errorf("partial failure: %v", failure)

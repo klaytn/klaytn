@@ -55,7 +55,7 @@ type DBManager interface {
 	GetDBConfig() *DBConfig
 	getDatabase(DBEntryType) Database
 	CreateMigrationDBAndSetStatus(blockNum uint64) error
-	FinishStateMigration(succeed bool)
+	FinishStateMigration(succeed bool) chan struct{}
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
@@ -534,7 +534,16 @@ func (stdBatch *stateTrieDBBatch) Put(key []byte, value []byte) error {
 			errResult = err
 		}
 	}
+	return errResult
+}
 
+func (stdBatch *stateTrieDBBatch) Delete(key []byte) error {
+	var errResult error
+	for _, batch := range stdBatch.batches {
+		if err := batch.Delete(key); err != nil {
+			errResult = err
+		}
+	}
 	return errResult
 }
 
@@ -562,6 +571,16 @@ func (stdBatch *stateTrieDBBatch) Reset() {
 	for _, batch := range stdBatch.batches {
 		batch.Reset()
 	}
+}
+
+func (stdBatch *stateTrieDBBatch) Replay(w KeyValueWriter) error {
+	var errResult error
+	for _, batch := range stdBatch.batches {
+		if err := batch.Replay(w); err != nil {
+			errResult = err
+		}
+	}
+	return errResult
 }
 
 func (dbm *databaseManager) getDBDir(dbEntry DBEntryType) string {
@@ -661,7 +680,8 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 
 // FinishStateMigration updates stateTrieDB and removes the old one.
 // The function should be called only after when state trie migration is finished.
-func (dbm *databaseManager) FinishStateMigration(succeed bool) {
+// It returns a channel that closes when removeDB is finished.
+func (dbm *databaseManager) FinishStateMigration(succeed bool) chan struct{} {
 	// lock to prevent from a conflict of reading state DB and changing state DB
 	dbm.lockInMigration.Lock()
 	defer dbm.lockInMigration.Unlock()
@@ -690,10 +710,17 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) {
 	dbPathToBeRemoved := filepath.Join(dbm.config.Dir, dbDirToBeRemoved)
 	dbToBeRemoved.Close()
 
-	go removeDB(dbPathToBeRemoved)
+	endCheck := make(chan struct{})
+	go removeDB(dbPathToBeRemoved, endCheck)
+	return endCheck
 }
 
-func removeDB(dbPath string) {
+func removeDB(dbPath string, endCheck chan struct{}) {
+	defer func() {
+		if endCheck != nil {
+			close(endCheck)
+		}
+	}()
 	if err := os.RemoveAll(dbPath); err != nil {
 		logger.Error("Failed to remove the database due to an error", "err", err, "dir", dbPath)
 		return
@@ -1218,7 +1245,7 @@ func (dbm *databaseManager) PutReceiptsToBatch(batch Batch, hash common.Hash, nu
 	dbm.putReceiptsToPutter(batch, hash, number, receipts, false)
 }
 
-func (dbm *databaseManager) putReceiptsToPutter(putter Putter, hash common.Hash, number uint64, receipts types.Receipts, addToCache bool) {
+func (dbm *databaseManager) putReceiptsToPutter(putter KeyValueWriter, hash common.Hash, number uint64, receipts types.Receipts, addToCache bool) {
 	// Convert the receipts into their database form and serialize them
 	storageReceipts := make([]*types.ReceiptForStorage, len(receipts))
 	for i, receipt := range receipts {
@@ -1588,7 +1615,7 @@ func (dbm *databaseManager) PutTxLookupEntriesToBatch(batch Batch, block *types.
 	putTxLookupEntriesToPutter(batch, block)
 }
 
-func putTxLookupEntriesToPutter(putter Putter, block *types.Block) {
+func putTxLookupEntriesToPutter(putter KeyValueWriter, block *types.Block) {
 	for i, tx := range block.Transactions() {
 		entry := TxLookupEntry{
 			BlockHash:  block.Hash(),

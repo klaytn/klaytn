@@ -59,10 +59,6 @@ case "$SUBCOMMAND" in
         ADDITIONAL_OPTIONS="--ldflags '-extldflags \"-static\"'"
         shift
         ;;
-    darwin-386)
-        TARGET="darwin/386"
-        shift
-        ;;
     darwin-amd64)
         TARGET="darwin-10.10/amd64"
         shift
@@ -76,11 +72,11 @@ case "$SUBCOMMAND" in
         shift
         ;;
     *)
-        echo "Undefined architecture for cross-compile. Supported architectures: linux-386, linux-amd64, linux-arm-5, linux-arm-6, linux-arm-7, linux-arm64, linux-mips, linux-mipsle, linux-mips64, linux-mips64le, darwin-386, darwin-amd64, windows-386, windows-amd64"
+        echo "Undefined architecture for cross-compile. Supported architectures: linux-386, linux-amd64, linux-arm-5, linux-arm-6, linux-arm-7, linux-arm64, linux-mips, linux-mipsle, linux-mips64, linux-mips64le, darwin-amd64, windows-386, windows-amd64"
         echo "Usage: ${0} {arch} [kcn|kpn...]"
-        echo "    ${0} linux-386"
-        echo "    ${0} darwin-386 kcn"
-        echo "    ${0} windows-386 kcn kpn"
+        echo "    ${0} linux-amd64"
+        echo "    ${0} darwin-amd64 kcn"
+        echo "    ${0} windows-amd64 kcn kpn"
         exit 1
         ;;
 esac
