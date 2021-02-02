@@ -396,7 +396,7 @@ func (f *ChainDataFetcher) resetRequestCh() {
 	}
 }
 
-func (f *ChainDataFetcher) forceStop() {
+func (f *ChainDataFetcher) pause() {
 	f.stopFetching()
 	f.stopRangeFetching()
 	f.resetChainCh()
@@ -424,7 +424,8 @@ func (f *ChainDataFetcher) handleRequest() {
 			}
 
 			if err != nil && err == errMaxRetryExceeded {
-				f.forceStop()
+				logger.Error("the chaindatafetcher reaches the maximum retries. it pauses fetching and clear the channels", "blockNum", ev.Block.NumberU64())
+				f.pause()
 			}
 		case req := <-f.reqCh:
 			numRequestsGauge.Update(int64(len(f.reqCh)))
@@ -436,7 +437,8 @@ func (f *ChainDataFetcher) handleRequest() {
 			}
 			err = f.handleRequestByType(req.ReqType, req.ShouldUpdateCheckpoint, ev)
 			if err != nil && err == errMaxRetryExceeded {
-				f.forceStop()
+				logger.Error("the chaindatafetcher reaches the maximum retries. it pauses fetching and clear the channels", "blockNum", ev.Block.NumberU64())
+				f.pause()
 			}
 		}
 	}
