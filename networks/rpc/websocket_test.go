@@ -22,12 +22,13 @@ package rpc
 
 import (
 	"context"
-	"github.com/klaytn/klaytn/common"
-	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/stretchr/testify/assert"
 )
 
 type echoArgs struct {
