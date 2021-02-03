@@ -301,7 +301,9 @@ func (valSet *weightedCouncil) List() []istanbul.Validator {
 func (valSet *weightedCouncil) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
 	// TODO-Klaytn-Istanbul: investigate whether `valSet.GetProposer().Address()` is a proper value
 	// TODO-Klaytn-Istanbul: or the proposer should be calculated based on `view`
-	return valSet.SubListWithProposer(prevHash, valSet.GetProposer().Address(), view)
+	proposer := valSet.GetProposer().Address()
+	logger.Info("SubList", "proposer", proposer.String(), "preHash", prevHash.String())
+	return valSet.SubListWithProposer(prevHash, proposer, view)
 }
 
 // SubListWithProposer composes a committee with given parameters.
@@ -460,7 +462,7 @@ func (valSet *weightedCouncil) CalcProposer(lastProposer common.Address, round u
 		}
 	}
 
-	logger.Debug("Update a proposer", "old", valSet.proposer, "new", newProposer, "last proposer", lastProposer.String(), "round", round, "blockNum of council", valSet.blockNum, "blockNum of proposers", valSet.proposersBlockNum)
+	logger.Info("Update a proposer", "old", valSet.GetProposer(), "new", newProposer, "last proposer", lastProposer.String(), "round", round, "blockNum of council", valSet.blockNum, "blockNum of proposers", valSet.proposersBlockNum)
 	valSet.proposer.Store(newProposer)
 }
 
@@ -555,7 +557,7 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 
 // Refresh recalculates up-to-date proposers only when blockNum is the proposer update interval.
 // It returns an error if it can't make up-to-date proposers
-//   (1) due toe wrong parameters
+//   (1) due to wrong parameters
 //   (2) due to lack of staking information
 // It returns no error when weightedCouncil:
 //   (1) already has up-do-date proposers

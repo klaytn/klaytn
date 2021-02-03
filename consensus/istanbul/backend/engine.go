@@ -24,7 +24,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/influxdata/influxdb/pkg/deep"
 	"math/big"
+	"sort"
 	"time"
 
 	"github.com/klaytn/klaytn/reward"
@@ -324,7 +326,43 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
 
 	// add validators in snapshot to extraData's validators section
-	extra, err := prepareExtra(header, snap.committee(header.ParentHash, sb.currentView.Load().(*istanbul.View)))
+	view := sb.currentView.Load().(*istanbul.View)
+	committe := common.AddressSlice{}
+	committe = snap.committee(header.ParentHash, view)
+	if len(committe) > 3 {
+		sort.Sort(committe[2:])
+	}
+	committeStr := ""
+
+	for _, addr := range committe {
+		committeStr = committeStr + addr.String() + ", "
+	}
+
+	logger.Info("prepareExtra", "blk", header.Number.String(), "parentHash", header.ParentHash.String(), "Round", view.Round.String())
+
+	if sb.chain != nil {
+		lastProposer := sb.GetProposer(header.Number.Uint64() - 1)
+		//_, lastProposer := sb.LastProposal()
+		snap.ValSet.CalcProposer(lastProposer, view.Round.Uint64())
+		committeAfter := common.AddressSlice{}
+		committeAfter = snap.committee(header.ParentHash, view)
+		if len(committeAfter) > 3 {
+			sort.Sort(committeAfter[2:])
+		}
+
+		committeStrAfter := ""
+		for _, addr := range committeAfter {
+			committeStrAfter = committeStrAfter + addr.String() + ", "
+		}
+
+		logger.Info("prepareExtra", "blk", header.Number.String(), "parentHash", header.ParentHash.String(), "lastProposer", lastProposer.String(), "Round", view.Round.String())
+
+		if !deep.Equal(committe, committeAfter) {
+			logger.Info("1st prepareExtra", "committe", committeStr)
+			logger.Info("2st prepareExtra", "committe", committeStrAfter)
+		}
+	}
+	extra, err := prepareExtra(header, committe)
 	if err != nil {
 		return err
 	}

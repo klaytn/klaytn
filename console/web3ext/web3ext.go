@@ -711,6 +711,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
+			name: 'validateBlock',
+			call: 'klay_validateBlock',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getBlockWithConsensusInfo',
 			call: blockWithConsensusInfoCall,
 			params: 1,

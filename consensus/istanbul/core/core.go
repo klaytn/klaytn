@@ -270,7 +270,9 @@ func (c *core) startNewRound(round *big.Int) {
 	// New snapshot for new round
 	c.updateRoundState(newView, c.valSet, roundChange)
 	// Calculate new proposer
+	logger.Info("Call CalcProposer by startNewRound")
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
+	logger.Info("After Call CalcProposer by startNewRound")
 	c.waitingForRoundChange = false
 	c.setState(StateAcceptRequest)
 	if roundChange && c.isProposer() && c.current != nil {

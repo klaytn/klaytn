@@ -283,6 +283,12 @@ func (a Address) getShardIndex(shardMask int) int {
 	return ((data2 << 8) + data1) & shardMask
 }
 
+type AddressSlice []Address
+
+func (p AddressSlice) Len() int           { return len(p) }
+func (p AddressSlice) Less(i, j int) bool { return p[i].String() < p[j].String() }
+func (p AddressSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
 // UnprefixedAddress allows marshaling an Address without 0x prefix.
 type UnprefixedAddress Address
 
