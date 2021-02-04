@@ -81,9 +81,7 @@ func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
 	if !cfg.JumpTable[STOP].valid {
-		var jt JumpTable
-		jt = ConstantinopleInstructionSet
-		cfg.JumpTable = jt
+		cfg.JumpTable = ConstantinopleInstructionSet
 	}
 
 	return &Interpreter{
