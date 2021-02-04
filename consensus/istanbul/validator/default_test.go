@@ -22,14 +22,15 @@ package validator
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
