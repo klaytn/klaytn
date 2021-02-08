@@ -294,6 +294,15 @@ commands:
           command : |
             curl --data '{"text": "❌ Job *'$CIRCLE_JOB'* failed on *'$CIRCLE_BRANCH'*. Please see '$CIRCLE_BUILD_URL' for details."}' "$SLACK_WEBHOOK_URL"
           when: on_fail
+  trigger_kes_pipeline:
+    steps:
+      - run:
+          name: "trigger a new KES pipeline"
+          command: |
+            curl --location --request POST $KES_CIRCLECI_ENDPOINT \
+                 --header 'Content-Type: application/json' \
+                 -u ${CIRCLECI_API_TOKEN}: \
+                 -d '{"branch": "dev"}'
 
 jobs:
   build:
@@ -508,6 +517,11 @@ jobs:
       - checkout
       - tagging-delete-branch
 
+  trigger_kes_pipeline:
+    executor: default
+    steps:
+      - trigger_kes_pipeline
+
 workflows:
   version: 2
   build_n_packaging:
@@ -542,6 +556,13 @@ workflows:
             - tagger-verify
             - test-linter
           filters: *filter-version-not-release
+
+      - trigger_kes_pipeline:
+          requires:
+            - pass-tests
+          filters:
+            branches:
+              only: dev
 
       - tag-verify:
           filters: *filter-only-version-tag
