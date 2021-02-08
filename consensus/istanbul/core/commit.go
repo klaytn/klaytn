@@ -21,9 +21,10 @@
 package core
 
 import (
+	"reflect"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"reflect"
 )
 
 func (c *core) sendCommit() {
@@ -95,6 +96,16 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	}
 
 	c.acceptCommit(msg, src)
+
+	// Change to Prepared state if we've received enough PREPARE or COMMIT messages and we are in earlier state
+	// before Prepared state.
+	// Both of PREPARE and COMMIT messages are counted since hashlocked nodes in the previous round skip sending
+	// PREPARE messages.
+	if c.current.GetPrepareOrCommitSize() > 2*c.valSet.F() && c.state.Cmp(StatePrepared) < 0 {
+		c.current.LockHash()
+		c.setState(StatePrepared)
+		c.sendCommit()
+	}
 
 	// Commit the proposal once we have enough COMMIT messages and we are not in the Committed state.
 	//
