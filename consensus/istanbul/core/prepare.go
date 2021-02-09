@@ -21,8 +21,9 @@
 package core
 
 import (
-	"github.com/klaytn/klaytn/consensus/istanbul"
 	"reflect"
+
+	"github.com/klaytn/klaytn/consensus/istanbul"
 )
 
 func (c *core) sendPrepare() {
@@ -78,11 +79,17 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 
 	// Change to Prepared state if we've received enough PREPARE messages or it is locked
 	// and we are in earlier state before Prepared state.
-	if ((c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash()) || c.current.GetPrepareOrCommitSize() > 2*c.valSet.F()) &&
-		c.state.Cmp(StatePrepared) < 0 {
-		c.current.LockHash()
-		c.setState(StatePrepared)
-		c.sendCommit()
+	if c.state.Cmp(StatePrepared) < 0 {
+		if c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash() {
+			logger.Warn("received prepare of the hash locked proposal and change state to prepared")
+			c.setState(StatePrepared)
+			c.sendCommit()
+		} else if c.current.GetPrepareOrCommitSize() > 2*c.valSet.F() {
+			logger.Warn("received more than 2f agreements and change state to prepared")
+			c.current.LockHash()
+			c.setState(StatePrepared)
+			c.sendCommit()
+		}
 	}
 
 	return nil

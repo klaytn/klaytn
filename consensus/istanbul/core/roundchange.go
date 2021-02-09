@@ -21,10 +21,11 @@
 package core
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
 	"math/big"
 	"sync"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 )
 
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1
@@ -45,6 +46,11 @@ func (c *core) sendRoundChange(round *big.Int) {
 		logger.Error("Cannot send out the round change", "current round", cv.Round, "target round", round)
 		return
 	}
+
+	logger.Warn("[RC] Prepare messages received before catchUpRound",
+		"len(prepares)", c.current.Prepares.Size(), "messages", c.current.Prepares.GetMessages())
+	logger.Warn("[RC] Commit messages received before catchUpRound",
+		"len(commits)", c.current.Commits.Size(), "messages", c.current.Commits.GetMessages())
 
 	c.catchUpRound(&istanbul.View{
 		// The round number we'd like to transfer to.
@@ -122,7 +128,12 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 
 	if num == numStartNewRound && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
 		// We've received enough ROUND CHANGE messages, start a new round immediately.
-		logger.Warn("[RC] Received 2f+1 Round Change Messages. Starting new round")
+		logger.Warn("[RC] Prepare messages received before startNewRound", "round", cv.Round.String(),
+			"len(prepares)", c.current.Prepares.Size(), "messages", c.current.Prepares.GetMessages())
+		logger.Warn("[RC] Commit messages received before startNewRound", "round", cv.Round.String(),
+			"len(commits)", c.current.Commits.Size(), "messages", c.current.Commits.GetMessages())
+		logger.Warn("[RC] Received 2f+1 Round Change Messages. Starting new round",
+			"currentRound", cv.Round.String(), "newRound", roundView.Round.String())
 		c.startNewRound(roundView.Round)
 		return nil
 	} else if c.waitingForRoundChange && num == numCatchUp {
@@ -130,13 +141,15 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 		// If our round number is smaller than the certificate's round number, we would
 		// try to catch up the round number.
 		if cv.Round.Cmp(roundView.Round) < 0 {
-			logger.Warn("[RC] Send round change because we have F+1 roundchange messages")
+			logger.Warn("[RC] Send round change because we have f+1 round change messages",
+				"currentRound", cv.Round.String(), "newRound", roundView.Round.String())
 			c.sendRoundChange(roundView.Round)
 		}
 		return nil
 	} else if cv.Round.Cmp(roundView.Round) < 0 {
 		// Only gossip the message with current round to other validators.
-		logger.Warn("[RC] Received round is bigger but not enough number of messages. Message ignored")
+		logger.Warn("[RC] Received round is bigger but not enough number of messages. Message ignored",
+			"currentRound", cv.Round.String(), "newRound", roundView.Round.String(), "numRC", num)
 		return errIgnored
 	}
 	return nil

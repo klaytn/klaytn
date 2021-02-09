@@ -21,10 +21,11 @@
 package core
 
 import (
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"time"
 )
 
 func (c *core) sendPreprepare(request *istanbul.Request) {
@@ -115,13 +116,14 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 			c.current.Preprepare.Proposal = c.current.Preprepare.Proposal.WithSeal(header)
 
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
+				logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
 				// Broadcast COMMIT and enters Prepared state directly
 				c.acceptPreprepare(preprepare)
 				c.setState(StatePrepared)
 				c.sendCommit()
 			} else {
 				// Send round change
-				c.sendNextRoundChange("handlePrepare. HashLocked, but received hash is different from locked hash")
+				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")
 			}
 		} else {
 			// Either
