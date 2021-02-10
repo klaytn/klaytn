@@ -324,7 +324,10 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
 
 	// add validators in snapshot to extraData's validators section
-	extra, err := prepareExtra(header, snap.committee(header.ParentHash, sb.currentView.Load().(*istanbul.View)))
+	currentView := sb.currentView.Load().(*istanbul.View)
+	lastProposer := sb.GetProposer(header.Number.Uint64() - 1)
+	snap.ValSet.CalcProposer(lastProposer, currentView.Round.Uint64())
+	extra, err := prepareExtra(header, snap.committee(header.ParentHash, currentView))
 	if err != nil {
 		return err
 	}
