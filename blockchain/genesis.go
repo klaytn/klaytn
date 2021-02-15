@@ -248,7 +248,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
-	if genesis == nil && stored != params.MainnetGenesisHash {
+	if genesis == nil && stored != params.CypressGenesisHash {
 		return storedcfg, stored, nil
 	}
 
@@ -364,31 +364,26 @@ func GenesisBlockForTesting(db database.DBManager, addr common.Address, balance 
 	return g.MustCommit(db)
 }
 
-// DefaultGenesisBlock returns the Klaytn main net genesis block.
+// DefaultGenesisBlock returns the Cypress mainnet genesis block.
+// It is also used for default genesis block.
 func DefaultGenesisBlock() *Genesis {
-	return cypressGenesisBlock()
-}
-
-func cypressGenesisBlock() *Genesis {
 	ret := &Genesis{}
 	if err := json.Unmarshal(cypressGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshaling Cypress Genesis Json", "err", err)
+		logger.Error("Error in Unmarshalling Cypress Genesis Json", "err", err)
 	}
+	ret.Config = params.CypressChainConfig
 	return ret
 }
 
-func baobabGenesisBlock() *Genesis {
+// DefaultBaobabGenesisBlock returns the Baobab testnet genesis block.
+func DefaultBaobabGenesisBlock() *Genesis {
 	ret := &Genesis{}
 	if err := json.Unmarshal(baobabGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshaling", "err", err)
+		logger.Error("Error in Unmarshalling Baobab Genesis Json", "err", err)
 		return nil
 	}
+	ret.Config = params.BaobabChainConfig
 	return ret
-}
-
-// DefaultBaobabGenesisBlock returns the Baobab network genesis block.
-func DefaultBaobabGenesisBlock() *Genesis {
-	return baobabGenesisBlock()
 }
 
 func decodePrealloc(data string) GenesisAlloc {

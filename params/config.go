@@ -30,22 +30,63 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash      = common.HexToHash("// todo generate new hash for mainnet") // Mainnet genesis hash to enforce below configs on
-	TestnetGenesisHash      = common.HexToHash("// todo generate new hash for testnet") // Testnet genesis hash to enforce below configs on
+	CypressGenesisHash      = common.HexToHash("// todo generate new hash for cypress") // cypress genesis hash to enforce below configs on
+	BaobabGenesisHash       = common.HexToHash("// todo generate new hash for baobab")  // baobab genesis hash to enforce below configs on
 	AuthorAddressForTesting = common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949")
+	mintingAmount, _        = new(big.Int).SetString("9600000000000000000", 10)
 )
 
 var (
-	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	MainnetChainConfig = &ChainConfig{
-		ChainID: big.NewInt(1),
-		Gxhash:  new(GxhashConfig),
+	// CypressChainConfig is the chain parameters to run a node on the cypress main network.
+	CypressChainConfig = &ChainConfig{
+		ChainID:            big.NewInt(int64(CypressNetworkId)),
+		Incompatible1Block: nil,
+		DeriveShaImpl:      2,
+		Governance: &GovernanceConfig{
+			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
+			GovernanceMode: "single",
+			Reward: &RewardConfig{
+				MintingAmount:          mintingAmount,
+				Ratio:                  "34/54/12",
+				UseGiniCoeff:           true,
+				DeferredTxFee:          true,
+				StakingUpdateInterval:  86400,
+				ProposerUpdateInterval: 3600,
+				MinimumStake:           big.NewInt(5000000),
+			},
+		},
+		Istanbul: &IstanbulConfig{
+			Epoch:          604800,
+			ProposerPolicy: 2,
+			SubGroupSize:   22,
+		},
+		UnitPrice: 25000000000,
 	}
 
-	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
-	TestnetChainConfig = &ChainConfig{
-		ChainID: big.NewInt(2),
-		Gxhash:  new(GxhashConfig),
+	// BaobabChainConfig contains the chain parameters to run a node on the Baobab test network.
+	BaobabChainConfig = &ChainConfig{
+		ChainID:            big.NewInt(int64(BaobabNetworkId)),
+		Incompatible1Block: nil,
+		DeriveShaImpl:      2,
+		Governance: &GovernanceConfig{
+			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
+			GovernanceMode: "single",
+			Reward: &RewardConfig{
+				MintingAmount:          mintingAmount,
+				Ratio:                  "34/54/12",
+				UseGiniCoeff:           true,
+				DeferredTxFee:          true,
+				StakingUpdateInterval:  86400,
+				ProposerUpdateInterval: 3600,
+				MinimumStake:           big.NewInt(5000000),
+			},
+		},
+		Istanbul: &IstanbulConfig{
+			Epoch:          604800,
+			ProposerPolicy: 2,
+			SubGroupSize:   22,
+		},
+		UnitPrice: 25000000000,
 	}
 
 	// AllGxhashProtocolChanges contains every protocol change (GxIPs) introduced
@@ -119,6 +160,8 @@ const (
 // set of configuration options.
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
+
+	Incompatible1Block *big.Int `json:"incompatible1Block"` // incompatible1 switch block (nil = no fork, 0 = already incompatible1)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -198,21 +241,28 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v Incompatible1Block: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
+			c.Incompatible1Block,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v Incompatible1Block: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
+			c.Incompatible1Block,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	}
+}
+
+// IsIncompatible1 returns whether num is either equal to the incompatible1 block or greater.
+func (c *ChainConfig) IsIncompatible1(num *big.Int) bool {
+	return isForked(c.Incompatible1Block, num)
 }
 
 // GasTable returns the gas table corresponding to the current phase.
@@ -241,6 +291,9 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 }
 
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
+	if isForkIncompatible(c.Incompatible1Block, newcfg.Incompatible1Block, head) {
+		return newCompatError("Incompatible1 Block", c.Incompatible1Block, newcfg.Incompatible1Block)
+	}
 	return nil
 }
 
@@ -352,7 +405,8 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID *big.Int
+	ChainID         *big.Int
+	IsInCompatible1 bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -361,7 +415,10 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	if chainID == nil {
 		chainID = new(big.Int)
 	}
-	return Rules{ChainID: new(big.Int).Set(chainID)}
+	return Rules{
+		ChainID:         new(big.Int).Set(chainID),
+		IsInCompatible1: c.IsIncompatible1(num),
+	}
 }
 
 // Copy copies self to a new governance config and return it
