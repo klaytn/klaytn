@@ -97,14 +97,21 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 
 	c.acceptCommit(msg, src)
 
-	// Change to Prepared state if we've received enough PREPARE or COMMIT messages and we are in earlier state
-	// before Prepared state.
-	// Both of PREPARE and COMMIT messages are counted since hashlocked nodes in the previous round skip sending
-	// PREPARE messages.
-	if c.current.GetPrepareOrCommitSize() > 2*c.valSet.F() && c.state.Cmp(StatePrepared) < 0 {
-		c.current.LockHash()
-		c.setState(StatePrepared)
-		c.sendCommit()
+	// Change to Prepared state if we've received enough PREPARE/COMMIT messages or it is locked
+	// and we are in earlier state before Prepared state.
+	// Both of PREPARE and COMMIT messages are counted since the nodes which is hashlocked in
+	// the previous round skip sending PREPARE messages.
+	if c.state.Cmp(StatePrepared) < 0 {
+		if c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
+			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
+			c.setState(StatePrepared)
+			c.sendCommit()
+		} else if c.current.GetPrepareOrCommitSize() > 2*c.valSet.F() {
+			logger.Warn("received more than 2f agreements and change state to prepared", "msgType", msgCommit)
+			c.current.LockHash()
+			c.setState(StatePrepared)
+			c.sendCommit()
+		}
 	}
 
 	// Commit the proposal once we have enough COMMIT messages and we are not in the Committed state.
