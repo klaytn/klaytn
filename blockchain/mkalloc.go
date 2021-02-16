@@ -33,12 +33,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"math/big"
 	"os"
 	"sort"
 	"strconv"
+
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 type allocItem struct{ Addr, Balance *big.Int }

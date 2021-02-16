@@ -24,11 +24,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/klaytn/klaytn/reward"
 	"math/big"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	"github.com/klaytn/klaytn/reward"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -40,7 +41,7 @@ import (
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 const (

@@ -18,17 +18,18 @@ package cn
 
 import (
 	"errors"
+	"math/big"
+	"sync/atomic"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
 	mocks2 "github.com/klaytn/klaytn/node/cn/mocks"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"sync/atomic"
-	"testing"
 )
 
 var expectedErr = errors.New("some error")

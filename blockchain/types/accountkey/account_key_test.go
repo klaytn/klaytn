@@ -18,9 +18,10 @@ package accountkey
 
 import (
 	"encoding/json"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"testing"
+
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 func TestAccountKeySerialization(t *testing.T) {

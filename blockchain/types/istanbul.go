@@ -22,9 +22,10 @@ package types
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 var (

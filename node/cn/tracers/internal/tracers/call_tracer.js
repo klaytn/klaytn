@@ -1,3 +1,4 @@
+// Modifications Copyright 2019 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -13,7 +14,10 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
+//
+// This file is derived from eth/tracers/internal/tracers/call_tracer.js (2019/01/15).
+// Modified and improved for the klaytn development.
+//
 // callTracer is a full blown transaction tracer that extracts and reports all
 // the internal calls made by a transaction, along with any useful information.
 {

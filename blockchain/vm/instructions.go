@@ -21,12 +21,13 @@
 package vm
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/params"
-	"math/big"
 )
 
 var (
@@ -382,7 +383,7 @@ func opSAR(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 
 func opSha3(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	offset, size := stack.pop(), stack.pop()
-	data := memory.Get(offset.Int64(), size.Int64())
+	data := memory.GetPtr(offset.Int64(), size.Int64())
 
 	if evm.interpreter.hasher == nil {
 		evm.interpreter.hasher = sha3.NewKeccak256().(keccakState)
@@ -594,11 +595,10 @@ func opPop(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 }
 
 func opMload(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	offset := stack.pop()
-	val := evm.interpreter.intPool.get().SetBytes(memory.Get(offset.Int64(), 32))
-	stack.push(val)
+	v := stack.Peek()
+	offset := v.Int64()
+	v.SetBytes(memory.GetPtr(offset, 32))
 
-	evm.interpreter.intPool.put(offset)
 	return nil, nil
 }
 
@@ -683,7 +683,7 @@ func opCreate(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 	var (
 		value        = stack.pop()
 		offset, size = stack.pop(), stack.pop()
-		input        = memory.Get(offset.Int64(), size.Int64())
+		input        = memory.GetCopy(offset.Int64(), size.Int64())
 		gas          = contract.Gas
 	)
 
@@ -715,7 +715,7 @@ func opCreate2(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *
 		endowment    = stack.pop()
 		offset, size = stack.pop(), stack.pop()
 		salt         = stack.pop()
-		input        = memory.Get(offset.Int64(), size.Int64())
+		input        = memory.GetCopy(offset.Int64(), size.Int64())
 		gas          = contract.Gas
 	)
 
@@ -747,7 +747,7 @@ func opCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Sta
 	toAddr := common.BigToAddress(addr)
 	value = math.U256(value)
 	// Get the arguments from the memory.
-	args := memory.Get(inOffset.Int64(), inSize.Int64())
+	args := memory.GetPtr(inOffset.Int64(), inSize.Int64())
 
 	if value.Sign() != 0 {
 		gas += params.CallStipend
@@ -776,7 +776,7 @@ func opCallCode(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 	toAddr := common.BigToAddress(addr)
 	value = math.U256(value)
 	// Get arguments from the memory.
-	args := memory.Get(inOffset.Int64(), inSize.Int64())
+	args := memory.GetPtr(inOffset.Int64(), inSize.Int64())
 
 	if value.Sign() != 0 {
 		gas += params.CallStipend
@@ -804,7 +804,7 @@ func opDelegateCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, st
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := common.BigToAddress(addr)
 	// Get arguments from the memory.
-	args := memory.Get(inOffset.Int64(), inSize.Int64())
+	args := memory.GetPtr(inOffset.Int64(), inSize.Int64())
 
 	ret, returnGas, err := evm.DelegateCall(contract, toAddr, args, gas)
 	if err != nil {
@@ -829,7 +829,7 @@ func opStaticCall(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stac
 	addr, inOffset, inSize, retOffset, retSize := stack.pop(), stack.pop(), stack.pop(), stack.pop(), stack.pop()
 	toAddr := common.BigToAddress(addr)
 	// Get arguments from the memory.
-	args := memory.Get(inOffset.Int64(), inSize.Int64())
+	args := memory.GetPtr(inOffset.Int64(), inSize.Int64())
 
 	ret, returnGas, err := evm.StaticCall(contract, toAddr, args, gas)
 	if err != nil {
@@ -900,7 +900,7 @@ func makeLog(size int) executionFunc {
 			topics[i] = common.BigToHash(stack.pop())
 		}
 
-		d := memory.Get(mStart.Int64(), mSize.Int64())
+		d := memory.GetCopy(mStart.Int64(), mSize.Int64())
 		evm.StateDB.AddLog(&types.Log{
 			Address: contract.Address(),
 			Topics:  topics,

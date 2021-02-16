@@ -17,17 +17,6 @@
 package sc
 
 import (
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/sc_erc20"
-	"github.com/klaytn/klaytn/contracts/sc_erc721"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -35,6 +24,18 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	sctoken "github.com/klaytn/klaytn/contracts/sc_erc20"
+	scnft "github.com/klaytn/klaytn/contracts/sc_erc721"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
 )
 
 type testInfo struct {
@@ -114,6 +115,7 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 			ops[KLAY].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 
 	// 2. Update recovery hint.
@@ -186,6 +188,7 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 			}
 		}
 	})
+	defer info.sim.Close()
 	// TODO-Klaytn need to remove sleep
 	time.Sleep(1 * time.Second)
 	info.sim.Commit()
@@ -249,6 +252,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 			ops[ERC20].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 	err = vtr.updateRecoveryHint()
@@ -288,6 +292,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 			ops[ERC721].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 	err = vtr.updateRecoveryHint()
@@ -326,6 +331,8 @@ func TestMethodRecover(t *testing.T) {
 			ops[KLAY].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
+
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -362,6 +369,8 @@ func TestMethodStop(t *testing.T) {
 			ops[KLAY].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
+
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 1}, info.localInfo, info.remoteInfo)
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -397,6 +406,7 @@ func TestFlagVTRecovery(t *testing.T) {
 			ops[KLAY].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 60}, info.localInfo, info.remoteInfo)
 	vtr.Start()
@@ -423,6 +433,7 @@ func TestAlreadyStartedVTRecovery(t *testing.T) {
 			ops[KLAY].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 60}, info.localInfo, info.remoteInfo)
 	err = vtr.Start()
@@ -450,6 +461,7 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 			ops[KLAY].request(info, info.remoteInfo)
 		}
 	})
+	defer info.sim.Close()
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 	err = vtr.updateRecoveryHint()
@@ -487,6 +499,8 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 			ops[KLAY].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
+
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 1}, info.localInfo, info.remoteInfo)
 	err = vtr.updateRecoveryHint()
 	if err != nil {
@@ -526,6 +540,7 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 			ops[KLAY].request(info, info.localInfo)
 		}
 	})
+	defer info.sim.Close()
 
 	// 2. Set multi-operator.
 	cAcc := info.nodeAuth

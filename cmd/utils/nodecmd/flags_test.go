@@ -198,10 +198,6 @@ var flagsWithValues = []struct {
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue, ErrorInvalidValue},
 	},
 	{
-		flag:     "--statedb.use-cache",
-		flagType: FlagTypeBoolean,
-	},
-	{
 		flag:     "--db.single",
 		flagType: FlagTypeBoolean,
 	},
@@ -276,10 +272,6 @@ var flagsWithValues = []struct {
 		values:      []string{"16"},
 		wrongValues: commonTwoErrors,
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue},
-	},
-	{
-		flag:     "--statedb.use-txpool-cache",
-		flagType: FlagTypeBoolean,
 	},
 	{
 		flag:        "--state.trie-cache-limit",

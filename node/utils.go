@@ -23,14 +23,15 @@ package node
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/rcrowley/go-metrics"
-	"strings"
-	"time"
 )
 
 // PrivateAdminAPI is the collection of administrative API methods exposed only
@@ -252,6 +253,12 @@ func (api *PrivateAdminAPI) StopWS() (bool, error) {
 	}
 	api.node.stopWS()
 	return true, nil
+}
+
+func (api *PrivateAdminAPI) SetMaxSubscriptionPerConn(num int32) {
+	logger.Info("Change the max subscription number for a websocket connection",
+		"old", rpc.MaxSubscriptionPerConn, "new", num)
+	rpc.MaxSubscriptionPerConn = num
 }
 
 // PublicAdminAPI is the collection of administrative API methods exposed over

@@ -22,14 +22,15 @@ package downloader
 
 import (
 	"fmt"
+	"hash"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"hash"
-	"sync"
-	"time"
 )
 
 // stateReq represents a batch of state fetch requests grouped together into
@@ -100,7 +101,7 @@ func (d *Downloader) runStateSync(s *stateSync) *stateSync {
 		// available for the next sync.
 		for _, req := range active {
 			req.timer.Stop()
-			req.peer.SetNodeDataIdle(len(req.items))
+			req.peer.SetNodeDataIdle(len(req.items), time.Now())
 		}
 	}()
 	// Run the state sync.
@@ -302,23 +303,38 @@ func (s *stateSync) loop() (err error) {
 			return errCancelStateFetch
 
 		case <-s.d.cancelCh:
-			return errCancelStateFetch
+			return errCanceled
 
 		case req := <-s.deliver:
+			deliveryTime := time.Now()
 			// Response, disconnect or timeout triggered, drop the peer if stalling
 			logger.Trace("Received node data response", "peer", req.peer.id, "count", len(req.response), "dropped", req.dropped, "timeout", !req.dropped && req.timedOut())
 			if len(req.items) <= 2 && !req.dropped && req.timedOut() {
 				// 2 items are the minimum requested, if even that times out, we've no use of
 				// this peer at the moment.
 				logger.Warn("Stalling state sync, dropping peer", "peer", req.peer.id)
-				s.d.dropPeer(req.peer.id)
+				if s.d.dropPeer == nil {
+					req.peer.logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", req.peer.id)
+				} else {
+					s.d.dropPeer(req.peer.id)
+
+					// If this peer was the master peer, abort sync immediately
+					s.d.cancelLock.RLock()
+					master := req.peer.id == s.d.cancelPeer
+					s.d.cancelLock.RUnlock()
+
+					if master {
+						s.d.cancel()
+						return errTimeout
+					}
+				}
 			}
 			// Process all the received blobs and check for stale delivery
 			if err = s.process(req); err != nil {
 				logger.Error("Node data write error", "err", err)
 				return err
 			}
-			req.peer.SetNodeDataIdle(len(req.response))
+			req.peer.SetNodeDataIdle(len(req.response), deliveryTime)
 		}
 	}
 	return nil

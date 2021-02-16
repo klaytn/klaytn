@@ -53,7 +53,6 @@ var CommonNodeFlags = []cli.Flag{
 	utils.SyncModeFlag,
 	utils.GCModeFlag,
 	utils.LightKDFFlag,
-	utils.StateDBCachingFlag,
 	utils.SingleDBFlag,
 	utils.NumStateTrieShardsFlag,
 	utils.LevelDBCompressionTypeFlag,
@@ -75,9 +74,10 @@ var CommonNodeFlags = []cli.Flag{
 	utils.CacheScaleFlag,
 	utils.CacheUsageLevelFlag,
 	utils.MemorySizeFlag,
-	utils.TxPoolStateCacheFlag,
 	utils.TrieNodeCacheTypeFlag,
+	utils.TrieNodeCacheNoPrefetchFlag,
 	utils.TrieNodeCacheLimitFlag,
+	utils.TrieNodeCacheSavePeriodFlag,
 	utils.TrieNodeCacheRedisEndpointsFlag,
 	utils.TrieNodeCacheRedisClusterFlag,
 	utils.TrieNodeCacheRedisPublishBlockFlag,
@@ -119,6 +119,7 @@ var CommonRPCFlags = []cli.Flag{
 	utils.RPCListenAddrFlag,
 	utils.RPCPortFlag,
 	utils.RPCApiFlag,
+	utils.RPCGlobalGasCap,
 	utils.WSEnabledFlag,
 	utils.WSListenAddrFlag,
 	utils.WSPortFlag,
@@ -127,6 +128,10 @@ var CommonRPCFlags = []cli.Flag{
 	utils.GRPCPortFlag,
 	utils.WSApiFlag,
 	utils.WSAllowedOriginsFlag,
+	utils.WSMaxSubscriptionPerConn,
+	utils.WSReadDeadLine,
+	utils.WSWriteDeadLine,
+	utils.WSMaxConnections,
 	utils.IPCDisabledFlag,
 	utils.IPCPathFlag,
 }
@@ -201,6 +206,7 @@ var KENFlags = []cli.Flag{
 }
 
 var KSCNFlags = []cli.Flag{
+	utils.RewardbaseFlag,
 	utils.ServiceChainSignerFlag,
 	utils.AnchoringPeriodFlag,
 	utils.SentChainTxsLimit,

@@ -23,10 +23,11 @@ package api
 import (
 	"context"
 	"fmt"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // PublicDebugAPI is the collection of Klaytn APIs exposed over the public

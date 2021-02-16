@@ -67,6 +67,10 @@ func (batch *emptyBatch) Put(key, val []byte) error {
 	return nil
 }
 
+func (batch *emptyBatch) Delete(key []byte) error {
+	return nil
+}
+
 func (batch *emptyBatch) Write() error {
 	return nil
 }
@@ -76,4 +80,8 @@ func (batch *emptyBatch) ValueSize() int {
 }
 
 func (batch *emptyBatch) Reset() {
+}
+
+func (batch *emptyBatch) Replay(w KeyValueWriter) error {
+	return nil
 }

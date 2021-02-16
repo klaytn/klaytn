@@ -25,16 +25,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
-	"sync"
-	"time"
 )
 
 var (
@@ -442,6 +444,14 @@ func (args *FilterCriteria) UnmarshalJSON(data []byte) error {
 	var raw input
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
+	}
+
+	if raw.From != nil && *raw.From == rpc.PendingBlockNumber {
+		return kerrors.ErrPendingBlockNotSupported
+	}
+
+	if raw.ToBlock != nil && *raw.ToBlock == rpc.PendingBlockNumber {
+		return kerrors.ErrPendingBlockNotSupported
 	}
 
 	if raw.From != nil {

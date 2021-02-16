@@ -25,7 +25,6 @@ import (
 	"io"
 	"math/big"
 	"sync/atomic"
-	"time"
 
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
@@ -38,7 +37,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
@@ -94,12 +93,12 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, rewardbase common.Address, TxResendUseLegacy bool, restartTimeOut time.Duration, restartFn func()) *Miner {
+func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, rewardbase common.Address, TxResendUseLegacy bool) *Miner {
 	miner := &Miner{
 		backend:  backend,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, rewardbase, backend, mux, nodetype, TxResendUseLegacy, restartTimeOut, restartFn),
+		worker:   newWorker(config, engine, rewardbase, backend, mux, nodetype, TxResendUseLegacy),
 		canStart: 1,
 	}
 	// TODO-Klaytn drop or missing tx
@@ -275,7 +274,6 @@ type BlockChain interface {
 	StateAtWithGCLock(root common.Hash) (*state.StateDB, error)
 	Export(w io.Writer) error
 	Engine() consensus.Engine
-	GetNonceInCache(addr common.Address) (uint64, bool)
 	GetTxLookupInfoAndReceipt(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts
@@ -285,9 +283,8 @@ type BlockChain interface {
 	ResetWithGenesisBlock(gb *types.Block) error
 	Validator() blockchain.Validator
 	HasBadBlock(hash common.Hash) bool
-	WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (blockchain.WriteStatus, error)
+	WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (blockchain.WriteResult, error)
 	PostChainEvents(events []interface{}, logs []*types.Log)
-	TryGetCachedStateDB(rootHash common.Hash) (*state.StateDB, error)
 	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error)
 
 	// State Migration
@@ -298,7 +295,12 @@ type BlockChain interface {
 
 	// Warm up
 	StartWarmUp() error
+	StartContractWarmUp(contractAddr common.Address) error
 	StopWarmUp() error
+
+	// Collect state/storage trie statistics
+	StartCollectingTrieStats(contractAddr common.Address) error
+	GetContractStorageRoot(block *types.Block, db state.Database, contractAddr common.Address) (common.Hash, error)
 
 	// Save trie node cache to this
 	SaveTrieNodeCacheToDisk() error

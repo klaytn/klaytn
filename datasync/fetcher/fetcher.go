@@ -22,19 +22,21 @@ package fetcher
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/log"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"math/rand"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/prque"
+	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/log"
 )
 
 const (
-	arriveTimeout = 500 * time.Millisecond // Time allowance before an announced block is explicitly requested
-	gatherSlack   = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
-	fetchTimeout  = 5 * time.Second        // Maximum allotted time to return an explicitly requested block
+	arriveTimeout       = 500 * time.Millisecond // Time allowance before an announced block is explicitly requested
+	gatherSlack         = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
+	fetchTimeout        = 5 * time.Second        // Maximum allotted time to return an explicitly requested block
+	insertTasksWaitTime = 100 * time.Millisecond // Waiting time when the insertTasks channel is full
 	// TODO-Klaytn Klaytn is 20 times faster than ethereum, so check block height is 20 times
 	maxQueueDist = 32 * 20  // Maximum allowed distance from the chain head to queue
 	hashLimit    = 256 * 20 // Maximum number of unique blocks a peer may have announced
@@ -308,7 +310,6 @@ func (f *Fetcher) loop() {
 		}
 		// Import any queued blocks that could potentially fit
 		height := f.chainHeight()
-	insertFailed:
 		for !f.queue.Empty() {
 			op := f.queue.PopItem().(*inject)
 			if f.queueChangeHook != nil {
@@ -317,7 +318,7 @@ func (f *Fetcher) loop() {
 			// If too high up the chain or phase, continue later
 			number := op.block.NumberU64()
 			if number > height+1 {
-				f.queue.Push(op, -float32(op.block.NumberU64()))
+				f.queue.Push(op, -int64(op.block.NumberU64()))
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(op.block.Hash(), true)
 				}
@@ -335,13 +336,13 @@ func (f *Fetcher) loop() {
 			select {
 			case f.insertTasks <- insertTask{peer, block}:
 				logger.Debug("Importing propagated block", "peer", peer, "number", number, "hash", hash)
-			default:
+			case <-time.NewTimer(insertTasksWaitTime).C: // in case the insertTasks is full, it waits for a bit
 				logger.Warn("Failed to import propagated block as the channel is full", "peer", peer, "number", number, "hash", hash)
-				f.queue.Push(op, -float32(number))
+				f.queue.Push(op, -int64(number))
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(hash, true)
 				}
-				break insertFailed
+				break
 			}
 		}
 		// Wait for an outside event to occur
@@ -550,33 +551,43 @@ func (f *Fetcher) loop() {
 			bodyFilterInMeter.Mark(int64(len(task.transactions)))
 
 			blocks := []*types.Block{}
-			for i := 0; i < len(task.transactions); i++ {
-				// Match up a body to any possible completion request
-				matched := false
+			// abort early if there's nothing explicitly requested
+			if len(f.completing) > 0 {
+				for i := 0; i < len(task.transactions); i++ {
+					// Match up a body to any possible completion request
+					var (
+						matched = false
+						txnHash common.Hash // calculated lazily and reused
+					)
 
-				for hash, announce := range f.completing {
-					if f.queued[hash] == nil {
-						txnHash := types.DeriveSha(types.Transactions(task.transactions[i]))
+					for hash, announce := range f.completing {
+						if f.queued[hash] != nil || announce.origin != task.peer {
+							continue
+						}
 
-						if txnHash == announce.header.TxHash && announce.origin == task.peer {
-							// Mark the body matched, reassemble if still unknown
-							matched = true
+						if common.EmptyHash(txnHash) {
+							txnHash = types.DeriveSha(types.Transactions(task.transactions[i]))
+						}
 
-							if f.getBlock(hash) == nil {
-								block := types.NewBlockWithHeader(announce.header).WithBody(task.transactions[i])
-								block.ReceivedAt = task.time
+						if txnHash != announce.header.TxHash {
+							continue
+						}
 
-								blocks = append(blocks, block)
-							} else {
-								f.forgetHash(hash)
-							}
+						// Mark the body matched, reassemble if still unknown
+						matched = true
+						if f.getBlock(hash) == nil {
+							block := types.NewBlockWithHeader(announce.header).WithBody(task.transactions[i])
+							block.ReceivedAt = task.time
+							blocks = append(blocks, block)
+						} else {
+							f.forgetHash(hash)
 						}
 					}
-				}
-				if matched {
-					task.transactions = append(task.transactions[:i], task.transactions[i+1:]...)
-					i--
-					continue
+					if matched {
+						task.transactions = append(task.transactions[:i], task.transactions[i+1:]...)
+						i--
+						continue
+					}
 				}
 			}
 
@@ -656,7 +667,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		}
 		f.queues[peer] = count
 		f.queued[hash] = op
-		f.queue.Push(op, -float32(block.NumberU64()))
+		f.queue.Push(op, -int64(block.NumberU64()))
 		if f.queueChangeHook != nil {
 			f.queueChangeHook(op.block.Hash(), true)
 		}

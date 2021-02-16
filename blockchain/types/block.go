@@ -22,16 +22,18 @@ package types
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"math/big"
 	"sort"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/crypto/sha3"
+
+	"github.com/klaytn/klaytn/rlp"
 )
 
 const (
@@ -41,6 +43,8 @@ const (
 )
 
 var (
+	// EmptyRootHash is transaction/receipt root hash when there is no transaction.
+	// This value is initialized in InitDeriveSha.
 	EmptyRootHash = common.Hash{}
 	EngineType    = Engine_IBFT
 )
@@ -117,11 +121,26 @@ func (h *Header) Size() common.StorageSize {
 	return common.StorageSize(unsafe.Sizeof(*h)) + common.StorageSize(len(h.Extra)+(h.BlockScore.BitLen()+h.Number.BitLen()+h.Time.BitLen())/8)
 }
 
+func (h *Header) Round() byte {
+	return byte(h.Extra[IstanbulExtraVanity-1])
+}
+
 func rlpHash(x interface{}) (h common.Hash) {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, x)
 	hw.Sum(h[:0])
 	return h
+}
+
+// EmptyBody returns true if there is no additional 'body' to complete the header
+// that is: no transactions.
+func (h *Header) EmptyBody() bool {
+	return h.TxHash == EmptyRootHash
+}
+
+// EmptyReceipts returns true if there are no receipts for this header/block.
+func (h *Header) EmptyReceipts() bool {
+	return h.ReceiptHash == EmptyRootHash
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving

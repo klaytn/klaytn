@@ -23,6 +23,8 @@ package cn
 import (
 	"context"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
@@ -32,23 +34,17 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
 )
 
 // CNAPIBackend implements api.Backend for full nodes
 type CNAPIBackend struct {
 	cn  *CN
 	gpo *gasprice.Oracle
-}
-
-// GetNonceInCache returns (cachedNonce, true) if nonce exists in cache.
-// If not, it returns (0, false).
-func (b *CNAPIBackend) GetNonceInCache(addr common.Address) (uint64, bool) {
-	return b.cn.blockchain.GetNonceInCache(addr)
 }
 
 // GetTxLookupInfoAndReceipt retrieves a tx and lookup info and receipt for a given transaction hash.
@@ -87,8 +83,7 @@ func (b *CNAPIBackend) SetHead(number uint64) {
 func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block := b.cn.miner.PendingBlock()
-		return block.Header(), nil
+		return nil, kerrors.ErrPendingBlockNotSupported
 	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
@@ -104,8 +99,7 @@ func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumb
 func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block := b.cn.miner.PendingBlock()
-		return block, nil
+		return nil, kerrors.ErrPendingBlockNotSupported
 	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
@@ -121,8 +115,7 @@ func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumbe
 func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block, state := b.cn.miner.Pending()
-		return state, block.Header(), nil
+		return nil, nil, kerrors.ErrPendingBlockNotSupported
 	}
 	// Otherwise resolve the block number and return its state
 	header, err := b.HeaderByNumber(ctx, blockNr)
@@ -265,4 +258,8 @@ func (b *CNAPIBackend) IsParallelDBWrite() bool {
 
 func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 	return b.cn.BlockChain().IsSenderTxHashIndexingEnabled()
+}
+
+func (b *CNAPIBackend) RPCGasCap() *big.Int {
+	return b.cn.config.RPCGasCap
 }

@@ -22,17 +22,18 @@ package types
 
 import (
 	"crypto/ecdsa"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 func TestEIP155Signing(t *testing.T) {

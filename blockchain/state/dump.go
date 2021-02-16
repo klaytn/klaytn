@@ -23,9 +23,10 @@ package state
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/statedb"
 )
 

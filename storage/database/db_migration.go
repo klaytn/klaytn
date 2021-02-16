@@ -50,7 +50,7 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	dstDB := dstdbm.getDatabase(MiscDB)
 
 	// create src iterator and dst batch
-	srcIter := srcDB.NewIterator()
+	srcIter := srcDB.NewIterator(nil, nil)
 	dstBatch := dstDB.NewBatch()
 
 	// vars for log

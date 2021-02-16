@@ -691,7 +691,7 @@ func getTestConfig() *params.ChainConfig {
 
 func getGovernance(dbm database.DBManager) *governance.Governance {
 	config := getTestConfig()
-	return governance.NewGovernance(config, dbm)
+	return governance.NewGovernanceInitialize(config, dbm)
 }
 
 func Benchmark_getTargetReceivers(b *testing.B) {

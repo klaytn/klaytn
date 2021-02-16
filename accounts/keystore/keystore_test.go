@@ -22,10 +22,6 @@ package keystore
 
 import (
 	"crypto/ecdsa"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/params"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -35,6 +31,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/common"
@@ -389,11 +390,11 @@ func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	new := NewPlaintextKeyStore
+	newKs := NewPlaintextKeyStore
 	if encrypted {
-		new = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
+		newKs = func(kd string) *KeyStore { return NewKeyStore(kd, veryLightScryptN, veryLightScryptP) }
 	}
-	return d, new(string(d))
+	return d, newKs(string(d))
 }
 
 // testTx returns a sample transaction and private keys of the sender and fee payer.

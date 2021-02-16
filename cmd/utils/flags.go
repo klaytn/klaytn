@@ -24,6 +24,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -35,6 +36,7 @@ import (
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/fdlimit"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
@@ -46,6 +48,7 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/node/sc"
@@ -202,11 +205,6 @@ var (
 		Name:  "kes.nodetype.service",
 		Usage: "Run as a KES Service Node (Disable fetcher, downloader, and worker)",
 	}
-	// Performance tuning settings
-	StateDBCachingFlag = cli.BoolFlag{
-		Name:  "statedb.use-cache",
-		Usage: "Enables caching of state objects in stateDB",
-	}
 	SingleDBFlag = cli.BoolFlag{
 		Name:  "db.single",
 		Usage: "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
@@ -298,15 +296,15 @@ var (
 		Name:  "cache.memory",
 		Usage: "Set the physical RAM size (GB, Default: 16GB)",
 	}
-	TxPoolStateCacheFlag = cli.BoolFlag{
-		Name:  "statedb.use-txpool-cache",
-		Usage: "Enables caching of nonce and balance for txpool.",
-	}
 	TrieNodeCacheTypeFlag = cli.StringFlag{
 		Name: "statedb.cache.type",
 		Usage: "Set trie node cache type ('LocalCache', 'RemoteCache', " +
 			"'HybridCache') (default = 'LocalCache')",
 		Value: string(statedb.CacheTypeLocal),
+	}
+	TrieNodeCacheNoPrefetchFlag = cli.BoolFlag{
+		Name:  "statedb.cache.noprefetch",
+		Usage: "Disable heuristic state prefetch during block import (less CPU and disk IO, more time waiting for data)",
 	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",
@@ -328,6 +326,11 @@ var (
 		Name:  "state.trie-cache-limit",
 		Usage: "Memory allowance (MB) to use for caching trie nodes in memory. -1 is for auto-scaling",
 		Value: -1,
+	}
+	TrieNodeCacheSavePeriodFlag = cli.DurationFlag{
+		Name:  "state.trie-cache-save-period",
+		Usage: "Period of saving in memory trie cache to file if fastcache is used, 0 means disabled",
+		Value: 0,
 	}
 	SenderTxHashIndexingFlag = cli.BoolFlag{
 		Name:  "sendertxhashindexing",
@@ -442,13 +445,9 @@ var (
 		Usage: "API's offered over the HTTP-RPC interface",
 		Value: "",
 	}
-	IPCDisabledFlag = cli.BoolFlag{
-		Name:  "ipcdisable",
-		Usage: "Disable the IPC-RPC server",
-	}
-	IPCPathFlag = DirectoryFlag{
-		Name:  "ipcpath",
-		Usage: "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
+	RPCGlobalGasCap = cli.Uint64Flag{
+		Name:  "rpc.gascap",
+		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
 	}
 	WSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
@@ -464,6 +463,36 @@ var (
 		Usage: "WS-RPC server listening port",
 		Value: node.DefaultWSPort,
 	}
+	WSApiFlag = cli.StringFlag{
+		Name:  "wsapi",
+		Usage: "API's offered over the WS-RPC interface",
+		Value: "",
+	}
+	WSAllowedOriginsFlag = cli.StringFlag{
+		Name:  "wsorigins",
+		Usage: "Origins from which to accept websockets requests",
+		Value: "",
+	}
+	WSMaxSubscriptionPerConn = cli.IntFlag{
+		Name:  "wsmaxsubscriptionperconn",
+		Usage: "Allowed maximum subscription number per a websocket connection",
+		Value: 5,
+	}
+	WSReadDeadLine = cli.Int64Flag{
+		Name:  "wsreaddeadline",
+		Usage: "Set the read deadline on the underlying network connection in seconds. 0 means read will not timeout",
+		Value: rpc.WebsocketReadDeadline,
+	}
+	WSWriteDeadLine = cli.Int64Flag{
+		Name:  "wswritedeadline",
+		Usage: "Set the Write deadline on the underlying network connection in seconds. 0 means write will not timeout",
+		Value: rpc.WebsocketWriteDeadline,
+	}
+	WSMaxConnections = cli.IntFlag{
+		Name:  "wsmaxconnections",
+		Usage: "Allowed maximum websocket connection number",
+		Value: 3000,
+	}
 	GRPCEnabledFlag = cli.BoolFlag{
 		Name:  "grpc",
 		Usage: "Enable the gRPC server",
@@ -478,15 +507,13 @@ var (
 		Usage: "gRPC server listening port",
 		Value: node.DefaultGRPCPort,
 	}
-	WSApiFlag = cli.StringFlag{
-		Name:  "wsapi",
-		Usage: "API's offered over the WS-RPC interface",
-		Value: "",
+	IPCDisabledFlag = cli.BoolFlag{
+		Name:  "ipcdisable",
+		Usage: "Disable the IPC-RPC server",
 	}
-	WSAllowedOriginsFlag = cli.StringFlag{
-		Name:  "wsorigins",
-		Usage: "Origins from which to accept websockets requests",
-		Value: "",
+	IPCPathFlag = DirectoryFlag{
+		Name:  "ipcpath",
+		Usage: "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
 	}
 	ExecFlag = cli.StringFlag{
 		Name:  "exec",
@@ -1119,12 +1146,16 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(WSApiFlag.Name) {
 		cfg.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
 	}
+	rpc.MaxSubscriptionPerConn = int32(ctx.GlobalInt(WSMaxSubscriptionPerConn.Name))
+	rpc.WebsocketReadDeadline = ctx.GlobalInt64(WSReadDeadLine.Name)
+	rpc.WebsocketWriteDeadline = ctx.GlobalInt64(WSWriteDeadLine.Name)
+	rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(WSMaxConnections.Name))
 }
 
 // setIPC creates an IPC path configuration from the set command line flags,
 // returning an empty string if IPC was explicitly disabled, or the set path.
 func setIPC(ctx *cli.Context, cfg *node.Config) {
-	checkExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
+	CheckExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
 	switch {
 	case ctx.GlobalBool(IPCDisabledFlag.Name):
 		cfg.IPCPath = ""
@@ -1342,10 +1373,10 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	}
 }
 
-// checkExclusive verifies that only a single instance of the provided flags was
+// CheckExclusive verifies that only a single instance of the provided flags was
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.
-func checkExclusive(ctx *cli.Context, args ...interface{}) {
+func CheckExclusive(ctx *cli.Context, args ...interface{}) {
 	set := make([]string, 0, 1)
 	for i := 0; i < len(args); i++ {
 		// Make sure the next argument is a flag and skip if not set
@@ -1380,10 +1411,26 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 	}
 }
 
+// raiseFDLimit increases the file descriptor limit to process's maximum value
+func raiseFDLimit() {
+	limit, err := fdlimit.Maximum()
+	if err != nil {
+		logger.Error("Failed to read maximum fd. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	raised, err := fdlimit.Raise(uint64(limit))
+	if err != nil {
+		logger.Warn("Failed to increase fd limit. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	logger.Info("Raised fd limit to process's maximum value", "fd", raised)
+}
+
 // SetKlayConfig applies klay-related command line flags to the config.
 func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
+	raiseFDLimit()
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setServiceChainSigner(ctx, ks, cfg)
@@ -1464,8 +1511,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		logger.Debug("Memory settings", "PhysicalMemory(GB)", common.TotalPhysicalMemGB)
 	}
 
-	cfg.TxPoolStateCache = ctx.GlobalIsSet(TxPoolStateCacheFlag.Name)
-
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}
@@ -1475,12 +1520,13 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	cfg.SenderTxHashIndexing = ctx.GlobalIsSet(SenderTxHashIndexingFlag.Name)
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
-	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
 	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
+		NoPrefetch:                ctx.GlobalBool(TrieNodeCacheNoPrefetchFlag.Name),
 		LocalCacheSizeMB:          ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
+		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),
 		RedisEndpoints:            ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
 		RedisClusterEnable:        ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
 		RedisPublishBlockEnable:   ctx.GlobalBool(TrieNodeCacheRedisPublishBlockFlag.Name),
@@ -1501,6 +1547,10 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.AutoRestartFlag = ctx.GlobalBool(AutoRestartFlag.Name)
 	cfg.RestartTimeOutFlag = ctx.GlobalDuration(RestartTimeOutFlag.Name)
 	cfg.DaemonPathFlag = ctx.GlobalString(DaemonPathFlag.Name)
+
+	if ctx.GlobalIsSet(RPCGlobalGasCap.Name) {
+		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
+	}
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
@@ -1591,7 +1641,7 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 		return nil
 	}
 	// Otherwise resolve absolute paths and return them
-	preloads := []string{}
+	var preloads []string
 
 	assets := ctx.GlobalString(JSpathFlag.Name)
 	for _, file := range strings.Split(ctx.GlobalString(PreloadJSFlag.Name), ",") {

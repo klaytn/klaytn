@@ -18,11 +18,12 @@ package types
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 type testingF func(t *testing.T)

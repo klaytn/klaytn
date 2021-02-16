@@ -18,15 +18,16 @@ package contract
 
 import (
 	"context"
-	"fmt"
+	"log"
+	"math/big"
+	"testing"
+
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
-	"log"
-	"math/big"
-	"testing"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSmartContract(t *testing.T) {
@@ -37,45 +38,45 @@ func TestSmartContract(t *testing.T) {
 	key2, _ := crypto.GenerateKey()
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	alloc := blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(params.KLAY)}, auth2.From: {Balance: big.NewInt(params.KLAY)}}
+	initialValue := big.NewInt(params.KLAY)
+	withdrawValue := big.NewInt(500000000)
+
+	alloc := blockchain.GenesisAlloc{auth.From: {Balance: initialValue}, auth2.From: {Balance: initialValue}}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	// Deploy a token contract on the simulated blockchain
 	_, _, reward, err := DeployKlaytnReward(auth, sim)
 	if err != nil {
 		log.Fatalf("Failed to deploy new token contract: %v", err)
 	}
-	// Print the current (non existent) and pending name of the contract
-	tx, err := reward.Reward(&bind.TransactOpts{From: auth.From, Signer: auth.Signer, Value: big.NewInt(500000000)}, auth2.From)
+	sim.Commit()
+
+	// Set reward
+	tx, err := reward.Reward(&bind.TransactOpts{From: auth.From, Signer: auth.Signer,
+		Value: withdrawValue}, auth2.From)
 	if err != nil {
 		log.Fatalf("Failed to call reward : %v", err)
 	}
-	fmt.Println("reward tx.hash :", tx.Hash().Hex())
-
-	// Commit all pending transactions in the simulator and print the names again
 	sim.Commit()
+	assert.Equal(t, uint(1), sim.BlockChain().GetReceiptByTxHash(tx.Hash()).Status)
 
-	balance, _ := reward.BalanceOf((&bind.CallOpts{Pending: true}), auth2.From)
-	fmt.Println("balance :", balance)
+	// Check the balance before withdrawal
+	balance1, err := sim.BalanceAt(context.Background(), auth2.From, nil)
+	assert.Nil(t, err)
+	assert.Equal(t, initialValue, balance1)
 
-	amount, _ := reward.TotalAmount((&bind.CallOpts{Pending: true}))
-	fmt.Println("total amount :", amount)
-
-	balance1, _ := sim.BalanceAt(context.Background(), auth2.From, big.NewInt(1))
-	fmt.Println("before reward, balance :", balance1)
-
-	tx2, err2 := reward.SafeWithdrawal(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer, Value: big.NewInt(0)})
-	if err2 != nil {
-		log.Fatalf("Failed to call reward : %v", err2)
+	// Withdraw reward
+	tx2, err := reward.SafeWithdrawal(&bind.TransactOpts{From: auth2.From, Signer: auth2.Signer,
+		Value: big.NewInt(0)})
+	if err != nil {
+		log.Fatalf("Failed to call reward : %v", err)
 	}
-	fmt.Println("reward tx.hash :", tx2.Hash().Hex())
-
 	sim.Commit()
+	assert.Equal(t, uint(1), sim.BlockChain().GetReceiptByTxHash(tx2.Hash()).Status)
 
-	balance2, _ := sim.BalanceAt(context.Background(), auth2.From, big.NewInt(2))
-	fmt.Println("after reward, balance :", balance2)
-
-	if balance1.Cmp(balance2) >= 0 {
-		log.Fatalf("Failed to withdraw safely")
-	}
+	// Check the balance after withdrawal
+	balance2, err := sim.BalanceAt(context.Background(), auth2.From, nil)
+	assert.Nil(t, err)
+	assert.Equal(t, new(big.Int).Add(balance1, withdrawValue), balance2)
 }

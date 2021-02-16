@@ -18,16 +18,19 @@ package cn
 
 import (
 	"context"
+	"fmt"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common/hexutil"
 	mocks2 "github.com/klaytn/klaytn/consensus/mocks"
+	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	mocks3 "github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func createCNMocks(t *testing.T) (*gomock.Controller, *PrivateDebugAPI, *mocks2.MockEngine, *mocks.MockBlockChain, *mocks3.MockMiner) {
@@ -39,14 +42,12 @@ func createCNMocks(t *testing.T) (*gomock.Controller, *PrivateDebugAPI, *mocks2.
 
 func TestPrivateDebugAPI_TraceChain(t *testing.T) {
 	endBlockNumber := rpc.BlockNumber(123)
-	block := newBlock(123)
 	// from == nil
 	{
-		mockCtrl, api, _, _, mockMiner := createCNMocks(t)
-		mockMiner.EXPECT().PendingBlock().Return(nil).Times(2)
+		mockCtrl, api, _, _, _ := createCNMocks(t)
 		sub, err := api.TraceChain(context.Background(), rpc.PendingBlockNumber, rpc.PendingBlockNumber, nil)
 		assert.Nil(t, sub)
-		assert.Error(t, err)
+		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
 		mockCtrl.Finish()
 	}
 	{
@@ -67,22 +68,27 @@ func TestPrivateDebugAPI_TraceChain(t *testing.T) {
 	}
 	// from != nil
 	{
-		mockCtrl, api, _, mockBlockChain, mockMiner := createCNMocks(t)
-		mockMiner.EXPECT().PendingBlock().Return(block).Times(1)
-		mockBlockChain.EXPECT().CurrentBlock().Return(nil).Times(1)
+		mockCtrl, api, _, _, _ := createCNMocks(t)
 		sub, err := api.TraceChain(context.Background(), rpc.PendingBlockNumber, rpc.LatestBlockNumber, nil)
 		assert.Nil(t, sub)
-		assert.Error(t, err)
+		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
 		mockCtrl.Finish()
 	}
 	{
-		endBlockNumber := rpc.BlockNumber(123)
-		mockCtrl, api, _, mockBlockChain, mockMiner := createCNMocks(t)
-		mockMiner.EXPECT().PendingBlock().Return(block).Times(1)
-		mockBlockChain.EXPECT().GetBlockByNumber(uint64(endBlockNumber)).Return(nil).Times(1)
+		mockCtrl, api, _, _, _ := createCNMocks(t)
 		sub, err := api.TraceChain(context.Background(), rpc.PendingBlockNumber, endBlockNumber, nil)
 		assert.Nil(t, sub)
-		assert.Error(t, err)
+		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
+		mockCtrl.Finish()
+	}
+	{
+		startBlockNumber := rpc.BlockNumber(130)
+		mockCtrl, api, _, mockBlockChain, _ := createCNMocks(t)
+		mockBlockChain.EXPECT().GetBlockByNumber(uint64(startBlockNumber)).Return(newBlock(130))
+		mockBlockChain.EXPECT().GetBlockByNumber(uint64(endBlockNumber)).Return(newBlock(123))
+		sub, err := api.TraceChain(context.Background(), startBlockNumber, endBlockNumber, nil)
+		assert.Nil(t, sub)
+		assert.Equal(t, fmt.Errorf("end block #%d needs to come after start block #%d", endBlockNumber, startBlockNumber), err)
 		mockCtrl.Finish()
 	}
 }
@@ -90,11 +96,10 @@ func TestPrivateDebugAPI_TraceChain(t *testing.T) {
 func TestPrivateDebugAPI_TraceBlockByNumber(t *testing.T) {
 	blockNumber := rpc.BlockNumber(123)
 	{
-		mockCtrl, api, _, _, mockMiner := createCNMocks(t)
-		mockMiner.EXPECT().PendingBlock().Return(nil).Times(1)
+		mockCtrl, api, _, _, _ := createCNMocks(t)
 		sub, err := api.TraceBlockByNumber(context.Background(), rpc.PendingBlockNumber, nil)
 		assert.Nil(t, sub)
-		assert.Error(t, err)
+		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
 		mockCtrl.Finish()
 	}
 	{

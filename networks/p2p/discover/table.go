@@ -136,7 +136,7 @@ func newTable(cfg *Config) (Discovery, error) {
 	tab := &Table{
 		net:         cfg.udp,
 		db:          db,
-		self:        NewNode(cfg.Id, cfg.Addr.IP, uint16(cfg.Addr.Port), uint16(cfg.Addr.Port), cfg.NodeType),
+		self:        NewNode(cfg.Id, cfg.Addr.IP, uint16(cfg.Addr.Port), uint16(cfg.Addr.Port), nil, cfg.NodeType),
 		bonding:     make(map[NodeID]*bondproc),
 		bondslots:   make(chan struct{}, maxBondingPingPongs),
 		refreshReq:  make(chan chan struct{}),
@@ -705,7 +705,7 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAdd
 		tab.net.waitping(id)
 	}
 	// Bonding succeeded, update the node database.
-	w.n = NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nType)
+	w.n = NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nil, nType)
 	tab.localLogger.Trace("pingpong-success, make new node", "node", w.n)
 	close(w.done)
 }

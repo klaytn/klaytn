@@ -30,7 +30,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pkg/errors"
 )
@@ -401,8 +401,9 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 	}
 }
 
+// NewGovernance creates Governance with the given configuration.
 func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
-	ret := Governance{
+	return &Governance{
 		ChainConfig:              chainConfig,
 		voteMap:                  NewVoteMap(),
 		db:                       dbm,
@@ -414,11 +415,17 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 		GovernanceVotes:          NewGovernanceVotes(),
 		idxCacheLock:             new(sync.RWMutex),
 	}
+}
+
+// NewGovernanceInitialize creates Governance with the given configuration and read governance state from DB.
+// If any items are not stored in DB, it stores governance items of the genesis block to DB.
+func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
+	ret := NewGovernance(chainConfig, dbm)
 	// nil is for testing or simple function usage
 	if dbm != nil {
 		if err := ret.initializeCache(); err != nil {
 			// If this is the first time to run, store governance information for genesis block on database
-			cfg := getGovernanceItemsFromChainConfig(chainConfig)
+			cfg := GetGovernanceItemsFromChainConfig(chainConfig)
 			if err := ret.WriteGovernance(0, cfg, NewGovernanceSet()); err != nil {
 				logger.Crit("Error in writing governance information", "err", err)
 			}
@@ -429,7 +436,7 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 		}
 		ret.ReadGovernanceState()
 	}
-	return &ret
+	return ret
 }
 
 func (g *Governance) SetNodeAddress(addr common.Address) {
@@ -552,7 +559,7 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 }
 
 func CheckGenesisValues(c *params.ChainConfig) error {
-	gov := NewGovernance(c, nil)
+	gov := NewGovernanceInitialize(c, nil)
 
 	var tstMap = map[string]interface{}{
 		"istanbul.epoch":                c.Istanbul.Epoch,
@@ -917,7 +924,7 @@ func (gov *Governance) SetTxPool(txpool txPool) {
 	gov.TxPool = txpool
 }
 
-func getGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
+func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
 	g := NewGovernanceSet()
 
 	if config.Governance != nil {
@@ -967,7 +974,7 @@ func writeFailLog(key int, err error) {
 func AddGovernanceCacheForTest(g *Governance, num uint64, config *params.ChainConfig) {
 	// Don't update cache if num (block number) is smaller than the biggest number of cached block number
 
-	data := getGovernanceItemsFromChainConfig(config)
+	data := GetGovernanceItemsFromChainConfig(config)
 	g.addGovernanceCache(num, data)
 }
 

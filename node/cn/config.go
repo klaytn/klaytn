@@ -119,8 +119,6 @@ type Config struct {
 	TriesInMemory        uint64
 	SenderTxHashIndexing bool
 	ParallelDBWrite      bool
-	StateDBCaching       bool
-	TxPoolStateCache     bool
 	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
 
 	// Mining-related options
@@ -164,6 +162,9 @@ type Config struct {
 	AutoRestartFlag    bool
 	RestartTimeOutFlag time.Duration
 	DaemonPathFlag     string
+
+	// RPCGasCap is the global gas cap for eth-call variants.
+	RPCGasCap *big.Int `toml:",omitempty"`
 }
 
 type configMarshaling struct {

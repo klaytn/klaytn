@@ -31,7 +31,7 @@ import (
 
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // Msg defines the structure of a p2p message.
@@ -173,7 +173,7 @@ type MsgPipeRW struct {
 	closed  *int32
 }
 
-// WriteMsg sends a messsage on the pipe.
+// WriteMsg sends a message on the pipe.
 // It blocks until the receiver has consumed the message payload.
 func (p *MsgPipeRW) WriteMsg(msg Msg) error {
 	if atomic.LoadInt32(p.closed) == 0 {

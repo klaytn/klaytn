@@ -26,7 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/log"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -41,9 +40,11 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/tracers"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	statedb2 "github.com/klaytn/klaytn/storage/statedb"
 )
 
@@ -116,7 +117,7 @@ func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.Block
 
 	switch start {
 	case rpc.PendingBlockNumber:
-		from = api.cn.miner.PendingBlock()
+		return nil, kerrors.ErrPendingBlockNotSupported
 	case rpc.LatestBlockNumber:
 		from = api.cn.blockchain.CurrentBlock()
 	default:
@@ -124,7 +125,7 @@ func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.Block
 	}
 	switch end {
 	case rpc.PendingBlockNumber:
-		to = api.cn.miner.PendingBlock()
+		return nil, kerrors.ErrPendingBlockNotSupported
 	case rpc.LatestBlockNumber:
 		to = api.cn.blockchain.CurrentBlock()
 	default:
@@ -136,6 +137,9 @@ func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.Block
 	}
 	if to == nil {
 		return nil, fmt.Errorf("end block #%d not found", end)
+	}
+	if from.Number().Cmp(to.Number()) >= 0 {
+		return nil, fmt.Errorf("end block #%d needs to come after start block #%d", end, start)
 	}
 	return api.traceChain(ctx, from, to, config)
 }
@@ -300,7 +304,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 				traced += uint64(len(txs))
 			}
 			// Generate the next state snapshot fast without tracing
-			_, _, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{})
+			_, _, _, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{})
 			if err != nil {
 				failed = err
 				break
@@ -321,7 +325,9 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 				database.TrieDB().Reference(root, common.Hash{})
 			}
 			// Dereference all past tries we ourselves are done working with
-			database.TrieDB().Dereference(proot)
+			if !common.EmptyHash(proot) {
+				database.TrieDB().Dereference(proot)
+			}
 			proot = root
 		}
 	}()
@@ -365,7 +371,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(ctx context.Context, number rpc.B
 
 	switch number {
 	case rpc.PendingBlockNumber:
-		block = api.cn.miner.PendingBlock()
+		return nil, kerrors.ErrPendingBlockNotSupported
 	case rpc.LatestBlockNumber:
 		block = api.cn.blockchain.CurrentBlock()
 	default:
@@ -552,14 +558,8 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 // be one filename per transaction traced.
 func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block *types.Block, config *StdTraceConfig) ([]string, error) {
 	// If we're tracing a single transaction, make sure it's present
-	if config != nil && config.TxHash != (common.Hash{}) {
-		var exists bool
-		for _, tx := range block.Transactions() {
-			if exists = (tx.Hash() == config.TxHash); exists {
-				break
-			}
-		}
-		if !exists {
+	if config != nil && !common.EmptyHash(config.TxHash) {
+		if !containsTx(block, config.TxHash) {
 			return nil, fmt.Errorf("transaction %#x not found in block", config.TxHash)
 		}
 	}
@@ -616,7 +616,7 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 		)
 
 		// If the transaction needs tracing, swap out the configs
-		if tx.Hash() == txHash || txHash == (common.Hash{}) {
+		if tx.Hash() == txHash || common.EmptyHash(txHash) {
 			// Generate a unique temporary file to dump it into
 			prefix := fmt.Sprintf("block_%#x-%d-%#x-", block.Hash().Bytes()[:4], i, tx.Hash().Bytes()[:4])
 
@@ -653,6 +653,17 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 		}
 	}
 	return dumps, nil
+}
+
+// containsTx reports whether the transaction with a certain hash
+// is contained within the specified block.
+func containsTx(block *types.Block, hash common.Hash) bool {
+	for _, tx := range block.Transactions() {
+		if tx.Hash() == hash {
+			return true
+		}
+	}
+	return false
 }
 
 // computeStateDB retrieves the state database associated with a certain block.
@@ -699,7 +710,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 		if block = api.cn.blockchain.GetBlockByNumber(block.NumberU64() + 1); block == nil {
 			return nil, fmt.Errorf("block #%d not found", block.NumberU64()+1)
 		}
-		_, _, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{})
+		_, _, _, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{})
 		if err != nil {
 			return nil, fmt.Errorf("processing block %d failed: %v", block.NumberU64(), err)
 		}
@@ -712,7 +723,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 			return nil, fmt.Errorf("state reset after block %d failed: %v", block.NumberU64(), err)
 		}
 		database.TrieDB().Reference(root, common.Hash{})
-		if proot != (common.Hash{}) {
+		if !common.EmptyHash(proot) {
 			database.TrieDB().Dereference(proot)
 		}
 		proot = root

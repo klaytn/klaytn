@@ -27,9 +27,8 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/common"
-
+	"github.com/klaytn/klaytn/common/prque"
 	"github.com/klaytn/klaytn/storage/database"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a
@@ -254,7 +253,7 @@ func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
 
 // Commit flushes the data stored in the internal membatch out to persistent
 // storage, returning the number of items written and any occurred error.
-func (s *TrieSync) Commit(dbw database.Putter) (int, error) {
+func (s *TrieSync) Commit(dbw database.KeyValueWriter) (int, error) {
 	// Dump the membatch into a database dbw
 	for i, key := range s.membatch.order {
 		if err := dbw.Put(key[:], s.membatch.batch[key]); err != nil {
@@ -295,7 +294,7 @@ func (s *TrieSync) schedule(req *request) {
 	s.retrievedByDepth[req.depth]++
 
 	// Schedule the request for future retrieval
-	s.queue.Push(req.hash, float32(req.depth))
+	s.queue.Push(req.hash, int64(req.depth))
 	s.requests[req.hash] = req
 }
 

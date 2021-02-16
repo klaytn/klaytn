@@ -162,7 +162,7 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 		if err != nil {
 			return err
 		}
-		receipts, _, usedGas, _, err := blockchain.Processor().Process(block, statedb, vm.Config{})
+		receipts, _, usedGas, _, _, err := blockchain.Processor().Process(block, statedb, vm.Config{})
 		if err != nil {
 			blockchain.reportBlock(block, receipts, err)
 			return err
@@ -1590,7 +1590,6 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 	// Archive mode is given to avoid mismatching between the given starting block number and
 	// the actual block number where the blockchain has been rolled back to due to 128 blocks interval commit.
 	cacheConfig := &CacheConfig{
-		StateDBCaching:      false,
 		ArchiveMode:         true,
 		CacheSize:           512,
 		BlockInterval:       DefaultBlockInterval,

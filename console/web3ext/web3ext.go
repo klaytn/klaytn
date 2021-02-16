@@ -295,6 +295,11 @@ web3._extend({
 			name: 'saveTrieNodeCacheToDisk',
 			call: 'admin_saveTrieNodeCacheToDisk',
 		}),
+		new web3._extend.Method({
+			name: 'setMaxSubscriptionPerConn',
+			call: 'admin_setMaxSubscriptionPerConn',
+			params: 1
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -356,8 +361,18 @@ web3._extend({
 			call: 'debug_startWarmUp',
 		}),
 		new web3._extend.Method({
+			name: 'startContractWarmUp',
+			call: 'debug_startContractWarmUp',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'stopWarmUp',
 			call: 'debug_stopWarmUp',
+		}),
+		new web3._extend.Method({
+			name: 'startCollectingTrieStats',
+			call: 'debug_startCollectingTrieStats',
+			params: 1,
 		}),
 		new web3._extend.Method({
 			name: 'chaindbProperty',
@@ -581,6 +596,12 @@ web3._extend({
 			call: 'debug_getModifiedAccountsByHash',
 			params: 2,
 			inputFormatter:[null, null],
+		}),
+		new web3._extend.Method({
+			name: 'getModifiedStorageNodesByNumber',
+			call: 'debug_getModifiedStorageNodesByNumber',
+			params: 4,
+			inputFormatter: [null, null, null, null],
 		}),
 		new web3._extend.Method({
 			name: 'setVMLogTarget',

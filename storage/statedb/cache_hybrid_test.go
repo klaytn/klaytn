@@ -3,14 +3,15 @@ package statedb
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func getTestHybridConfig() TrieNodeCacheConfig {
-	return TrieNodeCacheConfig{
+func getTestHybridConfig() *TrieNodeCacheConfig {
+	return &TrieNodeCacheConfig{
 		CacheType:          CacheTypeHybrid,
-		LocalCacheSizeMB:   1024 * 1024,
+		LocalCacheSizeMB:   100,
 		FastCacheFileDir:   "",
 		RedisEndpoints:     []string{"localhost:6379"},
 		RedisClusterEnable: false,
@@ -19,7 +20,7 @@ func getTestHybridConfig() TrieNodeCacheConfig {
 
 // TestHybridCache_Set tests whether a hybrid cache can set an item into both of local and remote caches.
 func TestHybridCache_Set(t *testing.T) {
-	cache, err := NewHybridCache(getTestHybridConfig())
+	cache, err := newHybridCache(getTestHybridConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,6 +28,7 @@ func TestHybridCache_Set(t *testing.T) {
 	// Set an item
 	key, value := randBytes(32), randBytes(500)
 	cache.Set(key, value)
+	time.Sleep(sleepDurationForAsyncBehavior)
 
 	// Type assertion to check both of local cache and remote cache
 	hybrid, ok := cache.(*HybridCache)
@@ -44,8 +46,8 @@ func TestHybridCache_Set(t *testing.T) {
 // TestHybridCache_Get tests whether a hybrid cache can get an item from both of local and remote caches.
 func TestHybridCache_Get(t *testing.T) {
 	// Prepare caches to be integrated with a hybrid cache
-	localCache := NewFastCache(getTestHybridConfig())
-	remoteCache, err := NewRedisCache(getTestHybridConfig())
+	localCache := newFastCache(getTestHybridConfig())
+	remoteCache, err := newRedisCache(getTestHybridConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,6 +73,7 @@ func TestHybridCache_Get(t *testing.T) {
 		// Store an item into remote cache
 		key, value := randBytes(32), randBytes(500)
 		remoteCache.Set(key, value)
+		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Make sure the item is not stored in the local cache.
 		assert.Equal(t, len(localCache.Get(key)), 0)
@@ -89,6 +92,7 @@ func TestHybridCache_Get(t *testing.T) {
 		key, value := randBytes(32), randBytes(500)
 		localCache.Set(key, value)
 		remoteCache.Set(key, []byte{0x11})
+		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Get the item from the hybrid cache and check the validity
 		returnedVal := hybrid.Get(key)
@@ -99,8 +103,8 @@ func TestHybridCache_Get(t *testing.T) {
 // TestHybridCache_Has tests whether a hybrid cache can check an item from both of local and remote caches.
 func TestHybridCache_Has(t *testing.T) {
 	// Prepare caches to be integrated with a hybrid cache
-	localCache := NewFastCache(getTestHybridConfig())
-	remoteCache, err := NewRedisCache(getTestHybridConfig())
+	localCache := newFastCache(getTestHybridConfig())
+	remoteCache, err := newRedisCache(getTestHybridConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,6 +131,7 @@ func TestHybridCache_Has(t *testing.T) {
 		// Store an item into remote cache
 		key, value := randBytes(32), randBytes(500)
 		remoteCache.Set(key, value)
+		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Get the item from the hybrid cache and check the validity
 		returnedVal, returnedExist := hybrid.Has(key)
@@ -140,6 +145,7 @@ func TestHybridCache_Has(t *testing.T) {
 		key, value := randBytes(32), randBytes(500)
 		localCache.Set(key, value)
 		remoteCache.Set(key, []byte{0x11})
+		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Get the item from the hybrid cache and check the validity
 		returnedVal, returnedExist := hybrid.Has(key)

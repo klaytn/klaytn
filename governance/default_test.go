@@ -27,7 +27,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
@@ -128,7 +128,7 @@ func getTestConfig() *params.ChainConfig {
 func getGovernance() *Governance {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 	config := getTestConfig()
-	return NewGovernance(config, dbm)
+	return NewGovernanceInitialize(config, dbm)
 }
 
 func TestGetDefaultGovernanceConfig(t *testing.T) {
@@ -684,7 +684,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	config := getTestConfig()
 	config.Governance.GovernanceMode = GovernanceModeBallot
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
-	gov := NewGovernance(config, dbm)
+	gov := NewGovernanceInitialize(config, dbm)
 	gov.nodeAddress.Store(council[len(council)-1])
 
 	votes := make([]GovernanceVote, 0)

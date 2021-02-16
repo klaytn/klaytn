@@ -21,11 +21,18 @@
 package database
 
 import (
+	"errors"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/klaytn/klaytn/common"
+)
+
+var (
+	// errMemorydbClosed is returned if a memory database was already closed at the
+	// invocation of a data access operation.
+	errMemorydbClosed = errors.New("database closed")
 )
 
 /*
@@ -48,34 +55,67 @@ func NewMemDBWithCap(size int) *MemDB {
 	}
 }
 
+// Close deallocates the internal map and ensures any consecutive data access op
+// fails with an error.
+func (db *MemDB) Close() {
+	db.lock.Lock()
+	defer db.lock.Unlock()
+
+	db.db = nil
+}
+
 func (db *MemDB) Type() DBType {
 	return MemoryDB
 }
 
-func (db *MemDB) Put(key []byte, value []byte) error {
-	db.lock.Lock()
-	defer db.lock.Unlock()
-
-	db.db[string(key)] = common.CopyBytes(value)
-	return nil
-}
-
+// Has retrieves if a key is present in the key-value store.
 func (db *MemDB) Has(key []byte) (bool, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
+	if db.db == nil {
+		return false, errMemorydbClosed
+	}
 	_, ok := db.db[string(key)]
 	return ok, nil
 }
 
+// Get retrieves the given key if it's present in the key-value store.
 func (db *MemDB) Get(key []byte) ([]byte, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
+	if db.db == nil {
+		return nil, errMemorydbClosed
+	}
 	if entry, ok := db.db[string(key)]; ok {
 		return common.CopyBytes(entry), nil
 	}
 	return nil, dataNotFoundErr
+}
+
+// Put inserts the given value into the key-value store.
+func (db *MemDB) Put(key []byte, value []byte) error {
+	db.lock.Lock()
+	defer db.lock.Unlock()
+
+	if db.db == nil {
+		return errMemorydbClosed
+	}
+	db.db[string(key)] = common.CopyBytes(value)
+	return nil
+}
+
+// Delete removes the key from the key-value store.
+func (db *MemDB) Delete(key []byte) error {
+	db.lock.Lock()
+	defer db.lock.Unlock()
+
+	if db.db == nil {
+		return errMemorydbClosed
+	}
+	delete(db.db, string(key))
+	return nil
 }
 
 func (db *MemDB) Keys() [][]byte {
@@ -89,40 +129,29 @@ func (db *MemDB) Keys() [][]byte {
 	return keys
 }
 
-func (db *MemDB) Delete(key []byte) error {
-	db.lock.Lock()
-	defer db.lock.Unlock()
-
-	delete(db.db, string(key))
-	return nil
-}
-
-func (db *MemDB) Close() {}
-
 func (db *MemDB) NewBatch() Batch {
 	return &memBatch{db: db}
 }
 
-// NewIterator creates a binary-alphabetical iterator over the entire keyspace
-// contained within the memory database.
-func (db *MemDB) NewIterator() Iterator {
-	return db.NewIteratorWithStart(nil)
-}
-
-// NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
-// database content starting at a particular initial key (or after, if it does
-// not exist).
-func (db *MemDB) NewIteratorWithStart(start []byte) Iterator {
+// NewIterator creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix, starting at a particular
+// initial key (or after, if it does not exist).
+func (db *MemDB) NewIterator(prefix []byte, start []byte) Iterator {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
 	var (
-		st     = string(start)
+		pr     = string(prefix)
+		st     = string(append(prefix, start...))
 		keys   = make([]string, 0, len(db.db))
 		values = make([][]byte, 0, len(db.db))
 	)
-	// Collect the keys from the memory database corresponding to the given start
+	// Collect the keys from the memory database corresponding to the given prefix
+	// and start
 	for key := range db.db {
+		if !strings.HasPrefix(key, pr) {
+			continue
+		}
 		if key >= st {
 			keys = append(keys, key)
 		}
@@ -138,71 +167,102 @@ func (db *MemDB) NewIteratorWithStart(start []byte) Iterator {
 	}
 }
 
-// NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
-// of database content with a particular key prefix.
-func (db *MemDB) NewIteratorWithPrefix(prefix []byte) Iterator {
+// Stat returns a particular internal stat of the database.
+func (db *MemDB) Stat(property string) (string, error) {
+	return "", errors.New("unknown property")
+}
+
+// Compact is not supported on a memory database, but there's no need either as
+// a memory database doesn't waste space anyway.
+func (db *MemDB) Compact(start []byte, limit []byte) error {
+	return nil
+}
+
+// Len returns the number of entries currently present in the memory database.
+//
+// Note, this method is only used for testing (i.e. not public in general) and
+// does not have explicit checks for closed-ness to allow simpler testing code.
+func (db *MemDB) Len() int {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
-	var (
-		pr     = string(prefix)
-		keys   = make([]string, 0, len(db.db))
-		values = make([][]byte, 0, len(db.db))
-	)
-	// Collect the keys from the memory database corresponding to the given prefix
-	for key := range db.db {
-		if strings.HasPrefix(key, pr) {
-			keys = append(keys, key)
-		}
-	}
-	// Sort the items and retrieve the associated values
-	sort.Strings(keys)
-	for _, key := range keys {
-		values = append(values, db.db[key])
-	}
-	return &iterator{
-		keys:   keys,
-		values: values,
-	}
+	return len(db.db)
 }
-
-func (db *MemDB) Len() int { return len(db.db) }
 
 func (db *MemDB) Meter(prefix string) {
 	logger.Warn("MemDB does not support metrics!")
 }
 
-type kv struct{ k, v []byte }
+// keyvalue is a key-value tuple tagged with a deletion field to allow creating
+// memory-database write batches.
+type keyvalue struct {
+	key    []byte
+	value  []byte
+	delete bool
+}
 
+// memBatch is a write-only memory batch that commits changes to its host
+// database when Write is called. A batch cannot be used concurrently.
 type memBatch struct {
 	db     *MemDB
-	writes []kv
+	writes []keyvalue
 	size   int
 }
 
+// Put inserts the given value into the batch for later committing.
 func (b *memBatch) Put(key, value []byte) error {
-	b.writes = append(b.writes, kv{common.CopyBytes(key), common.CopyBytes(value)})
+	b.writes = append(b.writes, keyvalue{common.CopyBytes(key), common.CopyBytes(value), false})
 	b.size += len(value)
 	return nil
 }
 
-func (b *memBatch) Write() error {
-	b.db.lock.Lock()
-	defer b.db.lock.Unlock()
-
-	for _, kv := range b.writes {
-		b.db.db[string(kv.k)] = kv.v
-	}
+// Delete inserts the a key removal into the batch for later committing.
+func (b *memBatch) Delete(key []byte) error {
+	b.writes = append(b.writes, keyvalue{common.CopyBytes(key), nil, true})
+	b.size += 1
 	return nil
 }
 
+// ValueSize retrieves the amount of data queued up for writing.
 func (b *memBatch) ValueSize() int {
 	return b.size
 }
 
+// Write flushes any accumulated data to the memory database.
+func (b *memBatch) Write() error {
+	b.db.lock.Lock()
+	defer b.db.lock.Unlock()
+
+	for _, keyvalue := range b.writes {
+		if keyvalue.delete {
+			delete(b.db.db, string(keyvalue.key))
+			continue
+		}
+		b.db.db[string(keyvalue.key)] = keyvalue.value
+	}
+	return nil
+}
+
+// Reset resets the batch for reuse.
 func (b *memBatch) Reset() {
 	b.writes = b.writes[:0]
 	b.size = 0
+}
+
+// Replay replays the batch contents.
+func (b *memBatch) Replay(w KeyValueWriter) error {
+	for _, keyvalue := range b.writes {
+		if keyvalue.delete {
+			if err := w.Delete(keyvalue.key); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := w.Put(keyvalue.key, keyvalue.value); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // iterator can walk over the (potentially partial) keyspace of a memory key

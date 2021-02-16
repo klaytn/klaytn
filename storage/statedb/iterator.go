@@ -24,8 +24,9 @@ import (
 	"bytes"
 	"container/heap"
 	"errors"
+
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // Iterator is a key-value trie iterator that traverses a Trie.

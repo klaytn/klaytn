@@ -6,6 +6,9 @@ package mock_api
 
 import (
 	context "context"
+	big "math/big"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	klaytn "github.com/klaytn/klaytn"
 	accounts "github.com/klaytn/klaytn/accounts"
@@ -18,8 +21,6 @@ import (
 	rpc "github.com/klaytn/klaytn/networks/rpc"
 	params "github.com/klaytn/klaytn/params"
 	database "github.com/klaytn/klaytn/storage/database"
-	big "math/big"
-	reflect "reflect"
 )
 
 // MockBackend is a mock of Backend interface
@@ -187,21 +188,6 @@ func (m *MockBackend) GetEVM(arg0 context.Context, arg1 blockchain.Message, arg2
 func (mr *MockBackendMockRecorder) GetEVM(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEVM", reflect.TypeOf((*MockBackend)(nil).GetEVM), arg0, arg1, arg2, arg3, arg4)
-}
-
-// GetNonceInCache mocks base method
-func (m *MockBackend) GetNonceInCache(arg0 common.Address) (uint64, bool) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNonceInCache", arg0)
-	ret0, _ := ret[0].(uint64)
-	ret1, _ := ret[1].(bool)
-	return ret0, ret1
-}
-
-// GetNonceInCache indicates an expected call of GetNonceInCache
-func (mr *MockBackendMockRecorder) GetNonceInCache(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNonceInCache", reflect.TypeOf((*MockBackend)(nil).GetNonceInCache), arg0)
 }
 
 // GetPoolNonce mocks base method
@@ -400,6 +386,20 @@ func (m *MockBackend) ProtocolVersion() int {
 func (mr *MockBackendMockRecorder) ProtocolVersion() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProtocolVersion", reflect.TypeOf((*MockBackend)(nil).ProtocolVersion))
+}
+
+// RPCGasCap mocks base method
+func (m *MockBackend) RPCGasCap() *big.Int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RPCGasCap")
+	ret0, _ := ret[0].(*big.Int)
+	return ret0
+}
+
+// RPCGasCap indicates an expected call of RPCGasCap
+func (mr *MockBackendMockRecorder) RPCGasCap() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RPCGasCap", reflect.TypeOf((*MockBackend)(nil).RPCGasCap))
 }
 
 // SendTx mocks base method

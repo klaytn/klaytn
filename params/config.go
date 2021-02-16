@@ -25,6 +25,7 @@ import (
 	"math/big"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 )
 
 // Genesis hashes to enforce below configs on.
@@ -120,7 +121,7 @@ type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
 	// Various consensus engines
-	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"`
+	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
 
@@ -159,6 +160,7 @@ type IstanbulConfig struct {
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.
+// Deprecated: Use IstanbulConfig or CliqueConfig.
 type GxhashConfig struct{}
 
 // String implements the stringer interface, returning the consensus engine details.
@@ -240,6 +242,53 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
 	return nil
+}
+
+// GetConsensusEngine returns the consensus engine type specified in ChainConfig.
+// It returns Unknown type if none of engine type is configured or more than one type is configured.
+func (c *ChainConfig) GetConsensusEngine() EngineType {
+	switch {
+	case c.Clique != nil && c.Istanbul == nil:
+		return UseClique
+	case c.Clique == nil && c.Istanbul != nil:
+		return UseIstanbul
+	default:
+		return Unknown
+	}
+}
+
+// SetDefaults fills undefined chain config with default values.
+func (c *ChainConfig) SetDefaults() {
+	logger := log.NewModuleLogger(log.Governance)
+
+	if c.GetConsensusEngine() == Unknown && c.Istanbul == nil {
+		c.Istanbul = GetDefaultIstanbulConfig()
+		logger.Warn("Override the default Istanbul config to the chain config")
+	}
+
+	if c.Governance == nil {
+		engineType := c.GetConsensusEngine()
+		c.Governance = GetDefaultGovernanceConfig(engineType)
+		logger.Warn("Override the default governance config to the chain config", "engineType", engineType)
+	}
+
+	if c.Governance.Reward == nil {
+		c.Governance.Reward = GetDefaultRewardConfig()
+		logger.Warn("Override the default governance reward config to the chain config", "reward",
+			c.Governance.Reward)
+	}
+
+	if c.Governance.Reward.StakingUpdateInterval == 0 {
+		c.Governance.Reward.StakingUpdateInterval = StakingUpdateInterval()
+		logger.Warn("Override the default staking update interval to the chain config", "interval",
+			c.Governance.Reward.StakingUpdateInterval)
+	}
+
+	if c.Governance.Reward.ProposerUpdateInterval == 0 {
+		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
+		logger.Warn("Override the default proposer update interval to the chain config", "interval",
+			c.Governance.Reward.ProposerUpdateInterval)
+	}
 }
 
 // isForkIncompatible returns true if a fork scheduled at s1 cannot be rescheduled to
@@ -340,6 +389,7 @@ func (c *IstanbulConfig) Copy() *IstanbulConfig {
 	return newIC
 }
 
+// TODO-Klaytn-Governance: Remove input parameter if not needed anymore
 func GetDefaultGovernanceConfig(engine EngineType) *GovernanceConfig {
 	gov := &GovernanceConfig{
 		GovernanceMode: DefaultGovernanceMode,

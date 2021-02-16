@@ -64,9 +64,8 @@ func testNewMainBridge(t *testing.T) *MainBridge {
 // testBlockChain returns a test BlockChain with initial values
 func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	db := database.NewMemoryDBManager()
-	defer db.Close()
 
-	gov := governance.NewGovernance(&params.ChainConfig{
+	gov := governance.NewGovernanceInitialize(&params.ChainConfig{
 		ChainID:       big.NewInt(2018),
 		UnitPrice:     25000000000,
 		DeriveShaImpl: 0,

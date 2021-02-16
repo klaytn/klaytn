@@ -24,6 +24,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"errors"
+	"math/big"
+	"strconv"
+
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -35,8 +38,6 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"golang.org/x/crypto/ripemd160"
-	"math/big"
-	"strconv"
 )
 
 var logger = log.NewModuleLogger(log.VM)
@@ -114,8 +115,13 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 	if !allZero(input[32:63]) || !crypto.ValidateSignatureValues(v, r, s, false) {
 		return nil, nil
 	}
+	// We must make sure not to modify the 'input', so placing the 'v' along with
+	// the signature needs to be done on a new allocation
+	sig := make([]byte, 65)
+	copy(sig, input[64:128])
+	sig[64] = v
 	// v needs to be at the end for libsecp256k1
-	pubKey, err := crypto.Ecrecover(input[:32], append(input[64:128], v))
+	pubKey, err := crypto.Ecrecover(input[:32], sig)
 	// make sure the public key is a valid one
 	if err != nil {
 		return nil, nil

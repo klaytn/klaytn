@@ -159,6 +159,11 @@ var validatorTemplate = `{{ .Name }}:
 {{- end }}
         echo 'ADDITIONAL="$$ADDITIONAL --debug --metrics --prometheus"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         /klaytn-docker-pkg/bin/k{{ .NodeType }}d start
+{{- if eq .NodeType "cn"}}
+        sleep 1
+        ken attach --exec "personal.importRawKey('{{ .NodeKey }}', '')" http://localhost:{{ .RPCPort }}
+        ken attach --exec "personal.unlockAccount('{{ .Address }}', '', 999999999)" http://localhost:{{ .RPCPort }}
+{{- end }}
         tail -F klaytn/log/k{{ .NodeType }}d.out
     networks:
       app_net:

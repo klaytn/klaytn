@@ -25,14 +25,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // TODO-Klaytn Needs to separate APIs along with each namespaces.
@@ -117,7 +118,9 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 	// Fill the sender cache of transactions in the block.
 	txs := make([]*types.Transaction, len(body.Transactions))
 	for i, tx := range body.Transactions {
-		setSenderFromServer(tx.tx, tx.From, body.Hash)
+		if tx.From != nil {
+			setSenderFromServer(tx.tx, *tx.From, body.Hash)
+		}
 		txs[i] = tx.tx
 	}
 	return types.NewBlockWithHeader(head).WithBody(txs), nil
@@ -150,9 +153,9 @@ type rpcTransaction struct {
 }
 
 type txExtraInfo struct {
-	BlockNumber *string
-	BlockHash   common.Hash
-	From        common.Address
+	BlockNumber *string         `json:"blockNumber,omitempty"`
+	BlockHash   *common.Hash    `json:"blockHash,omitempty"`
+	From        *common.Address `json:"from,omitempty"`
 }
 
 func (tx *rpcTransaction) UnmarshalJSON(msg []byte) error {
@@ -173,7 +176,9 @@ func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *
 	} else if sigs := json.tx.RawSignatureValues(); sigs[0].V == nil {
 		return nil, false, fmt.Errorf("server returned transaction without signature")
 	}
-	setSenderFromServer(json.tx, json.From, json.BlockHash)
+	if json.From != nil && json.BlockHash != nil {
+		setSenderFromServer(json.tx, *json.From, *json.BlockHash)
+	}
 	return json.tx, json.BlockNumber == nil, nil
 }
 
@@ -220,7 +225,9 @@ func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash,
 			return nil, fmt.Errorf("server returned transaction without signature")
 		}
 	}
-	setSenderFromServer(json.tx, json.From, json.BlockHash)
+	if json.From != nil && json.BlockHash != nil {
+		setSenderFromServer(json.tx, *json.From, *json.BlockHash)
+	}
 	return json.tx, err
 }
 
@@ -445,7 +452,7 @@ func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 }
 
 // EstimateGas tries to estimate the gas needed to execute a specific transaction based on
-// the current pending state of the backend blockchain. There is no guarantee that this is
+// the latest state of the backend blockchain. There is no guarantee that this is
 // the true gas limit requirement as other transactions may be added or removed by miners,
 // but it should provide a basis for setting a reasonable default.
 func (ec *Client) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (uint64, error) {

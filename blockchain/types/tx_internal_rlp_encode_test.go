@@ -22,15 +22,16 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
+	"strings"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"strings"
-	"testing"
 )
 
 var payerKey = defaultFeePayerKey()

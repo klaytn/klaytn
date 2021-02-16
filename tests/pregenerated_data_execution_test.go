@@ -19,11 +19,12 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"runtime/pprof"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"runtime/pprof"
-	"testing"
 )
 
 const txPoolSize = 32768
@@ -55,8 +56,6 @@ func BenchmarkDataExecution_CandidateLevelDB(b *testing.B) {
 	tc := getExecutionTestDefaultTC()
 	tc.testName = "BenchmarkDataExecution_CandidateLevelDB"
 	tc.originalDataDir = candidate500LevelDB_orig
-	tc.cacheConfig.StateDBCaching = false
-	tc.cacheConfig.TxPoolStateCache = false
 
 	tc.dbc, tc.levelDBOption = genCandidateLevelDBOptions()
 
@@ -86,8 +85,6 @@ func BenchmarkDataExecution_Baobab_ControlGroup(b *testing.B) {
 
 	// ControlGroup specific setting
 	tc.numReceiversPerRun = 10000
-	tc.cacheConfig.StateDBCaching = false
-	tc.cacheConfig.TxPoolStateCache = false
 
 	dataExecutionTest(b, tc)
 }

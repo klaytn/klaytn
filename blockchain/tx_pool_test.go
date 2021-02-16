@@ -23,6 +23,13 @@ package blockchain
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"math/rand"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -31,12 +38,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"math/big"
-	"math/rand"
-	"os"
-	"testing"
-	"time"
 )
 
 // testTxPoolConfig is a transaction pool configuration without stateful disk
@@ -66,20 +67,8 @@ func (bc *testBlockChain) StateAt(common.Hash) (*state.StateDB, error) {
 	return bc.statedb, nil
 }
 
-func (bc *testBlockChain) TryGetCachedStateDB(common.Hash) (*state.StateDB, error) {
-	return bc.statedb, nil
-}
-
 func (bc *testBlockChain) SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription {
 	return bc.chainHeadFeed.Subscribe(ch)
-}
-
-func (bc *testBlockChain) GetNonceCache() common.Cache {
-	return nil
-}
-
-func (bc *testBlockChain) GetBalanceCache() common.Cache {
-	return nil
 }
 
 func transaction(nonce uint64, gaslimit uint64, key *ecdsa.PrivateKey) *types.Transaction {

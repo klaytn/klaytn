@@ -24,16 +24,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"sync/atomic"
+	"time"
+	"unsafe"
+
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"gopkg.in/olebedev/go-duktape.v3"
-	"math/big"
-	"sync/atomic"
-	"time"
-	"unsafe"
 )
 
 // bigIntegerJS is the minified version of https://github.com/peterolson/BigInteger.js.
@@ -98,18 +99,25 @@ type memoryWrapper struct {
 
 // slice returns the requested range of memory as a byte slice.
 func (mw *memoryWrapper) slice(begin, end int64) []byte {
+	if end == begin {
+		return []byte{}
+	}
+	if end < begin || begin < 0 {
+		logger.Warn("Tracer accessed out of bound memory", "offset", begin, "end", end)
+		return nil
+	}
 	if mw.memory.Len() < int(end) {
 		// TODO(karalabe): We can't js-throw from Go inside duktape inside Go. The Go
 		// runtime goes belly up https://github.com/golang/go/issues/15639.
 		logger.Warn("Tracer accessed out of bound memory", "available", mw.memory.Len(), "offset", begin, "size", end-begin)
 		return nil
 	}
-	return mw.memory.Get(begin, end-begin)
+	return mw.memory.GetCopy(begin, end-begin)
 }
 
 // getUint returns the 32 bytes at the specified address interpreted as a uint.
 func (mw *memoryWrapper) getUint(addr int64) *big.Int {
-	if mw.memory.Len() < int(addr)+32 {
+	if mw.memory.Len() < int(addr)+32 || addr < 0 {
 		// TODO(karalabe): We can't js-throw from Go inside duktape inside Go. The Go
 		// runtime goes belly up https://github.com/golang/go/issues/15639.
 		logger.Warn("Tracer accessed out of bound memory", "available", mw.memory.Len(), "offset", addr, "size", 32)
@@ -152,7 +160,7 @@ type stackWrapper struct {
 
 // peek returns the nth-from-the-top element of the stack.
 func (sw *stackWrapper) peek(idx int) *big.Int {
-	if len(sw.stack.Data()) <= idx {
+	if len(sw.stack.Data()) <= idx || idx < 0 {
 		// TODO(karalabe): We can't js-throw from Go inside duktape inside Go. The Go
 		// runtime goes belly up https://github.com/golang/go/issues/15639.
 		logger.Warn("Tracer accessed out of bound stack", "size", len(sw.stack.Data()), "index", idx)

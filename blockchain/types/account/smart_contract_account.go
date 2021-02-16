@@ -20,13 +20,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"io"
-	"math/big"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // SmartContractAccount represents a smart contract account containing

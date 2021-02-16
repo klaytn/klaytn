@@ -164,7 +164,6 @@ var FlagGroups = []FlagGroup{
 	{
 		Name: "STATE",
 		Flags: []cli.Flag{
-			StateDBCachingFlag,
 			TrieMemoryCacheSizeFlag,
 			TrieBlockIntervalFlag,
 			TriesInMemoryFlag,
@@ -177,9 +176,10 @@ var FlagGroups = []FlagGroup{
 			CacheScaleFlag,
 			CacheUsageLevelFlag,
 			MemorySizeFlag,
-			TxPoolStateCacheFlag,
 			TrieNodeCacheTypeFlag,
+			TrieNodeCacheNoPrefetchFlag,
 			TrieNodeCacheLimitFlag,
+			TrieNodeCacheSavePeriodFlag,
 			TrieNodeCacheRedisEndpointsFlag,
 			TrieNodeCacheRedisClusterFlag,
 			TrieNodeCacheRedisPublishBlockFlag,
@@ -240,6 +240,7 @@ var FlagGroups = []FlagGroup{
 			RPCCORSDomainFlag,
 			RPCVirtualHostsFlag,
 			RPCApiFlag,
+			RPCGlobalGasCap,
 			IPCDisabledFlag,
 			IPCPathFlag,
 			WSEnabledFlag,

@@ -267,7 +267,6 @@ func (n *Node) Start() error {
 	n.services = coreservices
 	n.server = p2pServer
 	n.stop = make(chan struct{})
-
 	return nil
 }
 

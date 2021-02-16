@@ -270,7 +270,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return err
 	}
 
-	stateDB, err := bcdata.bc.TryGetCachedStateDB(bcdata.bc.CurrentBlock().Root())
+	stateDB, err := bcdata.bc.StateAt(bcdata.bc.CurrentBlock().Root())
 	if err != nil {
 		return err
 	}
@@ -297,12 +297,12 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	}
 
 	// Write the block with state.
-	status, err := bcdata.bc.WriteBlockWithState(b, receipts, stateDB)
+	result, err := bcdata.bc.WriteBlockWithState(b, receipts, stateDB)
 	if err != nil {
 		return fmt.Errorf("err = %s", err)
 	}
 
-	if status == blockchain.SideStatTy {
+	if result.Status == blockchain.SideStatTy {
 		return fmt.Errorf("forked block is generated! number: %v, hash: %v, txs: %v", b.Number(), b.Hash(), len(b.Transactions()))
 	}
 
@@ -471,13 +471,11 @@ func getChainConfig(chainDB database.DBManager) (*params.ChainConfig, error) {
 // defaultCacheConfig returns cache config for data generation tests.
 func defaultCacheConfig() *blockchain.CacheConfig {
 	return &blockchain.CacheConfig{
-		StateDBCaching:   true,
-		TxPoolStateCache: true,
-		ArchiveMode:      false,
-		CacheSize:        512,
-		BlockInterval:    blockchain.DefaultBlockInterval,
-		TriesInMemory:    blockchain.DefaultTriesInMemory,
-		TrieNodeCacheConfig: statedb.TrieNodeCacheConfig{
+		ArchiveMode:   false,
+		CacheSize:     512,
+		BlockInterval: blockchain.DefaultBlockInterval,
+		TriesInMemory: blockchain.DefaultTriesInMemory,
+		TrieNodeCacheConfig: &statedb.TrieNodeCacheConfig{
 			CacheType:          statedb.CacheTypeLocal,
 			LocalCacheSizeMB:   4096,
 			FastCacheFileDir:   "",
@@ -491,7 +489,7 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 func generateGovernaceDataForTest() *governance.Governance {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 
-	return governance.NewGovernance(&params.ChainConfig{
+	return governance.NewGovernanceInitialize(&params.ChainConfig{
 		ChainID:       big.NewInt(2018),
 		UnitPrice:     25000000000,
 		DeriveShaImpl: 0,

@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
@@ -51,7 +52,7 @@ import (
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
 )
@@ -216,7 +217,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
 	logger.Info("Initialised chain configuration", "config", chainConfig)
-	governance := governance.NewGovernance(chainConfig, chainDB)
+	governance := governance.NewGovernanceInitialize(chainConfig, chainDB)
 
 	cn := &CN{
 		config:            config,
@@ -248,10 +249,9 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	var (
 		vmConfig    = config.getVMConfig()
-		cacheConfig = &blockchain.CacheConfig{StateDBCaching: config.StateDBCaching,
-			ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize, BlockInterval: config.TrieBlockInterval,
-			TriesInMemory: config.TriesInMemory, TxPoolStateCache: config.TxPoolStateCache,
-			TrieNodeCacheConfig: config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing}
+		cacheConfig = &blockchain.CacheConfig{ArchiveMode: config.NoPruning, CacheSize: config.TrieCacheSize,
+			BlockInterval: config.TrieBlockInterval, TriesInMemory: config.TriesInMemory,
+			TrieNodeCacheConfig: &config.TrieNodeCacheConfig, SenderTxHashIndexing: config.SenderTxHashIndexing}
 	)
 
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
@@ -317,21 +317,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// set worker
 	if config.WorkerDisable {
-		// TODO Klaytn: implement auto restart when the fake worker is used
 		cn.miner = work.NewFakeWorker()
 	} else {
-		var restartFn func()
-		if config.AutoRestartFlag {
-			restartFn = func() {
-				daemonPath := config.DaemonPathFlag
-				logger.Warn("Restart node", "command", daemonPath+" restart")
-				cmd := exec.Command(daemonPath, "restart")
-				cmd.Run()
-			}
-		}
-
 		// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
-		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy, config.RestartTimeOutFlag, restartFn)
+		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy)
 	}
 
 	// istanbul BFT
@@ -351,6 +340,36 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.txPool)
 	cn.addComponent(cn.APIs())
 	cn.addComponent(cn.ChainDB())
+
+	if config.AutoRestartFlag {
+		daemonPath := config.DaemonPathFlag
+		restartInterval := config.RestartTimeOutFlag
+		if restartInterval <= time.Second {
+			logger.Crit("Invalid auto-restart timeout", "timeout", restartInterval)
+		}
+
+		// Restarts the node with the same configuration if blockNumber is not changed for a specific time.
+		restartTimer := time.AfterFunc(restartInterval, func() {
+			logger.Warn("Restart node", "command", daemonPath+" restart")
+			cmd := exec.Command(daemonPath, "restart")
+			cmd.Run()
+		})
+		logger.Info("Initialize auto-restart feature", "timeout", restartInterval)
+
+		go func() {
+			blockChecker := time.NewTicker(time.Second)
+			prevBlockNum := cn.blockchain.CurrentBlock().NumberU64()
+
+			for range blockChecker.C {
+				currentBlockNum := cn.blockchain.CurrentBlock().NumberU64()
+
+				if prevBlockNum != currentBlockNum {
+					prevBlockNum = currentBlockNum
+					restartTimer.Reset(restartInterval)
+				}
+			}
+		}()
+	}
 
 	// Only for KES nodes
 	if config.TrieNodeCacheConfig.RedisSubscribeBlockEnable {

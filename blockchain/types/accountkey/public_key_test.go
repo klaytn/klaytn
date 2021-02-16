@@ -18,11 +18,12 @@ package accountkey
 
 import (
 	"encoding/json"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestPublicKeyRLP tests RLP encoding/decoding of PublicKeySerializable.

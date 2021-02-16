@@ -25,14 +25,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // PublicTransactionPoolAPI exposes methods for the RPC interface
@@ -108,14 +109,6 @@ func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, addr
 	if blockNr == rpc.PendingBlockNumber {
 		nonce := s.b.GetPoolNonce(ctx, address)
 		return (*hexutil.Uint64)(&nonce), nil
-	}
-
-	// Ask NonceCache for the nonce if blockNumber is lastestBlockNumber
-	if blockNr == rpc.LatestBlockNumber {
-		nonce, ok := s.b.GetNonceInCache(address)
-		if ok {
-			return (*hexutil.Uint64)(&nonce), nil
-		}
 	}
 
 	// Resolve block number and use its state to ask for the nonce
@@ -458,19 +451,24 @@ func (s *PublicTransactionPoolAPI) SignTransactionAsFeePayer(ctx context.Context
 	return &SignTransactionResult{data, feePayerSignedTx}, nil
 }
 
-// PendingTransactions returns the transactions that are in the transaction pool and have a from address that is one of
-// the accounts this node manages.
+// PendingTransactions returns the transactions that are in the transaction pool
+// and have a from address that is one of the accounts this node manages.
 func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface{}, error) {
 	pending, err := s.b.GetPoolTransactions()
 	if err != nil {
 		return nil, err
 	}
-
+	accounts := make(map[common.Address]struct{})
+	for _, wallet := range s.b.AccountManager().Wallets() {
+		for _, account := range wallet.Accounts() {
+			accounts[account.Address] = struct{}{}
+		}
+	}
 	transactions := make([]map[string]interface{}, 0, len(pending))
 	for _, tx := range pending {
 		signer := types.NewEIP155Signer(tx.ChainId())
 		from, _ := types.Sender(signer, tx)
-		if _, err := s.b.AccountManager().Find(accounts.Account{Address: from}); err == nil {
+		if _, exists := accounts[from]; exists {
 			transactions = append(transactions, newRPCPendingTransaction(tx))
 		}
 	}

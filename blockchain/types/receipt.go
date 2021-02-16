@@ -22,12 +22,13 @@ package types
 
 import (
 	"fmt"
+	"io"
+	"unsafe"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"io"
-	"unsafe"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 //go:generate gencodec -type Receipt -field-override receiptMarshaling -out gen_receipt_json.go

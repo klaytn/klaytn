@@ -516,7 +516,7 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 	err := srv.setupConn(c, flags, dialDest)
 	if err != nil {
 		c.close(err)
-		srv.logger.Trace("Setting up connection failed", "id", c.id, "err", err)
+		srv.logger.Trace("close connection", "id", c.id, "err", err)
 	}
 	return err
 }
@@ -571,14 +571,15 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 	}
 	c.caps, c.name, c.multiChannel = phs.Caps, phs.Name, phs.Multichannel
 
-	if c.multiChannel && dialDest != nil && (dialDest.TCPs == nil || len(dialDest.TCPs) == 0) && len(phs.ListenPort) == 2 {
+	if c.multiChannel && dialDest != nil && (dialDest.TCPs == nil || len(dialDest.TCPs) < 2) && len(dialDest.TCPs) < len(phs.ListenPort) {
+		logger.Debug("[Dial] update and retry the dial candidate as a multichannel",
+			"id", dialDest.ID, "addr", dialDest.IP, "previous", dialDest.TCPs, "new", phs.ListenPort)
+
 		dialDest.TCPs = make([]uint16, 0, len(phs.ListenPort))
 		for _, listenPort := range phs.ListenPort {
 			dialDest.TCPs = append(dialDest.TCPs, uint16(listenPort))
 		}
-		srv.AddPeer(dialDest)
-		logger.Info("[Dial] Try to update dial candidate with a multichannel peer", "id", dialDest.ID, "addr", dialDest.IP, "port", dialDest.TCPs)
-		return nil
+		return errUpdateDial
 	}
 
 	err = srv.checkpoint(c, srv.addpeer)

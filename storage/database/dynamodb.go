@@ -27,22 +27,20 @@ package database
 
 import (
 	"bytes"
-	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-
-	"github.com/rcrowley/go-metrics"
-
-	"github.com/pkg/errors"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
+	"github.com/pkg/errors"
+	"github.com/rcrowley/go-metrics"
 )
 
 var overSizedDataPrefix = []byte("oversizeditem")
@@ -59,6 +57,7 @@ var noTableNameErr = errors.New("dynamoDB table name not provided")
 const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB including attribute names and values
 const dynamoBatchSize = 25
 const dynamoMaxRetry = 5
+const dynamoTimeout = 10 * time.Second
 
 // batch write
 const WorkerNum = 10
@@ -74,7 +73,7 @@ var (
 type DynamoDBConfig struct {
 	TableName          string
 	Region             string // AWS region
-	Endpoint           string // Where DynamoDB reside
+	Endpoint           string // Where DynamoDB reside (Used to specify the localstack endpoint on the test)
 	S3Endpoint         string // Where S3 reside
 	IsProvisioned      bool   // Billing mode
 	ReadCapacityUnits  int64  // read capacity when provisioned
@@ -96,8 +95,8 @@ type dynamoDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 
 	// metrics
-	getTimeMeter metrics.Meter
-	putTimeMeter metrics.Meter
+	getTimer metrics.Timer
+	putTimer metrics.Timer
 }
 
 type DynamoData struct {
@@ -114,31 +113,13 @@ type DynamoData struct {
 func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
-		Endpoint:           "https://dynamodb.ap-northeast-2.amazonaws.com",
+		Endpoint:           "", // nil or "" means the default generated endpoint
 		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
 		IsProvisioned:      false,
 		ReadCapacityUnits:  10000,
 		WriteCapacityUnits: 10000,
 		ReadOnly:           false,
 		PerfCheck:          true,
-	}
-}
-
-// GetTestDynamoConfig gets dynamo config for local test
-//
-// Please Run DynamoDB local with docker
-//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
-func GetTestDynamoConfig() *DynamoDBConfig {
-	return &DynamoDBConfig{
-		Region:             "us-east-1",
-		Endpoint:           "http://localhost:4566",
-		S3Endpoint:         "http://localhost:4566",
-		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
-		IsProvisioned:      false,
-		ReadCapacityUnits:  10000,
-		WriteCapacityUnits: 10000,
-		ReadOnly:           false,
-		PerfCheck:          false,
 	}
 }
 
@@ -158,12 +139,6 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if len(config.TableName) == 0 {
 		return nil, noTableNameErr
 	}
-	if len(config.Endpoint) == 0 {
-		config.Endpoint = "https://dynamodb." + config.Region + ".amazonaws.com"
-	}
-	if len(config.S3Endpoint) == 0 {
-		config.S3Endpoint = "https://s3." + config.Region + ".amazonaws.com"
-	}
 
 	config.TableName = strings.ReplaceAll(config.TableName, "_", "-")
 
@@ -179,6 +154,8 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 				Endpoint:         aws.String(config.Endpoint),
 				Region:           aws.String(config.Region),
 				S3ForcePathStyle: aws.Bool(true),
+				MaxRetries:       aws.Int(dynamoMaxRetry),
+				HTTPClient:       &http.Client{Timeout: dynamoTimeout}, // default client is &http.Client{}
 			},
 		})))
 	}
@@ -199,8 +176,7 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 				return nil, err
 			}
 
-			dynamoDB.logger.Warn("creating a DynamoDB table. You will be CHARGED until the DB is deleted",
-				"endPoint", config.Endpoint)
+			dynamoDB.logger.Warn("creating a DynamoDB table. You will be CHARGED until the DB is deleted")
 			if err := dynamoDB.createTable(); err != nil {
 				dynamoDB.logger.Error("unable to create a DynamoDB table", "err", err.Error())
 				return nil, err
@@ -214,10 +190,10 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 				dynamoOpenedDBNum++
 				// create workers on the first successful table creation
 				dynamoOnceWorker.Do(func() {
-					createBatchWriteWorkerPool(config.Endpoint, config.Region)
+					createBatchWriteWorkerPool()
 				})
 			}
-			dynamoDB.logger.Info("successfully created dynamoDB session", "endPoint", config.Endpoint)
+			dynamoDB.logger.Info("successfully created dynamoDB session")
 			return dynamoDB, nil
 		case dynamodb.TableStatusDeleting, dynamodb.TableStatusArchiving, dynamodb.TableStatusArchived:
 			return nil, errors.New("failed to get DynamoDB table, table status : " + tableStatus)
@@ -301,7 +277,7 @@ func (dynamo *dynamoDB) Put(key []byte, val []byte) error {
 	if dynamo.config.PerfCheck {
 		start := time.Now()
 		err := dynamo.put(key, val)
-		dynamo.putTimeMeter.Mark(int64(time.Since(start)))
+		dynamo.putTimer.Update(time.Since(start))
 		return err
 	}
 	return dynamo.put(key, val)
@@ -333,7 +309,7 @@ func (dynamo *dynamoDB) put(key []byte, val []byte) error {
 
 	_, err = dynamoDBClient.PutItem(params)
 	if err != nil {
-		fmt.Printf("Put ERROR: %v\n", err.Error())
+		dynamo.logger.Error("failed to put an item", "err", err, "key", hexutil.Encode(data.Key))
 		return err
 	}
 
@@ -353,7 +329,7 @@ func (dynamo *dynamoDB) Get(key []byte) ([]byte, error) {
 	if dynamo.config.PerfCheck {
 		start := time.Now()
 		val, err := dynamo.get(key)
-		dynamo.getTimeMeter.Mark(int64(time.Since(start)))
+		dynamo.getTimer.Update(time.Since(start))
 		return val, err
 	}
 	return dynamo.get(key)
@@ -372,7 +348,7 @@ func (dynamo *dynamoDB) get(key []byte) ([]byte, error) {
 
 	result, err := dynamoDBClient.GetItem(params)
 	if err != nil {
-		fmt.Printf("Get ERROR: %v\n", err.Error())
+		dynamo.logger.Error("failed to get an item", "err", err, "key", hexutil.Encode(key))
 		return nil, err
 	}
 
@@ -409,7 +385,7 @@ func (dynamo *dynamoDB) Delete(key []byte) error {
 
 	_, err := dynamoDBClient.DeleteItem(params)
 	if err != nil {
-		fmt.Printf("ERROR: %v\n", err.Error())
+		dynamo.logger.Error("failed to delete an item", "err", err, "key", hexutil.Encode(key))
 		return err
 	}
 	return nil
@@ -425,27 +401,17 @@ func (dynamo *dynamoDB) Close() {
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
-	dynamo.getTimeMeter = metrics.NewRegisteredMeter(prefix+"get/time", nil)
-	dynamo.putTimeMeter = metrics.NewRegisteredMeter(prefix+"put/time", nil)
+	dynamo.getTimer = metrics.NewRegisteredTimer(prefix+"get/time", nil)
+	dynamo.putTimer = metrics.NewRegisteredTimer(prefix+"put/time", nil)
 	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 }
 
-func (dynamo *dynamoDB) NewIterator() Iterator {
+func (dynamo *dynamoDB) NewIterator(prefix []byte, start []byte) Iterator {
 	// TODO-Klaytn: implement this later.
 	return nil
 }
 
-func (dynamo *dynamoDB) NewIteratorWithStart(start []byte) Iterator {
-	// TODO-Klaytn: implement this later.
-	return nil
-}
-
-func (dynamo *dynamoDB) NewIteratorWithPrefix(prefix []byte) Iterator {
-	// TODO-Klaytn: implement this later.
-	return nil
-}
-
-func createBatchWriteWorkerPool(endpoint, region string) {
+func createBatchWriteWorkerPool() {
 	dynamoWriteCh = make(chan *batchWriteWorkerInput, itemChanSize)
 	for i := 0; i < WorkerNum; i++ {
 		go createBatchWriteWorker(dynamoWriteCh)
@@ -576,6 +542,12 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 	return nil
 }
 
+// Delete inserts the a key removal into the batch for later committing.
+func (batch *dynamoBatch) Delete(key []byte) error {
+	logger.CritWithStack("Delete should not be called when using dynamodb batch")
+	return nil
+}
+
 func (batch *dynamoBatch) Write() error {
 	var writeRequest []*dynamodb.WriteRequest
 	numRemainedItems := len(batch.batchItems)
@@ -604,4 +576,9 @@ func (batch *dynamoBatch) Reset() {
 	batch.batchItems = []*dynamodb.WriteRequest{}
 	batch.keyMap = map[string]struct{}{}
 	batch.size = 0
+}
+
+func (batch *dynamoBatch) Replay(w KeyValueWriter) error {
+	logger.CritWithStack("Replay should not be called when using dynamodb batch")
+	return nil
 }

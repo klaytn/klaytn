@@ -22,11 +22,12 @@ package sc
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/node/sc/bridgepool"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"os"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/node/sc/bridgepool"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 var (

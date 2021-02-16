@@ -20,14 +20,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/otiai10/copy"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 	"math/big"
 	"math/rand"
 	"os"
@@ -37,6 +29,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
+	"github.com/otiai10/copy"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 func init() {
@@ -217,8 +218,6 @@ func BenchmarkDataGeneration_CandidateLevelDB(b *testing.B) {
 	tc := getGenerationTestDefaultTC()
 	tc.testName = "BenchmarkDataGeneration_CandidateLevelDB"
 	tc.originalDataDir = candidate500LevelDB_orig
-	tc.cacheConfig.StateDBCaching = false
-	tc.cacheConfig.TxPoolStateCache = false
 
 	tc.cacheConfig = defaultCacheConfig()
 
