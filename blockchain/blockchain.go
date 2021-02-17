@@ -288,6 +288,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		bc.wg.Add(1)
 		go bc.prefetchTxWorker(i)
 	}
+	logger.Info("prefetchTxWorkers are started", "num", bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker)
 
 	// Take ownership of this particular state
 	go bc.update()
@@ -314,7 +315,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 func (bc *BlockChain) prefetchTxWorker(index int) {
 	defer bc.wg.Done()
 
-	logger.Info("prefetchTxWorker is started", "num", index)
+	logger.Debug("prefetchTxWorker is started", "index", index)
 	for followup := range bc.prefetchTxCh {
 		stateDB, err := state.New(bc.CurrentBlock().Root(), bc.stateCache)
 		if err != nil {
@@ -323,7 +324,7 @@ func (bc *BlockChain) prefetchTxWorker(index int) {
 		}
 		bc.prefetcher.PrefetchTx(followup.block, followup.ti, stateDB, bc.vmConfig, followup.followupInterrupt)
 	}
-	logger.Info("prefetchTxWorker is terminated", "num", index)
+	logger.Debug("prefetchTxWorker is terminated", "index", index)
 }
 
 // SetCanonicalBlock resets the canonical as the block with the given block number.
