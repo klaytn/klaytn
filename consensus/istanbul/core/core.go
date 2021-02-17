@@ -304,7 +304,7 @@ func (c *core) catchUpRound(view *istanbul.View) {
 	c.roundChangeSet.Clear(view.Round)
 
 	c.newRoundChangeTimer()
-	logger.Warn("[RC] Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.valSet)
+	logger.Warn("[RC] Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.valSet.GetProposer())
 }
 
 // updateRoundState updates round state by checking if locking block is necessary
