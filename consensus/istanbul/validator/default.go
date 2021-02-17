@@ -21,13 +21,14 @@
 package validator
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
 	"math"
 	"reflect"
 	"sort"
 	"sync"
 	"sync/atomic"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 )
 
 const (
@@ -57,6 +58,7 @@ func (val *defaultValidator) Hash() int64 {
 func (val *defaultValidator) RewardAddress() common.Address { return common.Address{} }
 func (val *defaultValidator) VotingPower() uint64           { return 1000 }
 func (val *defaultValidator) Weight() uint64                { return 0 }
+func (val *defaultValidator) HasMinStaking() bool           { return true }
 
 type defaultSet struct {
 	subSize uint64

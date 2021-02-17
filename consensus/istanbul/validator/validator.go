@@ -96,7 +96,7 @@ func SelectRandomCommittee(validators []istanbul.Validator, committeeSize uint64
 
 	// ensure committeeSize and proposer indexes are valid
 	validatorSize := len(validators)
-	if validatorSize < int(committeeSize) || validatorSize < proposerIdx || validatorSize < nextProposerIdx {
+	if validatorSize < int(committeeSize) || validatorSize <= proposerIdx || validatorSize <= nextProposerIdx {
 		logger.Error("invalid committee size or validator indexes", "validatorSize", validatorSize,
 			"committeeSize", committeeSize, "proposerIdx", proposerIdx, "nextProposerIdx", nextProposerIdx)
 		return nil
@@ -111,6 +111,11 @@ func SelectRandomCommittee(validators []istanbul.Validator, committeeSize uint64
 		return []istanbul.Validator{validators[proposerIdx]}
 	}
 
+	if !validators[proposerIdx].HasMinStaking() || !validators[nextProposerIdx].HasMinStaking() {
+		logger.Error("proposer and nextProposer must have enough staking amount", "proposer", validators[proposerIdx].Address(), "nextProposer", validators[nextProposerIdx].Address())
+		return nil
+	}
+
 	// first committee is the proposer and the second committee is the next proposer
 	committee := make([]istanbul.Validator, committeeSize)
 	committee[0] = validators[proposerIdx]
@@ -122,20 +127,28 @@ func SelectRandomCommittee(validators []istanbul.Validator, committeeSize uint64
 	indexs := make([]int, pickSize)
 	idx := 0
 	for i := 0; i < validatorSize; i++ {
-		if i != proposerIdx && i != nextProposerIdx {
+		if i != proposerIdx && i != nextProposerIdx && validators[i].HasMinStaking() {
 			indexs[idx] = i
 			idx++
 		}
+	}
+	if idx < pickSize {
+		pickSize = idx
+		indexs = indexs[:idx]
 	}
 
 	for i := 0; i < pickSize; i++ {
 		randIndex := picker.Intn(pickSize)
 		indexs[i], indexs[randIndex] = indexs[randIndex], indexs[i]
 	}
-
-	for i := uint64(0); i < committeeSize-2; i++ {
+	// add the rest of committee except for the proposer and the next proposer
+	rest := int(committeeSize) - 2
+	if pickSize < rest {
+		rest = pickSize
+	}
+	for i := 0; i < rest; i++ {
 		committee[i+2] = validators[indexs[i]]
 	}
 
-	return committee
+	return committee[:rest+2]
 }

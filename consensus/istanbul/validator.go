@@ -21,8 +21,9 @@
 package istanbul
 
 import (
-	"github.com/klaytn/klaytn/common"
 	"strings"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 type Validator interface {
@@ -35,6 +36,7 @@ type Validator interface {
 	RewardAddress() common.Address
 	VotingPower() uint64
 	Weight() uint64
+	HasMinStaking() bool
 }
 
 // ----------------------------------------------------------------------------

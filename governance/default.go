@@ -909,6 +909,9 @@ func (gov *Governance) ReadGovernanceState() {
 	gov.UnmarshalJSON(b)
 	params.SetStakingUpdateInterval(gov.StakingUpdateInterval())
 	params.SetProposerUpdateInterval(gov.ProposerUpdateInterval())
+	if minimumStakingAmount, ok := new(big.Int).SetString(gov.MinimumStake(), 10); ok {
+		params.SetMinimumStakingAmount(minimumStakingAmount)
+	}
 
 	if txGasHumanReadable, ok := gov.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
 		params.TxGasHumanReadable = txGasHumanReadable.(uint64)

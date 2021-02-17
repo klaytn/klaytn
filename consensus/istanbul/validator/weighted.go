@@ -45,6 +45,7 @@ type weightedValidator struct {
 	rewardAddress atomic.Value
 	votingPower   uint64 // TODO-Klaytn-Issue1336 This should be updated for governance implementation
 	weight        uint64
+	hasMinStaking bool // TODO-Klaytn-governance use atomic value if necessary
 }
 
 func (val *weightedValidator) Address() common.Address {
@@ -83,11 +84,16 @@ func (val *weightedValidator) Weight() uint64 {
 	return atomic.LoadUint64(&val.weight)
 }
 
+func (val *weightedValidator) HasMinStaking() bool {
+	return val.hasMinStaking
+}
+
 func newWeightedValidator(addr common.Address, reward common.Address, votingpower uint64, weight uint64) istanbul.Validator {
 	weightedValidator := &weightedValidator{
-		address:     addr,
-		votingPower: votingpower,
-		weight:      weight,
+		address:       addr,
+		votingPower:   votingpower,
+		weight:        weight,
+		hasMinStaking: true,
 	}
 	weightedValidator.SetRewardAddress(reward)
 	return weightedValidator
@@ -647,6 +653,11 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 		}
 	}
 
+	for vIdx, val := range weightedValidators {
+		minimumStakingAmount := float64(params.MinimumStakingAmount().Uint64())
+		val.hasMinStaking = stakingAmounts[vIdx] >= minimumStakingAmount
+	}
+
 	logger.Debug("stakingAmounts of validators", "validators", weightedValidators, "stakingAmounts", stakingAmounts)
 	return weightedValidators, stakingAmounts, nil
 }
@@ -708,6 +719,9 @@ func (valSet *weightedCouncil) refreshProposers(seed int64, blockNum uint64) {
 	var candidateValsIdx []int // This is a slice which stores index of validator. it is used for shuffling
 
 	for index, val := range valSet.validators {
+		if !val.HasMinStaking() {
+			continue
+		}
 		weight := val.Weight()
 		for i := uint64(0); i < weight; i++ {
 			candidateValsIdx = append(candidateValsIdx, index)

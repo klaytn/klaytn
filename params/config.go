@@ -342,6 +342,12 @@ func (c *ChainConfig) SetDefaults() {
 		logger.Warn("Override the default proposer update interval to the chain config", "interval",
 			c.Governance.Reward.ProposerUpdateInterval)
 	}
+
+	if c.Governance.Reward.MinimumStake.Cmp(common.Big0) == 0 {
+		c.Governance.Reward.MinimumStake = MinimumStakingAmount()
+		logger.Warn("Override the default minimum staking amount to the chain config", "amount",
+			c.Governance.Reward.MinimumStake)
+	}
 }
 
 // isForkIncompatible returns true if a fork scheduled at s1 cannot be rescheduled to
