@@ -30,11 +30,11 @@ import (
 
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1
 func (c *core) sendNextRoundChange(loc string) {
-	cv := c.currentView()
-	if c.backend.NodeType() == common.CONSENSUSNODE {
-		logger.Warn("[RC] sendNextRoundChange happened", "where", loc)
+	if c.backend.NodeType() != common.CONSENSUSNODE {
+		return
 	}
-	c.sendRoundChange(new(big.Int).Add(cv.Round, common.Big1))
+	logger.Warn("[RC] sendNextRoundChange happened", "where", loc)
+	c.sendRoundChange(new(big.Int).Add(c.currentView().Round, common.Big1))
 }
 
 // sendRoundChange sends the ROUND CHANGE message with the given round
