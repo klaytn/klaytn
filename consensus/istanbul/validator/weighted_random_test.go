@@ -17,10 +17,6 @@
 package validator
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -29,6 +25,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -490,5 +491,45 @@ func TestWeightedCouncil_Copy(t *testing.T) {
 		t.Errorf("validators. original : %v, Copied : %v", valSet.validators, copiedValSet.validators)
 		t.Errorf("proposers. original : %v, Copied : %v", valSet.proposers, copiedValSet.proposers)
 		t.Errorf("staking. original : %v, Copied : %v", valSet.stakingInfo, copiedValSet.stakingInfo)
+	}
+}
+
+func setPoorValidators(validators []istanbul.Validator, indices ...int) {
+	for _, idx := range indices {
+		wv, _ := validators[idx].(*weightedValidator)
+		wv.hasMinStaking = false
+	}
+}
+
+func isPoorValidator(v istanbul.Validator, validators []istanbul.Validator, indices []int) bool {
+	for _, idx := range indices {
+		if validators[idx] == v {
+			return true
+		}
+	}
+	return false
+}
+
+func TestWeightedCouncil_RefreshWithPoorValidators(t *testing.T) {
+	type testcase struct {
+		indices []int
+	}
+
+	testcases := []testcase{
+		{[]int{0, 1, 2, 3}},
+		{[]int{0, 2, 4, 5}},
+		{[]int{10}},
+		{[]int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}},
+		{[]int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}},
+	}
+
+	for _, tc := range testcases {
+		valSet := makeTestWeightedCouncil(testNonZeroWeights)
+		setPoorValidators(valSet.validators, tc.indices...)
+		runRefreshForTest(valSet)
+
+		for _, proposer := range valSet.proposers {
+			assert.False(t, isPoorValidator(proposer, valSet.validators, tc.indices))
+		}
 	}
 }

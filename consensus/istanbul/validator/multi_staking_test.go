@@ -35,11 +35,14 @@ NodeAddress of additional staking contract : begin with 9
 package validator
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func newTestWeightedCouncil(nodeAddrs []common.Address) *weightedCouncil {
@@ -57,7 +60,9 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 	testCases := []struct {
 		validators             []common.Address
 		stakingInfo            *reward.StakingInfo
+		minimumStaking         int64
 		expectedStakingAmounts []float64
+		expectedHasMinStaking  []bool
 	}{
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
@@ -66,7 +71,9 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203")},
 				CouncilStakingAmounts: []uint64{10000000, 5000000, 5000000},
 			},
+			5000001,
 			[]float64{10000000, 5000000, 5000000},
+			[]bool{true, false, false},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103")},
@@ -75,7 +82,9 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203")},
 				CouncilStakingAmounts: []uint64{7000000, 5000000, 10000000},
 			},
+			7000000,
 			[]float64{7000000, 5000000, 10000000},
+			[]bool{true, false, true},
 		},
 		{
 			[]common.Address{common.StringToAddress("101"), common.StringToAddress("102"), common.StringToAddress("103"), common.StringToAddress("104")},
@@ -84,7 +93,9 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("201")},
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000},
 			},
+			5000000,
 			[]float64{10000000, 5000000, 5000000, 5000000},
+			[]bool{true, true, true, true},
 		},
 		{
 			[]common.Address{common.StringToAddress("104"), common.StringToAddress("103"), common.StringToAddress("102"), common.StringToAddress("101")},
@@ -93,18 +104,21 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 				CouncilRewardAddrs:    []common.Address{common.StringToAddress("201"), common.StringToAddress("202"), common.StringToAddress("203"), common.StringToAddress("204"), common.StringToAddress("201"), common.StringToAddress("202")},
 				CouncilStakingAmounts: []uint64{5000000, 5000000, 5000000, 5000000, 5000000, 5000000},
 			},
+			10000000,
 			[]float64{10000000, 10000000, 5000000, 5000000},
+			[]bool{true, true, false, false},
 		},
 	}
 	for _, testCase := range testCases {
 		council := newTestWeightedCouncil(testCase.validators)
-
+		params.SetMinimumStakingAmount(new(big.Int).SetInt64(testCase.minimumStaking))
 		weightedValidators, stakingAmounts, err := council.getStakingAmountsOfValidators(testCase.stakingInfo)
 
 		assert.NoError(t, err)
 		assert.Equal(t, len(testCase.validators), len(weightedValidators))
-		for _, validator := range weightedValidators {
+		for idx, validator := range weightedValidators {
 			assert.Contains(t, testCase.validators, validator.address)
+			assert.Equal(t, testCase.expectedHasMinStaking[idx], validator.hasMinStaking)
 		}
 		assert.Equal(t, testCase.expectedStakingAmounts, stakingAmounts)
 	}
