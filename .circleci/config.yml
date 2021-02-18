@@ -540,7 +540,6 @@ workflows:
             - test-others
             - tag-verify
             - tagger-verify
-            - test-linter
           filters: *filter-version-not-release
 
       - tag-verify:
