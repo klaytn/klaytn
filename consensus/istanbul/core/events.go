@@ -32,5 +32,5 @@ type backlogEvent struct {
 }
 
 type timeoutEvent struct {
-	view *istanbul.View
+	nextView *istanbul.View
 }

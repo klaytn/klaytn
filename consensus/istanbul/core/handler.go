@@ -123,15 +123,15 @@ func (c *core) handleEvents() {
 			}
 		case ev, ok := <-c.timeoutSub.Chan():
 			if !ok || ev.Data == nil {
-				logger.Warn("Invalid message from timeout channel")
+				logger.Warn("Drop an invalid message from timeout channel")
 				return
 			}
 			data, ok := ev.Data.(timeoutEvent)
-			if !ok || data.view == nil {
+			if !ok || data.nextView == nil {
 				logger.Warn("Invalid message type from timeout channel", "msg", ev.Data)
 				return
 			}
-			c.handleTimeoutMsg(data.view)
+			c.handleTimeoutMsg(data.nextView)
 		case event, ok := <-c.finalCommittedSub.Chan():
 			if !ok {
 				return
@@ -199,23 +199,23 @@ func (c *core) handleCheckedMsg(msg *message, src istanbul.Validator) error {
 	return errInvalidMessage
 }
 
-func (c *core) handleTimeoutMsg(view *istanbul.View) {
-	// TODO-Klaytn-Istanbul: Check whether this statement is required. EN/PN should not handle consensus msgs.
+func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
+	// TODO-Klaytn-Istanbul: EN/PN should not handle consensus msgs.
 	if c.backend.NodeType() != common.CONSENSUSNODE {
-		logger.Warn("This is not consensus node, but received an istanbul timeout message",
+		logger.Trace("PN/EN doesn't need to handle timeout messages",
 			"nodeType", c.backend.NodeType().String())
 		return
 	}
 
 	lastProposal, _ := c.backend.LastProposal()
 	if lastProposal == nil {
-		logger.Error("Cannot find the last proposal")
+		logger.Error("Received timeout message but can't find the last proposal", "msgView", nextView.String())
 		return
 	}
 
-	if lastProposal.Number().Cmp(view.Sequence) >= 0 {
+	if lastProposal.Number().Cmp(nextView.Sequence) >= 0 {
 		logger.Debug("This timeoutMsg is outdated",
-			"blockNumber", lastProposal.Number().Uint64(), "msgView", view.String())
+			"blockNumber", lastProposal.Number().Uint64(), "msgView", nextView.String())
 		return
 	}
 
@@ -235,6 +235,6 @@ func (c *core) handleTimeoutMsg(view *istanbul.View) {
 		c.logger.Trace("round change timeout, catch up latest sequence", "number", lastProposal.Number().Uint64())
 		c.startNewRound(common.Big0)
 	} else {
-		c.sendRoundChange(view.Round)
+		c.sendRoundChange(nextView.Round)
 	}
 }
