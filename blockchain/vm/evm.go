@@ -65,11 +65,6 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
 		precompiles := PrecompiledContractsCypress
 		if p := precompiles[*contract.CodeAddr]; p != nil {
-			var (
-				ret             []byte
-				computationCost uint64
-				err             error
-			)
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
 			//var startTime time.Time
@@ -77,16 +72,7 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 			//	startTime = time.Now()
 			//}
 			///////////////////////////////////////////////////////
-			switch *contract.CodeAddr {
-			case vmLogAddress:
-				ret, computationCost, err = RunVMLogContract(p, input, contract, evm)
-			case feePayerAddress:
-				ret, computationCost, err = RunFeePayerContract(p, input, contract)
-			case validateSenderAddress:
-				ret, computationCost, err = RunValidateSenderContract(p, input, contract, evm.StateDB)
-			default:
-				ret, computationCost, err = RunPrecompiledContract(p, input, contract) // TODO-Klaytn-Issue615
-			}
+			ret, computationCost, err := RunPrecompiledContract(p, input, contract, evm) // TODO-Klaytn-Issue615
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
 			//if opDebug {
@@ -187,7 +173,7 @@ func NewEVM(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmCon
 		vmConfig.Tracer = NewInternalTxTracer()
 	}
 
-	evm.interpreter = NewInterpreter(evm, vmConfig)
+	evm.interpreter = NewEVMInterpreter(evm, vmConfig)
 	return evm
 }
 
@@ -252,7 +238,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	// However, it does not create a contract account since `Call` is not proper method to create a contract.
 	if !evm.StateDB.Exist(addr) {
 		if value.Sign() == 0 {
-			// Calling a non-existing account (probably contract), don't do antything, but ping the tracer
+			// Calling a non-existing account (probably contract), don't do anything, but ping the tracer
 			if evm.vmConfig.Debug && evm.depth == 0 {
 				evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
 				evm.vmConfig.Tracer.CaptureEnd(ret, 0, 0, nil)

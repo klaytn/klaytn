@@ -56,38 +56,33 @@ type PrecompiledContract interface {
 	GetRequiredGasAndComputationCost(input []byte) (uint64, uint64)
 
 	// Run runs the precompiled contract
-	Run(input []byte) ([]byte, error)
+	// contract, evm is only exists in klaytn, those are not used in go-ethereum
+	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error)
 }
 
-// vmLogAddress is the address of precompiled contract vmLog.
-var vmLogAddress = common.BytesToAddress([]byte{9})
-
-// feePayerAddress is the address of precompiled contract feePayer.
-var feePayerAddress = common.BytesToAddress([]byte{10})
-
-// validateSenderAddress is the address of precompiled contract ValidateSender.
-var validateSenderAddress = common.BytesToAddress([]byte{11})
-
-// PrecompiledContractsCypress contains the default set of pre-compiled contracts.
+// PrecompiledContractsCypress contains the default set of pre-compiled Klaytn
+// contracts used in the Cypress release.
 var PrecompiledContractsCypress = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}): &ecrecover{},
-	common.BytesToAddress([]byte{2}): &sha256hash{},
-	common.BytesToAddress([]byte{3}): &ripemd160hash{},
-	common.BytesToAddress([]byte{4}): &dataCopy{},
-	common.BytesToAddress([]byte{5}): &bigModExp{},
-	common.BytesToAddress([]byte{6}): &bn256Add{},
-	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
-	common.BytesToAddress([]byte{8}): &bn256Pairing{},
-	vmLogAddress:                     &vmLog{},
-	feePayerAddress:                  &feePayer{},
-	validateSenderAddress:            &precompiledValidateSender{},
+	common.BytesToAddress([]byte{1}):  &ecrecover{},
+	common.BytesToAddress([]byte{2}):  &sha256hash{},
+	common.BytesToAddress([]byte{3}):  &ripemd160hash{},
+	common.BytesToAddress([]byte{4}):  &dataCopy{},
+	common.BytesToAddress([]byte{5}):  &bigModExp{},
+	common.BytesToAddress([]byte{6}):  &bn256Add{},
+	common.BytesToAddress([]byte{7}):  &bn256ScalarMul{},
+	common.BytesToAddress([]byte{8}):  &bn256Pairing{},
+	common.BytesToAddress([]byte{9}):  &vmLog{},
+	common.BytesToAddress([]byte{10}): &feePayer{},
+	common.BytesToAddress([]byte{11}): &validateSender{},
 }
+
+// TODO-IncompatibleChange: define PrecompiledContracts set for first incompatible change
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
-func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract) (ret []byte, computationCost uint64, err error) {
+func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) (ret []byte, computationCost uint64, err error) {
 	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
 	if contract.UseGas(gas) {
-		ret, err := p.Run(input)
+		ret, err = p.Run(input, contract, evm)
 		return ret, computationCost, err
 	}
 	return nil, computationCost, kerrors.ErrOutOfGas
@@ -100,7 +95,7 @@ func (c *ecrecover) GetRequiredGasAndComputationCost(input []byte) (uint64, uint
 	return params.EcrecoverGas, params.EcrecoverComputationCost
 }
 
-func (c *ecrecover) Run(input []byte) ([]byte, error) {
+func (c *ecrecover) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	const ecRecoverInputLength = 128
 
 	input = common.RightPadBytes(input, ecRecoverInputLength)
@@ -145,7 +140,7 @@ func (c *sha256hash) GetRequiredGasAndComputationCost(input []byte) (uint64, uin
 	return n32Bytes*params.Sha256PerWordGas + params.Sha256BaseGas,
 		n32Bytes*params.Sha256PerWordComputationCost + params.Sha256BaseComputationCost
 }
-func (c *sha256hash) Run(input []byte) ([]byte, error) {
+func (c *sha256hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	h := sha256.Sum256(input)
 	return h[:], nil
 }
@@ -164,7 +159,7 @@ func (c *ripemd160hash) GetRequiredGasAndComputationCost(input []byte) (uint64, 
 	return n32Bytes*params.Ripemd160PerWordGas + params.Ripemd160BaseGas,
 		n32Bytes*params.Ripemd160PerWordComputationCost + params.Ripemd160BaseComputationCost
 }
-func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
+func (c *ripemd160hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	ripemd := ripemd160.New()
 	ripemd.Write(input)
 	return common.LeftPadBytes(ripemd.Sum(nil), 32), nil
@@ -183,7 +178,7 @@ func (c *dataCopy) GetRequiredGasAndComputationCost(input []byte) (uint64, uint6
 	return n32Bytes*params.IdentityPerWordGas + params.IdentityBaseGas,
 		n32Bytes*params.IdentityPerWordComputationCost + params.IdentityBaseComputationCost
 }
-func (c *dataCopy) Run(in []byte) ([]byte, error) {
+func (c *dataCopy) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return in, nil
 }
 
@@ -265,7 +260,7 @@ func (c *bigModExp) GetRequiredGasAndComputationCost(input []byte) (uint64, uint
 	return gas.Uint64(), (gas.Uint64() / 100) + params.BigModExpBaseComputationCost
 }
 
-func (c *bigModExp) Run(input []byte) ([]byte, error) {
+func (c *bigModExp) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	var (
 		baseLen = new(big.Int).SetBytes(getData(input, 0, 32)).Uint64()
 		expLen  = new(big.Int).SetBytes(getData(input, 32, 32)).Uint64()
@@ -322,7 +317,7 @@ func (c *bn256Add) GetRequiredGasAndComputationCost(input []byte) (uint64, uint6
 	return params.Bn256AddGas, params.Bn256AddComputationCost
 }
 
-func (c *bn256Add) Run(input []byte) ([]byte, error) {
+func (c *bn256Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	x, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
 		return nil, err
@@ -345,7 +340,7 @@ func (c *bn256ScalarMul) GetRequiredGasAndComputationCost(input []byte) (uint64,
 	return params.Bn256ScalarMulGas, params.Bn256ScalarMulComputationCost
 }
 
-func (c *bn256ScalarMul) Run(input []byte) ([]byte, error) {
+func (c *bn256ScalarMul) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	p, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
 		return nil, err
@@ -377,7 +372,7 @@ func (c *bn256Pairing) GetRequiredGasAndComputationCost(input []byte) (uint64, u
 		params.Bn256ParingBaseComputationCost + numParings*params.Bn256ParingPerPointComputationCost
 }
 
-func (c *bn256Pairing) Run(input []byte) ([]byte, error) {
+func (c *bn256Pairing) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	// Handle some corner cases cheaply
 	if len(input)%192 > 0 {
 		return nil, errBadPairingInput
@@ -417,29 +412,17 @@ func (c *vmLog) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) 
 		l*params.VMLogPerByteComputationCost + params.VMLogBaseComputationCost
 }
 
-// Run calls logger.Debug with input.
-// Note that this function is only for testing and not used for typical vmlog calls.
-// Invoke RunVMLogContract for the actual logging.
-func (c *vmLog) Run(input []byte) ([]byte, error) {
-	logger.Debug("vmlog", "msg", strconv.QuoteToASCII(string(input)))
-	return nil, nil
-}
-
-// RunVMLogContract runs the vmlog contract.
-func RunVMLogContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) ([]byte, uint64, error) {
-	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
-	if contract.UseGas(gas) {
-		if (params.VMLogTarget & params.VMLogToFile) != 0 {
-			prefix := "tx=" + evm.StateDB.GetTxHash().String() + " caller=" + contract.CallerAddress.String() + " msg="
-			debug.Handler.WriteVMLog(prefix + string(input))
-		}
-		if (params.VMLogTarget & params.VMLogToStdout) != 0 {
-			logger.Debug("vmlog", "tx", evm.StateDB.GetTxHash().String(),
-				"caller", contract.CallerAddress.String(), "msg", strconv.QuoteToASCII(string(input)))
-		}
-		return nil, computationCost, nil
+// Runs the vmLog contract.
+func (c *vmLog) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	if (params.VMLogTarget & params.VMLogToFile) != 0 {
+		prefix := "tx=" + evm.StateDB.GetTxHash().String() + " caller=" + contract.CallerAddress.String() + " msg="
+		debug.Handler.WriteVMLog(prefix + string(input))
 	}
-	return nil, computationCost, kerrors.ErrOutOfGas
+	if (params.VMLogTarget & params.VMLogToStdout) != 0 {
+		logger.Debug("vmlog", "tx", evm.StateDB.GetTxHash().String(),
+			"caller", contract.CallerAddress.String(), "msg", strconv.QuoteToASCII(string(input)))
+	}
+	return nil, nil
 }
 
 type feePayer struct{}
@@ -448,51 +431,29 @@ func (c *feePayer) GetRequiredGasAndComputationCost(input []byte) (uint64, uint6
 	return params.FeePayerGas, params.FeePayerComputationCost
 }
 
-func (c *feePayer) Run(input []byte) ([]byte, error) {
-	// Run function should not be called. Instead of this function, RunFeePayerContract should be called.
-	logger.Error("should not be reached here")
-	return nil, nil
+func (c *feePayer) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	return contract.FeePayerAddress.Bytes(), nil
 }
 
-func RunFeePayerContract(p PrecompiledContract, input []byte, contract *Contract) ([]byte, uint64, error) {
-	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
-	if contract.UseGas(gas) {
-		return contract.FeePayerAddress.Bytes(), computationCost, nil
-	}
-	return nil, computationCost, kerrors.ErrOutOfGas
-}
+type validateSender struct{}
 
-type precompiledValidateSender struct{}
-
-func (c *precompiledValidateSender) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+func (c *validateSender) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
 	numSigs := uint64(len(input) / common.SignatureLength)
 	return numSigs * params.ValidateSenderGas,
 		numSigs*params.ValidateSenderPerSigComputationCost + params.ValidateSenderBaseComputationCost
 }
 
-func (c *precompiledValidateSender) Run(input []byte) ([]byte, error) {
-	// Run function should not be called. Instead of this function, RunValidateSenderContract should be called.
-	logger.Error("should not be reached here")
-	return nil, nil
-}
-
-func RunValidateSenderContract(p PrecompiledContract, input []byte, contract *Contract, picker types.AccountKeyPicker) ([]byte, uint64, error) {
-	// input must be (addr, message, signature1, signature2, and more signatures)
-	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
-	if contract.UseGas(gas) == false {
-		return []byte{0}, computationCost, kerrors.ErrOutOfGas
-	}
-	if err := validateSender(input, picker); err != nil {
+func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	if err := c.validateSender(input, evm.StateDB); err != nil {
 		// If return error makes contract execution failed, do not return the error.
 		// Instead, print log.
 		logger.Trace("validateSender failed", "err", err)
-		return []byte{0}, computationCost, nil
+		return []byte{0}, nil
 	}
-
-	return []byte{1}, computationCost, nil
+	return []byte{1}, nil
 }
 
-func validateSender(input []byte, picker types.AccountKeyPicker) error {
+func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPicker) error {
 	ptr := input
 
 	// Parse the first 20 bytes. They represent an address to be verified.
