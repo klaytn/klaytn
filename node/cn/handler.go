@@ -493,7 +493,7 @@ func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.
 		}
 	}
 
-	p.GetP2PPeer().Log().Info("ProtocolManager.processMsg closed", "PeerName", p.GetP2PPeer().Name())
+	p.GetP2PPeer().Log().Debug("ProtocolManager.processMsg closed", "PeerName", p.GetP2PPeer().Name())
 }
 
 // processConsensusMsg processes the consensus message.

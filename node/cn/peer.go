@@ -1077,6 +1077,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	err = <-errChannel
 	close(closed)
 	wg.Wait()
+	p.GetP2PPeer().Log().Info("Disconnected a multichannel P2P Peer", "peerID", p.GetP2PPeerID(), "peerName", p.GetP2PPeer().Name())
 	return err
 }
 
