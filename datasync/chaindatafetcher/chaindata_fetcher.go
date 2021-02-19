@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/klaytn/klaytn/blockchain"
@@ -39,8 +40,14 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+const (
+	stopped = uint32(iota)
+	running
+)
+
 var logger = log.NewModuleLogger(log.ChainDataFetcher)
 var errUnsupportedMode = errors.New("the given chaindatafetcher mode is not supported")
+var errMaxRetryExceeded = errors.New("the number of retries is exceeded over max")
 
 //go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher BlockChain
 type BlockChain interface {
@@ -74,10 +81,10 @@ type ChainDataFetcher struct {
 	checkpointDB CheckpointDB
 	setters      []ComponentSetter
 
-	fetchingStarted      bool
+	fetchingStarted      uint32
 	fetchingStopCh       chan struct{}
 	fetchingWg           sync.WaitGroup
-	rangeFetchingStarted bool
+	rangeFetchingStarted uint32
 	rangeFetchingStopCh  chan struct{}
 	rangeFetchingWg      sync.WaitGroup
 }
@@ -189,10 +196,9 @@ func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfT
 }
 
 func (f *ChainDataFetcher) startFetching() error {
-	if f.fetchingStarted {
+	if !atomic.CompareAndSwapUint32(&f.fetchingStarted, stopped, running) {
 		return errors.New("fetching is already started")
 	}
-	f.fetchingStarted = true
 
 	// subscribe chain event in order to handle new blocks.
 	f.chainSub = f.blockchain.SubscribeChainEvent(f.chainCh)
@@ -219,42 +225,39 @@ func (f *ChainDataFetcher) startFetching() error {
 }
 
 func (f *ChainDataFetcher) stopFetching() error {
-	if !f.fetchingStarted {
+	if !atomic.CompareAndSwapUint32(&f.fetchingStarted, running, stopped) {
 		return errors.New("fetching is not running")
 	}
 
 	f.chainSub.Unsubscribe()
 	close(f.fetchingStopCh)
 	f.fetchingWg.Wait()
-	f.fetchingStarted = false
 	logger.Info("fetching is stopped")
 	return nil
 }
 
 func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqType cfTypes.RequestType) error {
-	if f.rangeFetchingStarted {
+	if !atomic.CompareAndSwapUint32(&f.rangeFetchingStarted, stopped, running) {
 		return errors.New("range fetching is already started")
 	}
-	f.rangeFetchingStarted = true
 
 	f.rangeFetchingStopCh = make(chan struct{})
 	f.rangeFetchingWg.Add(1)
 	go func() {
 		defer f.rangeFetchingWg.Done()
 		f.sendRequests(startBlock, endBlock, reqType, false, f.rangeFetchingStopCh)
-		f.rangeFetchingStarted = false
+		atomic.StoreUint32(&f.rangeFetchingStarted, stopped)
 	}()
 	logger.Info("range fetching is started", "startBlock", startBlock, "endBlock", endBlock)
 	return nil
 }
 
 func (f *ChainDataFetcher) stopRangeFetching() error {
-	if !f.rangeFetchingStarted {
+	if !atomic.CompareAndSwapUint32(&f.rangeFetchingStarted, running, stopped) {
 		return errors.New("range fetching is not running")
 	}
 	close(f.rangeFetchingStopCh)
 	f.rangeFetchingWg.Wait()
-	f.rangeFetchingStarted = false
 	logger.Info("range fetching is stopped")
 	return nil
 }
@@ -344,7 +347,7 @@ func (f *ChainDataFetcher) SetComponents(components []interface{}) {
 	f.setCheckpoint()
 }
 
-func (f *ChainDataFetcher) handleRequestByType(reqType cfTypes.RequestType, shouldUpdateCheckpoint bool, ev blockchain.ChainEvent) {
+func (f *ChainDataFetcher) handleRequestByType(reqType cfTypes.RequestType, shouldUpdateCheckpoint bool, ev blockchain.ChainEvent) error {
 	now := time.Now()
 	// TODO-ChainDataFetcher parallelize handling data
 
@@ -358,8 +361,8 @@ func (f *ChainDataFetcher) handleRequestByType(reqType cfTypes.RequestType, shou
 	for targetType := cfTypes.RequestTypeTransaction; targetType < cfTypes.RequestTypeLength; targetType = targetType << 1 {
 		if cfTypes.CheckRequestType(reqType, targetType) {
 			if err := f.updateInsertionTimeGauge(f.retryFunc(f.repo.HandleChainEvent))(ev, targetType); err != nil {
-				logger.Error("the chaindatafetcher is stopped by user while an error is occurring", "blockNumber", ev.Block.NumberU64(), "err", err)
-				return
+				logger.Error("handling chain event is failed", "blockNumber", ev.Block.NumberU64(), "err", err, "reqType", reqType, "targetType", targetType)
+				return err
 			}
 		}
 	}
@@ -370,6 +373,34 @@ func (f *ChainDataFetcher) handleRequestByType(reqType cfTypes.RequestType, shou
 		f.updateCheckpoint(ev.Block.Number().Int64())
 	}
 	handledBlockNumberGauge.Update(ev.Block.Number().Int64())
+	return nil
+}
+
+func (f *ChainDataFetcher) resetChainCh() {
+	for {
+		select {
+		case <-f.chainCh:
+		default:
+			return
+		}
+	}
+}
+
+func (f *ChainDataFetcher) resetRequestCh() {
+	for {
+		select {
+		case <-f.reqCh:
+		default:
+			return
+		}
+	}
+}
+
+func (f *ChainDataFetcher) pause() {
+	f.stopFetching()
+	f.stopRangeFetching()
+	f.resetChainCh()
+	f.resetRequestCh()
 }
 
 func (f *ChainDataFetcher) handleRequest() {
@@ -382,13 +413,19 @@ func (f *ChainDataFetcher) handleRequest() {
 			return
 		case ev := <-f.chainCh:
 			numChainEventGauge.Update(int64(len(f.chainCh)))
+			var err error
 			switch f.config.Mode {
 			case ModeKAS:
-				f.handleRequestByType(cfTypes.RequestTypeAll, true, ev)
+				err = f.handleRequestByType(cfTypes.RequestTypeAll, true, ev)
 			case ModeKafka:
-				f.handleRequestByType(cfTypes.RequestTypeGroupAll, true, ev)
+				err = f.handleRequestByType(cfTypes.RequestTypeGroupAll, true, ev)
 			default:
 				logger.Error("the chaindatafetcher mode is not supported", "mode", f.config.Mode, "blockNumber", ev.Block.NumberU64())
+			}
+
+			if err != nil && err == errMaxRetryExceeded {
+				logger.Error("the chaindatafetcher reaches the maximum retries. it pauses fetching and clear the channels", "blockNum", ev.Block.NumberU64())
+				f.pause()
 			}
 		case req := <-f.reqCh:
 			numRequestsGauge.Update(int64(len(f.reqCh)))
@@ -398,7 +435,11 @@ func (f *ChainDataFetcher) handleRequest() {
 				logger.Error("making chain event is failed", "err", err)
 				break
 			}
-			f.handleRequestByType(req.ReqType, req.ShouldUpdateCheckpoint, ev)
+			err = f.handleRequestByType(req.ReqType, req.ShouldUpdateCheckpoint, ev)
+			if err != nil && err == errMaxRetryExceeded {
+				logger.Error("the chaindatafetcher reaches the maximum retries. it pauses fetching and clear the channels", "blockNum", ev.Block.NumberU64())
+				f.pause()
+			}
 		}
 	}
 }
@@ -488,11 +529,14 @@ func (f *ChainDataFetcher) retryFunc(insert HandleChainEventFn) HandleChainEvent
 			case <-f.stopCh:
 				return err
 			default:
+				if i > InsertMaxRetry {
+					return errMaxRetryExceeded
+				}
 				i++
 				gauge := getInsertionRetryGauge(reqType)
 				gauge.Update(int64(i))
 				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i, "err", err)
-				time.Sleep(DBInsertRetryInterval)
+				time.Sleep(InsertRetryInterval)
 			}
 		}
 		return nil
@@ -500,5 +544,5 @@ func (f *ChainDataFetcher) retryFunc(insert HandleChainEventFn) HandleChainEvent
 }
 
 func (f *ChainDataFetcher) status() string {
-	return fmt.Sprintf("{fetching: %v, rangeFetching: %v}", f.fetchingStarted, f.rangeFetchingStarted)
+	return fmt.Sprintf("{fetching: %v, rangeFetching: %v}", atomic.LoadUint32(&f.fetchingStarted), atomic.LoadUint32(&f.rangeFetchingStarted))
 }

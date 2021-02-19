@@ -23,7 +23,10 @@ import (
 	"github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
 )
 
-const DBInsertRetryInterval = 500 * time.Millisecond
+const (
+	InsertRetryInterval = 500 * time.Millisecond
+	InsertMaxRetry      = 100
+)
 
 type HandleChainEventFn func(blockchain.ChainEvent, types.RequestType) error
 
