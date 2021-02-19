@@ -19,7 +19,7 @@ package statedb
 func getTestFastCacheConfig() *TrieNodeCacheConfig {
 	return &TrieNodeCacheConfig{
 		CacheType:           CacheTypeLocal,
-		LocalCacheSizeMB:    100,
+		LocalCacheSizeMiB:   100,
 		FastCacheFileDir:    "./test/fastcache",
 		FastCacheSavePeriod: 0,
 	}
