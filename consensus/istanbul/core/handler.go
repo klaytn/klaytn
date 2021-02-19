@@ -123,12 +123,12 @@ func (c *core) handleEvents() {
 			}
 		case ev, ok := <-c.timeoutSub.Chan():
 			if !ok || ev.Data == nil {
-				logger.Warn("Drop an invalid message from timeout channel")
+				logger.Error("Drop an empty message from timeout channel")
 				return
 			}
 			data, ok := ev.Data.(timeoutEvent)
 			if !ok || data.nextView == nil {
-				logger.Warn("Invalid message type from timeout channel", "msg", ev.Data)
+				logger.Error("Invalid message from timeout channel", "msg", ev.Data)
 				return
 			}
 			c.handleTimeoutMsg(data.nextView)
