@@ -1147,7 +1147,7 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(WSApiFlag.Name) {
 		cfg.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
 	}
-	rpc.MaxSubscriptionPerConn = int32(ctx.GlobalInt(WSMaxSubscriptionPerConn.Name))
+	rpc.MaxSubscriptionPerWSConn = int32(ctx.GlobalInt(WSMaxSubscriptionPerConn.Name))
 	rpc.WebsocketReadDeadline = ctx.GlobalInt64(WSReadDeadLine.Name)
 	rpc.WebsocketWriteDeadline = ctx.GlobalInt64(WSWriteDeadLine.Name)
 	rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(WSMaxConnections.Name))
