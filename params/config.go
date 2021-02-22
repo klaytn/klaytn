@@ -39,9 +39,9 @@ var (
 var (
 	// CypressChainConfig is the chain parameters to run a node on the cypress main network.
 	CypressChainConfig = &ChainConfig{
-		ChainID:            big.NewInt(int64(CypressNetworkId)),
-		Incompatible1Block: nil,
-		DeriveShaImpl:      2,
+		ChainID:                 big.NewInt(int64(CypressNetworkId)),
+		IstanbulCompatibleBlock: nil,
+		DeriveShaImpl:           2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
 			GovernanceMode: "single",
@@ -65,9 +65,9 @@ var (
 
 	// BaobabChainConfig contains the chain parameters to run a node on the Baobab test network.
 	BaobabChainConfig = &ChainConfig{
-		ChainID:            big.NewInt(int64(BaobabNetworkId)),
-		Incompatible1Block: nil,
-		DeriveShaImpl:      2,
+		ChainID:                 big.NewInt(int64(BaobabNetworkId)),
+		IstanbulCompatibleBlock: nil,
+		DeriveShaImpl:           2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
 			GovernanceMode: "single",
@@ -161,7 +161,7 @@ const (
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
-	Incompatible1Block *big.Int `json:"incompatible1Block"` // incompatible1 switch block (nil = no fork, 0 = already incompatible1)
+	IstanbulCompatibleBlock *big.Int `json:"istanbulCompatibleBlock,omitempty"` // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -241,18 +241,18 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v Incompatible1Block: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
-			c.Incompatible1Block,
+			c.IstanbulCompatibleBlock,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v Incompatible1Block: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
-			c.Incompatible1Block,
+			c.IstanbulCompatibleBlock,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -260,9 +260,9 @@ func (c *ChainConfig) String() string {
 	}
 }
 
-// IsIncompatible1 returns whether num is either equal to the incompatible1 block or greater.
-func (c *ChainConfig) IsIncompatible1(num *big.Int) bool {
-	return isForked(c.Incompatible1Block, num)
+// IsIstanbul returns whether num is either equal to the istanbul block or greater.
+func (c *ChainConfig) IsIstanbul(num *big.Int) bool {
+	return isForked(c.IstanbulCompatibleBlock, num)
 }
 
 // GasTable returns the gas table corresponding to the current phase.
@@ -291,8 +291,8 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 }
 
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
-	if isForkIncompatible(c.Incompatible1Block, newcfg.Incompatible1Block, head) {
-		return newCompatError("Incompatible1 Block", c.Incompatible1Block, newcfg.Incompatible1Block)
+	if isForkIncompatible(c.IstanbulCompatibleBlock, newcfg.IstanbulCompatibleBlock, head) {
+		return newCompatError("Istanbul Block", c.IstanbulCompatibleBlock, newcfg.IstanbulCompatibleBlock)
 	}
 	return nil
 }
@@ -405,8 +405,8 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID         *big.Int
-	IsInCompatible1 bool
+	ChainID    *big.Int
+	IsIstanbul bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -416,8 +416,8 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		chainID = new(big.Int)
 	}
 	return Rules{
-		ChainID:         new(big.Int).Set(chainID),
-		IsInCompatible1: c.IsIncompatible1(num),
+		ChainID:    new(big.Int).Set(chainID),
+		IsIstanbul: c.IsIstanbul(num),
 	}
 }
 

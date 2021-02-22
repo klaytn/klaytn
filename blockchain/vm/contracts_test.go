@@ -71,7 +71,7 @@ func prepare(reqGas uint64) (*Contract, *EVM, error) {
 }
 
 func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
-	p := PrecompiledContractsCypress[common.HexToAddress(addr)]
+	p := PrecompiledContractsConstantinople[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.Input)
 	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 
@@ -88,7 +88,7 @@ func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
 }
 
 func testPrecompiledOOG(addr string, test precompiledTest, t *testing.T) {
-	p := PrecompiledContractsCypress[common.HexToAddress(addr)]
+	p := PrecompiledContractsConstantinople[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.Input)
 	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 	reqGas -= 1
@@ -112,7 +112,7 @@ func benchmarkPrecompiled(addr string, test precompiledTest, bench *testing.B) {
 	if test.NoBenchmark {
 		return
 	}
-	p := PrecompiledContractsCypress[common.HexToAddress(addr)]
+	p := PrecompiledContractsConstantinople[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.Input)
 	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 

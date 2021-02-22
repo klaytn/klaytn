@@ -268,7 +268,7 @@ func (this *InternalTxTracer) step(log *tracerLog) error {
 
 		// Skip any pre-compile invocations, those are just fancy opcodes
 		toAddr := common.HexToAddress(log.stack.Back(1).Text(16))
-		if _, ok := PrecompiledContractsCypress[toAddr]; ok {
+		if _, ok := PrecompiledContractsConstantinople[toAddr]; ok {
 			return nil
 		}
 

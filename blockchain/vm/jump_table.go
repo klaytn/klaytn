@@ -22,6 +22,7 @@ package vm
 
 import (
 	"errors"
+
 	"github.com/klaytn/klaytn/params"
 )
 
@@ -60,13 +61,19 @@ type operation struct {
 	returns bool // determines whether the operations sets the return data content
 }
 
-// TODO-IncompatibleChange: define new InstructionSet for first incompatible change
 var (
 	ConstantinopleInstructionSet = newConstantinopleInstructionSet()
+	IstanbulInstructionSet       = newIstanbulInstructionSet()
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
 type JumpTable [256]operation
+
+func newIstanbulInstructionSet() JumpTable {
+	instructionSet := newConstantinopleInstructionSet()
+	// TODO-IstanbulCompatible: add istanbul hardfork items
+	return instructionSet
+}
 
 // newConstantinopleInstructionSet returns the frontier, homestead
 // byzantium and constantinople instructions.

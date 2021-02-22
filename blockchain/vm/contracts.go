@@ -61,8 +61,8 @@ type PrecompiledContract interface {
 }
 
 // PrecompiledContractsCypress contains the default set of pre-compiled Klaytn
-// contracts used in the Cypress release.
-var PrecompiledContractsCypress = map[common.Address]PrecompiledContract{
+// contracts used in the Constantinople release.
+var PrecompiledContractsConstantinople = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):  &ecrecover{},
 	common.BytesToAddress([]byte{2}):  &sha256hash{},
 	common.BytesToAddress([]byte{3}):  &ripemd160hash{},
@@ -76,7 +76,22 @@ var PrecompiledContractsCypress = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{11}): &validateSender{},
 }
 
-// TODO-IncompatibleChange: define PrecompiledContracts set for first incompatible change
+// TODO-IstanbulCompatible: add blake2b and reprice bn_128 precompiled contract
+// PrecompiledContractsIstanbul contains the default set of pre-compiled Klaytn
+// contracts used in the IstanbulCompatible version.
+var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
+	common.BytesToAddress([]byte{1}):      &ecrecover{},
+	common.BytesToAddress([]byte{2}):      &sha256hash{},
+	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
+	common.BytesToAddress([]byte{4}):      &dataCopy{},
+	common.BytesToAddress([]byte{5}):      &bigModExp{},
+	common.BytesToAddress([]byte{6}):      &bn256Add{},
+	common.BytesToAddress([]byte{7}):      &bn256ScalarMul{},
+	common.BytesToAddress([]byte{8}):      &bn256Pairing{},
+	common.BytesToAddress([]byte{3, 252}): &vmLog{},
+	common.BytesToAddress([]byte{3, 253}): &feePayer{},
+	common.BytesToAddress([]byte{3, 254}): &validateSender{},
+}
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
 func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) (ret []byte, computationCost uint64, err error) {
