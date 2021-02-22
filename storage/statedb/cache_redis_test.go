@@ -33,7 +33,7 @@ const sleepDurationForAsyncBehavior = 100 * time.Millisecond
 func getTestRedisConfig() *TrieNodeCacheConfig {
 	return &TrieNodeCacheConfig{
 		CacheType:          CacheTypeRedis,
-		LocalCacheSizeMB:   100,
+		LocalCacheSizeMiB:  100,
 		RedisEndpoints:     []string{"localhost:6379"},
 		RedisClusterEnable: false,
 	}

@@ -30,7 +30,7 @@ type TrieNodeCacheType string
 type TrieNodeCacheConfig struct {
 	CacheType                 TrieNodeCacheType
 	NumFetcherPrefetchWorker  int           // Number of workers used to prefetch a block when fetcher works
-	LocalCacheSizeMB          int           // Memory allowance (MB) to use for caching trie nodes in fast cache
+	LocalCacheSizeMiB         int           // Memory allowance (MiB) to use for caching trie nodes in fast cache
 	FastCacheFileDir          string        // Directory where the persistent fastcache data is stored
 	FastCacheSavePeriod       time.Duration // Period of saving in memory trie cache to file if fastcache is used
 	RedisEndpoints            []string      // Endpoints of redis cache
@@ -40,7 +40,7 @@ type TrieNodeCacheConfig struct {
 }
 
 func (c *TrieNodeCacheConfig) DumpPeriodically() bool {
-	if c.CacheType == CacheTypeLocal && c.LocalCacheSizeMB > 0 && c.FastCacheSavePeriod > 0 {
+	if c.CacheType == CacheTypeLocal && c.LocalCacheSizeMiB > 0 && c.FastCacheSavePeriod > 0 {
 		return true
 	}
 	return false
@@ -109,7 +109,7 @@ func NewTrieNodeCache(config *TrieNodeCacheConfig) (TrieNodeCache, error) {
 func GetEmptyTrieNodeCacheConfig() *TrieNodeCacheConfig {
 	return &TrieNodeCacheConfig{
 		CacheType:          CacheTypeLocal,
-		LocalCacheSizeMB:   0,
+		LocalCacheSizeMiB:  0,
 		FastCacheFileDir:   "",
 		RedisEndpoints:     nil,
 		RedisClusterEnable: false,

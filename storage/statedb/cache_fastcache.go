@@ -18,7 +18,9 @@ package statedb
 
 import (
 	"github.com/VictoriaMetrics/fastcache"
+	"github.com/alecthomas/units"
 	"github.com/rcrowley/go-metrics"
+	"time"
 )
 
 var (
@@ -41,23 +43,27 @@ type FastCache struct {
 }
 
 // newFastCache creates a FastCache with given cache size.
-// If you want auto-scaled cache size, set config.LocalCacheSizeMB to AutoScaling.
+// If you want auto-scaled cache size, set config.LocalCacheSizeMiB to AutoScaling.
 // It returns nil if the cache size is zero.
 func newFastCache(config *TrieNodeCacheConfig) TrieNodeCache {
-	if config.LocalCacheSizeMB == AutoScaling {
-		config.LocalCacheSizeMB = getTrieNodeCacheSizeMB()
+	if config.LocalCacheSizeMiB == AutoScaling {
+		config.LocalCacheSizeMiB = getTrieNodeCacheSizeMiB()
 	}
 
-	if config.LocalCacheSizeMB <= 0 {
+	if config.LocalCacheSizeMiB <= 0 {
 		return nil
 	}
 
-	fc := &FastCache{fast: fastcache.LoadFromFileOrNew(config.FastCacheFileDir, config.LocalCacheSizeMB*1024*1024)} // Convert MB to Byte
+	logger.Info("Initializing local trie node cache (fastCache)",
+		"MaxMiB", config.LocalCacheSizeMiB, "FilePath", config.FastCacheFileDir)
+
+	start := time.Now()
+	fc := &FastCache{fast: fastcache.LoadFromFileOrNew(config.FastCacheFileDir, config.LocalCacheSizeMiB*int(units.MiB))}
 	stats := fc.UpdateStats().(fastcache.Stats)
 
-	logger.Info("Initialize local trie node cache (fastCache)",
-		"MaxMB", config.LocalCacheSizeMB, "FilePath", config.FastCacheFileDir,
-		"LoadedBytes", stats.BytesSize, "LoadedEntries", stats.EntriesCount)
+	logger.Info("Initialized local trie node cache (fastCache)",
+		"LoadedMiB", stats.BytesSize/uint64(units.MiB), "LoadedEntries", stats.EntriesCount, "elapsed", time.Since(start))
+
 	return fc
 }
 

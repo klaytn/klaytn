@@ -336,21 +336,21 @@ func NewDatabaseWithExistingCache(diskDB database.DBManager, cache TrieNodeCache
 	}
 }
 
-func getTrieNodeCacheSizeMB() int {
-	totalPhysicalMemMB := float64(memory.TotalMemory() / 1024 / 1024)
+func getTrieNodeCacheSizeMiB() int {
+	totalPhysicalMemMiB := float64(memory.TotalMemory() / 1024 / 1024)
 
-	if totalPhysicalMemMB < 10*1024 {
+	if totalPhysicalMemMiB < 10*1024 {
 		return 0
-	} else if totalPhysicalMemMB < 20*1024 {
+	} else if totalPhysicalMemMiB < 20*1024 {
 		return 1 * 1024 // allocate 1G for small memory
 	}
 
 	memoryScalePercent := 0.3 // allocate 30% for 20 < mem < 100
-	if totalPhysicalMemMB > 100*1024 {
+	if totalPhysicalMemMiB > 100*1024 {
 		memoryScalePercent = 0.35 // allocate 35% for 100 < mem
 	}
 
-	return int(totalPhysicalMemMB * memoryScalePercent)
+	return int(totalPhysicalMemMiB * memoryScalePercent)
 }
 
 // DiskDB retrieves the persistent database backing the trie database.
@@ -370,7 +370,7 @@ func (db *Database) GetTrieNodeCacheConfig() *TrieNodeCacheConfig {
 
 // GetTrieNodeLocalCacheByteLimit returns the byte size of trie node cache.
 func (db *Database) GetTrieNodeLocalCacheByteLimit() uint64 {
-	return uint64(db.trieNodeCacheConfig.LocalCacheSizeMB) * 1024 * 1024
+	return uint64(db.trieNodeCacheConfig.LocalCacheSizeMiB) * 1024 * 1024
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.
