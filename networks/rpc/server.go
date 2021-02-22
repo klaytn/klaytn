@@ -56,8 +56,8 @@ var (
 	pendingRequestCount int64 = 0
 
 	// TODO-Klaytn: move websocket configurations to Config struct in /network/rpc/server.go
-	// MaxSubscriptionPerConn is a maximum number of subscription for a server connection
-	MaxSubscriptionPerConn int32 = 5
+	// MaxSubscriptionPerWSConn is a maximum number of subscription for a websocket connection
+	MaxSubscriptionPerWSConn int32 = 5
 
 	// WebsocketReadDeadline is the read deadline on the underlying network connection in seconds. 0 means read will not timeout
 	WebsocketReadDeadline int64 = 0
@@ -360,10 +360,10 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	}
 
 	if req.callb.isSubscribe {
-		if atomic.LoadInt32(subCnt) >= MaxSubscriptionPerConn {
+		if atomic.LoadInt32(subCnt) >= MaxSubscriptionPerWSConn {
 			return codec.CreateErrorResponse(&req.id, &callbackError{
 				fmt.Sprintf("Maximum %d subscriptions are allowed for a websocket connection. "+
-					"The limit can be updated with 'admin_setMaxSubscriptionPerConn' API", MaxSubscriptionPerConn),
+					"The limit can be updated with 'admin_setMaxSubscriptionPerWSConn' API", MaxSubscriptionPerWSConn),
 			}), nil
 		}
 
