@@ -60,7 +60,7 @@ type PrecompiledContract interface {
 	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error)
 }
 
-// PrecompiledContractsCypress contains the default set of pre-compiled Klaytn
+// PrecompiledContractsConstantinople contains the default set of pre-compiled Klaytn
 // contracts used in the Constantinople release.
 var PrecompiledContractsConstantinople = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):  &ecrecover{},
