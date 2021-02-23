@@ -21,6 +21,7 @@
 package database
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -111,6 +112,12 @@ type levelDB struct {
 	nonlevel0CompGauge     metrics.Gauge // Gauge for tracking the number of table compaction in non0 level
 	seekCompGauge          metrics.Gauge // Gauge for tracking the number of table compaction caused by read opt
 
+	levelSizeMeters      []metrics.Meter
+	levelTableCounts     []metrics.Meter
+	levelReadMeters      []metrics.Meter
+	levelWriteMeters     []metrics.Meter
+	levelDurationsMeters []metrics.Timer
+
 	perfCheck       bool
 	getTimer        metrics.Timer
 	putTimer        metrics.Timer
@@ -119,6 +126,7 @@ type levelDB struct {
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
 
+	prefix string     // prefix used for metrics
 	logger log.Logger // Contextual logger tracking the database path
 }
 
@@ -337,6 +345,8 @@ func (db *levelDB) LDB() *leveldb.DB {
 
 // Meter configures the database metrics collectors and
 func (db *levelDB) Meter(prefix string) {
+	db.prefix = prefix
+
 	// Initialize all the metrics collector at the requested prefix
 	db.writeDelayCountMeter = metrics.NewRegisteredMeter(prefix+"writedelay/count", nil)
 	db.writeDelayDurationMeter = metrics.NewRegisteredMeter(prefix+"writedelay/duration", nil)
@@ -434,6 +444,8 @@ hasError:
 			currCompTime += s.LevelDurations[i]
 			currCompRead += s.LevelRead[i]
 			currCompWrite += s.LevelWrite[i]
+
+			db.updateLevelStats(s, i)
 		}
 		db.compTimer.Update(currCompTime - prevCompTime)
 		db.compReadMeter.Mark(currCompRead - prevCompRead)
@@ -470,6 +482,25 @@ hasError:
 		errc = <-db.quitChan
 	}
 	errc <- merr
+}
+
+// updateLevelStats collects level-wise stats.
+func (db *levelDB) updateLevelStats(s *leveldb.DBStats, lv int) {
+	// dynamically creates a new metrics for a new level
+	if len(db.levelSizeMeters) <= lv {
+		prefix := db.prefix + fmt.Sprintf("level%v/", lv)
+		db.levelSizeMeters = append(db.levelSizeMeters, metrics.NewRegisteredMeter(prefix+"size", nil))
+		db.levelTableCounts = append(db.levelTableCounts, metrics.NewRegisteredMeter(prefix+"tables", nil))
+		db.levelReadMeters = append(db.levelReadMeters, metrics.NewRegisteredMeter(prefix+"read", nil))
+		db.levelWriteMeters = append(db.levelWriteMeters, metrics.NewRegisteredMeter(prefix+"write", nil))
+		db.levelDurationsMeters = append(db.levelDurationsMeters, metrics.NewRegisteredTimer(prefix+"duration", nil))
+	}
+
+	db.levelSizeMeters[lv].Mark(s.LevelSizes[lv])
+	db.levelTableCounts[lv].Mark(int64(s.LevelTablesCounts[lv]))
+	db.levelReadMeters[lv].Mark(s.LevelRead[lv])
+	db.levelWriteMeters[lv].Mark(s.LevelWrite[lv])
+	db.levelDurationsMeters[lv].Update(s.LevelDurations[lv])
 }
 
 func (db *levelDB) NewBatch() Batch {
