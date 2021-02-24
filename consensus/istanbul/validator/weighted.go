@@ -219,7 +219,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	return valSet
 }
 
-func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.Address, rewardAddrs []common.Address, votingPowers []uint64, weights []uint64, proposers []common.Address, proposersBlockNum uint64) {
+func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.Address, rewardAddrs []common.Address, votingPowers []uint64, weights []uint64, proposers []common.Address, proposersBlockNum uint64, hasMinStaking []bool) {
 
 	weightedCouncil, ok := valSet.(*weightedCouncil)
 	if !ok {
@@ -233,12 +233,14 @@ func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.A
 		rewardAddrs = make([]common.Address, numVals)
 		votingPowers = make([]uint64, numVals)
 		weights = make([]uint64, numVals)
+		hasMinStaking = make([]bool, numVals)
 		for i, val := range weightedCouncil.List() {
 			weightedVal := val.(*weightedValidator)
 			validators[i] = weightedVal.address
 			rewardAddrs[i] = weightedVal.RewardAddress()
 			votingPowers[i] = weightedVal.votingPower
 			weights[i] = atomic.LoadUint64(&weightedVal.weight)
+			hasMinStaking[i] = weightedVal.hasMinStaking
 		}
 
 		proposers = make([]common.Address, len(weightedCouncil.proposers))
@@ -325,7 +327,13 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 
 	// return early if the committee size is equal or larger than the validator size
 	if committeeSize >= validatorSize {
-		return validators
+		var result []istanbul.Validator
+		for _, val := range validators {
+			if val.HasMinStaking() {
+				result = append(result, val)
+			}
+		}
+		return result
 	}
 
 	// find the proposer

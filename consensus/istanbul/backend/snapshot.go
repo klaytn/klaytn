@@ -23,6 +23,7 @@ package backend
 import (
 	"bytes"
 	"encoding/json"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -262,6 +263,7 @@ type snapshotJSON struct {
 	Weights           []uint64         `json:"weight"`
 	Proposers         []common.Address `json:"proposers"`
 	ProposersBlockNum uint64           `json:"proposersBlockNum"`
+	HasMinStaking     []bool           `json:"hasMinStaking"`
 }
 
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
@@ -270,11 +272,12 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	var weights []uint64
 	var proposers []common.Address
 	var proposersBlockNum uint64
+	var hasMinStaking []bool
 	var validators []common.Address
 
 	// TODO-Klaytn-Issue1166 For weightedCouncil
 	if s.ValSet.Policy() == istanbul.WeightedRandom {
-		validators, rewardAddrs, votingPowers, weights, proposers, proposersBlockNum = validator.GetWeightedCouncilData(s.ValSet)
+		validators, rewardAddrs, votingPowers, weights, proposers, proposersBlockNum, hasMinStaking = validator.GetWeightedCouncilData(s.ValSet)
 	} else {
 		validators = s.validators()
 	}
@@ -293,6 +296,7 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 		Weights:           weights,
 		Proposers:         proposers,
 		ProposersBlockNum: proposersBlockNum,
+		HasMinStaking:     hasMinStaking,
 	}
 }
 
