@@ -112,11 +112,11 @@ type levelDB struct {
 	nonlevel0CompGauge     metrics.Gauge // Gauge for tracking the number of table compaction in non0 level
 	seekCompGauge          metrics.Gauge // Gauge for tracking the number of table compaction caused by read opt
 
-	levelSizeMeters      []metrics.Meter
-	levelTableCounts     []metrics.Meter
-	levelReadMeters      []metrics.Meter
-	levelWriteMeters     []metrics.Meter
-	levelDurationsMeters []metrics.Timer
+	levelSizesGauge     []metrics.Gauge
+	levelTablesGauge    []metrics.Gauge
+	levelReadGauge      []metrics.Gauge
+	levelWriteGauge     []metrics.Gauge
+	levelDurationsGauge []metrics.Gauge
 
 	perfCheck       bool
 	getTimer        metrics.Timer
@@ -487,20 +487,20 @@ hasError:
 // updateLevelStats collects level-wise stats.
 func (db *levelDB) updateLevelStats(s *leveldb.DBStats, lv int) {
 	// dynamically creates a new metrics for a new level
-	if len(db.levelSizeMeters) <= lv {
+	if len(db.levelSizesGauge) <= lv {
 		prefix := db.prefix + fmt.Sprintf("level%v/", lv)
-		db.levelSizeMeters = append(db.levelSizeMeters, metrics.NewRegisteredMeter(prefix+"size", nil))
-		db.levelTableCounts = append(db.levelTableCounts, metrics.NewRegisteredMeter(prefix+"tables", nil))
-		db.levelReadMeters = append(db.levelReadMeters, metrics.NewRegisteredMeter(prefix+"read", nil))
-		db.levelWriteMeters = append(db.levelWriteMeters, metrics.NewRegisteredMeter(prefix+"write", nil))
-		db.levelDurationsMeters = append(db.levelDurationsMeters, metrics.NewRegisteredTimer(prefix+"duration", nil))
+		db.levelSizesGauge = append(db.levelSizesGauge, metrics.NewRegisteredGauge(prefix+"size", nil))
+		db.levelTablesGauge = append(db.levelTablesGauge, metrics.NewRegisteredGauge(prefix+"tables", nil))
+		db.levelReadGauge = append(db.levelReadGauge, metrics.NewRegisteredGauge(prefix+"read", nil))
+		db.levelWriteGauge = append(db.levelWriteGauge, metrics.NewRegisteredGauge(prefix+"write", nil))
+		db.levelDurationsGauge = append(db.levelDurationsGauge, metrics.NewRegisteredGauge(prefix+"duration", nil))
 	}
 
-	db.levelSizeMeters[lv].Mark(s.LevelSizes[lv])
-	db.levelTableCounts[lv].Mark(int64(s.LevelTablesCounts[lv]))
-	db.levelReadMeters[lv].Mark(s.LevelRead[lv])
-	db.levelWriteMeters[lv].Mark(s.LevelWrite[lv])
-	db.levelDurationsMeters[lv].Update(s.LevelDurations[lv])
+	db.levelSizesGauge[lv].Update(s.LevelSizes[lv])
+	db.levelTablesGauge[lv].Update(int64(s.LevelTablesCounts[lv]))
+	db.levelReadGauge[lv].Update(s.LevelRead[lv])
+	db.levelWriteGauge[lv].Update(s.LevelWrite[lv])
+	db.levelDurationsGauge[lv].Update(int64(s.LevelDurations[lv]))
 }
 
 func (db *levelDB) NewBatch() Batch {
