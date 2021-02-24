@@ -542,6 +542,17 @@ workflows:
             - tagger-verify
           filters: *filter-version-not-release
 
+      - docker/publish:
+          filters:
+            branches:
+              only: dev
+          requires:
+            - pass-tests
+          image: klaytn/klaytn
+          tag: dev
+          executor: docker/docker
+          use-remote-docker: true
+
       - tag-verify:
           filters: *filter-only-version-tag
 
@@ -603,7 +614,7 @@ workflows:
           requires:
             - pass-tests
           image: klaytn/klaytn
-          tag: $CIRCLE_TAG,latest
+          tag: latest,$CIRCLE_TAG
           executor: docker/docker
           use-remote-docker: true
 
