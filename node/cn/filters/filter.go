@@ -22,6 +22,11 @@ package filters
 
 import (
 	"context"
+	"errors"
+	"math"
+	"math/big"
+	"strconv"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -29,7 +34,6 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
 )
 
 //go:generate mockgen -destination=node/cn/filters/mock/backend_mock.go -package=cn github.com/klaytn/klaytn/node/cn/filters Backend
@@ -159,6 +163,14 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 	// Iterate over the matches until exhausted or context closed
 	var logs []*types.Log
 
+	maxItems := math.MaxInt32 - 1
+	if val := ctx.Value(getLogsCxtKeyMaxItems); val != nil {
+		val, ok := val.(int)
+		if ok {
+			maxItems = val
+		}
+	}
+
 	for {
 		select {
 		case number, ok := <-matches:
@@ -182,9 +194,14 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 				return logs, err
 			}
 			logs = append(logs, found...)
-
+			if len(logs) > maxItems {
+				return logs, errors.New("query returned more than " + strconv.Itoa(maxItems) + " results")
+			}
 		case <-ctx.Done():
-			return logs, ctx.Err()
+			if ctx.Err() == context.DeadlineExceeded {
+				return logs, errors.New("query timeout exceeded")
+			}
+			return logs, errors.New("query is canceled. " + ctx.Err().Error())
 		}
 	}
 }
@@ -193,6 +210,14 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 // iteration and bloom matching.
 func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*types.Log, error) {
 	var logs []*types.Log
+
+	maxItems := math.MaxInt32 - 1
+	if val := ctx.Value(getLogsCxtKeyMaxItems); val != nil {
+		val, ok := val.(int)
+		if ok {
+			maxItems = val
+		}
+	}
 
 	for ; f.begin <= int64(end); f.begin++ {
 		header, err := f.backend.HeaderByNumber(ctx, rpc.BlockNumber(f.begin))
@@ -205,6 +230,16 @@ func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*types.Log, e
 				return logs, err
 			}
 			logs = append(logs, found...)
+			if len(logs) > maxItems {
+				return logs, errors.New("query returned more than " + strconv.Itoa(maxItems) + " results")
+			}
+		}
+		select {
+		case <-ctx.Done():
+			if ctx.Err() == context.DeadlineExceeded {
+				return logs, errors.New("query timeout exceeded")
+			}
+			return logs, errors.New("query is canceled. " + ctx.Err().Error())
 		}
 	}
 	return logs, nil

@@ -41,6 +41,10 @@ import (
 
 var (
 	deadline = 5 * time.Minute // consider a filter inactive if it has not been polled for within deadline
+
+	getLogsCxtKeyMaxItems = "maxItems"
+	GetLogsDeadline       = 10 * time.Second
+	GetLogsMaxItems       = int(10000)
 )
 
 // filter is a helper struct that holds meta information over the filter type
@@ -321,6 +325,10 @@ func (api *PublicFilterAPI) NewFilter(crit FilterCriteria) (rpc.ID, error) {
 
 // GetLogs returns logs matching the given argument that are stored within the state.
 func (api *PublicFilterAPI) GetLogs(ctx context.Context, crit FilterCriteria) ([]*types.Log, error) {
+	ctx = context.WithValue(ctx, getLogsCxtKeyMaxItems, GetLogsMaxItems)
+	ctx, cancelFnc := context.WithTimeout(ctx, GetLogsDeadline)
+	defer cancelFnc()
+
 	// Convert the RPC block numbers into internal representations
 	if crit.FromBlock == nil {
 		crit.FromBlock = big.NewInt(rpc.LatestBlockNumber.Int64())
@@ -328,6 +336,7 @@ func (api *PublicFilterAPI) GetLogs(ctx context.Context, crit FilterCriteria) ([
 	if crit.ToBlock == nil {
 		crit.ToBlock = big.NewInt(rpc.LatestBlockNumber.Int64())
 	}
+
 	// Create and run the filter to get all the logs
 	filter := NewRangeFilter(api.backend, crit.FromBlock.Int64(), crit.ToBlock.Int64(), crit.Addresses, crit.Topics)
 
@@ -356,6 +365,10 @@ func (api *PublicFilterAPI) UninstallFilter(id rpc.ID) bool {
 // GetFilterLogs returns the logs for the filter with the given id.
 // If the filter could not be found an empty array of logs is returned.
 func (api *PublicFilterAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
+	ctx = context.WithValue(ctx, "maxItem", GetLogsMaxItems)
+	ctx, cancelFnc := context.WithTimeout(ctx, GetLogsDeadline)
+	defer cancelFnc()
+
 	api.filtersMu.Lock()
 	f, found := api.filters[id]
 	api.filtersMu.Unlock()
