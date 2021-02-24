@@ -486,14 +486,6 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 			messageRound:  20,
 			expectedRound: 20,
 		},
-		{
-			// if timeoutTime > processingTime && timeoutTime < (processingTime + sleepTime * 2),
-			// (2f+1)th round change message will be processed and then timeout event will not be triggered in the test
-			name:          "reset timeout after processing the (2f+1)th round change message",
-			timeoutTime:   700 * time.Millisecond,
-			messageRound:  30,
-			expectedRound: 30,
-		},
 	}
 
 	validatorAddrs, _ := genValidators(10)
