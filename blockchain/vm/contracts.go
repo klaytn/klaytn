@@ -50,6 +50,8 @@ var (
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
 // requires a deterministic gas count based on the input size of the Run method of the
 // contract.
+// If you want more information about Klaytn's precompiled contracts,
+// please refer https://docs.klaytn.com/smart-contract/precompiled-contracts
 type PrecompiledContract interface {
 	// GetRequiredGasAndComputationCost returns the gas and computation cost
 	// required to execute the precompiled contract.
@@ -61,7 +63,7 @@ type PrecompiledContract interface {
 }
 
 // PrecompiledContractsConstantinople contains the default set of pre-compiled Klaytn
-// contracts used in the Constantinople release.
+// contracts based on Ethereum Constantinople.
 var PrecompiledContractsConstantinople = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):  &ecrecover{},
 	common.BytesToAddress([]byte{2}):  &sha256hash{},
@@ -78,7 +80,7 @@ var PrecompiledContractsConstantinople = map[common.Address]PrecompiledContract{
 
 // TODO-IstanbulCompatible: add blake2b and reprice bn_128 precompiled contract
 // PrecompiledContractsIstanbul contains the default set of pre-compiled Klaytn
-// contracts used in the IstanbulCompatible version.
+// contracts based on Ethereum Istanbul.
 var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):      &ecrecover{},
 	common.BytesToAddress([]byte{2}):      &sha256hash{},
