@@ -22,11 +22,12 @@ package core
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
 	"math/big"
 	"strings"
 	"sync"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 )
 
 // Construct a new message set to accumulate messages for given sequence/view number.
