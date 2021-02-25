@@ -317,6 +317,7 @@ jobs:
       - checkout
       - run:
           name: "Run golangci-lint"
+          no_output_timeout: 30m
           command: golangci-lint run --new-from-rev=dev --presets complexity,format,performance -v --timeout 10m
 
   test-datasync:
@@ -327,6 +328,7 @@ jobs:
       - wait-other-containers-ready
       - run:
           name: "Run test datasync"
+          no_output_timeout: 30m
           command: make test-datasync
 
   test-networks:
@@ -336,6 +338,7 @@ jobs:
       - checkout
       - run:
           name: "Run test networks"
+          no_output_timeout: 30m
           command: make test-networks
 
   test-tests:
@@ -345,6 +348,7 @@ jobs:
       - checkout
       - run:
           name: "Run test tests"
+          no_output_timeout: 30m
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
             make test-tests
@@ -357,6 +361,7 @@ jobs:
       - wait-other-containers-ready
       - run:
           name: "Run test others"
+          no_output_timeout: 30m
           command: |
             make test-others
 
