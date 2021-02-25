@@ -527,12 +527,12 @@ var (
 	}
 	APIFilterGetLogsDeadlineFlag = cli.DurationFlag{
 		Name:  "api.filter.getLogs.deadline",
-		Usage: "Execution deadline for log collecting filter APIs (Default: 10s)",
+		Usage: "Execution deadline for log collecting filter APIs",
 		Value: filters.GetLogsDeadline,
 	}
 	APIFilterGetLogsMaxItemsFlag = cli.IntFlag{
 		Name:  "api.filter.getLogs.maxitems",
-		Usage: "Maximum allowed number of return items for log collecting filter API (Default: 10000)",
+		Usage: "Maximum allowed number of return items for log collecting filter API",
 		Value: filters.GetLogsMaxItems,
 	}
 
