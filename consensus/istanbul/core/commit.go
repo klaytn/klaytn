@@ -21,9 +21,10 @@
 package core
 
 import (
+	"reflect"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"reflect"
 )
 
 func (c *core) sendCommit() {
