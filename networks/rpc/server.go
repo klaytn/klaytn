@@ -65,7 +65,7 @@ var (
 	// WebsocketWriteDeadline is the write deadline on the underlying network connection in seconds. 0 means write will not timeout
 	WebsocketWriteDeadline int64 = 0
 
-	// MaxSubscription is a maximum number of websocket connections
+	// MaxWebsocketConnections is a maximum number of websocket connections
 	MaxWebsocketConnections int32 = 3000
 )
 
