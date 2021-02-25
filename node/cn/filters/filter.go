@@ -163,13 +163,7 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 	// Iterate over the matches until exhausted or context closed
 	var logs []*types.Log
 
-	maxItems := math.MaxInt32 - 1
-	if val := ctx.Value(getLogsCxtKeyMaxItems); val != nil {
-		val, ok := val.(int)
-		if ok {
-			maxItems = val
-		}
-	}
+	maxItems := getMaxItems(ctx)
 
 	for {
 		select {
@@ -211,13 +205,7 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*types.Log, error) {
 	var logs []*types.Log
 
-	maxItems := math.MaxInt32 - 1
-	if val := ctx.Value(getLogsCxtKeyMaxItems); val != nil {
-		val, ok := val.(int)
-		if ok {
-			maxItems = val
-		}
-	}
+	maxItems := getMaxItems(ctx)
 
 	for ; f.begin <= int64(end); f.begin++ {
 		header, err := f.backend.HeaderByNumber(ctx, rpc.BlockNumber(f.begin))
@@ -346,4 +334,17 @@ func bloomFilter(bloom types.Bloom, addresses []common.Address, topics [][]commo
 		}
 	}
 	return true
+}
+
+// getMaxItems returns the value of getLogsCxtKeyMaxItems set in the given context.
+// If the value is not set in the context, it will returns MaxInt32-1.
+func getMaxItems(ctx context.Context) int {
+	maxItems := math.MaxInt32 - 1
+	if val := ctx.Value(getLogsCxtKeyMaxItems); val != nil {
+		val, ok := val.(int)
+		if ok {
+			maxItems = val
+		}
+	}
+	return maxItems
 }

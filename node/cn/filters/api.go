@@ -42,9 +42,9 @@ import (
 var (
 	deadline = 5 * time.Minute // consider a filter inactive if it has not been polled for within deadline
 
-	getLogsCxtKeyMaxItems = "maxItems"
-	GetLogsDeadline       = 10 * time.Second
-	GetLogsMaxItems       = int(10000)
+	getLogsCxtKeyMaxItems = "maxItems"       // the value of the context key should have the type of GetLogsMaxItems
+	GetLogsDeadline       = 10 * time.Second // execution deadlines for getLogs and getFilterLogs APIs
+	GetLogsMaxItems       = int(10000)       // maximum allowed number of return items for getLogs and getFilterLogs APIs
 )
 
 // filter is a helper struct that holds meta information over the filter type
