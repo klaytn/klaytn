@@ -20,6 +20,7 @@ func TestCore_sendPrepare(t *testing.T) {
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
+	defer istCore.Stop()
 
 	lastProposal, lastProposer := mockBackend.LastProposal()
 	proposal, err := genBlock(lastProposal.(*types.Block), validatorKeyMap[validatorAddrs[0]])
