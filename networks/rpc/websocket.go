@@ -163,18 +163,13 @@ func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
 // NewWSServer creates a new websocket RPC server around an API provider.
 //
 // Deprecated: use Server.WebsocketHandler
-func NewWSServer(allowedOrigins []string, timeouts HTTPTimeouts, srv *Server) *http.Server {
-	timeouts = sanitizeTimeouts(timeouts)
+func NewWSServer(allowedOrigins []string, srv *Server) *http.Server {
 	return &http.Server{
-		Handler:      srv.WebsocketHandler(allowedOrigins),
-		ReadTimeout:  timeouts.ReadTimeout,
-		WriteTimeout: timeouts.WriteTimeout,
-		IdleTimeout:  timeouts.IdleTimeout,
+		Handler: srv.WebsocketHandler(allowedOrigins),
 	}
 }
 
-func NewFastWSServer(allowedOrigins []string, timeouts HTTPTimeouts, srv *Server) *fasthttp.Server {
-	timeouts = sanitizeTimeouts(timeouts)
+func NewFastWSServer(allowedOrigins []string, srv *Server) *fasthttp.Server {
 	upgrader.CheckOrigin = wsFastHandshakeValidator(allowedOrigins)
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
@@ -182,9 +177,6 @@ func NewFastWSServer(allowedOrigins []string, timeouts HTTPTimeouts, srv *Server
 		Concurrency:        concurrencyLimit,
 		MaxRequestBodySize: common.MaxRequestContentLength,
 		Handler:            srv.FastWebsocketHandler,
-		ReadTimeout:        timeouts.ReadTimeout,
-		WriteTimeout:       timeouts.WriteTimeout,
-		IdleTimeout:        timeouts.IdleTimeout,
 	}
 }
 

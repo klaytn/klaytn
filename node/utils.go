@@ -238,13 +238,13 @@ func (api *PrivateAdminAPI) StartWS(host *string, port *int, allowedOrigins *str
 	if api.node.config.IsFastHTTP() {
 		if err := api.node.startFastWS(
 			fmt.Sprintf("%s:%d", *host, *port),
-			api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll, api.node.config.HTTPTimeouts); err != nil {
+			api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll); err != nil {
 			return false, err
 		}
 	} else {
 		if err := api.node.startWS(
 			fmt.Sprintf("%s:%d", *host, *port),
-			api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll, api.node.config.HTTPTimeouts); err != nil {
+			api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll); err != nil {
 			return false, err
 		}
 	}

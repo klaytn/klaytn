@@ -331,7 +331,7 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 			n.stopInProc()
 			return err
 		}
-		if err := n.startFastWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll, n.config.HTTPTimeouts); err != nil {
+		if err := n.startFastWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
 			n.stopHTTP()
 			n.stopIPC()
 			n.stopInProc()
@@ -343,7 +343,7 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 			n.stopInProc()
 			return err
 		}
-		if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll, n.config.HTTPTimeouts); err != nil {
+		if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
 			n.stopHTTP()
 			n.stopIPC()
 			n.stopInProc()
@@ -493,12 +493,12 @@ func (n *Node) stopHTTP() {
 }
 
 // startWS initializes and starts the websocket RPC endpoint.
-func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrigins []string, exposeAll bool, timeouts rpc.HTTPTimeouts) error {
+func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrigins []string, exposeAll bool) error {
 	// Short circuit if the WS endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll, timeouts)
+	listener, handler, err := rpc.StartWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll)
 	if err != nil {
 		return err
 	}
@@ -512,12 +512,12 @@ func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrig
 }
 
 // startFastWS initializes and starts the websocket RPC endpoint.
-func (n *Node) startFastWS(endpoint string, apis []rpc.API, modules []string, wsOrigins []string, exposeAll bool, timeouts rpc.HTTPTimeouts) error {
+func (n *Node) startFastWS(endpoint string, apis []rpc.API, modules []string, wsOrigins []string, exposeAll bool) error {
 	// Short circuit if the WS endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartFastWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll, timeouts)
+	listener, handler, err := rpc.StartFastWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll)
 	if err != nil {
 		return err
 	}

@@ -282,7 +282,7 @@ func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrig
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll, n.config.HTTPTimeouts)
+	listener, handler, err := rpc.StartWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll)
 	if err != nil {
 		return err
 	}
@@ -301,7 +301,7 @@ func (n *Node) startFastWS(endpoint string, apis []rpc.API, modules []string, ws
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartFastWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll, n.config.HTTPTimeouts)
+	listener, handler, err := rpc.StartFastWSEndpoint(endpoint, apis, modules, wsOrigins, exposeAll)
 	if err != nil {
 		return err
 	}
