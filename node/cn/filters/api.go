@@ -365,7 +365,7 @@ func (api *PublicFilterAPI) UninstallFilter(id rpc.ID) bool {
 // GetFilterLogs returns the logs for the filter with the given id.
 // If the filter could not be found an empty array of logs is returned.
 func (api *PublicFilterAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
-	ctx = context.WithValue(ctx, "maxItem", GetLogsMaxItems)
+	ctx = context.WithValue(ctx, getLogsCxtKeyMaxItems, GetLogsMaxItems)
 	ctx, cancelFnc := context.WithTimeout(ctx, GetLogsDeadline)
 	defer cancelFnc()
 
