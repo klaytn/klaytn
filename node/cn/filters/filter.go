@@ -228,6 +228,7 @@ func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*types.Log, e
 				return logs, errors.New("query timeout exceeded")
 			}
 			return logs, errors.New("query is canceled. " + ctx.Err().Error())
+		default:
 		}
 	}
 	return logs, nil
