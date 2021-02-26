@@ -103,6 +103,10 @@ func LocalEnv() Environment {
 	head := readGitFile("HEAD")
 	if splits := strings.Split(head, " "); len(splits) == 2 {
 		head = splits[1]
+	} else if len(splits) == 1 && len(splits[0]) == 40 {
+		// HEAD file of detached HEAD contains only commit hash
+		env.Commit = splits[0]
+		return env
 	} else {
 		return env
 	}
