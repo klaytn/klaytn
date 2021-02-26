@@ -22,11 +22,13 @@ package types
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
+
 	"io/ioutil"
 	"math/big"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/rlp"
