@@ -47,6 +47,9 @@ type Config struct {
 
 	// Enables collecting internal transaction data during processing a block
 	EnableInternalTxTracing bool
+
+	// Prefetching is true if the EVM is used for prefetching.
+	Prefetching bool
 }
 
 // keccakState wraps sha3.state. In addition to the usual hash methods, it also supports

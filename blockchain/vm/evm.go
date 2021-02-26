@@ -189,6 +189,10 @@ func (evm *EVM) Cancel(reason int32) {
 	}
 }
 
+func (evm *EVM) IsPrefetching() bool {
+	return evm.vmConfig.Prefetching
+}
+
 // Cancelled returns true if Cancel has been called
 func (evm *EVM) Cancelled() bool {
 	return atomic.LoadInt32(&evm.abort) == 1

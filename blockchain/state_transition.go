@@ -227,9 +227,14 @@ func (st *StateTransition) preCheck() error {
 // returning the result including the used gas. It returns an error if failed.
 // An error indicates a consensus issue.
 func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerror) {
-	if kerr.ErrTxInvalid = st.preCheck(); kerr.ErrTxInvalid != nil {
-		return
+	if st.evm.IsPrefetching() {
+		st.gas = st.msg.Gas()
+	} else {
+		if kerr.ErrTxInvalid = st.preCheck(); kerr.ErrTxInvalid != nil {
+			return
+		}
 	}
+
 	msg := st.msg
 
 	// Pay intrinsic gas.

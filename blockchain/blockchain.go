@@ -317,12 +317,15 @@ func (bc *BlockChain) prefetchTxWorker(index int) {
 
 	logger.Debug("prefetchTxWorker is started", "index", index)
 	for followup := range bc.prefetchTxCh {
-		stateDB, err := state.New(bc.CurrentBlock().Root(), bc.stateCache)
+		stateDB, err := state.NewForPrefetching(bc.CurrentBlock().Root(), bc.stateCache)
 		if err != nil {
 			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
 			continue
 		}
-		bc.prefetcher.PrefetchTx(followup.block, followup.ti, stateDB, bc.vmConfig, followup.followupInterrupt)
+		vmCfg := vm.Config{}
+		vmCfg = bc.vmConfig
+		vmCfg.Prefetching = true
+		bc.prefetcher.PrefetchTx(followup.block, followup.ti, stateDB, vmCfg, followup.followupInterrupt)
 	}
 	logger.Debug("prefetchTxWorker is terminated", "index", index)
 }
@@ -1691,8 +1694,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				// current block is not the last one, so prefetch the right next block
 				followup := chain[i+1]
 				go func(start time.Time) {
-					throwaway, _ := state.New(parent.Root(), bc.stateCache)
-					bc.prefetcher.Prefetch(followup, throwaway, bc.vmConfig, &followupInterrupt)
+					throwaway, _ := state.NewForPrefetching(parent.Root(), bc.stateCache)
+					vmCfg := vm.Config{}
+					vmCfg = bc.vmConfig
+					vmCfg.Prefetching = true
+					bc.prefetcher.Prefetch(followup, throwaway, vmCfg, &followupInterrupt)
 
 					blockPrefetchExecuteTimer.Update(time.Since(start))
 					if atomic.LoadUint32(&followupInterrupt) == 1 {

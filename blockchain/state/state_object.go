@@ -154,18 +154,25 @@ func (c *stateObject) touch() {
 	}
 }
 
+func (c *stateObject) openStorageTrie(hash common.Hash, db Database) (Trie, error) {
+	if c.db.prefetching {
+		return db.OpenStorageTrieForPrefetching(hash)
+	}
+	return db.OpenStorageTrie(hash)
+}
+
 func (c *stateObject) getStorageTrie(db Database) Trie {
 	if c.storageTrie == nil {
 		if acc := account.GetProgramAccount(c.account); acc != nil {
 			var err error
-			c.storageTrie, err = db.OpenStorageTrie(acc.GetStorageRoot())
+			c.storageTrie, err = c.openStorageTrie(acc.GetStorageRoot(), db)
 			if err != nil {
-				c.storageTrie, _ = db.OpenStorageTrie(common.Hash{})
+				c.storageTrie, _ = c.openStorageTrie(common.Hash{}, db)
 				c.setError(fmt.Errorf("can't create storage trie: %v", err))
 			}
 		} else {
 			// not a contract account, just returns the empty trie.
-			c.storageTrie, _ = db.OpenStorageTrie(common.Hash{})
+			c.storageTrie, _ = c.openStorageTrie(common.Hash{}, db)
 		}
 	}
 	return c.storageTrie
