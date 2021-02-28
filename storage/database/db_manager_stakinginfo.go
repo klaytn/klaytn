@@ -22,7 +22,7 @@ package database
 // Be sure to use the right block number before calling this function.
 // (Refer to CalcStakingBlockNumber() in params/governance_params.go)
 func (dbm *databaseManager) ReadStakingInfo(blockNum uint64) ([]byte, error) {
-	db := dbm.getDatabase(MiscDB)
+	db := dbm.GetDatabase(MiscDB)
 
 	key := makeKey(stakingInfoPrefix, blockNum)
 	stakingInfo, err := db.Get(key)
@@ -41,7 +41,7 @@ func (dbm *databaseManager) ReadStakingInfo(blockNum uint64) ([]byte, error) {
 // Be sure to use the right block number before calling this function.
 // (Refer to CalcStakingBlockNumber() in params/governance_params.go)
 func (dbm *databaseManager) WriteStakingInfo(blockNum uint64, stakingInfo []byte) error {
-	db := dbm.getDatabase(MiscDB)
+	db := dbm.GetDatabase(MiscDB)
 
 	key := makeKey(stakingInfoPrefix, blockNum)
 	return db.Put(key, stakingInfo)

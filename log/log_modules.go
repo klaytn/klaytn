@@ -111,6 +111,7 @@ const (
 	NodeCNFilters
 	NodeCNTracers
 	Reward
+	Snapshot
 	ServiceChain
 	StorageDatabase
 	StorageStateDB
@@ -184,14 +185,15 @@ var moduleNames = [ModuleNameLen]string{
 	"node/cn/filters",
 	"node/cn/tracers",
 	"contracts/reward",
+	"snapshot",
 	"servicechain",
 	"storage/database",
 	"storage/statedb",
 	"vm",
 	"work",
-	"cmd/kspn",
 
 	// 51~60
+	"cmd/kspn",
 	"cmd/ksen",
 	"datasync/chaindatafetcher",
 	"kas",

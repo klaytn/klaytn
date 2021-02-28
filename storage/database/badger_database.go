@@ -197,6 +197,11 @@ func (bg *badgerDB) Meter(prefix string) {
 	logger.Warn("badgerDB does not support metrics!")
 }
 
+// Compact is not supported on a badger database.
+func (db *badgerDB) Compact(start []byte, limit []byte) error {
+	return nil
+}
+
 type badgerBatch struct {
 	db   *badger.DB
 	txn  *badger.Txn
