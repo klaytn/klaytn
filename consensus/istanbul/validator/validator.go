@@ -96,7 +96,7 @@ func SelectRandomCommittee(validators []istanbul.Validator, committeeSize uint64
 
 	// ensure committeeSize and proposer indexes are valid
 	validatorSize := len(validators)
-	if validatorSize < int(committeeSize) || validatorSize < proposerIdx || validatorSize < nextProposerIdx {
+	if validatorSize < int(committeeSize) || validatorSize <= proposerIdx || validatorSize <= nextProposerIdx {
 		logger.Error("invalid committee size or validator indexes", "validatorSize", validatorSize,
 			"committeeSize", committeeSize, "proposerIdx", proposerIdx, "nextProposerIdx", nextProposerIdx)
 		return nil
