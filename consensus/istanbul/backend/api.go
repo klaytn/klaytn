@@ -23,6 +23,9 @@ package backend
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"reflect"
+
 	klaytnApi "github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -30,8 +33,6 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"math/big"
-	"reflect"
 )
 
 // API is a user facing RPC API to dump Istanbul state
@@ -280,7 +281,11 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 
 	// get origin proposer at 0 round.
 	originProposer := common.Address{}
-	_, lastProposer := api.istanbul.LastProposal()
+	lastProposer := common.Address{}
+	if blockNumber > 0 {
+		lastProposer = api.istanbul.GetProposer(blockNumber - 1)
+	}
+
 	newValSet := snap.ValSet.Copy()
 	newValSet.CalcProposer(lastProposer, 0)
 	originProposer = newValSet.GetProposer().Address()
