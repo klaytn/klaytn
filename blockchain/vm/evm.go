@@ -56,14 +56,14 @@ type (
 // - an address of precompiled contracts
 // - an address of program accounts
 func isProgramAccount(addr common.Address, db StateDB) bool {
-	_, exists := PrecompiledContractsCypress[addr]
+	_, exists := PrecompiledContractsConstantinople[addr]
 	return exists || db.IsProgramAccount(addr)
 }
 
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
-		precompiles := PrecompiledContractsCypress
+		precompiles := PrecompiledContractsConstantinople
 		if p := precompiles[*contract.CodeAddr]; p != nil {
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
@@ -219,7 +219,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
 	if common.IsPrecompiledContractAddress(addr) {
-		precompiles := PrecompiledContractsCypress
+		precompiles := PrecompiledContractsConstantinople
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
 			if evm.vmConfig.Debug && evm.depth == 0 {

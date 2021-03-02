@@ -50,6 +50,8 @@ var (
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
 // requires a deterministic gas count based on the input size of the Run method of the
 // contract.
+// If you want more information about Klaytn's precompiled contracts,
+// please refer https://docs.klaytn.com/smart-contract/precompiled-contracts
 type PrecompiledContract interface {
 	// GetRequiredGasAndComputationCost returns the gas and computation cost
 	// required to execute the precompiled contract.
@@ -60,9 +62,9 @@ type PrecompiledContract interface {
 	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error)
 }
 
-// PrecompiledContractsCypress contains the default set of pre-compiled Klaytn
-// contracts used in the Cypress release.
-var PrecompiledContractsCypress = map[common.Address]PrecompiledContract{
+// PrecompiledContractsConstantinople contains the default set of pre-compiled Klaytn
+// contracts based on Ethereum Constantinople.
+var PrecompiledContractsConstantinople = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):  &ecrecover{},
 	common.BytesToAddress([]byte{2}):  &sha256hash{},
 	common.BytesToAddress([]byte{3}):  &ripemd160hash{},
@@ -76,7 +78,22 @@ var PrecompiledContractsCypress = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{11}): &validateSender{},
 }
 
-// TODO-IncompatibleChange: define PrecompiledContracts set for first incompatible change
+// TODO-IstanbulCompatible: add blake2b and reprice bn_128 precompiled contract
+// PrecompiledContractsIstanbul contains the default set of pre-compiled Klaytn
+// contracts based on Ethereum Istanbul.
+var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
+	common.BytesToAddress([]byte{1}):      &ecrecover{},
+	common.BytesToAddress([]byte{2}):      &sha256hash{},
+	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
+	common.BytesToAddress([]byte{4}):      &dataCopy{},
+	common.BytesToAddress([]byte{5}):      &bigModExp{},
+	common.BytesToAddress([]byte{6}):      &bn256Add{},
+	common.BytesToAddress([]byte{7}):      &bn256ScalarMul{},
+	common.BytesToAddress([]byte{8}):      &bn256Pairing{},
+	common.BytesToAddress([]byte{3, 253}): &vmLog{},
+	common.BytesToAddress([]byte{3, 254}): &feePayer{},
+	common.BytesToAddress([]byte{3, 255}): &validateSender{},
+}
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
 func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) (ret []byte, computationCost uint64, err error) {
