@@ -90,9 +90,9 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{6}):      &bn256Add{},
 	common.BytesToAddress([]byte{7}):      &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}):      &bn256Pairing{},
-	common.BytesToAddress([]byte{3, 252}): &vmLog{},
-	common.BytesToAddress([]byte{3, 253}): &feePayer{},
-	common.BytesToAddress([]byte{3, 254}): &validateSender{},
+	common.BytesToAddress([]byte{3, 253}): &vmLog{},
+	common.BytesToAddress([]byte{3, 254}): &feePayer{},
+	common.BytesToAddress([]byte{3, 255}): &validateSender{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
