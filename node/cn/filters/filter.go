@@ -22,7 +22,10 @@ package filters
 
 import (
 	"context"
+	"errors"
+	"math"
 	"math/big"
+	"strconv"
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
@@ -160,6 +163,8 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 	// Iterate over the matches until exhausted or context closed
 	var logs []*types.Log
 
+	maxItems := getMaxItems(ctx)
+
 	for {
 		select {
 		case number, ok := <-matches:
@@ -183,9 +188,14 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 				return logs, err
 			}
 			logs = append(logs, found...)
-
+			if len(logs) > maxItems {
+				return logs, errors.New("query returned more than " + strconv.Itoa(maxItems) + " results")
+			}
 		case <-ctx.Done():
-			return logs, ctx.Err()
+			if ctx.Err() == context.DeadlineExceeded {
+				return logs, errors.New("query timeout exceeded")
+			}
+			return logs, errors.New("query is canceled. " + ctx.Err().Error())
 		}
 	}
 }
@@ -194,6 +204,8 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 // iteration and bloom matching.
 func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*types.Log, error) {
 	var logs []*types.Log
+
+	maxItems := getMaxItems(ctx)
 
 	for ; f.begin <= int64(end); f.begin++ {
 		header, err := f.backend.HeaderByNumber(ctx, rpc.BlockNumber(f.begin))
@@ -206,6 +218,17 @@ func (f *Filter) unindexedLogs(ctx context.Context, end uint64) ([]*types.Log, e
 				return logs, err
 			}
 			logs = append(logs, found...)
+			if len(logs) > maxItems {
+				return logs, errors.New("query returned more than " + strconv.Itoa(maxItems) + " results")
+			}
+		}
+		select {
+		case <-ctx.Done():
+			if ctx.Err() == context.DeadlineExceeded {
+				return logs, errors.New("query timeout exceeded")
+			}
+			return logs, errors.New("query is canceled. " + ctx.Err().Error())
+		default:
 		}
 	}
 	return logs, nil
@@ -312,4 +335,17 @@ func bloomFilter(bloom types.Bloom, addresses []common.Address, topics [][]commo
 		}
 	}
 	return true
+}
+
+// getMaxItems returns the value of getLogsCxtKeyMaxItems set in the given context.
+// If the value is not set in the context, it will returns MaxInt32-1.
+func getMaxItems(ctx context.Context) int {
+	maxItems := math.MaxInt32 - 1
+	if val := ctx.Value(getLogsCxtKeyMaxItems); val != nil {
+		val, ok := val.(int)
+		if ok {
+			maxItems = val
+		}
+	}
+	return maxItems
 }

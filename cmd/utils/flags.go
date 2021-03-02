@@ -51,6 +51,7 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
+	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -325,7 +326,7 @@ var (
 	}
 	TrieNodeCacheLimitFlag = cli.IntFlag{
 		Name:  "state.trie-cache-limit",
-		Usage: "Memory allowance (MB) to use for caching trie nodes in memory. -1 is for auto-scaling",
+		Usage: "Memory allowance (MiB) to use for caching trie nodes in memory. -1 is for auto-scaling",
 		Value: -1,
 	}
 	TrieNodeCacheSavePeriodFlag = cli.DurationFlag{
@@ -523,6 +524,16 @@ var (
 	PreloadJSFlag = cli.StringFlag{
 		Name:  "preload",
 		Usage: "Comma separated list of JavaScript files to preload into the console",
+	}
+	APIFilterGetLogsDeadlineFlag = cli.DurationFlag{
+		Name:  "api.filter.getLogs.deadline",
+		Usage: "Execution deadline for log collecting filter APIs",
+		Value: filters.GetLogsDeadline,
+	}
+	APIFilterGetLogsMaxItemsFlag = cli.IntFlag{
+		Name:  "api.filter.getLogs.maxitems",
+		Usage: "Maximum allowed number of return items for log collecting filter API",
+		Value: filters.GetLogsMaxItems,
 	}
 
 	// Network Settings
@@ -1180,6 +1191,12 @@ func setgRPC(ctx *cli.Context, cfg *node.Config) {
 	}
 }
 
+// setAPIConfig sets configurations for specific APIs.
+func setAPIConfig(ctx *cli.Context) {
+	filters.GetLogsDeadline = ctx.GlobalDuration(APIFilterGetLogsDeadlineFlag.Name)
+	filters.GetLogsMaxItems = ctx.GlobalInt(APIFilterGetLogsMaxItemsFlag.Name)
+}
+
 // MakeAddress converts an account specified directly as a hex encoded string or
 // a key index in the key store to an internal account representation.
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
@@ -1318,6 +1335,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setHTTP(ctx, cfg)
 	setWS(ctx, cfg)
 	setgRPC(ctx, cfg)
+	setAPIConfig(ctx)
 	setNodeUserIdent(ctx, cfg)
 
 	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
@@ -1525,7 +1543,7 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
 		NumFetcherPrefetchWorker:  ctx.GlobalInt(NumFetcherPrefetchWorkerFlag.Name),
-		LocalCacheSizeMB:          ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
+		LocalCacheSizeMiB:         ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
 		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),
 		RedisEndpoints:            ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),

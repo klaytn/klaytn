@@ -255,6 +255,8 @@ var FlagGroups = []FlagGroup{
 			ExecFlag,
 			PreloadJSFlag,
 			MaxRequestContentLengthFlag,
+			APIFilterGetLogsDeadlineFlag,
+			APIFilterGetLogsMaxItemsFlag,
 		},
 	},
 	{

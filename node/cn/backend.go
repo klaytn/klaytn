@@ -295,7 +295,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.txPool.SetGasPrice(big.NewInt(0).SetUint64(governance.UnitPrice()))
 
 	// Permit the downloader to use the trie cache allowance during fast sync
-	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMB
+	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
 		return nil, err
 	}

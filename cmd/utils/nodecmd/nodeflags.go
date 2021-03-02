@@ -111,6 +111,8 @@ var CommonNodeFlags = []cli.Flag{
 	utils.RestartTimeOutFlag,
 	utils.DaemonPathFlag,
 	utils.ConfigFileFlag,
+	utils.APIFilterGetLogsMaxItemsFlag,
+	utils.APIFilterGetLogsDeadlineFlag,
 }
 
 // Common RPC flags
