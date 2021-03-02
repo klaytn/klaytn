@@ -22,6 +22,8 @@ package filters
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -29,7 +31,6 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
 )
 
 //go:generate mockgen -destination=node/cn/filters/mock/backend_mock.go -package=cn github.com/klaytn/klaytn/node/cn/filters Backend
