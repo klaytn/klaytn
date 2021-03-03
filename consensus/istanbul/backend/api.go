@@ -281,10 +281,7 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 
 	// get origin proposer at 0 round.
 	originProposer := common.Address{}
-	lastProposer := common.Address{}
-	if blockNumber > 0 {
-		lastProposer = api.istanbul.GetProposer(blockNumber - 1)
-	}
+	lastProposer := api.istanbul.GetProposer(blockNumber - 1)
 
 	newValSet := snap.ValSet.Copy()
 	newValSet.CalcProposer(lastProposer, 0)
