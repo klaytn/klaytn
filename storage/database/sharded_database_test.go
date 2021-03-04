@@ -86,37 +86,37 @@ func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*D
 }
 
 // TestShardedDBIterator tests if shardedDBIterator iterates all entries with diverse shard size
-func TestShardedDBIterator(t *testing.T) {
+func testShardedDBIterator(t *testing.T) {
 	testIterator(t, true, []uint{100}, ShardedDBConfig, newShardedDBIterator)
 }
 
 // TestShardedDBIteratorUnsorted tests if shardedDBIteratorUnsorted iterates all entries with diverse shard size
-func TestShardedDBIteratorUnsorted(t *testing.T) {
+func testShardedDBIteratorUnsorted(t *testing.T) {
 	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBIteratorUnsorted)
 }
 
 // TestShardedDBChanIterator tests if shardedDBChanIterator iterates all entries with diverse shard size
-func TestShardedDBChanIterator(t *testing.T) {
+func testShardedDBChanIterator(t *testing.T) {
 	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBChanIterator)
 }
 
 // TestShardedDBIteratorSize tests if shardedDBIterator iterates all entries for different
 // entry sizes
-func TestShardedDBIteratorSize(t *testing.T) {
+func testShardedDBIteratorSize(t *testing.T) {
 	config := ShardedDBConfig[0]
 	size := config.NumStateTrieShards
 	testIterator(t, true, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBIterator)
 }
 
 // TestShardedDBIteratorUnsortedSize tests if shardedDBIteratorUnsorted iterates all entries
-func TestShardedDBIteratorUnsortedSize(t *testing.T) {
+func testShardedDBIteratorUnsortedSize(t *testing.T) {
 	config := ShardedDBConfig[0]
 	size := config.NumStateTrieShards
 	testIterator(t, false, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBIteratorUnsorted)
 }
 
 // TestShardedDBChanIteratorSize tests if shardedDBChanIterator iterates all entries
-func TestShardedDBChanIteratorSize(t *testing.T) {
+func testShardedDBChanIteratorSize(t *testing.T) {
 	config := ShardedDBConfig[0]
 	size := config.NumStateTrieShards
 	testIterator(t, false, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBChanIterator)
@@ -206,7 +206,7 @@ func testShardedIterator_Release(t *testing.T, entryNum int, checkFunc func(db s
 	}
 }
 
-func TestShardedDBIterator_Release(t *testing.T) {
+func testShardedDBIterator_Release(t *testing.T) {
 	testShardedIterator_Release(t, shardedDBCombineChanSize+10, func(db shardedDB) {
 		// Next() returns True if Release() is not called
 		{
@@ -235,7 +235,7 @@ func TestShardedDBIterator_Release(t *testing.T) {
 	})
 }
 
-func TestShardedDBIteratorUnsorted_Release(t *testing.T) {
+func testShardedDBIteratorUnsorted_Release(t *testing.T) {
 	testShardedIterator_Release(t, shardedDBCombineChanSize+10, func(db shardedDB) {
 		// Next() returns True if Release() is not called
 		{
@@ -264,7 +264,7 @@ func TestShardedDBIteratorUnsorted_Release(t *testing.T) {
 	})
 }
 
-func TestShardedDBChanIterator_Release(t *testing.T) {
+func testShardedDBChanIterator_Release(t *testing.T) {
 	testShardedIterator_Release(t,
 		int(ShardedDBConfig[len(ShardedDBConfig)-1].NumStateTrieShards*shardedDBSubChannelSize*2),
 		func(db shardedDB) {
