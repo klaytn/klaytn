@@ -48,6 +48,7 @@ type StateDB interface {
 	GetCode(common.Address) []byte
 	SetCode(common.Address, []byte) error
 	GetCodeSize(common.Address) int
+	GetCodeFormat(common.Address) params.CodeFormat
 
 	AddRefund(uint64)
 	GetRefund() uint64

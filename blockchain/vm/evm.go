@@ -55,15 +55,15 @@ type (
 // isProgramAccount returns true if the address is one of the following:
 // - an address of precompiled contracts
 // - an address of program accounts
-func isProgramAccount(addr common.Address, db StateDB) bool {
-	_, exists := PrecompiledContractsConstantinople[addr]
+func isProgramAccount(evm *EVM, caller common.Address, addr common.Address, db StateDB) bool {
+	_, exists := evm.GetPrecompiledContract(caller, addr)[addr]
 	return exists || db.IsProgramAccount(addr)
 }
 
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
-		precompiles := PrecompiledContractsConstantinople
+		precompiles := evm.GetPrecompiledContract(contract.CallerAddress, *contract.CodeAddr)
 		if p := precompiles[*contract.CodeAddr]; p != nil {
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
@@ -219,7 +219,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
 	if common.IsPrecompiledContractAddress(addr) {
-		precompiles := PrecompiledContractsConstantinople
+		precompiles := evm.GetPrecompiledContract(caller.Address(), addr)
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
 			if evm.vmConfig.Debug && evm.depth == 0 {
@@ -230,7 +230,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		}
 		// create an account object of the enabled precompiled address if not exist.
 		if !evm.StateDB.Exist(addr) {
-			evm.StateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM)
+			evm.StateDB.CreateSmartContractAccount(addr, evm.CurrentCodeFormat())
 		}
 	}
 
@@ -250,7 +250,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	}
 	evm.Transfer(evm.StateDB, caller.Address(), to.Address(), value)
 
-	if !isProgramAccount(addr, evm.StateDB) {
+	if !isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
 		return ret, gas, nil
 	}
 
@@ -304,7 +304,7 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
 
-	if !isProgramAccount(addr, evm.StateDB) {
+	if !isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
 		logger.Info("Returning since the addr is not a program account", "addr", addr)
 		return nil, gas, nil
 	}
@@ -342,7 +342,7 @@ func (evm *EVM) DelegateCall(caller types.ContractRef, addr common.Address, inpu
 		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
 	}
 
-	if !isProgramAccount(addr, evm.StateDB) {
+	if !isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
 		logger.Info("Returning since the addr is not a program account", "addr", addr)
 		return nil, gas, nil
 	}
@@ -386,7 +386,7 @@ func (evm *EVM) StaticCall(caller types.ContractRef, addr common.Address, input 
 		defer func() { evm.interpreter.readOnly = false }()
 	}
 
-	if !isProgramAccount(addr, evm.StateDB) {
+	if !isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
 		logger.Info("Returning since the addr is not a program account", "addr", addr)
 		return nil, gas, nil
 	}
@@ -452,7 +452,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
 	//   because the account key is set to AccountKeyFail by default.
 	//   Need to make a decision of the key type.
-	evm.StateDB.CreateSmartContractAccountWithKey(address, humanReadable, accountkey.NewAccountKeyFail(), codeFormat)
+	evm.StateDB.CreateSmartContractAccountWithKey(address, humanReadable, accountkey.NewAccountKeyFail(), evm.CurrentCodeFormat())
 	evm.StateDB.SetNonce(address, 1)
 	if value.Sign() != 0 {
 		evm.Transfer(evm.StateDB, caller.Address(), address, value)
@@ -536,6 +536,33 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 	codeAndHash := &codeAndHash{code: code}
 	codeAndHash.Hash()
 	return evm.create(caller, codeAndHash, gas, value, contractAddr, humanReadable, codeFormat)
+}
+
+func (evm *EVM) CurrentCodeFormat() params.CodeFormat {
+	switch {
+	case evm.chainRules.IsIstanbul:
+		return params.CodeFormatEVM2
+	default:
+		return params.CodeFormatEVM
+	}
+}
+
+func (evm *EVM) GetPrecompiledContract(caller, address common.Address) map[common.Address]PrecompiledContract {
+	switch {
+	case evm.chainRules.IsIstanbul:
+		// Below code is added to make vmLog(0x09), feePayer(0x0a), validateSender(0x0b) precompiled contract
+		// works after the istanbul incompatible change
+		// (1) check whether the contract(caller) is deployed before istanbul incompatible change
+		// (2) then, check whether the precompiled contract(address) is 0x09, 0x0a, 0x0b
+		// (3) if it is, use old precompiled contract set
+		if evm.StateDB.GetCodeFormat(caller) == params.CodeFormatEVM &&
+			(address == common.HexToAddress("0x09") || address == common.HexToAddress("0x0a") || address == common.HexToAddress("0x0b")) {
+			return PrecompiledContractsConstantinople
+		}
+		return PrecompiledContractsIstanbul
+	default:
+		return PrecompiledContractsConstantinople
+	}
 }
 
 // ChainConfig returns the environment's chain configuration

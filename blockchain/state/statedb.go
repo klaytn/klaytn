@@ -326,6 +326,18 @@ func (self *StateDB) IsValidCodeFormat(addr common.Address) bool {
 	return false
 }
 
+func (self *StateDB) GetCodeFormat(addr common.Address) params.CodeFormat {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		pa := account.GetProgramAccount(stateObject.account)
+		if pa != nil {
+			return pa.GetCodeFormat()
+		}
+		return params.CodeFormatLast
+	}
+	return params.CodeFormatLast
+}
+
 func (self *StateDB) GetKey(addr common.Address) accountkey.AccountKey {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
