@@ -19,6 +19,11 @@ package main
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
@@ -26,10 +31,6 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 const (

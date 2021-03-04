@@ -17,9 +17,10 @@
 package database
 
 import (
-	"github.com/syndtr/goleveldb/leveldb/opt"
 	"strconv"
 	"testing"
+
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 type LDBOptions struct {

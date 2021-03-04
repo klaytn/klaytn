@@ -23,6 +23,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
@@ -32,10 +37,6 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"gopkg.in/urfave/cli.v1"
-	"net"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 var (

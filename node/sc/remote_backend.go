@@ -18,15 +18,16 @@ package sc
 
 import (
 	"context"
+	"math/big"
+	"net"
+	"time"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/pkg/errors"
-	"math/big"
-	"net"
-	"time"
 )
 
 var (

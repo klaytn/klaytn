@@ -18,11 +18,12 @@ package tests
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"testing"
-	"time"
 )
 
 func BenchmarkDeriveSha(b *testing.B) {

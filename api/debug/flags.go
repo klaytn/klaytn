@@ -26,12 +26,13 @@ import (
 	"os"
 	"runtime"
 
+	"io"
+
 	"github.com/fjl/memsize/memsizeui"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/log/term"
 	colorable "github.com/mattn/go-colorable"
 	"gopkg.in/urfave/cli.v1"
-	"io"
 )
 
 var Memsize memsizeui.Handler

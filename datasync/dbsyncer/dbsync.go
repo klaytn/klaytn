@@ -19,6 +19,9 @@ package dbsyncer
 import (
 	"context"
 	"database/sql"
+	"strings"
+	"time"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -29,8 +32,6 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/work"
 	"github.com/pkg/errors"
-	"strings"
-	"time"
 )
 
 var logger = log.NewModuleLogger(log.Node)

@@ -5,13 +5,14 @@
 package mock_istanbul
 
 import (
+	big "math/big"
+	reflect "reflect"
+	time "time"
+
 	gomock "github.com/golang/mock/gomock"
 	common "github.com/klaytn/klaytn/common"
 	istanbul "github.com/klaytn/klaytn/consensus/istanbul"
 	event "github.com/klaytn/klaytn/event"
-	big "math/big"
-	reflect "reflect"
-	time "time"
 )
 
 // MockBackend is a mock of Backend interface

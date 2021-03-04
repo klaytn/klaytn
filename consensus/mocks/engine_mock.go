@@ -5,14 +5,15 @@
 package mocks
 
 import (
+	big "math/big"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	state "github.com/klaytn/klaytn/blockchain/state"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	consensus "github.com/klaytn/klaytn/consensus"
 	rpc "github.com/klaytn/klaytn/networks/rpc"
-	big "math/big"
-	reflect "reflect"
 )
 
 // MockEngine is a mock of Engine interface

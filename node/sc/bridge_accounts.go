@@ -18,13 +18,6 @@ package sc
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/cmd/homi/setup"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/params"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -32,6 +25,14 @@ import (
 	"path"
 	"sync"
 	"time"
+
+	"github.com/klaytn/klaytn/accounts"
+	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/klaytn/klaytn/accounts/keystore"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/cmd/homi/setup"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/params"
 )
 
 const (

@@ -17,13 +17,14 @@
 package cn
 
 import (
+	"math/big"
+	"strings"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"strings"
-	"testing"
 )
 
 var version = 63

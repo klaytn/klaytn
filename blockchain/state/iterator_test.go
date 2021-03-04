@@ -21,8 +21,9 @@ package state
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/common"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 // Tests that the node iterator indeed walks over the entire database contents.

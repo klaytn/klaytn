@@ -22,6 +22,9 @@ package filters
 
 import (
 	"context"
+	"math/big"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -35,8 +38,6 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
 )
 
 var addr1 = common.HexToAddress("111")

@@ -22,6 +22,9 @@ package state
 import (
 	"bytes"
 	"errors"
+	"math/big"
+	"testing"
+
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/common"
@@ -29,8 +32,6 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
 )
 
 // testAccount is the data associated with an account used by the state tests.

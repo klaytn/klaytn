@@ -17,17 +17,18 @@
 package tests
 
 import (
+	"io/ioutil"
+	"math/big"
+	"os"
+	"strconv"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"strconv"
-	"testing"
 )
 
 type testEntry struct {

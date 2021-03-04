@@ -22,12 +22,13 @@ package vm
 
 import (
 	"fmt"
+	"hash"
+	"sync/atomic"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
-	"hash"
-	"sync/atomic"
 )
 
 // Config are the configuration options for the Interpreter

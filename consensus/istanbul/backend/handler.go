@@ -22,7 +22,8 @@ package backend
 
 import (
 	"errors"
-	"github.com/hashicorp/golang-lru"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"

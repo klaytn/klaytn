@@ -5,12 +5,13 @@
 package cn
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	accounts "github.com/klaytn/klaytn/accounts"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	p2p "github.com/klaytn/klaytn/networks/p2p"
-	reflect "reflect"
 )
 
 // MockBackendProtocolManager is a mock of BackendProtocolManager interface

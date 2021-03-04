@@ -20,14 +20,15 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
-	"github.com/klaytn/klaytn/log"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	"github.com/klaytn/klaytn/log"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 const (

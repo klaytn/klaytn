@@ -22,11 +22,12 @@ package gasprice
 
 import (
 	"context"
+	"math/big"
+	"sync"
+
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
-	"math/big"
-	"sync"
 )
 
 var maxPrice = big.NewInt(500 * params.Ston)

@@ -21,10 +21,11 @@
 package istanbul
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/event"
 	"math/big"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/event"
 )
 
 //go:generate mockgen -destination=consensus/istanbul/mocks/backend_mock.go github.com/klaytn/klaytn/consensus/istanbul Backend

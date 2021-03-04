@@ -20,11 +20,6 @@ import (
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/profile"
-	"github.com/klaytn/klaytn/params"
 	"math/big"
 	"math/rand"
 	"os"
@@ -32,6 +27,12 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/params"
 )
 
 var cpuprofile bool = false

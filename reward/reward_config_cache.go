@@ -18,11 +18,12 @@ package reward
 
 import (
 	"errors"
-	"github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/params"
 	"math/big"
 	"strconv"
 	"strings"
+
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/klaytn/klaytn/params"
 )
 
 var (

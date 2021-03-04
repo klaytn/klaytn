@@ -17,18 +17,19 @@
 package tests
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/stretchr/testify/assert"
-	"github.com/syndtr/goleveldb/leveldb"
 	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/node/cn"
+	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // continuous occurrence of state trie migration and node restart must success

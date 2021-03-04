@@ -24,6 +24,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"math/big"
+	"net"
+	"path"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/api"
@@ -41,12 +48,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
-	"io"
-	"math/big"
-	"net"
-	"path"
-	"sync"
-	"time"
 )
 
 const (

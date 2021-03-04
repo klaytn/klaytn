@@ -20,11 +20,12 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/kerrors"
-	"math/big"
 )
 
 var (

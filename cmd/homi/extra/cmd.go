@@ -19,8 +19,9 @@ package extra
 
 import (
 	"fmt"
-	"gopkg.in/urfave/cli.v1"
 	"os"
+
+	"gopkg.in/urfave/cli.v1"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/naoina/toml"

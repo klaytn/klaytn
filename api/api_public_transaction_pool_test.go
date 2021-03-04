@@ -2,22 +2,23 @@ package api
 
 import (
 	"context"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"reflect"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/accounts/mocks"
-	"github.com/klaytn/klaytn/api/mocks"
+	mock_accounts "github.com/klaytn/klaytn/accounts/mocks"
+	mock_api "github.com/klaytn/klaytn/api/mocks"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"reflect"
-	"testing"
 )
 
 // test tx types and internal data to be supported by APIs in PublicTransactionPoolAPI.

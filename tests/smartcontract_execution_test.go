@@ -19,6 +19,14 @@ package tests
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"math/rand"
+	"os"
+	"runtime/pprof"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -27,13 +35,6 @@ import (
 	"github.com/klaytn/klaytn/common/compiler"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
-	"math/big"
-	"math/rand"
-	"os"
-	"runtime/pprof"
-	"strings"
-	"testing"
-	"time"
 )
 
 type deployedContract struct {

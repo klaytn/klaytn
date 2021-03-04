@@ -28,11 +28,12 @@ import (
 	"sync"
 	"time"
 
+	"strings"
+
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/simulations/adapters"
-	"strings"
 )
 
 var DialBanTimeout = 200 * time.Millisecond

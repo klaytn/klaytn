@@ -22,6 +22,7 @@ package api
 
 import (
 	"fmt"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/hexutil"
 )

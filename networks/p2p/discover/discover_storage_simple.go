@@ -17,13 +17,14 @@
 package discover
 
 import (
+	"math/rand"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
-	"math/rand"
-	"sync"
-	"time"
 )
 
 type simpleStorage struct {

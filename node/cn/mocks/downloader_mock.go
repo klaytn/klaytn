@@ -5,13 +5,14 @@
 package mocks
 
 import (
+	big "math/big"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	klaytn "github.com/klaytn/klaytn"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	downloader "github.com/klaytn/klaytn/datasync/downloader"
-	big "math/big"
-	reflect "reflect"
 )
 
 // MockProtocolManagerDownloader is a mock of ProtocolManagerDownloader interface

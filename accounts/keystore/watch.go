@@ -23,8 +23,9 @@
 package keystore
 
 import (
-	"github.com/rjeczalik/notify"
 	"time"
+
+	"github.com/rjeczalik/notify"
 )
 
 type watcher struct {

@@ -23,10 +23,11 @@ package grpc
 import (
 	"context"
 	"encoding/json"
-	"google.golang.org/grpc"
 	"io"
 	"sync"
 	"time"
+
+	"google.golang.org/grpc"
 )
 
 type gKlaytnClient struct {

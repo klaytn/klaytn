@@ -21,13 +21,14 @@
 package consensus
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
-	"math/big"
 )
 
 // ChainReader defines a small collection of methods needed to access the local

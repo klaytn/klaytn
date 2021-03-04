@@ -23,13 +23,14 @@ package vm
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
+	"math/big"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
-	"io"
-	"math/big"
-	"time"
 )
 
 // Storage represents a contract's storage.

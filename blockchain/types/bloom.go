@@ -22,9 +22,10 @@ package types
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
-	"math/big"
 )
 
 type bytesBacked interface {

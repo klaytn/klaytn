@@ -21,8 +21,9 @@
 package state
 
 import (
-	"github.com/klaytn/klaytn/common"
 	"math/big"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 // journalEntry is a modification entry in the state change journal that can be

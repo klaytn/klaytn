@@ -21,9 +21,10 @@
 package jsre
 
 import (
-	"github.com/robertkrimen/otto"
 	"sort"
 	"strings"
+
+	"github.com/robertkrimen/otto"
 )
 
 // CompleteKeywords returns potential continuations for the given line. Since line is
