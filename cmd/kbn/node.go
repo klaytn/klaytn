@@ -22,13 +22,14 @@ package main
 
 import (
 	"fmt"
+	"net"
+	"strings"
+	"sync"
+
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/grpc"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
-	"net"
-	"strings"
-	"sync"
 )
 
 // Node is a container on which services can be registered.
@@ -229,7 +230,7 @@ func (n *Node) startHTTP(endpoint string, apis []rpc.API, modules []string, cors
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartHTTPEndpoint(endpoint, apis, modules, cors, vhosts)
+	listener, handler, err := rpc.StartHTTPEndpoint(endpoint, apis, modules, cors, vhosts, n.config.HTTPTimeouts)
 	if err != nil {
 		return err
 	}
@@ -248,7 +249,7 @@ func (n *Node) startFastHTTP(endpoint string, apis []rpc.API, modules []string, 
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartFastHTTPEndpoint(endpoint, apis, modules, cors, vhosts)
+	listener, handler, err := rpc.StartFastHTTPEndpoint(endpoint, apis, modules, cors, vhosts, n.config.HTTPTimeouts)
 	if err != nil {
 		return err
 	}
