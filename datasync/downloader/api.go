@@ -22,10 +22,11 @@ package downloader
 
 import (
 	"context"
+	"sync"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"sync"
 )
 
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.

@@ -17,13 +17,14 @@
 package cn
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
 )
 
 func setMockPeers(mockPeers []*MockPeer) {

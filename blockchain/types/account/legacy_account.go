@@ -19,10 +19,11 @@ package account
 import (
 	"bytes"
 	"fmt"
+	"math/big"
+
 	"github.com/go-stack/stack"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
-	"math/big"
 )
 
 // LegacyAccount is the Klaytn consensus representation of legacy accounts.

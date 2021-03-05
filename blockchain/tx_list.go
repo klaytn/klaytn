@@ -22,11 +22,12 @@ package blockchain
 
 import (
 	"container/heap"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
 	"math"
 	"math/big"
 	"sort"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for

@@ -18,12 +18,13 @@ package discover
 
 import (
 	"crypto/rand"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/pkg/errors"
 	rand2 "math/rand"
 	"net"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/pkg/errors"
 )
 
 var (

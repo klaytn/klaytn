@@ -18,8 +18,9 @@ package database
 
 import (
 	"fmt"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 	"path/filepath"
+
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 // NewLevelDBManagerForTest returns a DBManager, consisted of only LevelDB.

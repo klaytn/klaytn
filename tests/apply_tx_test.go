@@ -19,14 +19,6 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/profile"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/params"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"os"
 	"reflect"
@@ -35,6 +27,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
+	"github.com/stretchr/testify/assert"
 )
 
 var benchName string

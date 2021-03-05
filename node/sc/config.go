@@ -23,16 +23,17 @@ package sc
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/networks/p2p/discover"
 )
 
 const (

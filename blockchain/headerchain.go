@@ -24,17 +24,18 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
+	mrand "math/rand"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"math"
-	"math/big"
-	mrand "math/rand"
-	"sync/atomic"
-	"time"
 )
 
 // HeaderChain implements the basic block header chain logic that is shared by

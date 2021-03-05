@@ -21,8 +21,9 @@
 package vm
 
 import (
-	"github.com/klaytn/klaytn/params"
 	"math/big"
+
+	"github.com/klaytn/klaytn/params"
 )
 
 // Gas costs

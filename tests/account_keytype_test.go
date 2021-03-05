@@ -19,6 +19,13 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"math"
+	"math/big"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -29,12 +36,6 @@ import (
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"math"
-	"math/big"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 // createDefaultAccount creates a default account with a specific account key type.

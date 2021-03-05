@@ -18,8 +18,9 @@
 package extra
 
 import (
-	"gopkg.in/urfave/cli.v1"
 	"strings"
+
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (

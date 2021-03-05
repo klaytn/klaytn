@@ -18,6 +18,7 @@ package kas
 
 import (
 	"errors"
+
 	"github.com/jinzhu/gorm"
 )
 

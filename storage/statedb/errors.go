@@ -23,6 +23,7 @@ package statedb
 import (
 	"errors"
 	"fmt"
+
 	"github.com/klaytn/klaytn/common"
 )
 

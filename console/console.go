@@ -22,7 +22,6 @@ package console
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/networks/rpc"
 	"io"
 	"io/ioutil"
 	"os"
@@ -32,6 +31,8 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+
+	"github.com/klaytn/klaytn/networks/rpc"
 
 	"github.com/klaytn/klaytn/console/jsre"
 	"github.com/klaytn/klaytn/console/web3ext"

@@ -23,7 +23,6 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"math/rand"
 	"net"
 	"net/http"
@@ -34,6 +33,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestClientRequest(t *testing.T) {

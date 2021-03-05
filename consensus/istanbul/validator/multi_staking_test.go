@@ -35,11 +35,12 @@ NodeAddress of additional staking contract : begin with 9
 package validator
 
 import (
+	"testing"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func newTestWeightedCouncil(nodeAddrs []common.Address) *weightedCouncil {

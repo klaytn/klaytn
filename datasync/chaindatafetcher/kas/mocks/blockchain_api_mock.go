@@ -6,12 +6,13 @@ package mocks
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	api "github.com/klaytn/klaytn/api"
 	common "github.com/klaytn/klaytn/common"
 	hexutil "github.com/klaytn/klaytn/common/hexutil"
 	rpc "github.com/klaytn/klaytn/networks/rpc"
-	reflect "reflect"
 )
 
 // MockBlockchainAPI is a mock of BlockchainAPI interface

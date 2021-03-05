@@ -22,9 +22,10 @@ package event
 
 import (
 	"context"
-	"github.com/klaytn/klaytn/common/mclock"
 	"sync"
 	"time"
+
+	"github.com/klaytn/klaytn/common/mclock"
 )
 
 //go:generate mockgen -destination=event/mocks/subscription_mock.go -package=mocks github.com/klaytn/klaytn/event Subscription

@@ -5,10 +5,11 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/klaytn/klaytn/blockchain"
 	p2p "github.com/klaytn/klaytn/networks/p2p"
-	reflect "reflect"
 )
 
 // MockLesServer is a mock of LesServer interface

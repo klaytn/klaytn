@@ -22,6 +22,10 @@ package nodecmd
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+	"strings"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/api/debug"
@@ -32,9 +36,6 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"runtime"
-	"strings"
 )
 
 const (

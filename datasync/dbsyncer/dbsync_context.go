@@ -19,9 +19,10 @@ package dbsyncer
 import (
 	"context"
 	"database/sql"
-	"github.com/klaytn/klaytn/blockchain/types"
 	"strings"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
 )
 
 // HandleChainEventContext supports 2PC Commit (insert block + insert txs) for data consistency

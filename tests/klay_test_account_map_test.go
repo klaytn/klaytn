@@ -18,12 +18,13 @@ package tests
 import (
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
 	"github.com/klaytn/klaytn/crypto"
-	"math/big"
 )
 
 ////////////////////////////////////////////////////////////////////////////////

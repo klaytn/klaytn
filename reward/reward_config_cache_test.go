@@ -18,10 +18,11 @@ package reward
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/params"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/klaytn/klaytn/params"
+	"github.com/stretchr/testify/assert"
 )
 
 type testGovernance struct {

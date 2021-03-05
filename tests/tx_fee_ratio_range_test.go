@@ -19,6 +19,10 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -28,9 +32,6 @@ import (
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
-	"time"
 )
 
 // TestTxFeeRatioRange checks the range of the fee ratio.

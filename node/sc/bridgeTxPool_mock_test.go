@@ -5,10 +5,11 @@
 package sc
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
-	reflect "reflect"
 )
 
 // MockBridgeTxPool is a mock of BridgeTxPool interface

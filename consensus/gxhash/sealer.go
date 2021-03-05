@@ -22,13 +22,14 @@ package gxhash
 
 import (
 	crand "crypto/rand"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/consensus"
 	"math"
 	"math/big"
 	"math/rand"
 	"runtime"
 	"sync"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/consensus"
 )
 
 // Seal implements consensus.Engine, attempting to find a nonce that satisfies

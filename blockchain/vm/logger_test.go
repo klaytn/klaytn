@@ -21,11 +21,12 @@
 package vm
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
-	"math/big"
-	"testing"
 )
 
 type dummyContractRef struct {

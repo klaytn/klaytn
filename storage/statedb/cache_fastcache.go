@@ -17,10 +17,11 @@
 package statedb
 
 import (
+	"time"
+
 	"github.com/VictoriaMetrics/fastcache"
 	"github.com/alecthomas/units"
 	"github.com/rcrowley/go-metrics"
-	"time"
 )
 
 var (

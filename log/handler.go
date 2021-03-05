@@ -7,12 +7,13 @@ package log
 
 import (
 	"fmt"
-	"github.com/go-stack/stack"
 	"io"
 	"net"
 	"os"
 	"reflect"
 	"sync"
+
+	"github.com/go-stack/stack"
 )
 
 // A Logger prints its log records by writing to a Handler.

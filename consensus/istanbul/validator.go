@@ -21,8 +21,9 @@
 package istanbul
 
 import (
-	"github.com/klaytn/klaytn/common"
 	"strings"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 type Validator interface {

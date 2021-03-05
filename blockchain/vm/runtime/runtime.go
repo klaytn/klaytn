@@ -21,10 +21,11 @@
 package runtime
 
 import (
-	"github.com/klaytn/klaytn/blockchain/types"
 	"math"
 	"math/big"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
 
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/vm"

@@ -18,11 +18,12 @@ package governance
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"math/big"
 	"reflect"
 	"strings"
 	"sync/atomic"
+
+	"github.com/klaytn/klaytn/common/hexutil"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"

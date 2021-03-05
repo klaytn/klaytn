@@ -23,12 +23,13 @@ package nat
 import (
 	"errors"
 	"fmt"
-	"github.com/jackpal/go-nat-pmp"
-	"github.com/klaytn/klaytn/log"
 	"net"
 	"strings"
 	"sync"
 	"time"
+
+	natpmp "github.com/jackpal/go-nat-pmp"
+	"github.com/klaytn/klaytn/log"
 )
 
 var logger = log.NewModuleLogger(log.NetworksP2PNat)

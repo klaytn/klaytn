@@ -23,10 +23,6 @@ package debug
 import (
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/metrics/exp"
-	"github.com/klaytn/klaytn/params"
-	"github.com/rcrowley/go-metrics"
 	"io"
 	"net/http"
 	"os"
@@ -38,6 +34,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/metrics/exp"
+	"github.com/klaytn/klaytn/params"
+	"github.com/rcrowley/go-metrics"
 )
 
 // Handler is the global debugging handler.

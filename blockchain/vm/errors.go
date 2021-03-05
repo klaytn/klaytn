@@ -23,6 +23,7 @@ package vm
 import (
 	"errors"
 	"fmt"
+
 	"github.com/klaytn/klaytn/params"
 )
 

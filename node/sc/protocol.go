@@ -21,8 +21,9 @@
 package sc
 
 import (
-	"github.com/klaytn/klaytn/common"
 	"math/big"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 const ProtocolMaxMsgSize = 10 * 1024 * 1024 // Maximum cap on the size of a protocol message

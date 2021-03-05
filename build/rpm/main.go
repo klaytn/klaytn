@@ -3,11 +3,12 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/klaytn/klaytn/params"
-	"github.com/urfave/cli"
 	"os"
 	"strings"
 	"text/template"
+
+	"github.com/klaytn/klaytn/params"
+	"github.com/urfave/cli"
 )
 
 const (

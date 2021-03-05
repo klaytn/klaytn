@@ -1,12 +1,13 @@
 package core
 
 import (
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/consensus/istanbul/mocks"
-	"testing"
+	mock_istanbul "github.com/klaytn/klaytn/consensus/istanbul/mocks"
 )
 
 func TestCore_sendCommit(t *testing.T) {

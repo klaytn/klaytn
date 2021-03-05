@@ -18,9 +18,10 @@ package dbsyncer
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/blockchain/types"
 	"strings"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
 )
 
 func (ds *DBSyncer) HandleChainEventParallel(block *types.Block) error {

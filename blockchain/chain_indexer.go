@@ -23,14 +23,15 @@ package blockchain
 import (
 	"encoding/binary"
 	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/storage/database"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 // ChainIndexerBackend defines the methods needed to process chain segments in

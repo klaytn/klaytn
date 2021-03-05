@@ -22,11 +22,12 @@ package blockchain
 
 import (
 	"errors"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
-	"math/big"
 )
 
 var (

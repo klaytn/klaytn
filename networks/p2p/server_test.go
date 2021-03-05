@@ -23,15 +23,16 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"errors"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"math/rand"
 	"net"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/networks/p2p/discover"
 )
 
 func init() {

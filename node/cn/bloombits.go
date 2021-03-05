@@ -21,6 +21,8 @@
 package cn
 
 import (
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -28,7 +30,6 @@ import (
 	"github.com/klaytn/klaytn/common/bitutil"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"time"
 )
 
 const (

@@ -22,13 +22,14 @@ package discover
 
 import (
 	"crypto/rand"
+	"net"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
-	"net"
-	"sync"
-	"time"
 )
 
 const (

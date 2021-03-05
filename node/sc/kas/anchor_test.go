@@ -20,18 +20,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/golang/mock/gomock"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/node/sc/kas/mocks"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
 	"net/http"
 	"strconv"
 	"testing"
+
+	"github.com/golang/mock/gomock"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/node/sc/kas/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
 var (

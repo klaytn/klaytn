@@ -18,6 +18,11 @@ package tests
 
 import (
 	"crypto/sha256"
+	"math/big"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -26,10 +31,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ripemd160"
-	"math/big"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestPrecompiledContract(t *testing.T) {

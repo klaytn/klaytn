@@ -23,11 +23,6 @@ package gxhash
 import (
 	"errors"
 	"fmt"
-	"github.com/hashicorp/golang-lru/simplelru"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/rcrowley/go-metrics"
 	"math"
 	"math/big"
 	"math/rand"
@@ -39,6 +34,12 @@ import (
 	"sync"
 	"time"
 	"unsafe"
+
+	"github.com/hashicorp/golang-lru/simplelru"
+	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/rcrowley/go-metrics"
 
 	mmap "github.com/edsrzf/mmap-go"
 	"github.com/klaytn/klaytn/common"

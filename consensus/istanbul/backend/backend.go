@@ -22,7 +22,12 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"github.com/hashicorp/golang-lru"
+	"math/big"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -36,10 +41,6 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 const (

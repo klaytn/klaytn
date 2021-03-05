@@ -18,16 +18,17 @@ package tests
 
 import (
 	"crypto/ecdsa"
+	"math/big"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"strings"
-	"testing"
-	"time"
 )
 
 type genTxWithCodeFormat func(t *testing.T, signer types.Signer, from TestAccount, payer TestAccount, gasPrice *big.Int, codeFormat params.CodeFormat) *types.Transaction

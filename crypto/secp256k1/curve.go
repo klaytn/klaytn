@@ -38,9 +38,10 @@ package secp256k1
 
 import (
 	"crypto/elliptic"
-	"github.com/klaytn/klaytn/common"
 	"math/big"
 	"unsafe"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 /*
