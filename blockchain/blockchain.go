@@ -1681,7 +1681,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		var followupInterrupt uint32
 
 		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 {
-			// if fetcher works and only a block is given, use prefetchTxWorker
+			// Tx prefetcher is enabled for all cases (both single and multiple block insertion).
 			for ti := range block.Transactions() {
 				select {
 				case bc.prefetchTxCh <- prefetchTx{ti, block, &followupInterrupt}:
