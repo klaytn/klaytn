@@ -56,10 +56,11 @@ var (
 	memcacheUncacheTimeGauge = metrics.NewRegisteredGauge("trie/memcache/uncache/time", nil)
 
 	// metrics for state trie cache db
-	memcacheCleanHitMeter   = metrics.NewRegisteredMeter("trie/memcache/clean/hit", nil)
-	memcacheCleanMissMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
-	memcacheCleanReadMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
-	memcacheCleanWriteMeter = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
+	memcacheCleanHitMeter          = metrics.NewRegisteredMeter("trie/memcache/clean/hit", nil)
+	memcacheCleanMissMeter         = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
+	memcacheCleanPrefetchMissMeter = metrics.NewRegisteredMeter("trie/memcache/clean/prefetch/miss", nil)
+	memcacheCleanReadMeter         = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
+	memcacheCleanWriteMeter        = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
 
 	// metric of total node number
 	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
@@ -391,7 +392,7 @@ func (db *Database) NodeChildren(hash common.Hash) ([]common.Hash, error) {
 		return childrenHash, ErrZeroHashNode
 	}
 
-	n := db.node(hash)
+	n, _ := db.node(hash)
 	if n == nil {
 		return childrenHash, nil
 	}
@@ -503,11 +504,11 @@ func (db *Database) setCachedNode(hash, enc []byte) {
 
 // node retrieves a cached trie node from memory, or returns nil if node can be
 // found in the memory cache.
-func (db *Database) node(hash common.Hash) node {
+func (db *Database) node(hash common.Hash) (n node, fromDB bool) {
 	// Retrieve the node from the trie node cache if available
 	if enc := db.getCachedNode(hash); enc != nil {
 		if dec, err := decodeNode(hash[:], enc); err == nil {
-			return dec
+			return dec, false
 		} else {
 			logger.Error("node from cached trie node fails to be decoded!", "err", err)
 		}
@@ -518,16 +519,16 @@ func (db *Database) node(hash common.Hash) node {
 	node := db.nodes[hash]
 	db.lock.RUnlock()
 	if node != nil {
-		return node.obj(hash)
+		return node.obj(hash), false
 	}
 
 	// Content unavailable in memory, attempt to retrieve from disk
 	enc, err := db.diskDB.ReadCachedTrieNode(hash)
 	if err != nil || enc == nil {
-		return nil
+		return nil, true
 	}
 	db.setCachedNode(hash[:], enc)
-	return mustDecodeNode(hash[:], enc)
+	return mustDecodeNode(hash[:], enc), true
 }
 
 // Node retrieves an encoded cached trie node from memory. If it cannot be found
@@ -1188,7 +1189,7 @@ type NodeInfo struct {
 
 // CollectChildrenStats collects the depth of the trie recursively
 func (db *Database) CollectChildrenStats(node common.Hash, depth int, resultCh chan<- NodeInfo) {
-	n := db.node(node)
+	n, _ := db.node(node)
 	if n == nil {
 		return
 	}

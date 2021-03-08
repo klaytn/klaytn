@@ -90,6 +90,8 @@ type StateDB struct {
 	validRevisions []revision
 	nextRevisionId int
 
+	prefetching bool
+
 	// Measurements gathered during execution for debugging purposes
 	AccountReads   time.Duration
 	AccountHashes  time.Duration
@@ -116,6 +118,25 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		logs:                     make(map[common.Hash][]*types.Log),
 		preimages:                make(map[common.Hash][]byte),
 		journal:                  newJournal(),
+	}, nil
+}
+
+// Create a new state from a given trie with prefetching
+func NewForPrefetching(root common.Hash, db Database) (*StateDB, error) {
+	tr, err := db.OpenTrieForPrefetching(root)
+	if err != nil {
+		return nil, err
+	}
+	return &StateDB{
+		db:                       db,
+		trie:                     tr,
+		stateObjects:             make(map[common.Address]*stateObject),
+		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
+		stateObjectsDirty:        make(map[common.Address]struct{}),
+		logs:                     make(map[common.Hash][]*types.Log),
+		preimages:                make(map[common.Hash][]byte),
+		journal:                  newJournal(),
+		prefetching:              true,
 	}, nil
 }
 
