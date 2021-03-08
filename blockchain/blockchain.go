@@ -1584,6 +1584,43 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
+		// Create a new trie using the parent block and report an
+		// error if it fails.
+		var parent *types.Block
+		if i == 0 {
+			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
+		} else {
+			parent = chain[i-1]
+		}
+
+		// If we have a followup block, run that against the current state to pre-cache
+		// transactions and probabilistically some of the account/storage trie nodes.
+		var followupInterrupt uint32
+
+		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 {
+			// Tx prefetcher is enabled for all cases (both single and multiple block insertion).
+			for ti := range block.Transactions() {
+				select {
+				case bc.prefetchTxCh <- prefetchTx{ti, block, &followupInterrupt}:
+				default:
+				}
+			}
+			if i < len(chain)-1 {
+				// current block is not the last one, so prefetch the right next block
+				followup := chain[i+1]
+				go func(start time.Time) {
+					throwaway, _ := state.NewForPrefetching(parent.Root(), bc.stateCache)
+					vmCfg := bc.vmConfig
+					vmCfg.Prefetching = true
+					bc.prefetcher.Prefetch(followup, throwaway, vmCfg, &followupInterrupt)
+
+					blockPrefetchExecuteTimer.Update(time.Since(start))
+					if atomic.LoadUint32(&followupInterrupt) == 1 {
+						blockPrefetchInterruptMeter.Mark(1)
+					}
+				}(time.Now())
+			}
+		}
 		// If the chain is terminating, stop processing blocks
 		if atomic.LoadInt32(&bc.procInterrupt) == 1 {
 			logger.Debug("Premature abort during blocks processing")
@@ -1663,46 +1700,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}
-		// Create a new trie using the parent block and report an
-		// error if it fails.
-		var parent *types.Block
-		if i == 0 {
-			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
-		} else {
-			parent = chain[i-1]
-		}
 
 		stateDB, err := bc.StateAt(parent.Root())
 		if err != nil {
 			return i, events, coalescedLogs, err
-		}
-		// If we have a followup block, run that against the current state to pre-cache
-		// transactions and probabilistically some of the account/storage trie nodes.
-		var followupInterrupt uint32
-
-		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 {
-			// Tx prefetcher is enabled for all cases (both single and multiple block insertion).
-			for ti := range block.Transactions() {
-				select {
-				case bc.prefetchTxCh <- prefetchTx{ti, block, &followupInterrupt}:
-				default:
-				}
-			}
-			if i < len(chain)-1 {
-				// current block is not the last one, so prefetch the right next block
-				followup := chain[i+1]
-				go func(start time.Time) {
-					throwaway, _ := state.NewForPrefetching(parent.Root(), bc.stateCache)
-					vmCfg := bc.vmConfig
-					vmCfg.Prefetching = true
-					bc.prefetcher.Prefetch(followup, throwaway, vmCfg, &followupInterrupt)
-
-					blockPrefetchExecuteTimer.Update(time.Since(start))
-					if atomic.LoadUint32(&followupInterrupt) == 1 {
-						blockPrefetchInterruptMeter.Mark(1)
-					}
-				}(time.Now())
-			}
 		}
 
 		// Process block using the parent state as reference point.
