@@ -1584,6 +1584,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
+		// If the chain is terminating, stop processing blocks
+		if atomic.LoadInt32(&bc.procInterrupt) == 1 {
+			logger.Debug("Premature abort during blocks processing")
+			break
+		}
 		// Create a new trie using the parent block and report an
 		// error if it fails.
 		var parent *types.Block
@@ -1620,11 +1625,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 					}
 				}(time.Now())
 			}
-		}
-		// If the chain is terminating, stop processing blocks
-		if atomic.LoadInt32(&bc.procInterrupt) == 1 {
-			logger.Debug("Premature abort during blocks processing")
-			break
 		}
 		// If the header is a banned one, straight out abort
 		if BadHashes[block.Hash()] {
