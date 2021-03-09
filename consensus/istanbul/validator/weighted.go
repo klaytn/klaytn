@@ -95,6 +95,7 @@ func newWeightedValidator(addr common.Address, reward common.Address, votingpowe
 
 type weightedCouncil struct {
 	subSize    uint64
+	demoted    istanbul.Validators
 	validators istanbul.Validators
 	policy     istanbul.ProposerPolicy
 
@@ -600,6 +601,7 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 	calcWeight(weightedValidators, stakingAmounts, totalStaking)
 
 	valSet.refreshProposers(seed, blockNum)
+	valSet.SetBlockNum(blockNum)
 
 	logger.Debug("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
 	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
@@ -612,12 +614,13 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64) error 
 //  - []*weightedValidator : a list of validators which type is converted to weightedValidator
 //  - []float64 : a list of stakingAmounts.
 func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
-	numValidators := len(valSet.validators)
+	candidates := append(valSet.validators, valSet.demoted...)
+	numValidators := len(candidates)
 	weightedValidators := make([]*weightedValidator, numValidators)
 	stakingAmounts := make([]float64, numValidators)
 	addedStaking := make([]bool, len(stakingInfo.CouncilNodeAddrs))
 
-	for vIdx, val := range valSet.validators {
+	for vIdx, val := range candidates {
 		weightedVal, ok := val.(*weightedValidator)
 		if !ok {
 			return nil, nil, errors.New(fmt.Sprintf("not weightedValidator. val=%s", val.Address().String()))
@@ -645,6 +648,27 @@ func (valSet *weightedCouncil) getStakingAmountsOfValidators(stakingInfo *reward
 				break
 			}
 		}
+	}
+
+	var (
+		newValidators istanbul.Validators
+		newDemoted    istanbul.Validators
+	)
+	amount := params.MinimumStakingAmount()
+	for sIdx, val := range stakingAmounts {
+		if uint64(val) >= amount.Uint64() {
+			newValidators = append(newValidators, weightedValidators[sIdx])
+		} else {
+			newDemoted = append(newDemoted, weightedValidators[sIdx])
+		}
+	}
+
+	if len(newValidators) <= 0 {
+		valSet.validators = append(newValidators, newDemoted...)
+		valSet.demoted = istanbul.Validators{}
+	} else {
+		valSet.validators = newValidators
+		valSet.demoted = newDemoted
 	}
 
 	logger.Debug("stakingAmounts of validators", "validators", weightedValidators, "stakingAmounts", stakingAmounts)
