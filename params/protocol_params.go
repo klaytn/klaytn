@@ -149,8 +149,8 @@ func GetMaximumExtraDataSize() uint64 {
 type CodeFormat uint8
 
 const (
-	CodeFormatEVM CodeFormat = iota
-	CodeFormatEVM2
+	CodeFormatEVM                   CodeFormat = iota // contracts deployed before IstanbulCompatible are assigned CodeFormatEVM
+	CodeFormatEVMIstanbulCompatible                   // contracts deployed after IstanbulCompatible are assigned CodeFormatEVMIstanbulCompatible
 	CodeFormatLast
 )
 
@@ -158,8 +158,8 @@ func (t CodeFormat) String() string {
 	switch t {
 	case CodeFormatEVM:
 		return "CodeFormatEVM"
-	case CodeFormatEVM2:
-		return "CodeFormatEVM2"
+	case CodeFormatEVMIstanbulCompatible:
+		return "CodeFormatEVM2IstanbulCompatible"
 	}
 
 	return "UndefinedCodeFormat"

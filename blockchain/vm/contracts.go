@@ -431,7 +431,6 @@ func (c *vmLog) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) 
 
 // Runs the vmLog contract.
 func (c *vmLog) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	logger.Info("Precompiled Contract Run", "vmLog", strconv.QuoteToASCII(string(input)))
 	if (params.VMLogTarget & params.VMLogToFile) != 0 {
 		prefix := "tx=" + evm.StateDB.GetTxHash().String() + " caller=" + contract.CallerAddress.String() + " msg="
 		debug.Handler.WriteVMLog(prefix + string(input))
@@ -450,7 +449,6 @@ func (c *feePayer) GetRequiredGasAndComputationCost(input []byte) (uint64, uint6
 }
 
 func (c *feePayer) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	logger.Info("Precompiled Contract Run", "FeePayer", contract.FeePayerAddress.Bytes())
 	return contract.FeePayerAddress.Bytes(), nil
 }
 
@@ -463,7 +461,6 @@ func (c *validateSender) GetRequiredGasAndComputationCost(input []byte) (uint64,
 }
 
 func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	logger.Info("Precompiled Contract Run", "ValidateSender", strconv.QuoteToASCII(string(input)))
 	if err := c.validateSender(input, evm.StateDB); err != nil {
 		// If return error makes contract execution failed, do not return the error.
 		// Instead, print log.

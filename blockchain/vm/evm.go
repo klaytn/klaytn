@@ -56,14 +56,14 @@ type (
 // - an address of precompiled contracts
 // - an address of program accounts
 func isProgramAccount(evm *EVM, caller common.Address, addr common.Address, db StateDB) bool {
-	_, exists := evm.GetPrecompiledContract(caller, addr)[addr]
+	_, exists := evm.GetPrecompiledContractMap(caller, addr)[addr]
 	return exists || db.IsProgramAccount(addr)
 }
 
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
-		precompiles := evm.GetPrecompiledContract(contract.CallerAddress, *contract.CodeAddr)
+		precompiles := evm.GetPrecompiledContractMap(contract.CallerAddress, *contract.CodeAddr)
 		if p := precompiles[*contract.CodeAddr]; p != nil {
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
@@ -219,7 +219,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
 	if common.IsPrecompiledContractAddress(addr) {
-		precompiles := evm.GetPrecompiledContract(caller.Address(), addr)
+		precompiles := evm.GetPrecompiledContractMap(caller.Address(), addr)
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
 			if evm.vmConfig.Debug && evm.depth == 0 {
@@ -541,20 +541,23 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 func (evm *EVM) CurrentCodeFormat() params.CodeFormat {
 	switch {
 	case evm.chainRules.IsIstanbul:
-		return params.CodeFormatEVM2
+		return params.CodeFormatEVMIstanbulCompatible
 	default:
 		return params.CodeFormatEVM
 	}
 }
 
-func (evm *EVM) GetPrecompiledContract(caller, address common.Address) map[common.Address]PrecompiledContract {
+func (evm *EVM) GetPrecompiledContractMap(caller, address common.Address) map[common.Address]PrecompiledContract {
 	switch {
 	case evm.chainRules.IsIstanbul:
-		// Below code is added to make vmLog(0x09), feePayer(0x0a), validateSender(0x0b) precompiled contract
-		// works after the istanbul incompatible change
-		// (1) check whether the contract(caller) is deployed before istanbul incompatible change
-		// (2) then, check whether the precompiled contract(address) is 0x09, 0x0a, 0x0b
-		// (3) if it is, use old precompiled contract set
+		// The following code is to make vmLog(0x09), feePayer(0x0a), validateSender(0x0b) precompiled contract
+		// works after the istanbulIncompatible change
+		// if contract(caller) is deployed before istanbul and
+		// (1) contract address is 0x09, 0x0a, 0x0b, use the old precompiled contract set (use constantinople)
+		// (2) contract address is 0x06, 0x07, 0x08, use the new precompiled contract set (use istanbul)
+		//       (the only difference is gas cost)
+		// (3) contract address is 0x01-0x05,        use the new precompiled contract set (use istanbul)
+		//       (but gas price is exactly same as before)
 		if evm.StateDB.GetCodeFormat(caller) == params.CodeFormatEVM &&
 			(address == common.HexToAddress("0x09") || address == common.HexToAddress("0x0a") || address == common.HexToAddress("0x0b")) {
 			return PrecompiledContractsConstantinople
