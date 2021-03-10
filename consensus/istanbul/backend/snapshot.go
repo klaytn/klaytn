@@ -263,38 +263,48 @@ type snapshotJSON struct {
 	Weights           []uint64         `json:"weight"`
 	Proposers         []common.Address `json:"proposers"`
 	ProposersBlockNum uint64           `json:"proposersBlockNum"`
+
+	// for demoted validator
+	DemotedValidators   []common.Address `json:"demotedValidators"`
+	DemotedRewardAddrs  []common.Address `json:"demotedRewardAddrs"`
+	DemotedVotingPowers []uint64         `json:"demotedVotingPower"`
+	DemotedWeights      []uint64         `json:"demotedWeight"`
 }
 
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
-	var rewardAddrs []common.Address
-	var votingPowers []uint64
-	var weights []uint64
-	var proposers []common.Address
-	var proposersBlockNum uint64
-	var validators []common.Address
+	snapshot := &snapshotJSON{
+		Epoch:        s.Epoch,
+		Number:       s.Number,
+		Hash:         s.Hash,
+		Votes:        s.Votes,
+		Tally:        s.Tally,
+		Validators:   s.validators(),
+		Policy:       istanbul.ProposerPolicy(s.Policy),
+		SubGroupSize: s.CommitteeSize,
+	}
 
 	// TODO-Klaytn-Issue1166 For weightedCouncil
 	if s.ValSet.Policy() == istanbul.WeightedRandom {
-		validators, rewardAddrs, votingPowers, weights, proposers, proposersBlockNum = validator.GetWeightedCouncilData(s.ValSet)
-	} else {
-		validators = s.validators()
-	}
+		data := validator.GetWeightedCouncilData(s.ValSet)
+		if data != nil {
+			// set validators data
+			snapshot.Validators, snapshot.RewardAddrs, snapshot.VotingPowers, snapshot.Weights =
+				data.ValidatorsData.Addresses, data.ValidatorsData.RewardAddrs,
+				data.ValidatorsData.VotingPowers, data.ValidatorsData.Weights
 
-	return &snapshotJSON{
-		Epoch:             s.Epoch,
-		Number:            s.Number,
-		Hash:              s.Hash,
-		Votes:             s.Votes,
-		Tally:             s.Tally,
-		Validators:        validators,
-		Policy:            istanbul.ProposerPolicy(s.Policy),
-		SubGroupSize:      s.CommitteeSize,
-		RewardAddrs:       rewardAddrs,
-		VotingPowers:      votingPowers,
-		Weights:           weights,
-		Proposers:         proposers,
-		ProposersBlockNum: proposersBlockNum,
+			// set demoted validators data
+			snapshot.DemotedValidators, snapshot.DemotedRewardAddrs, snapshot.DemotedVotingPowers, snapshot.DemotedWeights =
+				data.DemotedValidatorsData.Addresses, data.DemotedValidatorsData.RewardAddrs,
+				data.DemotedValidatorsData.VotingPowers, data.DemotedValidatorsData.Weights
+
+			// set proposers data
+			snapshot.Proposers = data.Proposers
+			snapshot.ProposersBlockNum = data.ProposersBlockNum
+		}
+	} else {
+		snapshot.Validators = s.validators()
 	}
+	return snapshot
 }
 
 // Unmarshal from a json byte array
@@ -312,7 +322,13 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 
 	// TODO-Klaytn-Issue1166 For weightedCouncil
 	if j.Policy == istanbul.WeightedRandom {
-		s.ValSet = validator.NewWeightedCouncil(j.Validators, j.RewardAddrs, j.VotingPowers, j.Weights, j.Policy, j.SubGroupSize, j.Number, j.ProposersBlockNum, nil)
+		validators := &validator.ValidatorData{
+			j.Validators, j.RewardAddrs, j.VotingPowers, j.Weights,
+		}
+		demoted := &validator.ValidatorData{
+			j.DemotedValidators, j.DemotedRewardAddrs, j.DemotedVotingPowers, j.DemotedWeights,
+		}
+		s.ValSet = validator.NewWeightedCouncil(validators, demoted, j.Policy, j.SubGroupSize, j.Number, j.ProposersBlockNum, nil)
 		validator.RecoverWeightedCouncilProposer(s.ValSet, j.Proposers)
 	} else {
 		s.ValSet = validator.NewSubSet(j.Validators, j.Policy, j.SubGroupSize)

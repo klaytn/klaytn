@@ -133,15 +133,14 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 	weightedCouncil.proposers = proposers
 }
 
-func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, votingPowers []uint64, weights []uint64, policy istanbul.ProposerPolicy, committeeSize uint64, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
-
-	if policy != istanbul.WeightedRandom {
-		logger.Error("unsupported proposer policy for weighted council", "policy", policy)
+func convert(v *ValidatorData, chain consensus.ChainReader) []istanbul.Validator {
+	if v == nil {
 		return nil
 	}
-
-	valSet := &weightedCouncil{}
-	valSet.policy = policy
+	addrs := v.Addresses
+	rewards := v.RewardAddrs
+	weights := v.Weights
+	votingPowers := v.VotingPowers
 
 	// prepare rewards if necessary
 	if rewards == nil {
@@ -189,13 +188,30 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	}
 
 	// init validators
-	valSet.validators = make([]istanbul.Validator, len(addrs))
+	validators := make([]istanbul.Validator, len(addrs))
 	for i, addr := range addrs {
-		valSet.validators[i] = newWeightedValidator(addr, rewards[i], votingPowers[i], weights[i])
+		validators[i] = newWeightedValidator(addr, rewards[i], votingPowers[i], weights[i])
 	}
+
+	return validators
+}
+
+func NewWeightedCouncil(validators *ValidatorData, demoted *ValidatorData, policy istanbul.ProposerPolicy, committeeSize uint64, blockNum uint64, proposersBlockNum uint64, chain consensus.ChainReader) *weightedCouncil {
+
+	if policy != istanbul.WeightedRandom {
+		logger.Error("unsupported proposer policy for weighted council", "policy", policy)
+		return nil
+	}
+
+	valSet := &weightedCouncil{}
+	valSet.policy = policy
+
+	valSet.validators = convert(validators, chain)
+	valSet.demoted = convert(demoted, chain)
 
 	// sort validator
 	sort.Sort(valSet.validators)
+	sort.Sort(valSet.demoted)
 
 	// init proposer
 	if valSet.Size() > 0 {
@@ -205,7 +221,7 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	valSet.selector = weightedRandomProposer
 
 	valSet.blockNum = blockNum
-	valSet.proposers = make([]istanbul.Validator, len(addrs))
+	valSet.proposers = make([]istanbul.Validator, len(valSet.validators))
 	copy(valSet.proposers, valSet.validators)
 	valSet.proposersBlockNum = proposersBlockNum
 
@@ -214,37 +230,70 @@ func NewWeightedCouncil(addrs []common.Address, rewards []common.Address, voting
 	return valSet
 }
 
-func GetWeightedCouncilData(valSet istanbul.ValidatorSet) (validators []common.Address, rewardAddrs []common.Address, votingPowers []uint64, weights []uint64, proposers []common.Address, proposersBlockNum uint64) {
+type ValidatorData struct {
+	Addresses    []common.Address
+	RewardAddrs  []common.Address
+	VotingPowers []uint64
+	Weights      []uint64
+}
+
+type WeightedCouncilData struct {
+	Proposers         []common.Address
+	ProposersBlockNum uint64
+
+	ValidatorsData        *ValidatorData
+	DemotedValidatorsData *ValidatorData
+}
+
+func toSlices(vals istanbul.Validators) *ValidatorData {
+	numVals := len(vals)
+	addresses := make([]common.Address, numVals)
+	rewardAddrs := make([]common.Address, numVals)
+	votingPowers := make([]uint64, numVals)
+	weights := make([]uint64, numVals)
+	for i, val := range vals {
+		weightedVal := val.(*weightedValidator)
+		addresses[i] = weightedVal.address
+		rewardAddrs[i] = weightedVal.RewardAddress()
+		votingPowers[i] = weightedVal.votingPower
+		weights[i] = atomic.LoadUint64(&weightedVal.weight)
+	}
+
+	return &ValidatorData{
+		Addresses:    addresses,
+		RewardAddrs:  rewardAddrs,
+		VotingPowers: votingPowers,
+		Weights:      weights,
+	}
+}
+
+func GetWeightedCouncilData(valSet istanbul.ValidatorSet) *WeightedCouncilData {
 
 	weightedCouncil, ok := valSet.(*weightedCouncil)
 	if !ok {
 		logger.Error("not weightedCouncil type.")
-		return
+		return nil
 	}
 
 	if weightedCouncil.Policy() == istanbul.WeightedRandom {
-		numVals := len(weightedCouncil.validators)
-		validators = make([]common.Address, numVals)
-		rewardAddrs = make([]common.Address, numVals)
-		votingPowers = make([]uint64, numVals)
-		weights = make([]uint64, numVals)
-		for i, val := range weightedCouncil.List() {
-			weightedVal := val.(*weightedValidator)
-			validators[i] = weightedVal.address
-			rewardAddrs[i] = weightedVal.RewardAddress()
-			votingPowers[i] = weightedVal.votingPower
-			weights[i] = atomic.LoadUint64(&weightedVal.weight)
-		}
-
-		proposers = make([]common.Address, len(weightedCouncil.proposers))
+		validatorsData := toSlices(weightedCouncil.validators)
+		demotedData := toSlices(weightedCouncil.demoted)
+		proposers := make([]common.Address, len(weightedCouncil.proposers))
 		for i, proposer := range weightedCouncil.proposers {
 			proposers[i] = proposer.Address()
 		}
-		proposersBlockNum = weightedCouncil.proposersBlockNum
+		proposersBlockNum := weightedCouncil.proposersBlockNum
+
+		return &WeightedCouncilData{
+			Proposers:             proposers,
+			ProposersBlockNum:     proposersBlockNum,
+			ValidatorsData:        validatorsData,
+			DemotedValidatorsData: demotedData,
+		}
 	} else {
 		logger.Error("invalid proposer policy for weightedCouncil")
 	}
-	return
+	return nil
 }
 
 func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Address, round uint64) istanbul.Validator {
@@ -522,6 +571,10 @@ func (valSet *weightedCouncil) GetValidators() []istanbul.Validator {
 	return valSet.validators
 }
 
+func (valSet *weightedCouncil) GetDemotedValidators() []istanbul.Validator {
+	return valSet.demoted
+}
+
 func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
@@ -537,6 +590,9 @@ func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	}
 	newWeightedCouncil.validators = make([]istanbul.Validator, len(valSet.validators))
 	copy(newWeightedCouncil.validators, valSet.validators)
+
+	newWeightedCouncil.demoted = make([]istanbul.Validator, len(valSet.demoted))
+	copy(newWeightedCouncil.demoted, valSet.demoted)
 
 	newWeightedCouncil.proposers = make([]istanbul.Validator, len(valSet.proposers))
 	copy(newWeightedCouncil.proposers, valSet.proposers)
