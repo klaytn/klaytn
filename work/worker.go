@@ -709,7 +709,7 @@ CommitTransactionLoop:
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
-			logger.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
 			txs.Pop()
 
@@ -717,7 +717,7 @@ CommitTransactionLoop:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
 			timeLimitReachedCounter.Inc(1)
 			if env.tcount == 0 {
-				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash())
+				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash().String())
 				tooLongTxCounter.Inc(1)
 			}
 			// NOTE-Klaytn Exit for loop immediately without checking abort variable again.
@@ -732,7 +732,7 @@ CommitTransactionLoop:
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
-			logger.Error("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			logger.Error("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
 			txs.Shift()
 		}
