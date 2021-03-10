@@ -323,8 +323,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	// if there is a vote to attach, attach it to the header
 	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
 
-	// add validators in snapshot to extraData's validators section
-	extra, err := prepareExtra(header, snap.committee(header.ParentHash, sb.currentView.Load().(*istanbul.View)))
+	// add validators (council list) in snapshot to extraData's validators section
+	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
 		return err
 	}

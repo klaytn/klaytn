@@ -120,6 +120,8 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 		return nil, err
 	}
 
+	engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock)
+
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
 	rewardDistributor := reward.NewRewardDistributor(gov)
 

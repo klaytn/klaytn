@@ -162,9 +162,19 @@ func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, 
 	}
 	// Ensure we have an actually valid block and return the council from its snapshot
 	if header == nil {
-		logger.Trace("Failed to find the requested block", "number", number)
 		return nil, errNoBlockExist // return nil if block is not found.
 	}
+
+	// Since v1.6.1, extra.validators represents a list of council
+	// TODO-Klaytn : replace this to the below calculation logic
+	//istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	//if err == nil {
+	//	return istanbulExtra.Validators, nil
+	//} else {
+	//	return nil, errExtractIstanbulExtra
+	//}
+
+	// Calculate council list from snapshot
 	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
@@ -198,12 +208,34 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 		return nil, errNoBlockExist
 	}
 
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
-	if err == nil {
-		return istanbulExtra.Validators, nil
-	} else {
-		return nil, errExtractIstanbulExtra
+	blockNumber := header.Number.Uint64()
+	round := header.Round()
+	view := &istanbul.View{
+		Sequence: new(big.Int).SetUint64(blockNumber),
+		Round:    new(big.Int).SetUint64(uint64(round)),
 	}
+
+	// get the proposer of this block.
+	proposer, err := ecrecover(header)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the snapshot of the previous block.
+	parentHash := header.ParentHash
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the committee list of this block at the view (blockNumber, round)
+	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
+	addresses := make([]common.Address, len(committee))
+	for i, v := range committee {
+		addresses[i] = v.Address()
+	}
+
+	return addresses, nil
 }
 
 func (api *APIExtension) GetCommitteeSize(number *rpc.BlockNumber) (int, error) {
@@ -249,17 +281,13 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 
 	// get origin proposer at 0 round.
 	originProposer := common.Address{}
-	lastProposer := common.Address{}
-	// TODO-Klaytn add the logic to get the last proposer for other policies. Weighted Random doesn't need it.
-	if istanbul.ProposerPolicy(snap.Policy) == istanbul.WeightedRandom {
-		newValSet := snap.ValSet.Copy()
-		newValSet.CalcProposer(lastProposer, 0)
-		originProposer = newValSet.GetProposer().Address()
-	} else {
-		logger.Warn("getConsensusInfo does not support to get origin proposal on", "proposerPolicy", snap.Policy)
-	}
+	lastProposer := api.istanbul.GetProposer(blockNumber - 1)
 
-	// get the committee list of this block.
+	newValSet := snap.ValSet.Copy()
+	newValSet.CalcProposer(lastProposer, 0)
+	originProposer = newValSet.GetProposer().Address()
+
+	// get the committee list of this block at the view (blockNumber, round)
 	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
 	committeeAddrs := make([]common.Address, len(committee))
 	for i, v := range committee {

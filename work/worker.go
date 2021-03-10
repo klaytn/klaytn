@@ -176,8 +176,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase c
 		rewardbase:  rewardbase,
 	}
 
-	// istanbul BFT
-	//	if _, ok := engine.(consensus.Istanbul); ok {
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = backend.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	// Subscribe events for blockchain
@@ -186,9 +184,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase c
 	go worker.update()
 
 	go worker.wait(TxResendUseLegacy)
-	worker.commitNewWork()
-	//	}
-
 	return worker
 }
 
