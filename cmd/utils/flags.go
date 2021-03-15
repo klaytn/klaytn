@@ -451,6 +451,11 @@ var (
 		Name:  "rpc.gascap",
 		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
 	}
+	RPCConcurrencyLimit = cli.IntFlag{
+		Name:  "rpc.concurrencylimit",
+		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server",
+		Value: rpc.ConcurrencyLimit,
+	}
 	WSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
 		Usage: "Enable the WS-RPC server",
@@ -1136,6 +1141,10 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	}
 	if ctx.GlobalIsSet(RPCVirtualHostsFlag.Name) {
 		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(RPCVirtualHostsFlag.Name))
+	}
+	if ctx.GlobalIsSet(RPCConcurrencyLimit.Name) {
+		rpc.ConcurrencyLimit = ctx.GlobalInt(RPCConcurrencyLimit.Name)
+		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
 	}
 }
 

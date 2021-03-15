@@ -174,7 +174,7 @@ func NewFastWSServer(allowedOrigins []string, srv *Server) *fasthttp.Server {
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
 	return &fasthttp.Server{
-		Concurrency:        concurrencyLimit,
+		Concurrency:        ConcurrencyLimit,
 		MaxRequestBodySize: common.MaxRequestContentLength,
 		Handler:            srv.FastWebsocketHandler,
 	}
