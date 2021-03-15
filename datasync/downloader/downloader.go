@@ -830,7 +830,7 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64, pivot uint64) 
 				logger.Debug("Received skeleton from incorrect peer", "peer", packet.PeerId())
 				break
 			}
-			headerReqTimer.UpdateSince(request)
+			headerReqTimer.Update(time.Since(request))
 			timeout.Stop()
 
 			// If the skeleton's finished, pull any remaining head headers directly from the origin
