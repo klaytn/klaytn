@@ -103,7 +103,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	// the previous round skip sending PREPARE messages.
 	if c.state.Cmp(StatePrepared) < 0 {
 		if c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
-			logger.Info("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
+			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
 			c.setState(StatePrepared)
 			c.sendCommit()
 		} else if c.current.GetPrepareOrCommitSize() > 2*c.valSet.F() {
