@@ -86,17 +86,17 @@ func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*D
 }
 
 // TestShardedDBIterator tests if shardedDBIterator iterates all entries with diverse shard size
-func testShardedDBIterator(t *testing.T) {
+func TestShardedDBIterator(t *testing.T) {
 	testIterator(t, true, []uint{100}, ShardedDBConfig, newShardedDBIterator)
 }
 
 // TestShardedDBIteratorUnsorted tests if shardedDBIteratorUnsorted iterates all entries with diverse shard size
-func testShardedDBIteratorUnsorted(t *testing.T) {
+func TestShardedDBIteratorUnsorted(t *testing.T) {
 	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBIteratorUnsorted)
 }
 
 // TestShardedDBChanIterator tests if shardedDBChanIterator iterates all entries with diverse shard size
-func testShardedDBChanIterator(t *testing.T) {
+func TestShardedDBChanIterator(t *testing.T) {
 	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBChanIterator)
 }
 
