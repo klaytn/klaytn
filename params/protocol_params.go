@@ -159,7 +159,7 @@ func (t CodeFormat) String() string {
 	case CodeFormatEVM:
 		return "CodeFormatEVM"
 	case CodeFormatEVMIstanbulCompatible:
-		return "CodeFormatEVM2IstanbulCompatible"
+		return "CodeFormatEVMIstanbulCompatible"
 	}
 
 	return "UndefinedCodeFormat"

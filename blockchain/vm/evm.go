@@ -56,14 +56,14 @@ type (
 // - an address of precompiled contracts
 // - an address of program accounts
 func isProgramAccount(evm *EVM, caller common.Address, addr common.Address, db StateDB) bool {
-	_, exists := evm.GetPrecompiledContractMap(caller, addr)[addr]
+	_, exists := evm.GetPrecompiledContractMap(caller)[addr]
 	return exists || db.IsProgramAccount(addr)
 }
 
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
-		precompiles := evm.GetPrecompiledContractMap(contract.CallerAddress, *contract.CodeAddr)
+		precompiles := evm.GetPrecompiledContractMap(contract.CallerAddress)
 		if p := precompiles[*contract.CodeAddr]; p != nil {
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
@@ -219,7 +219,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
 	if common.IsPrecompiledContractAddress(addr) {
-		precompiles := evm.GetPrecompiledContractMap(caller.Address(), addr)
+		precompiles := evm.GetPrecompiledContractMap(caller.Address())
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
 			if evm.vmConfig.Debug && evm.depth == 0 {
@@ -547,7 +547,7 @@ func (evm *EVM) CurrentCodeFormat() params.CodeFormat {
 	}
 }
 
-func (evm *EVM) GetPrecompiledContractMap(caller, address common.Address) map[common.Address]PrecompiledContract {
+func (evm *EVM) GetPrecompiledContractMap(caller common.Address) map[common.Address]PrecompiledContract {
 	switch {
 	case evm.chainRules.IsIstanbul:
 		// The following code is to make vmLog(0x09), feePayer(0x0a), validateSender(0x0b) precompiled contract
