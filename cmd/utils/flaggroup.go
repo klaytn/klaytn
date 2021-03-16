@@ -241,6 +241,7 @@ var FlagGroups = []FlagGroup{
 			RPCVirtualHostsFlag,
 			RPCApiFlag,
 			RPCGlobalGasCap,
+			RPCConcurrencyLimit,
 			IPCDisabledFlag,
 			IPCPathFlag,
 			WSEnabledFlag,

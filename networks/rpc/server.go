@@ -46,12 +46,13 @@ const (
 
 	// pendingRequestLimit is a limit for concurrent RPC method calls
 	pendingRequestLimit = 200000
-
-	// concurrencyLimit is a limit for the number of concurrency connection for RPC servers
-	concurrencyLimit = 3000
 )
 
 var (
+	// ConcurrencyLimit is a limit for the number of concurrency connection for RPC servers.
+	// It can be overwritten by rpc.concurrencylimit flag
+	ConcurrencyLimit = 3000
+
 	// pendingRequestCount is a total number of concurrent RPC method calls
 	pendingRequestCount int64 = 0
 
