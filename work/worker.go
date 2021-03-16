@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -67,20 +69,20 @@ var (
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
 
-	blockMiningTimer          = metrics.NewRegisteredTimer("miner/block/mining/time", nil)
-	blockMiningExecuteTxTimer = metrics.NewRegisteredTimer("miner/block/execute/time", nil)
-	blockMiningCommitTxTimer  = metrics.NewRegisteredTimer("miner/block/commit/time", nil)
-	blockMiningFinalizeTimer  = metrics.NewRegisteredTimer("miner/block/finalize/time", nil)
+	blockMiningTimer          = klaytnmetrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
+	blockMiningExecuteTxTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
+	blockMiningCommitTxTimer  = klaytnmetrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
+	blockMiningFinalizeTimer  = klaytnmetrics.NewRegisteredHybridTimer("miner/block/finalize/time", nil)
 
-	accountReadTimer   = metrics.NewRegisteredTimer("miner/block/account/reads", nil)
-	accountHashTimer   = metrics.NewRegisteredTimer("miner/block/account/hashes", nil)
-	accountUpdateTimer = metrics.NewRegisteredTimer("miner/block/account/updates", nil)
-	accountCommitTimer = metrics.NewRegisteredTimer("miner/block/account/commits", nil)
+	accountReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/reads", nil)
+	accountHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/hashes", nil)
+	accountUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/updates", nil)
+	accountCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/commits", nil)
 
-	storageReadTimer   = metrics.NewRegisteredTimer("miner/block/storage/reads", nil)
-	storageHashTimer   = metrics.NewRegisteredTimer("miner/block/storage/hashes", nil)
-	storageUpdateTimer = metrics.NewRegisteredTimer("miner/block/storage/updates", nil)
-	storageCommitTimer = metrics.NewRegisteredTimer("miner/block/storage/commits", nil)
+	storageReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/reads", nil)
+	storageHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/hashes", nil)
+	storageUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/updates", nil)
+	storageCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/commits", nil)
 )
 
 // Agent can register themself with the worker

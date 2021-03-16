@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rcrowley/go-metrics"
 )
@@ -67,6 +69,7 @@ func (c *PrometheusConfig) gaugeFromNameAndValue(name string, val float64) {
 func (c *PrometheusConfig) UpdatePrometheusMetrics() {
 	for range time.Tick(c.FlushInterval) {
 		c.UpdatePrometheusMetricsOnce()
+		klaytnmetrics.ResetMaxGauges()
 	}
 }
 

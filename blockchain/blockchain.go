@@ -33,6 +33,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+
 	"github.com/go-redis/redis/v7"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -58,24 +60,24 @@ import (
 const insertTimeLimit = common.PrettyDuration(time.Second)
 
 var (
-	accountReadTimer   = metrics.NewRegisteredTimer("state/account/reads", nil)
-	accountHashTimer   = metrics.NewRegisteredTimer("state/account/hashes", nil)
-	accountUpdateTimer = metrics.NewRegisteredTimer("state/account/updates", nil)
-	accountCommitTimer = metrics.NewRegisteredTimer("state/account/commits", nil)
+	accountReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/account/reads", nil)
+	accountHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/account/hashes", nil)
+	accountUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("state/account/updates", nil)
+	accountCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("state/account/commits", nil)
 
-	storageReadTimer   = metrics.NewRegisteredTimer("state/storage/reads", nil)
-	storageHashTimer   = metrics.NewRegisteredTimer("state/storage/hashes", nil)
-	storageUpdateTimer = metrics.NewRegisteredTimer("state/storage/updates", nil)
-	storageCommitTimer = metrics.NewRegisteredTimer("state/storage/commits", nil)
+	storageReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/storage/reads", nil)
+	storageHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/storage/hashes", nil)
+	storageUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("state/storage/updates", nil)
+	storageCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("state/storage/commits", nil)
 
-	blockInsertTimer    = metrics.NewRegisteredTimer("chain/inserts", nil)
-	blockProcessTimer   = metrics.NewRegisteredTimer("chain/process", nil)
-	blockExecutionTimer = metrics.NewRegisteredTimer("chain/execution", nil)
-	blockFinalizeTimer  = metrics.NewRegisteredTimer("chain/finalize", nil)
-	blockValidateTimer  = metrics.NewRegisteredTimer("chain/validate", nil)
-	blockAgeTimer       = metrics.NewRegisteredTimer("chain/age", nil)
+	blockInsertTimer    = klaytnmetrics.NewRegisteredHybridTimer("chain/inserts", nil)
+	blockProcessTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/process", nil)
+	blockExecutionTimer = klaytnmetrics.NewRegisteredHybridTimer("chain/execution", nil)
+	blockFinalizeTimer  = klaytnmetrics.NewRegisteredHybridTimer("chain/finalize", nil)
+	blockValidateTimer  = klaytnmetrics.NewRegisteredHybridTimer("chain/validate", nil)
+	blockAgeTimer       = klaytnmetrics.NewRegisteredHybridTimer("chain/age", nil)
 
-	blockPrefetchExecuteTimer   = metrics.NewRegisteredTimer("chain/prefetch/executes", nil)
+	blockPrefetchExecuteTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/prefetch/executes", nil)
 	blockPrefetchInterruptMeter = metrics.NewRegisteredMeter("chain/prefetch/interrupts", nil)
 
 	ErrNoGenesis            = errors.New("genesis not found in chain")
