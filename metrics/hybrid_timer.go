@@ -30,6 +30,8 @@ var gauges = make(map[string]metrics.Gauge)
 
 // ResetMaxGauges sets the value of registered gauges to 0.
 func ResetMaxGauges() {
+	mu.Lock()
+	defer mu.Unlock()
 	for _, g := range gauges {
 		g.Update(0)
 	}
