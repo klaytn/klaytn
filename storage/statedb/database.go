@@ -750,6 +750,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	db.lock.RLock()
 
 	nodes, nodeSize, start := len(db.nodes), db.nodesSize, time.Now()
+	preimagesSize := db.preimagesSize
 
 	// db.nodesSize only contains the useful data in the cache, but when reporting
 	// the total memory consumption, the maintenance metadata is also needed to be
@@ -824,9 +825,10 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	memcacheFlushSizeGauge.Update(int64(nodeSize - db.nodesSize))
 	memcacheFlushNodesGauge.Update(int64(nodes - len(db.nodes)))
 
-	logger.Info("Persisted nodes from memory database by Cap", "nodes", nodes-len(db.nodes), "size", nodeSize-db.nodesSize, "time", time.Since(start),
-		"flushnodes", db.flushnodes, "flushsize", db.flushsize, "flushtime", db.flushtime, "livenodes", len(db.nodes), "livesize", db.nodesSize)
-
+	logger.Info("Persisted nodes from memory database by Cap", "nodes", nodes-len(db.nodes),
+		"size", nodeSize-db.nodesSize, "preimagesSize", preimagesSize-db.preimagesSize, "time", time.Since(start),
+		"flushnodes", db.flushnodes, "flushsize", db.flushsize, "flushtime", db.flushtime, "livenodes", len(db.nodes),
+		"livesize", db.nodesSize)
 	return nil
 }
 
