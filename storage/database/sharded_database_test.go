@@ -86,37 +86,37 @@ func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*D
 }
 
 // TestShardedDBIterator tests if shardedDBIterator iterates all entries with diverse shard size
-func TestShardedDBIterator(t *testing.T) {
+func testShardedDBIterator(t *testing.T) {
 	testIterator(t, true, []uint{100}, ShardedDBConfig, newShardedDBIterator)
 }
 
 // TestShardedDBIteratorUnsorted tests if shardedDBIteratorUnsorted iterates all entries with diverse shard size
-func TestShardedDBIteratorUnsorted(t *testing.T) {
+func testShardedDBIteratorUnsorted(t *testing.T) {
 	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBIteratorUnsorted)
 }
 
 // TestShardedDBChanIterator tests if shardedDBChanIterator iterates all entries with diverse shard size
-func TestShardedDBChanIterator(t *testing.T) {
+func testShardedDBChanIterator(t *testing.T) {
 	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBChanIterator)
 }
 
 // TestShardedDBIteratorSize tests if shardedDBIterator iterates all entries for different
 // entry sizes
-func testShardedDBIteratorSize(t *testing.T) {
+func TestShardedDBIteratorSize(t *testing.T) {
 	config := ShardedDBConfig[0]
 	size := config.NumStateTrieShards
 	testIterator(t, true, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBIterator)
 }
 
 // TestShardedDBIteratorUnsortedSize tests if shardedDBIteratorUnsorted iterates all entries
-func testShardedDBIteratorUnsortedSize(t *testing.T) {
+func TestShardedDBIteratorUnsortedSize(t *testing.T) {
 	config := ShardedDBConfig[0]
 	size := config.NumStateTrieShards
 	testIterator(t, false, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBIteratorUnsorted)
 }
 
 // TestShardedDBChanIteratorSize tests if shardedDBChanIterator iterates all entries
-func testShardedDBChanIteratorSize(t *testing.T) {
+func TestShardedDBChanIteratorSize(t *testing.T) {
 	config := ShardedDBConfig[0]
 	size := config.NumStateTrieShards
 	testIterator(t, false, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBChanIterator)
