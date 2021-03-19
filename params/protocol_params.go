@@ -127,7 +127,7 @@ const (
 )
 
 var (
-	TxGasHumanReadable     uint64 = 4000000000
+	TxGasHumanReadable     uint64 = 4000000000         // NOTE: HumanReadable related functions are inactivated now
 	BlockScoreBoundDivisor        = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
 	GenesisBlockScore             = big.NewInt(131072) // BlockScore of the Genesis block.
 	MinimumBlockScore             = big.NewInt(131072) // The minimum that the blockscore may ever be.
