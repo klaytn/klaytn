@@ -443,6 +443,7 @@ func (g *Governance) updateGovernanceParams() {
 	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
 	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
 
+	// NOTE: HumanReadable related functions are inactivated now
 	if txGasHumanReadable, ok := g.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
 		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
 	}
@@ -599,6 +600,8 @@ func newGovernanceCache() common.Cache {
 	return cache
 }
 
+// initializeCache reads governance item data from database and updates Governance.itemCache.
+// The latest governance item data of Governance.itemCache is imported to Governance.currentSet.
 func (g *Governance) initializeCache() error {
 	// get last n governance change block number
 	indices, err := g.db.ReadRecentGovernanceIdx(params.GovernanceIdxCacheLimit)
@@ -914,6 +917,8 @@ func (gov *Governance) WriteGovernanceState(num uint64, isCheckpoint bool) error
 	}
 }
 
+// ReadGovernanceState reads field values of the Governance struct from database.
+// It also updates params.stakingUpdateInterval and params.proposerUpdateInterval with the retrieved value.
 func (gov *Governance) ReadGovernanceState() {
 	b, err := gov.db.ReadGovernanceState()
 	if err != nil {
