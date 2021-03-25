@@ -263,6 +263,7 @@ type snapshotJSON struct {
 	Weights           []uint64         `json:"weight"`
 	Proposers         []common.Address `json:"proposers"`
 	ProposersBlockNum uint64           `json:"proposersBlockNum"`
+	DemotedValidators []common.Address `json:"demotedValidators"`
 }
 
 func (s *Snapshot) toJSONStruct() *snapshotJSON {

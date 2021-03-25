@@ -39,10 +39,10 @@ func New(addr common.Address) istanbul.Validator {
 	}
 }
 
-func NewValidatorSet(addrs []common.Address, proposerPolicy istanbul.ProposerPolicy, subGroupSize uint64, chain consensus.ChainReader) istanbul.ValidatorSet {
+func NewValidatorSet(addrs, demotedAddrs []common.Address, proposerPolicy istanbul.ProposerPolicy, subGroupSize uint64, chain consensus.ChainReader) istanbul.ValidatorSet {
 	var valSet istanbul.ValidatorSet
 	if proposerPolicy == istanbul.WeightedRandom {
-		valSet = NewWeightedCouncil(addrs, nil, nil, nil, proposerPolicy, subGroupSize, 0, 0, chain)
+		valSet = NewWeightedCouncil(addrs, demotedAddrs, nil, nil, nil, proposerPolicy, subGroupSize, 0, 0, chain)
 	} else {
 		valSet = NewSubSet(addrs, proposerPolicy, subGroupSize)
 	}

@@ -702,7 +702,7 @@ func Benchmark_getTargetReceivers(b *testing.B) {
 	// get testing node's address
 	key, _ := crypto.HexToECDSA(PRIVKEY) // This key is to be provided to create backend
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
-	valSet := validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
+	valSet := validator.NewWeightedCouncil(council, nil, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -748,7 +748,7 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 	// get testing node's address
 	key, _ := crypto.HexToECDSA(PRIVKEY) // This key is to be provided to create backend
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
-	valSet := validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
+	valSet := validator.NewWeightedCouncil(council, nil, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
