@@ -488,6 +488,11 @@ func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
 			return false
 		}
 	}
+	for _, v := range valSet.demotedValidators {
+		if v.Address() == address {
+			return false
+		}
+	}
 
 	// TODO-Klaytn-Issue1336 Update for governance implementation. How to determine initial value for rewardAddress and votingPower ?
 	valSet.validators = append(valSet.validators, newWeightedValidator(address, common.Address{}, 1000, 0))
@@ -518,6 +523,12 @@ func (valSet *weightedCouncil) RemoveValidator(address common.Address) bool {
 		if v.Address() == address {
 			valSet.validators = append(valSet.validators[:i], valSet.validators[i+1:]...)
 			valSet.removeValidatorFromProposers(address)
+			return true
+		}
+	}
+	for i, v := range valSet.demotedValidators {
+		if v.Address() == address {
+			valSet.demotedValidators = append(valSet.demotedValidators[:i], valSet.demotedValidators[i+1:]...)
 			return true
 		}
 	}
