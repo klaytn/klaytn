@@ -550,10 +550,9 @@ func (evm *EVM) CurrentCodeFormat() params.CodeFormat {
 func (evm *EVM) GetPrecompiledContractMap(caller common.Address) map[common.Address]PrecompiledContract {
 	switch {
 	case evm.chainRules.IsIstanbul:
-		// The following code is to make vmLog(0x09), feePayer(0x0a), validateSender(0x0b) precompiled contract
-		// works after the istanbulIncompatible change
 		// if contract(caller) is deployed before istanbul, use the old precompiled contract set (use constantinople)
-		//      (gas price is exactly same as before)
+		//      (gas price policy also follows constantinople rules)
+		// Without these lines, contracts that are deployed before istanbul and uses vmLog(0x09), feePayer(0x0a), validateSender(0x0b) won't not work properly.
 		if evm.StateDB.GetCodeFormat(caller) == params.CodeFormatEVM {
 			return PrecompiledContractsConstantinople
 		}
