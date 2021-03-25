@@ -165,16 +165,16 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 	}
 }
 
-func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) *reward.StakingInfo {
+func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber {
 		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
 	} else if *num == rpc.PendingBlockNumber {
-		return nil
+		return nil, kerrors.ErrPendingBlockNotSupported
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
-	return reward.GetStakingInfo(blockNumber)
+	return reward.GetStakingInfo(blockNumber), nil
 }
 
 func (api *PublicGovernanceAPI) PendingChanges() map[string]interface{} {
