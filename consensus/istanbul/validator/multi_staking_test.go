@@ -44,7 +44,7 @@ import (
 )
 
 func newTestWeightedCouncil(nodeAddrs []common.Address) *weightedCouncil {
-	return NewWeightedCouncil(nodeAddrs, nil, make([]uint64, len(nodeAddrs)), nil, istanbul.WeightedRandom, 0, 0, 0, nil)
+	return NewWeightedCouncil(nodeAddrs, nil, nil, make([]uint64, len(nodeAddrs)), nil, istanbul.WeightedRandom, 0, 0, 0, nil)
 }
 
 // TestWeightedCouncil_getStakingAmountsOfValidators checks if validators and stakingAmounts from a stakingInfo are matched well.
@@ -99,8 +99,8 @@ func TestWeightedCouncil_getStakingAmountsOfValidators(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		council := newTestWeightedCouncil(testCase.validators)
-
-		weightedValidators, stakingAmounts, err := council.getStakingAmountsOfValidators(testCase.stakingInfo)
+		candidates := append(council.validators, council.demotedValidators...)
+		weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, testCase.stakingInfo)
 
 		assert.NoError(t, err)
 		assert.Equal(t, len(testCase.validators), len(weightedValidators))
@@ -307,8 +307,8 @@ func TestWeightedCouncil_validatorWeightWithStakingInfo(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		council := newTestWeightedCouncil(testCase.validators)
-
-		weightedValidators, stakingAmounts, err := council.getStakingAmountsOfValidators(testCase.stakingInfo)
+		candidates := append(council.validators, council.demotedValidators...)
+		weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, testCase.stakingInfo)
 		assert.NoError(t, err)
 		totalStaking := calcTotalAmount(weightedValidators, testCase.stakingInfo, stakingAmounts)
 		calcWeight(weightedValidators, stakingAmounts, totalStaking)

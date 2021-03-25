@@ -563,7 +563,7 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 	if !ok {
 		committeeSize = params.DefaultSubGroupSize
 	}
-	snap := newSnapshot(sb.governance, 0, genesis.Hash(), validator.NewValidatorSet(istanbulExtra.Validators, istanbul.ProposerPolicy(proposerPolicy), committeeSize, chain), chain.Config())
+	snap := newSnapshot(sb.governance, 0, genesis.Hash(), validator.NewValidatorSet(istanbulExtra.Validators, nil, istanbul.ProposerPolicy(proposerPolicy), committeeSize, chain), chain.Config())
 
 	if err := snap.store(sb.db); err != nil {
 		return nil, err

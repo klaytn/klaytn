@@ -45,7 +45,7 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	})
 
 	eventMux := new(event.TypeMux)
-	validatorSet := validator.NewWeightedCouncil(validatorAddrs, validatorAddrs, nil, nil,
+	validatorSet := validator.NewWeightedCouncil(validatorAddrs, nil, validatorAddrs, nil, nil,
 		istanbul.WeightedRandom, committeeSize, 0, 0, &blockchain.BlockChain{})
 
 	mockCtrl := gomock.NewController(t)
