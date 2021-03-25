@@ -238,11 +238,18 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		if storedcfg.Governance == nil {
 			logger.Crit("Failed to read governance. storedcfg.Governance == nil")
 		}
+		if storedcfg.Governance.Reward == nil {
+			logger.Crit("Failed to read governance. storedcfg.Governance.Reward == nil")
+		}
 		if storedcfg.Governance.Reward.StakingUpdateInterval != 0 {
 			params.SetStakingUpdateInterval(storedcfg.Governance.Reward.StakingUpdateInterval)
 		}
 		if storedcfg.Governance.Reward.ProposerUpdateInterval != 0 {
 			params.SetProposerUpdateInterval(storedcfg.Governance.Reward.ProposerUpdateInterval)
+		}
+		if storedcfg.Governance.Reward.MinimumStake != nil &&
+			storedcfg.Governance.Reward.MinimumStake.Cmp(common.Big0) > 0 {
+			params.SetMinimumStakingAmount(storedcfg.Governance.Reward.MinimumStake)
 		}
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new
