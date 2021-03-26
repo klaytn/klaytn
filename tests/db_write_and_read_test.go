@@ -45,11 +45,11 @@ var testEntries = []testEntry{
 	{"LevelDB", &database.DBConfig{DBType: database.LevelDB, SingleDB: false, LevelDBCacheSize: 128, OpenFilesLimit: 32, NumStateTrieShards: 4}},
 }
 
-// TestDBManager_WriteAndRead_Functional checks basic functionality of database.DBManager interface
-// with underlying Database with combination of various configurations. Test cases usually include
+// testDBManager_WriteAndRead_Functional checks basic functionality of database.DBManager interface
+// with underlying Database with combination of various configurations. test cases usually include
 // 1) read before write, 2) read after write, 3) read after overwrite and 4) read after delete.
 // Sometimes 3) and 4) are omitted if such operation is not possible due to some reasons.
-func TestDBManager_WriteAndRead_Functional(t *testing.T) {
+func testDBManager_WriteAndRead_Functional(t *testing.T) {
 	for _, entry := range testEntries {
 		tempDir, err := ioutil.TempDir("", "klaytn-db-manager-test")
 		if err != nil {

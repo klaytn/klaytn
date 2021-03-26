@@ -26,7 +26,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 )
 
-func TestVM(t *testing.T) {
+func testVM(t *testing.T) {
 	t.Parallel()
 	vmt := new(testMatcher)
 	vmt.fails("^vmSystemOperationsTest.json/createNameRegistrator$", "fails without parallel execution")

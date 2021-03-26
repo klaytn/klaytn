@@ -33,7 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTransaction(t *testing.T) {
+func testTransaction(t *testing.T) {
 	t.Parallel()
 
 	txt := new(testMatcher)
@@ -47,9 +47,9 @@ func TestTransaction(t *testing.T) {
 	})
 }
 
-// TestAccountCreationDisable tries to use accountCreation tx types which is disabled now.
+// testAccountCreationDisable tries to use accountCreation tx types which is disabled now.
 // The tx should be invalided in txPool and execution process.
-func TestAccountCreationDisable(t *testing.T) {
+func testAccountCreationDisable(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -115,10 +115,10 @@ func TestAccountCreationDisable(t *testing.T) {
 	}
 }
 
-// TestContractDeployWithDisabledAddress tests invalid contract deploy transactions.
+// testContractDeployWithDisabledAddress tests invalid contract deploy transactions.
 // 1. If the humanReadable field of an tx is 'true', it should fail.
 // 2. If the recipient field of an tx is not nil, it should fail.
-func TestContractDeployWithDisabledAddress(t *testing.T) {
+func testContractDeployWithDisabledAddress(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}

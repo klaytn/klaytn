@@ -24,7 +24,7 @@ import (
 	"testing"
 )
 
-func TestBlockchain(t *testing.T) {
+func testBlockchain(t *testing.T) {
 	t.Parallel()
 
 	bt := new(testMatcher)

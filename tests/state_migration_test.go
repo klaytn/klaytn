@@ -33,7 +33,7 @@ import (
 )
 
 // continuous occurrence of state trie migration and node restart must success
-func TestMigration_ContinuousRestartAndMigration(t *testing.T) {
+func testMigration_ContinuousRestartAndMigration(t *testing.T) {
 	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 
@@ -66,7 +66,7 @@ func TestMigration_ContinuousRestartAndMigration(t *testing.T) {
 }
 
 // state trie DB should be determined by the values of miscDB
-func TestMigration_StartMigrationByMiscDB(t *testing.T) {
+func testMigration_StartMigrationByMiscDB(t *testing.T) {
 	fullNode, cn, validator, _, workspace, _, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 
@@ -132,7 +132,7 @@ func checkIfStoredInDB(t *testing.T, numShard uint, dir string, entries map[stri
 }
 
 // if migration status is set on miscDB and a node is restarted, migration should start
-func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
+func testMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 	fullNode, node, validator, chainID, workspace, richAccount, _, _ := newSimpleBlockchain(t, 10)
 	defer os.RemoveAll(workspace)
 	miscDB := node.ChainDB().GetMiscDB()

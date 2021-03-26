@@ -45,7 +45,7 @@ import (
 	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
 )
 
-// TestHardForkBlock tests whether the change incurs a hard fork or not.
+// testHardForkBlock tests whether the change incurs a hard fork or not.
 // genesis.json, b1.rlp, and b2.rlp has raw data of genesis, and consecutive two blocks after the genesis block.
 // If anything is failed, it can be considered that a hard fork occurs.
 func TestHardForkBlock(t *testing.T) {

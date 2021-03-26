@@ -381,10 +381,10 @@ func signTxWithVariousKeyTypes(signer types.EIP155Signer, tx *types.Transaction,
 	return tx, err
 }
 
-// TestDefaultTxsWithDefaultAccountKey tests most of transactions types with most of account key types.
+// testDefaultTxsWithDefaultAccountKey tests most of transactions types with most of account key types.
 // The test creates a default account for each account key type, and generates default Tx for each Tx type.
 // AccountKeyTypeNil is excluded because it cannot be used for account creation.
-func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
+func testDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
 	gasLimit := uint64(100000000)
 
@@ -588,10 +588,10 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	}
 }
 
-// TestAccountUpdateMultiSigKeyMaxKey tests multiSig key update with maximum private keys.
+// testAccountUpdateMultiSigKeyMaxKey tests multiSig key update with maximum private keys.
 // A multiSig account supports maximum 10 different private keys.
 // Update an account key to a multiSig key with 11 different private keys (more than 10 -> failed)
-func TestAccountUpdateMultiSigKeyMaxKey(t *testing.T) {
+func testAccountUpdateMultiSigKeyMaxKey(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -712,11 +712,11 @@ func TestAccountUpdateMultiSigKeyMaxKey(t *testing.T) {
 	}
 }
 
-// TestAccountUpdateMultiSigKeyBigThreshold tests multiSig key update with abnormal threshold.
+// testAccountUpdateMultiSigKeyBigThreshold tests multiSig key update with abnormal threshold.
 // When a multisig key is updated, a threshold value should be less or equal to the total weight of private keys.
 // If not, the account cannot creates any valid signatures.
 // The test update an account key to a multisig key with a threshold (10) and the total weight (6). (failed case)
-func TestAccountUpdateMultiSigKeyBigThreshold(t *testing.T) {
+func testAccountUpdateMultiSigKeyBigThreshold(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -826,10 +826,10 @@ func TestAccountUpdateMultiSigKeyBigThreshold(t *testing.T) {
 	}
 }
 
-// TestAccountUpdateMultiSigKeyDupPrvKeys tests multiSig key update with duplicated private keys.
+// testAccountUpdateMultiSigKeyDupPrvKeys tests multiSig key update with duplicated private keys.
 // A multisig key consists of  all different private keys, therefore account update with duplicated private keys should be failed.
 // The test supposed the case when two same private keys are used in creation processes.
-func TestAccountUpdateMultiSigKeyDupPrvKeys(t *testing.T) {
+func testAccountUpdateMultiSigKeyDupPrvKeys(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -939,9 +939,9 @@ func TestAccountUpdateMultiSigKeyDupPrvKeys(t *testing.T) {
 	}
 }
 
-// TestAccountUpdateMultiSigKeyWeightOverflow tests multiSig key update with weight overflow.
+// testAccountUpdateMultiSigKeyWeightOverflow tests multiSig key update with weight overflow.
 // If the sum of weights is overflowed, the test should fail.
-func TestAccountUpdateMultiSigKeyWeightOverflow(t *testing.T) {
+func testAccountUpdateMultiSigKeyWeightOverflow(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -1057,11 +1057,11 @@ func TestAccountUpdateMultiSigKeyWeightOverflow(t *testing.T) {
 	}
 }
 
-// TestAccountUpdateRoleBasedKeyInvalidNumKey tests account update with a RoleBased key which contains invalid number of sub-keys.
+// testAccountUpdateRoleBasedKeyInvalidNumKey tests account update with a RoleBased key which contains invalid number of sub-keys.
 // A RoleBased key can contain 1 ~ 3 sub-keys, otherwise it will fail to the account creation.
 // 1. try to create an account with a RoleBased key which contains 4 sub-keys.
 // 2. try to create an account with a RoleBased key which contains 0 sub-key.
-func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
+func testAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -1199,7 +1199,7 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 	}
 }
 
-// TestAccountUpdateRoleBasedKeyInvalidTypeKey tests account key update with a RoleBased key contains types of sub-keys.
+// testAccountUpdateRoleBasedKeyInvalidTypeKey tests account key update with a RoleBased key contains types of sub-keys.
 // As a sub-key type, a RoleBased key can have AccountKeyFail keys but not AccountKeyNil keys.
 // 1. a RoleBased key contains an AccountKeyNil type sub-key as a first sub-key. (fail)
 // 2. a RoleBased key contains an AccountKeyNil type sub-key as a second sub-key. (fail)
@@ -1207,7 +1207,7 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 // 4. a RoleBased key contains an AccountKeyFail type sub-key as a first sub-key. (success)
 // 5. a RoleBased key contains an AccountKeyFail type sub-key as a second sub-key. (success)
 // 6. a RoleBased key contains an AccountKeyFail type sub-key as a third sub-key. (success)
-func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
+func testAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -1465,14 +1465,14 @@ func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 	}
 }
 
-// TestAccountUpdateWithRoleBasedKey tests account update with a roleBased key.
+// testAccountUpdateWithRoleBasedKey tests account update with a roleBased key.
 // A roleBased key contains three types of sub-keys, and only RoleAccountUpdate key is used for update.
 // Other sub-keys are not used for the account update.
 // 0. create an account and update its key to a roleBased key.
 // 1. try to update the account with a RoleTransaction key. (fail)
 // 2. try to update the account with a RoleFeePayer key. (fail)
 // 3. try to update the account with a RoleAccountUpdate key. (success)
-func TestAccountUpdateRoleBasedKey(t *testing.T) {
+func testAccountUpdateRoleBasedKey(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -1657,11 +1657,11 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 	}
 }
 
-// TestAccountUpdateRoleBasedKeyNested tests account update with a nested RoleBasedKey.
+// testAccountUpdateRoleBasedKeyNested tests account update with a nested RoleBasedKey.
 // Nested RoleBasedKey is not allowed in Klaytn.
 // 1. Create an account with a RoleBasedKey.
 // 2. Update an accountKey with a nested RoleBasedKey
-func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
+func testAccountUpdateRoleBasedKeyNested(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -1792,11 +1792,11 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 	}
 }
 
-// TestRoleBasedKeySendTx tests signing transactions with a role-based key.
+// testRoleBasedKeySendTx tests signing transactions with a role-based key.
 // A role-based key contains three types of sub-keys: RoleTransaction, RoleAccountUpdate, RoleFeePayer.
 // Only RoleTransaction can generate valid signature as a sender except account update txs.
 // RoleAccountUpdate can generate valid signature for account update txs.
-func TestRoleBasedKeySendTx(t *testing.T) {
+func testRoleBasedKeySendTx(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
@@ -1994,10 +1994,10 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 	}
 }
 
-// TestRoleBasedKeyFeeDelegation tests fee delegation with a role-based key.
+// testRoleBasedKeyFeeDelegation tests fee delegation with a role-based key.
 // A role-based key contains three types of sub-keys: RoleTransaction, RoleAccountUpdate, RoleFeePayer.
 // Only RoleFeePayer can sign txs as a fee payer.
-func TestRoleBasedKeyFeeDelegation(t *testing.T) {
+func testRoleBasedKeyFeeDelegation(t *testing.T) {
 	if testing.Verbose() {
 		enableLog()
 	}
