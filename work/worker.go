@@ -734,7 +734,7 @@ CommitTransactionLoop:
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
-			logger.Error("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
+			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
 			txs.Shift()
 		}
