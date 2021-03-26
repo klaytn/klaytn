@@ -60,6 +60,7 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		consensusTimeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/timer", nil),
 		councilSizeGauge:   metrics.NewRegisteredGauge("consensus/istanbul/core/councilSize", nil),
 		committeeSizeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/committeeSize", nil),
+		hashLockGauge:      metrics.NewRegisteredGauge("consensus/istanbul/core/hashLock", nil),
 	}
 	c.validateFn = c.checkValidatorSignature
 	return c
@@ -103,6 +104,8 @@ type core struct {
 	sequenceMeter metrics.Meter
 	// the gauge to record consensus duration (from accepting a preprepare to final committed stage)
 	consensusTimeGauge metrics.Gauge
+	// the gauge to record hashLock status (1 if hash-locked. 0 otherwise)
+	hashLockGauge metrics.Gauge
 
 	councilSizeGauge   metrics.Gauge
 	committeeSizeGauge metrics.Gauge
@@ -320,6 +323,11 @@ func (c *core) updateRoundState(view *istanbul.View, validatorSet istanbul.Valid
 		c.current = newRoundState(view, validatorSet, common.Hash{}, nil, nil, c.backend.HasBadProposal)
 	}
 	c.currentRoundGauge.Update(c.current.round.Int64())
+	if c.current.IsHashLocked() {
+		c.hashLockGauge.Update(1)
+	} else {
+		c.hashLockGauge.Update(0)
+	}
 }
 
 func (c *core) setState(state State) {
