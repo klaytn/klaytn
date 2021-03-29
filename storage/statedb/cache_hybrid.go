@@ -31,15 +31,17 @@ func newHybridCache(config *TrieNodeCacheConfig) (TrieNodeCache, error) {
 }
 
 // HybridCache integrates two kinds of caches: local, remote.
-// local cache uses memory of the local machine and remote cache uses memory of the remote machine.
+// Local cache uses memory of the local machine and remote cache uses memory of the remote machine.
+// When it sets data to both caches, only remote cache is set asynchronously
 type HybridCache struct {
 	local  TrieNodeCache
 	remote *RedisCache
 }
 
+// Set writes data to local cache synchronously and to remote cache asynchronously.
 func (cache *HybridCache) Set(k, v []byte) {
 	cache.local.Set(k, v)
-	cache.remote.Set(k, v)
+	cache.remote.SetAsync(k, v)
 }
 
 func (cache *HybridCache) Get(k []byte) []byte {
