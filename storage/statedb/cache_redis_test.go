@@ -114,7 +114,7 @@ func TestRedisCache_Set_LargeData(t *testing.T) {
 	assert.Equal(t, bytes.Compare(value, retValue), 0)
 }
 
-func TestRedisCache_SetAsynchronous_LargeNumberItems(t *testing.T) {
+func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
