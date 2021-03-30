@@ -28,7 +28,7 @@ badgerDB, dynamoDB and shardedDB.
 
 Source Files
 
-  - badger_database.go       : implementation of badgerDB, which wraps github.com/dgraph-io/badger
+  - badger_database.go       : implementation of badgerDB, which wraps github.com/dgraph-io/badger/v3
   - cache_manager.go         : implementation of cacheManager, which manages cache layer over persistent layer
   - db_manager.go            : contains DBManager and databaseManager
   - dynamodb.go              : implementation of dynamoDB, which wraps github.com/aws/aws-sdk-go/service/dynamodb

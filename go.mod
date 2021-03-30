@@ -11,7 +11,7 @@ require (
 	github.com/cespare/cp v1.0.0
 	github.com/clevergo/websocket v1.0.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/dgraph-io/badger v1.6.0
+	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/docker/docker v1.13.1
 	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712
 	github.com/fatih/color v1.7.0
@@ -23,7 +23,7 @@ require (
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.2
 	github.com/golang/snappy v0.0.1
-	github.com/hashicorp/golang-lru v0.5.3
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/huin/goupnp v1.0.0
 	github.com/influxdata/influxdb v1.5.2
 	github.com/jackpal/go-nat-pmp v1.0.1
@@ -57,14 +57,11 @@ require (
 	go.uber.org/multierr v1.2.0 // indirect
 	go.uber.org/zap v1.10.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/net v0.0.0-20200813134508-3edf25e44fcc
-	golang.org/x/sys v0.0.0-20200814200057-3d37ad5750ed
-	golang.org/x/tools v0.0.0-20191126055441-b0650ceb63d9
-	google.golang.org/genproto v0.0.0-20190111180523-db91494dd46c // indirect
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974
+	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
 	google.golang.org/grpc v1.23.1
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 	gopkg.in/fatih/set.v0 v0.1.0
-	gopkg.in/karalabe/cookiejar.v2 v2.0.0-20150724131613-8dcd6a7f4951
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20181125150206-ccb656ba24c2
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
