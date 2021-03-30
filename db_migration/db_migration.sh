@@ -9,16 +9,16 @@ KLAYTN_BIN=~/klaytn/bin/ken
 
 # src DB
 SRC_DB_TYPE=LevelDB     # one of "LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3"
-DATA_DIR=~/klaytn/data  # for localDB ("LevelDB", "BadgerDB", "MemoryDB")
+DATA_DIR=~/klaytn/data  # for localDB ("LevelDB", "BadgerDB", "MemoryDB"). neglected config for "DynamoDBS3"
 SRC_DB=body             # result of `ls $DATA_DIR/klay/chaindata`
                         # * one of "body", "bridgeservice", "header", "misc", "receipts", "statetrie/0", "statetrie/1", "statetrie/2", "statetrie/3", "txlookup"
 SRC_DB_DIR=$DATA_DIR/klay/chaindata/$SRC_DB
 
 # Dst DynamoDB
 DST_DB_TYPE=DynamoDBS3                # one of "LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3"
-DST_DB_DIR=~/klaytn/db_migration/dst  # for localDB ("LevelDB", "BadgerDB", "MemoryDB")
-DST_TABLENAME=db-migration            # for remoteDB ("DynamoDBS3")
-DST_RCU=0
+DST_DB_DIR=~/klaytn/db_migration/dst  # for localDB ("LevelDB", "BadgerDB", "MemoryDB"). neglected config for "DynamoDBS3"
+DST_TABLENAME=db-migration            # for remoteDB ("DynamoDBS3"). neglected config for localDB
+DST_RCU=0                             # neglected config for existing DB.
 DST_WCU=4000                          # recommended to use auto-scaling up to 4000 while db migration
 
 # set this value if you are using DynamoDB
