@@ -26,7 +26,7 @@ export AWS_ACCESS_KEY_ID=
 export AWS_SECRET_ACCESS_KEY=
 
 # call db migration
-echo $KLAYTN_BIN db-migration start \
+$KLAYTN_BIN db-migration start \
   --db.single --db.dst.single \
   --dbtype $SRC_DB_TYPE --dst.dbtype $DST_DB_TYPE \
   --datadir $SRC_DB_DIR  \
