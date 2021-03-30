@@ -136,4 +136,7 @@ type Istanbul interface {
 
 	// Stop stops the engine
 	Stop() error
+
+	// SetChain sets chain of the Istanbul backend
+	SetChain(chain ChainReader)
 }

@@ -498,6 +498,11 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 	}
 }
 
+// SetChain sets chain of the Istanbul backend
+func (sb *backend) SetChain(chain consensus.ChainReader) {
+	sb.chain = chain
+}
+
 // Start implements consensus.Istanbul.Start
 func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	sb.coreMu.Lock()
@@ -513,7 +518,7 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	}
 	sb.commitCh = make(chan *types.Result, 1)
 
-	sb.chain = chain
+	sb.SetChain(chain)
 	sb.currentBlock = currentBlock
 	sb.hasBadBlock = hasBadBlock
 
