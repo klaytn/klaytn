@@ -95,6 +95,7 @@ var tstData = []voteValue{
 	{k: "reward.deferredtxfee", v: 0, e: false},
 	{k: "reward.deferredtxfee", v: 1, e: false},
 	{k: "reward.deferredtxfee", v: "true", e: false},
+	{k: "reward.minimumstake", v: "2000000000000000000000000", e: true},
 	{k: "reward.minimumstake", v: 200000000000000, e: false},
 	{k: "reward.stakingupdateinterval", v: uint64(20), e: false},
 	{k: "reward.proposerupdateinterval", v: uint64(20), e: false},
