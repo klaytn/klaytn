@@ -21,9 +21,14 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"runtime"
 	"sort"
+	"strconv"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/shirou/gopsutil/cpu"
 
 	"github.com/klaytn/klaytn/common"
 
@@ -31,16 +36,16 @@ import (
 )
 
 var ShardedDBConfig = []*DBConfig{
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 2, ParallelDBWrite: true},
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 2, ParallelDBWrite: true},
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 2, ParallelDBWrite: true},
+	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
 }
 
 // testIterator tests if given iterator iterates all entries
 func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*DBConfig, entriesFromIterator func(t *testing.T, db shardedDB, entryNum uint) []common.Entry) {
-	for _, entryNum := range entryNums {
+	PrintMemUsage(t, "0")
+	for i, entryNum := range entryNums {
 		entries := common.CreateEntries(int(entryNum))
 		dbs := make([]shardedDB, len(dbConfig))
+		PrintMemUsage(t, strconv.Itoa(i)+"th 1")
 
 		// create DB and write data for testing
 		for i, config := range dbConfig {
@@ -67,6 +72,7 @@ func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*D
 			assert.NoError(t, batch.Write())
 		}
 
+		PrintMemUsage(t, strconv.Itoa(i)+"th 2")
 		// sort entries for each compare
 		sort.Slice(entries, func(i, j int) bool { return bytes.Compare(entries[i].Key, entries[j].Key) < 0 })
 
@@ -82,6 +88,7 @@ func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*D
 			assert.Equal(t, len(entries), len(entriesFromIt))
 			assert.True(t, reflect.DeepEqual(entries, entriesFromIt))
 		}
+		PrintMemUsage(t, strconv.Itoa(i)+"th 3")
 	}
 }
 
@@ -176,6 +183,7 @@ func newShardedDBChanIterator(t *testing.T, db shardedDB, entryNum uint) []commo
 }
 
 func testShardedIterator_Release(t *testing.T, entryNum int, checkFunc func(db shardedDB)) {
+	PrintMemUsage(t, "1")
 	entries := common.CreateEntries(entryNum)
 
 	// create DB and write data for testing
@@ -204,6 +212,7 @@ func testShardedIterator_Release(t *testing.T, entryNum int, checkFunc func(db s
 		// check if Release quits iterator
 		checkFunc(*db)
 	}
+	PrintMemUsage(t, "2")
 }
 
 func TestShardedDBIterator_Release(t *testing.T) {
@@ -303,7 +312,17 @@ func TestShardedDBChanIterator_Release(t *testing.T) {
 		})
 }
 
-func TestLongWait(t *testing.T) {
-	//time.Sleep(3 * time.Minute)
-	//t.Log("[WINNIE] waited 1 minute")
+func PrintMemUsage(t *testing.T, s string) {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m) // For info on each, see: https://golang.org/pkg/runtime/#MemStats
+	memUsage := bToMb(m.Alloc)
+
+	percent, _ := cpu.Percent(time.Second, false)
+	cpuUsage := percent[0]
+
+	t.Logf("%s Alloc = %v MiB, CPU = %v \n", s, memUsage, cpuUsage)
+}
+
+func bToMb(b uint64) uint64 {
+	return b / 1024 / 1024
 }
