@@ -265,6 +265,9 @@ func (f *ChainDataFetcher) stopRangeFetching() error {
 func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainEvent, error) {
 	var logs []*types.Log
 	block := f.blockchain.GetBlockByNumber(blockNumber)
+	if block == nil {
+		return blockchain.ChainEvent{}, fmt.Errorf("GetBlockByNumber is failed. blockNumber: %v", blockNumber)
+	}
 	receipts := f.blockchain.GetReceiptsByBlockHash(block.Hash())
 	for _, r := range receipts {
 		logs = append(logs, r.Logs...)
