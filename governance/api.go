@@ -23,8 +23,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/klaytn/klaytn/common/hexutil"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/kerrors"
