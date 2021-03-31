@@ -58,7 +58,7 @@ var noTableNameErr = errors.New("dynamoDB table name not provided")
 // batch write size
 const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB including attribute names and values
 const dynamoBatchSize = 25
-const dynamoMaxRetry = 5
+const dynamoMaxRetry = 10
 const dynamoTimeout = 10 * time.Second
 
 // batch write
