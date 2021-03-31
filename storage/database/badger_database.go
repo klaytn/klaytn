@@ -92,14 +92,19 @@ func (bg *badgerDB) runValueLogGC() {
 			if currValueLogSize-lastValueLogSize < gcThreshold {
 				continue
 			}
-
-			err := bg.db.RunValueLogGC(0.5)
-			if err != nil {
-				bg.logger.Error("Error while runValueLogGC()", "err", err)
-				continue
+			for {
+				err := bg.db.RunValueLogGC(0.7)
+				// One gc call would only result in removal of at max one log file.
+				// As an optimization, immediately re-run it whenever it returns nil error
+				// (indicating a successful value log GC)
+				if err == nil {
+					_, lastValueLogSize = bg.db.Size()
+					continue
+				} else {
+					bg.logger.Error("Error while runValueLogGC()", "err", err)
+					break
+				}
 			}
-
-			_, lastValueLogSize = bg.db.Size()
 		}
 	}
 }
@@ -147,13 +152,7 @@ func (bg *badgerDB) Get(key []byte) ([]byte, error) {
 		}
 		return nil, err
 	}
-
-	var valCopy []byte
-	err = item.Value(func(val []byte) error {
-		valCopy = append([]byte{}, val...)
-		return nil
-	})
-	return valCopy, err
+	return item.ValueCopy(nil)
 }
 
 // Delete deletes the key from the queue and database
@@ -206,14 +205,20 @@ type badgerBatch struct {
 // Put inserts the given value into the batch for later committing.
 func (b *badgerBatch) Put(key, value []byte) error {
 	err := b.txn.Set(key, value)
+	if err == badger.ErrTxnTooBig {
+		b.Write()
+		err = b.txn.Set(key, value)
+	}
 	b.size += len(value)
 	return err
 }
 
 // Delete inserts the a key removal into the batch for later committing.
 func (b *badgerBatch) Delete(key []byte) error {
-	if err := b.txn.Delete(key); err != nil {
-		return err
+	err := b.txn.Delete(key)
+	if err == badger.ErrTxnTooBig {
+		b.Write()
+		err = b.txn.Delete(key)
 	}
 	b.size += 1
 	return nil
@@ -221,6 +226,7 @@ func (b *badgerBatch) Delete(key []byte) error {
 
 // Write flushes any accumulated data to disk.
 func (b *badgerBatch) Write() error {
+	b.size = 0
 	return b.txn.Commit()
 }
 
