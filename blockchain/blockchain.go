@@ -2185,6 +2185,7 @@ func (bc *BlockChain) addBadBlock(block *types.Block) {
 
 // reportBlock logs a bad block error.
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
+	badBlockCounter.Inc(1)
 	bc.addBadBlock(block)
 
 	var receiptString string
