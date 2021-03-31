@@ -525,7 +525,7 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 }
 
 // TestMultiOperatorRequestRecovery tests value transfer recovery for the multi-operator.
-func TestMultiOperatorRequestRecovery(t *testing.T) {
+func testMultiOperatorRequestRecovery(t *testing.T) {
 	tempDir, err := ioutil.TempDir(os.TempDir(), "sc")
 	assert.NoError(t, err)
 	defer func() {
