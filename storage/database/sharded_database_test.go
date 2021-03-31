@@ -18,6 +18,7 @@ package database
 import (
 	"bytes"
 	"context"
+	"io"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -27,6 +28,10 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/log/term"
+	"github.com/mattn/go-colorable"
 
 	"github.com/shirou/gopsutil/cpu"
 
@@ -39,8 +44,23 @@ var ShardedDBConfig = []*DBConfig{
 	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
 }
 
+func enableLog() {
+	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
+	output := io.Writer(os.Stderr)
+	if usecolor {
+		output = colorable.NewColorableStderr()
+	}
+	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
+	log.PrintOrigins(true)
+	log.ChangeGlobalLogLevel(glogger, log.Lvl(5))
+	glogger.Vmodule("")
+	glogger.BacktraceAt("")
+	log.Root().SetHandler(glogger)
+}
+
 // testIterator tests if given iterator iterates all entries
 func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*DBConfig, entriesFromIterator func(t *testing.T, db shardedDB, entryNum uint) []common.Entry) {
+	enableLog()
 	PrintMemUsage(t, "0")
 	for i, entryNum := range entryNums {
 		entries := common.CreateEntries(int(entryNum))
@@ -184,6 +204,7 @@ func newShardedDBChanIterator(t *testing.T, db shardedDB, entryNum uint) []commo
 }
 
 func testShardedIterator_Release(t *testing.T, entryNum int, checkFunc func(db shardedDB)) {
+	enableLog()
 	PrintMemUsage(t, "1")
 	entries := common.CreateEntries(entryNum)
 
