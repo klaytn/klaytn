@@ -18,6 +18,7 @@ package database
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -320,7 +321,7 @@ func PrintMemUsage(t *testing.T, s string) {
 	percent, _ := cpu.Percent(time.Second, false)
 	cpuUsage := percent[0]
 
-	logger.Error("[WINNIE] Print Mem/CPU Usage", "seq", s, "Alloc", memUsage, "CPU", cpuUsage)
+	fmt.Println("[WINNIE] Print Mem/CPU Usage", "seq=", s, " Alloc=", memUsage, " CPU=", cpuUsage)
 }
 
 func bToMb(b uint64) uint64 {
