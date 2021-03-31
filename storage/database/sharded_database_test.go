@@ -320,7 +320,7 @@ func PrintMemUsage(t *testing.T, s string) {
 	percent, _ := cpu.Percent(time.Second, false)
 	cpuUsage := percent[0]
 
-	t.Logf("%s Alloc = %v MiB, CPU = %v \n", s, memUsage, cpuUsage)
+	logger.Error("[WINNIE] Print Mem/CPU Usage", "seq", s, "Alloc", memUsage, "CPU", cpuUsage)
 }
 
 func bToMb(b uint64) uint64 {
