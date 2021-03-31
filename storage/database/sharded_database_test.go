@@ -18,7 +18,6 @@ package database
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -91,6 +90,7 @@ func testIterator(t *testing.T, checkOrder bool, entryNums []uint, dbConfig []*D
 		}
 		PrintMemUsage(t, strconv.Itoa(i)+"th 3")
 	}
+	t.FailNow()
 }
 
 // testShardedDBIterator tests if shardedDBIterator iterates all entries with diverse shard size
@@ -214,6 +214,7 @@ func testShardedIterator_Release(t *testing.T, entryNum int, checkFunc func(db s
 		checkFunc(*db)
 	}
 	PrintMemUsage(t, "2")
+	t.FailNow()
 }
 
 func TestShardedDBIterator_Release(t *testing.T) {
@@ -321,7 +322,7 @@ func PrintMemUsage(t *testing.T, s string) {
 	percent, _ := cpu.Percent(time.Second, false)
 	cpuUsage := percent[0]
 
-	fmt.Println("[WINNIE] Print Mem/CPU Usage", "seq=", s, " Alloc=", memUsage, " CPU=", cpuUsage)
+	logger.Error("[WINNIE] Print Mem/CPU Usage", "seq", s, "Alloc", memUsage, "CPU", cpuUsage)
 }
 
 func bToMb(b uint64) uint64 {
