@@ -169,7 +169,7 @@ type Entry struct {
 func CreateEntries(entryNum int) []Entry {
 	entries := make([]Entry, entryNum)
 	for i := 0; i < entryNum; i++ {
-		entries[i] = Entry{Key: MakeRandomBytes(256), Val: MakeRandomBytes(600)}
+		entries[i] = Entry{Key: MakeRandomBytes(256), Val: MakeRandomBytes(300)}
 	}
 	return entries
 }
