@@ -31,7 +31,6 @@ import (
 )
 
 var ShardedDBConfig = []*DBConfig{
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: true},
 	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 2, ParallelDBWrite: true},
 	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
 }
