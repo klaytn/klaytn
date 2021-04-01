@@ -31,9 +31,9 @@ import (
 )
 
 var ShardedDBConfig = []*DBConfig{
+	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: true},
+	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 2, ParallelDBWrite: true},
 	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 8, ParallelDBWrite: true},
-	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 16, ParallelDBWrite: true},
 }
 
 // testIterator tests if given iterator iterates all entries
