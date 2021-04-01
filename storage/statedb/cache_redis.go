@@ -26,8 +26,10 @@ import (
 )
 
 const (
-	redisSetItemChannelSize       = 1024
-	redisSubscriptionChannelSize  = 100 // default value of redis client
+	// Channel size for aync item set. If average item size is 400Byte, 4MB could be used.
+	redisSetItemChannelSize = 10000
+	// Channel size for block subscription. If average block size is 10KB, 10MB could be used.
+	redisSubscriptionChannelSize  = 1000
 	redisSubscriptionChannelBlock = "latestBlock"
 )
 
