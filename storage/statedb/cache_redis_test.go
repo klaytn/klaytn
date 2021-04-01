@@ -91,7 +91,6 @@ func TestRedisCache(t *testing.T) {
 
 	key, value := randBytes(32), randBytes(500)
 	cache.Set(key, value)
-	time.Sleep(sleepDurationForAsyncBehavior)
 
 	getValue := cache.Get(key)
 	assert.Equal(t, bytes.Compare(value, getValue), 0)
@@ -110,13 +109,45 @@ func TestRedisCache_Set_LargeData(t *testing.T) {
 
 	key, value := randBytes(32), randBytes(5*1024*1024) // 5MB value
 	cache.Set(key, value)
+
+	retValue := cache.Get(key)
+	assert.Equal(t, bytes.Compare(value, retValue), 0)
+}
+
+// TestRedisCache_SetAsync tests basic operations of redis cache using SetAsync instead of Set.
+func TestRedisCache_SetAsync(t *testing.T) {
+	cache, err := newRedisCache(getTestRedisConfig())
+	assert.Nil(t, err)
+
+	key, value := randBytes(32), randBytes(500)
+	cache.SetAsync(key, value)
+	time.Sleep(sleepDurationForAsyncBehavior)
+
+	getValue := cache.Get(key)
+	assert.Equal(t, bytes.Compare(value, getValue), 0)
+
+	hasValue, ok := cache.Has(key)
+	assert.Equal(t, ok, true)
+	assert.Equal(t, bytes.Compare(value, hasValue), 0)
+}
+
+// TestRedisCache_SetAsync_LargeData check whether redis cache can store an large data asynchronously (5MB).
+func TestRedisCache_SetAsync_LargeData(t *testing.T) {
+	cache, err := newRedisCache(getTestRedisConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key, value := randBytes(32), randBytes(5*1024*1024) // 5MB value
+	cache.SetAsync(key, value)
 	time.Sleep(sleepDurationForAsyncBehavior)
 
 	retValue := cache.Get(key)
 	assert.Equal(t, bytes.Compare(value, retValue), 0)
 }
 
-func TestRedisCache_Set_LargeNumberItems(t *testing.T) {
+// TestRedisCache_SetAsync_LargeNumberItems asynchronously sets lots of items exceeding channel size.
+func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -139,7 +170,7 @@ func TestRedisCache_Set_LargeNumberItems(t *testing.T) {
 				time.Sleep(2 * time.Second)
 			}
 			// set writes items asynchronously
-			cache.Set(items[i].key, items[i].value)
+			cache.SetAsync(items[i].key, items[i].value)
 		}
 	}()
 
@@ -201,7 +232,7 @@ func TestRedisCache_Timeout(t *testing.T) {
 
 	start := time.Now()
 	redisCache := cache.(*RedisCache) // Because RedisCache.Set writes item asynchronously, use RedisCache.set
-	redisCache.set(key, value)
+	redisCache.Set(key, value)
 	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 
 	start = time.Now()

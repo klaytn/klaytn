@@ -72,7 +72,7 @@ func TestHybridCache_Get(t *testing.T) {
 	{
 		// Store an item into remote cache
 		key, value := randBytes(32), randBytes(500)
-		remoteCache.Set(key, value)
+		remoteCache.SetAsync(key, value)
 		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Make sure the item is not stored in the local cache.
@@ -91,7 +91,7 @@ func TestHybridCache_Get(t *testing.T) {
 		// Store an item into the remote cache
 		key, value := randBytes(32), randBytes(500)
 		localCache.Set(key, value)
-		remoteCache.Set(key, []byte{0x11})
+		remoteCache.SetAsync(key, []byte{0x11})
 		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Get the item from the hybrid cache and check the validity
@@ -130,7 +130,7 @@ func TestHybridCache_Has(t *testing.T) {
 	{
 		// Store an item into remote cache
 		key, value := randBytes(32), randBytes(500)
-		remoteCache.Set(key, value)
+		remoteCache.SetAsync(key, value)
 		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Get the item from the hybrid cache and check the validity
@@ -144,7 +144,7 @@ func TestHybridCache_Has(t *testing.T) {
 		// Store an item into the remote cache
 		key, value := randBytes(32), randBytes(500)
 		localCache.Set(key, value)
-		remoteCache.Set(key, []byte{0x11})
+		remoteCache.SetAsync(key, []byte{0x11})
 		time.Sleep(sleepDurationForAsyncBehavior)
 
 		// Get the item from the hybrid cache and check the validity
