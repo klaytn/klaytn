@@ -188,8 +188,7 @@ func (bg *badgerDB) LDB() *badger.DB {
 }
 
 func (bg *badgerDB) NewBatch() Batch {
-	txn := bg.db.NewTransaction(true)
-	return &badgerBatch{db: bg.db, txn: txn}
+	return &badgerBatch{bg.db, bg.db.NewWriteBatch(), 0}
 }
 
 func (bg *badgerDB) Meter(prefix string) {
@@ -197,28 +196,26 @@ func (bg *badgerDB) Meter(prefix string) {
 }
 
 type badgerBatch struct {
-	db   *badger.DB
-	txn  *badger.Txn
-	size int
+	db    *badger.DB
+	batch *badger.WriteBatch
+	size  int
 }
 
 // Put inserts the given value into the batch for later committing.
 func (b *badgerBatch) Put(key, value []byte) error {
-	err := b.txn.Set(key, value)
-	if err == badger.ErrTxnTooBig {
-		b.Write()
-		err = b.txn.Set(key, value)
+	err := b.batch.Set(key, value)
+	if err != nil {
+		return err
 	}
 	b.size += len(value)
-	return err
+	return nil
 }
 
 // Delete inserts the a key removal into the batch for later committing.
 func (b *badgerBatch) Delete(key []byte) error {
-	err := b.txn.Delete(key)
-	if err == badger.ErrTxnTooBig {
-		b.Write()
-		err = b.txn.Delete(key)
+	err := b.batch.Delete(key)
+	if err != nil {
+		return err
 	}
 	b.size += 1
 	return nil
@@ -226,8 +223,12 @@ func (b *badgerBatch) Delete(key []byte) error {
 
 // Write flushes any accumulated data to disk.
 func (b *badgerBatch) Write() error {
+	err := b.batch.Flush()
+	if err != nil {
+		return err
+	}
 	b.size = 0
-	return b.txn.Commit()
+	return nil
 }
 
 // ValueSize retrieves the amount of data queued up for writing.
@@ -235,9 +236,10 @@ func (b *badgerBatch) ValueSize() int {
 	return b.size
 }
 
-// Replay replays the batch contents.
+// Reset resets the content of the batch.
 func (b *badgerBatch) Reset() {
-	b.txn = b.db.NewTransaction(true)
+	b.batch.Cancel()
+	b.batch = b.db.NewWriteBatch()
 	b.size = 0
 }
 
