@@ -38,6 +38,14 @@ type HybridCache struct {
 	remote *RedisCache
 }
 
+func (cache *HybridCache) Local() TrieNodeCache {
+	return cache.local
+}
+
+func (cache *HybridCache) Remote() *RedisCache {
+	return cache.remote
+}
+
 // Set writes data to local cache synchronously and to remote cache asynchronously.
 func (cache *HybridCache) Set(k, v []byte) {
 	cache.local.Set(k, v)
