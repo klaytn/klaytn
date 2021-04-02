@@ -1309,7 +1309,13 @@ func (bc *BlockChain) writeBlockLogsToRemoteCache(blockLogsKey []byte, receipts 
 		return
 	}
 	// TODO-Klaytn-KES: refine this not to use trieNodeCache
-	bc.stateCache.TrieDB().TrieNodeCache().Set(blockLogsKey, encodedBlockLogs)
+	cache, ok := bc.stateCache.TrieDB().TrieNodeCache().(*statedb.HybridCache)
+	if !ok {
+		logger.Error("only HybridCache supports block logs writing",
+			"TrieNodeCacheType", reflect.TypeOf(bc.stateCache.TrieDB().TrieNodeCache()))
+	} else {
+		cache.Remote().Set(blockLogsKey, encodedBlockLogs)
+	}
 }
 
 // writeBlockWithStateSerial writes the block and all associated state to the database in serial manner.
