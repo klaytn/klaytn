@@ -166,6 +166,9 @@ type Config struct {
 	// ephemeral nodes).
 	GRPCPort int `toml:",omitempty"`
 
+	// APINRAppName string `toml:",omitempty"`
+	// APINRLicense string `toml:",omitempty"`
+
 	// Logger is a custom logger to use with the p2p.Server.
 	Logger log.Logger `toml:",omitempty"`
 }
