@@ -64,6 +64,9 @@ type Node struct {
 	rpcAPIs       []rpc.API
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 
+	nrAppName string
+	nrLicense string
+
 	ipcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
 	ipcListener net.Listener // IPC RPC listener socket to serve API requests
 	ipcHandler  *rpc.Server  // IPC RPC request handler to process the API requests
@@ -465,7 +468,8 @@ func (n *Node) startFastHTTP(endpoint string, apis []rpc.API, modules []string, 
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartFastHTTPEndpoint(endpoint, apis, modules, cors, vhosts, timeouts)
+	listener, handler, err := rpc.StartFastHTTPEndpoint(endpoint, apis, modules, cors, vhosts, timeouts,
+		n.nrAppName, n.nrLicense)
 	if err != nil {
 		return err
 	}

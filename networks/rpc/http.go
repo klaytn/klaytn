@@ -34,6 +34,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/newrelic/go-agent/v3/newrelic"
+
 	"github.com/klaytn/klaytn/common"
 
 	"bufio"
@@ -213,7 +215,8 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *S
 	}
 }
 
-func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *fasthttp.Server {
+func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server,
+	nrAppName string, nrLicense string) *fasthttp.Server {
 	timeouts = sanitizeTimeouts(timeouts)
 	if len(cors) == 0 {
 		for _, vhost := range vhosts {
@@ -231,6 +234,18 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 	// Wrap the CORS-handler within a host-handler
 	handler := newCorsHandler(srv, cors)
 	handler = newVHostHandler(vhosts, handler)
+
+	if nrAppName != "" && nrLicense != "" {
+		nrApp, err := newrelic.NewApplication(
+			newrelic.ConfigAppName(nrAppName),
+			newrelic.ConfigLicense(nrLicense),
+			newrelic.ConfigDistributedTracerEnabled(true),
+		)
+		if err != nil {
+			logger.Crit("failed to create NewRelic application")
+		}
+		handler = newNewRelicHTTPHandler(nrApp, handler)
+	}
 
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
 
