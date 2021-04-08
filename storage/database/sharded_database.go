@@ -168,7 +168,7 @@ const shardedDBSubChannelSize = 128   // Size of each sub-channel of resultChs
 // shardedDBIterator iterates all items of each shardDB.
 // This is useful when you want to get items in serial in binary-alphabetigcal order.
 type shardedDBIterator struct {
-	shardedDBChanIterator
+	shardedDBParallelIterator
 
 	resultCh chan common.Entry
 	key      []byte // current key
@@ -180,8 +180,8 @@ type shardedDBIterator struct {
 // initial key (or after, if it does not exist).
 func (db *shardedDB) NewIterator(prefix []byte, start []byte) Iterator {
 	it := &shardedDBIterator{
-		shardedDBChanIterator: db.NewChanIterator(context.TODO(), prefix, start, nil),
-		resultCh:              make(chan common.Entry, shardedDBCombineChanSize),
+		shardedDBParallelIterator: db.NewParallelIterator(context.TODO(), prefix, start, nil),
+		resultCh:                  make(chan common.Entry, shardedDBCombineChanSize),
 	}
 
 	go it.runCombineWorker()
@@ -296,7 +296,7 @@ type shardedDBIteratorUnsorted struct {
 // NewIteratorUnsorted creates a iterator over the entire keyspace contained within
 // the key-value database.
 // If you want to get ordered items in serial, checkout shardedDB.NewIterator()
-// If you want to get items in parallel from channels, checkout shardedDB.NewChanIterator()
+// If you want to get items in parallel from channels, checkout shardedDB.NewParallelIterator()
 // IteratorUnsorted is a implementation of Iterator and data are accessed with
 // Next(), Key() and Value() methods. With ChanIterator, data can be accessed with
 // channels. The channels are gained with Channels() method.
@@ -304,17 +304,17 @@ func (db *shardedDB) NewIteratorUnsorted(prefix []byte, start []byte) Iterator {
 	resultCh := make(chan common.Entry, shardedDBCombineChanSize)
 	it := &shardedDBIteratorUnsorted{
 		shardedDBIterator{
-			shardedDBChanIterator: db.NewChanIterator(context.TODO(), prefix, start, resultCh),
-			resultCh:              resultCh,
+			shardedDBParallelIterator: db.NewParallelIterator(context.TODO(), prefix, start, resultCh),
+			resultCh:                  resultCh,
 		}}
 	return it
 }
 
-// shardedDBChanIterator creates iterators for each shard DB.
+// shardedDBParallelIterator creates iterators for each shard DB.
 // Channels subscribing each iterators can be gained.
 // Each iterators fetch values in binary-alphabetical order.
 // This is useful when you want to operate on each items in parallel.
-type shardedDBChanIterator struct {
+type shardedDBParallelIterator struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -326,7 +326,7 @@ type shardedDBChanIterator struct {
 	resultChs    []chan common.Entry
 }
 
-// NewChanIterator creates iterators for each shard DB. This is useful when you
+// NewParallelIterator creates iterators for each shard DB. This is useful when you
 // want to operate on each items in parallel.
 // If `resultCh` is given, all items are written to `resultCh`, unsorted with a
 // particular key prefix, starting at a particular initial key. If `resultCh`
@@ -337,12 +337,12 @@ type shardedDBChanIterator struct {
 // If you want to get ordered items in serial, checkout shardedDB.NewIterator()
 // If you want to get unordered items in serial with Iterator Interface,
 // checkout shardedDB.NewIteratorUnsorted().
-func (db *shardedDB) NewChanIterator(ctx context.Context, prefix []byte, start []byte, resultCh chan common.Entry) shardedDBChanIterator {
+func (db *shardedDB) NewParallelIterator(ctx context.Context, prefix []byte, start []byte, resultCh chan common.Entry) shardedDBParallelIterator {
 	if ctx == nil {
 		ctx = context.TODO()
 	}
 
-	it := shardedDBChanIterator{
+	it := shardedDBParallelIterator{
 		ctx:          ctx,
 		cancel:       nil,
 		iterators:    make([]Iterator, len(db.shards)),
@@ -370,7 +370,7 @@ func (db *shardedDB) NewChanIterator(ctx context.Context, prefix []byte, start [
 // `it` and push the value to `resultCh`.
 // `iterator.Release()` is called after all iterating is finished.
 // `resultCh` is closed after the iterating is finished.
-func (sit *shardedDBChanIterator) runChanWorker(ctx context.Context, it Iterator, resultCh chan common.Entry) {
+func (sit *shardedDBParallelIterator) runChanWorker(ctx context.Context, it Iterator, resultCh chan common.Entry) {
 iter:
 	for it.Next() {
 		select {
@@ -397,14 +397,14 @@ iter:
 }
 
 // Channels returns channels that can subscribe on.
-func (it *shardedDBChanIterator) Channels() []chan common.Entry {
+func (it *shardedDBParallelIterator) Channels() []chan common.Entry {
 	return it.resultChs
 }
 
 // Release stops all iterators, channels and workers
 // Even Release() is called, there could be some items left in the channel.
 // Each iterator.Release() is called in `runChanWorker`.
-func (it *shardedDBChanIterator) Release() {
+func (it *shardedDBParallelIterator) Release() {
 	it.cancel()
 }
 
