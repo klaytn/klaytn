@@ -228,35 +228,6 @@ chanIter:
 	close(it.resultCh)
 }
 
-type entryWithShardNum struct {
-	common.Entry
-	shardNum int
-}
-
-type entryHeap []entryWithShardNum
-
-func (e entryHeap) Len() int {
-	return len(e)
-}
-
-func (e entryHeap) Less(i, j int) bool {
-	return bytes.Compare(e[i].Key, e[j].Key) < 0
-}
-func (e entryHeap) Swap(i, j int) {
-	e[i], e[j] = e[j], e[i]
-}
-func (e *entryHeap) Push(x interface{}) {
-	*e = append(*e, x.(entryWithShardNum))
-}
-
-func (e *entryHeap) Pop() interface{} {
-	old := *e
-	n := len(old)
-	element := old[n-1]
-	*e = old[0 : n-1]
-	return element
-}
-
 // Next gets the next item from iterators.
 func (it *shardedDBIterator) Next() bool {
 	e, ok := <-it.resultCh
@@ -285,6 +256,35 @@ func (it *shardedDBIterator) Key() []byte {
 
 func (it *shardedDBIterator) Value() []byte {
 	return it.value
+}
+
+type entryWithShardNum struct {
+	common.Entry
+	shardNum int
+}
+
+type entryHeap []entryWithShardNum
+
+func (e entryHeap) Len() int {
+	return len(e)
+}
+
+func (e entryHeap) Less(i, j int) bool {
+	return bytes.Compare(e[i].Key, e[j].Key) < 0
+}
+func (e entryHeap) Swap(i, j int) {
+	e[i], e[j] = e[j], e[i]
+}
+func (e *entryHeap) Push(x interface{}) {
+	*e = append(*e, x.(entryWithShardNum))
+}
+
+func (e *entryHeap) Pop() interface{} {
+	old := *e
+	n := len(old)
+	element := old[n-1]
+	*e = old[0 : n-1]
+	return element
 }
 
 // shardedDBIteratorUnsorted iterates all items of each shardDB.
