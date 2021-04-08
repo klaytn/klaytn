@@ -168,7 +168,7 @@ const shardedDBSubChannelSize = 128   // Size of each sub-channel of resultChs
 // shardedDBIterator iterates all items of each shardDB.
 // This is useful when you want to get items in serial in binary-alphabetigcal order.
 type shardedDBIterator struct {
-	shardedDBParallelIterator
+	parallelIterator shardedDBParallelIterator
 
 	resultCh chan common.Entry
 	key      []byte // current key
@@ -180,13 +180,28 @@ type shardedDBIterator struct {
 // initial key (or after, if it does not exist).
 func (db *shardedDB) NewIterator(prefix []byte, start []byte) Iterator {
 	it := &shardedDBIterator{
-		shardedDBParallelIterator: db.NewParallelIterator(context.TODO(), prefix, start, nil),
-		resultCh:                  make(chan common.Entry, shardedDBCombineChanSize),
+		parallelIterator: db.NewParallelIterator(context.TODO(), prefix, start, nil),
+		resultCh:         make(chan common.Entry, shardedDBCombineChanSize),
 	}
 
 	go it.runCombineWorker()
 
 	return it
+}
+
+// NewIteratorUnsorted creates a iterator over the entire keyspace contained within
+// the key-value database. This is useful when you want to get items fast in serial.
+// If you want to get ordered items in serial, checkout shardedDB.NewIterator()
+// If you want to get items in parallel from channels, checkout shardedDB.NewParallelIterator()
+// IteratorUnsorted is a implementation of Iterator and data are accessed with
+// Next(), Key() and Value() methods. With ChanIterator, data can be accessed with
+// channels. The channels are gained with Channels() method.
+func (db *shardedDB) NewIteratorUnsorted(prefix []byte, start []byte) Iterator {
+	resultCh := make(chan common.Entry, shardedDBCombineChanSize)
+	return &shardedDBIterator{
+		parallelIterator: db.NewParallelIterator(context.TODO(), prefix, start, resultCh),
+		resultCh:         resultCh,
+	}
 }
 
 // runCombineWorker fetches any key/value from resultChs and put the data in resultCh
@@ -196,7 +211,7 @@ func (it *shardedDBIterator) runCombineWorker() {
 	// creates min-priority queue smallest values from each iterators
 	entries := &entryHeap{}
 	heap.Init(entries)
-	for i, ch := range it.resultChs {
+	for i, ch := range it.parallelIterator.resultChs {
 		if e, ok := <-ch; ok {
 			heap.Push(entries, entryWithShardNum{e, i})
 		}
@@ -206,7 +221,7 @@ chanIter:
 	for len(*entries) != 0 {
 		// check if done
 		select {
-		case <-it.ctx.Done():
+		case <-it.parallelIterator.ctx.Done():
 			logger.Trace("[shardedDBIterator] combine worker ends due to ctx")
 			break chanIter
 		default:
@@ -220,7 +235,7 @@ chanIter:
 
 		// fill used entry with new entry
 		// skip this if channel is closed
-		if e, ok := <-it.resultChs[minEntry.shardNum]; ok {
+		if e, ok := <-it.parallelIterator.resultChs[minEntry.shardNum]; ok {
 			heap.Push(entries, entryWithShardNum{e, minEntry.shardNum})
 		}
 	}
@@ -240,7 +255,7 @@ func (it *shardedDBIterator) Next() bool {
 }
 
 func (it *shardedDBIterator) Error() error {
-	for i, iter := range it.iterators {
+	for i, iter := range it.parallelIterator.iterators {
 		if iter.Error() != nil {
 			logger.Error("[shardedDBIterator] error from iterator",
 				"err", iter.Error(), "shardNum", i, "key", it.key, "val", it.value)
@@ -256,6 +271,10 @@ func (it *shardedDBIterator) Key() []byte {
 
 func (it *shardedDBIterator) Value() []byte {
 	return it.value
+}
+
+func (it *shardedDBIterator) Release() {
+	it.parallelIterator.cancel()
 }
 
 type entryWithShardNum struct {
@@ -285,29 +304,6 @@ func (e *entryHeap) Pop() interface{} {
 	element := old[n-1]
 	*e = old[0 : n-1]
 	return element
-}
-
-// shardedDBIteratorUnsorted iterates all items of each shardDB.
-// This is useful when you want to get items fast in serial.
-type shardedDBIteratorUnsorted struct {
-	shardedDBIterator
-}
-
-// NewIteratorUnsorted creates a iterator over the entire keyspace contained within
-// the key-value database.
-// If you want to get ordered items in serial, checkout shardedDB.NewIterator()
-// If you want to get items in parallel from channels, checkout shardedDB.NewParallelIterator()
-// IteratorUnsorted is a implementation of Iterator and data are accessed with
-// Next(), Key() and Value() methods. With ChanIterator, data can be accessed with
-// channels. The channels are gained with Channels() method.
-func (db *shardedDB) NewIteratorUnsorted(prefix []byte, start []byte) Iterator {
-	resultCh := make(chan common.Entry, shardedDBCombineChanSize)
-	it := &shardedDBIteratorUnsorted{
-		shardedDBIterator{
-			shardedDBParallelIterator: db.NewParallelIterator(context.TODO(), prefix, start, resultCh),
-			resultCh:                  resultCh,
-		}}
-	return it
 }
 
 // shardedDBParallelIterator creates iterators for each shard DB.
