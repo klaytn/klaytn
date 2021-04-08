@@ -94,9 +94,9 @@ func TestShardedDBIteratorUnsorted(t *testing.T) {
 	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBIteratorUnsorted)
 }
 
-// TestShardedDBChanIterator tests if shardedDBChanIterator iterates all entries with diverse shard size
-func TestShardedDBChanIterator(t *testing.T) {
-	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBChanIterator)
+// TestShardedDBParallelIterator tests if shardedDBParallelIterator iterates all entries with diverse shard size
+func TestShardedDBParallelIterator(t *testing.T) {
+	testIterator(t, false, []uint{100}, ShardedDBConfig, newShardedDBParallelIterator)
 }
 
 // TestShardedDBIteratorSize tests if shardedDBIterator iterates all entries for different
@@ -114,11 +114,11 @@ func TestShardedDBIteratorUnsortedSize(t *testing.T) {
 	testIterator(t, false, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBIteratorUnsorted)
 }
 
-// TestShardedDBChanIteratorSize tests if shardedDBChanIterator iterates all entries
-func TestShardedDBChanIteratorSize(t *testing.T) {
+// TestShardedDBParallelIteratorSize tests if shardedDBParallelIterator iterates all entries
+func TestShardedDBParallelIteratorSize(t *testing.T) {
 	config := ShardedDBConfig[0]
 	size := config.NumStateTrieShards
-	testIterator(t, false, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBChanIterator)
+	testIterator(t, false, []uint{size - 1, size, size + 1}, []*DBConfig{config}, newShardedDBParallelIterator)
 }
 
 func newShardedDBIterator(t *testing.T, db shardedDB, entryNum uint) []common.Entry {
@@ -145,12 +145,12 @@ func newShardedDBIteratorUnsorted(t *testing.T, db shardedDB, entryNum uint) []c
 	return entries
 }
 
-func newShardedDBChanIterator(t *testing.T, db shardedDB, entryNum uint) []common.Entry {
+func newShardedDBParallelIterator(t *testing.T, db shardedDB, entryNum uint) []common.Entry {
 	entries := make([]common.Entry, 0, entryNum) // store all items
 	var l sync.RWMutex                           // mutex for entries
 
 	// create chan Iterator and get channels
-	it := db.NewChanIterator(context.Background(), nil, nil, nil)
+	it := db.NewParallelIterator(context.Background(), nil, nil, nil)
 	chans := it.Channels()
 
 	// listen all channels and get key/value
@@ -263,13 +263,13 @@ func TestShardedDBIteratorUnsorted_Release(t *testing.T) {
 	})
 }
 
-func TestShardedDBChanIterator_Release(t *testing.T) {
+func TestShardedDBParallelIterator_Release(t *testing.T) {
 	testShardedIterator_Release(t,
 		int(ShardedDBConfig[len(ShardedDBConfig)-1].NumStateTrieShards*shardedDBSubChannelSize*2),
 		func(db shardedDB) {
 			// Next() returns True if Release() is not called
 			{
-				it := db.NewChanIterator(context.Background(), nil, nil, nil)
+				it := db.NewParallelIterator(context.Background(), nil, nil, nil)
 				defer it.Release()
 
 				for _, ch := range it.Channels() {
@@ -285,7 +285,7 @@ func TestShardedDBChanIterator_Release(t *testing.T) {
 
 			//  Next() returns False if Release() is called
 			{
-				it := db.NewChanIterator(context.Background(), nil, nil, nil)
+				it := db.NewParallelIterator(context.Background(), nil, nil, nil)
 				it.Release()
 				for _, ch := range it.Channels() {
 
