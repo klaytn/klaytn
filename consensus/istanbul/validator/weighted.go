@@ -625,30 +625,18 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 	blockNumBig := new(big.Int).SetUint64(blockNum)
 	chainRules := config.Rules(blockNumBig)
 
-	var (
-		weightedValidators []*weightedValidator
-		stakingAmounts     []float64
-	)
+	candidates := append(valSet.validators, valSet.demotedValidators...)
+	weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, newStakingInfo)
+	if err != nil {
+		return err
+	}
 
 	if chainRules.IsIstanbul {
-		// get staking amounts of validators and demoted ones
-		candidates := append(valSet.validators, valSet.demotedValidators...)
-		weightedValidators, stakingAmounts, err = getStakingAmountsOfValidators(candidates, newStakingInfo)
-		if err != nil {
-			return err
-		}
-
 		var demotedValidators []*weightedValidator
 		// divide the obtained validators into two groups which have enough amount of staking
 		weightedValidators, stakingAmounts, demotedValidators, _ = filterPoorValidators(weightedValidators, stakingAmounts)
 		// update new validators and demoted validators of the council
 		valSet.setValidators(weightedValidators, demotedValidators)
-	} else {
-		candidates := valSet.validators
-		weightedValidators, stakingAmounts, err = getStakingAmountsOfValidators(candidates, newStakingInfo)
-		if err != nil {
-			return err
-		}
 	}
 
 	totalStaking := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
