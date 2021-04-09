@@ -313,6 +313,12 @@ func (valSet *weightedCouncil) List() []istanbul.Validator {
 	return valSet.validators
 }
 
+func (valSet *weightedCouncil) DemotedList() []istanbul.Validator {
+	valSet.validatorMu.RLock()
+	defer valSet.validatorMu.RUnlock()
+	return valSet.demotedValidators
+}
+
 // SubList composes a committee after setting a proposer with a default value.
 // This functions returns whole validators if it failed to compose a committee.
 func (valSet *weightedCouncil) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {

@@ -145,6 +145,10 @@ func (valSet *defaultSet) List() []istanbul.Validator {
 	return valSet.validators
 }
 
+func (valSet *defaultSet) DemotedList() []istanbul.Validator {
+	return nil
+}
+
 // SubList composes a committee after setting a proposer with a default value.
 // This functions returns whole validators if it failed to compose a committee.
 func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
