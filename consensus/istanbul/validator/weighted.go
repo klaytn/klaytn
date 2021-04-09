@@ -632,10 +632,18 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 	}
 
 	if chainRules.IsIstanbul {
-		var demotedValidators []*weightedValidator
+		var (
+			demotedValidators     []*weightedValidator
+			demotedStakingAmounts []float64
+		)
 		// divide the obtained validators into two groups which have enough amount of staking
-		weightedValidators, stakingAmounts, demotedValidators, _ = filterPoorValidators(weightedValidators, stakingAmounts)
-		// update new validators and demoted validators of the council
+		weightedValidators, stakingAmounts, demotedValidators, demotedStakingAmounts = filterPoorValidators(weightedValidators, stakingAmounts)
+
+		// if there is no valid validator, the demoted validators become valid
+		if len(weightedValidators) <= 0 {
+			weightedValidators, stakingAmounts = demotedValidators, demotedStakingAmounts
+			demotedValidators, demotedStakingAmounts = []*weightedValidator{}, []float64{}
+		}
 		valSet.setValidators(weightedValidators, demotedValidators)
 	}
 
@@ -691,11 +699,7 @@ func filterPoorValidators(weightedValidators []*weightedValidator, stakingAmount
 		}
 	}
 
-	if len(newWeightedValidators) <= 0 {
-		return newWeightedDemoted, newDemotedStaking, []*weightedValidator{}, []float64{}
-	} else {
-		return newWeightedValidators, newValidatorsStaking, newWeightedDemoted, newDemotedStaking
-	}
+	return newWeightedValidators, newValidatorsStaking, newWeightedDemoted, newDemotedStaking
 }
 
 // getStakingAmountsOfValidators calculates stakingAmounts of validators.
