@@ -77,6 +77,8 @@ type ValidatorSet interface {
 	SetSubGroupSize(size uint64)
 	// Return the validator array
 	List() []Validator
+	// Return the demoted validator array
+	DemotedList() []Validator
 	// SubList composes a committee after setting a proposer with a default value.
 	SubList(prevHash common.Hash, view *View) []Validator
 	// Return whether the given address is one of sub-list
