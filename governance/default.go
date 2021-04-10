@@ -182,7 +182,7 @@ type Governance struct {
 
 	db           database.DBManager
 	itemCache    common.Cache
-	idxCache     []uint64
+	idxCache     []uint64 // elements should be in ascending order
 	idxCacheLock *sync.RWMutex
 
 	// The block number when current governance information was changed
@@ -648,6 +648,8 @@ func (g *Governance) addGovernanceCache(num uint64, data GovernanceSet) {
 	defer g.idxCacheLock.Unlock()
 
 	if len(g.idxCache) > 0 && num <= g.idxCache[len(g.idxCache)-1] {
+		logger.Error("The same or more recent governance index exist. Skip updating governance cache",
+			"newIdx", num, "govIdxes", g.idxCache)
 		return
 	}
 	cKey := getGovernanceCacheKey(num)
@@ -673,6 +675,8 @@ func (g *Governance) WriteGovernance(num uint64, data GovernanceSet, delta Gover
 	g.idxCacheLock.RUnlock()
 
 	if len(indices) > 0 && num <= indices[len(indices)-1] {
+		logger.Error("The same or more recent governance index exist. Skip writing governance",
+			"newIdx", num, "govIdxes", indices)
 		return nil
 	}
 
