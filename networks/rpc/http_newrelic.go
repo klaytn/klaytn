@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin/binding"
@@ -38,6 +39,28 @@ func parseKASHeader(r *http.Request) KASAttrs {
 		logger.Error("failed to bind a KAS header")
 	}
 	return attrs
+}
+
+func newNewRelicApp() *newrelic.Application {
+	appName := os.Getenv("NEWRELIC_APP_NAME")
+	license := os.Getenv("NEWRELIC_LICENSE")
+	if appName == "" && license == "" {
+		return nil
+	}
+
+	nrApp, err := newrelic.NewApplication(
+		newrelic.ConfigAppName(appName),
+		newrelic.ConfigLicense(license),
+		newrelic.ConfigDistributedTracerEnabled(true),
+	)
+	if err != nil {
+		logger.Crit("failed to create NewRelic application. If you want to register a NewRelic HTTP handler," +
+			" specify NEWRELIC_APP_NAME and NEWRELIC_LICENSE os environment variables with valid values. " +
+			"If you don't want to register the handler, specify them with an empty string.")
+	}
+
+	logger.Info("NewRelic APM is enabled", "appName", appName)
+	return nrApp
 }
 
 // newNewRelicHTTPHandler enables NewRelic web transaction monitor.
