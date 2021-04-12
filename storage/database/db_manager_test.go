@@ -956,7 +956,7 @@ func TestDBManager_ReadRecentGovernanceIdx(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Nil(t, dbm.GetMiscDB().Put(governanceHistoryKey, data))
 
-			// read and check the idnexes from the database
+			// read and check the indexes from the database
 			idxes, err = dbm.ReadRecentGovernanceIdx(0)
 			assert.Equal(t, testIdxes, idxes)
 			assert.Nil(t, err)
