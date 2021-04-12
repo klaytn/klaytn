@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"runtime/debug"
 
 	"github.com/gin-gonic/gin/binding"
 	"github.com/newrelic/go-agent/v3/newrelic"
@@ -69,7 +68,7 @@ func newNewRelicHTTPHandler(nrApp *newrelic.Application, handler http.Handler) h
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				logger.Error("NewRelic http handler panic\n"+string(debug.Stack()), "err", err)
+				logger.ErrorWithStack("NewRelic http handler panic", "err", err)
 			}
 		}()
 
