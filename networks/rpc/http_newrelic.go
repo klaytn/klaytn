@@ -108,11 +108,13 @@ func newNewRelicHTTPHandler(nrApp *newrelic.Application, handler http.Handler) h
 			if err := json.Unmarshal(dupW.body.Bytes(), &rpcReturns); err == nil {
 				for i, rpcReturn := range rpcReturns {
 					if data, err := json.Marshal(rpcReturn); err == nil {
+						// TODO-Klaytn: make the log level configurable or separate module name of the logger
 						printRPCErrorLog(data, reqs[i].method, r)
 					}
 				}
 			}
 		} else {
+			// TODO-Klaytn: make the log level configurable or separate module name of the logger
 			printRPCErrorLog(dupW.body.Bytes(), reqs[0].method, r)
 		}
 	})
