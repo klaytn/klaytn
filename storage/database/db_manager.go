@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -2052,6 +2053,11 @@ func (dbm *databaseManager) ReadRecentGovernanceIdx(count int) ([]uint64, error)
 		if e := json.Unmarshal(history, &idxHistory); e != nil {
 			return nil, e
 		}
+
+		// Make sure idxHistory should be in ascending order
+		sort.Slice(idxHistory, func(i, j int) bool {
+			return idxHistory[i] < idxHistory[j]
+		})
 
 		max := 0
 		leng := len(idxHistory)
