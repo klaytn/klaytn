@@ -924,7 +924,7 @@ func TestDBManager_WriteGovernanceIdx(t *testing.T) {
 			encodedIdxes, err := dbm.GetMiscDB().Get(governanceHistoryKey)
 			assert.Nil(t, err)
 
-			// read and check the idnexes from the database
+			// read and check the indexes from the database
 			actualIdxes := make([]uint64, 0)
 			assert.Nil(t, json.Unmarshal(encodedIdxes, &actualIdxes))
 			assert.Equal(t, testIdxes, actualIdxes)
@@ -972,7 +972,7 @@ func TestDBManager_ReadRecentGovernanceIdx(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Nil(t, dbm.GetMiscDB().Put(governanceHistoryKey, data))
 
-			// read and check the idnexes from the database
+			// read and check the indexes from the database
 			idxes, err = dbm.ReadRecentGovernanceIdx(0)
 			assert.Nil(t, err)
 			assert.Equal(t, expectedIdxes, idxes)
