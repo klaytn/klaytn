@@ -24,6 +24,8 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/klaytn/klaytn/consensus"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -142,7 +144,7 @@ func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, addr common.Address, epoch uint64) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, addr common.Address, policy uint64, chain consensus.ChainReader) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -177,6 +179,23 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		}
 
 		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr)
+		if policy == uint64(params.WeightedRandom) {
+			// Snapshot of block N (Snapshot_N) should contain proposers for N+1 and following blocks.
+			// And proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
+			// Let's refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
+			pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
+			if pHeader != nil {
+				if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config()); err != nil {
+					// There are three error cases and they just don't refresh proposers
+					// (1) no validator at all
+					// (2) invalid formatted hash
+					// (3) no staking info available
+					logger.Trace("Skip refreshing proposers while creating snapshot", "snap.Number", snap.Number, "pHeader.Number", pHeader.Number.Uint64(), "err", err)
+				}
+			} else {
+				logger.Trace("Can't refreshing proposers while creating snapshot due to lack of required header", "snap.Number", snap.Number)
+			}
+		}
 
 		if number%snap.Epoch == 0 {
 			if len(header.Governance) > 0 {
