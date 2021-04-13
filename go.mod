@@ -16,6 +16,7 @@ require (
 	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712
 	github.com/fatih/color v1.7.0
 	github.com/fjl/memsize v0.0.0-20180427083637-f6d5545993d6
+	github.com/gin-gonic/gin v1.6.3
 	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/go-redis/redis/v7 v7.4.0
 	github.com/go-sql-driver/mysql v1.5.0
@@ -33,6 +34,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.2 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
+	github.com/newrelic/go-agent/v3 v3.11.0
 	github.com/otiai10/copy v1.0.1
 	github.com/otiai10/curr v0.0.0-20190513014714-f5a3d24e5776 // indirect
 	github.com/pbnjay/memory v0.0.0-20190104145345-974d429e7ae4
@@ -59,12 +61,9 @@ require (
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20200813134508-3edf25e44fcc
 	golang.org/x/sys v0.0.0-20200814200057-3d37ad5750ed
-	golang.org/x/tools v0.0.0-20191126055441-b0650ceb63d9
-	google.golang.org/genproto v0.0.0-20190111180523-db91494dd46c // indirect
-	google.golang.org/grpc v1.23.1
+	google.golang.org/grpc v1.27.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 	gopkg.in/fatih/set.v0 v0.1.0
-	gopkg.in/karalabe/cookiejar.v2 v2.0.0-20150724131613-8dcd6a7f4951
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20181125150206-ccb656ba24c2
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect

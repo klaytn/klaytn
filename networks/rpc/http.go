@@ -21,9 +21,11 @@
 package rpc
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -35,10 +37,6 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/common"
-
-	"bufio"
-	"errors"
-
 	"github.com/rs/cors"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
@@ -231,6 +229,12 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 	// Wrap the CORS-handler within a host-handler
 	handler := newCorsHandler(srv, cors)
 	handler = newVHostHandler(vhosts, handler)
+
+	// If os environment variables for NewRelic exist, register the NewRelicHTTPHandler
+	nrApp := newNewRelicApp()
+	if nrApp != nil {
+		handler = newNewRelicHTTPHandler(nrApp, handler)
+	}
 
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
 
