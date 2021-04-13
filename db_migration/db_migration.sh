@@ -18,7 +18,7 @@ SRC_DB_DIR=$DATA_DIR/klay/chaindata/$SRC_DB
 DST_DB_TYPE=DynamoDBS3                # one of "LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3"
 DST_DB_DIR=~/klaytn/db_migration/dst  # for localDB ("LevelDB", "BadgerDB", "MemoryDB"). neglected config for "DynamoDBS3"
 DST_TABLENAME=db-migration            # for remoteDB ("DynamoDBS3"). neglected config for localDB
-DST_RCU=0                             # neglected config for existing DB.
+DST_RCU=100                             # neglected config for existing DB.
 DST_WCU=4000                          # recommended to use auto-scaling up to 4000 while db migration
 
 # set this value if you are using DynamoDB
