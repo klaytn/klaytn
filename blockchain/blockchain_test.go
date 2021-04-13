@@ -30,6 +30,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/rlp"
+
 	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/klaytn/klaytn/accounts/abi"
@@ -1625,4 +1628,52 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 	newHeadBlock := blockchain.CurrentBlock()
 	assert.Equal(t, targetBlock.Hash(), newHeadBlock.Hash())
 	assert.EqualValues(t, targetBlock, newHeadBlock)
+}
+
+func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
+	// prepare blockchain
+	blockchain := &BlockChain{
+		stateCache: state.NewDatabaseWithNewCache(database.NewMemoryDBManager(), &statedb.TrieNodeCacheConfig{
+			CacheType:          statedb.CacheTypeHybrid,
+			LocalCacheSizeMiB:  100,
+			RedisEndpoints:     []string{"localhost:6379"},
+			RedisClusterEnable: false,
+		}),
+	}
+
+	// prepare test data to be written in the cache
+	key := []byte{1, 2, 3, 4}
+	log := &types.Log{
+		Address:     common.Address{},
+		Topics:      []common.Hash{common.BytesToHash(hexutil.MustDecode("0x123456789abcdef123456789abcdefffffffffff"))},
+		Data:        []uint8{0x11, 0x22, 0x33, 0x44},
+		BlockNumber: uint64(1000),
+	}
+	receipt := &types.Receipt{
+		TxHash:  common.Hash{},
+		GasUsed: uint64(999999),
+		Status:  types.ReceiptStatusSuccessful,
+		Logs:    []*types.Log{log},
+	}
+
+	// write log to cache
+	blockchain.writeBlockLogsToRemoteCache(key, []*types.Receipt{receipt})
+
+	// get log from cache
+	ret := blockchain.stateCache.TrieDB().TrieNodeCache().Get(key)
+	if ret == nil {
+		t.Fatal("no cache")
+	}
+
+	// decode return data to the original log format
+	storageLog := []*types.LogForStorage{}
+	if err := rlp.DecodeBytes(ret, &storageLog); err != nil {
+		t.Fatal(err)
+	}
+	logs := make([]*types.Log, len(storageLog))
+	for i, log := range storageLog {
+		logs[i] = (*types.Log)(log)
+	}
+
+	assert.Equal(t, log, logs[0])
 }
