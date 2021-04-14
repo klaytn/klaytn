@@ -101,7 +101,7 @@ type weightedCouncil struct {
 	policy            istanbul.ProposerPolicy
 
 	proposer    atomic.Value // istanbul.Validator
-	validatorMu sync.RWMutex
+	validatorMu sync.RWMutex // this validator mutex protects concurrent usage of validators and demotedValidators
 	selector    istanbul.ProposalSelector
 
 	proposers         []istanbul.Validator
