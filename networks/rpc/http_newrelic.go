@@ -72,20 +72,21 @@ func newNewRelicHTTPHandler(nrApp *newrelic.Application, handler http.Handler) h
 			}
 		}()
 
+		reqMethod := ""
+
 		// parse RPC requests
 		reqs, isBatch, err := getRPCRequests(r)
 		if err != nil || len(reqs) < 1 {
-			logger.Error("failed to parse RPC request", "err", err, "len(reqs)", len(reqs))
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			// The error will be handled in `handler.ServeHTTP()` and printed with `printRPCErrorLog()`
+			logger.Debug("failed to parse RPC request", "err", err, "len(reqs)", len(reqs))
+		} else {
+			reqMethod = reqs[0].method
+			if isBatch {
+				reqMethod += "_batch"
+			}
 		}
 
 		// new relic transaction name contains the first API method of the request
-		reqMethod := reqs[0].method
-		if isBatch {
-			reqMethod += "_batch"
-		}
-
 		txn := nrApp.StartTransaction(r.Method + " " + r.URL.String() + " " + reqMethod)
 		defer txn.End()
 
@@ -115,7 +116,7 @@ func newNewRelicHTTPHandler(nrApp *newrelic.Application, handler http.Handler) h
 			}
 		} else {
 			// TODO-Klaytn: make the log level configurable or separate module name of the logger
-			printRPCErrorLog(dupW.body.Bytes(), reqs[0].method, r)
+			printRPCErrorLog(dupW.body.Bytes(), reqMethod, r)
 		}
 	})
 }
