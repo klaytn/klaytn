@@ -498,9 +498,6 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 
 	data := DynamoData{Key: key, Val: val}
 	dataSize := len(val)
-	if dataSize == 0 {
-		return nil
-	}
 
 	// If the size of the item is larger than the limit, it should be handled in different way
 	if dataSize > dynamoWriteSizeLimit {
