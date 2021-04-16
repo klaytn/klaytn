@@ -91,6 +91,28 @@ func (s *SuiteDynamoDB) TestDynamoDB_Put() {
 	s.NoError(returnedErr)
 }
 
+func (s *SuiteDynamoDB) TestDynamoDB_Put_EmptyVal() {
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
+	if err != nil {
+		s.FailNow("failed to create dynamoDB", err)
+	}
+	s.dynamoDBs = append(s.dynamoDBs, dynamo)
+
+	// write nil value
+	key := common.MakeRandomBytes(32)
+	s.Nil(dynamo.Put(key, nil))
+
+	// get nil value
+	ret, err := dynamo.Get(key)
+	s.Equal([]byte{}, ret)
+	s.Nil(err)
+
+	// check existence
+	exist, err := dynamo.Has(key)
+	s.Equal(true, exist)
+	s.Nil(err)
+}
+
 // TestDynamoDB_Timeout tests if a timeout error occurs.
 // When there is no answer from DynamoDB server due to network failure,
 // a timeout error should occur.
@@ -191,7 +213,32 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
 	}
 }
 
-func (s *SuiteDynamoDB) TestDynamoBatch_WriteLargeData() {
+func (s *SuiteDynamoDB) TestDynamoBatch_Write_EmptyVal() {
+	dynamo, err := newDynamoDB(GetTestDynamoConfig())
+	if err != nil {
+		s.FailNow("failed to create dynamoDB", err)
+	}
+	s.dynamoDBs = append(s.dynamoDBs, dynamo)
+
+	batch := dynamo.NewBatch()
+
+	// write nil value
+	key := common.MakeRandomBytes(32)
+	s.Nil(batch.Put(key, nil))
+	s.NoError(batch.Write())
+
+	// get nil value
+	ret, err := dynamo.Get(key)
+	s.Equal([]byte{}, ret)
+	s.Nil(err)
+
+	// check existence
+	exist, err := dynamo.Has(key)
+	s.Equal(true, exist)
+	s.Nil(err)
+}
+
+func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -222,7 +269,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_WriteLargeData() {
 	}
 }
 
-func (s *SuiteDynamoDB) TestDynamoBatch_DuplicatedKey() {
+func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -257,7 +304,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_DuplicatedKey() {
 
 // testDynamoBatch_WriteMutliTables checks if there is no error when working with more than one tables.
 // This also checks if shared workers works as expected.
-func (s *SuiteDynamoDB) TestDynamoBatch_WriteMutliTables() {
+func (s *SuiteDynamoDB) TestDynamoBatch_Write_MutliTables() {
 	// this test might end with Crit, enableLog to find out the log
 	//enableLog()
 
