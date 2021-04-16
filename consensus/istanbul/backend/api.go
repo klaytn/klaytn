@@ -209,6 +209,15 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 	}
 
 	blockNumber := header.Number.Uint64()
+	if blockNumber == 0 {
+		// The committee of genesis block can not be calculated because it requires a previous block.
+		istanbulExtra, err := types.ExtractIstanbulExtra(header)
+		if err != nil {
+			return nil, errExtractIstanbulExtra
+		}
+		return istanbulExtra.Validators, nil
+	}
+
 	round := header.Round()
 	view := &istanbul.View{
 		Sequence: new(big.Int).SetUint64(blockNumber),
