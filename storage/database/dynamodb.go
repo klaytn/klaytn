@@ -67,8 +67,8 @@ const itemChanSize = WorkerNum * 2
 
 var (
 	dynamoDBClient    *dynamodb.DynamoDB          // handles dynamoDB connections
-	dynamoOnceWorker  sync.Once                   // makes sure worker is created once
 	dynamoWriteCh     chan *batchWriteWorkerInput // use global write channel for shared worker
+	dynamoOnceWorker  = &sync.Once{}              // makes sure worker is created once
 	dynamoOpenedDBNum uint
 )
 

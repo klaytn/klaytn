@@ -77,7 +77,7 @@ func newTestDynamoS3DB() (Database, func()) {
 	dynamoDBClient = nil
 
 	oldDynamoOnceWorker := dynamoOnceWorker
-	dynamoOnceWorker = sync.Once{}
+	dynamoOnceWorker = &sync.Once{}
 
 	oldDynamoWriteCh := dynamoWriteCh
 	dynamoWriteCh = nil
