@@ -91,28 +91,6 @@ func (s *SuiteDynamoDB) TestDynamoDB_Put() {
 	s.NoError(returnedErr)
 }
 
-func (s *SuiteDynamoDB) TestDynamoDB_Put_EmptyVal() {
-	dynamo, err := newDynamoDB(GetTestDynamoConfig())
-	if err != nil {
-		s.FailNow("failed to create dynamoDB", err)
-	}
-	s.dynamoDBs = append(s.dynamoDBs, dynamo)
-
-	// write nil value
-	key := common.MakeRandomBytes(32)
-	s.Nil(dynamo.Put(key, nil))
-
-	// get nil value
-	ret, err := dynamo.Get(key)
-	s.Equal([]byte{}, ret)
-	s.Nil(err)
-
-	// check existence
-	exist, err := dynamo.Has(key)
-	s.Equal(true, exist)
-	s.Nil(err)
-}
-
 // TestDynamoDB_Timeout tests if a timeout error occurs.
 // When there is no answer from DynamoDB server due to network failure,
 // a timeout error should occur.

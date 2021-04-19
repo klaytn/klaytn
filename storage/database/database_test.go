@@ -164,7 +164,6 @@ func TestDatabase_NilValue(t *testing.T) {
 		// batch
 		{
 			batch := db.NewBatch()
-			fmt.Println(db.Type())
 
 			// write nil value
 			key := common.MakeRandomBytes(32)
