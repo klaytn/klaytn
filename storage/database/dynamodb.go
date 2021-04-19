@@ -321,6 +321,9 @@ func (dynamo *dynamoDB) put(key []byte, val []byte) error {
 // Has returns true if the corresponding value to the given key exists.
 func (dynamo *dynamoDB) Has(key []byte) (bool, error) {
 	if _, err := dynamo.Get(key); err != nil {
+		if err == dataNotFoundErr {
+			return false, nil
+		}
 		return false, err
 	}
 	return true, nil
