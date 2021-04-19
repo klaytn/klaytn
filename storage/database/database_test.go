@@ -71,12 +71,22 @@ func newTestMemDB() (Database, func()) {
 	return NewMemDB(), func() {}
 }
 
+func newTestDynamoS3DB() (Database, func()) {
+	db, err := newDynamoDB(GetTestDynamoConfig())
+	if err != nil {
+		panic("failed to create test DynamoS3 database: " + err.Error())
+	}
+	return db, func() {
+		db.deleteDB()
+	}
+}
+
 var test_values = []string{"a", "1251", "\x00123\x00"}
 
 //var test_values = []string{"", "a", "1251", "\x00123\x00"} original test_values; modified since badgerDB can't store empty key
 
 // TODO-Klaytn-Database Need to add DynamoDB to the below list.
-var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB}
+var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
 
 // TestDatabase_PutGet tests the basic put and get operations.
 func TestDatabase_PutGet(t *testing.T) {
