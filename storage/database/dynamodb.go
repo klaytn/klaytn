@@ -67,8 +67,8 @@ const itemChanSize = WorkerNum * 2
 
 var (
 	dynamoDBClient    *dynamodb.DynamoDB          // handles dynamoDB connections
-	dynamoOnceWorker  sync.Once                   // makes sure worker is created once
 	dynamoWriteCh     chan *batchWriteWorkerInput // use global write channel for shared worker
+	dynamoOnceWorker  = &sync.Once{}              // makes sure worker is created once
 	dynamoOpenedDBNum uint
 )
 
@@ -161,7 +161,6 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 			},
 		})))
 	}
-
 	dynamoDB := &dynamoDB{
 		config: *config,
 		fdb:    s3FileDB,
@@ -501,9 +500,6 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 
 	data := DynamoData{Key: key, Val: val}
 	dataSize := len(val)
-	if dataSize == 0 {
-		return nil
-	}
 
 	// If the size of the item is larger than the limit, it should be handled in different way
 	if dataSize > dynamoWriteSizeLimit {

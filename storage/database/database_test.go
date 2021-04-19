@@ -71,12 +71,37 @@ func newTestMemDB() (Database, func()) {
 	return NewMemDB(), func() {}
 }
 
+func newTestDynamoS3DB() (Database, func()) {
+	// to start test with DynamoDB singletons
+	oldDynamoDBClient := dynamoDBClient
+	dynamoDBClient = nil
+
+	oldDynamoOnceWorker := dynamoOnceWorker
+	dynamoOnceWorker = &sync.Once{}
+
+	oldDynamoWriteCh := dynamoWriteCh
+	dynamoWriteCh = nil
+
+	db, err := newDynamoDB(GetTestDynamoConfig())
+	if err != nil {
+		panic("failed to create test DynamoS3 database: " + err.Error())
+	}
+	return db, func() {
+		db.deleteDB()
+
+		// to finish test with DynamoDB singletons
+		dynamoDBClient = oldDynamoDBClient
+		dynamoOnceWorker = oldDynamoOnceWorker
+		dynamoWriteCh = oldDynamoWriteCh
+	}
+}
+
 var test_values = []string{"a", "1251", "\x00123\x00"}
 
 //var test_values = []string{"", "a", "1251", "\x00123\x00"} original test_values; modified since badgerDB can't store empty key
 
 // TODO-Klaytn-Database Need to add DynamoDB to the below list.
-var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB}
+var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
 
 // TestDatabase_PutGet tests the basic put and get operations.
 func TestDatabase_PutGet(t *testing.T) {
@@ -106,6 +131,60 @@ func TestDatabase_NotFoundErr(t *testing.T) {
 		assert.Nil(t, val)
 		assert.Error(t, err)
 		assert.Equal(t, dataNotFoundErr, err)
+	}
+}
+
+// TestDatabase_NilValue checks if all database write/read nil value in the same way.
+func TestDatabase_NilValue(t *testing.T) {
+	for _, dbCreateFn := range testDatabases {
+		db, remove := dbCreateFn()
+		defer remove()
+
+		{
+			// write nil value
+			key := common.MakeRandomBytes(32)
+			assert.Nil(t, db.Put(key, nil))
+
+			// get nil value
+			ret, err := db.Get(key)
+			assert.Equal(t, []byte{}, ret)
+			assert.Nil(t, err)
+
+			// check existence
+			exist, err := db.Has(key)
+			assert.Equal(t, true, exist)
+			assert.Nil(t, err)
+
+			val, err := db.Get(randStrBytes(100))
+			assert.Nil(t, val)
+			assert.Error(t, err)
+			assert.Equal(t, dataNotFoundErr, err)
+		}
+
+		// batch
+		{
+			batch := db.NewBatch()
+
+			// write nil value
+			key := common.MakeRandomBytes(32)
+			assert.Nil(t, batch.Put(key, nil))
+			assert.NoError(t, batch.Write())
+
+			// get nil value
+			ret, err := db.Get(key)
+			assert.Equal(t, []byte{}, ret)
+			assert.Nil(t, err)
+
+			// check existence
+			exist, err := db.Has(key)
+			assert.Equal(t, true, exist)
+			assert.Nil(t, err)
+
+			val, err := db.Get(randStrBytes(100))
+			assert.Nil(t, val)
+			assert.Error(t, err)
+			assert.Equal(t, dataNotFoundErr, err)
+		}
 	}
 }
 

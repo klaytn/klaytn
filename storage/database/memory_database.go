@@ -89,6 +89,9 @@ func (db *MemDB) Get(key []byte) ([]byte, error) {
 		return nil, errMemorydbClosed
 	}
 	if entry, ok := db.db[string(key)]; ok {
+		if entry == nil {
+			entry = []byte{}
+		}
 		return common.CopyBytes(entry), nil
 	}
 	return nil, dataNotFoundErr

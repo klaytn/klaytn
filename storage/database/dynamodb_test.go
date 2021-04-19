@@ -191,7 +191,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
 	}
 }
 
-func (s *SuiteDynamoDB) TestDynamoBatch_WriteLargeData() {
+func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -222,7 +222,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_WriteLargeData() {
 	}
 }
 
-func (s *SuiteDynamoDB) TestDynamoBatch_DuplicatedKey() {
+func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -257,7 +257,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_DuplicatedKey() {
 
 // testDynamoBatch_WriteMutliTables checks if there is no error when working with more than one tables.
 // This also checks if shared workers works as expected.
-func (s *SuiteDynamoDB) TestDynamoBatch_WriteMutliTables() {
+func (s *SuiteDynamoDB) TestDynamoBatch_Write_MutliTables() {
 	// this test might end with Crit, enableLog to find out the log
 	//enableLog()
 
