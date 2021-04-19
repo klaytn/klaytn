@@ -161,7 +161,6 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 			},
 		})))
 	}
-
 	dynamoDB := &dynamoDB{
 		config: *config,
 		fdb:    s3FileDB,

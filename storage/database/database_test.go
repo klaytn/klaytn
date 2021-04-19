@@ -72,12 +72,27 @@ func newTestMemDB() (Database, func()) {
 }
 
 func newTestDynamoS3DB() (Database, func()) {
+	// to start test with DynamoDB singletons
+	oldDynamoDBClient := dynamoDBClient
+	dynamoDBClient = nil
+
+	oldDynamoOnceWorker := dynamoOnceWorker
+	dynamoOnceWorker = sync.Once{}
+
+	oldDynamoWriteCh := dynamoWriteCh
+	dynamoWriteCh = nil
+
 	db, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		panic("failed to create test DynamoS3 database: " + err.Error())
 	}
 	return db, func() {
 		db.deleteDB()
+
+		// to finish test with DynamoDB singletons
+		dynamoDBClient = oldDynamoDBClient
+		dynamoOnceWorker = oldDynamoOnceWorker
+		dynamoWriteCh = oldDynamoWriteCh
 	}
 }
 
