@@ -109,6 +109,61 @@ func TestDatabase_NotFoundErr(t *testing.T) {
 	}
 }
 
+// TestDatabase_NilValue checks if all database write/read nil value in the same way.
+func TestDatabase_NilValue(t *testing.T) {
+	for _, dbCreateFn := range testDatabases {
+		db, remove := dbCreateFn()
+		defer remove()
+
+		{
+			// write nil value
+			key := common.MakeRandomBytes(32)
+			assert.Nil(t, db.Put(key, nil))
+
+			// get nil value
+			ret, err := db.Get(key)
+			assert.Equal(t, []byte{}, ret)
+			assert.Nil(t, err)
+
+			// check existence
+			exist, err := db.Has(key)
+			assert.Equal(t, true, exist)
+			assert.Nil(t, err)
+
+			val, err := db.Get(randStrBytes(100))
+			assert.Nil(t, val)
+			assert.Error(t, err)
+			assert.Equal(t, dataNotFoundErr, err)
+		}
+
+		// batch
+		{
+			batch := db.NewBatch()
+			fmt.Println(db.Type())
+
+			// write nil value
+			key := common.MakeRandomBytes(32)
+			assert.Nil(t, batch.Put(key, nil))
+			assert.NoError(t, batch.Write())
+
+			// get nil value
+			ret, err := db.Get(key)
+			assert.Equal(t, []byte{}, ret)
+			assert.Nil(t, err)
+
+			// check existence
+			exist, err := db.Has(key)
+			assert.Equal(t, true, exist)
+			assert.Nil(t, err)
+
+			val, err := db.Get(randStrBytes(100))
+			assert.Nil(t, val)
+			assert.Error(t, err)
+			assert.Equal(t, dataNotFoundErr, err)
+		}
+	}
+}
+
 func testPutGet(db Database, t *testing.T) {
 	// put
 	for _, v := range test_values {

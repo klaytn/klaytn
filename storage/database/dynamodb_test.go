@@ -213,31 +213,6 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
 	}
 }
 
-func (s *SuiteDynamoDB) TestDynamoBatch_Write_EmptyVal() {
-	dynamo, err := newDynamoDB(GetTestDynamoConfig())
-	if err != nil {
-		s.FailNow("failed to create dynamoDB", err)
-	}
-	s.dynamoDBs = append(s.dynamoDBs, dynamo)
-
-	batch := dynamo.NewBatch()
-
-	// write nil value
-	key := common.MakeRandomBytes(32)
-	s.Nil(batch.Put(key, nil))
-	s.NoError(batch.Write())
-
-	// get nil value
-	ret, err := dynamo.Get(key)
-	s.Equal([]byte{}, ret)
-	s.Nil(err)
-
-	// check existence
-	exist, err := dynamo.Has(key)
-	s.Equal(true, exist)
-	s.Nil(err)
-}
-
 func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
