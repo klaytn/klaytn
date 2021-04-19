@@ -360,7 +360,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 			cmd := exec.Command(daemonPath, "restart")
 			cmd.Run()
 		})
-		logger.Info("Initialize auto-restart feature", "timeout", restartInterval)
+		logger.Info("Initialize auto-restart feature", "timeout", restartInterval, "daemonPath", daemonPath)
 
 		go func() {
 			blockChecker := time.NewTicker(time.Second)
