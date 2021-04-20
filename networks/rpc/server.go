@@ -58,7 +58,7 @@ var (
 
 	// TODO-Klaytn: move websocket configurations to Config struct in /network/rpc/server.go
 	// MaxSubscriptionPerWSConn is a maximum number of subscription for a websocket connection
-	MaxSubscriptionPerWSConn int32 = 5
+	MaxSubscriptionPerWSConn int32 = 3000
 
 	// WebsocketReadDeadline is the read deadline on the underlying network connection in seconds. 0 means read will not timeout
 	WebsocketReadDeadline int64 = 0
