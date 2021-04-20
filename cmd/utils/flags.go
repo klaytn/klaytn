@@ -483,7 +483,7 @@ var (
 	WSMaxSubscriptionPerConn = cli.IntFlag{
 		Name:  "wsmaxsubscriptionperconn",
 		Usage: "Allowed maximum subscription number per a websocket connection",
-		Value: 5,
+		Value: int(rpc.MaxSubscriptionPerWSConn),
 	}
 	WSReadDeadLine = cli.Int64Flag{
 		Name:  "wsreaddeadline",
