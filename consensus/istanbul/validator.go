@@ -23,6 +23,8 @@ package istanbul
 import (
 	"strings"
 
+	"github.com/klaytn/klaytn/params"
+
 	"github.com/klaytn/klaytn/common"
 )
 
@@ -75,6 +77,8 @@ type ValidatorSet interface {
 	SetSubGroupSize(size uint64)
 	// Return the validator array
 	List() []Validator
+	// Return the demoted validator array
+	DemotedList() []Validator
 	// SubList composes a committee after setting a proposer with a default value.
 	SubList(prevHash common.Hash, view *View) []Validator
 	// Return whether the given address is one of sub-list
@@ -103,7 +107,7 @@ type ValidatorSet interface {
 	IsSubSet() bool
 
 	// Refreshes a list of candidate proposers with given hash and blockNum
-	Refresh(hash common.Hash, blockNum uint64) error
+	Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig) error
 
 	SetBlockNum(blockNum uint64)
 

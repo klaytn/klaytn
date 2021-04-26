@@ -27,6 +27,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/klaytn/klaytn/params"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 )
@@ -141,6 +143,10 @@ func (valSet *defaultSet) List() []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 	return valSet.validators
+}
+
+func (valSet *defaultSet) DemotedList() []istanbul.Validator {
+	return nil
 }
 
 // SubList composes a committee after setting a proposer with a default value.
@@ -360,7 +366,7 @@ func (valSet *defaultSet) F() int {
 
 func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
-func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64) error {
+func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
 	return nil
 }
 func (valSet *defaultSet) SetBlockNum(blockNum uint64)     { /* Do nothing */ }

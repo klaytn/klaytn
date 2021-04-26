@@ -607,7 +607,7 @@ func TestGovernance_HandleGovernanceVote_None_mode(t *testing.T) {
 	rewards := getTestRewards()
 
 	blockCounter := common.Big0
-	valSet := validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
+	valSet := validator.NewWeightedCouncil(council, nil, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 	gov := getGovernance()
 	gov.nodeAddress.Store(council[len(council)-1])
 
@@ -679,7 +679,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 
 	blockCounter := common.Big0
 	var valSet istanbul.ValidatorSet
-	valSet = validator.NewWeightedCouncil(council, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
+	valSet = validator.NewWeightedCouncil(council, nil, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
 
 	config := getTestConfig()
 	config.Governance.GovernanceMode = GovernanceModeBallot
