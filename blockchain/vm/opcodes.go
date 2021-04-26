@@ -103,6 +103,7 @@ const (
 	NUMBER
 	DIFFICULTY
 	GASLIMIT
+	CHAINID OpCode = 0x46
 )
 
 // 0x50 range - 'storage' and execution.
@@ -430,6 +431,7 @@ var stringToOp = map[string]OpCode{
 	"CALLDATALOAD":   CALLDATALOAD,
 	"CALLDATASIZE":   CALLDATASIZE,
 	"CALLDATACOPY":   CALLDATACOPY,
+	"CHAINID":        CHAINID,
 	"DELEGATECALL":   DELEGATECALL,
 	"STATICCALL":     STATICCALL,
 	"CODESIZE":       CODESIZE,
