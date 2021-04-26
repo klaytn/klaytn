@@ -5,13 +5,14 @@
 package mocks
 
 import (
+	big "math/big"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/klaytn/klaytn/blockchain"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	event "github.com/klaytn/klaytn/event"
-	big "math/big"
-	reflect "reflect"
 )
 
 // MockTxPool is a mock of TxPool interface

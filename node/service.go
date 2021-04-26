@@ -22,13 +22,14 @@ package node
 
 import (
 	"crypto/ecdsa"
+	"reflect"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/storage/database"
-	"reflect"
 )
 
 type ServiceContext struct {

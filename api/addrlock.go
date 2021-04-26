@@ -21,8 +21,9 @@
 package api
 
 import (
-	"github.com/klaytn/klaytn/common"
 	"sync"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 type AddrLocker struct {

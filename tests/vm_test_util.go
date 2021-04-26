@@ -24,6 +24,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -33,7 +35,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
 )
 
 // VMTest checks EVM execution without block or transaction context.
@@ -155,7 +156,7 @@ func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
 		GasPrice:    t.json.Exec.GasPrice,
 	}
 	vmconfig.NoRecursion = true
-	return vm.NewEVM(context, statedb, params.MainnetChainConfig, &vmconfig)
+	return vm.NewEVM(context, statedb, params.CypressChainConfig, &vmconfig)
 }
 
 func vmTestBlockHash(n uint64) common.Hash {

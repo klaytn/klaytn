@@ -28,7 +28,6 @@ executors:
     docker:
       - image: klaytn/build_base:1.1-go1.15.7-solc0.4.24
       - image: localstack/localstack:0.11.5
-      - image: circleci/mysql:5.7
       - image: circleci/redis:6.0.8-alpine
       - name: zookeeper
         image: wurstmeister/zookeeper
@@ -233,16 +232,6 @@ commands:
   wait-other-containers-ready:
     steps:
       - run:
-          name: "Waiting for MySQL to be ready"
-          command: |
-            for i in `seq 1 10`;
-            do
-              nc -z 127.0.0.1 3306 && echo Success && exit 0
-              echo -n .
-              sleep 1
-            done
-            echo Failed waiting for MySQL && exit 1
-      - run:
           name: "Waiting for Redis to be ready"
           command: |
             for i in `seq 1 10`;
@@ -317,6 +306,7 @@ jobs:
       - checkout
       - run:
           name: "Run golangci-lint"
+          no_output_timeout: 30m
           command: golangci-lint run --new-from-rev=dev --presets complexity,format,performance -v --timeout 10m
 
   test-datasync:
@@ -327,6 +317,7 @@ jobs:
       - wait-other-containers-ready
       - run:
           name: "Run test datasync"
+          no_output_timeout: 30m
           command: make test-datasync
 
   test-networks:
@@ -336,6 +327,7 @@ jobs:
       - checkout
       - run:
           name: "Run test networks"
+          no_output_timeout: 30m
           command: make test-networks
 
   test-tests:
@@ -345,6 +337,7 @@ jobs:
       - checkout
       - run:
           name: "Run test tests"
+          no_output_timeout: 30m
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
             make test-tests
@@ -357,6 +350,7 @@ jobs:
       - wait-other-containers-ready
       - run:
           name: "Run test others"
+          no_output_timeout: 30m
           command: |
             make test-others
 
@@ -542,6 +536,17 @@ workflows:
             - tagger-verify
           filters: *filter-version-not-release
 
+      - docker/publish:
+          filters:
+            branches:
+              only: dev
+          requires:
+            - pass-tests
+          image: klaytn/klaytn
+          tag: dev
+          executor: docker/docker
+          use-remote-docker: true
+
       - tag-verify:
           filters: *filter-only-version-tag
 
@@ -603,7 +608,7 @@ workflows:
           requires:
             - pass-tests
           image: klaytn/klaytn
-          tag: $CIRCLE_TAG,latest
+          tag: latest,$CIRCLE_TAG
           executor: docker/docker
           use-remote-docker: true
 

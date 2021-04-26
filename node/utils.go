@@ -172,11 +172,15 @@ func (api *PrivateAdminAPI) StartRPC(host *string, port *int, cors *string, apis
 	}
 
 	if api.node.config.IsFastHTTP() {
-		if err := api.node.startFastHTTP(fmt.Sprintf("%s:%d", *host, *port), api.node.rpcAPIs, modules, allowedOrigins, allowedVHosts); err != nil {
+		if err := api.node.startFastHTTP(
+			fmt.Sprintf("%s:%d", *host, *port),
+			api.node.rpcAPIs, modules, allowedOrigins, allowedVHosts, api.node.config.HTTPTimeouts); err != nil {
 			return false, err
 		}
 	} else {
-		if err := api.node.startHTTP(fmt.Sprintf("%s:%d", *host, *port), api.node.rpcAPIs, modules, allowedOrigins, allowedVHosts); err != nil {
+		if err := api.node.startHTTP(
+			fmt.Sprintf("%s:%d", *host, *port),
+			api.node.rpcAPIs, modules, allowedOrigins, allowedVHosts, api.node.config.HTTPTimeouts); err != nil {
 			return false, err
 		}
 	}
@@ -232,11 +236,15 @@ func (api *PrivateAdminAPI) StartWS(host *string, port *int, allowedOrigins *str
 	}
 
 	if api.node.config.IsFastHTTP() {
-		if err := api.node.startFastWS(fmt.Sprintf("%s:%d", *host, *port), api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll); err != nil {
+		if err := api.node.startFastWS(
+			fmt.Sprintf("%s:%d", *host, *port),
+			api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll); err != nil {
 			return false, err
 		}
 	} else {
-		if err := api.node.startWS(fmt.Sprintf("%s:%d", *host, *port), api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll); err != nil {
+		if err := api.node.startWS(
+			fmt.Sprintf("%s:%d", *host, *port),
+			api.node.rpcAPIs, modules, origins, api.node.config.WSExposeAll); err != nil {
 			return false, err
 		}
 	}
@@ -255,10 +263,10 @@ func (api *PrivateAdminAPI) StopWS() (bool, error) {
 	return true, nil
 }
 
-func (api *PrivateAdminAPI) SetMaxSubscriptionPerConn(num int32) {
+func (api *PrivateAdminAPI) SetMaxSubscriptionPerWSConn(num int32) {
 	logger.Info("Change the max subscription number for a websocket connection",
-		"old", rpc.MaxSubscriptionPerConn, "new", num)
-	rpc.MaxSubscriptionPerConn = num
+		"old", rpc.MaxSubscriptionPerWSConn, "new", num)
+	rpc.MaxSubscriptionPerWSConn = num
 }
 
 // PublicAdminAPI is the collection of administrative API methods exposed over

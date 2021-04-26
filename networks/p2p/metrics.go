@@ -23,8 +23,9 @@
 package p2p
 
 import (
-	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"net"
+
+	metricutils "github.com/klaytn/klaytn/metrics/utils"
 
 	"github.com/rcrowley/go-metrics"
 )

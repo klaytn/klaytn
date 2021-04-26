@@ -19,17 +19,19 @@ package main
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 const (
@@ -105,6 +107,10 @@ type bootnodeConfig struct {
 	// If the module list is empty, all RPC API endpoints designated public will be
 	// exposed.
 	HTTPModules []string `toml:",omitempty"`
+
+	// HTTPTimeouts allows for customization of the timeout values used by the HTTP RPC
+	// interface.
+	HTTPTimeouts rpc.HTTPTimeouts
 
 	// WSHost is the host interface on which to start the websocket RPC server. If
 	// this field is empty, no websocket API endpoint will be started.

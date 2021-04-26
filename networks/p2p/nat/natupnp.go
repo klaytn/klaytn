@@ -25,11 +25,12 @@ import (
 
 	"errors"
 	"fmt"
+	"net"
+	"strings"
+
 	"github.com/huin/goupnp"
 	"github.com/huin/goupnp/dcps/internetgateway1"
 	"github.com/huin/goupnp/dcps/internetgateway2"
-	"net"
-	"strings"
 )
 
 const soapRequestTimeout = 3 * time.Second

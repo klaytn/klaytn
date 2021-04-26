@@ -22,13 +22,14 @@ package work
 
 import (
 	"errors"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/consensus/gxhash"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/consensus/gxhash"
 )
 
 type hashrate struct {

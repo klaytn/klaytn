@@ -23,9 +23,10 @@ package client
 import (
 	"crypto/ecdsa"
 	"errors"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"math/big"
 )
 
 // senderFromServer is a types.Signer that remembers the sender address returned by the RPC

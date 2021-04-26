@@ -20,9 +20,10 @@ package compose
 import (
 	"bytes"
 	"fmt"
-	"github.com/klaytn/klaytn/cmd/homi/docker/service"
 	"strings"
 	"text/template"
+
+	"github.com/klaytn/klaytn/cmd/homi/docker/service"
 )
 
 type Homi struct {

@@ -17,6 +17,13 @@
 package tests
 
 import (
+	"io"
+	"math/big"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/compiler"
@@ -24,12 +31,6 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/log/term"
 	"github.com/mattn/go-colorable"
-	"io"
-	"math/big"
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
 )
 
 type testData struct {

@@ -22,12 +22,13 @@ package cn
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/networks/p2p"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/networks/p2p"
 )
 
 //go:generate mockgen -destination=node/cn/peer_set_mock_test.go -package=cn github.com/klaytn/klaytn/node/cn PeerSet

@@ -19,11 +19,12 @@ package reward
 import (
 	"encoding/json"
 	"errors"
-	"github.com/klaytn/klaytn/common"
-	"github.com/stretchr/testify/assert"
 	"math"
 	"reflect"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStakingInfo_GetIndexByNodeAddress(t *testing.T) {

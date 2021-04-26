@@ -40,10 +40,11 @@ import (
 	"crypto/hmac"
 	"crypto/subtle"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"hash"
 	"io"
 	"math/big"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 var (

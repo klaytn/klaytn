@@ -51,6 +51,7 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
+	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -302,9 +303,10 @@ var (
 			"'HybridCache') (default = 'LocalCache')",
 		Value: string(statedb.CacheTypeLocal),
 	}
-	TrieNodeCacheNoPrefetchFlag = cli.BoolFlag{
-		Name:  "statedb.cache.noprefetch",
-		Usage: "Disable heuristic state prefetch during block import (less CPU and disk IO, more time waiting for data)",
+	NumFetcherPrefetchWorkerFlag = cli.IntFlag{
+		Name:  "statedb.cache.num-fetcher-prefetch-worker",
+		Usage: "Number of workers used to prefetch block when fetcher fetches block",
+		Value: 32,
 	}
 	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
 		Name:  "statedb.cache.redis.endpoints",
@@ -324,7 +326,7 @@ var (
 	}
 	TrieNodeCacheLimitFlag = cli.IntFlag{
 		Name:  "state.trie-cache-limit",
-		Usage: "Memory allowance (MB) to use for caching trie nodes in memory. -1 is for auto-scaling",
+		Usage: "Memory allowance (MiB) to use for caching trie nodes in memory. -1 is for auto-scaling",
 		Value: -1,
 	}
 	TrieNodeCacheSavePeriodFlag = cli.DurationFlag{
@@ -449,6 +451,11 @@ var (
 		Name:  "rpc.gascap",
 		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
 	}
+	RPCConcurrencyLimit = cli.IntFlag{
+		Name:  "rpc.concurrencylimit",
+		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server",
+		Value: rpc.ConcurrencyLimit,
+	}
 	WSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
 		Usage: "Enable the WS-RPC server",
@@ -522,6 +529,16 @@ var (
 	PreloadJSFlag = cli.StringFlag{
 		Name:  "preload",
 		Usage: "Comma separated list of JavaScript files to preload into the console",
+	}
+	APIFilterGetLogsDeadlineFlag = cli.DurationFlag{
+		Name:  "api.filter.getLogs.deadline",
+		Usage: "Execution deadline for log collecting filter APIs",
+		Value: filters.GetLogsDeadline,
+	}
+	APIFilterGetLogsMaxItemsFlag = cli.IntFlag{
+		Name:  "api.filter.getLogs.maxitems",
+		Usage: "Maximum allowed number of return items for log collecting filter API",
+		Value: filters.GetLogsMaxItems,
 	}
 
 	// Network Settings
@@ -1125,6 +1142,10 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(RPCVirtualHostsFlag.Name) {
 		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(RPCVirtualHostsFlag.Name))
 	}
+	if ctx.GlobalIsSet(RPCConcurrencyLimit.Name) {
+		rpc.ConcurrencyLimit = ctx.GlobalInt(RPCConcurrencyLimit.Name)
+		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
+	}
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
@@ -1146,7 +1167,7 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(WSApiFlag.Name) {
 		cfg.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
 	}
-	rpc.MaxSubscriptionPerConn = int32(ctx.GlobalInt(WSMaxSubscriptionPerConn.Name))
+	rpc.MaxSubscriptionPerWSConn = int32(ctx.GlobalInt(WSMaxSubscriptionPerConn.Name))
 	rpc.WebsocketReadDeadline = ctx.GlobalInt64(WSReadDeadLine.Name)
 	rpc.WebsocketWriteDeadline = ctx.GlobalInt64(WSWriteDeadLine.Name)
 	rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(WSMaxConnections.Name))
@@ -1177,6 +1198,12 @@ func setgRPC(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(GRPCPortFlag.Name) {
 		cfg.GRPCPort = ctx.GlobalInt(GRPCPortFlag.Name)
 	}
+}
+
+// setAPIConfig sets configurations for specific APIs.
+func setAPIConfig(ctx *cli.Context) {
+	filters.GetLogsDeadline = ctx.GlobalDuration(APIFilterGetLogsDeadlineFlag.Name)
+	filters.GetLogsMaxItems = ctx.GlobalInt(APIFilterGetLogsMaxItemsFlag.Name)
 }
 
 // MakeAddress converts an account specified directly as a hex encoded string or
@@ -1317,6 +1344,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setHTTP(ctx, cfg)
 	setWS(ctx, cfg)
 	setgRPC(ctx, cfg)
+	setAPIConfig(ctx)
 	setNodeUserIdent(ctx, cfg)
 
 	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
@@ -1523,8 +1551,8 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
 		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
 			Name)).ToValid(),
-		NoPrefetch:                ctx.GlobalBool(TrieNodeCacheNoPrefetchFlag.Name),
-		LocalCacheSizeMB:          ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
+		NumFetcherPrefetchWorker:  ctx.GlobalInt(NumFetcherPrefetchWorkerFlag.Name),
+		LocalCacheSizeMiB:         ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
 		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
 		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),
 		RedisEndpoints:            ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),

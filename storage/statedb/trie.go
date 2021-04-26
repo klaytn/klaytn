@@ -50,6 +50,7 @@ type Trie struct {
 	db           *Database
 	root         node
 	originalRoot common.Hash
+	prefetching  bool
 }
 
 // newFlag returns the cache flag value for a newly created node.
@@ -79,6 +80,12 @@ func NewTrie(root common.Hash, db *Database) (*Trie, error) {
 		trie.root = rootnode
 	}
 	return trie, nil
+}
+
+func NewTrieForPrefetching(root common.Hash, db *Database) (*Trie, error) {
+	trie, err := NewTrie(root, db)
+	trie.prefetching = true
+	return trie, err
 }
 
 // NodeIterator returns an iterator that returns nodes of the trie. Iteration starts at
@@ -405,7 +412,11 @@ func (t *Trie) resolve(n node, prefix []byte) (node, error) {
 
 func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
 	hash := common.BytesToHash(n)
-	if node := t.db.node(hash); node != nil {
+	node, fromDB := t.db.node(hash)
+	if t.prefetching && fromDB {
+		memcacheCleanPrefetchMissMeter.Mark(1)
+	}
+	if node != nil {
 		return node, nil
 	}
 	return nil, &MissingNodeError{NodeHash: hash, Path: prefix}

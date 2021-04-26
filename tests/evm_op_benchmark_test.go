@@ -20,6 +20,11 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -29,10 +34,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"math/big"
-	"strings"
-	"testing"
-	"time"
 )
 
 type BenchmarkEvmOpTestCase struct {

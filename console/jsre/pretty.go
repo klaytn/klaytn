@@ -22,11 +22,12 @@ package jsre
 
 import (
 	"fmt"
-	"github.com/robertkrimen/otto"
 	"io"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/robertkrimen/otto"
 
 	"github.com/fatih/color"
 )

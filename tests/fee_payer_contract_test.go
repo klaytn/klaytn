@@ -18,15 +18,16 @@ package tests
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"strings"
-	"testing"
-	"time"
 )
 
 // TestFeePayerContract tests a direct call of precompiled contract 0xa (feepayer).

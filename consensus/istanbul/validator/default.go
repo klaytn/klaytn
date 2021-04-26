@@ -21,13 +21,14 @@
 package validator
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
 	"math"
 	"reflect"
 	"sort"
 	"sync"
 	"sync/atomic"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 )
 
 const (

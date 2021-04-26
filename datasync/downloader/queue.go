@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/prque"
@@ -690,7 +692,7 @@ func (q *queue) DeliverHeaders(id string, headers []*types.Header, headerProcCh 
 	if request == nil {
 		return 0, errNoFetchesPending
 	}
-	headerReqTimer.UpdateSince(request.Time)
+	headerReqTimer.Update(time.Since(request.Time))
 	delete(q.headerPendPool, id)
 
 	// Ensure headers can be mapped onto the skeleton chain
@@ -809,7 +811,7 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int,
 // reason this lock is not obtained in here is because the parameters already need
 // to access the queue, so they already need a lock anyway.
 func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQueue *prque.Prque,
-	pendPool map[string]*fetchRequest, reqTimer metrics.Timer,
+	pendPool map[string]*fetchRequest, reqTimer klaytnmetrics.HybridTimer,
 	results int, validate func(index int, header *types.Header) error,
 	reconstruct func(index int, result *fetchResult)) (int, error) {
 
@@ -818,7 +820,7 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 	if request == nil {
 		return 0, errNoFetchesPending
 	}
-	reqTimer.UpdateSince(request.Time)
+	reqTimer.Update(time.Since(request.Time))
 	delete(pendPool, id)
 
 	// If no data items were retrieved, mark them as unavailable for the origin peer

@@ -22,11 +22,12 @@ package keystore
 
 import (
 	"crypto/ecdsa"
+	"io/ioutil"
+	"testing"
+
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"testing"
 
 	"github.com/klaytn/klaytn/common"
 )

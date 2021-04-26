@@ -17,12 +17,13 @@
 package tests
 
 import (
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/params"
-	"testing"
 )
 
 type overflowCheckFunc func(t *testing.T)

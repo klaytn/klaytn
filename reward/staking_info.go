@@ -20,11 +20,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/params"
 	"math"
 	"math/big"
 	"sort"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/params"
 )
 
 const (

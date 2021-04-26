@@ -21,10 +21,11 @@
 package keystore
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain/types"
-	"math/big"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original

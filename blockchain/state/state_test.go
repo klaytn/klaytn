@@ -22,14 +22,15 @@ package state
 
 import (
 	"bytes"
+	"math/big"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	checker "gopkg.in/check.v1"
-	"math/big"
-	"testing"
 )
 
 type StateSuite struct {

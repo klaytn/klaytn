@@ -5,9 +5,10 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/klaytn/klaytn/blockchain/types"
-	reflect "reflect"
 )
 
 // MockBlockChain is a mock of BlockChain interface

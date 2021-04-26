@@ -17,11 +17,12 @@
 package kas
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/stretchr/testify/assert"
-	"strings"
-	"testing"
 )
 
 func TestSplitToWords_Success(t *testing.T) {

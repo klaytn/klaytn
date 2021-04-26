@@ -23,6 +23,12 @@ package sc
 import (
 	"errors"
 	"fmt"
+	"io"
+	"math/big"
+	"net"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
@@ -36,11 +42,6 @@ import (
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"io"
-	"math/big"
-	"net"
-	"sync"
-	"time"
 )
 
 const (

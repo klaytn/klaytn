@@ -17,11 +17,12 @@
 package sc
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBridgeJournal(t *testing.T) {

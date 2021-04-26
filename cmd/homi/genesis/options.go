@@ -18,12 +18,13 @@
 package genesis
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/cmd/homi/extra"
 	"github.com/klaytn/klaytn/consensus/clique"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
-	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"

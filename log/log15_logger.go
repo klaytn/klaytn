@@ -9,8 +9,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/go-stack/stack"
 	"os"
+
+	"github.com/go-stack/stack"
 )
 
 const timeKey = "t"

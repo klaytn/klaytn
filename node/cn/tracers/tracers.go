@@ -22,9 +22,10 @@
 package tracers
 
 import (
-	"github.com/klaytn/klaytn/node/cn/tracers/internal/tracers"
 	"strings"
 	"unicode"
+
+	"github.com/klaytn/klaytn/node/cn/tracers/internal/tracers"
 )
 
 // all contains all the built in JavaScript tracers by name.

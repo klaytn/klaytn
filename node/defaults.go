@@ -28,6 +28,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/klaytn/klaytn/networks/rpc"
+
 	"github.com/klaytn/klaytn/storage/database"
 
 	"github.com/klaytn/klaytn/networks/p2p"
@@ -53,6 +55,7 @@ var DefaultConfig = Config{
 	HTTPPort:         DefaultHTTPPort,
 	HTTPModules:      []string{"net", "web3"},
 	HTTPVirtualHosts: []string{"localhost"},
+	HTTPTimeouts:     rpc.DefaultHTTPTimeouts,
 	WSPort:           DefaultWSPort,
 	WSModules:        []string{"net", "web3"},
 	GRPCPort:         DefaultGRPCPort,

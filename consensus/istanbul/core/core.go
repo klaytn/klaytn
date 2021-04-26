@@ -60,6 +60,7 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		consensusTimeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/timer", nil),
 		councilSizeGauge:   metrics.NewRegisteredGauge("consensus/istanbul/core/councilSize", nil),
 		committeeSizeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/committeeSize", nil),
+		hashLockGauge:      metrics.NewRegisteredGauge("consensus/istanbul/core/hashLock", nil),
 	}
 	c.validateFn = c.checkValidatorSignature
 	return c
@@ -103,6 +104,8 @@ type core struct {
 	sequenceMeter metrics.Meter
 	// the gauge to record consensus duration (from accepting a preprepare to final committed stage)
 	consensusTimeGauge metrics.Gauge
+	// the gauge to record hashLock status (1 if hash-locked. 0 otherwise)
+	hashLockGauge metrics.Gauge
 
 	councilSizeGauge   metrics.Gauge
 	committeeSizeGauge metrics.Gauge
@@ -304,7 +307,7 @@ func (c *core) catchUpRound(view *istanbul.View) {
 	c.roundChangeSet.Clear(view.Round)
 
 	c.newRoundChangeTimer()
-	logger.Trace("Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.valSet)
+	logger.Warn("[RC] Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.valSet.GetProposer())
 }
 
 // updateRoundState updates round state by checking if locking block is necessary
@@ -320,6 +323,11 @@ func (c *core) updateRoundState(view *istanbul.View, validatorSet istanbul.Valid
 		c.current = newRoundState(view, validatorSet, common.Hash{}, nil, nil, c.backend.HasBadProposal)
 	}
 	c.currentRoundGauge.Update(c.current.round.Int64())
+	if c.current.IsHashLocked() {
+		c.hashLockGauge.Update(1)
+	} else {
+		c.hashLockGauge.Update(0)
+	}
 }
 
 func (c *core) setState(state State) {
@@ -353,6 +361,7 @@ func (c *core) stopTimer() {
 func (c *core) newRoundChangeTimer() {
 	c.stopTimer()
 
+	// TODO-Klaytn-Istanbul: Replace &istanbul.DefaultConfig.Timeout to c.config.Timeout
 	// set timeout based on the round number
 	timeout := time.Duration(atomic.LoadUint64(&istanbul.DefaultConfig.Timeout)) * time.Millisecond
 	round := c.current.Round().Uint64()
@@ -360,35 +369,43 @@ func (c *core) newRoundChangeTimer() {
 		timeout += time.Duration(math.Pow(2, float64(round))) * time.Second
 	}
 
-	c.roundChangeTimer.Store(time.AfterFunc(timeout, func() {
-		var loc, proposer string
+	current := c.current
+	proposer := c.valSet.GetProposer()
 
-		if c.current.round.Cmp(common.Big0) == 0 {
+	c.roundChangeTimer.Store(time.AfterFunc(timeout, func() {
+		var loc, proposerStr string
+
+		if round == 0 {
 			loc = "startNewRound"
 		} else {
 			loc = "catchUpRound"
 		}
-		if c.valSet.GetProposer() == nil {
-			proposer = ""
+		if proposer == nil {
+			proposerStr = ""
 		} else {
-			proposer = c.valSet.GetProposer().String()
+			proposerStr = proposer.String()
 		}
 
 		if c.backend.NodeType() == common.CONSENSUSNODE {
 			// Write log messages for validator activities analysis
-			preparesSize := c.current.Prepares.Size()
-			commitsSize := c.current.Commits.Size()
-			logger.Warn("[RC] timeoutEvent Sent!", "set by", loc, "sequence", c.current.sequence, "round", c.current.round, "proposer", proposer, "preprepare is nil?", c.current.Preprepare == nil, "len(prepares)", preparesSize, "len(commits)", commitsSize)
+			preparesSize := current.Prepares.Size()
+			commitsSize := current.Commits.Size()
+			logger.Warn("[RC] timeoutEvent Sent!", "set by", loc, "sequence",
+				current.sequence, "round", current.round, "proposer", proposerStr, "preprepare is nil?",
+				current.Preprepare == nil, "len(prepares)", preparesSize, "len(commits)", commitsSize)
 
 			if preparesSize > 0 {
-				logger.Warn("[RC] Prepares:", "messages", c.current.Prepares.GetMessages())
+				logger.Warn("[RC] Prepares:", "messages", current.Prepares.GetMessages())
 			}
 			if commitsSize > 0 {
-				logger.Warn("[RC] Commits:", "messages", c.current.Commits.GetMessages())
+				logger.Warn("[RC] Commits:", "messages", current.Commits.GetMessages())
 			}
 		}
 
-		c.sendEvent(timeoutEvent{})
+		c.sendEvent(timeoutEvent{&istanbul.View{
+			Sequence: current.sequence,
+			Round:    new(big.Int).Add(current.round, common.Big1),
+		}})
 	}))
 
 	logger.Debug("New RoundChangeTimer Set", "seq", c.current.Sequence(), "round", round, "timeout", timeout)

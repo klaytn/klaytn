@@ -18,11 +18,12 @@ package benchmarks
 
 import (
 	"bytes"
+	"math/big"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"math/big"
-	"testing"
 )
 
 var addrs = []string{

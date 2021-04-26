@@ -19,6 +19,8 @@ package sc
 import (
 	"context"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
@@ -26,7 +28,6 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node"
 	"github.com/pkg/errors"
-	"math/big"
 )
 
 var (

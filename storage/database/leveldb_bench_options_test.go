@@ -17,8 +17,6 @@
 package database
 
 import (
-	"github.com/stretchr/testify/require"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -26,6 +24,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 func genTempDirForTestDB(b *testing.B) string {

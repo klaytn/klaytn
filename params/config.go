@@ -30,22 +30,63 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash      = common.HexToHash("// todo generate new hash for mainnet") // Mainnet genesis hash to enforce below configs on
-	TestnetGenesisHash      = common.HexToHash("// todo generate new hash for testnet") // Testnet genesis hash to enforce below configs on
+	CypressGenesisHash      = common.HexToHash("// todo generate new hash for cypress") // cypress genesis hash to enforce below configs on
+	BaobabGenesisHash       = common.HexToHash("// todo generate new hash for baobab")  // baobab genesis hash to enforce below configs on
 	AuthorAddressForTesting = common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949")
+	mintingAmount, _        = new(big.Int).SetString("9600000000000000000", 10)
 )
 
 var (
-	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	MainnetChainConfig = &ChainConfig{
-		ChainID: big.NewInt(1),
-		Gxhash:  new(GxhashConfig),
+	// CypressChainConfig is the chain parameters to run a node on the cypress main network.
+	CypressChainConfig = &ChainConfig{
+		ChainID:                 big.NewInt(int64(CypressNetworkId)),
+		IstanbulCompatibleBlock: nil,
+		DeriveShaImpl:           2,
+		Governance: &GovernanceConfig{
+			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
+			GovernanceMode: "single",
+			Reward: &RewardConfig{
+				MintingAmount:          mintingAmount,
+				Ratio:                  "34/54/12",
+				UseGiniCoeff:           true,
+				DeferredTxFee:          true,
+				StakingUpdateInterval:  86400,
+				ProposerUpdateInterval: 3600,
+				MinimumStake:           big.NewInt(5000000),
+			},
+		},
+		Istanbul: &IstanbulConfig{
+			Epoch:          604800,
+			ProposerPolicy: 2,
+			SubGroupSize:   22,
+		},
+		UnitPrice: 25000000000,
 	}
 
-	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
-	TestnetChainConfig = &ChainConfig{
-		ChainID: big.NewInt(2),
-		Gxhash:  new(GxhashConfig),
+	// BaobabChainConfig contains the chain parameters to run a node on the Baobab test network.
+	BaobabChainConfig = &ChainConfig{
+		ChainID:                 big.NewInt(int64(BaobabNetworkId)),
+		IstanbulCompatibleBlock: nil,
+		DeriveShaImpl:           2,
+		Governance: &GovernanceConfig{
+			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
+			GovernanceMode: "single",
+			Reward: &RewardConfig{
+				MintingAmount:          mintingAmount,
+				Ratio:                  "34/54/12",
+				UseGiniCoeff:           true,
+				DeferredTxFee:          true,
+				StakingUpdateInterval:  86400,
+				ProposerUpdateInterval: 3600,
+				MinimumStake:           big.NewInt(5000000),
+			},
+		},
+		Istanbul: &IstanbulConfig{
+			Epoch:          604800,
+			ProposerPolicy: 2,
+			SubGroupSize:   22,
+		},
+		UnitPrice: 25000000000,
 	}
 
 	// AllGxhashProtocolChanges contains every protocol change (GxIPs) introduced
@@ -120,6 +161,8 @@ const (
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
+	IstanbulCompatibleBlock *big.Int `json:"istanbulCompatibleBlock,omitempty"` // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
+
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
@@ -155,7 +198,7 @@ type RewardConfig struct {
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
 type IstanbulConfig struct {
 	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection
+	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection; 0: Round Robin, 1: Sticky, 2: Weighted Random
 	SubGroupSize   uint64 `json:"sub"`
 }
 
@@ -198,21 +241,28 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v Engine: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
-			engine,
+			c.IstanbulCompatibleBlock,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
+			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v Engine: %v UnitPrice: %d DeriveShaImpl: %d}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
-			engine,
+			c.IstanbulCompatibleBlock,
 			c.UnitPrice,
 			c.DeriveShaImpl,
+			engine,
 		)
 	}
+}
+
+// IsIstanbul returns whether num is either equal to the istanbul block or greater.
+func (c *ChainConfig) IsIstanbul(num *big.Int) bool {
+	return isForked(c.IstanbulCompatibleBlock, num)
 }
 
 // GasTable returns the gas table corresponding to the current phase.
@@ -241,6 +291,9 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 }
 
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
+	if isForkIncompatible(c.IstanbulCompatibleBlock, newcfg.IstanbulCompatibleBlock, head) {
+		return newCompatError("Istanbul Block", c.IstanbulCompatibleBlock, newcfg.IstanbulCompatibleBlock)
+	}
 	return nil
 }
 
@@ -346,13 +399,14 @@ func (err *ConfigCompatError) Error() string {
 	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
 }
 
-// Rules wraps ChainConfig and is merely syntatic sugar or can be used for functions
+// Rules wraps ChainConfig and is merely syntactic sugar or can be used for functions
 // that do not have or require information about the block.
 //
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID *big.Int
+	ChainID    *big.Int
+	IsIstanbul bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -361,7 +415,10 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	if chainID == nil {
 		chainID = new(big.Int)
 	}
-	return Rules{ChainID: new(big.Int).Set(chainID)}
+	return Rules{
+		ChainID:    new(big.Int).Set(chainID),
+		IsIstanbul: c.IsIstanbul(num),
+	}
 }
 
 // Copy copies self to a new governance config and return it

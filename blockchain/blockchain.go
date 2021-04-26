@@ -33,6 +33,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+
 	"github.com/go-redis/redis/v7"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -58,24 +60,24 @@ import (
 const insertTimeLimit = common.PrettyDuration(time.Second)
 
 var (
-	accountReadTimer   = metrics.NewRegisteredTimer("state/account/reads", nil)
-	accountHashTimer   = metrics.NewRegisteredTimer("state/account/hashes", nil)
-	accountUpdateTimer = metrics.NewRegisteredTimer("state/account/updates", nil)
-	accountCommitTimer = metrics.NewRegisteredTimer("state/account/commits", nil)
+	accountReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/account/reads", nil)
+	accountHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/account/hashes", nil)
+	accountUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("state/account/updates", nil)
+	accountCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("state/account/commits", nil)
 
-	storageReadTimer   = metrics.NewRegisteredTimer("state/storage/reads", nil)
-	storageHashTimer   = metrics.NewRegisteredTimer("state/storage/hashes", nil)
-	storageUpdateTimer = metrics.NewRegisteredTimer("state/storage/updates", nil)
-	storageCommitTimer = metrics.NewRegisteredTimer("state/storage/commits", nil)
+	storageReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/storage/reads", nil)
+	storageHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/storage/hashes", nil)
+	storageUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("state/storage/updates", nil)
+	storageCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("state/storage/commits", nil)
 
-	blockInsertTimer    = metrics.NewRegisteredTimer("chain/inserts", nil)
-	blockProcessTimer   = metrics.NewRegisteredTimer("chain/process", nil)
-	blockExecutionTimer = metrics.NewRegisteredTimer("chain/execution", nil)
-	blockFinalizeTimer  = metrics.NewRegisteredTimer("chain/finalize", nil)
-	blockValidateTimer  = metrics.NewRegisteredTimer("chain/validate", nil)
-	blockAgeTimer       = metrics.NewRegisteredTimer("chain/age", nil)
+	blockInsertTimer    = klaytnmetrics.NewRegisteredHybridTimer("chain/inserts", nil)
+	blockProcessTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/process", nil)
+	blockExecutionTimer = klaytnmetrics.NewRegisteredHybridTimer("chain/execution", nil)
+	blockFinalizeTimer  = klaytnmetrics.NewRegisteredHybridTimer("chain/finalize", nil)
+	blockValidateTimer  = klaytnmetrics.NewRegisteredHybridTimer("chain/validate", nil)
+	blockAgeTimer       = klaytnmetrics.NewRegisteredHybridTimer("chain/age", nil)
 
-	blockPrefetchExecuteTimer   = metrics.NewRegisteredTimer("chain/prefetch/executes", nil)
+	blockPrefetchExecuteTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/prefetch/executes", nil)
 	blockPrefetchInterruptMeter = metrics.NewRegisteredMeter("chain/prefetch/interrupts", nil)
 
 	ErrNoGenesis            = errors.New("genesis not found in chain")
@@ -99,7 +101,7 @@ const (
 )
 
 const (
-	DefaultTriesInMemory = 4
+	DefaultTriesInMemory = 128
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	BlockChainVersion    = 3
 	DefaultBlockInterval = 128
@@ -284,10 +286,11 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		}
 	}
 
-	for i := 1; i <= runtime.NumCPU()/2; i++ {
+	for i := 1; i <= bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker; i++ {
 		bc.wg.Add(1)
 		go bc.prefetchTxWorker(i)
 	}
+	logger.Info("prefetchTxWorkers are started", "num", bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker)
 
 	// Take ownership of this particular state
 	go bc.update()
@@ -314,16 +317,18 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 func (bc *BlockChain) prefetchTxWorker(index int) {
 	defer bc.wg.Done()
 
-	logger.Info("prefetchTxWorker is started", "num", index)
+	logger.Debug("prefetchTxWorker is started", "index", index)
 	for followup := range bc.prefetchTxCh {
-		stateDB, err := state.New(bc.CurrentBlock().Root(), bc.stateCache)
+		stateDB, err := state.NewForPrefetching(bc.CurrentBlock().Root(), bc.stateCache)
 		if err != nil {
 			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
 			continue
 		}
-		bc.prefetcher.PrefetchTx(followup.block, followup.ti, stateDB, bc.vmConfig, followup.followupInterrupt)
+		vmCfg := bc.vmConfig
+		vmCfg.Prefetching = true
+		bc.prefetcher.PrefetchTx(followup.block, followup.ti, stateDB, vmCfg, followup.followupInterrupt)
 	}
-	logger.Info("prefetchTxWorker is terminated", "num", index)
+	logger.Debug("prefetchTxWorker is terminated", "index", index)
 }
 
 // SetCanonicalBlock resets the canonical as the block with the given block number.
@@ -393,13 +398,14 @@ func (bc *BlockChain) loadLastState() error {
 	currentBlock := bc.GetBlockByHash(head)
 	if currentBlock == nil {
 		// Corrupt or empty database, init from scratch
-		logger.Error("Head block missing, resetting chain", "hash", head)
+		logger.Error("Head block missing, resetting chain", "hash", head.String())
 		return bc.Reset()
 	}
 	// Make sure the state associated with the block is available
 	if _, err := state.New(currentBlock.Root(), bc.stateCache); err != nil {
 		// Dangling block without a state associated, init from scratch
-		logger.Error("Head state missing, repairing chain", "number", currentBlock.Number(), "hash", currentBlock.Hash())
+		logger.Error("Head state missing, repairing chain",
+			"number", currentBlock.NumberU64(), "hash", currentBlock.Hash().String())
 		if err := bc.repair(&currentBlock); err != nil {
 			return err
 		}
@@ -1133,6 +1139,10 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			nodesSize, preimagesSize = trieDB.Size()
 			nodesSizeLimit           = common.StorageSize(bc.cacheConfig.CacheSize) * 1024 * 1024
 		)
+
+		trieDBNodesSizeBytesGauge.Update(int64(nodesSize))
+		trieDBPreimagesSizeGauge.Update(int64(preimagesSize))
+
 		if nodesSize > nodesSizeLimit || preimagesSize > 4*1024*1024 {
 			// NOTE-Klaytn Not to change the original behavior, error is not returned.
 			// Error should be returned if it is thought to be safe in the future.
@@ -1585,6 +1595,43 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			logger.Debug("Premature abort during blocks processing")
 			break
 		}
+		// Create a new trie using the parent block and report an
+		// error if it fails.
+		var parent *types.Block
+		if i == 0 {
+			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
+		} else {
+			parent = chain[i-1]
+		}
+
+		// If we have a followup block, run that against the current state to pre-cache
+		// transactions and probabilistically some of the account/storage trie nodes.
+		var followupInterrupt uint32
+
+		if bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker > 0 {
+			// Tx prefetcher is enabled for all cases (both single and multiple block insertion).
+			for ti := range block.Transactions() {
+				select {
+				case bc.prefetchTxCh <- prefetchTx{ti, block, &followupInterrupt}:
+				default:
+				}
+			}
+			if i < len(chain)-1 {
+				// current block is not the last one, so prefetch the right next block
+				followup := chain[i+1]
+				go func(start time.Time) {
+					throwaway, _ := state.NewForPrefetching(parent.Root(), bc.stateCache)
+					vmCfg := bc.vmConfig
+					vmCfg.Prefetching = true
+					bc.prefetcher.Prefetch(followup, throwaway, vmCfg, &followupInterrupt)
+
+					blockPrefetchExecuteTimer.Update(time.Since(start))
+					if atomic.LoadUint32(&followupInterrupt) == 1 {
+						blockPrefetchInterruptMeter.Mark(1)
+					}
+				}(time.Now())
+			}
+		}
 		// If the header is a banned one, straight out abort
 		if BadHashes[block.Hash()] {
 			bc.reportBlock(block, nil, ErrBlacklistedHash)
@@ -1659,45 +1706,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			bc.reportBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}
-		// Create a new trie using the parent block and report an
-		// error if it fails.
-		var parent *types.Block
-		if i == 0 {
-			parent = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
-		} else {
-			parent = chain[i-1]
-		}
 
 		stateDB, err := bc.StateAt(parent.Root())
 		if err != nil {
 			return i, events, coalescedLogs, err
-		}
-		// If we have a followup block, run that against the current state to pre-cache
-		// transactions and probabilistically some of the account/storage trie nodes.
-		var followupInterrupt uint32
-
-		if !bc.cacheConfig.TrieNodeCacheConfig.NoPrefetch {
-			// if fetcher works and only a block is given, use prefetchTxWorker
-			if len(chain) == 1 {
-				for ti := range block.Transactions() {
-					select {
-					case bc.prefetchTxCh <- prefetchTx{ti, block, &followupInterrupt}:
-					default:
-					}
-				}
-			} else if i < len(chain)-1 {
-				// current block is not the last one, so prefetch the right next block
-				followup := chain[i+1]
-				go func(start time.Time) {
-					throwaway, _ := state.New(parent.Root(), bc.stateCache)
-					bc.prefetcher.Prefetch(followup, throwaway, bc.vmConfig, &followupInterrupt)
-
-					blockPrefetchExecuteTimer.Update(time.Since(start))
-					if atomic.LoadUint32(&followupInterrupt) == 1 {
-						blockPrefetchInterruptMeter.Mark(1)
-					}
-				}(time.Now())
-			}
 		}
 
 		// Process block using the parent state as reference point.
@@ -2173,6 +2185,7 @@ func (bc *BlockChain) addBadBlock(block *types.Block) {
 
 // reportBlock logs a bad block error.
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
+	badBlockCounter.Inc(1)
 	bc.addBadBlock(block)
 
 	var receiptString string

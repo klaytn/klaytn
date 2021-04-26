@@ -26,6 +26,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
+
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto/secp256k1"
 )

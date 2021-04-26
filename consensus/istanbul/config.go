@@ -36,6 +36,7 @@ type Config struct {
 	SubGroupSize   uint64         `toml:",omitempty"`
 }
 
+// TODO-Klaytn-Istanbul: Do not use DefaultConfig except for assigning new config
 var DefaultConfig = &Config{
 	Timeout:        10000,
 	BlockPeriod:    1,

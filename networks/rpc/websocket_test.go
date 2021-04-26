@@ -53,6 +53,7 @@ func TestWebsocketLargeCall(t *testing.T) {
 	)
 	defer srv.Stop()
 	defer httpsrv.Close()
+	time.Sleep(100 * time.Millisecond)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -100,6 +101,7 @@ func TestWSServer_MaxConnections(t *testing.T) {
 	defer ln.Close()
 
 	go NewWSServer([]string{"*"}, srv).Serve(ln)
+	time.Sleep(100 * time.Millisecond)
 
 	// set max websocket connections
 	MaxWebsocketConnections = 3
@@ -116,6 +118,7 @@ func TestFastWSServer_MaxConnections(t *testing.T) {
 	defer ln.Close()
 
 	go NewFastWSServer([]string{"*"}, srv).Serve(ln)
+	time.Sleep(100 * time.Millisecond)
 
 	// set max websocket connections
 	MaxWebsocketConnections = 3

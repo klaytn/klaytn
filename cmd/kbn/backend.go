@@ -18,9 +18,10 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"strings"
 )
 
 type BN struct {
@@ -129,9 +130,15 @@ func (b *BN) DeleteAuthorizedNodes(rawurl string) error {
 func (b *BN) APIs() []rpc.API {
 	return []rpc.API{
 		{
+			Namespace: "admin",
+			Version:   "1.0",
+			Service:   NewPrivateBootnodeAPI(b),
+			Public:    true,
+		},
+		{
 			Namespace: "bootnode",
 			Version:   "1.0",
-			Service:   NewBootnodeAPI(b),
+			Service:   NewPublicBootnodeAPI(b),
 			Public:    true,
 		},
 	}

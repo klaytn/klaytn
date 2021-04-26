@@ -5,11 +5,12 @@
 package cn
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	p2p "github.com/klaytn/klaytn/networks/p2p"
-	reflect "reflect"
 )
 
 // MockPeerSet is a mock of PeerSet interface

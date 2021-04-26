@@ -17,8 +17,9 @@
 package reward
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // test cache limit of stakingInfoCache

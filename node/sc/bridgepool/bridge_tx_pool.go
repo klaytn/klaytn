@@ -23,13 +23,14 @@ package bridgepool
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
 	"github.com/rcrowley/go-metrics"
-	"math/big"
-	"sync"
-	"time"
 )
 
 var logger = log.NewModuleLogger(log.ServiceChain)

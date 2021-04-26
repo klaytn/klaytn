@@ -17,11 +17,12 @@
 package gasprice
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	mock_api "github.com/klaytn/klaytn/api/mocks"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
 )
 
 func TestGasPrice_NewOracle(t *testing.T) {

@@ -22,6 +22,7 @@ package downloader
 
 import (
 	"fmt"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 )
 

@@ -5,11 +5,12 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	state "github.com/klaytn/klaytn/blockchain/state"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	work "github.com/klaytn/klaytn/work"
-	reflect "reflect"
 )
 
 // MockMiner is a mock of Miner interface

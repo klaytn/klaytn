@@ -33,6 +33,8 @@ import (
 	"sync"
 	"time"
 
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -56,7 +58,7 @@ var noTableNameErr = errors.New("dynamoDB table name not provided")
 // batch write size
 const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB including attribute names and values
 const dynamoBatchSize = 25
-const dynamoMaxRetry = 5
+const dynamoMaxRetry = 10
 const dynamoTimeout = 10 * time.Second
 
 // batch write
@@ -95,8 +97,8 @@ type dynamoDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 
 	// metrics
-	getTimer metrics.Timer
-	putTimer metrics.Timer
+	getTimer klaytnmetrics.HybridTimer
+	putTimer klaytnmetrics.HybridTimer
 }
 
 type DynamoData struct {
@@ -401,8 +403,8 @@ func (dynamo *dynamoDB) Close() {
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
-	dynamo.getTimer = metrics.NewRegisteredTimer(prefix+"get/time", nil)
-	dynamo.putTimer = metrics.NewRegisteredTimer(prefix+"put/time", nil)
+	dynamo.getTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
+	dynamo.putTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
 	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 }
 

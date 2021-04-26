@@ -295,7 +295,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.txPool.SetGasPrice(big.NewInt(0).SetUint64(governance.UnitPrice()))
 
 	// Permit the downloader to use the trie cache allowance during fast sync
-	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMB
+	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
 		return nil, err
 	}
@@ -318,6 +318,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// set worker
 	if config.WorkerDisable {
 		cn.miner = work.NewFakeWorker()
+		// Istanbul backend can be accessed by APIs to call its methods even though the core of the
+		// consensus engine doesn't run.
+		istBackend, ok := cn.engine.(consensus.Istanbul)
+		if ok {
+			istBackend.SetChain(cn.blockchain)
+		}
 	} else {
 		// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
 		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy)

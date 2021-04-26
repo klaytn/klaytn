@@ -22,29 +22,23 @@ package vm
 
 import (
 	"fmt"
+	"hash"
+	"sync/atomic"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
-	"hash"
-	"sync/atomic"
 )
 
 // Config are the configuration options for the Interpreter
 type Config struct {
-	// Debug enabled debugging Interpreter options
-	Debug bool
-	// Tracer is the op code logger
-	Tracer Tracer
-	// NoRecursion disabled Interpreter call, callcode,
-	// delegate call and create.
-	NoRecursion bool
-	// Enable recording of SHA3/keccak preimages
-	EnablePreimageRecording bool
-	// JumpTable contains the EVM instruction table. This
-	// may be left uninitialised and will be set to the default
-	// table.
-	JumpTable [256]operation
+	Debug                   bool   // Enables debugging
+	Tracer                  Tracer // Opcode logger
+	NoRecursion             bool   // Disables call, callcode, delegate call and create
+	EnablePreimageRecording bool   // Enables recording of SHA3/keccak preimages
+
+	JumpTable [256]operation // EVM instruction table, automatically populated if unset
 
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
@@ -54,6 +48,9 @@ type Config struct {
 
 	// Enables collecting internal transaction data during processing a block
 	EnableInternalTxTracing bool
+
+	// Prefetching is true if the EVM is used for prefetching.
+	Prefetching bool
 }
 
 // keccakState wraps sha3.state. In addition to the usual hash methods, it also supports
@@ -82,8 +79,8 @@ type Interpreter struct {
 	returnData []byte // Last CALL's return data for subsequent reuse
 }
 
-// NewInterpreter returns a new instance of the Interpreter.
-func NewInterpreter(evm *EVM, cfg *Config) *Interpreter {
+// NewEVMInterpreter returns a new instance of the Interpreter.
+func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.

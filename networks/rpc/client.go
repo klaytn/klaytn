@@ -26,8 +26,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/log"
-	"github.com/pkg/errors"
 	"net"
 	"net/url"
 	"os"
@@ -37,6 +35,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/log"
+	"github.com/pkg/errors"
 )
 
 var (

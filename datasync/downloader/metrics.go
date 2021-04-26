@@ -20,21 +20,24 @@
 
 package downloader
 
-import "github.com/rcrowley/go-metrics"
+import (
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	"github.com/rcrowley/go-metrics"
+)
 
 var (
 	headerInMeter      = metrics.NewRegisteredMeter("klay/downloader/headers/in", nil)
-	headerReqTimer     = metrics.NewRegisteredTimer("klay/downloader/headers/req", nil)
+	headerReqTimer     = klaytnmetrics.NewRegisteredHybridTimer("klay/downloader/headers/req", nil)
 	headerDropMeter    = metrics.NewRegisteredMeter("klay/downloader/headers/drop", nil)
 	headerTimeoutMeter = metrics.NewRegisteredMeter("klay/downloader/headers/timeout", nil)
 
 	bodyInMeter      = metrics.NewRegisteredMeter("klay/downloader/bodies/in", nil)
-	bodyReqTimer     = metrics.NewRegisteredTimer("klay/downloader/bodies/req", nil)
+	bodyReqTimer     = klaytnmetrics.NewRegisteredHybridTimer("klay/downloader/bodies/req", nil)
 	bodyDropMeter    = metrics.NewRegisteredMeter("klay/downloader/bodies/drop", nil)
 	bodyTimeoutMeter = metrics.NewRegisteredMeter("klay/downloader/bodies/timeout", nil)
 
 	receiptInMeter      = metrics.NewRegisteredMeter("klay/downloader/receipts/in", nil)
-	receiptReqTimer     = metrics.NewRegisteredTimer("klay/downloader/receipts/req", nil)
+	receiptReqTimer     = klaytnmetrics.NewRegisteredHybridTimer("klay/downloader/receipts/req", nil)
 	receiptDropMeter    = metrics.NewRegisteredMeter("klay/downloader/receipts/drop", nil)
 	receiptTimeoutMeter = metrics.NewRegisteredMeter("klay/downloader/receipts/timeout", nil)
 

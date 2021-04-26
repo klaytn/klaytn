@@ -75,7 +75,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.CacheUsageLevelFlag,
 	utils.MemorySizeFlag,
 	utils.TrieNodeCacheTypeFlag,
-	utils.TrieNodeCacheNoPrefetchFlag,
+	utils.NumFetcherPrefetchWorkerFlag,
 	utils.TrieNodeCacheLimitFlag,
 	utils.TrieNodeCacheSavePeriodFlag,
 	utils.TrieNodeCacheRedisEndpointsFlag,
@@ -111,6 +111,8 @@ var CommonNodeFlags = []cli.Flag{
 	utils.RestartTimeOutFlag,
 	utils.DaemonPathFlag,
 	utils.ConfigFileFlag,
+	utils.APIFilterGetLogsMaxItemsFlag,
+	utils.APIFilterGetLogsDeadlineFlag,
 }
 
 // Common RPC flags
@@ -126,6 +128,7 @@ var CommonRPCFlags = []cli.Flag{
 	utils.GRPCEnabledFlag,
 	utils.GRPCListenAddrFlag,
 	utils.GRPCPortFlag,
+	utils.RPCConcurrencyLimit,
 	utils.WSApiFlag,
 	utils.WSAllowedOriginsFlag,
 	utils.WSMaxSubscriptionPerConn,

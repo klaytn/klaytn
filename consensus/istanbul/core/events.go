@@ -22,6 +22,7 @@ package core
 
 import (
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
 )
 
 type backlogEvent struct {
@@ -30,4 +31,6 @@ type backlogEvent struct {
 	Hash common.Hash
 }
 
-type timeoutEvent struct{}
+type timeoutEvent struct {
+	nextView *istanbul.View
+}

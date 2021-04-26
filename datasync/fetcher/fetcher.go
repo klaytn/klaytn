@@ -700,7 +700,7 @@ func (f *Fetcher) insertWork(peer string, block *types.Block) {
 	switch err := f.verifyHeader(block.Header()); err {
 	case nil:
 		// All ok, quickly propagate to our peers
-		propBroadcastOutTimer.UpdateSince(block.ReceivedAt)
+		propBroadcastOutTimer.Update(time.Since(block.ReceivedAt))
 		go f.broadcastBlock(block)
 
 	case consensus.ErrFutureBlock:
@@ -718,7 +718,7 @@ func (f *Fetcher) insertWork(peer string, block *types.Block) {
 		return
 	}
 	// If import succeeded, broadcast the block
-	propAnnounceOutTimer.UpdateSince(block.ReceivedAt)
+	propAnnounceOutTimer.Update(time.Since(block.ReceivedAt))
 	go f.broadcastBlockHash(block)
 
 	// Invoke the testing hook if needed

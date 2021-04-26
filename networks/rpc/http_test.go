@@ -17,11 +17,12 @@
 package rpc
 
 import (
-	"github.com/klaytn/klaytn/common"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 func TestHTTPErrorResponseWithDelete(t *testing.T) {

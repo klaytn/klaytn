@@ -23,9 +23,10 @@ package keystore
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"os"
 	"path/filepath"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 type keyStorePlain struct {

@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -67,20 +69,20 @@ var (
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
 
-	blockMiningTimer          = metrics.NewRegisteredTimer("miner/block/mining/time", nil)
-	blockMiningExecuteTxTimer = metrics.NewRegisteredTimer("miner/block/execute/time", nil)
-	blockMiningCommitTxTimer  = metrics.NewRegisteredTimer("miner/block/commit/time", nil)
-	blockMiningFinalizeTimer  = metrics.NewRegisteredTimer("miner/block/finalize/time", nil)
+	blockMiningTimer          = klaytnmetrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
+	blockMiningExecuteTxTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
+	blockMiningCommitTxTimer  = klaytnmetrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
+	blockMiningFinalizeTimer  = klaytnmetrics.NewRegisteredHybridTimer("miner/block/finalize/time", nil)
 
-	accountReadTimer   = metrics.NewRegisteredTimer("miner/block/account/reads", nil)
-	accountHashTimer   = metrics.NewRegisteredTimer("miner/block/account/hashes", nil)
-	accountUpdateTimer = metrics.NewRegisteredTimer("miner/block/account/updates", nil)
-	accountCommitTimer = metrics.NewRegisteredTimer("miner/block/account/commits", nil)
+	accountReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/reads", nil)
+	accountHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/hashes", nil)
+	accountUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/updates", nil)
+	accountCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/commits", nil)
 
-	storageReadTimer   = metrics.NewRegisteredTimer("miner/block/storage/reads", nil)
-	storageHashTimer   = metrics.NewRegisteredTimer("miner/block/storage/hashes", nil)
-	storageUpdateTimer = metrics.NewRegisteredTimer("miner/block/storage/updates", nil)
-	storageCommitTimer = metrics.NewRegisteredTimer("miner/block/storage/commits", nil)
+	storageReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/reads", nil)
+	storageHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/hashes", nil)
+	storageUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/updates", nil)
+	storageCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/commits", nil)
 )
 
 // Agent can register themself with the worker
@@ -176,8 +178,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase c
 		rewardbase:  rewardbase,
 	}
 
-	// istanbul BFT
-	//	if _, ok := engine.(consensus.Istanbul); ok {
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = backend.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	// Subscribe events for blockchain
@@ -186,9 +186,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase c
 	go worker.update()
 
 	go worker.wait(TxResendUseLegacy)
-	worker.commitNewWork()
-	//	}
-
 	return worker
 }
 
@@ -714,7 +711,7 @@ CommitTransactionLoop:
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
-			logger.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
+			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
 			txs.Pop()
 
@@ -722,7 +719,7 @@ CommitTransactionLoop:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
 			timeLimitReachedCounter.Inc(1)
 			if env.tcount == 0 {
-				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash())
+				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash().String())
 				tooLongTxCounter.Inc(1)
 			}
 			// NOTE-Klaytn Exit for loop immediately without checking abort variable again.
@@ -737,7 +734,7 @@ CommitTransactionLoop:
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
-			logger.Error("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
+			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
 			txs.Shift()
 		}

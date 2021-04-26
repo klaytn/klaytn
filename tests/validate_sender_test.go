@@ -19,6 +19,11 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -26,10 +31,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"strings"
-	"testing"
-	"time"
 )
 
 // TestValidateSenderContract tests a precompiled contract "ValidateSender" whose address is 0xb.

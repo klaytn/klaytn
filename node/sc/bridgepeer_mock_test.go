@@ -5,13 +5,14 @@
 package sc
 
 import (
+	big "math/big"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	p2p "github.com/klaytn/klaytn/networks/p2p"
 	discover "github.com/klaytn/klaytn/networks/p2p/discover"
-	big "math/big"
-	reflect "reflect"
 )
 
 // MockBridgePeer is a mock of BridgePeer interface

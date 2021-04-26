@@ -26,8 +26,10 @@ import (
 )
 
 const (
-	redisSetItemChannelSize       = 1024
-	redisSubscriptionChannelSize  = 100 // default value of redis client
+	// Channel size for aync item set. If average item size is 400Byte, 4MB could be used.
+	redisSetItemChannelSize = 10000
+	// Channel size for block subscription. If average block size is 10KB, 10MB could be used.
+	redisSubscriptionChannelSize  = 1000
 	redisSubscriptionChannelBlock = "latestBlock"
 )
 
@@ -96,7 +98,7 @@ func newRedisCache(config *TrieNodeCacheConfig) (*RedisCache, error) {
 	for i := 0; i < workerNum; i++ {
 		go func() {
 			for item := range cache.setItemCh {
-				cache.set(item.key, item.value)
+				cache.Set(item.key, item.value)
 			}
 		}()
 	}
@@ -115,22 +117,22 @@ func (cache *RedisCache) Get(k []byte) []byte {
 	return val
 }
 
-// Set writes data asynchronously. Not all data is written if a setItemCh is full.
-// To write data synchronously, use set instead.
+// Set writes data synchronously.
+// To write data asynchronously, use SetAsync instead.
 func (cache *RedisCache) Set(k, v []byte) {
+	if err := cache.client.Set(hexutil.Encode(k), v, 0).Err(); err != nil {
+		logger.Warn("failed to set an item on redis cache", "err", err, "key", hexutil.Encode(k))
+	}
+}
+
+// SetAsync writes data asynchronously. Not all data is written if a setItemCh is full.
+// To write data synchronously, use Set instead.
+func (cache *RedisCache) SetAsync(k, v []byte) {
 	item := setItem{key: k, value: v}
 	select {
 	case cache.setItemCh <- item:
 	default:
 		logger.Warn("redis setItem channel is full")
-	}
-}
-
-// set writes data synchronously.
-// To write data asynchronously, use Set instead.
-func (cache *RedisCache) set(k, v []byte) {
-	if err := cache.client.Set(hexutil.Encode(k), v, 0).Err(); err != nil {
-		logger.Warn("failed to set an item on redis cache", "err", err, "key", hexutil.Encode(k))
 	}
 }
 

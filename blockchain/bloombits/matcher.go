@@ -24,13 +24,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/klaytn/klaytn/common/bitutil"
-	"github.com/klaytn/klaytn/crypto"
 	"math"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/common/bitutil"
+	"github.com/klaytn/klaytn/crypto"
 )
 
 // bloomIndexes represents the bit indexes inside the bloom filter that belong

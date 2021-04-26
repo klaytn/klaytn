@@ -22,10 +22,6 @@ package gxhash
 
 import (
 	"encoding/binary"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/bitutil"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/sha3"
 	"hash"
 	"math/big"
 	"reflect"
@@ -34,6 +30,11 @@ import (
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/bitutil"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/sha3"
 )
 
 const (

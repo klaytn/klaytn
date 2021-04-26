@@ -24,16 +24,17 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
-	"gopkg.in/fatih/set.v0"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/klaytn/klaytn/accounts"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
+	"gopkg.in/fatih/set.v0"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does

@@ -25,13 +25,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/klaytn/klaytn/common/math"
-	"gopkg.in/urfave/cli.v1"
 	"math/big"
 	"os"
 	"os/user"
 	"path"
 	"strings"
+
+	"github.com/klaytn/klaytn/common/math"
+	"gopkg.in/urfave/cli.v1"
 )
 
 // Custom type which is registered in the flags library which cli uses for

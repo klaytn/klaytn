@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
+	"math"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
-	"math"
-	"math/big"
 )
 
 // MaxFeeRatio is the maximum value of feeRatio. Since it is represented in percentage,
