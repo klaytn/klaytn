@@ -71,7 +71,7 @@ type JumpTable [256]operation
 
 func newIstanbulInstructionSet() JumpTable {
 	instructionSet := newConstantinopleInstructionSet()
-	EnableEIP(1344, &instructionSet)
+	enable1344(&instructionSet)
 	return instructionSet
 }
 
