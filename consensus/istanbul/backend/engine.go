@@ -177,7 +177,15 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 // the input slice).
 func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
-	results := make(chan error, len(headers))
+	size := len(headers)
+	if sb.governance.ProposerPolicy() == params.WeightedRandom {
+		// If the proposer policy is weighted random, the previous state trie is needed in order to get staking information.
+		// This ensures that the header will not be verified before the block which contains the staking information is inserted.
+		if maxSize := int(sb.governance.StakingUpdateInterval()); size > maxSize {
+			size = maxSize
+		}
+	}
+	results := make(chan error, size)
 	go func() {
 		for i, header := range headers {
 			err := sb.verifyHeader(chain, header, headers[:i])
