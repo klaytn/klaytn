@@ -326,6 +326,8 @@ func (self *StateDB) IsValidCodeFormat(addr common.Address) bool {
 	return false
 }
 
+// GetCodeFormat can return an invalid codeFormat, params.CodeFormatLast.
+// It can be validated with CodeFormat.Validate().
 func (self *StateDB) GetCodeFormat(addr common.Address) params.CodeFormat {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
