@@ -146,28 +146,45 @@ func GetMaximumExtraDataSize() uint64 {
 	return BFTMaximumExtraDataSize
 }
 
+// As istanbulHF items are brought to klaytn code, 0x09-0x0b contracts are moved to 0x3fd-0x3ff.
+// For this reason, contracts deployed before HF use old precompiledContract map so it can work even after HF.
+// To Record the deployment time, the MSB of CodeFormat is changed to a istanbulHF field.
+// case 1. CodeFormat [0 0 0 0 0 0 0 0]. MSB is 0, so the contract is deployed before istanbulHF.
+// case 2. CodeFormat [1 0 0 0 0 0 0 0]. MSB is 1, so the contract is deployed after istanbulHF.
+
 type CodeFormat uint8
 
 const (
-	CodeFormatEVM                   CodeFormat = iota // contracts deployed before IstanbulCompatible are assigned CodeFormatEVM
-	CodeFormatEVMIstanbulCompatible                   // contracts deployed after IstanbulCompatible are assigned CodeFormatEVMIstanbulCompatible
+	CodeFormatEVM CodeFormat = iota
 	CodeFormatLast
 )
 
 func (t CodeFormat) String() string {
-	switch t {
+	switch t & 0b01111111 { // IstanbulHF field is irrelevant with CodeFormat.
 	case CodeFormatEVM:
 		return "CodeFormatEVM"
-	case CodeFormatEVMIstanbulCompatible:
-		return "CodeFormatEVMIstanbulCompatible"
 	}
 
 	return "UndefinedCodeFormat"
 }
 
 func (t CodeFormat) Validate() bool {
-	if t < CodeFormatLast {
+	if t&0b01111111 < CodeFormatLast { // IstanbulHF field is irrelevant with CodeFormat.
 		return true
 	}
 	return false
+}
+
+func (t CodeFormat) IsIstanbulHF() bool {
+	if t&0b10000000 == 0 { // CodeFormat field is irrelevant with IstanbulHF field.
+		return false
+	} else {
+		return true
+	}
+}
+
+func (t *CodeFormat) SetIstanbulHFField(isIstanbul bool) {
+	if isIstanbul {
+		*t |= 0b10000000
+	}
 }

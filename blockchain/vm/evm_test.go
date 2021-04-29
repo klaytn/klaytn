@@ -15,7 +15,7 @@ import (
 
 // Test condition
 type TestField struct {
-	codeFormat params.CodeFormat
+	isIstanbul bool
 	block      *big.Int
 }
 
@@ -29,10 +29,8 @@ type ExpectField struct {
 // TestData
 var (
 	// Test Condition
-	ver1   = params.CodeFormatEVM                   // Indicates that a contract is deployed before istanbulCompatible change
-	ver2   = params.CodeFormatEVMIstanbulCompatible // Indicates that a contract is deployed after istanbulCompatible change
-	Block4 = big.NewInt(4)                          // Block number before the istanbulCompatible Change
-	Block5 = big.NewInt(5)                          // Block number after the istanbulCompatible Change(also istanbulCompatible Block number)
+	Block4 = big.NewInt(4) // Block number before the istanbulCompatible Change
+	Block5 = big.NewInt(5) // Block number after the istanbulCompatible Change(also istanbulCompatible Block number)
 	// Test Input
 	vmLogInput    = []byte("Hello")
 	feePayerInput = []byte("")
@@ -51,31 +49,31 @@ var PrecompiledContractAddressMappingTestData = []struct {
 }{
 	// Expect Normal Behavior
 	// Condition 1. Caller Contract Deploy - before IstanbulCompatible Change, Call - before istanbulCompatible
-	{"0x009", vmLogInput, TestField{ver1, Block4}, ExpectField{200, vmLogOutput, nil}},
-	{"0x00a", feePayerInput, TestField{ver1, Block4}, ExpectField{300, feePayerOutput, nil}},
-	{"0x00b", validateInput, TestField{ver1, Block4}, ExpectField{5000, validateOutput, nil}},
+	{"0x009", vmLogInput, TestField{false, Block4}, ExpectField{200, vmLogOutput, nil}},
+	{"0x00a", feePayerInput, TestField{false, Block4}, ExpectField{300, feePayerOutput, nil}},
+	{"0x00b", validateInput, TestField{false, Block4}, ExpectField{5000, validateOutput, nil}},
 	// Condition 2. Caller Contract Deploy - before IstanbulCompatible Change, Call - after istanbulCompatible
-	{"0x009", vmLogInput, TestField{ver1, Block5}, ExpectField{200, vmLogOutput, nil}},
-	{"0x00a", feePayerInput, TestField{ver1, Block5}, ExpectField{300, feePayerOutput, nil}},
-	{"0x00b", validateInput, TestField{ver1, Block5}, ExpectField{5000, validateOutput, nil}},
+	{"0x009", vmLogInput, TestField{false, Block5}, ExpectField{200, vmLogOutput, nil}},
+	{"0x00a", feePayerInput, TestField{false, Block5}, ExpectField{300, feePayerOutput, nil}},
+	{"0x00b", validateInput, TestField{false, Block5}, ExpectField{5000, validateOutput, nil}},
 	// Condition 3. Caller Contract Deploy - after IstanbulCompatible Change, Call - after istanbulCompatible
-	{"0x3fd", vmLogInput, TestField{ver2, Block5}, ExpectField{200, vmLogOutput, nil}},
-	{"0x3fe", feePayerInput, TestField{ver2, Block5}, ExpectField{300, feePayerOutput, nil}},
-	{"0x3ff", validateInput, TestField{ver2, Block5}, ExpectField{5000, validateOutput, nil}},
+	{"0x3fd", vmLogInput, TestField{true, Block5}, ExpectField{200, vmLogOutput, nil}},
+	{"0x3fe", feePayerInput, TestField{true, Block5}, ExpectField{300, feePayerOutput, nil}},
+	{"0x3ff", validateInput, TestField{true, Block5}, ExpectField{5000, validateOutput, nil}},
 
 	// Expect Error Behavior
 	// Condition 1. Caller Contract Deploy - before IstanbulCompatible Change, Call - before istanbulCompatible
-	{"0x3fd", vmLogInput, TestField{ver1, Block4}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
-	{"0x3fe", feePayerInput, TestField{ver1, Block4}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
-	{"0x3ff", validateInput, TestField{ver1, Block4}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
+	{"0x3fd", vmLogInput, TestField{false, Block4}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
+	{"0x3fe", feePayerInput, TestField{false, Block4}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
+	{"0x3ff", validateInput, TestField{false, Block4}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
 	// Condition 2. Caller Contract Deploy - before IstanbulCompatible Change, Call - after istanbulCompatible
-	{"0x3fd", vmLogInput, TestField{ver1, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
-	{"0x3fe", feePayerInput, TestField{ver1, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
-	{"0x3ff", validateInput, TestField{ver1, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
+	{"0x3fd", vmLogInput, TestField{false, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
+	{"0x3fe", feePayerInput, TestField{false, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
+	{"0x3ff", validateInput, TestField{false, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
 	// Condition 2. Caller Contract Deploy - after IstanbulCompatible Change, Call - after istanbulCompatible
-	{"0x009", vmLogInput, TestField{ver2, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
-	{"0x00a", feePayerInput, TestField{ver2, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
-	{"0x00b", validateInput, TestField{ver2, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
+	{"0x009", vmLogInput, TestField{true, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
+	{"0x00a", feePayerInput, TestField{true, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
+	{"0x00b", validateInput, TestField{true, Block5}, ExpectField{0, "", kerrors.ErrPrecompiledContractAddress}},
 }
 
 func TestPrecompiledContractAddressMapping(t *testing.T) {
@@ -87,7 +85,9 @@ func TestPrecompiledContractAddressMapping(t *testing.T) {
 		// Make StateDB
 		callerAddr := common.BytesToAddress([]byte("contract"))
 		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
-		statedb.CreateSmartContractAccount(callerAddr, tt.codeFormat)
+		format := params.CodeFormatEVM
+		format.SetIstanbulHFField(tt.isIstanbul)
+		statedb.CreateSmartContractAccount(callerAddr, format)
 
 		// Make EVM environment
 		vmctx := Context{

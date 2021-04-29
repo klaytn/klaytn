@@ -230,7 +230,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		}
 		// create an account object of the enabled precompiled address if not exist.
 		if !evm.StateDB.Exist(addr) {
-			evm.StateDB.CreateSmartContractAccount(addr, evm.CurrentCodeFormat())
+			evm.StateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM)
 		}
 	}
 
@@ -452,7 +452,8 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
 	//   because the account key is set to AccountKeyFail by default.
 	//   Need to make a decision of the key type.
-	evm.StateDB.CreateSmartContractAccountWithKey(address, humanReadable, accountkey.NewAccountKeyFail(), evm.CurrentCodeFormat())
+	codeFormat.SetIstanbulHFField(evm.chainRules.IsIstanbul)
+	evm.StateDB.CreateSmartContractAccountWithKey(address, humanReadable, accountkey.NewAccountKeyFail(), codeFormat)
 	evm.StateDB.SetNonce(address, 1)
 	if value.Sign() != 0 {
 		evm.Transfer(evm.StateDB, caller.Address(), address, value)
@@ -538,25 +539,16 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 	return evm.create(caller, codeAndHash, gas, value, contractAddr, humanReadable, codeFormat)
 }
 
-func (evm *EVM) CurrentCodeFormat() params.CodeFormat {
-	switch {
-	case evm.chainRules.IsIstanbul:
-		return params.CodeFormatEVMIstanbulCompatible
-	default:
-		return params.CodeFormatEVM
-	}
-}
-
 func (evm *EVM) GetPrecompiledContractMap(caller common.Address) map[common.Address]PrecompiledContract {
 	switch {
 	case evm.chainRules.IsIstanbul:
 		// if contract(caller) is deployed before istanbul, use the old precompiled contract set (use constantinople)
 		//      (gas price policy also follows constantinople rules)
-		// Without these lines, contracts that are deployed before istanbul and uses vmLog(0x09), feePayer(0x0a), validateSender(0x0b) won't not work properly.
-		if evm.StateDB.GetCodeFormat(caller) == params.CodeFormatEVM {
-			return PrecompiledContractsConstantinople
+		// Without these lines, contracts that are deployed before istanbul and uses 0x09-0x0b won't not work properly.
+		if evm.StateDB.GetCodeFormat(caller).IsIstanbulHF() {
+			return PrecompiledContractsIstanbul
 		}
-		return PrecompiledContractsIstanbul
+		return PrecompiledContractsConstantinople
 	default:
 		return PrecompiledContractsConstantinople
 	}
