@@ -545,7 +545,7 @@ func (evm *EVM) GetPrecompiledContractMap(caller common.Address) map[common.Addr
 		// if contract(caller) is deployed before istanbul, use the old precompiled contract set (use constantinople)
 		//      (gas price policy also follows constantinople rules)
 		// Without these lines, contracts that are deployed before istanbul and uses 0x09-0x0b won't work properly.
-		if evm.StateDB.GetCodeFormat(caller).IsIstanbulHF() {
+		if evm.StateDB.GetCodeFormat(caller).IsDeployedAfterIstanbulHF() {
 			return PrecompiledContractsIstanbul
 		}
 		return PrecompiledContractsConstantinople

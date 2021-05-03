@@ -30,23 +30,23 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-func TestIsIstanbulHF(t *testing.T) {
+func TestAfterIstanbulHF(t *testing.T) {
 	for _, tc := range testCaseWithBinaryCodeFormat {
-		assert.Equal(t, tc.isDeployedIstanbulHFExpectVal, tc.cf.IsIstanbulHF())
+		assert.Equal(t, tc.isDeployedIstanbulHFExpectVal, tc.cf.IsDeployedAfterIstanbulHF())
 	}
 }
 
 func TestSetIstanbulHFField(t *testing.T) {
 	testCaseSetIstanbulHFField := []struct {
-		cf         CodeFormat
-		isIstanbul bool
-		expectCf   CodeFormat
+		cf                        CodeFormat
+		isDeployedAfterIstanbulHF bool
+		expectCf                  CodeFormat
 	}{
 		{CodeFormatEVM, false, 0b00000000},
 		{CodeFormatEVM, true, 0b10000000},
 	}
 	for _, tc := range testCaseSetIstanbulHFField {
-		tc.cf.SetIstanbulHFField(tc.isIstanbul)
+		tc.cf.SetIstanbulHFField(tc.isDeployedAfterIstanbulHF)
 		assert.Equal(t, tc.expectCf, tc.cf)
 	}
 }

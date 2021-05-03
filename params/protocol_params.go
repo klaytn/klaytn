@@ -155,12 +155,19 @@ func GetMaximumExtraDataSize() uint64 {
 type CodeFormat uint8
 
 const (
+	IstanbulHFFieldZeroCF = 127 // 0b01111111: hardfork field value is zero, but codeFormat field values are one
+	CodeFormatFieldZeroCF = 128 // 0b10000000: hardfork field value is one, but codeFormat field values are zero
+)
+
+const (
 	CodeFormatEVM CodeFormat = iota
 	CodeFormatLast
 )
 
 func (t CodeFormat) String() string {
-	switch t & 0b01111111 { // IstanbulHF field is irrelevant with CodeFormat.
+	format := t & IstanbulHFFieldZeroCF // Reset IstanbulHF field, set to 0
+
+	switch format {
 	case CodeFormatEVM:
 		return "CodeFormatEVM"
 	}
@@ -169,14 +176,16 @@ func (t CodeFormat) String() string {
 }
 
 func (t CodeFormat) Validate() bool {
-	if t&0b01111111 < CodeFormatLast { // IstanbulHF field is irrelevant with CodeFormat.
+	format := t & IstanbulHFFieldZeroCF // Reset IstanbulHF field, set to 0
+
+	if format < CodeFormatLast {
 		return true
 	}
 	return false
 }
 
-func (t CodeFormat) IsIstanbulHF() bool {
-	if t&0b10000000 == 0 { // CodeFormat field is irrelevant with IstanbulHF field.
+func (t CodeFormat) IsDeployedAfterIstanbulHF() bool {
+	if t&CodeFormatFieldZeroCF == 0 {
 		return false
 	} else {
 		return true
@@ -185,6 +194,6 @@ func (t CodeFormat) IsIstanbulHF() bool {
 
 func (t *CodeFormat) SetIstanbulHFField(isIstanbul bool) {
 	if isIstanbul {
-		*t |= 0b10000000
+		*t |= CodeFormatFieldZeroCF
 	}
 }
