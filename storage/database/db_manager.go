@@ -44,192 +44,194 @@ var (
 	errGovIdxAlreadyExist = errors.New("a governance idx of the more recent or the same block exist")
 )
 
-type DBManager interface {
-	IsParallelDBWrite() bool
-	IsSingle() bool
-	InMigration() bool
-	MigrationBlockNumber() uint64
-	getStateTrieMigrationInfo() uint64
+type (
+	DBManager interface {
+		IsParallelDBWrite() bool
+		IsSingle() bool
+		InMigration() bool
+		MigrationBlockNumber() uint64
+		getStateTrieMigrationInfo() uint64
 
-	Close()
-	NewBatch(dbType DBEntryType) Batch
-	getDBDir(dbEntry DBEntryType) string
-	setDBDir(dbEntry DBEntryType, newDBDir string)
-	setStateTrieMigrationStatus(uint64)
-	GetMemDB() *MemDB
-	GetDBConfig() *DBConfig
-	getDatabase(DBEntryType) Database
-	CreateMigrationDBAndSetStatus(blockNum uint64) error
-	FinishStateMigration(succeed bool) chan struct{}
-	GetStateTrieDB() Database
-	GetStateTrieMigrationDB() Database
-	GetMiscDB() Database
+		Close()
+		NewBatch(dbType DBEntryType) Batch
+		getDBDir(dbEntry DBEntryType) string
+		setDBDir(dbEntry DBEntryType, newDBDir string)
+		setStateTrieMigrationStatus(uint64)
+		GetMemDB() *MemDB
+		GetDBConfig() *DBConfig
+		getDatabase(DBEntryType) Database
+		CreateMigrationDBAndSetStatus(blockNum uint64) error
+		FinishStateMigration(succeed bool) chan struct{}
+		GetStateTrieDB() Database
+		GetStateTrieMigrationDB() Database
+		GetMiscDB() Database
 
-	// from accessors_chain.go
-	ReadCanonicalHash(number uint64) common.Hash
-	WriteCanonicalHash(hash common.Hash, number uint64)
-	DeleteCanonicalHash(number uint64)
+		// from accessors_chain.go
+		ReadCanonicalHash(number uint64) common.Hash
+		WriteCanonicalHash(hash common.Hash, number uint64)
+		DeleteCanonicalHash(number uint64)
 
-	ReadHeadHeaderHash() common.Hash
-	WriteHeadHeaderHash(hash common.Hash)
+		ReadHeadHeaderHash() common.Hash
+		WriteHeadHeaderHash(hash common.Hash)
 
-	ReadHeadBlockHash() common.Hash
-	WriteHeadBlockHash(hash common.Hash)
+		ReadHeadBlockHash() common.Hash
+		WriteHeadBlockHash(hash common.Hash)
 
-	ReadHeadFastBlockHash() common.Hash
-	WriteHeadFastBlockHash(hash common.Hash)
+		ReadHeadFastBlockHash() common.Hash
+		WriteHeadFastBlockHash(hash common.Hash)
 
-	ReadFastTrieProgress() uint64
-	WriteFastTrieProgress(count uint64)
+		ReadFastTrieProgress() uint64
+		WriteFastTrieProgress(count uint64)
 
-	HasHeader(hash common.Hash, number uint64) bool
-	ReadHeader(hash common.Hash, number uint64) *types.Header
-	ReadHeaderRLP(hash common.Hash, number uint64) rlp.RawValue
-	WriteHeader(header *types.Header)
-	DeleteHeader(hash common.Hash, number uint64)
-	ReadHeaderNumber(hash common.Hash) *uint64
+		HasHeader(hash common.Hash, number uint64) bool
+		ReadHeader(hash common.Hash, number uint64) *types.Header
+		ReadHeaderRLP(hash common.Hash, number uint64) rlp.RawValue
+		WriteHeader(header *types.Header)
+		DeleteHeader(hash common.Hash, number uint64)
+		ReadHeaderNumber(hash common.Hash) *uint64
 
-	HasBody(hash common.Hash, number uint64) bool
-	ReadBody(hash common.Hash, number uint64) *types.Body
-	ReadBodyInCache(hash common.Hash) *types.Body
-	ReadBodyRLP(hash common.Hash, number uint64) rlp.RawValue
-	ReadBodyRLPByHash(hash common.Hash) rlp.RawValue
-	WriteBody(hash common.Hash, number uint64, body *types.Body)
-	PutBodyToBatch(batch Batch, hash common.Hash, number uint64, body *types.Body)
-	WriteBodyRLP(hash common.Hash, number uint64, rlp rlp.RawValue)
-	DeleteBody(hash common.Hash, number uint64)
+		HasBody(hash common.Hash, number uint64) bool
+		ReadBody(hash common.Hash, number uint64) *types.Body
+		ReadBodyInCache(hash common.Hash) *types.Body
+		ReadBodyRLP(hash common.Hash, number uint64) rlp.RawValue
+		ReadBodyRLPByHash(hash common.Hash) rlp.RawValue
+		WriteBody(hash common.Hash, number uint64, body *types.Body)
+		PutBodyToBatch(batch Batch, hash common.Hash, number uint64, body *types.Body)
+		WriteBodyRLP(hash common.Hash, number uint64, rlp rlp.RawValue)
+		DeleteBody(hash common.Hash, number uint64)
 
-	ReadTd(hash common.Hash, number uint64) *big.Int
-	WriteTd(hash common.Hash, number uint64, td *big.Int)
-	DeleteTd(hash common.Hash, number uint64)
+		ReadTd(hash common.Hash, number uint64) *big.Int
+		WriteTd(hash common.Hash, number uint64, td *big.Int)
+		DeleteTd(hash common.Hash, number uint64)
 
-	ReadReceipt(txHash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
-	ReadReceipts(blockHash common.Hash, number uint64) types.Receipts
-	ReadReceiptsByBlockHash(hash common.Hash) types.Receipts
-	WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts)
-	PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts)
-	DeleteReceipts(hash common.Hash, number uint64)
+		ReadReceipt(txHash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
+		ReadReceipts(blockHash common.Hash, number uint64) types.Receipts
+		ReadReceiptsByBlockHash(hash common.Hash) types.Receipts
+		WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts)
+		PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts)
+		DeleteReceipts(hash common.Hash, number uint64)
 
-	ReadBlock(hash common.Hash, number uint64) *types.Block
-	ReadBlockByHash(hash common.Hash) *types.Block
-	ReadBlockByNumber(number uint64) *types.Block
-	HasBlock(hash common.Hash, number uint64) bool
-	WriteBlock(block *types.Block)
-	DeleteBlock(hash common.Hash, number uint64)
+		ReadBlock(hash common.Hash, number uint64) *types.Block
+		ReadBlockByHash(hash common.Hash) *types.Block
+		ReadBlockByNumber(number uint64) *types.Block
+		HasBlock(hash common.Hash, number uint64) bool
+		WriteBlock(block *types.Block)
+		DeleteBlock(hash common.Hash, number uint64)
 
-	FindCommonAncestor(a, b *types.Header) *types.Header
+		FindCommonAncestor(a, b *types.Header) *types.Header
 
-	ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
-	WriteIstanbulSnapshot(hash common.Hash, blob []byte) error
+		ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
+		WriteIstanbulSnapshot(hash common.Hash, blob []byte) error
 
-	WriteMerkleProof(key, value []byte)
+		WriteMerkleProof(key, value []byte)
 
-	// State Trie Database related operations
-	ReadCachedTrieNode(hash common.Hash) ([]byte, error)
-	ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
-	ReadStateTrieNode(key []byte) ([]byte, error)
-	HasStateTrieNode(key []byte) (bool, error)
-	ReadPreimage(hash common.Hash) []byte
+		// State Trie Database related operations
+		ReadCachedTrieNode(hash common.Hash) ([]byte, error)
+		ReadCachedTrieNodePreimage(secureKey []byte) ([]byte, error)
+		ReadStateTrieNode(key []byte) ([]byte, error)
+		HasStateTrieNode(key []byte) (bool, error)
+		ReadPreimage(hash common.Hash) []byte
 
-	// Read StateTrie from new DB
-	ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error)
-	ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
-	ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
-	HasStateTrieNodeFromNew(key []byte) (bool, error)
-	ReadPreimageFromNew(hash common.Hash) []byte
+		// Read StateTrie from new DB
+		ReadCachedTrieNodeFromNew(hash common.Hash) ([]byte, error)
+		ReadCachedTrieNodePreimageFromNew(secureKey []byte) ([]byte, error)
+		ReadStateTrieNodeFromNew(key []byte) ([]byte, error)
+		HasStateTrieNodeFromNew(key []byte) (bool, error)
+		ReadPreimageFromNew(hash common.Hash) []byte
 
-	// Read StateTrie from old DB
-	ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error)
-	ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
-	ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
-	HasStateTrieNodeFromOld(key []byte) (bool, error)
-	ReadPreimageFromOld(hash common.Hash) []byte
+		// Read StateTrie from old DB
+		ReadCachedTrieNodeFromOld(hash common.Hash) ([]byte, error)
+		ReadCachedTrieNodePreimageFromOld(secureKey []byte) ([]byte, error)
+		ReadStateTrieNodeFromOld(key []byte) ([]byte, error)
+		HasStateTrieNodeFromOld(key []byte) (bool, error)
+		ReadPreimageFromOld(hash common.Hash) []byte
 
-	WritePreimages(number uint64, preimages map[common.Hash][]byte)
+		WritePreimages(number uint64, preimages map[common.Hash][]byte)
 
-	// from accessors_indexes.go
-	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
-	WriteTxLookupEntries(block *types.Block)
-	WriteAndCacheTxLookupEntries(block *types.Block) error
-	PutTxLookupEntriesToBatch(batch Batch, block *types.Block)
-	DeleteTxLookupEntry(hash common.Hash)
+		// from accessors_indexes.go
+		ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
+		WriteTxLookupEntries(block *types.Block)
+		WriteAndCacheTxLookupEntries(block *types.Block) error
+		PutTxLookupEntriesToBatch(batch Batch, block *types.Block)
+		DeleteTxLookupEntry(hash common.Hash)
 
-	ReadTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
+		ReadTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 
-	NewSenderTxHashToTxHashBatch() Batch
-	PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) error
-	ReadTxHashFromSenderTxHash(senderTxHash common.Hash) common.Hash
+		NewSenderTxHashToTxHashBatch() Batch
+		PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) error
+		ReadTxHashFromSenderTxHash(senderTxHash common.Hash) common.Hash
 
-	ReadBloomBits(bloomBitsKey []byte) ([]byte, error)
-	WriteBloomBits(bloomBitsKey []byte, bits []byte) error
+		ReadBloomBits(bloomBitsKey []byte) ([]byte, error)
+		WriteBloomBits(bloomBitsKey []byte, bits []byte) error
 
-	ReadValidSections() ([]byte, error)
-	WriteValidSections(encodedSections []byte)
+		ReadValidSections() ([]byte, error)
+		WriteValidSections(encodedSections []byte)
 
-	ReadSectionHead(encodedSection []byte) ([]byte, error)
-	WriteSectionHead(encodedSection []byte, hash common.Hash)
-	DeleteSectionHead(encodedSection []byte)
+		ReadSectionHead(encodedSection []byte) ([]byte, error)
+		WriteSectionHead(encodedSection []byte, hash common.Hash)
+		DeleteSectionHead(encodedSection []byte)
 
-	// from accessors_metadata.go
-	ReadDatabaseVersion() *uint64
-	WriteDatabaseVersion(version uint64)
+		// from accessors_metadata.go
+		ReadDatabaseVersion() *uint64
+		WriteDatabaseVersion(version uint64)
 
-	ReadChainConfig(hash common.Hash) *params.ChainConfig
-	WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
+		ReadChainConfig(hash common.Hash) *params.ChainConfig
+		WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
 
-	// below operations are used in parent chain side, not child chain side.
-	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
-	ConvertChildChainBlockHashToParentChainTxHash(scBlockHash common.Hash) common.Hash
+		// below operations are used in parent chain side, not child chain side.
+		WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
+		ConvertChildChainBlockHashToParentChainTxHash(scBlockHash common.Hash) common.Hash
 
-	WriteLastIndexedBlockNumber(blockNum uint64)
-	GetLastIndexedBlockNumber() uint64
+		WriteLastIndexedBlockNumber(blockNum uint64)
+		GetLastIndexedBlockNumber() uint64
 
-	// below operations are used in child chain side, not parent chain side.
-	WriteAnchoredBlockNumber(blockNum uint64)
-	ReadAnchoredBlockNumber() uint64
+		// below operations are used in child chain side, not parent chain side.
+		WriteAnchoredBlockNumber(blockNum uint64)
+		ReadAnchoredBlockNumber() uint64
 
-	WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt)
-	ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt
+		WriteReceiptFromParentChain(blockHash common.Hash, receipt *types.Receipt)
+		ReadReceiptFromParentChain(blockHash common.Hash) *types.Receipt
 
-	WriteHandleTxHashFromRequestTxHash(rTx, hTx common.Hash)
-	ReadHandleTxHashFromRequestTxHash(rTx common.Hash) common.Hash
+		WriteHandleTxHashFromRequestTxHash(rTx, hTx common.Hash)
+		ReadHandleTxHashFromRequestTxHash(rTx common.Hash) common.Hash
 
-	WriteParentOperatorFeePayer(feePayer common.Address)
-	WriteChildOperatorFeePayer(feePayer common.Address)
-	ReadParentOperatorFeePayer() common.Address
-	ReadChildOperatorFeePayer() common.Address
+		WriteParentOperatorFeePayer(feePayer common.Address)
+		WriteChildOperatorFeePayer(feePayer common.Address)
+		ReadParentOperatorFeePayer() common.Address
+		ReadChildOperatorFeePayer() common.Address
 
-	// cacheManager related functions.
-	ClearHeaderChainCache()
-	ClearBlockChainCache()
-	ReadTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
-	ReadBlockReceiptsInCache(blockHash common.Hash) types.Receipts
-	ReadTxReceiptInCache(txHash common.Hash) *types.Receipt
+		// cacheManager related functions.
+		ClearHeaderChainCache()
+		ClearBlockChainCache()
+		ReadTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
+		ReadBlockReceiptsInCache(blockHash common.Hash) types.Receipts
+		ReadTxReceiptInCache(txHash common.Hash) *types.Receipt
 
-	// snapshot in clique(ConsensusClique) consensus
-	WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) error
-	ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error)
+		// snapshot in clique(ConsensusClique) consensus
+		WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) error
+		ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error)
 
-	// Governance related functions
-	WriteGovernance(data map[string]interface{}, num uint64) error
-	WriteGovernanceIdx(num uint64) error
-	ReadGovernance(num uint64) (map[string]interface{}, error)
-	ReadRecentGovernanceIdx(count int) ([]uint64, error)
-	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
-	WriteGovernanceState(b []byte) error
-	ReadGovernanceState() ([]byte, error)
+		// Governance related functions
+		WriteGovernance(data map[string]interface{}, num uint64) error
+		WriteGovernanceIdx(num uint64) error
+		ReadGovernance(num uint64) (map[string]interface{}, error)
+		ReadRecentGovernanceIdx(count int) ([]uint64, error)
+		ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
+		WriteGovernanceState(b []byte) error
+		ReadGovernanceState() ([]byte, error)
 
-	// StakingInfo related functions
-	ReadStakingInfo(blockNum uint64) ([]byte, error)
-	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
+		// StakingInfo related functions
+		ReadStakingInfo(blockNum uint64) ([]byte, error)
+		WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
 
-	// DB migration related function
-	StartDBMigration(DBManager) error
+		// DB migration related function
+		StartDBMigration(DBManager) error
 
-	// ChainDataFetcher checkpoint function
-	WriteChainDataFetcherCheckpoint(checkpoint uint64) error
-	ReadChainDataFetcherCheckpoint() (uint64, error)
-}
+		// ChainDataFetcher checkpoint function
+		WriteChainDataFetcherCheckpoint(checkpoint uint64) error
+		ReadChainDataFetcherCheckpoint() (uint64, error)
+	}
+)
 
 type DBEntryType uint8
 

@@ -107,11 +107,6 @@ func createDBManagerForMigration(ctx *cli.Context) (database.DBManager, database
 }
 
 func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database.DBConfig, error) {
-	// TODO enable for all dbs
-	if !ctx.GlobalBool(utils.SingleDBFlag.Name) || !ctx.GlobalBool(utils.DstSingleDBFlag.Name) {
-		return nil, nil, errors.New("this feature is provided for single db only")
-	}
-
 	// srcDB
 	srcDBC := &database.DBConfig{
 		Dir:                ctx.GlobalString(utils.DataDirFlag.Name),

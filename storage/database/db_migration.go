@@ -31,12 +31,7 @@ const (
 	reportCycle         = dbMigrationFetchNum * 100
 )
 
-// StartDBMigration migrates a DB to another DB.
-// (e.g. LevelDB -> LevelDB, LevelDB -> BadgerDB, LevelDB -> DynamoDB)
-//
-// This feature uses Iterator. A src DB should have implementation of Iteratee to use this function.
-// Do not use db migration while a node is executing.
-func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
+func copyDB(name string, srcDB, dstDB Database) error {
 	// settings for quit signal from os
 	sigQuit := make(chan os.Signal, 1)
 	signal.Notify(sigQuit,
@@ -44,10 +39,6 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 		syscall.SIGINT,
 		syscall.SIGTERM,
 		syscall.SIGQUIT)
-
-	// TODO enable for all dbs
-	srcDB := dbm.getDatabase(MiscDB) // first DB
-	dstDB := dstdbm.getDatabase(MiscDB)
 
 	// create src iterator and dst batch
 	srcIter := srcDB.NewIterator(nil, nil)
@@ -57,10 +48,8 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	start := time.Now()
 	previousFetched, fetched := 0, 0
 
-loop:
+	cycleStart := time.Now()
 	for fetched = 0; srcIter.Next(); fetched++ {
-		cycleStart := time.Now()
-
 		// fetch keys and values
 		// Contents of srcIter.Key() and srcIter.Value() should not be modified, and
 		// only valid until the next call to Next.
@@ -75,10 +64,17 @@ loop:
 			return errors.Wrap(err, "failed to put batch")
 		}
 
+		if dstBatch.ValueSize() > IdealBatchSize {
+			if err := dstBatch.Write(); err != nil {
+				return err
+			}
+			dstBatch.Reset()
+		}
+
 		// make a report
-		if fetched%reportCycle == 0 {
+		if fetched%(IdealBatchSize*10) == 0 {
 			logger.Info("DB migrated",
-				"fetched", fetched-previousFetched, "elapsedIter", time.Since(cycleStart),
+				"db", name, "fetched", fetched-previousFetched, "elapsedIter", time.Since(cycleStart),
 				"fetchedTotal", fetched, "elapsedTotal", time.Since(start))
 			cycleStart = time.Now()
 			previousFetched = fetched
@@ -87,8 +83,8 @@ loop:
 		// check for quit signal from OS
 		select {
 		case <-sigQuit:
-			logger.Info("exit called", "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
-			break loop
+			logger.Warn("exit called", "db", name, "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
+			return errors.New("sigQuit")
 		default:
 		}
 	}
@@ -96,8 +92,61 @@ loop:
 	if err := dstBatch.Write(); err != nil {
 		return errors.Wrap(err, "failed to write items")
 	}
+	dstBatch.Reset()
 
-	logger.Info("Finish DB migration", "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
+	logger.Info("Finish DB migration", "db", name, "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
+
+	srcIter.Release()
+	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
+		return errors.Wrap(err, "failed to iterate")
+	}
+
+	return nil
+}
+
+// StartDBMigration migrates a DB to another DB.
+// (e.g. LevelDB -> LevelDB, LevelDB -> BadgerDB, LevelDB -> DynamoDB)
+//
+// This feature uses Iterator. A src DB should have implementation of Iteratee to use this function.
+// Do not use db migration while a node is executing.
+func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
+	// from non single DB
+	if !dbm.config.SingleDB {
+		for et := StateTrieDB; et < databaseEntryTypeSize; et++ {
+			srcDB := dbm.getDatabase(et)
+
+			dstDB := dstdbm.getDatabase(MiscDB)
+			if !dstdbm.GetDBConfig().SingleDB {
+				dstDB = dstdbm.getDatabase(et)
+			}
+
+			if srcDB == nil {
+				logger.Warn("skip nil src db", "db", dbBaseDirs[et])
+				continue
+			}
+
+			if dstDB == nil {
+				logger.Warn("skip nil dst db", "db", dbBaseDirs[et])
+				continue
+			}
+
+			if err := copyDB(dbBaseDirs[et], srcDB, dstDB); err != nil {
+				return err
+			}
+
+			logger.Info("complete copy db", "db", dbBaseDirs[et])
+		}
+
+		return nil
+	}
+
+	// single DB -> single DB
+	srcDB := dbm.getDatabase(MiscDB)
+	dstDB := dstdbm.getDatabase(MiscDB)
+
+	if err := copyDB("single", srcDB, dstDB); err != nil {
+		return err
+	}
 
 	// If the current src DB is misc DB, clear all db dir on dst
 	// TODO: If DB Migration supports non-single db, change the checking logic
@@ -105,11 +154,6 @@ loop:
 		for i := uint8(MiscDB); i < uint8(databaseEntryTypeSize); i++ {
 			dstdbm.setDBDir(DBEntryType(i), "")
 		}
-	}
-
-	srcIter.Release()
-	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
-		return errors.Wrap(err, "failed to iterate")
 	}
 
 	return nil
