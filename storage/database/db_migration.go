@@ -151,6 +151,9 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 			}
 		}
 
+		// Reset state trie DB path if migrated state trie path ("statetrie_migrated_XXXXXX") is set
+		dstdbm.setDBDir(DBEntryType(StateTrieDB), "")
+
 		return nil
 	}
 
