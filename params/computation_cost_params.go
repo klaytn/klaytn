@@ -64,6 +64,7 @@ const (
 	CallDataLoadComputationCost   = 596
 	CallDataSizeComputationCost   = 194
 	CallDataCopyComputationCost   = 100
+	ChainIDComputationCost        = 150
 	CodeSizeComputationCost       = 145
 	CodeCopyComputationCost       = 898
 	GasPriceComputationCost       = 131
