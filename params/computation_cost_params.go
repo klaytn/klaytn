@@ -25,7 +25,6 @@ const (
 	ShlComputationCost            = 1603
 	ShrComputationCost            = 1346
 	SarComputationCost            = 1815
-	ExtCodeHashComputationCost    = 1000
 	Create2ComputationCost        = 10000
 	StaticCallComputationCost     = 10000
 	ReturnDataSizeComputationCost = 10
@@ -57,7 +56,6 @@ const (
 	ByteComputationCost           = 589
 	Sha3ComputationCost           = 2465
 	AddressComputationCost        = 284
-	BalanceComputationCost        = 1407
 	OriginComputationCost         = 210
 	CallerComputationCost         = 188
 	CallValueComputationCost      = 149
@@ -80,7 +78,6 @@ const (
 	MloadComputationCost          = 376
 	MstoreComputationCost         = 288
 	Mstore8ComputationCost        = 5142
-	SloadComputationCost          = 835
 	SstoreComputationCost         = 1548
 	JumpComputationCost           = 253
 	JumpiComputationCost          = 176
@@ -105,6 +102,7 @@ const (
 	Dup14ComputationCost          = 143
 	Dup15ComputationCost          = 237
 	Dup16ComputationCost          = 149
+	SelfBalanceComputationCost    = 150
 	Swap1ComputationCost          = 141
 	Swap2ComputationCost          = 156
 	Swap3ComputationCost          = 145
@@ -131,6 +129,14 @@ const (
 	CallCodeComputationCost       = 4000
 	ReturnComputationCost         = 0
 	SelfDestructComputationCost   = 0
+
+	// Istanbul version of BalanceGas, SloadGas, ExtcodeHash is added.
+	BalanceComputationCostEIP150             = 1407
+	BalanceComputationCostEIP1884            = 2462
+	SloadComputationCostEIP150               = 835
+	SloadComputationCostEIP1884              = 3340
+	ExtCodeHashComputationCostConstantinople = 1000
+	ExtCodeHashComputationCostEIP1884        = 1750
 
 	// Computation cost for precompiled contracts
 	EcrecoverComputationCost            = 113150
