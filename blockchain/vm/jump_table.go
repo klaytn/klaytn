@@ -72,6 +72,7 @@ type JumpTable [256]operation
 func newIstanbulInstructionSet() JumpTable {
 	instructionSet := newConstantinopleInstructionSet()
 	enable1344(&instructionSet)
+	enable1884(&instructionSet)
 	return instructionSet
 }
 
@@ -105,11 +106,11 @@ func newConstantinopleInstructionSet() JumpTable {
 	}
 	instructionSet[EXTCODEHASH] = operation{
 		execute:         opExtCodeHash,
-		constantGas:     params.ExtcodeHashGas,
+		constantGas:     params.ExtcodeHashGasConstantinople,
 		minStack:        minStack(1, 1),
 		maxStack:        maxStack(1, 1),
 		valid:           true,
-		computationCost: params.ExtCodeHashComputationCost,
+		computationCost: params.ExtCodeHashComputationCostConstantinople,
 	}
 	instructionSet[CREATE2] = operation{
 		execute:         opCreate2,
@@ -401,11 +402,11 @@ func newFrontierInstructionSet() JumpTable {
 		},
 		BALANCE: {
 			execute:         opBalance,
-			constantGas:     params.BalanceGas,
+			constantGas:     params.BalanceGasEIP150,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
 			valid:           true,
-			computationCost: params.BalanceComputationCost,
+			computationCost: params.BalanceComputationCostEIP150,
 		},
 		ORIGIN: {
 			execute:         opOrigin,
@@ -589,11 +590,11 @@ func newFrontierInstructionSet() JumpTable {
 		},
 		SLOAD: {
 			execute:         opSload,
-			constantGas:     params.SloadGas,
+			constantGas:     params.SloadGasEIP150,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
 			valid:           true,
-			computationCost: params.SloadComputationCost,
+			computationCost: params.SloadComputationCostEIP150,
 		},
 		SSTORE: {
 			execute:         opSstore,

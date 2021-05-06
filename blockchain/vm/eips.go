@@ -27,12 +27,47 @@ import (
 // defined jump tables are not polluted.
 func EnableEIP(eipNum int, jt *JumpTable) error {
 	switch eipNum {
+	case 1884:
+		enable1884(jt)
 	case 1344:
 		enable1344(jt)
 	default:
 		return fmt.Errorf("undefined eip %d", eipNum)
 	}
 	return nil
+}
+
+// enable1884 applies EIP-1884 to the given jump table:
+// - Increase cost of BALANCE to 700
+// - Increase cost of EXTCODEHASH to 700
+// - Increase cost of SLOAD to 800
+// - Define SELFBALANCE, with cost GasFastStep (5)
+func enable1884(jt *JumpTable) {
+	// Gas cost changes
+	jt[BALANCE].constantGas = params.BalanceGasEIP1884
+	jt[EXTCODEHASH].constantGas = params.ExtcodeHashGasEIP1884
+	jt[SLOAD].constantGas = params.SloadGasEIP1884
+
+	// Computation cost changes
+	jt[BALANCE].computationCost = params.BalanceComputationCostEIP1884
+	jt[EXTCODEHASH].computationCost = params.ExtCodeHashComputationCostEIP1884
+	jt[SLOAD].computationCost = params.SloadComputationCostEIP1884
+
+	// New opcode
+	jt[SELFBALANCE] = operation{
+		execute:         opSelfBalance,
+		constantGas:     GasFastStep,
+		minStack:        minStack(0, 1),
+		maxStack:        maxStack(0, 1),
+		valid:           true,
+		computationCost: params.SelfBalanceComputationCost,
+	}
+}
+
+func opSelfBalance(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	balance := evm.interpreter.intPool.get().Set(evm.StateDB.GetBalance(contract.Address()))
+	stack.push(balance)
+	return nil, nil
 }
 
 // enable1344 applies EIP-1344 (ChainID Opcode)
