@@ -191,17 +191,17 @@ func CheckStateConsistencyParallel(oldDB Database, newDB Database, root common.H
 	// Check if the tries can be called
 	_, err := oldDB.OpenTrie(root)
 	if err != nil {
-		return errors.Wrap(err, "can not open oldDB trie")
+		return errors.WithMessage(err, "can not open oldDB trie")
 	}
 	_, err = newDB.OpenTrie(root)
 	if err != nil {
-		return errors.Wrap(err, "can not open newDB trie")
+		return errors.WithMessage(err, "can not open newDB trie")
 	}
 	// get children hash
 	children, err := oldDB.TrieDB().NodeChildren(root)
 	if err != nil {
 		logger.Error("cannot start CheckStateConsistencyParallel", "err", err)
-		return errors.Wrap(err, "cannot get children before consistency check")
+		return errors.WithMessage(err, "cannot get children before consistency check")
 	}
 
 	logger.Info("CheckStateConsistencyParallel is started", "root", root.String(), "len(children)", len(children))
@@ -256,12 +256,12 @@ func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit c
 	// Create and iterate a state trie rooted in a sub-node
 	oldState, err := New(root, oldDB)
 	if err != nil {
-		return errors.Wrap(err, "can not open oldDB trie")
+		return errors.WithMessage(err, "can not open oldDB trie")
 	}
 
 	newState, err := New(root, newDB)
 	if err != nil {
-		return errors.Wrap(err, "can not open newDB trie")
+		return errors.WithMessage(err, "can not open newDB trie")
 	}
 
 	oldIt := NewNodeIterator(oldState)

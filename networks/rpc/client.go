@@ -462,12 +462,12 @@ func (c *Client) newMessage(method string, paramsIn ...interface{}) (*jsonrpcMes
 func (c *Client) getMessageSize(method string, args ...interface{}) (int, error) {
 	msg, err := c.newMessage(method, args)
 	if err != nil {
-		return -1, errors.Wrap(err, "failed to make a new message")
+		return -1, errors.WithMessage(err, "failed to make a new message")
 	}
 
 	data, err := json.Marshal(msg)
 	if err != nil {
-		return -1, errors.Wrap(err, "failed to marshal new message")
+		return -1, errors.WithMessage(err, "failed to marshal new message")
 	}
 
 	return len(data), nil
