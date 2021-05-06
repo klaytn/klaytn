@@ -18,6 +18,8 @@ package vm
 
 import (
 	"fmt"
+
+	"github.com/klaytn/klaytn/params"
 )
 
 // EnableEIP enables the given EIP on the config.
@@ -38,11 +40,12 @@ func EnableEIP(eipNum int, jt *JumpTable) error {
 func enable1344(jt *JumpTable) {
 	// New opcode
 	jt[CHAINID] = operation{
-		execute:     opChainID,
-		constantGas: GasQuickStep,
-		minStack:    minStack(0, 1),
-		maxStack:    maxStack(0, 1),
-		valid:       true,
+		execute:         opChainID,
+		constantGas:     GasQuickStep,
+		minStack:        minStack(0, 1),
+		maxStack:        maxStack(0, 1),
+		valid:           true,
+		computationCost: params.ChainIDComputationCost,
 	}
 }
 
