@@ -63,6 +63,12 @@ type Engine interface {
 	// block.
 	Author(header *types.Header) (common.Address, error)
 
+	// CanVerifyHeadersConcurrently returns true if concurrent header verification possible, otherwise returns false.
+	CanVerifyHeadersConcurrently() bool
+
+	// PreprocessHeaderVerification prepare header verification for heavy computation before synchronous header verification such as ecrecover.
+	PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error)
+
 	// VerifyHeader checks whether a header conforms to the consensus rules of a
 	// given engine. Verifying the seal may be done optionally here, or explicitly
 	// via the VerifySeal method.

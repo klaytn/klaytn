@@ -240,6 +240,16 @@ func (c *Clique) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header, c.signatures)
 }
 
+// CanVerifyHeadersConcurrently returns true if concurrent header verification possible, otherwise returns false.
+func (c *Clique) CanVerifyHeadersConcurrently() bool {
+	return true
+}
+
+// PreprocessHeaderVerification prepare header verification for heavy computation before synchronous header verification such as ecrecover.
+func (c *Clique) PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error) {
+	panic("this method is not used for Clique engine")
+}
+
 // VerifyHeader checks whether a header conforms to the consensus rules.
 func (c *Clique) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	return c.verifyHeader(chain, header, nil)

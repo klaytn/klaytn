@@ -22,6 +22,7 @@ package backend
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"math/big"
@@ -95,13 +96,66 @@ var (
 	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new validator
 	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a validator.
 
-	inmemoryAddresses  = 20 // Number of recent addresses from ecrecover
-	recentAddresses, _ = lru.NewARC(inmemoryAddresses)
+	inmemoryBlocks             = 100 // Number of blocks to precompute validators' addresses
+	inmemoryValidatorsPerBlock = 30  // Approximate number of validators' addresses from ecrecover
+	recentAddresses, _         = lru.NewARC(inmemoryBlocks)
+	signatureAddresses, _      = lru.New(inmemoryBlocks * inmemoryValidatorsPerBlock)
 )
 
 // Author retrieves the Klaytn address of the account that minted the given block.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header)
+}
+
+// CanVerifyHeadersConcurrently returns true if concurrent header verification possible, otherwise returns false.
+func (sb *backend) CanVerifyHeadersConcurrently() bool {
+	return false
+}
+
+// PreprocessHeaderVerification prepare header verification for heavy computation before synchronous header verification such as ecrecover.
+func (sb *backend) PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error) {
+	abort := make(chan struct{})
+	results := make(chan error, inmemoryBlocks)
+	go func() {
+		for _, header := range headers {
+			err := sb.computeSignatureAddrs(header)
+
+			select {
+			case <-abort:
+				return
+			case results <- err:
+			}
+		}
+	}()
+	return abort, results
+}
+
+// computeSignatureAddrs computes the addresses of signer and validators and caches them.
+func (sb *backend) computeSignatureAddrs(header *types.Header) error {
+	_, err := ecrecover(header)
+	if err != nil {
+		return err
+	}
+
+	// Retrieve the signature from the header extra-data
+	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	if err != nil {
+		return err
+	}
+
+	proposalSeal := istanbulCore.PrepareCommittedSeal(header.Hash())
+	for _, seal := range istanbulExtra.CommittedSeal {
+		sealStr := hex.EncodeToString(seal)
+		if _, ok := signatureAddresses.Get(sealStr); ok {
+			continue
+		}
+		addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
+		if err != nil {
+			return err
+		}
+		signatureAddresses.Add(sealStr, addr)
+	}
+	return nil
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of a
@@ -248,14 +302,19 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	proposalSeal := istanbulCore.PrepareCommittedSeal(header.Hash())
 	// 1. Get committed seals from current header
 	for _, seal := range extra.CommittedSeal {
-		// 2. Get the original address by seal and parent block hash
-		addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
-		if err != nil {
-			return errInvalidSignature
+		sealStr := hex.EncodeToString(seal)
+		addr, ok := signatureAddresses.Get(sealStr)
+		if !ok {
+			// 2. Get the original address by seal and parent block hash
+			addr, err = istanbul.GetSignatureAddress(proposalSeal, seal)
+			if err != nil {
+				return errInvalidSignature
+			}
+			signatureAddresses.Add(sealStr, addr)
 		}
 		// Every validator can have only one seal. If more than one seals are signed by a
 		// validator, the validator cannot be found and errInvalidCommittedSeals is returned.
-		if validators.RemoveValidator(addr) {
+		if validators.RemoveValidator(addr.(common.Address)) {
 			validSeal += 1
 		} else {
 			return errInvalidCommittedSeals
