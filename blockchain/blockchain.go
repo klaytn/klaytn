@@ -1588,7 +1588,15 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		seals[i] = true
 	}
 
-	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
+	var (
+		abort   chan<- struct{}
+		results <-chan error
+	)
+	if bc.engine.CanVerifyHeadersConcurrently() {
+		abort, results = bc.engine.VerifyHeaders(bc, headers, seals)
+	} else {
+		abort, results = bc.engine.PreprocessHeaderVerification(headers)
+	}
 	defer close(abort)
 
 	// Start a parallel signature recovery (signer will fluke on fork transition, minimal perf loss)
@@ -1647,6 +1655,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		bstart := time.Now()
 
 		err := <-results
+		if !bc.engine.CanVerifyHeadersConcurrently() && err == nil {
+			err = bc.engine.VerifyHeader(bc, block.Header(), true)
+		}
+
 		if err == nil {
 			err = bc.validator.ValidateBody(block)
 		}
