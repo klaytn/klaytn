@@ -112,7 +112,7 @@ func (sb *backend) CanVerifyHeadersConcurrently() bool {
 	return false
 }
 
-// PreprocessHeaderVerification prepare header verification for heavy computation before synchronous header verification such as ecrecover.
+// PreprocessHeaderVerification prepares header verification for heavy computation before synchronous header verification such as ecrecover.
 func (sb *backend) PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, inmemoryBlocks)
@@ -151,7 +151,7 @@ func (sb *backend) computeSignatureAddrs(header *types.Header) error {
 		}
 		addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
 		if err != nil {
-			return err
+			return errInvalidSignature
 		}
 		signatureAddresses.Add(sealStr, addr)
 	}
