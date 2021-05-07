@@ -5,7 +5,7 @@
 # To checkout migration status, `tail -f logs-body.out`
 
 # BIN file
-KLAYTN_BIN=/Users/mini-admin/go/src/github.com/klaytn/klaytn/build/bin/ken
+KLAYTN_BIN=~/klaytn/bin/ken
 
 # Source DB
 SRC_DB_TYPE=LevelDB     # one of "LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3"
