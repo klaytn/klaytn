@@ -234,3 +234,12 @@ func StakingManagerUnsubscribe() {
 
 	stakingManager.chainHeadSub.Unsubscribe()
 }
+
+// SetTestStakingManagerWithStakingInfoCache is for testing purpose in order to mock staking manager.
+func SetTestStakingManagerWithStakingInfoCache(testInfo *StakingInfo) {
+	cache := newStakingInfoCache()
+	cache.add(testInfo)
+	stakingManager = &StakingManager{
+		stakingInfoCache: cache,
+	}
+}
