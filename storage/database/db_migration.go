@@ -96,7 +96,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 
 // StartDBMigration migrates a DB to another DB.
 // (e.g. LevelDB -> LevelDB, LevelDB -> BadgerDB, LevelDB -> DynamoDB)
-// Do not use db migration while a node is executing.
+// Do not migrate db while a node is executing.
 func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	// settings for quit signal from os
 	quit := make(chan struct{})
