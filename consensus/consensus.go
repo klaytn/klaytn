@@ -66,7 +66,7 @@ type Engine interface {
 	// CanVerifyHeadersConcurrently returns true if concurrent header verification possible, otherwise returns false.
 	CanVerifyHeadersConcurrently() bool
 
-	// PreprocessHeaderVerification prepare header verification for heavy computation before synchronous header verification such as ecrecover.
+	// PreprocessHeaderVerification prepares header verification for heavy computation before synchronous header verification such as ecrecover.
 	PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error)
 
 	// VerifyHeader checks whether a header conforms to the consensus rules of a

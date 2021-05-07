@@ -62,7 +62,7 @@ func (gxhash *Gxhash) CanVerifyHeadersConcurrently() bool {
 	return true
 }
 
-// PreprocessHeaderVerification prepare header verification for heavy computation before synchronous header verification such as ecrecover.
+// PreprocessHeaderVerification prepares header verification for heavy computation before synchronous header verification such as ecrecover.
 func (gxhash *Gxhash) PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error) {
 	panic("this method is not used for PoW engine")
 }

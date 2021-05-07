@@ -245,7 +245,7 @@ func (c *Clique) CanVerifyHeadersConcurrently() bool {
 	return true
 }
 
-// PreprocessHeaderVerification prepare header verification for heavy computation before synchronous header verification such as ecrecover.
+// PreprocessHeaderVerification prepares header verification for heavy computation before synchronous header verification such as ecrecover.
 func (c *Clique) PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error) {
 	panic("this method is not used for Clique engine")
 }
