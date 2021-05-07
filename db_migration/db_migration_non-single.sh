@@ -10,12 +10,12 @@ KLAYTN_BIN=/Users/mini-admin/go/src/github.com/klaytn/klaytn/build/bin/ken
 # Source DB
 SRC_DB_TYPE=LevelDB     # one of "LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3"
 SRC_DB_DIR=~/klaytn/data
-SRC_DB_SHARDS=4
+SRC_DB_SHARDS=4         # should be 2^x
 
 # Destination DB
 DST_DB_TYPE=LevelDB     # one of "LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3"
 DST_DB_DIR=~/klaytn/db_migration/dst # for only localDB ("LevelDB", "BadgerDB", "MemoryDB"). neglected config for "DynamoDBS3"
-DST_DB_SHARDS=8
+DST_DB_SHARDS=8         # should be 2^x
 
 ## For only DynamoDBS3
 DST_TABLENAME=db-migration      # for remoteDB ("DynamoDBS3"). neglected config for localDB
