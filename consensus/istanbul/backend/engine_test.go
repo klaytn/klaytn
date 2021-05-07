@@ -35,19 +35,75 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/stretchr/testify/assert"
 )
+
+// These variables are the global variables of the test blockchain.
+var (
+	nodeKeys []*ecdsa.PrivateKey
+	addrs    []common.Address
+)
+
+// These are the types in order to add a custom configuration of the test chain.
+// You may need to create a configuration type if necessary.
+type istanbulCompatibleBlock *big.Int
+type minimumStake *big.Int
+type stakingUpdateInterval uint64
+type proposerUpdateInterval uint64
+type proposerPolicy uint64
+
+// makeCommittedSeals returns a list of committed seals for the global variable nodeKeys.
+func makeCommittedSeals(hash common.Hash) [][]byte {
+	committedSeals := make([][]byte, len(nodeKeys))
+	hashData := crypto.Keccak256(core.PrepareCommittedSeal(hash))
+	for i, key := range nodeKeys {
+		sig, _ := crypto.Sign(hashData, key)
+		committedSeals[i] = make([]byte, types.IstanbulExtraSeal)
+		copy(committedSeals[i][:], sig)
+	}
+	return committedSeals
+}
 
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
-func newBlockChain(n int) (*blockchain.BlockChain, *backend) {
-	var nodeKeys = make([]*ecdsa.PrivateKey, n)
-	var addrs = make([]common.Address, n)
+func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
+	// generate a genesis block
+	genesis := blockchain.DefaultGenesisBlock()
+	genesis.Config = params.TestChainConfig
+	genesis.Timestamp = uint64(time.Now().Unix())
 
-	b := newTestBackend()
+	// force enable Istanbul engine and governance
+	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
+	genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	for _, item := range items {
+		switch v := item.(type) {
+		case istanbulCompatibleBlock:
+			genesis.Config.IstanbulCompatibleBlock = v
+		case proposerPolicy:
+			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
+		case minimumStake:
+			genesis.Config.Governance.Reward.MinimumStake = v
+		case stakingUpdateInterval:
+			genesis.Config.Governance.Reward.StakingUpdateInterval = uint64(v)
+		case proposerUpdateInterval:
+			genesis.Config.Governance.Reward.ProposerUpdateInterval = uint64(v)
+		}
+	}
+	nodeKeys = make([]*ecdsa.PrivateKey, n)
+	addrs = make([]common.Address, n)
+
+	var b *backend
+	if len(items) != 0 {
+		b = newTestBackendWithConfig(genesis.Config)
+	} else {
+		b = newTestBackend()
+	}
 
 	nodeKeys[0] = b.privateKey
 	addrs[0] = b.address
@@ -56,13 +112,6 @@ func newBlockChain(n int) (*blockchain.BlockChain, *backend) {
 		addrs[i] = crypto.PubkeyToAddress(nodeKeys[i].PublicKey)
 	}
 
-	// generate a genesis block
-	genesis := blockchain.DefaultGenesisBlock()
-	genesis.Config = params.TestChainConfig
-	genesis.Timestamp = uint64(time.Now().Unix())
-
-	// force enable Istanbul engine
-	genesis.Config.Istanbul = &params.IstanbulConfig{}
 	appendValidators(genesis, addrs)
 
 	genesis.MustCommit(b.db)
@@ -117,6 +166,28 @@ func makeBlock(chain *blockchain.BlockChain, engine *backend, parent *types.Bloc
 		panic(err)
 	}
 	return result
+}
+
+// makeBlockWithSeal creates a block with the proposer seal as well as all committed seals of validators.
+func makeBlockWithSeal(chain *blockchain.BlockChain, engine *backend, parent *types.Block) *types.Block {
+	blockWithoutSeal := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+
+	// add proposer seal for the block
+	block, err := engine.updateBlock(nil, blockWithoutSeal)
+	if err != nil {
+		panic(err)
+	}
+
+	// write validators committed seals to the block
+	header := block.Header()
+	committedSeals := makeCommittedSeals(block.Hash())
+	err = writeCommittedSeals(header, committedSeals)
+	if err != nil {
+		panic(err)
+	}
+	block = block.WithSeal(header)
+
+	return block
 }
 
 func makeBlockWithoutSeal(chain *blockchain.BlockChain, engine *backend, parent *types.Block) *types.Block {
@@ -504,5 +575,128 @@ func TestWriteCommittedSeals(t *testing.T) {
 	err = writeCommittedSeals(h, [][]byte{unexpectedCommittedSeal})
 	if err != errInvalidCommittedSeals {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidCommittedSeals)
+	}
+}
+
+func makeSnapshotTestConfigItems() []interface{} {
+	return []interface{}{
+		minimumStake(new(big.Int).SetUint64(5500000)),
+		stakingUpdateInterval(1),
+		proposerUpdateInterval(1),
+		proposerPolicy(params.WeightedRandom),
+	}
+}
+
+func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts []uint64) *reward.StakingInfo {
+	stakingInfo := &reward.StakingInfo{
+		BlockNum: blockNumber,
+	}
+	for idx, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+
+		pk, _ := crypto.GenerateKey()
+		rewardAddr := crypto.PubkeyToAddress(pk.PublicKey)
+
+		stakingInfo.CouncilNodeAddrs = append(stakingInfo.CouncilNodeAddrs, addr)
+		stakingInfo.CouncilStakingAmounts = append(stakingInfo.CouncilStakingAmounts, amounts[idx])
+		stakingInfo.CouncilRewardAddrs = append(stakingInfo.CouncilRewardAddrs, rewardAddr)
+	}
+	return stakingInfo
+}
+
+func TestSnapshot(t *testing.T) {
+	type testcase struct {
+		stakingAmounts      []uint64 // test staking amounts of each validator
+		isIstanbulComatible bool     // whether or not if the inserted block is istanbul compatible
+		expectedValidators  int      // the number of expected validators
+		expectedDemoted     int      // the number of expected demoted validators
+	}
+
+	testcases := []testcase{
+		// The following testcases are the ones before istanbul incompatible change
+		{
+			[]uint64{5000000, 5000000, 5000000, 5000000},
+			false,
+			4,
+			0,
+		},
+		{
+			[]uint64{5000000, 5000000, 5000000, 6000000},
+			false,
+			4,
+			0,
+		},
+		{
+			[]uint64{5000000, 5000000, 6000000, 6000000},
+			false,
+			4,
+			0,
+		},
+		{
+			[]uint64{5000000, 6000000, 6000000, 6000000},
+			false,
+			4,
+			0,
+		},
+		{
+			[]uint64{6000000, 6000000, 6000000, 6000000},
+			false,
+			4,
+			0,
+		},
+		// The following testcases are the ones after istanbul incompatible change
+		{
+			[]uint64{5000000, 5000000, 5000000, 5000000},
+			true,
+			4,
+			0,
+		},
+		{
+			[]uint64{5000000, 5000000, 5000000, 6000000},
+			true,
+			1,
+			3,
+		},
+		{
+			[]uint64{5000000, 5000000, 6000000, 6000000},
+			true,
+			2,
+			2,
+		},
+		{
+			[]uint64{5000000, 6000000, 6000000, 6000000},
+			true,
+			3,
+			1,
+		},
+		{
+			[]uint64{6000000, 6000000, 6000000, 6000000},
+			true,
+			4,
+			0,
+		},
+	}
+
+	testNum := 4
+	configItems := makeSnapshotTestConfigItems()
+	for _, tc := range testcases {
+		if tc.isIstanbulComatible {
+			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+		}
+		chain, engine := newBlockChain(testNum, configItems...)
+
+		stakingInfo := makeFakeStakingInfo(0, nodeKeys, tc.stakingAmounts)
+		reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+
+		block := makeBlockWithSeal(chain, engine, chain.Genesis())
+		_, err := chain.InsertChain(types.Blocks{block})
+		assert.NoError(t, err)
+
+		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+		assert.NoError(t, err)
+		assert.Equal(t, tc.expectedValidators, len(snap.ValSet.List()))
+		assert.Equal(t, tc.expectedDemoted, len(snap.ValSet.DemotedList()))
+
+		engine.Stop()
 	}
 }

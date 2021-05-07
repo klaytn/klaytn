@@ -865,11 +865,16 @@ func checkInCommitteeBlocks(seq int64, round int64) bool {
 }
 
 func newTestBackend() (b *backend) {
+	return newTestBackendWithConfig(getTestConfig())
+}
+
+func newTestBackendWithConfig(chainConfig *params.ChainConfig) (b *backend) {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 	key, _ := crypto.GenerateKey()
 	istanbul.DefaultConfig.ProposerPolicy = istanbul.WeightedRandom
+	gov := governance.NewGovernanceInitialize(chainConfig, dbm)
 
-	backend := New(getTestRewards()[0], istanbul.DefaultConfig, key, dbm, getGovernance(dbm), common.CONSENSUSNODE).(*backend)
+	backend := New(getTestRewards()[0], istanbul.DefaultConfig, key, dbm, gov, common.CONSENSUSNODE).(*backend)
 	return backend
 }
 
