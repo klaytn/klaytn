@@ -172,11 +172,11 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	cnConf.NumStateTrieShards = 4
 
 	if err = fullNode.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, cnConf) }); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to register Klaytn protocol")
+		return nil, nil, errors.WithMessage(err, "failed to register Klaytn protocol")
 	}
 
 	if err = fullNode.Start(); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to start test fullNode")
+		return nil, nil, errors.WithMessage(err, "failed to start test fullNode")
 	}
 
 	if err := fullNode.Service(&klaytnNode); err != nil {
