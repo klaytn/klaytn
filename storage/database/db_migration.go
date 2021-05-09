@@ -54,7 +54,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 		// write fetched keys and values to DB
 		// If dstDB is dynamoDB, Put will Write when the number items reach dynamoBatchSize.
 		if err := dstBatch.Put(key, val); err != nil {
-			return errors.Wrap(err, "failed to put batch")
+			return errors.WithMessage(err, "failed to put batch")
 		}
 
 		if dstBatch.ValueSize() > IdealBatchSize {
@@ -80,7 +80,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 	}
 
 	if err := dstBatch.Write(); err != nil {
-		return errors.Wrap(err, "failed to write items")
+		return errors.WithMessage(err, "failed to write items")
 	}
 	dstBatch.Reset()
 
@@ -88,7 +88,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 
 	srcIter.Release()
 	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
-		return errors.Wrap(err, "failed to iterate")
+		return errors.WithMessage(err, "failed to iterate")
 	}
 
 	return nil
