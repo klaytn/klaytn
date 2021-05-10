@@ -98,9 +98,22 @@ var (
 
 	inmemoryBlocks             = 2048 // Number of blocks to precompute validators' addresses
 	inmemoryValidatorsPerBlock = 30   // Approximate number of validators' addresses from ecrecover
-	recentAddresses, _         = lru.NewARC(inmemoryBlocks)
-	signatureAddresses, _      = lru.New(inmemoryBlocks * inmemoryValidatorsPerBlock)
+	signatureAddresses, _      = lru.NewARC(inmemoryBlocks * inmemoryValidatorsPerBlock)
 )
+
+// cacheSignatureAddresses extracts the address from the given data and signature and cache them for later usage.
+func cacheSignatureAddresses(data []byte, sig []byte) (common.Address, error) {
+	sigStr := hex.EncodeToString(sig)
+	if addr, ok := signatureAddresses.Get(sigStr); ok {
+		return addr.(common.Address), nil
+	}
+	addr, err := istanbul.GetSignatureAddress(data, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+	signatureAddresses.Add(sigStr, addr)
+	return addr, err
+}
 
 // Author retrieves the Klaytn address of the account that minted the given block.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
@@ -145,15 +158,10 @@ func (sb *backend) computeSignatureAddrs(header *types.Header) error {
 
 	proposalSeal := istanbulCore.PrepareCommittedSeal(header.Hash())
 	for _, seal := range istanbulExtra.CommittedSeal {
-		sealStr := hex.EncodeToString(seal)
-		if _, ok := signatureAddresses.Get(sealStr); ok {
-			continue
-		}
-		addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
+		_, err := cacheSignatureAddresses(proposalSeal, seal)
 		if err != nil {
 			return errInvalidSignature
 		}
-		signatureAddresses.Add(sealStr, addr)
 	}
 	return nil
 }
@@ -302,19 +310,14 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	proposalSeal := istanbulCore.PrepareCommittedSeal(header.Hash())
 	// 1. Get committed seals from current header
 	for _, seal := range extra.CommittedSeal {
-		sealStr := hex.EncodeToString(seal)
-		addr, ok := signatureAddresses.Get(sealStr)
-		if !ok {
-			// 2. Get the original address by seal and parent block hash
-			addr, err = istanbul.GetSignatureAddress(proposalSeal, seal)
-			if err != nil {
-				return errInvalidSignature
-			}
-			signatureAddresses.Add(sealStr, addr)
+		// 2. Get the original address by seal and parent block hash
+		addr, err := cacheSignatureAddresses(proposalSeal, seal)
+		if err != nil {
+			return errInvalidSignature
 		}
 		// Every validator can have only one seal. If more than one seals are signed by a
 		// validator, the validator cannot be found and errInvalidCommittedSeals is returned.
-		if validators.RemoveValidator(addr.(common.Address)) {
+		if validators.RemoveValidator(addr) {
 			validSeal += 1
 		} else {
 			return errInvalidCommittedSeals
@@ -732,22 +735,16 @@ func sigHash(header *types.Header) (hash common.Hash) {
 
 // ecrecover extracts the Klaytn account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
-	hash := header.Hash()
-	if addr, ok := recentAddresses.Get(hash); ok {
-		return addr.(common.Address), nil
-	}
-
 	// Retrieve the signature from the header extra-data
 	istanbulExtra, err := types.ExtractIstanbulExtra(header)
 	if err != nil {
 		return common.Address{}, err
 	}
-
-	addr, err := istanbul.GetSignatureAddress(sigHash(header).Bytes(), istanbulExtra.Seal)
+	addr, err := cacheSignatureAddresses(sigHash(header).Bytes(), istanbulExtra.Seal)
 	if err != nil {
 		return addr, err
 	}
-	recentAddresses.Add(hash, addr)
+
 	return addr, nil
 }
 

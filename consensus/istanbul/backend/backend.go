@@ -356,7 +356,7 @@ func (sb *backend) Sign(data []byte) ([]byte, error) {
 
 // CheckSignature implements istanbul.Backend.CheckSignature
 func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byte) error {
-	signer, err := istanbul.GetSignatureAddress(data, sig)
+	signer, err := cacheSignatureAddresses(data, sig)
 	if err != nil {
 		logger.Error("Failed to get signer address", "err", err)
 		return err
