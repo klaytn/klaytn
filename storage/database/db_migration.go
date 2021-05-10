@@ -27,8 +27,7 @@ import (
 )
 
 const (
-	dbMigrationFetchNum = 500
-	reportCycle         = dbMigrationFetchNum * 100
+	reportCycle = IdealBatchSize * 20
 )
 
 // copyDB migrates a DB to another DB.
@@ -65,7 +64,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 		}
 
 		// make a report
-		if fetched%(IdealBatchSize*20) == 0 {
+		if fetched%(reportCycle) == 0 {
 			logger.Info("DB migrated",
 				"db", name, "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
 		}

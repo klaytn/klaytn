@@ -30,6 +30,8 @@ import (
 
 var errKeyLengthZero = fmt.Errorf("database key for sharded database should be greater than 0")
 
+const numShardsLimit = 256
+
 type shardedDB struct {
 	fn        string
 	shards    []Database
@@ -52,8 +54,6 @@ type sdbBatchResult struct {
 // newShardedDB creates database with numShards shards, or partitions.
 // The type of database is specified DBConfig.DBType.
 func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, error) {
-	const numShardsLimit = 256
-
 	if numShards == 0 {
 		logger.Crit("numShards should be greater than 0!")
 	}
