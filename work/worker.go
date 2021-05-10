@@ -655,7 +655,6 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	}()
 
 	vmConfig := &vm.Config{
-		JumpTable:                vm.ConstantinopleInstructionSet,
 		RunningEVM:               chEVM,
 		UseOpcodeComputationCost: true,
 	}
