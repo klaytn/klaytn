@@ -7,46 +7,59 @@ import (
 )
 
 var testCaseWithBinaryCodeFormat = []struct {
-	cf                            CodeFormat
+	cf                            CodeInfo
+	getCodeFormatExpectVal        CodeFormat
+	stringExpectVal               string
 	validateExpectVal             bool
 	isDeployedIstanbulHFExpectVal bool
-	stringExpectVal               string
+	getVmVersionExpectVal         VmVersion
 }{
-	{0b00000000, true, false, "CodeFormatEVM"},
-	{0b10000000, true, true, "CodeFormatEVM"},
-	{0b00000001, false, false, "UndefinedCodeFormat"},
-	{0b10000001, false, true, "UndefinedCodeFormat"},
+	{0b00000000, CodeFormatEVM, "CodeFormatEVM", true, false, VmVersionConstantinople},
+	{0b00010000, CodeFormatEVM, "CodeFormatEVM", true, true, VmVersionIstanbul},
+	{0b00000001, CodeFormatLast, "UndefinedCodeFormat", false, false, VmVersionConstantinople},
+	{0b00010001, CodeFormatLast, "UndefinedCodeFormat", false, true, VmVersionIstanbul},
+}
+
+func TestGetCodeFormat(t *testing.T) {
+	for _, tc := range testCaseWithBinaryCodeFormat {
+		assert.Equal(t, tc.getCodeFormatExpectVal, tc.cf.GetCodeFormat())
+	}
 }
 
 func TestString(t *testing.T) {
 	for _, tc := range testCaseWithBinaryCodeFormat {
-		assert.Equal(t, tc.stringExpectVal, tc.cf.String())
+		assert.Equal(t, tc.stringExpectVal, tc.cf.GetCodeFormat().String())
 	}
 }
 
 func TestValidate(t *testing.T) {
 	for _, tc := range testCaseWithBinaryCodeFormat {
-		assert.Equal(t, tc.validateExpectVal, tc.cf.Validate())
+		assert.Equal(t, tc.validateExpectVal, tc.cf.GetCodeFormat().Validate())
 	}
 }
 
-func TestAfterIstanbulHF(t *testing.T) {
+func TestIsDeployedAfterHF(t *testing.T) {
 	for _, tc := range testCaseWithBinaryCodeFormat {
-		assert.Equal(t, tc.isDeployedIstanbulHFExpectVal, tc.cf.IsDeployedAfterIstanbulHF())
+		assert.Equal(t, tc.isDeployedIstanbulHFExpectVal, tc.cf.GetVmVersion().IsDeployedAfterHF(VmVersionIstanbul))
 	}
 }
 
-func TestSetIstanbulHFField(t *testing.T) {
+func TestGetVmVersion(t *testing.T) {
+	for _, tc := range testCaseWithBinaryCodeFormat {
+		assert.Equal(t, tc.getVmVersionExpectVal, tc.cf.GetVmVersion())
+	}
+}
+
+func TestSetVmVersion(t *testing.T) {
 	testCaseSetIstanbulHFField := []struct {
 		cf                        CodeFormat
 		isDeployedAfterIstanbulHF bool
-		expectCf                  CodeFormat
+		expectCi                  CodeInfo
 	}{
 		{CodeFormatEVM, false, 0b00000000},
-		{CodeFormatEVM, true, 0b10000000},
+		{CodeFormatEVM, true, 0b00010000},
 	}
 	for _, tc := range testCaseSetIstanbulHFField {
-		tc.cf.SetIstanbulHFField(tc.isDeployedAfterIstanbulHF)
-		assert.Equal(t, tc.expectCf, tc.cf)
+		assert.Equal(t, tc.expectCi, tc.cf.GenerateCodeInfo(Rules{IsIstanbul: tc.isDeployedAfterIstanbulHF}))
 	}
 }

@@ -146,28 +146,37 @@ func GetMaximumExtraDataSize() uint64 {
 	return BFTMaximumExtraDataSize
 }
 
-// As istanbulHF items are brought to klaytn code, 0x09-0x0b contracts are moved to 0x3fd-0x3ff.
-// For this reason, contracts deployed before HF use old precompiledContract map so it can work even after HF.
-// To Record the deployment time, the MSB of CodeFormat is changed to a istanbulHF field.
-// case 1. CodeFormat [0 0 0 0 0 0 0 0]. MSB is 0, so the contract is deployed before istanbulHF.
-// case 2. CodeFormat [1 0 0 0 0 0 0 0]. MSB is 1, so the contract is deployed after istanbulHF.
-
-type CodeFormat uint8
+// CodeInfo consists of 8 bits, and has information of the contract code.
+// Originally, codeInfo only contains codeFormat information(interpreter version), but now it is divided into two parts.
+// First four bit contains the deployment time (ex. 0x00(constantinople), 0x10(istanbul,...)), so it is called vmVersion.
+// Last four bit contains the interpreter version (ex. 0x00(EVM), 0x01(EWASM)), so it is called codeFormat.
+type CodeInfo uint8
 
 const (
-	IstanbulHFFieldZeroCF = 127 // 0b01111111: hardfork field value is zero, but codeFormat field values are one
-	CodeFormatFieldZeroCF = 128 // 0b10000000: hardfork field value is one, but codeFormat field values are zero
+	// codeFormatBitMask filters only the codeFormat. It means the interpreter version used by the contract.
+	// Mask result 1. [x x x x 0 0 0 1]. The contract uses EVM interpreter.
+	codeFormatBitMask = 0b00001111
+
+	// vmVersionBitMask filters only the vmVersion. It means deployment time of the contract.
+	// Mask result 1. [0 0 0 0 x x x x]. The contract is deployed at constantinople
+	// Mask result 2. [0 0 0 1 x x x x]. The contract is deployed after istanbulHF
+	vmVersionBitMask = 0b11110000
 )
+
+// Supporting CodeFormat
+type CodeFormat CodeInfo
 
 const (
 	CodeFormatEVM CodeFormat = iota
 	CodeFormatLast
 )
 
-func (t CodeFormat) String() string {
-	format := t & IstanbulHFFieldZeroCF // Reset IstanbulHF field, set to 0
+func (t CodeInfo) GetCodeFormat() CodeFormat {
+	return CodeFormat(t & codeFormatBitMask)
+}
 
-	switch format {
+func (t CodeFormat) String() string {
+	switch t {
 	case CodeFormatEVM:
 		return "CodeFormatEVM"
 	}
@@ -176,24 +185,33 @@ func (t CodeFormat) String() string {
 }
 
 func (t CodeFormat) Validate() bool {
-	format := t & IstanbulHFFieldZeroCF // Reset IstanbulHF field, set to 0
-
-	if format < CodeFormatLast {
+	if t < CodeFormatLast {
 		return true
 	}
 	return false
 }
 
-func (t CodeFormat) IsDeployedAfterIstanbulHF() bool {
-	if t&CodeFormatFieldZeroCF == 0 {
-		return false
-	} else {
-		return true
+func (t CodeFormat) GenerateCodeInfo(r Rules) CodeInfo {
+	switch {
+	case r.IsIstanbul:
+		return CodeInfo(t | VmVersionIstanbul)
+	default:
+		return CodeInfo(t)
 	}
 }
 
-func (t *CodeFormat) SetIstanbulHFField(isIstanbul bool) {
-	if isIstanbul {
-		*t |= CodeFormatFieldZeroCF
-	}
+// Supporting VmVersion
+type VmVersion CodeInfo
+
+const (
+	VmVersionConstantinople VmVersion = 0b00000000 // Deployed at Constantinople
+	VmVersionIstanbul                 = 0b00010000 // Deployed at Istanbul, ...(later HFs would be added)
+)
+
+func (t CodeInfo) GetVmVersion() VmVersion {
+	return VmVersion(t & vmVersionBitMask)
+}
+
+func (t VmVersion) IsDeployedAfterHF(hardFork VmVersion) bool {
+	return hardFork <= t
 }

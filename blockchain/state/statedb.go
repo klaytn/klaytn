@@ -21,6 +21,7 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -319,26 +320,24 @@ func (self *StateDB) IsValidCodeFormat(addr common.Address) bool {
 	if stateObject != nil {
 		pa := account.GetProgramAccount(stateObject.account)
 		if pa != nil {
-			return pa.GetCodeFormat().Validate()
+			return pa.GetCodeInfo().GetCodeFormat().Validate()
 		}
 		return false
 	}
 	return false
 }
 
-// GetCodeFormat can return params.CodeFormatLast(invalid codeFormat value)
-// when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
-// It can be validated with CodeFormat.Validate().
-func (self *StateDB) GetCodeFormat(addr common.Address) params.CodeFormat {
+// GetCodeInfo return error when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
+func (self *StateDB) GetCodeInfo(addr common.Address) (params.CodeInfo, error) {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		pa := account.GetProgramAccount(stateObject.account)
 		if pa != nil {
-			return pa.GetCodeFormat()
+			return pa.GetCodeInfo(), nil
 		}
-		return params.CodeFormatLast
+		return params.CodeInfo(0), errors.New("trying to get codeInfo from not a program account")
 	}
-	return params.CodeFormatLast
+	return params.CodeInfo(0), errors.New("account is not exists")
 }
 
 func (self *StateDB) GetKey(addr common.Address) accountkey.AccountKey {
@@ -628,16 +627,16 @@ func (self *StateDB) CreateEOA(addr common.Address, humanReadable bool, key acco
 	}
 }
 
-func (self *StateDB) CreateSmartContractAccount(addr common.Address, format params.CodeFormat) {
-	self.CreateSmartContractAccountWithKey(addr, false, accountkey.NewAccountKeyFail(), format)
+func (self *StateDB) CreateSmartContractAccount(addr common.Address, info params.CodeInfo) {
+	self.CreateSmartContractAccountWithKey(addr, false, accountkey.NewAccountKeyFail(), info)
 }
 
-func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat) {
+func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, info params.CodeInfo) {
 	values := map[account.AccountValueKeyType]interface{}{
 		account.AccountValueKeyNonce:         uint64(1),
 		account.AccountValueKeyHumanReadable: humanReadable,
 		account.AccountValueKeyAccountKey:    key,
-		account.AccountValueKeyCodeFormat:    format,
+		account.AccountValueKeyCodeInfo:      info,
 	}
 	new, prev := self.createObjectWithMap(addr, account.SmartContractAccountType, values)
 	if prev != nil {

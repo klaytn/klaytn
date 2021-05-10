@@ -230,7 +230,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		}
 		// create an account object of the enabled precompiled address if not exist.
 		if !evm.StateDB.Exist(addr) {
-			evm.StateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM)
+			evm.StateDB.CreateSmartContractAccount(addr, params.CodeInfo(0))
 		}
 	}
 
@@ -452,8 +452,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
 	//   because the account key is set to AccountKeyFail by default.
 	//   Need to make a decision of the key type.
-	codeFormat.SetIstanbulHFField(evm.chainRules.IsIstanbul)
-	evm.StateDB.CreateSmartContractAccountWithKey(address, humanReadable, accountkey.NewAccountKeyFail(), codeFormat)
+	evm.StateDB.CreateSmartContractAccountWithKey(address, humanReadable, accountkey.NewAccountKeyFail(), codeFormat.GenerateCodeInfo(evm.chainRules))
 	evm.StateDB.SetNonce(address, 1)
 	if value.Sign() != 0 {
 		evm.Transfer(evm.StateDB, caller.Address(), address, value)
@@ -545,7 +544,9 @@ func (evm *EVM) GetPrecompiledContractMap(caller common.Address) map[common.Addr
 		// if contract(caller) is deployed before istanbul, use the old precompiled contract set (use constantinople)
 		//      (gas price policy also follows constantinople rules)
 		// Without these lines, contracts that are deployed before istanbul and uses 0x09-0x0b won't work properly.
-		if evm.StateDB.GetCodeFormat(caller).IsDeployedAfterIstanbulHF() {
+		if codeInfo, err := evm.StateDB.GetCodeInfo(caller); err != nil {
+			logger.Error("error occurred when get codeInfo at getPrecompiledContractMap", err)
+		} else if codeInfo.GetVmVersion().IsDeployedAfterHF(params.VmVersionIstanbul) {
 			return PrecompiledContractsIstanbul
 		}
 		return PrecompiledContractsConstantinople
