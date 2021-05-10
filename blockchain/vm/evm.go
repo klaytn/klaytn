@@ -539,17 +539,40 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 }
 
 func (evm *EVM) GetPrecompiledContractMap(caller common.Address) map[common.Address]PrecompiledContract {
+	var (
+		currentBlockVMVersion params.VmVersion
+		contractVmVersion     params.VmVersion
+	)
+
+	// If new HF is added, please add new case below
 	switch {
 	case evm.chainRules.IsIstanbul:
-		// if contract(caller) is deployed before istanbul, use the old precompiled contract set (use constantinople)
-		//      (gas price policy also follows constantinople rules)
-		// Without these lines, contracts that are deployed before istanbul and uses 0x09-0x0b won't work properly.
-		if codeInfo, err := evm.StateDB.GetCodeInfo(caller); err != nil {
-			logger.Error("error occurred when get codeInfo at getPrecompiledContractMap", err)
-		} else if codeInfo.GetVmVersion().IsDeployedAfterHF(params.VmVersionIstanbul) {
-			return PrecompiledContractsIstanbul
+		currentBlockVMVersion = params.VmVersionIstanbul
+	default:
+		currentBlockVMVersion = params.VmVersionConstantinople
+	}
+	if codeInfo, err := evm.StateDB.GetCodeInfo(caller); err != nil {
+		logger.Error("error occurred", err, "this line should not be executed")
+	} else {
+		contractVmVersion = codeInfo.GetVmVersion()
+	}
+
+	// There are contracts which uses the old precompiled contract map (use the map at deployment time)
+	//      (gas price policy also follows old map's rule)
+	if contractVmVersion < currentBlockVMVersion {
+		// If new "VmVersion of CodeInfo" is added, please add new case below
+		switch contractVmVersion {
+		default:
+			// Without this version, contracts that are deployed before istanbul and uses 0x09-0x0b won't work properly.
+			return PrecompiledContractsConstantinople
 		}
-		return PrecompiledContractsConstantinople
+	}
+
+	// There are contracts which uses latest precompiled contract map (regardless of deployment time)
+	// If new HF is added, please add new case below
+	switch {
+	case evm.chainRules.IsIstanbul:
+		return PrecompiledContractsIstanbul
 	default:
 		return PrecompiledContractsConstantinople
 	}

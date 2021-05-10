@@ -211,7 +211,3 @@ const (
 func (t CodeInfo) GetVmVersion() VmVersion {
 	return VmVersion(t & vmVersionBitMask)
 }
-
-func (t VmVersion) IsDeployedAfterHF(hardFork VmVersion) bool {
-	return hardFork <= t
-}
