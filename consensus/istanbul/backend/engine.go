@@ -96,8 +96,8 @@ var (
 	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new validator
 	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a validator.
 
-	inmemoryBlocks             = 100 // Number of blocks to precompute validators' addresses
-	inmemoryValidatorsPerBlock = 30  // Approximate number of validators' addresses from ecrecover
+	inmemoryBlocks             = 2048 // Number of blocks to precompute validators' addresses
+	inmemoryValidatorsPerBlock = 30   // Approximate number of validators' addresses from ecrecover
 	recentAddresses, _         = lru.NewARC(inmemoryBlocks)
 	signatureAddresses, _      = lru.New(inmemoryBlocks * inmemoryValidatorsPerBlock)
 )
