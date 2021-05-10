@@ -77,7 +77,7 @@ func TestPrecompiledContractAddressMapping(t *testing.T) {
 		// Make StateDB
 		callerAddr := common.BytesToAddress([]byte("contract"))
 		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
-		statedb.CreateSmartContractAccount(callerAddr, params.CodeFormatEVM.GenerateCodeInfo(params.Rules{IsIstanbul: tc.isDeployedAfterIstanbulHF}))
+		statedb.CreateSmartContractAccount(callerAddr, params.CodeFormatEVM, params.Rules{IsIstanbul: tc.isDeployedAfterIstanbulHF})
 
 		// Make EVM environment
 		vmctx := Context{
