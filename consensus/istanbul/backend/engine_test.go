@@ -612,10 +612,10 @@ func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts [
 
 func TestSnapshot(t *testing.T) {
 	type testcase struct {
-		stakingAmounts      []uint64 // test staking amounts of each validator
-		isIstanbulComatible bool     // whether or not if the inserted block is istanbul compatible
-		expectedValidators  int      // the number of expected validators
-		expectedDemoted     int      // the number of expected demoted validators
+		stakingAmounts        []uint64 // test staking amounts of each validator
+		isIstanbulCompatible  bool     // whether or not if the inserted block is istanbul compatible
+		expectedValidatorsNum int      // the number of expected validators
+		expectedDemotedNum    int      // the number of expected demoted validators
 	}
 
 	testcases := []testcase{
@@ -686,7 +686,7 @@ func TestSnapshot(t *testing.T) {
 	testNum := 4
 	configItems := makeSnapshotTestConfigItems()
 	for _, tc := range testcases {
-		if tc.isIstanbulComatible {
+		if tc.isIstanbulCompatible {
 			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 		}
 		chain, engine := newBlockChain(testNum, configItems...)
@@ -700,8 +700,8 @@ func TestSnapshot(t *testing.T) {
 
 		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
 		assert.NoError(t, err)
-		assert.Equal(t, tc.expectedValidators, len(snap.ValSet.List()))
-		assert.Equal(t, tc.expectedDemoted, len(snap.ValSet.DemotedList()))
+		assert.Equal(t, tc.expectedValidatorsNum, len(snap.ValSet.List()))
+		assert.Equal(t, tc.expectedDemotedNum, len(snap.ValSet.DemotedList()))
 
 		engine.Stop()
 	}
