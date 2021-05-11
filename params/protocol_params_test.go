@@ -9,14 +9,14 @@ import (
 var testCaseWithBinaryCodeFormat = []struct {
 	cf                     CodeInfo
 	getCodeFormatExpectVal CodeFormat
-	stringExpectVal        string
 	validateExpectVal      bool
 	getVmVersionExpectVal  VmVersion
+	stringExpectVal        string
 }{
-	{0b00000000, CodeFormatEVM, "CodeFormatEVM", true, VmVersionConstantinople},
-	{0b00010000, CodeFormatEVM, "CodeFormatEVM", true, VmVersionIstanbul},
-	{0b00000001, CodeFormatLast, "UndefinedCodeFormat", false, VmVersionConstantinople},
-	{0b00010001, CodeFormatLast, "UndefinedCodeFormat", false, VmVersionIstanbul},
+	{0b00000000, CodeFormatEVM, true, VmVersionConstantinople, "CodeFormatEVM"},
+	{0b00010000, CodeFormatEVM, true, VmVersionIstanbul, "CodeFormatEVM"},
+	{0b00000001, CodeFormatLast, false, VmVersionConstantinople, "UndefinedCodeFormat"},
+	{0b00010001, CodeFormatLast, false, VmVersionIstanbul, "UndefinedCodeFormat"},
 }
 
 func TestGetCodeFormat(t *testing.T) {
