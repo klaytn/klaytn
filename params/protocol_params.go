@@ -58,12 +58,17 @@ const (
 	LogTopicGas           uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.   // G_logtopic
 	TxDataNonZeroGas      uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. // G_txdatanonzero
 
-	CallGas         uint64 = 700 // Static portion of gas for CALL-derivates after EIP 150 (Tangerine)
-	BalanceGas      uint64 = 400 // The cost of a BALANCE operation after EIP 150 (Tangerine)
-	ExtcodeSizeGas  uint64 = 700 // Cost of EXTCODESIZE after EIP 150 (Tangerine)
-	SloadGas        uint64 = 200
-	ExtcodeHashGas  uint64 = 400  // Cost of EXTCODEHASH (introduced in Constantinople)
+	CallGas         uint64 = 700  // Static portion of gas for CALL-derivates after EIP 150 (Tangerine)
+	ExtcodeSizeGas  uint64 = 700  // Cost of EXTCODESIZE after EIP 150 (Tangerine)
 	SelfdestructGas uint64 = 5000 // Cost of SELFDESTRUCT post EIP 150 (Tangerine)
+
+	// Istanbul version of BalanceGas, SloadGas, ExtcodeHash is added.
+	BalanceGasEIP150             uint64 = 400 // Cost of BALANCE     before EIP 1884
+	BalanceGasEIP1884            uint64 = 700 // Cost of BALANCE     after  EIP 1884 (part of Istanbul)
+	SloadGasEIP150               uint64 = 200 // Cost of SLOAD       before EIP 1884
+	SloadGasEIP1884              uint64 = 800 // Cost of SLOAD       after  EIP 1884 (part of Istanbul)
+	ExtcodeHashGasConstantinople uint64 = 400 // Cost of EXTCODEHASH before EIP 1884
+	ExtcodeHashGasEIP1884        uint64 = 700 // Cost of EXTCODEHASH after  EIP 1884 (part in Istanbul)
 
 	// EXP has a dynamic portion depending on the size of the exponent
 	// was set to 10 in Frontier, was raised to 50 during Eip158 (Spurious Dragon)

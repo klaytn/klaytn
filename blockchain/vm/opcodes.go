@@ -103,7 +103,8 @@ const (
 	NUMBER
 	DIFFICULTY
 	GASLIMIT
-	CHAINID OpCode = 0x46
+	CHAINID     OpCode = 0x46
+	SELFBALANCE OpCode = 0x47
 )
 
 // 0x50 range - 'storage' and execution.
@@ -274,12 +275,14 @@ var opCodeToString = map[OpCode]string{
 	EXTCODEHASH:    "EXTCODEHASH",
 
 	// 0x40 range - block operations.
-	BLOCKHASH:  "BLOCKHASH",
-	COINBASE:   "COINBASE",
-	TIMESTAMP:  "TIMESTAMP",
-	NUMBER:     "NUMBER",
-	DIFFICULTY: "DIFFICULTY",
-	GASLIMIT:   "GASLIMIT",
+	BLOCKHASH:   "BLOCKHASH",
+	COINBASE:    "COINBASE",
+	TIMESTAMP:   "TIMESTAMP",
+	NUMBER:      "NUMBER",
+	DIFFICULTY:  "DIFFICULTY",
+	GASLIMIT:    "GASLIMIT",
+	CHAINID:     "CHAINID",
+	SELFBALANCE: "SELFBALANCE",
 
 	// 0x50 range - 'storage' and execution.
 	POP: "POP",
@@ -448,6 +451,7 @@ var stringToOp = map[string]OpCode{
 	"NUMBER":         NUMBER,
 	"DIFFICULTY":     DIFFICULTY,
 	"GASLIMIT":       GASLIMIT,
+	"SELFBALANCE":    SELFBALANCE,
 	"POP":            POP,
 	"MLOAD":          MLOAD,
 	"MSTORE":         MSTORE,
