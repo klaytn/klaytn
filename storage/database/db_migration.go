@@ -64,7 +64,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 		}
 
 		// make a report
-		if fetched%(reportCycle) == 0 {
+		if fetched%reportCycle == 0 {
 			logger.Info("DB migrated",
 				"db", name, "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
 		}
