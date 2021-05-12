@@ -414,7 +414,6 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		return nil, err
 	}
 
-	tx.validatedIntrinsicGas = intrinsicGas + gasFrom
 	tx.checkNonce = true
 
 	if tx.IsFeeDelegatedTransaction() {
@@ -423,7 +422,9 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 			return nil, err
 		}
 
-		tx.validatedIntrinsicGas += gasFeePayer
+		tx.validatedIntrinsicGas = intrinsicGas + gasFrom + gasFeePayer
+	} else {
+		tx.validatedIntrinsicGas = intrinsicGas + gasFrom
 	}
 
 	return tx, err
