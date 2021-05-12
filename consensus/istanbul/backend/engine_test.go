@@ -580,7 +580,6 @@ func TestWriteCommittedSeals(t *testing.T) {
 
 func makeSnapshotTestConfigItems() []interface{} {
 	return []interface{}{
-		minimumStake(new(big.Int).SetUint64(5500000)),
 		stakingUpdateInterval(1),
 		proposerUpdateInterval(1),
 		proposerPolicy(params.WeightedRandom),
@@ -602,6 +601,24 @@ func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts [
 		stakingInfo.CouncilRewardAddrs = append(stakingInfo.CouncilRewardAddrs, rewardAddr)
 	}
 	return stakingInfo
+}
+
+func checkInValidators(target common.Address, list []istanbul.Validator) bool {
+	for _, val := range list {
+		if target == val.Address() {
+			return true
+		}
+	}
+	return false
+}
+
+func isAllDemoted(minimumStaking uint64, stakingAmounts []uint64) bool {
+	for _, val := range stakingAmounts {
+		if val >= minimumStaking {
+			return false
+		}
+	}
+	return true
 }
 
 func TestSnapshot(t *testing.T) {
@@ -675,10 +692,18 @@ func TestSnapshot(t *testing.T) {
 			4,
 			0,
 		},
+		{
+			[]uint64{5500001, 5500000, 5499999, 0},
+			true,
+			2,
+			2,
+		},
 	}
 
 	testNum := 4
+	ms := uint64(5500000)
 	configItems := makeSnapshotTestConfigItems()
+	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(ms)))
 	for _, tc := range testcases {
 		if tc.isIstanbulCompatible {
 			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
@@ -696,6 +721,25 @@ func TestSnapshot(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, tc.expectedValidatorsNum, len(snap.ValSet.List()))
 		assert.Equal(t, tc.expectedDemotedNum, len(snap.ValSet.DemotedList()))
+
+		if tc.isIstanbulCompatible && !isAllDemoted(ms, tc.stakingAmounts) {
+			// if the inserted block is istanbul compatible
+			// and a validator has enough KLAYs at least
+			for idx, sa := range tc.stakingAmounts {
+				if sa >= ms {
+					assert.True(t, checkInValidators(addrs[idx], snap.ValSet.List()))
+				} else {
+					assert.True(t, checkInValidators(addrs[idx], snap.ValSet.DemotedList()))
+				}
+			}
+		} else {
+			// if the inserted block is not istanbul compatible
+			// and all validators doesn't have enough KLAYs
+			for idx := range tc.stakingAmounts {
+				assert.True(t, checkInValidators(addrs[idx], snap.ValSet.List()))
+				assert.False(t, checkInValidators(addrs[idx], snap.ValSet.DemotedList()))
+			}
+		}
 
 		engine.Stop()
 	}
