@@ -14,6 +14,7 @@ require (
 	github.com/dgraph-io/badger v1.6.0
 	github.com/docker/docker v1.13.1
 	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712
+	github.com/ethereum/go-ethereum v1.9.3
 	github.com/fatih/color v1.7.0
 	github.com/fjl/memsize v0.0.0-20180427083637-f6d5545993d6
 	github.com/gin-gonic/gin v1.6.3
