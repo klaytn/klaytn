@@ -711,7 +711,7 @@ var (
 		"node/sc/subbridge.go":                               "eth/backend.go",
 		"node/service_test.go":                               "node/service_test.go",
 		"node/defaults.go":                                   "node/defaults.go",
-		"node/utils.go":                                      "node/api.go",
+		"node/api.go":                                        "node/api.go",
 		"node/node_test.go":                                  "node/node_test.go",
 		"node/config_test.go":                                "node/config_test.go",
 		"node/node.go":                                       "node/node.go",
