@@ -27,6 +27,7 @@ import (
 	"errors"
 	"io"
 	"math/big"
+	"sync"
 	"sync/atomic"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -75,6 +76,9 @@ type Transaction struct {
 	checkNonce bool
 	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
 	markedUnexecutable int32
+
+	// lock for protecting AsMessageWithAccountKeyPicker().
+	mu sync.Mutex
 }
 
 // NewTransactionWithMap generates a tx from tx field values.
@@ -404,6 +408,9 @@ func (tx *Transaction) Execute(vm VM, stateDB StateDB, currentBlockNumber uint64
 // XXX Rename message to something less arbitrary?
 // TODO-Klaytn: Message is removed and this function will return *Transaction.
 func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker, currentBlockNumber uint64) (*Transaction, error) {
+	tx.mu.Lock()
+	defer tx.mu.Unlock()
+
 	intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
 	if err != nil {
 		return nil, err
