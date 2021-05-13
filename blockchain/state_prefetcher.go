@@ -96,10 +96,8 @@ func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.
 // and uses the input parameters for its environment. The goal is not to execute
 // the transaction successfully, rather to warm up touched data slots.
 func precacheTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, cfg vm.Config) error {
-	copiedTx := *tx
-
 	// Convert the transaction into an executable message and pre-cache its sender
-	msg, err := copiedTx.AsMessageWithAccountKeyPicker(types.MakeSigner(config, header.Number), statedb, header.Number.Uint64())
+	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(config, header.Number), statedb, header.Number.Uint64())
 	if err != nil {
 		return err
 	}
