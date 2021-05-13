@@ -108,6 +108,9 @@ type ValidatorSet interface {
 
 	// Refreshes a list of candidate proposers with given hash and blockNum
 	Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig) error
+	// PromoteGoverningNode promotes governing node from demoted validators to staked validators although the node does
+	// not have the minimum staking amount
+	PromoteGoverningNode(address common.Address)
 
 	SetBlockNum(blockNum uint64)
 

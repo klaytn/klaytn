@@ -664,6 +664,30 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 	return nil
 }
 
+// PromoteGoverningNode promotes governing node from demoted validators to staked validators although the node does
+// not have the minimum staking amount.
+func (valSet *weightedCouncil) PromoteGoverningNode(address common.Address) {
+	valSet.validatorMu.Lock()
+	defer valSet.validatorMu.Unlock()
+	var (
+		governingNode *weightedValidator
+		isDemoted     = false
+	)
+	for i, v := range valSet.demotedValidators {
+		if v.Address() == address {
+			isDemoted = true
+			governingNode = v.(*weightedValidator)
+			valSet.demotedValidators = append(valSet.demotedValidators[:i], valSet.demotedValidators[i+1:]...)
+			break
+		}
+	}
+
+	if isDemoted {
+		valSet.validators = append(valSet.validators, governingNode)
+		sort.Sort(valSet.validators)
+	}
+}
+
 // setValidators converts weighted validator slice to istanbul.Validators and sets them to the council.
 func (valSet *weightedCouncil) setValidators(validators []*weightedValidator, demoted []*weightedValidator) {
 	var (

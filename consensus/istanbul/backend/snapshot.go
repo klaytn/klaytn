@@ -212,6 +212,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
+	snap.promoteGoverningNode(gov, snap.Number)
 
 	if snap.ValSet.Policy() == istanbul.WeightedRandom {
 		// TODO-Klaytn-Issue1166 We have to update block number of ValSet too.
@@ -223,6 +224,22 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 	gov.SetMyVotingPower(snap.getMyVotingPower(addr))
 
 	return snap, nil
+}
+
+func (s *Snapshot) promoteGoverningNode(gov *governance.Governance, number uint64) error {
+	govMode, err := gov.GetItemAtNumberByIntKey(number, params.GovernanceMode)
+	if err != nil {
+		return err
+	}
+
+	if governance.GovernanceModeMap[govMode.(string)] == params.GovernanceMode_Single {
+		govNode, err := gov.GetItemAtNumberByIntKey(number, params.GoverningNode)
+		if err != nil {
+			return err
+		}
+		s.ValSet.PromoteGoverningNode(govNode.(common.Address))
+	}
+	return nil
 }
 
 func (s *Snapshot) getMyVotingPower(addr common.Address) uint64 {
