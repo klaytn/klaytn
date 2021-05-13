@@ -270,6 +270,16 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
+			name: 'startHTTP',
+			call: 'admin_startHTTP',
+			params: 5,
+			inputFormatter: [null, null, null, null, null]
+		}),
+		new web3._extend.Method({
+			name: 'stopHTTP',
+			call: 'admin_stopHTTP'
+		}),
+		new web3._extend.Method({
 			name: 'startRPC',
 			call: 'admin_startRPC',
 			params: 4,
