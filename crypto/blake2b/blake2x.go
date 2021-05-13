@@ -1,7 +1,9 @@
 // Copyright 2017 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
+//
+// This file is derived from crypto/blake2b/blake2x.go (2021/05/13).
+// Modified for the klaytn development.
 package blake2b
 
 import (
@@ -166,7 +168,7 @@ func (x *xof) Read(p []byte) (n int, err error) {
 		x.offset = copy(p, x.block[:todo])
 		x.remaining -= uint64(todo)
 	}
-	return
+	return n, err
 }
 
 func (d *digest) initConfig(cfg *[Size]byte) {
