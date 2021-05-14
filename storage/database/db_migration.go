@@ -27,40 +27,21 @@ import (
 )
 
 const (
-	dbMigrationFetchNum = 500
-	reportCycle         = dbMigrationFetchNum * 100
+	reportCycle = IdealBatchSize * 20
 )
 
-// StartDBMigration migrates a DB to another DB.
-// (e.g. LevelDB -> LevelDB, LevelDB -> BadgerDB, LevelDB -> DynamoDB)
-//
+// copyDB migrates a DB to another DB.
 // This feature uses Iterator. A src DB should have implementation of Iteratee to use this function.
-// Do not use db migration while a node is executing.
-func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
-	// settings for quit signal from os
-	sigQuit := make(chan os.Signal, 1)
-	signal.Notify(sigQuit,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT)
-
-	// TODO enable for all dbs
-	srcDB := dbm.getDatabase(MiscDB) // first DB
-	dstDB := dstdbm.getDatabase(MiscDB)
-
+func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 	// create src iterator and dst batch
 	srcIter := srcDB.NewIterator(nil, nil)
 	dstBatch := dstDB.NewBatch()
 
 	// vars for log
 	start := time.Now()
-	previousFetched, fetched := 0, 0
+	fetched := 0
 
-loop:
 	for fetched = 0; srcIter.Next(); fetched++ {
-		cycleStart := time.Now()
-
 		// fetch keys and values
 		// Contents of srcIter.Key() and srcIter.Value() should not be modified, and
 		// only valid until the next call to Next.
@@ -72,32 +53,116 @@ loop:
 		// write fetched keys and values to DB
 		// If dstDB is dynamoDB, Put will Write when the number items reach dynamoBatchSize.
 		if err := dstBatch.Put(key, val); err != nil {
-			return errors.Wrap(err, "failed to put batch")
+			return errors.WithMessage(err, "failed to put batch")
+		}
+
+		if dstBatch.ValueSize() > IdealBatchSize {
+			if err := dstBatch.Write(); err != nil {
+				return err
+			}
+			dstBatch.Reset()
 		}
 
 		// make a report
 		if fetched%reportCycle == 0 {
 			logger.Info("DB migrated",
-				"fetched", fetched-previousFetched, "elapsedIter", time.Since(cycleStart),
-				"fetchedTotal", fetched, "elapsedTotal", time.Since(start))
-			cycleStart = time.Now()
-			previousFetched = fetched
+				"db", name, "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
 		}
 
 		// check for quit signal from OS
 		select {
-		case <-sigQuit:
-			logger.Info("exit called", "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
-			break loop
+		case <-quit:
+			logger.Warn("exit called", "db", name, "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
+			return nil
 		default:
 		}
 	}
 
 	if err := dstBatch.Write(); err != nil {
-		return errors.Wrap(err, "failed to write items")
+		return errors.WithMessage(err, "failed to write items")
+	}
+	dstBatch.Reset()
+
+	logger.Info("Finish DB migration", "db", name, "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
+
+	srcIter.Release()
+	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
+		return errors.WithMessage(err, "failed to iterate")
 	}
 
-	logger.Info("Finish DB migration", "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
+	return nil
+}
+
+// StartDBMigration migrates a DB to another DB.
+// (e.g. LevelDB -> LevelDB, LevelDB -> BadgerDB, LevelDB -> DynamoDB)
+// Do not migrate db while a node is executing.
+func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
+	// settings for quit signal from os
+	quit := make(chan struct{})
+	go func() {
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(sigc)
+		<-sigc
+		logger.Info("Got interrupt, shutting down...")
+		close(quit)
+		for i := 10; i > 0; i-- {
+			<-sigc
+			if i > 1 {
+				logger.Info("Already shutting down, interrupt more to panic.", "times", i-1)
+			}
+		}
+	}()
+
+	// from non single DB
+	if !dbm.config.SingleDB {
+		errChan := make(chan error, databaseEntryTypeSize)
+		for et := MiscDB; et < databaseEntryTypeSize; et++ {
+			srcDB := dbm.getDatabase(et)
+
+			dstDB := dstdbm.getDatabase(MiscDB)
+			if !dstdbm.GetDBConfig().SingleDB {
+				dstDB = dstdbm.getDatabase(et)
+			}
+
+			if srcDB == nil {
+				logger.Warn("skip nil src db", "db", dbBaseDirs[et])
+				errChan <- nil
+				continue
+			}
+
+			if dstDB == nil {
+				logger.Warn("skip nil dst db", "db", dbBaseDirs[et])
+				errChan <- nil
+				continue
+			}
+
+			dbIdx := et
+			go func() {
+				errChan <- copyDB(dbBaseDirs[dbIdx], srcDB, dstDB, quit)
+			}()
+		}
+
+		for et := MiscDB; et < databaseEntryTypeSize; et++ {
+			err := <-errChan
+			if err != nil {
+				logger.Error("copyDB got an error", "err", err)
+			}
+		}
+
+		// Reset state trie DB path if migrated state trie path ("statetrie_migrated_XXXXXX") is set
+		dstdbm.setDBDir(DBEntryType(StateTrieDB), "")
+
+		return nil
+	}
+
+	// single DB -> single DB
+	srcDB := dbm.getDatabase(0)
+	dstDB := dstdbm.getDatabase(0)
+
+	if err := copyDB("single", srcDB, dstDB, quit); err != nil {
+		return err
+	}
 
 	// If the current src DB is misc DB, clear all db dir on dst
 	// TODO: If DB Migration supports non-single db, change the checking logic
@@ -105,11 +170,6 @@ loop:
 		for i := uint8(MiscDB); i < uint8(databaseEntryTypeSize); i++ {
 			dstdbm.setDBDir(DBEntryType(i), "")
 		}
-	}
-
-	srcIter.Release()
-	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
-		return errors.Wrap(err, "failed to iterate")
 	}
 
 	return nil
