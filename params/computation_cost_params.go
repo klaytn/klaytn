@@ -151,5 +151,5 @@ const (
 	ValidateSenderPerSigComputationCost = 180000
 	ValidateSenderBaseComputationCost   = 10000
 	Blake2bBaseComputationCost          = 10000
-	Blake2bScaleComputationCost         = 100
+	Blake2bScaleComputationCost         = 10
 )
