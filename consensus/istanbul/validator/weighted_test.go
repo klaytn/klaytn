@@ -219,3 +219,60 @@ func TestNewWeightedCouncil_IncompleteParams(t *testing.T) {
 	valSet = NewWeightedCouncil(ExtractValidators(b), nil, nil, nil, incompleteWeights, istanbul.WeightedRandom, 0, 0, 0, &blockchain.BlockChain{})
 	assert.Equal(t, (*weightedCouncil)(nil), valSet)
 }
+
+func makeTestValidatorsWithAddresses(addrs []common.Address) istanbul.Validators {
+	validators := istanbul.Validators{}
+	for _, addr := range addrs {
+		validators = append(validators, newWeightedValidator(addr, common.Address{}, 0, 0))
+	}
+	return validators
+}
+
+func Test_weightedCouncil_PromoteGoverningNode(t *testing.T) {
+	type testcase struct {
+		governingNode          common.Address
+		demotedAddrs           []common.Address
+		validatorAddrs         []common.Address
+		expectedDemotedAddrs   []common.Address
+		expectedValidatorAddrs []common.Address
+	}
+
+	testcases := []testcase{
+		{
+			common.Address{1},
+			[]common.Address{{1}},
+			[]common.Address{},
+			[]common.Address{},
+			[]common.Address{{1}},
+		},
+		{
+			common.Address{2},
+			[]common.Address{},
+			[]common.Address{{2}},
+			[]common.Address{},
+			[]common.Address{{2}},
+		},
+		{
+			common.Address{3},
+			[]common.Address{{1}, {2}, {3}, {4}},
+			[]common.Address{{5}, {6}, {7}},
+			[]common.Address{{1}, {2}, {4}},
+			[]common.Address{{3}, {5}, {6}, {7}},
+		},
+	}
+
+	for _, tc := range testcases {
+		validators := makeTestValidatorsWithAddresses(tc.validatorAddrs)
+		demotedValidators := makeTestValidatorsWithAddresses(tc.demotedAddrs)
+		expectedValidators := makeTestValidatorsWithAddresses(tc.expectedValidatorAddrs)
+		expectedDemotedValidators := makeTestValidatorsWithAddresses(tc.expectedDemotedAddrs)
+
+		council := &weightedCouncil{
+			validators:        validators,
+			demotedValidators: demotedValidators,
+		}
+		council.PromoteGoverningNode(tc.governingNode)
+		assert.Equal(t, expectedValidators, council.validators)
+		assert.Equal(t, expectedDemotedValidators, council.demotedValidators)
+	}
+}
