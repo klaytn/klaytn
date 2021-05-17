@@ -744,7 +744,7 @@ func TestSnapshot(t *testing.T) {
 			}
 		} else {
 			// if the inserted block is not istanbul compatible
-			// and all validators doesn't have enough KLAYs
+			// or all validators don't have enough KLAYs
 			for idx := range tc.stakingAmounts {
 				assert.True(t, checkInValidators(addrs[idx], snap.ValSet.List()))
 				assert.False(t, checkInValidators(addrs[idx], snap.ValSet.DemotedList()))
