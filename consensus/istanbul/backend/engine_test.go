@@ -710,6 +710,10 @@ func TestSnapshot(t *testing.T) {
 		}
 		chain, engine := newBlockChain(testNum, configItems...)
 
+		// set old staking manager after finishing this test.
+		oldStakingManager := reward.GetStakingManager()
+
+		// set new staking manager with the given staking information.
 		stakingInfo := makeFakeStakingInfo(0, nodeKeys, tc.stakingAmounts)
 		reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
 
@@ -741,6 +745,7 @@ func TestSnapshot(t *testing.T) {
 			}
 		}
 
+		reward.SetTestStakingManager(oldStakingManager)
 		engine.Stop()
 	}
 }
