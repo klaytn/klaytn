@@ -234,3 +234,19 @@ func StakingManagerUnsubscribe() {
 
 	stakingManager.chainHeadSub.Unsubscribe()
 }
+
+// SetTestStakingManagerWithStakingInfoCache sets the staking manager with the given test staking information.
+// Note that this method is used only for testing purpose.
+func SetTestStakingManagerWithStakingInfoCache(testInfo *StakingInfo) {
+	cache := newStakingInfoCache()
+	cache.add(testInfo)
+	SetTestStakingManager(&StakingManager{
+		stakingInfoCache: cache,
+	})
+}
+
+// SetTestStakingManager sets the staking manager for testing purpose.
+// Note that this method is used only for testing purpose.
+func SetTestStakingManager(sm *StakingManager) {
+	stakingManager = sm
+}
