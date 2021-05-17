@@ -21,7 +21,6 @@
 package state
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -327,17 +326,17 @@ func (self *StateDB) IsValidCodeFormat(addr common.Address) bool {
 	return false
 }
 
-// GetCodeInfo return error when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
-func (self *StateDB) GetCodeInfo(addr common.Address) (params.CodeInfo, error) {
+// GetCodeInfo return false when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
+func (self *StateDB) GetCodeInfo(addr common.Address) (params.CodeInfo, bool) {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		pa := account.GetProgramAccount(stateObject.account)
 		if pa != nil {
-			return pa.GetCodeInfo(), nil
+			return pa.GetCodeInfo(), true
 		}
-		return params.CodeInfo(0), errors.New("trying to get codeInfo from not a program account")
+		return params.CodeInfo(0), false
 	}
-	return params.CodeInfo(0), errors.New("account is not exists")
+	return params.CodeInfo(0), false
 }
 
 func (self *StateDB) GetKey(addr common.Address) accountkey.AccountKey {

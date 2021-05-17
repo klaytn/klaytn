@@ -539,32 +539,21 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 }
 
 func (evm *EVM) GetPrecompiledContractMap(caller common.Address) map[common.Address]PrecompiledContract {
-	var (
-		currentBlockVMVersion params.VmVersion
-		contractVmVersion     params.VmVersion
-	)
+	if codeInfo, ok := evm.StateDB.GetCodeInfo(caller); ok {
+		var (
+			currentBlockVMVersion = params.GenerateVmVersion(evm.chainRules)
+			contractVmVersion     = codeInfo.GetVmVersion()
+		)
 
-	// If new HF is added, please add new case below
-	switch {
-	case evm.chainRules.IsIstanbul:
-		currentBlockVMVersion = params.VmVersionIstanbul
-	default:
-		currentBlockVMVersion = params.VmVersionConstantinople
-	}
-	if codeInfo, err := evm.StateDB.GetCodeInfo(caller); err != nil {
-		logger.Error("error occurred", err, "this line should not be executed")
-	} else {
-		contractVmVersion = codeInfo.GetVmVersion()
-	}
-
-	// There are contracts which uses the old precompiled contract map (use the map at deployment time)
-	//      (gas price policy also follows old map's rule)
-	if contractVmVersion < currentBlockVMVersion {
-		// If new "VmVersion of CodeInfo" is added, please add new case below
-		switch contractVmVersion {
-		default:
-			// Without this version, contracts that are deployed before istanbul and uses 0x09-0x0b won't work properly.
-			return PrecompiledContractsConstantinople
+		// There are contracts which uses the old precompiled contract map (use the map at deployment time)
+		//      (gas price policy also follows old map's rule)
+		if contractVmVersion < currentBlockVMVersion {
+			// If new "VmVersion of CodeInfo" is added, please add new case below
+			switch contractVmVersion {
+			default:
+				// Without this version, contracts that are deployed before istanbul and uses 0x09-0x0b won't work properly.
+				return PrecompiledContractsConstantinople
+			}
 		}
 	}
 

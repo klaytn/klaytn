@@ -192,12 +192,7 @@ func (t CodeFormat) Validate() bool {
 }
 
 func (t CodeFormat) GenerateCodeInfo(r Rules) CodeInfo {
-	switch {
-	case r.IsIstanbul:
-		return CodeInfo(t | VmVersionIstanbul)
-	default:
-		return CodeInfo(t)
-	}
+	return CodeInfo(t) | CodeInfo(GenerateVmVersion(r))
 }
 
 // Supporting VmVersion
@@ -210,4 +205,14 @@ const (
 
 func (t CodeInfo) GetVmVersion() VmVersion {
 	return VmVersion(t & vmVersionBitMask)
+}
+
+func GenerateVmVersion(r Rules) VmVersion {
+	switch {
+	// If new HF is added, please add new case below
+	case r.IsIstanbul:
+		return VmVersionIstanbul
+	default:
+		return VmVersionConstantinople
+	}
 }
