@@ -56,7 +56,6 @@ type operation struct {
 	halts   bool // indicates whether the operation should halt further execution
 	jumps   bool // indicates whether the program counter should not increment
 	writes  bool // determines whether this a state modifying operation
-	valid   bool // indication whether the retrieved operation is valid and known
 	reverts bool // determines whether the operation reverts state (implicitly halts)
 	returns bool // determines whether the operations sets the return data content
 }
@@ -67,7 +66,7 @@ var (
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
-type JumpTable [256]operation
+type JumpTable [256]*operation
 
 func newIstanbulInstructionSet() JumpTable {
 	instructionSet := newConstantinopleInstructionSet()
@@ -80,46 +79,41 @@ func newIstanbulInstructionSet() JumpTable {
 // byzantium and constantinople instructions.
 func newConstantinopleInstructionSet() JumpTable {
 	instructionSet := newByzantiumInstructionSet()
-	instructionSet[SHL] = operation{
+	instructionSet[SHL] = &operation{
 		execute:         opSHL,
 		constantGas:     GasFastestStep,
 		minStack:        minStack(2, 1),
 		maxStack:        maxStack(2, 1),
-		valid:           true,
 		computationCost: params.ShlComputationCost,
 	}
-	instructionSet[SHR] = operation{
+	instructionSet[SHR] = &operation{
 		execute:         opSHR,
 		constantGas:     GasFastestStep,
 		minStack:        minStack(2, 1),
 		maxStack:        maxStack(2, 1),
-		valid:           true,
 		computationCost: params.ShrComputationCost,
 	}
-	instructionSet[SAR] = operation{
+	instructionSet[SAR] = &operation{
 		execute:         opSAR,
 		constantGas:     GasFastestStep,
 		minStack:        minStack(2, 1),
 		maxStack:        maxStack(2, 1),
-		valid:           true,
 		computationCost: params.SarComputationCost,
 	}
-	instructionSet[EXTCODEHASH] = operation{
+	instructionSet[EXTCODEHASH] = &operation{
 		execute:         opExtCodeHash,
 		constantGas:     params.ExtcodeHashGasConstantinople,
 		minStack:        minStack(1, 1),
 		maxStack:        maxStack(1, 1),
-		valid:           true,
 		computationCost: params.ExtCodeHashComputationCostConstantinople,
 	}
-	instructionSet[CREATE2] = operation{
+	instructionSet[CREATE2] = &operation{
 		execute:         opCreate2,
 		constantGas:     params.Create2Gas,
 		dynamicGas:      gasCreate2,
 		minStack:        minStack(4, 1),
 		maxStack:        maxStack(4, 1),
 		memorySize:      memoryCreate2,
-		valid:           true,
 		writes:          true,
 		returns:         true,
 		computationCost: params.Create2ComputationCost,
@@ -132,42 +126,38 @@ func newConstantinopleInstructionSet() JumpTable {
 func newByzantiumInstructionSet() JumpTable {
 	// instructions that can be executed during the homestead phase.
 	instructionSet := newHomesteadInstructionSet()
-	instructionSet[STATICCALL] = operation{
+	instructionSet[STATICCALL] = &operation{
 		execute:         opStaticCall,
 		constantGas:     params.CallGas,
 		dynamicGas:      gasStaticCall,
 		minStack:        minStack(6, 1),
 		maxStack:        maxStack(6, 1),
 		memorySize:      memoryStaticCall,
-		valid:           true,
 		returns:         true,
 		computationCost: params.StaticCallComputationCost,
 	}
-	instructionSet[RETURNDATASIZE] = operation{
+	instructionSet[RETURNDATASIZE] = &operation{
 		execute:         opReturnDataSize,
 		constantGas:     GasQuickStep,
 		minStack:        minStack(0, 1),
 		maxStack:        maxStack(0, 1),
-		valid:           true,
 		computationCost: params.ReturnDataSizeComputationCost,
 	}
-	instructionSet[RETURNDATACOPY] = operation{
+	instructionSet[RETURNDATACOPY] = &operation{
 		execute:         opReturnDataCopy,
 		constantGas:     GasFastestStep,
 		dynamicGas:      gasReturnDataCopy,
 		minStack:        minStack(3, 0),
 		maxStack:        maxStack(3, 0),
 		memorySize:      memoryReturnDataCopy,
-		valid:           true,
 		computationCost: params.ReturnDataCopyComputationCost,
 	}
-	instructionSet[REVERT] = operation{
+	instructionSet[REVERT] = &operation{
 		execute:         opRevert,
 		dynamicGas:      gasRevert,
 		minStack:        minStack(2, 0),
 		maxStack:        maxStack(2, 0),
 		memorySize:      memoryRevert,
-		valid:           true,
 		reverts:         true,
 		returns:         true,
 		computationCost: params.RevertComputationCost,
@@ -179,14 +169,13 @@ func newByzantiumInstructionSet() JumpTable {
 // instructions that can be executed during the homestead phase.
 func newHomesteadInstructionSet() JumpTable {
 	instructionSet := newFrontierInstructionSet()
-	instructionSet[DELEGATECALL] = operation{
+	instructionSet[DELEGATECALL] = &operation{
 		execute:         opDelegateCall,
 		constantGas:     params.CallGas,
 		dynamicGas:      gasDelegateCall,
 		minStack:        minStack(6, 1),
 		maxStack:        maxStack(6, 1),
 		memorySize:      memoryDelegateCall,
-		valid:           true,
 		returns:         true,
 		computationCost: params.DelegateCallComputationCost,
 	}
@@ -203,7 +192,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(0, 0),
 			maxStack:        maxStack(0, 0),
 			halts:           true,
-			valid:           true,
 			computationCost: params.StopComputationCost,
 		},
 		ADD: {
@@ -211,7 +199,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.AddComputationCost,
 		},
 		MUL: {
@@ -219,7 +206,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.MulComputationCost,
 		},
 		SUB: {
@@ -227,7 +213,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.SubComputationCost,
 		},
 		DIV: {
@@ -235,7 +220,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.DivComputationCost,
 		},
 		SDIV: {
@@ -243,7 +227,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.SdivComputationCost,
 		},
 		MOD: {
@@ -251,7 +234,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.ModComputationCost,
 		},
 		SMOD: {
@@ -259,7 +241,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.SmodComputationCost,
 		},
 		ADDMOD: {
@@ -267,7 +248,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasMidStep,
 			minStack:        minStack(3, 1),
 			maxStack:        maxStack(3, 1),
-			valid:           true,
 			computationCost: params.AddmodComputationCost,
 		},
 		MULMOD: {
@@ -275,7 +255,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasMidStep,
 			minStack:        minStack(3, 1),
 			maxStack:        maxStack(3, 1),
-			valid:           true,
 			computationCost: params.MulmodComputationCost,
 		},
 		EXP: {
@@ -283,7 +262,6 @@ func newFrontierInstructionSet() JumpTable {
 			dynamicGas:      gasExp,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.ExpComputationCost,
 		},
 		SIGNEXTEND: {
@@ -291,7 +269,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.SignExtendComputationCost,
 		},
 		LT: {
@@ -299,7 +276,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.LtComputationCost,
 		},
 		GT: {
@@ -307,7 +283,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.GtComputationCost,
 		},
 		SLT: {
@@ -315,7 +290,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.SltComputationCost,
 		},
 		SGT: {
@@ -323,7 +297,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.SgtComputationCost,
 		},
 		EQ: {
@@ -331,7 +304,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.EqComputationCost,
 		},
 		ISZERO: {
@@ -339,7 +311,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
-			valid:           true,
 			computationCost: params.IszeroComputationCost,
 		},
 		AND: {
@@ -347,7 +318,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.AndComputationCost,
 		},
 		XOR: {
@@ -355,7 +325,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.XorComputationCost,
 		},
 		OR: {
@@ -363,7 +332,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.OrComputationCost,
 		},
 		NOT: {
@@ -371,7 +339,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
-			valid:           true,
 			computationCost: params.NotComputationCost,
 		},
 		BYTE: {
@@ -379,7 +346,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
-			valid:           true,
 			computationCost: params.ByteComputationCost,
 		},
 		SHA3: {
@@ -389,7 +355,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
 			memorySize:      memorySha3,
-			valid:           true,
 			computationCost: params.Sha3ComputationCost,
 		},
 		ADDRESS: {
@@ -397,7 +362,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.AddressComputationCost,
 		},
 		BALANCE: {
@@ -405,7 +369,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     params.BalanceGasEIP150,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
-			valid:           true,
 			computationCost: params.BalanceComputationCostEIP150,
 		},
 		ORIGIN: {
@@ -413,7 +376,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.OriginComputationCost,
 		},
 		CALLER: {
@@ -421,7 +383,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.CallerComputationCost,
 		},
 		CALLVALUE: {
@@ -429,7 +390,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.CallValueComputationCost,
 		},
 		CALLDATALOAD: {
@@ -437,7 +397,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
-			valid:           true,
 			computationCost: params.CallDataLoadComputationCost,
 		},
 		CALLDATASIZE: {
@@ -445,7 +404,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.CallDataSizeComputationCost,
 		},
 		CALLDATACOPY: {
@@ -455,7 +413,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(3, 0),
 			maxStack:        maxStack(3, 0),
 			memorySize:      memoryCallDataCopy,
-			valid:           true,
 			computationCost: params.CallDataCopyComputationCost,
 		},
 		CODESIZE: {
@@ -463,7 +420,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.CodeSizeComputationCost,
 		},
 		CODECOPY: {
@@ -473,7 +429,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(3, 0),
 			maxStack:        maxStack(3, 0),
 			memorySize:      memoryCodeCopy,
-			valid:           true,
 			computationCost: params.CodeCopyComputationCost,
 		},
 		GASPRICE: {
@@ -481,7 +436,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.GasPriceComputationCost,
 		},
 		EXTCODESIZE: {
@@ -489,7 +443,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     params.ExtcodeSizeGas,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
-			valid:           true,
 			computationCost: params.ExtCodeSizeComputationCost,
 		},
 		EXTCODECOPY: {
@@ -499,7 +452,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(4, 0),
 			maxStack:        maxStack(4, 0),
 			memorySize:      memoryExtCodeCopy,
-			valid:           true,
 			computationCost: params.ExtCodeCopyComputationCost,
 		},
 		BLOCKHASH: {
@@ -507,7 +459,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasExtStep,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
-			valid:           true,
 			computationCost: params.BlockHashComputationCost,
 		},
 		COINBASE: {
@@ -515,7 +466,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.CoinbaseComputationCost,
 		},
 		TIMESTAMP: {
@@ -523,7 +473,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.TimestampComputationCost,
 		},
 		NUMBER: {
@@ -531,7 +480,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.NumberComputationCost,
 		},
 		DIFFICULTY: {
@@ -539,7 +487,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.DifficultyComputationCost,
 		},
 		GASLIMIT: {
@@ -547,7 +494,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.GasLimitComputationCost,
 		},
 		POP: {
@@ -555,7 +501,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(1, 0),
 			maxStack:        maxStack(1, 0),
-			valid:           true,
 			computationCost: params.PopComputationCost,
 		},
 		MLOAD: {
@@ -565,7 +510,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
 			memorySize:      memoryMLoad,
-			valid:           true,
 			computationCost: params.MloadComputationCost,
 		},
 		MSTORE: {
@@ -575,7 +519,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(2, 0),
 			maxStack:        maxStack(2, 0),
 			memorySize:      memoryMStore,
-			valid:           true,
 			computationCost: params.MstoreComputationCost,
 		},
 		MSTORE8: {
@@ -585,7 +528,6 @@ func newFrontierInstructionSet() JumpTable {
 			memorySize:      memoryMStore8,
 			minStack:        minStack(2, 0),
 			maxStack:        maxStack(2, 0),
-			valid:           true,
 			computationCost: params.Mstore8ComputationCost,
 		},
 		SLOAD: {
@@ -593,7 +535,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     params.SloadGasEIP150,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
-			valid:           true,
 			computationCost: params.SloadComputationCostEIP150,
 		},
 		SSTORE: {
@@ -601,7 +542,6 @@ func newFrontierInstructionSet() JumpTable {
 			dynamicGas:      gasSStore,
 			minStack:        minStack(2, 0),
 			maxStack:        maxStack(2, 0),
-			valid:           true,
 			writes:          true,
 			computationCost: params.SstoreComputationCost,
 		},
@@ -611,7 +551,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(1, 0),
 			maxStack:        maxStack(1, 0),
 			jumps:           true,
-			valid:           true,
 			computationCost: params.JumpComputationCost,
 		},
 		JUMPI: {
@@ -620,7 +559,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(2, 0),
 			maxStack:        maxStack(2, 0),
 			jumps:           true,
-			valid:           true,
 			computationCost: params.JumpiComputationCost,
 		},
 		PC: {
@@ -628,7 +566,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PcComputationCost,
 		},
 		MSIZE: {
@@ -636,7 +573,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.MsizeComputationCost,
 		},
 		GAS: {
@@ -644,7 +580,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasQuickStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.GasComputationCost,
 		},
 		JUMPDEST: {
@@ -652,7 +587,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     params.JumpdestGas,
 			minStack:        minStack(0, 0),
 			maxStack:        maxStack(0, 0),
-			valid:           true,
 			computationCost: params.JumpDestComputationCost,
 		},
 		PUSH1: {
@@ -660,7 +594,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH2: {
@@ -668,7 +601,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH3: {
@@ -676,7 +608,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH4: {
@@ -684,7 +615,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH5: {
@@ -692,7 +622,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH6: {
@@ -700,7 +629,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH7: {
@@ -708,7 +636,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH8: {
@@ -716,7 +643,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH9: {
@@ -724,7 +650,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH10: {
@@ -732,7 +657,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH11: {
@@ -740,7 +664,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH12: {
@@ -748,7 +671,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH13: {
@@ -756,7 +678,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH14: {
@@ -764,7 +685,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH15: {
@@ -772,7 +692,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH16: {
@@ -780,7 +699,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH17: {
@@ -788,7 +706,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH18: {
@@ -796,7 +713,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH19: {
@@ -804,7 +720,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH20: {
@@ -812,7 +727,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH21: {
@@ -820,7 +734,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH22: {
@@ -828,7 +741,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH23: {
@@ -836,7 +748,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH24: {
@@ -844,7 +755,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH25: {
@@ -852,7 +762,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH26: {
@@ -860,7 +769,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH27: {
@@ -868,7 +776,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH28: {
@@ -876,7 +783,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH29: {
@@ -884,7 +790,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH30: {
@@ -892,7 +797,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH31: {
@@ -900,7 +804,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		PUSH32: {
@@ -908,7 +811,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minStack(0, 1),
 			maxStack:        maxStack(0, 1),
-			valid:           true,
 			computationCost: params.PushComputationCost,
 		},
 		DUP1: {
@@ -916,7 +818,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(1),
 			maxStack:        maxDupStack(1),
-			valid:           true,
 			computationCost: params.Dup1ComputationCost,
 		},
 		DUP2: {
@@ -924,7 +825,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(2),
 			maxStack:        maxDupStack(2),
-			valid:           true,
 			computationCost: params.Dup2ComputationCost,
 		},
 		DUP3: {
@@ -932,7 +832,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(3),
 			maxStack:        maxDupStack(3),
-			valid:           true,
 			computationCost: params.Dup3ComputationCost,
 		},
 		DUP4: {
@@ -940,7 +839,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(4),
 			maxStack:        maxDupStack(4),
-			valid:           true,
 			computationCost: params.Dup4ComputationCost,
 		},
 		DUP5: {
@@ -948,7 +846,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(5),
 			maxStack:        maxDupStack(5),
-			valid:           true,
 			computationCost: params.Dup5ComputationCost,
 		},
 		DUP6: {
@@ -956,7 +853,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(6),
 			maxStack:        maxDupStack(6),
-			valid:           true,
 			computationCost: params.Dup6ComputationCost,
 		},
 		DUP7: {
@@ -964,7 +860,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(7),
 			maxStack:        maxDupStack(7),
-			valid:           true,
 			computationCost: params.Dup7ComputationCost,
 		},
 		DUP8: {
@@ -972,7 +867,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(8),
 			maxStack:        maxDupStack(8),
-			valid:           true,
 			computationCost: params.Dup8ComputationCost,
 		},
 		DUP9: {
@@ -980,7 +874,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(9),
 			maxStack:        maxDupStack(9),
-			valid:           true,
 			computationCost: params.Dup9ComputationCost,
 		},
 		DUP10: {
@@ -988,7 +881,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(10),
 			maxStack:        maxDupStack(10),
-			valid:           true,
 			computationCost: params.Dup10ComputationCost,
 		},
 		DUP11: {
@@ -996,7 +888,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(11),
 			maxStack:        maxDupStack(11),
-			valid:           true,
 			computationCost: params.Dup11ComputationCost,
 		},
 		DUP12: {
@@ -1004,7 +895,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(12),
 			maxStack:        maxDupStack(12),
-			valid:           true,
 			computationCost: params.Dup12ComputationCost,
 		},
 		DUP13: {
@@ -1012,7 +902,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(13),
 			maxStack:        maxDupStack(13),
-			valid:           true,
 			computationCost: params.Dup13ComputationCost,
 		},
 		DUP14: {
@@ -1020,7 +909,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(14),
 			maxStack:        maxDupStack(14),
-			valid:           true,
 			computationCost: params.Dup14ComputationCost,
 		},
 		DUP15: {
@@ -1028,7 +916,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(15),
 			maxStack:        maxDupStack(15),
-			valid:           true,
 			computationCost: params.Dup15ComputationCost,
 		},
 		DUP16: {
@@ -1036,7 +923,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minDupStack(16),
 			maxStack:        maxDupStack(16),
-			valid:           true,
 			computationCost: params.Dup16ComputationCost,
 		},
 		SWAP1: {
@@ -1044,7 +930,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(2),
 			maxStack:        maxSwapStack(2),
-			valid:           true,
 			computationCost: params.Swap1ComputationCost,
 		},
 		SWAP2: {
@@ -1052,7 +937,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(3),
 			maxStack:        maxSwapStack(3),
-			valid:           true,
 			computationCost: params.Swap2ComputationCost,
 		},
 		SWAP3: {
@@ -1060,7 +944,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(4),
 			maxStack:        maxSwapStack(4),
-			valid:           true,
 			computationCost: params.Swap3ComputationCost,
 		},
 		SWAP4: {
@@ -1068,7 +951,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(5),
 			maxStack:        maxSwapStack(5),
-			valid:           true,
 			computationCost: params.Swap4ComputationCost,
 		},
 		SWAP5: {
@@ -1076,7 +958,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(6),
 			maxStack:        maxSwapStack(6),
-			valid:           true,
 			computationCost: params.Swap5ComputationCost,
 		},
 		SWAP6: {
@@ -1084,7 +965,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(7),
 			maxStack:        maxSwapStack(7),
-			valid:           true,
 			computationCost: params.Swap6ComputationCost,
 		},
 		SWAP7: {
@@ -1092,7 +972,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(8),
 			maxStack:        maxSwapStack(8),
-			valid:           true,
 			computationCost: params.Swap7ComputationCost,
 		},
 		SWAP8: {
@@ -1100,7 +979,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(9),
 			maxStack:        maxSwapStack(9),
-			valid:           true,
 			computationCost: params.Swap8ComputationCost,
 		},
 		SWAP9: {
@@ -1108,7 +986,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(10),
 			maxStack:        maxSwapStack(10),
-			valid:           true,
 			computationCost: params.Swap9ComputationCost,
 		},
 		SWAP10: {
@@ -1116,7 +993,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(11),
 			maxStack:        maxSwapStack(11),
-			valid:           true,
 			computationCost: params.Swap10ComputationCost,
 		},
 		SWAP11: {
@@ -1124,7 +1000,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(12),
 			maxStack:        maxSwapStack(12),
-			valid:           true,
 			computationCost: params.Swap11ComputationCost,
 		},
 		SWAP12: {
@@ -1132,7 +1007,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(13),
 			maxStack:        maxSwapStack(13),
-			valid:           true,
 			computationCost: params.Swap12ComputationCost,
 		},
 		SWAP13: {
@@ -1140,7 +1014,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(14),
 			maxStack:        maxSwapStack(14),
-			valid:           true,
 			computationCost: params.Swap13ComputationCost,
 		},
 		SWAP14: {
@@ -1148,7 +1021,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(15),
 			maxStack:        maxSwapStack(15),
-			valid:           true,
 			computationCost: params.Swap14ComputationCost,
 		},
 		SWAP15: {
@@ -1156,7 +1028,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(16),
 			maxStack:        maxSwapStack(16),
-			valid:           true,
 			computationCost: params.Swap15ComputationCost,
 		},
 		SWAP16: {
@@ -1164,7 +1035,6 @@ func newFrontierInstructionSet() JumpTable {
 			constantGas:     GasFastestStep,
 			minStack:        minSwapStack(17),
 			maxStack:        maxSwapStack(17),
-			valid:           true,
 			computationCost: params.Swap16ComputationCost,
 		},
 		LOG0: {
@@ -1173,7 +1043,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(2, 0),
 			maxStack:        maxStack(2, 0),
 			memorySize:      memoryLog,
-			valid:           true,
 			writes:          true,
 			computationCost: params.Log0ComputationCost,
 		},
@@ -1183,7 +1052,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(3, 0),
 			maxStack:        maxStack(3, 0),
 			memorySize:      memoryLog,
-			valid:           true,
 			writes:          true,
 			computationCost: params.Log1ComputationCost,
 		},
@@ -1193,7 +1061,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(4, 0),
 			maxStack:        maxStack(4, 0),
 			memorySize:      memoryLog,
-			valid:           true,
 			writes:          true,
 			computationCost: params.Log2ComputationCost,
 		},
@@ -1203,7 +1070,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(5, 0),
 			maxStack:        maxStack(5, 0),
 			memorySize:      memoryLog,
-			valid:           true,
 			writes:          true,
 			computationCost: params.Log3ComputationCost,
 		},
@@ -1213,7 +1079,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(6, 0),
 			maxStack:        maxStack(6, 0),
 			memorySize:      memoryLog,
-			valid:           true,
 			writes:          true,
 			computationCost: params.Log4ComputationCost,
 		},
@@ -1224,7 +1089,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(3, 1),
 			maxStack:        maxStack(3, 1),
 			memorySize:      memoryCreate,
-			valid:           true,
 			writes:          true,
 			returns:         true,
 			computationCost: params.CreateComputationCost,
@@ -1236,7 +1100,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(7, 1),
 			maxStack:        maxStack(7, 1),
 			memorySize:      memoryCall,
-			valid:           true,
 			returns:         true,
 			computationCost: params.CallComputationCost,
 		},
@@ -1247,7 +1110,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(7, 1),
 			maxStack:        maxStack(7, 1),
 			memorySize:      memoryCall,
-			valid:           true,
 			returns:         true,
 			computationCost: params.CallCodeComputationCost,
 		},
@@ -1258,7 +1120,6 @@ func newFrontierInstructionSet() JumpTable {
 			maxStack:        maxStack(2, 0),
 			memorySize:      memoryReturn,
 			halts:           true,
-			valid:           true,
 			computationCost: params.ReturnComputationCost,
 		},
 		SELFDESTRUCT: {
@@ -1267,7 +1128,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:        minStack(1, 0),
 			maxStack:        maxStack(1, 0),
 			halts:           true,
-			valid:           true,
 			writes:          true,
 			computationCost: params.SelfDestructComputationCost,
 		},

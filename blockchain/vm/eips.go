@@ -54,12 +54,11 @@ func enable1884(jt *JumpTable) {
 	jt[SLOAD].computationCost = params.SloadComputationCostEIP1884
 
 	// New opcode
-	jt[SELFBALANCE] = operation{
+	jt[SELFBALANCE] = &operation{
 		execute:         opSelfBalance,
 		constantGas:     GasFastStep,
 		minStack:        minStack(0, 1),
 		maxStack:        maxStack(0, 1),
-		valid:           true,
 		computationCost: params.SelfBalanceComputationCost,
 	}
 }
@@ -74,12 +73,11 @@ func opSelfBalance(pc *uint64, evm *EVM, contract *Contract, memory *Memory, sta
 // - Adds an opcode that returns the current chain’s EIP-155 unique identifier
 func enable1344(jt *JumpTable) {
 	// New opcode
-	jt[CHAINID] = operation{
+	jt[CHAINID] = &operation{
 		execute:         opChainID,
 		constantGas:     GasQuickStep,
 		minStack:        minStack(0, 1),
 		maxStack:        maxStack(0, 1),
-		valid:           true,
 		computationCost: params.ChainIDComputationCost,
 	}
 }
