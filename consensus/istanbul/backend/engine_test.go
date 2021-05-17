@@ -262,6 +262,9 @@ func TestVerifySeal(t *testing.T) {
 	}
 	block := makeBlock(chain, engine, genesis)
 
+	// clean cache before testing
+	signatureAddresses.Purge()
+
 	// change block content
 	header := block.Header()
 	header.Number = big.NewInt(4)
@@ -270,6 +273,9 @@ func TestVerifySeal(t *testing.T) {
 	if err != errUnauthorized {
 		t.Errorf("error mismatch: have %v, want %v", err, errUnauthorized)
 	}
+
+	// clean cache before testing
+	signatureAddresses.Purge()
 
 	// unauthorized users but still can get correct signer address
 	engine.privateKey, _ = crypto.GenerateKey()

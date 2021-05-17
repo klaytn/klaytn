@@ -57,6 +57,16 @@ func (gxhash *Gxhash) Author(header *types.Header) (common.Address, error) {
 	return params.AuthorAddressForTesting, nil
 }
 
+// CanVerifyHeadersConcurrently returns true if concurrent header verification possible, otherwise returns false.
+func (gxhash *Gxhash) CanVerifyHeadersConcurrently() bool {
+	return true
+}
+
+// PreprocessHeaderVerification prepares header verification for heavy computation before synchronous header verification such as ecrecover.
+func (gxhash *Gxhash) PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error) {
+	panic("this method is not used for PoW engine")
+}
+
 // VerifyHeader checks whether a header conforms to the consensus rules of the
 // stock Klaytn gxhash engine.
 func (gxhash *Gxhash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {

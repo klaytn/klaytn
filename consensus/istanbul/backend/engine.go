@@ -22,6 +22,7 @@ package backend
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"math/big"
@@ -95,13 +96,74 @@ var (
 	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new validator
 	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a validator.
 
-	inmemoryAddresses  = 20 // Number of recent addresses from ecrecover
-	recentAddresses, _ = lru.NewARC(inmemoryAddresses)
+	inmemoryBlocks             = 2048 // Number of blocks to precompute validators' addresses
+	inmemoryValidatorsPerBlock = 30   // Approximate number of validators' addresses from ecrecover
+	signatureAddresses, _      = lru.NewARC(inmemoryBlocks * inmemoryValidatorsPerBlock)
 )
+
+// cacheSignatureAddresses extracts the address from the given data and signature and cache them for later usage.
+func cacheSignatureAddresses(data []byte, sig []byte) (common.Address, error) {
+	sigStr := hex.EncodeToString(sig)
+	if addr, ok := signatureAddresses.Get(sigStr); ok {
+		return addr.(common.Address), nil
+	}
+	addr, err := istanbul.GetSignatureAddress(data, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+	signatureAddresses.Add(sigStr, addr)
+	return addr, err
+}
 
 // Author retrieves the Klaytn address of the account that minted the given block.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header)
+}
+
+// CanVerifyHeadersConcurrently returns true if concurrent header verification possible, otherwise returns false.
+func (sb *backend) CanVerifyHeadersConcurrently() bool {
+	return false
+}
+
+// PreprocessHeaderVerification prepares header verification for heavy computation before synchronous header verification such as ecrecover.
+func (sb *backend) PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error) {
+	abort := make(chan struct{})
+	results := make(chan error, inmemoryBlocks)
+	go func() {
+		for _, header := range headers {
+			err := sb.computeSignatureAddrs(header)
+
+			select {
+			case <-abort:
+				return
+			case results <- err:
+			}
+		}
+	}()
+	return abort, results
+}
+
+// computeSignatureAddrs computes the addresses of signer and validators and caches them.
+func (sb *backend) computeSignatureAddrs(header *types.Header) error {
+	_, err := ecrecover(header)
+	if err != nil {
+		return err
+	}
+
+	// Retrieve the signature from the header extra-data
+	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	if err != nil {
+		return err
+	}
+
+	proposalSeal := istanbulCore.PrepareCommittedSeal(header.Hash())
+	for _, seal := range istanbulExtra.CommittedSeal {
+		_, err := cacheSignatureAddresses(proposalSeal, seal)
+		if err != nil {
+			return errInvalidSignature
+		}
+	}
+	return nil
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of a
@@ -249,7 +311,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	// 1. Get committed seals from current header
 	for _, seal := range extra.CommittedSeal {
 		// 2. Get the original address by seal and parent block hash
-		addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
+		addr, err := cacheSignatureAddresses(proposalSeal, seal)
 		if err != nil {
 			return errInvalidSignature
 		}
@@ -673,22 +735,16 @@ func sigHash(header *types.Header) (hash common.Hash) {
 
 // ecrecover extracts the Klaytn account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
-	hash := header.Hash()
-	if addr, ok := recentAddresses.Get(hash); ok {
-		return addr.(common.Address), nil
-	}
-
 	// Retrieve the signature from the header extra-data
 	istanbulExtra, err := types.ExtractIstanbulExtra(header)
 	if err != nil {
 		return common.Address{}, err
 	}
-
-	addr, err := istanbul.GetSignatureAddress(sigHash(header).Bytes(), istanbulExtra.Seal)
+	addr, err := cacheSignatureAddresses(sigHash(header).Bytes(), istanbulExtra.Seal)
 	if err != nil {
 		return addr, err
 	}
-	recentAddresses.Add(hash, addr)
+
 	return addr, nil
 }
 
