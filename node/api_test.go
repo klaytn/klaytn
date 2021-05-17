@@ -22,13 +22,14 @@ package node
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"testing"
+
+	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/stretchr/testify/assert"
 )
 
 // This test uses the admin_startRPC and admin_startWS APIs,
