@@ -408,9 +408,6 @@ func (tx *Transaction) Execute(vm VM, stateDB StateDB, currentBlockNumber uint64
 // XXX Rename message to something less arbitrary?
 // TODO-Klaytn: Message is removed and this function will return *Transaction.
 func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker, currentBlockNumber uint64) (*Transaction, error) {
-	tx.mu.Lock()
-	defer tx.mu.Unlock()
-
 	intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
 	if err != nil {
 		return nil, err
@@ -421,17 +418,19 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		return nil, err
 	}
 
-	tx.validatedIntrinsicGas = intrinsicGas + gasFrom
 	tx.checkNonce = true
 
+	gasFeePayer := uint64(0)
 	if tx.IsFeeDelegatedTransaction() {
-		gasFeePayer, err := tx.ValidateFeePayer(s, picker, currentBlockNumber)
+		gasFeePayer, err = tx.ValidateFeePayer(s, picker, currentBlockNumber)
 		if err != nil {
 			return nil, err
 		}
-
-		tx.validatedIntrinsicGas += gasFeePayer
 	}
+
+	tx.mu.Lock()
+	tx.validatedIntrinsicGas = intrinsicGas + gasFrom + gasFeePayer
+	tx.mu.Unlock()
 
 	return tx, err
 }
