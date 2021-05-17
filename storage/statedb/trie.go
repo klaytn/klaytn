@@ -84,6 +84,9 @@ func NewTrie(root common.Hash, db *Database) (*Trie, error) {
 
 func NewTrieForPrefetching(root common.Hash, db *Database) (*Trie, error) {
 	trie, err := NewTrie(root, db)
+	if err != nil {
+		return nil, err
+	}
 	trie.prefetching = true
 	return trie, err
 }
