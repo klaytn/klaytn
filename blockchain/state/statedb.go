@@ -635,7 +635,7 @@ func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, huma
 		account.AccountValueKeyNonce:         uint64(1),
 		account.AccountValueKeyHumanReadable: humanReadable,
 		account.AccountValueKeyAccountKey:    key,
-		account.AccountValueKeyCodeInfo:      format.GenerateCodeInfo(r),
+		account.AccountValueKeyCodeInfo:      format.CodeInfoFromRules(r),
 	}
 	new, prev := self.createObjectWithMap(addr, account.SmartContractAccountType, values)
 	if prev != nil {

@@ -160,7 +160,7 @@ func (sca *SmartContractAccount) UnmarshalJSON(b []byte) error {
 	sca.key = serialized.Key.GetKey()
 	sca.storageRoot = serialized.StorageRoot
 	sca.codeHash = serialized.CodeHash
-	sca.codeInfo = params.CodeInfo(serialized.CodeFormat) | params.CodeInfo(serialized.VmVersion)
+	sca.codeInfo = serialized.CodeFormat.CodeInfoFromCodeFormat() | serialized.VmVersion.CodeInfoFromVmVersion()
 
 	return nil
 }

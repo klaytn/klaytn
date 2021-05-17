@@ -163,6 +163,14 @@ const (
 	vmVersionBitMask = 0b11110000
 )
 
+func (t CodeInfo) GetCodeFormat() CodeFormat {
+	return CodeFormat(t & codeFormatBitMask)
+}
+
+func (t CodeInfo) GetVmVersion() VmVersion {
+	return VmVersion(t & vmVersionBitMask)
+}
+
 // Supporting CodeFormat
 type CodeFormat CodeInfo
 
@@ -171,8 +179,8 @@ const (
 	CodeFormatLast
 )
 
-func (t CodeInfo) GetCodeFormat() CodeFormat {
-	return CodeFormat(t & codeFormatBitMask)
+func (t CodeFormat) CodeInfoFromCodeFormat() CodeInfo {
+	return CodeInfo(t)
 }
 
 func (t CodeFormat) String() string {
@@ -191,8 +199,8 @@ func (t CodeFormat) Validate() bool {
 	return false
 }
 
-func (t CodeFormat) GenerateCodeInfo(r Rules) CodeInfo {
-	return CodeInfo(t) | CodeInfo(GenerateVmVersion(r))
+func (t CodeFormat) CodeInfoFromRules(r Rules) CodeInfo {
+	return t.CodeInfoFromCodeFormat() | GenerateVmVersion(r).CodeInfoFromVmVersion()
 }
 
 // Supporting VmVersion
@@ -203,8 +211,8 @@ const (
 	VmVersionIstanbul                 = 0b00010000 // Deployed at Istanbul, ...(later HFs would be added)
 )
 
-func (t CodeInfo) GetVmVersion() VmVersion {
-	return VmVersion(t & vmVersionBitMask)
+func (t VmVersion) CodeInfoFromVmVersion() CodeInfo {
+	return CodeInfo(t)
 }
 
 func GenerateVmVersion(r Rules) VmVersion {
