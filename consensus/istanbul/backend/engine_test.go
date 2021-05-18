@@ -615,17 +615,14 @@ func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts [
 }
 
 func toAddressList(validators []istanbul.Validator) []common.Address {
-	var addresses []common.Address
-	for _, val := range validators {
-		addresses = append(addresses, val.Address())
+	addresses := make([]common.Address, len(validators))
+	for idx, val := range validators {
+		addresses[idx] = val.Address()
 	}
 	return addresses
 }
 
 func copyAndSortAddrs(addrs []common.Address) []common.Address {
-	if len(addrs) == 0 {
-		return nil
-	}
 	copied := make([]common.Address, len(addrs))
 	copy(copied, addrs)
 
@@ -637,9 +634,9 @@ func copyAndSortAddrs(addrs []common.Address) []common.Address {
 }
 
 func makeExpectedResult(indices []int, candidate []common.Address) []common.Address {
-	var expected []common.Address
-	for _, idx := range indices {
-		expected = append(expected, candidate[idx])
+	expected := make([]common.Address, len(indices))
+	for eIdx, cIdx := range indices {
+		expected[eIdx] = candidate[cIdx]
 	}
 	return copyAndSortAddrs(expected)
 }
