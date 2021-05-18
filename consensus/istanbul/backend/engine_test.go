@@ -25,6 +25,8 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -609,30 +611,42 @@ func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts [
 	return stakingInfo
 }
 
-func checkInValidators(target common.Address, list []istanbul.Validator) bool {
-	for _, val := range list {
-		if target == val.Address() {
-			return true
-		}
+func toAddressList(validators []istanbul.Validator) []common.Address {
+	var addresses []common.Address
+	for _, val := range validators {
+		addresses = append(addresses, val.Address())
 	}
-	return false
+	return addresses
 }
 
-func isAllDemoted(minimumStaking uint64, stakingAmounts []uint64) bool {
-	for _, val := range stakingAmounts {
-		if val >= minimumStaking {
-			return false
-		}
+func copyAndSortAddrs(addrs []common.Address) []common.Address {
+	if len(addrs) == 0 {
+		return nil
 	}
-	return true
+	copied := make([]common.Address, len(addrs))
+	copy(copied, addrs)
+
+	sort.Slice(copied, func(i, j int) bool {
+		return strings.Compare(copied[i].String(), copied[j].String()) < 0
+	})
+
+	return copied
+}
+
+func makeExpectedResult(indices []int, candidate []common.Address) []common.Address {
+	var expected []common.Address
+	for _, idx := range indices {
+		expected = append(expected, candidate[idx])
+	}
+	return copyAndSortAddrs(expected)
 }
 
 func TestSnapshot(t *testing.T) {
 	type testcase struct {
-		stakingAmounts        []uint64 // test staking amounts of each validator
-		isIstanbulCompatible  bool     // whether or not if the inserted block is istanbul compatible
-		expectedValidatorsNum int      // the number of expected validators
-		expectedDemotedNum    int      // the number of expected demoted validators
+		stakingAmounts       []uint64 // test staking amounts of each validator
+		isIstanbulCompatible bool     // whether or not if the inserted block is istanbul compatible
+		expectedValidators   []int    // the indices of expected validators
+		expectedDemoted      []int    // the indices of expected demoted validators
 	}
 
 	testcases := []testcase{
@@ -640,69 +654,69 @@ func TestSnapshot(t *testing.T) {
 		{
 			[]uint64{5000000, 5000000, 5000000, 5000000},
 			false,
-			4,
-			0,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{5000000, 5000000, 5000000, 6000000},
 			false,
-			4,
-			0,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{5000000, 5000000, 6000000, 6000000},
 			false,
-			4,
-			0,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{5000000, 6000000, 6000000, 6000000},
 			false,
-			4,
-			0,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{6000000, 6000000, 6000000, 6000000},
 			false,
-			4,
-			0,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		// The following testcases are the ones after istanbul incompatible change
 		{
 			[]uint64{5000000, 5000000, 5000000, 5000000},
 			true,
-			4,
-			0,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{5000000, 5000000, 5000000, 6000000},
 			true,
-			1,
-			3,
+			[]int{3},
+			[]int{0, 1, 2},
 		},
 		{
 			[]uint64{5000000, 5000000, 6000000, 6000000},
 			true,
-			2,
-			2,
+			[]int{2, 3},
+			[]int{0, 1},
 		},
 		{
 			[]uint64{5000000, 6000000, 6000000, 6000000},
 			true,
-			3,
-			1,
+			[]int{1, 2, 3},
+			[]int{0},
 		},
 		{
 			[]uint64{6000000, 6000000, 6000000, 6000000},
 			true,
-			4,
-			0,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{5500001, 5500000, 5499999, 0},
 			true,
-			2,
-			2,
+			[]int{0, 1},
+			[]int{2, 3},
 		},
 	}
 
@@ -729,27 +743,15 @@ func TestSnapshot(t *testing.T) {
 
 		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
 		assert.NoError(t, err)
-		assert.Equal(t, tc.expectedValidatorsNum, len(snap.ValSet.List()))
-		assert.Equal(t, tc.expectedDemotedNum, len(snap.ValSet.DemotedList()))
 
-		if tc.isIstanbulCompatible && !isAllDemoted(ms, tc.stakingAmounts) {
-			// if the inserted block is istanbul compatible
-			// and a validator has enough KLAYs at least
-			for idx, sa := range tc.stakingAmounts {
-				if sa >= ms {
-					assert.True(t, checkInValidators(addrs[idx], snap.ValSet.List()))
-				} else {
-					assert.True(t, checkInValidators(addrs[idx], snap.ValSet.DemotedList()))
-				}
-			}
-		} else {
-			// if the inserted block is not istanbul compatible
-			// or all validators don't have enough KLAYs
-			for idx := range tc.stakingAmounts {
-				assert.True(t, checkInValidators(addrs[idx], snap.ValSet.List()))
-				assert.False(t, checkInValidators(addrs[idx], snap.ValSet.DemotedList()))
-			}
-		}
+		validators := toAddressList(snap.ValSet.List())
+		demoted := toAddressList(snap.ValSet.DemotedList())
+
+		expectedValidators := makeExpectedResult(tc.expectedValidators, addrs)
+		expectedDemoted := makeExpectedResult(tc.expectedDemoted, addrs)
+
+		assert.Equal(t, expectedValidators, validators)
+		assert.Equal(t, expectedDemoted, demoted)
 
 		reward.SetTestStakingManager(oldStakingManager)
 		engine.Stop()
