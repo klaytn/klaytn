@@ -58,6 +58,7 @@ type minimumStake *big.Int
 type stakingUpdateInterval uint64
 type proposerUpdateInterval uint64
 type proposerPolicy uint64
+type governanceMode string
 
 // makeCommittedSeals returns a list of committed seals for the global variable nodeKeys.
 func makeCommittedSeals(hash common.Hash) [][]byte {
@@ -95,6 +96,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.Governance.Reward.StakingUpdateInterval = uint64(v)
 		case proposerUpdateInterval:
 			genesis.Config.Governance.Reward.ProposerUpdateInterval = uint64(v)
+		case governanceMode:
+			genesis.Config.Governance.GovernanceMode = string(v)
 		}
 	}
 	nodeKeys = make([]*ecdsa.PrivateKey, n)
@@ -645,6 +648,7 @@ func TestSnapshot(t *testing.T) {
 	type testcase struct {
 		stakingAmounts       []uint64 // test staking amounts of each validator
 		isIstanbulCompatible bool     // whether or not if the inserted block is istanbul compatible
+		isSingleMode         bool     // whether or not if the governance mode is single
 		expectedValidators   []int    // the indices of expected validators
 		expectedDemoted      []int    // the indices of expected demoted validators
 	}
@@ -654,11 +658,13 @@ func TestSnapshot(t *testing.T) {
 		{
 			[]uint64{5000000, 5000000, 5000000, 5000000},
 			false,
+			false,
 			[]int{0, 1, 2, 3},
 			[]int{},
 		},
 		{
 			[]uint64{5000000, 5000000, 5000000, 6000000},
+			false,
 			false,
 			[]int{0, 1, 2, 3},
 			[]int{},
@@ -666,17 +672,20 @@ func TestSnapshot(t *testing.T) {
 		{
 			[]uint64{5000000, 5000000, 6000000, 6000000},
 			false,
+			false,
 			[]int{0, 1, 2, 3},
 			[]int{},
 		},
 		{
 			[]uint64{5000000, 6000000, 6000000, 6000000},
 			false,
+			false,
 			[]int{0, 1, 2, 3},
 			[]int{},
 		},
 		{
 			[]uint64{6000000, 6000000, 6000000, 6000000},
+			false,
 			false,
 			[]int{0, 1, 2, 3},
 			[]int{},
@@ -685,38 +694,80 @@ func TestSnapshot(t *testing.T) {
 		{
 			[]uint64{5000000, 5000000, 5000000, 5000000},
 			true,
+			false,
 			[]int{0, 1, 2, 3},
 			[]int{},
 		},
 		{
 			[]uint64{5000000, 5000000, 5000000, 6000000},
 			true,
+			false,
 			[]int{3},
 			[]int{0, 1, 2},
 		},
 		{
 			[]uint64{5000000, 5000000, 6000000, 6000000},
 			true,
+			false,
 			[]int{2, 3},
 			[]int{0, 1},
 		},
 		{
 			[]uint64{5000000, 6000000, 6000000, 6000000},
 			true,
+			false,
 			[]int{1, 2, 3},
 			[]int{0},
 		},
 		{
 			[]uint64{6000000, 6000000, 6000000, 6000000},
 			true,
+			false,
 			[]int{0, 1, 2, 3},
 			[]int{},
 		},
 		{
 			[]uint64{5500001, 5500000, 5499999, 0},
 			true,
+			false,
 			[]int{0, 1},
 			[]int{2, 3},
+		},
+		// The following testcases are the ones for testing governing node in single mode
+		{
+			[]uint64{6000000, 6000000, 6000000, 6000000},
+			true,
+			true,
+			[]int{0, 1, 2, 3},
+			[]int{},
+		},
+		{
+			[]uint64{5000000, 6000000, 6000000, 6000000},
+			true,
+			true,
+			[]int{0, 1, 2, 3},
+			[]int{},
+		},
+		{
+			[]uint64{5000000, 5000000, 6000000, 6000000},
+			true,
+			true,
+			[]int{0, 2, 3},
+			[]int{1},
+		},
+		{
+			[]uint64{5000000, 5000000, 5000000, 6000000},
+			true,
+			true,
+			[]int{0, 3},
+			[]int{1, 2},
+		},
+		{
+			[]uint64{5000000, 5000000, 5000000, 5000000},
+			true,
+			true,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 	}
 
@@ -727,6 +778,9 @@ func TestSnapshot(t *testing.T) {
 	for _, tc := range testcases {
 		if tc.isIstanbulCompatible {
 			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+		}
+		if tc.isSingleMode {
+			configItems = append(configItems, governanceMode("single"))
 		}
 		chain, engine := newBlockChain(testNum, configItems...)
 
