@@ -33,7 +33,7 @@ func (c *core) sendPrepare() {
 	prevHash := c.current.Proposal().ParentHash()
 
 	// Do not send message if the owner of the core is not a member of the committee for the `sub.View`
-	if !c.valSet.CheckInSubList(prevHash, sub.View, c.Address()) {
+	if !c.valSet.CheckInSubList(prevHash, sub.View, c.Address(), c.backend.ChainConfig()) {
 		return
 	}
 
@@ -69,7 +69,7 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 		return err
 	}
 
-	if !c.valSet.CheckInSubList(msg.Hash, prepare.View, src.Address()) {
+	if !c.valSet.CheckInSubList(msg.Hash, prepare.View, src.Address(), c.backend.ChainConfig()) {
 		logger.Warn("received an istanbul prepare message from non-committee",
 			"currentSequence", c.current.sequence.Uint64(), "sender", src.Address().String(), "msgView", prepare.View.String())
 		return errNotFromCommittee

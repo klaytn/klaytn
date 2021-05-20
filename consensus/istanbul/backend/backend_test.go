@@ -30,17 +30,13 @@ import (
 	"testing"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
@@ -695,40 +691,14 @@ func getGovernance(dbm database.DBManager) *governance.Governance {
 }
 
 func Benchmark_getTargetReceivers(b *testing.B) {
+	_, backend := newBlockChain(1)
+	defer backend.Stop()
+	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(0)})
+
 	// Create ValidatorSet
 	council := getTestCouncil()
 	rewards := getTestRewards()
-
-	// get testing node's address
-	key, _ := crypto.HexToECDSA(PRIVKEY) // This key is to be provided to create backend
-	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 	valSet := validator.NewWeightedCouncil(council, nil, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
-
-	recents, _ := lru.NewARC(inmemorySnapshots)
-	recentMessages, _ := lru.NewARC(inmemoryPeers)
-	knownMessages, _ := lru.NewARC(inmemoryMessages)
-	gov := getGovernance(dbm)
-	backend := &backend{
-		config:            istanbul.DefaultConfig,
-		istanbulEventMux:  new(event.TypeMux),
-		privateKey:        key,
-		address:           crypto.PubkeyToAddress(key.PublicKey),
-		logger:            logger.NewWith(),
-		db:                dbm,
-		commitCh:          make(chan *types.Result, 1),
-		recents:           recents,
-		candidates:        make(map[common.Address]bool),
-		coreStarted:       false,
-		recentMessages:    recentMessages,
-		knownMessages:     knownMessages,
-		rewardbase:        rewards[0],
-		governance:        gov,
-		nodetype:          common.CONSENSUSNODE,
-		rewardDistributor: reward.NewRewardDistributor(gov),
-	}
-	backend.core = istanbulCore.New(backend, backend.config)
-
-	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(0)})
 	valSet.SetBlockNum(uint64(1))
 	valSet.CalcProposer(valSet.GetProposer().Address(), uint64(1))
 	hex := fmt.Sprintf("%015d000000000000000000000000000000000000000000000000000", 1)
@@ -741,38 +711,13 @@ func Benchmark_getTargetReceivers(b *testing.B) {
 
 // Test_GossipSubPeerTargets checks if the gossiping targets are same as council members
 func Test_GossipSubPeerTargets(t *testing.T) {
+	_, backend := newBlockChain(1)
+	defer backend.Stop()
+
 	// Create ValidatorSet
 	council := getTestCouncil()
 	rewards := getTestRewards()
-
-	// get testing node's address
-	key, _ := crypto.HexToECDSA(PRIVKEY) // This key is to be provided to create backend
-	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 	valSet := validator.NewWeightedCouncil(council, nil, rewards, getTestVotingPowers(len(council)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
-
-	recents, _ := lru.NewARC(inmemorySnapshots)
-	recentMessages, _ := lru.NewARC(inmemoryPeers)
-	knownMessages, _ := lru.NewARC(inmemoryMessages)
-	gov := getGovernance(dbm)
-	backend := &backend{
-		config:            istanbul.DefaultConfig,
-		istanbulEventMux:  new(event.TypeMux),
-		privateKey:        key,
-		address:           crypto.PubkeyToAddress(key.PublicKey),
-		logger:            logger.NewWith(),
-		db:                dbm,
-		commitCh:          make(chan *types.Result, 1),
-		recents:           recents,
-		candidates:        make(map[common.Address]bool),
-		coreStarted:       false,
-		recentMessages:    recentMessages,
-		knownMessages:     knownMessages,
-		rewardbase:        rewards[0],
-		governance:        gov,
-		nodetype:          common.CONSENSUSNODE,
-		rewardDistributor: reward.NewRewardDistributor(gov),
-	}
-	backend.core = istanbulCore.New(backend, backend.config)
 
 	// Test for blocks from 0 to maxBlockNum
 	for i := int64(0); i < maxBlockNum; i++ {
@@ -792,14 +737,14 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 
 			// Getting the current round's committee
 			viewCurrent := backend.currentView.Load().(*istanbul.View)
-			committees[0] = valSet.SubList(prevHash, viewCurrent)
+			committees[0] = valSet.SubList(prevHash, viewCurrent, backend.ChainConfig())
 
 			// Getting the next round's committee
 			viewCurrent.Round = viewCurrent.Round.Add(viewCurrent.Round, common.Big1)
 			backend.currentView.Store(viewCurrent)
 
 			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round+1))
-			committees[1] = valSet.SubList(prevHash, viewCurrent)
+			committees[1] = valSet.SubList(prevHash, viewCurrent, backend.ChainConfig())
 
 			// Reduce round by 1 to set round to the current round before calling GossipSubPeer
 			viewCurrent.Round = viewCurrent.Round.Sub(viewCurrent.Round, common.Big1)
@@ -872,7 +817,7 @@ func newTestBackend() (b *backend) {
 
 func newTestBackendWithConfig(chainConfig *params.ChainConfig) (b *backend) {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
-	key, _ := crypto.GenerateKey()
+	key, _ := crypto.HexToECDSA(PRIVKEY)
 	gov := governance.NewGovernanceInitialize(chainConfig, dbm)
 	istanbulConfig := istanbul.DefaultConfig
 	istanbulConfig.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)

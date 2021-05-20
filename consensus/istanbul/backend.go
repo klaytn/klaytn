@@ -26,6 +26,7 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/params"
 )
 
 //go:generate mockgen -destination=consensus/istanbul/mocks/backend_mock.go github.com/klaytn/klaytn/consensus/istanbul Backend
@@ -85,4 +86,6 @@ type Backend interface {
 	SetCurrentView(view *View)
 
 	NodeType() common.ConnType
+
+	ChainConfig() *params.ChainConfig
 }

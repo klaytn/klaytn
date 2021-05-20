@@ -80,11 +80,11 @@ type ValidatorSet interface {
 	// Return the demoted validator array
 	DemotedList() []Validator
 	// SubList composes a committee after setting a proposer with a default value.
-	SubList(prevHash common.Hash, view *View) []Validator
+	SubList(prevHash common.Hash, view *View, config *params.ChainConfig) []Validator
 	// Return whether the given address is one of sub-list
-	CheckInSubList(prevHash common.Hash, view *View, addr common.Address) bool
+	CheckInSubList(prevHash common.Hash, view *View, addr common.Address, config *params.ChainConfig) bool
 	// SubListWithProposer composes a committee with given parameters.
-	SubListWithProposer(prevHash common.Hash, proposer common.Address, view *View) []Validator
+	SubListWithProposer(prevHash common.Hash, proposer common.Address, view *View, r params.Rules) []Validator
 	// Get validator by index
 	GetByIndex(i uint64) Validator
 	// Get validator by given address

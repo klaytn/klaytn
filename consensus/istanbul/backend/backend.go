@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 )
@@ -126,6 +127,10 @@ type backend struct {
 	nodetype common.ConnType
 }
 
+func (sb *backend) ChainConfig() *params.ChainConfig {
+	return sb.chain.Config()
+}
+
 func (sb *backend) NodeType() common.ConnType {
 	return sb.nodetype
 }
@@ -203,7 +208,7 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 
 // checkInSubList checks if the node is in a sublist
 func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.ValidatorSet) bool {
-	return valSet.CheckInSubList(prevHash, sb.currentView.Load().(*istanbul.View), sb.Address())
+	return valSet.CheckInSubList(prevHash, sb.currentView.Load().(*istanbul.View), sb.Address(), sb.chain.Config())
 }
 
 // getTargetReceivers returns a map of nodes which need to receive a message
@@ -222,7 +227,7 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 
 	proposer := valSet.GetProposer()
 	for i := 0; i < 2; i++ {
-		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
+		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view, sb.chain.Config().Rules(view.Sequence))
 		for _, val := range committee {
 			if val.Address() != sb.Address() {
 				targets[val.Address()] = true

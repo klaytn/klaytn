@@ -242,7 +242,7 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 	}
 
 	// get the committee list of this block at the view (blockNumber, round)
-	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
+	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view, api.chain.Config().Rules(view.Sequence))
 	addresses := make([]common.Address, len(committee))
 	for i, v := range committee {
 		addresses[i] = v.Address()
@@ -301,7 +301,7 @@ func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, er
 	originProposer = newValSet.GetProposer().Address()
 
 	// get the committee list of this block at the view (blockNumber, round)
-	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
+	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view, api.chain.Config().Rules(view.Sequence))
 	committeeAddrs := make([]common.Address, len(committee))
 	for i, v := range committee {
 		committeeAddrs[i] = v.Address()

@@ -151,13 +151,13 @@ func (valSet *defaultSet) DemotedList() []istanbul.Validator {
 
 // SubList composes a committee after setting a proposer with a default value.
 // This functions returns whole validators if it failed to compose a committee.
-func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
+func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View, chainConfig *params.ChainConfig) []istanbul.Validator {
 	// TODO-Klaytn-Istanbul: investigate whether `valSet.GetProposer().Address()` is a proper value or the proposer should be calculated based on `view`
 	proposer := valSet.GetProposer()
 	if proposer == nil {
 		return valSet.List()
 	}
-	return valSet.SubListWithProposer(prevHash, proposer.Address(), view)
+	return valSet.SubListWithProposer(prevHash, proposer.Address(), view, chainConfig.Rules(view.Sequence))
 }
 
 // SubListWithProposer composes a committee with given parameters.
@@ -165,7 +165,7 @@ func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View) []i
 // The second member of the committee is calculated with a round number of the given view and `valSet.blockNum`.
 // The reset of the committee is selected with a random seed derived from `prevHash`.
 // This functions returns whole validators if it failed to compose a committee.
-func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr common.Address, view *istanbul.View) []istanbul.Validator {
+func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr common.Address, view *istanbul.View, r params.Rules) []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
@@ -202,6 +202,10 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 
 	// seed will be used to select a random committee
 	seed, err := ConvertHashToSeed(prevHash)
+	if r.IsIstanbul {
+		logger.Info("[DEBUG] DefaultSet, SubListWithProposer", "block number", view.Sequence, "round", view.Round)
+		seed += view.Round.Int64()
+	}
 	if err != nil {
 		logger.Error("failed to convert hash to seed", "prevHash", prevHash, "err", err)
 		return validators
@@ -219,8 +223,8 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 	return committee
 }
 
-func (valSet *defaultSet) CheckInSubList(prevHash common.Hash, view *istanbul.View, addr common.Address) bool {
-	for _, val := range valSet.SubList(prevHash, view) {
+func (valSet *defaultSet) CheckInSubList(prevHash common.Hash, view *istanbul.View, addr common.Address, chainConfig *params.ChainConfig) bool {
+	for _, val := range valSet.SubList(prevHash, view, chainConfig) {
 		if val.Address() == addr {
 			return true
 		}

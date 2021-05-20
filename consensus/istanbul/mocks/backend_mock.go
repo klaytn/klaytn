@@ -13,6 +13,7 @@ import (
 	common "github.com/klaytn/klaytn/common"
 	istanbul "github.com/klaytn/klaytn/consensus/istanbul"
 	event "github.com/klaytn/klaytn/event"
+	params "github.com/klaytn/klaytn/params"
 )
 
 // MockBackend is a mock of Backend interface
@@ -64,6 +65,20 @@ func (m *MockBackend) Broadcast(arg0 common.Hash, arg1 istanbul.ValidatorSet, ar
 func (mr *MockBackendMockRecorder) Broadcast(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockBackend)(nil).Broadcast), arg0, arg1, arg2)
+}
+
+// ChainConfig mocks base method.
+func (m *MockBackend) ChainConfig() *params.ChainConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChainConfig")
+	ret0, _ := ret[0].(*params.ChainConfig)
+	return ret0
+}
+
+// ChainConfig indicates an expected call of ChainConfig.
+func (mr *MockBackendMockRecorder) ChainConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChainConfig", reflect.TypeOf((*MockBackend)(nil).ChainConfig))
 }
 
 // CheckSignature mocks base method
