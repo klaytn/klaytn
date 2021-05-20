@@ -175,9 +175,7 @@ func TestStartRPC(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Apply some sane defaults.
 			config := test.cfg
-			// config.Logger = testlog.Logger(t, log.LvlDebug)
 			config.P2P.NoDiscovery = true
 
 			// Create Node.
@@ -202,7 +200,6 @@ func TestStartRPC(t *testing.T) {
 				test.fn(t, stack, &PrivateAdminAPI{stack})
 			}
 
-			// Check if the HTTP endpoints are available.
 			httpBaseURL := "http://" + stack.httpEndpoint
 			if stack.httpListener != nil {
 				httpBaseURL = "http://" + stack.httpListener.Addr().String()
