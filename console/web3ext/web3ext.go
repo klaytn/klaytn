@@ -984,6 +984,17 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
+			name: 'getDemotedValidators',
+			call: 'istanbul_getDemotedValidators',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'getDemotedValidatorsAtHash',
+			call: 'istanbul_getDemotedValidatorsAtHash',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'discard',
 			call: 'istanbul_discard',
 			params: 1
