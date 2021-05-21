@@ -538,29 +538,32 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 	return evm.create(caller, codeAndHash, gas, value, contractAddr, humanReadable, codeFormat)
 }
 
-func (evm *EVM) GetPrecompiledContractMap(caller common.Address) map[common.Address]PrecompiledContract {
-	if codeInfo, ok := evm.StateDB.GetCodeInfo(caller); ok {
-		var (
-			currentBlockVMVersion = params.GenerateVmVersion(evm.chainRules)
-			contractVmVersion     = codeInfo.GetVmVersion()
-		)
-
-		// There are contracts which uses the old precompiled contract map (use the map at deployment time)
-		//      (gas price policy also follows old map's rule)
-		if contractVmVersion < currentBlockVMVersion {
-			// If new "VmVersion of CodeInfo" is added, please add new case below
-			switch contractVmVersion {
-			default:
-				// Without this version, contracts that are deployed before istanbul and uses 0x09-0x0b won't work properly.
-				return PrecompiledContractsConstantinople
-			}
+func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Address]PrecompiledContract {
+	getPrecompiledContractMapWithVmVersion := func() (bool, map[common.Address]PrecompiledContract) {
+		// Get codeInfo from addr. If there's no codeInfo, it returns false and use latest precompiled contract map
+		codeInfo, ok := evm.StateDB.GetCodeInfo(addr)
+		if !ok {
+			return false, nil
 		}
+
+		// Return precompiled contract map according to the VmVersion (use the map at deployment time of addr contract)
+		//      (gas price policy also follows old map's rule)
+		// If new "VmVersion" is added, add new if clause below
+		vmVersion := codeInfo.GetVmVersion()
+		if vmVersion == params.VmVersion0 {
+			// Without this version, 0x09-0x0b won't work properly with contracts deployed before istanbulHF
+			return true, PrecompiledContractsConstantinople
+		}
+		return false, nil
 	}
 
 	// There are contracts which uses latest precompiled contract map (regardless of deployment time)
 	// If new HF is added, please add new case below
 	switch {
 	case evm.chainRules.IsIstanbul:
+		if ok, mapWithVmVersion := getPrecompiledContractMapWithVmVersion(); ok {
+			return mapWithVmVersion
+		}
 		return PrecompiledContractsIstanbul
 	default:
 		return PrecompiledContractsConstantinople
