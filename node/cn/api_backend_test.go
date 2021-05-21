@@ -208,6 +208,72 @@ func TestCNAPIBackend_HeaderByNumber(t *testing.T) {
 	}
 }
 
+func TestCNAPIBackend_HeaderByNumberOrHash(t *testing.T) {
+	block := newBlock(123)
+	expectedHeader := block.Header()
+	{
+		mockCtrl, _, _, api := newCNAPIBackend(t)
+
+		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber))
+
+		assert.Nil(t, header)
+		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
+
+		mockCtrl.Finish()
+	}
+	{
+		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
+		mockBlockChain.EXPECT().CurrentBlock().Return(block).Times(1)
+
+		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
+
+		assert.Equal(t, expectedHeader, header)
+		assert.NoError(t, err)
+
+		mockCtrl.Finish()
+	}
+	{
+		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
+		mockBlockChain.EXPECT().GetHeaderByNumber(uint64(123)).Return(expectedHeader).Times(1)
+
+		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(123)))
+
+		assert.Equal(t, expectedHeader, header)
+		assert.NoError(t, err)
+
+		mockCtrl.Finish()
+	}
+	{
+		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
+		mockBlockChain.EXPECT().GetHeaderByHash(hash1).Return(expectedHeader).Times(1)
+
+		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithHash(hash1, false))
+
+		assert.Equal(t, expectedHeader, header)
+		assert.NoError(t, err)
+
+		mockCtrl.Finish()
+	}
+}
+
+func TestCNAPIBackend_HeaderByHash(t *testing.T) {
+	{
+		blockNum := uint64(123)
+		block := newBlock(int(blockNum))
+		expectedHeader := block.Header()
+
+		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
+		mockBlockChain.EXPECT().GetHeaderByHash(hash1).Return(expectedHeader).Times(1)
+
+		header, err := api.HeaderByHash(context.Background(), hash1)
+
+		assert.Equal(t, expectedHeader, header)
+		assert.NoError(t, err)
+
+		mockCtrl.Finish()
+	}
+}
+
 func TestCNAPIBackend_BlockByNumber(t *testing.T) {
 	blockNum := uint64(123)
 	block := newBlock(int(blockNum))
@@ -249,6 +315,69 @@ func TestCNAPIBackend_BlockByNumber(t *testing.T) {
 		mockBlockChain.EXPECT().GetBlockByNumber(blockNum).Return(expectedBlock).Times(1)
 
 		block, err := api.BlockByNumber(context.Background(), rpc.BlockNumber(blockNum))
+
+		assert.Equal(t, expectedBlock, block)
+		assert.NoError(t, err)
+
+		mockCtrl.Finish()
+	}
+}
+
+func TestCNAPIBackend_BlockByNumberOrHash(t *testing.T) {
+	expectedBlock := newBlock(123)
+	{
+		mockCtrl, _, _, api := newCNAPIBackend(t)
+
+		header, err := api.BlockByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber))
+
+		assert.Nil(t, header)
+		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
+
+		mockCtrl.Finish()
+	}
+	{
+		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
+		mockBlockChain.EXPECT().CurrentBlock().Return(expectedBlock).Times(1)
+
+		block, err := api.BlockByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
+
+		assert.Equal(t, expectedBlock, block)
+		assert.NoError(t, err)
+
+		mockCtrl.Finish()
+	}
+	{
+		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
+		mockBlockChain.EXPECT().GetBlockByNumber(uint64(123)).Return(nil).Times(1)
+
+		block, err := api.BlockByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(123)))
+
+		assert.Nil(t, block)
+		assert.Error(t, err)
+
+		mockCtrl.Finish()
+	}
+	{
+		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
+		mockBlockChain.EXPECT().GetBlockByHash(hash1).Return(expectedBlock).Times(1)
+
+		block, err := api.BlockByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithHash(hash1, false))
+
+		assert.Equal(t, expectedBlock, block)
+		assert.NoError(t, err)
+
+		mockCtrl.Finish()
+	}
+}
+
+func TestCNAPIBackend_BlockByHash(t *testing.T) {
+	{
+		expectedBlock := newBlock(123)
+
+		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
+		mockBlockChain.EXPECT().GetBlockByHash(hash1).Return(expectedBlock).Times(1)
+
+		block, err := api.BlockByHash(context.Background(), hash1)
 
 		assert.Equal(t, expectedBlock, block)
 		assert.NoError(t, err)

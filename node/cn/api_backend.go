@@ -96,6 +96,27 @@ func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumb
 	return header, nil
 }
 
+func (b *CNAPIBackend) HeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Header, error) {
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		return b.HeaderByNumber(ctx, blockNr)
+	}
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		header, err := b.HeaderByHash(ctx, hash)
+		if err != nil {
+			return nil, err
+		}
+		if header == nil {
+			return nil, fmt.Errorf("header for hash not found")
+		}
+		return header, nil
+	}
+	return nil, fmt.Errorf("invalid arguments; neither block nor hash specified")
+}
+
+func (b *CNAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	return b.cn.blockchain.GetHeaderByHash(hash), nil
+}
+
 func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
@@ -112,6 +133,31 @@ func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumbe
 	return block, nil
 }
 
+func (b *CNAPIBackend) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
+	block := b.cn.blockchain.GetBlockByHash(hash)
+	if block == nil {
+		return nil, fmt.Errorf("the block does not exist (block hash: %s)", hash.String())
+	}
+	return block, nil
+}
+
+func (b *CNAPIBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Block, error) {
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		return b.BlockByNumber(ctx, blockNr)
+	}
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		block, err := b.BlockByHash(ctx, hash)
+		if err != nil {
+			return nil, err
+		}
+		if block == nil {
+			return nil, fmt.Errorf("header found, but block body is missing")
+		}
+		return block, nil
+	}
+	return nil, fmt.Errorf("invalid arguments; neither block nor hash specified")
+}
+
 func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
@@ -124,6 +170,21 @@ func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.B
 	}
 	stateDb, err := b.cn.BlockChain().StateAt(header.Root)
 	return stateDb, header, err
+}
+
+func (b *CNAPIBackend) StateAndHeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *types.Header, error) {
+	if blockNr, ok := blockNrOrHash.Number(); ok {
+		return b.StateAndHeaderByNumber(ctx, blockNr)
+	}
+	if hash, ok := blockNrOrHash.Hash(); ok {
+		header := b.cn.blockchain.GetHeaderByHash(hash)
+		if header == nil {
+			return nil, nil, fmt.Errorf("header for hash not found")
+		}
+		stateDb, err := b.cn.BlockChain().StateAt(header.Root)
+		return stateDb, header, err
+	}
+	return nil, nil, fmt.Errorf("invalid arguments; neither block nor hash specified")
 }
 
 func (b *CNAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
