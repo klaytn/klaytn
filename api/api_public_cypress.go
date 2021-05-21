@@ -50,7 +50,7 @@ func (s *PublicBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, pars
 		To:   &cypressCreditContractAddress,
 		Data: abiGet,
 	}
-	ret, err := s.Call(ctx, args, rpc.LatestBlockNumber)
+	ret, err := s.Call(ctx, args, rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (s *PublicBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, pars
 // GetCypressCredit calls getPhoto and getNames in the CypressCredit contract
 // and returns all the results as a struct.
 func (s *PublicBlockChainAPI) GetCypressCredit(ctx context.Context) (*CreditOutput, error) {
-	answer, err := s.IsContractAccount(ctx, cypressCreditContractAddress, rpc.LatestBlockNumber)
+	answer, err := s.IsContractAccount(ctx, cypressCreditContractAddress, rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
 	if err != nil {
 		return nil, err
 	}
