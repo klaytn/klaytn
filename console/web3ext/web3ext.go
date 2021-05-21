@@ -285,7 +285,7 @@ web3._extend({
 			call: 'admin_startRPC',
 			params: 5,
 			inputFormatter: [null, null, null, null, null]
-		}),q
+		}),
 		// This method is deprecated.
 		new web3._extend.Method({
 			name: 'stopRPC',
