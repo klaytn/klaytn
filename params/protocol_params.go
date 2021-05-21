@@ -168,11 +168,11 @@ func (t CodeInfo) GetCodeFormat() CodeFormat {
 }
 
 func (t CodeInfo) GetVmVersion() VmVersion {
-	return VmVersion(t & vmVersionBitMask)
+	return VmVersion(t & vmVersionBitMask >> 4)
 }
 
 // Supporting CodeFormat
-type CodeFormat CodeInfo
+type CodeFormat uint8
 
 const (
 	CodeFormatEVM CodeFormat = iota
@@ -204,15 +204,15 @@ func (t CodeFormat) CodeInfoFromRules(r Rules) CodeInfo {
 }
 
 // Supporting VmVersion
-type VmVersion CodeInfo
+type VmVersion uint8
 
 const (
-	VmVersionConstantinople VmVersion = 0b00000000 // Deployed at Constantinople
-	VmVersionIstanbul                 = 0b00010000 // Deployed at Istanbul, ...(later HFs would be added)
+	VmVersionConstantinople VmVersion = iota // Deployed at Constantinople
+	VmVersionIstanbul                        // Deployed at Istanbul, ...(later HFs would be added)
 )
 
 func (t VmVersion) CodeInfoFromVmVersion() CodeInfo {
-	return CodeInfo(t)
+	return CodeInfo(t) << 4
 }
 
 func GenerateVmVersion(r Rules) VmVersion {
