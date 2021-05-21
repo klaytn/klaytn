@@ -34,18 +34,18 @@ import (
 
 // This test uses the admin_startRPC and admin_startWS APIs,
 // checking whether the HTTP server is started correctly.
+type test struct {
+	name string
+	cfg  Config
+	fn   func(*testing.T, *Node, *PrivateAdminAPI)
+
+	// Checks. These run after the node is configured and all API calls have been made.
+	wantReachable bool // whether the HTTP server should be reachable at all
+	wantRPC       bool // whether JSON-RPC/HTTP should be accessible
+	wantWS        bool // whether JSON-RPC/WS should be accessible
+}
+
 func TestStartRPC(t *testing.T) {
-	type test struct {
-		name string
-		cfg  Config
-		fn   func(*testing.T, *Node, *PrivateAdminAPI)
-
-		// Checks. These run after the node is configured and all API calls have been made.
-		wantReachable bool // whether the HTTP server should be reachable at all
-		wantRPC       bool // whether JSON-RPC/HTTP should be accessible
-		wantWS        bool // whether JSON-RPC/WS should be accessible
-	}
-
 	tests := []test{
 		{
 			name: "all off",
@@ -175,55 +175,61 @@ func TestStartRPC(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			config := test.cfg
-			config.P2P.NoDiscovery = true
-
-			// Create Node.
-			stack, err := New(&config)
-			if err != nil {
-				t.Fatal("can't create node:", err)
-			}
-
-			// Register the test config.
-			stack.config.HTTPServerType = "fasthttp"
-			stack.config.HTTPPort = 0
-			stack.config.WSPort = 0
-
-			if err := stack.Start(); err != nil {
-				t.Fatal("can't start node:", err)
-			}
-
-			defer stack.Stop()
-
-			// Run the API call hook.
-			if test.fn != nil {
-				test.fn(t, stack, &PrivateAdminAPI{stack})
-			}
-
-			httpBaseURL := "http://" + stack.httpEndpoint
-			if stack.httpListener != nil {
-				httpBaseURL = "http://" + stack.httpListener.Addr().String()
-			}
-
-			wsBaseURL := "ws://" + stack.wsEndpoint
-			if stack.wsListener != nil {
-				wsBaseURL = "ws://" + stack.wsListener.Addr().String()
-			}
-
-			reachable := checkReachable(httpBaseURL)
-			rpcAvailable := checkRPC(httpBaseURL)
-			wsAvailable := checkRPC(wsBaseURL)
-
-			if reachable != test.wantReachable {
-				t.Errorf("HTTP server is %sreachable, want it %sreachable", not(reachable), not(test.wantReachable))
-			}
-			if rpcAvailable != test.wantRPC {
-				t.Errorf("HTTP RPC %savailable, want it %savailable", not(rpcAvailable), not(test.wantRPC))
-			}
-			if wsAvailable != test.wantWS {
-				t.Errorf("WS RPC %savailable, want it %savailable", not(wsAvailable), not(test.wantWS))
-			}
+			runTestWithServerType(t, test, "fasthttp")
+			runTestWithServerType(t, test, "http")
 		})
+	}
+}
+
+func runTestWithServerType(t *testing.T, test test, httpServerType string) {
+	// Setting test node config
+	config := test.cfg
+	config.P2P.NoDiscovery = true
+
+	// Create Node.
+	stack, err := New(&config)
+	if err != nil {
+		t.Fatal("can't create node:", err)
+	}
+
+	// Register the test config.
+	stack.config.HTTPServerType = httpServerType
+	stack.config.HTTPPort = 0
+	stack.config.WSPort = 0
+
+	if err := stack.Start(); err != nil {
+		t.Fatal("can't start node:", err)
+	}
+
+	defer stack.Stop()
+
+	// Run the API call hook.
+	if test.fn != nil {
+		test.fn(t, stack, &PrivateAdminAPI{stack})
+	}
+
+	httpBaseURL := "http://" + stack.httpEndpoint
+	if stack.httpListener != nil {
+		httpBaseURL = "http://" + stack.httpListener.Addr().String()
+	}
+
+	wsBaseURL := "ws://" + stack.wsEndpoint
+	if stack.wsListener != nil {
+		wsBaseURL = "ws://" + stack.wsListener.Addr().String()
+	}
+
+	reachable := checkReachable(httpBaseURL)
+	rpcAvailable := checkRPC(httpBaseURL)
+	wsAvailable := checkRPC(wsBaseURL)
+
+	if reachable != test.wantReachable {
+		t.Errorf("HTTP server is %sreachable, want it %sreachable", not(reachable), not(test.wantReachable))
+	}
+	if rpcAvailable != test.wantRPC {
+		t.Errorf("HTTP RPC %savailable, want it %savailable", not(rpcAvailable), not(test.wantRPC))
+	}
+	if wsAvailable != test.wantWS {
+		t.Errorf("WS RPC %savailable, want it %savailable", not(wsAvailable), not(test.wantWS))
 	}
 }
 
