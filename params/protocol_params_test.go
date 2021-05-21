@@ -13,10 +13,10 @@ var testCaseWithBinaryCodeFormat = []struct {
 	getVmVersionExpectVal  VmVersion
 	stringExpectVal        string
 }{
-	{0b00000000, CodeFormatEVM, true, VmVersionConstantinople, "CodeFormatEVM"},
-	{0b00010000, CodeFormatEVM, true, VmVersionIstanbul, "CodeFormatEVM"},
-	{0b00000001, CodeFormatLast, false, VmVersionConstantinople, "UndefinedCodeFormat"},
-	{0b00010001, CodeFormatLast, false, VmVersionIstanbul, "UndefinedCodeFormat"},
+	{0b00000000, CodeFormatEVM, true, VmVersion0, "CodeFormatEVM"},
+	{0b00010000, CodeFormatEVM, true, VmVersion1, "CodeFormatEVM"},
+	{0b00000001, CodeFormatLast, false, VmVersion0, "UndefinedCodeFormat"},
+	{0b00010001, CodeFormatLast, false, VmVersion1, "UndefinedCodeFormat"},
 }
 
 func TestGetCodeFormat(t *testing.T) {

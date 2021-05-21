@@ -207,8 +207,8 @@ func (t CodeFormat) CodeInfoFromRules(r Rules) CodeInfo {
 type VmVersion uint8
 
 const (
-	VmVersionConstantinople VmVersion = iota // Deployed at Constantinople
-	VmVersionIstanbul                        // Deployed at Istanbul, ...(later HFs would be added)
+	VmVersion0 VmVersion = iota // Deployed at Constantinople
+	VmVersion1                  // Deployed at Istanbul, ...(later HFs would be added)
 )
 
 func (t VmVersion) CodeInfoFromVmVersion() CodeInfo {
@@ -219,8 +219,8 @@ func GenerateVmVersion(r Rules) VmVersion {
 	switch {
 	// If new HF is added, please add new case below
 	case r.IsIstanbul:
-		return VmVersionIstanbul
+		return VmVersion1
 	default:
-		return VmVersionConstantinople
+		return VmVersion0
 	}
 }
