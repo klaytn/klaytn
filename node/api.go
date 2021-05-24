@@ -127,8 +127,8 @@ func (api *PrivateAdminAPI) PeerEvents(ctx context.Context) (*rpc.Subscription, 
 	return rpcSub, nil
 }
 
-// StartRPC starts the HTTP RPC API server.
-func (api *PrivateAdminAPI) StartRPC(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
+// StartHTTP starts the HTTP RPC API server.
+func (api *PrivateAdminAPI) StartHTTP(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()
 
@@ -187,8 +187,15 @@ func (api *PrivateAdminAPI) StartRPC(host *string, port *int, cors *string, apis
 	return true, nil
 }
 
-// StopRPC terminates an already running HTTP RPC API endpoint.
-func (api *PrivateAdminAPI) StopRPC() (bool, error) {
+// StartRPC starts the HTTP RPC API server.
+// This method is deprecated. Use StartHTTP instead.
+func (api *PrivateAdminAPI) StartRPC(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
+	logger.Warn("Deprecation warning", "method", "admin.StartRPC", "use-instead", "admin.StartHTTP")
+	return api.StartHTTP(host, port, cors, apis, vhosts)
+}
+
+// StopHTTP terminates an already running HTTP RPC API endpoint.
+func (api *PrivateAdminAPI) StopHTTP() (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()
 
@@ -197,6 +204,13 @@ func (api *PrivateAdminAPI) StopRPC() (bool, error) {
 	}
 	api.node.stopHTTP()
 	return true, nil
+}
+
+// StopRPC terminates an already running HTTP RPC API endpoint.
+// This method is deprecated. Use StopHTTP instead.
+func (api *PrivateAdminAPI) StopRPC() (bool, error) {
+	logger.Warn("Deprecation warning", "method", "admin.StopRPC", "use-instead", "admin.StopHTTP")
+	return api.StopHTTP()
 }
 
 // StartWS starts the websocket RPC API server.

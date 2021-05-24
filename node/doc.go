@@ -103,7 +103,7 @@ Functions and variables related to Node are defined in the files listed below
   - node_test.go         : Test functions for testing the Node type
   - service.go           : Defines Service, Service is an individual protocol that can be registered into a node
   - service_test.go      : Functions for testing the Service
-  - utils.go             : Administrative APIs
+  - api.go               : Administrative APIs
   - utils_test.go        : Define InstrumentedService type for node test
 */
 package node
