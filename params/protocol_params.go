@@ -218,6 +218,7 @@ func (t VmVersion) CodeInfoFromVmVersion() CodeInfo {
 func GenerateVmVersion(r Rules) VmVersion {
 	switch {
 	// If new HF is added, please add new case below
+	//	case r.IsNextHF:          // If this HF is backward compatible with vmVersion1.
 	case r.IsIstanbul:
 		return VmVersion1
 	default:
