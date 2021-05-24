@@ -243,7 +243,7 @@ func (s *Snapshot) validators() []common.Address {
 	return sortValidatorArray(validators)
 }
 
-// demotedValidators retrieves the list of authorized but demoted validators in ascending order.
+// demotedValidators retrieves the list of authorized, but demoted validators in ascending order.
 func (s *Snapshot) demotedValidators() []common.Address {
 	demotedValidators := make([]common.Address, 0, len(s.ValSet.DemotedList()))
 	for _, demotedValidator := range s.ValSet.DemotedList() {
