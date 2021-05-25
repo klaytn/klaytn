@@ -262,6 +262,25 @@ func (f *ChainDataFetcher) stopRangeFetching() error {
 	return nil
 }
 
+func (f *ChainDataFetcher) retryMakeChainEvent(blockNumber uint64) (blockchain.ChainEvent, error) {
+	var (
+		retryMax      = 100
+		retryInterval = 300 * time.Millisecond
+	)
+	ev, err := f.makeChainEvent(blockNumber)
+	for i := 0; i < retryMax && err != nil; i++ {
+		select {
+		case <-f.stopCh:
+			return ev, err
+		default:
+			logger.Warn("retrying to make a chain event...", "blockNumber", blockNumber, "retryCount", i, "err", err)
+			time.Sleep(retryInterval)
+			ev, err = f.makeChainEvent(blockNumber)
+		}
+	}
+	return ev, err
+}
+
 func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainEvent, error) {
 	var logs []*types.Log
 	block := f.blockchain.GetBlockByNumber(blockNumber)
@@ -269,6 +288,9 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 		return blockchain.ChainEvent{}, fmt.Errorf("GetBlockByNumber is failed. blockNumber: %v", blockNumber)
 	}
 	receipts := f.blockchain.GetReceiptsByBlockHash(block.Hash())
+	if receipts == nil {
+		return blockchain.ChainEvent{}, fmt.Errorf("GetReceiptsByBlockHash is failed. blockNumber: %v", blockNumber)
+	}
 	for _, r := range receipts {
 		logs = append(logs, r.Logs...)
 	}
@@ -432,7 +454,7 @@ func (f *ChainDataFetcher) handleRequest() {
 			}
 		case req := <-f.reqCh:
 			numRequestsGauge.Update(int64(len(f.reqCh)))
-			ev, err := f.makeChainEvent(req.BlockNumber)
+			ev, err := f.retryMakeChainEvent(req.BlockNumber)
 			if err != nil {
 				// TODO-ChainDataFetcher handle error
 				logger.Error("making chain event is failed", "err", err)
@@ -538,7 +560,7 @@ func (f *ChainDataFetcher) retryFunc(insert HandleChainEventFn) HandleChainEvent
 				i++
 				gauge := getInsertionRetryGauge(reqType)
 				gauge.Update(int64(i))
-				logger.Warn("retrying...", "blockNumber", event.Block.NumberU64(), "retryCount", i, "err", err)
+				logger.Warn("retrying to insert a chain event...", "blockNumber", event.Block.NumberU64(), "retryCount", i, "err", err)
 				time.Sleep(InsertRetryInterval)
 			}
 		}
