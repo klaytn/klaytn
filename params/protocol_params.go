@@ -101,14 +101,18 @@ const (
 	IdentityPerWordGas  uint64 = 3    // Per-work price for a data copy operation
 	ModExpQuadCoeffDiv  uint64 = 20   // Divisor for the quadratic particle of the big int modular exponentiation
 
-	Bn256AddGas             uint64 = 500    // Gas needed for an elliptic curve addition
-	Bn256ScalarMulGas       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
-	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
-	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
-	VMLogBaseGas            uint64 = 100    // Base price for a VMLOG operation
-	VMLogPerByteGas         uint64 = 20     // Per-byte price for a VMLOG operation
-	FeePayerGas             uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
-	ValidateSenderGas       uint64 = 5000   // Gas needed for validating the signature of a message.
+	Bn256AddGasConstantinople             uint64 = 500    // Gas needed for an elliptic curve addition
+	Bn256AddGasIstanbul                   uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
+	Bn256ScalarMulGasConstantinople       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
+	Bn256ScalarMulGasIstanbul             uint64 = 6000   // Istanbul version of gas needed for an elliptic curve scalar multiplication
+	Bn256PairingBaseGasConstantinople     uint64 = 100000 // Base price for an elliptic curve pairing check
+	Bn256PairingBaseGasIstanbul           uint64 = 45000  // Istanbul version of base price for an elliptic curve pairing check
+	Bn256PairingPerPointGasConstantinople uint64 = 80000  // Per-point price for an elliptic curve pairing check
+	Bn256PairingPerPointGasIstanbul       uint64 = 34000  // Istanbul version of per-point price for an elliptic curve pairing check
+	VMLogBaseGas                          uint64 = 100    // Base price for a VMLOG operation
+	VMLogPerByteGas                       uint64 = 20     // Per-byte price for a VMLOG operation
+	FeePayerGas                           uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
+	ValidateSenderGas                     uint64 = 5000   // Gas needed for validating the signature of a message.
 
 	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
