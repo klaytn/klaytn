@@ -16,7 +16,12 @@
 
 package chaindatafetcher
 
-import "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
+import (
+	"errors"
+	"sync/atomic"
+
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
+)
 
 type PublicChainDataFetcherAPI struct {
 	f *ChainDataFetcher
@@ -51,6 +56,12 @@ func (api *PublicChainDataFetcherAPI) ReadCheckpoint() (int64, error) {
 }
 
 func (api *PublicChainDataFetcherAPI) WriteCheckpoint(checkpoint int64) error {
+	isRunning := atomic.LoadUint32(&api.f.fetchingStarted)
+	if isRunning == running {
+		return errors.New("please call stopFetching first before write checkpoint manually")
+	}
+
+	api.f.checkpoint = checkpoint
 	return api.f.checkpointDB.WriteCheckpoint(checkpoint)
 }
 
