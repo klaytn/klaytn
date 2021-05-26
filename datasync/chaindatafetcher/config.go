@@ -44,7 +44,7 @@ type ChainDataFetcherConfig struct {
 	JobChannelSize          int
 	BlockChannelSize        int
 
-	KasConfig   *kas.KASConfig
+	KasConfig   *kas.KASConfig `json:"-"` // Deprecated: This configuration is not used anymore.
 	KafkaConfig *kafka.KafkaConfig
 }
 
