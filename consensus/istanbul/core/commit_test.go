@@ -8,6 +8,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	mock_istanbul "github.com/klaytn/klaytn/consensus/istanbul/mocks"
+	"github.com/klaytn/klaytn/params"
 )
 
 func TestCore_sendCommit(t *testing.T) {
@@ -34,12 +35,13 @@ func TestCore_sendCommit(t *testing.T) {
 		Proposal: proposal,
 	}
 
+	chainConfig := istCore.backend.ChainConfig()
 	mockCtrl.Finish()
 
 	// invalid case - not committee
 	{
 		// Increase round number until the owner of istanbul.core is not a member of the committee
-		for istCore.valSet.CheckInSubList(lastProposal.Hash(), istCore.currentView(), istCore.Address(), istCore.backend.ChainConfig()) {
+		for istCore.valSet.CheckInSubList(lastProposal.Hash(), istCore.currentView(), istCore.Address(), chainConfig) {
 			istCore.current.round.Add(istCore.current.round, common.Big1)
 			istCore.valSet.CalcProposer(lastProposer, istCore.current.round.Uint64())
 		}
@@ -48,6 +50,7 @@ func TestCore_sendCommit(t *testing.T) {
 		mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
 		mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).Times(0)
 		mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
+		mockBackend.EXPECT().ChainConfig().Return(&params.ChainConfig{}).AnyTimes()
 
 		istCore.backend = mockBackend
 		istCore.sendCommit()
@@ -68,6 +71,7 @@ func TestCore_sendCommit(t *testing.T) {
 		mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
 		mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).Times(2)
 		mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+		mockBackend.EXPECT().ChainConfig().Return(&params.ChainConfig{}).AnyTimes()
 
 		istCore.backend = mockBackend
 		istCore.sendCommit()

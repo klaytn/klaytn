@@ -75,7 +75,7 @@ func makeCommittedSeals(hash common.Hash) [][]byte {
 func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
 	// generate a genesis block
 	genesis := blockchain.DefaultGenesisBlock()
-	genesis.Config = params.TestChainConfig
+	genesis.Config = &params.ChainConfig{ChainID: big.NewInt(1)}
 	genesis.Timestamp = uint64(time.Now().Unix())
 
 	// force enable Istanbul engine and governance

@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -449,12 +450,13 @@ func TestWeightedCouncil_SubListWithProposer(t *testing.T) {
 		Sequence: new(big.Int).SetInt64(1),
 		Round:    new(big.Int).SetInt64(0),
 	}
+	r := (&params.ChainConfig{}).Rules(view.Sequence)
 
 	for i := 2; i < len(validators); i++ {
 		testSubSetLen := uint64(i)
 		valSet.SetSubGroupSize(testSubSetLen)
 
-		testSubList := valSet.SubListWithProposer(crypto.Keccak256Hash([]byte("This is a test")), valSet.GetProposer().Address(), view)
+		testSubList := valSet.SubListWithProposer(crypto.Keccak256Hash([]byte("This is a test")), valSet.GetProposer().Address(), view, r)
 		resultSubListLen := len(testSubList)
 
 		if int(testSubSetLen) != resultSubListLen {
