@@ -278,3 +278,39 @@ func TestChainDataFetcher_setComponents(t *testing.T) {
 	fetcher.setCheckpoint()
 	assert.Equal(t, testCheckpoint, fetcher.checkpoint)
 }
+
+func TestChainDataFetcher_retryMakeChainEvent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	bc, _ := mocks.NewMockBlockChain(ctrl), mocks.NewMockCheckpointDB(ctrl)
+
+	fetcher := &ChainDataFetcher{
+		blockchain: bc,
+	}
+
+	// normal case
+	header := &types.Header{Number: big.NewInt(1)}
+	testBlock := types.NewBlockWithHeader(header)
+	emptyReceipts := types.Receipts{}
+	expected := blockchain.ChainEvent{Block: testBlock, Hash: testBlock.Hash(), Receipts: emptyReceipts}
+	bc.EXPECT().GetBlockByNumber(gomock.Eq(testBlock.NumberU64())).Return(testBlock).Times(1)
+	bc.EXPECT().GetReceiptsByBlockHash(gomock.Eq(testBlock.Hash())).Return(emptyReceipts).Times(1)
+
+	actual, err := fetcher.retryMakeChainEvent(testBlock.NumberU64())
+	assert.Equal(t, expected, actual)
+	assert.NoError(t, err)
+
+	// retry case
+	testBlock2 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})
+	expected2 := blockchain.ChainEvent{Block: testBlock2, Hash: testBlock2.Hash(), Receipts: emptyReceipts}
+	bc.EXPECT().GetBlockByNumber(gomock.Eq(testBlock2.NumberU64())).Return(testBlock2).Times(2)
+	bc.EXPECT().GetReceiptsByBlockHash(gomock.Eq(testBlock2.Hash())).Return(nil).Times(2) // failed to get receipts
+
+	bc.EXPECT().GetBlockByNumber(gomock.Eq(testBlock2.NumberU64())).Return(testBlock2).Times(1)
+	bc.EXPECT().GetReceiptsByBlockHash(gomock.Eq(testBlock2.Hash())).Return(emptyReceipts).Times(1) // retry and success
+
+	actual2, err := fetcher.retryMakeChainEvent(testBlock2.NumberU64())
+	assert.Equal(t, expected2, actual2)
+	assert.NoError(t, err)
+}
