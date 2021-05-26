@@ -21,6 +21,7 @@
 package params
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 )
@@ -146,6 +147,44 @@ func GetMaximumExtraDataSize() uint64 {
 	return BFTMaximumExtraDataSize
 }
 
+// CodeFormat is the version of the interpreter that smart contract uses
+type CodeFormat uint8
+
+// Supporting CodeFormat
+const (
+	CodeFormatEVM CodeFormat = iota
+	CodeFormatLast
+)
+
+func (t CodeFormat) Validate() bool {
+	if t < CodeFormatLast {
+		return true
+	}
+	return false
+}
+
+func (t CodeFormat) String() string {
+	switch t {
+	case CodeFormatEVM:
+		return "CodeFormatEVM"
+	}
+
+	return "UndefinedCodeFormat"
+}
+
+// VmVersion contains the information of the contract deployment time (ex. 0x0(constantinople), 0x1(istanbul,...))
+type VmVersion uint8
+
+// Supporting VmVersion
+const (
+	VmVersion0 VmVersion = iota // Deployed at Constantinople
+	VmVersion1                  // Deployed at Istanbul, ...(later HFs would be added)
+)
+
+func (t VmVersion) String() string {
+	return "VmVersion" + string(t)
+}
+
 // CodeInfo consists of 8 bits, and has information of the contract code.
 // Originally, codeInfo only contains codeFormat information(interpreter version), but now it is divided into two parts.
 // First four bit contains the deployment time (ex. 0x00(constantinople), 0x10(istanbul,...)), so it is called vmVersion.
@@ -163,6 +202,23 @@ const (
 	vmVersionBitMask = 0b11110000
 )
 
+func NewCodeInfo(codeFormat CodeFormat, vmVersion VmVersion) CodeInfo {
+	return CodeInfo(codeFormat) | CodeInfo(vmVersion)<<4
+}
+
+func NewCodeInfoWithRules(codeFormat CodeFormat, r Rules) CodeInfo {
+	var vmVersion VmVersion
+	switch {
+	// If new HF is added, please add new case below
+	// case r.IsNextHF:          // If this HF is backward compatible with vmVersion1.
+	case r.IsIstanbul:
+		vmVersion = VmVersion1
+	default:
+		vmVersion = VmVersion0
+	}
+	return CodeInfo(codeFormat) | CodeInfo(vmVersion)<<4
+}
+
 func (t CodeInfo) GetCodeFormat() CodeFormat {
 	return CodeFormat(t & codeFormatBitMask)
 }
@@ -171,57 +227,6 @@ func (t CodeInfo) GetVmVersion() VmVersion {
 	return VmVersion(t & vmVersionBitMask >> 4)
 }
 
-// Supporting CodeFormat
-type CodeFormat uint8
-
-const (
-	CodeFormatEVM CodeFormat = iota
-	CodeFormatLast
-)
-
-func (t CodeFormat) CodeInfoFromCodeFormat() CodeInfo {
-	return CodeInfo(t)
-}
-
-func (t CodeFormat) String() string {
-	switch t {
-	case CodeFormatEVM:
-		return "CodeFormatEVM"
-	}
-
-	return "UndefinedCodeFormat"
-}
-
-func (t CodeFormat) Validate() bool {
-	if t < CodeFormatLast {
-		return true
-	}
-	return false
-}
-
-func (t CodeFormat) CodeInfoFromRules(r Rules) CodeInfo {
-	return t.CodeInfoFromCodeFormat() | GenerateVmVersion(r).CodeInfoFromVmVersion()
-}
-
-// Supporting VmVersion
-type VmVersion uint8
-
-const (
-	VmVersion0 VmVersion = iota // Deployed at Constantinople
-	VmVersion1                  // Deployed at Istanbul, ...(later HFs would be added)
-)
-
-func (t VmVersion) CodeInfoFromVmVersion() CodeInfo {
-	return CodeInfo(t) << 4
-}
-
-func GenerateVmVersion(r Rules) VmVersion {
-	switch {
-	// If new HF is added, please add new case below
-	//	case r.IsNextHF:          // If this HF is backward compatible with vmVersion1.
-	case r.IsIstanbul:
-		return VmVersion1
-	default:
-		return VmVersion0
-	}
+func (t CodeInfo) String() string {
+	return fmt.Sprintf("[%s, %s]", t.GetCodeFormat().String(), t.GetVmVersion().String())
 }

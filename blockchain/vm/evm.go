@@ -540,8 +540,8 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 
 func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Address]PrecompiledContract {
 	getPrecompiledContractMapWithVmVersion := func() (bool, map[common.Address]PrecompiledContract) {
-		// Get codeInfo from addr. If there's no codeInfo, it returns false and use latest precompiled contract map
-		codeInfo, ok := evm.StateDB.GetCodeInfo(addr)
+		// Get vmVersion from addr. If there's no vmVersion, it returns false and use latest precompiled contract map
+		vmVersion, ok := evm.StateDB.GetVmVersion(addr)
 		if !ok {
 			return false, nil
 		}
@@ -549,7 +549,6 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 		// Return precompiled contract map according to the VmVersion (use the map at deployment time of addr contract)
 		//      (gas price policy also follows old map's rule)
 		// If new "VmVersion" is added, add new if clause below
-		vmVersion := codeInfo.GetVmVersion()
 		if vmVersion == params.VmVersion0 {
 			// Without this version, 0x09-0x0b won't work properly with contracts deployed before istanbulHF
 			return true, PrecompiledContractsConstantinople

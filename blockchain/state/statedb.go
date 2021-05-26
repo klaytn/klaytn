@@ -319,24 +319,24 @@ func (self *StateDB) IsValidCodeFormat(addr common.Address) bool {
 	if stateObject != nil {
 		pa := account.GetProgramAccount(stateObject.account)
 		if pa != nil {
-			return pa.GetCodeInfo().GetCodeFormat().Validate()
+			return pa.GetCodeFormat().Validate()
 		}
 		return false
 	}
 	return false
 }
 
-// GetCodeInfo return false when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
-func (self *StateDB) GetCodeInfo(addr common.Address) (params.CodeInfo, bool) {
+// GetVmVersion return false when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
+func (self *StateDB) GetVmVersion(addr common.Address) (params.VmVersion, bool) {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
 		pa := account.GetProgramAccount(stateObject.account)
 		if pa != nil {
-			return pa.GetCodeInfo(), true
+			return pa.GetVmVersion(), true
 		}
-		return params.CodeInfo(0), false
+		return params.VmVersion0, false
 	}
-	return params.CodeInfo(0), false
+	return params.VmVersion0, false
 }
 
 func (self *StateDB) GetKey(addr common.Address) accountkey.AccountKey {
@@ -635,7 +635,7 @@ func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, huma
 		account.AccountValueKeyNonce:         uint64(1),
 		account.AccountValueKeyHumanReadable: humanReadable,
 		account.AccountValueKeyAccountKey:    key,
-		account.AccountValueKeyCodeInfo:      format.CodeInfoFromRules(r),
+		account.AccountValueKeyCodeInfo:      params.NewCodeInfoWithRules(format, r),
 	}
 	new, prev := self.createObjectWithMap(addr, account.SmartContractAccountType, values)
 	if prev != nil {

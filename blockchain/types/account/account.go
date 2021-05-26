@@ -112,7 +112,8 @@ type ProgramAccount interface {
 
 	GetStorageRoot() common.Hash
 	GetCodeHash() []byte
-	GetCodeInfo() params.CodeInfo
+	GetCodeFormat() params.CodeFormat
+	GetVmVersion() params.VmVersion
 
 	SetStorageRoot(h common.Hash)
 	SetCodeHash(h []byte)

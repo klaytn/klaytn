@@ -160,7 +160,7 @@ func (sca *SmartContractAccount) UnmarshalJSON(b []byte) error {
 	sca.key = serialized.Key.GetKey()
 	sca.storageRoot = serialized.StorageRoot
 	sca.codeHash = serialized.CodeHash
-	sca.codeInfo = serialized.CodeFormat.CodeInfoFromCodeFormat() | serialized.VmVersion.CodeInfoFromVmVersion()
+	sca.codeInfo = params.NewCodeInfo(serialized.CodeFormat, serialized.VmVersion)
 
 	return nil
 }
@@ -177,8 +177,12 @@ func (sca *SmartContractAccount) GetCodeHash() []byte {
 	return sca.codeHash
 }
 
-func (sca *SmartContractAccount) GetCodeInfo() params.CodeInfo {
-	return sca.codeInfo
+func (sca *SmartContractAccount) GetCodeFormat() params.CodeFormat {
+	return sca.codeInfo.GetCodeFormat()
+}
+
+func (sca *SmartContractAccount) GetVmVersion() params.VmVersion {
+	return sca.codeInfo.GetVmVersion()
 }
 
 func (sca *SmartContractAccount) SetStorageRoot(h common.Hash) {
@@ -226,9 +230,9 @@ func (sca *SmartContractAccount) String() string {
 	return fmt.Sprintf(`Common:%s
 	StorageRoot: %s
 	CodeHash: %s
-	CodeFormat: %s`,
+	CodeInfo: %s`,
 		sca.AccountCommon.String(),
 		sca.storageRoot.String(),
 		common.Bytes2Hex(sca.codeHash),
-		sca.codeInfo.GetCodeFormat().String())
+		sca.codeInfo.String())
 }

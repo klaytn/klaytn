@@ -53,6 +53,6 @@ func TestSetVmVersion(t *testing.T) {
 		{CodeFormatEVM, true, 0b00010000},
 	}
 	for _, tc := range testCaseSetIstanbulHFField {
-		assert.Equal(t, tc.expectCi, tc.cf.CodeInfoFromRules(Rules{IsIstanbul: tc.isDeployedAfterIstanbulHF}))
+		assert.Equal(t, tc.expectCi, NewCodeInfoWithRules(tc.cf, Rules{IsIstanbul: tc.isDeployedAfterIstanbulHF}))
 	}
 }
