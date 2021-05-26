@@ -717,6 +717,17 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
+			name: 'getHeaderByNumber',
+			call: 'klay_getHeaderByNumber',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getHeaderByHash',
+			call: 'klay_getHeaderByHash',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getBlockWithConsensusInfo',
 			call: blockWithConsensusInfoCall,
 			params: 1,
@@ -969,7 +980,8 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'getSnapshotAtHash',
-			call: 'istanbul_getSnapshotAtHash',
+			call: 'istanbul_
+getSnapshotAtHash',
 			params: 1
 		}),
 		new web3._extend.Method({
