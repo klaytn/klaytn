@@ -980,8 +980,7 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'getSnapshotAtHash',
-			call: 'istanbul_
-getSnapshotAtHash',
+			call: 'istanbul_getSnapshotAtHash',
 			params: 1
 		}),
 		new web3._extend.Method({
