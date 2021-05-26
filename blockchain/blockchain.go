@@ -2404,7 +2404,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 		return nil, 0, nil, err
 	}
 
-	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chainConfig, header.Number), statedb, blockNumber)
+	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chainConfig, header.Number), statedb, blockNumber, chainConfig.Rules(header.Number))
 	if err != nil {
 		return nil, 0, nil, err
 	}

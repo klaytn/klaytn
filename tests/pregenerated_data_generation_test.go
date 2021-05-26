@@ -296,7 +296,7 @@ func dataGenerationTest(b *testing.B, tc *preGeneratedTC) {
 		}
 
 		for _, tx := range txs {
-			tx.AsMessageWithAccountKeyPicker(signer, stateDB, bcData.bc.CurrentBlock().NumberU64())
+			tx.AsMessageWithAccountKeyPicker(signer, stateDB, bcData.bc.CurrentBlock().NumberU64(), bcData.bc.Config().Rules(bcData.bc.CurrentBlock().Number()))
 		}
 
 		b.StartTimer()

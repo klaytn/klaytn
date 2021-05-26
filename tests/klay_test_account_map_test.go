@@ -25,6 +25,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
 )
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -105,7 +106,7 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 	return nil
 }
 
-func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
+func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64, r params.Rules) error {
 	for _, tx := range txs {
 		to := tx.To()
 		v := tx.Value()
@@ -136,7 +137,7 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 
 		// TODO-Klaytn: This gas fee calculation is correct only if the transaction is a value transfer transaction.
 		// Calculate the correct transaction fee by checking the corresponding receipt.
-		intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
+		intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber, r)
 		if err != nil {
 			return err
 		}

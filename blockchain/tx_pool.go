@@ -693,7 +693,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 	}
 
-	intrGas, err := tx.IntrinsicGas(pool.currentBlockNumber)
+	intrGas, err := tx.IntrinsicGas(pool.currentBlockNumber, pool.chainconfig.Rules(new(big.Int).SetUint64(pool.currentBlockNumber)))
 	intrGas += gasFrom + gasFeePayer
 	if err != nil {
 		return err
