@@ -265,15 +265,18 @@ func (f *ChainDataFetcher) stopRangeFetching() error {
 func (f *ChainDataFetcher) retryMakeChainEvent(blockNumber uint64) (blockchain.ChainEvent, error) {
 	var (
 		retryMax      = 100
-		retryInterval = 300 * time.Millisecond
+		retryInterval = 1 * time.Second
 	)
 	ev, err := f.makeChainEvent(blockNumber)
-	for i := 0; i < retryMax && err != nil; i++ {
+	for i := 1; err != nil; i++ {
 		select {
 		case <-f.stopCh:
 			return ev, err
 		default:
-			logger.Warn("retrying to make a chain event...", "blockNumber", blockNumber, "retryCount", i, "err", err)
+			logger.Warn("retrying to make a chain event...", "blockNumber", blockNumber, "retryCount", i, "retryMax", retryMax, "err", err)
+			if i >= retryMax {
+				logger.Error("the max retry exceeded")
+			}
 			time.Sleep(retryInterval)
 			ev, err = f.makeChainEvent(blockNumber)
 		}
