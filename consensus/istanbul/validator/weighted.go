@@ -384,7 +384,6 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	// seed will be used to select a random committee
 	seed, err := ConvertHashToSeed(prevHash)
 	if r.IsIstanbul {
-		logger.Info("[DEBUG] weightedCouncil, SubListWithProposer", "block number", view.Sequence, "round", view.Round)
 		seed += view.Round.Int64()
 	}
 	if err != nil {

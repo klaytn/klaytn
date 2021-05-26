@@ -203,7 +203,6 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 	// seed will be used to select a random committee
 	seed, err := ConvertHashToSeed(prevHash)
 	if r.IsIstanbul {
-		logger.Info("[DEBUG] DefaultSet, SubListWithProposer", "block number", view.Sequence, "round", view.Round)
 		seed += view.Round.Int64()
 	}
 	if err != nil {
