@@ -62,7 +62,7 @@ func newAddressBookConnector(bc blockChain, gh governanceHelper) *addressBookCon
 }
 
 // make a message to the addressBook contract for executing getAllAddress function of the addressBook contract
-func (ac *addressBookConnector) makeMsgToAddressBook() (*types.Transaction, error) {
+func (ac *addressBookConnector) makeMsgToAddressBook(r params.Rules) (*types.Transaction, error) {
 	abiInstance, err := abi.JSON(strings.NewReader(ac.abi))
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (ac *addressBookConnector) makeMsgToAddressBook() (*types.Transaction, erro
 		return nil, err
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(data, false, true)
+	intrinsicGas, err := types.IntrinsicGas(data, false, r)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (ac *addressBookConnector) getStakingInfoFromAddressBook(blockNum uint64) (
 	}
 
 	// Prepare a message
-	msg, err := ac.makeMsgToAddressBook()
+	msg, err := ac.makeMsgToAddressBook(ac.bc.Config().Rules(new(big.Int).SetUint64(blockNum)))
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("failed to make message for AddressBook. root err: %s", err))
 	}

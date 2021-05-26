@@ -235,7 +235,7 @@ func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.M
 func (tx *Transaction) GetTxInternalData() TxInternalData     { return tx.data }
 
 func (tx *Transaction) IntrinsicGas(currentBlockNumber uint64, r params.Rules) (uint64, error) {
-	return tx.data.IntrinsicGas(currentBlockNumber)
+	return tx.data.IntrinsicGas(currentBlockNumber, r)
 }
 
 func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {

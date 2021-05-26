@@ -257,7 +257,7 @@ func (t *TxInternalDataChainDataAnchoring) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64, r params.Rules) (uint64, error) {
 	gas := params.TxChainDataAnchoringGas
 
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)

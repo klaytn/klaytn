@@ -232,8 +232,8 @@ func (t *TxInternalDataLegacy) RecoverPubkey(txhash common.Hash, homestead bool,
 	return []*ecdsa.PublicKey{pk}, nil
 }
 
-func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return IntrinsicGas(t.Payload, t.Recipient == nil, true)
+func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64, r params.Rules) (uint64, error) {
+	return IntrinsicGas(t.Payload, t.Recipient == nil, r)
 }
 
 func (t *TxInternalDataLegacy) SerializeForSign() []interface{} {
