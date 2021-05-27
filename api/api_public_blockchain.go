@@ -453,7 +453,7 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes {
 	return formatted
 }
 
-// RPCOutputHeader converts the given header to the RPC output .
+// RPCOutputHeader converts the given header to the RPC output.
 func RPCOutputHeader(head *types.Header) (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),

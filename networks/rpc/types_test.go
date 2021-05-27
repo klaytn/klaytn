@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
-
 	"github.com/klaytn/klaytn/common/math"
 )
 
