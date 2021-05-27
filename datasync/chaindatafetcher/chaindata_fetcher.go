@@ -268,13 +268,13 @@ func (f *ChainDataFetcher) retryMakeChainEvent(blockNumber uint64) (blockchain.C
 		retryInterval = 1 * time.Second
 	)
 	ev, err := f.makeChainEvent(blockNumber)
-	for i := 1; err != nil; i++ {
+	for retryCount := 1; err != nil; retryCount++ {
 		select {
 		case <-f.stopCh:
 			return ev, err
 		default:
-			logger.Warn("retrying to make a chain event...", "blockNumber", blockNumber, "retryCount", i, "retryMax", retryMax, "err", err)
-			if i >= retryMax {
+			logger.Warn("retrying to make a chain event...", "blockNumber", blockNumber, "retryCount", retryCount, "retryMax", retryMax, "err", err)
+			if retryCount >= retryMax {
 				logger.Error("the max retry exceeded")
 			}
 			time.Sleep(retryInterval)
