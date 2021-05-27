@@ -151,21 +151,13 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 }
 
 // GetHeaderByNumber returns the requested canonical block header.
-// * When blockNr is -1 the chain head is returned.
-// * When blockNr is -2 the pending chain head is returned.
 func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	header, err := s.b.HeaderByNumber(ctx, number)
-	if header != nil && err == nil {
-		response, err := s.rpcOutputHeader(header)
-		if number == rpc.PendingBlockNumber {
-			// Pending header need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
-				response[field] = nil
-			}
-		}
-		return response, err
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	return s.rpcOutputHeader(header)
+
 }
 
 // GetHeaderByHash returns the requested header by hash.
