@@ -58,7 +58,7 @@ func (api *PublicChainDataFetcherAPI) ReadCheckpoint() (int64, error) {
 func (api *PublicChainDataFetcherAPI) WriteCheckpoint(checkpoint int64) error {
 	isRunning := atomic.LoadUint32(&api.f.fetchingStarted)
 	if isRunning == running {
-		return errors.New("please call stopFetching first before write checkpoint manually")
+		return errors.New("call stopFetching before writing checkpoint manually")
 	}
 
 	api.f.checkpoint = checkpoint
