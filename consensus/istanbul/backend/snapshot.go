@@ -252,8 +252,8 @@ func (s *Snapshot) demotedValidators() []common.Address {
 	return sortValidatorArray(demotedValidators)
 }
 
-func (s *Snapshot) committee(prevHash common.Hash, view *istanbul.View, chain consensus.ChainReader) []common.Address {
-	committeeList := s.ValSet.SubList(prevHash, view, chain.Config())
+func (s *Snapshot) committee(prevHash common.Hash, view *istanbul.View, isIstanbul bool) []common.Address {
+	committeeList := s.ValSet.SubList(prevHash, view, isIstanbul)
 
 	committee := make([]common.Address, 0, len(committeeList))
 	for _, v := range committeeList {

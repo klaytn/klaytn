@@ -321,10 +321,10 @@ func (valSet *weightedCouncil) DemotedList() []istanbul.Validator {
 
 // SubList composes a committee after setting a proposer with a default value.
 // This functions returns whole validators if it failed to compose a committee.
-func (valSet *weightedCouncil) SubList(prevHash common.Hash, view *istanbul.View, chainConfig *params.ChainConfig) []istanbul.Validator {
+func (valSet *weightedCouncil) SubList(prevHash common.Hash, view *istanbul.View, isIstanbul bool) []istanbul.Validator {
 	// TODO-Klaytn-Istanbul: investigate whether `valSet.GetProposer().Address()` is a proper value
 	// TODO-Klaytn-Istanbul: or the proposer should be calculated based on `view`
-	return valSet.SubListWithProposer(prevHash, valSet.GetProposer().Address(), view, chainConfig.Rules(view.Sequence))
+	return valSet.SubListWithProposer(prevHash, valSet.GetProposer().Address(), view, isIstanbul)
 }
 
 // SubListWithProposer composes a committee with given parameters.
@@ -332,7 +332,7 @@ func (valSet *weightedCouncil) SubList(prevHash common.Hash, view *istanbul.View
 // The second member of the committee is calculated with a round number of the given view and `valSet.blockNum`.
 // The reset of the committee is selected with a random seed derived from `prevHash`.
 // This functions returns whole validators if it failed to compose a committee.
-func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, proposerAddr common.Address, view *istanbul.View, r params.Rules) []istanbul.Validator {
+func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, proposerAddr common.Address, view *istanbul.View, isIstanbul bool) []istanbul.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
@@ -383,7 +383,7 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 
 	// seed will be used to select a random committee
 	seed, err := ConvertHashToSeed(prevHash)
-	if r.IsIstanbul {
+	if isIstanbul {
 		seed += view.Round.Int64()
 	}
 	if err != nil {
@@ -403,8 +403,8 @@ func (valSet *weightedCouncil) SubListWithProposer(prevHash common.Hash, propose
 	return committee
 }
 
-func (valSet *weightedCouncil) CheckInSubList(prevHash common.Hash, view *istanbul.View, addr common.Address, chainConfig *params.ChainConfig) bool {
-	for _, val := range valSet.SubList(prevHash, view, chainConfig) {
+func (valSet *weightedCouncil) CheckInSubList(prevHash common.Hash, view *istanbul.View, addr common.Address, isIstanbul bool) bool {
+	for _, val := range valSet.SubList(prevHash, view, isIstanbul) {
 		if val.Address() == addr {
 			return true
 		}

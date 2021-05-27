@@ -35,14 +35,13 @@ func TestCore_sendPrepare(t *testing.T) {
 		View:     istCore.currentView(),
 		Proposal: proposal,
 	}
-	chainConfig := istCore.backend.ChainConfig()
 
 	mockCtrl.Finish()
 
 	// invalid case - not committee
 	{
 		// Increase round number until the owner of istanbul.core is not a member of the committee
-		for istCore.valSet.CheckInSubList(lastProposal.Hash(), istCore.currentView(), istCore.Address(), chainConfig) {
+		for istCore.valSet.CheckInSubList(lastProposal.Hash(), istCore.currentView(), istCore.Address(), true) {
 			istCore.current.round.Add(istCore.current.round, common.Big1)
 			istCore.valSet.CalcProposer(lastProposer, istCore.current.round.Uint64())
 		}
@@ -63,7 +62,7 @@ func TestCore_sendPrepare(t *testing.T) {
 	// valid case
 	{
 		// Increase round number until the owner of istanbul.core become a member of the committee
-		for !istCore.valSet.CheckInSubList(lastProposal.Hash(), istCore.currentView(), istCore.Address(), chainConfig) {
+		for !istCore.valSet.CheckInSubList(lastProposal.Hash(), istCore.currentView(), istCore.Address(), true) {
 			istCore.current.round.Add(istCore.current.round, common.Big1)
 			istCore.valSet.CalcProposer(lastProposer, istCore.current.round.Uint64())
 		}

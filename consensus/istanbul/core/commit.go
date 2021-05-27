@@ -38,7 +38,7 @@ func (c *core) sendCommit() {
 	prevHash := c.current.Proposal().ParentHash()
 
 	// Do not send message if the owner of the core is not a member of the committee for the `sub.View`
-	if !c.valSet.CheckInSubList(prevHash, sub.View, c.Address(), c.backend.ChainConfig()) {
+	if !c.valSet.CheckInSubList(prevHash, sub.View, c.Address(), c.backend.ChainConfig().IsIstanbul(sub.View.Sequence)) {
 		return
 	}
 
@@ -89,7 +89,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 		return err
 	}
 
-	if !c.valSet.CheckInSubList(msg.Hash, commit.View, src.Address(), c.backend.ChainConfig()) {
+	if !c.valSet.CheckInSubList(msg.Hash, commit.View, src.Address(), c.backend.ChainConfig().IsIstanbul(commit.View.Sequence)) {
 		logger.Warn("received an istanbul commit message from non-committee",
 			"currentSequence", c.current.sequence.Uint64(), "sender", src.Address().String(), "msgView", commit.View.String())
 		return errNotFromCommittee

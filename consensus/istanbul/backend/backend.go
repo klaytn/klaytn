@@ -208,7 +208,8 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 
 // checkInSubList checks if the node is in a sublist
 func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.ValidatorSet) bool {
-	return valSet.CheckInSubList(prevHash, sb.currentView.Load().(*istanbul.View), sb.Address(), sb.chain.Config())
+	view := sb.currentView.Load().(*istanbul.View)
+	return valSet.CheckInSubList(prevHash, view, sb.Address(), sb.chain.Config().IsIstanbul(view.Sequence))
 }
 
 // getTargetReceivers returns a map of nodes which need to receive a message
@@ -227,7 +228,7 @@ func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.Vali
 
 	proposer := valSet.GetProposer()
 	for i := 0; i < 2; i++ {
-		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view, sb.chain.Config().Rules(view.Sequence))
+		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view, sb.chain.Config().IsIstanbul(view.Sequence))
 		for _, val := range committee {
 			if val.Address() != sb.Address() {
 				targets[val.Address()] = true

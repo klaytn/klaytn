@@ -728,14 +728,14 @@ func Test_GossipSubPeerTargets(t *testing.T) {
 
 			// Getting the current round's committee
 			viewCurrent := backend.currentView.Load().(*istanbul.View)
-			committees[0] = valSet.SubList(prevHash, viewCurrent, backend.ChainConfig())
+			committees[0] = valSet.SubList(prevHash, viewCurrent, true)
 
 			// Getting the next round's committee
 			viewCurrent.Round = viewCurrent.Round.Add(viewCurrent.Round, common.Big1)
 			backend.currentView.Store(viewCurrent)
 
 			valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round+1))
-			committees[1] = valSet.SubList(prevHash, viewCurrent, backend.ChainConfig())
+			committees[1] = valSet.SubList(prevHash, viewCurrent, true)
 
 			// Reduce round by 1 to set round to the current round before calling GossipSubPeer
 			viewCurrent.Round = viewCurrent.Round.Sub(viewCurrent.Round, common.Big1)

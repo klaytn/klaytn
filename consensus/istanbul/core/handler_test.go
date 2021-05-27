@@ -94,8 +94,8 @@ func genValidators(n int) ([]common.Address, map[common.Address]*ecdsa.PrivateKe
 
 // getRandomValidator selects a validator in the given validator set.
 // `isCommittee` determines whether it returns a committee or a non-committee.
-func getRandomValidator(isCommittee bool, valSet istanbul.ValidatorSet, prevHash common.Hash, view *istanbul.View, config *params.ChainConfig) istanbul.Validator {
-	committee := valSet.SubList(prevHash, view, config)
+func getRandomValidator(isCommittee bool, valSet istanbul.ValidatorSet, prevHash common.Hash, view *istanbul.View, isIstanbul bool) istanbul.Validator {
+	committee := valSet.SubList(prevHash, view, isIstanbul)
 
 	if isCommittee {
 		return committee[rand.Int()%(len(committee)-1)]
@@ -240,11 +240,10 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
 	validators := mockBackend.Validators(lastBlock)
-	chainConfig := mockBackend.ChainConfig()
 
 	// Preprepare message originated from invalid sender
 	{
-		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView(), chainConfig)
+		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView(), true)
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
 		newProposal, err := genBlock(lastBlock, msgSenderKey)
@@ -290,7 +289,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Prepare message originated from invalid sender
 	{
-		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView(), chainConfig)
+		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView(), true)
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
 		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
@@ -308,7 +307,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Prepare message originated from valid sender
 	{
-		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView(), chainConfig)
+		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView(), true)
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
 		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
@@ -326,7 +325,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Commit message originated from invalid sender
 	{
-		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView(), chainConfig)
+		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView(), true)
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
 		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
@@ -344,7 +343,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Commit message originated from valid sender
 	{
-		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView(), chainConfig)
+		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView(), true)
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
 		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
@@ -380,7 +379,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// RoundChange message originated from valid sender
 	{
-		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView(), chainConfig)
+		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView(), true)
 		msgSenderKey := validatorKeyMap[msgSender.Address()]
 
 		istanbulMsg, err := genIstanbulMsg(msgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
