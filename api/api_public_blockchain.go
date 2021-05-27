@@ -368,7 +368,7 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 	executable := func(gas uint64) bool {
 		args.Gas = hexutil.Uint64(gas)
 
-		_, _, _, failed, err := DoCall(ctx, b, args, rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber), vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, gasCap)
+		_, _, _, failed, err := DoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, gasCap)
 		if err != nil || failed {
 			return false
 		}

@@ -5429,7 +5429,7 @@ var methods = function () {
     var getHeader = new Method({
         name: 'getHeader',
         call: headerCall,
-        params: 2,
+        params: 1,
         inputFormatter: [formatters.inputBlockNumberFormatter, function (val) { return !!val; }],
         outputFormatter: formatters.outputBlockFormatter
     });

@@ -248,7 +248,7 @@ func (bnh *BlockNumberOrHash) Hash() (common.Hash, bool) {
 	return common.Hash{}, false
 }
 
-func BlockNumberOrHashWithNumber(blockNr BlockNumber) BlockNumberOrHash {
+func NewBlockNumberOrHashWithNumber(blockNr BlockNumber) BlockNumberOrHash {
 	return BlockNumberOrHash{
 		BlockNumber:      &blockNr,
 		BlockHash:        nil,
@@ -256,7 +256,7 @@ func BlockNumberOrHashWithNumber(blockNr BlockNumber) BlockNumberOrHash {
 	}
 }
 
-func BlockNumberOrHashWithHash(hash common.Hash, canonical bool) BlockNumberOrHash {
+func NewBlockNumberOrHashWithHash(hash common.Hash, canonical bool) BlockNumberOrHash {
 	return BlockNumberOrHash{
 		BlockNumber:      nil,
 		BlockHash:        &hash,

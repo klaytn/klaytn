@@ -63,7 +63,7 @@ func setExpectation(m *mocks.MockBlockchainAPI, contract *common.Address, data, 
 		Data: data,
 	}
 
-	m.EXPECT().Call(gomock.Any(), gomock.Eq(arg), gomock.Eq(rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber))).Return(result, nil).Times(1)
+	m.EXPECT().Call(gomock.Any(), gomock.Eq(arg), gomock.Eq(rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber))).Return(result, nil).Times(1)
 }
 
 func (s *SuiteContractCaller) TestContractCaller_IsKIP13_Success() {

@@ -214,7 +214,7 @@ func TestCNAPIBackend_HeaderByNumberOrHash(t *testing.T) {
 	{
 		mockCtrl, _, _, api := newCNAPIBackend(t)
 
-		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber))
+		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber))
 
 		assert.Nil(t, header)
 		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
@@ -225,7 +225,7 @@ func TestCNAPIBackend_HeaderByNumberOrHash(t *testing.T) {
 		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 		mockBlockChain.EXPECT().CurrentBlock().Return(block).Times(1)
 
-		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
+		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
 
 		assert.Equal(t, expectedHeader, header)
 		assert.NoError(t, err)
@@ -236,7 +236,7 @@ func TestCNAPIBackend_HeaderByNumberOrHash(t *testing.T) {
 		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 		mockBlockChain.EXPECT().GetHeaderByNumber(uint64(123)).Return(expectedHeader).Times(1)
 
-		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(123)))
+		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithNumber(rpc.BlockNumber(123)))
 
 		assert.Equal(t, expectedHeader, header)
 		assert.NoError(t, err)
@@ -247,7 +247,7 @@ func TestCNAPIBackend_HeaderByNumberOrHash(t *testing.T) {
 		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 		mockBlockChain.EXPECT().GetHeaderByHash(hash1).Return(expectedHeader).Times(1)
 
-		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithHash(hash1, false))
+		header, err := api.HeaderByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithHash(hash1, false))
 
 		assert.Equal(t, expectedHeader, header)
 		assert.NoError(t, err)
@@ -328,7 +328,7 @@ func TestCNAPIBackend_BlockByNumberOrHash(t *testing.T) {
 	{
 		mockCtrl, _, _, api := newCNAPIBackend(t)
 
-		header, err := api.BlockByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber))
+		header, err := api.BlockByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber))
 
 		assert.Nil(t, header)
 		assert.Equal(t, kerrors.ErrPendingBlockNotSupported, err)
@@ -339,7 +339,7 @@ func TestCNAPIBackend_BlockByNumberOrHash(t *testing.T) {
 		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 		mockBlockChain.EXPECT().CurrentBlock().Return(expectedBlock).Times(1)
 
-		block, err := api.BlockByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
+		block, err := api.BlockByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
 
 		assert.Equal(t, expectedBlock, block)
 		assert.NoError(t, err)
@@ -350,7 +350,7 @@ func TestCNAPIBackend_BlockByNumberOrHash(t *testing.T) {
 		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 		mockBlockChain.EXPECT().GetBlockByNumber(uint64(123)).Return(nil).Times(1)
 
-		block, err := api.BlockByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(123)))
+		block, err := api.BlockByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithNumber(rpc.BlockNumber(123)))
 
 		assert.Nil(t, block)
 		assert.Error(t, err)
@@ -361,7 +361,7 @@ func TestCNAPIBackend_BlockByNumberOrHash(t *testing.T) {
 		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 		mockBlockChain.EXPECT().GetBlockByHash(hash1).Return(expectedBlock).Times(1)
 
-		block, err := api.BlockByNumberOrHash(context.Background(), rpc.BlockNumberOrHashWithHash(hash1, false))
+		block, err := api.BlockByNumberOrHash(context.Background(), rpc.NewBlockNumberOrHashWithHash(hash1, false))
 
 		assert.Equal(t, expectedBlock, block)
 		assert.NoError(t, err)

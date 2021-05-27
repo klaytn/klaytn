@@ -75,7 +75,7 @@ func (f *contractCaller) CodeAt(ctx context.Context, contract common.Address, bl
 	if blockNumber != nil {
 		num = rpc.BlockNumber(blockNumber.Int64())
 	}
-	return f.blockchainAPI.GetCode(ctx, contract, rpc.BlockNumberOrHashWithNumber(num))
+	return f.blockchainAPI.GetCode(ctx, contract, rpc.NewBlockNumberOrHashWithNumber(num))
 }
 
 func (f *contractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
@@ -88,7 +88,7 @@ func (f *contractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, 
 		To:   call.To,
 		Data: hexutil.Bytes(call.Data),
 	}
-	return f.blockchainAPI.Call(ctx, callArgs, rpc.BlockNumberOrHashWithNumber(num))
+	return f.blockchainAPI.Call(ctx, callArgs, rpc.NewBlockNumberOrHashWithNumber(num))
 }
 
 func getCallOpts(blockNumber *big.Int, timeout time.Duration) (*bind.CallOpts, context.CancelFunc) {
