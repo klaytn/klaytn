@@ -262,7 +262,7 @@ func (f *ChainDataFetcher) stopRangeFetching() error {
 	return nil
 }
 
-func (f *ChainDataFetcher) retryMakeChainEvent(blockNumber uint64) (blockchain.ChainEvent, error) {
+func (f *ChainDataFetcher) makeChainEventWithRetry(blockNumber uint64) (blockchain.ChainEvent, error) {
 	var (
 		retryMax      = 100
 		retryInterval = 1 * time.Second
@@ -457,7 +457,7 @@ func (f *ChainDataFetcher) handleRequest() {
 			}
 		case req := <-f.reqCh:
 			numRequestsGauge.Update(int64(len(f.reqCh)))
-			ev, err := f.retryMakeChainEvent(req.BlockNumber)
+			ev, err := f.makeChainEventWithRetry(req.BlockNumber)
 			if err != nil {
 				// TODO-ChainDataFetcher handle error
 				logger.Error("making chain event is failed", "err", err)

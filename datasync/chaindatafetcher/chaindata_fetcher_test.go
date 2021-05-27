@@ -297,7 +297,7 @@ func TestChainDataFetcher_retryMakeChainEvent(t *testing.T) {
 	bc.EXPECT().GetBlockByNumber(gomock.Eq(testBlock.NumberU64())).Return(testBlock).Times(1)
 	bc.EXPECT().GetReceiptsByBlockHash(gomock.Eq(testBlock.Hash())).Return(emptyReceipts).Times(1)
 
-	actual, err := fetcher.retryMakeChainEvent(testBlock.NumberU64())
+	actual, err := fetcher.makeChainEventWithRetry(testBlock.NumberU64())
 	assert.Equal(t, expected, actual)
 	assert.NoError(t, err)
 
@@ -310,7 +310,7 @@ func TestChainDataFetcher_retryMakeChainEvent(t *testing.T) {
 	bc.EXPECT().GetBlockByNumber(gomock.Eq(testBlock2.NumberU64())).Return(testBlock2).Times(1)
 	bc.EXPECT().GetReceiptsByBlockHash(gomock.Eq(testBlock2.Hash())).Return(emptyReceipts).Times(1) // retry and success
 
-	actual2, err := fetcher.retryMakeChainEvent(testBlock2.NumberU64())
+	actual2, err := fetcher.makeChainEventWithRetry(testBlock2.NumberU64())
 	assert.Equal(t, expected2, actual2)
 	assert.NoError(t, err)
 }
