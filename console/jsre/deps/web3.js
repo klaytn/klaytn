@@ -5343,6 +5343,10 @@ var blockCall = function (args) {
     return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "klay_getBlockByHash" : "klay_getBlockByNumber";
 };
 
+var headerCall = function (args) {
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "klay_getHeaderByHash" : "klay_getHeaderByNumber";
+};
+
 var transactionFromBlockCall = function (args) {
     return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getTransactionByBlockHashAndIndex' : 'klay_getTransactionByBlockNumberAndIndex';
 };
@@ -5417,6 +5421,14 @@ var methods = function () {
     var getBlock = new Method({
         name: 'getBlock',
         call: blockCall,
+        params: 2,
+        inputFormatter: [formatters.inputBlockNumberFormatter, function (val) { return !!val; }],
+        outputFormatter: formatters.outputBlockFormatter
+    });
+
+    var getHeader = new Method({
+        name: 'getHeader',
+        call: headerCall,
         params: 2,
         inputFormatter: [formatters.inputBlockNumberFormatter, function (val) { return !!val; }],
         outputFormatter: formatters.outputBlockFormatter
@@ -5538,6 +5550,7 @@ var methods = function () {
         getStorageAt,
         getCode,
         getBlock,
+        getHeader,
         getCompilers,
         getBlockTransactionCount,
         getTransaction,
