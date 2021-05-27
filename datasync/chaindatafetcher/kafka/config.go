@@ -45,7 +45,7 @@ const (
 )
 
 type KafkaConfig struct {
-	SaramaConfig         *sarama.Config // kafka client configurations.
+	SaramaConfig         *sarama.Config `json:"-"` // kafka client configurations.
 	Brokers              []string       // Brokers is a list of broker URLs.
 	TopicEnvironmentName string
 	TopicResourceName    string
