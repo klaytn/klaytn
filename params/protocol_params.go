@@ -204,7 +204,7 @@ const (
 )
 
 func NewCodeInfo(codeFormat CodeFormat, vmVersion VmVersion) CodeInfo {
-	return CodeInfo(codeFormat & codeFormatBitMask) | CodeInfo(vmVersion)<<4
+	return CodeInfo(codeFormat&codeFormatBitMask) | CodeInfo(vmVersion)<<4
 }
 
 func NewCodeInfoWithRules(codeFormat CodeFormat, r Rules) CodeInfo {
