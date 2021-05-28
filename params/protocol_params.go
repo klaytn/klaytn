@@ -151,6 +151,7 @@ func GetMaximumExtraDataSize() uint64 {
 type CodeFormat uint8
 
 // Supporting CodeFormat
+// CodeFormatLast should be equal or less than 16 because only the last 4 bits of CodeFormat are used for CodeInfo.
 const (
 	CodeFormatEVM CodeFormat = iota
 	CodeFormatLast
@@ -203,7 +204,7 @@ const (
 )
 
 func NewCodeInfo(codeFormat CodeFormat, vmVersion VmVersion) CodeInfo {
-	return CodeInfo(codeFormat) | CodeInfo(vmVersion)<<4
+	return CodeInfo(codeFormat & codeFormatBitMask) | CodeInfo(vmVersion)<<4
 }
 
 func NewCodeInfoWithRules(codeFormat CodeFormat, r Rules) CodeInfo {
@@ -216,7 +217,7 @@ func NewCodeInfoWithRules(codeFormat CodeFormat, r Rules) CodeInfo {
 	default:
 		vmVersion = VmVersion0
 	}
-	return CodeInfo(codeFormat) | CodeInfo(vmVersion)<<4
+	return NewCodeInfo(codeFormat, vmVersion)
 }
 
 func (t CodeInfo) GetCodeFormat() CodeFormat {
