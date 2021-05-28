@@ -273,9 +273,13 @@ func (f *ChainDataFetcher) makeChainEventWithRetry(blockNumber uint64) (blockcha
 		case <-f.stopCh:
 			return ev, err
 		default:
-			logger.Warn("retrying to make a chain event...", "blockNumber", blockNumber, "retryCount", retryCount, "retryMax", retryMax, "err", err)
-			if retryCount >= retryMax {
-				logger.Error("the max retry exceeded")
+			if retryCount < retryMax {
+				logger.Warn("retrying to make a chain event...", "blockNumber", blockNumber, "retryCount", retryCount, "retryMax", retryMax, "err", err)
+			}
+
+			// leaves an error log periodically after max retry
+			if retryCount%retryMax == 0 {
+				logger.Error("max retry exceeded. retrying to make a chain event...", "blockNumber", blockNumber, "retryCount", retryCount, "retryMax", retryMax, "err", err)
 			}
 			time.Sleep(retryInterval)
 			ev, err = f.makeChainEvent(blockNumber)
