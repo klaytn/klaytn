@@ -153,9 +153,6 @@ func (b *CNAPIBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash rp
 		if err != nil {
 			return nil, err
 		}
-		if block == nil {
-			return nil, fmt.Errorf("header found, but block body is missing")
-		}
 		return block, nil
 	}
 	return nil, fmt.Errorf("invalid arguments; neither block nor hash specified")
