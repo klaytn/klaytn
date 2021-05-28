@@ -91,7 +91,7 @@ func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumb
 	}
 	header := b.cn.blockchain.GetHeaderByNumber(uint64(blockNr))
 	if header == nil {
-		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNr)
+		return nil, fmt.Errorf("the header does not exist (block number: %d)", blockNr)
 	}
 	return header, nil
 }
@@ -114,7 +114,10 @@ func (b *CNAPIBackend) HeaderByNumberOrHash(ctx context.Context, blockNrOrHash r
 }
 
 func (b *CNAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	return b.cn.blockchain.GetHeaderByHash(hash), nil
+	if header := b.cn.blockchain.GetHeaderByHash(hash); header != nil {
+		return header, nil
+	}
+	return nil, fmt.Errorf("the header does not exist (hash: %d)", hash)
 }
 
 func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
