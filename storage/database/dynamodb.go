@@ -119,7 +119,7 @@ type CustomRetryer struct {
 // ShouldRetry overrides AWS SDK's built in DefaultRetryer to retry in all error cases.
 func (r CustomRetryer) ShouldRetry(req *request.Request) bool {
 	logger.Debug("dynamoDB client retry", "error", req.Error, "retryCnt", req.RetryCount, "retryDelay",
-		req.RetryDelay, "maxRetry:", r.MaxRetries())
+		req.RetryDelay, "maxRetry", r.MaxRetries())
 	return req.Error != nil && req.RetryCount < r.MaxRetries()
 }
 
