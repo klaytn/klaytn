@@ -36,6 +36,8 @@ import (
 	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -58,7 +60,7 @@ var noTableNameErr = errors.New("dynamoDB table name not provided")
 // batch write size
 const dynamoWriteSizeLimit = 399 * 1024 // The maximum write size is 400KB including attribute names and values
 const dynamoBatchSize = 25
-const dynamoMaxRetry = 10
+const dynamoMaxRetry = 20
 const dynamoTimeout = 10 * time.Second
 
 // batch write
@@ -104,6 +106,21 @@ type dynamoDB struct {
 type DynamoData struct {
 	Key []byte `json:"Key" dynamodbav:"Key"`
 	Val []byte `json:"Val" dynamodbav:"Val"`
+}
+
+// CustomRetryer wraps AWS SDK's built in DefaultRetryer adding additional custom features.
+// DefaultRetryer of AWS SDK has its own standard of retryable situation,
+// but it's not proper when network environment is not stable.
+// CustomRetryer conservatively retry in all error cases because DB failure of Klaytn is critical.
+type CustomRetryer struct {
+	client.DefaultRetryer
+}
+
+// ShouldRetry overrides AWS SDK's built in DefaultRetryer to retry in all error cases.
+func (r CustomRetryer) ShouldRetry(req *request.Request) bool {
+	logger.Debug("dynamoDB client retry", "error", req.Error, "retryCnt", req.RetryCount, "retryDelay",
+		req.RetryDelay, "maxRetry:", r.MaxRetries())
+	return req.Error != nil && req.RetryCount < r.MaxRetries()
 }
 
 // GetTestDynamoConfig gets dynamo config for actual aws DynamoDB test
@@ -153,6 +170,13 @@ func newDynamoDB(config *DynamoDBConfig) (*dynamoDB, error) {
 	if dynamoDBClient == nil {
 		dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
 			Config: aws.Config{
+				Retryer: CustomRetryer{
+					DefaultRetryer: client.DefaultRetryer{
+						NumMaxRetries:    dynamoMaxRetry,
+						MaxRetryDelay:    time.Second,
+						MaxThrottleDelay: time.Second,
+					},
+				},
 				Endpoint:         aws.String(config.Endpoint),
 				Region:           aws.String(config.Region),
 				S3ForcePathStyle: aws.Bool(true),
@@ -310,7 +334,7 @@ func (dynamo *dynamoDB) put(key []byte, val []byte) error {
 
 	_, err = dynamoDBClient.PutItem(params)
 	if err != nil {
-		dynamo.logger.Error("failed to put an item", "err", err, "key", hexutil.Encode(data.Key))
+		dynamo.logger.Crit("failed to put an item", "err", err, "key", hexutil.Encode(data.Key))
 		return err
 	}
 
@@ -352,7 +376,7 @@ func (dynamo *dynamoDB) get(key []byte) ([]byte, error) {
 
 	result, err := dynamoDBClient.GetItem(params)
 	if err != nil {
-		dynamo.logger.Error("failed to get an item", "err", err, "key", hexutil.Encode(key))
+		dynamo.logger.Crit("failed to get an item", "err", err, "key", hexutil.Encode(key))
 		return nil, err
 	}
 
@@ -362,6 +386,7 @@ func (dynamo *dynamoDB) get(key []byte) ([]byte, error) {
 
 	var data DynamoData
 	if err := dynamodbattribute.UnmarshalMap(result.Item, &data); err != nil {
+		dynamo.logger.Crit("failed to unmarshal dynamodb data", "err", err)
 		return nil, err
 	}
 
@@ -370,7 +395,11 @@ func (dynamo *dynamoDB) get(key []byte) ([]byte, error) {
 	}
 
 	if bytes.Equal(data.Val, overSizedDataPrefix) {
-		return dynamo.fdb.read(key)
+		ret, err := dynamo.fdb.read(key)
+		if err != nil {
+			dynamo.logger.Crit("failed to read filedb data", "err", err, "key", hexutil.Encode(key))
+		}
+		return ret, err
 	}
 
 	return data.Val, nil
@@ -389,7 +418,7 @@ func (dynamo *dynamoDB) Delete(key []byte) error {
 
 	_, err := dynamoDBClient.DeleteItem(params)
 	if err != nil {
-		dynamo.logger.Error("failed to delete an item", "err", err, "key", hexutil.Encode(key))
+		dynamo.logger.Crit("failed to delete an item", "err", err, "key", hexutil.Encode(key))
 		return err
 	}
 	return nil
