@@ -22,6 +22,7 @@ package database
 import (
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -302,7 +303,10 @@ func TestDynamoDB_Retry(t *testing.T) {
 			}
 			conn, err := listen.AcceptTCP()
 			if err != nil {
-				t.Fatal(err)
+				// the fake server ends silently when it meets deadline
+				if strings.Contains(err.Error(), "timeout") {
+					return
+				}
 			}
 			requestCnt++
 			_ = conn.Close()
