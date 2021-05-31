@@ -440,3 +440,22 @@ func (gov *Governance) GetGovernanceItemAtNumber(num uint64, key string) (interf
 func (gov *Governance) GetItemAtNumberByIntKey(num uint64, key int) (interface{}, error) {
 	return gov.GetGovernanceItemAtNumber(num, GovernanceKeyMapReverse[key])
 }
+
+// GetGoverningNodeAtNumber returns whether the governing mode is single or not and the governing node.
+func (gov *Governance) GetGoverningNodeAtNumber(num uint64) (bool, common.Address, error) {
+	govMode, err := gov.GetItemAtNumberByIntKey(num, params.GovernanceMode)
+	if err != nil {
+		return false, common.Address{}, err
+	}
+
+	if GovernanceModeMap[govMode.(string)] != params.GovernanceMode_Single {
+		return false, common.Address{}, nil
+	}
+
+	govNode, err := gov.GetItemAtNumberByIntKey(num, params.GoverningNode)
+	if err != nil {
+		return true, common.Address{}, err
+	}
+
+	return true, govNode.(common.Address), nil
+}

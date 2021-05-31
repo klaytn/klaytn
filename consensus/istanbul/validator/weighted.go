@@ -597,7 +597,7 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 // It returns no error when weightedCouncil:
 //   (1) already has up-do-date proposers
 //   (2) successfully calculated up-do-date proposers
-func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
+func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address) error {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 
@@ -638,18 +638,9 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 	}
 
 	if chainRules.IsIstanbul {
-		var (
-			demotedValidators     []*weightedValidator
-			demotedStakingAmounts []float64
-		)
-		// divide the obtained validators into two groups which have enough amount of staking
-		weightedValidators, stakingAmounts, demotedValidators, demotedStakingAmounts = filterPoorValidators(weightedValidators, stakingAmounts)
+		var demotedValidators []*weightedValidator
 
-		// if there is no valid validator, the demoted validators become valid
-		if len(weightedValidators) <= 0 {
-			weightedValidators, stakingAmounts = demotedValidators, demotedStakingAmounts
-			demotedValidators, demotedStakingAmounts = []*weightedValidator{}, []float64{}
-		}
+		weightedValidators, stakingAmounts, demotedValidators, _ = filterValidators(isSingle, governingNode, weightedValidators, stakingAmounts)
 		valSet.setValidators(weightedValidators, demotedValidators)
 	}
 
@@ -662,23 +653,6 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
 
 	return nil
-}
-
-// PromoteGoverningNode promotes governing node from demoted validators to staked validators although the node does
-// not have the minimum staking amount.
-func (valSet *weightedCouncil) PromoteGoverningNode(address common.Address) {
-	valSet.validatorMu.Lock()
-	defer valSet.validatorMu.Unlock()
-	for i, v := range valSet.demotedValidators {
-		if v.Address() == address {
-			governingNode := v.(*weightedValidator)
-			valSet.demotedValidators = append(valSet.demotedValidators[:i], valSet.demotedValidators[i+1:]...)
-			valSet.validators = append(valSet.validators, governingNode)
-			sort.Sort(valSet.validators)
-			logger.Warn("The governing node is promoted", "addr", address)
-			break
-		}
-	}
 }
 
 // setValidators converts weighted validator slice to istanbul.Validators and sets them to the council.
@@ -703,17 +677,24 @@ func (valSet *weightedCouncil) setValidators(validators []*weightedValidator, de
 	valSet.demotedValidators = newDemoted
 }
 
-// filterPoorValidators divided the given weightedValidators into two group filtered by the minimum amount of staking.
-func filterPoorValidators(weightedValidators []*weightedValidator, stakingAmounts []float64) ([]*weightedValidator, []float64, []*weightedValidator, []float64) {
+// filterValidators divided the given weightedValidators into two group filtered by the minimum amount of staking.
+// If governance mode is single, the governing node will always be a validator.
+// If no validator has enough KLAYs, all become validators.
+func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedValidators []*weightedValidator, stakingAmounts []float64) ([]*weightedValidator, []float64, []*weightedValidator, []float64) {
 	var (
 		newWeightedValidators []*weightedValidator
 		newWeightedDemoted    []*weightedValidator
+		govNode               *weightedValidator
 		newValidatorsStaking  []float64
 		newDemotedStaking     []float64
+		govNodeStaking        float64
 	)
 	amount := params.MinimumStakingAmount().Uint64()
 	for idx, val := range stakingAmounts {
-		if uint64(val) >= amount {
+		if isSingleMode && govNodeAddr == weightedValidators[idx].Address() {
+			govNode = weightedValidators[idx]
+			govNodeStaking = val
+		} else if uint64(val) >= amount {
 			newWeightedValidators = append(newWeightedValidators, weightedValidators[idx])
 			newValidatorsStaking = append(newValidatorsStaking, val)
 		} else {
@@ -722,6 +703,21 @@ func filterPoorValidators(weightedValidators []*weightedValidator, stakingAmount
 		}
 	}
 
+	// when no validator has more than minimum staking amount of KLAYs, all members are in validators
+	if len(newWeightedValidators) <= 0 {
+		// 1. if governance mode is not single,
+		// 2. if governance mode is single and governing node does not have minimum staking amount of KLAYs as well
+		if !isSingleMode || (isSingleMode && uint64(govNodeStaking) < amount) {
+			newWeightedValidators, newValidatorsStaking = newWeightedDemoted, newDemotedStaking
+			newWeightedDemoted, newDemotedStaking = []*weightedValidator{}, []float64{}
+		}
+	}
+
+	// if the governance mode is single, governing node is added to validators all the time.
+	if isSingleMode {
+		newWeightedValidators = append(newWeightedValidators, govNode)
+		newValidatorsStaking = append(newValidatorsStaking, govNodeStaking)
+	}
 	return newWeightedValidators, newValidatorsStaking, newWeightedDemoted, newDemotedStaking
 }
 

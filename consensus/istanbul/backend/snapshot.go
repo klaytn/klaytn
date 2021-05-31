@@ -181,11 +181,19 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr)
 		if policy == uint64(params.WeightedRandom) {
 			// Snapshot of block N (Snapshot_N) should contain proposers for N+1 and following blocks.
-			// And proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
-			// Let's refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
+			// Validators for Block N+1 can be calculated based on the staking information from the previous stakingUpdateInterval block.
+			// If the governance mode is single, the governing node is added to validator all the time.
+			//
+			// Proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
+			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
+			isSingle, govNode, err := gov.GetGoverningNodeAtNumber(number + 1)
+			if err != nil {
+				return nil, err
+			}
+
 			pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
 			if pHeader != nil {
-				if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config()); err != nil {
+				if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config(), isSingle, govNode); err != nil {
 					// There are three error cases and they just don't refresh proposers
 					// (1) no validator at all
 					// (2) invalid formatted hash
@@ -212,9 +220,6 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
-	if err := snap.promoteGoverningNode(gov, snap.Number); err != nil {
-		return nil, err
-	}
 
 	if snap.ValSet.Policy() == istanbul.WeightedRandom {
 		// TODO-Klaytn-Issue1166 We have to update block number of ValSet too.
@@ -226,22 +231,6 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 	gov.SetMyVotingPower(snap.getMyVotingPower(addr))
 
 	return snap, nil
-}
-
-func (s *Snapshot) promoteGoverningNode(gov *governance.Governance, number uint64) error {
-	govMode, err := gov.GetItemAtNumberByIntKey(number, params.GovernanceMode)
-	if err != nil {
-		return err
-	}
-
-	if governance.GovernanceModeMap[govMode.(string)] == params.GovernanceMode_Single {
-		govNode, err := gov.GetItemAtNumberByIntKey(number, params.GoverningNode)
-		if err != nil {
-			return err
-		}
-		s.ValSet.PromoteGoverningNode(govNode.(common.Address))
-	}
-	return nil
 }
 
 func (s *Snapshot) getMyVotingPower(addr common.Address) uint64 {
