@@ -21,16 +21,14 @@ package database
 
 import (
 	"net"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/stretchr/testify/suite"
@@ -89,75 +87,6 @@ func (s *SuiteDynamoDB) TestDynamoDB_Put() {
 	returnedVal, returnedErr := dynamo.Get(testKey)
 	s.Equal(testVal, returnedVal)
 	s.NoError(returnedErr)
-}
-
-// TestDynamoDB_Timeout tests if a timeout error occurs.
-// When there is no answer from DynamoDB server due to network failure,
-// a timeout error should occur.
-// A fake server is setup to simulate a server with a response latency.
-func (s *SuiteDynamoDB) TestDynamoDB_Timeout() {
-	// fakeEndpoint allows TCP handshakes, but doesn't answer anything to client.
-	// The fake server is used to produce a network failure scenario.
-	fakeEndpoint := "127.0.0.1:14566"
-	maxRetries := 2
-	timeout := 1 * time.Second
-	serverReadyWg := sync.WaitGroup{}
-	serverReadyWg.Add(1)
-
-	go func() {
-		tcpAddr, err := net.ResolveTCPAddr("tcp", fakeEndpoint)
-		if err != nil {
-			s.FailNow(err.Error())
-		}
-
-		listen, err := net.ListenTCP("tcp", tcpAddr)
-		if err != nil {
-			s.FailNow(err.Error())
-		}
-		defer listen.Close()
-		serverReadyWg.Done()
-
-		for i := 0; i < maxRetries+1; i++ {
-			// Deadline prevents infinite waiting of the fake server
-			// Wait longer than (maxRetries+1) * timeout
-			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
-				s.FailNow(err.Error())
-			}
-			if _, err := listen.AcceptTCP(); err != nil {
-				// the fake server ends silently when it meets deadline
-				if strings.Contains(err.Error(), "timeout") {
-					return
-				}
-				s.FailNow(err.Error())
-			}
-		}
-	}()
-
-	conf := GetTestDynamoConfig() // dummy values to create dynamoDB
-	conf.Endpoint = fakeEndpoint
-	conf.TableName = "test-table"
-
-	dynamoDBClient = dynamodb.New(session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Endpoint:   aws.String(conf.Endpoint),
-			Region:     aws.String(conf.Region),
-			MaxRetries: aws.Int(maxRetries),
-			HTTPClient: &http.Client{Timeout: timeout},
-		},
-	})))
-	expectedElapsed := time.Duration(maxRetries+1) * timeout
-
-	dynamoDB := &dynamoDB{
-		config: *conf,
-		logger: logger.NewWith("logger"),
-	}
-	serverReadyWg.Wait()
-
-	start := time.Now()
-	_, err := dynamoDB.get([]byte{0x1, 0x2})
-	s.NotNil(err)
-	s.True(strings.Contains(err.Error(), "Timeout"))
-	s.Equal(expectedElapsed, time.Since(start).Round(time.Second))
 }
 
 func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
@@ -255,9 +184,9 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
 	}
 }
 
-// testDynamoBatch_WriteMutliTables checks if there is no error when working with more than one tables.
+// TestDynamoBatch_Write_MultiTables checks if there is no error when working with more than one tables.
 // This also checks if shared workers works as expected.
-func (s *SuiteDynamoDB) TestDynamoBatch_Write_MutliTables() {
+func (s *SuiteDynamoDB) TestDynamoBatch_Write_MultiTables() {
 	// this test might end with Crit, enableLog to find out the log
 	//enableLog()
 
@@ -331,4 +260,66 @@ func (dynamo *dynamoDB) deleteDB() {
 	dynamo.Close()
 	dynamo.deleteTable()
 	dynamo.fdb.deleteBucket()
+}
+
+// TestDynamoDB_Retry tests whether dynamoDB client retries successfully.
+// A fake server is setup to simulate a server with a request count.
+func TestDynamoDB_Retry(t *testing.T) {
+	// This test needs a new dynamoDBClient having a fake endpoint.
+	oldClient := dynamoDBClient
+	dynamoDBClient = nil
+	defer func() {
+		dynamoDBClient = oldClient
+	}()
+
+	// fakeEndpoint allows TCP handshakes, but doesn't answer anything to client.
+	// The fake server is used to produce a network failure scenario.
+	fakeEndpoint := "localhost:14566"
+	requestCnt := 0
+
+	serverReadyWg := sync.WaitGroup{}
+	serverReadyWg.Add(1)
+
+	go func() {
+		tcpAddr, err := net.ResolveTCPAddr("tcp", fakeEndpoint)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		listen, err := net.ListenTCP("tcp", tcpAddr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer listen.Close()
+
+		serverReadyWg.Done()
+
+		// expected request number: dynamoMaxRetry+1. It will wait one more time after all retry done.
+		for i := 0; i < dynamoMaxRetry+1+1; i++ {
+			// Deadline prevents infinite waiting of the fake server
+			// Wait longer than (maxRetries+1) * timeout
+			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
+				t.Fatal(err)
+			}
+			conn, err := listen.AcceptTCP()
+			if err != nil {
+				// the fake server ends silently when it meets deadline
+				if strings.Contains(err.Error(), "timeout") {
+					return
+				}
+			}
+			requestCnt++
+			_ = conn.Close()
+		}
+	}()
+
+	conf := GetTestDynamoConfig() // dummy values to create dynamoDB
+	conf.Endpoint = fakeEndpoint
+
+	serverReadyWg.Wait()
+
+	dynamoDBClient = nil
+	_, err := NewDynamoDB(conf)
+	assert.NotNil(t, err)
+	assert.Equal(t, dynamoMaxRetry+1, requestCnt)
 }

@@ -28,10 +28,12 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	"github.com/klaytn/klaytn/common/hexutil"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/klaytn/klaytn/log"
@@ -52,6 +54,13 @@ type s3FileDB struct {
 func newS3FileDB(region, endpoint, bucketName string) (*s3FileDB, error) {
 	localLogger := logger.NewWith("endpoint", endpoint, "bucketName", bucketName)
 	sessionConf, err := session.NewSession(&aws.Config{
+		Retryer: CustomRetryer{
+			DefaultRetryer: client.DefaultRetryer{
+				NumMaxRetries:    dynamoMaxRetry,
+				MaxRetryDelay:    time.Second,
+				MaxThrottleDelay: time.Second,
+			},
+		},
 		Region:           aws.String(region),
 		Endpoint:         aws.String(endpoint),
 		S3ForcePathStyle: aws.Bool(true),
