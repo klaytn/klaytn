@@ -21,8 +21,9 @@ package state
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/common"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 // Tests that the node iterator indeed walks over the entire database contents.
@@ -52,7 +53,7 @@ func TestNodeIteratorCoverage(t *testing.T) {
 			t.Errorf("state entry not reported %x", hash)
 		}
 	}
-	it := db.TrieDB().DiskDB().GetMemDB().NewIterator()
+	it := db.TrieDB().DiskDB().GetMemDB().NewIterator(nil, nil)
 	for it.Next() {
 		key := it.Key()
 		if bytes.HasPrefix(key, []byte("secure-key-")) {

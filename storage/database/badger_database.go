@@ -18,10 +18,11 @@ package database
 
 import (
 	"fmt"
-	"github.com/dgraph-io/badger"
-	"github.com/klaytn/klaytn/log"
 	"os"
 	"time"
+
+	"github.com/dgraph-io/badger"
+	"github.com/klaytn/klaytn/log"
 )
 
 const gcThreshold = int64(1 << 30) // GB
@@ -141,6 +142,9 @@ func (bg *badgerDB) Get(key []byte) ([]byte, error) {
 	defer txn.Discard()
 	item, err := txn.Get(key)
 	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, dataNotFoundErr
+		}
 		return nil, err
 	}
 
@@ -163,20 +167,10 @@ func (bg *badgerDB) Delete(key []byte) error {
 	return txn.Commit()
 }
 
-func (bg *badgerDB) NewIterator() Iterator {
+func (bg *badgerDB) NewIterator(prefix []byte, start []byte) Iterator {
 	//txn := bg.db.NewTransaction(false)
 	//return txn.NewIterator(badger.DefaultIteratorOptions)
 	logger.CritWithStack("badgerDB doesn't support NewIterator")
-	return nil
-}
-
-func (bg *badgerDB) NewIteratorWithStart(start []byte) Iterator {
-	logger.CritWithStack("badgerDB doesn't support NewIteratorWithStart")
-	return nil
-}
-
-func (pdb *badgerDB) NewIteratorWithPrefix(prefix []byte) Iterator {
-	logger.CritWithStack("badgerDB doesn't support NewIteratorWithPrefix")
 	return nil
 }
 
@@ -209,21 +203,40 @@ type badgerBatch struct {
 	size int
 }
 
+// Put inserts the given value into the batch for later committing.
 func (b *badgerBatch) Put(key, value []byte) error {
 	err := b.txn.Set(key, value)
 	b.size += len(value)
 	return err
 }
 
+// Delete inserts the a key removal into the batch for later committing.
+func (b *badgerBatch) Delete(key []byte) error {
+	if err := b.txn.Delete(key); err != nil {
+		return err
+	}
+	b.size += 1
+	return nil
+}
+
+// Write flushes any accumulated data to disk.
 func (b *badgerBatch) Write() error {
 	return b.txn.Commit()
 }
 
+// ValueSize retrieves the amount of data queued up for writing.
 func (b *badgerBatch) ValueSize() int {
 	return b.size
 }
 
+// Replay replays the batch contents.
 func (b *badgerBatch) Reset() {
 	b.txn = b.db.NewTransaction(true)
 	b.size = 0
+}
+
+// Replay replays the batch contents.
+func (b *badgerBatch) Replay(w KeyValueWriter) error {
+	logger.CritWithStack("Replay is not implemented in badgerBatch!")
+	return nil
 }

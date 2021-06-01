@@ -22,7 +22,6 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
-	"math/big"
 	"math/rand"
 	"reflect"
 	"strings"
@@ -103,20 +102,6 @@ func formatName(name string) string {
 		ret[0] = unicode.ToLower(ret[0])
 	}
 	return string(ret)
-}
-
-var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
-
-// Indication if this type should be serialized in hex
-func isHexNum(t reflect.Type) bool {
-	if t == nil {
-		return false
-	}
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	return t == bigIntType
 }
 
 // suitableCallbacks iterates over the methods of the given type. It will determine if a method satisfies the criteria
@@ -238,4 +223,23 @@ func NewID() ID {
 	}
 
 	return ID("0x" + rpcId)
+}
+
+// sanitizeTimeouts sets timeouts to default one if timeout is too short.
+func sanitizeTimeouts(timeouts HTTPTimeouts) HTTPTimeouts {
+	// Make sure timeout values are meaningful
+	if timeouts.ReadTimeout < time.Second {
+		logger.Warn("Sanitizing invalid HTTP read timeout", "provided", timeouts.ReadTimeout, "updated", DefaultHTTPTimeouts.ReadTimeout)
+		timeouts.ReadTimeout = DefaultHTTPTimeouts.ReadTimeout
+	}
+	if timeouts.WriteTimeout < time.Second {
+		logger.Warn("Sanitizing invalid HTTP write timeout", "provided", timeouts.WriteTimeout, "updated", DefaultHTTPTimeouts.WriteTimeout)
+		timeouts.WriteTimeout = DefaultHTTPTimeouts.WriteTimeout
+	}
+	if timeouts.IdleTimeout < time.Second {
+		logger.Warn("Sanitizing invalid HTTP idle timeout", "provided", timeouts.IdleTimeout, "updated", DefaultHTTPTimeouts.IdleTimeout)
+		timeouts.IdleTimeout = DefaultHTTPTimeouts.IdleTimeout
+	}
+
+	return timeouts
 }

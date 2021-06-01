@@ -21,11 +21,12 @@
 package statedb
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"hash"
 	"sync"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 type hasher struct {

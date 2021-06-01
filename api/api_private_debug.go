@@ -22,11 +22,12 @@ package api
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"strings"
 )
 
 // PrivateDebugAPI is the collection of Klaytn APIs exposed over the private

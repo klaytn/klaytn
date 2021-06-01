@@ -22,8 +22,9 @@ package rpc
 
 import (
 	"context"
-	"github.com/klaytn/klaytn/networks/p2p/netutil"
 	"net"
+
+	"github.com/klaytn/klaytn/networks/p2p/netutil"
 )
 
 // ServeListener accepts connections on l, serving JSON-RPC on them.

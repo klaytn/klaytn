@@ -21,19 +21,21 @@
 package database
 
 import (
-	"github.com/klaytn/klaytn/common/fdlimit"
-	metricutils "github.com/klaytn/klaytn/metrics/utils"
+	"fmt"
 	"sync"
 	"time"
 
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+
+	"github.com/klaytn/klaytn/common/fdlimit"
+	"github.com/klaytn/klaytn/log"
+	metricutils "github.com/klaytn/klaytn/metrics/utils"
+	"github.com/rcrowley/go-metrics"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
-
-	"github.com/klaytn/klaytn/log"
-	"github.com/rcrowley/go-metrics"
 )
 
 var OpenFileLimit = 64
@@ -48,10 +50,12 @@ const (
 )
 
 const (
-	minWriteBufferSize        = 2 * opt.MiB
-	minBlockCacheCapacity     = 2 * minWriteBufferSize
-	MinOpenFilesCacheCapacity = 16
-	minBitsPerKeyForFilter    = 10
+	minWriteBufferSize             = 2 * opt.MiB
+	minBlockCacheCapacity          = 2 * minWriteBufferSize
+	MinOpenFilesCacheCapacity      = 16
+	minBitsPerKeyForFilter         = 10
+	minFileDescriptorsForDBManager = 2048
+	minFileDescriptorsForLevelDB   = 16
 )
 
 var defaultLevelDBOption = &opt.Options{
@@ -60,6 +64,7 @@ var defaultLevelDBOption = &opt.Options{
 	OpenFilesCacheCapacity: MinOpenFilesCacheCapacity,
 	Filter:                 filter.NewBloomFilter(minBitsPerKeyForFilter),
 	DisableBufferPool:      false,
+	DisableSeeksCompaction: true,
 }
 
 // GetDefaultLevelDBOption returns default LevelDB option copied from defaultLevelDBOption.
@@ -76,13 +81,13 @@ func GetOpenFilesLimit() int {
 	if err != nil {
 		logger.Crit("Failed to retrieve file descriptor allowance", "err", err)
 	}
-	if limit < 2048 {
-		if err := fdlimit.Raise(2048); err != nil {
-			logger.Crit("Failed to raise file descriptor allowance", "err", err)
+	if limit < minFileDescriptorsForDBManager {
+		raised, err := fdlimit.Raise(minFileDescriptorsForDBManager)
+		if err != nil || raised < minFileDescriptorsForDBManager {
+			logger.Crit("Raised number of file descriptor is below the minimum value",
+				"currFileDescriptorsLimit", limit, "minFileDescriptorsForDBManager", minFileDescriptorsForDBManager)
 		}
-	}
-	if limit > 2048 { // cap database file descriptors even if more is available
-		limit = 2048
+		limit = int(raised)
 	}
 	return limit / 2 // Leave half for networking and other stuff
 }
@@ -91,16 +96,39 @@ type levelDB struct {
 	fn string      // filename for reporting
 	db *leveldb.DB // LevelDB instance
 
-	compTimeMeter   metrics.Meter // Meter for measuring the total time spent in database compaction
-	compReadMeter   metrics.Meter // Meter for measuring the data read during compaction
-	compWriteMeter  metrics.Meter // Meter for measuring the data written during compaction
-	diskReadMeter   metrics.Meter // Meter for measuring the effective amount of data read
-	diskWriteMeter  metrics.Meter // Meter for measuring the effective amount of data written
-	blockCacheGauge metrics.Gauge // Gauge for measuring the current size of block cache
+	writeDelayCountMeter    metrics.Meter // Meter for measuring the cumulative number of write delays
+	writeDelayDurationMeter metrics.Meter // Meter for measuring the cumulative duration of write delays
+
+	aliveSnapshotsMeter metrics.Meter // Meter for measuring the number of alive snapshots
+	aliveIteratorsMeter metrics.Meter // Meter for measuring the number of alive iterators
+
+	compTimer              klaytnmetrics.HybridTimer // Meter for measuring the total time spent in database compaction
+	compReadMeter          metrics.Meter             // Meter for measuring the data read during compaction
+	compWriteMeter         metrics.Meter             // Meter for measuring the data written during compaction
+	diskReadMeter          metrics.Meter             // Meter for measuring the effective amount of data read
+	diskWriteMeter         metrics.Meter             // Meter for measuring the effective amount of data written
+	blockCacheGauge        metrics.Gauge             // Gauge for measuring the current size of block cache
+	openedTablesCountMeter metrics.Meter
+	memCompGauge           metrics.Gauge // Gauge for tracking the number of memory compaction
+	level0CompGauge        metrics.Gauge // Gauge for tracking the number of table compaction in level0
+	nonlevel0CompGauge     metrics.Gauge // Gauge for tracking the number of table compaction in non0 level
+	seekCompGauge          metrics.Gauge // Gauge for tracking the number of table compaction caused by read opt
+
+	levelSizesGauge     []metrics.Gauge
+	levelTablesGauge    []metrics.Gauge
+	levelReadGauge      []metrics.Gauge
+	levelWriteGauge     []metrics.Gauge
+	levelDurationsGauge []metrics.Gauge
+
+	perfCheck       bool
+	getTimer        klaytnmetrics.HybridTimer
+	putTimer        klaytnmetrics.HybridTimer
+	batchWriteTimer klaytnmetrics.HybridTimer
 
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
 
+	prefix string     // prefix used for metrics
 	logger log.Logger // Contextual logger tracking the database path
 }
 
@@ -113,6 +141,7 @@ func getLevelDBOptions(dbc *DBConfig) *opt.Options {
 		DisableBufferPool:             !dbc.LevelDBBufferPool,
 		CompactionTableSize:           2 * opt.MiB,
 		CompactionTableSizeMultiplier: 1.0,
+		DisableSeeksCompaction:        true,
 	}
 
 	return newOption
@@ -125,8 +154,8 @@ func NewLevelDB(dbc *DBConfig, entryType DBEntryType) (*levelDB, error) {
 	if dbc.LevelDBCacheSize < 16 {
 		dbc.LevelDBCacheSize = 16
 	}
-	if dbc.OpenFilesLimit < 16 {
-		dbc.OpenFilesLimit = 16
+	if dbc.OpenFilesLimit < minFileDescriptorsForLevelDB {
+		dbc.OpenFilesLimit = minFileDescriptorsForLevelDB
 	}
 
 	ldbOpts := getLevelDBOptions(dbc)
@@ -134,7 +163,7 @@ func NewLevelDB(dbc *DBConfig, entryType DBEntryType) (*levelDB, error) {
 
 	localLogger.Info("LevelDB configurations",
 		"levelDBCacheSize", (ldbOpts.WriteBuffer+ldbOpts.BlockCacheCapacity)/opt.MiB, "openFilesLimit", ldbOpts.OpenFilesCacheCapacity,
-		"useBufferPool", !ldbOpts.DisableBufferPool, "compressionType", ldbOpts.Compression,
+		"useBufferPool", !ldbOpts.DisableBufferPool, "usePerfCheck", dbc.EnableDBPerfMetrics, "compressionType", ldbOpts.Compression,
 		"compactionTableSize(MB)", ldbOpts.CompactionTableSize/opt.MiB, "compactionTableSizeMultiplier", ldbOpts.CompactionTableSizeMultiplier)
 
 	// Open the db and recover any potential corruptions
@@ -147,9 +176,10 @@ func NewLevelDB(dbc *DBConfig, entryType DBEntryType) (*levelDB, error) {
 		return nil, err
 	}
 	return &levelDB{
-		fn:     dbc.Dir,
-		db:     db,
-		logger: localLogger,
+		fn:        dbc.Dir,
+		db:        db,
+		logger:    localLogger,
+		perfCheck: dbc.EnableDBPerfMetrics,
 	}, nil
 }
 
@@ -237,7 +267,16 @@ func (db *levelDB) Path() string {
 func (db *levelDB) Put(key []byte, value []byte) error {
 	// Generate the data to write to disk, update the meter and write
 	//value = rle.Compress(value)
+	if db.perfCheck {
+		start := time.Now()
+		err := db.put(key, value)
+		db.putTimer.Update(time.Since(start))
+		return err
+	}
+	return db.put(key, value)
+}
 
+func (db *levelDB) put(key []byte, value []byte) error {
 	return db.db.Put(key, value, nil)
 }
 
@@ -247,13 +286,25 @@ func (db *levelDB) Has(key []byte) (bool, error) {
 
 // Get returns the given key if it's present.
 func (db *levelDB) Get(key []byte) ([]byte, error) {
-	// Retrieve the key and increment the miss counter if not found
+	if db.perfCheck {
+		start := time.Now()
+		val, err := db.get(key)
+		db.getTimer.Update(time.Since(start))
+		return val, err
+	}
+	return db.get(key)
+	//return rle.Decompress(dat)
+}
+
+func (db *levelDB) get(key []byte) ([]byte, error) {
 	dat, err := db.db.Get(key, nil)
 	if err != nil {
+		if err == leveldb.ErrNotFound {
+			return nil, dataNotFoundErr
+		}
 		return nil, err
 	}
 	return dat, nil
-	//return rle.Decompress(dat)
 }
 
 // Delete deletes the key from the queue and database
@@ -262,22 +313,11 @@ func (db *levelDB) Delete(key []byte) error {
 	return db.db.Delete(key, nil)
 }
 
-// NewIterator creates a binary-alphabetical iterator over the entire keyspace
-// contained within the leveldb database.
-func (db *levelDB) NewIterator() Iterator {
-	return db.db.NewIterator(nil, nil)
-}
-
-// NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
-// database content starting at a particular initial key (or after, if it does
-// not exist).
-func (db *levelDB) NewIteratorWithStart(start []byte) Iterator {
-	return db.db.NewIterator(&util.Range{Start: start}, nil)
-}
-
-// NewIteratorWithPrefix returns a iterator to iterate over subset of database content with a particular prefix.
-func (db *levelDB) NewIteratorWithPrefix(prefix []byte) Iterator {
-	return db.db.NewIterator(util.BytesPrefix(prefix), nil)
+// NewIterator creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix, starting at a particular
+// initial key (or after, if it does not exist).
+func (db *levelDB) NewIterator(prefix []byte, start []byte) Iterator {
+	return db.db.NewIterator(bytesPrefixRange(prefix, start), nil)
 }
 
 func (db *levelDB) Close() {
@@ -307,13 +347,30 @@ func (db *levelDB) LDB() *leveldb.DB {
 
 // Meter configures the database metrics collectors and
 func (db *levelDB) Meter(prefix string) {
+	db.prefix = prefix
+
 	// Initialize all the metrics collector at the requested prefix
-	db.compTimeMeter = metrics.NewRegisteredMeter(prefix+"compaction/time", nil)
+	db.writeDelayCountMeter = metrics.NewRegisteredMeter(prefix+"writedelay/count", nil)
+	db.writeDelayDurationMeter = metrics.NewRegisteredMeter(prefix+"writedelay/duration", nil)
+	db.aliveSnapshotsMeter = metrics.NewRegisteredMeter(prefix+"snapshots", nil)
+	db.aliveIteratorsMeter = metrics.NewRegisteredMeter(prefix+"iterators", nil)
+	db.compTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"compaction/time", nil)
 	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compaction/read", nil)
 	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compaction/write", nil)
 	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
 	db.diskWriteMeter = metrics.NewRegisteredMeter(prefix+"disk/write", nil)
 	db.blockCacheGauge = metrics.NewRegisteredGauge(prefix+"blockcache", nil)
+
+	db.openedTablesCountMeter = metrics.NewRegisteredMeter(prefix+"opendedtables", nil)
+
+	db.getTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
+	db.putTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
+	db.batchWriteTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"batchwrite/time", nil)
+
+	db.memCompGauge = metrics.NewRegisteredGauge(prefix+"compact/memory", nil)
+	db.level0CompGauge = metrics.NewRegisteredGauge(prefix+"compact/level0", nil)
+	db.nonlevel0CompGauge = metrics.NewRegisteredGauge(prefix+"compact/nonlevel0", nil)
+	db.seekCompGauge = metrics.NewRegisteredGauge(prefix+"compact/seek", nil)
 
 	// Short circuit metering if the metrics system is disabled
 	// Above meters are initialized by NilMeter if metricutils.Enabled == false
@@ -346,6 +403,13 @@ func (db *levelDB) Meter(prefix string) {
 func (db *levelDB) meter(refresh time.Duration) {
 	s := new(leveldb.DBStats)
 
+	// Write delay related stats
+	var prevWriteDelayCount int32
+	var prevWriteDelayDuration time.Duration
+
+	// Alive snapshots/iterators
+	var prevAliveSnapshots, prevAliveIterators int32
+
 	// Compaction related stats
 	var prevCompRead, prevCompWrite int64
 	var prevCompTime time.Duration
@@ -365,6 +429,15 @@ hasError:
 		if merr != nil {
 			break
 		}
+		// Write delay related stats
+		db.writeDelayCountMeter.Mark(int64(s.WriteDelayCount - prevWriteDelayCount))
+		db.writeDelayDurationMeter.Mark(int64(s.WriteDelayDuration - prevWriteDelayDuration))
+		prevWriteDelayCount, prevWriteDelayDuration = s.WriteDelayCount, s.WriteDelayDuration
+
+		// Alive snapshots/iterators
+		db.aliveSnapshotsMeter.Mark(int64(s.AliveSnapshots - prevAliveSnapshots))
+		db.aliveIteratorsMeter.Mark(int64(s.AliveIterators - prevAliveIterators))
+		prevAliveSnapshots, prevAliveIterators = s.AliveSnapshots, s.AliveIterators
 
 		// Compaction related stats
 		var currCompRead, currCompWrite int64
@@ -373,26 +446,29 @@ hasError:
 			currCompTime += s.LevelDurations[i]
 			currCompRead += s.LevelRead[i]
 			currCompWrite += s.LevelWrite[i]
+
+			db.updateLevelStats(s, i)
 		}
-
-		db.compTimeMeter.Mark(int64(currCompTime.Seconds() - prevCompTime.Seconds()))
-		db.compReadMeter.Mark(int64(currCompRead - prevCompRead))
-		db.compWriteMeter.Mark(int64(currCompWrite - prevCompWrite))
-
-		prevCompTime = currCompTime
-		prevCompRead = currCompRead
-		prevCompWrite = currCompWrite
+		db.compTimer.Update(currCompTime - prevCompTime)
+		db.compReadMeter.Mark(currCompRead - prevCompRead)
+		db.compWriteMeter.Mark(currCompWrite - prevCompWrite)
+		prevCompTime, prevCompRead, prevCompWrite = currCompTime, currCompRead, currCompWrite
 
 		// IO related stats
 		currRead, currWrite := s.IORead, s.IOWrite
-
 		db.diskReadMeter.Mark(int64(currRead - prevRead))
 		db.diskWriteMeter.Mark(int64(currWrite - prevWrite))
-
 		prevRead, prevWrite = currRead, currWrite
 
-		// BlockCache size
+		// BlockCache/OpenedTables related stats
 		db.blockCacheGauge.Update(int64(s.BlockCacheSize))
+		db.openedTablesCountMeter.Mark(int64(s.OpenedTablesCount))
+
+		// Compaction related stats
+		db.memCompGauge.Update(int64(s.MemComp))
+		db.level0CompGauge.Update(int64(s.Level0Comp))
+		db.nonlevel0CompGauge.Update(int64(s.NonLevel0Comp))
+		db.seekCompGauge.Update(int64(s.SeekComp))
 
 		// Sleep a bit, then repeat the stats collection
 		select {
@@ -410,31 +486,111 @@ hasError:
 	errc <- merr
 }
 
-func (db *levelDB) NewBatch() Batch {
-	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
+// updateLevelStats collects level-wise stats.
+func (db *levelDB) updateLevelStats(s *leveldb.DBStats, lv int) {
+	// dynamically creates a new metrics for a new level
+	if len(db.levelSizesGauge) <= lv {
+		prefix := db.prefix + fmt.Sprintf("level%v/", lv)
+		db.levelSizesGauge = append(db.levelSizesGauge, metrics.NewRegisteredGauge(prefix+"size", nil))
+		db.levelTablesGauge = append(db.levelTablesGauge, metrics.NewRegisteredGauge(prefix+"tables", nil))
+		db.levelReadGauge = append(db.levelReadGauge, metrics.NewRegisteredGauge(prefix+"read", nil))
+		db.levelWriteGauge = append(db.levelWriteGauge, metrics.NewRegisteredGauge(prefix+"write", nil))
+		db.levelDurationsGauge = append(db.levelDurationsGauge, metrics.NewRegisteredGauge(prefix+"duration", nil))
+	}
+
+	db.levelSizesGauge[lv].Update(s.LevelSizes[lv])
+	db.levelTablesGauge[lv].Update(int64(s.LevelTablesCounts[lv]))
+	db.levelReadGauge[lv].Update(s.LevelRead[lv])
+	db.levelWriteGauge[lv].Update(s.LevelWrite[lv])
+	db.levelDurationsGauge[lv].Update(int64(s.LevelDurations[lv]))
 }
 
+func (db *levelDB) NewBatch() Batch {
+	return &ldbBatch{b: new(leveldb.Batch), ldb: db}
+}
+
+// ldbBatch is a write-only leveldb batch that commits changes to its host database
+// when Write is called. A batch cannot be used concurrently.
 type ldbBatch struct {
-	db   *leveldb.DB
 	b    *leveldb.Batch
+	ldb  *levelDB
 	size int
 }
 
+// Put inserts the given value into the batch for later committing.
 func (b *ldbBatch) Put(key, value []byte) error {
 	b.b.Put(key, value)
 	b.size += len(value)
 	return nil
 }
 
-func (b *ldbBatch) Write() error {
-	return b.db.Write(b.b, nil)
+// Delete inserts the a key removal into the batch for later committing.
+func (b *ldbBatch) Delete(key []byte) error {
+	b.b.Delete(key)
+	b.size++
+	return nil
 }
 
+// Write flushes any accumulated data to disk.
+func (b *ldbBatch) Write() error {
+	if b.ldb.perfCheck {
+		start := time.Now()
+		err := b.write()
+		b.ldb.batchWriteTimer.Update(time.Since(start))
+		return err
+	}
+	return b.write()
+}
+
+func (b *ldbBatch) write() error {
+	return b.ldb.db.Write(b.b, nil)
+}
+
+// ValueSize retrieves the amount of data queued up for writing.
 func (b *ldbBatch) ValueSize() int {
 	return b.size
 }
 
+// Reset resets the batch for reuse.
 func (b *ldbBatch) Reset() {
 	b.b.Reset()
 	b.size = 0
+}
+
+// bytesPrefixRange returns key range that satisfy
+// - the given prefix, and
+// - the given seek position
+func bytesPrefixRange(prefix, start []byte) *util.Range {
+	r := util.BytesPrefix(prefix)
+	r.Start = append(r.Start, start...)
+	return r
+}
+
+// Replay replays the batch contents.
+func (b *ldbBatch) Replay(w KeyValueWriter) error {
+	return b.b.Replay(&replayer{writer: w})
+}
+
+// replayer is a small wrapper to implement the correct replay methods.
+type replayer struct {
+	writer  KeyValueWriter
+	failure error
+}
+
+// Put inserts the given value into the key-value data store.
+func (r *replayer) Put(key, value []byte) {
+	// If the replay already failed, stop executing ops
+	if r.failure != nil {
+		return
+	}
+	r.failure = r.writer.Put(key, value)
+}
+
+// Delete removes the key from the key-value data store.
+func (r *replayer) Delete(key []byte) {
+	// If the replay already failed, stop executing ops
+	if r.failure != nil {
+		return
+	}
+	r.failure = r.writer.Delete(key)
 }

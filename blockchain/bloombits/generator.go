@@ -22,6 +22,7 @@ package bloombits
 
 import (
 	"errors"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 )
 

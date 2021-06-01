@@ -53,10 +53,30 @@ const (
 	CopyGas               uint64 = 3     // Partial payment for COPY operations, multiplied by words copied, rounded up. // G_copy
 	CreateGas             uint64 = 32000 // Once per CREATE operation & contract-creation transaction.               // G_create
 	Create2Gas            uint64 = 32000 // Once per CREATE2 operation
-	SuicideRefundGas      uint64 = 24000 // Refunded following a suicide operation.                                  // R_selfdestruct
+	SelfdestructRefundGas uint64 = 24000 // Refunded following a selfdestruct operation.                                  // R_selfdestruct
 	MemoryGas             uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL. // G_memory
 	LogTopicGas           uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.   // G_logtopic
 	TxDataNonZeroGas      uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. // G_txdatanonzero
+
+	CallGas         uint64 = 700 // Static portion of gas for CALL-derivates after EIP 150 (Tangerine)
+	BalanceGas      uint64 = 400 // The cost of a BALANCE operation after EIP 150 (Tangerine)
+	ExtcodeSizeGas  uint64 = 700 // Cost of EXTCODESIZE after EIP 150 (Tangerine)
+	SloadGas        uint64 = 200
+	ExtcodeHashGas  uint64 = 400  // Cost of EXTCODEHASH (introduced in Constantinople)
+	SelfdestructGas uint64 = 5000 // Cost of SELFDESTRUCT post EIP 150 (Tangerine)
+
+	// EXP has a dynamic portion depending on the size of the exponent
+	// was set to 10 in Frontier, was raised to 50 during Eip158 (Spurious Dragon)
+	ExpByte uint64 = 50
+
+	// Extcodecopy has a dynamic AND a static cost. This represents only the
+	// static portion of the gas. It was changed during EIP 150 (Tangerine)
+	ExtcodeCopyBase uint64 = 700
+
+	// CreateBySelfdestructGas is used when the refunded account is one that does
+	// not exist. This logic is similar to call.
+	// Introduced in Tangerine Whistle (Eip 150)
+	CreateBySelfdestructGas uint64 = 25000
 
 	// Fee for Service Chain
 	// TODO-Klaytn-ServiceChain The following parameters should be fixed.
@@ -66,14 +86,15 @@ const (
 
 	// Precompiled contract gas prices
 
-	EcrecoverGas            uint64 = 3000   // Elliptic curve sender recovery gas price
-	Sha256BaseGas           uint64 = 60     // Base price for a SHA256 operation
-	Sha256PerWordGas        uint64 = 12     // Per-word price for a SHA256 operation
-	Ripemd160BaseGas        uint64 = 600    // Base price for a RIPEMD160 operation
-	Ripemd160PerWordGas     uint64 = 120    // Per-word price for a RIPEMD160 operation
-	IdentityBaseGas         uint64 = 15     // Base price for a data copy operation
-	IdentityPerWordGas      uint64 = 3      // Per-work price for a data copy operation
-	ModExpQuadCoeffDiv      uint64 = 20     // Divisor for the quadratic particle of the big int modular exponentiation
+	EcrecoverGas        uint64 = 3000 // Elliptic curve sender recovery gas price
+	Sha256BaseGas       uint64 = 60   // Base price for a SHA256 operation
+	Sha256PerWordGas    uint64 = 12   // Per-word price for a SHA256 operation
+	Ripemd160BaseGas    uint64 = 600  // Base price for a RIPEMD160 operation
+	Ripemd160PerWordGas uint64 = 120  // Per-word price for a RIPEMD160 operation
+	IdentityBaseGas     uint64 = 15   // Base price for a data copy operation
+	IdentityPerWordGas  uint64 = 3    // Per-work price for a data copy operation
+	ModExpQuadCoeffDiv  uint64 = 20   // Divisor for the quadratic particle of the big int modular exponentiation
+
 	Bn256AddGas             uint64 = 500    // Gas needed for an elliptic curve addition
 	Bn256ScalarMulGas       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
 	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
@@ -127,7 +148,7 @@ const (
 )
 
 var (
-	TxGasHumanReadable     uint64 = 4000000000
+	TxGasHumanReadable     uint64 = 4000000000         // NOTE: HumanReadable related functions are inactivated now
 	BlockScoreBoundDivisor        = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
 	GenesisBlockScore             = big.NewInt(131072) // BlockScore of the Genesis block.
 	MinimumBlockScore             = big.NewInt(131072) // The minimum that the blockscore may ever be.

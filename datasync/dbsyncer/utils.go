@@ -17,12 +17,13 @@
 package dbsyncer
 
 import (
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"strings"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 const (

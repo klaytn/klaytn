@@ -23,14 +23,15 @@ package bind
 import (
 	"crypto/ecdsa"
 	"errors"
+	"io"
+	"io/ioutil"
+	"math/big"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"io"
-	"io/ioutil"
-	"math/big"
 )
 
 // NewTransactor is a utility method to easily create a transaction signer from
@@ -47,6 +48,24 @@ func NewTransactor(keyin io.Reader, passphrase string) (*TransactOpts, error) {
 	return NewKeyedTransactor(key.GetPrivateKey()), nil
 }
 
+// NewKeyStoreTransactor is a utility method to easily create a transaction signer from
+// an decrypted key from a keystore
+func NewKeyStoreTransactor(keystore *keystore.KeyStore, account accounts.Account) (*TransactOpts, error) {
+	return &TransactOpts{
+		From: account.Address,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			if address != account.Address {
+				return nil, errors.New("not authorized to sign this account")
+			}
+			signature, err := keystore.SignHash(account, signer.Hash(tx).Bytes())
+			if err != nil {
+				return nil, err
+			}
+			return tx.WithSignature(signer, signature)
+		},
+	}, nil
+}
+
 // NewKeyedTransactor is a utility method to easily create a transaction signer
 // from a single private key.
 func NewKeyedTransactor(key *ecdsa.PrivateKey) *TransactOpts {
@@ -61,6 +80,23 @@ func NewKeyedTransactor(key *ecdsa.PrivateKey) *TransactOpts {
 		},
 	}
 }
+
+// TODO-klaytn: clef related code
+/*
+// NewClefTransactor is a utility method to easily create a transaction signer
+// with a clef backend.
+func NewClefTransactor(clef *external.ExternalSigner, account accounts.Account) *TransactOpts {
+	return &TransactOpts{
+		From: account.Address,
+		Signer: func(signer types.Signer, address common.Address, transaction *types.Transaction) (*types.Transaction, error) {
+			if address != account.Address {
+				return nil, errors.New("not authorized to sign this account")
+			}
+			return clef.SignTx(account, transaction, nil) // Clef enforces its own chain id
+		},
+	}
+}
+*/
 
 // NewKeyedTransactorWithKeystore is a utility method to easily create a transaction signer
 // from a keystore wallet.

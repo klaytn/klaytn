@@ -22,11 +22,12 @@ package vm
 
 import (
 	"encoding/json"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
 	"io"
 	"math/big"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/math"
 )
 
 type JSONLogger struct {

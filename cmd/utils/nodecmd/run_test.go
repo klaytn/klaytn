@@ -22,6 +22,12 @@ package nodecmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"runtime"
+	"sort"
+	"testing"
+
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/cmd/utils"
@@ -29,11 +35,6 @@ import (
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/klaytn/klaytn/node"
 	"gopkg.in/urfave/cli.v1"
-	"io/ioutil"
-	"os"
-	"runtime"
-	"sort"
-	"testing"
 )
 
 func tmpdir(t *testing.T) string {

@@ -23,15 +23,16 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/params"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/params"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // The values in those tests are from the Transaction Tests
@@ -95,16 +96,14 @@ func TestRecipientEmpty(t *testing.T) {
 	_, addr := defaultTestKey()
 	tx, err := decodeTx(common.Hex2Bytes("f84980808080800126a0f18ba0124c1ed46fef6673ff5f614bafbb33a23ad92874bfa3cb3abad56d9a72a046690eb704a07384224d12e991da61faceefede59c6741d85e7d72e097855eaf"))
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatal(err)
 	}
 
 	signer := NewEIP155Signer(common.Big1)
 
 	from, err := Sender(signer, tx)
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatal(err)
 	}
 	if addr != from {
 		t.Error("derived address doesn't match")
@@ -116,20 +115,18 @@ func TestRecipientNormal(t *testing.T) {
 
 	tx, err := decodeTx(common.Hex2Bytes("f85d808080940000000000000000000000000000000000000000800126a0c1f2953a2277033c693f3d352b740479788672ba21e76d567557aa069b7e5061a06e798331dbd58c7438fe0e0a64b3b17c8378c726da3613abae8783b5dccc9944"))
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatal(err)
 	}
 
 	signer := NewEIP155Signer(common.Big1)
 
 	from, err := Sender(signer, tx)
 	if err != nil {
-		t.Error(err)
-		t.FailNow()
+		t.Fatal(err)
 	}
 
 	if addr != from {
-		t.Error("derived address doesn't match")
+		t.Fatal("derived address doesn't match")
 	}
 }
 

@@ -24,15 +24,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"io/ioutil"
-	"math/big"
-	"testing"
 )
 
 type TwoOperandTestcase struct {
@@ -326,7 +327,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 		env            = NewEVM(ctx, statedb, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
-		evmInterpreter = NewInterpreter(env, env.vmConfig)
+		evmInterpreter = NewEVMInterpreter(env, env.vmConfig)
 	)
 
 	env.Origin = common.HexToAddress("0x9d19bb4553940f422104b1d0c8e5704c5aab63c9")
@@ -581,7 +582,7 @@ func TestOpMstore(t *testing.T) {
 		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
-		evmInterpreter = NewInterpreter(env, env.vmConfig)
+		evmInterpreter = NewEVMInterpreter(env, env.vmConfig)
 	)
 
 	env.interpreter = evmInterpreter
@@ -591,12 +592,12 @@ func TestOpMstore(t *testing.T) {
 	v := "abcdef00000000000000abba000000000deaf000000c0de00100000000133700"
 	stack.pushN(new(big.Int).SetBytes(common.Hex2Bytes(v)), big.NewInt(0))
 	opMstore(&pc, env, nil, mem, stack)
-	if got := common.Bytes2Hex(mem.Get(0, 32)); got != v {
+	if got := common.Bytes2Hex(mem.GetCopy(0, 32)); got != v {
 		t.Fatalf("Mstore fail, got %v, expected %v", got, v)
 	}
 	stack.pushN(big.NewInt(0x1), big.NewInt(0))
 	opMstore(&pc, env, nil, mem, stack)
-	if common.Bytes2Hex(mem.Get(0, 32)) != "0000000000000000000000000000000000000000000000000000000000000001" {
+	if common.Bytes2Hex(mem.GetCopy(0, 32)) != "0000000000000000000000000000000000000000000000000000000000000001" {
 		t.Fatalf("Mstore failed to overwrite previous value")
 	}
 	poolOfIntPools.put(evmInterpreter.intPool)
@@ -607,7 +608,7 @@ func BenchmarkOpMstore(bench *testing.B) {
 		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
-		evmInterpreter = NewInterpreter(env, env.vmConfig)
+		evmInterpreter = NewEVMInterpreter(env, env.vmConfig)
 	)
 
 	env.interpreter = evmInterpreter
@@ -630,7 +631,7 @@ func BenchmarkOpSHA3(bench *testing.B) {
 		env            = NewEVM(Context{}, nil, params.TestChainConfig, &Config{})
 		stack          = newstack()
 		mem            = NewMemory()
-		evmInterpreter = NewInterpreter(env, env.vmConfig)
+		evmInterpreter = NewEVMInterpreter(env, env.vmConfig)
 	)
 	env.interpreter = evmInterpreter
 	evmInterpreter.intPool = poolOfIntPools.get()
@@ -864,7 +865,7 @@ func BenchmarkOpSstore(bench *testing.B) {
 
 		env            = NewEVM(Context{}, statedb, params.TestChainConfig, &Config{})
 		stack          = newstack()
-		evmInterpreter = NewInterpreter(env, env.vmConfig)
+		evmInterpreter = NewEVMInterpreter(env, env.vmConfig)
 	)
 
 	env.interpreter = evmInterpreter

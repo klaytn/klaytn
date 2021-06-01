@@ -20,6 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"math/big"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
@@ -32,11 +38,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
-	"log"
-	"math/big"
-	"strconv"
-	"testing"
-	"time"
 )
 
 const (
@@ -133,6 +134,7 @@ func TestBridgeDeployWithKLAY(t *testing.T) {
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
 	backend := backends.NewSimulatedBackend(alloc)
+	defer backend.Close()
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
@@ -167,6 +169,7 @@ func TestBridgeRequestValueTransferNonce(t *testing.T) {
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
 	backend := backends.NewSimulatedBackend(alloc)
+	defer backend.Close()
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
@@ -232,6 +235,7 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
 	backend := backends.NewSimulatedBackend(alloc)
+	defer backend.Close()
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
@@ -325,6 +329,7 @@ func TestBridgePublicVariables(t *testing.T) {
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
 	backend := backends.NewSimulatedBackend(alloc)
+	defer backend.Close()
 
 	chargeAmount := big.NewInt(10000000)
 	bridgeAccount.Value = chargeAmount
@@ -393,6 +398,7 @@ func TestExtendedBridgeAndCallbackERC20(t *testing.T) {
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
 	backend := backends.NewSimulatedBackend(alloc)
+	defer backend.Close()
 
 	// Deploy extBridge
 	bridgeAddr, tx, eb, err := extbridge.DeployExtBridge(bridgeAccount, backend, true)
@@ -538,6 +544,7 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
 	backend := backends.NewSimulatedBackend(alloc)
+	defer backend.Close()
 
 	// Deploy extBridge
 	bridgeAddr, tx, eb, err := extbridge.DeployExtBridge(bridgeAccount, backend, true)
@@ -749,6 +756,8 @@ func generateBridgeTokenTestEnv(t *testing.T) *bridgeTokenTestENV {
 // - DeregisterToken works well
 func TestBridgeContract_RegisterToken(t *testing.T) {
 	env := generateBridgeTokenTestEnv(t)
+	defer env.backend.Close()
+
 	backend := env.backend
 	operator := env.operator
 	b := env.bridge
@@ -827,6 +836,8 @@ func TestBridgeContract_RegisterToken(t *testing.T) {
 // TestBridgeContract_InitStatus checks initial lock status.
 func TestBridgeContract_InitStatus(t *testing.T) {
 	env := generateBridgeTokenTestEnv(t)
+	defer env.backend.Close()
+
 	b := env.bridge
 	erc20Addr := env.erc20Addr
 	erc721Addr := env.erc721Addr
@@ -849,6 +860,8 @@ func TestBridgeContract_InitStatus(t *testing.T) {
 // - the request value transfer can be allowed after registering it.
 func TestBridgeContract_InitRequest(t *testing.T) {
 	env := generateBridgeTokenTestEnv(t)
+	defer env.backend.Close()
+
 	backend := env.backend
 	operator := env.operator
 	tester := env.tester
@@ -879,6 +892,8 @@ func TestBridgeContract_InitRequest(t *testing.T) {
 // - the token can be lock to prevent value transfer requests.
 func TestBridgeContract_TokenLock(t *testing.T) {
 	env := generateBridgeTokenTestEnv(t)
+	defer env.backend.Close()
+
 	backend := env.backend
 	operator := env.operator
 	tester := env.tester
@@ -940,6 +955,8 @@ func TestBridgeContract_TokenLock(t *testing.T) {
 // - testing the case locking token is fail.
 func TestBridgeContract_TokenLockFail(t *testing.T) {
 	env := generateBridgeTokenTestEnv(t)
+	defer env.backend.Close()
+
 	backend := env.backend
 	operator := env.operator
 	tester := env.tester
@@ -1006,6 +1023,8 @@ func TestBridgeContract_TokenLockFail(t *testing.T) {
 // - testing the case unlocking token is fail.
 func TestBridgeContract_TokenUnlockFail(t *testing.T) {
 	env := generateBridgeTokenTestEnv(t)
+	defer env.backend.Close()
+
 	backend := env.backend
 	operator := env.operator
 	b := env.bridge
@@ -1040,6 +1059,8 @@ func TestBridgeContract_TokenUnlockFail(t *testing.T) {
 // - the token can be unlock to allow value transfer requests.
 func TestBridgeContract_CheckValueTransferAfterUnLock(t *testing.T) {
 	env := generateBridgeTokenTestEnv(t)
+	defer env.backend.Close()
+
 	backend := env.backend
 	operator := env.operator
 	tester := env.tester
@@ -1133,6 +1154,7 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 		auth.From:  {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	var err error
 
@@ -1171,7 +1193,7 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 				"status", receipt.Status)
 		case <-time.After(1 * time.Second):
 			if receipt != nil {
-				t.Log("handle event ommited Tx gas used=", receipt.GasUsed)
+				t.Log("handle event omitted Tx gas used=", receipt.GasUsed)
 			}
 			t.Fatal("handle event omitted")
 		}
@@ -1233,6 +1255,7 @@ func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 		auth.From:  {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	var err error
 
@@ -1314,6 +1337,7 @@ func TestBridgeThresholdLimit(t *testing.T) {
 		auth.From: {Balance: big.NewInt(params.KLAY)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
+	defer sim.Close()
 
 	var err error
 

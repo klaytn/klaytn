@@ -18,9 +18,10 @@ package types
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"testing"
+
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 func BenchmarkTxEncode(b *testing.B) {

@@ -19,9 +19,10 @@ package log
 import (
 	"errors"
 	"fmt"
+	"sync"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"sync"
 )
 
 var zlManager = zapLoggerManager{"stderr", // Use stderr to outputPath instead of stdout to be aligned with log15.

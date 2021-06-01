@@ -22,6 +22,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"math"
+	"math/big"
+	"os"
+	"path"
+	"strconv"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -33,17 +43,9 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/klaytn/klaytn/work"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	"io/ioutil"
-	"math"
-	"math/big"
-	"os"
-	"path"
-	"strconv"
-	"sync"
-	"testing"
-	"time"
 )
 
 const (
@@ -268,7 +270,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return err
 	}
 
-	stateDB, err := bcdata.bc.TryGetCachedStateDB(bcdata.bc.CurrentBlock().Root())
+	stateDB, err := bcdata.bc.StateAt(bcdata.bc.CurrentBlock().Root())
 	if err != nil {
 		return err
 	}
@@ -295,12 +297,12 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	}
 
 	// Write the block with state.
-	status, err := bcdata.bc.WriteBlockWithState(b, receipts, stateDB)
+	result, err := bcdata.bc.WriteBlockWithState(b, receipts, stateDB)
 	if err != nil {
 		return fmt.Errorf("err = %s", err)
 	}
 
-	if status == blockchain.SideStatTy {
+	if result.Status == blockchain.SideStatTy {
 		return fmt.Errorf("forked block is generated! number: %v, hash: %v, txs: %v", b.Number(), b.Hash(), len(b.Transactions()))
 	}
 
@@ -448,7 +450,7 @@ func genCandidateBadgerDBOptions() (*database.DBConfig, *opt.Options) {
 
 // defaultDBConfig returns default database.DBConfig for pre-generated tests.
 func defaultDBConfig() *database.DBConfig {
-	return &database.DBConfig{Partitioned: true, ParallelDBWrite: true, NumStateTriePartitions: 4}
+	return &database.DBConfig{SingleDB: false, ParallelDBWrite: true, NumStateTrieShards: 4}
 }
 
 // getChainConfig returns chain config from chainDB.
@@ -469,13 +471,17 @@ func getChainConfig(chainDB database.DBManager) (*params.ChainConfig, error) {
 // defaultCacheConfig returns cache config for data generation tests.
 func defaultCacheConfig() *blockchain.CacheConfig {
 	return &blockchain.CacheConfig{
-		StateDBCaching:   true,
-		TxPoolStateCache: true,
-		ArchiveMode:      false,
-		CacheSize:        512,
-		BlockInterval:    blockchain.DefaultBlockInterval,
-		TriesInMemory:    blockchain.DefaultTriesInMemory,
-		TrieCacheLimit:   4096,
+		ArchiveMode:   false,
+		CacheSize:     512,
+		BlockInterval: blockchain.DefaultBlockInterval,
+		TriesInMemory: blockchain.DefaultTriesInMemory,
+		TrieNodeCacheConfig: &statedb.TrieNodeCacheConfig{
+			CacheType:          statedb.CacheTypeLocal,
+			LocalCacheSizeMiB:  4096,
+			FastCacheFileDir:   "",
+			RedisEndpoints:     nil,
+			RedisClusterEnable: false,
+		},
 	}
 }
 
@@ -483,7 +489,7 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 func generateGovernaceDataForTest() *governance.Governance {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 
-	return governance.NewGovernance(&params.ChainConfig{
+	return governance.NewGovernanceInitialize(&params.ChainConfig{
 		ChainID:       big.NewInt(2018),
 		UnitPrice:     25000000000,
 		DeriveShaImpl: 0,
@@ -492,7 +498,7 @@ func generateGovernaceDataForTest() *governance.Governance {
 			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
 			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
 		},
-		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
+		Governance: params.GetDefaultGovernanceConfig(params.UseIstanbul),
 	}, dbm)
 }
 

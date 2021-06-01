@@ -23,6 +23,13 @@ package blockchain
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"math/rand"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -31,12 +38,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"math/big"
-	"math/rand"
-	"os"
-	"testing"
-	"time"
 )
 
 // testTxPoolConfig is a transaction pool configuration without stateful disk
@@ -66,20 +67,8 @@ func (bc *testBlockChain) StateAt(common.Hash) (*state.StateDB, error) {
 	return bc.statedb, nil
 }
 
-func (bc *testBlockChain) TryGetCachedStateDB(common.Hash) (*state.StateDB, error) {
-	return bc.statedb, nil
-}
-
 func (bc *testBlockChain) SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription {
 	return bc.chainHeadFeed.Subscribe(ch)
-}
-
-func (bc *testBlockChain) GetNonceCache() common.Cache {
-	return nil
-}
-
-func (bc *testBlockChain) GetBalanceCache() common.Cache {
-	return nil
 }
 
 func transaction(nonce uint64, gaslimit uint64, key *ecdsa.PrivateKey) *types.Transaction {
@@ -275,6 +264,66 @@ func TestInvalidTransactions(t *testing.T) {
 	}
 	if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
+	}
+}
+
+func genAnchorTx(nonce uint64) *types.Transaction {
+	key, _ := crypto.HexToECDSA("45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
+	from := crypto.PubkeyToAddress(key.PublicKey)
+
+	gasLimit := uint64(1000000)
+	gasPrice := big.NewInt(1)
+
+	data := []byte{0x11, 0x22}
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:        nonce,
+		types.TxValueKeyFrom:         from,
+		types.TxValueKeyGasLimit:     gasLimit,
+		types.TxValueKeyGasPrice:     gasPrice,
+		types.TxValueKeyAnchoredData: data,
+	}
+
+	tx, _ := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values)
+
+	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	tx.Sign(signer, key)
+
+	return tx
+}
+
+func TestAnchorTransactions(t *testing.T) {
+	t.Parallel()
+
+	pool, _ := setupTxPool()
+	defer pool.Stop()
+
+	poolAllow, _ := setupTxPool()
+	poolAllow.config.AllowLocalAnchorTx = true
+	defer poolAllow.Stop()
+
+	tx1 := genAnchorTx(1)
+	tx2 := genAnchorTx(2)
+
+	from, _ := tx1.From()
+	pool.currentState.AddBalance(from, big.NewInt(10000000))
+	poolAllow.currentState.AddBalance(from, big.NewInt(10000000))
+
+	// default txPool
+	{
+		err := pool.AddRemote(tx1)
+		assert.NoError(t, err)
+
+		err = pool.AddLocal(tx2)
+		assert.Error(t, errNotAllowedAnchoringTx, err)
+	}
+
+	// txPool which allow locally submitted anchor txs
+	{
+		err := poolAllow.AddRemote(tx1)
+		assert.NoError(t, err)
+
+		err = poolAllow.AddLocal(tx2)
+		assert.NoError(t, err)
 	}
 }
 

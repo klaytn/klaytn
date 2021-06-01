@@ -22,9 +22,10 @@ package statedb
 
 import (
 	"bytes"
+	"testing"
+
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
-	"testing"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"

@@ -21,6 +21,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"math/rand"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -31,14 +37,9 @@ import (
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"math/rand"
-	"strings"
-	"testing"
-	"time"
 )
 
 var (
@@ -1877,7 +1878,7 @@ func TestValidateSender(t *testing.T) {
 	{
 		dummyBlock := types.NewBlock(&types.Header{}, nil, nil)
 
-		scData, err := types.NewAnchoringDataType0(dummyBlock, big.NewInt(0), big.NewInt(int64(dummyBlock.Transactions().Len())))
+		scData, err := types.NewAnchoringDataType0(dummyBlock, 0, uint64(dummyBlock.Transactions().Len()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2018,5 +2019,6 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 		BlockScore: big.NewInt(0),
 	}
 	usedGas := uint64(0)
-	return bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, &usedGas, vmConfig)
+	receipt, gas, _, err := bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, &usedGas, vmConfig)
+	return receipt, gas, err
 }

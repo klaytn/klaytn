@@ -5,6 +5,10 @@
 package mocks
 
 import (
+	io "io"
+	big "math/big"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/klaytn/klaytn/blockchain"
 	state "github.com/klaytn/klaytn/blockchain/state"
@@ -14,10 +18,7 @@ import (
 	consensus "github.com/klaytn/klaytn/consensus"
 	event "github.com/klaytn/klaytn/event"
 	params "github.com/klaytn/klaytn/params"
-	rlp "github.com/klaytn/klaytn/ser/rlp"
-	io "io"
-	big "math/big"
-	reflect "reflect"
+	rlp "github.com/klaytn/klaytn/rlp"
 )
 
 // MockBlockChain is a mock of BlockChain interface
@@ -44,13 +45,14 @@ func (m *MockBlockChain) EXPECT() *MockBlockChainMockRecorder {
 }
 
 // ApplyTransaction mocks base method
-func (m *MockBlockChain) ApplyTransaction(arg0 *params.ChainConfig, arg1 *common.Address, arg2 *state.StateDB, arg3 *types.Header, arg4 *types.Transaction, arg5 *uint64, arg6 *vm.Config) (*types.Receipt, uint64, error) {
+func (m *MockBlockChain) ApplyTransaction(arg0 *params.ChainConfig, arg1 *common.Address, arg2 *state.StateDB, arg3 *types.Header, arg4 *types.Transaction, arg5 *uint64, arg6 *vm.Config) (*types.Receipt, uint64, *vm.InternalTxTrace, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ApplyTransaction", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(*types.Receipt)
 	ret1, _ := ret[1].(uint64)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret2, _ := ret[2].(*vm.InternalTxTrace)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // ApplyTransaction indicates an expected call of ApplyTransaction
@@ -72,6 +74,30 @@ func (m *MockBlockChain) BadBlocks() ([]blockchain.BadBlockArgs, error) {
 func (mr *MockBlockChainMockRecorder) BadBlocks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BadBlocks", reflect.TypeOf((*MockBlockChain)(nil).BadBlocks))
+}
+
+// BlockSubscriptionLoop mocks base method
+func (m *MockBlockChain) BlockSubscriptionLoop(arg0 *blockchain.TxPool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "BlockSubscriptionLoop", arg0)
+}
+
+// BlockSubscriptionLoop indicates an expected call of BlockSubscriptionLoop
+func (mr *MockBlockChainMockRecorder) BlockSubscriptionLoop(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockSubscriptionLoop", reflect.TypeOf((*MockBlockChain)(nil).BlockSubscriptionLoop), arg0)
+}
+
+// CloseBlockSubscriptionLoop mocks base method
+func (m *MockBlockChain) CloseBlockSubscriptionLoop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CloseBlockSubscriptionLoop")
+}
+
+// CloseBlockSubscriptionLoop indicates an expected call of CloseBlockSubscriptionLoop
+func (mr *MockBlockChainMockRecorder) CloseBlockSubscriptionLoop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseBlockSubscriptionLoop", reflect.TypeOf((*MockBlockChain)(nil).CloseBlockSubscriptionLoop))
 }
 
 // Config mocks base method
@@ -270,6 +296,21 @@ func (mr *MockBlockChainMockRecorder) GetBodyRLP(arg0 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBodyRLP", reflect.TypeOf((*MockBlockChain)(nil).GetBodyRLP), arg0)
 }
 
+// GetContractStorageRoot mocks base method
+func (m *MockBlockChain) GetContractStorageRoot(arg0 *types.Block, arg1 state.Database, arg2 common.Address) (common.Hash, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContractStorageRoot", arg0, arg1, arg2)
+	ret0, _ := ret[0].(common.Hash)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetContractStorageRoot indicates an expected call of GetContractStorageRoot
+func (mr *MockBlockChainMockRecorder) GetContractStorageRoot(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContractStorageRoot", reflect.TypeOf((*MockBlockChain)(nil).GetContractStorageRoot), arg0, arg1, arg2)
+}
+
 // GetHeader mocks base method
 func (m *MockBlockChain) GetHeader(arg0 common.Hash, arg1 uint64) *types.Header {
 	m.ctrl.T.Helper()
@@ -324,21 +365,6 @@ func (m *MockBlockChain) GetLogsByHash(arg0 common.Hash) [][]*types.Log {
 func (mr *MockBlockChainMockRecorder) GetLogsByHash(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogsByHash", reflect.TypeOf((*MockBlockChain)(nil).GetLogsByHash), arg0)
-}
-
-// GetNonceInCache mocks base method
-func (m *MockBlockChain) GetNonceInCache(arg0 common.Address) (uint64, bool) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNonceInCache", arg0)
-	ret0, _ := ret[0].(uint64)
-	ret1, _ := ret[1].(bool)
-	return ret0, ret1
-}
-
-// GetNonceInCache indicates an expected call of GetNonceInCache
-func (mr *MockBlockChainMockRecorder) GetNonceInCache(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNonceInCache", reflect.TypeOf((*MockBlockChain)(nil).GetNonceInCache), arg0)
 }
 
 // GetReceiptsByBlockHash mocks base method
@@ -634,6 +660,20 @@ func (mr *MockBlockChainMockRecorder) Rollback(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rollback", reflect.TypeOf((*MockBlockChain)(nil).Rollback), arg0)
 }
 
+// SaveTrieNodeCacheToDisk mocks base method
+func (m *MockBlockChain) SaveTrieNodeCacheToDisk() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveTrieNodeCacheToDisk")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveTrieNodeCacheToDisk indicates an expected call of SaveTrieNodeCacheToDisk
+func (mr *MockBlockChainMockRecorder) SaveTrieNodeCacheToDisk() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveTrieNodeCacheToDisk", reflect.TypeOf((*MockBlockChain)(nil).SaveTrieNodeCacheToDisk))
+}
+
 // SetHead mocks base method
 func (m *MockBlockChain) SetHead(arg0 uint64) error {
 	m.ctrl.T.Helper()
@@ -670,6 +710,34 @@ func (m *MockBlockChain) SetUseGiniCoeff(arg0 bool) {
 func (mr *MockBlockChainMockRecorder) SetUseGiniCoeff(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUseGiniCoeff", reflect.TypeOf((*MockBlockChain)(nil).SetUseGiniCoeff), arg0)
+}
+
+// StartCollectingTrieStats mocks base method
+func (m *MockBlockChain) StartCollectingTrieStats(arg0 common.Address) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartCollectingTrieStats", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartCollectingTrieStats indicates an expected call of StartCollectingTrieStats
+func (mr *MockBlockChainMockRecorder) StartCollectingTrieStats(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartCollectingTrieStats", reflect.TypeOf((*MockBlockChain)(nil).StartCollectingTrieStats), arg0)
+}
+
+// StartContractWarmUp mocks base method
+func (m *MockBlockChain) StartContractWarmUp(arg0 common.Address) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartContractWarmUp", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartContractWarmUp indicates an expected call of StartContractWarmUp
+func (mr *MockBlockChainMockRecorder) StartContractWarmUp(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartContractWarmUp", reflect.TypeOf((*MockBlockChain)(nil).StartContractWarmUp), arg0)
 }
 
 // StartStateMigration mocks base method
@@ -919,21 +987,6 @@ func (mr *MockBlockChainMockRecorder) TrieNode(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrieNode", reflect.TypeOf((*MockBlockChain)(nil).TrieNode), arg0)
 }
 
-// TryGetCachedStateDB mocks base method
-func (m *MockBlockChain) TryGetCachedStateDB(arg0 common.Hash) (*state.StateDB, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryGetCachedStateDB", arg0)
-	ret0, _ := ret[0].(*state.StateDB)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TryGetCachedStateDB indicates an expected call of TryGetCachedStateDB
-func (mr *MockBlockChainMockRecorder) TryGetCachedStateDB(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryGetCachedStateDB", reflect.TypeOf((*MockBlockChain)(nil).TryGetCachedStateDB), arg0)
-}
-
 // Validator mocks base method
 func (m *MockBlockChain) Validator() blockchain.Validator {
 	m.ctrl.T.Helper()
@@ -949,10 +1002,10 @@ func (mr *MockBlockChainMockRecorder) Validator() *gomock.Call {
 }
 
 // WriteBlockWithState mocks base method
-func (m *MockBlockChain) WriteBlockWithState(arg0 *types.Block, arg1 []*types.Receipt, arg2 *state.StateDB) (blockchain.WriteStatus, error) {
+func (m *MockBlockChain) WriteBlockWithState(arg0 *types.Block, arg1 []*types.Receipt, arg2 *state.StateDB) (blockchain.WriteResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteBlockWithState", arg0, arg1, arg2)
-	ret0, _ := ret[0].(blockchain.WriteStatus)
+	ret0, _ := ret[0].(blockchain.WriteResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

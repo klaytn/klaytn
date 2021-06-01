@@ -23,14 +23,15 @@ package gxhash
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"runtime"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/params"
-	"math/big"
-	"runtime"
-	"time"
 )
 
 var (

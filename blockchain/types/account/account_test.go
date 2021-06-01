@@ -19,15 +19,16 @@ package account
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"math/rand"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
-	"math/rand"
-	"testing"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // TestAccountSerialization tests serialization of various account types.

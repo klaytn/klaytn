@@ -23,16 +23,17 @@ package utils
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 const (

@@ -18,11 +18,12 @@ package tests
 
 import (
 	"crypto/ecdsa"
+	"strings"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/stretchr/testify/assert"
-	"strings"
-	"testing"
 )
 
 func BenchmarkTxHash(b *testing.B) {

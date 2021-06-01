@@ -18,6 +18,12 @@ package sc
 
 import (
 	"fmt"
+	"math/big"
+	"path"
+	"reflect"
+	"strings"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api"
@@ -37,11 +43,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"path"
-	"reflect"
-	"strings"
-	"testing"
 )
 
 const testNetVersion = uint64(8888)
@@ -63,9 +64,8 @@ func testNewMainBridge(t *testing.T) *MainBridge {
 // testBlockChain returns a test BlockChain with initial values
 func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	db := database.NewMemoryDBManager()
-	defer db.Close()
 
-	gov := governance.NewGovernance(&params.ChainConfig{
+	gov := governance.NewGovernanceInitialize(&params.ChainConfig{
 		ChainID:       big.NewInt(2018),
 		UnitPrice:     25000000000,
 		DeriveShaImpl: 0,
@@ -74,7 +74,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
 			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
 		},
-		Governance: governance.GetDefaultGovernanceConfig(params.UseIstanbul),
+		Governance: params.GetDefaultGovernanceConfig(params.UseIstanbul),
 	}, db)
 
 	prvKey, _ := crypto.GenerateKey()
@@ -83,11 +83,11 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	var genesis *blockchain.Genesis
 	genesis = blockchain.DefaultGenesisBlock()
 	genesis.BlockScore = big.NewInt(1)
-	genesis.Config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
-	genesis.Config.Istanbul = governance.GetDefaultIstanbulConfig()
+	genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 	genesis.Config.UnitPrice = 25 * params.Ston
 
-	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false)
+	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false, false)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
 		t.Fatal(err)
 	}

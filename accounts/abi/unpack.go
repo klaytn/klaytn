@@ -23,32 +23,57 @@ package abi
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"math/big"
 	"reflect"
+
+	"github.com/klaytn/klaytn/common"
 )
 
-// reads the integer based on its kind
-func readInteger(kind reflect.Kind, b []byte) interface{} {
-	switch kind {
-	case reflect.Uint8:
-		return b[len(b)-1]
-	case reflect.Uint16:
-		return binary.BigEndian.Uint16(b[len(b)-2:])
-	case reflect.Uint32:
-		return binary.BigEndian.Uint32(b[len(b)-4:])
-	case reflect.Uint64:
-		return binary.BigEndian.Uint64(b[len(b)-8:])
-	case reflect.Int8:
+var (
+	// MaxUint256 is the maximum value that can be represented by a uint256
+	MaxUint256 = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 256), common.Big1)
+	// MaxInt256 is the maximum value that can be represented by a int256
+	MaxInt256 = new(big.Int).Sub(new(big.Int).Lsh(common.Big1, 255), common.Big1)
+)
+
+// ReadInteger reads the integer based on its kind and returns the appropriate value
+func ReadInteger(typ Type, b []byte) interface{} {
+	if typ.T == UintTy {
+		switch typ.Size {
+		case 8:
+			return b[len(b)-1]
+		case 16:
+			return binary.BigEndian.Uint16(b[len(b)-2:])
+		case 32:
+			return binary.BigEndian.Uint32(b[len(b)-4:])
+		case 64:
+			return binary.BigEndian.Uint64(b[len(b)-8:])
+		default:
+			// the only case left for unsigned integer is uint256.
+			return new(big.Int).SetBytes(b)
+		}
+	}
+	switch typ.Size {
+	case 8:
 		return int8(b[len(b)-1])
-	case reflect.Int16:
+	case 16:
 		return int16(binary.BigEndian.Uint16(b[len(b)-2:]))
-	case reflect.Int32:
+	case 32:
 		return int32(binary.BigEndian.Uint32(b[len(b)-4:]))
-	case reflect.Int64:
+	case 64:
 		return int64(binary.BigEndian.Uint64(b[len(b)-8:]))
 	default:
-		return new(big.Int).SetBytes(b)
+		// the only case left for integer is int256
+		// big.SetBytes can't tell if a number is negative or positive in itself.
+		// On EVM, if the returned number > max int256, it is negative.
+		// A number is > max int256 if the bit at position 255 is set.
+		ret := new(big.Int).SetBytes(b)
+		if ret.Bit(255) == 1 {
+			ret.Add(MaxUint256, new(big.Int).Neg(ret))
+			ret.Add(ret, common.Big1)
+			ret.Neg(ret)
+		}
+		return ret
 	}
 }
 
@@ -83,28 +108,17 @@ func readFunctionType(t Type, word []byte) (funcTy [24]byte, err error) {
 	return
 }
 
-// through reflection, creates a fixed array to be read from
-func readFixedBytes(t Type, word []byte) (interface{}, error) {
+// ReadFixedBytes uses reflection to create a fixed array to be read from
+func ReadFixedBytes(t Type, word []byte) (interface{}, error) {
 	if t.T != FixedBytesTy {
 		return nil, fmt.Errorf("abi: invalid type in call to make fixed byte array")
 	}
 	// convert
-	array := reflect.New(t.Type).Elem()
+	array := reflect.New(t.GetType()).Elem()
 
 	reflect.Copy(array, reflect.ValueOf(word[0:t.Size]))
 	return array.Interface(), nil
 
-}
-
-func getFullElemSize(elem *Type) int {
-	//all other should be counted as 32 (slices have pointers to respective elements)
-	size := 32
-	//arrays wrap it, each element being the same size
-	for elem.T == ArrayTy {
-		size *= elem.Size
-		elem = elem.Elem
-	}
-	return size
 }
 
 // iteratively unpack elements
@@ -121,23 +135,19 @@ func forEachUnpack(t Type, output []byte, start, size int) (interface{}, error) 
 
 	if t.T == SliceTy {
 		// declare our slice
-		refSlice = reflect.MakeSlice(t.Type, size, size)
+		refSlice = reflect.MakeSlice(t.GetType(), size, size)
 	} else if t.T == ArrayTy {
 		// declare our array
-		refSlice = reflect.New(t.Type).Elem()
+		refSlice = reflect.New(t.GetType()).Elem()
 	} else {
 		return nil, fmt.Errorf("abi: invalid type in array/slice unpacking stage")
 	}
 
 	// Arrays have packed elements, resulting in longer unpack steps.
 	// Slices have just 32 bytes per element (pointing to the contents).
-	elemSize := 32
-	if t.T == ArrayTy {
-		elemSize = getFullElemSize(t.Elem)
-	}
+	elemSize := getTypeSize(*t.Elem)
 
 	for i, j := start, 0; j < size; i, j = i+elemSize, j+1 {
-
 		inter, err := toGoType(i, *t.Elem, output)
 		if err != nil {
 			return nil, err
@@ -151,6 +161,36 @@ func forEachUnpack(t Type, output []byte, start, size int) (interface{}, error) 
 	return refSlice.Interface(), nil
 }
 
+func forTupleUnpack(t Type, output []byte) (interface{}, error) {
+	retval := reflect.New(t.GetType()).Elem()
+	virtualArgs := 0
+	for index, elem := range t.TupleElems {
+		marshalledValue, err := toGoType((index+virtualArgs)*32, *elem, output)
+		if elem.T == ArrayTy && !isDynamicType(*elem) {
+			// If we have a static array, like [3]uint256, these are coded as
+			// just like uint256,uint256,uint256.
+			// This means that we need to add two 'virtual' arguments when
+			// we count the index from now on.
+			//
+			// Array values nested multiple levels deep are also encoded inline:
+			// [2][3]uint256: uint256,uint256,uint256,uint256,uint256,uint256
+			//
+			// Calculate the full array size to get the correct offset for the next argument.
+			// Decrement it by 1, as the normal index increment is still applied.
+			virtualArgs += getTypeSize(*elem)/32 - 1
+		} else if elem.T == TupleTy && !isDynamicType(*elem) {
+			// If we have a static tuple, like (uint256, bool, uint256), these are
+			// coded as just like uint256,bool,uint256
+			virtualArgs += getTypeSize(*elem)/32 - 1
+		}
+		if err != nil {
+			return nil, err
+		}
+		retval.Field(index).Set(reflect.ValueOf(marshalledValue))
+	}
+	return retval.Interface(), nil
+}
+
 // toGoType parses the output bytes and recursively assigns the value of these bytes
 // into a go type with accordance with the ABI spec.
 func toGoType(index int, t Type, output []byte) (interface{}, error) {
@@ -159,14 +199,14 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	}
 
 	var (
-		returnOutput []byte
-		begin, end   int
-		err          error
+		returnOutput  []byte
+		begin, length int
+		err           error
 	)
 
 	// if we require a length prefix, find the beginning word and size returned.
 	if t.requiresLengthPrefix() {
-		begin, end, err = lengthPrefixPointsTo(index, output)
+		begin, length, err = lengthPrefixPointsTo(index, output)
 		if err != nil {
 			return nil, err
 		}
@@ -175,14 +215,27 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	}
 
 	switch t.T {
+	case TupleTy:
+		if isDynamicType(t) {
+			begin, err := tuplePointsTo(index, output)
+			if err != nil {
+				return nil, err
+			}
+			return forTupleUnpack(t, output[begin:])
+		}
+		return forTupleUnpack(t, output[index:])
 	case SliceTy:
-		return forEachUnpack(t, output, begin, end)
+		return forEachUnpack(t, output[begin:], 0, length)
 	case ArrayTy:
-		return forEachUnpack(t, output, index, t.Size)
+		if isDynamicType(*t.Elem) {
+			offset := int64(binary.BigEndian.Uint64(returnOutput[len(returnOutput)-8:]))
+			return forEachUnpack(t, output[offset:], 0, t.Size)
+		}
+		return forEachUnpack(t, output[index:], 0, t.Size)
 	case StringTy: // variable arrays are written at the end of the return bytes
-		return string(output[begin : begin+end]), nil
+		return string(output[begin : begin+length]), nil
 	case IntTy, UintTy:
-		return readInteger(t.Kind, returnOutput), nil
+		return ReadInteger(t, returnOutput), nil
 	case BoolTy:
 		return readBool(returnOutput)
 	case AddressTy:
@@ -190,9 +243,9 @@ func toGoType(index int, t Type, output []byte) (interface{}, error) {
 	case HashTy:
 		return common.BytesToHash(returnOutput), nil
 	case BytesTy:
-		return output[begin : begin+end], nil
+		return output[begin : begin+length], nil
 	case FixedBytesTy:
-		return readFixedBytes(t, returnOutput)
+		return ReadFixedBytes(t, returnOutput)
 	case FunctionTy:
 		return readFunctionType(t, returnOutput)
 	default:
@@ -221,7 +274,7 @@ func lengthPrefixPointsTo(index int, output []byte) (start int, length int, err 
 	totalSize.Add(totalSize, bigOffsetEnd)
 	totalSize.Add(totalSize, lengthBig)
 	if totalSize.BitLen() > 63 {
-		return 0, 0, fmt.Errorf("abi length larger than int64: %v", totalSize)
+		return 0, 0, fmt.Errorf("abi: length larger than int64: %v", totalSize)
 	}
 
 	if totalSize.Cmp(outputLength) > 0 {
@@ -230,4 +283,18 @@ func lengthPrefixPointsTo(index int, output []byte) (start int, length int, err 
 	start = int(bigOffsetEnd.Uint64())
 	length = int(lengthBig.Uint64())
 	return
+}
+
+// tuplePointsTo resolves the location reference for dynamic tuple.
+func tuplePointsTo(index int, output []byte) (start int, err error) {
+	offset := big.NewInt(0).SetBytes(output[index : index+32])
+	outputLen := big.NewInt(int64(len(output)))
+
+	if offset.Cmp(big.NewInt(int64(len(output)))) > 0 {
+		return 0, fmt.Errorf("abi: cannot marshal in to go slice: offset %v would go over slice boundary (len=%v)", offset, outputLen)
+	}
+	if offset.BitLen() > 63 {
+		return 0, fmt.Errorf("abi offset larger than int64: %v", offset)
+	}
+	return int(offset.Uint64()), nil
 }

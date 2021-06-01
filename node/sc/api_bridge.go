@@ -19,6 +19,8 @@ package sc
 import (
 	"context"
 	"fmt"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/bridge"
@@ -26,7 +28,6 @@ import (
 	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"github.com/klaytn/klaytn/node"
 	"github.com/pkg/errors"
-	"math/big"
 )
 
 var (
@@ -230,6 +231,18 @@ func (sb *SubBridgeAPI) GetBridgeInformation(bridgeAddr common.Address) (map[str
 		"isSubscribed":     bi.subscribed,
 		"pendingEventSize": bi.pendingRequestEvent.Len(),
 	}, nil
+}
+
+func (sb *SubBridgeAPI) KASAnchor(blkNum uint64) error {
+	block := sb.subBridge.blockchain.GetBlockByNumber(blkNum)
+	if block != nil {
+		if err := sb.subBridge.kasAnchor.AnchorBlock(block); err != nil {
+			logger.Error("Failed to anchor a block via KAS", "blkNum", block.NumberU64(), "err", err)
+			return err
+		}
+		return nil
+	}
+	return errInvalidBlock
 }
 
 func (sb *SubBridgeAPI) Anchoring(flag bool) bool {

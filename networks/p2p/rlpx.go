@@ -32,7 +32,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -41,13 +40,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klaytn/klaytn/common"
+
 	"github.com/golang/snappy"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/ecies"
 	"github.com/klaytn/klaytn/crypto/secp256k1"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 const (

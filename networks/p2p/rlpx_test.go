@@ -25,12 +25,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/ecies"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"io/ioutil"
 	"net"
@@ -39,6 +33,13 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/ecies"
+	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 func TestSharedSecret(t *testing.T) {

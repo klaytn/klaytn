@@ -23,6 +23,13 @@ package node
 import (
 	"errors"
 	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"sync"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api/debug"
 	"github.com/klaytn/klaytn/event"
@@ -32,12 +39,6 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/prometheus/prometheus/util/flock"
-	"net"
-	"os"
-	"path/filepath"
-	"reflect"
-	"strings"
-	"sync"
 )
 
 var logger = log.NewModuleLogger(log.Node)
@@ -57,7 +58,8 @@ type Node struct {
 	coreServiceFuncs []ServiceConstructor
 	serviceFuncs     []ServiceConstructor
 
-	services map[reflect.Type]Service // Currently running services
+	subservices map[reflect.Type]Service // services to be terminated previously
+	services    map[reflect.Type]Service // Currently running services
 
 	rpcAPIs       []rpc.API
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
@@ -261,10 +263,10 @@ func (n *Node) Start() error {
 	}
 
 	// Finish initializing the startup
+	n.subservices = services
 	n.services = coreservices
 	n.server = p2pServer
 	n.stop = make(chan struct{})
-
 	return nil
 }
 
@@ -324,7 +326,7 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 		return err
 	}
 	if n.config.IsFastHTTP() {
-		if err := n.startFastHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts); err != nil {
+		if err := n.startFastHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
 			n.stopIPC()
 			n.stopInProc()
 			return err
@@ -336,7 +338,7 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 			return err
 		}
 	} else {
-		if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts); err != nil {
+		if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
 			n.stopIPC()
 			n.stopInProc()
 			return err
@@ -439,12 +441,12 @@ func (n *Node) startgRPC(apis []rpc.API) error {
 }
 
 // startHTTP initializes and starts the HTTP RPC endpoint.
-func (n *Node) startHTTP(endpoint string, apis []rpc.API, modules []string, cors []string, vhosts []string) error {
+func (n *Node) startHTTP(endpoint string, apis []rpc.API, modules []string, cors []string, vhosts []string, timeouts rpc.HTTPTimeouts) error {
 	// Short circuit if the HTTP endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartHTTPEndpoint(endpoint, apis, modules, cors, vhosts)
+	listener, handler, err := rpc.StartHTTPEndpoint(endpoint, apis, modules, cors, vhosts, timeouts)
 	if err != nil {
 		return err
 	}
@@ -458,12 +460,12 @@ func (n *Node) startHTTP(endpoint string, apis []rpc.API, modules []string, cors
 }
 
 // startFastHTTP initializes and starts the HTTP RPC endpoint.
-func (n *Node) startFastHTTP(endpoint string, apis []rpc.API, modules []string, cors []string, vhosts []string) error {
+func (n *Node) startFastHTTP(endpoint string, apis []rpc.API, modules []string, cors []string, vhosts []string, timeouts rpc.HTTPTimeouts) error {
 	// Short circuit if the HTTP endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
 	}
-	listener, handler, err := rpc.StartFastHTTPEndpoint(endpoint, apis, modules, cors, vhosts)
+	listener, handler, err := rpc.StartFastHTTPEndpoint(endpoint, apis, modules, cors, vhosts, timeouts)
 	if err != nil {
 		return err
 	}
@@ -575,6 +577,14 @@ func (n *Node) Stop() error {
 	n.rpcAPIs = nil
 	failure := &StopError{
 		Services: make(map[reflect.Type]error),
+	}
+	// subservices are the services which should be terminated before coreservices are terminated.
+	for kind, service := range n.subservices {
+		if err := service.Stop(); err != nil {
+			failure.Services[kind] = err
+		}
+		// delete the already terminated services.
+		delete(n.services, kind)
 	}
 	for kind, service := range n.services {
 		if err := service.Stop(); err != nil {

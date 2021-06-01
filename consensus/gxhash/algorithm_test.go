@@ -22,9 +22,10 @@ package gxhash
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"reflect"
 	"testing"
+
+	"github.com/klaytn/klaytn/common/hexutil"
 )
 
 // Tests whether the dataset size calculator works correctly by cross checking the

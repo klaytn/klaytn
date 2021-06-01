@@ -17,10 +17,11 @@
 package dbsyncer
 
 import (
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"strings"
 )
 
 type SummaryArguments struct {

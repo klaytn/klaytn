@@ -23,32 +23,40 @@ package utils
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/api/debug"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/datasync/dbsyncer"
-	"github.com/klaytn/klaytn/datasync/downloader"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/metrics/utils"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/p2p/nat"
-	"github.com/klaytn/klaytn/networks/p2p/netutil"
-	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn"
-	"github.com/klaytn/klaytn/node/sc"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
-	"gopkg.in/urfave/cli.v1"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/klaytn/klaytn/accounts"
+	"github.com/klaytn/klaytn/accounts/keystore"
+	"github.com/klaytn/klaytn/api/debug"
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/fdlimit"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
+	"github.com/klaytn/klaytn/datasync/dbsyncer"
+	"github.com/klaytn/klaytn/datasync/downloader"
+	"github.com/klaytn/klaytn/log"
+	metricutils "github.com/klaytn/klaytn/metrics/utils"
+	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/klaytn/klaytn/networks/p2p/nat"
+	"github.com/klaytn/klaytn/networks/p2p/netutil"
+	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/node"
+	"github.com/klaytn/klaytn/node/cn"
+	"github.com/klaytn/klaytn/node/cn/filters"
+	"github.com/klaytn/klaytn/node/sc"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func InitHelper() {
@@ -80,8 +88,8 @@ var (
 	}
 	DbTypeFlag = cli.StringFlag{
 		Name:  "dbtype",
-		Usage: `Blockchain storage database type ("leveldb", "badger")`,
-		Value: "leveldb",
+		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3")`,
+		Value: "LevelDB",
 	}
 	SrvTypeFlag = cli.StringFlag{
 		Name:  "srvtype",
@@ -90,7 +98,7 @@ var (
 	}
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
-		Usage: "Data directory for the databases and keystore",
+		Usage: "Data directory for the databases and keystore. This value is only used in local DB.",
 		Value: DirectoryString{node.DefaultDataDir()},
 	}
 	KeyStoreDirFlag = DirectoryFlag{
@@ -127,10 +135,22 @@ var (
 		Name:  "lightkdf",
 		Usage: "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
 	}
+	OverwriteGenesisFlag = cli.BoolFlag{
+		Name:  "overwrite-genesis",
+		Usage: "Overwrites genesis block with the given new genesis block for testing purpose",
+	}
+	StartBlockNumberFlag = cli.Uint64Flag{
+		Name:  "start-block-num",
+		Usage: "Starts the node from the given block number. Starting from 0 is not supported.",
+	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.nolocals",
 		Usage: "Disables price exemptions for locally submitted transactions",
+	}
+	TxPoolAllowLocalAnchorTxFlag = cli.BoolFlag{
+		Name:  "txpool.allow-local-anchortx",
+		Usage: "Allow locally submitted anchoring transactions",
 	}
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
@@ -181,18 +201,18 @@ var (
 		Usage: "Maximum amount of time non-executable transaction are queued",
 		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
-	// Performance tuning settings
-	StateDBCachingFlag = cli.BoolFlag{
-		Name:  "statedb.use-cache",
-		Usage: "Enables caching of state objects in stateDB",
+	// KES
+	KESNodeTypeServiceFlag = cli.BoolFlag{
+		Name:  "kes.nodetype.service",
+		Usage: "Run as a KES Service Node (Disable fetcher, downloader, and worker)",
 	}
-	NoPartitionedDBFlag = cli.BoolFlag{
-		Name:  "db.no-partitioning",
-		Usage: "Disable partitioned databases for persistent storage",
+	SingleDBFlag = cli.BoolFlag{
+		Name:  "db.single",
+		Usage: "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
 	}
-	NumStateTriePartitionsFlag = cli.UintFlag{
-		Name:  "db.num-statetrie-partitions",
-		Usage: "Number of internal partitions of state trie partition. Should be power of 2",
+	NumStateTrieShardsFlag = cli.UintFlag{
+		Name:  "db.num-statetrie-shards",
+		Usage: "Number of internal shards of state trie DB shards. Should be power of 2",
 		Value: 4,
 	}
 	LevelDBCacheSizeFlag = cli.IntFlag{
@@ -210,9 +230,40 @@ var (
 		Name:  "db.leveldb.no-buffer-pool",
 		Usage: "Disables using buffer pool for LevelDB's block allocation",
 	}
+	DynamoDBTableNameFlag = cli.StringFlag{
+		Name:  "db.dynamo.tablename",
+		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
+	}
+	DynamoDBRegionFlag = cli.StringFlag{
+		Name:  "db.dynamo.region",
+		Usage: "AWS region where the DynamoDB will be created.",
+		Value: database.GetDefaultDynamoDBConfig().Region,
+	}
+	DynamoDBIsProvisionedFlag = cli.BoolFlag{
+		Name:  "db.dynamo.is-provisioned",
+		Usage: "Set DynamoDB billing mode to provision. The default billing mode is on-demand.",
+	}
+	DynamoDBReadCapacityFlag = cli.Int64Flag{
+		Name:  "db.dynamo.read-capacity",
+		Usage: "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
+		Value: database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
+	}
+	DynamoDBWriteCapacityFlag = cli.Int64Flag{
+		Name:  "db.dynamo.write-capacity",
+		Usage: "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
+		Value: database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
+	}
+	DynamoDBReadOnlyFlag = cli.BoolFlag{
+		Name:  "db.dynamo.read-only",
+		Usage: "Disables write to DynamoDB. Only read is possible.",
+	}
 	NoParallelDBWriteFlag = cli.BoolFlag{
 		Name:  "db.no-parallel-write",
 		Usage: "Disables parallel writes of block data to persistent database",
+	}
+	DBNoPerformanceMetricsFlag = cli.BoolFlag{
+		Name:  "db.no-perf-metrics",
+		Usage: "Disables performance metrics of database's read and write operations",
 	}
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
 		Name:  "state.cache-size",
@@ -246,20 +297,43 @@ var (
 		Name:  "cache.memory",
 		Usage: "Set the physical RAM size (GB, Default: 16GB)",
 	}
-	CacheWriteThroughFlag = cli.BoolFlag{
-		Name:  "cache.writethrough",
-		Usage: "Enables write-through writing to database and cache for certain types of cache.",
+	TrieNodeCacheTypeFlag = cli.StringFlag{
+		Name: "statedb.cache.type",
+		Usage: "Set trie node cache type ('LocalCache', 'RemoteCache', " +
+			"'HybridCache') (default = 'LocalCache')",
+		Value: string(statedb.CacheTypeLocal),
 	}
-	TxPoolStateCacheFlag = cli.BoolFlag{
-		Name:  "statedb.use-txpool-cache",
-		Usage: "Enables caching of nonce and balance for txpool.",
+	NumFetcherPrefetchWorkerFlag = cli.IntFlag{
+		Name:  "statedb.cache.num-fetcher-prefetch-worker",
+		Usage: "Number of workers used to prefetch block when fetcher fetches block",
+		Value: 32,
 	}
-	TrieCacheLimitFlag = cli.IntFlag{
+	TrieNodeCacheRedisEndpointsFlag = cli.StringSliceFlag{
+		Name:  "statedb.cache.redis.endpoints",
+		Usage: "Set endpoints of redis trie node cache. More than one endpoints can be set",
+	}
+	TrieNodeCacheRedisClusterFlag = cli.BoolFlag{
+		Name:  "statedb.cache.redis.cluster",
+		Usage: "Enables cluster-enabled mode of redis trie node cache",
+	}
+	TrieNodeCacheRedisPublishBlockFlag = cli.BoolFlag{
+		Name:  "statedb.cache.redis.publish",
+		Usage: "Publishes every committed block to redis trie node cache",
+	}
+	TrieNodeCacheRedisSubscribeBlockFlag = cli.BoolFlag{
+		Name:  "statedb.cache.redis.subscribe",
+		Usage: "Subscribes blocks from redis trie node cache",
+	}
+	TrieNodeCacheLimitFlag = cli.IntFlag{
 		Name:  "state.trie-cache-limit",
-		Usage: "Memory allowance (MB) to use for caching trie nodes in memory. -1 is for auto-scaling",
+		Usage: "Memory allowance (MiB) to use for caching trie nodes in memory. -1 is for auto-scaling",
 		Value: -1,
 	}
-
+	TrieNodeCacheSavePeriodFlag = cli.DurationFlag{
+		Name:  "state.trie-cache-save-period",
+		Usage: "Period of saving in memory trie cache to file if fastcache is used, 0 means disabled",
+		Value: 0,
+	}
 	SenderTxHashIndexingFlag = cli.BoolFlag{
 		Name:  "sendertxhashindexing",
 		Usage: "Enables storing mapping information of senderTxHash to txHash",
@@ -324,6 +398,10 @@ var (
 		Usage: "Set the output target of vmlog precompiled contract (0: no output, 1: file, 2: stdout, 3: both)",
 		Value: 0,
 	}
+	VMTraceInternalTxFlag = cli.BoolFlag{
+		Name:  "vm.internaltx",
+		Usage: "Collect internal transaction data while processing a block",
+	}
 
 	// Logging and debug settings
 	MetricsEnabledFlag = cli.BoolFlag{
@@ -369,13 +447,14 @@ var (
 		Usage: "API's offered over the HTTP-RPC interface",
 		Value: "",
 	}
-	IPCDisabledFlag = cli.BoolFlag{
-		Name:  "ipcdisable",
-		Usage: "Disable the IPC-RPC server",
+	RPCGlobalGasCap = cli.Uint64Flag{
+		Name:  "rpc.gascap",
+		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
 	}
-	IPCPathFlag = DirectoryFlag{
-		Name:  "ipcpath",
-		Usage: "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
+	RPCConcurrencyLimit = cli.IntFlag{
+		Name:  "rpc.concurrencylimit",
+		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server",
+		Value: rpc.ConcurrencyLimit,
 	}
 	WSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
@@ -391,6 +470,36 @@ var (
 		Usage: "WS-RPC server listening port",
 		Value: node.DefaultWSPort,
 	}
+	WSApiFlag = cli.StringFlag{
+		Name:  "wsapi",
+		Usage: "API's offered over the WS-RPC interface",
+		Value: "",
+	}
+	WSAllowedOriginsFlag = cli.StringFlag{
+		Name:  "wsorigins",
+		Usage: "Origins from which to accept websockets requests",
+		Value: "",
+	}
+	WSMaxSubscriptionPerConn = cli.IntFlag{
+		Name:  "wsmaxsubscriptionperconn",
+		Usage: "Allowed maximum subscription number per a websocket connection",
+		Value: int(rpc.MaxSubscriptionPerWSConn),
+	}
+	WSReadDeadLine = cli.Int64Flag{
+		Name:  "wsreaddeadline",
+		Usage: "Set the read deadline on the underlying network connection in seconds. 0 means read will not timeout",
+		Value: rpc.WebsocketReadDeadline,
+	}
+	WSWriteDeadLine = cli.Int64Flag{
+		Name:  "wswritedeadline",
+		Usage: "Set the Write deadline on the underlying network connection in seconds. 0 means write will not timeout",
+		Value: rpc.WebsocketWriteDeadline,
+	}
+	WSMaxConnections = cli.IntFlag{
+		Name:  "wsmaxconnections",
+		Usage: "Allowed maximum websocket connection number",
+		Value: 3000,
+	}
 	GRPCEnabledFlag = cli.BoolFlag{
 		Name:  "grpc",
 		Usage: "Enable the gRPC server",
@@ -405,15 +514,13 @@ var (
 		Usage: "gRPC server listening port",
 		Value: node.DefaultGRPCPort,
 	}
-	WSApiFlag = cli.StringFlag{
-		Name:  "wsapi",
-		Usage: "API's offered over the WS-RPC interface",
-		Value: "",
+	IPCDisabledFlag = cli.BoolFlag{
+		Name:  "ipcdisable",
+		Usage: "Disable the IPC-RPC server",
 	}
-	WSAllowedOriginsFlag = cli.StringFlag{
-		Name:  "wsorigins",
-		Usage: "Origins from which to accept websockets requests",
-		Value: "",
+	IPCPathFlag = DirectoryFlag{
+		Name:  "ipcpath",
+		Usage: "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
 	}
 	ExecFlag = cli.StringFlag{
 		Name:  "exec",
@@ -422,6 +529,16 @@ var (
 	PreloadJSFlag = cli.StringFlag{
 		Name:  "preload",
 		Usage: "Comma separated list of JavaScript files to preload into the console",
+	}
+	APIFilterGetLogsDeadlineFlag = cli.DurationFlag{
+		Name:  "api.filter.getLogs.deadline",
+		Usage: "Execution deadline for log collecting filter APIs",
+		Value: filters.GetLogsDeadline,
+	}
+	APIFilterGetLogsMaxItemsFlag = cli.IntFlag{
+		Name:  "api.filter.getLogs.maxitems",
+		Usage: "Maximum allowed number of return items for log collecting filter API",
+		Value: filters.GetLogsMaxItems,
 	}
 
 	// Network Settings
@@ -587,6 +704,142 @@ var (
 		Name:  "anchoring",
 		Usage: "Enable anchoring for service chain",
 	}
+	// KAS
+	KASServiceChainAnchorFlag = cli.BoolFlag{
+		Name:  "kas.sc.anchor",
+		Usage: "Enable KAS anchoring for service chain",
+	}
+	KASServiceChainAnchorPeriodFlag = cli.Uint64Flag{
+		Name:  "kas.sc.anchor.period",
+		Usage: "The period to anchor service chain blocks to KAS",
+		Value: 1,
+	}
+	KASServiceChainAnchorUrlFlag = cli.StringFlag{
+		Name:  "kas.sc.anchor.url",
+		Usage: "The url for KAS anchor",
+	}
+	KASServiceChainAnchorOperatorFlag = cli.StringFlag{
+		Name:  "kas.sc.anchor.operator",
+		Usage: "The operator address for KAS anchor",
+	}
+	KASServiceChainXChainIdFlag = cli.StringFlag{
+		Name:  "kas.x-chain-id",
+		Usage: "The x-chain-id for KAS",
+	}
+	KASServiceChainAccessKeyFlag = cli.StringFlag{
+		Name:  "kas.accesskey",
+		Usage: "The access key id for KAS",
+	}
+	KASServiceChainSecretKeyFlag = cli.StringFlag{
+		Name:  "kas.secretkey",
+		Usage: "The secret key for KAS",
+	}
+
+	// ChainDataFetcher
+	EnableChainDataFetcherFlag = cli.BoolFlag{
+		Name:  "chaindatafetcher",
+		Usage: "Enable the ChainDataFetcher Service",
+	}
+	ChainDataFetcherMode = cli.StringFlag{
+		Name:  "chaindatafetcher.mode",
+		Usage: "The mode of chaindatafetcher (\"kas\", \"kafka\")",
+		Value: "kas",
+	}
+	ChainDataFetcherNoDefault = cli.BoolFlag{
+		Name:  "chaindatafetcher.no.default",
+		Usage: "Turn off the starting of the chaindatafetcher",
+	}
+	ChainDataFetcherNumHandlers = cli.IntFlag{
+		Name:  "chaindatafetcher.num.handlers",
+		Usage: "Number of chaindata handlers",
+		Value: chaindatafetcher.DefaultNumHandlers,
+	}
+	ChainDataFetcherJobChannelSize = cli.IntFlag{
+		Name:  "chaindatafetcher.job.channel.size",
+		Usage: "Job channel size",
+		Value: chaindatafetcher.DefaultJobChannelSize,
+	}
+	ChainDataFetcherChainEventSizeFlag = cli.IntFlag{
+		Name:  "chaindatafetcher.block.channel.size",
+		Usage: "Block received channel size",
+		Value: chaindatafetcher.DefaultJobChannelSize,
+	}
+	ChainDataFetcherKASDBHostFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.db.host",
+		Usage: "KAS specific DB host in chaindatafetcher",
+	}
+	ChainDataFetcherKASDBPortFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.db.port",
+		Usage: "KAS specific DB port in chaindatafetcher",
+		Value: chaindatafetcher.DefaultDBPort,
+	}
+	ChainDataFetcherKASDBNameFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.db.name",
+		Usage: "KAS specific DB name in chaindatafetcher",
+	}
+	ChainDataFetcherKASDBUserFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.db.user",
+		Usage: "KAS specific DB user in chaindatafetcher",
+	}
+	ChainDataFetcherKASDBPasswordFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.db.password",
+		Usage: "KAS specific DB password in chaindatafetcher",
+	}
+	ChainDataFetcherKASCacheUse = cli.BoolFlag{
+		Name:  "chaindatafetcher.kas.cache.use",
+		Usage: "Enable KAS cache invalidation",
+	}
+	ChainDataFetcherKASCacheURLFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.cache.url",
+		Usage: "KAS specific cache invalidate API endpoint in chaindatafetcher",
+	}
+	ChainDataFetcherKASXChainIdFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.xchainid",
+		Usage: "KAS specific header x-chain-id in chaindatafetcher",
+	}
+	ChainDataFetcherKASBasicAuthParamFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kas.basic.auth.param",
+		Usage: "KAS specific header basic authorization parameter in chaindatafetcher",
+	}
+	ChainDataFetcherKafkaBrokersFlag = cli.StringSliceFlag{
+		Name:  "chaindatafetcher.kafka.brokers",
+		Usage: "Kafka broker URL list",
+	}
+	ChainDataFetcherKafkaTopicEnvironmentFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kafka.topic.environment",
+		Usage: "Kafka topic environment prefix",
+		Value: kafka.DefaultTopicEnvironmentName,
+	}
+	ChainDataFetcherKafkaTopicResourceFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kafka.topic.resource",
+		Usage: "Kafka topic resource name",
+		Value: kafka.DefaultTopicResourceName,
+	}
+	ChainDataFetcherKafkaReplicasFlag = cli.Int64Flag{
+		Name:  "chaindatafetcher.kafka.replicas",
+		Usage: "Kafka partition replication factor",
+		Value: kafka.DefaultReplicas,
+	}
+	ChainDataFetcherKafkaPartitionsFlag = cli.IntFlag{
+		Name:  "chaindatafetcher.kafka.partitions",
+		Usage: "The number of partitions in a topic",
+		Value: kafka.DefaultPartitions,
+	}
+	ChainDataFetcherKafkaMaxMessageBytesFlag = cli.Int64Flag{
+		Name:  "chaindatafetcher.kafka.max.message.bytes",
+		Usage: "The max size of a message produced by Kafka producer ",
+		Value: kafka.DefaultMaxMessageBytes,
+	}
+	ChainDataFetcherKafkaSegmentSizeBytesFlag = cli.IntFlag{
+		Name:  "chaindatafetcher.kafka.segment.size",
+		Usage: "The kafka data segment size (in byte)",
+		Value: kafka.DefaultSegmentSizeBytes,
+	}
+	ChainDataFetcherKafkaRequiredAcksFlag = cli.IntFlag{
+		Name:  "chaindatafetcher.kafka.required.acks",
+		Usage: "The level of acknowledgement reliability needed from Kafka broker (0: NoResponse, 1: WaitForLocal, -1: WaitForAll)",
+		Value: kafka.DefaultRequiredAcks,
+	}
 	// DBSyncer
 	EnableDBSyncerFlag = cli.BoolFlag{
 		Name:  "dbsyncer",
@@ -680,6 +933,65 @@ var (
 		Name:  "autorestart.daemon.path",
 		Usage: "Path of node daemon. Used to give signal to kill",
 		Value: "~/klaytn/bin/kcnd",
+	}
+
+	// db migration vars
+	DstDbTypeFlag = cli.StringFlag{
+		Name:  "dst.dbtype",
+		Usage: `Blockchain storage database type ("LevelDB", "BadgerDB", "DynamoDBS3")`,
+		Value: "LevelDB",
+	}
+	DstDataDirFlag = DirectoryFlag{
+		Name:  "dst.datadir",
+		Usage: "Data directory for the databases and keystore. This value is only used in local DB.",
+	}
+	DstSingleDBFlag = cli.BoolFlag{
+		Name:  "db.dst.single",
+		Usage: "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
+	}
+	DstLevelDBCacheSizeFlag = cli.IntFlag{
+		Name:  "db.dst.leveldb.cache-size",
+		Usage: "Size of in-memory cache in LevelDB (MiB)",
+		Value: 768,
+	}
+	DstLevelDBCompressionTypeFlag = cli.IntFlag{
+		Name:  "db.dst.leveldb.compression",
+		Usage: "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
+		Value: 0,
+	}
+	DstNumStateTrieShardsFlag = cli.UintFlag{
+		Name:  "db.dst.num-statetrie-shards",
+		Usage: "Number of internal shards of state trie DB shards. Should be power of 2",
+		Value: 4,
+	}
+	DstDynamoDBTableNameFlag = cli.StringFlag{
+		Name:  "db.dst.dynamo.tablename",
+		Usage: "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3). If dstDB is singleDB, tableName should be in form of 'PREFIX-TABLENAME'.(e.g. 'klaytn-misc', 'klaytn-statetrie')",
+	}
+	DstDynamoDBRegionFlag = cli.StringFlag{
+		Name:  "db.dst.dynamo.region",
+		Usage: "AWS region where the DynamoDB will be created.",
+		Value: database.GetDefaultDynamoDBConfig().Region,
+	}
+	DstDynamoDBIsProvisionedFlag = cli.BoolFlag{
+		Name:  "db.dst.dynamo.is-provisioned",
+		Usage: "Set DynamoDB billing mode to provision. The default billing mode is on-demand.",
+	}
+	DstDynamoDBReadCapacityFlag = cli.Int64Flag{
+		Name:  "db.dst.dynamo.read-capacity",
+		Usage: "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
+		Value: database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
+	}
+	DstDynamoDBWriteCapacityFlag = cli.Int64Flag{
+		Name:  "db.dst.dynamo.write-capacity",
+		Usage: "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
+		Value: database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
+	}
+
+	// Config
+	ConfigFileFlag = cli.StringFlag{
+		Name:  "config",
+		Usage: "TOML configuration file",
 	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
@@ -830,6 +1142,10 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(RPCVirtualHostsFlag.Name) {
 		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(RPCVirtualHostsFlag.Name))
 	}
+	if ctx.GlobalIsSet(RPCConcurrencyLimit.Name) {
+		rpc.ConcurrencyLimit = ctx.GlobalInt(RPCConcurrencyLimit.Name)
+		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
+	}
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
@@ -851,12 +1167,16 @@ func setWS(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(WSApiFlag.Name) {
 		cfg.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
 	}
+	rpc.MaxSubscriptionPerWSConn = int32(ctx.GlobalInt(WSMaxSubscriptionPerConn.Name))
+	rpc.WebsocketReadDeadline = ctx.GlobalInt64(WSReadDeadLine.Name)
+	rpc.WebsocketWriteDeadline = ctx.GlobalInt64(WSWriteDeadLine.Name)
+	rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(WSMaxConnections.Name))
 }
 
 // setIPC creates an IPC path configuration from the set command line flags,
 // returning an empty string if IPC was explicitly disabled, or the set path.
 func setIPC(ctx *cli.Context, cfg *node.Config) {
-	checkExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
+	CheckExclusive(ctx, IPCDisabledFlag, IPCPathFlag)
 	switch {
 	case ctx.GlobalBool(IPCDisabledFlag.Name):
 		cfg.IPCPath = ""
@@ -878,6 +1198,12 @@ func setgRPC(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(GRPCPortFlag.Name) {
 		cfg.GRPCPort = ctx.GlobalInt(GRPCPortFlag.Name)
 	}
+}
+
+// setAPIConfig sets configurations for specific APIs.
+func setAPIConfig(ctx *cli.Context) {
+	filters.GetLogsDeadline = ctx.GlobalDuration(APIFilterGetLogsDeadlineFlag.Name)
+	filters.GetLogsMaxItems = ctx.GlobalInt(APIFilterGetLogsMaxItemsFlag.Name)
 }
 
 // MakeAddress converts an account specified directly as a hex encoded string or
@@ -1018,9 +1344,14 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	setHTTP(ctx, cfg)
 	setWS(ctx, cfg)
 	setgRPC(ctx, cfg)
+	setAPIConfig(ctx)
 	setNodeUserIdent(ctx, cfg)
 
-	cfg.DBType = ctx.GlobalString(DbTypeFlag.Name)
+	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
+		cfg.DBType = dbtype
+	} else {
+		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(DbTypeFlag.Name))
+	}
 	cfg.DataDir = ctx.GlobalString(DataDirFlag.Name)
 
 	if ctx.GlobalIsSet(KeyStoreDirFlag.Name) {
@@ -1034,6 +1365,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolNoLocalsFlag.Name) {
 		cfg.NoLocals = ctx.GlobalBool(TxPoolNoLocalsFlag.Name)
+	}
+	if ctx.GlobalIsSet(TxPoolAllowLocalAnchorTxFlag.Name) {
+		cfg.AllowLocalAnchorTx = ctx.GlobalBool(TxPoolAllowLocalAnchorTxFlag.Name)
 	}
 	if ctx.GlobalIsSet(TxPoolJournalFlag.Name) {
 		cfg.Journal = ctx.GlobalString(TxPoolJournalFlag.Name)
@@ -1067,10 +1401,10 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	}
 }
 
-// checkExclusive verifies that only a single instance of the provided flags was
+// CheckExclusive verifies that only a single instance of the provided flags was
 // set by the user. Each flag might optionally be followed by a string type to
 // specialize it further.
-func checkExclusive(ctx *cli.Context, args ...interface{}) {
+func CheckExclusive(ctx *cli.Context, args ...interface{}) {
 	set := make([]string, 0, 1)
 	for i := 0; i < len(args); i++ {
 		// Make sure the next argument is a flag and skip if not set
@@ -1105,10 +1439,26 @@ func checkExclusive(ctx *cli.Context, args ...interface{}) {
 	}
 }
 
+// raiseFDLimit increases the file descriptor limit to process's maximum value
+func raiseFDLimit() {
+	limit, err := fdlimit.Maximum()
+	if err != nil {
+		logger.Error("Failed to read maximum fd. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	raised, err := fdlimit.Raise(uint64(limit))
+	if err != nil {
+		logger.Warn("Failed to increase fd limit. you may suffer fd exhaustion", "err", err)
+		return
+	}
+	logger.Info("Raised fd limit to process's maximum value", "fd", raised)
+}
+
 // SetKlayConfig applies klay-related command line flags to the config.
 func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
+	raiseFDLimit()
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 	setServiceChainSigner(ctx, ks, cfg)
@@ -1122,17 +1472,39 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		}
 	}
 
+	if ctx.GlobalBool(KESNodeTypeServiceFlag.Name) {
+		cfg.FetcherDisable = true
+		cfg.DownloaderDisable = true
+		cfg.WorkerDisable = true
+	}
+
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
 
-	cfg.PartitionedDB = !ctx.GlobalIsSet(NoPartitionedDBFlag.Name)
-	cfg.NumStateTriePartitions = ctx.GlobalUint(NumStateTriePartitionsFlag.Name)
-	if !database.IsPow2(cfg.NumStateTriePartitions) {
-		log.Fatalf("--db.num-statetrie-partitions should be power of 2 but %v is not!", cfg.NumStateTriePartitions)
+	if dbtype := database.DBType(ctx.GlobalString(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
+		cfg.DBType = dbtype
+	} else {
+		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(DbTypeFlag.Name))
 	}
+	cfg.SingleDB = ctx.GlobalIsSet(SingleDBFlag.Name)
+	cfg.NumStateTrieShards = ctx.GlobalUint(NumStateTrieShardsFlag.Name)
+	if !database.IsPow2(cfg.NumStateTrieShards) {
+		log.Fatalf("%v should be power of 2 but %v is not!", NumStateTrieShardsFlag.Name, cfg.NumStateTrieShards)
+	}
+
+	cfg.OverwriteGenesis = ctx.GlobalBool(OverwriteGenesisFlag.Name)
+	cfg.StartBlockNumber = ctx.GlobalUint64(StartBlockNumberFlag.Name)
 
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.GlobalInt(LevelDBCompressionTypeFlag.Name))
 	cfg.LevelDBBufferPool = !ctx.GlobalIsSet(LevelDBNoBufferPoolFlag.Name)
+	cfg.EnableDBPerfMetrics = !ctx.GlobalIsSet(DBNoPerformanceMetricsFlag.Name)
 	cfg.LevelDBCacheSize = ctx.GlobalInt(LevelDBCacheSizeFlag.Name)
+
+	cfg.DynamoDBConfig.TableName = ctx.GlobalString(DynamoDBTableNameFlag.Name)
+	cfg.DynamoDBConfig.Region = ctx.GlobalString(DynamoDBRegionFlag.Name)
+	cfg.DynamoDBConfig.IsProvisioned = ctx.GlobalBool(DynamoDBIsProvisionedFlag.Name)
+	cfg.DynamoDBConfig.ReadCapacityUnits = ctx.GlobalInt64(DynamoDBReadCapacityFlag.Name)
+	cfg.DynamoDBConfig.WriteCapacityUnits = ctx.GlobalInt64(DynamoDBWriteCapacityFlag.Name)
+	cfg.DynamoDBConfig.ReadOnly = ctx.GlobalBool(DynamoDBReadOnlyFlag.Name)
 
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		log.Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
@@ -1167,9 +1539,6 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		logger.Debug("Memory settings", "PhysicalMemory(GB)", common.TotalPhysicalMemGB)
 	}
 
-	common.WriteThroughCaching = ctx.GlobalIsSet(CacheWriteThroughFlag.Name)
-	cfg.TxPoolStateCache = ctx.GlobalIsSet(TxPoolStateCacheFlag.Name)
-
 	if ctx.GlobalIsSet(DocRootFlag.Name) {
 		cfg.DocRoot = ctx.GlobalString(DocRootFlag.Name)
 	}
@@ -1179,8 +1548,18 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 
 	cfg.SenderTxHashIndexing = ctx.GlobalIsSet(SenderTxHashIndexingFlag.Name)
 	cfg.ParallelDBWrite = !ctx.GlobalIsSet(NoParallelDBWriteFlag.Name)
-	cfg.StateDBCaching = ctx.GlobalIsSet(StateDBCachingFlag.Name)
-	cfg.TrieCacheLimit = ctx.GlobalInt(TrieCacheLimitFlag.Name)
+	cfg.TrieNodeCacheConfig = statedb.TrieNodeCacheConfig{
+		CacheType: statedb.TrieNodeCacheType(ctx.GlobalString(TrieNodeCacheTypeFlag.
+			Name)).ToValid(),
+		NumFetcherPrefetchWorker:  ctx.GlobalInt(NumFetcherPrefetchWorkerFlag.Name),
+		LocalCacheSizeMiB:         ctx.GlobalInt(TrieNodeCacheLimitFlag.Name),
+		FastCacheFileDir:          ctx.GlobalString(DataDirFlag.Name) + "/fastcache",
+		FastCacheSavePeriod:       ctx.GlobalDuration(TrieNodeCacheSavePeriodFlag.Name),
+		RedisEndpoints:            ctx.GlobalStringSlice(TrieNodeCacheRedisEndpointsFlag.Name),
+		RedisClusterEnable:        ctx.GlobalBool(TrieNodeCacheRedisClusterFlag.Name),
+		RedisPublishBlockEnable:   ctx.GlobalBool(TrieNodeCacheRedisPublishBlockFlag.Name),
+		RedisSubscribeBlockEnable: ctx.GlobalBool(TrieNodeCacheRedisSubscribeBlockFlag.Name),
+	}
 
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
@@ -1191,10 +1570,15 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 			logger.Warn("Incorrect vmlog value", "err", err)
 		}
 	}
+	cfg.EnableInternalTxTracing = ctx.GlobalIsSet(VMTraceInternalTxFlag.Name)
 
 	cfg.AutoRestartFlag = ctx.GlobalBool(AutoRestartFlag.Name)
 	cfg.RestartTimeOutFlag = ctx.GlobalDuration(RestartTimeOutFlag.Name)
 	cfg.DaemonPathFlag = ctx.GlobalString(DaemonPathFlag.Name)
+
+	if ctx.GlobalIsSet(RPCGlobalGasCap.Name) {
+		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
+	}
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
@@ -1245,6 +1629,19 @@ func RegisterService(stack *node.Node, cfg *sc.SCConfig) {
 	}
 }
 
+// RegisterChainDataFetcherService adds a ChainDataFetcher to the stack
+func RegisterChainDataFetcherService(stack *node.Node, cfg *chaindatafetcher.ChainDataFetcherConfig) {
+	if cfg.EnabledChainDataFetcher {
+		err := stack.RegisterSubService(func(ctx *node.ServiceContext) (node.Service, error) {
+			chainDataFetcher, err := chaindatafetcher.NewChainDataFetcher(ctx, cfg)
+			return chainDataFetcher, err
+		})
+		if err != nil {
+			log.Fatalf("Failed to register the service: %v", err)
+		}
+	}
+}
+
 // RegisterDBSyncerService adds a DBSyncer to the stack
 func RegisterDBSyncerService(stack *node.Node, cfg *dbsyncer.DBConfig) {
 	if cfg.EnabledDBSyncer {
@@ -1272,7 +1669,7 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 		return nil
 	}
 	// Otherwise resolve absolute paths and return them
-	preloads := []string{}
+	var preloads []string
 
 	assets := ctx.GlobalString(JSpathFlag.Name)
 	for _, file := range strings.Split(ctx.GlobalString(PreloadJSFlag.Name), ",") {

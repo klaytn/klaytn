@@ -18,32 +18,35 @@ package database
 
 import (
 	"crypto/ecdsa"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/stretchr/testify/assert"
+	"encoding/json"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 var dbManagers []DBManager
 var dbConfigs = make([]*DBConfig, 0, len(baseConfigs)*3)
 var baseConfigs = []*DBConfig{
-	{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 1, ParallelDBWrite: false},
-	{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 1, ParallelDBWrite: true},
-	{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 4, ParallelDBWrite: false},
-	{DBType: LevelDB, Partitioned: false, NumStateTriePartitions: 4, ParallelDBWrite: true},
+	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: false},
+	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: true},
+	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: false},
+	{DBType: LevelDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
 
-	{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 1, ParallelDBWrite: false},
-	{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 1, ParallelDBWrite: true},
-	{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 4, ParallelDBWrite: false},
-	{DBType: LevelDB, Partitioned: true, NumStateTriePartitions: 4, ParallelDBWrite: true},
+	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: false},
+	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: true},
+	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: false},
+	{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: true},
 }
 
 var num1 = uint64(20190815)
@@ -389,7 +392,7 @@ func TestDBManager_TrieNode(t *testing.T) {
 		hasStateTrieNode, _ = dbm.HasStateTrieNode(hash1[:])
 		assert.True(t, hasStateTrieNode)
 
-		if !dbm.IsPartitioned() {
+		if dbm.IsSingle() {
 			continue
 		}
 		err := dbm.CreateMigrationDBAndSetStatus(123)
@@ -680,7 +683,7 @@ func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
 		}
 
 		// check if migration fails on single DB
-		if !dbm.IsPartitioned() {
+		if dbm.IsSingle() {
 			migrationBlockNum := uint64(12345)
 
 			// check if not in migration
@@ -688,7 +691,7 @@ func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
 
 			// check if create migration fails
 			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
-			assert.Error(t, err, "error expected on non-partitioned DB") // expect error
+			assert.Error(t, err, "error expected on single DB") // expect error
 
 			continue
 		}
@@ -738,14 +741,14 @@ func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
 			assert.Equal(t, common.Int64ToByteBigEndian(migrationBlockNum), fetchedBlockNum)
 
 			// reset migration status for next test
-			dbm.FinishStateMigration(false)
+			dbm.FinishStateMigration(false) // migration fail
 		}
 	}
 }
 
 func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 	for i, dbm := range dbManagers {
-		if !dbm.IsPartitioned() || dbConfigs[i].DBType == MemoryDB {
+		if dbm.IsSingle() || dbConfigs[i].DBType == MemoryDB {
 			continue
 		}
 
@@ -763,7 +766,13 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			// finish migration with failure
 			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum)
 			assert.NoError(t, err)
-			dbm.FinishStateMigration(false)
+			endCheck := dbm.FinishStateMigration(false) // migration fail
+			select {
+			case <-endCheck: // wait for removing DB
+			case <-time.After(1 * time.Second):
+				t.Log("Take too long for a DB to be removed")
+				t.FailNow()
+			}
 
 			// check if in migration state
 			assert.False(t, dbm.InMigration())
@@ -772,6 +781,8 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
 			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
 			assert.NoError(t, err)
+			dirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
+			assert.Equal(t, 1, len(dirNames)) // check if DB is removed
 			assert.Equal(t, initialDirNames[0], string(fetchedStateDBPath), "old DB should remain")
 
 			// check if migration DB Path is not set in MiscDB
@@ -794,7 +805,13 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			// finish migration successfully
 			err := dbm.CreateMigrationDBAndSetStatus(migrationBlockNum2)
 			assert.NoError(t, err)
-			dbm.FinishStateMigration(true)
+			endCheck := dbm.FinishStateMigration(true) // migration succeed
+			select {
+			case <-endCheck: // wait for removing DB
+			case <-time.After(1 * time.Second):
+				t.Log("Take too long for a DB to be removed")
+				t.FailNow()
+			}
 
 			// check if in migration state
 			assert.False(t, dbm.InMigration())
@@ -803,6 +820,8 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 			statDBPathKey := append(databaseDirPrefix, common.Int64ToByteBigEndian(uint64(StateTrieDB))...)
 			fetchedStateDBPath, err := dbm.getDatabase(MiscDB).Get(statDBPathKey)
 			assert.NoError(t, err)
+			dirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
+			assert.Equal(t, 1, len(dirNames))                                                         // check if DB is removed
 			expectedStateDBPath := "statetrie_migrated_" + strconv.FormatUint(migrationBlockNum2, 10) // new DB format
 			assert.Equal(t, expectedStateDBPath, string(fetchedStateDBPath), "new DB should remain")
 
@@ -823,7 +842,7 @@ func TestDatabaseManager_FinishStateMigration(t *testing.T) {
 // While state trie migration, directory should be created with expected name
 func TestDBManager_StateMigrationDBPath(t *testing.T) {
 	for i, dbm := range dbManagers {
-		if !dbm.IsPartitioned() || dbConfigs[i].DBType == MemoryDB {
+		if dbm.IsSingle() || dbConfigs[i].DBType == MemoryDB {
 			continue
 		}
 
@@ -841,13 +860,19 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 			assert.NoError(t, err)
 			dirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
 			assert.Equal(t, 2, len(dirNames))
-
 			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
 
 			// check if old db is deleted on migration success
-			dbm.FinishStateMigration(true) // migration success
+			endCheck := dbm.FinishStateMigration(true) // migration succeed
+			select {
+			case <-endCheck: // wait for removing DB
+			case <-time.After(1 * time.Second):
+				t.Log("Take too long for a DB to be removed")
+				t.FailNow()
+			}
+
 			newDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, "statetrie")
-			assert.Equal(t, 1, len(newDirNames))
+			assert.Equal(t, 1, len(newDirNames)) // check if DB is removed
 			assert.Equal(t, NewMigrationPath, newDirNames[0], "new DB should remain")
 		}
 
@@ -869,11 +894,92 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 			assert.True(t, dirNames[0] == NewMigrationPath || dirNames[1] == NewMigrationPath)
 
 			// check if new db is deleted on migration fail
-			dbm.FinishStateMigration(false) // migration fail
+			endCheck := dbm.FinishStateMigration(false) // migration fail
+			select {
+			case <-endCheck: // wait for removing DB
+			case <-time.After(1 * time.Second):
+				t.Log("Take too long for a DB to be removed")
+				t.FailNow()
+			}
+
 			newDirNames := getFilesInDir(t, dbm.GetDBConfig().Dir, dbm.getDBDir(StateTrieDB))
-			assert.Equal(t, 1, len(newDirNames))
+			assert.Equal(t, 1, len(newDirNames)) // check if DB is removed
 			assert.Equal(t, initialDirNames[0], newDirNames[0], "old DB should remain")
 		}
+	}
+}
+
+func TestDBManager_WriteGovernanceIdx(t *testing.T) {
+	testIdxes := []uint64{100, 200, 300}
+
+	for _, dbm := range dbManagers {
+		// normal case
+		{
+			// write test indexes
+			for _, idx := range testIdxes {
+				assert.Nil(t, dbm.WriteGovernanceIdx(idx))
+			}
+
+			// get the stored indexes
+			encodedIdxes, err := dbm.GetMiscDB().Get(governanceHistoryKey)
+			assert.Nil(t, err)
+
+			// read and check the indexes from the database
+			actualIdxes := make([]uint64, 0)
+			assert.Nil(t, json.Unmarshal(encodedIdxes, &actualIdxes))
+			assert.Equal(t, testIdxes, actualIdxes)
+		}
+
+		// unexpected case: try to write a governance index not in ascending order
+		{
+			assert.NotNil(t, dbm.WriteGovernanceIdx(testIdxes[0]))
+		}
+
+		// remove test data from database
+		_ = dbm.GetMiscDB().Delete(governanceHistoryKey)
+	}
+}
+
+func TestDBManager_ReadRecentGovernanceIdx(t *testing.T) {
+	testIdxes := []uint64{100, 200, 300}
+
+	for _, dbm := range dbManagers {
+		// check empty
+		idxes, err := dbm.ReadRecentGovernanceIdx(0)
+		assert.Nil(t, idxes)
+		assert.NotNil(t, err)
+
+		// normal case
+		{
+			// write indexes on the database
+			data, err := json.Marshal(testIdxes)
+			assert.Nil(t, err)
+			assert.Nil(t, dbm.GetMiscDB().Put(governanceHistoryKey, data))
+
+			// read and check the indexes from the database
+			idxes, err = dbm.ReadRecentGovernanceIdx(0)
+			assert.Equal(t, testIdxes, idxes)
+			assert.Nil(t, err)
+		}
+
+		// unexpected case: the governance indexes in the database is not in ascending order
+		{
+			invalidTestIdxes := append(testIdxes, testIdxes[0])
+			expectedIdxes := append([]uint64{testIdxes[0]}, testIdxes...)
+
+			// write invalid indexes on the database
+			data, err := json.Marshal(invalidTestIdxes)
+			assert.Nil(t, err)
+			assert.Nil(t, dbm.GetMiscDB().Put(governanceHistoryKey, data))
+
+			// read and check the indexes from the database
+			idxes, err = dbm.ReadRecentGovernanceIdx(0)
+			assert.Nil(t, err)
+			assert.Equal(t, expectedIdxes, idxes)
+		}
+
+		// remove test data from database
+		_ = dbm.GetMiscDB().Delete(governanceHistoryKey)
 	}
 }
 

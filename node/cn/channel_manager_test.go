@@ -17,10 +17,11 @@
 package cn
 
 import (
+	"testing"
+
 	"github.com/klaytn/klaytn/consensus/istanbul/backend"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // TestChannelManager_ChannelSize_1 tests registering and retrieving of

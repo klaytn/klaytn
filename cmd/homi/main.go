@@ -19,12 +19,13 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/klaytn/klaytn/cmd/homi/extra"
 	"github.com/klaytn/klaytn/cmd/homi/setup"
 	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"path/filepath"
 )
 
 func main() {

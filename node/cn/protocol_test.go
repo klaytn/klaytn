@@ -18,10 +18,11 @@ package cn
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHashOrNumber_Success(t *testing.T) {

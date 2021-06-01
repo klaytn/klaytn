@@ -22,6 +22,7 @@ package node_test
 
 import (
 	"fmt"
+
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/rpc"

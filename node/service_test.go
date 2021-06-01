@@ -22,14 +22,15 @@ package node
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/storage/database"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/klaytn/klaytn/accounts"
+	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/storage/database"
 )
 
 // Tests that databases are correctly created persistent or ephemeral based on

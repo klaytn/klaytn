@@ -24,7 +24,13 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/hashicorp/golang-lru"
+	"math/big"
+	"sort"
+	"strings"
+	"testing"
+	"time"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -36,11 +42,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
-	"sort"
-	"strings"
-	"testing"
-	"time"
 )
 
 var (
@@ -683,14 +684,14 @@ func getTestVotingPowers(num int) []uint64 {
 
 func getTestConfig() *params.ChainConfig {
 	config := params.TestChainConfig
-	config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
-	config.Istanbul = governance.GetDefaultIstanbulConfig()
+	config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	config.Istanbul = params.GetDefaultIstanbulConfig()
 	return config
 }
 
 func getGovernance(dbm database.DBManager) *governance.Governance {
 	config := getTestConfig()
-	return governance.NewGovernance(config, dbm)
+	return governance.NewGovernanceInitialize(config, dbm)
 }
 
 func Benchmark_getTargetReceivers(b *testing.B) {

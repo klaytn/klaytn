@@ -26,19 +26,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/klaytn/klaytn/work"
-	"io"
-	"os"
-	"strings"
 )
 
 // PublicKlayAPI provides an API to access Klaytn CN-related
@@ -195,6 +198,10 @@ func (api *PrivateAdminAPI) StateMigrationStatus() map[string]interface{} {
 	}
 }
 
+func (api *PrivateAdminAPI) SaveTrieNodeCacheToDisk() error {
+	return api.cn.BlockChain().SaveTrieNodeCacheToDisk()
+}
+
 // PublicDebugAPI is the collection of Klaytn full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
@@ -210,11 +217,7 @@ func NewPublicDebugAPI(cn *CN) *PublicDebugAPI {
 // DumpBlock retrieves the entire state of the database at a given block.
 func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error) {
 	if blockNr == rpc.PendingBlockNumber {
-		// If we're dumping the pending state, we need to request
-		// both the pending block as well as the pending state from
-		// the miner and operate on those
-		_, stateDb := api.cn.miner.Pending()
-		return stateDb.RawDump(), nil
+		return state.Dump{}, kerrors.ErrPendingBlockNotSupported
 	}
 	var block *types.Block
 	if blockNr == rpc.LatestBlockNumber {
@@ -280,9 +283,20 @@ func (api *PublicDebugAPI) StartWarmUp() error {
 	return api.cn.blockchain.StartWarmUp()
 }
 
+// StartContractWarmUp retrieves a storage trie of the latest state root and caches the trie
+// corresponding to the given contract address.
+func (api *PublicDebugAPI) StartContractWarmUp(contractAddr common.Address) error {
+	return api.cn.blockchain.StartContractWarmUp(contractAddr)
+}
+
 // StopWarmUp stops the warming up process.
 func (api *PublicDebugAPI) StopWarmUp() error {
 	return api.cn.blockchain.StopWarmUp()
+}
+
+// StartCollectingTrieStats  collects state/storage trie statistics and print in the log.
+func (api *PublicDebugAPI) StartCollectingTrieStats(contractAddr common.Address) error {
+	return api.cn.blockchain.StartCollectingTrieStats(contractAddr)
 }
 
 // PrivateDebugAPI is the collection of CN full node APIs exposed over
@@ -361,30 +375,15 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 	return result, nil
 }
 
-// GetModifiedAccountsByumber returns all accounts that have changed between the
+// GetModifiedAccountsByNumber returns all accounts that have changed between the
 // two blocks specified. A change is defined as a difference in nonce, balance,
 // code hash, or storage hash.
 //
 // With one parameter, returns the list of accounts modified in the specified block.
 func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(startNum uint64, endNum *uint64) ([]common.Address, error) {
-	var startBlock, endBlock *types.Block
-
-	startBlock = api.cn.blockchain.GetBlockByNumber(startNum)
-	if startBlock == nil {
-		return nil, fmt.Errorf("start block number %d not found", startNum)
-	}
-
-	if endNum == nil {
-		endBlock = startBlock
-		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
-		if startBlock == nil {
-			return nil, fmt.Errorf("block number %d has no parent", startNum)
-		}
-	} else {
-		endBlock = api.cn.blockchain.GetBlockByNumber(*endNum)
-		if endBlock == nil {
-			return nil, fmt.Errorf("end block number %d not found", *endNum)
-		}
+	startBlock, endBlock, err := api.getStartAndEndBlock(startNum, endNum)
+	if err != nil {
+		return nil, err
 	}
 	return api.getModifiedAccounts(startBlock, endBlock)
 }
@@ -417,10 +416,6 @@ func (api *PrivateDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, end
 }
 
 func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
-	if startBlock.Number().Uint64() >= endBlock.Number().Uint64() {
-		return nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
-	}
-
 	trieDB := api.cn.blockchain.StateCache().TrieDB()
 
 	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), trieDB)
@@ -444,4 +439,84 @@ func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Bloc
 		dirty = append(dirty, common.BytesToAddress(key))
 	}
 	return dirty, nil
+}
+
+// getStartAndEndBlock returns start and end block based on the given startNum and endNum.
+func (api *PrivateDebugAPI) getStartAndEndBlock(startNum uint64, endNum *uint64) (*types.Block, *types.Block, error) {
+	var startBlock, endBlock *types.Block
+
+	startBlock = api.cn.blockchain.GetBlockByNumber(startNum)
+	if startBlock == nil {
+		return nil, nil, fmt.Errorf("start block number %d not found", startNum)
+	}
+
+	if endNum == nil {
+		endBlock = startBlock
+		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
+		if startBlock == nil {
+			return nil, nil, fmt.Errorf("block number %d has no parent", startNum)
+		}
+	} else {
+		endBlock = api.cn.blockchain.GetBlockByNumber(*endNum)
+		if endBlock == nil {
+			return nil, nil, fmt.Errorf("end block number %d not found", *endNum)
+		}
+	}
+
+	if startBlock.Number().Uint64() >= endBlock.Number().Uint64() {
+		return nil, nil, fmt.Errorf("start block height (%d) must be less than end block height (%d)", startBlock.Number().Uint64(), endBlock.Number().Uint64())
+	}
+
+	return startBlock, endBlock, nil
+}
+
+// GetModifiedStorageNodesByNumber returns the number of storage nodes of a contract account
+// that have been changed between the two blocks specified.
+//
+// With the first two parameters, it returns the number of storage trie nodes modified in the specified block.
+func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(contractAddr common.Address, startNum uint64, endNum *uint64, printDetail *bool) (int, error) {
+	startBlock, endBlock, err := api.getStartAndEndBlock(startNum, endNum)
+	if err != nil {
+		return 0, err
+	}
+	return api.getModifiedStorageNodes(contractAddr, startBlock, endBlock, printDetail)
+}
+
+func (api *PrivateDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, printDetail *bool) (int, error) {
+	startBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(startBlock, api.cn.blockchain.StateCache(), contractAddr)
+	if err != nil {
+		return 0, err
+	}
+	endBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(endBlock, api.cn.blockchain.StateCache(), contractAddr)
+	if err != nil {
+		return 0, err
+	}
+
+	trieDB := api.cn.blockchain.StateCache().TrieDB()
+	oldTrie, err := statedb.NewSecureTrie(startBlockRoot, trieDB)
+	if err != nil {
+		return 0, err
+	}
+	newTrie, err := statedb.NewSecureTrie(endBlockRoot, trieDB)
+	if err != nil {
+		return 0, err
+	}
+
+	diff, _ := statedb.NewDifferenceIterator(oldTrie.NodeIterator([]byte{}), newTrie.NodeIterator([]byte{}))
+	iter := statedb.NewIterator(diff)
+
+	logger.Info("Start collecting the modified storage nodes", "contractAddr", contractAddr.String(),
+		"startBlock", startBlock.NumberU64(), "endBlock", endBlock.NumberU64())
+	start := time.Now()
+	numModifiedNodes := 0
+	for iter.Next() {
+		numModifiedNodes++
+		if printDetail != nil && *printDetail {
+			logger.Info("modified storage trie nodes", "contractAddr", contractAddr.String(),
+				"nodeHash", common.BytesToHash(iter.Key).String())
+		}
+	}
+	logger.Info("Finished collecting the modified storage nodes", "contractAddr", contractAddr.String(),
+		"startBlock", startBlock.NumberU64(), "endBlock", endBlock.NumberU64(), "numModifiedNodes", numModifiedNodes, "elapsed", time.Since(start))
+	return numModifiedNodes, nil
 }

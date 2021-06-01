@@ -45,11 +45,12 @@ const NodeIDBits = 512
 // Node represents a host on the network.
 // The fields of Node may not be modified.
 type Node struct {
-	IP       net.IP   // len 4 for IPv4 or 16 for IPv6
-	UDP, TCP uint16   // port numbers
-	TCPs     []uint16 // port numbers
-	ID       NodeID   // the node's public key
-	NType    NodeType // the node's type (cn, pn, en, bn)
+	IP    net.IP   // len 4 for IPv4 or 16 for IPv6
+	UDP   uint16   // discovery port numbers
+	TCP   uint16   // TCP listening port number
+	TCPs  []uint16 // TCP listening port number including both main port and subports
+	ID    NodeID   // the node's public key
+	NType NodeType // the node's type (cn, pn, en, bn)
 
 	// This is a cached copy of sha3(ID) which is used for node
 	// distance calculations. This is part of Node in order to make it
@@ -66,19 +67,21 @@ type Node struct {
 
 // NewNode creates a new node. It is mostly meant to be used for
 // testing purposes.
-func NewNode(id NodeID, ip net.IP, udpPort, tcpPort uint16, nType NodeType) *Node {
+func NewNode(id NodeID, ip net.IP, udpPort, tcpPort uint16, tcpSubports []uint16, nType NodeType) *Node {
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
 	}
-	return &Node{
+	node := &Node{
 		IP:    ip,
 		UDP:   udpPort,
 		TCP:   tcpPort,
-		TCPs:  []uint16{},
+		TCPs:  tcpSubports,
 		ID:    id,
 		NType: nType,
 		sha:   crypto.Keccak256Hash(id[:]),
 	}
+	node.AddSubport(tcpPort)
+	return node
 }
 
 func (n *Node) addr() *net.UDPAddr {
@@ -112,22 +115,26 @@ func (n *Node) validateComplete() error {
 // Please see ParseNode for a description of the format.
 func (n *Node) String() string {
 	u := url.URL{Scheme: "kni"}
+	var query []string
 	if n.Incomplete() {
 		u.Host = fmt.Sprintf("%x", n.ID[:])
 	} else {
 		addr := net.TCPAddr{IP: n.IP, Port: int(n.TCP)}
 		u.User = url.User(fmt.Sprintf("%x", n.ID[:]))
 		u.Host = addr.String()
+		for _, tcp := range n.TCPs {
+			if tcp != n.TCP {
+				query = append(query, "subport="+strconv.Itoa(int(tcp)))
+			}
+		}
 		if n.UDP != n.TCP {
-			u.RawQuery = "discport=" + strconv.Itoa(int(n.UDP))
+			query = append(query, "discport="+strconv.Itoa(int(n.UDP)))
 		}
 	}
 	if n.NType != NodeTypeUnknown {
-		if u.RawQuery != "" {
-			u.RawQuery = u.RawQuery + "&"
-		}
-		u.RawQuery = u.RawQuery + "ntype=" + StringNodeType(n.NType)
+		query = append(query, "ntype="+StringNodeType(n.NType))
 	}
+	u.RawQuery = strings.Join(query, "&")
 	return u.String()
 }
 
@@ -157,7 +164,7 @@ var lookupIPFunc = net.LookupIP
 // a node with IP address 10.3.58.6, TCP listening port 30303
 // and UDP discovery port 30301.
 //
-//    kni://<hex node id>@10.3.58.6:30303?discport=30301[&ntype=cn|pn|en|bn]
+//    kni://<hex node id>@10.3.58.6:30303?&subport=30304&discport=30301[&ntype=cn|pn|en|bn]
 //    enode://<hex node id>@10.3.58.6:30303?discport=30301[&ntype=cn|pn|en|bn]
 func ParseNode(rawurl string) (*Node, error) {
 	if m := incompleteNodeURL.FindStringSubmatch(rawurl); m != nil {
@@ -165,7 +172,7 @@ func ParseNode(rawurl string) (*Node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid node ID (%v)", err)
 		}
-		return NewNode(id, nil, 0, 0, NodeTypeUnknown), nil
+		return NewNode(id, nil, 0, 0, nil, NodeTypeUnknown), nil
 	}
 	return parseComplete(rawurl)
 }
@@ -174,6 +181,7 @@ func parseComplete(rawurl string) (*Node, error) {
 	var (
 		id               NodeID
 		tcpPort, udpPort uint64
+		tcpSubports      []uint16
 	)
 	u, err := url.Parse(rawurl)
 	if err != nil {
@@ -208,8 +216,19 @@ func parseComplete(rawurl string) (*Node, error) {
 	if tcpPort, err = strconv.ParseUint(u.Port(), 10, 16); err != nil {
 		return nil, errors.New("invalid port")
 	}
-	udpPort = tcpPort
+	// Extract subport from query
 	qv := u.Query()
+	if qv.Get("subport") != "" {
+		for _, subport := range qv["subport"] {
+			if p, err := strconv.ParseUint(subport, 10, 16); err != nil {
+				logger.Warn("skipping invalid subport in query", "id", id, "ip", ip, "subport", p)
+			} else {
+				tcpSubports = append(tcpSubports, uint16(p))
+			}
+		}
+	}
+	// Extract discovery port from query
+	udpPort = tcpPort
 	if qv.Get("discport") != "" {
 		udpPort, err = strconv.ParseUint(qv.Get("discport"), 10, 16)
 		if err != nil {
@@ -221,7 +240,7 @@ func parseComplete(rawurl string) (*Node, error) {
 	if qv.Get("ntype") != "" {
 		nType = ParseNodeType(qv.Get("ntype"))
 	}
-	return NewNode(id, ip, uint16(udpPort), uint16(tcpPort), nType), nil
+	return NewNode(id, ip, uint16(udpPort), uint16(tcpPort), tcpSubports, nType), nil
 }
 
 // MustParseNode parses a node URL. It panics if the URL is not valid.
@@ -259,6 +278,20 @@ func (n *Node) CompareNode(tn *Node) bool {
 		return false
 	}
 	return true
+}
+
+// AddSubport adds a new port to TCPs
+// TCPs contains unique ports
+func (n *Node) AddSubport(port uint16) {
+	if n.TCPs == nil {
+		n.TCPs = []uint16{}
+	}
+	for _, val := range n.TCPs {
+		if val == port {
+			return
+		}
+	}
+	n.TCPs = append(n.TCPs, port)
 }
 
 // NodeID is a unique identifier for each node.

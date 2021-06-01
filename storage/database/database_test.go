@@ -23,7 +23,6 @@ package database
 import (
 	"bytes"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -31,9 +30,12 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/stretchr/testify/assert"
 )
 
-func newTestLDB() (*levelDB, func()) {
+func newTestLDB() (Database, func()) {
 	dirName, err := ioutil.TempDir(os.TempDir(), "klay_leveldb_test_")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
@@ -49,7 +51,7 @@ func newTestLDB() (*levelDB, func()) {
 	}
 }
 
-func newTestBadgerDB() (*badgerDB, func()) {
+func newTestBadgerDB() (Database, func()) {
 	dirName, err := ioutil.TempDir(os.TempDir(), "klay_badgerdb_test_")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
@@ -65,29 +67,128 @@ func newTestBadgerDB() (*badgerDB, func()) {
 	}
 }
 
+func newTestMemDB() (Database, func()) {
+	return NewMemDB(), func() {}
+}
+
+func newTestDynamoS3DB() (Database, func()) {
+	// to start test with DynamoDB singletons
+	oldDynamoDBClient := dynamoDBClient
+	dynamoDBClient = nil
+
+	oldDynamoOnceWorker := dynamoOnceWorker
+	dynamoOnceWorker = &sync.Once{}
+
+	oldDynamoWriteCh := dynamoWriteCh
+	dynamoWriteCh = nil
+
+	db, err := newDynamoDB(GetTestDynamoConfig())
+	if err != nil {
+		panic("failed to create test DynamoS3 database: " + err.Error())
+	}
+	return db, func() {
+		db.deleteDB()
+
+		// to finish test with DynamoDB singletons
+		dynamoDBClient = oldDynamoDBClient
+		dynamoOnceWorker = oldDynamoOnceWorker
+		dynamoWriteCh = oldDynamoWriteCh
+	}
+}
+
 var test_values = []string{"a", "1251", "\x00123\x00"}
 
 //var test_values = []string{"", "a", "1251", "\x00123\x00"} original test_values; modified since badgerDB can't store empty key
 
-func TestLDB_PutGet(t *testing.T) {
-	db, remove := newTestLDB()
-	defer remove()
-	testPutGet(db, t)
+// TODO-Klaytn-Database Need to add DynamoDB to the below list.
+var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
+
+// TestDatabase_PutGet tests the basic put and get operations.
+func TestDatabase_PutGet(t *testing.T) {
+	for _, dbCreateFn := range testDatabases {
+		db, remove := dbCreateFn()
+		defer remove()
+		testPutGet(db, t)
+	}
 }
 
-func TestBadgerDB_PutGet(t *testing.T) {
-	db, remove := newTestBadgerDB()
-	defer remove()
-	testPutGet(db, t)
+// TestDatabase_ParallelPutGet tests the parallel put and get operations.
+func TestDatabase_ParallelPutGet(t *testing.T) {
+	for _, dbCreateFn := range testDatabases {
+		db, remove := dbCreateFn()
+		defer remove()
+		testParallelPutGet(db, t)
+	}
 }
 
-func TestMemoryDB_PutGet(t *testing.T) {
-	testPutGet(NewMemDB(), t)
+// TestDatabase_NotFoundErr checks if an empty database returns
+// dataNotFoundErr for the given  random key.
+func TestDatabase_NotFoundErr(t *testing.T) {
+	for _, dbCreateFn := range testDatabases {
+		db, remove := dbCreateFn()
+		defer remove()
+		val, err := db.Get(randStrBytes(100))
+		assert.Nil(t, val)
+		assert.Error(t, err)
+		assert.Equal(t, dataNotFoundErr, err)
+	}
+}
+
+// TestDatabase_NilValue checks if all database write/read nil value in the same way.
+func TestDatabase_NilValue(t *testing.T) {
+	for _, dbCreateFn := range testDatabases {
+		db, remove := dbCreateFn()
+		defer remove()
+
+		{
+			// write nil value
+			key := common.MakeRandomBytes(32)
+			assert.Nil(t, db.Put(key, nil))
+
+			// get nil value
+			ret, err := db.Get(key)
+			assert.Equal(t, []byte{}, ret)
+			assert.Nil(t, err)
+
+			// check existence
+			exist, err := db.Has(key)
+			assert.Equal(t, true, exist)
+			assert.Nil(t, err)
+
+			val, err := db.Get(randStrBytes(100))
+			assert.Nil(t, val)
+			assert.Error(t, err)
+			assert.Equal(t, dataNotFoundErr, err)
+		}
+
+		// batch
+		{
+			batch := db.NewBatch()
+
+			// write nil value
+			key := common.MakeRandomBytes(32)
+			assert.Nil(t, batch.Put(key, nil))
+			assert.NoError(t, batch.Write())
+
+			// get nil value
+			ret, err := db.Get(key)
+			assert.Equal(t, []byte{}, ret)
+			assert.Nil(t, err)
+
+			// check existence
+			exist, err := db.Has(key)
+			assert.Equal(t, true, exist)
+			assert.Nil(t, err)
+
+			val, err := db.Get(randStrBytes(100))
+			assert.Nil(t, val)
+			assert.Error(t, err)
+			assert.Equal(t, dataNotFoundErr, err)
+		}
+	}
 }
 
 func testPutGet(db Database, t *testing.T) {
-	t.Parallel()
-
 	// put
 	for _, v := range test_values {
 		err := db.Put([]byte(v), []byte(v))
@@ -159,22 +260,6 @@ func testPutGet(db Database, t *testing.T) {
 	}
 }
 
-func TestLDB_ParallelPutGet(t *testing.T) {
-	db, remove := newTestLDB()
-	defer remove()
-	testParallelPutGet(db, t)
-}
-
-func TestBadgerDB_ParallelPutGet(t *testing.T) {
-	db, remove := newTestBadgerDB()
-	defer remove()
-	testParallelPutGet(db, t)
-}
-
-func TestMemoryDB_ParallelPutGet(t *testing.T) {
-	testParallelPutGet(NewMemDB(), t)
-}
-
 func TestShardDB(t *testing.T) {
 
 	key := common.Hex2Bytes("0x91d6f7d2537d8a0bd7d487dcc59151ebc00da306")
@@ -185,11 +270,11 @@ func TestShardDB(t *testing.T) {
 	}
 	seed, _ := strconv.ParseInt(hashstring, 16, 64)
 
-	partition := seed % int64(12)
+	shard := seed % int64(12)
 
 	idx := common.BytesToHash(key).Big().Mod(common.BytesToHash(key).Big(), big.NewInt(4))
 
-	fmt.Printf("idx %d   %d   %d", idx, partition, seed)
+	fmt.Printf("idx %d   %d   %d\n", idx, shard, seed)
 
 }
 

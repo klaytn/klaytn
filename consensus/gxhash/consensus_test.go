@@ -23,6 +23,7 @@ package gxhash
 import (
 	"encoding/json"
 	"math/big"
+
 	// Enable below packages when enabling TestCalcDiffulty
 	// "os"
 	// "path/filepath"

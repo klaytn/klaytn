@@ -21,9 +21,10 @@
 package vm
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
-	"math/big"
 )
 
 // calcMemSize64 calculates the required memory size, and returns

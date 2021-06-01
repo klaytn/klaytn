@@ -22,35 +22,35 @@ package vm
 
 import (
 	"fmt"
+	"hash"
+	"sync/atomic"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
-	"hash"
-	"sync/atomic"
 )
 
 // Config are the configuration options for the Interpreter
 type Config struct {
-	// Debug enabled debugging Interpreter options
-	Debug bool
-	// Tracer is the op code logger
-	Tracer Tracer
-	// NoRecursion disabled Interpreter call, callcode,
-	// delegate call and create.
-	NoRecursion bool
-	// Enable recording of SHA3/keccak preimages
-	EnablePreimageRecording bool
-	// JumpTable contains the EVM instruction table. This
-	// may be left uninitialised and will be set to the default
-	// table.
-	JumpTable [256]operation
+	Debug                   bool   // Enables debugging
+	Tracer                  Tracer // Opcode logger
+	NoRecursion             bool   // Disables call, callcode, delegate call and create
+	EnablePreimageRecording bool   // Enables recording of SHA3/keccak preimages
+
+	JumpTable [256]operation // EVM instruction table, automatically populated if unset
 
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
 
 	// UseOpcodeComputationCost is to enable applying the opcode computation cost limit.
 	UseOpcodeComputationCost bool
+
+	// Enables collecting internal transaction data during processing a block
+	EnableInternalTxTracing bool
+
+	// Prefetching is true if the EVM is used for prefetching.
+	Prefetching bool
 }
 
 // keccakState wraps sha3.state. In addition to the usual hash methods, it also supports
@@ -66,9 +66,8 @@ type keccakState interface {
 // The Interpreter will run the byte code VM based on the passed
 // configuration.
 type Interpreter struct {
-	evm      *EVM
-	cfg      *Config
-	gasTable params.GasTable
+	evm *EVM
+	cfg *Config
 
 	intPool *intPool
 
@@ -79,8 +78,8 @@ type Interpreter struct {
 	returnData []byte // Last CALL's return data for subsequent reuse
 }
 
-// NewInterpreter returns a new instance of the Interpreter.
-func NewInterpreter(evm *EVM, cfg *Config) *Interpreter {
+// NewEVMInterpreter returns a new instance of the Interpreter.
+func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
@@ -89,9 +88,8 @@ func NewInterpreter(evm *EVM, cfg *Config) *Interpreter {
 	}
 
 	return &Interpreter{
-		evm:      evm,
-		cfg:      cfg,
-		gasTable: evm.ChainConfig().GasTable(evm.BlockNumber),
+		evm: evm,
+		cfg: cfg,
 	}
 }
 
@@ -236,6 +234,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		// Static portion of gas
+		cost = operation.constantGas // For tracing
 		if !contract.UseGas(operation.constantGas) {
 			return nil, kerrors.ErrOutOfGas
 		}
@@ -281,8 +280,10 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
 		if operation.dynamicGas != nil {
-			cost, err = operation.dynamicGas(in.gasTable, in.evm, contract, stack, mem, memorySize)
-			if err != nil || !contract.UseGas(cost) {
+			var dynamicCost uint64
+			dynamicCost, err = operation.dynamicGas(in.evm, contract, stack, mem, memorySize)
+			cost += dynamicCost // total cost, for debug tracing
+			if err != nil || !contract.UseGas(dynamicCost) {
 				return nil, kerrors.ErrOutOfGas // TODO-Klaytn-Issue615
 			}
 		}

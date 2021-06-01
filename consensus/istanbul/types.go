@@ -22,11 +22,12 @@ package istanbul
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"math/big"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // Proposal supports retrieving height and serialized block to be used during Istanbul consensus.

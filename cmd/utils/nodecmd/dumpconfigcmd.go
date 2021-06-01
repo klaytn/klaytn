@@ -24,28 +24,25 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"reflect"
+	"strings"
+	"unicode"
+
+	"github.com/Shopify/sarama"
 	"github.com/klaytn/klaytn/cmd/utils"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
+	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
 	"github.com/klaytn/klaytn/datasync/dbsyncer"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/node"
 	"github.com/klaytn/klaytn/node/cn"
 	"github.com/klaytn/klaytn/node/sc"
 	"github.com/klaytn/klaytn/params"
-	"gopkg.in/urfave/cli.v1"
-	"os"
-	"reflect"
-	"strings"
-	"unicode"
-
 	"github.com/naoina/toml"
-	"io"
-)
-
-var (
-	ConfigFileFlag = cli.StringFlag{
-		Name:  "config",
-		Usage: "TOML configuration file",
-	}
+	"gopkg.in/urfave/cli.v1"
 )
 
 // These settings ensure that TOML keys use the same names as Go struct fields.
@@ -116,7 +113,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	}
 
 	// Load config file.
-	if file := ctx.GlobalString(ConfigFileFlag.Name); file != "" {
+	if file := ctx.GlobalString(utils.ConfigFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -134,6 +131,110 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, klayConfig) {
 	//utils.SetDashboardConfig(ctx, &cfg.Dashboard)
 
 	return stack, cfg
+}
+
+func makeChainDataFetcherConfig(ctx *cli.Context) chaindatafetcher.ChainDataFetcherConfig {
+	cfg := chaindatafetcher.DefaultChainDataFetcherConfig
+
+	if ctx.GlobalBool(utils.EnableChainDataFetcherFlag.Name) {
+		cfg.EnabledChainDataFetcher = true
+
+		if ctx.GlobalIsSet(utils.ChainDataFetcherNoDefault.Name) {
+			cfg.NoDefaultStart = true
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherNumHandlers.Name) {
+			cfg.NumHandlers = ctx.GlobalInt(utils.ChainDataFetcherNumHandlers.Name)
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherJobChannelSize.Name) {
+			cfg.JobChannelSize = ctx.GlobalInt(utils.ChainDataFetcherJobChannelSize.Name)
+		}
+		if ctx.GlobalIsSet(utils.ChainDataFetcherChainEventSizeFlag.Name) {
+			cfg.BlockChannelSize = ctx.GlobalInt(utils.ChainDataFetcherChainEventSizeFlag.Name)
+		}
+
+		mode := ctx.GlobalString(utils.ChainDataFetcherMode.Name)
+		mode = strings.ToLower(mode)
+		switch mode {
+		case "kas":
+			cfg.Mode = chaindatafetcher.ModeKAS
+			cfg.KasConfig = makeKASConfig(ctx)
+		case "kafka":
+			cfg.Mode = chaindatafetcher.ModeKafka
+			cfg.KafkaConfig = makeKafkaConfig(ctx)
+		default:
+			logger.Crit("unsupported chaindatafetcher mode (\"kas\", \"kafka\")", "mode", cfg.Mode)
+		}
+	}
+
+	return *cfg
+}
+
+func checkKASDBConfigs(ctx *cli.Context) {
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASDBHostFlag.Name) {
+		logger.Crit("DBHost must be set !", "key", utils.ChainDataFetcherKASDBHostFlag.Name)
+	}
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASDBUserFlag.Name) {
+		logger.Crit("DBUser must be set !", "key", utils.ChainDataFetcherKASDBUserFlag.Name)
+	}
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASDBPasswordFlag.Name) {
+		logger.Crit("DBPassword must be set !", "key", utils.ChainDataFetcherKASDBPasswordFlag.Name)
+	}
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASDBNameFlag.Name) {
+		logger.Crit("DBName must be set !", "key", utils.ChainDataFetcherKASDBNameFlag.Name)
+	}
+}
+
+func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASCacheURLFlag.Name) {
+		logger.Crit("The cache invalidation url is not set")
+	}
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASBasicAuthParamFlag.Name) {
+		logger.Crit("The authorization is not set")
+	}
+	if !ctx.GlobalIsSet(utils.ChainDataFetcherKASXChainIdFlag.Name) {
+		logger.Crit("The x-chain-id is not set")
+	}
+}
+
+func makeKASConfig(ctx *cli.Context) *kas.KASConfig {
+	kasConfig := kas.DefaultKASConfig
+
+	checkKASDBConfigs(ctx)
+	kasConfig.DBHost = ctx.GlobalString(utils.ChainDataFetcherKASDBHostFlag.Name)
+	kasConfig.DBPort = ctx.GlobalString(utils.ChainDataFetcherKASDBPortFlag.Name)
+	kasConfig.DBUser = ctx.GlobalString(utils.ChainDataFetcherKASDBUserFlag.Name)
+	kasConfig.DBPassword = ctx.GlobalString(utils.ChainDataFetcherKASDBPasswordFlag.Name)
+	kasConfig.DBName = ctx.GlobalString(utils.ChainDataFetcherKASDBNameFlag.Name)
+
+	if ctx.GlobalBool(utils.ChainDataFetcherKASCacheUse.Name) {
+		checkKASCacheInvalidationConfigs(ctx)
+		kasConfig.CacheUse = true
+		kasConfig.CacheInvalidationURL = ctx.GlobalString(utils.ChainDataFetcherKASCacheURLFlag.Name)
+		kasConfig.BasicAuthParam = ctx.GlobalString(utils.ChainDataFetcherKASBasicAuthParamFlag.Name)
+		kasConfig.XChainId = ctx.GlobalString(utils.ChainDataFetcherKASXChainIdFlag.Name)
+	}
+	return kasConfig
+}
+
+func makeKafkaConfig(ctx *cli.Context) *kafka.KafkaConfig {
+	kafkaConfig := kafka.GetDefaultKafkaConfig()
+	if ctx.GlobalIsSet(utils.ChainDataFetcherKafkaBrokersFlag.Name) {
+		kafkaConfig.Brokers = ctx.GlobalStringSlice(utils.ChainDataFetcherKafkaBrokersFlag.Name)
+	} else {
+		logger.Crit("The kafka brokers must be set")
+	}
+	kafkaConfig.TopicEnvironmentName = ctx.GlobalString(utils.ChainDataFetcherKafkaTopicEnvironmentFlag.Name)
+	kafkaConfig.TopicResourceName = ctx.GlobalString(utils.ChainDataFetcherKafkaTopicResourceFlag.Name)
+	kafkaConfig.Partitions = int32(ctx.GlobalInt64(utils.ChainDataFetcherKafkaPartitionsFlag.Name))
+	kafkaConfig.Replicas = int16(ctx.GlobalInt64(utils.ChainDataFetcherKafkaReplicasFlag.Name))
+	kafkaConfig.SaramaConfig.Producer.MaxMessageBytes = ctx.GlobalInt(utils.ChainDataFetcherKafkaMaxMessageBytesFlag.Name)
+	kafkaConfig.SegmentSizeBytes = ctx.GlobalInt(utils.ChainDataFetcherKafkaSegmentSizeBytesFlag.Name)
+	requiredAcks := sarama.RequiredAcks(ctx.GlobalInt(utils.ChainDataFetcherKafkaRequiredAcksFlag.Name))
+	if requiredAcks != sarama.NoResponse && requiredAcks != sarama.WaitForLocal && requiredAcks != sarama.WaitForAll {
+		logger.Crit("not supported requiredAcks. it must be NoResponse(0), WaitForLocal(1), or WaitForAll(-1)", "given", requiredAcks)
+	}
+	kafkaConfig.SaramaConfig.Producer.RequiredAcks = requiredAcks
+	return kafkaConfig
 }
 
 func makeDBSyncerConfig(ctx *cli.Context) dbsyncer.DBConfig {
@@ -231,6 +332,39 @@ func makeServiceChainConfig(ctx *cli.Context) (config sc.SCConfig) {
 	cfg.VTRecoveryInterval = ctx.GlobalUint64(utils.VTRecoveryIntervalFlag.Name)
 	cfg.ServiceChainConsensus = utils.ServiceChainConsensusFlag.Value
 
+	cfg.KASAnchor = ctx.GlobalBool(utils.KASServiceChainAnchorFlag.Name)
+	if cfg.KASAnchor {
+		cfg.KASAnchorPeriod = ctx.GlobalUint64(utils.KASServiceChainAnchorPeriodFlag.Name)
+		if cfg.KASAnchorPeriod == 0 {
+			cfg.KASAnchorPeriod = 1
+			logger.Warn("KAS anchor period is set by 1")
+		}
+
+		cfg.KASAnchorUrl = ctx.GlobalString(utils.KASServiceChainAnchorUrlFlag.Name)
+		if cfg.KASAnchorUrl == "" {
+			logger.Crit("KAS anchor url should be set", "key", utils.KASServiceChainAnchorUrlFlag.Name)
+		}
+
+		cfg.KASAnchorOperator = ctx.GlobalString(utils.KASServiceChainAnchorOperatorFlag.Name)
+		if cfg.KASAnchorOperator == "" {
+			logger.Crit("KAS anchor operator should be set", "key", utils.KASServiceChainAnchorOperatorFlag.Name)
+		}
+
+		cfg.KASAccessKey = ctx.GlobalString(utils.KASServiceChainAccessKeyFlag.Name)
+		if cfg.KASAccessKey == "" {
+			logger.Crit("KAS access key should be set", "key", utils.KASServiceChainAccessKeyFlag.Name)
+		}
+
+		cfg.KASSecretKey = ctx.GlobalString(utils.KASServiceChainSecretKeyFlag.Name)
+		if cfg.KASSecretKey == "" {
+			logger.Crit("KAS secret key should be set", "key", utils.KASServiceChainSecretKeyFlag.Name)
+		}
+
+		cfg.KASXChainId = ctx.GlobalString(utils.KASServiceChainXChainIdFlag.Name)
+		if cfg.KASXChainId == "" {
+			logger.Crit("KAS x-chain-id should be set", "key", utils.KASServiceChainXChainIdFlag.Name)
+		}
+	}
 	return cfg
 }
 
@@ -261,6 +395,9 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 
 	dbfg := makeDBSyncerConfig(ctx)
 	utils.RegisterDBSyncerService(stack, &dbfg)
+
+	chaindataFetcherConfig := makeChainDataFetcherConfig(ctx)
+	utils.RegisterChainDataFetcherService(stack, &chaindataFetcherConfig)
 
 	return stack
 }

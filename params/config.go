@@ -22,28 +22,71 @@ package params
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"math/big"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
 )
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash      = common.HexToHash("// todo generate new hash for mainnet") // Mainnet genesis hash to enforce below configs on
-	TestnetGenesisHash      = common.HexToHash("// todo generate new hash for testnet") // Testnet genesis hash to enforce below configs on
+	CypressGenesisHash      = common.HexToHash("// todo generate new hash for cypress") // cypress genesis hash to enforce below configs on
+	BaobabGenesisHash       = common.HexToHash("// todo generate new hash for baobab")  // baobab genesis hash to enforce below configs on
 	AuthorAddressForTesting = common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949")
+	mintingAmount, _        = new(big.Int).SetString("9600000000000000000", 10)
 )
 
 var (
-	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	MainnetChainConfig = &ChainConfig{
-		ChainID: big.NewInt(1),
-		Gxhash:  new(GxhashConfig),
+	// CypressChainConfig is the chain parameters to run a node on the cypress main network.
+	CypressChainConfig = &ChainConfig{
+		ChainID:                 big.NewInt(int64(CypressNetworkId)),
+		IstanbulCompatibleBlock: nil,
+		DeriveShaImpl:           2,
+		Governance: &GovernanceConfig{
+			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
+			GovernanceMode: "single",
+			Reward: &RewardConfig{
+				MintingAmount:          mintingAmount,
+				Ratio:                  "34/54/12",
+				UseGiniCoeff:           true,
+				DeferredTxFee:          true,
+				StakingUpdateInterval:  86400,
+				ProposerUpdateInterval: 3600,
+				MinimumStake:           big.NewInt(5000000),
+			},
+		},
+		Istanbul: &IstanbulConfig{
+			Epoch:          604800,
+			ProposerPolicy: 2,
+			SubGroupSize:   22,
+		},
+		UnitPrice: 25000000000,
 	}
 
-	// TestnetChainConfig contains the chain parameters to run a node on the Ropsten test network.
-	TestnetChainConfig = &ChainConfig{
-		ChainID: big.NewInt(2),
-		Gxhash:  new(GxhashConfig),
+	// BaobabChainConfig contains the chain parameters to run a node on the Baobab test network.
+	BaobabChainConfig = &ChainConfig{
+		ChainID:                 big.NewInt(int64(BaobabNetworkId)),
+		IstanbulCompatibleBlock: nil,
+		DeriveShaImpl:           2,
+		Governance: &GovernanceConfig{
+			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
+			GovernanceMode: "single",
+			Reward: &RewardConfig{
+				MintingAmount:          mintingAmount,
+				Ratio:                  "34/54/12",
+				UseGiniCoeff:           true,
+				DeferredTxFee:          true,
+				StakingUpdateInterval:  86400,
+				ProposerUpdateInterval: 3600,
+				MinimumStake:           big.NewInt(5000000),
+			},
+		},
+		Istanbul: &IstanbulConfig{
+			Epoch:          604800,
+			ProposerPolicy: 2,
+			SubGroupSize:   22,
+		},
+		UnitPrice: 25000000000,
 	}
 
 	// AllGxhashProtocolChanges contains every protocol change (GxIPs) introduced
@@ -118,8 +161,10 @@ const (
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
+	IstanbulCompatibleBlock *big.Int `json:"istanbulCompatibleBlock,omitempty"` // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
+
 	// Various consensus engines
-	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"`
+	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
 	Clique   *CliqueConfig   `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
 
@@ -153,11 +198,12 @@ type RewardConfig struct {
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
 type IstanbulConfig struct {
 	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection
+	ProposerPolicy uint64 `json:"policy"` // The policy for proposer selection; 0: Round Robin, 1: Sticky, 2: Weighted Random
 	SubGroupSize   uint64 `json:"sub"`
 }
 
 // GxhashConfig is the consensus engine configs for proof-of-work based sealing.
+// Deprecated: Use IstanbulConfig or CliqueConfig.
 type GxhashConfig struct{}
 
 // String implements the stringer interface, returning the consensus engine details.
@@ -195,28 +241,28 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v Engine: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
-			engine,
+			c.IstanbulCompatibleBlock,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
+			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v Engine: %v UnitPrice: %d DeriveShaImpl: %d}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
-			engine,
+			c.IstanbulCompatibleBlock,
 			c.UnitPrice,
 			c.DeriveShaImpl,
+			engine,
 		)
 	}
 }
 
-// GasTable returns the gas table corresponding to the current phase.
-//
-// The returned GasTable's fields shouldn't, under any circumstances, be changed.
-func (c *ChainConfig) GasTable(num *big.Int) GasTable {
-	return GasTableCypress
+// IsIstanbul returns whether num is either equal to the istanbul block or greater.
+func (c *ChainConfig) IsIstanbul(num *big.Int) bool {
+	return isForked(c.IstanbulCompatibleBlock, num)
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -238,7 +284,57 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 }
 
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
+	if isForkIncompatible(c.IstanbulCompatibleBlock, newcfg.IstanbulCompatibleBlock, head) {
+		return newCompatError("Istanbul Block", c.IstanbulCompatibleBlock, newcfg.IstanbulCompatibleBlock)
+	}
 	return nil
+}
+
+// GetConsensusEngine returns the consensus engine type specified in ChainConfig.
+// It returns Unknown type if none of engine type is configured or more than one type is configured.
+func (c *ChainConfig) GetConsensusEngine() EngineType {
+	switch {
+	case c.Clique != nil && c.Istanbul == nil:
+		return UseClique
+	case c.Clique == nil && c.Istanbul != nil:
+		return UseIstanbul
+	default:
+		return Unknown
+	}
+}
+
+// SetDefaults fills undefined chain config with default values.
+func (c *ChainConfig) SetDefaults() {
+	logger := log.NewModuleLogger(log.Governance)
+
+	if c.GetConsensusEngine() == Unknown && c.Istanbul == nil {
+		c.Istanbul = GetDefaultIstanbulConfig()
+		logger.Warn("Override the default Istanbul config to the chain config")
+	}
+
+	if c.Governance == nil {
+		engineType := c.GetConsensusEngine()
+		c.Governance = GetDefaultGovernanceConfig(engineType)
+		logger.Warn("Override the default governance config to the chain config", "engineType", engineType)
+	}
+
+	if c.Governance.Reward == nil {
+		c.Governance.Reward = GetDefaultRewardConfig()
+		logger.Warn("Override the default governance reward config to the chain config", "reward",
+			c.Governance.Reward)
+	}
+
+	if c.Governance.Reward.StakingUpdateInterval == 0 {
+		c.Governance.Reward.StakingUpdateInterval = StakingUpdateInterval()
+		logger.Warn("Override the default staking update interval to the chain config", "interval",
+			c.Governance.Reward.StakingUpdateInterval)
+	}
+
+	if c.Governance.Reward.ProposerUpdateInterval == 0 {
+		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
+		logger.Warn("Override the default proposer update interval to the chain config", "interval",
+			c.Governance.Reward.ProposerUpdateInterval)
+	}
 }
 
 // isForkIncompatible returns true if a fork scheduled at s1 cannot be rescheduled to
@@ -296,13 +392,14 @@ func (err *ConfigCompatError) Error() string {
 	return fmt.Sprintf("mismatching %s in database (have %d, want %d, rewindto %d)", err.What, err.StoredConfig, err.NewConfig, err.RewindTo)
 }
 
-// Rules wraps ChainConfig and is merely syntatic sugar or can be used for functions
+// Rules wraps ChainConfig and is merely syntactic sugar or can be used for functions
 // that do not have or require information about the block.
 //
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID *big.Int
+	ChainID    *big.Int
+	IsIstanbul bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -311,7 +408,10 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	if chainID == nil {
 		chainID = new(big.Int)
 	}
-	return Rules{ChainID: new(big.Int).Set(chainID)}
+	return Rules{
+		ChainID:    new(big.Int).Set(chainID),
+		IsIstanbul: c.IsIstanbul(num),
+	}
 }
 
 // Copy copies self to a new governance config and return it
@@ -337,4 +437,41 @@ func (c *IstanbulConfig) Copy() *IstanbulConfig {
 	newIC.ProposerPolicy = c.ProposerPolicy
 
 	return newIC
+}
+
+// TODO-Klaytn-Governance: Remove input parameter if not needed anymore
+func GetDefaultGovernanceConfig(engine EngineType) *GovernanceConfig {
+	gov := &GovernanceConfig{
+		GovernanceMode: DefaultGovernanceMode,
+		GoverningNode:  common.HexToAddress(DefaultGoverningNode),
+		Reward:         GetDefaultRewardConfig(),
+	}
+	return gov
+}
+
+func GetDefaultIstanbulConfig() *IstanbulConfig {
+	return &IstanbulConfig{
+		Epoch:          DefaultEpoch,
+		ProposerPolicy: DefaultProposerPolicy,
+		SubGroupSize:   DefaultSubGroupSize,
+	}
+}
+
+func GetDefaultRewardConfig() *RewardConfig {
+	return &RewardConfig{
+		MintingAmount:          big.NewInt(DefaultMintingAmount),
+		Ratio:                  DefaultRatio,
+		UseGiniCoeff:           DefaultUseGiniCoeff,
+		DeferredTxFee:          DefaultDefferedTxFee,
+		StakingUpdateInterval:  uint64(86400),
+		ProposerUpdateInterval: uint64(3600),
+		MinimumStake:           big.NewInt(2000000),
+	}
+}
+
+func GetDefaultCliqueConfig() *CliqueConfig {
+	return &CliqueConfig{
+		Epoch:  DefaultEpoch,
+		Period: DefaultPeriod,
+	}
 }

@@ -21,10 +21,11 @@
 package work
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
 	"sync"
 	"sync/atomic"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 )
 
 type CpuAgent struct {

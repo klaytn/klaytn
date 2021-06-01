@@ -19,14 +19,6 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/profile"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/params"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"os"
 	"reflect"
@@ -35,6 +27,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
+	"github.com/stretchr/testify/assert"
 )
 
 var benchName string
@@ -335,7 +336,7 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 	// Execute ApplyTransaction to measure performance of the given transaction type.
 	for i := 0; i < b.N; i++ {
 		usedGas := uint64(0)
-		_, _, err = bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, txs[i], &usedGas, vmConfig)
+		_, _, _, err = bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, txs[i], &usedGas, vmConfig)
 		assert.Equal(b, nil, err)
 	}
 	b.StopTimer()
@@ -463,7 +464,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 	// Execute ApplyTransaction to measure performance of the given transaction type.
 	for i := 0; i < b.N; i++ {
 		usedGas := uint64(0)
-		_, _, err = bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, txs[i], &usedGas, vmConfig)
+		_, _, _, err = bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, txs[i], &usedGas, vmConfig)
 		assert.Equal(b, nil, err)
 	}
 	b.StopTimer()
@@ -583,7 +584,7 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 	// Execute ApplyTransaction to measure performance of the given transaction type.
 	for i := 0; i < b.N; i++ {
 		usedGas := uint64(0)
-		_, _, err = bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, txs[i], &usedGas, vmConfig)
+		_, _, _, err = bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, txs[i], &usedGas, vmConfig)
 		assert.Equal(b, nil, err)
 	}
 	b.StopTimer()

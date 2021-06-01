@@ -30,6 +30,14 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 		ParentChainID         uint64
 		VTRecovery            bool
 		VTRecoveryInterval    uint64
+		Anchoring             bool
+		KASAnchor             bool
+		KASAnchorUrl          string
+		KASAnchorPeriod       uint64
+		KASAnchorOperator     string
+		KASAccessKey          string
+		KASSecretKey          string
+		KASXKRN               string
 	}
 	var enc SCConfig
 	enc.Name = s.Name
@@ -53,6 +61,14 @@ func (s SCConfig) MarshalTOML() (interface{}, error) {
 	enc.ParentChainID = s.ParentChainID
 	enc.VTRecovery = s.VTRecovery
 	enc.VTRecoveryInterval = s.VTRecoveryInterval
+	enc.Anchoring = s.Anchoring
+	enc.KASAnchor = s.KASAnchor
+	enc.KASAnchorUrl = s.KASAnchorUrl
+	enc.KASAnchorPeriod = s.KASAnchorPeriod
+	enc.KASAnchorOperator = s.KASAnchorOperator
+	enc.KASAccessKey = s.KASAccessKey
+	enc.KASSecretKey = s.KASSecretKey
+	enc.KASXKRN = s.KASXChainId
 	return &enc, nil
 }
 
@@ -80,6 +96,14 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		ParentChainID         *uint64
 		VTRecovery            *bool
 		VTRecoveryInterval    *uint64
+		Anchoring             *bool
+		KASAnchor             *bool
+		KASAnchorUrl          *string
+		KASAnchorPeriod       *uint64
+		KASAnchorOperator     *string
+		KASAccessKey          *string
+		KASSecretKey          *string
+		KASXKRN               *string
 	}
 	var dec SCConfig
 	if err := unmarshal(&dec); err != nil {
@@ -147,6 +171,30 @@ func (s *SCConfig) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.VTRecoveryInterval != nil {
 		s.VTRecoveryInterval = *dec.VTRecoveryInterval
+	}
+	if dec.Anchoring != nil {
+		s.Anchoring = *dec.Anchoring
+	}
+	if dec.KASAnchor != nil {
+		s.KASAnchor = *dec.KASAnchor
+	}
+	if dec.KASAnchorUrl != nil {
+		s.KASAnchorUrl = *dec.KASAnchorUrl
+	}
+	if dec.KASAnchorPeriod != nil {
+		s.KASAnchorPeriod = *dec.KASAnchorPeriod
+	}
+	if dec.KASAnchorOperator != nil {
+		s.KASAnchorOperator = *dec.KASAnchorOperator
+	}
+	if dec.KASAccessKey != nil {
+		s.KASAccessKey = *dec.KASAccessKey
+	}
+	if dec.KASSecretKey != nil {
+		s.KASSecretKey = *dec.KASSecretKey
+	}
+	if dec.KASXKRN != nil {
+		s.KASXChainId = *dec.KASXKRN
 	}
 	return nil
 }

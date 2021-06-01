@@ -26,16 +26,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
-	"strings"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -136,6 +137,31 @@ func (e *GenesisMismatchError) Error() string {
 	return fmt.Sprintf("database already contains an incompatible genesis block (have %x, new %x)", e.Stored[:8], e.New[:8])
 }
 
+// findBlockWithState returns the latest block with state.
+func findBlockWithState(db database.DBManager) *types.Block {
+	headBlock := db.ReadBlockByHash(db.ReadHeadBlockHash())
+	if headBlock == nil {
+		logger.Crit("failed to read head block by head block hash")
+	}
+
+	startBlock := headBlock
+	for _, err := state.New(headBlock.Root(), state.NewDatabase(db)); err != nil; {
+		if headBlock.NumberU64() == 0 {
+			logger.Crit("failed to find state from the head block to the genesis block",
+				"headBlockNum", headBlock.NumberU64(),
+				"headBlockHash", headBlock.Hash().String(), "headBlockRoot", headBlock.Root().String())
+		}
+		headBlock = db.ReadBlockByNumber(headBlock.NumberU64() - 1)
+		if headBlock == nil {
+			logger.Crit("failed to read previous block by head block number")
+		}
+		logger.Warn("found previous block", "blockNum", headBlock.NumberU64())
+	}
+	logger.Info("found the latest block with state",
+		"blockNum", headBlock.NumberU64(), "startedNum", startBlock.NumberU64())
+	return headBlock
+}
+
 // SetupGenesisBlock writes or updates the genesis block in db.
 // The block that will be used is:
 //
@@ -149,7 +175,7 @@ func (e *GenesisMismatchError) Error() string {
 // error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
-func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64, isPrivate bool) (*params.ChainConfig, common.Hash, error) {
+func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64, isPrivate, overwriteGenesis bool) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return params.AllGxhashProtocolChanges, common.Hash{}, errGenesisNoConfig
 	}
@@ -179,13 +205,23 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		}
 		// Initialize DeriveSha implementation
 		InitDeriveSha(genesis.Config.DeriveShaImpl)
-		block, err := genesis.Commit(db)
+		block, err := genesis.Commit(common.Hash{}, db)
 		return genesis.Config, block.Hash(), err
 	}
 
 	// Check whether the genesis block is already written.
 	if genesis != nil {
-		hash := genesis.ToBlock(nil).Hash()
+		// If overwriteGenesis is true, overwrite existing genesis block with the new one.
+		// This is to run a test with pre-existing data.
+		if overwriteGenesis {
+			headBlock := findBlockWithState(db)
+			logger.Warn("Trying to overwrite original genesis block with the new one",
+				"headBlockHash", headBlock.Hash().String(), "headBlockNum", headBlock.NumberU64())
+			newGenesisBlock, err := genesis.Commit(headBlock.Root(), db)
+			return genesis.Config, newGenesisBlock.Hash(), err
+		}
+		// This is the usual path which does not overwrite genesis block with the new one.
+		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
 		if hash != stored {
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
 		}
@@ -212,7 +248,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
-	if genesis == nil && stored != params.MainnetGenesisHash {
+	if genesis == nil && stored != params.CypressGenesisHash {
 		return storedcfg, stored, nil
 	}
 
@@ -241,14 +277,21 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 
 // ToBlock creates the genesis block and writes state of a genesis specification
 // to the given database (or discards it if nil).
-func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
+func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *types.Block {
 	if db == nil {
 		db = database.NewMemoryDBManager()
 	}
-	stateDB, _ := state.New(common.Hash{}, state.NewDatabase(db))
+	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db))
 	for addr, account := range g.Alloc {
 		if len(account.Code) != 0 {
+			originalCode := stateDB.GetCode(addr)
 			stateDB.SetCode(addr, account.Code)
+			// If originalCode is not nil,
+			// just update the code and don't change the other states
+			if originalCode != nil {
+				logger.Warn("this address already has a not nil code, now the code of this address has been changed", "addr", addr.String())
+				continue
+			}
 		}
 		for key, value := range account.Storage {
 			stateDB.SetState(addr, key, value)
@@ -279,8 +322,8 @@ func (g *Genesis) ToBlock(db database.DBManager) *types.Block {
 
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
-func (g *Genesis) Commit(db database.DBManager) (*types.Block, error) {
-	block := g.ToBlock(db)
+func (g *Genesis) Commit(baseStateRoot common.Hash, db database.DBManager) (*types.Block, error) {
+	block := g.ToBlock(baseStateRoot, db)
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
 	}
@@ -308,7 +351,7 @@ func (g *Genesis) MustCommit(db database.DBManager) *types.Block {
 	}
 	InitDeriveSha(config.DeriveShaImpl)
 
-	block, err := g.Commit(db)
+	block, err := g.Commit(common.Hash{}, db)
 	if err != nil {
 		panic(err)
 	}
@@ -321,31 +364,26 @@ func GenesisBlockForTesting(db database.DBManager, addr common.Address, balance 
 	return g.MustCommit(db)
 }
 
-// DefaultGenesisBlock returns the Klaytn main net genesis block.
+// DefaultGenesisBlock returns the Cypress mainnet genesis block.
+// It is also used for default genesis block.
 func DefaultGenesisBlock() *Genesis {
-	return cypressGenesisBlock()
-}
-
-func cypressGenesisBlock() *Genesis {
 	ret := &Genesis{}
 	if err := json.Unmarshal(cypressGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshaling Cypress Genesis Json", "err", err)
+		logger.Error("Error in Unmarshalling Cypress Genesis Json", "err", err)
 	}
+	ret.Config = params.CypressChainConfig
 	return ret
 }
 
-func baobabGenesisBlock() *Genesis {
+// DefaultBaobabGenesisBlock returns the Baobab testnet genesis block.
+func DefaultBaobabGenesisBlock() *Genesis {
 	ret := &Genesis{}
 	if err := json.Unmarshal(baobabGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshaling", "err", err)
+		logger.Error("Error in Unmarshalling Baobab Genesis Json", "err", err)
 		return nil
 	}
+	ret.Config = params.BaobabChainConfig
 	return ret
-}
-
-// DefaultBaobabGenesisBlock returns the Baobab network genesis block.
-func DefaultBaobabGenesisBlock() *Genesis {
-	return baobabGenesisBlock()
 }
 
 func decodePrealloc(data string) GenesisAlloc {

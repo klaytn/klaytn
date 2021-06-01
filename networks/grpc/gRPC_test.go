@@ -18,11 +18,12 @@ package grpc
 
 import (
 	"encoding/json"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/stretchr/testify/assert"
 )
 
 const (

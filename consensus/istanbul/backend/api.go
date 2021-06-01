@@ -23,6 +23,9 @@ package backend
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"reflect"
+
 	klaytnApi "github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -30,8 +33,6 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"math/big"
-	"reflect"
 )
 
 // API is a user facing RPC API to dump Istanbul state
@@ -161,9 +162,19 @@ func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, 
 	}
 	// Ensure we have an actually valid block and return the council from its snapshot
 	if header == nil {
-		logger.Trace("Failed to find the requested block", "number", number)
 		return nil, errNoBlockExist // return nil if block is not found.
 	}
+
+	// Since v1.6.1, extra.validators represents a list of council
+	// TODO-Klaytn : replace this to the below calculation logic
+	//istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	//if err == nil {
+	//	return istanbulExtra.Validators, nil
+	//} else {
+	//	return nil, errExtractIstanbulExtra
+	//}
+
+	// Calculate council list from snapshot
 	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
@@ -197,12 +208,43 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 		return nil, errNoBlockExist
 	}
 
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
-	if err == nil {
+	blockNumber := header.Number.Uint64()
+	if blockNumber == 0 {
+		// The committee of genesis block can not be calculated because it requires a previous block.
+		istanbulExtra, err := types.ExtractIstanbulExtra(header)
+		if err != nil {
+			return nil, errExtractIstanbulExtra
+		}
 		return istanbulExtra.Validators, nil
-	} else {
-		return nil, errExtractIstanbulExtra
 	}
+
+	round := header.Round()
+	view := &istanbul.View{
+		Sequence: new(big.Int).SetUint64(blockNumber),
+		Round:    new(big.Int).SetUint64(uint64(round)),
+	}
+
+	// get the proposer of this block.
+	proposer, err := ecrecover(header)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the snapshot of the previous block.
+	parentHash := header.ParentHash
+	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the committee list of this block at the view (blockNumber, round)
+	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
+	addresses := make([]common.Address, len(committee))
+	for i, v := range committee {
+		addresses[i] = v.Address()
+	}
+
+	return addresses, nil
 }
 
 func (api *APIExtension) GetCommitteeSize(number *rpc.BlockNumber) (int, error) {
@@ -214,41 +256,57 @@ func (api *APIExtension) GetCommitteeSize(number *rpc.BlockNumber) (int, error) 
 	}
 }
 
-func (api *APIExtension) getProposerAndValidators(block *types.Block) (common.Address, []common.Address, error) {
+type ConsensusInfo struct {
+	proposer       common.Address
+	originProposer common.Address // the proposal of 0 round at the same block number
+	committee      []common.Address
+	round          byte
+}
+
+func (api *APIExtension) getConsensusInfo(block *types.Block) (ConsensusInfo, error) {
 	blockNumber := block.NumberU64()
 	if blockNumber == 0 {
-		return common.Address{}, []common.Address{}, nil
+		return ConsensusInfo{}, nil
 	}
 
+	round := block.Header().Round()
 	view := &istanbul.View{
 		Sequence: new(big.Int).Set(block.Number()),
-		Round:    new(big.Int).SetInt64(0),
+		Round:    new(big.Int).SetInt64(int64(round)),
 	}
 
 	// get the proposer of this block.
 	proposer, err := ecrecover(block.Header())
 	if err != nil {
-		return common.Address{}, []common.Address{}, err
+		return ConsensusInfo{}, err
 	}
 
 	// get the snapshot of the previous block.
 	parentHash := block.ParentHash()
 	snap, err := api.istanbul.snapshot(api.chain, blockNumber-1, parentHash, nil)
 	if err != nil {
-		return proposer, []common.Address{}, err
+		return ConsensusInfo{}, err
 	}
 
-	// get the committee list of this block.
+	// get origin proposer at 0 round.
+	originProposer := common.Address{}
+	lastProposer := api.istanbul.GetProposer(blockNumber - 1)
+
+	newValSet := snap.ValSet.Copy()
+	newValSet.CalcProposer(lastProposer, 0)
+	originProposer = newValSet.GetProposer().Address()
+
+	// get the committee list of this block at the view (blockNumber, round)
 	committee := snap.ValSet.SubListWithProposer(parentHash, proposer, view)
-	commiteeAddrs := make([]common.Address, len(committee))
+	committeeAddrs := make([]common.Address, len(committee))
 	for i, v := range committee {
-		commiteeAddrs[i] = v.Address()
+		committeeAddrs[i] = v.Address()
 	}
 
 	// verify the committee list of the block using istanbul
 	//proposalSeal := istanbulCore.PrepareCommittedSeal(block.Hash())
 	//extra, err := types.ExtractIstanbulExtra(block.Header())
-	//istanbulAddrs := make([]common.Address, len(commiteeAddrs))
+	//istanbulAddrs := make([]common.Address, len(committeeAddrs))
 	//for i, seal := range extra.CommittedSeal {
 	//	addr, err := istanbul.GetSignatureAddress(proposalSeal, seal)
 	//	istanbulAddrs[i] = addr
@@ -257,23 +315,30 @@ func (api *APIExtension) getProposerAndValidators(block *types.Block) (common.Ad
 	//	}
 	//
 	//	var found bool = false
-	//	for _, v := range commiteeAddrs {
+	//	for _, v := range committeeAddrs {
 	//		if addr == v {
 	//			found = true
 	//			break
 	//		}
 	//	}
 	//	if found == false {
-	//		logger.Trace("validator is different!", "snap", commiteeAddrs, "istanbul", istanbulAddrs)
-	//		return proposer, commiteeAddrs, errors.New("validator set is different from Istanbul engine!!")
+	//		logger.Trace("validator is different!", "snap", committeeAddrs, "istanbul", istanbulAddrs)
+	//		return proposer, committeeAddrs, errors.New("validator set is different from Istanbul engine!!")
 	//	}
 	//}
 
-	return proposer, commiteeAddrs, nil
+	cInfo := ConsensusInfo{
+		proposer:       proposer,
+		originProposer: originProposer,
+		committee:      committeeAddrs,
+		round:          round,
+	}
+
+	return cInfo, nil
 }
 
-func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, committee []common.Address,
-	transactions types.Transactions, receipts types.Receipts) map[string]interface{} {
+func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
+	cInfo ConsensusInfo, transactions types.Transactions, receipts types.Receipts) map[string]interface{} {
 	head := b.Header() // copies the header once
 	hash := head.Hash()
 
@@ -294,8 +359,10 @@ func (api *APIExtension) makeRPCOutput(b *types.Block, proposer common.Address, 
 		rpcTransactions[i] = klaytnApi.RpcOutputReceipt(tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
 	}
 
-	r["committee"] = committee
-	r["proposer"] = proposer
+	r["committee"] = cInfo.committee
+	r["proposer"] = cInfo.proposer
+	r["round"] = cInfo.round
+	r["originProposer"] = cInfo.originProposer
 	r["transactions"] = rpcTransactions
 
 	return r
@@ -336,7 +403,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	}
 	blockHash := block.Hash()
 
-	proposer, committee, err := api.getProposerAndValidators(block)
+	cInfo, err := api.getConsensusInfo(block)
 	if err != nil {
 		logger.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
 		return nil, errInternalError
@@ -346,7 +413,8 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	if receipts == nil {
 		receipts = b.GetReceiptsByBlockHash(blockHash)
 	}
-	return api.makeRPCOutput(block, proposer, committee, block.Transactions(), receipts), nil
+
+	return api.makeRPCBlockOutput(block, cInfo, block.Transactions(), receipts), nil
 }
 
 func (api *APIExtension) GetBlockWithConsensusInfoByNumberRange(start *rpc.BlockNumber, end *rpc.BlockNumber) (map[string]interface{}, error) {
@@ -411,7 +479,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 		return nil, fmt.Errorf("the block does not exist (block hash: %s)", blockHash.String())
 	}
 
-	proposer, committee, err := api.getProposerAndValidators(block)
+	cInfo, err := api.getConsensusInfo(block)
 	if err != nil {
 		logger.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
 		return nil, errInternalError
@@ -422,7 +490,7 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 		receipts = b.GetReceiptsByBlockHash(blockHash)
 	}
 
-	return api.makeRPCOutput(block, proposer, committee, block.Transactions(), receipts), nil
+	return api.makeRPCBlockOutput(block, cInfo, block.Transactions(), receipts), nil
 }
 
 func (api *API) GetTimeout() uint64 {

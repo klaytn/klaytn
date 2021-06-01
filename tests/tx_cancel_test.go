@@ -18,13 +18,14 @@ package tests
 
 import (
 	"crypto/ecdsa"
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
-	"time"
 )
 
 // TestTxCancel tests TxCancel transaction types:

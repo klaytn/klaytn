@@ -22,6 +22,7 @@ package database
 
 import (
 	"encoding/binary"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/rcrowley/go-metrics"
 )
@@ -92,6 +93,8 @@ var (
 	migrationStatusKey = []byte("migrationStatus")
 
 	stakingInfoPrefix = []byte("stakingInfo")
+
+	chaindatafetcherCheckpointKey = []byte("chaindatafetcherCheckpoint")
 )
 
 // TxLookupEntry is a positional metadata to help looking up the data content of

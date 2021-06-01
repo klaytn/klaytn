@@ -31,12 +31,14 @@ var (
 	cacheGetBadBlockMissMeter = metrics.NewRegisteredMeter("klay/cache/get/badblock/miss", nil)
 	cacheGetBadBlockHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/badblock/hit", nil)
 
-	cacheGetStateDBMissMeter = metrics.NewRegisteredMeter("klay/cache/get/statedb/miss", nil)
-	cacheGetStateDBHitMeter  = metrics.NewRegisteredMeter("klay/cache/get/statedb/hit", nil)
+	trieDBNodesSizeBytesGauge = metrics.NewRegisteredGauge("klay/triedb/nodessizebytes", nil)
+	trieDBPreimagesSizeGauge  = metrics.NewRegisteredGauge("klay/triedb/preimagessizebytes", nil)
 
 	headBlockNumberGauge = metrics.NewRegisteredGauge("blockchain/head/blocknumber", nil)
 	blockTxCountsGauge   = metrics.NewRegisteredGauge("blockchain/block/tx/gauge", nil)
 	blockTxCountsCounter = metrics.NewRegisteredCounter("blockchain/block/tx/counter", nil)
+	// the counter to record a bad block, increases 1 if bad block occurs
+	badBlockCounter = metrics.NewRegisteredCounter("blockchain/bad/block/counter", nil)
 
 	txPoolPendingGauge = metrics.NewRegisteredGauge("tx/pool/pending/gauge", nil)
 	txPoolQueueGauge   = metrics.NewRegisteredGauge("tx/pool/queue/gauge", nil)

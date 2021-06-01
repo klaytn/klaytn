@@ -21,15 +21,16 @@
 package vm
 
 import (
+	"math/big"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
-	"math/big"
-	"sync/atomic"
-	"time"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -55,20 +56,15 @@ type (
 // - an address of precompiled contracts
 // - an address of program accounts
 func isProgramAccount(addr common.Address, db StateDB) bool {
-	_, exists := PrecompiledContractsCypress[addr]
+	_, exists := PrecompiledContractsConstantinople[addr]
 	return exists || db.IsProgramAccount(addr)
 }
 
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.
 func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 	if contract.CodeAddr != nil {
-		precompiles := PrecompiledContractsCypress
+		precompiles := PrecompiledContractsConstantinople
 		if p := precompiles[*contract.CodeAddr]; p != nil {
-			var (
-				ret             []byte
-				computationCost uint64
-				err             error
-			)
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
 			//var startTime time.Time
@@ -76,16 +72,7 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 			//	startTime = time.Now()
 			//}
 			///////////////////////////////////////////////////////
-			switch *contract.CodeAddr {
-			case vmLogAddress:
-				ret, computationCost, err = RunVMLogContract(p, input, contract, evm)
-			case feePayerAddress:
-				ret, computationCost, err = RunFeePayerContract(p, input, contract)
-			case validateSenderAddress:
-				ret, computationCost, err = RunValidateSenderContract(p, input, contract, evm.StateDB)
-			default:
-				ret, computationCost, err = RunPrecompiledContract(p, input, contract) // TODO-Klaytn-Issue615
-			}
+			ret, computationCost, err := RunPrecompiledContract(p, input, contract, evm) // TODO-Klaytn-Issue615
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
 			//if opDebug {
@@ -180,7 +167,13 @@ func NewEVM(ctx Context, statedb StateDB, chainConfig *params.ChainConfig, vmCon
 		vmConfig.RunningEVM <- evm
 	}
 
-	evm.interpreter = NewInterpreter(evm, vmConfig)
+	// If internal transaction tracing is enabled, creates a tracer for a transaction
+	if vmConfig.EnableInternalTxTracing {
+		vmConfig.Debug = true
+		vmConfig.Tracer = NewInternalTxTracer()
+	}
+
+	evm.interpreter = NewEVMInterpreter(evm, vmConfig)
 	return evm
 }
 
@@ -194,6 +187,15 @@ func (evm *EVM) Cancel(reason int32) {
 			break
 		}
 	}
+}
+
+func (evm *EVM) IsPrefetching() bool {
+	return evm.vmConfig.Prefetching
+}
+
+// Cancelled returns true if Cancel has been called
+func (evm *EVM) Cancelled() bool {
+	return atomic.LoadInt32(&evm.abort) == 1
 }
 
 // Call executes the contract associated with the addr with the given input as
@@ -221,7 +223,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
 	if common.IsPrecompiledContractAddress(addr) {
-		precompiles := PrecompiledContractsCypress
+		precompiles := PrecompiledContractsConstantinople
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
 			if evm.vmConfig.Debug && evm.depth == 0 {
@@ -240,7 +242,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	// However, it does not create a contract account since `Call` is not proper method to create a contract.
 	if !evm.StateDB.Exist(addr) {
 		if value.Sign() == 0 {
-			// Calling a non-existing account (probably contract), don't do antything, but ping the tracer
+			// Calling a non-existing account (probably contract), don't do anything, but ping the tracer
 			if evm.vmConfig.Debug && evm.depth == 0 {
 				evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
 				evm.vmConfig.Tracer.CaptureEnd(ret, 0, 0, nil)

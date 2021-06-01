@@ -6,6 +6,8 @@ package cn
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/klaytn/klaytn/blockchain"
 	bloombits "github.com/klaytn/klaytn/blockchain/bloombits"
@@ -14,7 +16,6 @@ import (
 	event "github.com/klaytn/klaytn/event"
 	rpc "github.com/klaytn/klaytn/networks/rpc"
 	database "github.com/klaytn/klaytn/storage/database"
-	reflect "reflect"
 )
 
 // MockBackend is a mock of Backend interface

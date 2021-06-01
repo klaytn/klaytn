@@ -22,12 +22,13 @@ package vm
 
 import (
 	"errors"
+
 	"github.com/klaytn/klaytn/params"
 )
 
 type (
 	executionFunc func(pc *uint64, env *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error)
-	gasFunc       func(params.GasTable, *EVM, *Contract, *Stack, *Memory, uint64) (uint64, error) // last parameter is the requested memory size as a uint64
+	gasFunc       func(*EVM, *Contract, *Stack, *Memory, uint64) (uint64, error) // last parameter is the requested memory size as a uint64
 	// memorySizeFunc returns the required size, and whether the operation overflowed a uint64
 	memorySizeFunc func(*Stack) (size uint64, overflow bool)
 )
@@ -61,16 +62,22 @@ type operation struct {
 }
 
 var (
-	frontierInstructionSet       = newFrontierInstructionSet()
-	homesteadInstructionSet      = newHomesteadInstructionSet()
-	byzantiumInstructionSet      = newByzantiumInstructionSet()
 	ConstantinopleInstructionSet = newConstantinopleInstructionSet()
+	IstanbulInstructionSet       = newIstanbulInstructionSet()
 )
 
-// NewConstantinopleInstructionSet returns the frontier, homestead
-// byzantium and contantinople instructions.
-func newConstantinopleInstructionSet() [256]operation {
-	// instructions that can be executed during the byzantium phase.
+// JumpTable contains the EVM opcodes supported at a given fork.
+type JumpTable [256]operation
+
+func newIstanbulInstructionSet() JumpTable {
+	instructionSet := newConstantinopleInstructionSet()
+	// TODO-IstanbulCompatible: add istanbul hardfork items
+	return instructionSet
+}
+
+// newConstantinopleInstructionSet returns the frontier, homestead
+// byzantium and constantinople instructions.
+func newConstantinopleInstructionSet() JumpTable {
 	instructionSet := newByzantiumInstructionSet()
 	instructionSet[SHL] = operation{
 		execute:         opSHL,
@@ -98,7 +105,7 @@ func newConstantinopleInstructionSet() [256]operation {
 	}
 	instructionSet[EXTCODEHASH] = operation{
 		execute:         opExtCodeHash,
-		dynamicGas:      gasExtCodeHash,
+		constantGas:     params.ExtcodeHashGas,
 		minStack:        minStack(1, 1),
 		maxStack:        maxStack(1, 1),
 		valid:           true,
@@ -106,6 +113,7 @@ func newConstantinopleInstructionSet() [256]operation {
 	}
 	instructionSet[CREATE2] = operation{
 		execute:         opCreate2,
+		constantGas:     params.Create2Gas,
 		dynamicGas:      gasCreate2,
 		minStack:        minStack(4, 1),
 		maxStack:        maxStack(4, 1),
@@ -118,13 +126,14 @@ func newConstantinopleInstructionSet() [256]operation {
 	return instructionSet
 }
 
-// NewByzantiumInstructionSet returns the frontier, homestead and
+// newByzantiumInstructionSet returns the frontier, homestead and
 // byzantium instructions.
-func newByzantiumInstructionSet() [256]operation {
+func newByzantiumInstructionSet() JumpTable {
 	// instructions that can be executed during the homestead phase.
 	instructionSet := newHomesteadInstructionSet()
 	instructionSet[STATICCALL] = operation{
 		execute:         opStaticCall,
+		constantGas:     params.CallGas,
 		dynamicGas:      gasStaticCall,
 		minStack:        minStack(6, 1),
 		maxStack:        maxStack(6, 1),
@@ -143,6 +152,7 @@ func newByzantiumInstructionSet() [256]operation {
 	}
 	instructionSet[RETURNDATACOPY] = operation{
 		execute:         opReturnDataCopy,
+		constantGas:     GasFastestStep,
 		dynamicGas:      gasReturnDataCopy,
 		minStack:        minStack(3, 0),
 		maxStack:        maxStack(3, 0),
@@ -164,12 +174,13 @@ func newByzantiumInstructionSet() [256]operation {
 	return instructionSet
 }
 
-// NewHomesteadInstructionSet returns the frontier and homestead
+// newHomesteadInstructionSet returns the frontier and homestead
 // instructions that can be executed during the homestead phase.
-func newHomesteadInstructionSet() [256]operation {
+func newHomesteadInstructionSet() JumpTable {
 	instructionSet := newFrontierInstructionSet()
 	instructionSet[DELEGATECALL] = operation{
 		execute:         opDelegateCall,
+		constantGas:     params.CallGas,
 		dynamicGas:      gasDelegateCall,
 		minStack:        minStack(6, 1),
 		maxStack:        maxStack(6, 1),
@@ -181,10 +192,10 @@ func newHomesteadInstructionSet() [256]operation {
 	return instructionSet
 }
 
-// NewFrontierInstructionSet returns the frontier instructions
+// newFrontierInstructionSet returns the frontier instructions
 // that can be executed during the frontier phase.
-func newFrontierInstructionSet() [256]operation {
-	return [256]operation{
+func newFrontierInstructionSet() JumpTable {
+	return JumpTable{
 		STOP: {
 			execute:         opStop,
 			constantGas:     0,
@@ -372,6 +383,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		SHA3: {
 			execute:         opSha3,
+			constantGas:     params.Sha3Gas,
 			dynamicGas:      gasSha3,
 			minStack:        minStack(2, 1),
 			maxStack:        maxStack(2, 1),
@@ -389,7 +401,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		BALANCE: {
 			execute:         opBalance,
-			dynamicGas:      gasBalance,
+			constantGas:     params.BalanceGas,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
 			valid:           true,
@@ -437,6 +449,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		CALLDATACOPY: {
 			execute:         opCallDataCopy,
+			constantGas:     GasFastestStep,
 			dynamicGas:      gasCallDataCopy,
 			minStack:        minStack(3, 0),
 			maxStack:        maxStack(3, 0),
@@ -454,6 +467,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		CODECOPY: {
 			execute:         opCodeCopy,
+			constantGas:     GasFastestStep,
 			dynamicGas:      gasCodeCopy,
 			minStack:        minStack(3, 0),
 			maxStack:        maxStack(3, 0),
@@ -471,7 +485,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		EXTCODESIZE: {
 			execute:         opExtCodeSize,
-			dynamicGas:      gasExtCodeSize,
+			constantGas:     params.ExtcodeSizeGas,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
 			valid:           true,
@@ -479,6 +493,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		EXTCODECOPY: {
 			execute:         opExtCodeCopy,
+			constantGas:     params.ExtcodeCopyBase,
 			dynamicGas:      gasExtCodeCopy,
 			minStack:        minStack(4, 0),
 			maxStack:        maxStack(4, 0),
@@ -544,6 +559,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		MLOAD: {
 			execute:         opMload,
+			constantGas:     GasFastestStep,
 			dynamicGas:      gasMLoad,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
@@ -553,6 +569,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		MSTORE: {
 			execute:         opMstore,
+			constantGas:     GasFastestStep,
 			dynamicGas:      gasMStore,
 			minStack:        minStack(2, 0),
 			maxStack:        maxStack(2, 0),
@@ -562,6 +579,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		MSTORE8: {
 			execute:         opMstore8,
+			constantGas:     GasFastestStep,
 			dynamicGas:      gasMStore8,
 			memorySize:      memoryMStore8,
 			minStack:        minStack(2, 0),
@@ -571,7 +589,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		SLOAD: {
 			execute:         opSload,
-			dynamicGas:      gasSLoad,
+			constantGas:     params.SloadGas,
 			minStack:        minStack(1, 1),
 			maxStack:        maxStack(1, 1),
 			valid:           true,
@@ -1200,6 +1218,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		CREATE: {
 			execute:         opCreate,
+			constantGas:     params.CreateGas,
 			dynamicGas:      gasCreate,
 			minStack:        minStack(3, 1),
 			maxStack:        maxStack(3, 1),
@@ -1211,6 +1230,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		CALL: {
 			execute:         opCall,
+			constantGas:     params.CallGas,
 			dynamicGas:      gasCall,
 			minStack:        minStack(7, 1),
 			maxStack:        maxStack(7, 1),
@@ -1221,6 +1241,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		CALLCODE: {
 			execute:         opCallCode,
+			constantGas:     params.CallGas,
 			dynamicGas:      gasCallCode,
 			minStack:        minStack(7, 1),
 			maxStack:        maxStack(7, 1),
@@ -1241,7 +1262,7 @@ func newFrontierInstructionSet() [256]operation {
 		},
 		SELFDESTRUCT: {
 			execute:         opSuicide,
-			dynamicGas:      gasSuicide,
+			dynamicGas:      gasSelfdestruct,
 			minStack:        minStack(1, 0),
 			maxStack:        maxStack(1, 0),
 			halts:           true,

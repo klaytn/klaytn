@@ -18,9 +18,10 @@ package accountkey
 
 import (
 	"encoding/json"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/pkg/errors"
 	"io"
+
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/pkg/errors"
 )
 
 var (

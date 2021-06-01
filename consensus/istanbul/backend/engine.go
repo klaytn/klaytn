@@ -24,11 +24,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/klaytn/klaytn/reward"
 	"math/big"
 	"time"
 
-	"github.com/hashicorp/golang-lru"
+	"github.com/klaytn/klaytn/reward"
+
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -40,7 +41,7 @@ import (
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 const (
@@ -322,8 +323,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	// if there is a vote to attach, attach it to the header
 	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
 
-	// add validators in snapshot to extraData's validators section
-	extra, err := prepareExtra(header, snap.committee(header.ParentHash, sb.currentView.Load().(*istanbul.View)))
+	// add validators (council list) in snapshot to extraData's validators section
+	extra, err := prepareExtra(header, snap.validators())
 	if err != nil {
 		return err
 	}
@@ -497,6 +498,11 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 	}
 }
 
+// SetChain sets chain of the Istanbul backend
+func (sb *backend) SetChain(chain consensus.ChainReader) {
+	sb.chain = chain
+}
+
 // Start implements consensus.Istanbul.Start
 func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	sb.coreMu.Lock()
@@ -512,7 +518,7 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	}
 	sb.commitCh = make(chan *types.Result, 1)
 
-	sb.chain = chain
+	sb.SetChain(chain)
 	sb.currentBlock = currentBlock
 	sb.hasBadBlock = hasBadBlock
 

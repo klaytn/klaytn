@@ -21,12 +21,13 @@
 package core
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"math/big"
 	"sync"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // newRoundState creates a new roundState instance with the given view and validatorSet

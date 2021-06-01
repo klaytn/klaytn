@@ -22,8 +22,9 @@ package math
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"math/big"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 var (
@@ -178,6 +179,12 @@ func ReadBits(bigint *big.Int, buf []byte) {
 // U256 encodes as a 256 bit two's complement number. This operation is destructive.
 func U256(x *big.Int) *big.Int {
 	return x.And(x, tt256m1)
+}
+
+// U256Bytes converts a big Int into a 256bit EVM number.
+// This operation is destructive.
+func U256Bytes(n *big.Int) []byte {
+	return PaddedBigBytes(U256(n), 32)
 }
 
 // S256 interprets x as a two's complement number.

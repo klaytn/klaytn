@@ -17,9 +17,10 @@
 package reward
 
 import (
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func newTestBlockChain() *blockchain.BlockChain {

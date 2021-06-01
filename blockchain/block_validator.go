@@ -22,6 +22,7 @@ package blockchain
 
 import (
 	"fmt"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/consensus"

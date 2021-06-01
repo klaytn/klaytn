@@ -22,6 +22,11 @@ package state
 
 import (
 	"fmt"
+	"math/big"
+	"sort"
+	"sync/atomic"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -29,11 +34,8 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/statedb"
-	"math/big"
-	"sort"
-	"sync/atomic"
 )
 
 type revision struct {
@@ -49,10 +51,10 @@ var (
 	emptyCode = crypto.Keccak256Hash(nil)
 
 	logger = log.NewModuleLogger(log.BlockchainState)
-)
 
-// TODO-Klaytn-StateDB Need to consider setting this value by command line option.
-const maxCachedStateObjects = 40960
+	// TODO-Klaytn EnabledExpensive and DBConfig.EnableDBPerfMetrics will be merged
+	EnabledExpensive = false
+)
 
 // StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
 // and mediate the operations to them.
@@ -64,9 +66,6 @@ type StateDB struct {
 	stateObjects             map[common.Address]*stateObject
 	stateObjectsDirty        map[common.Address]struct{}
 	stateObjectsDirtyStorage map[common.Address]struct{}
-
-	// cachedStateObjects stores the most recent finalized stateObjects.
-	cachedStateObjects common.Cache
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -90,11 +89,18 @@ type StateDB struct {
 	journal        *journal
 	validRevisions []revision
 	nextRevisionId int
-}
 
-// NewCachedStateObjects returns a new Common.Cache object for cachedStateObjects.
-func NewCachedStateObjects() common.Cache {
-	return common.NewCache(common.LRUConfig{CacheSize: maxCachedStateObjects, IsScaled: true})
+	prefetching bool
+
+	// Measurements gathered during execution for debugging purposes
+	AccountReads   time.Duration
+	AccountHashes  time.Duration
+	AccountUpdates time.Duration
+	AccountCommits time.Duration
+	StorageReads   time.Duration
+	StorageHashes  time.Duration
+	StorageUpdates time.Duration
+	StorageCommits time.Duration
 }
 
 // Create a new state from a given trie.
@@ -109,21 +115,29 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		stateObjects:             make(map[common.Address]*stateObject),
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
 		stateObjectsDirty:        make(map[common.Address]struct{}),
-		cachedStateObjects:       nil,
 		logs:                     make(map[common.Hash][]*types.Log),
 		preimages:                make(map[common.Hash][]byte),
 		journal:                  newJournal(),
 	}, nil
 }
 
-// NewWithCache creates a new state from a given trie with state object caching enabled.
-func NewWithCache(root common.Hash, db Database, cachedStateObjects common.Cache) (*StateDB, error) {
-	if stateDB, err := New(root, db); err != nil {
+// Create a new state from a given trie with prefetching
+func NewForPrefetching(root common.Hash, db Database) (*StateDB, error) {
+	tr, err := db.OpenTrieForPrefetching(root)
+	if err != nil {
 		return nil, err
-	} else {
-		stateDB.cachedStateObjects = cachedStateObjects
-		return stateDB, nil
 	}
+	return &StateDB{
+		db:                       db,
+		trie:                     tr,
+		stateObjects:             make(map[common.Address]*stateObject),
+		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
+		stateObjectsDirty:        make(map[common.Address]struct{}),
+		logs:                     make(map[common.Hash][]*types.Log),
+		preimages:                make(map[common.Hash][]byte),
+		journal:                  newJournal(),
+		prefetching:              true,
+	}, nil
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.
@@ -157,7 +171,6 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.trie = tr
 	self.stateObjects = make(map[common.Address]*stateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
-	self.cachedStateObjects = NewCachedStateObjects()
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}
 	self.txIndex = 0
@@ -166,66 +179,6 @@ func (self *StateDB) Reset(root common.Hash) error {
 	self.preimages = make(map[common.Hash][]byte)
 	self.clearJournalAndRefund()
 	return nil
-}
-
-// ResetExceptCachedStateObjects clears out all ephemeral state objects from the state db,
-// but keeps 1) underlying state trie and 2) cachedStateObjects to avoid reloading data.
-func (self *StateDB) ResetExceptCachedStateObjects(root common.Hash) {
-	cachedStateObjects := self.cachedStateObjects
-	self.Reset(root)
-	self.cachedStateObjects = cachedStateObjects
-}
-
-// UpdateTxPoolStateCache updates the caches used in TxPool.
-func (self *StateDB) UpdateTxPoolStateCache(nonceCache common.Cache, balanceCache common.Cache) {
-	if nonceCache == nil || balanceCache == nil {
-		logger.ErrorWithStack("UpdateTxPoolStateCache should not be called! If nonceCache or balanceCache is nil")
-		return
-	}
-
-	for addr, stateObj := range self.stateObjects {
-		if stateObj.suicided || stateObj.deleted || stateObj.dbErr != nil {
-			nonceCache.Add(addr, nil)
-			balanceCache.Add(addr, nil)
-		} else {
-			nonceCache.Add(addr, stateObj.Nonce())
-			balanceCache.Add(addr, stateObj.Balance())
-		}
-	}
-}
-
-// UpdateCachedStateObjects copies stateObjects to cachedStateObjects.
-// And then, call ResetExceptCachedStateObjects() to clear out all ephemeral state objects,
-// except for 1) underlying state trie and 2) cachedStateObjects.
-func (self *StateDB) UpdateCachedStateObjects(root common.Hash) {
-	if !self.UseCachedStateObjects() {
-		logger.ErrorWithStack("UpdateCachedStateObjects should not be called! It is disabled!")
-		return
-	}
-	for addr, stateObj := range self.stateObjects {
-		if stateObj.suicided || stateObj.deleted || stateObj.dbErr != nil {
-			self.cachedStateObjects.Add(addr, nil)
-		} else {
-			// TODO-Klaytn-StateDB cachedStorage also can be reused, but needs to be tested.
-			newObj := newObject(self, addr, stateObj.account)
-			newObj.storageTrie = stateObj.storageTrie
-			newObj.code = stateObj.code
-			self.cachedStateObjects.Add(addr, newObj)
-		}
-	}
-
-	// Reset all member variables except for cachedStateObjects.
-	self.ResetExceptCachedStateObjects(root)
-}
-
-// GetCachedStateObjects returns its cachedStateObjects.
-func (self *StateDB) GetCachedStateObjects() common.Cache {
-	return self.cachedStateObjects
-}
-
-// UseCachedStateObjects returns if it uses cachedStateObjects or not.
-func (self *StateDB) UseCachedStateObjects() bool {
-	return self.cachedStateObjects != nil
 }
 
 func (self *StateDB) AddLog(log *types.Log) {
@@ -521,6 +474,10 @@ func (self *StateDB) Suicide(addr common.Address) bool {
 
 // updateStateObject writes the given object to the statedb.
 func (self *StateDB) updateStateObject(stateObject *stateObject) {
+	// Track the amount of time wasted on updating the account from the trie
+	if EnabledExpensive {
+		defer func(start time.Time) { self.AccountUpdates += time.Since(start) }(time.Now())
+	}
 	addr := stateObject.Address()
 	if data := stateObject.encoded.Load(); data != nil {
 		encodedData := data.(*encodedData)
@@ -541,6 +498,10 @@ func (self *StateDB) updateStateObject(stateObject *stateObject) {
 
 // deleteStateObject removes the given object from the state trie.
 func (self *StateDB) deleteStateObject(stateObject *stateObject) {
+	// Track the amount of time wasted on deleting the account from the trie
+	if EnabledExpensive {
+		defer func(start time.Time) { self.AccountUpdates += time.Since(start) }(time.Now())
+	}
 	stateObject.deleted = true
 	addr := stateObject.Address()
 	self.setError(self.trie.TryDelete(addr[:]))
@@ -555,22 +516,11 @@ func (self *StateDB) getStateObject(addr common.Address) *stateObject {
 		}
 		return obj
 	}
-
-	// Second, if not found in stateObjects, check cachedStateObjects.
-	if self.UseCachedStateObjects() {
-		if obj, exist := self.cachedStateObjects.Get(addr); exist && obj != nil {
-			stateObj, ok := obj.(*stateObject)
-			if !ok {
-				logger.Error("cached state object is not *stateObject type!", "addr", addr.String())
-				return nil
-			}
-
-			self.stateObjects[addr] = stateObj.deepCopy(self)
-			return self.stateObjects[addr]
-		}
+	// Track the amount of time wasted on loading the object from the database
+	if EnabledExpensive {
+		defer func(start time.Time) { self.AccountReads += time.Since(start) }(time.Now())
 	}
-
-	// Third, the object for given address is not cached.
+	// Second, the object for given address is not cached.
 	// Load the object from the database.
 	enc, err := self.trie.TryGet(addr[:])
 	if len(enc) == 0 {
@@ -586,10 +536,6 @@ func (self *StateDB) getStateObject(addr common.Address) *stateObject {
 	// Insert into the live set.
 	obj := newObject(self, addr, data)
 	self.setStateObject(obj)
-
-	if self.UseCachedStateObjects() {
-		self.cachedStateObjects.Add(addr, obj.deepCopy(self))
-	}
 
 	return obj
 }
@@ -731,16 +677,15 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 func (self *StateDB) Copy() *StateDB {
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
-		db:                 self.db,
-		trie:               self.db.CopyTrie(self.trie),
-		stateObjects:       make(map[common.Address]*stateObject, len(self.journal.dirties)),
-		stateObjectsDirty:  make(map[common.Address]struct{}, len(self.journal.dirties)),
-		cachedStateObjects: nil,
-		refund:             self.refund,
-		logs:               make(map[common.Hash][]*types.Log, len(self.logs)),
-		logSize:            self.logSize,
-		preimages:          make(map[common.Hash][]byte),
-		journal:            newJournal(),
+		db:                self.db,
+		trie:              self.db.CopyTrie(self.trie),
+		stateObjects:      make(map[common.Address]*stateObject, len(self.journal.dirties)),
+		stateObjectsDirty: make(map[common.Address]struct{}, len(self.journal.dirties)),
+		refund:            self.refund,
+		logs:              make(map[common.Hash][]*types.Log, len(self.logs)),
+		logSize:           self.logSize,
+		preimages:         make(map[common.Hash][]byte),
+		journal:           newJournal(),
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range self.journal.dirties {
@@ -763,19 +708,12 @@ func (self *StateDB) Copy() *StateDB {
 		}
 	}
 
-	// NOTE-Klaytn-StateDB cachedStateObject is cache, so not copied to copied StateDB.
-
 	deepCopyLogs(self, state)
 
 	for hash, preimage := range self.preimages {
 		state.preimages[hash] = preimage
 	}
 
-	// Use cachedStateObjects only if original StateDB uses.
-	// However, cached values are not copied.
-	if self.cachedStateObjects != nil {
-		state.cachedStateObjects = NewCachedStateObjects()
-	}
 	return state
 }
 
@@ -864,6 +802,10 @@ func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
 // goes into transaction receipts.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	s.Finalise(deleteEmptyObjects, true)
+	// Track the amount of time wasted on hashing the account trie
+	if EnabledExpensive {
+		defer func(start time.Time) { s.AccountHashes += time.Since(start) }(time.Now())
+	}
 	return s.trie.Hash()
 }
 
@@ -922,7 +864,10 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		s.updateStateObject(so)
 	}
 
-	// Write trie changes.
+	// Write the account trie changes, measuring the amount of wasted time
+	if EnabledExpensive {
+		defer func(start time.Time) { s.AccountCommits += time.Since(start) }(time.Now())
+	}
 	root, err = s.trie.Commit(func(leaf []byte, parent common.Hash, parentDepth int) error {
 		serializer := account.NewAccountSerializer()
 		if err := rlp.DecodeBytes(leaf, serializer); err != nil {
@@ -947,4 +892,22 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 // GetTxHash returns the hash of current running transaction.
 func (s *StateDB) GetTxHash() common.Hash {
 	return s.thash
+}
+
+var errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
+var errNotContractAddress = fmt.Errorf("given address is not a contract address")
+
+func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Hash, error) {
+	acc := s.GetAccount(contractAddr)
+	if acc == nil {
+		return common.Hash{}, errNotExistingAddress
+	}
+	if acc.Type() != account.SmartContractAccountType {
+		return common.Hash{}, errNotContractAddress
+	}
+	contract, true := acc.(*account.SmartContractAccount)
+	if !true {
+		return common.Hash{}, errNotContractAddress
+	}
+	return contract.GetStorageRoot(), nil
 }

@@ -17,9 +17,10 @@
 package discover
 
 import (
+	"testing"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
-	"testing"
 )
 
 var (

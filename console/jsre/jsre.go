@@ -24,13 +24,14 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/console/jsre/deps"
-	"github.com/robertkrimen/otto"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/console/jsre/deps"
+	"github.com/robertkrimen/otto"
 )
 
 var (

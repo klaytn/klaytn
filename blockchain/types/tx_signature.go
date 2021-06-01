@@ -19,10 +19,11 @@ package types
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"math/big"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
-	"math/big"
 )
 
 // TxSignature contains a signature of tx (V, R, S).

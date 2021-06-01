@@ -19,11 +19,12 @@ package account
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"io"
 	"math/big"
+
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // AccountCommon represents the common data structure of a Klaytn account.

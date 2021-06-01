@@ -22,16 +22,27 @@ executors:
   test-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.1-go1.14.6-solc0.4.24
+      - image: klaytn/build_base:1.1-go1.15.7-solc0.4.24
   test-others-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/build_base:1.1-go1.14.6-solc0.4.24
-      - image: localstack/localstack:0.10.9
+      - image: klaytn/build_base:1.1-go1.15.7-solc0.4.24
+      - image: localstack/localstack:0.11.5
+      - image: circleci/redis:6.0.8-alpine
+      - name: zookeeper
+        image: wurstmeister/zookeeper
+      - name: kafka
+        image: wurstmeister/kafka
+        environment:
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
+          KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://kafka:9094
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
   rpm-executor:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
-      - image: klaytn/circleci-rpmbuild:1.14.6
+      - image: klaytn/circleci-rpmbuild:1.15.7
   default:
     working_directory: /go/src/github.com/klaytn/klaytn
     docker:
@@ -47,9 +58,9 @@ commands:
       - run:
           name: "Install golang on machine"
           command: |
-            curl -O https://dl.google.com/go/go1.14.6.linux-amd64.tar.gz
-            mkdir $HOME/go1.14.6
-            tar -C $HOME/go1.14.6 -xzf go1.14.6.linux-amd64.tar.gz
+            curl -O https://dl.google.com/go/go1.15.7.linux-amd64.tar.gz
+            mkdir $HOME/go1.15.7
+            tar -C $HOME/go1.15.7 -xzf go1.15.7.linux-amd64.tar.gz
   pre-build:
     description: "before build, set version"
     steps:
@@ -57,7 +68,7 @@ commands:
           name: "set variables"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.14.6/go/bin:$PATH
+            export PATH=$HOME/go1.15.7/go/bin:$PATH
             pat="^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*"
 
             if [[ $CIRCLE_TAG =~ $pat ]]; then
@@ -80,7 +91,7 @@ commands:
           name: "build new(Cross compile)"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.14.6/go/bin:$PATH
+            export PATH=$HOME/go1.15.7/go/bin:$PATH
             make << parameters.os-network >>
   upload-repo:
     description: "upload packaging tar.gz"
@@ -93,7 +104,7 @@ commands:
           name: "upload S3 repo"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.14.6/go/bin:$PATH
+            export PATH=$HOME/go1.15.7/go/bin:$PATH
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
             for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
@@ -144,7 +155,7 @@ commands:
   tag-verify:
     steps:
       - run:
-          name: "Verify tag and file verison match"
+          name: "Verify tag and file version match"
           command: |
             echo "tag version is " $CIRCLE_TAG
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
@@ -158,7 +169,7 @@ commands:
   tagger-verify:
     steps:
       - run:
-          name: "Verify tag and file verison match"
+          name: "Verify tag and file version match"
           command: |
               TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG | sed 's/ .*//')
               if [ $TAGGER == 'circleci-klaytn' ]; then
@@ -218,6 +229,46 @@ commands:
               else
                 echo "Need to delete branch manually"
               fi
+  wait-other-containers-ready:
+    steps:
+      - run:
+          name: "Waiting for Redis to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z 127.0.0.1 6379 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Redis && exit 1
+      - run:
+          name: "Waiting for zookeeper to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z zookeeper 2181 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for zookeeper && exit 1
+      - run:
+          name: "Waiting for Kafka to be ready"
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z kafka 9092 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Kafka && exit 1
+      - run:
+          name: "Wait until localstack container running"
+          command: |
+            timeout -t 60 sh -c \
+            'until nc -z localhost 4566; do
+              echo "Waiting for Localstack ..."
+              sleep 1
+            done'
   notify-success:
     steps:
       - run:
@@ -244,25 +295,29 @@ jobs:
       - run:
           name: "Build"
           command: |
-            export PATH=$HOME/go1.14.6/go/bin:$PATH
+            export PATH=$HOME/go1.15.7/go/bin:$PATH
             make fmt
             make all
 
   test-linter:
     executor: test-executor
     steps:
-      - checkout
-      - run:
-          name: "Run golangci-lint"
-          command: golangci-lint run --new-from-rev=dev --presets format,style -v --timeout 10m
-
-  test-datasync:
-    executor: test-executor
-    steps:
       - install-ssh-alpine
       - checkout
       - run:
+          name: "Run golangci-lint"
+          no_output_timeout: 30m
+          command: golangci-lint run --new-from-rev=dev --presets complexity,format,performance -v --timeout 10m
+
+  test-datasync:
+    executor: test-others-executor
+    steps:
+      - install-ssh-alpine
+      - checkout
+      - wait-other-containers-ready
+      - run:
           name: "Run test datasync"
+          no_output_timeout: 30m
           command: make test-datasync
 
   test-networks:
@@ -272,6 +327,7 @@ jobs:
       - checkout
       - run:
           name: "Run test networks"
+          no_output_timeout: 30m
           command: make test-networks
 
   test-tests:
@@ -281,6 +337,7 @@ jobs:
       - checkout
       - run:
           name: "Run test tests"
+          no_output_timeout: 30m
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
             make test-tests
@@ -290,17 +347,12 @@ jobs:
     steps:
       - install-ssh-alpine
       - checkout
-      - run:
-          name: "Wait until localstack container running"
-          command: |
-            timeout -t 60 sh -c \
-            'until curl --silent --fail "http://localhost:4572"; do
-              echo "Waiting for Localstack S3 ..."
-              sleep 1
-            done'
+      - wait-other-containers-ready
       - run:
           name: "Run test others"
-          command: make test-others
+          no_output_timeout: 30m
+          command: |
+            make test-others
 
   pass-tests:
     executor: default
@@ -316,11 +368,12 @@ jobs:
       - tagger-verify
 
   coverage:
-    executor: test-executor
+    executor: test-others-executor
     resource_class: xlarge
     steps:
       - install-ssh-alpine
       - checkout
+      - wait-other-containers-ready
       - run:
           shell: /bin/bash
           name: "Run coverage tests"
@@ -483,6 +536,17 @@ workflows:
             - tagger-verify
           filters: *filter-version-not-release
 
+      - docker/publish:
+          filters:
+            branches:
+              only: dev
+          requires:
+            - pass-tests
+          image: klaytn/klaytn
+          tag: dev
+          executor: docker/docker
+          use-remote-docker: true
+
       - tag-verify:
           filters: *filter-only-version-tag
 
@@ -544,7 +608,7 @@ workflows:
           requires:
             - pass-tests
           image: klaytn/klaytn
-          tag: $CIRCLE_TAG,latest
+          tag: latest,$CIRCLE_TAG
           executor: docker/docker
           use-remote-docker: true
 
@@ -572,3 +636,4 @@ workflows:
               only: dev
     jobs:
       - linters
+

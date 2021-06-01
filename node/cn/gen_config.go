@@ -13,6 +13,7 @@ import (
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 )
 
 var _ = (*configMarshaling)(nil)
@@ -27,21 +28,22 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		ParentOperatorAddr      *common.Address `toml:",omitempty"`
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
+		OverwriteGenesis        bool
+		DBType                  database.DBType
 		SkipBcVersionCheck      bool `toml:"-"`
-		PartitionedDB           bool
-		NumStateTriePartitions  uint
+		SingleDB                bool
+		NumStateTrieShards      uint
 		LevelDBCompression      database.LevelDBCompressionType
 		LevelDBBufferPool       bool
 		LevelDBCacheSize        int
+		DynamoDBConfig          database.DynamoDBConfig
 		TrieCacheSize           int
 		TrieTimeout             time.Duration
 		TrieBlockInterval       uint
 		TriesInMemory           uint64
 		SenderTxHashIndexing    bool
 		ParallelDBWrite         bool
-		StateDBCaching          bool
-		TxPoolStateCache        bool
-		TrieCacheLimit          int
+		TrieNodeCacheConfig     statedb.TrieNodeCacheConfig
 		ServiceChainSigner      common.Address `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -49,6 +51,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		TxPool                  blockchain.TxPoolConfig
 		GPO                     gasprice.Config
 		EnablePreimageRecording bool
+		EnableInternalTxTracing bool
 		Istanbul                istanbul.Config
 		DocRoot                 string `toml:"-"`
 		WsEndpoint              string `toml:",omitempty"`
@@ -69,21 +72,22 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.ParentOperatorAddr = c.ParentOperatorAddr
 	enc.AnchoringPeriod = c.AnchoringPeriod
 	enc.SentChainTxsLimit = c.SentChainTxsLimit
+	enc.OverwriteGenesis = c.OverwriteGenesis
+	enc.DBType = c.DBType
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
-	enc.PartitionedDB = c.PartitionedDB
-	enc.NumStateTriePartitions = c.NumStateTriePartitions
+	enc.SingleDB = c.SingleDB
+	enc.NumStateTrieShards = c.NumStateTrieShards
 	enc.LevelDBCompression = c.LevelDBCompression
 	enc.LevelDBBufferPool = c.LevelDBBufferPool
 	enc.LevelDBCacheSize = c.LevelDBCacheSize
+	enc.DynamoDBConfig = c.DynamoDBConfig
 	enc.TrieCacheSize = c.TrieCacheSize
 	enc.TrieTimeout = c.TrieTimeout
 	enc.TrieBlockInterval = c.TrieBlockInterval
 	enc.TriesInMemory = c.TriesInMemory
 	enc.SenderTxHashIndexing = c.SenderTxHashIndexing
 	enc.ParallelDBWrite = c.ParallelDBWrite
-	enc.StateDBCaching = c.StateDBCaching
-	enc.TxPoolStateCache = c.TxPoolStateCache
-	enc.TrieCacheLimit = c.TrieCacheLimit
+	enc.TrieNodeCacheConfig = c.TrieNodeCacheConfig
 	enc.ServiceChainSigner = c.ServiceChainSigner
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
@@ -91,6 +95,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.TxPool = c.TxPool
 	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
+	enc.EnableInternalTxTracing = c.EnableInternalTxTracing
 	enc.Istanbul = c.Istanbul
 	enc.DocRoot = c.DocRoot
 	enc.WsEndpoint = c.WsEndpoint
@@ -115,21 +120,22 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		ParentOperatorAddr      *common.Address `toml:",omitempty"`
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
+		OverwriteGenesis        *bool
+		DBType                  *database.DBType
 		SkipBcVersionCheck      *bool `toml:"-"`
-		PartitionedDB           *bool
-		NumStateTriePartitions  *uint
+		SingleDB                *bool
+		NumStateTrieShards      *uint
 		LevelDBCompression      *database.LevelDBCompressionType
 		LevelDBBufferPool       *bool
 		LevelDBCacheSize        *int
+		DynamoDBConfig          *database.DynamoDBConfig
 		TrieCacheSize           *int
 		TrieTimeout             *time.Duration
 		TrieBlockInterval       *uint
 		TriesInMemory           *uint64
 		SenderTxHashIndexing    *bool
 		ParallelDBWrite         *bool
-		StateDBCaching          *bool
-		TxPoolStateCache        *bool
-		TrieCacheLimit          *int
+		TrieNodeCacheConfig     *statedb.TrieNodeCacheConfig
 		ServiceChainSigner      *common.Address `toml:",omitempty"`
 		ExtraData               *hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
@@ -137,6 +143,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		TxPool                  *blockchain.TxPoolConfig
 		GPO                     *gasprice.Config
 		EnablePreimageRecording *bool
+		EnableInternalTxTracing *bool
 		Istanbul                *istanbul.Config
 		DocRoot                 *string `toml:"-"`
 		WsEndpoint              *string `toml:",omitempty"`
@@ -174,14 +181,20 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.SentChainTxsLimit != nil {
 		c.SentChainTxsLimit = *dec.SentChainTxsLimit
 	}
+	if dec.OverwriteGenesis != nil {
+		c.OverwriteGenesis = *dec.OverwriteGenesis
+	}
+	if dec.DBType != nil {
+		c.DBType = *dec.DBType
+	}
 	if dec.SkipBcVersionCheck != nil {
 		c.SkipBcVersionCheck = *dec.SkipBcVersionCheck
 	}
-	if dec.PartitionedDB != nil {
-		c.PartitionedDB = *dec.PartitionedDB
+	if dec.SingleDB != nil {
+		c.SingleDB = *dec.SingleDB
 	}
-	if dec.NumStateTriePartitions != nil {
-		c.NumStateTriePartitions = *dec.NumStateTriePartitions
+	if dec.NumStateTrieShards != nil {
+		c.NumStateTrieShards = *dec.NumStateTrieShards
 	}
 	if dec.LevelDBCompression != nil {
 		c.LevelDBCompression = *dec.LevelDBCompression
@@ -191,6 +204,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.LevelDBCacheSize != nil {
 		c.LevelDBCacheSize = *dec.LevelDBCacheSize
+	}
+	if dec.DynamoDBConfig != nil {
+		c.DynamoDBConfig = *dec.DynamoDBConfig
 	}
 	if dec.TrieCacheSize != nil {
 		c.TrieCacheSize = *dec.TrieCacheSize
@@ -210,14 +226,8 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.ParallelDBWrite != nil {
 		c.ParallelDBWrite = *dec.ParallelDBWrite
 	}
-	if dec.StateDBCaching != nil {
-		c.StateDBCaching = *dec.StateDBCaching
-	}
-	if dec.TxPoolStateCache != nil {
-		c.TxPoolStateCache = *dec.TxPoolStateCache
-	}
-	if dec.TrieCacheLimit != nil {
-		c.TrieCacheLimit = *dec.TrieCacheLimit
+	if dec.TrieNodeCacheConfig != nil {
+		c.TrieNodeCacheConfig = *dec.TrieNodeCacheConfig
 	}
 	if dec.ServiceChainSigner != nil {
 		c.ServiceChainSigner = *dec.ServiceChainSigner
@@ -239,6 +249,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.EnablePreimageRecording != nil {
 		c.EnablePreimageRecording = *dec.EnablePreimageRecording
+	}
+	if dec.EnableInternalTxTracing != nil {
+		c.EnableInternalTxTracing = *dec.EnableInternalTxTracing
 	}
 	if dec.Istanbul != nil {
 		c.Istanbul = *dec.Istanbul

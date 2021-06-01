@@ -17,10 +17,11 @@
 package types
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
 	"math/big"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
 )
 
 func BenchmarkSingleRecoverEIP155Signer(b *testing.B) {

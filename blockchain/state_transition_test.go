@@ -19,9 +19,10 @@ package blockchain
 import (
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
-	"testing"
 )
 
 func TestGetVMerrFromReceiptStatus(t *testing.T) {

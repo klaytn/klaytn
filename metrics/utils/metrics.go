@@ -7,17 +7,18 @@ package metricutils
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+	"runtime"
+	"strings"
+	"time"
+
 	"github.com/klaytn/klaytn/log"
 	prometheusmetrics "github.com/klaytn/klaytn/metrics/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rcrowley/go-metrics"
 	"gopkg.in/urfave/cli.v1"
-	"net/http"
-	"os"
-	"runtime"
-	"strings"
-	"time"
 )
 
 // Enabled is checked by the constructor functions for all of the

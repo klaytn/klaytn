@@ -23,12 +23,13 @@ package client
 import (
 	"context"
 	"errors"
+	"math/big"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/networks/p2p"
-	"math/big"
 )
 
 // BridgeAddPeerOnParentChain can add a static peer on bridge node for service chain.

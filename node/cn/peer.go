@@ -23,6 +23,10 @@ package cn
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
@@ -30,10 +34,7 @@ import (
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"math/big"
-	"sync"
-	"time"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 var (
@@ -1076,6 +1077,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	err = <-errChannel
 	close(closed)
 	wg.Wait()
+	p.GetP2PPeer().Log().Info("Disconnected a multichannel P2P Peer", "peerID", p.GetP2PPeerID(), "peerName", p.GetP2PPeer().Name(), "err", err)
 	return err
 }
 

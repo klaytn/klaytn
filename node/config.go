@@ -23,6 +23,12 @@ package node
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/common"
@@ -30,11 +36,8 @@ import (
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
+	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/storage/database"
 )
 
 const (
@@ -61,8 +64,8 @@ type Config struct {
 	// in the devp2p node identifier.
 	Version string `toml:"-"`
 
-	// key-value database type [leveldb, badgerdb]
-	DBType string
+	// key-value database type [LevelDB, BadgerDB, MemoryDB, DynamoDB]
+	DBType database.DBType
 
 	// DataDir is the file system folder the node should use for any data storage
 	// requirements. The configured data directory will not be directly shared with
@@ -123,6 +126,10 @@ type Config struct {
 	// If the module list is empty, all RPC API endpoints designated public will be
 	// exposed.
 	HTTPModules []string `toml:",omitempty"`
+
+	// HTTPTimeouts allows for customization of the timeout values used by the HTTP RPC
+	// interface.
+	HTTPTimeouts rpc.HTTPTimeouts
 
 	// WSHost is the host interface on which to start the websocket RPC server. If
 	// this field is empty, no websocket API endpoint will be started.

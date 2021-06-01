@@ -108,4 +108,7 @@ var (
 
 	// ErrAccountCreationPrevented is returned if account creation is inserted in the service chain's txpool.
 	ErrAccountCreationPrevented = errors.New("account creation is prevented for the service chain")
+
+	// ErrInvalidTracer is returned if the tracer type is not vm.InternalTxTracer
+	ErrInvalidTracer = errors.New("tracer type is invalid for internal transaction tracing")
 )

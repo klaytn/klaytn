@@ -23,13 +23,13 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"github.com/klaytn/klaytn/common/fdlimit"
-	"gopkg.in/fatih/set.v0"
 	"reflect"
 	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"gopkg.in/fatih/set.v0"
 )
 
 const MetadataApi = "rpc"
@@ -46,37 +46,37 @@ const (
 
 	// pendingRequestLimit is a limit for concurrent RPC method calls
 	pendingRequestLimit = 200000
-
-	// concurrencyLimit is a limit for the number of concurrency connection for RPC servers
-	concurrencyLimit = 3000
-
-	// minFDLimit is the minimum file descriptor limit for RPC servers (heuristic value. concurrency limit of RPC and WS servers)
-	minFDLimit = concurrencyLimit * 2
 )
 
-// pendingRequestCount is a total number of concurrent RPC method calls
-var pendingRequestCount int64 = 0
+var (
+	// ConcurrencyLimit is a limit for the number of concurrency connection for RPC servers.
+	// It can be overwritten by rpc.concurrencylimit flag
+	ConcurrencyLimit = 3000
+
+	// pendingRequestCount is a total number of concurrent RPC method calls
+	pendingRequestCount int64 = 0
+
+	// TODO-Klaytn: move websocket configurations to Config struct in /network/rpc/server.go
+	// MaxSubscriptionPerWSConn is a maximum number of subscription for a websocket connection
+	MaxSubscriptionPerWSConn int32 = 3000
+
+	// WebsocketReadDeadline is the read deadline on the underlying network connection in seconds. 0 means read will not timeout
+	WebsocketReadDeadline int64 = 0
+
+	// WebsocketWriteDeadline is the write deadline on the underlying network connection in seconds. 0 means write will not timeout
+	WebsocketWriteDeadline int64 = 0
+
+	// MaxWebsocketConnections is a maximum number of websocket connections
+	MaxWebsocketConnections int32 = 3000
+)
 
 // NewServer will create a new server instance with no registered handlers.
 func NewServer() *Server {
-	// increase the file descriptor limit if the process has a small limit
-	limit, err := fdlimit.Current()
-	if err != nil {
-		logger.Warn("fail to read fd limit. you may suffer fd exhaustion", "err", err)
-	} else {
-		if limit < minFDLimit {
-			err := fdlimit.Raise(uint64(limit + minFDLimit))
-			if err != nil {
-				logger.Warn("fail to increase fd limit. you may suffer fd exhaustion", "err", err)
-			}
-			logger.Warn("Increase the file descriptor limit of the process for RPC servers", "oldLimit", limit, "newLimit", limit+minFDLimit)
-		}
-	}
-
 	server := &Server{
-		services: make(serviceRegistry),
-		codecs:   set.New(),
-		run:      1,
+		services:    make(serviceRegistry),
+		codecs:      set.New(),
+		run:         1,
+		wsConnCount: 0,
 	}
 
 	// register a default service which will provide meta information about the RPC service such as the services and
@@ -198,6 +198,9 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 	s.codecs.Add(codec)
 	s.codecsMu.Unlock()
 
+	// subscriptionCount counts and limits active subscriptions to avoid resource exhaustion
+	subscriptionCount := int32(0)
+
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
 		reqs, batch, err := s.readRequest(codec)
@@ -249,9 +252,9 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 		// If a single shot request is executing, run and return immediately
 		if singleShot {
 			if batch {
-				s.execBatch(ctx, codec, reqs)
+				s.execBatch(ctx, codec, reqs, &subscriptionCount)
 			} else {
-				s.exec(ctx, codec, reqs[0])
+				s.exec(ctx, codec, reqs[0], &subscriptionCount)
 			}
 			return nil
 		}
@@ -272,9 +275,9 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 
 			defer pend.Done()
 			if batch {
-				s.execBatch(ctx, codec, reqs)
+				s.execBatch(ctx, codec, reqs, &subscriptionCount)
 			} else {
-				s.exec(ctx, codec, reqs[0])
+				s.exec(ctx, codec, reqs[0], &subscriptionCount)
 			}
 		}(reqs, batch)
 	}
@@ -328,7 +331,7 @@ var callCount = 0
 var callSendTx = 0
 
 // handle executes a request and returns the response from the callback.
-func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
+func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest, subCnt *int32) (interface{}, func()) {
 	if req.err != nil {
 		rpcErrorResponsesCounter.Inc(1)
 		return codec.CreateErrorResponse(&req.id, req.err), nil
@@ -348,14 +351,23 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 				return codec.CreateErrorResponse(&req.id, &callbackError{err.Error()}), nil
 			}
 
+			atomic.AddInt32(subCnt, -1)
 			rpcSuccessResponsesCounter.Inc(1)
 			return codec.CreateResponse(req.id, true), nil
 		}
 		rpcErrorResponsesCounter.Inc(1)
+		wsUnsubscriptionReqCounter.Inc(1)
 		return codec.CreateErrorResponse(&req.id, &invalidParamsError{"Expected subscription id as first argument"}), nil
 	}
 
 	if req.callb.isSubscribe {
+		if atomic.LoadInt32(subCnt) >= MaxSubscriptionPerWSConn {
+			return codec.CreateErrorResponse(&req.id, &callbackError{
+				fmt.Sprintf("Maximum %d subscriptions are allowed for a websocket connection. "+
+					"The limit can be updated with 'admin_setMaxSubscriptionPerWSConn' API", MaxSubscriptionPerWSConn),
+			}), nil
+		}
+
 		subid, err := s.createSubscription(ctx, codec, req)
 		if err != nil {
 			rpcErrorResponsesCounter.Inc(1)
@@ -367,7 +379,9 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 			notifier, _ := NotifierFromContext(ctx)
 			notifier.activate(subid, req.svcname)
 		}
+		atomic.AddInt32(subCnt, 1)
 		rpcSuccessResponsesCounter.Inc(1)
+		wsSubscriptionReqCounter.Inc(1)
 		return codec.CreateResponse(req.id, subid), activateSub
 	}
 
@@ -402,7 +416,6 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 		rpcSuccessResponsesCounter.Inc(1)
 		return codec.CreateResponse(req.id, nil), nil
 	}
-
 	if req.callb.errPos >= 0 { // test if method returned an error
 		if !reply[req.callb.errPos].IsNil() {
 			e := reply[req.callb.errPos].Interface().(error)
@@ -417,14 +430,14 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 }
 
 // exec executes the given request and writes the result back using the codec.
-func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest) {
+func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest, subCnt *int32) {
 	var response interface{}
 	var callback func()
 	if req.err != nil {
 		rpcErrorResponsesCounter.Inc(1)
 		response = codec.CreateErrorResponse(&req.id, req.err)
 	} else {
-		response, callback = s.handle(ctx, codec, req)
+		response, callback = s.handle(ctx, codec, req, subCnt)
 	}
 
 	if err := codec.Write(response); err != nil {
@@ -440,7 +453,7 @@ func (s *Server) exec(ctx context.Context, codec ServerCodec, req *serverRequest
 
 // execBatch executes the given requests and writes the result back using the codec.
 // It will only write the response back when the last request is processed.
-func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest) {
+func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*serverRequest, subCnt *int32) {
 	responses := make([]interface{}, len(requests))
 	var callbacks []func()
 	for i, req := range requests {
@@ -449,7 +462,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 			responses[i] = codec.CreateErrorResponse(&req.id, req.err)
 		} else {
 			var callback func()
-			if responses[i], callback = s.handle(ctx, codec, req); callback != nil {
+			if responses[i], callback = s.handle(ctx, codec, req, subCnt); callback != nil {
 				callbacks = append(callbacks, callback)
 			}
 		}

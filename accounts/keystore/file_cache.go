@@ -21,13 +21,14 @@
 package keystore
 
 import (
-	"gopkg.in/fatih/set.v0"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"gopkg.in/fatih/set.v0"
 )
 
 // fileCache is a cache of files seen during scan of keystore.

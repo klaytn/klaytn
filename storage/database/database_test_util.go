@@ -18,8 +18,9 @@ package database
 
 import (
 	"fmt"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 	"path/filepath"
+
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 // NewLevelDBManagerForTest returns a DBManager, consisted of only LevelDB.
@@ -32,18 +33,18 @@ func NewLevelDBManagerForTest(dbc *DBConfig, levelDBOption *opt.Options) (DBMana
 	var ldb *levelDB
 	var err error
 	for i := 0; i < int(databaseEntryTypeSize); i++ {
-		if !dbm.config.Partitioned {
+		if dbm.config.SingleDB {
 			if i == 0 {
 				ldb, err = NewLevelDBWithOption(dbc.Dir, levelDBOption)
 			}
 		} else {
-			partitionDir := filepath.Join(dbc.Dir, dbBaseDirs[i])
-			partitionLDBOption := getLevelDBOptionByPartition(levelDBOption, DBEntryType(i))
-			partitionLDBOption.Compression = getCompressionType(dbc.LevelDBCompression, DBEntryType(i))
+			dir := filepath.Join(dbc.Dir, dbBaseDirs[i])
+			LDBOption := getLevelDBOptionByDBType(levelDBOption, DBEntryType(i))
+			LDBOption.Compression = getCompressionType(dbc.LevelDBCompression, DBEntryType(i))
 
-			ldb, err = NewLevelDBWithOption(partitionDir, partitionLDBOption)
+			ldb, err = NewLevelDBWithOption(dir, LDBOption)
 
-			fmt.Printf("Database: %-15s Compression: %-15s DisableBufferPool: %v \n", dbBaseDirs[i], partitionLDBOption.Compression, levelDBOption.DisableBufferPool)
+			fmt.Printf("Database: %-15s Compression: %-15s DisableBufferPool: %v \n", dbBaseDirs[i], LDBOption.Compression, levelDBOption.DisableBufferPool)
 		}
 
 		if err != nil {
@@ -56,10 +57,10 @@ func NewLevelDBManagerForTest(dbc *DBConfig, levelDBOption *opt.Options) (DBMana
 	return dbm, nil
 }
 
-// getLevelDBOptionByPartition returns scaled LevelDB option from the given LevelDB option.
+// getLevelDBOptionByDBType returns scaled LevelDB option from the given LevelDB option.
 // Some settings are not changed since they are not globally shared resources.
 // e.g., NoSync or CompactionTableSizeMultiplier
-func getLevelDBOptionByPartition(levelDBOption *opt.Options, i DBEntryType) *opt.Options {
+func getLevelDBOptionByDBType(levelDBOption *opt.Options, i DBEntryType) *opt.Options {
 	copiedLevelDBOption := *levelDBOption
 	ratio := dbConfigRatio[i]
 	copiedLevelDBOption.WriteBuffer = levelDBOption.WriteBuffer * ratio / 100

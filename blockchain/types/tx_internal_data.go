@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
+	"math"
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
-	"math"
-	"math/big"
 )
 
 // MaxFeeRatio is the maximum value of feeRatio. Since it is represented in percentage,
@@ -215,11 +216,6 @@ func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
 
 func (t TxType) IsChainDataAnchoring() bool {
 	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeChainDataAnchoring
-}
-
-// IsRPCExcluded returns true if the submission of such tx type is excluded via RPC.
-func (t TxType) IsRPCExcluded() bool {
-	return t.IsChainDataAnchoring()
 }
 
 type FeeRatio uint8

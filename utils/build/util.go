@@ -176,28 +176,41 @@ func GoTool(tool string, args ...string) *exec.Cmd {
 	return exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), args...)
 }
 
-// ExcludePackages excludes packages having patterns from the passed package slice and
-// returns a slice including only the remained packages.
-func ExcludePackages(packages []string, patterns []string) []string {
-	// TODO-Klaytn This exclusion code is a naive implementation. Improve this if it hurts build performance.
-	for _, pkg := range patterns {
+// ExpandPackages expands a packages list if an input contains "...".
+func ExpandPackages(packages []string) []string {
+	for _, pkg := range packages {
 		if strings.Contains(pkg, "...") {
-			cmd := GoTool("list", patterns...)
+			var newPkgs []string
+
+			cmd := GoTool("list", packages...)
 			out, err := cmd.Output()
 			if err != nil {
 				log.Fatalf("package listing failed: %v\n%s", err, string(out))
 			}
+
+			for _, line := range strings.Split(string(out), "\n") {
+				newPkgs = append(newPkgs, strings.TrimSpace(line))
+			}
+			return newPkgs
 		}
 	}
+	return packages
+}
+
+// ExcludePackages excludes packages having patterns from the passed package slice and
+// returns a slice including only the remained packages.
+func ExcludePackages(packages []string, patterns []string) []string {
+	// TODO-Klaytn This exclusion code is a naive implementation. Improve this if it hurts build performance.
+	packages = ExpandPackages(packages)
 
 	for _, pattern := range patterns {
-		var newpkgs []string
+		var newPkgs []string
 		for _, pkg := range packages {
 			if !strings.Contains(pkg, pattern) {
-				newpkgs = append(newpkgs, pkg)
+				newPkgs = append(newPkgs, pkg)
 			}
 		}
-		packages = newpkgs
+		packages = newPkgs
 	}
 	return packages
 }

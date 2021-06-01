@@ -23,16 +23,17 @@ package sc
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/networks/p2p/discover"
 )
 
 const (
@@ -94,6 +95,15 @@ type SCConfig struct {
 	VTRecovery         bool
 	VTRecoveryInterval uint64
 	Anchoring          bool
+
+	// KAS
+	KASAnchor         bool
+	KASAnchorUrl      string
+	KASAnchorPeriod   uint64
+	KASAnchorOperator string
+	KASAccessKey      string
+	KASSecretKey      string
+	KASXChainId       string
 }
 
 // NodeName returns the devp2p node identifier.

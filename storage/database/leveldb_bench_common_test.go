@@ -19,11 +19,12 @@ package database
 import (
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/stretchr/testify/assert"
 )
 
 const (

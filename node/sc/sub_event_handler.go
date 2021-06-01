@@ -19,6 +19,7 @@ package sc
 import (
 	"errors"
 	"fmt"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 )

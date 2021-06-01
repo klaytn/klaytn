@@ -21,17 +21,19 @@
 package statedb
 
 import (
+	"errors"
 	"fmt"
-	"github.com/VictoriaMetrics/fastcache"
+	"io"
+	"math/rand"
+	"sync"
+	"time"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/pbnjay/memory"
 	"github.com/rcrowley/go-metrics"
-	"io"
-	"sync"
-	"time"
 )
 
 var (
@@ -54,23 +56,11 @@ var (
 	memcacheUncacheTimeGauge = metrics.NewRegisteredGauge("trie/memcache/uncache/time", nil)
 
 	// metrics for state trie cache db
-	memcacheCleanHitMeter   = metrics.NewRegisteredMeter("trie/memcache/clean/hit", nil)
-	memcacheCleanMissMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
-	memcacheCleanReadMeter  = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
-	memcacheCleanWriteMeter = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
-
-	// metrics for fastcache
-	memcacheFastMisses                 = metrics.NewRegisteredGauge("trie/memcache/fast/misses", nil)
-	memcacheFastCollisions             = metrics.NewRegisteredGauge("trie/memcache/fast/collisions", nil)
-	memcacheFastCorruptions            = metrics.NewRegisteredGauge("trie/memcache/fast/corruptions", nil)
-	memcacheFastEntriesCount           = metrics.NewRegisteredGauge("trie/memcache/fast/entries", nil)
-	memcacheFastBytesSize              = metrics.NewRegisteredGauge("trie/memcache/fast/size", nil)
-	memcacheFastGetBigCalls            = metrics.NewRegisteredGauge("trie/memcache/fast/get", nil)
-	memcacheFastSetBigCalls            = metrics.NewRegisteredGauge("trie/memcache/fast/set", nil)
-	memcacheFastTooBigKeyErrors        = metrics.NewRegisteredGauge("trie/memcache/fast/error/too/bigkey", nil)
-	memcacheFastInvalidMetavalueErrors = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/matal", nil)
-	memcacheFastInvalidValueLenErrors  = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/valuelen", nil)
-	memcacheFastInvalidValueHashErrors = metrics.NewRegisteredGauge("trie/memcache/fast/error/invalid/hash", nil)
+	memcacheCleanHitMeter          = metrics.NewRegisteredMeter("trie/memcache/clean/hit", nil)
+	memcacheCleanMissMeter         = metrics.NewRegisteredMeter("trie/memcache/clean/miss", nil)
+	memcacheCleanPrefetchMissMeter = metrics.NewRegisteredMeter("trie/memcache/clean/prefetch/miss", nil)
+	memcacheCleanReadMeter         = metrics.NewRegisteredMeter("trie/memcache/clean/read", nil)
+	memcacheCleanWriteMeter        = metrics.NewRegisteredMeter("trie/memcache/clean/write", nil)
 
 	// metric of total node number
 	memcacheNodesGauge = metrics.NewRegisteredGauge("trie/memcache/nodes", nil)
@@ -79,8 +69,11 @@ var (
 // secureKeyPrefix is the database key prefix used to store trie node preimages.
 var secureKeyPrefix = []byte("secure-key-")
 
+// secureKeyPrefixLength is the length of the above prefix
+const secureKeyPrefixLength = 11
+
 // secureKeyLength is the length of the above prefix + 32byte hash.
-const secureKeyLength = 11 + 32
+const secureKeyLength = secureKeyPrefixLength + 32
 
 // commitResultChSizeLimit limits the size of channel used for commitResult.
 const commitResultChSizeLimit = 100 * 10000
@@ -108,7 +101,6 @@ type Database struct {
 	newest common.Hash                 // Newest tracked node, flush-list tail
 
 	preimages map[common.Hash][]byte // Preimages of nodes from the secure trie
-	seckeybuf [secureKeyLength]byte  // Ephemeral buffer for calculating preimage keys
 
 	gctime  time.Duration      // Time spent on garbage collection since last commit
 	gcnodes uint64             // Nodes garbage collected since last commit
@@ -124,8 +116,9 @@ type Database struct {
 
 	lock sync.RWMutex
 
-	trieNodeCache      *fastcache.Cache // GC friendly memory cache of trie node RLPs
-	trieNodeCacheLimit int              // byte size of trieNodeCache
+	trieNodeCache                TrieNodeCache        // GC friendly memory cache of trie node RLPs
+	trieNodeCacheConfig          *TrieNodeCacheConfig // Configuration of trieNodeCache
+	savingTrieNodeCacheTriggered bool                 // Whether saving trie node cache has been triggered or not
 }
 
 // rawNode is a simple binary blob used to differentiate between collapsed trie
@@ -311,38 +304,31 @@ func expandNode(hash hashNode, n node) node {
 // NewDatabase creates a new trie database to store ephemeral trie content before
 // its written out to disk or garbage collected.
 func NewDatabase(diskDB database.DBManager) *Database {
-	return NewDatabaseWithNewCache(diskDB, 0)
+	return NewDatabaseWithNewCache(diskDB, GetEmptyTrieNodeCacheConfig())
 }
 
 // NewDatabaseWithNewCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithNewCache(diskDB database.DBManager, cacheSizeMB int) *Database {
-	var trieNodeCache *fastcache.Cache
-	var cacheSizeByte int
-
-	if cacheSizeMB == AutoScaling {
-		cacheSizeMB = getTrieNodeCacheSizeMB()
+func NewDatabaseWithNewCache(diskDB database.DBManager, cacheConfig *TrieNodeCacheConfig) *Database {
+	trieNodeCache, err := NewTrieNodeCache(cacheConfig)
+	if err != nil {
+		logger.Error("Invalid trie node cache config", "err", err, "config", cacheConfig)
 	}
-	if cacheSizeMB > 0 {
-		cacheSizeByte = cacheSizeMB * 1024 * 1024
-		trieNodeCache = fastcache.New(cacheSizeByte)
 
-		logger.Info("Initialize trie node cache with fastcache", "MaxMB", cacheSizeMB)
-	}
 	return &Database{
-		diskDB:             diskDB,
-		nodes:              map[common.Hash]*cachedNode{{}: {}},
-		preimages:          make(map[common.Hash][]byte),
-		trieNodeCache:      trieNodeCache,
-		trieNodeCacheLimit: cacheSizeByte,
+		diskDB:              diskDB,
+		nodes:               map[common.Hash]*cachedNode{{}: {}},
+		preimages:           make(map[common.Hash][]byte),
+		trieNodeCache:       trieNodeCache,
+		trieNodeCacheConfig: cacheConfig,
 	}
 }
 
 // NewDatabaseWithExistingCache creates a new trie database to store ephemeral trie content
 // before its written out to disk or garbage collected. It also acts as a read cache
 // for nodes loaded from disk.
-func NewDatabaseWithExistingCache(diskDB database.DBManager, cache *fastcache.Cache) *Database {
+func NewDatabaseWithExistingCache(diskDB database.DBManager, cache TrieNodeCache) *Database {
 	return &Database{
 		diskDB:        diskDB,
 		nodes:         map[common.Hash]*cachedNode{{}: {}},
@@ -351,21 +337,21 @@ func NewDatabaseWithExistingCache(diskDB database.DBManager, cache *fastcache.Ca
 	}
 }
 
-func getTrieNodeCacheSizeMB() int {
-	totalPhysicalMemMB := float64(memory.TotalMemory() / 1024 / 1024)
+func getTrieNodeCacheSizeMiB() int {
+	totalPhysicalMemMiB := float64(memory.TotalMemory() / 1024 / 1024)
 
-	if totalPhysicalMemMB < 10*1024 {
+	if totalPhysicalMemMiB < 10*1024 {
 		return 0
-	} else if totalPhysicalMemMB < 20*1024 {
+	} else if totalPhysicalMemMiB < 20*1024 {
 		return 1 * 1024 // allocate 1G for small memory
 	}
 
 	memoryScalePercent := 0.3 // allocate 30% for 20 < mem < 100
-	if totalPhysicalMemMB > 100*1024 {
+	if totalPhysicalMemMiB > 100*1024 {
 		memoryScalePercent = 0.35 // allocate 35% for 100 < mem
 	}
 
-	return int(totalPhysicalMemMB * memoryScalePercent)
+	return int(totalPhysicalMemMiB * memoryScalePercent)
 }
 
 // DiskDB retrieves the persistent database backing the trie database.
@@ -374,13 +360,18 @@ func (db *Database) DiskDB() database.DBManager {
 }
 
 // TrieNodeCache retrieves the trieNodeCache of the trie database.
-func (db *Database) TrieNodeCache() *fastcache.Cache {
+func (db *Database) TrieNodeCache() TrieNodeCache {
 	return db.trieNodeCache
 }
 
-// GetTrieNodeCacheLimit returns the byte size of trie node cache.
-func (db *Database) GetTrieNodeCacheLimit() int {
-	return db.trieNodeCacheLimit
+// GetTrieNodeCacheConfig returns the configuration of TrieNodeCache.
+func (db *Database) GetTrieNodeCacheConfig() *TrieNodeCacheConfig {
+	return db.trieNodeCacheConfig
+}
+
+// GetTrieNodeLocalCacheByteLimit returns the byte size of trie node cache.
+func (db *Database) GetTrieNodeLocalCacheByteLimit() uint64 {
+	return uint64(db.trieNodeCacheConfig.LocalCacheSizeMiB) * 1024 * 1024
 }
 
 // RLockGCCachedNode locks the GC lock of CachedNode.
@@ -401,7 +392,7 @@ func (db *Database) NodeChildren(hash common.Hash) ([]common.Hash, error) {
 		return childrenHash, ErrZeroHashNode
 	}
 
-	n := db.node(hash)
+	n, _ := db.node(hash)
 	if n == nil {
 		return childrenHash, nil
 	}
@@ -493,7 +484,7 @@ func (db *Database) insertPreimage(hash common.Hash, preimage []byte) {
 // getCachedNode finds an encoded node in the trie node cache if enabled.
 func (db *Database) getCachedNode(hash common.Hash) []byte {
 	if db.trieNodeCache != nil {
-		if enc := db.trieNodeCache.Get(nil, hash[:]); enc != nil {
+		if enc := db.trieNodeCache.Get(hash[:]); enc != nil {
 			memcacheCleanHitMeter.Mark(1)
 			memcacheCleanReadMeter.Mark(int64(len(enc)))
 			return enc
@@ -511,13 +502,13 @@ func (db *Database) setCachedNode(hash, enc []byte) {
 	}
 }
 
-// node retrieves a cached trie node from memory, or returns nil if none can be
+// node retrieves a cached trie node from memory, or returns nil if node can be
 // found in the memory cache.
-func (db *Database) node(hash common.Hash) node {
+func (db *Database) node(hash common.Hash) (n node, fromDB bool) {
 	// Retrieve the node from the trie node cache if available
 	if enc := db.getCachedNode(hash); enc != nil {
 		if dec, err := decodeNode(hash[:], enc); err == nil {
-			return dec
+			return dec, false
 		} else {
 			logger.Error("node from cached trie node fails to be decoded!", "err", err)
 		}
@@ -528,16 +519,16 @@ func (db *Database) node(hash common.Hash) node {
 	node := db.nodes[hash]
 	db.lock.RUnlock()
 	if node != nil {
-		return node.obj(hash)
+		return node.obj(hash), false
 	}
 
 	// Content unavailable in memory, attempt to retrieve from disk
 	enc, err := db.diskDB.ReadCachedTrieNode(hash)
 	if err != nil || enc == nil {
-		return nil
+		return nil, true
 	}
 	db.setCachedNode(hash[:], enc)
-	return mustDecodeNode(hash[:], enc)
+	return mustDecodeNode(hash[:], enc), true
 }
 
 // Node retrieves an encoded cached trie node from memory. If it cannot be found
@@ -631,15 +622,15 @@ func (db *Database) preimage(hash common.Hash) ([]byte, error) {
 		return preimage, nil
 	}
 	// Content unavailable in memory, attempt to retrieve from disk
-	return db.diskDB.ReadCachedTrieNodePreimage(db.secureKey(hash[:]))
+	return db.diskDB.ReadCachedTrieNodePreimage(secureKey(hash))
 }
 
-// secureKey returns the database key for the preimage of key, as an ephemeral
-// buffer. The caller must not hold onto the return value because it will become
-// invalid on the next call.
-func (db *Database) secureKey(key []byte) []byte {
-	buf := append(db.seckeybuf[:0], secureKeyPrefix...)
-	buf = append(buf, key...)
+// secureKey returns the database key for the preimage of key (as a newly
+// allocated byte-slice)
+func secureKey(hash common.Hash) []byte {
+	buf := make([]byte, secureKeyLength)
+	copy(buf, secureKeyPrefix)
+	copy(buf[secureKeyPrefixLength:], hash[:])
 	return buf
 }
 
@@ -686,6 +677,12 @@ func (db *Database) reference(child common.Hash, parent common.Hash) {
 
 // Dereference removes an existing reference from a root node.
 func (db *Database) Dereference(root common.Hash) {
+	// Sanity check to ensure that the meta-root is not removed
+	if common.EmptyHash(root) {
+		logger.Error("Attempted to dereference the trie cache meta root")
+		return
+	}
+
 	db.gcLock.Lock()
 	defer db.gcLock.Unlock()
 
@@ -753,6 +750,7 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	db.lock.RLock()
 
 	nodes, nodeSize, start := len(db.nodes), db.nodesSize, time.Now()
+	preimagesSize := db.preimagesSize
 
 	// db.nodesSize only contains the useful data in the cache, but when reporting
 	// the total memory consumption, the maintenance metadata is also needed to be
@@ -827,9 +825,10 @@ func (db *Database) Cap(limit common.StorageSize) error {
 	memcacheFlushSizeGauge.Update(int64(nodeSize - db.nodesSize))
 	memcacheFlushNodesGauge.Update(int64(nodes - len(db.nodes)))
 
-	logger.Info("Persisted nodes from memory database by Cap", "nodes", nodes-len(db.nodes), "size", nodeSize-db.nodesSize, "time", time.Since(start),
-		"flushnodes", db.flushnodes, "flushsize", db.flushsize, "flushtime", db.flushtime, "livenodes", len(db.nodes), "livesize", db.nodesSize)
-
+	logger.Info("Persisted nodes from memory database by Cap", "nodes", nodes-len(db.nodes),
+		"size", nodeSize-db.nodesSize, "preimagesSize", preimagesSize-db.preimagesSize, "time", time.Since(start),
+		"flushnodes", db.flushnodes, "flushsize", db.flushsize, "flushtime", db.flushtime, "livenodes", len(db.nodes),
+		"livesize", db.nodesSize)
 	return nil
 }
 
@@ -837,9 +836,15 @@ func (db *Database) writeBatchPreimages() error {
 	// TODO-Klaytn What kind of batch should be used below?
 	preimagesBatch := db.diskDB.NewBatch(database.StateTrieDB)
 
+	// We reuse an ephemeral buffer for the keys. The batch Put operation
+	// copies it internally, so we can reuse it.
+	var keyBuf [secureKeyLength]byte
+	copy(keyBuf[:], secureKeyPrefix)
+
 	// Move all of the accumulated preimages into a write batch
 	for hash, preimage := range db.preimages {
-		if err := preimagesBatch.Put(db.secureKey(hash[:]), preimage); err != nil {
+		copy(keyBuf[secureKeyPrefixLength:], hash[:])
+		if err := preimagesBatch.Put(keyBuf[:], preimage); err != nil {
 			logger.Error("Failed to commit preimages from trie database", "err", err)
 			return err
 		}
@@ -1120,19 +1125,91 @@ func (db *Database) getLastNodeHashInFlushList() common.Hash {
 func (db *Database) UpdateMetricNodes() {
 	memcacheNodesGauge.Update(int64(len(db.nodes)))
 	if db.trieNodeCache != nil {
-		var stats fastcache.Stats
-		db.trieNodeCache.UpdateStats(&stats)
+		db.trieNodeCache.UpdateStats()
+	}
+}
 
-		memcacheFastMisses.Update(int64(stats.Misses))
-		memcacheFastCollisions.Update(int64(stats.Collisions))
-		memcacheFastCorruptions.Update(int64(stats.Corruptions))
-		memcacheFastEntriesCount.Update(int64(stats.EntriesCount))
-		memcacheFastBytesSize.Update(int64(stats.BytesSize))
-		memcacheFastGetBigCalls.Update(int64(stats.GetBigCalls))
-		memcacheFastSetBigCalls.Update(int64(stats.SetBigCalls))
-		memcacheFastTooBigKeyErrors.Update(int64(stats.TooBigKeyErrors))
-		memcacheFastInvalidMetavalueErrors.Update(int64(stats.InvalidMetavalueErrors))
-		memcacheFastInvalidValueLenErrors.Update(int64(stats.InvalidValueLenErrors))
-		memcacheFastInvalidValueHashErrors.Update(int64(stats.InvalidValueHashErrors))
+var errDisabledTrieNodeCache = errors.New("trie node cache is disabled, nothing to save to file")
+var errSavingTrieNodeCacheInProgress = errors.New("saving trie node cache has been triggered already")
+
+func (db *Database) CanSaveTrieNodeCacheToFile() error {
+	if db.trieNodeCache == nil {
+		return errDisabledTrieNodeCache
+	}
+	if db.savingTrieNodeCacheTriggered {
+		return errSavingTrieNodeCacheInProgress
+	}
+	return nil
+}
+
+// SaveTrieNodeCacheToFile saves the current cached trie nodes to file to reuse when the node restarts
+func (db *Database) SaveTrieNodeCacheToFile(filePath string, concurrency int) {
+	db.savingTrieNodeCacheTriggered = true
+	start := time.Now()
+	logger.Info("start saving cache to file",
+		"filePath", filePath, "concurrency", concurrency)
+	if err := db.trieNodeCache.SaveToFile(filePath, concurrency); err != nil {
+		logger.Error("failed to save cache to file",
+			"filePath", filePath, "elapsed", time.Since(start), "err", err)
+	} else {
+		logger.Info("successfully saved cache to file",
+			"filePath", filePath, "elapsed", time.Since(start))
+	}
+	db.savingTrieNodeCacheTriggered = false
+}
+
+// DumpPeriodically atomically saves fast cache data to the given dir with the specified interval.
+func (db *Database) SaveCachePeriodically(c *TrieNodeCacheConfig, stopCh <-chan struct{}) {
+	rand.Seed(time.Now().UnixNano())
+	randomVal := 0.5 + rand.Float64()/2.0 // 0.5 <= randomVal < 1.0
+	startTime := time.Duration(int(randomVal * float64(c.FastCacheSavePeriod)))
+	logger.Info("first periodic cache saving will be triggered", "after", startTime)
+
+	timer := time.NewTimer(startTime)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			if err := db.CanSaveTrieNodeCacheToFile(); err != nil {
+				logger.Warn("failed to trigger periodic cache saving", "err", err)
+				continue
+			}
+			db.SaveTrieNodeCacheToFile(c.FastCacheFileDir, 1)
+			timer.Reset(c.FastCacheSavePeriod)
+		case <-stopCh:
+			return
+		}
+	}
+}
+
+// NodeInfo is a struct used for collecting trie statistics
+type NodeInfo struct {
+	Depth    int  // 0 if not a leaf node
+	Finished bool // true if the uppermost call is finished
+}
+
+// CollectChildrenStats collects the depth of the trie recursively
+func (db *Database) CollectChildrenStats(node common.Hash, depth int, resultCh chan<- NodeInfo) {
+	n, _ := db.node(node)
+	if n == nil {
+		return
+	}
+	// retrieve the children of the given node
+	childrenNodes, err := db.NodeChildren(node)
+	if err != nil {
+		logger.Error("failed to retrieve the children nodes",
+			"node", node.String(), "err", err)
+		return
+	}
+	// write the depth of the node only if the node is a leaf node, otherwise set 0
+	resultDepth := 0
+	if len(childrenNodes) == 0 {
+		resultDepth = depth
+	}
+	// send the result to the channel and iterate its children
+	resultCh <- NodeInfo{Depth: resultDepth}
+	for _, child := range childrenNodes {
+		db.CollectChildrenStats(child, depth+1, resultCh)
 	}
 }

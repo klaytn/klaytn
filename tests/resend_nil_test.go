@@ -19,13 +19,14 @@ package tests
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common/profile"
-	"github.com/klaytn/klaytn/params"
 	"math/big"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/params"
 )
 
 // BenchmarkResendNilDereference checks nil pointer dereferences while

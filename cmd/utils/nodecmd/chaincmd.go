@@ -22,17 +22,19 @@ package nodecmd
 
 import (
 	"encoding/json"
+	"errors"
+	"os"
+	"strings"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/cmd/utils"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"strings"
 )
 
 var logger = log.NewModuleLogger(log.CMDUtilsNodeCMD)
@@ -45,10 +47,17 @@ var (
 		ArgsUsage: "<genesisPath>",
 		Flags: []cli.Flag{
 			utils.DbTypeFlag,
-			utils.NoPartitionedDBFlag,
-			utils.NumStateTriePartitionsFlag,
+			utils.SingleDBFlag,
+			utils.NumStateTrieShardsFlag,
+			utils.DynamoDBTableNameFlag,
+			utils.DynamoDBRegionFlag,
+			utils.DynamoDBIsProvisionedFlag,
+			utils.DynamoDBReadCapacityFlag,
+			utils.DynamoDBWriteCapacityFlag,
+			utils.DynamoDBReadOnlyFlag,
 			utils.LevelDBCompressionTypeFlag,
 			utils.DataDirFlag,
+			utils.OverwriteGenesisFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -66,187 +75,141 @@ func initGenesis(ctx *cli.Context) error {
 	// Make sure we have a valid genesis JSON
 	genesisPath := ctx.Args().First()
 	if len(genesisPath) == 0 {
-		log.Fatalf("Must supply path to genesis JSON file")
+		logger.Crit("Must supply path to genesis JSON file")
 	}
 	file, err := os.Open(genesisPath)
 	if err != nil {
-		log.Fatalf("Failed to read genesis file: %v", err)
+		logger.Crit("Failed to read genesis file", "err", err)
 	}
 	defer file.Close()
 
 	genesis := new(blockchain.Genesis)
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
-		log.Fatalf("invalid genesis file: %v", err)
+		logger.Crit("Invalid genesis file", "err", err)
 		return err
 	}
-
-	genesis = checkGenesisAndFillDefaultIfNeeded(genesis)
-
-	if genesis.Config.Istanbul != nil {
-		if err := governance.CheckGenesisValues(genesis.Config); err != nil {
-			logger.Crit("Error in genesis json values", "err", err)
-		}
-
-		// Check if governingNode is properly set
-		if strings.ToLower(genesis.Config.Governance.GovernanceMode) == "single" {
-			if istanbulExtra, err := decodeExtra(genesis.ExtraData); err != nil {
-				logger.Crit("Extra data couldn't be decoded. Please check if your extra data is correct", "err", err)
-			} else {
-				var found bool
-				for _, v := range istanbulExtra.Validators {
-					if v == genesis.Config.Governance.GoverningNode {
-						found = true
-						break
-					}
-				}
-				if !found {
-					logger.Crit("GoverningNode is not in the validator list. Please check if your governingNode address is correct")
-				}
-			}
-		}
+	if genesis.Config == nil {
+		logger.Crit("Genesis config is not set")
 	}
 
-	if genesis.Config.Governance.Reward.StakingUpdateInterval != 0 {
-		params.SetStakingUpdateInterval(genesis.Config.Governance.Reward.StakingUpdateInterval)
-	} else {
-		genesis.Config.Governance.Reward.StakingUpdateInterval = params.StakingUpdateInterval()
+	// Update undefined config with default values
+	genesis.Config.SetDefaults()
+
+	// Validate config values
+	if err := ValidateGenesisConfig(genesis); err != nil {
+		logger.Crit("Invalid genesis", "err", err)
 	}
 
-	if genesis.Config.Governance.Reward.ProposerUpdateInterval != 0 {
-		params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
-	} else {
-		genesis.Config.Governance.Reward.ProposerUpdateInterval = params.ProposerUpdateInterval()
-	}
-
-	data := getGovernanceItemsFromGenesis(genesis)
-	gbytes, err := json.Marshal(data.Items())
+	// Set genesis.Governance and reward intervals
+	govSet := governance.GetGovernanceItemsFromChainConfig(genesis.Config)
+	govItemBytes, err := json.Marshal(govSet.Items())
 	if err != nil {
 		logger.Crit("Failed to json marshaling governance data", "err", err)
 	}
-	if genesis.Governance, err = rlp.EncodeToBytes(gbytes); err != nil {
+	if genesis.Governance, err = rlp.EncodeToBytes(govItemBytes); err != nil {
 		logger.Crit("Failed to encode initial settings. Check your genesis.json", "err", err)
 	}
+	params.SetStakingUpdateInterval(genesis.Config.Governance.Reward.StakingUpdateInterval)
+	params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
+
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
-
 	parallelDBWrite := !ctx.GlobalIsSet(utils.NoParallelDBWriteFlag.Name)
-	partitioned := !ctx.GlobalIsSet(utils.NoPartitionedDBFlag.Name)
-	numStateTriePartitions := ctx.GlobalUint(utils.NumStateTriePartitionsFlag.Name)
-	for _, name := range []string{"chaindata", "lightchaindata"} {
-		dbc := &database.DBConfig{Dir: name, DBType: database.LevelDB, ParallelDBWrite: parallelDBWrite,
-			Partitioned: partitioned, NumStateTriePartitions: numStateTriePartitions,
-			LevelDBCacheSize: 0, OpenFilesLimit: 0}
-		chaindb := stack.OpenDatabase(dbc)
+	singleDB := ctx.GlobalIsSet(utils.SingleDBFlag.Name)
+	numStateTrieShards := ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name)
+	overwriteGenesis := ctx.GlobalBool(utils.OverwriteGenesisFlag.Name)
+
+	dbtype := database.DBType(ctx.GlobalString(utils.DbTypeFlag.Name)).ToValid()
+	if len(dbtype) == 0 {
+		logger.Crit("invalid dbtype", "dbtype", ctx.GlobalString(utils.DbTypeFlag.Name))
+	}
+
+	var dynamoDBConfig *database.DynamoDBConfig
+	if dbtype == database.DynamoDB {
+		dynamoDBConfig = &database.DynamoDBConfig{
+			TableName:          ctx.GlobalString(utils.DynamoDBTableNameFlag.Name),
+			Region:             ctx.GlobalString(utils.DynamoDBRegionFlag.Name),
+			IsProvisioned:      ctx.GlobalBool(utils.DynamoDBIsProvisionedFlag.Name),
+			ReadCapacityUnits:  ctx.GlobalInt64(utils.DynamoDBReadCapacityFlag.Name),
+			WriteCapacityUnits: ctx.GlobalInt64(utils.DynamoDBWriteCapacityFlag.Name),
+			ReadOnly:           ctx.GlobalBool(utils.DynamoDBReadOnlyFlag.Name),
+		}
+	}
+
+	for _, name := range []string{"chaindata"} { // Removed "lightchaindata" since Klaytn doesn't use it
+		dbc := &database.DBConfig{Dir: name, DBType: dbtype, ParallelDBWrite: parallelDBWrite,
+			SingleDB: singleDB, NumStateTrieShards: numStateTrieShards,
+			LevelDBCacheSize: 0, OpenFilesLimit: 0, DynamoDBConfig: dynamoDBConfig}
+		chainDB := stack.OpenDatabase(dbc)
+
 		// Initialize DeriveSha implementation
 		blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 
-		_, hash, err := blockchain.SetupGenesisBlock(chaindb, genesis, params.UnusedNetworkId, false)
+		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis, params.UnusedNetworkId, false, overwriteGenesis)
 		if err != nil {
-			log.Fatalf("Failed to write genesis block: %v", err)
+			logger.Crit("Failed to write genesis block", "err", err)
 		}
-		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
 
-		chaindb.Close()
+		// Write governance items to database
+		// If governance data already exist, it'll be skipped with an error log and will not return an error
+		if err := governance.NewGovernance(genesis.Config, chainDB).WriteGovernance(0, govSet,
+			governance.NewGovernanceSet()); err != nil {
+			logger.Crit("Failed to write governance items", "err", err)
+		}
+
+		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
+		chainDB.Close()
 	}
 	return nil
 }
 
-func getGovernanceItemsFromGenesis(genesis *blockchain.Genesis) governance.GovernanceSet {
-	g := governance.NewGovernanceSet()
-
-	if genesis.Config.Governance != nil {
-		governance := genesis.Config.Governance
-		if err := g.SetValue(params.GovernanceMode, governance.GovernanceMode); err != nil {
-			writeFailLog(params.GovernanceMode, err)
-		}
-		if err := g.SetValue(params.GoverningNode, governance.GoverningNode); err != nil {
-			writeFailLog(params.GoverningNode, err)
-		}
-		if err := g.SetValue(params.UnitPrice, genesis.Config.UnitPrice); err != nil {
-			writeFailLog(params.UnitPrice, err)
-		}
-		if err := g.SetValue(params.MintingAmount, governance.Reward.MintingAmount.String()); err != nil {
-			writeFailLog(params.MintingAmount, err)
-		}
-		if err := g.SetValue(params.Ratio, governance.Reward.Ratio); err != nil {
-			writeFailLog(params.Ratio, err)
-		}
-		if err := g.SetValue(params.UseGiniCoeff, governance.Reward.UseGiniCoeff); err != nil {
-			writeFailLog(params.UseGiniCoeff, err)
-		}
-		if err := g.SetValue(params.DeferredTxFee, governance.Reward.DeferredTxFee); err != nil {
-			writeFailLog(params.DeferredTxFee, err)
-		}
-		if err := g.SetValue(params.MinimumStake, governance.Reward.MinimumStake.String()); err != nil {
-			writeFailLog(params.MinimumStake, err)
-		}
-		if err := g.SetValue(params.StakeUpdateInterval, governance.Reward.StakingUpdateInterval); err != nil {
-			writeFailLog(params.StakeUpdateInterval, err)
-		}
-		if err := g.SetValue(params.ProposerRefreshInterval, governance.Reward.ProposerUpdateInterval); err != nil {
-			writeFailLog(params.ProposerRefreshInterval, err)
-		}
+func ValidateGenesisConfig(g *blockchain.Genesis) error {
+	if g.Config.ChainID == nil {
+		return errors.New("chainID is not specified")
 	}
 
-	if genesis.Config.Istanbul != nil {
-		istanbul := genesis.Config.Istanbul
-		if err := g.SetValue(params.Epoch, istanbul.Epoch); err != nil {
-			writeFailLog(params.Epoch, err)
+	if g.Config.Clique == nil && g.Config.Istanbul == nil {
+		return errors.New("consensus engine should be configured")
+	}
+
+	if g.Config.Clique != nil && g.Config.Istanbul != nil {
+		return errors.New("only one consensus engine can be configured")
+	}
+
+	if g.Config.Governance == nil || g.Config.Governance.Reward == nil {
+		return errors.New("governance and reward policies should be configured")
+	}
+
+	if g.Config.Governance.Reward.ProposerUpdateInterval == 0 || g.Config.Governance.Reward.
+		StakingUpdateInterval == 0 {
+		return errors.New("proposerUpdateInterval and stakingUpdateInterval cannot be zero")
+	}
+
+	if g.Config.GetConsensusEngine() == params.UseIstanbul {
+		if err := governance.CheckGenesisValues(g.Config); err != nil {
+			return err
 		}
-		if err := g.SetValue(params.Policy, istanbul.ProposerPolicy); err != nil {
-			writeFailLog(params.Policy, err)
+
+		// TODO-Klaytn: Add validation logic for other GovernanceModes
+		// Check if governingNode is properly set
+		if strings.ToLower(g.Config.Governance.GovernanceMode) == "single" {
+			var found bool
+
+			istanbulExtra, err := types.ExtractIstanbulExtra(&types.Header{Extra: g.ExtraData})
+			if err != nil {
+				return err
+			}
+
+			for _, v := range istanbulExtra.Validators {
+				if v == g.Config.Governance.GoverningNode {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return errors.New("governingNode is not in the validator list")
+			}
 		}
-		if err := g.SetValue(params.CommitteeSize, istanbul.SubGroupSize); err != nil {
-			writeFailLog(params.CommitteeSize, err)
-		}
 	}
-	return g
-}
-
-func writeFailLog(key int, err error) {
-	msg := "Failed to set " + governance.GovernanceKeyMapReverse[key]
-	logger.Crit(msg, "err", err)
-}
-
-func checkGenesisAndFillDefaultIfNeeded(genesis *blockchain.Genesis) *blockchain.Genesis {
-	engine := params.UseIstanbul
-	valueChanged := false
-	if genesis.Config == nil {
-		genesis.Config = new(params.ChainConfig)
-	}
-
-	// using Clique as a consensus engine
-	if genesis.Config.Istanbul == nil && genesis.Config.Clique != nil {
-		engine = params.UseClique
-		if genesis.Config.Governance == nil {
-			genesis.Config.Governance = governance.GetDefaultGovernanceConfig(engine)
-		}
-		valueChanged = true
-	} else if genesis.Config.Istanbul == nil && genesis.Config.Clique == nil {
-		engine = params.UseIstanbul
-		genesis.Config.Istanbul = governance.GetDefaultIstanbulConfig()
-		valueChanged = true
-	} else if genesis.Config.Istanbul != nil && genesis.Config.Clique != nil {
-		// Error case. Both istanbul and Clique exists
-		logger.Crit("Both clique and istanbul configuration exists. Only one configuration can be applied. Exiting..")
-	}
-
-	// If we don't have governance config
-	if genesis.Config.Governance == nil {
-		genesis.Config.Governance = governance.GetDefaultGovernanceConfig(engine)
-		valueChanged = true
-	}
-
-	if valueChanged {
-		logger.Warn("Some input value of genesis.json have been set to default or changed")
-	}
-	return genesis
-}
-
-func decodeExtra(extraData []byte) (*types.IstanbulExtra, error) {
-	istanbulExtra, err := types.ExtractIstanbulExtra(&types.Header{Extra: extraData})
-	if err != nil {
-		return nil, err
-	}
-	return istanbulExtra, nil
+	return nil
 }

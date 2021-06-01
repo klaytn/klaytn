@@ -17,6 +17,9 @@
 package cn
 
 import (
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/datasync/downloader"
@@ -24,8 +27,6 @@ import (
 	"github.com/klaytn/klaytn/params"
 	mocks2 "github.com/klaytn/klaytn/work/mocks"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func newCN(t *testing.T) (*gomock.Controller, *MockBackendProtocolManager, *mocks.MockMiner, *CN) {

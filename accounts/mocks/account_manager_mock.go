@@ -5,10 +5,11 @@
 package mock_accounts
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	accounts "github.com/klaytn/klaytn/accounts"
 	event "github.com/klaytn/klaytn/event"
-	reflect "reflect"
 )
 
 // MockAccountManager is a mock of AccountManager interface

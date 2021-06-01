@@ -17,18 +17,19 @@
 package governance
 
 import (
+	"math/big"
+	"reflect"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/consensus/istanbul/validator"
 	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"reflect"
-	"testing"
 )
 
 type voteValue struct {
@@ -119,19 +120,19 @@ var goodVotes = []voteValue{
 
 func getTestConfig() *params.ChainConfig {
 	config := params.TestChainConfig
-	config.Governance = GetDefaultGovernanceConfig(params.UseIstanbul)
-	config.Istanbul = GetDefaultIstanbulConfig()
+	config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+	config.Istanbul = params.GetDefaultIstanbulConfig()
 	return config
 }
 
 func getGovernance() *Governance {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 	config := getTestConfig()
-	return NewGovernance(config, dbm)
+	return NewGovernanceInitialize(config, dbm)
 }
 
 func TestGetDefaultGovernanceConfig(t *testing.T) {
-	tstGovernance := GetDefaultGovernanceConfig(params.UseIstanbul)
+	tstGovernance := params.GetDefaultGovernanceConfig(params.UseIstanbul)
 
 	want := []interface{}{
 		params.DefaultUseGiniCoeff,
@@ -528,7 +529,7 @@ func TestBaoBabGenesisHash(t *testing.T) {
 	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 
 	db := database.NewMemoryDBManager()
-	block, _ := genesis.Commit(db)
+	block, _ := genesis.Commit(common.Hash{}, db)
 	if block.Hash() != baobabHash {
 		t.Errorf("Generated hash is not equal to Baobab's hash. Want %v, Have %v", baobabHash.String(), block.Hash().String())
 	}
@@ -541,7 +542,7 @@ func TestCypressGenesisHash(t *testing.T) {
 	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
 
 	db := database.NewMemoryDBManager()
-	block, _ := genesis.Commit(db)
+	block, _ := genesis.Commit(common.Hash{}, db)
 	if block.Hash() != cypressHash {
 		t.Errorf("Generated hash is not equal to Cypress's hash. Want %v, Have %v", cypressHash.String(), block.Hash().String())
 	}
@@ -683,7 +684,7 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	config := getTestConfig()
 	config.Governance.GovernanceMode = GovernanceModeBallot
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
-	gov := NewGovernance(config, dbm)
+	gov := NewGovernanceInitialize(config, dbm)
 	gov.nodeAddress.Store(council[len(council)-1])
 
 	votes := make([]GovernanceVote, 0)

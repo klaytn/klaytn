@@ -17,14 +17,15 @@
 package validator
 
 import (
+	"reflect"
+	"strings"
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/stretchr/testify/assert"
-	"reflect"
-	"strings"
-	"testing"
 )
 
 func TestNewWeightedCouncil(t *testing.T) {

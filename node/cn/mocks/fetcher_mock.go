@@ -5,12 +5,13 @@
 package mocks
 
 import (
+	reflect "reflect"
+	time "time"
+
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	fetcher "github.com/klaytn/klaytn/datasync/fetcher"
-	reflect "reflect"
-	time "time"
 )
 
 // MockProtocolManagerFetcher is a mock of ProtocolManagerFetcher interface

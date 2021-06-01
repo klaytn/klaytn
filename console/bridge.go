@@ -23,11 +23,12 @@ package console
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/rpc"
 	"io"
 	"strings"
 	"time"
+
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/networks/rpc"
 
 	"github.com/robertkrimen/otto"
 )

@@ -22,13 +22,14 @@ package state
 import (
 	"bytes"
 	"fmt"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/pkg/errors"
-	"time"
 )
 
 var (

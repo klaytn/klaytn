@@ -22,6 +22,8 @@ package api
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
@@ -33,7 +35,6 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
-	"math/big"
 )
 
 //go:generate mockgen -destination=api/mocks/backend_mock.go github.com/klaytn/klaytn/api Backend
@@ -47,6 +48,7 @@ type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
 	AccountManager() accounts.AccountManager
+	RPCGasCap() *big.Int // global gas cap for klay_call over rpc: DoS protection
 
 	// BlockChain API
 	SetHead(number uint64)
@@ -63,7 +65,6 @@ type Backend interface {
 	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription
 	SubscribeChainSideEvent(ch chan<- blockchain.ChainSideEvent) event.Subscription
 	IsParallelDBWrite() bool
-	GetNonceInCache(address common.Address) (uint64, bool)
 
 	IsSenderTxHashIndexingEnabled() bool
 

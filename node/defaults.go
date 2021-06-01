@@ -22,13 +22,18 @@ package node
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/p2p/nat"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/klaytn/klaytn/networks/rpc"
+
+	"github.com/klaytn/klaytn/storage/database"
+
+	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/klaytn/klaytn/networks/p2p/nat"
 )
 
 const (
@@ -50,6 +55,7 @@ var DefaultConfig = Config{
 	HTTPPort:         DefaultHTTPPort,
 	HTTPModules:      []string{"net", "web3"},
 	HTTPVirtualHosts: []string{"localhost"},
+	HTTPTimeouts:     rpc.DefaultHTTPTimeouts,
 	WSPort:           DefaultWSPort,
 	WSModules:        []string{"net", "web3"},
 	GRPCPort:         DefaultGRPCPort,
@@ -60,8 +66,8 @@ var DefaultConfig = Config{
 	},
 }
 
-func DefaultDBType() string {
-	return "leveldb"
+func DefaultDBType() database.DBType {
+	return database.LevelDB
 }
 
 // DefaultDataDir is the default data directory to use for the databases and other

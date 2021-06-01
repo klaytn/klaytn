@@ -17,9 +17,6 @@
 package sc
 
 import (
-	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -27,6 +24,10 @@ import (
 	"path"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/accounts/keystore"
+	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestBridgeAccountLockUnlock checks the lock/unlock functionality.

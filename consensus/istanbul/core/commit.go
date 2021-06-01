@@ -21,9 +21,10 @@
 package core
 
 import (
+	"reflect"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"reflect"
 )
 
 func (c *core) sendCommit() {
@@ -96,12 +97,29 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 
 	c.acceptCommit(msg, src)
 
+	// Change to Prepared state if we've received enough PREPARE/COMMIT messages or it is locked
+	// and we are in earlier state before Prepared state.
+	// Both of PREPARE and COMMIT messages are counted since the nodes which is hashlocked in
+	// the previous round skip sending PREPARE messages.
+	if c.state.Cmp(StatePrepared) < 0 {
+		if c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
+			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
+			c.setState(StatePrepared)
+			c.sendCommit()
+		} else if c.current.GetPrepareOrCommitSize() > 2*c.valSet.F() {
+			logger.Info("received more than 2f agreements and change state to prepared", "msgType", msgCommit)
+			c.current.LockHash()
+			c.setState(StatePrepared)
+			c.sendCommit()
+		}
+	}
+
 	// Commit the proposal once we have enough COMMIT messages and we are not in the Committed state.
 	//
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
 	//logger.Error("### consensus check","len(commits)",c.current.Commits.Size(),"f(2/3)",2*c.valSet.F(),"state",c.state.Cmp(StateCommitted))
-	if c.current.Commits.Size() > 2*c.valSet.F() && c.state.Cmp(StateCommitted) < 0 {
+	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() > 2*c.valSet.F() {
 		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
 		c.current.LockHash()
 		c.commit()

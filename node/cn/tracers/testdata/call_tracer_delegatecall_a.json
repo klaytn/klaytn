@@ -1,0 +1,87 @@
+{
+  "_comment": "This test json file is a contract creation with DELEGATECALL opcode from an internal transaction. The associated code is under testdata/contracts/DelegateCaller.sol.",
+  "context": {
+    "blockscore": "0x1",
+    "number": "36881228",
+    "timestamp": "1598436657"
+  },
+  "genesis": {
+    "alloc": {
+      "0x13cf0d18bcb898efd4e85ae2bb65a443ab86023c": {
+        "balance": "0x0",
+        "code": "0x6080604052348015600f57600080fd5b506004361060285760003560e01c8063c605f76c14602d575b600080fd5b60336035565b005b56fea165627a7a7230582014f02734fa3172fdb1bcf42f334c98ade1dfeb64d80a33e3e3b5dd800d93b2700029",
+        "nonce": "1",
+        "storage": {}
+      },
+      "0x2074f91470365144df78c333948814fe4158af5a": {
+        "balance": "0x0",
+        "code": "0x608060405234801561001057600080fd5b506004361061002b5760003560e01c80633917b3df14610030575b600080fd5b61003861003a565b005b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166040516024016040516020818303038152906040527fc605f76c000000000000000000000000000000000000000000000000000000007bffffffffffffffffffffffffffffffffffffffffffffffffffffffff19166020820180517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff83818316178352505050506040518082805190602001908083835b602083106101285780518252602082019150602081019050602083039250610105565b6001836020036101000a038019825116818451168082178552505050505050905001915050600060405180830381855af49150503d8060008114610188576040519150601f19603f3d011682016040523d82523d6000602084013e61018d565b606091505b50505056fea165627a7a7230582052ae56a4e5563cef4bf5c1154adde217083522d53bf2eb6ffc1728410a645b120029",
+        "nonce": "1",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x00000000000000000000000013cf0d18bcb898efd4e85ae2bb65a443ab86023c"
+        }
+      },
+      "0x71562b71999873db5b286df957af199ec94617f7": {
+        "balance": "0x4414100ed4daac00",
+        "code": "0x",
+        "nonce": "30",
+        "storage": {}
+      }
+    },
+    "blockscore": "0x1",
+    "config": {
+      "chainId": 1001,
+      "deriveShaImpl": 2,
+      "governance": {
+        "governanceMode": "single",
+        "governingNode": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+        "reward": {
+          "deferredTxFee": true,
+          "minimumStake": 5000000,
+          "mintingAmount": 9600000000000000000,
+          "proposerUpdateInterval": 3600,
+          "ratio": "34/54/12",
+          "stakingUpdateInterval": 86400,
+          "useGiniCoeff": true
+        }
+      },
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 2,
+        "sub": 22
+      },
+      "unitPrice": 25000000000
+    },
+    "extraData": "0xd883010501846b6c617988676f312e31342e36856c696e757800000000000000f90164f85494571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c89499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb2b841642c8e7207b41f92fb62c726c4a50536416edd54eb08a0f62433635c84be277b733c6a6765c1b6919c80d2db4ddaed51b2fa7304be97f7272517018c0a9869d000f8c9b841da36a903c151a41d2215d4837cf671e527eb39f4646d455346b2ee8c9027285f663cbbbd92ba7355f8c6f6cf7ff760a6eec8cda42b3a45c62b838fae37eb80c101b8418e51eda2a892e37f4839cec7428b26a584232afdf1e34d9f66d8207afef3180a61092b6fff6a3f8de7e6e5ce998508ba88cb62d4fe2d587a28420fb3b33c5fbb01b841347cb82b6ff94bd8fd1ab72862bd72ebd9d0f60e7417cd68db8ad3deb4a8a25752d0ae75199e3a564e48b4f75864750f0925aaf67a2d5ede57ac6bf1093b261100",
+    "hash": "0x1df11f589d9223abb03309e965039c35764c6f220b50790d1a2de581ee4534a4",
+    "number": "36881227",
+    "reward": "0xa86fd667c6a340c53cc5d796ba84dbe1f29cb2f7",
+    "stateRoot": "0x398a2e82ae0f28e8679fb8961537103466a5453c1453b8f839242980980761f4",
+    "timestamp": "1598436656",
+    "timestampFoS": 1,
+    "totalBlockScore": "0x232c34c",
+    "voteData": "0x"
+  },
+  "input": "0xf86a1e8505d21dba00825952942074f91470365144df78c333948814fe4158af5a80843917b3df8207f6a0e1d66cd31b35d9904ea3fa00e4b5168461f05bf77df19728675b061ee1d22b07a00d9ddb2f09af2a067796f04856a052c328c186b6c150bf869590282a5930d48c",
+  "result": {
+    "calls": [
+      {
+        "from": "0x2074f91470365144df78c333948814fe4158af5a",
+        "gas": "0xb3",
+        "gasUsed": "0x7a",
+        "input": "0xc605f76c",
+        "output": "0x",
+        "to": "0x13cf0d18bcb898efd4e85ae2bb65a443ab86023c",
+        "type": "DELEGATECALL"
+      }
+    ],
+    "from": "0x71562b71999873db5b286df957af199ec94617f7",
+    "gas": "0x63a",
+    "gasUsed": "0x63a",
+    "input": "0x3917b3df",
+    "output": "0x",
+    "to": "0x2074f91470365144df78c333948814fe4158af5a",
+    "type": "CALL",
+    "value": "0x0"
+  }
+}

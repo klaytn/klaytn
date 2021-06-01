@@ -20,18 +20,19 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/ser/rlp"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/pkg/errors"
 	"math/big"
 	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/storage/database"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -181,7 +182,7 @@ type Governance struct {
 
 	db           database.DBManager
 	itemCache    common.Cache
-	idxCache     []uint64
+	idxCache     []uint64 // elements should be in ascending order
 	idxCacheLock *sync.RWMutex
 
 	// The block number when current governance information was changed
@@ -400,8 +401,9 @@ func (gs *GovernanceSet) Merge(change map[string]interface{}) {
 	}
 }
 
+// NewGovernance creates Governance with the given configuration.
 func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
-	ret := Governance{
+	return &Governance{
 		ChainConfig:              chainConfig,
 		voteMap:                  NewVoteMap(),
 		db:                       dbm,
@@ -413,11 +415,18 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 		GovernanceVotes:          NewGovernanceVotes(),
 		idxCacheLock:             new(sync.RWMutex),
 	}
+}
+
+// NewGovernanceInitialize creates Governance with the given configuration and read governance state from DB.
+// If any items are not stored in DB, it stores governance items of the genesis block to DB.
+func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBManager) *Governance {
+	ret := NewGovernance(chainConfig, dbm)
 	// nil is for testing or simple function usage
 	if dbm != nil {
+		ret.ReadGovernanceState()
 		if err := ret.initializeCache(); err != nil {
 			// If this is the first time to run, store governance information for genesis block on database
-			cfg := getGovernanceItemsFromChainConfig(chainConfig)
+			cfg := GetGovernanceItemsFromChainConfig(chainConfig)
 			if err := ret.WriteGovernance(0, cfg, NewGovernanceSet()); err != nil {
 				logger.Crit("Error in writing governance information", "err", err)
 			}
@@ -426,9 +435,18 @@ func NewGovernance(chainConfig *params.ChainConfig, dbm database.DBManager) *Gov
 				logger.Crit("No governance cache index found in a database", "err", err)
 			}
 		}
-		ret.ReadGovernanceState()
 	}
-	return &ret
+	return ret
+}
+
+func (g *Governance) updateGovernanceParams() {
+	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
+	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
+
+	// NOTE: HumanReadable related functions are inactivated now
+	if txGasHumanReadable, ok := g.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
+		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
+	}
 }
 
 func (g *Governance) SetNodeAddress(addr common.Address) {
@@ -550,44 +568,8 @@ func (gov *Governance) updateChangeSet(vote GovernanceVote) bool {
 	return false
 }
 
-func GetDefaultGovernanceConfig(engine params.EngineType) *params.GovernanceConfig {
-	gov := &params.GovernanceConfig{
-		GovernanceMode: params.DefaultGovernanceMode,
-		GoverningNode:  common.HexToAddress(params.DefaultGoverningNode),
-		Reward:         GetDefaultRewardConfig(),
-	}
-	return gov
-}
-
-func GetDefaultIstanbulConfig() *params.IstanbulConfig {
-	return &params.IstanbulConfig{
-		Epoch:          params.DefaultEpoch,
-		ProposerPolicy: params.DefaultProposerPolicy,
-		SubGroupSize:   params.DefaultSubGroupSize,
-	}
-}
-
-func GetDefaultRewardConfig() *params.RewardConfig {
-	return &params.RewardConfig{
-		MintingAmount:          big.NewInt(params.DefaultMintingAmount),
-		Ratio:                  params.DefaultRatio,
-		UseGiniCoeff:           params.DefaultUseGiniCoeff,
-		DeferredTxFee:          params.DefaultDefferedTxFee,
-		StakingUpdateInterval:  uint64(86400),
-		ProposerUpdateInterval: uint64(3600),
-		MinimumStake:           big.NewInt(2000000),
-	}
-}
-
-func GetDefaultCliqueConfig() *params.CliqueConfig {
-	return &params.CliqueConfig{
-		Epoch:  params.DefaultEpoch,
-		Period: params.DefaultPeriod,
-	}
-}
-
 func CheckGenesisValues(c *params.ChainConfig) error {
-	gov := NewGovernance(c, nil)
+	gov := NewGovernanceInitialize(c, nil)
 
 	var tstMap = map[string]interface{}{
 		"istanbul.epoch":                c.Istanbul.Epoch,
@@ -618,6 +600,8 @@ func newGovernanceCache() common.Cache {
 	return cache
 }
 
+// initializeCache reads governance item data from database and updates Governance.itemCache.
+// The latest governance item data of Governance.itemCache is imported to Governance.currentSet.
 func (g *Governance) initializeCache() error {
 	// get last n governance change block number
 	indices, err := g.db.ReadRecentGovernanceIdx(params.GovernanceIdxCacheLimit)
@@ -637,9 +621,14 @@ func (g *Governance) initializeCache() error {
 		}
 	}
 
-	// the last one is the one to be used now
-	ret, _ := g.itemCache.Get(getGovernanceCacheKey(g.actualGovernanceBlock.Load().(uint64)))
-	g.currentSet.Import(ret.(map[string]interface{}))
+	governanceBlock := g.actualGovernanceBlock.Load().(uint64)
+	governanceStateBlock := atomic.LoadUint64(&g.lastGovernanceStateBlock)
+	if governanceBlock >= governanceStateBlock {
+		ret, _ := g.itemCache.Get(getGovernanceCacheKey(governanceBlock))
+		g.currentSet.Import(ret.(map[string]interface{}))
+		g.updateGovernanceParams()
+	}
+
 	return nil
 }
 
@@ -659,6 +648,8 @@ func (g *Governance) addGovernanceCache(num uint64, data GovernanceSet) {
 	defer g.idxCacheLock.Unlock()
 
 	if len(g.idxCache) > 0 && num <= g.idxCache[len(g.idxCache)-1] {
+		logger.Error("The same or more recent governance index exist. Skip updating governance cache",
+			"newIdx", num, "govIdxes", g.idxCache)
 		return
 	}
 	cKey := getGovernanceCacheKey(num)
@@ -684,6 +675,8 @@ func (g *Governance) WriteGovernance(num uint64, data GovernanceSet, delta Gover
 	g.idxCacheLock.RUnlock()
 
 	if len(indices) > 0 && num <= indices[len(indices)-1] {
+		logger.Error("The same or more recent governance index exist. Skip writing governance",
+			"newIdx", num, "govIdxes", indices)
 		return nil
 	}
 
@@ -928,6 +921,8 @@ func (gov *Governance) WriteGovernanceState(num uint64, isCheckpoint bool) error
 	}
 }
 
+// ReadGovernanceState reads field values of the Governance struct from database.
+// It also updates params.stakingUpdateInterval and params.proposerUpdateInterval with the retrieved value.
 func (gov *Governance) ReadGovernanceState() {
 	b, err := gov.db.ReadGovernanceState()
 	if err != nil {
@@ -935,12 +930,8 @@ func (gov *Governance) ReadGovernanceState() {
 		return
 	}
 	gov.UnmarshalJSON(b)
-	params.SetStakingUpdateInterval(gov.StakingUpdateInterval())
-	params.SetProposerUpdateInterval(gov.ProposerUpdateInterval())
+	gov.updateGovernanceParams()
 
-	if txGasHumanReadable, ok := gov.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
-		params.TxGasHumanReadable = txGasHumanReadable.(uint64)
-	}
 	logger.Info("Successfully loaded governance state from database", "blockNumber", atomic.LoadUint64(&gov.lastGovernanceStateBlock))
 }
 
@@ -952,7 +943,7 @@ func (gov *Governance) SetTxPool(txpool txPool) {
 	gov.TxPool = txpool
 }
 
-func getGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
+func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet {
 	g := NewGovernanceSet()
 
 	if config.Governance != nil {
@@ -1002,7 +993,7 @@ func writeFailLog(key int, err error) {
 func AddGovernanceCacheForTest(g *Governance, num uint64, config *params.ChainConfig) {
 	// Don't update cache if num (block number) is smaller than the biggest number of cached block number
 
-	data := getGovernanceItemsFromChainConfig(config)
+	data := GetGovernanceItemsFromChainConfig(config)
 	g.addGovernanceCache(num, data)
 }
 

@@ -68,7 +68,7 @@ var flagsWithValues = []struct {
 	{
 		flag:        "--dbtype",
 		flagType:    FlagTypeArgument,
-		values:      []string{"leveldb", "badger"},
+		values:      []string{"LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3"},
 		wrongValues: append(commonThreeErrors, "oracle"),
 		errors:      []int{NonError, NonError, NonError, NonError},
 	},
@@ -198,15 +198,11 @@ var flagsWithValues = []struct {
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue, ErrorInvalidValue},
 	},
 	{
-		flag:     "--statedb.use-cache",
+		flag:     "--db.single",
 		flagType: FlagTypeBoolean,
 	},
 	{
-		flag:     "--db.no-partitioning",
-		flagType: FlagTypeBoolean,
-	},
-	{
-		flag:     "--db.num-statetrie-partitions",
+		flag:     "--db.num-statetrie-shards",
 		flagType: FlagTypeArgument,
 		//values:    []string{"1", "2"},
 		values:      []string{"1"},
@@ -276,14 +272,6 @@ var flagsWithValues = []struct {
 		values:      []string{"16"},
 		wrongValues: commonTwoErrors,
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue},
-	},
-	{
-		flag:     "--cache.writethrough",
-		flagType: FlagTypeBoolean,
-	},
-	{
-		flag:     "--statedb.use-txpool-cache",
-		flagType: FlagTypeBoolean,
 	},
 	{
 		flag:        "--state.trie-cache-limit",

@@ -9,7 +9,7 @@ set -e
 function printUsage {
     echo "Usage: ${0} [-b] <arch> <target>"
     echo "         -b: use baobab configuration"
-    echo "     <arch>:  linux-386 | linux-amd64 | darwin-386 | darwin-amd64 | windows-386 | windows-amd64"
+    echo "     <arch>:  linux-386 | linux-amd64 | darwin-amd64 | windows-386 | windows-amd64"
     echo "   <target>:  kcn | kpn | ken | kbn | kscn | kspn | ksen | kgen | homi"
     echo ""
     echo "    ${0} linux-amd64 kcn"
@@ -39,10 +39,6 @@ case "$SUBCOMMAND" in
 		PLATFORM_SUFFIX="linux-amd64"
 		shift
 		;;
-	darwin-386)
-		PLATFORM_SUFFIX="darwin-386"
-		shift
-		;;
 	darwin-amd64)
 		PLATFORM_SUFFIX="darwin-10.10-amd64"
 		shift
@@ -56,7 +52,7 @@ case "$SUBCOMMAND" in
 		shift
 		;;
 	*)
-		echo "Undefined architecture for packaging. Supported architectures: linux-386, linux-amd64, darwin-386, darwin-amd64, windows-386, windows-amd64"
+		echo "Undefined architecture for packaging. Supported architectures: linux-386, linux-amd64, darwin-amd64, windows-386, windows-amd64"
 		printUsage
 		;;
 esac

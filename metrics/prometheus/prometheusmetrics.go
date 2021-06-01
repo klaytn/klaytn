@@ -7,10 +7,13 @@ package prometheusmetrics
 
 import (
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rcrowley/go-metrics"
 	"strings"
 	"time"
+
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rcrowley/go-metrics"
 )
 
 // PrometheusConfig provides a container with config parameters for the Prometheus Exporter
@@ -66,8 +69,12 @@ func (c *PrometheusConfig) gaugeFromNameAndValue(name string, val float64) {
 func (c *PrometheusConfig) UpdatePrometheusMetrics() {
 	for range time.Tick(c.FlushInterval) {
 		c.UpdatePrometheusMetricsOnce()
+		klaytnmetrics.ResetMaxGauges()
 	}
 }
+
+var pv = []float64{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999}
+var pv_str = []string{"_0_5", "_0_75", "_0_95", "_0_99", "_0_999", "_0_9999"}
 
 func (c *PrometheusConfig) UpdatePrometheusMetricsOnce() error {
 	c.Registry.Each(func(name string, i interface{}) {
@@ -88,8 +95,13 @@ func (c *PrometheusConfig) UpdatePrometheusMetricsOnce() error {
 			lastSample := metric.Snapshot().Rate1()
 			c.gaugeFromNameAndValue(name, float64(lastSample))
 		case metrics.Timer:
-			lastSample := metric.Snapshot().Rate1()
-			c.gaugeFromNameAndValue(name, float64(lastSample))
+			// use mean as a default export value of metrics.Timer
+			c.gaugeFromNameAndValue(name, metric.Mean())
+			// also retrieve and export percentiles
+			ps := metric.Percentiles(pv)
+			for i := range pv {
+				c.gaugeFromNameAndValue(name+pv_str[i], ps[i])
+			}
 		}
 	})
 	return nil

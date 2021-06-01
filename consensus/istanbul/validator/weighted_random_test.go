@@ -17,10 +17,6 @@
 package validator
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -29,6 +25,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 var (

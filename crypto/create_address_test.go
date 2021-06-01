@@ -19,13 +19,14 @@ package crypto
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/ser/rlp"
 	"math/rand"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/rlp"
 )
 
 // BenchmarkCreateAddress measures performance of two address generation methods:

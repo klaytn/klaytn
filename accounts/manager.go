@@ -21,10 +21,11 @@
 package accounts
 
 import (
-	"github.com/klaytn/klaytn/event"
 	"reflect"
 	"sort"
 	"sync"
+
+	"github.com/klaytn/klaytn/event"
 )
 
 // Manager is an overarching account manager that can communicate with various

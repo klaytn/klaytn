@@ -21,6 +21,10 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"math/big"
+	"os"
+	"time"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -33,12 +37,9 @@ import (
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
-	"github.com/klaytn/klaytn/ser/rlp"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/work"
-	"math/big"
-	"os"
-	"time"
 
 	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
 	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
@@ -118,6 +119,8 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock)
 
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
 	rewardDistributor := reward.NewRewardDistributor(gov)
@@ -383,7 +386,7 @@ func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 		return database.NewMemoryDBManager()
 	} else {
 		dbc := &database.DBConfig{Dir: dir, DBType: dbType, LevelDBCacheSize: 768,
-			OpenFilesLimit: 1024, Partitioned: true, NumStateTriePartitions: 4, ParallelDBWrite: true,
+			OpenFilesLimit: 1024, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true,
 			LevelDBCompression: database.AllNoCompression, LevelDBBufferPool: true}
 		return database.NewDBManager(dbc)
 	}
@@ -418,8 +421,8 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 		genesis.Config = Forks["Byzantium"]
 		genesis.ExtraData = extraData
 		genesis.BlockScore = big.NewInt(1)
-		genesis.Config.Governance = governance.GetDefaultGovernanceConfig(params.UseIstanbul)
-		genesis.Config.Istanbul = governance.GetDefaultIstanbulConfig()
+		genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
+		genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 		genesis.Config.UnitPrice = 25 * params.Ston
 	}
 
@@ -430,7 +433,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 
 	genesis.Alloc = alloc
 
-	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false)
+	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false, false)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
 		return nil, nil, err
 	}

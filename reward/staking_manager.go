@@ -18,13 +18,14 @@ package reward
 
 import (
 	"errors"
+	"sync"
+
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
-	"sync"
 )
 
 const (

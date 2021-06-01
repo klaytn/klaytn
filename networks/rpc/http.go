@@ -21,11 +21,12 @@
 package rpc
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/common"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -35,8 +36,7 @@ import (
 	"sync"
 	"time"
 
-	"bufio"
-	"errors"
+	"github.com/klaytn/klaytn/common"
 	"github.com/rs/cors"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
@@ -69,6 +69,38 @@ func (hc *httpConn) Read(b []byte) (int, error) {
 func (hc *httpConn) Close() error {
 	hc.closeOnce.Do(func() { close(hc.closed) })
 	return nil
+}
+
+// HTTPTimeouts represents the configuration params for the HTTP RPC server.
+type HTTPTimeouts struct {
+	// ReadTimeout is the maximum duration for reading the entire
+	// request, including the body.
+	//
+	// Because ReadTimeout does not let Handlers make per-request
+	// decisions on each request body's acceptable deadline or
+	// upload rate, most users will prefer to use
+	// ReadHeaderTimeout. It is valid to use them both.
+	ReadTimeout time.Duration
+
+	// WriteTimeout is the maximum duration before timing out
+	// writes of the response. It is reset whenever a new
+	// request's header is read. Like ReadTimeout, it does not
+	// let Handlers make decisions on a per-request basis.
+	WriteTimeout time.Duration
+
+	// IdleTimeout is the maximum amount of time to wait for the
+	// next request when keep-alives are enabled. If IdleTimeout
+	// is zero, the value of ReadTimeout is used. If both are
+	// zero, ReadHeaderTimeout is used.
+	IdleTimeout time.Duration
+}
+
+// DefaultHTTPTimeouts represents the default timeout values used if further
+// configuration is not provided.
+var DefaultHTTPTimeouts = HTTPTimeouts{
+	ReadTimeout:  30 * time.Second,
+	WriteTimeout: 30 * time.Second,
+	IdleTimeout:  120 * time.Second,
 }
 
 // DialHTTPWithClient creates a new RPC client that connects to an RPC server over HTTP
@@ -166,18 +198,31 @@ func (t *httpReadWriteNopCloser) Close() error {
 // NewHTTPServer creates a new HTTP RPC server around an API provider.
 //
 // Deprecated: Server implements http.Handler
-func NewHTTPServer(cors []string, vhosts []string, srv *Server) *http.Server {
+func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *http.Server {
+	timeouts = sanitizeTimeouts(timeouts)
 	// Wrap the CORS-handler within a host-handler
 	handler := newCorsHandler(srv, cors)
 	handler = newVHostHandler(vhosts, handler)
-	return &http.Server{Handler: handler}
+	return &http.Server{
+		Handler:      handler,
+		ReadTimeout:  timeouts.ReadTimeout,
+		WriteTimeout: timeouts.WriteTimeout,
+		IdleTimeout:  timeouts.IdleTimeout,
+	}
 }
 
-func NewFastHTTPServer(cors []string, vhosts []string, srv *Server) *fasthttp.Server {
+func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *fasthttp.Server {
+	timeouts = sanitizeTimeouts(timeouts)
 	if len(cors) == 0 {
 		for _, vhost := range vhosts {
 			if vhost == "*" {
-				return &fasthttp.Server{Concurrency: concurrencyLimit, Handler: srv.HandleFastHTTP}
+				return &fasthttp.Server{
+					Concurrency:  ConcurrencyLimit,
+					Handler:      srv.HandleFastHTTP,
+					ReadTimeout:  timeouts.ReadTimeout,
+					WriteTimeout: timeouts.WriteTimeout,
+					IdleTimeout:  timeouts.IdleTimeout,
+				}
 			}
 		}
 	}
@@ -185,10 +230,22 @@ func NewFastHTTPServer(cors []string, vhosts []string, srv *Server) *fasthttp.Se
 	handler := newCorsHandler(srv, cors)
 	handler = newVHostHandler(vhosts, handler)
 
+	// If os environment variables for NewRelic exist, register the NewRelicHTTPHandler
+	nrApp := newNewRelicApp()
+	if nrApp != nil {
+		handler = newNewRelicHTTPHandler(nrApp, handler)
+	}
+
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
-	return &fasthttp.Server{Concurrency: concurrencyLimit, Handler: fhandler}
+	return &fasthttp.Server{
+		Concurrency:  ConcurrencyLimit,
+		Handler:      fhandler,
+		ReadTimeout:  timeouts.ReadTimeout,
+		WriteTimeout: timeouts.WriteTimeout,
+		IdleTimeout:  timeouts.IdleTimeout,
+	}
 }
 
 // ServeHTTP serves JSON-RPC requests over HTTP.
@@ -204,7 +261,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// All checks passed, create a codec that reads direct from the request body
 	// untilEOF and writes the response to w and order the server to process a
 	// single request.
-	ctx := context.Background()
+	ctx := r.Context()
 	ctx = context.WithValue(ctx, "remote", r.RemoteAddr)
 	ctx = context.WithValue(ctx, "scheme", r.Proto)
 	ctx = context.WithValue(ctx, "local", r.Host)
@@ -236,7 +293,8 @@ func (srv *Server) HandleFastHTTP(requestCtx *fasthttp.RequestCtx) {
 	// All checks passed, create a codec that reads direct from the request body
 	// untilEOF and writes the response to w and order the server to process a
 	// single request.
-	ctx := context.Background()
+	var ctx context.Context
+	ctx = requestCtx
 	ctx = context.WithValue(ctx, "remote", requestCtx.RemoteAddr().String())
 	ctx = context.WithValue(ctx, "scheme", string(requestCtx.URI().Scheme()))
 	ctx = context.WithValue(ctx, "local", requestCtx.LocalAddr().String())
