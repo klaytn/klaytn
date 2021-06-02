@@ -215,18 +215,20 @@ func NewPublicDebugAPI(cn *CN) *PublicDebugAPI {
 }
 
 // DumpBlock retrieves the entire state of the database at a given block.
-func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error) {
-	if blockNr == rpc.PendingBlockNumber {
+func (api *PublicDebugAPI) DumpBlock(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (state.Dump, error) {
+	if *blockNrOrHash.BlockNumber == rpc.PendingBlockNumber {
 		return state.Dump{}, kerrors.ErrPendingBlockNotSupported
 	}
 	var block *types.Block
-	if blockNr == rpc.LatestBlockNumber {
-		block = api.cn.blockchain.CurrentBlock()
+	var err error
+	if *blockNrOrHash.BlockNumber == rpc.LatestBlockNumber {
+		block = api.cn.APIBackend.CurrentBlock()
 	} else {
-		block = api.cn.blockchain.GetBlockByNumber(uint64(blockNr))
+		block, err = api.cn.APIBackend.BlockByNumberOrHash(ctx, blockNrOrHash)
 	}
-	if block == nil {
-		return state.Dump{}, fmt.Errorf("block #%d not found", blockNr)
+	if err != nil {
+		blockNrOrHashString, _ := blockNrOrHash.NumberOrHashString()
+		return state.Dump{}, fmt.Errorf("block %v not found", blockNrOrHashString)
 	}
 	stateDb, err := api.cn.BlockChain().StateAtWithPersistent(block.Root())
 	if err != nil {
@@ -248,10 +250,11 @@ type DumpStateTrieResult struct {
 }
 
 // DumpStateTrie retrieves all state/storage tries of the given state root.
-func (api *PublicDebugAPI) DumpStateTrie(blockNr uint64) (DumpStateTrieResult, error) {
-	block := api.cn.blockchain.GetBlockByNumber(uint64(blockNr))
-	if block == nil {
-		return DumpStateTrieResult{}, fmt.Errorf("block #%d not found", blockNr)
+func (api *PublicDebugAPI) DumpStateTrie(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (DumpStateTrieResult, error) {
+	block, err := api.cn.APIBackend.BlockByNumberOrHash(ctx, blockNrOrHash)
+	if err != nil {
+		blockNrOrHashString, _ := blockNrOrHash.NumberOrHashString()
+		return DumpStateTrieResult{}, fmt.Errorf("block #%v not found", blockNrOrHashString)
 	}
 
 	result := DumpStateTrieResult{
@@ -339,18 +342,18 @@ type storageEntry struct {
 	Value common.Hash  `json:"value"`
 }
 
-// StorageRangeAt returns the storage at the given block height and transaction index.
-//func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
-//	_, _, statedb, err := api.computeTxEnv(blockHash, txIndex, 0)
-//	if err != nil {
-//		return StorageRangeResult{}, err
-//	}
-//	st := statedb.StorageTrie(contractAddress)
-//	if st == nil {
-//		return StorageRangeResult{}, fmt.Errorf("account %x doesn't exist", contractAddress)
-//	}
-//	return storageRangeAt(st, keyStart, maxResult)
-//}
+//StorageRangeAt returns the storage at the given block height and transaction index.
+func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
+	_, _, statedb, err := api.computeTxEnv(blockHash, txIndex, 0)
+	if err != nil {
+		return StorageRangeResult{}, err
+	}
+	st := statedb.StorageTrie(contractAddress)
+	if st == nil {
+		return StorageRangeResult{}, fmt.Errorf("account %x doesn't exist", contractAddress)
+	}
+	return storageRangeAt(st, keyStart, maxResult)
+}
 
 func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeResult, error) {
 	it := statedb.NewIterator(st.NodeIterator(start))
