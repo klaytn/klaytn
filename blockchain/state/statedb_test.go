@@ -281,7 +281,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 		{
 			name: "CreateAccount",
 			fn: func(a testAction, s *StateDB) {
-				s.CreateSmartContractAccount(addr, params.CodeFormatEVM)
+				s.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
 			},
 		},
 		{

@@ -357,8 +357,8 @@ type StateDB interface {
 	Exist(common.Address) bool
 	UpdateKey(addr common.Address, key accountkey.AccountKey, currentBlockNumber uint64) error
 	CreateEOA(addr common.Address, humanReadable bool, key accountkey.AccountKey)
-	CreateSmartContractAccount(addr common.Address, format params.CodeFormat)
-	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat)
+	CreateSmartContractAccount(addr common.Address, format params.CodeFormat, r params.Rules)
+	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat, r params.Rules)
 	IsProgramAccount(addr common.Address) bool
 	IsContractAvailable(addr common.Address) bool
 	IsValidCodeFormat(addr common.Address) bool

@@ -347,6 +347,19 @@ func (self *StateDB) IsValidCodeFormat(addr common.Address) bool {
 	return false
 }
 
+// GetVmVersion return false when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
+func (self *StateDB) GetVmVersion(addr common.Address) (params.VmVersion, bool) {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		pa := account.GetProgramAccount(stateObject.account)
+		if pa != nil {
+			return pa.GetVmVersion(), true
+		}
+		return params.VmVersion0, false
+	}
+	return params.VmVersion0, false
+}
+
 func (self *StateDB) GetKey(addr common.Address) accountkey.AccountKey {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
@@ -634,16 +647,16 @@ func (self *StateDB) CreateEOA(addr common.Address, humanReadable bool, key acco
 	}
 }
 
-func (self *StateDB) CreateSmartContractAccount(addr common.Address, format params.CodeFormat) {
-	self.CreateSmartContractAccountWithKey(addr, false, accountkey.NewAccountKeyFail(), format)
+func (self *StateDB) CreateSmartContractAccount(addr common.Address, format params.CodeFormat, r params.Rules) {
+	self.CreateSmartContractAccountWithKey(addr, false, accountkey.NewAccountKeyFail(), format, r)
 }
 
-func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat) {
+func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat, r params.Rules) {
 	values := map[account.AccountValueKeyType]interface{}{
 		account.AccountValueKeyNonce:         uint64(1),
 		account.AccountValueKeyHumanReadable: humanReadable,
 		account.AccountValueKeyAccountKey:    key,
-		account.AccountValueKeyCodeFormat:    format,
+		account.AccountValueKeyCodeInfo:      params.NewCodeInfoWithRules(format, r),
 	}
 	new, prev := self.createObjectWithMap(addr, account.SmartContractAccountType, values)
 	if prev != nil {

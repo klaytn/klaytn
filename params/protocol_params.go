@@ -21,6 +21,7 @@
 package params
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 )
@@ -172,12 +173,22 @@ func GetMaximumExtraDataSize() uint64 {
 	return BFTMaximumExtraDataSize
 }
 
+// CodeFormat is the version of the interpreter that smart contract uses
 type CodeFormat uint8
 
+// Supporting CodeFormat
+// CodeFormatLast should be equal or less than 16 because only the last 4 bits of CodeFormat are used for CodeInfo.
 const (
 	CodeFormatEVM CodeFormat = iota
 	CodeFormatLast
 )
+
+func (t CodeFormat) Validate() bool {
+	if t < CodeFormatLast {
+		return true
+	}
+	return false
+}
 
 func (t CodeFormat) String() string {
 	switch t {
@@ -188,9 +199,61 @@ func (t CodeFormat) String() string {
 	return "UndefinedCodeFormat"
 }
 
-func (t CodeFormat) Validate() bool {
-	if t < CodeFormatLast {
-		return true
+// VmVersion contains the information of the contract deployment time (ex. 0x0(constantinople), 0x1(istanbul,...))
+type VmVersion uint8
+
+// Supporting VmVersion
+const (
+	VmVersion0 VmVersion = iota // Deployed at Constantinople
+	VmVersion1                  // Deployed at Istanbul, ...(later HFs would be added)
+)
+
+func (t VmVersion) String() string {
+	return "VmVersion" + string(t)
+}
+
+// CodeInfo consists of 8 bits, and has information of the contract code.
+// Originally, codeInfo only contains codeFormat information(interpreter version), but now it is divided into two parts.
+// First four bit contains the deployment time (ex. 0x00(constantinople), 0x10(istanbul,...)), so it is called vmVersion.
+// Last four bit contains the interpreter version (ex. 0x00(EVM), 0x01(EWASM)), so it is called codeFormat.
+type CodeInfo uint8
+
+const (
+	// codeFormatBitMask filters only the codeFormat. It means the interpreter version used by the contract.
+	// Mask result 1. [x x x x 0 0 0 1]. The contract uses EVM interpreter.
+	codeFormatBitMask = 0b00001111
+
+	// vmVersionBitMask filters only the vmVersion. It means deployment time of the contract.
+	// Mask result 1. [0 0 0 0 x x x x]. The contract is deployed at constantinople
+	// Mask result 2. [0 0 0 1 x x x x]. The contract is deployed after istanbulHF
+	vmVersionBitMask = 0b11110000
+)
+
+func NewCodeInfo(codeFormat CodeFormat, vmVersion VmVersion) CodeInfo {
+	return CodeInfo(codeFormat&codeFormatBitMask) | CodeInfo(vmVersion)<<4
+}
+
+func NewCodeInfoWithRules(codeFormat CodeFormat, r Rules) CodeInfo {
+	var vmVersion VmVersion
+	switch {
+	// If new HF is added, please add new case below
+	// case r.IsNextHF:          // If this HF is backward compatible with vmVersion1.
+	case r.IsIstanbul:
+		vmVersion = VmVersion1
+	default:
+		vmVersion = VmVersion0
 	}
-	return false
+	return NewCodeInfo(codeFormat, vmVersion)
+}
+
+func (t CodeInfo) GetCodeFormat() CodeFormat {
+	return CodeFormat(t & codeFormatBitMask)
+}
+
+func (t CodeInfo) GetVmVersion() VmVersion {
+	return VmVersion(t & vmVersionBitMask >> 4)
+}
+
+func (t CodeInfo) String() string {
+	return fmt.Sprintf("[%s, %s]", t.GetCodeFormat().String(), t.GetVmVersion().String())
 }

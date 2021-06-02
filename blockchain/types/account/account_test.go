@@ -149,7 +149,7 @@ func genSCA() *SmartContractAccount {
 		AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
 		AccountValueKeyStorageRoot:   genRandomHash(),
 		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
-		AccountValueKeyCodeFormat:    params.CodeFormatEVM,
+		AccountValueKeyCodeInfo:      params.CodeInfo(0),
 	})
 }
 
@@ -165,6 +165,6 @@ func genSCAWithPublicKey() *SmartContractAccount {
 		AccountValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
 		AccountValueKeyStorageRoot:   genRandomHash(),
 		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
-		AccountValueKeyCodeFormat:    params.CodeFormatEVM,
+		AccountValueKeyCodeInfo:      params.CodeInfo(0),
 	})
 }
