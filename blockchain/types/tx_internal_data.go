@@ -517,7 +517,14 @@ func IntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, e
 	} else {
 		gas = params.TxGas
 	}
-	gasPayloadWithGas, err := IntrinsicGasPayloadLegacy(gas, data)
+
+	var gasPayloadWithGas uint64
+	var err error
+	if r.IsIstanbul {
+		gasPayloadWithGas, err = IntrinsicGasPayload(gas, data)
+	} else {
+		gasPayloadWithGas, err = IntrinsicGasPayloadLegacy(gas, data)
+	}
 	if err != nil {
 		return 0, err
 	}

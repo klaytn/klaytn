@@ -23,16 +23,16 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"math/big"
 	"testing"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/params"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 // The values in those tests are from the Transaction Tests
@@ -255,3 +255,52 @@ func TestTransactionJSON(t *testing.T) {
 	}
 }
 */
+
+func TestIntrinsicGas(t *testing.T) {
+	// testData contains two kind of members
+	// inputString - test input data
+	// expectGas - expect gas according to the specific condition.
+	//            it differs depending on whether the contract is created or not,
+	//            or whether it has passed through the Istanbul compatible block.
+	testData := []struct {
+		inputString string
+		expectGas1  uint64 // contractCreate - false, isIstanbul - false
+		expectGas2  uint64 // contractCreate - false, isIstanbul - true
+		expectGas3  uint64 // contractCreate - true,  isIstanbul - false
+		expectGas4  uint64 // contractCreate - true,  isIstanbul - true
+	}{
+		{"0000", 21008, 21200, 53008, 53200},
+		{"1000", 21072, 21200, 53072, 53200},
+		{"0100", 21072, 21200, 53072, 53200},
+		{"ff3d", 21136, 21200, 53136, 53200},
+		{"0000a6bc", 21144, 21400, 53144, 53400},
+		{"fd00fd00", 21144, 21400, 53144, 53400},
+		{"", 21000, 21000, 53000, 53000},
+	}
+	for _, tc := range testData {
+		var (
+			data []byte // input data entered through the tx argument
+			gas  uint64 // the gas varies depending on what comes in as a condition(contractCreate & IsIstanbul)
+			err  error  // in this unittest, every testcase returns nil error.
+		)
+
+		data, err = hex.DecodeString(tc.inputString) // decode input string to hex data
+		assert.Equal(t, nil, err)
+
+		gas, err = IntrinsicGas(data, false, params.Rules{IsIstanbul: false})
+		assert.Equal(t, tc.expectGas1, gas)
+		assert.Equal(t, nil, err)
+
+		gas, err = IntrinsicGas(data, false, params.Rules{IsIstanbul: true})
+		assert.Equal(t, tc.expectGas2, gas)
+		assert.Equal(t, nil, err)
+
+		gas, err = IntrinsicGas(data, true, params.Rules{IsIstanbul: false})
+		assert.Equal(t, tc.expectGas3, gas)
+		assert.Equal(t, nil, err)
+
+		gas, err = IntrinsicGas(data, true, params.Rules{IsIstanbul: true})
+		assert.Equal(t, tc.expectGas4, gas)
+		assert.Equal(t, nil, err)
+	}
+}
