@@ -180,6 +180,10 @@ func (bn BlockNumber) Int64() int64 {
 	return (int64)(bn)
 }
 
+func (bn BlockNumber) Uint64() uint64 {
+	return (uint64)(bn)
+}
+
 type BlockNumberOrHash struct {
 	BlockNumber      *BlockNumber `json:"blockNumber,omitempty"`
 	BlockHash        *common.Hash `json:"blockHash,omitempty"`

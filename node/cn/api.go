@@ -383,8 +383,8 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 // code hash, or storage hash.
 //
 // With one parameter, returns the list of accounts modified in the specified block.
-func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(startNum uint64, endNum *uint64) ([]common.Address, error) {
-	startBlock, endBlock, err := api.getStartAndEndBlock(startNum, endNum)
+func (api *PrivateDebugAPI) GetModifiedAccountsByNumber(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) ([]common.Address, error) {
+	startBlock, endBlock, err := api.getStartAndEndBlock(ctx, startNum, endNum)
 	if err != nil {
 		return nil, err
 	}
@@ -445,24 +445,24 @@ func (api *PrivateDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Bloc
 }
 
 // getStartAndEndBlock returns start and end block based on the given startNum and endNum.
-func (api *PrivateDebugAPI) getStartAndEndBlock(startNum uint64, endNum *uint64) (*types.Block, *types.Block, error) {
+func (api *PrivateDebugAPI) getStartAndEndBlock(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) (*types.Block, *types.Block, error) {
 	var startBlock, endBlock *types.Block
 
-	startBlock = api.cn.blockchain.GetBlockByNumber(startNum)
-	if startBlock == nil {
-		return nil, nil, fmt.Errorf("start block number %d not found", startNum)
+	startBlock, err := api.cn.APIBackend.BlockByNumber(ctx, startNum)
+	if err != nil {
+		return nil, nil, fmt.Errorf("start block number #%d not found", startNum.Uint64())
 	}
 
 	if endNum == nil {
 		endBlock = startBlock
-		startBlock = api.cn.blockchain.GetBlockByHash(startBlock.ParentHash())
-		if startBlock == nil {
-			return nil, nil, fmt.Errorf("block number %d has no parent", startNum)
+		startBlock, err = api.cn.APIBackend.BlockByHash(ctx, startBlock.ParentHash())
+		if err != nil {
+			return nil, nil, fmt.Errorf("block number #%d has no parent", startNum.Uint64())
 		}
 	} else {
-		endBlock = api.cn.blockchain.GetBlockByNumber(*endNum)
-		if endBlock == nil {
-			return nil, nil, fmt.Errorf("end block number %d not found", *endNum)
+		endBlock, err = api.cn.APIBackend.BlockByNumber(ctx, *endNum)
+		if err != nil {
+			return nil, nil, fmt.Errorf("end block number #%d not found", (*endNum).Uint64())
 		}
 	}
 
@@ -477,8 +477,8 @@ func (api *PrivateDebugAPI) getStartAndEndBlock(startNum uint64, endNum *uint64)
 // that have been changed between the two blocks specified.
 //
 // With the first two parameters, it returns the number of storage trie nodes modified in the specified block.
-func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(contractAddr common.Address, startNum uint64, endNum *uint64, printDetail *bool) (int, error) {
-	startBlock, endBlock, err := api.getStartAndEndBlock(startNum, endNum)
+func (api *PrivateDebugAPI) GetModifiedStorageNodesByNumber(ctx context.Context, contractAddr common.Address, startNum rpc.BlockNumber, endNum *rpc.BlockNumber, printDetail *bool) (int, error) {
+	startBlock, endBlock, err := api.getStartAndEndBlock(ctx, startNum, endNum)
 	if err != nil {
 		return 0, err
 	}
