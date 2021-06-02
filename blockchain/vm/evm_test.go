@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"errors"
 	"math"
 	"math/big"
 	"testing"
@@ -63,7 +64,7 @@ var PrecompiledContractAddressMappingTestData = []struct {
 	{"0x3fe", feePayerInput, false, Block5, 0, "", kerrors.ErrPrecompiledContractAddress},
 	{"0x3ff", validateInput, false, Block5, 0, "", kerrors.ErrPrecompiledContractAddress},
 	// Condition 2. Caller Contract Deploy - after IstanbulCompatible Change, Call - after istanbulCompatible
-	{"0x009", vmLogInput, true, Block5, 0, "", kerrors.ErrPrecompiledContractAddress},
+	{"0x009", vmLogInput, true, Block5, math.MaxUint64, "", errors.New("invalid input length")},
 	{"0x00a", feePayerInput, true, Block5, 0, "", kerrors.ErrPrecompiledContractAddress},
 	{"0x00b", validateInput, true, Block5, 0, "", kerrors.ErrPrecompiledContractAddress},
 }
