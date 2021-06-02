@@ -99,7 +99,7 @@ func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address com
 // GetBlockReceipts returns all the transaction receipts for the given block hash.
 func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
 	receipts := s.b.GetBlockReceipts(ctx, blockHash)
-	block, err := s.b.GetBlock(ctx, blockHash)
+	block, err := s.b.BlockByHash(ctx, blockHash)
 	if err != nil {
 		return nil, err
 	}

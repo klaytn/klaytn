@@ -75,21 +75,6 @@ func (mr *MockBackendMockRecorder) BlockByNumber(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockByNumber", reflect.TypeOf((*MockBackend)(nil).BlockByNumber), arg0, arg1)
 }
 
-// BlockByHash mocks base method
-func (m *MockBackend) BlockByHash(arg0 context.Context, arg1 common.Hash) (*types.Block, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BlockByHash", arg0, arg1)
-	ret0, _ := ret[0].(*types.Block)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// BlockByHash indicates an expected call of BlockByHash
-func (mr *MockBackendMockRecorder) BlockByHash(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockByHash", reflect.TypeOf((*MockBackend)(nil).BlockByHash), arg0, arg1)
-}
-
 // BlockByNumberOrHash mocks base method
 func (m *MockBackend) BlockByNumberOrHash(arg0 context.Context, arg1 rpc.BlockNumberOrHash) (*types.Block, error) {
 	m.ctrl.T.Helper()
@@ -162,9 +147,9 @@ func (mr *MockBackendMockRecorder) EventMux() *gomock.Call {
 }
 
 // GetBlock mocks base method
-func (m *MockBackend) GetBlock(arg0 context.Context, arg1 common.Hash) (*types.Block, error) {
+func (m *MockBackend) BlockByHash(arg0 context.Context, arg1 common.Hash) (*types.Block, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlock", arg0, arg1)
+	ret := m.ctrl.Call(m, "BlockByHash", arg0, arg1)
 	ret0, _ := ret[0].(*types.Block)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -173,7 +158,7 @@ func (m *MockBackend) GetBlock(arg0 context.Context, arg1 common.Hash) (*types.B
 // GetBlock indicates an expected call of GetBlock
 func (mr *MockBackendMockRecorder) GetBlock(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlock", reflect.TypeOf((*MockBackend)(nil).GetBlock), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockByHash", reflect.TypeOf((*MockBackend)(nil).BlockByHash), arg0, arg1)
 }
 
 // GetBlockReceipts mocks base method

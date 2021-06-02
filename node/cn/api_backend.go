@@ -136,14 +136,6 @@ func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumbe
 	return block, nil
 }
 
-func (b *CNAPIBackend) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	block := b.cn.blockchain.GetBlockByHash(hash)
-	if block == nil {
-		return nil, fmt.Errorf("the block does not exist (block hash: %s)", hash.String())
-	}
-	return block, nil
-}
-
 func (b *CNAPIBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Block, error) {
 	if blockNr, ok := blockNrOrHash.Number(); ok {
 		return b.BlockByNumber(ctx, blockNr)
@@ -187,7 +179,7 @@ func (b *CNAPIBackend) StateAndHeaderByNumberOrHash(ctx context.Context, blockNr
 	return nil, nil, fmt.Errorf("invalid arguments; neither block nor hash specified")
 }
 
-func (b *CNAPIBackend) GetBlock(ctx context.Context, hash common.Hash) (*types.Block, error) {
+func (b *CNAPIBackend) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
 	block := b.cn.blockchain.GetBlockByHash(hash)
 	if block == nil {
 		return nil, fmt.Errorf("the block does not exist (block hash: %s)", hash.String())

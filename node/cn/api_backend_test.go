@@ -370,22 +370,6 @@ func TestCNAPIBackend_BlockByNumberOrHash(t *testing.T) {
 	}
 }
 
-func TestCNAPIBackend_BlockByHash(t *testing.T) {
-	{
-		expectedBlock := newBlock(123)
-
-		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
-		mockBlockChain.EXPECT().GetBlockByHash(hash1).Return(expectedBlock).Times(1)
-
-		block, err := api.BlockByHash(context.Background(), hash1)
-
-		assert.Equal(t, expectedBlock, block)
-		assert.NoError(t, err)
-
-		mockCtrl.Finish()
-	}
-}
-
 func TestCNAPIBackend_StateAndHeaderByNumber(t *testing.T) {
 	blockNum := uint64(123)
 	block := newBlock(int(blockNum))
@@ -443,7 +427,7 @@ func TestCNAPIBackend_GetBlock(t *testing.T) {
 		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 		mockBlockChain.EXPECT().GetBlockByHash(hash).Return(nil).Times(1)
 
-		returnedBlock, err := api.GetBlock(context.Background(), hash)
+		returnedBlock, err := api.BlockByHash(context.Background(), hash)
 		assert.Nil(t, returnedBlock)
 		assert.Error(t, err)
 
@@ -453,7 +437,7 @@ func TestCNAPIBackend_GetBlock(t *testing.T) {
 		mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 		mockBlockChain.EXPECT().GetBlockByHash(hash).Return(block).Times(1)
 
-		returnedBlock, err := api.GetBlock(context.Background(), hash)
+		returnedBlock, err := api.BlockByHash(context.Background(), hash)
 		assert.Equal(t, block, returnedBlock)
 		assert.NoError(t, err)
 
