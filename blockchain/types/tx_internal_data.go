@@ -262,7 +262,7 @@ type TxInternalData interface {
 	Equal(t TxInternalData) bool
 
 	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
-	IntrinsicGas(currentBlockNumber uint64) (uint64, error)
+	IntrinsicGas(currentBlockNumber uint64, r params.Rules) (uint64, error)
 
 	// SerializeForSign returns a slice containing attributes to make its tx signature.
 	SerializeForSign() []interface{}
@@ -509,10 +509,10 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error) {
+func IntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
-	if contractCreation && homestead {
+	if contractCreation {
 		gas = params.TxGasContractCreation
 	} else {
 		gas = params.TxGas

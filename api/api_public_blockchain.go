@@ -258,7 +258,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNr rpc.BlockNumb
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(args.Data, args.To == nil, true)
+	intrinsicGas, err := types.IntrinsicGas(args.Data, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, 0, false, err
 	}

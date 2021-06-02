@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +31,7 @@ func newTestBlockChain() *blockchain.BlockChain {
 func TestAddressBookManager_makeMsgToAddressBook(t *testing.T) {
 	targetAddress := "0x0000000000000000000000000000000000000400" // address of addressBook which the message has to be sent to
 	ac := newAddressBookConnector(newTestBlockChain(), nil)
-	msg, err := ac.makeMsgToAddressBook()
+	msg, err := ac.makeMsgToAddressBook(params.Rules{IsIstanbul: true})
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}

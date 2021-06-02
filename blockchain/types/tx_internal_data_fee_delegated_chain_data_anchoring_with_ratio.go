@@ -316,7 +316,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) RecoverFeePayerP
 	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) IntrinsicGas(currentBlockNumber uint64, r params.Rules) (uint64, error) {
 	gas := params.TxChainDataAnchoringGas + params.TxGasFeeDelegatedWithRatio
 
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
