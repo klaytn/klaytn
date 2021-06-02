@@ -140,6 +140,13 @@ const (
 // - an invalid block number error when the given argument isn't a known strings
 // - an out of range error when the given block number is either too little or too large
 func (bn *BlockNumber) UnmarshalJSON(data []byte) error {
+	var decimalInput uint64
+	err := json.Unmarshal(data, &decimalInput)
+	if err == nil {
+		*bn = BlockNumber(decimalInput)
+		return nil
+	}
+
 	input := strings.TrimSpace(string(data))
 	if len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"' {
 		input = input[1 : len(input)-1]
@@ -192,6 +199,15 @@ func (bnh *BlockNumberOrHash) UnmarshalJSON(data []byte) error {
 		bnh.RequireCanonical = e.RequireCanonical
 		return nil
 	}
+
+	var decimalInput uint64
+	err = json.Unmarshal(data, &decimalInput)
+	if err == nil {
+		bn := BlockNumber(decimalInput)
+		bnh.BlockNumber = &bn
+		return nil
+	}
+
 	var input string
 	err = json.Unmarshal(data, &input)
 	if err != nil {
@@ -246,6 +262,16 @@ func (bnh *BlockNumberOrHash) Hash() (common.Hash, bool) {
 		return *bnh.BlockHash, true
 	}
 	return common.Hash{}, false
+}
+
+func (bnh *BlockNumberOrHash) NumberOrHashString() (string, bool) {
+	if bnh.BlockHash != nil {
+		return bnh.BlockHash.String(), true
+	}
+	if bnh.BlockNumber != nil {
+		return fmt.Sprintf("#%v", bnh.BlockNumber.Int64()), true
+	}
+	return "", false
 }
 
 func NewBlockNumberOrHashWithNumber(blockNr BlockNumber) BlockNumberOrHash {
