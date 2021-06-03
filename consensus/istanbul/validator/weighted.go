@@ -710,7 +710,7 @@ func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedVal
 		if !isSingleMode || uint64(govNodeStaking) < amount {
 			newWeightedValidators, newValidatorsStaking = newWeightedDemoted, newDemotedStaking
 			newWeightedDemoted, newDemotedStaking = []*weightedValidator{}, []float64{}
-			logger.Debug("there is no council member who staking more than the minimum, so all become validators", "numValidators", len(newWeightedValidators), "isSingleMode", isSingleMode, "govNodeAddr", govNodeAddr, "govNodeStaking", govNodeStaking, "minStaking", amount)
+			logger.Debug("there is no council member staking more than the minimum, so all become validators", "numValidators", len(newWeightedValidators), "isSingleMode", isSingleMode, "govNodeAddr", govNodeAddr, "govNodeStaking", govNodeStaking, "minStaking", amount)
 		}
 	}
 
