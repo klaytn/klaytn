@@ -441,8 +441,8 @@ func (gov *Governance) GetItemAtNumberByIntKey(num uint64, key int) (interface{}
 	return gov.GetGovernanceItemAtNumber(num, GovernanceKeyMapReverse[key])
 }
 
-// GetGoverningNodeAtNumber returns whether the governing mode is single or not and the governing node.
-func (gov *Governance) GetGoverningNodeAtNumber(num uint64) (bool, common.Address, error) {
+// GetGoverningInfoAtNumber returns whether the governing mode is single or not and the governing node.
+func (gov *Governance) GetGoverningInfoAtNumber(num uint64) (bool, common.Address, error) {
 	govMode, err := gov.GetItemAtNumberByIntKey(num, params.GovernanceMode)
 	if err != nil {
 		return false, common.Address{}, err

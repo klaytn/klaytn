@@ -186,7 +186,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			//
 			// Proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
 			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
-			isSingle, govNode, err := gov.GetGoverningNodeAtNumber(number + 1)
+			isSingle, govNode, err := gov.GetGoverningInfoAtNumber(number + 1)
 			if err != nil {
 				return nil, err
 			}
