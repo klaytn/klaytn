@@ -707,7 +707,7 @@ func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedVal
 	if len(newWeightedValidators) <= 0 {
 		// 1. if governance mode is not single,
 		// 2. if governance mode is single and governing node does not have minimum staking amount of KLAYs as well
-		if !isSingleMode || (isSingleMode && uint64(govNodeStaking) < amount) {
+		if !isSingleMode || uint64(govNodeStaking) < amount {
 			newWeightedValidators, newValidatorsStaking = newWeightedDemoted, newDemotedStaking
 			newWeightedDemoted, newDemotedStaking = []*weightedValidator{}, []float64{}
 		}
