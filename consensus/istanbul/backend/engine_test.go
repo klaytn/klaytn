@@ -111,7 +111,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	}
 
 	nodeKeys[0] = b.privateKey
-	addrs[0] = b.address
+	addrs[0] = b.address // if governance mode is single, this addresses is the governing node address
 	for i := 1; i < n; i++ {
 		nodeKeys[i], _ = crypto.GenerateKey()
 		addrs[i] = crypto.PubkeyToAddress(nodeKeys[i].PublicKey)
@@ -731,6 +731,7 @@ func TestSnapshot(t *testing.T) {
 			[]int{2, 3},
 		},
 		// The following testcases are the ones for testing governing node in single mode
+		// The first staking amount is of the governing node
 		{
 			[]uint64{6000000, 6000000, 6000000, 6000000},
 			true,
