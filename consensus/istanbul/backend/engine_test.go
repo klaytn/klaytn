@@ -111,7 +111,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	}
 
 	nodeKeys[0] = b.privateKey
-	addrs[0] = b.address // if governance mode is single, this addresses is the governing node address
+	addrs[0] = b.address // if governance mode is single, this address is the governing node address
 	for i := 1; i < n; i++ {
 		nodeKeys[i], _ = crypto.GenerateKey()
 		addrs[i] = crypto.PubkeyToAddress(nodeKeys[i].PublicKey)
