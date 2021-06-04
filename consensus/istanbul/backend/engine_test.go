@@ -25,6 +25,8 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,6 +58,7 @@ type minimumStake *big.Int
 type stakingUpdateInterval uint64
 type proposerUpdateInterval uint64
 type proposerPolicy uint64
+type governanceMode string
 
 // makeCommittedSeals returns a list of committed seals for the global variable nodeKeys.
 func makeCommittedSeals(hash common.Hash) [][]byte {
@@ -93,6 +96,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.Governance.Reward.StakingUpdateInterval = uint64(v)
 		case proposerUpdateInterval:
 			genesis.Config.Governance.Reward.ProposerUpdateInterval = uint64(v)
+		case governanceMode:
+			genesis.Config.Governance.GovernanceMode = string(v)
 		}
 	}
 	nodeKeys = make([]*ecdsa.PrivateKey, n)
@@ -106,7 +111,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	}
 
 	nodeKeys[0] = b.privateKey
-	addrs[0] = b.address
+	addrs[0] = b.address // if governance mode is single, this address is the governing node address
 	for i := 1; i < n; i++ {
 		nodeKeys[i], _ = crypto.GenerateKey()
 		addrs[i] = crypto.PubkeyToAddress(nodeKeys[i].PublicKey)
@@ -609,30 +614,40 @@ func makeFakeStakingInfo(blockNumber uint64, keys []*ecdsa.PrivateKey, amounts [
 	return stakingInfo
 }
 
-func checkInValidators(target common.Address, list []istanbul.Validator) bool {
-	for _, val := range list {
-		if target == val.Address() {
-			return true
-		}
+func toAddressList(validators []istanbul.Validator) []common.Address {
+	addresses := make([]common.Address, len(validators))
+	for idx, val := range validators {
+		addresses[idx] = val.Address()
 	}
-	return false
+	return addresses
 }
 
-func isAllDemoted(minimumStaking uint64, stakingAmounts []uint64) bool {
-	for _, val := range stakingAmounts {
-		if val >= minimumStaking {
-			return false
-		}
+func copyAndSortAddrs(addrs []common.Address) []common.Address {
+	copied := make([]common.Address, len(addrs))
+	copy(copied, addrs)
+
+	sort.Slice(copied, func(i, j int) bool {
+		return strings.Compare(copied[i].String(), copied[j].String()) < 0
+	})
+
+	return copied
+}
+
+func makeExpectedResult(indices []int, candidate []common.Address) []common.Address {
+	expected := make([]common.Address, len(indices))
+	for eIdx, cIdx := range indices {
+		expected[eIdx] = candidate[cIdx]
 	}
-	return true
+	return copyAndSortAddrs(expected)
 }
 
 func TestSnapshot(t *testing.T) {
 	type testcase struct {
-		stakingAmounts        []uint64 // test staking amounts of each validator
-		isIstanbulCompatible  bool     // whether or not if the inserted block is istanbul compatible
-		expectedValidatorsNum int      // the number of expected validators
-		expectedDemotedNum    int      // the number of expected demoted validators
+		stakingAmounts       []uint64 // test staking amounts of each validator
+		isIstanbulCompatible bool     // whether or not if the inserted block is istanbul compatible
+		isSingleMode         bool     // whether or not if the governance mode is single
+		expectedValidators   []int    // the indices of expected validators
+		expectedDemoted      []int    // the indices of expected demoted validators
 	}
 
 	testcases := []testcase{
@@ -640,69 +655,117 @@ func TestSnapshot(t *testing.T) {
 		{
 			[]uint64{5000000, 5000000, 5000000, 5000000},
 			false,
-			4,
-			0,
+			false,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{5000000, 5000000, 5000000, 6000000},
 			false,
-			4,
-			0,
+			false,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{5000000, 5000000, 6000000, 6000000},
 			false,
-			4,
-			0,
+			false,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{5000000, 6000000, 6000000, 6000000},
 			false,
-			4,
-			0,
+			false,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{6000000, 6000000, 6000000, 6000000},
 			false,
-			4,
-			0,
+			false,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		// The following testcases are the ones after istanbul incompatible change
 		{
 			[]uint64{5000000, 5000000, 5000000, 5000000},
 			true,
-			4,
-			0,
+			false,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{5000000, 5000000, 5000000, 6000000},
 			true,
-			1,
-			3,
+			false,
+			[]int{3},
+			[]int{0, 1, 2},
 		},
 		{
 			[]uint64{5000000, 5000000, 6000000, 6000000},
 			true,
-			2,
-			2,
+			false,
+			[]int{2, 3},
+			[]int{0, 1},
 		},
 		{
 			[]uint64{5000000, 6000000, 6000000, 6000000},
 			true,
-			3,
-			1,
+			false,
+			[]int{1, 2, 3},
+			[]int{0},
 		},
 		{
 			[]uint64{6000000, 6000000, 6000000, 6000000},
 			true,
-			4,
-			0,
+			false,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 		{
 			[]uint64{5500001, 5500000, 5499999, 0},
 			true,
-			2,
-			2,
+			false,
+			[]int{0, 1},
+			[]int{2, 3},
+		},
+		// The following testcases are the ones for testing governing node in single mode
+		// The first staking amount is of the governing node
+		{
+			[]uint64{6000000, 6000000, 6000000, 6000000},
+			true,
+			true,
+			[]int{0, 1, 2, 3},
+			[]int{},
+		},
+		{
+			[]uint64{5000000, 6000000, 6000000, 6000000},
+			true,
+			true,
+			[]int{0, 1, 2, 3},
+			[]int{},
+		},
+		{
+			[]uint64{5000000, 5000000, 6000000, 6000000},
+			true,
+			true,
+			[]int{0, 2, 3},
+			[]int{1},
+		},
+		{
+			[]uint64{5000000, 5000000, 5000000, 6000000},
+			true,
+			true,
+			[]int{0, 3},
+			[]int{1, 2},
+		},
+		{
+			[]uint64{5000000, 5000000, 5000000, 5000000},
+			true,
+			true,
+			[]int{0, 1, 2, 3},
+			[]int{},
 		},
 	}
 
@@ -713,6 +776,9 @@ func TestSnapshot(t *testing.T) {
 	for _, tc := range testcases {
 		if tc.isIstanbulCompatible {
 			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+		}
+		if tc.isSingleMode {
+			configItems = append(configItems, governanceMode("single"))
 		}
 		chain, engine := newBlockChain(testNum, configItems...)
 
@@ -729,27 +795,15 @@ func TestSnapshot(t *testing.T) {
 
 		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
 		assert.NoError(t, err)
-		assert.Equal(t, tc.expectedValidatorsNum, len(snap.ValSet.List()))
-		assert.Equal(t, tc.expectedDemotedNum, len(snap.ValSet.DemotedList()))
 
-		if tc.isIstanbulCompatible && !isAllDemoted(ms, tc.stakingAmounts) {
-			// if the inserted block is istanbul compatible
-			// and a validator has enough KLAYs at least
-			for idx, sa := range tc.stakingAmounts {
-				if sa >= ms {
-					assert.True(t, checkInValidators(addrs[idx], snap.ValSet.List()))
-				} else {
-					assert.True(t, checkInValidators(addrs[idx], snap.ValSet.DemotedList()))
-				}
-			}
-		} else {
-			// if the inserted block is not istanbul compatible
-			// or all validators don't have enough KLAYs
-			for idx := range tc.stakingAmounts {
-				assert.True(t, checkInValidators(addrs[idx], snap.ValSet.List()))
-				assert.False(t, checkInValidators(addrs[idx], snap.ValSet.DemotedList()))
-			}
-		}
+		validators := toAddressList(snap.ValSet.List())
+		demoted := toAddressList(snap.ValSet.DemotedList())
+
+		expectedValidators := makeExpectedResult(tc.expectedValidators, addrs)
+		expectedDemoted := makeExpectedResult(tc.expectedDemoted, addrs)
+
+		assert.Equal(t, expectedValidators, validators)
+		assert.Equal(t, expectedDemoted, demoted)
 
 		reward.SetTestStakingManager(oldStakingManager)
 		engine.Stop()

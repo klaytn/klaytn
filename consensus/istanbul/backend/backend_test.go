@@ -873,6 +873,10 @@ func newTestBackend() (b *backend) {
 func newTestBackendWithConfig(chainConfig *params.ChainConfig) (b *backend) {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 	key, _ := crypto.GenerateKey()
+	if chainConfig.Governance.GovernanceMode == "single" {
+		// if governance mode is single, set the node key to the governing node.
+		chainConfig.Governance.GoverningNode = crypto.PubkeyToAddress(key.PublicKey)
+	}
 	gov := governance.NewGovernanceInitialize(chainConfig, dbm)
 	istanbulConfig := istanbul.DefaultConfig
 	istanbulConfig.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
