@@ -116,7 +116,7 @@ func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash co
 }
 
 // GetBalance returns the amount of peb for the given address in the state of the
-// given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
+// given block number or hash. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers and hash are also allowed.
 func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
@@ -151,22 +151,22 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 }
 
 // GetHeaderByNumber returns the requested canonical block header.
-func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
+func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
 	header, err := s.b.HeaderByNumber(ctx, number)
 	if err != nil {
 		return nil, err
 	}
-	return s.rpcOutputHeader(header)
+	return header, nil
 
 }
 
 // GetHeaderByHash returns the requested header by hash.
-func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
 	header, err := s.b.HeaderByHash(ctx, hash)
 	if err != nil {
 		return nil, err
 	}
-	return s.rpcOutputHeader(header)
+	return header, nil
 
 }
 
@@ -453,26 +453,6 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes {
 	return formatted
 }
 
-// RPCOutputHeader converts the given header to the RPC output.
-func RPCOutputHeader(head *types.Header) (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"number":           (*hexutil.Big)(head.Number),
-		"parentHash":       head.ParentHash,
-		"logsBloom":        head.Bloom,
-		"stateRoot":        head.Root,
-		"reward":           head.Rewardbase,
-		"blockscore":       (*hexutil.Big)(head.BlockScore),
-		"extraData":        hexutil.Bytes(head.Extra),
-		"governanceData":   hexutil.Bytes(head.Governance),
-		"voteData":         hexutil.Bytes(head.Vote),
-		"gasUsed":          hexutil.Uint64(head.GasUsed),
-		"timestamp":        (*hexutil.Big)(head.Time),
-		"timestampFoS":     (hexutil.Uint)(head.TimeFoS),
-		"transactionsRoot": head.TxHash,
-		"receiptsRoot":     head.ReceiptHash,
-	}, nil
-}
-
 func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
@@ -482,7 +462,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[
 		"logsBloom":        head.Bloom,
 		"stateRoot":        head.Root,
 		"reward":           head.Rewardbase,
-		"blockscore":       (*hexutil.Big)(head.BlockScore),
+		"blockScore":       (*hexutil.Big)(head.BlockScore),
 		"totalBlockScore":  (*hexutil.Big)(td),
 		"extraData":        hexutil.Bytes(head.Extra),
 		"governanceData":   hexutil.Bytes(head.Governance),
@@ -525,11 +505,6 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool) (map[
 // transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
 	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx)
-}
-
-// rpcOutputHeader converts the given header to the RPC output.
-func (s *PublicBlockChainAPI) rpcOutputHeader(head *types.Header) (map[string]interface{}, error) {
-	return RPCOutputHeader(head)
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
