@@ -121,14 +121,14 @@ func TestBn256GasCost(t *testing.T) {
 		// Condition 1. Caller Contract Deploy - before IstanbulCompatible, Call - before istanbulCompatible
 		{"0x006", bn256AddInput, false, Block4, params.Bn256AddGasConstantinople, bn256AddOutput, nil},
 		{"0x007", bn256ScalarMulInput, false, Block4, params.Bn256ScalarMulGasConstantinople, bn256ScalarMulOutput, nil},
-		{"0x008", bn256PairingInput, false, Block4, 260000, bn256PairingOutput, nil},
+		{"0x008", bn256PairingInput, false, Block4, params.Bn256PairingBaseGasConstantinople + params.Bn256PairingPerPointGasConstantinople*uint64(len(bn256PairingInput)/192), bn256PairingOutput, nil},
 		// Condition 2. Caller Contract Deploy - before IstanbulCompatible, Call - after istanbulCompatible
 		{"0x006", bn256AddInput, false, Block5, params.Bn256AddGasConstantinople, bn256AddOutput, nil},
 		{"0x007", bn256ScalarMulInput, false, Block5, params.Bn256ScalarMulGasConstantinople, bn256ScalarMulOutput, nil},
-		{"0x008", bn256PairingInput, false, Block5, 260000, bn256PairingOutput, nil},
+		{"0x008", bn256PairingInput, false, Block5, params.Bn256PairingBaseGasConstantinople + params.Bn256PairingPerPointGasConstantinople*uint64(len(bn256PairingInput)/192), bn256PairingOutput, nil},
 		// Condition 3. Caller Contract Deploy - after IstanbulCompatible, Call - after istanbulCompatible
 		{"0x006", bn256AddInput, true, Block5, params.Bn256AddGasIstanbul, bn256AddOutput, nil},
 		{"0x007", bn256ScalarMulInput, true, Block5, params.Bn256ScalarMulGasIstanbul, bn256ScalarMulOutput, nil},
-		{"0x008", bn256PairingInput, true, Block5, 113000, bn256PairingOutput, nil},
+		{"0x008", bn256PairingInput, true, Block5, params.Bn256PairingBaseGasIstanbul + params.Bn256PairingPerPointGasIstanbul*uint64(len(bn256PairingInput)/192), bn256PairingOutput, nil},
 	})
 }
