@@ -49,12 +49,16 @@ var (
 		Value: "",
 	}
 	backtraceAtFlag = cli.StringFlag{
-		Name:  "backtrace",
+		Name:  "log.backtrace",
 		Usage: "Request a stack trace at a specific logging statement (e.g. \"block.go:271\")",
 		Value: "",
 	}
+	logjsonFlag = cli.BoolFlag{
+		Name:  "log.json",
+		Usage: "Format logs with JSON",
+	}
 	debugFlag = cli.BoolFlag{
-		Name:  "debug",
+		Name:  "log.debug",
 		Usage: "Prepends log messages with call-site location (file and line number)",
 	}
 	pprofFlag = cli.BoolFlag{
@@ -62,44 +66,93 @@ var (
 		Usage: "Enable the pprof HTTP server",
 	}
 	pprofPortFlag = cli.IntFlag{
-		Name:  "pprofport",
+		Name:  "pprof.port",
 		Usage: "pprof HTTP server listening port",
 		Value: 6060,
 	}
 	pprofAddrFlag = cli.StringFlag{
-		Name:  "pprofaddr",
+		Name:  "pprof.addr",
 		Usage: "pprof HTTP server listening interface",
 		Value: "127.0.0.1",
 	}
 	memprofileFlag = cli.StringFlag{
-		Name:  "memprofile",
+		Name:  "pprof.memprofile",
 		Usage: "Write memory profile to the given file",
 	}
 	memprofilerateFlag = cli.IntFlag{
-		Name:  "memprofilerate",
+		Name:  "pprof.memprofilerate",
 		Usage: "Turn on memory profiling with the given rate",
 		Value: runtime.MemProfileRate,
 	}
 	blockprofilerateFlag = cli.IntFlag{
-		Name:  "blockprofilerate",
+		Name:  "pprof.blockprofilerate",
 		Usage: "Turn on block profiling with the given rate",
 	}
 	cpuprofileFlag = cli.StringFlag{
-		Name:  "cpuprofile",
+		Name:  "pprof.cpuprofile",
 		Usage: "Write CPU profile to the given file",
 	}
 	traceFlag = cli.StringFlag{
 		Name:  "trace",
 		Usage: "Write execution trace to the given file",
 	}
+	// (Deprecated June 2021)
+	legacyPprofPortFlag = cli.IntFlag{
+		Name:  "pprofport",
+		Usage: "pprof HTTP server listening port (deprecated, use --pprof.port)",
+		Value: 6060,
+	}
+	legacyPprofAddrFlag = cli.StringFlag{
+		Name:  "pprofaddr",
+		Usage: "pprof HTTP server listening interface (deprecated, use --pprof.addr)",
+		Value: "127.0.0.1",
+	}
+	legacyMemprofileFlag = cli.StringFlag{
+		Name:  "memprofile",
+		Usage: "Write memory profile to the given file (deprecated, use --pprof.memprofile)",
+	}
+	legacyMemprofilerateFlag = cli.IntFlag{
+		Name:  "memprofilerate",
+		Usage: "Turn on memory profiling with the given rate (deprecated, use --pprof.memprofilerate)",
+		Value: runtime.MemProfileRate,
+	}
+	legacyBlockprofilerateFlag = cli.IntFlag{
+		Name:  "blockprofilerate",
+		Usage: "Turn on block profiling with the given rate (deprecated, use --pprof.blockprofilerate)",
+	}
+	legacyCpuprofileFlag = cli.StringFlag{
+		Name:  "cpuprofile",
+		Usage: "Write CPU profile to the given file (deprecated, use --pprof.cpuprofile)",
+	}
+	legacyBacktraceAtFlag = cli.StringFlag{
+		Name:  "backtrace",
+		Usage: "Request a stack trace at a specific logging statement (e.g. \"block.go:271\") (deprecated, use --log.backtrace)",
+		Value: "",
+	}
+	legacyDebugFlag = cli.BoolFlag{
+		Name:  "debug",
+		Usage: "Prepends log messages with call-site location (file and line number) (deprecated, use --log.debug)",
+	}
 )
 
 // Flags holds all command-line flags required for debugging.
 var Flags = []cli.Flag{
 	verbosityFlag, vmoduleFlag, backtraceAtFlag, debugFlag,
-	pprofFlag, pprofAddrFlag, pprofPortFlag,
+	logjsonFlag, pprofFlag, pprofAddrFlag, pprofPortFlag,
 	memprofileFlag, memprofilerateFlag,
 	blockprofilerateFlag, cpuprofileFlag, traceFlag,
+}
+
+// This is the list of deprecated debugging flags.
+var DeprecatedFlags = []cli.Flag{
+	legacyPprofPortFlag,
+	legacyPprofAddrFlag,
+	legacyMemprofileFlag,
+	legacyMemprofilerateFlag,
+	legacyBlockprofilerateFlag,
+	legacyCpuprofileFlag,
+	legacyBacktraceAtFlag,
+	legacyDebugFlag,
 }
 
 var glogger *log.GlogHandler
@@ -140,23 +193,71 @@ func Setup(ctx *cli.Context) error {
 	log.PrintOrigins(ctx.GlobalBool(debugFlag.Name))
 	log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name)))
 	glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name))
-	glogger.BacktraceAt(ctx.GlobalString(backtraceAtFlag.Name))
+
+	debug := ctx.GlobalBool(debugFlag.Name)
+	if ctx.GlobalIsSet(legacyDebugFlag.Name) {
+		debug = ctx.GlobalBool(legacyDebugFlag.Name)
+		logger.Warn("The flag --debug is deprecated and will be removed in the future, please use --log.debug")
+	}
+	if ctx.GlobalIsSet(debugFlag.Name) {
+		debug = ctx.GlobalBool(debugFlag.Name)
+	}
+	log.PrintOrigins(debug)
+
+	backtrace := ctx.GlobalString(backtraceAtFlag.Name)
+	if b := ctx.GlobalString(legacyBacktraceAtFlag.Name); b != "" {
+		backtrace = b
+		logger.Warn("The flag --backtrace is deprecated and will be removed in the future, please use --log.backtrace")
+	}
+	if b := ctx.GlobalString(backtraceAtFlag.Name); b != "" {
+		backtrace = b
+	}
+	glogger.BacktraceAt(backtrace)
 	log.Root().SetHandler(glogger)
 
 	// profiling, tracing
-	runtime.MemProfileRate = ctx.GlobalInt(memprofilerateFlag.Name)
-	Handler.SetBlockProfileRate(ctx.GlobalInt(blockprofilerateFlag.Name))
+	runtime.MemProfileRate = memprofilerateFlag.Value
+	if ctx.GlobalIsSet(legacyMemprofilerateFlag.Name) {
+		runtime.MemProfileRate = ctx.GlobalInt(legacyMemprofilerateFlag.Name)
+		logger.Warn("The flag --memprofilerate is deprecated and will be removed in the future, please use --pprof.memprofilerate")
+	}
+	if ctx.GlobalIsSet(memprofilerateFlag.Name) {
+		runtime.MemProfileRate = ctx.GlobalInt(memprofilerateFlag.Name)
+	}
+
+	blockProfileRate := blockprofilerateFlag.Value
+	if ctx.GlobalIsSet(legacyBlockprofilerateFlag.Name) {
+		blockProfileRate = ctx.GlobalInt(legacyBlockprofilerateFlag.Name)
+		logger.Warn("The flag --blockprofilerate is deprecated and will be removed in the future, please use --pprof.blockprofilerate")
+	}
+	if ctx.GlobalIsSet(blockprofilerateFlag.Name) {
+		blockProfileRate = ctx.GlobalInt(blockprofilerateFlag.Name)
+	}
+	Handler.SetBlockProfileRate(blockProfileRate)
+
 	if traceFile := ctx.GlobalString(traceFlag.Name); traceFile != "" {
 		if err := Handler.StartGoTrace(traceFile); err != nil {
 			return err
 		}
 	}
-	if cpuFile := ctx.GlobalString(cpuprofileFlag.Name); cpuFile != "" {
+	cpuFileName := cpuprofileFlag.Name
+	if ctx.GlobalIsSet(legacyCpuprofileFlag.Name) {
+		cpuFileName = legacyCpuprofileFlag.Name
+	}
+	if cpuFile := ctx.GlobalString(cpuFileName); cpuFile != "" {
 		if err := Handler.StartCPUProfile(cpuFile); err != nil {
 			return err
 		}
 	}
-	Handler.memFile = ctx.GlobalString(memprofileFlag.Name)
+	memProfile := memprofileFlag.Value
+	if ctx.GlobalIsSet(legacyMemprofileFlag.Name) {
+		memProfile = ctx.GlobalString(legacyMemprofileFlag.Name)
+		logger.Warn("The flag --memprofile is deprecated and will be removed in the future, please use --pprof.memprofile")
+	}
+	if ctx.GlobalIsSet(memprofileFlag.Name) {
+		memProfile = ctx.GlobalString(memprofileFlag.Name)
+	}
+	Handler.memFile = ctx.GlobalString(memProfile)
 
 	// pprof server
 	if ctx.GlobalBool(pprofFlag.Name) {
