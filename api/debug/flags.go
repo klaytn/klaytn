@@ -26,6 +26,8 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/mattn/go-isatty"
+
 	"io"
 
 	"github.com/fjl/memsize/memsizeui"
@@ -189,6 +191,19 @@ func CreateLogDir(logDir string) {
 // Setup initializes profiling and logging based on the CLI flags.
 // It should be called as early as possible in the program.
 func Setup(ctx *cli.Context) error {
+	var ostream log.Handler
+	output := io.Writer(os.Stderr)
+	if ctx.GlobalBool(logjsonFlag.Name) {
+		ostream = log.StreamHandler(output, log.JsonFormat())
+	} else {
+		usecolor := (isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())) && os.Getenv("TERM") != "dumb"
+		if usecolor {
+			output = colorable.NewColorableStderr()
+		}
+		ostream = log.StreamHandler(output, log.TerminalFormat(usecolor))
+	}
+	glogger.SetHandler(ostream)
+
 	// logging
 	log.PrintOrigins(ctx.GlobalBool(debugFlag.Name))
 	log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name)))
