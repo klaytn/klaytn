@@ -109,6 +109,7 @@ func init() {
 	app.Flags = append(app.Flags, rpcFlags...)
 	app.Flags = append(app.Flags, ConsoleFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
+	app.Flags = append(app.Flags, debug.DeprecatedFlags...)
 	app.Flags = union(app.Flags, KCNFlags)
 	app.Flags = union(app.Flags, KPNFlags)
 	app.Flags = union(app.Flags, KENFlags)
