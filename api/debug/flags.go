@@ -243,6 +243,7 @@ func Setup(ctx *cli.Context) error {
 	cpuFileName := cpuprofileFlag.Name
 	if ctx.GlobalIsSet(legacyCpuprofileFlag.Name) {
 		cpuFileName = legacyCpuprofileFlag.Name
+		logger.Warn("The flag --cpuprofile is deprecated and will be removed in the future, please use --pprof.cpuprofile")
 	}
 	if cpuFile := ctx.GlobalString(cpuFileName); cpuFile != "" {
 		if err := Handler.StartCPUProfile(cpuFile); err != nil {
@@ -261,9 +262,25 @@ func Setup(ctx *cli.Context) error {
 
 	// pprof server
 	if ctx.GlobalBool(pprofFlag.Name) {
-		addr := ctx.GlobalString(pprofAddrFlag.Name)
-		port := ctx.GlobalInt(pprofPortFlag.Name)
-		Handler.StartPProf(&addr, &port)
+		pprofAddr := pprofAddrFlag.Value
+		if ctx.GlobalIsSet(legacyPprofAddrFlag.Name) {
+			pprofAddr = ctx.GlobalString(legacyPprofAddrFlag.Name)
+			logger.Warn("The flag --pprofaddr is deprecated and will be removed in the future, please use --pprof.addr")
+		}
+		if ctx.GlobalIsSet(pprofAddrFlag.Name) {
+			pprofAddr = ctx.GlobalString(pprofAddrFlag.Name)
+		}
+		addr := ctx.GlobalString(pprofAddr)
+
+		pprofPort := pprofPortFlag.Value
+		if ctx.GlobalIsSet(legacyPprofPortFlag.Name) {
+			pprofPort = ctx.GlobalInt(legacyPprofPortFlag.Name)
+			logger.Warn("The flag --pprofport is deprecated and will be removed in the future, please use --pprof.port")
+		}
+		if ctx.GlobalIsSet(pprofPortFlag.Name) {
+			pprofPort = ctx.GlobalInt(pprofPortFlag.Name)
+		}
+		Handler.StartPProf(&addr, &pprofPort)
 	}
 	return nil
 }
