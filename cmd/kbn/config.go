@@ -219,24 +219,44 @@ func setAuthorizedNodes(ctx *cli.Context, cfg *bootnodeConfig) {
 // setHTTP creates the HTTP RPC listener interface string from the set
 // command line flags, returning empty if the HTTP endpoint is disabled.
 func setHTTP(ctx *cli.Context, cfg *bootnodeConfig) {
-	if ctx.GlobalBool(utils.RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
+	if ctx.GlobalBool(utils.HTTPEnabledFlag.Name) && cfg.HTTPHost == "" {
+		cfg.HTTPHost = "127.0.0.1"
+		if ctx.GlobalIsSet(utils.HTTPListenAddrFlag.Name) {
+			cfg.HTTPHost = ctx.GlobalString(utils.HTTPListenAddrFlag.Name)
+		}
+	} else if ctx.GlobalBool(utils.RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
 		cfg.HTTPHost = "127.0.0.1"
 		if ctx.GlobalIsSet(utils.RPCListenAddrFlag.Name) {
 			cfg.HTTPHost = ctx.GlobalString(utils.RPCListenAddrFlag.Name)
 		}
 	}
 
-	if ctx.GlobalIsSet(utils.RPCPortFlag.Name) {
+	if ctx.GlobalIsSet(utils.HTTPPortFlag.Name) {
+		cfg.HTTPPort = ctx.GlobalInt(utils.HTTPPortFlag.Name)
+	} else if ctx.GlobalIsSet(utils.RPCPortFlag.Name) {
 		cfg.HTTPPort = ctx.GlobalInt(utils.RPCPortFlag.Name)
 	}
-	if ctx.GlobalIsSet(utils.RPCCORSDomainFlag.Name) {
+	if ctx.GlobalIsSet(utils.HTTPCORSDomainFlag.Name) {
+		cfg.HTTPCors = splitAndTrim(ctx.GlobalString(utils.HTTPCORSDomainFlag.Name))
+	} else if ctx.GlobalIsSet(utils.RPCCORSDomainFlag.Name) {
 		cfg.HTTPCors = splitAndTrim(ctx.GlobalString(utils.RPCCORSDomainFlag.Name))
 	}
-	if ctx.GlobalIsSet(utils.RPCApiFlag.Name) {
+	if ctx.GlobalIsSet(utils.HTTPApiFlag.Name) {
+		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(utils.HTTPApiFlag.Name))
+	} else if ctx.GlobalIsSet(utils.RPCApiFlag.Name) {
 		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(utils.RPCApiFlag.Name))
 	}
-	if ctx.GlobalIsSet(utils.RPCVirtualHostsFlag.Name) {
+	if ctx.GlobalIsSet(utils.HTTPVirtualHostsFlag.Name) {
+		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(utils.HTTPVirtualHostsFlag.Name))
+	} else if ctx.GlobalIsSet(utils.RPCVirtualHostsFlag.Name) {
 		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(utils.RPCVirtualHostsFlag.Name))
+	}
+	if ctx.GlobalIsSet(utils.HTTPConcurrencyLimit.Name) {
+		rpc.ConcurrencyLimit = ctx.GlobalInt(utils.HTTPConcurrencyLimit.Name)
+		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
+	} else if ctx.GlobalIsSet(utils.RPCConcurrencyLimit.Name) {
+		rpc.ConcurrencyLimit = ctx.GlobalInt(utils.RPCConcurrencyLimit.Name)
+		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
 	}
 }
 
@@ -247,17 +267,25 @@ func setWS(ctx *cli.Context, cfg *bootnodeConfig) {
 		cfg.WSHost = "127.0.0.1"
 		if ctx.GlobalIsSet(utils.WSListenAddrFlag.Name) {
 			cfg.WSHost = ctx.GlobalString(utils.WSListenAddrFlag.Name)
+		} else if ctx.GlobalIsSet(utils.LegacyWSListenAddrFlag.Name) {
+			cfg.WSHost = ctx.GlobalString(utils.LegacyWSListenAddrFlag.Name)
 		}
 	}
 
 	if ctx.GlobalIsSet(utils.WSPortFlag.Name) {
 		cfg.WSPort = ctx.GlobalInt(utils.WSPortFlag.Name)
+	} else if ctx.GlobalIsSet(utils.LegacyWSPortFlag.Name) {
+		cfg.WSPort = ctx.GlobalInt(utils.LegacyWSPortFlag.Name)
 	}
 	if ctx.GlobalIsSet(utils.WSAllowedOriginsFlag.Name) {
 		cfg.WSOrigins = splitAndTrim(ctx.GlobalString(utils.WSAllowedOriginsFlag.Name))
+	} else if ctx.GlobalIsSet(utils.LegacyWSAllowedOriginsFlag.Name) {
+		cfg.WSOrigins = splitAndTrim(ctx.GlobalString(utils.LegacyWSAllowedOriginsFlag.Name))
 	}
 	if ctx.GlobalIsSet(utils.WSApiFlag.Name) {
 		cfg.WSModules = splitAndTrim(ctx.GlobalString(utils.WSApiFlag.Name))
+	} else if ctx.GlobalIsSet(utils.LegacyWSApiFlag.Name) {
+		cfg.WSModules = splitAndTrim(ctx.GlobalString(utils.LegacyWSApiFlag.Name))
 	}
 }
 

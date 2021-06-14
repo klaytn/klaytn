@@ -100,8 +100,8 @@ var CommonNodeFlags = []cli.Flag{
 	utils.VMLogTargetFlag,
 	utils.VMTraceInternalTxFlag,
 	utils.NetworkIdFlag,
-	utils.RPCCORSDomainFlag,
-	utils.RPCVirtualHostsFlag,
+	utils.HTTPCORSDomainFlag,
+	utils.HTTPVirtualHostsFlag,
 	utils.MetricsEnabledFlag,
 	utils.PrometheusExporterFlag,
 	utils.PrometheusExporterPortFlag,
@@ -117,18 +117,18 @@ var CommonNodeFlags = []cli.Flag{
 
 // Common RPC flags
 var CommonRPCFlags = []cli.Flag{
-	utils.RPCEnabledFlag,
-	utils.RPCListenAddrFlag,
-	utils.RPCPortFlag,
-	utils.RPCApiFlag,
-	utils.RPCGlobalGasCap,
+	utils.HTTPEnabledFlag,
+	utils.HTTPListenAddrFlag,
+	utils.HTTPPortFlag,
+	utils.HTTPApiFlag,
+	utils.HTTPGlobalGasCap,
 	utils.WSEnabledFlag,
 	utils.WSListenAddrFlag,
 	utils.WSPortFlag,
 	utils.GRPCEnabledFlag,
 	utils.GRPCListenAddrFlag,
 	utils.GRPCPortFlag,
-	utils.RPCConcurrencyLimit,
+	utils.HTTPConcurrencyLimit,
 	utils.WSApiFlag,
 	utils.WSAllowedOriginsFlag,
 	utils.WSMaxSubscriptionPerConn,
@@ -137,6 +137,22 @@ var CommonRPCFlags = []cli.Flag{
 	utils.WSMaxConnections,
 	utils.IPCDisabledFlag,
 	utils.IPCPathFlag,
+
+	//Deprecated RPC flags
+	utils.RPCEnabledFlag,
+	utils.RPCListenAddrFlag,
+	utils.RPCPortFlag,
+	utils.RPCApiFlag,
+	utils.RPCGlobalGasCap,
+	utils.LegacyWSListenAddrFlag,
+	utils.LegacyWSPortFlag,
+	utils.RPCConcurrencyLimit,
+	utils.LegacyWSApiFlag,
+	utils.LegacyWSAllowedOriginsFlag,
+	utils.LegacyWSMaxSubscriptionPerConn,
+	utils.LegacyWSReadDeadLine,
+	utils.LegacyWSWriteDeadLine,
+	utils.LegacyWSMaxConnections,
 }
 
 var KCNFlags = []cli.Flag{
