@@ -113,6 +113,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.ConfigFileFlag,
 	utils.APIFilterGetLogsMaxItemsFlag,
 	utils.APIFilterGetLogsDeadlineFlag,
+	utils.OpcodeComputationCostLimitFlag,
 }
 
 // Common RPC flags
@@ -143,6 +144,8 @@ var KCNFlags = []cli.Flag{
 	utils.RewardbaseFlag,
 	utils.CypressFlag,
 	utils.BaobabFlag,
+	utils.BlockGenerationIntervalFlag,
+	utils.BlockGenerationTimeLimitFlag,
 }
 
 var KPNFlags = []cli.Flag{
@@ -210,6 +213,8 @@ var KENFlags = []cli.Flag{
 
 var KSCNFlags = []cli.Flag{
 	utils.RewardbaseFlag,
+	utils.BlockGenerationIntervalFlag,
+	utils.BlockGenerationTimeLimitFlag,
 	utils.ServiceChainSignerFlag,
 	utils.AnchoringPeriodFlag,
 	utils.SentChainTxsLimit,

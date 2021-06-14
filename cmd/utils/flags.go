@@ -993,6 +993,23 @@ var (
 		Name:  "config",
 		Usage: "TOML configuration file",
 	}
+	BlockGenerationIntervalFlag = cli.Int64Flag{
+		Name: "block-generation-interval",
+		Usage: "(experimental option) Set the block generation interval in seconds. " +
+			"It should be equal or larger than 1",
+		Value: params.DefaultBlockGenerationInterval,
+	}
+	BlockGenerationTimeLimitFlag = cli.DurationFlag{
+		Name: "block-generation-time-limit",
+		Usage: "(experimental option) Set the vm execution time limit during block generation. " +
+			"Less than half of the block generation interval is recommended for this value",
+		Value: params.DefaultBlockGenerationTimeLimit,
+	}
+	OpcodeComputationCostLimitFlag = cli.Uint64Flag{
+		Name:  "opcode-computation-cost-limit",
+		Usage: "(experimental option) Set the computation cost limit for a tx",
+		Value: params.DefaultOpcodeComputationCostLimit,
+	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
 	// TODO-Klaytn-Bootnode: Implements bootnode's RPC
@@ -1579,6 +1596,13 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	if ctx.GlobalIsSet(RPCGlobalGasCap.Name) {
 		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
 	}
+
+	params.BlockGenerationInterval = ctx.GlobalInt64(BlockGenerationIntervalFlag.Name)
+	if params.BlockGenerationInterval < 1 {
+		logger.Crit("Block generation interval should be equal or larger than 1")
+	}
+	params.BlockGenerationTimeLimit = ctx.GlobalDuration(BlockGenerationTimeLimitFlag.Name)
+	params.OpcodeComputationCostLimit = ctx.GlobalUint64(OpcodeComputationCostLimitFlag.Name)
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
