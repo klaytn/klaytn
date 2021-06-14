@@ -108,7 +108,7 @@ var (
 	// TODO-Klaytn-Bootnode: redefine networkid
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
-		Usage: "Network identifier (integer, 1=MainNet (Not yet launched), 1000=Aspen, 1001=Baobab)",
+		Usage: "Network identifier (integer, 8217=MainNet, , 1001=Baobab)",
 		Value: cn.GetDefaultConfig().NetworkId,
 	}
 	IdentityFlag = cli.StringFlag{
