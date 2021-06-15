@@ -1224,7 +1224,7 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 		logger.Warn("The flag --rpc is deprecated and will be removed in the future, please use --http")
 		if ctx.GlobalIsSet(RPCListenAddrFlag.Name) {
 			cfg.HTTPHost = ctx.GlobalString(RPCListenAddrFlag.Name)
-			logger.Warn("The flag --rpcaddr is deprecated and will be removed in the future, please use --rpc.addr")
+			logger.Warn("The flag --rpcaddr is deprecated and will be removed in the future, please use --http.addr")
 		}
 	}
 
