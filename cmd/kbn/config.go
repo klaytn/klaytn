@@ -308,11 +308,15 @@ func setgRPC(ctx *cli.Context, cfg *bootnodeConfig) {
 		cfg.GRPCHost = "127.0.0.1"
 		if ctx.GlobalIsSet(utils.GRPCListenAddrFlag.Name) {
 			cfg.GRPCHost = ctx.GlobalString(utils.GRPCListenAddrFlag.Name)
+		} else if ctx.GlobalIsSet(utils.LegacyGRPCListenAddrFlag.Name) {
+			cfg.GRPCHost = ctx.GlobalString(utils.LegacyGRPCListenAddrFlag.Name)
 		}
 	}
 
 	if ctx.GlobalIsSet(utils.GRPCPortFlag.Name) {
 		cfg.GRPCPort = ctx.GlobalInt(utils.GRPCPortFlag.Name)
+	} else if ctx.GlobalIsSet(utils.LegacyGRPCPortFlag.Name) {
+		cfg.GRPCPort = ctx.GlobalInt(utils.LegacyGRPCPortFlag.Name)
 	}
 }
 
