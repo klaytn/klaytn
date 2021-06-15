@@ -1597,11 +1597,17 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
 	}
 
-	params.BlockGenerationInterval = ctx.GlobalInt64(BlockGenerationIntervalFlag.Name)
-	if params.BlockGenerationInterval < 1 {
-		logger.Crit("Block generation interval should be equal or larger than 1")
+	// Only CNs could set BlockGenerationIntervalFlag and BlockGenerationTimeLimitFlag
+	if ctx.GlobalIsSet(BlockGenerationIntervalFlag.Name) {
+		params.BlockGenerationInterval = ctx.GlobalInt64(BlockGenerationIntervalFlag.Name)
+		if params.BlockGenerationInterval < 1 {
+			logger.Crit("Block generation interval should be equal or larger than 1", "interval", params.BlockGenerationInterval)
+		}
 	}
-	params.BlockGenerationTimeLimit = ctx.GlobalDuration(BlockGenerationTimeLimitFlag.Name)
+	if ctx.GlobalIsSet(BlockGenerationTimeLimitFlag.Name) {
+		params.BlockGenerationTimeLimit = ctx.GlobalDuration(BlockGenerationTimeLimitFlag.Name)
+	}
+
 	params.OpcodeComputationCostLimit = ctx.GlobalUint64(OpcodeComputationCostLimitFlag.Name)
 
 	// Override any default configs for hard coded network.
