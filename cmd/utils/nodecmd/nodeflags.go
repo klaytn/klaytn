@@ -144,15 +144,19 @@ var CommonRPCFlags = []cli.Flag{
 	utils.RPCPortFlag,
 	utils.RPCApiFlag,
 	utils.RPCGlobalGasCap,
+	utils.RPCConcurrencyLimit,
+	utils.RPCCORSDomainFlag,
+	utils.RPCVirtualHostsFlag,
 	utils.LegacyWSListenAddrFlag,
 	utils.LegacyWSPortFlag,
-	utils.RPCConcurrencyLimit,
 	utils.LegacyWSApiFlag,
 	utils.LegacyWSAllowedOriginsFlag,
 	utils.LegacyWSMaxSubscriptionPerConn,
 	utils.LegacyWSReadDeadLine,
 	utils.LegacyWSWriteDeadLine,
 	utils.LegacyWSMaxConnections,
+	utils.LegacyGRPCPortFlag,
+	utils.LegacyGRPCListenAddrFlag,
 }
 
 var KCNFlags = []cli.Flag{
