@@ -90,7 +90,7 @@ type stateObject struct {
 	storageTrie Trie // storage trie, which becomes non-nil on first access
 	code        Code // contract bytecode, which gets set when code is loaded
 
-	cachedStorage Storage // Storage cache of original entries to dedup rewrites
+	originStorage Storage // Storage cache of original entries to dedup rewrites
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
 
 	// Cache flags.
@@ -121,7 +121,7 @@ func newObject(db *StateDB, address common.Address, data account.Account) *state
 		db:            db,
 		address:       address,
 		account:       data,
-		cachedStorage: make(Storage),
+		originStorage: make(Storage),
 		dirtyStorage:  make(Storage),
 	}
 }
@@ -192,7 +192,7 @@ func (self *stateObject) GetState(db Database, key common.Hash) common.Hash {
 // GetCommittedState retrieves a value from the committed account storage trie.
 func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.Hash {
 	// If we have the original value cached, return that
-	value, cached := self.cachedStorage[key]
+	value, cached := self.originStorage[key]
 	if cached {
 		return value
 	}
@@ -213,7 +213,7 @@ func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.
 		}
 		value.SetBytes(content)
 	}
-	self.cachedStorage[key] = value
+	self.originStorage[key] = value
 	return value
 }
 
@@ -282,10 +282,10 @@ func (self *stateObject) updateStorageTrie(db Database) Trie {
 		delete(self.dirtyStorage, key)
 
 		// Skip noop changes, persist actual changes
-		if value == self.cachedStorage[key] {
+		if value == self.originStorage[key] {
 			continue
 		}
-		self.cachedStorage[key] = value
+		self.originStorage[key] = value
 
 		if (value == common.Hash{}) {
 			self.setError(tr.TryDelete(key[:]))
@@ -393,7 +393,7 @@ func (self *stateObject) deepCopy(db *StateDB) *stateObject {
 	}
 	stateObject.code = self.code
 	stateObject.dirtyStorage = self.dirtyStorage.Copy()
-	stateObject.cachedStorage = self.cachedStorage.Copy()
+	stateObject.originStorage = self.originStorage.Copy()
 	stateObject.suicided = self.suicided
 	stateObject.dirtyCode = self.dirtyCode
 	stateObject.deleted = self.deleted
