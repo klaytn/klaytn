@@ -225,10 +225,10 @@ func (api *PublicDebugAPI) DumpBlock(ctx context.Context, blockNrOrHash rpc.Bloc
 		block = api.cn.APIBackend.CurrentBlock()
 	} else {
 		block, err = api.cn.APIBackend.BlockByNumberOrHash(ctx, blockNrOrHash)
-	}
-	if err != nil {
-		blockNrOrHashString, _ := blockNrOrHash.NumberOrHashString()
-		return state.Dump{}, fmt.Errorf("block %v not found", blockNrOrHashString)
+		if err != nil {
+			blockNrOrHashString, _ := blockNrOrHash.NumberOrHashString()
+			return state.Dump{}, fmt.Errorf("block %v not found", blockNrOrHashString)
+		}
 	}
 	stateDb, err := api.cn.BlockChain().StateAtWithPersistent(block.Root())
 	if err != nil {
