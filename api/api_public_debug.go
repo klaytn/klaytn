@@ -25,7 +25,6 @@ import (
 	"fmt"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -64,17 +63,4 @@ func (api *PublicDebugAPI) PrintBlock(ctx context.Context, blockNrOrHash rpc.Blo
 		return "", fmt.Errorf("block %v not found", blockNumberOrHashString)
 	}
 	return spew.Sdump(block), nil
-}
-
-// SeedHash retrieves the seed hash of a block.
-func (api *PublicDebugAPI) SeedHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (string, error) {
-	blockNr, ok := blockNrOrHash.Number()
-	if !ok {
-		return "", fmt.Errorf("input must be block number")
-	}
-	block, _ := api.b.BlockByNumber(ctx, blockNr)
-	if block == nil {
-		return "", fmt.Errorf("block #%v not found", blockNr)
-	}
-	return fmt.Sprintf("0x%x", gxhash.SeedHash(uint64(blockNr.Int64()))), nil
 }
