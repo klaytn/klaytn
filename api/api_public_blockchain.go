@@ -152,22 +152,12 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 
 // GetHeaderByNumber returns the requested canonical block header.
 func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
-	header, err := s.b.HeaderByNumber(ctx, number)
-	if err != nil {
-		return nil, err
-	}
-	return header, nil
-
+	return s.b.HeaderByNumber(ctx, number)
 }
 
 // GetHeaderByHash returns the requested header by hash.
 func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	header, err := s.b.HeaderByHash(ctx, hash)
-	if err != nil {
-		return nil, err
-	}
-	return header, nil
-
+	return s.b.HeaderByHash(ctx, hash)
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
