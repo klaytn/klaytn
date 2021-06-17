@@ -269,11 +269,11 @@ func (bnh *BlockNumberOrHash) Hash() (common.Hash, bool) {
 }
 
 func (bnh *BlockNumberOrHash) NumberOrHashString() (string, bool) {
-	if bnh.BlockHash != nil {
-		return bnh.BlockHash.String(), true
-	}
 	if bnh.BlockNumber != nil {
 		return fmt.Sprintf("#%v", bnh.BlockNumber.Int64()), true
+	}
+	if bnh.BlockHash != nil {
+		return bnh.BlockHash.String(), true
 	}
 	return "", false
 }
