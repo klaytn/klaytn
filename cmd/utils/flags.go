@@ -1594,6 +1594,17 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	setTxResendConfig(ctx, cfg)
 }
 
+func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
+	var genesis blockchain.Genesis
+	switch {
+	case ctx.GlobalBool(CypressFlag.Name):
+		genesis = *blockchain.DefaultGenesisBlock()
+	case ctx.GlobalBool(BaobabFlag.Name):
+		genesis = *blockchain.DefaultBaobabGenesisBlock()
+	}
+	return &genesis
+}
+
 // RegisterCNService adds a CN client to the stack.
 func RegisterCNService(stack *node.Node, cfg *cn.Config) {
 	// TODO-Klaytn add syncMode.LightSync func and add LesServer

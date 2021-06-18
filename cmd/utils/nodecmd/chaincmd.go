@@ -67,6 +67,20 @@ participating.
 
 It expects the genesis file as argument.`,
 	}
+
+	DumpGenesisCommand = cli.Command{
+		Action:    utils.MigrateFlags(dumpGenesis),
+		Name:      "dumpgenesis",
+		Usage:     "Dumps genesis block JSON configuration to stdout",
+		ArgsUsage: "",
+		Flags: []cli.Flag{
+			utils.CypressFlag,
+			utils.BaobabFlag,
+		},
+		Category: "BLOCKCHAIN COMMANDS",
+		Description: `
+The dumpgenesis command dumps the genesis block configuration in JSON format to stdout.`,
+	}
 )
 
 // initGenesis will initialise the given JSON format genesis file and writes it as
@@ -160,6 +174,17 @@ func initGenesis(ctx *cli.Context) error {
 
 		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
 		chainDB.Close()
+	}
+	return nil
+}
+
+func dumpGenesis(ctx *cli.Context) error {
+	genesis := utils.MakeGenesis(ctx)
+	if genesis == nil {
+		genesis = blockchain.DefaultGenesisBlock()
+	}
+	if err := json.NewEncoder(os.Stdout).Encode(genesis); err != nil {
+		utils.Fatalf("could not encode genesis")
 	}
 	return nil
 }
