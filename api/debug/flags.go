@@ -212,7 +212,7 @@ func Setup(ctx *cli.Context) error {
 	debug := ctx.GlobalBool(debugFlag.Name)
 	if ctx.GlobalIsSet(legacyDebugFlag.Name) {
 		debug = ctx.GlobalBool(legacyDebugFlag.Name)
-		logger.Warn("The flag --debug is deprecated and will be removed in the future, please use --log.debug")
+		logger.Warn("The flag --debug is deprecated and will be removed in the future (v1.12.0), please use --log.debug")
 	}
 	if ctx.GlobalIsSet(debugFlag.Name) {
 		debug = ctx.GlobalBool(debugFlag.Name)
@@ -222,7 +222,7 @@ func Setup(ctx *cli.Context) error {
 	backtrace := ctx.GlobalString(backtraceAtFlag.Name)
 	if b := ctx.GlobalString(legacyBacktraceAtFlag.Name); b != "" {
 		backtrace = b
-		logger.Warn("The flag --backtrace is deprecated and will be removed in the future, please use --log.backtrace")
+		logger.Warn("The flag --backtrace is deprecated and will be removed in the future (v1.12.0), please use --log.backtrace")
 	}
 	if b := ctx.GlobalString(backtraceAtFlag.Name); b != "" {
 		backtrace = b
@@ -234,7 +234,7 @@ func Setup(ctx *cli.Context) error {
 	runtime.MemProfileRate = memprofilerateFlag.Value
 	if ctx.GlobalIsSet(legacyMemprofilerateFlag.Name) {
 		runtime.MemProfileRate = ctx.GlobalInt(legacyMemprofilerateFlag.Name)
-		logger.Warn("The flag --memprofilerate is deprecated and will be removed in the future, please use --pprof.memprofilerate")
+		logger.Warn("The flag --memprofilerate is deprecated and will be removed in the future (v1.12.0), please use --pprof.memprofilerate")
 	}
 	if ctx.GlobalIsSet(memprofilerateFlag.Name) {
 		runtime.MemProfileRate = ctx.GlobalInt(memprofilerateFlag.Name)
@@ -243,7 +243,7 @@ func Setup(ctx *cli.Context) error {
 	blockProfileRate := blockprofilerateFlag.Value
 	if ctx.GlobalIsSet(legacyBlockprofilerateFlag.Name) {
 		blockProfileRate = ctx.GlobalInt(legacyBlockprofilerateFlag.Name)
-		logger.Warn("The flag --blockprofilerate is deprecated and will be removed in the future, please use --pprof.blockprofilerate")
+		logger.Warn("The flag --blockprofilerate is deprecated and will be removed in the future (v1.12.0), please use --pprof.blockprofilerate")
 	}
 	if ctx.GlobalIsSet(blockprofilerateFlag.Name) {
 		blockProfileRate = ctx.GlobalInt(blockprofilerateFlag.Name)
@@ -258,7 +258,7 @@ func Setup(ctx *cli.Context) error {
 	cpuFileName := cpuprofileFlag.Name
 	if ctx.GlobalIsSet(legacyCpuprofileFlag.Name) {
 		cpuFileName = legacyCpuprofileFlag.Name
-		logger.Warn("The flag --cpuprofile is deprecated and will be removed in the future, please use --pprof.cpuprofile")
+		logger.Warn("The flag --cpuprofile is deprecated and will be removed in the future (v1.12.0), please use --pprof.cpuprofile")
 	}
 	if cpuFile := ctx.GlobalString(cpuFileName); cpuFile != "" {
 		if err := Handler.StartCPUProfile(cpuFile); err != nil {
@@ -268,7 +268,7 @@ func Setup(ctx *cli.Context) error {
 	memProfile := memprofileFlag.Value
 	if ctx.GlobalIsSet(legacyMemprofileFlag.Name) {
 		memProfile = ctx.GlobalString(legacyMemprofileFlag.Name)
-		logger.Warn("The flag --memprofile is deprecated and will be removed in the future, please use --pprof.memprofile")
+		logger.Warn("The flag --memprofile is deprecated and will be removed in the future (v1.12.0), please use --pprof.memprofile")
 	}
 	if ctx.GlobalIsSet(memprofileFlag.Name) {
 		memProfile = ctx.GlobalString(memprofileFlag.Name)
@@ -280,7 +280,7 @@ func Setup(ctx *cli.Context) error {
 		pprofAddr := pprofAddrFlag.Value
 		if ctx.GlobalIsSet(legacyPprofAddrFlag.Name) {
 			pprofAddr = ctx.GlobalString(legacyPprofAddrFlag.Name)
-			logger.Warn("The flag --pprofaddr is deprecated and will be removed in the future, please use --pprof.addr")
+			logger.Warn("The flag --pprofaddr is deprecated and will be removed in the future (v1.12.0), please use --pprof.addr")
 		}
 		if ctx.GlobalIsSet(pprofAddrFlag.Name) {
 			pprofAddr = ctx.GlobalString(pprofAddrFlag.Name)
@@ -290,7 +290,7 @@ func Setup(ctx *cli.Context) error {
 		pprofPort := pprofPortFlag.Value
 		if ctx.GlobalIsSet(legacyPprofPortFlag.Name) {
 			pprofPort = ctx.GlobalInt(legacyPprofPortFlag.Name)
-			logger.Warn("The flag --pprofport is deprecated and will be removed in the future, please use --pprof.port")
+			logger.Warn("The flag --pprofport is deprecated and will be removed in the future (v1.12.0), please use --pprof.port")
 		}
 		if ctx.GlobalIsSet(pprofPortFlag.Name) {
 			pprofPort = ctx.GlobalInt(pprofPortFlag.Name)
