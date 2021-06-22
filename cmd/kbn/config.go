@@ -226,8 +226,10 @@ func setHTTP(ctx *cli.Context, cfg *bootnodeConfig) {
 		}
 	} else if ctx.GlobalBool(utils.RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
 		cfg.HTTPHost = "127.0.0.1"
+		logger.Warn("The flag --rpc is deprecated and will be removed in the future (v1.12.0), please use --http")
 		if ctx.GlobalIsSet(utils.RPCListenAddrFlag.Name) {
 			cfg.HTTPHost = ctx.GlobalString(utils.RPCListenAddrFlag.Name)
+			logger.Warn("The flag --rpcaddr is deprecated and will be removed in the future (v1.12.0), please use --http.addr")
 		}
 	}
 
@@ -235,27 +237,32 @@ func setHTTP(ctx *cli.Context, cfg *bootnodeConfig) {
 		cfg.HTTPPort = ctx.GlobalInt(utils.HTTPPortFlag.Name)
 	} else if ctx.GlobalIsSet(utils.RPCPortFlag.Name) {
 		cfg.HTTPPort = ctx.GlobalInt(utils.RPCPortFlag.Name)
+		logger.Warn("The flag --rpcport is deprecated and will be removed in the future (v1.12.0), please use --http.port")
 	}
 	if ctx.GlobalIsSet(utils.HTTPCORSDomainFlag.Name) {
 		cfg.HTTPCors = splitAndTrim(ctx.GlobalString(utils.HTTPCORSDomainFlag.Name))
 	} else if ctx.GlobalIsSet(utils.RPCCORSDomainFlag.Name) {
 		cfg.HTTPCors = splitAndTrim(ctx.GlobalString(utils.RPCCORSDomainFlag.Name))
+		logger.Warn("The flag --rpccorsdomain is deprecated and will be removed in the future (v1.12.0), please use --http.corsdomain")
 	}
 	if ctx.GlobalIsSet(utils.HTTPApiFlag.Name) {
 		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(utils.HTTPApiFlag.Name))
 	} else if ctx.GlobalIsSet(utils.RPCApiFlag.Name) {
 		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(utils.RPCApiFlag.Name))
+		logger.Warn("The flag --rpcapi is deprecated and will be removed in the future (v1.12.0), please use --http.api")
 	}
 	if ctx.GlobalIsSet(utils.HTTPVirtualHostsFlag.Name) {
 		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(utils.HTTPVirtualHostsFlag.Name))
 	} else if ctx.GlobalIsSet(utils.RPCVirtualHostsFlag.Name) {
 		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(utils.RPCVirtualHostsFlag.Name))
+		logger.Warn("The flag --rpcvhosts is deprecated and will be removed in the future (v1.12.0), please use --http.vhosts")
 	}
 	if ctx.GlobalIsSet(utils.HTTPConcurrencyLimit.Name) {
 		rpc.ConcurrencyLimit = ctx.GlobalInt(utils.HTTPConcurrencyLimit.Name)
 		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
 	} else if ctx.GlobalIsSet(utils.RPCConcurrencyLimit.Name) {
 		rpc.ConcurrencyLimit = ctx.GlobalInt(utils.RPCConcurrencyLimit.Name)
+		logger.Warn("The flag --rpcconcurrencylimit is deprecated and will be removed in the future (v1.12.0), please use --http.concurrencylimit")
 		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
 	}
 }
@@ -269,6 +276,7 @@ func setWS(ctx *cli.Context, cfg *bootnodeConfig) {
 			cfg.WSHost = ctx.GlobalString(utils.WSListenAddrFlag.Name)
 		} else if ctx.GlobalIsSet(utils.LegacyWSListenAddrFlag.Name) {
 			cfg.WSHost = ctx.GlobalString(utils.LegacyWSListenAddrFlag.Name)
+			logger.Warn("The flag --wsaddr is deprecated and will be removed in the future (v1.12.0), please use --ws.addr")
 		}
 	}
 
@@ -276,16 +284,19 @@ func setWS(ctx *cli.Context, cfg *bootnodeConfig) {
 		cfg.WSPort = ctx.GlobalInt(utils.WSPortFlag.Name)
 	} else if ctx.GlobalIsSet(utils.LegacyWSPortFlag.Name) {
 		cfg.WSPort = ctx.GlobalInt(utils.LegacyWSPortFlag.Name)
+		logger.Warn("The flag --wsport is deprecated and will be removed in the future (v1.12.0), please use --ws.port")
 	}
 	if ctx.GlobalIsSet(utils.WSAllowedOriginsFlag.Name) {
 		cfg.WSOrigins = splitAndTrim(ctx.GlobalString(utils.WSAllowedOriginsFlag.Name))
 	} else if ctx.GlobalIsSet(utils.LegacyWSAllowedOriginsFlag.Name) {
 		cfg.WSOrigins = splitAndTrim(ctx.GlobalString(utils.LegacyWSAllowedOriginsFlag.Name))
+		logger.Warn("The flag --wsorigins is deprecated and will be removed in the future (v1.12.0), please use --ws.origins")
 	}
 	if ctx.GlobalIsSet(utils.WSApiFlag.Name) {
 		cfg.WSModules = splitAndTrim(ctx.GlobalString(utils.WSApiFlag.Name))
 	} else if ctx.GlobalIsSet(utils.LegacyWSApiFlag.Name) {
 		cfg.WSModules = splitAndTrim(ctx.GlobalString(utils.LegacyWSApiFlag.Name))
+		logger.Warn("The flag --wsapi is deprecated and will be removed in the future (v1.12.0), please use --ws.api")
 	}
 }
 
