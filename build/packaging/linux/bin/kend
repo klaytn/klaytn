@@ -88,6 +88,26 @@ __check_option() {
         fi
     fi
 
+    #Deprecated options
+    if [[ ! -z $RPC_ENABLE ]] && [[ $RPC_ENABLE -eq 1 ]]; then
+        OPTIONS="$OPTIONS --rpc"
+        if [ ! -z $RPC_API ]; then
+            OPTIONS="$OPTIONS --rpc.api $RPC_API"
+        fi
+        if [ ! -z $RPC_PORT ]; then
+            OPTIONS="$OPTIONS --rpc.port $RPC_PORT"
+        fi
+        if [ ! -z $RPC_ADDR ]; then
+            OPTIONS="$OPTIONS --rpc.addr $RPC_ADDR"
+        fi
+        if [ ! -z $RPC_CORSDOMAIN ]; then
+            OPTIONS="$OPTIONS --rpc.corsdomain $RPC_CORSDOMAIN"
+        fi
+        if [ ! -z $RPC_VHOSTS ]; then
+            OPTIONS="$OPTIONS --rpc.vhosts $RPC_VHOSTS"
+        fi
+    fi
+
     if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
         OPTIONS="$OPTIONS --ws"
         if [ ! -z $WS_API ]; then
