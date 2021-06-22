@@ -115,6 +115,8 @@ func initGenesis(ctx *cli.Context) error {
 
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
+	defer stack.Close()
+
 	parallelDBWrite := !ctx.GlobalIsSet(utils.NoParallelDBWriteFlag.Name)
 	singleDB := ctx.GlobalIsSet(utils.SingleDBFlag.Name)
 	numStateTrieShards := ctx.GlobalUint(utils.NumStateTrieShardsFlag.Name)

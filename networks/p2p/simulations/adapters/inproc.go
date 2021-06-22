@@ -179,6 +179,12 @@ type SimNode struct {
 	registerOnce sync.Once
 }
 
+// Close closes the underlaying node.Node to release
+// acquired resources.
+func (sn *SimNode) Close() error {
+	return sn.node.Close()
+}
+
 // Addr returns the node's discovery address
 func (sn *SimNode) Addr() []byte {
 	return []byte(sn.Node().String())
