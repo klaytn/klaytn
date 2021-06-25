@@ -214,12 +214,9 @@ func Setup(ctx *cli.Context) error {
 		debug = ctx.GlobalBool(legacyDebugFlag.Name)
 		logger.Warn("The flag --debug is deprecated and will be removed in the future (v1.12.0), please use --log.debug")
 	}
-	if ctx.GlobalIsSet(debugFlag.Name) {
-		debug = ctx.GlobalBool(debugFlag.Name)
-	}
 	log.PrintOrigins(debug)
 
-	backtrace := ctx.GlobalString(backtraceAtFlag.Name)
+	backtrace := backtraceAtFlag.Value
 	if b := ctx.GlobalString(legacyBacktraceAtFlag.Name); b != "" {
 		backtrace = b
 		logger.Warn("The flag --backtrace is deprecated and will be removed in the future (v1.12.0), please use --log.backtrace")
