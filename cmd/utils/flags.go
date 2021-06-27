@@ -840,6 +840,16 @@ var (
 		Usage: "The level of acknowledgement reliability needed from Kafka broker (0: NoResponse, 1: WaitForLocal, -1: WaitForAll)",
 		Value: kafka.DefaultRequiredAcks,
 	}
+	ChainDataFetcherKafkaMessageVersionFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kafka.msg.version",
+		Usage: "The version of Kafka message",
+		Value: kafka.DefaultKafkaMessageVersion,
+	}
+	ChainDataFetcherKafkaProducerIdFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kafka.producer.id",
+		Usage: "The identifier of kafka message producer",
+		Value: kafka.GetDefaultProducerId(),
+	}
 	// DBSyncer
 	EnableDBSyncerFlag = cli.BoolFlag{
 		Name:  "dbsyncer",

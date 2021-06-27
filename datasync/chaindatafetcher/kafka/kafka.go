@@ -30,12 +30,21 @@ const (
 	// item indices of message header
 	MsgHeaderTotalSegments = iota
 	MsgHeaderSegmentIdx
+	MsgHeaderVersion
+	MsgHeaderProducerId
 	MsgHeaderLength
+	LegacyMsgHeaderLength = 2
 )
 
 const (
 	KeyTotalSegments = "totalSegments"
 	KeySegmentIdx    = "segmentIdx"
+	KeyVersion       = "version"
+	KeyProducerId    = "producerId"
+)
+
+const (
+	MsgVersion1_0 = "1.0"
 )
 
 type IKey interface {
@@ -135,8 +144,8 @@ func (k *Kafka) split(data []byte) ([][]byte, int) {
 	return segments, len(segments)
 }
 
-func (k *Kafka) makeProducerMessage(topic, key string, segment []byte, segmentIdx, totalSegments uint64) *sarama.ProducerMessage {
-	return &sarama.ProducerMessage{
+func (k *Kafka) makeProducerMessage(topic, key, version, producerId string, segment []byte, segmentIdx, totalSegments uint64) *sarama.ProducerMessage {
+	msg := &sarama.ProducerMessage{
 		Topic: topic,
 		Key:   sarama.StringEncoder(key),
 		Headers: []sarama.RecordHeader{
@@ -151,6 +160,21 @@ func (k *Kafka) makeProducerMessage(topic, key string, segment []byte, segmentId
 		},
 		Value: sarama.ByteEncoder(segment),
 	}
+
+	if version == MsgVersion1_0 {
+		extraHeaders := []sarama.RecordHeader{
+			{
+				Key:   []byte(KeyVersion),
+				Value: []byte(version),
+			},
+			{
+				Key:   []byte(KeyProducerId),
+				Value: []byte(producerId),
+			},
+		}
+		msg.Headers = append(msg.Headers, extraHeaders...)
+	}
+	return msg
 }
 
 func (k *Kafka) Publish(topic string, data interface{}) error {
@@ -164,7 +188,7 @@ func (k *Kafka) Publish(topic string, data interface{}) error {
 	}
 	segments, totalSegments := k.split(dataBytes)
 	for idx, segment := range segments {
-		msg := k.makeProducerMessage(topic, key, segment, uint64(idx), uint64(totalSegments))
+		msg := k.makeProducerMessage(topic, key, k.config.MsgVersion, k.config.ProducerId, segment, uint64(idx), uint64(totalSegments))
 		_, _, err = k.producer.SendMessage(msg)
 		if err != nil {
 			logger.Error("sending kafka message is failed", "err", err, "segmentIdx", idx, "key", key)
