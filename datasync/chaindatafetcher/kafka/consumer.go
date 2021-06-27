@@ -37,6 +37,7 @@ var (
 	nilConsumerMessageErrorMsg = "the given message should not be nil"
 	wrongHeaderNumberErrorMsg  = "the number of header is not expected"
 	wrongHeaderKeyErrorMsg     = "the header key is not expected"
+	wrongMsgVersionErrorMsg    = "the message version is not supported"
 	missingSegmentErrorMsg     = "there is a missing segment"
 	noHandlerErrorMsg          = "the handler does not exist for the given topic"
 	emptySegmentErrorMsg       = "there is no segment in the segment slice"
@@ -48,15 +49,17 @@ type TopicHandler func(message *sarama.ConsumerMessage) error
 
 // Segment represents a message segment with the parsed headers.
 type Segment struct {
-	orig  *sarama.ConsumerMessage
-	key   string
-	total uint64
-	index uint64
-	value []byte
+	orig       *sarama.ConsumerMessage
+	key        string
+	total      uint64
+	index      uint64
+	value      []byte
+	version    string
+	producerId string
 }
 
 func (s *Segment) String() string {
-	return fmt.Sprintf("key: %v, total: %v, index: %v, value %v", s.key, s.total, s.index, string(s.value))
+	return fmt.Sprintf("key: %v, total: %v, index: %v, value: %v, version: %v, producerId: %v", s.key, s.total, s.index, string(s.value), s.version, s.producerId)
 }
 
 // newSegment creates a new segment structure after parsing the headers.
@@ -65,8 +68,30 @@ func newSegment(msg *sarama.ConsumerMessage) (*Segment, error) {
 		return nil, errors.New(nilConsumerMessageErrorMsg)
 	}
 
-	if len(msg.Headers) != MsgHeaderLength {
-		return nil, fmt.Errorf("%v [header length: %v]", wrongHeaderNumberErrorMsg, len(msg.Headers))
+	headerLen := len(msg.Headers)
+	if headerLen != MsgHeaderLength && headerLen != LegacyMsgHeaderLength {
+		return nil, fmt.Errorf("%v [header length: %v]", wrongHeaderNumberErrorMsg, headerLen)
+	}
+
+	version := ""
+	producerId := ""
+
+	if len(msg.Headers) == MsgHeaderLength {
+		keyVersion := string(msg.Headers[MsgHeaderVersion].Key)
+		if keyVersion != KeyVersion {
+			return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeyVersion, keyVersion)
+		}
+		version = string(msg.Headers[MsgHeaderVersion].Value)
+		switch version {
+		case MsgVersion1_0:
+			keyProducerId := string(msg.Headers[MsgHeaderProducerId].Key)
+			if keyProducerId != KeyProducerId {
+				return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeyProducerId, keyProducerId)
+			}
+			producerId = string(msg.Headers[MsgHeaderProducerId].Value)
+		default:
+			return nil, fmt.Errorf("%v [available: %v]", wrongMsgVersionErrorMsg, MsgVersion1_0)
+		}
 	}
 
 	// check the existence of KeyTotalSegments header
@@ -84,7 +109,15 @@ func newSegment(msg *sarama.ConsumerMessage) (*Segment, error) {
 	key := string(msg.Key)
 	totalSegments := binary.BigEndian.Uint64(msg.Headers[MsgHeaderTotalSegments].Value)
 	segmentIdx := binary.BigEndian.Uint64(msg.Headers[MsgHeaderSegmentIdx].Value)
-	return &Segment{orig: msg, key: key, total: totalSegments, index: segmentIdx, value: msg.Value}, nil
+	return &Segment{
+		orig:       msg,
+		key:        key,
+		total:      totalSegments,
+		index:      segmentIdx,
+		value:      msg.Value,
+		version:    version,
+		producerId: producerId,
+	}, nil
 }
 
 // Consumer is a reference structure to subscribe block or trace group produced by EN.
@@ -174,7 +207,7 @@ func (c *Consumer) Cleanup(s sarama.ConsumerGroupSession) error {
 func insertSegment(newSegment *Segment, buffer [][]*Segment) ([][]*Segment, error) {
 	for idx, bufferedSegments := range buffer {
 		numBuffered := len(bufferedSegments)
-		if numBuffered > 0 && bufferedSegments[0].key == newSegment.key {
+		if numBuffered > 0 && bufferedSegments[0].key == newSegment.key && bufferedSegments[0].producerId == newSegment.producerId {
 			// there is a missing segment which should not exist.
 			if newSegment.index > uint64(numBuffered) {
 				logger.Error("there may be a missing segment", "numBuffered", numBuffered, "newSegment", newSegment)
