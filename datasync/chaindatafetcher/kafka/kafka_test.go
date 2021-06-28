@@ -97,8 +97,6 @@ func (s *KafkaSuite) TestKafka_makeProducerV1Message() {
 	rand.Seed(time.Now().UnixNano())
 	totalSegments := rand.Uint64()
 	idx := rand.Uint64() % totalSegments
-	version := MsgVersion1_0
-	producerId := "test-producer-id"
 
 	// make a producer message with the random input
 	msg := s.kfk.makeProducerMessage(s.topic, "", data, idx, totalSegments)
@@ -108,8 +106,8 @@ func (s *KafkaSuite) TestKafka_makeProducerV1Message() {
 	s.Equal(sarama.ByteEncoder(data), msg.Value)
 	s.Equal(totalSegments, binary.BigEndian.Uint64(msg.Headers[MsgHeaderTotalSegments].Value))
 	s.Equal(idx, binary.BigEndian.Uint64(msg.Headers[MsgHeaderSegmentIdx].Value))
-	s.Equal(version, string(msg.Headers[MsgHeaderVersion].Value))
-	s.Equal(producerId, string(msg.Headers[MsgHeaderProducerId].Value))
+	s.Equal(s.kfk.config.MsgVersion, string(msg.Headers[MsgHeaderVersion].Value))
+	s.Equal(s.kfk.config.ProducerId, string(msg.Headers[MsgHeaderProducerId].Value))
 }
 
 func (s *KafkaSuite) TestKafka_makeProducerMessage() {
