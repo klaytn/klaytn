@@ -33,8 +33,9 @@ const (
 	MsgHeaderVersion
 	MsgHeaderProducerId
 	MsgHeaderLength
-	LegacyMsgHeaderLength = 2
 )
+
+const LegacyMsgHeaderLength = 2
 
 const (
 	KeyTotalSegments = "totalSegments"
