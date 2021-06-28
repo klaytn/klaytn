@@ -101,7 +101,7 @@ func (s *KafkaSuite) TestKafka_makeProducerV1Message() {
 	producerId := "test-producer-id"
 
 	// make a producer message with the random input
-	msg := s.kfk.makeProducerMessage(s.topic, "", version, producerId, data, idx, totalSegments)
+	msg := s.kfk.makeProducerMessage(s.topic, "", data, idx, totalSegments)
 
 	// compare the data is correctly inserted
 	s.Equal(s.topic, msg.Topic)
@@ -120,7 +120,7 @@ func (s *KafkaSuite) TestKafka_makeProducerMessage() {
 	idx := rand.Uint64() % totalSegments
 
 	// make a producer message with the random input
-	msg := s.kfk.makeProducerMessage(s.topic, "", "", "", data, idx, totalSegments)
+	msg := s.kfk.makeProducerMessage(s.topic, "", data, idx, totalSegments)
 
 	// compare the data is correctly inserted
 	s.Equal(s.topic, msg.Topic)
@@ -428,7 +428,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegements_BufferOverflow() {
 
 	// insert incomplete message segments
 	for i := 0; i < 3; i++ {
-		msg := s.kfk.makeProducerMessage(topic, "test-key-"+strconv.Itoa(i), MsgVersion1_0, "producer-0", common.MakeRandomBytes(10), 0, 2)
+		msg := s.kfk.makeProducerMessage(topic, "test-key-"+strconv.Itoa(i), common.MakeRandomBytes(10), 0, 2)
 		_, _, err = s.kfk.producer.SendMessage(msg)
 		s.NoError(err)
 	}
