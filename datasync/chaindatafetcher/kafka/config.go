@@ -69,7 +69,7 @@ func GetDefaultKafkaConfig() *KafkaConfig {
 	// The following configurations should be true
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
-	config.Version = sarama.MaxVersion
+	config.Version = sarama.V2_4_0_0
 	config.Producer.MaxMessageBytes = DefaultMaxMessageBytes
 	config.Producer.RequiredAcks = sarama.RequiredAcks(DefaultRequiredAcks)
 	return &KafkaConfig{

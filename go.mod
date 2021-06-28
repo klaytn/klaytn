@@ -3,7 +3,7 @@ module github.com/klaytn/klaytn
 go 1.13
 
 require (
-	github.com/Shopify/sarama v1.23.1
+	github.com/Shopify/sarama v1.26.4
 	github.com/VictoriaMetrics/fastcache v1.5.7
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/client_golang v1.1.0
 	github.com/prometheus/prometheus v2.1.0+incompatible
 	github.com/prometheus/tsdb v0.10.0 // indirect
-	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
+	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
 	github.com/rjeczalik/notify v0.9.1
 	github.com/robertkrimen/otto v0.0.0-20180506084358-03d472dc43ab
 	github.com/rs/cors v1.4.0
