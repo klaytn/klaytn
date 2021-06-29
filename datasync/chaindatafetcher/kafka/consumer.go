@@ -21,15 +21,15 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/Shopify/sarama"
 )
 
 // Logger is the instance of a sarama.StdLogger interface that chaindatafetcher leaves the SDK level information.
-// By default it is set to discard all log messages via ioutil.Discard, but you can set it to redirect wherever you want.
-var Logger sarama.StdLogger = log.New(ioutil.Discard, "[Chaindatafetcher] ", log.LstdFlags)
+// By default it is set to print all log messages as standard output, but you can set it to redirect wherever you want.
+var Logger sarama.StdLogger = log.New(os.Stdout, "[Chaindatafetcher] ", log.LstdFlags)
 
 //go:generate mockgen -destination=./mocks/consumer_group_session_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka ConsumerGroupSession
 // ConsumerGroupSession is for mocking sarama.ConsumerGroupSession for better testing.
