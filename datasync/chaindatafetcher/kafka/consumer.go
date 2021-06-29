@@ -139,7 +139,7 @@ func NewConsumer(config *KafkaConfig, groupId string) (*Consumer, error) {
 	if err != nil {
 		return nil, err
 	}
-	Logger.Printf("the chaindatafetcher consumer is created. [groupId: %s, config: %s]", groupId, config.String())
+	Logger.Printf("[INFO] the chaindatafetcher consumer is created. [groupId: %s, config: %s]", groupId, config.String())
 	return &Consumer{
 		config:   config,
 		group:    group,
@@ -150,7 +150,7 @@ func NewConsumer(config *KafkaConfig, groupId string) (*Consumer, error) {
 // Close stops the ConsumerGroup and detaches any running sessions. It is required to call
 // this function before the object passes out of scope, as it will otherwise leak memory.
 func (c *Consumer) Close() error {
-	Logger.Println("the chaindatafetcher consumer is closed")
+	Logger.Println("[INFO] the chaindatafetcher consumer is closed")
 	return c.group.Close()
 }
 
@@ -180,12 +180,12 @@ func (c *Consumer) Subscribe(ctx context.Context) error {
 
 	// Iterate over consumer sessions.
 	for {
-		Logger.Println("started to consume Kafka message")
+		Logger.Println("[INFO] started to consume Kafka message")
 		if err := c.group.Consume(ctx, c.topics, c); err == sarama.ErrClosedConsumerGroup {
-			Logger.Println("the consumer group is closed")
+			Logger.Println("[INFO] the consumer group is closed")
 			return nil
 		} else if err != nil {
-			Logger.Printf("the consumption is failed [err: %s]\n", err.Error())
+			Logger.Printf("[ERROR] the consumption is failed [err: %s]\n", err.Error())
 			return err
 		}
 		// TODO-Chaindatafetcher add retry logic and error callback here
@@ -222,13 +222,13 @@ func insertSegment(newSegment *Segment, buffer [][]*Segment) ([][]*Segment, erro
 		if numBuffered > 0 && bufferedSegments[0].key == newSegment.key && bufferedSegments[0].producerId == newSegment.producerId {
 			// there is a missing segment which should not exist.
 			if newSegment.index > uint64(numBuffered) {
-				Logger.Printf("there may be a missing segment [numBuffered: %d, newSegment: %s]\n", numBuffered, newSegment.String())
+				Logger.Printf("[ERROR] there may be a missing segment [numBuffered: %d, newSegment: %s]\n", numBuffered, newSegment.String())
 				return buffer, errors.New(missingSegmentErrorMsg)
 			}
 
 			// the segment is already inserted to buffer.
 			if newSegment.index < uint64(numBuffered) {
-				Logger.Printf("the message is duplicated [newSegment: %s]\n", newSegment.String())
+				Logger.Printf("[WARN] the message is duplicated [newSegment: %s]\n", newSegment.String())
 				return buffer, nil
 			}
 
@@ -243,7 +243,7 @@ func insertSegment(newSegment *Segment, buffer [][]*Segment) ([][]*Segment, erro
 		buffer = append(buffer, []*Segment{newSegment})
 	} else {
 		// the segment may be already handled.
-		Logger.Printf("the message may be inserted already. drop the segment [segment: %s]\n", newSegment.String())
+		Logger.Printf("[WARN] the message may be inserted already. drop the segment [segment: %s]\n", newSegment.String())
 	}
 	return buffer, nil
 }
@@ -270,12 +270,12 @@ func (c *Consumer) handleBufferedMessages(buffer [][]*Segment) ([][]*Segment, er
 
 		f, ok := c.handlers[firstSegment.orig.Topic]
 		if !ok {
-			Logger.Printf("getting handler is failed with the given topic. [topic: %s]\n", msg.Topic)
+			Logger.Printf("[ERROR] getting handler is failed with the given topic. [topic: %s]\n", msg.Topic)
 			return buffer, fmt.Errorf("%v: %v", noHandlerErrorMsg, msg.Topic)
 		}
 
 		if err := f(msg); err != nil {
-			Logger.Printf("the handler is failed [key: %s]\n", string(msg.Key))
+			Logger.Printf("[ERROR] the handler is failed [key: %s]\n", string(msg.Key))
 			return buffer, err
 		}
 
@@ -291,7 +291,7 @@ func (c *Consumer) handleBufferedMessages(buffer [][]*Segment) ([][]*Segment, er
 func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMessage, session ConsumerGroupSession) error {
 	if len(buffer) > 0 {
 		if len(buffer[0]) <= 0 {
-			Logger.Println("no segment exists in the given buffer slice")
+			Logger.Println("[ERROR] no segment exists in the given buffer slice")
 			return errors.New(emptySegmentErrorMsg)
 		}
 
