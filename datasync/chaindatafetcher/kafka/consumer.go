@@ -76,7 +76,7 @@ func newSegment(msg *sarama.ConsumerMessage) (*Segment, error) {
 	version := ""
 	producerId := ""
 
-	if len(msg.Headers) == MsgHeaderLength {
+	if headerLen == MsgHeaderLength {
 		keyVersion := string(msg.Headers[MsgHeaderVersion].Key)
 		if keyVersion != KeyVersion {
 			return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeyVersion, keyVersion)
