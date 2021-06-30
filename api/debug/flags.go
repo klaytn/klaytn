@@ -32,7 +32,6 @@ import (
 
 	"github.com/fjl/memsize/memsizeui"
 	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/log/term"
 	colorable "github.com/mattn/go-colorable"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -160,12 +159,9 @@ var DeprecatedFlags = []cli.Flag{
 var glogger *log.GlogHandler
 
 func init() {
-	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
-	output := io.Writer(os.Stderr)
-	if usecolor {
-		output = colorable.NewColorableStderr()
-	}
-	glogger = log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
+	glogger = log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
+	glogger.Verbosity(log.LvlInfo)
+	log.Root().SetHandler(glogger)
 }
 
 func GetGlogger() (*log.GlogHandler, error) {
