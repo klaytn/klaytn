@@ -192,7 +192,7 @@ func Setup(ctx *cli.Context) error {
 	if ctx.GlobalBool(logjsonFlag.Name) {
 		ostream = log.StreamHandler(output, log.JsonFormat())
 	} else {
-		usecolor := (isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())) && os.Getenv("TERM") != "dumb"
+		usecolor := (isatty.IsTerminal(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb")
 		if usecolor {
 			output = colorable.NewColorableStderr()
 		}
