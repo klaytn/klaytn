@@ -201,16 +201,14 @@ func Setup(ctx *cli.Context) error {
 	glogger.SetHandler(ostream)
 
 	// logging
-	log.PrintOrigins(ctx.GlobalBool(debugFlag.Name))
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name)))
-	glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name))
-
 	debug := ctx.GlobalBool(debugFlag.Name)
 	if ctx.GlobalIsSet(legacyDebugFlag.Name) {
 		debug = ctx.GlobalBool(legacyDebugFlag.Name)
 		logger.Warn("The flag --debug is deprecated and will be removed in the future (v1.12.0), please use --log.debug")
 	}
 	log.PrintOrigins(debug)
+	log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name)))
+	glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name))
 
 	backtrace := backtraceAtFlag.Value
 	if b := ctx.GlobalString(legacyBacktraceAtFlag.Name); b != "" {
