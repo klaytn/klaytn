@@ -20,6 +20,8 @@ import (
 	"fmt"
 
 	"github.com/Shopify/sarama"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 )
 
 const (
@@ -42,10 +44,14 @@ const (
 	DefaultRequiredAcks         = 1
 	DefaultSegmentSizeBytes     = 1000000 // 1 MB
 	DefaultMaxMessageNumber     = 100     // max number of messages in buffer
+	DefaultKafkaMessageVersion  = MsgVersion1_0
+	DefaultProducerIdPrefix     = "producer-"
 )
 
 type KafkaConfig struct {
 	SaramaConfig         *sarama.Config `json:"-"` // kafka client configurations.
+	MsgVersion           string         // MsgVersion is the version of Kafka message.
+	ProducerId           string         // ProducerId is for the identification of the message publisher.
 	Brokers              []string       // Brokers is a list of broker URLs.
 	TopicEnvironmentName string
 	TopicResourceName    string
@@ -63,7 +69,7 @@ func GetDefaultKafkaConfig() *KafkaConfig {
 	// The following configurations should be true
 	config.Producer.Return.Errors = true
 	config.Producer.Return.Successes = true
-	config.Version = sarama.MaxVersion
+	config.Version = sarama.V2_4_0_0
 	config.Producer.MaxMessageBytes = DefaultMaxMessageBytes
 	config.Producer.RequiredAcks = sarama.RequiredAcks(DefaultRequiredAcks)
 	return &KafkaConfig{
@@ -74,7 +80,15 @@ func GetDefaultKafkaConfig() *KafkaConfig {
 		Replicas:             DefaultReplicas,
 		SegmentSizeBytes:     DefaultSegmentSizeBytes,
 		MaxMessageNumber:     DefaultMaxMessageNumber,
+		MsgVersion:           DefaultKafkaMessageVersion,
+		ProducerId:           GetDefaultProducerId(),
 	}
+}
+
+func GetDefaultProducerId() string {
+	rb := common.MakeRandomBytes(8)
+	randomString := hexutil.Encode(rb)
+	return DefaultProducerIdPrefix + randomString[2:]
 }
 
 func (c *KafkaConfig) GetTopicName(event string) string {
@@ -82,6 +96,6 @@ func (c *KafkaConfig) GetTopicName(event string) string {
 }
 
 func (c *KafkaConfig) String() string {
-	return fmt.Sprintf("brokers: %v, topicEnvironment: %v, topicResourceName: %v, partitions: %v, replicas: %v, maxMessageBytes: %v, requiredAcks: %v, segmentSize: %v",
-		c.Brokers, c.TopicEnvironmentName, c.TopicResourceName, c.Partitions, c.Replicas, c.SaramaConfig.Producer.MaxMessageBytes, c.SaramaConfig.Producer.RequiredAcks, c.SegmentSizeBytes)
+	return fmt.Sprintf("brokers: %v, topicEnvironment: %v, topicResourceName: %v, partitions: %v, replicas: %v, maxMessageBytes: %v, requiredAcks: %v, segmentSize: %v, msgVersion: %v, producerId: %v",
+		c.Brokers, c.TopicEnvironmentName, c.TopicResourceName, c.Partitions, c.Replicas, c.SaramaConfig.Producer.MaxMessageBytes, c.SaramaConfig.Producer.RequiredAcks, c.SegmentSizeBytes, c.MsgVersion, c.ProducerId)
 }
