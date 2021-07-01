@@ -25,7 +25,6 @@ import (
 	"fmt"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/rlp"
 )
@@ -43,10 +42,11 @@ func NewPublicDebugAPI(b Backend) *PublicDebugAPI {
 }
 
 // GetBlockRlp retrieves the RLP encoded for of a single block.
-func (api *PublicDebugAPI) GetBlockRlp(ctx context.Context, number uint64) (string, error) {
-	block, _ := api.b.BlockByNumber(ctx, rpc.BlockNumber(number))
+func (api *PublicDebugAPI) GetBlockRlp(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (string, error) {
+	block, _ := api.b.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if block == nil {
-		return "", fmt.Errorf("block #%d not found", number)
+		blockNumberOrHashString, _ := blockNrOrHash.NumberOrHashString()
+		return "", fmt.Errorf("block %v not found", blockNumberOrHashString)
 	}
 	encoded, err := rlp.EncodeToBytes(block)
 	if err != nil {
@@ -56,19 +56,11 @@ func (api *PublicDebugAPI) GetBlockRlp(ctx context.Context, number uint64) (stri
 }
 
 // PrintBlock retrieves a block and returns its pretty printed form.
-func (api *PublicDebugAPI) PrintBlock(ctx context.Context, number uint64) (string, error) {
-	block, _ := api.b.BlockByNumber(ctx, rpc.BlockNumber(number))
+func (api *PublicDebugAPI) PrintBlock(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (string, error) {
+	block, _ := api.b.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if block == nil {
-		return "", fmt.Errorf("block #%d not found", number)
+		blockNumberOrHashString, _ := blockNrOrHash.NumberOrHashString()
+		return "", fmt.Errorf("block %v not found", blockNumberOrHashString)
 	}
 	return spew.Sdump(block), nil
-}
-
-// SeedHash retrieves the seed hash of a block.
-func (api *PublicDebugAPI) SeedHash(ctx context.Context, number uint64) (string, error) {
-	block, _ := api.b.BlockByNumber(ctx, rpc.BlockNumber(number))
-	if block == nil {
-		return "", fmt.Errorf("block #%d not found", number)
-	}
-	return fmt.Sprintf("0x%x", gxhash.SeedHash(number)), nil
 }

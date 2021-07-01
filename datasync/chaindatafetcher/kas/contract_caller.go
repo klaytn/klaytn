@@ -56,8 +56,8 @@ var (
 //go:generate mockgen -destination=./mocks/blockchain_api_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kas BlockchainAPI
 // BlockchainAPI interface is for testing purpose.
 type BlockchainAPI interface {
-	GetCode(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (hexutil.Bytes, error)
-	Call(ctx context.Context, args api.CallArgs, blockNr rpc.BlockNumber) (hexutil.Bytes, error)
+	GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error)
+	Call(ctx context.Context, args api.CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error)
 }
 
 // contractCaller performs kip13 method `supportsInterface` to detect the deployed contracts are KIP7 or KIP17.
@@ -75,7 +75,7 @@ func (f *contractCaller) CodeAt(ctx context.Context, contract common.Address, bl
 	if blockNumber != nil {
 		num = rpc.BlockNumber(blockNumber.Int64())
 	}
-	return f.blockchainAPI.GetCode(ctx, contract, num)
+	return f.blockchainAPI.GetCode(ctx, contract, rpc.NewBlockNumberOrHashWithNumber(num))
 }
 
 func (f *contractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
@@ -88,7 +88,7 @@ func (f *contractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, 
 		To:   call.To,
 		Data: hexutil.Bytes(call.Data),
 	}
-	return f.blockchainAPI.Call(ctx, callArgs, num)
+	return f.blockchainAPI.Call(ctx, callArgs, rpc.NewBlockNumberOrHashWithNumber(num))
 }
 
 func getCallOpts(blockNumber *big.Int, timeout time.Duration) (*bind.CallOpts, context.CancelFunc) {
