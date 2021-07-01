@@ -21,9 +21,15 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/Shopify/sarama"
 )
+
+// Logger is the instance of a sarama.StdLogger interface that chaindatafetcher leaves the SDK level information.
+// By default it is set to print all log messages as standard output, but you can set it to redirect wherever you want.
+var Logger sarama.StdLogger = log.New(os.Stdout, "[Chaindatafetcher] ", log.LstdFlags)
 
 //go:generate mockgen -destination=./mocks/consumer_group_session_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka ConsumerGroupSession
 // ConsumerGroupSession is for mocking sarama.ConsumerGroupSession for better testing.
@@ -37,6 +43,7 @@ var (
 	nilConsumerMessageErrorMsg = "the given message should not be nil"
 	wrongHeaderNumberErrorMsg  = "the number of header is not expected"
 	wrongHeaderKeyErrorMsg     = "the header key is not expected"
+	wrongMsgVersionErrorMsg    = "the message version is not supported"
 	missingSegmentErrorMsg     = "there is a missing segment"
 	noHandlerErrorMsg          = "the handler does not exist for the given topic"
 	emptySegmentErrorMsg       = "there is no segment in the segment slice"
@@ -48,15 +55,17 @@ type TopicHandler func(message *sarama.ConsumerMessage) error
 
 // Segment represents a message segment with the parsed headers.
 type Segment struct {
-	orig  *sarama.ConsumerMessage
-	key   string
-	total uint64
-	index uint64
-	value []byte
+	orig       *sarama.ConsumerMessage
+	key        string
+	total      uint64
+	index      uint64
+	value      []byte
+	version    string
+	producerId string
 }
 
 func (s *Segment) String() string {
-	return fmt.Sprintf("key: %v, total: %v, index: %v, value %v", s.key, s.total, s.index, string(s.value))
+	return fmt.Sprintf("key: %v, total: %v, index: %v, value: %v, version: %v, producerId: %v", s.key, s.total, s.index, string(s.value), s.version, s.producerId)
 }
 
 // newSegment creates a new segment structure after parsing the headers.
@@ -65,8 +74,30 @@ func newSegment(msg *sarama.ConsumerMessage) (*Segment, error) {
 		return nil, errors.New(nilConsumerMessageErrorMsg)
 	}
 
-	if len(msg.Headers) != MsgHeaderLength {
-		return nil, fmt.Errorf("%v [header length: %v]", wrongHeaderNumberErrorMsg, len(msg.Headers))
+	headerLen := len(msg.Headers)
+	if headerLen != MsgHeaderLength && headerLen != LegacyMsgHeaderLength {
+		return nil, fmt.Errorf("%v [header length: %v]", wrongHeaderNumberErrorMsg, headerLen)
+	}
+
+	version := ""
+	producerId := ""
+
+	if headerLen == MsgHeaderLength {
+		keyVersion := string(msg.Headers[MsgHeaderVersion].Key)
+		if keyVersion != KeyVersion {
+			return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeyVersion, keyVersion)
+		}
+		version = string(msg.Headers[MsgHeaderVersion].Value)
+		switch version {
+		case MsgVersion1_0:
+			keyProducerId := string(msg.Headers[MsgHeaderProducerId].Key)
+			if keyProducerId != KeyProducerId {
+				return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeyProducerId, keyProducerId)
+			}
+			producerId = string(msg.Headers[MsgHeaderProducerId].Value)
+		default:
+			return nil, fmt.Errorf("%v [available: %v]", wrongMsgVersionErrorMsg, MsgVersion1_0)
+		}
 	}
 
 	// check the existence of KeyTotalSegments header
@@ -84,7 +115,15 @@ func newSegment(msg *sarama.ConsumerMessage) (*Segment, error) {
 	key := string(msg.Key)
 	totalSegments := binary.BigEndian.Uint64(msg.Headers[MsgHeaderTotalSegments].Value)
 	segmentIdx := binary.BigEndian.Uint64(msg.Headers[MsgHeaderSegmentIdx].Value)
-	return &Segment{orig: msg, key: key, total: totalSegments, index: segmentIdx, value: msg.Value}, nil
+	return &Segment{
+		orig:       msg,
+		key:        key,
+		total:      totalSegments,
+		index:      segmentIdx,
+		value:      msg.Value,
+		version:    version,
+		producerId: producerId,
+	}, nil
 }
 
 // Consumer is a reference structure to subscribe block or trace group produced by EN.
@@ -100,6 +139,7 @@ func NewConsumer(config *KafkaConfig, groupId string) (*Consumer, error) {
 	if err != nil {
 		return nil, err
 	}
+	Logger.Printf("[INFO] the chaindatafetcher consumer is created. [groupId: %s, config: %s]", groupId, config.String())
 	return &Consumer{
 		config:   config,
 		group:    group,
@@ -110,6 +150,7 @@ func NewConsumer(config *KafkaConfig, groupId string) (*Consumer, error) {
 // Close stops the ConsumerGroup and detaches any running sessions. It is required to call
 // this function before the object passes out of scope, as it will otherwise leak memory.
 func (c *Consumer) Close() error {
+	Logger.Println("[INFO] the chaindatafetcher consumer is closed")
 	return c.group.Close()
 }
 
@@ -125,9 +166,9 @@ func (c *Consumer) AddTopicAndHandler(event string, handler TopicHandler) error 
 }
 
 func (c *Consumer) Errors() <-chan error {
-	// c.config.SaramaConfig.Consumer.Return.Errors has to be set to true, and
-	// read the errors from c.member.Errors() channel.
-	// Currently, it leaves only error logs as default.
+	// If c.config.SaramaConfig.Consumer.Return.Errors is set to true, then
+	// the errors while consuming the messages can be read from c.group.Errors() channel.
+	// Otherwise, it leaves only error logs using sarama.Logger as default.
 	return c.group.Errors()
 }
 
@@ -139,11 +180,15 @@ func (c *Consumer) Subscribe(ctx context.Context) error {
 
 	// Iterate over consumer sessions.
 	for {
+		Logger.Println("[INFO] started to consume Kafka message")
 		if err := c.group.Consume(ctx, c.topics, c); err == sarama.ErrClosedConsumerGroup {
+			Logger.Println("[INFO] the consumer group is closed")
 			return nil
 		} else if err != nil {
+			Logger.Printf("[ERROR] the consumption is failed [err: %s]\n", err.Error())
 			return err
 		}
+		// TODO-Chaindatafetcher add retry logic and error callback here
 	}
 }
 
@@ -174,16 +219,16 @@ func (c *Consumer) Cleanup(s sarama.ConsumerGroupSession) error {
 func insertSegment(newSegment *Segment, buffer [][]*Segment) ([][]*Segment, error) {
 	for idx, bufferedSegments := range buffer {
 		numBuffered := len(bufferedSegments)
-		if numBuffered > 0 && bufferedSegments[0].key == newSegment.key {
+		if numBuffered > 0 && bufferedSegments[0].key == newSegment.key && bufferedSegments[0].producerId == newSegment.producerId {
 			// there is a missing segment which should not exist.
 			if newSegment.index > uint64(numBuffered) {
-				logger.Error("there may be a missing segment", "numBuffered", numBuffered, "newSegment", newSegment)
+				Logger.Printf("[ERROR] there may be a missing segment [numBuffered: %d, newSegment: %s]\n", numBuffered, newSegment.String())
 				return buffer, errors.New(missingSegmentErrorMsg)
 			}
 
 			// the segment is already inserted to buffer.
 			if newSegment.index < uint64(numBuffered) {
-				logger.Warn("the message is duplicated", "newSegment", newSegment)
+				Logger.Printf("[WARN] the message is duplicated [newSegment: %s]\n", newSegment.String())
 				return buffer, nil
 			}
 
@@ -198,7 +243,7 @@ func insertSegment(newSegment *Segment, buffer [][]*Segment) ([][]*Segment, erro
 		buffer = append(buffer, []*Segment{newSegment})
 	} else {
 		// the segment may be already handled.
-		logger.Warn("the message may be inserted already. drop the segment", "segment", newSegment)
+		Logger.Printf("[WARN] the message may be inserted already. drop the segment [segment: %s]\n", newSegment.String())
 	}
 	return buffer, nil
 }
@@ -225,10 +270,12 @@ func (c *Consumer) handleBufferedMessages(buffer [][]*Segment) ([][]*Segment, er
 
 		f, ok := c.handlers[firstSegment.orig.Topic]
 		if !ok {
+			Logger.Printf("[ERROR] getting handler is failed with the given topic. [topic: %s]\n", msg.Topic)
 			return buffer, fmt.Errorf("%v: %v", noHandlerErrorMsg, msg.Topic)
 		}
 
 		if err := f(msg); err != nil {
+			Logger.Printf("[ERROR] the handler is failed [key: %s]\n", string(msg.Key))
 			return buffer, err
 		}
 
@@ -244,6 +291,7 @@ func (c *Consumer) handleBufferedMessages(buffer [][]*Segment) ([][]*Segment, er
 func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMessage, session ConsumerGroupSession) error {
 	if len(buffer) > 0 {
 		if len(buffer[0]) <= 0 {
+			Logger.Println("[ERROR] no segment exists in the given buffer slice")
 			return errors.New(emptySegmentErrorMsg)
 		}
 
