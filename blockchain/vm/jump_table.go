@@ -72,6 +72,7 @@ func newIstanbulInstructionSet() JumpTable {
 	instructionSet := newConstantinopleInstructionSet()
 	enable1344(&instructionSet)
 	enable1884(&instructionSet)
+	enable2200(&instructionSet)
 	return instructionSet
 }
 
