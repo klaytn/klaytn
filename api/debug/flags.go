@@ -26,13 +26,12 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/mattn/go-isatty"
-
 	"io"
 
 	"github.com/fjl/memsize/memsizeui"
 	"github.com/klaytn/klaytn/log"
 	colorable "github.com/mattn/go-colorable"
+	"github.com/mattn/go-isatty"
 	"gopkg.in/urfave/cli.v1"
 )
 
