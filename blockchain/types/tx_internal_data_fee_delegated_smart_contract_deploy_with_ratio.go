@@ -321,7 +321,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) String() string
 
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) IntrinsicGas(currentBlockNumber uint64, r params.Rules) (uint64, error) {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	gas := params.TxGasContractCreation + params.TxGasFeeDelegatedWithRatio
 
 	if t.HumanReadable {

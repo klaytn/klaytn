@@ -270,7 +270,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) String() string {
 		enc)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) IntrinsicGas(currentBlockNumber uint64, r params.Rules) (uint64, error) {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	gas := params.TxGasContractExecution + params.TxGasFeeDelegated
 
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
