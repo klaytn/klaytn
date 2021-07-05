@@ -352,6 +352,7 @@ jobs:
           name: "Run test others"
           no_output_timeout: 30m
           command: |
+            make devtools
             make test-others
 
   pass-tests:
