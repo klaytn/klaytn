@@ -121,3 +121,11 @@ devtools:
 	@type "npm" 2> /dev/null || echo 'Please install node.js and npm'
 	@type "solc" 2> /dev/null || echo 'Please install solc'
 	@type "protoc" 2> /dev/null || echo 'Please install protoc'
+
+
+# The devtoolsForTest target installs tools required for 'go-bindata'.
+# You need to put $BIN (or $GOPATH/bin) in your PATH to use 'go-bindata'.
+# If you upload bindata file, you must update under go-bindata version same wtih yours.
+
+devtools-for-test:
+	env GOFLAGS= GOBIN= go get -u github.com/kevinburke/go-bindata/go-bindata@v3.22.0
