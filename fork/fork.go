@@ -29,6 +29,7 @@ var (
 )
 
 // Rules returns the hard fork information
+// CAUTIOUS: Use it when chainConfig value is not reachable
 func Rules(blockNumber *big.Int) (*params.Rules, error) {
 	if hardForkBlockNumberConfig == nil {
 		return nil, errors.New("hardForkBlockNumberConfig variable is not initialized")
@@ -38,7 +39,7 @@ func Rules(blockNumber *big.Int) (*params.Rules, error) {
 }
 
 // SetHardForkBlockNumberConfig sets values in HardForkConfig if it is not nil.
-// CAUTIOUS: Calling this function is can be dangerous, so please avoid using it except tests
+// CAUTIOUS: Calling this function is can be dangerous, so avoid using it except tests
 func SetHardForkBlockNumberConfig(h *params.ChainConfig) error {
 	if h == nil {
 		return errors.New("hardForkBlockNumberConfig cannot be initialized as nil")
