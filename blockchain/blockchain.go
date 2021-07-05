@@ -33,8 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/go-redis/redis/v7"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -47,7 +45,9 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/log"
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -250,6 +250,13 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
+	}
+
+	// set hardForkBlockNumberConfig which will be used as a global variable
+	if err := fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock: bc.chainConfig.IstanbulCompatibleBlock,
+	}); err != nil {
+		return nil, err
 	}
 
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
