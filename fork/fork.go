@@ -19,6 +19,7 @@ package fork
 import (
 	"errors"
 	"math/big"
+	"sync"
 
 	"github.com/klaytn/klaytn/params"
 )
@@ -26,6 +27,8 @@ import (
 var (
 	// hardForkBlockNumberConfig contains only hardFork block number
 	hardForkBlockNumberConfig *params.ChainConfig
+	// once limits the usage of `SetHardForkBlockNumberConfig`
+	once sync.Once
 )
 
 // Rules returns the hard fork information
@@ -44,6 +47,9 @@ func SetHardForkBlockNumberConfig(h *params.ChainConfig) error {
 	if h == nil {
 		return errors.New("hardForkBlockNumberConfig cannot be initialized as nil")
 	}
-	hardForkBlockNumberConfig = h
+	// ensure that this statement is executed only once
+	once.Do(func() {
+		hardForkBlockNumberConfig = h
+	})
 	return nil
 }
