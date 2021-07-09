@@ -18,6 +18,7 @@ package kafka
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/klaytn/klaytn/common"
@@ -46,6 +47,12 @@ const (
 	DefaultMaxMessageNumber     = 100     // max number of messages in buffer
 	DefaultKafkaMessageVersion  = MsgVersion1_0
 	DefaultProducerIdPrefix     = "producer-"
+	DefaultExpirationTime       = time.Duration(0)
+)
+
+var (
+	DefaultSetup   = func(s sarama.ConsumerGroupSession) error { return nil }
+	DefaultCleanup = func(s sarama.ConsumerGroupSession) error { return nil }
 )
 
 type KafkaConfig struct {
@@ -61,6 +68,11 @@ type KafkaConfig struct {
 	// (number of partitions) * (average size of segments) * buffer size should not be greater than memory size.
 	// default max number of messages is 100
 	MaxMessageNumber int // MaxMessageNumber is the maximum number of consumer messages.
+
+	ExpirationTime time.Duration
+	ErrCallback    func(string) error
+	Setup          func(s sarama.ConsumerGroupSession) error
+	Cleanup        func(s sarama.ConsumerGroupSession) error
 }
 
 func GetDefaultKafkaConfig() *KafkaConfig {
@@ -82,6 +94,10 @@ func GetDefaultKafkaConfig() *KafkaConfig {
 		MaxMessageNumber:     DefaultMaxMessageNumber,
 		MsgVersion:           DefaultKafkaMessageVersion,
 		ProducerId:           GetDefaultProducerId(),
+		ExpirationTime:       DefaultExpirationTime,
+		Setup:                DefaultSetup,
+		Cleanup:              DefaultCleanup,
+		ErrCallback:          nil,
 	}
 }
 

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/Shopify/sarama"
 )
@@ -197,13 +198,13 @@ func (c *Consumer) Subscribe(ctx context.Context) error {
 
 // Setup is called at the beginning of a new session, before ConsumeClaim.
 func (c *Consumer) Setup(s sarama.ConsumerGroupSession) error {
-	return nil
+	return c.config.Setup(s)
 }
 
 // Cleanup is called at the end of a session, once all ConsumeClaim goroutines have exited
 // but before the offsets are committed for the very last time.
 func (c *Consumer) Cleanup(s sarama.ConsumerGroupSession) error {
-	return nil
+	return c.config.Cleanup(s)
 }
 
 // insertSegment inserts the given segment to the given buffer.
@@ -310,33 +311,86 @@ func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMes
 // Once the Messages() channel is closed, the Handler must finish its processing
 // loop and exit.
 func (c *Consumer) ConsumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.ConsumerGroupClaim) error {
-	var buffer [][]*Segment
-	for msg := range cgc.Messages() {
-		if len(buffer) > c.config.MaxMessageNumber {
-			return fmt.Errorf("%v: increasing buffer size may resolve this problem. [max: %v, current: %v]", bufferOverflowErrorMsg, c.config.MaxMessageNumber, len(buffer))
-		}
-
-		segment, err := newSegment(msg)
-		if err != nil {
-			return err
-		}
-
-		// insert a new message segment into the buffer
-		buffer, err = insertSegment(segment, buffer)
-		if err != nil {
-			return err
-		}
-
-		// handle the buffered messages if any message can be reassembled
-		buffer, err = c.handleBufferedMessages(buffer)
-		if err != nil {
-			return err
-		}
-
-		// mark offset of the oldest message to be read
-		if err := c.updateOffset(buffer, msg, cgs); err != nil {
-			return err
-		}
+	if buffer, err := c.consumeClaim(cgs, cgc); err != nil {
+		return c.handleError(buffer, cgs, err)
 	}
 	return nil
+}
+
+func (c *Consumer) consumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.ConsumerGroupClaim) ([][]*Segment, error) {
+	var (
+		buffer      [][]*Segment // TODO-Chaindatafetcher better to introduce segment buffer structure with useful methods
+		expireMsg   *sarama.ConsumerMessage
+		expireTimer = time.NewTimer(c.config.ExpirationTime)
+	)
+
+	// make sure that the expireTimer channel is empty
+	if !expireTimer.Stop() {
+		<-expireTimer.C
+	}
+
+	for {
+		select {
+		case <-expireTimer.C:
+			return buffer, errors.New("the message is expired")
+		case msg, ok := <-cgc.Messages():
+			if !ok {
+				return buffer, nil
+			}
+
+			if len(buffer) > c.config.MaxMessageNumber {
+				return buffer, fmt.Errorf("%v: increasing buffer size may resolve this problem. [max: %v, current: %v]", bufferOverflowErrorMsg, c.config.MaxMessageNumber, len(buffer))
+			}
+
+			segment, err := newSegment(msg)
+			if err != nil {
+				return buffer, err
+			}
+
+			// insert a new message segment into the buffer
+			buffer, err = insertSegment(segment, buffer)
+			if err != nil {
+				return buffer, err
+			}
+
+			// handle the buffered messages if any message can be reassembled
+			buffer, err = c.handleBufferedMessages(buffer)
+			if err != nil {
+				return buffer, err
+			}
+
+			if c.config.ExpirationTime > time.Duration(0) {
+				if len(buffer) == 0 {
+					expireTimer.Stop()
+					expireMsg = nil
+				} else if expireMsg != buffer[0][0].orig {
+					expireTimer.Reset(c.config.ExpirationTime)
+					expireMsg = buffer[0][0].orig
+				}
+			}
+
+			// mark offset of the oldest message to be read
+			if err := c.updateOffset(buffer, msg, cgs); err != nil {
+				return buffer, err
+			}
+		}
+	}
+}
+
+func (c *Consumer) handleError(buffer [][]*Segment, cgs sarama.ConsumerGroupSession, parentErr error) error {
+	if len(buffer) > 0 {
+		oldestMsg := buffer[0][0].orig
+		key := string(oldestMsg.Key)
+
+		if c.config.ErrCallback != nil {
+			if err := c.config.ErrCallback(key); err != nil {
+				return err
+			}
+
+			buffer = buffer[1:]
+			return c.updateOffset(buffer, oldestMsg, cgs)
+		}
+	}
+
+	return parentErr
 }
