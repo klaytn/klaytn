@@ -49,6 +49,7 @@ var (
 	noHandlerErrorMsg          = "the handler does not exist for the given topic"
 	emptySegmentErrorMsg       = "there is no segment in the segment slice"
 	bufferOverflowErrorMsg     = "the number of items in buffer exceeded the maximum"
+	msgExpiredErrorMsg         = "the message is expired"
 )
 
 // TopicHandler is a handler function in order to consume published messages.
@@ -189,7 +190,6 @@ func (c *Consumer) Subscribe(ctx context.Context) error {
 			Logger.Printf("[ERROR] the consumption is failed [err: %s]\n", err.Error())
 			return err
 		}
-		// TODO-Chaindatafetcher add retry logic and error callback here
 	}
 }
 
@@ -307,6 +307,22 @@ func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMes
 	return nil
 }
 
+// renewExpireMsg updates expiration timer and message if the expiring message is handled.
+func (c *Consumer) renewExpireMsg(buffer [][]*Segment, timer *time.Timer, oldestMsg *sarama.ConsumerMessage) *sarama.ConsumerMessage {
+	if c.config.ExpirationTime > time.Duration(0) {
+		if len(buffer) == 0 {
+			timer.Stop()
+			return nil
+		} else if oldestMsg != buffer[0][0].orig {
+			timer.Reset(c.config.ExpirationTime)
+			return buffer[0][0].orig
+		} else {
+			return oldestMsg
+		}
+	}
+	return nil
+}
+
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 // Once the Messages() channel is closed, the Handler must finish its processing
 // loop and exit.
@@ -332,7 +348,7 @@ func (c *Consumer) consumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.Cons
 	for {
 		select {
 		case <-expireTimer.C:
-			return buffer, errors.New("the message is expired")
+			return buffer, errors.New(msgExpiredErrorMsg)
 		case msg, ok := <-cgc.Messages():
 			if !ok {
 				return buffer, nil
@@ -359,15 +375,8 @@ func (c *Consumer) consumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.Cons
 				return buffer, err
 			}
 
-			if c.config.ExpirationTime > time.Duration(0) {
-				if len(buffer) == 0 {
-					expireTimer.Stop()
-					expireMsg = nil
-				} else if expireMsg != buffer[0][0].orig {
-					expireTimer.Reset(c.config.ExpirationTime)
-					expireMsg = buffer[0][0].orig
-				}
-			}
+			// update expire message and timer if it is handled
+			expireMsg = c.renewExpireMsg(buffer, expireTimer, expireMsg)
 
 			// mark offset of the oldest message to be read
 			if err := c.updateOffset(buffer, msg, cgs); err != nil {
@@ -377,7 +386,7 @@ func (c *Consumer) consumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.Cons
 	}
 }
 
-func (c *Consumer) handleError(buffer [][]*Segment, cgs sarama.ConsumerGroupSession, parentErr error) error {
+func (c *Consumer) handleError(buffer [][]*Segment, cgs ConsumerGroupSession, parentErr error) error {
 	if len(buffer) > 0 {
 		oldestMsg := buffer[0][0].orig
 		key := string(oldestMsg.Key)
