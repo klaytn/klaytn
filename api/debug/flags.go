@@ -143,7 +143,7 @@ var Flags = []cli.Flag{
 	blockprofilerateFlag, cpuprofileFlag, traceFlag,
 }
 
-// This is the list of deprecated debugging flags.
+// DeprecatedFlags is the list of deprecated debugging flags.
 var DeprecatedFlags = []cli.Flag{
 	legacyPprofPortFlag,
 	legacyPprofAddrFlag,
@@ -200,75 +200,55 @@ func Setup(ctx *cli.Context) error {
 	glogger.SetHandler(ostream)
 
 	// logging
-	log.PrintOrigins(getGlobalBoolByFlagWithLegacy(ctx, debugFlag, legacyDebugFlag, "(v1.12.0)"))
+	log.PrintOrigins(ctx.GlobalBool(getFlagName(ctx, debugFlag, legacyDebugFlag, "(v1.12.0)")))
 	log.ChangeGlobalLogLevel(glogger, log.Lvl(ctx.GlobalInt(verbosityFlag.Name)))
 	glogger.Vmodule(ctx.GlobalString(vmoduleFlag.Name))
 
-	glogger.BacktraceAt(getGlobalStringByFlagWithLegacy(ctx, backtraceAtFlag, legacyBacktraceAtFlag, "(v1.12.0)"))
+	if location := ctx.GlobalString(getFlagName(ctx, backtraceAtFlag, legacyBacktraceAtFlag, "(v1.12.0)")); location != "" {
+		glogger.BacktraceAt(location)
+	}
 	log.Root().SetHandler(glogger)
 
 	// profiling, tracing
-	runtime.MemProfileRate = getGlobalIntByFlagWithLegacy(ctx, memprofilerateFlag, legacyMemprofilerateFlag, "(v1.12.0)")
+	if memprofilerateFlagName := getFlagName(ctx, memprofilerateFlag, legacyMemprofilerateFlag, "(v1.12.0)"); memprofilerateFlagName != "" {
+		runtime.MemProfileRate = ctx.GlobalInt(memprofilerateFlagName)
+	}
 
-	Handler.SetBlockProfileRate(getGlobalIntByFlagWithLegacy(ctx, blockprofilerateFlag, legacyBlockprofilerateFlag, "(v1.12.0)"))
+	if blockprofilerateFlagName := getFlagName(ctx, blockprofilerateFlag, legacyBlockprofilerateFlag, "(v1.12.0)"); blockprofilerateFlagName != "" {
+		Handler.SetBlockProfileRate(ctx.GlobalInt(blockprofilerateFlagName))
+	}
 
 	if traceFile := ctx.GlobalString(traceFlag.Name); traceFile != "" {
 		if err := Handler.StartGoTrace(traceFile); err != nil {
 			return err
 		}
 	}
-	if cpuProfile := getGlobalStringByFlagWithLegacy(ctx, cpuprofileFlag, legacyCpuprofileFlag, "(v1.12.0)"); cpuProfile != "" {
+	if cpuProfile := ctx.GlobalString(getFlagName(ctx, cpuprofileFlag, legacyCpuprofileFlag, "(v1.12.0)")); cpuProfile != "" {
 		if err := Handler.StartCPUProfile(cpuProfile); err != nil {
 			return err
 		}
 	}
 
-	Handler.memFile = getGlobalStringByFlagWithLegacy(ctx, memprofileFlag, legacyMemprofileFlag, "(v1.12.0)")
+	Handler.memFile = ctx.GlobalString(getFlagName(ctx, memprofileFlag, legacyMemprofileFlag, "(v1.12.0)"))
 
 	// pprof server
 	if ctx.GlobalBool(pprofFlag.Name) {
-		addr := getGlobalStringByFlagWithLegacy(ctx, pprofAddrFlag, legacyPprofAddrFlag, "(v1.12.0)")
-		pprofPort := getGlobalIntByFlagWithLegacy(ctx, pprofPortFlag, legacyPprofPortFlag, "(v1.12.0)")
+		addr := ctx.GlobalString(getFlagName(ctx, pprofAddrFlag, legacyPprofAddrFlag, "(v1.12.0)"))
+		pprofPort := ctx.GlobalInt(getFlagName(ctx, pprofPortFlag, legacyPprofPortFlag, "(v1.12.0)"))
 		Handler.StartPProf(&addr, &pprofPort)
 	}
 	return nil
 }
 
-func getGlobalStringByFlagWithLegacy(ctx *cli.Context, flag cli.StringFlag, legacyFlag cli.StringFlag, deprecateVersion string) string {
-	if ctx.GlobalIsSet(flag.Name) {
-		if globalString := ctx.GlobalString(flag.Name); globalString != "" {
-			return globalString
-		}
+func getFlagName(ctx *cli.Context, flag cli.Flag, legacyFlag cli.Flag, deprecateVersion string) string {
+	if ctx.GlobalIsSet(flag.GetName()) {
+		return flag.GetName()
 	}
-	if ctx.GlobalIsSet(legacyFlag.Name) {
-		if globalString := ctx.GlobalString(legacyFlag.Name); globalString != "" {
-			logger.Warn("The flag" + legacyFlag.Name + " is deprecated and will be removed in the future " + deprecateVersion + ", please use " + flag.Name)
-			return globalString
-		}
+	if ctx.GlobalIsSet(legacyFlag.GetName()) {
+		logger.Warn("The flag " + legacyFlag.GetName() + " is deprecated and will be removed in the future " + deprecateVersion + ", please use " + flag.GetName())
+		return legacyFlag.GetName()
 	}
-	return flag.Value
-}
-
-func getGlobalIntByFlagWithLegacy(ctx *cli.Context, flag cli.IntFlag, legacyFlag cli.IntFlag, deprecateVersion string) int {
-	if ctx.GlobalIsSet(flag.Name) {
-		return ctx.GlobalInt(flag.Name)
-	}
-	if ctx.GlobalIsSet(legacyFlag.Name) {
-		logger.Warn("The flag" + legacyFlag.Name + " is deprecated and will be removed in the future " + deprecateVersion + ",, please use " + flag.Name)
-		return ctx.GlobalInt(legacyFlag.Name)
-	}
-	return flag.Value
-}
-
-func getGlobalBoolByFlagWithLegacy(ctx *cli.Context, flag cli.BoolFlag, legacyFlag cli.BoolFlag, deprecateVersion string) bool {
-	if ctx.GlobalIsSet(flag.Name) {
-		return ctx.GlobalBool(flag.Name)
-	}
-	if ctx.GlobalIsSet(legacyFlag.Name) {
-		logger.Warn("The flag" + legacyFlag.Name + " is deprecated and will be removed in the future " + deprecateVersion + ",, please use " + flag.Name)
-		return ctx.GlobalBool(legacyFlag.Name)
-	}
-	return false
+	return ""
 }
 
 // Exit stops all running profiles, flushing their output to the
