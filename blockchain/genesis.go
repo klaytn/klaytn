@@ -255,7 +255,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
-	if genesis == nil && isPrivate {
+	if genesis == nil && params.CypressGenesisHash != stored && params.BaobabGenesisHash != stored {
 		return storedcfg, stored, nil
 	}
 
