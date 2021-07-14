@@ -253,9 +253,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	// set hardForkBlockNumberConfig which will be used as a global variable
-	if err := fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
-		IstanbulCompatibleBlock: bc.chainConfig.IstanbulCompatibleBlock,
-	}); err != nil {
+	if err := fork.SetHardForkBlockNumberConfig(bc.chainConfig); err != nil {
 		return nil, err
 	}
 
