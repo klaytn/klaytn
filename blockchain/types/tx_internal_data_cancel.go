@@ -189,7 +189,7 @@ func (t *TxInternalDataCancel) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataCancel) IntrinsicGas(currentBlockNumber uint64, r params.Rules) (uint64, error) {
+func (t *TxInternalDataCancel) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return params.TxGasCancel, nil
 }
 

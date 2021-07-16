@@ -38,6 +38,7 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -185,7 +186,8 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	}
 	evm := vm.NewEVM(context, statedb, params.CypressChainConfig, &vm.Config{Debug: true, Tracer: tracer})
 
-	msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64(), evm.ChainConfig().Rules(evm.BlockNumber))
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 	if err != nil {
 		t.Fatalf("failed to prepare transaction for tracing: %v", err)
 	}
@@ -351,7 +353,8 @@ func TestCallTracer(t *testing.T) {
 			}
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
 
-			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64(), evm.ChainConfig().Rules(evm.BlockNumber))
+			fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)
 			}
@@ -449,7 +452,8 @@ func TestInternalCallTracer(t *testing.T) {
 			tracer := vm.NewInternalTxTracer()
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
 
-			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64(), evm.ChainConfig().Rules(evm.BlockNumber))
+			fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)
 			}
