@@ -184,7 +184,7 @@ func dumpGenesis(ctx *cli.Context) error {
 		genesis = blockchain.DefaultGenesisBlock()
 	}
 	if err := json.NewEncoder(os.Stdout).Encode(genesis); err != nil {
-		utils.Fatalf("could not encode genesis")
+		logger.Crit("could not encode genesis")
 	}
 	return nil
 }
