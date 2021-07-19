@@ -33,12 +33,12 @@ var (
 
 // Rules returns the hard fork information
 // CAUTIOUS: Use it when chainConfig value is not reachable
-func Rules(blockNumber *big.Int) (*params.Rules, error) {
+func Rules(blockNumber *big.Int) *params.Rules {
 	if hardForkBlockNumberConfig == nil {
-		return nil, errors.New("hardForkBlockNumberConfig variable is not initialized")
+		panic("fork.Rules should never be called before hardForkBlockNumberConfig initialization.")
 	}
 	rules := hardForkBlockNumberConfig.Rules(blockNumber)
-	return &rules, nil
+	return &rules
 }
 
 // SetHardForkBlockNumberConfig sets values in HardForkConfig if it is not nil.
