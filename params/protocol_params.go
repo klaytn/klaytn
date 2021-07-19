@@ -154,7 +154,7 @@ const (
 )
 
 const (
-	DefaultBlockGenerationInterval    = int64(1) // digit: seconds
+	DefaultBlockGenerationInterval    = int64(1) // unit: seconds
 	DefaultBlockGenerationTimeLimit   = 250 * time.Millisecond
 	DefaultOpcodeComputationCostLimit = uint64(100000000)
 )

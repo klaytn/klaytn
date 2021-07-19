@@ -492,7 +492,7 @@ func (self *worker) commitNewWork() {
 	tstamp := tstart.Unix()
 	if self.nodetype == common.CONSENSUSNODE {
 		ideal := parent.Time().Int64() + params.BlockGenerationInterval
-		// If a timestamp of the this block is faster than the ideal timestamp,
+		// If a timestamp of this block is faster than the ideal timestamp,
 		// wait for a while and get a new timestamp
 		if tstamp < ideal {
 			wait := time.Duration(ideal-tstamp) * time.Second

@@ -996,18 +996,20 @@ var (
 	BlockGenerationIntervalFlag = cli.Int64Flag{
 		Name: "block-generation-interval",
 		Usage: "(experimental option) Set the block generation interval in seconds. " +
-			"It should be equal or larger than 1",
+			"It should be equal or larger than 1. This flag is only applicable to CN.",
 		Value: params.DefaultBlockGenerationInterval,
 	}
 	BlockGenerationTimeLimitFlag = cli.DurationFlag{
 		Name: "block-generation-time-limit",
 		Usage: "(experimental option) Set the vm execution time limit during block generation. " +
-			"Less than half of the block generation interval is recommended for this value",
+			"Less than half of the block generation interval is recommended for this value. " +
+			"This flag is only applicable to CN",
 		Value: params.DefaultBlockGenerationTimeLimit,
 	}
 	OpcodeComputationCostLimitFlag = cli.Uint64Flag{
-		Name:  "opcode-computation-cost-limit",
-		Usage: "(experimental option) Set the computation cost limit for a tx",
+		Name: "opcode-computation-cost-limit",
+		Usage: "(experimental option) Set the computation cost limit for a tx. " +
+			"Should set the same value within the network",
 		Value: params.DefaultOpcodeComputationCostLimit,
 	}
 
