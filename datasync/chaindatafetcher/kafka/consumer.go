@@ -309,18 +309,21 @@ func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMes
 
 // renewExpireMsg updates expiration timer and message if the expiring message is handled.
 func (c *Consumer) renewExpireMsg(buffer [][]*Segment, timer *time.Timer, oldestMsg *sarama.ConsumerMessage) *sarama.ConsumerMessage {
-	if c.config.ExpirationTime > time.Duration(0) {
-		if len(buffer) == 0 {
-			timer.Stop()
-			return nil
-		} else if oldestMsg != buffer[0][0].orig {
-			timer.Reset(c.config.ExpirationTime)
-			return buffer[0][0].orig
-		} else {
-			return oldestMsg
-		}
+	if c.config.ExpirationTime <= time.Duration(0) {
+		return nil
 	}
-	return nil
+
+	if len(buffer) == 0 {
+		timer.Stop()
+		return nil
+	}
+
+	if oldestMsg != buffer[0][0].orig {
+		timer.Reset(c.config.ExpirationTime)
+		return buffer[0][0].orig
+	}
+
+	return oldestMsg
 }
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
@@ -387,19 +390,17 @@ func (c *Consumer) consumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.Cons
 }
 
 func (c *Consumer) handleError(buffer [][]*Segment, cgs ConsumerGroupSession, parentErr error) error {
-	if len(buffer) > 0 {
-		oldestMsg := buffer[0][0].orig
-		key := string(oldestMsg.Key)
-
-		if c.config.ErrCallback != nil {
-			if err := c.config.ErrCallback(key); err != nil {
-				return err
-			}
-
-			buffer = buffer[1:]
-			return c.updateOffset(buffer, oldestMsg, cgs)
-		}
+	if len(buffer) <= 0 || c.config.ErrCallback == nil {
+		return parentErr
 	}
 
-	return parentErr
+	oldestMsg := buffer[0][0].orig
+	key := string(oldestMsg.Key)
+
+	if err := c.config.ErrCallback(key); err != nil {
+		return err
+	}
+
+	buffer = buffer[1:]
+	return c.updateOffset(buffer, oldestMsg, cgs)
 }
