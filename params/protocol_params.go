@@ -157,19 +157,33 @@ const (
 	TxDataGas uint64 = 100
 )
 
+const (
+	DefaultBlockGenerationInterval    = int64(1) // unit: seconds
+	DefaultBlockGenerationTimeLimit   = 250 * time.Millisecond
+	DefaultOpcodeComputationCostLimit = uint64(100000000)
+)
+
 var (
-	TxGasHumanReadable     uint64 = 4000000000         // NOTE: HumanReadable related functions are inactivated now
-	BlockScoreBoundDivisor        = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
-	GenesisBlockScore             = big.NewInt(131072) // BlockScore of the Genesis block.
-	MinimumBlockScore             = big.NewInt(131072) // The minimum that the blockscore may ever be.
-	DurationLimit                 = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
+	TxGasHumanReadable uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
+
+	// TODO-Klaytn Change the variables used in GXhash to more appropriate values for Klaytn Network
+	BlockScoreBoundDivisor = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
+	GenesisBlockScore      = big.NewInt(131072) // BlockScore of the Genesis block.
+	MinimumBlockScore      = big.NewInt(131072) // The minimum that the blockscore may ever be.
+	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
 )
 
 // Parameters for execution time limit
+// These parameters will be re-assigned by init options
 var (
-	// TODO-Klaytn Determine more practical values through actual running experience
-	TotalTimeLimit             = 250 * time.Millisecond // Execution time limit for all txs in a block
-	OpcodeComputationCostLimit = uint64(100000000)      // Computation cost limit for a tx. For now, it is approximately 100 ms.
+	// Execution time limit for all txs in a block
+	BlockGenerationTimeLimit = DefaultBlockGenerationTimeLimit
+
+	// TODO-Klaytn-Governance Change the following variables to governance items which requires consensus of CCN
+	// Block generation interval in seconds. It should be equal or larger than 1
+	BlockGenerationInterval = DefaultBlockGenerationInterval
+	// Computation cost limit for a tx. For now, it is approximately 100 ms
+	OpcodeComputationCostLimit = DefaultOpcodeComputationCostLimit
 )
 
 // istanbul BFT
