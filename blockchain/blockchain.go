@@ -1639,7 +1639,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				// current block is not the last one, so prefetch the right next block
 				followup := chain[i+1]
 				go func(start time.Time) {
-					throwaway, _ := state.NewForPrefetching(parent.Root(), bc.stateCache)
+					throwaway, err := state.NewForPrefetching(parent.Root(), bc.stateCache)
+					if throwaway == nil || err != nil {
+						logger.Warn("failed to get StateDB for prefetcher", "err", err,
+							"parentBlockNum", parent.NumberU64(), "currBlockNum", bc.CurrentBlock().NumberU64())
+						return
+					}
+
 					vmCfg := bc.vmConfig
 					vmCfg.Prefetching = true
 					bc.prefetcher.Prefetch(followup, throwaway, vmCfg, &followupInterrupt)
