@@ -21,24 +21,26 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 )
 
 var (
 	// hardForkBlockNumberConfig contains only hardFork block number
 	hardForkBlockNumberConfig *params.ChainConfig
+	logger                    = log.NewModuleLogger(log.FORK)
 	// once limits the usage of `SetHardForkBlockNumberConfig`
 	once sync.Once
 )
 
 // Rules returns the hard fork information
 // CAUTIOUS: Use it when chainConfig value is not reachable
-func Rules(blockNumber *big.Int) (*params.Rules, error) {
+func Rules(blockNumber *big.Int) *params.Rules {
 	if hardForkBlockNumberConfig == nil {
-		return nil, errors.New("hardForkBlockNumberConfig variable is not initialized")
+		logger.Crit("fork.Rules should never be called before hardForkBlockNumberConfig initialization.")
 	}
 	rules := hardForkBlockNumberConfig.Rules(blockNumber)
-	return &rules, nil
+	return &rules
 }
 
 // SetHardForkBlockNumberConfig sets values in HardForkConfig if it is not nil.
