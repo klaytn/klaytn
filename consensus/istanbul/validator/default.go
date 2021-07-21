@@ -27,10 +27,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/klaytn/klaytn/params"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/fork"
+	"github.com/klaytn/klaytn/params"
 )
 
 const (
@@ -202,6 +202,9 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 
 	// seed will be used to select a random committee
 	seed, err := ConvertHashToSeed(prevHash)
+	if fork.Rules(view.Sequence).IsIstanbul {
+		seed += view.Round.Int64()
+	}
 	if err != nil {
 		logger.Error("failed to convert hash to seed", "prevHash", prevHash, "err", err)
 		return validators

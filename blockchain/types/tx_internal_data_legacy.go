@@ -234,11 +234,7 @@ func (t *TxInternalDataLegacy) RecoverPubkey(txhash common.Hash, homestead bool,
 }
 
 func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	rules, err := fork.Rules(big.NewInt(int64(currentBlockNumber)))
-	if err != nil {
-		return 0, err
-	}
-	return IntrinsicGas(t.Payload, t.Recipient == nil, *rules)
+	return IntrinsicGas(t.Payload, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
 func (t *TxInternalDataLegacy) SerializeForSign() []interface{} {

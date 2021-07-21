@@ -81,6 +81,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	genesis.Config = params.TestChainConfig
 	genesis.Timestamp = uint64(time.Now().Unix())
 
+	var key *ecdsa.PrivateKey
 	// force enable Istanbul engine and governance
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 	genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
@@ -98,6 +99,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.Governance.Reward.ProposerUpdateInterval = uint64(v)
 		case governanceMode:
 			genesis.Config.Governance.GovernanceMode = string(v)
+		case *ecdsa.PrivateKey:
+			key = v
 		}
 	}
 	nodeKeys = make([]*ecdsa.PrivateKey, n)
@@ -105,7 +108,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 
 	var b *backend
 	if len(items) != 0 {
-		b = newTestBackendWithConfig(genesis.Config)
+		b = newTestBackendWithConfig(genesis.Config, key)
 	} else {
 		b = newTestBackend()
 	}
