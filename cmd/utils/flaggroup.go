@@ -49,6 +49,9 @@ var FlagGroups = []FlagGroup{
 			ConfigFileFlag,
 			OverwriteGenesisFlag,
 			StartBlockNumberFlag,
+			BlockGenerationIntervalFlag,
+			BlockGenerationTimeLimitFlag,
+			OpcodeComputationCostLimitFlag,
 		},
 	},
 	{

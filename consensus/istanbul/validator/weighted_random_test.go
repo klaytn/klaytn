@@ -29,6 +29,8 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/fork"
+	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -441,32 +443,99 @@ func TestWeightedCouncil_SetSubGroupSize(t *testing.T) {
 }
 
 func TestWeightedCouncil_SubListWithProposer(t *testing.T) {
-	validators := makeTestValidators(testNonZeroWeights)
-	valSet := makeTestWeightedCouncil(testNonZeroWeights)
+	var (
+		validators = makeTestValidators(testNonZeroWeights)
+		prevHash   = crypto.Keccak256Hash([]byte("This is a test"))
+		valSet     = makeTestWeightedCouncil(testNonZeroWeights)
 
-	valSet.SetBlockNum(1)
-	view := &istanbul.View{
-		Sequence: new(big.Int).SetInt64(1),
-		Round:    new(big.Int).SetInt64(0),
+		BlockBeforeHF = big.NewInt(4)
+		HFBlock       = big.NewInt(5)
+		BlockAfterHF  = big.NewInt(6)
+
+		expectIndexOfSubsetLenTest                     = []int{1, 2, 7, 3, 11, 6, 9, 4, 0, 8, 12, 10}
+		expectIndexOfRoundTestBeforeIstanbulCompatible = [][]int{
+			{1, 2, 7, 3, 11, 6, 9, 4, 0, 8, 12, 10},
+			{2, 3, 7, 1, 11, 6, 9, 4, 0, 8, 12, 10},
+			{3, 4, 7, 1, 11, 6, 9, 2, 0, 8, 12, 10},
+			{4, 5, 7, 1, 11, 6, 9, 2, 0, 8, 12, 10},
+			{5, 6, 7, 1, 11, 4, 9, 2, 0, 8, 12, 10},
+			{6, 7, 5, 1, 11, 4, 9, 2, 0, 8, 12, 10},
+			{7, 8, 5, 1, 11, 4, 9, 2, 0, 6, 12, 10},
+			{8, 9, 5, 1, 11, 4, 7, 2, 0, 6, 12, 10},
+			{9, 10, 5, 1, 11, 4, 7, 2, 0, 6, 12, 8},
+			{10, 11, 5, 1, 9, 4, 7, 2, 0, 6, 12, 8},
+			{11, 12, 5, 1, 9, 4, 7, 2, 0, 6, 10, 8},
+			{12, 0, 6, 2, 10, 5, 8, 3, 1, 7, 11, 9},
+			{0, 1, 7, 3, 11, 6, 9, 4, 2, 8, 12, 10},
+			{1, 2, 7, 3, 11, 6, 9, 4, 0, 8, 12, 10},
+			{2, 3, 7, 1, 11, 6, 9, 4, 0, 8, 12, 10},
+		}
+		expectIndexOfRoundTestAfterIstanbulCompatible = [][]int{
+			{1, 2, 7, 3, 11, 6, 9, 4, 0, 8, 12, 10},
+			{2, 3, 6, 8, 10, 9, 1, 11, 5, 0, 4, 7},
+			{3, 4, 10, 5, 8, 0, 7, 9, 12, 6, 1, 11},
+			{4, 5, 6, 0, 7, 1, 3, 12, 2, 8, 9, 11},
+			{5, 6, 4, 9, 12, 7, 0, 3, 8, 2, 1, 11},
+			{6, 7, 2, 3, 8, 9, 11, 12, 5, 1, 4, 0},
+			{7, 8, 3, 11, 5, 10, 0, 1, 2, 6, 9, 12},
+			{8, 9, 5, 7, 11, 3, 1, 0, 10, 6, 4, 12},
+			{9, 10, 3, 7, 5, 6, 2, 0, 12, 8, 11, 1},
+			{10, 11, 7, 1, 0, 9, 8, 6, 12, 5, 2, 4},
+			{11, 12, 4, 8, 1, 6, 0, 3, 9, 10, 2, 7},
+			{12, 0, 7, 2, 4, 1, 6, 10, 9, 11, 8, 3},
+			{0, 1, 9, 8, 2, 3, 10, 5, 7, 12, 4, 6},
+			{1, 2, 11, 10, 6, 8, 7, 4, 9, 12, 0, 5},
+			{2, 3, 4, 8, 6, 5, 11, 1, 12, 0, 9, 10},
+		}
+	)
+
+	getExpectSubList := func(indices []int) []istanbul.Validator {
+		var expectSubList []istanbul.Validator
+		for _, index := range indices {
+			expectSubList = append(expectSubList, validators[index])
+		}
+		return expectSubList
 	}
 
-	for i := 2; i < len(validators); i++ {
-		testSubSetLen := uint64(i)
-		valSet.SetSubGroupSize(testSubSetLen)
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{IstanbulCompatibleBlock: HFBlock})
+	defer fork.ClearHardForkBlockNumberConfig()
 
-		testSubList := valSet.SubListWithProposer(crypto.Keccak256Hash([]byte("This is a test")), valSet.GetProposer().Address(), view)
-		resultSubListLen := len(testSubList)
+	// SubsetLen test: various subset length test
+	valSet.SetBlockNum(1)
+	for testSubsetLen := 2; testSubsetLen < len(validators); testSubsetLen++ {
+		// set committee size and calculate proposer
+		valSet.SetSubGroupSize(uint64(testSubsetLen))
+		valSet.CalcProposer(valSet.GetProposer().Address(), uint64(0))
 
-		if int(testSubSetLen) != resultSubListLen {
-			t.Errorf("SubGroupSize should be %v but gotten SubGroupSize is %v", testSubSetLen, resultSubListLen)
-		}
+		// get committee list
+		expectSubList := getExpectSubList(expectIndexOfSubsetLenTest[0:testSubsetLen])
 
-		for j := 0; j < resultSubListLen; j++ {
-			_, validator := valSet.getByAddress(testSubList[j].Address())
-			if validator == nil {
-				t.Errorf("validator in subGroup is not an element of weightedCouncil. validaotr address %v ", testSubList[j].Address())
-			}
-		}
+		// compare the subList of valSet with expected committee list
+		viewBeforeHF := &istanbul.View{Sequence: BlockBeforeHF, Round: big.NewInt(int64(0))}
+		viewAfterHF := &istanbul.View{Sequence: BlockAfterHF, Round: big.NewInt(int64(0))}
+		assert.Equal(t, expectSubList, valSet.SubList(prevHash, viewBeforeHF), "test Subset length: %d(before istanbulCompatible)", testSubsetLen)
+		assert.Equal(t, expectSubList, valSet.SubList(prevHash, viewAfterHF), "test subset length: %d(after istanbulCompatible)", testSubsetLen)
+	}
+
+	// Check: compare the size of the test data arrays
+	assert.Equal(t, len(expectIndexOfRoundTestBeforeIstanbulCompatible), len(expectIndexOfRoundTestAfterIstanbulCompatible))
+
+	// Round test: various round test
+	valSet.SetBlockNum(1)
+	valSet.SetSubGroupSize(uint64(len(validators) - 1))
+	for round := 0; round < len(expectIndexOfRoundTestBeforeIstanbulCompatible); round++ {
+		// calculate proposer and set view with test round value
+		valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round))
+
+		// get committee list
+		expectSubListBeforeHF := getExpectSubList(expectIndexOfRoundTestBeforeIstanbulCompatible[round])
+		expectSubListAfterHF := getExpectSubList(expectIndexOfRoundTestAfterIstanbulCompatible[round])
+
+		// compare the subList of valSet with expected committee list
+		viewBeforeHF := &istanbul.View{Sequence: BlockBeforeHF, Round: big.NewInt(int64(round))}
+		viewAfterHF := &istanbul.View{Sequence: BlockAfterHF, Round: big.NewInt(int64(round))}
+		assert.Equal(t, expectSubListBeforeHF, valSet.SubList(prevHash, viewBeforeHF), "test round: %d(before istanbulCompatible)", round)
+		assert.Equal(t, expectSubListAfterHF, valSet.SubList(prevHash, viewAfterHF), "test round: %d(after istanbulCompatible)", round)
 	}
 }
 

@@ -47,6 +47,13 @@ const (
 	SstoreResetGas        uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.             // G_sreset
 	SstoreClearGas        uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.                // G_sreset
 	SstoreRefundGas       uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
+
+	// gasSStoreEIP2200
+	SstoreSentryGasEIP2200            uint64 = 2300  // Minimum gas required to be present for an SSTORE call, not consumed
+	SstoreSetGasEIP2200               uint64 = 20000 // Once per SSTORE operation from clean zero to non-zero
+	SstoreResetGasEIP2200             uint64 = 5000  // Once per SSTORE operation from clean non-zero to something else
+	SstoreClearsScheduleRefundEIP2200 uint64 = 15000 // Once per SSTORE operation for clearing an originally existing storage slot
+
 	JumpdestGas           uint64 = 1     // Once per JUMPDEST operation.
 	CreateDataGas         uint64 = 200   // Paid per byte for a CREATE operation to succeed in placing code into state. // G_codedeposit
 	ExpGas                uint64 = 10    // Once per EXP instruction
@@ -68,6 +75,7 @@ const (
 	BalanceGasEIP1884            uint64 = 700 // Cost of BALANCE     after  EIP 1884 (part of Istanbul)
 	SloadGasEIP150               uint64 = 200 // Cost of SLOAD       before EIP 1884
 	SloadGasEIP1884              uint64 = 800 // Cost of SLOAD       after  EIP 1884 (part of Istanbul)
+	SloadGasEIP2200              uint64 = 800 // Cost of SLOAD       after  EIP 2200 (part of Istanbul)
 	ExtcodeHashGasConstantinople uint64 = 400 // Cost of EXTCODEHASH before EIP 1884
 	ExtcodeHashGasEIP1884        uint64 = 700 // Cost of EXTCODEHASH after  EIP 1884 (part in Istanbul)
 
@@ -157,19 +165,33 @@ const (
 	TxDataGas uint64 = 100
 )
 
+const (
+	DefaultBlockGenerationInterval    = int64(1) // unit: seconds
+	DefaultBlockGenerationTimeLimit   = 250 * time.Millisecond
+	DefaultOpcodeComputationCostLimit = uint64(100000000)
+)
+
 var (
-	TxGasHumanReadable     uint64 = 4000000000         // NOTE: HumanReadable related functions are inactivated now
-	BlockScoreBoundDivisor        = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
-	GenesisBlockScore             = big.NewInt(131072) // BlockScore of the Genesis block.
-	MinimumBlockScore             = big.NewInt(131072) // The minimum that the blockscore may ever be.
-	DurationLimit                 = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
+	TxGasHumanReadable uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
+
+	// TODO-Klaytn Change the variables used in GXhash to more appropriate values for Klaytn Network
+	BlockScoreBoundDivisor = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
+	GenesisBlockScore      = big.NewInt(131072) // BlockScore of the Genesis block.
+	MinimumBlockScore      = big.NewInt(131072) // The minimum that the blockscore may ever be.
+	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
 )
 
 // Parameters for execution time limit
+// These parameters will be re-assigned by init options
 var (
-	// TODO-Klaytn Determine more practical values through actual running experience
-	TotalTimeLimit             = 250 * time.Millisecond // Execution time limit for all txs in a block
-	OpcodeComputationCostLimit = uint64(100000000)      // Computation cost limit for a tx. For now, it is approximately 100 ms.
+	// Execution time limit for all txs in a block
+	BlockGenerationTimeLimit = DefaultBlockGenerationTimeLimit
+
+	// TODO-Klaytn-Governance Change the following variables to governance items which requires consensus of CCN
+	// Block generation interval in seconds. It should be equal or larger than 1
+	BlockGenerationInterval = DefaultBlockGenerationInterval
+	// Computation cost limit for a tx. For now, it is approximately 100 ms
+	OpcodeComputationCostLimit = DefaultOpcodeComputationCostLimit
 )
 
 // istanbul BFT
