@@ -96,6 +96,7 @@ func TestHardForkBlock(t *testing.T) {
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
 	engine := istanbulBackend.New(genesisAddr, istanbul.DefaultConfig, genesisKey, chainDb, gov, common.CONSENSUSNODE)
 	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, engine, vm.Config{})
+	defer chain.Stop()
 
 	r1, err := hexutil.Decode(string(rawb1))
 	require.Equal(t, nil, err)

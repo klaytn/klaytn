@@ -30,8 +30,9 @@ import (
 )
 
 func TestBackend_HandleMsg(t *testing.T) {
-	_, backend := newBlockChain(1)
-	defer backend.Stop()
+	bc, backend := newBlockChain(1)
+	defer stopBlockChain(bc, backend)
+
 	eventSub := backend.istanbulEventMux.Subscribe(istanbul.MessageEvent{})
 
 	addr := common.StringToAddress("test addr")
@@ -133,8 +134,8 @@ func TestBackend_Protocol(t *testing.T) {
 }
 
 func TestBackend_ValidatePeerType(t *testing.T) {
-	_, backend := newBlockChain(1)
-	defer backend.Stop()
+	bc, backend := newBlockChain(1)
+	defer stopBlockChain(bc, backend)
 
 	// Return nil if the input address is a validator
 	{

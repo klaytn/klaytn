@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/klaytn/klaytn/fork"
+
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -177,8 +179,15 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 			TriesInMemory:       DefaultTriesInMemory,
 			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 		}
+		prevConfig := fork.GetHardForkBlockNumberConfig()
+
 		blockchain, _ := NewBlockChain(db, cacheConfig, config, engine, vm.Config{})
-		defer blockchain.Stop()
+		defer func() {
+			blockchain.Stop()
+			if prevConfig != nil {
+				fork.SetHardForkBlockNumberConfig(prevConfig)
+			}
+		}()
 
 		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
 		b.header = makeHeader(b.chainReader, parent, stateDB, b.engine)

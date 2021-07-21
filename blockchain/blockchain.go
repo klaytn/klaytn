@@ -891,6 +891,9 @@ func (bc *BlockChain) Stop() {
 		_ = triedb.TrieNodeCache().Close()
 	}
 
+	// reset hardForkBlockNumberConfig to nil
+	fork.ClearHardForkBlockNumberConfig()
+
 	logger.Info("Blockchain manager stopped")
 }
 

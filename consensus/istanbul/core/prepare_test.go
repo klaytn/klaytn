@@ -8,9 +8,14 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
 	mock_istanbul "github.com/klaytn/klaytn/consensus/istanbul/mocks"
+	"github.com/klaytn/klaytn/fork"
+	"github.com/klaytn/klaytn/params"
 )
 
 func TestCore_sendPrepare(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	validatorAddrs, validatorKeyMap := genValidators(6)
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 

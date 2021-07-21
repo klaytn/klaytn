@@ -80,6 +80,7 @@ func TestSimpleBlockchain(t *testing.T) {
 		t.Fatal()
 	}
 	time.Sleep(2 * time.Second)
+	node.BlockChain().Stop()
 
 	// stop node before ending the test code
 	if err := fullNode.Stop(); err != nil {

@@ -133,6 +133,9 @@ type callTracerTest struct {
 }
 
 func TestPrestateTracerCreate2(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	unsignedTx := types.NewTransaction(1, common.HexToAddress("0x00000000000000000000000000000000deadbeef"),
 		new(big.Int), 5000000, big.NewInt(1), []byte{})
 
@@ -186,7 +189,6 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	}
 	evm := vm.NewEVM(context, statedb, params.CypressChainConfig, &vm.Config{Debug: true, Tracer: tracer})
 
-	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 	if err != nil {
 		t.Fatalf("failed to prepare transaction for tracing: %v", err)
@@ -279,6 +281,9 @@ func covertToCallTrace(t *testing.T, internalTx *vm.InternalTxTrace) *callTrace 
 // Iterates over all the input-output datasets in the tracer test harness and
 // runs the JavaScript tracers against them.
 func TestCallTracer(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	files, err := ioutil.ReadDir("testdata")
 	if err != nil {
 		t.Fatalf("failed to retrieve tracer test suite: %v", err)
@@ -289,8 +294,6 @@ func TestCallTracer(t *testing.T) {
 		}
 		file := file // capture range variable
 		t.Run(camel(strings.TrimSuffix(strings.TrimPrefix(file.Name(), "call_tracer_"), ".json")), func(t *testing.T) {
-			t.Parallel()
-
 			// Call tracer test found, read if from disk
 			blob, err := ioutil.ReadFile(filepath.Join("testdata", file.Name()))
 			if err != nil {
@@ -353,7 +356,6 @@ func TestCallTracer(t *testing.T) {
 			}
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
 
-			fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)
@@ -381,6 +383,9 @@ func TestCallTracer(t *testing.T) {
 // Iterates over all the input-output datasets in the tracer test harness and
 // runs the InternalCallTracer against them.
 func TestInternalCallTracer(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	files, err := ioutil.ReadDir("testdata")
 	if err != nil {
 		t.Fatalf("failed to retrieve tracer test suite: %v", err)
@@ -391,8 +396,6 @@ func TestInternalCallTracer(t *testing.T) {
 		}
 		file := file // capture range variable
 		t.Run(camel(strings.TrimSuffix(strings.TrimPrefix(file.Name(), "call_tracer_"), ".json")), func(t *testing.T) {
-			t.Parallel()
-
 			// Call tracer test found, read if from disk
 			blob, err := ioutil.ReadFile(filepath.Join("testdata", file.Name()))
 			if err != nil {
@@ -452,7 +455,6 @@ func TestInternalCallTracer(t *testing.T) {
 			tracer := vm.NewInternalTxTracer()
 			evm := vm.NewEVM(context, statedb, test.Genesis.Config, &vm.Config{Debug: true, Tracer: tracer})
 
-			fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, context.BlockNumber.Uint64())
 			if err != nil {
 				t.Fatalf("failed to prepare transaction for tracing: %v", err)

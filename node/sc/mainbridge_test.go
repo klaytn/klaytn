@@ -261,6 +261,7 @@ func TestMainBridge_handle(t *testing.T) {
 
 	// Set testBlockChain to MainBridge.blockchain
 	mBridge.blockchain = testBlockChain(t)
+	defer mBridge.blockchain.Stop()
 
 	// Variables will be used as return values of mockBridgePeer
 	key, _ := crypto.GenerateKey()

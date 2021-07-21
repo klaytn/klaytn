@@ -35,6 +35,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -181,7 +182,8 @@ func (c *testChain) State() (*state.StateDB, error) {
 // state reset and tests whether the pending state is in sync with the
 // block head event that initiated the resetState().
 func TestStateChangeDuringTransactionPoolReset(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	var (
 		key, _     = crypto.GenerateKey()
@@ -228,7 +230,8 @@ func TestStateChangeDuringTransactionPoolReset(t *testing.T) {
 }
 
 func TestInvalidTransactions(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	pool, key := setupTxPool()
 	defer pool.Stop()
@@ -292,7 +295,8 @@ func genAnchorTx(nonce uint64) *types.Transaction {
 }
 
 func TestAnchorTransactions(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	pool, _ := setupTxPool()
 	defer pool.Stop()
@@ -328,7 +332,8 @@ func TestAnchorTransactions(t *testing.T) {
 }
 
 func TestTransactionQueue(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	pool, key := setupTxPool()
 	defer pool.Stop()
@@ -382,7 +387,8 @@ func TestTransactionQueue(t *testing.T) {
 }
 
 func TestTransactionNegativeValue(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	pool, key := setupTxPool()
 	defer pool.Stop()
@@ -397,7 +403,8 @@ func TestTransactionNegativeValue(t *testing.T) {
 }
 
 func TestTransactionChainFork(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	pool, key := setupTxPool()
 	defer pool.Stop()
@@ -426,7 +433,8 @@ func TestTransactionChainFork(t *testing.T) {
 }
 
 func TestTransactionDoubleNonce(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	pool, key := setupTxPool()
 	defer pool.Stop()
@@ -476,7 +484,8 @@ func TestTransactionDoubleNonce(t *testing.T) {
 }
 
 func TestTransactionMissingNonce(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	pool, key := setupTxPool()
 	defer pool.Stop()
@@ -499,7 +508,8 @@ func TestTransactionMissingNonce(t *testing.T) {
 }
 
 func TestTransactionNonceRecovery(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	const n = 10
 	pool, key := setupTxPool()
@@ -525,7 +535,8 @@ func TestTransactionNonceRecovery(t *testing.T) {
 // Tests that if an account runs out of funds, any pending and queued transactions
 // are dropped.
 func TestTransactionDropping(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create a test account and fund it
 	pool, key := setupTxPool()
@@ -601,7 +612,8 @@ func TestTransactionDropping(t *testing.T) {
 // of fund), all consecutive (still valid, but not executable) transactions are
 // postponed back into the future queue to prevent broadcasting them.
 func TestTransactionPostponing(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create the pool to test the postponing with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
@@ -715,7 +727,8 @@ func TestTransactionPostponing(t *testing.T) {
 // transactions from an origin account, filling the nonce gap moves all queued
 // ones into the pending pool.
 func TestTransactionGapFilling(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create a test account and fund it
 	pool, key := setupTxPool()
@@ -771,7 +784,8 @@ func TestTransactionGapFilling(t *testing.T) {
 // Tests that if the transaction count belonging to a single account goes above
 // some threshold, the higher transactions are dropped to prevent DOS attacks.
 func TestTransactionQueueAccountLimiting(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create a test account and fund it
 	pool, key := setupTxPool()
@@ -816,7 +830,8 @@ func TestTransactionQueueGlobalLimitingNoLocals(t *testing.T) {
 }
 
 func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create the pool to test the limit enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
@@ -898,20 +913,29 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 //
 // This logic should not hold for local transactions, unless the local tracking
 // mechanism is disabled.
-func TestTransactionQueueTimeLimitingKeepLocals(t *testing.T) {
-	testTransactionQueueTimeLimiting(t, false, true)
-}
-func TestTransactionQueueTimeLimitingNotKeepLocals(t *testing.T) {
-	testTransactionQueueTimeLimiting(t, false, false)
-}
-func TestTransactionQueueTimeLimitingNoLocalsKeepLocals(t *testing.T) {
-	testTransactionQueueTimeLimiting(t, true, true)
-}
-func TestTransactionQueueTimeLimitingNoLocalsNoKeepLocals(t *testing.T) {
-	testTransactionQueueTimeLimiting(t, true, false)
+func TestTransactionQueueTimeLiming(t *testing.T) {
+	testData := []struct {
+		name       string
+		noLocals   bool
+		keepLocals bool
+	}{
+		{"KeepLocals", false, true},
+		{"NotKeepLocals", false, false},
+		{"NoLocalsKeepLocals", true, true},
+		{"NoLocalsNoKeepLocals", true, false},
+	}
+	for _, tc := range testData {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			testTransactionQueueTimeLimiting(t, tc.noLocals, tc.keepLocals)
+		})
+	}
 }
 
 func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	// Reduce the eviction interval to a testable amount
 	defer func(old time.Duration) { evictionInterval = old }(evictionInterval)
 	evictionInterval = time.Second
@@ -984,7 +1008,8 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 // above some threshold, as long as the transactions are executable, they are
 // accepted.
 func TestTransactionPendingLimiting(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create a test account and fund it
 	pool, key := setupTxPool()
@@ -1029,7 +1054,8 @@ func TestTransactionPendingLimitingEquivalency(t *testing.T) {
 }
 
 func testTransactionLimitingEquivalency(t *testing.T, origin uint64) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Add a batch of transactions to a pool one by one
 	pool1, key1 := setupTxPool()
@@ -1078,7 +1104,8 @@ func testTransactionLimitingEquivalency(t *testing.T, origin uint64) {
 // some hard threshold, the higher transactions are dropped to prevent DOS
 // attacks.
 func TestTransactionPendingGlobalLimiting(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create the pool to test the limit enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
@@ -1124,7 +1151,8 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 
 // Tests that if transactions start being capped, transactions are also removed from 'all'
 func TestTransactionCapClearsFromAll(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create the pool to test the limit enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
@@ -1158,7 +1186,8 @@ func TestTransactionCapClearsFromAll(t *testing.T) {
 // some hard threshold, if they are under the minimum guaranteed slot count then
 // the transactions are still kept.
 func TestTransactionPendingMinimumAllowance(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create the pool to test the limit enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
@@ -1209,6 +1238,9 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 /*
 func TestTransactionPoolRepricing(t *testing.T) {
 	t.Parallel()
+
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create the pool to test the pricing enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemDB()))
@@ -1338,6 +1370,9 @@ func TestTransactionPoolRepricing(t *testing.T) {
 func TestTransactionPoolRepricingKeepsLocals(t *testing.T) {
 	t.Parallel()
 
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	// Create the pool to test the pricing enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemDB()))
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
@@ -1403,6 +1438,9 @@ func TestTransactionPoolRepricingKeepsLocals(t *testing.T) {
 /*
 func TestTransactionPoolUnderpricing(t *testing.T) {
 	t.Parallel()
+
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create the pool to test the pricing enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemDB()))
@@ -1514,6 +1552,9 @@ func TestTransactionPoolUnderpricing(t *testing.T) {
 func TestTransactionPoolStableUnderpricing(t *testing.T) {
 	t.Parallel()
 
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	// Create the pool to test the pricing enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemDB()))
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
@@ -1582,6 +1623,9 @@ func TestTransactionPoolStableUnderpricing(t *testing.T) {
 /*
 func TestTransactionReplacement(t *testing.T) {
 	t.Parallel()
+
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create the pool to test the pricing enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemDB()))
@@ -1664,7 +1708,8 @@ func TestTransactionJournaling(t *testing.T)         { testTransactionJournaling
 func TestTransactionJournalingNoLocals(t *testing.T) { testTransactionJournaling(t, true) }
 
 func testTransactionJournaling(t *testing.T, nolocals bool) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create a temporary file for the journal
 	file, err := ioutil.TempFile("", "")
@@ -1774,7 +1819,8 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 // TestTransactionStatusCheck tests that the pool can correctly retrieve the
 // pending status of individual transactions.
 func TestTransactionStatusCheck(t *testing.T) {
-	t.Parallel()
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// Create the pool to test the status retrievals with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
@@ -1834,6 +1880,9 @@ func BenchmarkPendingDemotion1000(b *testing.B)  { benchmarkPendingDemotion(b, 1
 func BenchmarkPendingDemotion10000(b *testing.B) { benchmarkPendingDemotion(b, 10000) }
 
 func benchmarkPendingDemotion(b *testing.B, size int) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	// Add a batch of transactions to a pool one by one
 	pool, key := setupTxPool()
 	defer pool.Stop()
@@ -1859,6 +1908,9 @@ func BenchmarkFuturePromotion1000(b *testing.B)  { benchmarkFuturePromotion(b, 1
 func BenchmarkFuturePromotion10000(b *testing.B) { benchmarkFuturePromotion(b, 10000) }
 
 func benchmarkFuturePromotion(b *testing.B, size int) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	// Add a batch of transactions to a pool one by one
 	pool, key := setupTxPool()
 	defer pool.Stop()
@@ -1879,6 +1931,9 @@ func benchmarkFuturePromotion(b *testing.B, size int) {
 
 // Benchmarks the speed of iterative transaction insertion.
 func BenchmarkPoolInsert(b *testing.B) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	// Generate a batch of transactions to enqueue into the pool
 	pool, key := setupTxPool()
 	defer pool.Stop()
@@ -1903,6 +1958,9 @@ func BenchmarkPoolBatchInsert1000(b *testing.B)  { benchmarkPoolBatchInsert(b, 1
 func BenchmarkPoolBatchInsert10000(b *testing.B) { benchmarkPoolBatchInsert(b, 10000) }
 
 func benchmarkPoolBatchInsert(b *testing.B, size int) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	// Generate a batch of transactions to enqueue into the pool
 	pool, key := setupTxPool()
 	defer pool.Stop()
