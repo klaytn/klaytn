@@ -1595,14 +1595,14 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 }
 
 func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
-	var genesis blockchain.Genesis
+	var genesis *blockchain.Genesis
 	switch {
 	case ctx.GlobalBool(CypressFlag.Name):
-		genesis = *blockchain.DefaultGenesisBlock()
+		genesis = blockchain.DefaultGenesisBlock()
 	case ctx.GlobalBool(BaobabFlag.Name):
-		genesis = *blockchain.DefaultBaobabGenesisBlock()
+		genesis = blockchain.DefaultBaobabGenesisBlock()
 	}
-	return &genesis
+	return genesis
 }
 
 // RegisterCNService adds a CN client to the stack.
