@@ -72,7 +72,7 @@ type AccountKey interface {
 	AccountCreationGas(currentBlockNumber uint64) (uint64, error)
 
 	// SigValidationGas returns gas required to validate a tx with the account.
-	SigValidationGas(currentBlockNumber uint64, r RoleType, sigNum int) (uint64, error)
+	SigValidationGas(currentBlockNumber uint64, r RoleType, numSigs int) (uint64, error)
 
 	// CheckInstallable returns an error if any data in the key is invalid.
 	// This checks that the key is ready to be assigned to an account.

@@ -182,7 +182,7 @@ func (a *AccountKeyRoleBased) AccountCreationGas(currentBlockNumber uint64) (uin
 	return gas, nil
 }
 
-func (a *AccountKeyRoleBased) SigValidationGas(currentBlockNumber uint64, r RoleType, sigNum int) (uint64, error) {
+func (a *AccountKeyRoleBased) SigValidationGas(currentBlockNumber uint64, r RoleType, numSigs int) (uint64, error) {
 	var key AccountKey
 	// Set the key used to sign for validation.
 	if len(*a) > int(r) {
@@ -191,7 +191,7 @@ func (a *AccountKeyRoleBased) SigValidationGas(currentBlockNumber uint64, r Role
 		key = a.getDefaultKey()
 	}
 
-	gas, err := key.SigValidationGas(currentBlockNumber, r, sigNum)
+	gas, err := key.SigValidationGas(currentBlockNumber, r, numSigs)
 	if err != nil {
 		return 0, err
 	}

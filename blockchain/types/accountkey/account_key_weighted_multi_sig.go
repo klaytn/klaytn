@@ -82,12 +82,12 @@ func (a *AccountKeyWeightedMultiSig) Validate(currentBlockNumber uint64, r RoleT
 
 	// Validation 1. if isIstanbul is true, check whether the signature number exceeds key number
 	if isIstanbul && len(recoveredKeys) > len(a.Keys) {
-		logger.Debug("AccountKeyWeightedMultiSig validation failed and signature number(recoveredKeys) exceeds key number",
-			"sigNum", len(recoveredKeys), "keyNum", len(a.Keys))
+		logger.Debug("AccountKeyWeightedMultiSig validation failed and number of signatures exceeds key number",
+			"numSigs", len(recoveredKeys), "numKeys", len(a.Keys))
 		return false
 	}
 
-	validSigNum := 0
+	numberOfValidAndUniqueSigs := 0
 	weightedSum := uint(0)
 
 	// To prohibit making a signature with the same key, make a map.
@@ -113,14 +113,14 @@ func (a *AccountKeyWeightedMultiSig) Validate(currentBlockNumber uint64, r RoleT
 		// update weightedSum and validSigNum
 		if _, ok := pMap[string(b)]; ok {
 			weightedSum += k.Weight
-			validSigNum++
+			numberOfValidAndUniqueSigs++
 		}
 	}
 
 	// Validation 2. if isIstanbul is true, check whether invalid signature exists
-	if isIstanbul && validSigNum < len(pMap) {
+	if isIstanbul && numberOfValidAndUniqueSigs < len(pMap) {
 		logger.Debug("AccountKeyWeightedMultiSig validation failed and invalid signature exists",
-			"validSigNum", validSigNum, "uniqueSigNum", len(pMap))
+			"numberOfValidSigs", numberOfValidAndUniqueSigs, "numberOfUniqueSigs", len(pMap))
 		return false
 	}
 
@@ -149,7 +149,7 @@ func (a *AccountKeyWeightedMultiSig) AccountCreationGas(currentBlockNumber uint6
 	return numKeys * params.TxAccountCreationGasPerKey, nil
 }
 
-func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64, r RoleType, sigNum int) (uint64, error) {
+func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64, r RoleType, numSigs int) (uint64, error) {
 	numKeys := uint64(len(a.Keys))
 	if numKeys > MaxNumKeysForMultiSig {
 		logger.Warn("validation failed due to the number of keys in the account is larger than the limit.",
@@ -163,7 +163,7 @@ func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64,
 
 	isIstanbul := fork.Rules(new(big.Int).SetUint64(currentBlockNumber)).IsIstanbul
 	if isIstanbul {
-		return uint64(sigNum-1) * params.TxValidationGasPerKey, nil
+		return uint64(numSigs-1) * params.TxValidationGasPerKey, nil
 	}
 	return (numKeys - 1) * params.TxValidationGasPerKey, nil
 }

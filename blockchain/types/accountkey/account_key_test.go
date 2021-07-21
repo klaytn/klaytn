@@ -192,14 +192,14 @@ func TestAccountKeyWeightedMultiSig_Validate(t *testing.T) {
 		expectValidationResultBeforeHF bool // expectIsValid before istanbul compatible change
 		expectValidationResultAfterHF  bool // expectIsValid values after istanbul compatible change
 	}{
-		// 1. after istanbul compatible change, validation failed because sigNum exceeds keyNum
+		// 1. after istanbul compatible change, validation failed because number of signatures exceeds number of keys
 		{append(getValidKeys(m, 6), getAnonymousPubKeys(2)...), true, false},
 		{append(getValidKeys(m, 6), getAnonymousPubKeys(4)...), true, false},
 		{append(getValidKeys(m, 6), getValidKeys(m, 2)...), true, false},
 		{append(getValidKeys(m, 6), getValidKeys(m, 4)...), true, false},
 		{append(getValidKeys(m, 2), getValidKeys(m, 6)...), true, false},
 		{append(getValidKeys(m, 1), getValidKeys(m, 6)...), true, false},
-		// 2. after istanbul compatible change, validation failed because invalidSig is included
+		// 2. after istanbul compatible change, validation failed because invalid signature is included
 		{append(getValidKeys(m, 3), getAnonymousPubKeys(1)...), true, false},
 		{append(getValidKeys(m, 3), append(getValidKeys(m, 2), getAnonymousPubKeys(1)...)...), true, false},
 		{append(getValidKeys(m, 5), getAnonymousPubKeys(1)...), true, false},
@@ -237,7 +237,7 @@ func TestAccountKeyWeightedMultiSig_SigValidationGas(t *testing.T) {
 	m := NewAccountKeyWeightedMultiSigWithValues(uint(3), keys)
 
 	testData := []struct {
-		sigNum                      int
+		numSigs                     int
 		expectChargedKeyNumBeforeHF uint64
 		expectChargedKeyNumAfterHf  uint64
 	}{
@@ -247,11 +247,11 @@ func TestAccountKeyWeightedMultiSig_SigValidationGas(t *testing.T) {
 
 	// do test
 	for _, tc := range testData {
-		gas, err := m.SigValidationGas(blockBeforeHF, 0, tc.sigNum)
+		gas, err := m.SigValidationGas(blockBeforeHF, 0, tc.numSigs)
 		assert.NoError(t, err)
 		assert.Equal(t, uint64(tc.expectChargedKeyNumBeforeHF-1)*params.TxValidationGasPerKey, gas)
 
-		gas, err = m.SigValidationGas(blockAfterHF, 0, tc.sigNum)
+		gas, err = m.SigValidationGas(blockAfterHF, 0, tc.numSigs)
 		assert.NoError(t, err)
 		assert.Equal(t, uint64(tc.expectChargedKeyNumAfterHf-1)*params.TxValidationGasPerKey, gas)
 	}
