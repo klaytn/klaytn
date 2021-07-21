@@ -517,10 +517,13 @@ func TestWeightedCouncil_SubListWithProposer(t *testing.T) {
 		assert.Equal(t, expectSubList, valSet.SubList(prevHash, viewAfterHF), "test subset length: %d(after istanbulCompatible)", testSubsetLen)
 	}
 
+	// Check: compare the size of the test data arrays
+	assert.Equal(t, len(expectIndexOfRoundTestBeforeIstanbulCompatible), len(expectIndexOfRoundTestAfterIstanbulCompatible))
+
 	// Round test: various round test
 	valSet.SetBlockNum(1)
 	valSet.SetSubGroupSize(uint64(len(validators) - 1))
-	for round := 0; round < 15; round++ {
+	for round := 0; round < len(expectIndexOfRoundTestBeforeIstanbulCompatible); round++ {
 		// calculate proposer and set view with test round value
 		valSet.CalcProposer(valSet.GetProposer().Address(), uint64(round))
 
