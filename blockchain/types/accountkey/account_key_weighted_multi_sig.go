@@ -164,9 +164,8 @@ func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64,
 	isIstanbul := fork.Rules(new(big.Int).SetUint64(currentBlockNumber)).IsIstanbul
 	if isIstanbul {
 		return uint64(sigNum-1) * params.TxValidationGasPerKey, nil
-	} else {
-		return (numKeys - 1) * params.TxValidationGasPerKey, nil
 	}
+	return (numKeys - 1) * params.TxValidationGasPerKey, nil
 }
 
 func (a *AccountKeyWeightedMultiSig) CheckInstallable(currentBlockNumber uint64) error {
