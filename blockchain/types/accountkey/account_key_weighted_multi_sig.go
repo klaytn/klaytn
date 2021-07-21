@@ -19,8 +19,10 @@ package accountkey
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"math/big"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
@@ -75,7 +77,17 @@ func (a *AccountKeyWeightedMultiSig) Equal(b AccountKey) bool {
 		a.Keys.Equal(tb.Keys)
 }
 
-func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
+func (a *AccountKeyWeightedMultiSig) Validate(currentBlockNumber uint64, r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
+	isIstanbul := fork.Rules(new(big.Int).SetUint64(currentBlockNumber)).IsIstanbul
+
+	// Validation 1. if isIstanbul is true, check whether the signature number exceeds key number
+	if isIstanbul && len(recoveredKeys) > len(a.Keys) {
+		logger.Debug("AccountKeyWeightedMultiSig validation failed and signature number(recoveredKeys) exceeds key number",
+			"sigNum", len(recoveredKeys), "keyNum", len(a.Keys))
+		return false
+	}
+
+	validSigNum := 0
 	weightedSum := uint(0)
 
 	// To prohibit making a signature with the same key, make a map.
@@ -97,19 +109,29 @@ func (a *AccountKeyWeightedMultiSig) Validate(r RoleType, recoveredKeys []*ecdsa
 			continue
 		}
 
+		// if the registered key is included in one of the transaction signatures,
+		// update weightedSum and validSigNum
 		if _, ok := pMap[string(b)]; ok {
 			weightedSum += k.Weight
+			validSigNum++
 		}
 	}
 
-	if weightedSum >= a.Threshold {
-		return true
+	// Validation 2. if isIstanbul is true, check whether invalid signature exists
+	if isIstanbul && validSigNum < len(pMap) {
+		logger.Debug("AccountKeyWeightedMultiSig validation failed and invalid signature exists",
+			"validSigNum", validSigNum, "uniqueSigNum", len(pMap))
+		return false
 	}
 
-	logger.Debug("AccountKeyWeightedMultiSig validation is failed", "recoveredKeys", recoveredKeys,
-		"accountKeys", a.String(), "threshold", a.Threshold, "weighted sum", weightedSum)
+	// Validation 3. check whether enough signatures are gathered
+	if weightedSum < a.Threshold {
+		logger.Debug("AccountKeyWeightedMultiSig validation failed and weightedSum is smaller than threshold",
+			"recoveredKeys", recoveredKeys, "accountKeys", a.String(), "threshold", a.Threshold, "weighted sum", weightedSum)
+		return false
+	}
 
-	return false
+	return true
 }
 
 func (a *AccountKeyWeightedMultiSig) String() string {
@@ -127,7 +149,7 @@ func (a *AccountKeyWeightedMultiSig) AccountCreationGas(currentBlockNumber uint6
 	return numKeys * params.TxAccountCreationGasPerKey, nil
 }
 
-func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {
+func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64, r RoleType, sigNum int) (uint64, error) {
 	numKeys := uint64(len(a.Keys))
 	if numKeys > MaxNumKeysForMultiSig {
 		logger.Warn("validation failed due to the number of keys in the account is larger than the limit.",
@@ -138,7 +160,13 @@ func (a *AccountKeyWeightedMultiSig) SigValidationGas(currentBlockNumber uint64,
 		logger.Error("should not happen! numKeys is equal to zero!")
 		return 0, kerrors.ErrZeroLength
 	}
-	return (numKeys - 1) * params.TxValidationGasPerKey, nil
+
+	isIstanbul := fork.Rules(new(big.Int).SetUint64(currentBlockNumber)).IsIstanbul
+	if isIstanbul {
+		return uint64(sigNum-1) * params.TxValidationGasPerKey, nil
+	} else {
+		return (numKeys - 1) * params.TxValidationGasPerKey, nil
+	}
 }
 
 func (a *AccountKeyWeightedMultiSig) CheckInstallable(currentBlockNumber uint64) error {

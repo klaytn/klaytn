@@ -579,7 +579,7 @@ func (c *validateSender) GetRequiredGasAndComputationCost(input []byte) (uint64,
 }
 
 func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	if err := c.validateSender(input, evm.StateDB); err != nil {
+	if err := c.validateSender(input, evm.StateDB, evm.BlockNumber.Uint64()); err != nil {
 		// If return error makes contract execution failed, do not return the error.
 		// Instead, print log.
 		logger.Trace("validateSender failed", "err", err)
@@ -588,7 +588,7 @@ func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte
 	return []byte{1}, nil
 }
 
-func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPicker) error {
+func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
 	ptr := input
 
 	// Parse the first 20 bytes. They represent an address to be verified.
@@ -625,7 +625,7 @@ func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPic
 	}
 
 	k := picker.GetKey(from)
-	if err := accountkey.ValidateAccountKey(from, k, pubs, accountkey.RoleTransaction); err != nil {
+	if err := accountkey.ValidateAccountKey(currentBlockNumber, from, k, pubs, accountkey.RoleTransaction); err != nil {
 		return err
 	}
 
