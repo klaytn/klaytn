@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -453,6 +454,84 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegements_BufferOverflow() {
 		s.Fail("timeout")
 	case err := <-errCh:
 		s.True(strings.Contains(err.Error(), bufferOverflowErrorMsg))
+	}
+}
+
+func (s *KafkaSuite) TestKafka_PubSubWithSegments_ErrCallBack() {
+	// create a topic
+	topic := "test-message-segments-error-callback"
+	err := s.kfk.setupTopic(topic)
+	s.NoError(err)
+
+	_ = publishRandomData(s.T(), s.kfk, topic, 1, 1)
+
+	// setup consumer to handle errors with callback method
+	s.kfk.config.SaramaConfig.Consumer.Return.Errors = true
+	s.kfk.config.SaramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	callbackErr := errors.New("callback error")
+	s.kfk.config.ErrCallback = func(string) error { return callbackErr }
+
+	// create a consumer structure
+	consumer, err := NewConsumer(s.kfk.config, "test-group-id")
+	s.NoError(err)
+	consumer.topics = append(consumer.topics, topic)
+	consumer.handlers[topic] = func(message *sarama.ConsumerMessage) error { return errors.New("test error") }
+
+	go func() {
+		err = consumer.Subscribe(context.Background())
+		s.NoError(err)
+	}()
+
+	// checkout the returned error is callback error
+	timeout := time.NewTimer(3 * time.Second)
+	select {
+	case <-timeout.C:
+		s.Fail("timeout")
+	case err := <-consumer.Errors():
+		s.Error(err)
+		s.True(strings.Contains(err.Error(), callbackErr.Error()))
+	}
+}
+
+func (s *KafkaSuite) TestKafka_PubSubWithSegments_MessageTimeout() {
+	// create a topic
+	topic := "test-message-segments-expiration"
+	err := s.kfk.setupTopic(topic)
+	s.NoError(err)
+
+	// produce incomplete message
+	msg := s.kfk.makeProducerMessage(topic, "test-key", common.MakeRandomBytes(10), 0, 2)
+	_, _, err = s.kfk.producer.SendMessage(msg)
+	s.NoError(err)
+
+	// setup consumer to handle errors with callback method
+	s.kfk.config.SaramaConfig.Consumer.Return.Errors = true
+	s.kfk.config.SaramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	s.kfk.config.ExpirationTime = 300 * time.Millisecond
+
+	// create a consumer structure
+	consumer, err := NewConsumer(s.kfk.config, "test-group-id")
+	s.NoError(err)
+	consumer.topics = append(consumer.topics, topic)
+	consumer.handlers[topic] = func(message *sarama.ConsumerMessage) error {
+		// sleep for message expiration
+		time.Sleep(1 * time.Second)
+		return nil
+	}
+
+	go func() {
+		err = consumer.Subscribe(context.Background())
+		s.NoError(err)
+	}()
+
+	// checkout the returned error is callback error
+	timeout := time.NewTimer(3 * time.Second)
+	select {
+	case <-timeout.C:
+		s.Fail("timeout")
+	case err := <-consumer.Errors():
+		s.Error(err)
+		s.True(strings.Contains(err.Error(), msgExpiredErrorMsg))
 	}
 }
 

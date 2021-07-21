@@ -18,7 +18,9 @@ package kafka
 
 import (
 	"bytes"
+	"errors"
 	"math/rand"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -554,5 +556,159 @@ func Test_V1Segment_MultiProducers(t *testing.T) {
 			buffer, err = consumer.handleBufferedMessages(buffer)
 			assert.NoError(t, err)
 		}
+	}
+}
+
+func TestConsumer_handleError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	testSegment := &Segment{
+		orig: &sarama.ConsumerMessage{
+			Topic:     "test-topic",
+			Partition: int32(1),
+			Offset:    int64(99),
+		},
+	}
+
+	testSegment2 := &Segment{
+		orig: &sarama.ConsumerMessage{
+			Topic:     "test-topic",
+			Partition: int32(1),
+			Offset:    int64(100),
+		},
+	}
+
+	session := mocks.NewMockConsumerGroupSession(ctrl)
+	parentErr := errors.New("parent error")
+	callbackErr := errors.New("callback error")
+
+	tests := []struct {
+		name      string
+		setup     func()
+		callback  func(s string) error
+		buffer    [][]*Segment
+		parentErr error
+		expected  error
+	}{
+		{
+			"no_item_in_buffer",
+			func() {},
+			func(s string) error { panic("should not be called") },
+			[][]*Segment{},
+			parentErr,
+			parentErr,
+		},
+		{
+			"no_callback",
+			func() {},
+			nil,
+			[][]*Segment{{testSegment}},
+			parentErr,
+			parentErr,
+		},
+		{
+			"callback_success_an_item_in_buffer",
+			func() { session.EXPECT().MarkMessage(gomock.Eq(testSegment.orig), gomock.Eq("")).Times(1) },
+			func(s string) error { return nil },
+			[][]*Segment{{testSegment}},
+			parentErr,
+			nil,
+		},
+		{
+			"callback_success_two_items_in_buffer",
+			func() {
+				session.EXPECT().MarkOffset(gomock.Eq(testSegment2.orig.Topic), gomock.Eq(testSegment2.orig.Partition), gomock.Eq(testSegment2.orig.Offset), gomock.Eq("")).Times(1)
+			},
+			func(s string) error { return nil },
+			[][]*Segment{{testSegment}, {testSegment2}},
+			parentErr,
+			nil,
+		},
+		{
+			"callback_failure",
+			func() {},
+			func(s string) error { return callbackErr },
+			[][]*Segment{{testSegment}, {testSegment2}},
+			parentErr,
+			callbackErr,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Consumer{}
+			c.config = GetDefaultKafkaConfig()
+			c.config.ErrCallback = tt.callback
+			tt.setup()
+			if err := c.handleError(tt.buffer, session, tt.parentErr); err != tt.expected {
+				t.Errorf("handleError() error = %v, wantErr %v", err, tt.expected)
+			}
+		})
+	}
+}
+
+func TestConsumer_renewExpireMsg(t *testing.T) {
+	testTimer := time.NewTimer(1 * time.Second)
+	testTimer.Stop()
+
+	oldMsg := &sarama.ConsumerMessage{Key: []byte("old")}
+	newMsg := &sarama.ConsumerMessage{Key: []byte("new")}
+
+	type args struct {
+		buffer    [][]*Segment
+		timer     *time.Timer
+		oldestMsg *sarama.ConsumerMessage
+	}
+	tests := []struct {
+		name   string
+		config *KafkaConfig
+		args   args
+		want   *sarama.ConsumerMessage
+	}{
+		{
+			"no_expire_option",
+			&KafkaConfig{ExpirationTime: time.Duration(0)},
+			args{},
+			nil,
+		},
+		{
+			"all_handled",
+			&KafkaConfig{ExpirationTime: time.Duration(1)},
+			args{
+				[][]*Segment{},
+				testTimer,
+				oldMsg,
+			},
+			nil,
+		},
+		{
+			"oldest_handled",
+			&KafkaConfig{ExpirationTime: time.Duration(1)},
+			args{
+				[][]*Segment{{&Segment{orig: newMsg}}},
+				testTimer,
+				oldMsg,
+			},
+			newMsg,
+		},
+		{
+			"oldest_not_handled",
+			&KafkaConfig{ExpirationTime: time.Duration(1)},
+			args{
+				[][]*Segment{{&Segment{orig: oldMsg}}},
+				testTimer,
+				oldMsg,
+			},
+			oldMsg,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Consumer{
+				config: tt.config,
+			}
+			if got := c.resetTimer(tt.args.buffer, tt.args.timer, tt.args.oldestMsg); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("resetTimer() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
