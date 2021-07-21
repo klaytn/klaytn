@@ -320,10 +320,9 @@ func (c *Consumer) renewExpireMsg(buffer [][]*Segment, timer *time.Timer, oldest
 
 	if oldestMsg != buffer[0][0].orig {
 		timer.Reset(c.config.ExpirationTime)
-		return buffer[0][0].orig
 	}
 
-	return oldestMsg
+	return buffer[0][0].orig
 }
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
