@@ -706,8 +706,8 @@ func TestConsumer_renewExpireMsg(t *testing.T) {
 			c := &Consumer{
 				config: tt.config,
 			}
-			if got := c.renewExpireMsg(tt.args.buffer, tt.args.timer, tt.args.oldestMsg); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("renewExpireMsg() = %v, want %v", got, tt.want)
+			if got := c.resetTimer(tt.args.buffer, tt.args.timer, tt.args.oldestMsg); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("resetTimer() = %v, want %v", got, tt.want)
 			}
 		})
 	}

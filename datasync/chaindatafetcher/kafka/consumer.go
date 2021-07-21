@@ -307,8 +307,8 @@ func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMes
 	return nil
 }
 
-// renewExpireMsg updates expiration timer and message if the expiring message is handled.
-func (c *Consumer) renewExpireMsg(buffer [][]*Segment, timer *time.Timer, oldestMsg *sarama.ConsumerMessage) *sarama.ConsumerMessage {
+// resetTimer resets the given timer if oldest message is changed and it returns oldest message if exists.
+func (c *Consumer) resetTimer(buffer [][]*Segment, timer *time.Timer, oldestMsg *sarama.ConsumerMessage) *sarama.ConsumerMessage {
 	if c.config.ExpirationTime <= time.Duration(0) {
 		return nil
 	}
@@ -337,19 +337,19 @@ func (c *Consumer) ConsumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.Cons
 
 func (c *Consumer) consumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.ConsumerGroupClaim) ([][]*Segment, error) {
 	var (
-		buffer      [][]*Segment // TODO-Chaindatafetcher better to introduce segment buffer structure with useful methods
-		expireMsg   *sarama.ConsumerMessage
-		expireTimer = time.NewTimer(c.config.ExpirationTime)
+		buffer          [][]*Segment // TODO-Chaindatafetcher better to introduce segment buffer structure with useful methods
+		oldestMsg       *sarama.ConsumerMessage
+		expirationTimer = time.NewTimer(c.config.ExpirationTime)
 	)
 
-	// make sure that the expireTimer channel is empty
-	if !expireTimer.Stop() {
-		<-expireTimer.C
+	// make sure that the expirationTimer channel is empty
+	if !expirationTimer.Stop() {
+		<-expirationTimer.C
 	}
 
 	for {
 		select {
-		case <-expireTimer.C:
+		case <-expirationTimer.C:
 			return buffer, errors.New(msgExpiredErrorMsg)
 		case msg, ok := <-cgc.Messages():
 			if !ok {
@@ -377,8 +377,8 @@ func (c *Consumer) consumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.Cons
 				return buffer, err
 			}
 
-			// update expire message and timer if it is handled
-			expireMsg = c.renewExpireMsg(buffer, expireTimer, expireMsg)
+			// reset the expiration timer if necessary and update the oldest message
+			oldestMsg = c.resetTimer(buffer, expirationTimer, oldestMsg)
 
 			// mark offset of the oldest message to be read
 			if err := c.updateOffset(buffer, msg, cgs); err != nil {
