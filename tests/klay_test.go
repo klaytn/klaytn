@@ -741,9 +741,9 @@ func BenchmarkNewValueTransfer(t *testing.B) {
 func makeTxPool(bcdata *BCData, txPoolSize int) *blockchain.TxPool {
 	txpoolconfig := blockchain.DefaultTxPoolConfig
 	txpoolconfig.Journal = ""
-	txpoolconfig.ExecSlotsAccount = uint64(txPoolSize)
-	txpoolconfig.NonExecSlotsAccount = uint64(txPoolSize)
-	txpoolconfig.ExecSlotsAll = 2 * uint64(txPoolSize)
-	txpoolconfig.NonExecSlotsAll = 2 * uint64(txPoolSize)
+	txpoolconfig.AccountSlots = uint64(txPoolSize)
+	txpoolconfig.AccountQueue = uint64(txPoolSize)
+	txpoolconfig.GlobalSlots = 2 * uint64(txPoolSize)
+	txpoolconfig.GlobalQueue = 2 * uint64(txPoolSize)
 	return blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
 }

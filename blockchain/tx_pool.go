@@ -104,15 +104,15 @@ type TxPoolConfig struct {
 	NoLocals           bool          // Whether local transaction handling should be disabled
 	AllowLocalAnchorTx bool          // if this is true, the txpool allow locally submitted anchor transactions
 	Journal            string        // Journal of local transactions to survive node restarts
-	JournalInterval    time.Duration // Time interval to regenerate the local transaction journal
+	ReJournal          time.Duration // Time interval to regenerate the local transaction journal
 
 	PriceLimit uint64 // Minimum gas price to enforce for acceptance into the pool
 	PriceBump  uint64 // Minimum price bump percentage to replace an already existing transaction (nonce)
 
-	ExecSlotsAccount    uint64 // Number of executable transaction slots guaranteed per account
-	ExecSlotsAll        uint64 // Maximum number of executable transaction slots for all accounts
-	NonExecSlotsAccount uint64 // Maximum number of non-executable transaction slots permitted per account
-	NonExecSlotsAll     uint64 // Maximum number of non-executable transaction slots for all accounts
+	AccountSlots uint64 // Number of executable transaction slots guaranteed per account
+	GlobalSlots  uint64 // Maximum number of executable transaction slots for all accounts
+	AccountQueue uint64 // Maximum number of non-executable transaction slots permitted per account
+	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
 
 	KeepLocals bool          // Disables removing timed-out local transactions
 	Lifetime   time.Duration // Maximum amount of time non-executable transaction are queued
@@ -123,16 +123,16 @@ type TxPoolConfig struct {
 // DefaultTxPoolConfig contains the default configurations for the transaction
 // pool.
 var DefaultTxPoolConfig = TxPoolConfig{
-	Journal:         "transactions.rlp",
-	JournalInterval: time.Hour,
+	Journal:   "transactions.rlp",
+	ReJournal: time.Hour,
 
 	PriceLimit: 1,
 	PriceBump:  10,
 
-	ExecSlotsAccount:    16,
-	ExecSlotsAll:        4096,
-	NonExecSlotsAccount: 64,
-	NonExecSlotsAll:     1024,
+	AccountSlots: 16,
+	GlobalSlots:  4096,
+	AccountQueue: 64,
+	GlobalQueue:  1024,
 
 	KeepLocals: false,
 	Lifetime:   5 * time.Minute,
@@ -142,9 +142,9 @@ var DefaultTxPoolConfig = TxPoolConfig{
 // unreasonable or unworkable.
 func (config *TxPoolConfig) sanitize() TxPoolConfig {
 	conf := *config
-	if conf.JournalInterval < time.Second {
-		logger.Error("Sanitizing invalid txpool journal time", "provided", conf.JournalInterval, "updated", time.Second)
-		conf.JournalInterval = time.Second
+	if conf.ReJournal < time.Second {
+		logger.Error("Sanitizing invalid txpool journal time", "provided", conf.ReJournal, "updated", time.Second)
+		conf.ReJournal = time.Second
 	}
 	if conf.PriceLimit < 1 {
 		logger.Error("Sanitizing invalid txpool price limit", "provided", conf.PriceLimit, "updated", DefaultTxPoolConfig.PriceLimit)
@@ -261,7 +261,7 @@ func (pool *TxPool) loop() {
 	evict := time.NewTicker(evictionInterval)
 	defer evict.Stop()
 
-	journal := time.NewTicker(pool.config.JournalInterval)
+	journal := time.NewTicker(pool.config.ReJournal)
 	defer journal.Stop()
 
 	// Track the previous head headers for transaction reorgs
@@ -759,7 +759,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
 	// (3) discard a new Tx if the new Tx does not have a missing nonce
 	// (4) discard underpriced transactions
-	if uint64(len(pool.all)) >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
+	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
 		// (1) discard a new Tx if there is no room for the account of the Tx
 		from, _ := types.Sender(pool.signer, tx)
 		if pool.queue[from] == nil {
@@ -788,7 +788,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 			return false, ErrUnderpriced
 		}
 		// New transaction is better than our worse ones, make room for it
-		drop := pool.priced.Discard(len(pool.all)-int(pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll-1), pool.locals)
+		drop := pool.priced.Discard(len(pool.all)-int(pool.config.GlobalSlots+pool.config.GlobalQueue-1), pool.locals)
 		for _, tx := range drop {
 			logger.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "price", tx.GasPrice())
 			underpricedTxCounter.Inc(1)
@@ -947,7 +947,7 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 	}
 
 	poolSize := uint64(len(pool.all))
-	if poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
+	if poolSize >= pool.config.GlobalSlots+pool.config.GlobalQueue {
 		return fmt.Errorf("txpool is full: %d", poolSize)
 	}
 	return pool.addTx(tx, !pool.config.NoLocals)
@@ -979,7 +979,7 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 // so it can fit into TxPool's capacity.
 func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error {
 	poolSize := uint64(len(pool.all))
-	poolCapacity := int(pool.config.ExecSlotsAll + pool.config.NonExecSlotsAll - poolSize)
+	poolCapacity := int(pool.config.GlobalSlots + pool.config.GlobalQueue - poolSize)
 	numTxs := len(txs)
 
 	if poolCapacity < numTxs {
@@ -1182,7 +1182,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 		// Drop all transactions over the allowed limit
 		if !pool.locals.contains(addr) {
-			for _, tx := range list.Cap(int(pool.config.NonExecSlotsAccount)) {
+			for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
 				hash := tx.Hash()
 				delete(pool.all, hash)
 				pool.priced.Removed()
@@ -1205,19 +1205,19 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		pending += uint64(list.Len())
 	}
 
-	if pending > pool.config.ExecSlotsAll {
+	if pending > pool.config.GlobalSlots {
 		pendingBeforeCap := pending
 		// Assemble a spam order to penalize large transactors first
 		spammers := prque.New()
 		for addr, list := range pool.pending {
 			// Only evict transactions from high rollers
-			if !pool.locals.contains(addr) && uint64(list.Len()) > pool.config.ExecSlotsAccount {
+			if !pool.locals.contains(addr) && uint64(list.Len()) > pool.config.AccountSlots {
 				spammers.Push(addr, int64(list.Len()))
 			}
 		}
 		// Gradually drop transactions from offenders
 		offenders := []common.Address{}
-		for pending > pool.config.ExecSlotsAll && !spammers.Empty() {
+		for pending > pool.config.GlobalSlots && !spammers.Empty() {
 			// Retrieve the next offender if not local address
 			offender, _ := spammers.Pop()
 			offenders = append(offenders, offender.(common.Address))
@@ -1228,7 +1228,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 				threshold := pool.pending[offender.(common.Address)].Len()
 
 				// Iteratively reduce all offenders until below limit or threshold reached
-				for pending > pool.config.ExecSlotsAll && pool.pending[offenders[len(offenders)-2]].Len() > threshold {
+				for pending > pool.config.GlobalSlots && pool.pending[offenders[len(offenders)-2]].Len() > threshold {
 					for i := 0; i < len(offenders)-1; i++ {
 						list := pool.pending[offenders[i]]
 						for _, tx := range list.Cap(list.Len() - 1) {
@@ -1247,8 +1247,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			}
 		}
 		// If still above threshold, reduce to limit or min allowance
-		if pending > pool.config.ExecSlotsAll && len(offenders) > 0 {
-			for pending > pool.config.ExecSlotsAll && uint64(pool.pending[offenders[len(offenders)-1]].Len()) > pool.config.ExecSlotsAccount {
+		if pending > pool.config.GlobalSlots && len(offenders) > 0 {
+			for pending > pool.config.GlobalSlots && uint64(pool.pending[offenders[len(offenders)-1]].Len()) > pool.config.AccountSlots {
 				for _, addr := range offenders {
 					list := pool.pending[addr]
 					for _, tx := range list.Cap(list.Len() - 1) {
@@ -1273,7 +1273,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		queued += uint64(list.Len())
 	}
 
-	if queued > pool.config.NonExecSlotsAll {
+	if queued > pool.config.GlobalQueue {
 		// Sort all accounts with queued transactions by heartbeat
 		addresses := make(addresssByHeartbeat, 0, len(pool.queue))
 		for addr := range pool.queue {
@@ -1284,7 +1284,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		sort.Sort(addresses)
 
 		// Drop transactions until the total is below the limit or only locals remain
-		for drop := queued - pool.config.NonExecSlotsAll; drop > 0 && len(addresses) > 0; {
+		for drop := queued - pool.config.GlobalQueue; drop > 0 && len(addresses) > 0; {
 			addr := addresses[len(addresses)-1]
 			list := pool.queue[addr.address]
 

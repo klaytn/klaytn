@@ -157,10 +157,10 @@ var (
 		Usage: "Disk journal for local transaction to survive node restarts",
 		Value: blockchain.DefaultTxPoolConfig.Journal,
 	}
-	TxPoolJournalIntervalFlag = cli.DurationFlag{
-		Name:  "txpool.journal-interval",
+	TxPoolReJournalFlag = cli.DurationFlag{
+		Name:  "txpool.rejournal",
 		Usage: "Time interval to regenerate the local transaction journal",
-		Value: blockchain.DefaultTxPoolConfig.JournalInterval,
+		Value: blockchain.DefaultTxPoolConfig.ReJournal,
 	}
 	TxPoolPriceLimitFlag = cli.Uint64Flag{
 		Name:  "txpool.pricelimit",
@@ -172,25 +172,25 @@ var (
 		Usage: "Price bump percentage to replace an already existing transaction",
 		Value: cn.GetDefaultConfig().TxPool.PriceBump,
 	}
-	TxPoolExecSlotsAccountFlag = cli.Uint64Flag{
-		Name:  "txpool.exec-slots.account",
+	TxPoolAccountSlotsFlag = cli.Uint64Flag{
+		Name:  "txpool.accountslots",
 		Usage: "Number of executable transaction slots guaranteed per account",
-		Value: cn.GetDefaultConfig().TxPool.ExecSlotsAccount,
+		Value: cn.GetDefaultConfig().TxPool.AccountSlots,
 	}
-	TxPoolExecSlotsAllFlag = cli.Uint64Flag{
-		Name:  "txpool.exec-slots.all",
+	TxPoolGlobalSlotsFlag = cli.Uint64Flag{
+		Name:  "txpool.globalslots",
 		Usage: "Maximum number of executable transaction slots for all accounts",
-		Value: cn.GetDefaultConfig().TxPool.ExecSlotsAll,
+		Value: cn.GetDefaultConfig().TxPool.GlobalSlots,
 	}
-	TxPoolNonExecSlotsAccountFlag = cli.Uint64Flag{
-		Name:  "txpool.nonexec-slots.account",
+	TxPoolAccountQueueFlag = cli.Uint64Flag{
+		Name:  "txpool.accountqueue",
 		Usage: "Maximum number of non-executable transaction slots permitted per account",
-		Value: cn.GetDefaultConfig().TxPool.NonExecSlotsAccount,
+		Value: cn.GetDefaultConfig().TxPool.AccountQueue,
 	}
-	TxPoolNonExecSlotsAllFlag = cli.Uint64Flag{
-		Name:  "txpool.nonexec-slots.all",
+	TxPoolGlobalQueueFlag = cli.Uint64Flag{
+		Name:  "txpool.globalqueue",
 		Usage: "Maximum number of non-executable transaction slots for all accounts",
-		Value: cn.GetDefaultConfig().TxPool.NonExecSlotsAll,
+		Value: cn.GetDefaultConfig().TxPool.GlobalQueue,
 	}
 	TxPoolKeepLocalsFlag = cli.BoolFlag{
 		Name:  "txpool.keeplocals",
@@ -201,6 +201,34 @@ var (
 		Usage: "Maximum amount of time non-executable transaction are queued",
 		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
+
+	//Deprecated transaction pool settings
+	TxPoolExecSlotsAccountFlag = cli.Uint64Flag{
+		Name:  "txpool.exec-slots.account",
+		Usage: "Number of executable transaction slots guaranteed per account. (deprecated, use --txpool.accoutslots)",
+		Value: cn.GetDefaultConfig().TxPool.AccountSlots,
+	}
+	TxPoolExecSlotsAllFlag = cli.Uint64Flag{
+		Name:  "txpool.exec-slots.all",
+		Usage: "Maximum number of executable transaction slots for all accounts. (deprecated, use --txpool.globalslots)",
+		Value: cn.GetDefaultConfig().TxPool.GlobalSlots,
+	}
+	TxPoolNonExecSlotsAccountFlag = cli.Uint64Flag{
+		Name:  "txpool.nonexec-slots.account",
+		Usage: "Maximum number of non-executable transaction slots permitted per account. (deprecated, use --txpool.accountqueue)",
+		Value: cn.GetDefaultConfig().TxPool.AccountQueue,
+	}
+	TxPoolNonExecSlotsAllFlag = cli.Uint64Flag{
+		Name:  "txpool.nonexec-slots.all",
+		Usage: "Maximum number of non-executable transaction slots for all accounts. (deprecated, use --txpool.globalqueue)",
+		Value: cn.GetDefaultConfig().TxPool.GlobalQueue,
+	}
+	TxPoolJournalIntervalFlag = cli.DurationFlag{
+		Name:  "txpool.journal-interval",
+		Usage: "Time interval to regenerate the local transaction journal. (deprecated, use --txpool.rejournal)",
+		Value: blockchain.DefaultTxPoolConfig.ReJournal,
+	}
+
 	// KES
 	KESNodeTypeServiceFlag = cli.BoolFlag{
 		Name:  "kes.nodetype.service",
@@ -1372,8 +1400,8 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolJournalFlag.Name) {
 		cfg.Journal = ctx.GlobalString(TxPoolJournalFlag.Name)
 	}
-	if ctx.GlobalIsSet(TxPoolJournalIntervalFlag.Name) {
-		cfg.JournalInterval = ctx.GlobalDuration(TxPoolJournalIntervalFlag.Name)
+	if rejournalName := getFlagName(ctx, TxPoolReJournalFlag, TxPoolJournalIntervalFlag, "(v1.12.0)"); rejournalName != "" {
+		cfg.ReJournal = ctx.GlobalDuration(rejournalName)
 	}
 	if ctx.GlobalIsSet(TxPoolPriceLimitFlag.Name) {
 		cfg.PriceLimit = ctx.GlobalUint64(TxPoolPriceLimitFlag.Name)
@@ -1381,17 +1409,17 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolPriceBumpFlag.Name) {
 		cfg.PriceBump = ctx.GlobalUint64(TxPoolPriceBumpFlag.Name)
 	}
-	if ctx.GlobalIsSet(TxPoolExecSlotsAccountFlag.Name) {
-		cfg.ExecSlotsAccount = ctx.GlobalUint64(TxPoolExecSlotsAccountFlag.Name)
+	if accountSlotsName := getFlagName(ctx, TxPoolAccountSlotsFlag, TxPoolExecSlotsAccountFlag, "(v1.12.0)"); accountSlotsName != "" {
+		cfg.AccountSlots = ctx.GlobalUint64(accountSlotsName)
 	}
-	if ctx.GlobalIsSet(TxPoolExecSlotsAllFlag.Name) {
-		cfg.ExecSlotsAll = ctx.GlobalUint64(TxPoolExecSlotsAllFlag.Name)
+	if globalSlotsName := getFlagName(ctx, TxPoolGlobalSlotsFlag, TxPoolExecSlotsAllFlag, "(v1.12.0)"); globalSlotsName != "" {
+		cfg.GlobalSlots = ctx.GlobalUint64(globalSlotsName)
 	}
-	if ctx.GlobalIsSet(TxPoolNonExecSlotsAccountFlag.Name) {
-		cfg.NonExecSlotsAccount = ctx.GlobalUint64(TxPoolNonExecSlotsAccountFlag.Name)
+	if accountsQueuesName := getFlagName(ctx, TxPoolAccountQueueFlag, TxPoolNonExecSlotsAccountFlag, "(v1.12.0)"); accountsQueuesName != "" {
+		cfg.AccountQueue = ctx.GlobalUint64(accountsQueuesName)
 	}
-	if ctx.GlobalIsSet(TxPoolNonExecSlotsAllFlag.Name) {
-		cfg.NonExecSlotsAll = ctx.GlobalUint64(TxPoolNonExecSlotsAllFlag.Name)
+	if globalQueueName := getFlagName(ctx, TxPoolGlobalQueueFlag, TxPoolNonExecSlotsAllFlag, "(v1.12.0)"); globalQueueName != "" {
+		cfg.GlobalQueue = ctx.GlobalUint64(globalQueueName)
 	}
 
 	cfg.KeepLocals = ctx.GlobalIsSet(TxPoolKeepLocalsFlag.Name)
@@ -1748,4 +1776,15 @@ func getNetworkId(ctx *cli.Context) (uint64, bool) {
 		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
 		return params.CypressNetworkId, false
 	}
+}
+
+func getFlagName(ctx *cli.Context, flag cli.Flag, legacyFlag cli.Flag, deprecateVersion string) string {
+	if ctx.GlobalIsSet(flag.GetName()) {
+		return flag.GetName()
+	}
+	if ctx.GlobalIsSet(legacyFlag.GetName()) {
+		logger.Warn("The flag " + legacyFlag.GetName() + " is deprecated and will be removed in the future " + deprecateVersion + ", please use " + flag.GetName())
+		return legacyFlag.GetName()
+	}
+	return ""
 }
