@@ -20,10 +20,6 @@
 
 package istanbul
 
-import (
-	"math/big"
-)
-
 type ProposerPolicy uint64
 
 const (
@@ -48,10 +44,3 @@ var DefaultConfig = &Config{
 	Epoch:          30000,
 	SubGroupSize:   21,
 }
-
-// Test block numbers used for the tests which uses hard fork block number information
-var (
-	TestBlockBeforeHF = big.NewInt(4)
-	TestBlockHF       = big.NewInt(5)
-	TestBlockAfterHF  = big.NewInt(6)
-)

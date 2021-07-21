@@ -448,6 +448,10 @@ func TestWeightedCouncil_SubListWithProposer(t *testing.T) {
 		prevHash   = crypto.Keccak256Hash([]byte("This is a test"))
 		valSet     = makeTestWeightedCouncil(testNonZeroWeights)
 
+		BlockBeforeHF = big.NewInt(4)
+		HFBlock       = big.NewInt(5)
+		BlockAfterHF  = big.NewInt(6)
+
 		expectIndexOfSubsetLenTest                     = []int{1, 2, 7, 3, 11, 6, 9, 4, 0, 8, 12, 10}
 		expectIndexOfRoundTestBeforeIstanbulCompatible = [][]int{
 			{1, 2, 7, 3, 11, 6, 9, 4, 0, 8, 12, 10},
@@ -493,8 +497,8 @@ func TestWeightedCouncil_SubListWithProposer(t *testing.T) {
 		return expectSubList
 	}
 
-	// set hardForkBlockNumberConfig and view values
-	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{IstanbulCompatibleBlock: istanbul.TestBlockHF})
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{IstanbulCompatibleBlock: HFBlock})
+	defer fork.ClearHardForkBlockNumberConfig()
 
 	// SubsetLen test: various subset length test
 	valSet.SetBlockNum(1)
@@ -507,8 +511,8 @@ func TestWeightedCouncil_SubListWithProposer(t *testing.T) {
 		expectSubList := getExpectSubList(expectIndexOfSubsetLenTest[0:testSubsetLen])
 
 		// compare the subList of valSet with expected committee list
-		viewBeforeHF := &istanbul.View{Sequence: istanbul.TestBlockBeforeHF, Round: big.NewInt(int64(0))}
-		viewAfterHF := &istanbul.View{Sequence: istanbul.TestBlockAfterHF, Round: big.NewInt(int64(0))}
+		viewBeforeHF := &istanbul.View{Sequence: BlockBeforeHF, Round: big.NewInt(int64(0))}
+		viewAfterHF := &istanbul.View{Sequence: BlockAfterHF, Round: big.NewInt(int64(0))}
 		assert.Equal(t, expectSubList, valSet.SubList(prevHash, viewBeforeHF), "test Subset length: %d(before istanbulCompatible)", testSubsetLen)
 		assert.Equal(t, expectSubList, valSet.SubList(prevHash, viewAfterHF), "test subset length: %d(after istanbulCompatible)", testSubsetLen)
 	}
@@ -525,8 +529,8 @@ func TestWeightedCouncil_SubListWithProposer(t *testing.T) {
 		expectSubListAfterHF := getExpectSubList(expectIndexOfRoundTestAfterIstanbulCompatible[round])
 
 		// compare the subList of valSet with expected committee list
-		viewBeforeHF := &istanbul.View{Sequence: istanbul.TestBlockBeforeHF, Round: big.NewInt(int64(round))}
-		viewAfterHF := &istanbul.View{Sequence: istanbul.TestBlockAfterHF, Round: big.NewInt(int64(round))}
+		viewBeforeHF := &istanbul.View{Sequence: BlockBeforeHF, Round: big.NewInt(int64(round))}
+		viewAfterHF := &istanbul.View{Sequence: BlockAfterHF, Round: big.NewInt(int64(round))}
 		assert.Equal(t, expectSubListBeforeHF, valSet.SubList(prevHash, viewBeforeHF), "test round: %d(before istanbulCompatible)", round)
 		assert.Equal(t, expectSubListAfterHF, valSet.SubList(prevHash, viewAfterHF), "test round: %d(after istanbulCompatible)", round)
 	}
