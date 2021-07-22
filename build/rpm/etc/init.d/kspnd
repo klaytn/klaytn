@@ -112,20 +112,36 @@ if [ ! -z $VERBOSITY ]; then
     OPTIONS="$OPTIONS --verbosity $VERBOSITY"
 fi
 
-if [ ! -z $TXPOOL_EXEC_SLOTS_ALL ]; then
+if [ ! -z $TXPOOL_EXEC_SLOTS_ALL ]; then # For v1.6.4 and after, use txpool.globalslots instead. it will be deprecated after v.1.12.0
     OPTIONS="$OPTIONS --txpool.exec-slots.all $TXPOOL_EXEC_SLOTS_ALL"
 fi
 
-if [ ! -z $TXPOOL_NONEXEC_SLOTS_ALL ]; then
+if [ ! -z $TXPOOL_NONEXEC_SLOTS_ALL ]; then # For v1.6.4 and after, use txpool.globalqueue instead. it will be deprecated after v.1.12.0
     OPTIONS="$OPTIONS --txpool.nonexec-slots.all $TXPOOL_NONEXEC_SLOTS_ALL"
 fi
 
-if [ ! -z $TXPOOL_EXEC_SLOTS_ACCOUNT ]; then
+if [ ! -z $TXPOOL_EXEC_SLOTS_ACCOUNT ]; then # For v1.6.4 and after, use txpool.accountslots instead. it will be deprecated after v.1.12.0
     OPTIONS="$OPTIONS --txpool.exec-slots.account $TXPOOL_EXEC_SLOTS_ACCOUNT"
 fi
 
-if [ ! -z $TXPOOL_NONEXEC_SLOTS_ACCOUNT ]; then
+if [ ! -z $TXPOOL_NONEXEC_SLOTS_ACCOUNT ]; then # For v1.6.4 and after, use txpool.accountqueue instead. it will be deprecated after v.1.12.0
     OPTIONS="$OPTIONS --txpool.nonexec-slots.account $TXPOOL_NONEXEC_SLOTS_ACCOUNT"
+fi
+
+if [ ! -z $TXPOOL_GLOBAL_SLOTS ]; then
+    OPTIONS="$OPTIONS --txpool.globalslots $TXPOOL_GLOBAL_SLOTS"
+fi
+
+if [ ! -z $TXPOOL_GLOBAL_QUEUE ]; then
+    OPTIONS="$OPTIONS --txpool.globalqueue $TXPOOL_GLOBAL_QUEUE"
+fi
+
+if [ ! -z $TXPOOL_ACCOUNT_SLOTS ]; then
+    OPTIONS="$OPTIONS --txpool.accountslots $TXPOOL_ACCOUNT_SLOTS"
+fi
+
+if [ ! -z $TXPOOL_ACCOUNT_QUEUE ]; then
+    OPTIONS="$OPTIONS --txpool.accountqueue $TXPOOL_ACCOUNT_QUEUE"
 fi
 
 if [ ! -z TXPOOL_LIFE_TIME ]; then

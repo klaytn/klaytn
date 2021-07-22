@@ -41,13 +41,13 @@ var CommonNodeFlags = []cli.Flag{
 	utils.TxPoolNoLocalsFlag,
 	utils.TxPoolAllowLocalAnchorTxFlag,
 	utils.TxPoolJournalFlag,
-	utils.TxPoolJournalIntervalFlag,
+	utils.TxPoolReJournalFlag,
 	utils.TxPoolPriceLimitFlag,
 	utils.TxPoolPriceBumpFlag,
-	utils.TxPoolExecSlotsAccountFlag,
-	utils.TxPoolExecSlotsAllFlag,
-	utils.TxPoolNonExecSlotsAccountFlag,
-	utils.TxPoolNonExecSlotsAllFlag,
+	utils.TxPoolGlobalSlotsFlag,
+	utils.TxPoolGlobalQueueFlag,
+	utils.TxPoolAccountQueueFlag,
+	utils.TxPoolAccountSlotsFlag,
 	utils.TxPoolLifetimeFlag,
 	utils.TxPoolKeepLocalsFlag,
 	utils.SyncModeFlag,
@@ -114,6 +114,13 @@ var CommonNodeFlags = []cli.Flag{
 	utils.APIFilterGetLogsMaxItemsFlag,
 	utils.APIFilterGetLogsDeadlineFlag,
 	utils.OpcodeComputationCostLimitFlag,
+
+	// Deprecated flags
+	utils.TxPoolExecSlotsAccountFlag,
+	utils.TxPoolExecSlotsAllFlag,
+	utils.TxPoolNonExecSlotsAccountFlag,
+	utils.TxPoolNonExecSlotsAllFlag,
+	utils.TxPoolJournalIntervalFlag,
 }
 
 // Common RPC flags
