@@ -69,16 +69,16 @@ IF DEFINED LDBCACHESIZE (
     set OPTIONS=%OPTIONS% --db.leveldb.cache-size %LDBCACHESIZE%
 )
 
-IF DEFINED RPC_ENABLE (
-    IF %RPC_ENABLE%==1 (
-        set OPTIONS=%OPTIONS% --rpc --rpcapi %RPC_API% --rpcport %RPC_PORT% --rpcaddr %RPC_ADDR% --rpccorsdomain ^
-%RPC_CORSDOMAIN% --rpcvhosts %RPC_VHOSTS%
+IF DEFINED HTTP_ENABLE (
+    IF %HTTP_ENABLE%==1 (
+        set OPTIONS=%OPTIONS% --http --http.api %HTTP_API% --http.port %HTTP_PORT% --http.addr %HTTP_ADDR% --http.corsdomain ^
+%HTTP_CORSDOMAIN% --http.vhosts %HTTP_VHOSTS%
     )
 )
 
 IF DEFINED WS_ENABLE (
     IF %WS_ENABLE%==1 (
-        set OPTIONS=%OPTIONS% --ws --wsapi %WS_API% --wsaddr %WS_ADDR% --wsport %WS_PORT% --wsorigins %WS_ORIGINS%
+        set OPTIONS=%OPTIONS% --ws --ws.api %WS_API% --ws.addr %WS_ADDR% --ws.port %WS_PORT% --ws.origins %WS_ORIGINS%
     )
 )
 

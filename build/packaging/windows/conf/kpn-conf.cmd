@@ -18,12 +18,12 @@ set TXPOOL_NONEXEC_SLOTS_ACCOUNT=8192
 set TXPOOL_LIFE_TIME="5m"
 
 REM rpc options setting
-set RPC_ENABLE=0 &:: if this is set, the following options will be used
-set RPC_API="klay" &:: available apis: admin,debug,klay,miner,net,personal,rpc,txpool,web3
-set RPC_PORT=8551
-set RPC_ADDR="0.0.0.0"
-set RPC_CORSDOMAIN="*"
-set RPC_VHOSTS="*"
+set HTTP_ENABLE=0 &:: if this is set, the following options will be used
+set HTTP_API="klay" &:: available apis: admin,debug,klay,miner,net,personal,rpc,txpool,web3
+set HTTP_PORT=8551
+set HTTP_ADDR="0.0.0.0"
+set HTTP_CORSDOMAIN="*"
+set HTTP_VHOSTS="*"
 
 REM ws options setting
 set WS_ENABLE=0 &:: if this is set, the following options will be used

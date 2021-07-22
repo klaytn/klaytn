@@ -67,7 +67,7 @@ var kTemplate = `# Configuration file for the klay service.
 
 NETWORK_ID={{ .NetworkId }}
 
-RPC_PORT={{ .RPCPort }}
+HTTP_PORT={{ .RPCPort }}
 WS_PORT={{ .WSPort }}
 PORT={{ .P2PPort }}
 

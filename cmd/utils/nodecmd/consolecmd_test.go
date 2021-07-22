@@ -94,7 +94,7 @@ func TestIPCAttachWelcome(t *testing.T) {
 func TestHTTPAttachWelcome(t *testing.T) {
 	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
 	klay := runKlay(t,
-		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--rpc", "--rpcport", port)
+		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--http", "--http.port", port)
 
 	time.Sleep(5 * time.Second) // Simple way to wait for the RPC endpoint to open
 	testAttachWelcome(t, klay, "http://localhost:"+port, httpAPIs)
