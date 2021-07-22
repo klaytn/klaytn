@@ -63,7 +63,7 @@ type AccountKey interface {
 	Equal(AccountKey) bool
 
 	// Validate returns true if the given public keys are verifiable with the AccountKey.
-	Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool
+	Validate(currentBlockNumber uint64, r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool
 
 	// DeepCopy creates a new object and copies all the attributes to the new object.
 	DeepCopy() AccountKey
@@ -72,7 +72,7 @@ type AccountKey interface {
 	AccountCreationGas(currentBlockNumber uint64) (uint64, error)
 
 	// SigValidationGas returns gas required to validate a tx with the account.
-	SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error)
+	SigValidationGas(currentBlockNumber uint64, r RoleType, numSigs int) (uint64, error)
 
 	// CheckInstallable returns an error if any data in the key is invalid.
 	// This checks that the key is ready to be assigned to an account.
@@ -108,8 +108,8 @@ func NewAccountKey(t AccountKeyType) (AccountKey, error) {
 	return nil, errUndefinedAccountKeyType
 }
 
-func ValidateAccountKey(from common.Address, accKey AccountKey, recoveredKeys []*ecdsa.PublicKey, roleType RoleType) error {
-	if !accKey.Validate(roleType, recoveredKeys, from) {
+func ValidateAccountKey(currentBlockNumber uint64, from common.Address, accKey AccountKey, recoveredKeys []*ecdsa.PublicKey, roleType RoleType) error {
+	if !accKey.Validate(currentBlockNumber, roleType, recoveredKeys, from) {
 		return errInvalidSignature
 	}
 	return nil

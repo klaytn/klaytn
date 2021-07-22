@@ -55,7 +55,7 @@ func (a *AccountKeyLegacy) Equal(b AccountKey) bool {
 	return true
 }
 
-func (a *AccountKeyLegacy) Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
+func (a *AccountKeyLegacy) Validate(currentBlockNumber uint64, r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
 	// A valid legacy key generates only one signature
 	if len(recoveredKeys) != 1 {
 		return false
@@ -77,7 +77,7 @@ func (a *AccountKeyLegacy) AccountCreationGas(currentBlockNumber uint64) (uint64
 	return 0, nil
 }
 
-func (a *AccountKeyLegacy) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {
+func (a *AccountKeyLegacy) SigValidationGas(currentBlockNumber uint64, r RoleType, validSigNum int) (uint64, error) {
 	// No gas required to make an account with a nil key.
 	return 0, nil
 }

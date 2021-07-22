@@ -251,7 +251,7 @@ func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBl
 		}
 	} else {
 		pubkey, err := SenderPubkey(signer, tx)
-		if err != nil || accountkey.ValidateAccountKey(tx.validatedSender, accKey, pubkey, tx.GetRoleTypeForValidation()) != nil {
+		if err != nil || accountkey.ValidateAccountKey(currentBlockNumber, tx.validatedSender, accKey, pubkey, tx.GetRoleTypeForValidation()) != nil {
 			return ErrInvalidSigSender
 		}
 	}
@@ -260,7 +260,7 @@ func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBl
 	if tx.IsFeeDelegatedTransaction() {
 		feePayerAccKey := db.GetKey(tx.validatedFeePayer)
 		feePayerPubkey, err := SenderFeePayerPubkey(signer, tx)
-		if err != nil || accountkey.ValidateAccountKey(tx.validatedFeePayer, feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
+		if err != nil || accountkey.ValidateAccountKey(currentBlockNumber, tx.validatedFeePayer, feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
 			return ErrInvalidSigFeePayer
 		}
 	}
@@ -602,12 +602,12 @@ func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, current
 	from := txfrom.GetFrom()
 	accKey := p.GetKey(from)
 
-	gasKey, err := accKey.SigValidationGas(currentBlockNumber, tx.GetRoleTypeForValidation())
+	gasKey, err := accKey.SigValidationGas(currentBlockNumber, tx.GetRoleTypeForValidation(), len(pubkey))
 	if err != nil {
 		return 0, err
 	}
 
-	if err := accountkey.ValidateAccountKey(from, accKey, pubkey, tx.GetRoleTypeForValidation()); err != nil {
+	if err := accountkey.ValidateAccountKey(currentBlockNumber, from, accKey, pubkey, tx.GetRoleTypeForValidation()); err != nil {
 		return 0, ErrInvalidSigSender
 	}
 
@@ -635,12 +635,12 @@ func (tx *Transaction) ValidateFeePayer(signer Signer, p AccountKeyPicker, curre
 	feePayer := tf.GetFeePayer()
 	accKey := p.GetKey(feePayer)
 
-	gasKey, err := accKey.SigValidationGas(currentBlockNumber, accountkey.RoleFeePayer)
+	gasKey, err := accKey.SigValidationGas(currentBlockNumber, accountkey.RoleFeePayer, len(pubkey))
 	if err != nil {
 		return 0, err
 	}
 
-	if err := accountkey.ValidateAccountKey(feePayer, accKey, pubkey, accountkey.RoleFeePayer); err != nil {
+	if err := accountkey.ValidateAccountKey(currentBlockNumber, feePayer, accKey, pubkey, accountkey.RoleFeePayer); err != nil {
 		return 0, ErrInvalidSigFeePayer
 	}
 
