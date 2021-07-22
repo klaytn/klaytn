@@ -868,6 +868,16 @@ var (
 		Usage: "The level of acknowledgement reliability needed from Kafka broker (0: NoResponse, 1: WaitForLocal, -1: WaitForAll)",
 		Value: kafka.DefaultRequiredAcks,
 	}
+	ChainDataFetcherKafkaMessageVersionFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kafka.msg.version",
+		Usage: "The version of Kafka message",
+		Value: kafka.DefaultKafkaMessageVersion,
+	}
+	ChainDataFetcherKafkaProducerIdFlag = cli.StringFlag{
+		Name:  "chaindatafetcher.kafka.producer.id",
+		Usage: "The identifier of kafka message producer",
+		Value: kafka.GetDefaultProducerId(),
+	}
 	// DBSyncer
 	EnableDBSyncerFlag = cli.BoolFlag{
 		Name:  "dbsyncer",
@@ -1020,6 +1030,25 @@ var (
 	ConfigFileFlag = cli.StringFlag{
 		Name:  "config",
 		Usage: "TOML configuration file",
+	}
+	BlockGenerationIntervalFlag = cli.Int64Flag{
+		Name: "block-generation-interval",
+		Usage: "(experimental option) Set the block generation interval in seconds. " +
+			"It should be equal or larger than 1. This flag is only applicable to CN.",
+		Value: params.DefaultBlockGenerationInterval,
+	}
+	BlockGenerationTimeLimitFlag = cli.DurationFlag{
+		Name: "block-generation-time-limit",
+		Usage: "(experimental option) Set the vm execution time limit during block generation. " +
+			"Less than half of the block generation interval is recommended for this value. " +
+			"This flag is only applicable to CN",
+		Value: params.DefaultBlockGenerationTimeLimit,
+	}
+	OpcodeComputationCostLimitFlag = cli.Uint64Flag{
+		Name: "opcode-computation-cost-limit",
+		Usage: "(experimental option) Set the computation cost limit for a tx. " +
+			"Should set the same value within the network",
+		Value: params.DefaultOpcodeComputationCostLimit,
 	}
 
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
@@ -1608,6 +1637,19 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(RPCGlobalGasCap.Name))
 	}
 
+	// Only CNs could set BlockGenerationIntervalFlag and BlockGenerationTimeLimitFlag
+	if ctx.GlobalIsSet(BlockGenerationIntervalFlag.Name) {
+		params.BlockGenerationInterval = ctx.GlobalInt64(BlockGenerationIntervalFlag.Name)
+		if params.BlockGenerationInterval < 1 {
+			logger.Crit("Block generation interval should be equal or larger than 1", "interval", params.BlockGenerationInterval)
+		}
+	}
+	if ctx.GlobalIsSet(BlockGenerationTimeLimitFlag.Name) {
+		params.BlockGenerationTimeLimit = ctx.GlobalDuration(BlockGenerationTimeLimitFlag.Name)
+	}
+
+	params.OpcodeComputationCostLimit = ctx.GlobalUint64(OpcodeComputationCostLimitFlag.Name)
+
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
 	/*
@@ -1620,6 +1662,17 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	*/
 	// Set the Tx resending related configuration variables
 	setTxResendConfig(ctx, cfg)
+}
+
+func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
+	var genesis *blockchain.Genesis
+	switch {
+	case ctx.GlobalBool(CypressFlag.Name):
+		genesis = blockchain.DefaultGenesisBlock()
+	case ctx.GlobalBool(BaobabFlag.Name):
+		genesis = blockchain.DefaultBaobabGenesisBlock()
+	}
+	return genesis
 }
 
 // RegisterCNService adds a CN client to the stack.

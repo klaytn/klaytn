@@ -21,9 +21,16 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"time"
 
 	"github.com/Shopify/sarama"
 )
+
+// Logger is the instance of a sarama.StdLogger interface that chaindatafetcher leaves the SDK level information.
+// By default it is set to print all log messages as standard output, but you can set it to redirect wherever you want.
+var Logger sarama.StdLogger = log.New(os.Stdout, "[Chaindatafetcher] ", log.LstdFlags)
 
 //go:generate mockgen -destination=./mocks/consumer_group_session_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka ConsumerGroupSession
 // ConsumerGroupSession is for mocking sarama.ConsumerGroupSession for better testing.
@@ -37,10 +44,12 @@ var (
 	nilConsumerMessageErrorMsg = "the given message should not be nil"
 	wrongHeaderNumberErrorMsg  = "the number of header is not expected"
 	wrongHeaderKeyErrorMsg     = "the header key is not expected"
+	wrongMsgVersionErrorMsg    = "the message version is not supported"
 	missingSegmentErrorMsg     = "there is a missing segment"
 	noHandlerErrorMsg          = "the handler does not exist for the given topic"
 	emptySegmentErrorMsg       = "there is no segment in the segment slice"
 	bufferOverflowErrorMsg     = "the number of items in buffer exceeded the maximum"
+	msgExpiredErrorMsg         = "the message is expired"
 )
 
 // TopicHandler is a handler function in order to consume published messages.
@@ -48,15 +57,17 @@ type TopicHandler func(message *sarama.ConsumerMessage) error
 
 // Segment represents a message segment with the parsed headers.
 type Segment struct {
-	orig  *sarama.ConsumerMessage
-	key   string
-	total uint64
-	index uint64
-	value []byte
+	orig       *sarama.ConsumerMessage
+	key        string
+	total      uint64
+	index      uint64
+	value      []byte
+	version    string
+	producerId string
 }
 
 func (s *Segment) String() string {
-	return fmt.Sprintf("key: %v, total: %v, index: %v, value %v", s.key, s.total, s.index, string(s.value))
+	return fmt.Sprintf("key: %v, total: %v, index: %v, value: %v, version: %v, producerId: %v", s.key, s.total, s.index, string(s.value), s.version, s.producerId)
 }
 
 // newSegment creates a new segment structure after parsing the headers.
@@ -65,8 +76,30 @@ func newSegment(msg *sarama.ConsumerMessage) (*Segment, error) {
 		return nil, errors.New(nilConsumerMessageErrorMsg)
 	}
 
-	if len(msg.Headers) != MsgHeaderLength {
-		return nil, fmt.Errorf("%v [header length: %v]", wrongHeaderNumberErrorMsg, len(msg.Headers))
+	headerLen := len(msg.Headers)
+	if headerLen != MsgHeaderLength && headerLen != LegacyMsgHeaderLength {
+		return nil, fmt.Errorf("%v [header length: %v]", wrongHeaderNumberErrorMsg, headerLen)
+	}
+
+	version := ""
+	producerId := ""
+
+	if headerLen == MsgHeaderLength {
+		keyVersion := string(msg.Headers[MsgHeaderVersion].Key)
+		if keyVersion != KeyVersion {
+			return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeyVersion, keyVersion)
+		}
+		version = string(msg.Headers[MsgHeaderVersion].Value)
+		switch version {
+		case MsgVersion1_0:
+			keyProducerId := string(msg.Headers[MsgHeaderProducerId].Key)
+			if keyProducerId != KeyProducerId {
+				return nil, fmt.Errorf("%v [expected: %v, actual: %v]", wrongHeaderKeyErrorMsg, KeyProducerId, keyProducerId)
+			}
+			producerId = string(msg.Headers[MsgHeaderProducerId].Value)
+		default:
+			return nil, fmt.Errorf("%v [available: %v]", wrongMsgVersionErrorMsg, MsgVersion1_0)
+		}
 	}
 
 	// check the existence of KeyTotalSegments header
@@ -84,7 +117,15 @@ func newSegment(msg *sarama.ConsumerMessage) (*Segment, error) {
 	key := string(msg.Key)
 	totalSegments := binary.BigEndian.Uint64(msg.Headers[MsgHeaderTotalSegments].Value)
 	segmentIdx := binary.BigEndian.Uint64(msg.Headers[MsgHeaderSegmentIdx].Value)
-	return &Segment{orig: msg, key: key, total: totalSegments, index: segmentIdx, value: msg.Value}, nil
+	return &Segment{
+		orig:       msg,
+		key:        key,
+		total:      totalSegments,
+		index:      segmentIdx,
+		value:      msg.Value,
+		version:    version,
+		producerId: producerId,
+	}, nil
 }
 
 // Consumer is a reference structure to subscribe block or trace group produced by EN.
@@ -100,6 +141,7 @@ func NewConsumer(config *KafkaConfig, groupId string) (*Consumer, error) {
 	if err != nil {
 		return nil, err
 	}
+	Logger.Printf("[INFO] the chaindatafetcher consumer is created. [groupId: %s, config: %s]", groupId, config.String())
 	return &Consumer{
 		config:   config,
 		group:    group,
@@ -110,6 +152,7 @@ func NewConsumer(config *KafkaConfig, groupId string) (*Consumer, error) {
 // Close stops the ConsumerGroup and detaches any running sessions. It is required to call
 // this function before the object passes out of scope, as it will otherwise leak memory.
 func (c *Consumer) Close() error {
+	Logger.Println("[INFO] the chaindatafetcher consumer is closed")
 	return c.group.Close()
 }
 
@@ -125,9 +168,9 @@ func (c *Consumer) AddTopicAndHandler(event string, handler TopicHandler) error 
 }
 
 func (c *Consumer) Errors() <-chan error {
-	// c.config.SaramaConfig.Consumer.Return.Errors has to be set to true, and
-	// read the errors from c.member.Errors() channel.
-	// Currently, it leaves only error logs as default.
+	// If c.config.SaramaConfig.Consumer.Return.Errors is set to true, then
+	// the errors while consuming the messages can be read from c.group.Errors() channel.
+	// Otherwise, it leaves only error logs using sarama.Logger as default.
 	return c.group.Errors()
 }
 
@@ -139,9 +182,12 @@ func (c *Consumer) Subscribe(ctx context.Context) error {
 
 	// Iterate over consumer sessions.
 	for {
+		Logger.Println("[INFO] started to consume Kafka message")
 		if err := c.group.Consume(ctx, c.topics, c); err == sarama.ErrClosedConsumerGroup {
+			Logger.Println("[INFO] the consumer group is closed")
 			return nil
 		} else if err != nil {
+			Logger.Printf("[ERROR] the consumption is failed [err: %s]\n", err.Error())
 			return err
 		}
 	}
@@ -152,13 +198,13 @@ func (c *Consumer) Subscribe(ctx context.Context) error {
 
 // Setup is called at the beginning of a new session, before ConsumeClaim.
 func (c *Consumer) Setup(s sarama.ConsumerGroupSession) error {
-	return nil
+	return c.config.Setup(s)
 }
 
 // Cleanup is called at the end of a session, once all ConsumeClaim goroutines have exited
 // but before the offsets are committed for the very last time.
 func (c *Consumer) Cleanup(s sarama.ConsumerGroupSession) error {
-	return nil
+	return c.config.Cleanup(s)
 }
 
 // insertSegment inserts the given segment to the given buffer.
@@ -174,16 +220,16 @@ func (c *Consumer) Cleanup(s sarama.ConsumerGroupSession) error {
 func insertSegment(newSegment *Segment, buffer [][]*Segment) ([][]*Segment, error) {
 	for idx, bufferedSegments := range buffer {
 		numBuffered := len(bufferedSegments)
-		if numBuffered > 0 && bufferedSegments[0].key == newSegment.key {
+		if numBuffered > 0 && bufferedSegments[0].key == newSegment.key && bufferedSegments[0].producerId == newSegment.producerId {
 			// there is a missing segment which should not exist.
 			if newSegment.index > uint64(numBuffered) {
-				logger.Error("there may be a missing segment", "numBuffered", numBuffered, "newSegment", newSegment)
+				Logger.Printf("[ERROR] there may be a missing segment [numBuffered: %d, newSegment: %s]\n", numBuffered, newSegment.String())
 				return buffer, errors.New(missingSegmentErrorMsg)
 			}
 
 			// the segment is already inserted to buffer.
 			if newSegment.index < uint64(numBuffered) {
-				logger.Warn("the message is duplicated", "newSegment", newSegment)
+				Logger.Printf("[WARN] the message is duplicated [newSegment: %s]\n", newSegment.String())
 				return buffer, nil
 			}
 
@@ -198,7 +244,7 @@ func insertSegment(newSegment *Segment, buffer [][]*Segment) ([][]*Segment, erro
 		buffer = append(buffer, []*Segment{newSegment})
 	} else {
 		// the segment may be already handled.
-		logger.Warn("the message may be inserted already. drop the segment", "segment", newSegment)
+		Logger.Printf("[WARN] the message may be inserted already. drop the segment [segment: %s]\n", newSegment.String())
 	}
 	return buffer, nil
 }
@@ -225,10 +271,12 @@ func (c *Consumer) handleBufferedMessages(buffer [][]*Segment) ([][]*Segment, er
 
 		f, ok := c.handlers[firstSegment.orig.Topic]
 		if !ok {
+			Logger.Printf("[ERROR] getting handler is failed with the given topic. [topic: %s]\n", msg.Topic)
 			return buffer, fmt.Errorf("%v: %v", noHandlerErrorMsg, msg.Topic)
 		}
 
 		if err := f(msg); err != nil {
+			Logger.Printf("[ERROR] the handler is failed [key: %s]\n", string(msg.Key))
 			return buffer, err
 		}
 
@@ -244,6 +292,7 @@ func (c *Consumer) handleBufferedMessages(buffer [][]*Segment) ([][]*Segment, er
 func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMessage, session ConsumerGroupSession) error {
 	if len(buffer) > 0 {
 		if len(buffer[0]) <= 0 {
+			Logger.Println("[ERROR] no segment exists in the given buffer slice")
 			return errors.New(emptySegmentErrorMsg)
 		}
 
@@ -258,37 +307,99 @@ func (c *Consumer) updateOffset(buffer [][]*Segment, lastMsg *sarama.ConsumerMes
 	return nil
 }
 
+// resetTimer resets the given timer if oldest message is changed and it returns oldest message if exists.
+func (c *Consumer) resetTimer(buffer [][]*Segment, timer *time.Timer, oldestMsg *sarama.ConsumerMessage) *sarama.ConsumerMessage {
+	if c.config.ExpirationTime <= time.Duration(0) {
+		return nil
+	}
+
+	if len(buffer) == 0 {
+		timer.Stop()
+		return nil
+	}
+
+	if oldestMsg != buffer[0][0].orig {
+		timer.Reset(c.config.ExpirationTime)
+	}
+
+	return buffer[0][0].orig
+}
+
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 // Once the Messages() channel is closed, the Handler must finish its processing
 // loop and exit.
 func (c *Consumer) ConsumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.ConsumerGroupClaim) error {
-	var buffer [][]*Segment
-	for msg := range cgc.Messages() {
-		if len(buffer) > c.config.MaxMessageNumber {
-			return fmt.Errorf("%v: increasing buffer size may resolve this problem. [max: %v, current: %v]", bufferOverflowErrorMsg, c.config.MaxMessageNumber, len(buffer))
-		}
-
-		segment, err := newSegment(msg)
-		if err != nil {
-			return err
-		}
-
-		// insert a new message segment into the buffer
-		buffer, err = insertSegment(segment, buffer)
-		if err != nil {
-			return err
-		}
-
-		// handle the buffered messages if any message can be reassembled
-		buffer, err = c.handleBufferedMessages(buffer)
-		if err != nil {
-			return err
-		}
-
-		// mark offset of the oldest message to be read
-		if err := c.updateOffset(buffer, msg, cgs); err != nil {
-			return err
-		}
+	if buffer, err := c.consumeClaim(cgs, cgc); err != nil {
+		return c.handleError(buffer, cgs, err)
 	}
 	return nil
+}
+
+func (c *Consumer) consumeClaim(cgs sarama.ConsumerGroupSession, cgc sarama.ConsumerGroupClaim) ([][]*Segment, error) {
+	var (
+		buffer          [][]*Segment // TODO-Chaindatafetcher better to introduce segment buffer structure with useful methods
+		oldestMsg       *sarama.ConsumerMessage
+		expirationTimer = time.NewTimer(c.config.ExpirationTime)
+	)
+
+	// make sure that the expirationTimer channel is empty
+	if !expirationTimer.Stop() {
+		<-expirationTimer.C
+	}
+
+	for {
+		select {
+		case <-expirationTimer.C:
+			return buffer, errors.New(msgExpiredErrorMsg)
+		case msg, ok := <-cgc.Messages():
+			if !ok {
+				return buffer, nil
+			}
+
+			if len(buffer) > c.config.MaxMessageNumber {
+				return buffer, fmt.Errorf("%v: increasing buffer size may resolve this problem. [max: %v, current: %v]", bufferOverflowErrorMsg, c.config.MaxMessageNumber, len(buffer))
+			}
+
+			segment, err := newSegment(msg)
+			if err != nil {
+				return buffer, err
+			}
+
+			// insert a new message segment into the buffer
+			buffer, err = insertSegment(segment, buffer)
+			if err != nil {
+				return buffer, err
+			}
+
+			// handle the buffered messages if any message can be reassembled
+			buffer, err = c.handleBufferedMessages(buffer)
+			if err != nil {
+				return buffer, err
+			}
+
+			// reset the expiration timer if necessary and update the oldest message
+			oldestMsg = c.resetTimer(buffer, expirationTimer, oldestMsg)
+
+			// mark offset of the oldest message to be read
+			if err := c.updateOffset(buffer, msg, cgs); err != nil {
+				return buffer, err
+			}
+		}
+	}
+}
+
+func (c *Consumer) handleError(buffer [][]*Segment, cgs ConsumerGroupSession, parentErr error) error {
+	if len(buffer) <= 0 || c.config.ErrCallback == nil {
+		return parentErr
+	}
+
+	oldestMsg := buffer[0][0].orig
+	key := string(oldestMsg.Key)
+
+	if err := c.config.ErrCallback(key); err != nil {
+		return err
+	}
+
+	buffer = buffer[1:]
+	return c.updateOffset(buffer, oldestMsg, cgs)
 }

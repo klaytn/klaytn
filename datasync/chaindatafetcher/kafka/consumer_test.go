@@ -18,7 +18,9 @@ package kafka
 
 import (
 	"bytes"
+	"errors"
 	"math/rand"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -31,7 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_newSegment_Success(t *testing.T) {
+func Test_newSegment_Success_LegacyMessage(t *testing.T) {
 	value := common.MakeRandomBytes(100)
 	rand.Seed(time.Now().UnixNano())
 	total := uint64(10)
@@ -57,49 +59,167 @@ func Test_newSegment_Success(t *testing.T) {
 	assert.Equal(t, key, segment.key)
 }
 
+func Test_newSegment_Success_Version1Message(t *testing.T) {
+	value := common.MakeRandomBytes(100)
+	rand.Seed(time.Now().UnixNano())
+	total := uint64(10)
+	idx := rand.Uint64() % total
+	totalBytes := common.Int64ToByteBigEndian(total)
+	idxBytes := common.Int64ToByteBigEndian(idx)
+	key := "test-key"
+	version := MsgVersion1_0
+	versionBytes := []byte(version)
+	producerId := GetDefaultProducerId()
+	producerIdBytes := []byte(producerId)
+
+	msg := &sarama.ConsumerMessage{
+		Headers: []*sarama.RecordHeader{
+			{Key: []byte(KeyTotalSegments), Value: totalBytes},
+			{Key: []byte(KeySegmentIdx), Value: idxBytes},
+			{Key: []byte(KeyVersion), Value: versionBytes},
+			{Key: []byte(KeyProducerId), Value: producerIdBytes},
+		},
+		Key:   []byte(key),
+		Value: value,
+	}
+
+	segment, err := newSegment(msg)
+	assert.NoError(t, err)
+	assert.Equal(t, msg, segment.orig)
+	assert.Equal(t, value, segment.value)
+	assert.Equal(t, total, segment.total)
+	assert.Equal(t, idx, segment.index)
+	assert.Equal(t, key, segment.key)
+	assert.Equal(t, version, segment.version)
+	assert.Equal(t, producerId, segment.producerId)
+}
+
 func Test_newSegment_Fail(t *testing.T) {
-	// input message is nil
-	seg, err := newSegment(nil)
-	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), nilConsumerMessageErrorMsg))
-	assert.Nil(t, seg)
+	type testcase struct {
+		name   string
+		input  *sarama.ConsumerMessage
+		errMsg string
+	}
 
-	// the appropriate headers not given
-	seg, err = newSegment(&sarama.ConsumerMessage{})
-	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), wrongHeaderNumberErrorMsg))
-	assert.Nil(t, seg)
-
-	// the first header key is wrong
-	seg, err = newSegment(&sarama.ConsumerMessage{
-		Headers: []*sarama.RecordHeader{
-			{Key: []byte("wrong-header-key")},
-			{Key: []byte(KeyTotalSegments)},
+	testcases := []testcase{
+		{
+			"nil consumer message",
+			nil,
+			nilConsumerMessageErrorMsg,
 		},
-	})
-	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), wrongHeaderKeyErrorMsg))
-	assert.Nil(t, seg)
-
-	// the second header key is wrong
-	seg, err = newSegment(&sarama.ConsumerMessage{
-		Headers: []*sarama.RecordHeader{
-			{Key: []byte(KeySegmentIdx)},
-			{Key: []byte("wrong-header-key")},
+		{
+			"empty consumer message",
+			&sarama.ConsumerMessage{},
+			wrongHeaderNumberErrorMsg,
 		},
-	})
-	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), wrongHeaderKeyErrorMsg))
-	assert.Nil(t, seg)
+		{
+			"wrong first key with legacy header",
+			&sarama.ConsumerMessage{
+				Headers: []*sarama.RecordHeader{
+					{Key: []byte("wrong-header-key")},
+					{Key: []byte(KeyTotalSegments)},
+				},
+			},
+			wrongHeaderKeyErrorMsg,
+		},
+		{
+			"wrong second key with legacy header",
+			&sarama.ConsumerMessage{
+				Headers: []*sarama.RecordHeader{
+					{Key: []byte(KeySegmentIdx)},
+					{Key: []byte("wrong-header-key")},
+				},
+			},
+			wrongHeaderKeyErrorMsg,
+		},
+		{
+			"wrong first key with 1.0 header",
+			&sarama.ConsumerMessage{
+				Headers: []*sarama.RecordHeader{
+					{Key: []byte("wrong-header-key")},
+					{Key: []byte(KeyTotalSegments)},
+					{Key: []byte(KeyVersion), Value: []byte(MsgVersion1_0)},
+					{Key: []byte(KeyProducerId)},
+				},
+			},
+			wrongHeaderKeyErrorMsg,
+		},
+		{
+			"wrong second key with 1.0 header",
+			&sarama.ConsumerMessage{
+				Headers: []*sarama.RecordHeader{
+					{Key: []byte(KeySegmentIdx)},
+					{Key: []byte("wrong-header-key")},
+					{Key: []byte(KeyVersion), Value: []byte(MsgVersion1_0)},
+					{Key: []byte(KeyProducerId)},
+				},
+			},
+			wrongHeaderKeyErrorMsg,
+		},
+		{
+			"wrong third key with 1.0 header",
+			&sarama.ConsumerMessage{
+				Headers: []*sarama.RecordHeader{
+					{Key: []byte(KeySegmentIdx)},
+					{Key: []byte(KeyTotalSegments)},
+					{Key: []byte("wrong-header-key")},
+					{Key: []byte(KeyProducerId)},
+				},
+			},
+			wrongHeaderKeyErrorMsg,
+		},
+		{
+			"wrong fourth key with 1.0 header",
+			&sarama.ConsumerMessage{
+				Headers: []*sarama.RecordHeader{
+					{Key: []byte(KeySegmentIdx)},
+					{Key: []byte(KeyTotalSegments)},
+					{Key: []byte(KeyVersion), Value: []byte(MsgVersion1_0)},
+					{Key: []byte("wrong-header-key")},
+				},
+			},
+			wrongHeaderKeyErrorMsg,
+		},
+		{
+			"wrong version with 1.0 header",
+			&sarama.ConsumerMessage{
+				Headers: []*sarama.RecordHeader{
+					{Key: []byte(KeySegmentIdx)},
+					{Key: []byte(KeyTotalSegments)},
+					{Key: []byte(KeyVersion), Value: []byte("wrong-version")},
+					{Key: []byte(KeyProducerId)},
+				},
+			},
+			wrongMsgVersionErrorMsg,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			seg, err := newSegment(tc.input)
+			assert.Error(t, err)
+			assert.True(t, strings.Contains(err.Error(), tc.errMsg))
+			assert.Nil(t, seg)
+		})
+	}
+}
+
+func makeTestV1Segment(orig *sarama.ConsumerMessage, key string, total, index uint64, version, producerId string) *Segment {
+	seg := makeTestSegment(orig, key, total, index)
+	seg.version = version
+	seg.producerId = producerId
+	return seg
 }
 
 func makeTestSegment(orig *sarama.ConsumerMessage, key string, total, index uint64) *Segment {
 	return &Segment{
-		orig:  orig,
-		key:   key,
-		total: total,
-		index: index,
-		value: common.MakeRandomBytes(5),
+		orig:       orig,
+		key:        key,
+		total:      total,
+		index:      index,
+		value:      common.MakeRandomBytes(5),
+		version:    "",
+		producerId: "",
 	}
 }
 
@@ -370,4 +490,225 @@ func TestConsumer_updateOffset(t *testing.T) {
 	err = testConsumer.updateOffset(buffer, testMsg, session)
 	assert.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), emptySegmentErrorMsg))
+}
+
+func getTestConsumer() (string, *Consumer) {
+	testTopic := "test-topic"
+	testConsumer := &Consumer{
+		handlers: make(map[string]TopicHandler),
+	}
+
+	testConsumer.handlers[testTopic] = func(message *sarama.ConsumerMessage) error {
+		return nil
+	}
+	return testTopic, testConsumer
+}
+
+func Test_V1Segment_MultiProducers(t *testing.T) {
+	{ // Legacy segments test
+		var buffer [][]*Segment
+		var err error
+
+		msgKey := "msg"
+		total := uint64(3)
+		indices := []uint64{0, 1, 0, 2, 1, 0, 2, 1, 1 /* duplicated */, 2}
+
+		topic, consumer := getTestConsumer()
+
+		var msgs []*Segment
+		for _, idx := range indices {
+			msgs = append(msgs, makeTestSegment(&sarama.ConsumerMessage{Topic: topic}, msgKey, total, idx))
+		}
+
+		for idx, msg := range msgs {
+			buffer, err = insertSegment(msg, buffer)
+			if idx < 6 {
+				assert.NoError(t, err)
+			} else if idx == 6 {
+				assert.Error(t, err)
+				assert.True(t, strings.Contains(err.Error(), missingSegmentErrorMsg))
+				break
+			}
+			buffer, err = consumer.handleBufferedMessages(buffer)
+			assert.NoError(t, err)
+		}
+	}
+
+	{ // V1 segments test
+		var buffer [][]*Segment
+		var err error
+
+		msgKey := "msg"
+		total := uint64(3)
+		producerId := []string{"1", "1", "2", "1", "2", "3", "2", "3", "3", "3"}
+		indices := []uint64{0, 1, 0, 2, 1, 0, 2, 1, 1 /* duplicated */, 2}
+
+		topic, consumer := getTestConsumer()
+
+		var msgs []*Segment
+		for pi, si := range indices {
+			msgs = append(msgs, makeTestV1Segment(&sarama.ConsumerMessage{Topic: topic}, msgKey, total, si, MsgVersion1_0, producerId[pi]))
+		}
+
+		for _, msg := range msgs {
+			buffer, err = insertSegment(msg, buffer)
+			assert.NoError(t, err)
+			buffer, err = consumer.handleBufferedMessages(buffer)
+			assert.NoError(t, err)
+		}
+	}
+}
+
+func TestConsumer_handleError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	testSegment := &Segment{
+		orig: &sarama.ConsumerMessage{
+			Topic:     "test-topic",
+			Partition: int32(1),
+			Offset:    int64(99),
+		},
+	}
+
+	testSegment2 := &Segment{
+		orig: &sarama.ConsumerMessage{
+			Topic:     "test-topic",
+			Partition: int32(1),
+			Offset:    int64(100),
+		},
+	}
+
+	session := mocks.NewMockConsumerGroupSession(ctrl)
+	parentErr := errors.New("parent error")
+	callbackErr := errors.New("callback error")
+
+	tests := []struct {
+		name      string
+		setup     func()
+		callback  func(s string) error
+		buffer    [][]*Segment
+		parentErr error
+		expected  error
+	}{
+		{
+			"no_item_in_buffer",
+			func() {},
+			func(s string) error { panic("should not be called") },
+			[][]*Segment{},
+			parentErr,
+			parentErr,
+		},
+		{
+			"no_callback",
+			func() {},
+			nil,
+			[][]*Segment{{testSegment}},
+			parentErr,
+			parentErr,
+		},
+		{
+			"callback_success_an_item_in_buffer",
+			func() { session.EXPECT().MarkMessage(gomock.Eq(testSegment.orig), gomock.Eq("")).Times(1) },
+			func(s string) error { return nil },
+			[][]*Segment{{testSegment}},
+			parentErr,
+			nil,
+		},
+		{
+			"callback_success_two_items_in_buffer",
+			func() {
+				session.EXPECT().MarkOffset(gomock.Eq(testSegment2.orig.Topic), gomock.Eq(testSegment2.orig.Partition), gomock.Eq(testSegment2.orig.Offset), gomock.Eq("")).Times(1)
+			},
+			func(s string) error { return nil },
+			[][]*Segment{{testSegment}, {testSegment2}},
+			parentErr,
+			nil,
+		},
+		{
+			"callback_failure",
+			func() {},
+			func(s string) error { return callbackErr },
+			[][]*Segment{{testSegment}, {testSegment2}},
+			parentErr,
+			callbackErr,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Consumer{}
+			c.config = GetDefaultKafkaConfig()
+			c.config.ErrCallback = tt.callback
+			tt.setup()
+			if err := c.handleError(tt.buffer, session, tt.parentErr); err != tt.expected {
+				t.Errorf("handleError() error = %v, wantErr %v", err, tt.expected)
+			}
+		})
+	}
+}
+
+func TestConsumer_renewExpireMsg(t *testing.T) {
+	testTimer := time.NewTimer(1 * time.Second)
+	testTimer.Stop()
+
+	oldMsg := &sarama.ConsumerMessage{Key: []byte("old")}
+	newMsg := &sarama.ConsumerMessage{Key: []byte("new")}
+
+	type args struct {
+		buffer    [][]*Segment
+		timer     *time.Timer
+		oldestMsg *sarama.ConsumerMessage
+	}
+	tests := []struct {
+		name   string
+		config *KafkaConfig
+		args   args
+		want   *sarama.ConsumerMessage
+	}{
+		{
+			"no_expire_option",
+			&KafkaConfig{ExpirationTime: time.Duration(0)},
+			args{},
+			nil,
+		},
+		{
+			"all_handled",
+			&KafkaConfig{ExpirationTime: time.Duration(1)},
+			args{
+				[][]*Segment{},
+				testTimer,
+				oldMsg,
+			},
+			nil,
+		},
+		{
+			"oldest_handled",
+			&KafkaConfig{ExpirationTime: time.Duration(1)},
+			args{
+				[][]*Segment{{&Segment{orig: newMsg}}},
+				testTimer,
+				oldMsg,
+			},
+			newMsg,
+		},
+		{
+			"oldest_not_handled",
+			&KafkaConfig{ExpirationTime: time.Duration(1)},
+			args{
+				[][]*Segment{{&Segment{orig: oldMsg}}},
+				testTimer,
+				oldMsg,
+			},
+			oldMsg,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Consumer{
+				config: tt.config,
+			}
+			if got := c.resetTimer(tt.args.buffer, tt.args.timer, tt.args.oldestMsg); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("resetTimer() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

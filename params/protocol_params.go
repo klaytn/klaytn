@@ -47,6 +47,13 @@ const (
 	SstoreResetGas        uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.             // G_sreset
 	SstoreClearGas        uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.                // G_sreset
 	SstoreRefundGas       uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
+
+	// gasSStoreEIP2200
+	SstoreSentryGasEIP2200            uint64 = 2300  // Minimum gas required to be present for an SSTORE call, not consumed
+	SstoreSetGasEIP2200               uint64 = 20000 // Once per SSTORE operation from clean zero to non-zero
+	SstoreResetGasEIP2200             uint64 = 5000  // Once per SSTORE operation from clean non-zero to something else
+	SstoreClearsScheduleRefundEIP2200 uint64 = 15000 // Once per SSTORE operation for clearing an originally existing storage slot
+
 	JumpdestGas           uint64 = 1     // Once per JUMPDEST operation.
 	CreateDataGas         uint64 = 200   // Paid per byte for a CREATE operation to succeed in placing code into state. // G_codedeposit
 	ExpGas                uint64 = 10    // Once per EXP instruction
@@ -68,6 +75,7 @@ const (
 	BalanceGasEIP1884            uint64 = 700 // Cost of BALANCE     after  EIP 1884 (part of Istanbul)
 	SloadGasEIP150               uint64 = 200 // Cost of SLOAD       before EIP 1884
 	SloadGasEIP1884              uint64 = 800 // Cost of SLOAD       after  EIP 1884 (part of Istanbul)
+	SloadGasEIP2200              uint64 = 800 // Cost of SLOAD       after  EIP 2200 (part of Istanbul)
 	ExtcodeHashGasConstantinople uint64 = 400 // Cost of EXTCODEHASH before EIP 1884
 	ExtcodeHashGasEIP1884        uint64 = 700 // Cost of EXTCODEHASH after  EIP 1884 (part in Istanbul)
 
@@ -101,14 +109,18 @@ const (
 	IdentityPerWordGas  uint64 = 3    // Per-work price for a data copy operation
 	ModExpQuadCoeffDiv  uint64 = 20   // Divisor for the quadratic particle of the big int modular exponentiation
 
-	Bn256AddGas             uint64 = 500    // Gas needed for an elliptic curve addition
-	Bn256ScalarMulGas       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
-	Bn256PairingBaseGas     uint64 = 100000 // Base price for an elliptic curve pairing check
-	Bn256PairingPerPointGas uint64 = 80000  // Per-point price for an elliptic curve pairing check
-	VMLogBaseGas            uint64 = 100    // Base price for a VMLOG operation
-	VMLogPerByteGas         uint64 = 20     // Per-byte price for a VMLOG operation
-	FeePayerGas             uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
-	ValidateSenderGas       uint64 = 5000   // Gas needed for validating the signature of a message.
+	Bn256AddGasConstantinople             uint64 = 500    // Gas needed for an elliptic curve addition
+	Bn256AddGasIstanbul                   uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
+	Bn256ScalarMulGasConstantinople       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
+	Bn256ScalarMulGasIstanbul             uint64 = 6000   // Istanbul version of gas needed for an elliptic curve scalar multiplication
+	Bn256PairingBaseGasConstantinople     uint64 = 100000 // Base price for an elliptic curve pairing check
+	Bn256PairingBaseGasIstanbul           uint64 = 45000  // Istanbul version of base price for an elliptic curve pairing check
+	Bn256PairingPerPointGasConstantinople uint64 = 80000  // Per-point price for an elliptic curve pairing check
+	Bn256PairingPerPointGasIstanbul       uint64 = 34000  // Istanbul version of per-point price for an elliptic curve pairing check
+	VMLogBaseGas                          uint64 = 100    // Base price for a VMLOG operation
+	VMLogPerByteGas                       uint64 = 20     // Per-byte price for a VMLOG operation
+	FeePayerGas                           uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
+	ValidateSenderGas                     uint64 = 5000   // Gas needed for validating the signature of a message.
 
 	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
 	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
@@ -153,19 +165,33 @@ const (
 	TxDataGas uint64 = 100
 )
 
+const (
+	DefaultBlockGenerationInterval    = int64(1) // unit: seconds
+	DefaultBlockGenerationTimeLimit   = 250 * time.Millisecond
+	DefaultOpcodeComputationCostLimit = uint64(100000000)
+)
+
 var (
-	TxGasHumanReadable     uint64 = 4000000000         // NOTE: HumanReadable related functions are inactivated now
-	BlockScoreBoundDivisor        = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
-	GenesisBlockScore             = big.NewInt(131072) // BlockScore of the Genesis block.
-	MinimumBlockScore             = big.NewInt(131072) // The minimum that the blockscore may ever be.
-	DurationLimit                 = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
+	TxGasHumanReadable uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
+
+	// TODO-Klaytn Change the variables used in GXhash to more appropriate values for Klaytn Network
+	BlockScoreBoundDivisor = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
+	GenesisBlockScore      = big.NewInt(131072) // BlockScore of the Genesis block.
+	MinimumBlockScore      = big.NewInt(131072) // The minimum that the blockscore may ever be.
+	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
 )
 
 // Parameters for execution time limit
+// These parameters will be re-assigned by init options
 var (
-	// TODO-Klaytn Determine more practical values through actual running experience
-	TotalTimeLimit             = 250 * time.Millisecond // Execution time limit for all txs in a block
-	OpcodeComputationCostLimit = uint64(100000000)      // Computation cost limit for a tx. For now, it is approximately 100 ms.
+	// Execution time limit for all txs in a block
+	BlockGenerationTimeLimit = DefaultBlockGenerationTimeLimit
+
+	// TODO-Klaytn-Governance Change the following variables to governance items which requires consensus of CCN
+	// Block generation interval in seconds. It should be equal or larger than 1
+	BlockGenerationInterval = DefaultBlockGenerationInterval
+	// Computation cost limit for a tx. For now, it is approximately 100 ms
+	OpcodeComputationCostLimit = DefaultOpcodeComputationCostLimit
 )
 
 // istanbul BFT

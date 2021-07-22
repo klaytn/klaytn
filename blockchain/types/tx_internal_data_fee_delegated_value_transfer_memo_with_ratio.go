@@ -291,7 +291,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) RecoverFeePayerPu
 	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) IntrinsicGas(currentBlockNumber uint64, r params.Rules) (uint64, error) {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	gas := params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload)
 	if err != nil {

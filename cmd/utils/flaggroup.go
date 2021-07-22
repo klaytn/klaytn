@@ -49,6 +49,9 @@ var FlagGroups = []FlagGroup{
 			ConfigFileFlag,
 			OverwriteGenesisFlag,
 			StartBlockNumberFlag,
+			BlockGenerationIntervalFlag,
+			BlockGenerationTimeLimitFlag,
+			OpcodeComputationCostLimitFlag,
 		},
 	},
 	{
@@ -144,6 +147,8 @@ var FlagGroups = []FlagGroup{
 			ChainDataFetcherKafkaMaxMessageBytesFlag,
 			ChainDataFetcherKafkaSegmentSizeBytesFlag,
 			ChainDataFetcherKafkaRequiredAcksFlag,
+			ChainDataFetcherKafkaMessageVersionFlag,
+			ChainDataFetcherKafkaProducerIdFlag,
 		},
 	},
 	{

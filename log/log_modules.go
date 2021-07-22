@@ -122,6 +122,7 @@ const (
 	CMDKSEN
 	ChainDataFetcher
 	KAS
+	FORK
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -195,4 +196,5 @@ var moduleNames = [ModuleNameLen]string{
 	"cmd/ksen",
 	"datasync/chaindatafetcher",
 	"kas",
+	"fork",
 }

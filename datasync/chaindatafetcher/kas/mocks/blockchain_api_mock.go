@@ -39,7 +39,7 @@ func (m *MockBlockchainAPI) EXPECT() *MockBlockchainAPIMockRecorder {
 }
 
 // Call mocks base method
-func (m *MockBlockchainAPI) Call(arg0 context.Context, arg1 api.CallArgs, arg2 rpc.BlockNumber) (hexutil.Bytes, error) {
+func (m *MockBlockchainAPI) Call(arg0 context.Context, arg1 api.CallArgs, arg2 rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Call", arg0, arg1, arg2)
 	ret0, _ := ret[0].(hexutil.Bytes)
@@ -54,7 +54,7 @@ func (mr *MockBlockchainAPIMockRecorder) Call(arg0, arg1, arg2 interface{}) *gom
 }
 
 // GetCode mocks base method
-func (m *MockBlockchainAPI) GetCode(arg0 context.Context, arg1 common.Address, arg2 rpc.BlockNumber) (hexutil.Bytes, error) {
+func (m *MockBlockchainAPI) GetCode(arg0 context.Context, arg1 common.Address, arg2 rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCode", arg0, arg1, arg2)
 	ret0, _ := ret[0].(hexutil.Bytes)

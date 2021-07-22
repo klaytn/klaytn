@@ -20,7 +20,18 @@
 
 package vm
 
-import "testing"
+import (
+	"math"
+	"math/big"
+	"testing"
+
+	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
+)
 
 func TestMemoryGasCost(t *testing.T) {
 	tests := []struct {
@@ -38,6 +49,90 @@ func TestMemoryGasCost(t *testing.T) {
 		}
 		if v != tt.cost {
 			t.Errorf("test %d: gas cost mismatch: have %v, want %v", i, v, tt.cost)
+		}
+	}
+}
+
+var eip2200Tests = []struct {
+	original byte
+	gaspool  uint64
+	input    string
+	used     uint64
+	refund   uint64
+	failure  error
+}{
+	// before istanbul compatible hard fork
+	{0, math.MaxUint64, "0x60006000556000600055", 10012, 0, nil},               // 0 -> 0 -> 0
+	{0, math.MaxUint64, "0x60006000556001600055", 25012, 0, nil},               // 0 -> 0 -> 1
+	{0, math.MaxUint64, "0x60016000556000600055", 25012, 15000, nil},           // 0 -> 1 -> 0
+	{0, math.MaxUint64, "0x60016000556002600055", 25012, 0, nil},               // 0 -> 1 -> 2
+	{0, math.MaxUint64, "0x60016000556001600055", 25012, 0, nil},               // 0 -> 1 -> 1
+	{1, math.MaxUint64, "0x60006000556000600055", 10012, 15000, nil},           // 1 -> 0 -> 0
+	{1, math.MaxUint64, "0x60006000556001600055", 25012, 15000, nil},           // 1 -> 0 -> 1
+	{1, math.MaxUint64, "0x60006000556002600055", 25012, 15000, nil},           // 1 -> 0 -> 2
+	{1, math.MaxUint64, "0x60026000556000600055", 10012, 15000, nil},           // 1 -> 2 -> 0
+	{1, math.MaxUint64, "0x60026000556003600055", 10012, 0, nil},               // 1 -> 2 -> 3
+	{1, math.MaxUint64, "0x60026000556001600055", 10012, 0, nil},               // 1 -> 2 -> 1
+	{1, math.MaxUint64, "0x60026000556002600055", 10012, 0, nil},               // 1 -> 2 -> 2
+	{1, math.MaxUint64, "0x60016000556000600055", 10012, 15000, nil},           // 1 -> 1 -> 0
+	{1, math.MaxUint64, "0x60016000556002600055", 10012, 0, nil},               // 1 -> 1 -> 2
+	{1, math.MaxUint64, "0x60016000556001600055", 10012, 0, nil},               // 1 -> 1 -> 1
+	{0, math.MaxUint64, "0x600160005560006000556001600055", 45018, 15000, nil}, // 0 -> 1 -> 0 -> 1
+	{1, math.MaxUint64, "0x600060005560016000556000600055", 30018, 30000, nil}, // 1 -> 0 -> 1 -> 0
+	{1, 2306, "0x6001600055", 2306, 0, kerrors.ErrOutOfGas},                    // 1 -> 1 (2300 sentry + 2xPUSH)
+	{1, 2307, "0x6001600055", 2307, 0, kerrors.ErrOutOfGas},                    // 1 -> 1 (2301 sentry + 2xPUSH)
+	// after istanbul compatible hard fork
+	{0, math.MaxUint64, "0x60006000556000600055", 1612, 0, nil},                // 0 -> 0 -> 0
+	{0, math.MaxUint64, "0x60006000556001600055", 20812, 0, nil},               // 0 -> 0 -> 1
+	{0, math.MaxUint64, "0x60016000556000600055", 20812, 19200, nil},           // 0 -> 1 -> 0
+	{0, math.MaxUint64, "0x60016000556002600055", 20812, 0, nil},               // 0 -> 1 -> 2
+	{0, math.MaxUint64, "0x60016000556001600055", 20812, 0, nil},               // 0 -> 1 -> 1
+	{1, math.MaxUint64, "0x60006000556000600055", 5812, 15000, nil},            // 1 -> 0 -> 0
+	{1, math.MaxUint64, "0x60006000556001600055", 5812, 4200, nil},             // 1 -> 0 -> 1
+	{1, math.MaxUint64, "0x60006000556002600055", 5812, 0, nil},                // 1 -> 0 -> 2
+	{1, math.MaxUint64, "0x60026000556000600055", 5812, 15000, nil},            // 1 -> 2 -> 0
+	{1, math.MaxUint64, "0x60026000556003600055", 5812, 0, nil},                // 1 -> 2 -> 3
+	{1, math.MaxUint64, "0x60026000556001600055", 5812, 4200, nil},             // 1 -> 2 -> 1
+	{1, math.MaxUint64, "0x60026000556002600055", 5812, 0, nil},                // 1 -> 2 -> 2
+	{1, math.MaxUint64, "0x60016000556000600055", 5812, 15000, nil},            // 1 -> 1 -> 0
+	{1, math.MaxUint64, "0x60016000556002600055", 5812, 0, nil},                // 1 -> 1 -> 2
+	{1, math.MaxUint64, "0x60016000556001600055", 1612, 0, nil},                // 1 -> 1 -> 1
+	{0, math.MaxUint64, "0x600160005560006000556001600055", 40818, 19200, nil}, // 0 -> 1 -> 0 -> 1
+	{1, math.MaxUint64, "0x600060005560016000556000600055", 10818, 19200, nil}, // 1 -> 0 -> 1 -> 0
+	{1, 2306, "0x6001600055", 2306, 0, kerrors.ErrOutOfGas},                    // 1 -> 1 (2300 sentry + 2xPUSH)
+	{1, 2307, "0x6001600055", 806, 0, nil},                                     // 1 -> 1 (2301 sentry + 2xPUSH)
+}
+
+func TestEIP2200(t *testing.T) {
+	for i, tt := range eip2200Tests {
+		address := common.BytesToAddress([]byte("contract"))
+
+		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+		statedb.CreateSmartContractAccount(address, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
+		statedb.SetCode(address, hexutil.MustDecode(tt.input))
+		statedb.SetState(address, common.Hash{}, common.BytesToHash([]byte{tt.original}))
+		statedb.Finalise(true, false) // Push the state into the "original" slot
+
+		vmctx := Context{
+			CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
+			Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
+		}
+		var vmenv *EVM
+		if i <= 18 {
+			vmenv = NewEVM(vmctx, statedb, params.AllGxhashProtocolChanges, &Config{})
+		} else {
+			vmenv = NewEVM(vmctx, statedb, params.AllGxhashProtocolChanges, &Config{ExtraEips: []int{2200}})
+		}
+
+		_, gas, err := vmenv.Call(AccountRef(common.Address{}), address, nil, tt.gaspool, new(big.Int))
+		if err != tt.failure {
+			t.Errorf("test %d: failure mismatch: have %v, want %v", i, err, tt.failure)
+		}
+		if used := tt.gaspool - gas; used != tt.used {
+			t.Errorf("test %d: gas used mismatch: have %v, want %v", i, used, tt.used)
+		}
+		if refund := vmenv.StateDB.GetRefund(); refund != tt.refund {
+			t.Errorf("test %d: gas refund mismatch: have %v, want %v", i, refund, tt.refund)
 		}
 	}
 }

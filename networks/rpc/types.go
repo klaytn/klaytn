@@ -21,6 +21,7 @@
 package rpc
 
 import (
+	"encoding/json"
 	"reflect"
 	"sync"
 
@@ -28,6 +29,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"gopkg.in/fatih/set.v0"
 )
@@ -138,6 +140,13 @@ const (
 // - an invalid block number error when the given argument isn't a known strings
 // - an out of range error when the given block number is either too little or too large
 func (bn *BlockNumber) UnmarshalJSON(data []byte) error {
+	var decimalInput uint64
+	err := json.Unmarshal(data, &decimalInput)
+	if err == nil {
+		*bn = BlockNumber(decimalInput)
+		return nil
+	}
+
 	input := strings.TrimSpace(string(data))
 	if len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"' {
 		input = input[1 : len(input)-1]
@@ -169,4 +178,118 @@ func (bn *BlockNumber) UnmarshalJSON(data []byte) error {
 
 func (bn BlockNumber) Int64() int64 {
 	return (int64)(bn)
+}
+
+func (bn BlockNumber) Uint64() uint64 {
+	return (uint64)(bn)
+}
+
+type BlockNumberOrHash struct {
+	BlockNumber      *BlockNumber `json:"blockNumber,omitempty"`
+	BlockHash        *common.Hash `json:"blockHash,omitempty"`
+	RequireCanonical bool         `json:"requireCanonical,omitempty"`
+}
+
+func (bnh *BlockNumberOrHash) UnmarshalJSON(data []byte) error {
+	type erased BlockNumberOrHash
+	e := erased{}
+	err := json.Unmarshal(data, &e)
+	if err == nil {
+		if e.BlockNumber != nil && e.BlockHash != nil {
+			return fmt.Errorf("cannot specify both BlockHash and BlockNumber, choose one or the other")
+		}
+		bnh.BlockNumber = e.BlockNumber
+		bnh.BlockHash = e.BlockHash
+		bnh.RequireCanonical = e.RequireCanonical
+		return nil
+	}
+
+	var decimalInput uint64
+	err = json.Unmarshal(data, &decimalInput)
+	if err == nil {
+		bn := BlockNumber(decimalInput)
+		bnh.BlockNumber = &bn
+		return nil
+	}
+
+	var input string
+	err = json.Unmarshal(data, &input)
+	if err != nil {
+		return err
+	}
+	switch input {
+	case "earliest":
+		bn := EarliestBlockNumber
+		bnh.BlockNumber = &bn
+		return nil
+	case "latest":
+		bn := LatestBlockNumber
+		bnh.BlockNumber = &bn
+		return nil
+	case "pending":
+		bn := PendingBlockNumber
+		bnh.BlockNumber = &bn
+		return nil
+	default:
+		if len(input) == 66 {
+			hash := common.Hash{}
+			err := hash.UnmarshalText([]byte(input))
+			if err != nil {
+				return err
+			}
+			bnh.BlockHash = &hash
+			return nil
+		} else {
+			blckNum, err := hexutil.DecodeUint64(input)
+			if err != nil {
+				return err
+			}
+			if blckNum > math.MaxInt64 {
+				return fmt.Errorf("blocknumber too high")
+			}
+			bn := BlockNumber(blckNum)
+			bnh.BlockNumber = &bn
+			return nil
+		}
+	}
+}
+
+func (bnh *BlockNumberOrHash) Number() (BlockNumber, bool) {
+	if bnh.BlockNumber != nil {
+		return *bnh.BlockNumber, true
+	}
+	return BlockNumber(0), false
+}
+
+func (bnh *BlockNumberOrHash) Hash() (common.Hash, bool) {
+	if bnh.BlockHash != nil {
+		return *bnh.BlockHash, true
+	}
+	return common.Hash{}, false
+}
+
+func (bnh *BlockNumberOrHash) NumberOrHashString() (string, bool) {
+	if bnh.BlockNumber != nil {
+		return fmt.Sprintf("#%v", bnh.BlockNumber.Int64()), true
+	}
+	if bnh.BlockHash != nil {
+		return bnh.BlockHash.String(), true
+	}
+	return "", false
+}
+
+func NewBlockNumberOrHashWithNumber(blockNr BlockNumber) BlockNumberOrHash {
+	return BlockNumberOrHash{
+		BlockNumber:      &blockNr,
+		BlockHash:        nil,
+		RequireCanonical: false,
+	}
+}
+
+func NewBlockNumberOrHashWithHash(hash common.Hash, canonical bool) BlockNumberOrHash {
+	return BlockNumberOrHash{
+		BlockNumber:      nil,
+		BlockHash:        &hash,
+		RequireCanonical: canonical,
+	}
 }

@@ -20,12 +20,17 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math/rand"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/Shopify/sarama"
 	"github.com/klaytn/klaytn/common"
@@ -87,6 +92,25 @@ func (s *KafkaSuite) TestKafka_split() {
 	s.Equal(3, size)
 }
 
+func (s *KafkaSuite) TestKafka_makeProducerV1Message() {
+	// make test data
+	data := common.MakeRandomBytes(100)
+	rand.Seed(time.Now().UnixNano())
+	totalSegments := rand.Uint64()
+	idx := rand.Uint64() % totalSegments
+
+	// make a producer message with the random input
+	msg := s.kfk.makeProducerMessage(s.topic, "", data, idx, totalSegments)
+
+	// compare the data is correctly inserted
+	s.Equal(s.topic, msg.Topic)
+	s.Equal(sarama.ByteEncoder(data), msg.Value)
+	s.Equal(totalSegments, binary.BigEndian.Uint64(msg.Headers[MsgHeaderTotalSegments].Value))
+	s.Equal(idx, binary.BigEndian.Uint64(msg.Headers[MsgHeaderSegmentIdx].Value))
+	s.Equal(s.kfk.config.MsgVersion, string(msg.Headers[MsgHeaderVersion].Value))
+	s.Equal(s.kfk.config.ProducerId, string(msg.Headers[MsgHeaderProducerId].Value))
+}
+
 func (s *KafkaSuite) TestKafka_makeProducerMessage() {
 	// make test data
 	data := common.MakeRandomBytes(100)
@@ -141,14 +165,19 @@ func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {
 }
 
 type kafkaData struct {
-	Data []byte `json:"data"`
+	Number int
+	Data   []byte `json:"data"`
 }
 
-func (s *KafkaSuite) publishRandomData(topic string, numTests, testBytesSize int) []*kafkaData {
+func (d *kafkaData) Key() string {
+	return fmt.Sprintf("%v", d.Number)
+}
+
+func publishRandomData(t *testing.T, producer *Kafka, topic string, numTests, testBytesSize int) []*kafkaData {
 	var expected []*kafkaData
 	for i := 0; i < numTests; i++ {
-		testData := &kafkaData{common.MakeRandomBytes(testBytesSize)}
-		s.NoError(s.kfk.Publish(topic, testData))
+		testData := &kafkaData{i, common.MakeRandomBytes(testBytesSize)}
+		assert.NoError(t, producer.Publish(topic, testData))
 		expected = append(expected, testData)
 	}
 	return expected
@@ -184,7 +213,7 @@ func (s *KafkaSuite) subscribeData(topic, groupId string, numTests int, handler 
 		case <-numCheckCh:
 			s.T().Logf("test count: %v, total tests: %v", i+1, numTests)
 		case <-timeout.C:
-			s.Fail("timeout")
+			s.FailNow("timeout")
 		}
 	}
 }
@@ -195,7 +224,7 @@ func (s *KafkaSuite) TestKafka_Publish() {
 
 	s.kfk.CreateTopic(s.topic)
 
-	expected := s.publishRandomData(s.topic, numTests, testBytesSize)
+	expected := publishRandomData(s.T(), s.kfk, s.topic, numTests, testBytesSize)
 
 	// consume from the first partition and the first item
 	partitionConsumer, err := s.consumer.ConsumePartition(s.topic, int32(0), int64(0))
@@ -226,7 +255,7 @@ func (s *KafkaSuite) TestKafka_Subscribe() {
 	topic := "test-subscribe"
 	s.kfk.CreateTopic(topic)
 
-	expected := s.publishRandomData(topic, numTests, testBytesSize)
+	expected := publishRandomData(s.T(), s.kfk, topic, numTests, testBytesSize)
 
 	var actual []*kafkaData
 	s.subscribeData(topic, "test-group-id", numTests, func(message *sarama.ConsumerMessage) error {
@@ -251,7 +280,7 @@ func (s *KafkaSuite) TestKafka_PubSubWith2Partitions() {
 	s.kfk.CreateTopic(topicPartition)
 
 	// publish random data
-	expected := s.publishRandomData(topicPartition, numTests, testBytesSize)
+	expected := publishRandomData(s.T(), s.kfk, topicPartition, numTests, testBytesSize)
 
 	var actual []*kafkaData
 	s.subscribeData(topicPartition, "test-group-id", numTests, func(message *sarama.ConsumerMessage) error {
@@ -286,7 +315,7 @@ func (s *KafkaSuite) TestKafka_PubSubWith2DifferentGroups() {
 	s.kfk.CreateTopic(topic)
 
 	// publish random data
-	expected := s.publishRandomData(topic, numTests, testBytesSize)
+	expected := publishRandomData(s.T(), s.kfk, topic, numTests, testBytesSize)
 
 	var actual []*kafkaData
 	s.subscribeData(topic, "test-group-id-1", numTests, func(message *sarama.ConsumerMessage) error {
@@ -310,6 +339,64 @@ func (s *KafkaSuite) TestKafka_PubSubWith2DifferentGroups() {
 	s.Equal(expected, actual2)
 }
 
+func (s *KafkaSuite) TestKafka_PubSubWithV1Segments() {
+	numProducers := 3
+	numTests := 10
+	testBytesSize := 31
+	segmentSize := 3
+
+	// make multi producers
+	var producers []*Kafka
+	for i := 0; i < numProducers; i++ {
+		config := GetDefaultKafkaConfig()
+		config.Brokers = s.kfk.config.Brokers
+		config.SegmentSizeBytes = segmentSize
+		config.SaramaConfig.Producer.RequiredAcks = -1
+		kfk, err := NewKafka(config)
+		s.NoError(err)
+		producers = append(producers, kfk)
+	}
+
+	topic := "test-multi-producer-segments"
+	s.kfk.CreateTopic(topic)
+
+	var expected []*kafkaData
+	{ // produce messages
+		wg := sync.WaitGroup{}
+		dataLock := sync.Mutex{}
+		for _, p := range producers {
+			wg.Add(1)
+			go func(producer *Kafka) {
+				data := publishRandomData(s.T(), producer, topic, numTests, testBytesSize)
+				dataLock.Lock()
+				expected = append(expected, data...)
+				dataLock.Unlock()
+				wg.Done()
+			}(p)
+		}
+		wg.Wait()
+	}
+
+	var actual []*kafkaData
+	s.subscribeData(topic, "test-multi-producers-consumer", numTests*numProducers, func(message *sarama.ConsumerMessage) error {
+		var d *kafkaData
+		json.Unmarshal(message.Value, &d)
+		actual = append(actual, d)
+		return nil
+	})
+
+	for _, expectedData := range expected {
+		exist := false
+		for _, actualData := range actual {
+			if reflect.DeepEqual(actualData, expectedData) {
+				exist = true
+				break
+			}
+		}
+		assert.True(s.T(), exist)
+	}
+}
+
 func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
 	numTests := 5
 	testBytesSize := 10
@@ -320,7 +407,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments() {
 	s.kfk.CreateTopic(topic)
 
 	// publish random data
-	expected := s.publishRandomData(topic, numTests, testBytesSize)
+	expected := publishRandomData(s.T(), s.kfk, topic, numTests, testBytesSize)
 
 	var actual []*kafkaData
 	s.subscribeData(topic, "test-group-id", numTests, func(message *sarama.ConsumerMessage) error {
@@ -367,6 +454,84 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegements_BufferOverflow() {
 		s.Fail("timeout")
 	case err := <-errCh:
 		s.True(strings.Contains(err.Error(), bufferOverflowErrorMsg))
+	}
+}
+
+func (s *KafkaSuite) TestKafka_PubSubWithSegments_ErrCallBack() {
+	// create a topic
+	topic := "test-message-segments-error-callback"
+	err := s.kfk.setupTopic(topic)
+	s.NoError(err)
+
+	_ = publishRandomData(s.T(), s.kfk, topic, 1, 1)
+
+	// setup consumer to handle errors with callback method
+	s.kfk.config.SaramaConfig.Consumer.Return.Errors = true
+	s.kfk.config.SaramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	callbackErr := errors.New("callback error")
+	s.kfk.config.ErrCallback = func(string) error { return callbackErr }
+
+	// create a consumer structure
+	consumer, err := NewConsumer(s.kfk.config, "test-group-id")
+	s.NoError(err)
+	consumer.topics = append(consumer.topics, topic)
+	consumer.handlers[topic] = func(message *sarama.ConsumerMessage) error { return errors.New("test error") }
+
+	go func() {
+		err = consumer.Subscribe(context.Background())
+		s.NoError(err)
+	}()
+
+	// checkout the returned error is callback error
+	timeout := time.NewTimer(3 * time.Second)
+	select {
+	case <-timeout.C:
+		s.Fail("timeout")
+	case err := <-consumer.Errors():
+		s.Error(err)
+		s.True(strings.Contains(err.Error(), callbackErr.Error()))
+	}
+}
+
+func (s *KafkaSuite) TestKafka_PubSubWithSegments_MessageTimeout() {
+	// create a topic
+	topic := "test-message-segments-expiration"
+	err := s.kfk.setupTopic(topic)
+	s.NoError(err)
+
+	// produce incomplete message
+	msg := s.kfk.makeProducerMessage(topic, "test-key", common.MakeRandomBytes(10), 0, 2)
+	_, _, err = s.kfk.producer.SendMessage(msg)
+	s.NoError(err)
+
+	// setup consumer to handle errors with callback method
+	s.kfk.config.SaramaConfig.Consumer.Return.Errors = true
+	s.kfk.config.SaramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	s.kfk.config.ExpirationTime = 300 * time.Millisecond
+
+	// create a consumer structure
+	consumer, err := NewConsumer(s.kfk.config, "test-group-id")
+	s.NoError(err)
+	consumer.topics = append(consumer.topics, topic)
+	consumer.handlers[topic] = func(message *sarama.ConsumerMessage) error {
+		// sleep for message expiration
+		time.Sleep(1 * time.Second)
+		return nil
+	}
+
+	go func() {
+		err = consumer.Subscribe(context.Background())
+		s.NoError(err)
+	}()
+
+	// checkout the returned error is callback error
+	timeout := time.NewTimer(3 * time.Second)
+	select {
+	case <-timeout.C:
+		s.Fail("timeout")
+	case err := <-consumer.Errors():
+		s.Error(err)
+		s.True(strings.Contains(err.Error(), msgExpiredErrorMsg))
 	}
 }
 

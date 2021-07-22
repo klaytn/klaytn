@@ -33,8 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/go-redis/redis/v7"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -47,7 +45,9 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/log"
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -250,6 +250,11 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
+	}
+
+	// set hardForkBlockNumberConfig which will be used as a global variable
+	if err := fork.SetHardForkBlockNumberConfig(bc.chainConfig); err != nil {
+		return nil, err
 	}
 
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
@@ -1634,7 +1639,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				// current block is not the last one, so prefetch the right next block
 				followup := chain[i+1]
 				go func(start time.Time) {
-					throwaway, _ := state.NewForPrefetching(parent.Root(), bc.stateCache)
+					throwaway, err := state.NewForPrefetching(parent.Root(), bc.stateCache)
+					if throwaway == nil || err != nil {
+						logger.Warn("failed to get StateDB for prefetcher", "err", err,
+							"parentBlockNum", parent.NumberU64(), "currBlockNum", bc.CurrentBlock().NumberU64())
+						return
+					}
+
 					vmCfg := bc.vmConfig
 					vmCfg.Prefetching = true
 					bc.prefetcher.Prefetch(followup, throwaway, vmCfg, &followupInterrupt)
@@ -2404,7 +2415,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 		return nil, 0, nil, err
 	}
 
-	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chainConfig, header.Number), statedb, blockNumber, chainConfig.Rules(header.Number))
+	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chainConfig, header.Number), statedb, blockNumber)
 	if err != nil {
 		return nil, 0, nil, err
 	}
