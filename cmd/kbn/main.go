@@ -214,7 +214,6 @@ func main() {
 	app.UsageText = app.Name + " [global options] [commands]"
 	app.Flags = append(app.Flags, cliFlags...)
 	app.Flags = append(app.Flags, debug.Flags...)
-	app.Flags = append(app.Flags, debug.DeprecatedFlags...)
 	app.Flags = append(app.Flags, nodecmd.CommonRPCFlags...)
 	app.Commands = []cli.Command{
 		nodecmd.VersionCommand,
