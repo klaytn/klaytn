@@ -108,7 +108,7 @@ var (
 	// TODO-Klaytn-Bootnode: redefine networkid
 	NetworkIdFlag = cli.Uint64Flag{
 		Name:  "networkid",
-		Usage: "Network identifier (integer, 8217=MainNet, , 1001=Baobab)",
+		Usage: "Network identifier (integer, 8217=Cypress, , 1001=Baobab)",
 		Value: cn.GetDefaultConfig().NetworkId,
 	}
 	IdentityFlag = cli.StringFlag{
@@ -544,91 +544,91 @@ var (
 	// RPC legacy setting
 	RPCEnabledFlag = cli.BoolFlag{
 		Name:  "rpc",
-		Usage: "Enable the HTTP-RPC server",
+		Usage: "Enable the HTTP-RPC server. (deprecated at v1.12.0, use --http)",
 	}
 	RPCListenAddrFlag = cli.StringFlag{
 		Name:  "rpcaddr",
-		Usage: "HTTP-RPC server listening interface",
+		Usage: "HTTP-RPC server listening interface. (deprecated at v1.12.0, use --http.addr)",
 		Value: node.DefaultHTTPHost,
 	}
 	RPCPortFlag = cli.IntFlag{
 		Name:  "rpcport",
-		Usage: "HTTP-RPC server listening port",
+		Usage: "HTTP-RPC server listening port. (deprecated at v1.12.0, use --http.port)",
 		Value: node.DefaultHTTPPort,
 	}
 	RPCCORSDomainFlag = cli.StringFlag{
 		Name:  "rpccorsdomain",
-		Usage: "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
+		Usage: "Comma separated list of domains from which to accept cross origin requests (browser enforced). (deprecated at v1.12.0, use --http.corsdomain)",
 		Value: "",
 	}
 	RPCVirtualHostsFlag = cli.StringFlag{
 		Name:  "rpcvhosts",
-		Usage: "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard.",
+		Usage: "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard. (deprecated at v1.12.0, use --http.vhosts)",
 		Value: strings.Join(node.DefaultConfig.HTTPVirtualHosts, ","),
 	}
 	RPCApiFlag = cli.StringFlag{
 		Name:  "rpcapi",
-		Usage: "API's offered over the HTTP-RPC interface",
+		Usage: "API's offered over the HTTP-RPC interface. (deprecated at v1.12.0, use --http.api)",
 		Value: "",
 	}
 
 	RPCGlobalGasCap = cli.Uint64Flag{
 		Name:  "rpc.gascap",
-		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas",
+		Usage: "Sets a cap on gas that can be used in klay_call/estimateGas. (deprecated at v1.12.0, use --http.gascap)",
 	}
 	RPCConcurrencyLimit = cli.IntFlag{
 		Name:  "rpc.concurrencylimit",
-		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server",
+		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server. (deprecated at v1.12.0, use --http.concurrencylimit)",
 		Value: rpc.ConcurrencyLimit,
 	}
 	LegacyWSListenAddrFlag = cli.StringFlag{
 		Name:  "wsaddr",
-		Usage: "WS-RPC server listening interface",
+		Usage: "WS-RPC server listening interface (deprecated at v1.12.0, use --ws.addr)",
 		Value: node.DefaultWSHost,
 	}
 	LegacyWSPortFlag = cli.IntFlag{
 		Name:  "wsport",
-		Usage: "WS-RPC server listening port",
+		Usage: "WS-RPC server listening port (deprecated at v1.12.0, use --ws.port)",
 		Value: node.DefaultWSPort,
 	}
 	LegacyWSApiFlag = cli.StringFlag{
 		Name:  "wsapi",
-		Usage: "API's offered over the WS-RPC interface",
+		Usage: "API's offered over the WS-RPC interface (deprecated at v1.12.0, use --ws.api)",
 		Value: "",
 	}
 	LegacyWSAllowedOriginsFlag = cli.StringFlag{
 		Name:  "wsorigins",
-		Usage: "Origins from which to accept websockets requests",
+		Usage: "Origins from which to accept websockets requests (deprecated at v1.12.0, use --ws.origins)",
 		Value: "",
 	}
 	LegacyWSMaxSubscriptionPerConn = cli.IntFlag{
 		Name:  "wsmaxsubscriptionperconn",
-		Usage: "Allowed maximum subscription number per a websocket connection",
+		Usage: "Allowed maximum subscription number per a websocket connection (deprecated at v1.12.0, use --ws.maxsubscriptionperconn)",
 		Value: int(rpc.MaxSubscriptionPerWSConn),
 	}
 	LegacyWSReadDeadLine = cli.Int64Flag{
 		Name:  "wsreaddeadline",
-		Usage: "Set the read deadline on the underlying network connection in seconds. 0 means read will not timeout (deprecated, use --ws.readdeadline)",
+		Usage: "Set the read deadline on the underlying network connection in seconds. 0 means read will not timeout (deprecated at v1.12.0, use --ws.readdeadline)",
 		Value: rpc.WebsocketReadDeadline,
 	}
 	LegacyWSWriteDeadLine = cli.Int64Flag{
 		Name:  "wswritedeadline",
-		Usage: "Set the Write deadline on the underlying network connection in seconds. 0 means write will not timeout (deprecated, use --ws.writedeadline)",
+		Usage: "Set the Write deadline on the underlying network connection in seconds. 0 means write will not timeout (deprecated at v1.12.0, use --ws.writedeadline)",
 		Value: rpc.WebsocketWriteDeadline,
 	}
 	LegacyWSMaxConnections = cli.IntFlag{
 		Name:  "wsmaxconnections",
-		Usage: "Allowed maximum websocket connection number (deprecated, use --ws.maxconnections)",
+		Usage: "Allowed maximum websocket connection number (deprecated at v1.12.0, use --ws.maxconnections)",
 		Value: 3000,
 	}
 	LegacyGRPCListenAddrFlag = cli.StringFlag{
 		Name:  "grpcaddr",
-		Usage: "gRPC server listening interface (deprecated, use --grpc.addr)",
+		Usage: "gRPC server listening interface (deprecated at v1.12.0, use --grpc.addr)",
 		Value: node.DefaultGRPCHost,
 	}
 	LegacyGRPCPortFlag = cli.IntFlag{
 		Name:  "grpcport",
-		Usage: "gRPC server listening port (deprecated, use --grpc.port)",
+		Usage: "gRPC server listening port (deprecated at v1.12.0, use --grpc.port)",
 		Value: node.DefaultGRPCPort,
 	}
 
@@ -1214,50 +1214,27 @@ func splitAndTrim(input string) []string {
 // setHTTP creates the HTTP RPC listener interface string from the set
 // command line flags, returning empty if the HTTP endpoint is disabled.
 func setHTTP(ctx *cli.Context, cfg *node.Config) {
-	if ctx.GlobalBool(HTTPEnabledFlag.Name) && cfg.HTTPHost == "" {
+	if ctx.GlobalBool(getFlagName(ctx, HTTPEnabledFlag, RPCEnabledFlag, "(v1.12.0)")) && cfg.HTTPHost == "" {
 		cfg.HTTPHost = "127.0.0.1"
-		if ctx.GlobalIsSet(HTTPListenAddrFlag.Name) {
-			cfg.HTTPHost = ctx.GlobalString(HTTPListenAddrFlag.Name)
-		}
-	} else if ctx.GlobalBool(RPCEnabledFlag.Name) && cfg.HTTPHost == "" {
-		cfg.HTTPHost = "127.0.0.1"
-		logger.Warn("The flag --rpc is deprecated and will be removed in the future (v1.12.0), please use --http")
-		if ctx.GlobalIsSet(RPCListenAddrFlag.Name) {
-			cfg.HTTPHost = ctx.GlobalString(RPCListenAddrFlag.Name)
-			logger.Warn("The flag --rpcaddr is deprecated and will be removed in the future (v1.12.0), please use --http.addr")
+		if listenAddrFlagName := getFlagName(ctx, HTTPListenAddrFlag, RPCListenAddrFlag, "(v1.12.0)"); ctx.GlobalIsSet(listenAddrFlagName) {
+			cfg.HTTPHost = ctx.GlobalString(listenAddrFlagName)
 		}
 	}
 
-	if ctx.GlobalIsSet(HTTPPortFlag.Name) {
-		cfg.HTTPPort = ctx.GlobalInt(HTTPPortFlag.Name)
-	} else if ctx.GlobalIsSet(RPCPortFlag.Name) {
-		cfg.HTTPPort = ctx.GlobalInt(RPCPortFlag.Name)
-		logger.Warn("The flag --rpcport is deprecated and will be removed in the future (v1.12.0), please use --http.port")
+	if portFlagName := getFlagName(ctx, HTTPPortFlag, RPCPortFlag, "(v1.12.0)"); ctx.GlobalIsSet(portFlagName) {
+		cfg.HTTPPort = ctx.GlobalInt(portFlagName)
 	}
-	if ctx.GlobalIsSet(HTTPCORSDomainFlag.Name) {
-		cfg.HTTPCors = splitAndTrim(ctx.GlobalString(HTTPCORSDomainFlag.Name))
-	} else if ctx.GlobalIsSet(RPCCORSDomainFlag.Name) {
-		cfg.HTTPCors = splitAndTrim(ctx.GlobalString(RPCCORSDomainFlag.Name))
-		logger.Warn("The flag --rpccorsdomain is deprecated and will be removed in the future (v1.12.0), please use --http.corsdomain")
+	if corsDomainFlagName := getFlagName(ctx, HTTPCORSDomainFlag, RPCCORSDomainFlag, "(v1.12.0)"); ctx.GlobalIsSet(corsDomainFlagName) {
+		cfg.HTTPCors = splitAndTrim(ctx.GlobalString(corsDomainFlagName))
 	}
-	if ctx.GlobalIsSet(HTTPApiFlag.Name) {
-		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(HTTPApiFlag.Name))
-	} else if ctx.GlobalIsSet(RPCApiFlag.Name) {
-		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(RPCApiFlag.Name))
-		logger.Warn("The flag --rpcapi is deprecated and will be removed in the future (v1.12.0), please use --http.api")
+	if apiFlagName := getFlagName(ctx, HTTPApiFlag, RPCApiFlag, "(v1.12.0)"); ctx.GlobalIsSet(apiFlagName) {
+		cfg.HTTPModules = splitAndTrim(ctx.GlobalString(apiFlagName))
 	}
-	if ctx.GlobalIsSet(HTTPVirtualHostsFlag.Name) {
-		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(HTTPVirtualHostsFlag.Name))
-	} else if ctx.GlobalIsSet(RPCVirtualHostsFlag.Name) {
-		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(RPCVirtualHostsFlag.Name))
-		logger.Warn("The flag --rpcvhosts is deprecated and will be removed in the future (v1.12.0), please use --http.vhosts")
+	if virtualHostsFlagName := getFlagName(ctx, HTTPVirtualHostsFlag, RPCVirtualHostsFlag, "(v1.12.0)"); ctx.GlobalIsSet(virtualHostsFlagName) {
+		cfg.HTTPVirtualHosts = splitAndTrim(ctx.GlobalString(virtualHostsFlagName))
 	}
-	if ctx.GlobalIsSet(HTTPConcurrencyLimit.Name) {
-		rpc.ConcurrencyLimit = ctx.GlobalInt(HTTPConcurrencyLimit.Name)
-		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
-	} else if ctx.GlobalIsSet(RPCConcurrencyLimit.Name) {
-		rpc.ConcurrencyLimit = ctx.GlobalInt(RPCConcurrencyLimit.Name)
-		logger.Warn("The flag --rpcconcurrencylimit is deprecated and will be removed in the future (v1.12.0), please use --http.concurrencylimit")
+	if concurrencyLimitFlagName := getFlagName(ctx, HTTPConcurrencyLimit, RPCConcurrencyLimit, "(v1.12.0)"); ctx.GlobalIsSet(concurrencyLimitFlagName) {
+		rpc.ConcurrencyLimit = ctx.GlobalInt(concurrencyLimitFlagName)
 		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
 	}
 }
@@ -1267,56 +1244,31 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 func setWS(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalBool(WSEnabledFlag.Name) && cfg.WSHost == "" {
 		cfg.WSHost = "127.0.0.1"
-		if ctx.GlobalIsSet(WSListenAddrFlag.Name) {
-			cfg.WSHost = ctx.GlobalString(WSListenAddrFlag.Name)
-		} else if ctx.GlobalIsSet(LegacyWSListenAddrFlag.Name) {
-			cfg.WSHost = ctx.GlobalString(LegacyWSListenAddrFlag.Name)
-			logger.Warn("The flag --wsaddr is deprecated and will be removed in the future (v1.12.0), please use --ws.addr")
+		if listenAddrFlagName := getFlagName(ctx, WSListenAddrFlag, LegacyWSListenAddrFlag, "(v1.12.0)"); ctx.GlobalIsSet(listenAddrFlagName) {
+			cfg.WSHost = ctx.GlobalString(listenAddrFlagName)
 		}
 	}
 
-	if ctx.GlobalIsSet(WSPortFlag.Name) {
-		cfg.WSPort = ctx.GlobalInt(WSPortFlag.Name)
-	} else if ctx.GlobalIsSet(LegacyWSPortFlag.Name) {
-		cfg.WSPort = ctx.GlobalInt(LegacyWSPortFlag.Name)
-		logger.Warn("The flag --wsport is deprecated and will be removed in the future (v1.12.0), please use --ws.port")
+	if wsPortFlagName := getFlagName(ctx, WSPortFlag, LegacyWSPortFlag, "(v1.12.0)"); ctx.GlobalIsSet(wsPortFlagName) {
+		cfg.WSPort = ctx.GlobalInt(wsPortFlagName)
 	}
-	if ctx.GlobalIsSet(WSAllowedOriginsFlag.Name) {
-		cfg.WSOrigins = splitAndTrim(ctx.GlobalString(WSAllowedOriginsFlag.Name))
-	} else if ctx.GlobalIsSet(LegacyWSAllowedOriginsFlag.Name) {
-		cfg.WSOrigins = splitAndTrim(ctx.GlobalString(LegacyWSAllowedOriginsFlag.Name))
-		logger.Warn("The flag --wsorigins is deprecated and will be removed in the future (v1.12.0), please use --ws.origins")
+	if wsAllowOriginsFlagName := getFlagName(ctx, WSAllowedOriginsFlag, LegacyWSAllowedOriginsFlag, "(v1.12.0)"); ctx.GlobalIsSet(wsAllowOriginsFlagName) {
+		cfg.WSOrigins = splitAndTrim(ctx.GlobalString(wsAllowOriginsFlagName))
 	}
-	if ctx.GlobalIsSet(WSApiFlag.Name) {
-		cfg.WSModules = splitAndTrim(ctx.GlobalString(WSApiFlag.Name))
-	} else if ctx.GlobalIsSet(LegacyWSApiFlag.Name) {
-		cfg.WSModules = splitAndTrim(ctx.GlobalString(LegacyWSApiFlag.Name))
-		logger.Warn("The flag --wsapi is deprecated and will be removed in the future (v1.12.0), please use --ws.api")
+	if wsApiFlagName := getFlagName(ctx, WSApiFlag, LegacyWSApiFlag, "(v1.12.0)"); ctx.GlobalIsSet(wsApiFlagName) {
+		cfg.WSModules = splitAndTrim(ctx.GlobalString(wsApiFlagName))
 	}
-	if ctx.GlobalIsSet(WSMaxSubscriptionPerConn.Name) {
-		rpc.MaxSubscriptionPerWSConn = int32(ctx.GlobalInt(WSMaxSubscriptionPerConn.Name))
-	} else if ctx.GlobalIsSet(LegacyWSMaxSubscriptionPerConn.Name) {
-		rpc.MaxSubscriptionPerWSConn = int32(ctx.GlobalInt(LegacyWSMaxSubscriptionPerConn.Name))
-		logger.Warn("The flag --wsmaxsubscriptionperconn is deprecated and will be removed in the future (v1.12.0), please use --ws.maxsubscriptionperconn")
+	if wsMaxSubscriptionPerConnFlagName := getFlagName(ctx, WSMaxSubscriptionPerConn, LegacyWSMaxSubscriptionPerConn, "(v1.12.0)"); ctx.GlobalIsSet(wsMaxSubscriptionPerConnFlagName) {
+		rpc.MaxSubscriptionPerWSConn = int32(ctx.GlobalInt(wsMaxSubscriptionPerConnFlagName))
 	}
-
-	if ctx.GlobalIsSet(WSReadDeadLine.Name) {
-		rpc.WebsocketReadDeadline = ctx.GlobalInt64(WSReadDeadLine.Name)
-	} else if ctx.GlobalIsSet(LegacyWSReadDeadLine.Name) {
-		rpc.WebsocketReadDeadline = ctx.GlobalInt64(LegacyWSReadDeadLine.Name)
-		logger.Warn("The flag --wsreaddeadline is deprecated and will be removed in the future (v1.12.0), please use --ws.readdeadline")
+	if wsReadDeadLineFlagName := getFlagName(ctx, WSReadDeadLine, LegacyWSReadDeadLine, "(v1.12.0)"); ctx.GlobalIsSet(wsReadDeadLineFlagName) {
+		rpc.WebsocketReadDeadline = ctx.GlobalInt64(wsReadDeadLineFlagName)
 	}
-	if ctx.GlobalIsSet(WSWriteDeadLine.Name) {
-		rpc.WebsocketWriteDeadline = ctx.GlobalInt64(WSWriteDeadLine.Name)
-	} else if ctx.GlobalIsSet(LegacyWSWriteDeadLine.Name) {
-		rpc.WebsocketWriteDeadline = ctx.GlobalInt64(LegacyWSWriteDeadLine.Name)
-		logger.Warn("The flag --wswritedeadline is deprecated and will be removed in the future (v1.12.0), please use --ws.writedeadline")
+	if wsWriteDeadLineFlagName := getFlagName(ctx, WSWriteDeadLine, LegacyWSWriteDeadLine, "(v1.12.0)"); ctx.GlobalIsSet(wsWriteDeadLineFlagName) {
+		rpc.WebsocketWriteDeadline = ctx.GlobalInt64(wsWriteDeadLineFlagName)
 	}
-	if ctx.GlobalIsSet(WSMaxConnections.Name) {
-		rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(WSMaxConnections.Name))
-	} else if ctx.GlobalIsSet(LegacyWSMaxConnections.Name) {
-		rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(LegacyWSMaxConnections.Name))
-		logger.Warn("The flag --wsmaxconnections is deprecated and will be removed in the future (v1.12.0), please use --ws.maxconnections")
+	if wsMaxConnectionsFlagName := getFlagName(ctx, WSMaxConnections, LegacyWSMaxConnections, "(v1.12.0)"); ctx.GlobalIsSet(wsMaxConnectionsFlagName) {
+		rpc.MaxWebsocketConnections = int32(ctx.GlobalInt(wsMaxConnectionsFlagName))
 	}
 }
 
@@ -1337,17 +1289,12 @@ func setIPC(ctx *cli.Context, cfg *node.Config) {
 func setgRPC(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalBool(GRPCEnabledFlag.Name) && cfg.GRPCHost == "" {
 		cfg.GRPCHost = "127.0.0.1"
-		if ctx.GlobalIsSet(GRPCListenAddrFlag.Name) {
-			cfg.GRPCHost = ctx.GlobalString(GRPCListenAddrFlag.Name)
-		} else if ctx.GlobalIsSet(LegacyGRPCListenAddrFlag.Name) {
-			cfg.GRPCHost = ctx.GlobalString(LegacyGRPCListenAddrFlag.Name)
+		if grpcListenAddrName := getFlagName(ctx, GRPCListenAddrFlag, LegacyGRPCListenAddrFlag, "(v1.12.0)"); ctx.GlobalIsSet(grpcListenAddrName) {
+			cfg.GRPCHost = ctx.GlobalString(grpcListenAddrName)
 		}
 	}
-
-	if ctx.GlobalIsSet(GRPCPortFlag.Name) {
-		cfg.GRPCPort = ctx.GlobalInt(GRPCPortFlag.Name)
-	} else if ctx.GlobalIsSet(LegacyGRPCPortFlag.Name) {
-		cfg.GRPCPort = ctx.GlobalInt(LegacyGRPCPortFlag.Name)
+	if grpcPortName := getFlagName(ctx, GRPCPortFlag, LegacyGRPCPortFlag, "(v1.12.0)"); ctx.GlobalIsSet(grpcPortName) {
+		cfg.GRPCPort = ctx.GlobalInt(grpcPortName)
 	}
 }
 
@@ -1899,4 +1846,15 @@ func getNetworkId(ctx *cli.Context) (uint64, bool) {
 		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
 		return params.CypressNetworkId, false
 	}
+}
+
+func getFlagName(ctx *cli.Context, flag cli.Flag, legacyFlag cli.Flag, deprecateVersion string) string {
+	if ctx.GlobalIsSet(flag.GetName()) {
+		return flag.GetName()
+	}
+	if ctx.GlobalIsSet(legacyFlag.GetName()) {
+		logger.Warn("The flag " + legacyFlag.GetName() + " is deprecated and will be removed in the future " + deprecateVersion + ", please use " + flag.GetName())
+		return legacyFlag.GetName()
+	}
+	return ""
 }
