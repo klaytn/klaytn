@@ -266,7 +266,14 @@ func (vl *VoteMap) Clear() {
 	vl.mu.Lock()
 	defer vl.mu.Unlock()
 
-	vl.items = make(map[string]VoteStatus)
+	// TODO-Governance if vote is not casted, it can remain forever. So, it would be better to add expiration.
+	newItems := make(map[string]VoteStatus)
+	for k, v := range vl.items {
+		if !v.Casted {
+			newItems[k] = v
+		}
+	}
+	vl.items = newItems
 }
 
 func (vl *VoteMap) Size() int {
@@ -772,8 +779,16 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 			tempItems = adjustDecodedSet(tempItems)
 			tempSet.Import(tempItems)
 
+			_, govItems, err := gov.ReadGovernance(number)
+			if err != nil {
+				logger.Error("Failed to read governance", "number", number, "err", err)
+				return
+			}
+			govSet := NewGovernanceSet()
+			govSet.Import(govItems)
+
 			// Store new currentSet to governance database
-			if err := gov.WriteGovernance(number, gov.currentSet, tempSet); err != nil {
+			if err := gov.WriteGovernance(number, govSet, tempSet); err != nil {
 				logger.Crit("Failed to store new governance data", "number", number, "err", err)
 			}
 		}
