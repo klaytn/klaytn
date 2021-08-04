@@ -32,6 +32,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -48,9 +49,12 @@ var nullAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 
 type httpConn struct {
 	client    *http.Client
+	url       string
 	req       *http.Request
 	closeOnce sync.Once
 	closed    chan struct{}
+	mu        sync.Mutex
+	headers   http.Header
 }
 
 // httpConn is treated specially by Client.
@@ -106,16 +110,25 @@ var DefaultHTTPTimeouts = HTTPTimeouts{
 // DialHTTPWithClient creates a new RPC client that connects to an RPC server over HTTP
 // using the provided HTTP Client.
 func DialHTTPWithClient(endpoint string, client *http.Client) (*Client, error) {
-	req, err := http.NewRequest(http.MethodPost, endpoint, nil)
+	// Sanity check URL so we don't end up with a client that will fail every request.
+	_, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", contentType)
-	req.Header.Set("Accept", contentType)
 
 	initctx := context.Background()
+	headers := make(http.Header, 2)
+	headers.Set("accept", contentType)
+	headers.Set("content-type", contentType)
+
 	return NewClient(initctx, func(context.Context) (net.Conn, error) {
-		return &httpConn{client: client, req: req, closed: make(chan struct{})}, nil
+		hc := &httpConn{
+			client:  client,
+			headers: headers,
+			url:     endpoint,
+			closed:  make(chan struct{}),
+		}
+		return hc, nil
 	})
 }
 
@@ -135,7 +148,7 @@ func (c *Client) sendHTTP(ctx context.Context, op *requestOp, msg interface{}) e
 		if respBody != nil {
 			buf := new(bytes.Buffer)
 			if _, err2 := buf.ReadFrom(respBody); err2 == nil {
-				return fmt.Errorf("%v %v", err, buf.String())
+				return fmt.Errorf("%v: %v", err, buf.String())
 			}
 		}
 		return err
@@ -170,10 +183,18 @@ func (hc *httpConn) doRequest(ctx context.Context, msg interface{}) (io.ReadClos
 	if err != nil {
 		return nil, err
 	}
-	req := hc.req.WithContext(ctx)
-	req.Body = ioutil.NopCloser(bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", hc.url, ioutil.NopCloser(bytes.NewReader(body)))
+	if err != nil {
+		return nil, err
+	}
 	req.ContentLength = int64(len(body))
 
+	// set headers
+	hc.mu.Lock()
+	req.Header = hc.headers.Clone()
+	hc.mu.Unlock()
+
+	// do request
 	resp, err := hc.client.Do(req)
 	if err != nil {
 		return nil, err
