@@ -459,3 +459,12 @@ func (gov *Governance) GetGoverningInfoAtNumber(num uint64) (bool, common.Addres
 
 	return true, govNode.(common.Address), nil
 }
+
+func (gov *Governance) GetMinimumStakingAtNumber(num uint64) (uint64, error) {
+	minStaking, err := gov.GetItemAtNumberByIntKey(num, params.MinimumStake)
+	if err != nil {
+		return 0, err
+	}
+
+	return minStaking.(uint64), nil
+}

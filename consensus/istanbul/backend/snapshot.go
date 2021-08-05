@@ -193,7 +193,12 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 
 			pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
 			if pHeader != nil {
-				if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config(), isSingle, govNode); err != nil {
+				minStaking, err := gov.GetMinimumStakingAtNumber(pHeader.Number.Uint64())
+				if err != nil {
+					return nil, err
+				}
+
+				if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config(), isSingle, govNode, minStaking); err != nil {
 					// There are three error cases and they just don't refresh proposers
 					// (1) no validator at all
 					// (2) invalid formatted hash
