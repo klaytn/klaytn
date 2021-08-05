@@ -50,10 +50,9 @@ var nullAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 type httpConn struct {
 	client    *http.Client
 	url       string
-	req       *http.Request
 	closeOnce sync.Once
 	closed    chan struct{}
-	mu        sync.Mutex
+	mu        sync.Mutex // protects headers
 	headers   http.Header
 }
 
