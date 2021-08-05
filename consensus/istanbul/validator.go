@@ -109,7 +109,7 @@ type ValidatorSet interface {
 	IsSubSet() bool
 
 	// Refreshes a list of candidate proposers with given hash and blockNum
-	Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address) error
+	Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error
 
 	SetBlockNum(blockNum uint64)
 

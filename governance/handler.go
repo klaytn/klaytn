@@ -54,7 +54,7 @@ var GovernanceItems = map[int]check{
 	params.Ratio:                   {stringT, checkRatio, nil},
 	params.UseGiniCoeff:            {boolT, checkUint64andBool, updateUseGiniCoeff},
 	params.DeferredTxFee:           {boolT, checkUint64andBool, nil},
-	params.MinimumStake:            {stringT, checkBigInt, updateMinimumStakingAmount},
+	params.MinimumStake:            {stringT, checkBigInt, nil},
 	params.StakeUpdateInterval:     {uint64T, checkUint64andBool, updateStakingUpdateInterval},
 	params.ProposerRefreshInterval: {uint64T, checkUint64andBool, updateProposerUpdateInterval},
 	params.Epoch:                   {uint64T, checkUint64andBool, nil},
@@ -461,4 +461,13 @@ func (gov *Governance) GetGoverningInfoAtNumber(num uint64) (bool, common.Addres
 	}
 
 	return true, govNode.(common.Address), nil
+}
+
+func (gov *Governance) GetMinimumStakingAtNumber(num uint64) (uint64, error) {
+	minStaking, err := gov.GetItemAtNumberByIntKey(num, params.MinimumStake)
+	if err != nil {
+		return 0, err
+	}
+	bigMinStaking, _ := new(big.Int).SetString(minStaking.(string), 10)
+	return bigMinStaking.Uint64(), nil
 }

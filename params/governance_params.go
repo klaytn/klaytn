@@ -47,6 +47,7 @@ var (
 
 	DefaultMintedKLAY = big.NewInt(0).Mul(big.NewInt(defaultMintedKLAYInSton), big.NewInt(Ston))
 
+	// TODO-Governance remove below minimum staking amount parameter
 	defaultMinimumStakingAmount = big.NewInt(0).Mul(big.NewInt(defaultMinimumStakingAmountInKlay), big.NewInt(KLAY))
 	minimumStakingAmount        atomic.Value
 
