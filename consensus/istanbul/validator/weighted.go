@@ -439,10 +439,25 @@ func (valSet *weightedCouncil) getByAddress(addr common.Address) (int, istanbul.
 	return -1, nil
 }
 
+func (valSet *weightedCouncil) getDemotedByAddress(addr common.Address) (int, istanbul.Validator) {
+	for i, val := range valSet.demotedValidators {
+		if addr == val.Address() {
+			return i, val
+		}
+	}
+	return -1, nil
+}
+
 func (valSet *weightedCouncil) GetByAddress(addr common.Address) (int, istanbul.Validator) {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 	return valSet.getByAddress(addr)
+}
+
+func (valSet *weightedCouncil) GetDemotedByAddress(addr common.Address) (int, istanbul.Validator) {
+	valSet.validatorMu.RLock()
+	defer valSet.validatorMu.RUnlock()
+	return valSet.getDemotedByAddress(addr)
 }
 
 func (valSet *weightedCouncil) GetProposer() istanbul.Validator {
