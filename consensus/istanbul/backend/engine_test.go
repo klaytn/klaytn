@@ -59,6 +59,8 @@ type stakingUpdateInterval uint64
 type proposerUpdateInterval uint64
 type proposerPolicy uint64
 type governanceMode string
+type epoch uint64
+type blockPeriod uint64
 
 // makeCommittedSeals returns a list of committed seals for the global variable nodeKeys.
 func makeCommittedSeals(hash common.Hash) [][]byte {
@@ -81,7 +83,10 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	genesis.Config = params.TestChainConfig
 	genesis.Timestamp = uint64(time.Now().Unix())
 
-	var key *ecdsa.PrivateKey
+	var (
+		key    *ecdsa.PrivateKey
+		period = istanbul.DefaultConfig.BlockPeriod
+	)
 	// force enable Istanbul engine and governance
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
 	genesis.Config.Governance = params.GetDefaultGovernanceConfig(params.UseIstanbul)
@@ -91,6 +96,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.IstanbulCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
+		case epoch:
+			genesis.Config.Istanbul.Epoch = uint64(v)
 		case minimumStake:
 			genesis.Config.Governance.Reward.MinimumStake = v
 		case stakingUpdateInterval:
@@ -101,6 +108,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.Governance.GovernanceMode = string(v)
 		case *ecdsa.PrivateKey:
 			key = v
+		case blockPeriod:
+			period = uint64(v)
 		}
 	}
 	nodeKeys = make([]*ecdsa.PrivateKey, n)
@@ -108,7 +117,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 
 	var b *backend
 	if len(items) != 0 {
-		b = newTestBackendWithConfig(genesis.Config, key)
+		b = newTestBackendWithConfig(genesis.Config, period, key)
 	} else {
 		b = newTestBackend()
 	}
@@ -178,7 +187,7 @@ func makeBlock(chain *blockchain.BlockChain, engine *backend, parent *types.Bloc
 
 // makeBlockWithSeal creates a block with the proposer seal as well as all committed seals of validators.
 func makeBlockWithSeal(chain *blockchain.BlockChain, engine *backend, parent *types.Block) *types.Block {
-	blockWithoutSeal := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+	blockWithoutSeal := makeBlockWithoutSeal(chain, engine, parent)
 
 	// add proposer seal for the block
 	block, err := engine.updateBlock(nil, blockWithoutSeal)
@@ -644,7 +653,7 @@ func makeExpectedResult(indices []int, candidate []common.Address) []common.Addr
 	return copyAndSortAddrs(expected)
 }
 
-func TestSnapshot(t *testing.T) {
+func TestSnapshot_MinimumStaking(t *testing.T) {
 	type testcase struct {
 		stakingAmounts       []uint64 // test staking amounts of each validator
 		isIstanbulCompatible bool     // whether or not if the inserted block is istanbul compatible
@@ -809,6 +818,176 @@ func TestSnapshot(t *testing.T) {
 		assert.Equal(t, expectedDemoted, demoted)
 
 		reward.SetTestStakingManager(oldStakingManager)
+		engine.Stop()
+	}
+}
+
+func TestGovernance_Votes(t *testing.T) {
+	type vote struct {
+		key   string
+		value interface{}
+	}
+	type governanceItem struct {
+		vote
+		appliedBlockNumber uint64 // if applied block number is 0, then it checks the item on current block
+	}
+	type testcase struct {
+		votes    []vote
+		expected []governanceItem
+		final    []vote
+	}
+
+	testcases := []testcase{
+		{
+			votes: []vote{
+				{"governance.governancemode", "none"},     // voted on 1 block
+				{"istanbul.committeesize", uint64(4)},     // voted on 2 block
+				{"governance.unitprice", uint64(2000000)}, // voted on 3 block
+				{"reward.mintingamount", "96000000000"},   // voted on 4 block
+				{"reward.ratio", "34/33/33"},              // voted on 5 block
+				{"reward.useginicoeff", true},             // voted on 6 block
+				{"reward.minimumstake", "5000000"},        // voted on 7 block
+			},
+			expected: []governanceItem{
+				{vote{"governance.governancemode", "none"}, 4},
+				{vote{"istanbul.committeesize", uint64(4)}, 6},
+				{vote{"governance.unitprice", uint64(2000000)}, 6},
+				{vote{"reward.mintingamount", "96000000000"}, 8},
+				{vote{"reward.ratio", "34/33/33"}, 8},
+				{vote{"reward.useginicoeff", true}, 10},
+				{vote{"reward.minimumstake", "5000000"}, 10},
+				// check governance items on current block
+				{vote{"governance.governancemode", "none"}, 0},
+				{vote{"istanbul.committeesize", uint64(4)}, 0},
+				{vote{"governance.unitprice", uint64(2000000)}, 0},
+				{vote{"reward.mintingamount", "96000000000"}, 0},
+				{vote{"reward.ratio", "34/33/33"}, 0},
+				{vote{"reward.useginicoeff", true}, 0},
+				{vote{"reward.minimumstake", "5000000"}, 0},
+			},
+		},
+		{
+			votes: []vote{
+				{"governance.governancemode", "none"},   // voted on 1 block
+				{"governance.governancemode", "single"}, // voted on 2 block
+				{"governance.governancemode", "none"},   // voted on 3 block
+				{"governance.governancemode", "single"}, // voted on 4 block
+				{"governance.governancemode", "none"},   // voted on 5 block
+				{"governance.governancemode", "single"}, // voted on 6 block
+				{"governance.governancemode", "none"},   // voted on 7 block
+			},
+			expected: []governanceItem{
+				{vote{"governance.governancemode", "none"}, 4},
+				{vote{"governance.governancemode", "none"}, 6},
+				{vote{"governance.governancemode", "none"}, 8},
+				{vote{"governance.governancemode", "none"}, 10},
+				// check governance items on current block
+				{vote{"governance.governancemode", "none"}, 0},
+			},
+		},
+		{
+			votes: []vote{
+				{"governance.governancemode", "none"},     // voted on 1 block
+				{"istanbul.committeesize", uint64(4)},     // voted on 2 block
+				{"governance.unitprice", uint64(2000000)}, // voted on 3 block
+				{"governance.governancemode", "single"},   // voted on 5 block
+				{"istanbul.committeesize", uint64(22)},    // voted on 4 block
+				{"governance.unitprice", uint64(2)},       // voted on 6 block
+				{"governance.governancemode", "none"},     // voted on 7 block
+			},
+			expected: []governanceItem{
+				// governance mode for all blocks
+				{vote{"governance.governancemode", "single"}, 1},
+				{vote{"governance.governancemode", "single"}, 2},
+				{vote{"governance.governancemode", "single"}, 3},
+				{vote{"governance.governancemode", "none"}, 4},
+				{vote{"governance.governancemode", "none"}, 5},
+				{vote{"governance.governancemode", "none"}, 6},
+				{vote{"governance.governancemode", "none"}, 7},
+				{vote{"governance.governancemode", "single"}, 8},
+				{vote{"governance.governancemode", "single"}, 9},
+				{vote{"governance.governancemode", "none"}, 10},
+				{vote{"governance.governancemode", "none"}, 11},
+
+				// committee size for all blocks
+				{vote{"istanbul.committeesize", uint64(21)}, 1},
+				{vote{"istanbul.committeesize", uint64(21)}, 2},
+				{vote{"istanbul.committeesize", uint64(21)}, 3},
+				{vote{"istanbul.committeesize", uint64(21)}, 4},
+				{vote{"istanbul.committeesize", uint64(21)}, 5},
+				{vote{"istanbul.committeesize", uint64(4)}, 6},
+				{vote{"istanbul.committeesize", uint64(4)}, 7},
+				{vote{"istanbul.committeesize", uint64(22)}, 8},
+				{vote{"istanbul.committeesize", uint64(22)}, 9},
+				{vote{"istanbul.committeesize", uint64(22)}, 10},
+				{vote{"istanbul.committeesize", uint64(22)}, 11},
+
+				// unitprice for all blocks
+				{vote{"governance.unitprice", uint64(1)}, 1},
+				{vote{"governance.unitprice", uint64(1)}, 2},
+				{vote{"governance.unitprice", uint64(1)}, 3},
+				{vote{"governance.unitprice", uint64(1)}, 4},
+				{vote{"governance.unitprice", uint64(1)}, 5},
+				{vote{"governance.unitprice", uint64(2000000)}, 6},
+				{vote{"governance.unitprice", uint64(2000000)}, 7},
+				{vote{"governance.unitprice", uint64(2000000)}, 8},
+				{vote{"governance.unitprice", uint64(2000000)}, 9},
+				{vote{"governance.unitprice", uint64(2)}, 10},
+				{vote{"governance.unitprice", uint64(2)}, 11},
+			},
+		},
+	}
+
+	var configItems []interface{}
+	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
+	configItems = append(configItems, epoch(2))
+	configItems = append(configItems, governanceMode("single"))
+	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+	for _, tc := range testcases {
+		chain, engine := newBlockChain(1, configItems...)
+
+		// test initial governance items
+		assert.Equal(t, uint64(2), engine.governance.Epoch())
+		assert.Equal(t, "single", engine.governance.GovernanceMode())
+		assert.Equal(t, uint64(21), engine.governance.CommitteeSize())
+		assert.Equal(t, uint64(1), engine.governance.UnitPrice())
+		assert.Equal(t, "0", engine.governance.MintingAmount())
+		assert.Equal(t, "100/0/0", engine.governance.Ratio())
+		assert.Equal(t, false, engine.governance.UseGiniCoeff())
+		assert.Equal(t, "2000000", engine.governance.MinimumStake())
+
+		// add votes and insert voted blocks
+		var (
+			previousBlock, currentBlock *types.Block = nil, chain.Genesis()
+			err                         error
+		)
+
+		for _, vote := range tc.votes {
+			engine.governance.AddVote(vote.key, vote.value)
+			previousBlock = currentBlock
+			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+			_, err = chain.InsertChain(types.Blocks{currentBlock})
+			assert.NoError(t, err)
+		}
+
+		// insert blocks until the vote is applied
+		for i := 0; i < 4; i++ {
+			previousBlock = currentBlock
+			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+			_, err = chain.InsertChain(types.Blocks{currentBlock})
+			assert.NoError(t, err)
+		}
+
+		for _, item := range tc.expected {
+			blockNumber := item.appliedBlockNumber
+			if blockNumber == 0 {
+				blockNumber = chain.CurrentBlock().NumberU64()
+			}
+			_, items, err := engine.governance.ReadGovernance(blockNumber)
+			assert.NoError(t, err)
+			assert.Equal(t, item.value, items[item.key])
+		}
+
 		engine.Stop()
 	}
 }

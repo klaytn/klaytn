@@ -808,10 +808,10 @@ func checkInCommitteeBlocks(seq int64, round int64) bool {
 func newTestBackend() (b *backend) {
 	config := getTestConfig()
 	config.Istanbul.ProposerPolicy = params.WeightedRandom
-	return newTestBackendWithConfig(config, nil)
+	return newTestBackendWithConfig(config, istanbul.DefaultConfig.BlockPeriod, nil)
 }
 
-func newTestBackendWithConfig(chainConfig *params.ChainConfig, key *ecdsa.PrivateKey) (b *backend) {
+func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint64, key *ecdsa.PrivateKey) (b *backend) {
 	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 	if key == nil {
 		// if key is nil, generate new key for a test account
@@ -823,11 +823,13 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, key *ecdsa.Privat
 	}
 	gov := governance.NewGovernanceInitialize(chainConfig, dbm)
 	istanbulConfig := istanbul.DefaultConfig
+	istanbulConfig.BlockPeriod = blockPeriod
 	istanbulConfig.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
 	istanbulConfig.Epoch = chainConfig.Istanbul.Epoch
 	istanbulConfig.SubGroupSize = chainConfig.Istanbul.SubGroupSize
 
 	backend := New(getTestRewards()[0], istanbulConfig, key, dbm, gov, common.CONSENSUSNODE).(*backend)
+	gov.SetNodeAddress(crypto.PubkeyToAddress(key.PublicKey))
 	return backend
 }
 
