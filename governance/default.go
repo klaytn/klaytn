@@ -266,14 +266,7 @@ func (vl *VoteMap) Clear() {
 	vl.mu.Lock()
 	defer vl.mu.Unlock()
 
-	// TODO-Governance if vote is not casted, it can remain forever. So, it would be better to add expiration.
-	newItems := make(map[string]VoteStatus)
-	for k, v := range vl.items {
-		if !v.Casted {
-			newItems[k] = v
-		}
-	}
-	vl.items = newItems
+	vl.items = make(map[string]VoteStatus)
 }
 
 func (vl *VoteMap) Size() int {
