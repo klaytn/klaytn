@@ -783,3 +783,28 @@ func TestGovernance_HandleGovernanceVote_Ballot_mode(t *testing.T) {
 	}
 	gov.voteMap.Clear()
 }
+
+func TestGovernance_checkVote(t *testing.T) {
+	// Create ValidatorSet
+	council := getTestCouncil()
+	validators := []common.Address{council[0], council[1]}
+	demotedValidators := []common.Address{council[2], council[3]}
+
+	valSet := validator.NewWeightedCouncil(validators, demotedValidators, nil, getTestVotingPowers(len(validators)), nil, istanbul.WeightedRandom, 21, 0, 0, nil)
+
+	config := getTestConfig()
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	gov := NewGovernanceInitialize(config, dbm)
+
+	unknown := common.HexToAddress("0xa")
+
+	// for adding validator
+	assert.True(t, gov.checkVote(unknown, true, valSet))
+	assert.True(t, gov.checkVote(validators[0], false, valSet))
+	assert.True(t, gov.checkVote(demotedValidators[0], false, valSet))
+
+	// for removing validator
+	assert.False(t, gov.checkVote(unknown, false, valSet))
+	assert.False(t, gov.checkVote(validators[1], true, valSet))
+	assert.False(t, gov.checkVote(demotedValidators[1], true, valSet))
+}
