@@ -834,7 +834,6 @@ func TestGovernance_Votes(t *testing.T) {
 	type testcase struct {
 		votes    []vote
 		expected []governanceItem
-		final    []vote
 	}
 
 	testcases := []testcase{
@@ -843,21 +842,19 @@ func TestGovernance_Votes(t *testing.T) {
 				{"governance.governancemode", "none"},     // voted on block 1
 				{"istanbul.committeesize", uint64(4)},     // voted on block 2
 				{"governance.unitprice", uint64(2000000)}, // voted on block 3
-				{},                                      // voted on block 4
-				{"reward.mintingamount", "96000000000"}, // voted on block 5
-				{"reward.ratio", "34/33/33"},            // voted on block 6
-				{},                                      // voted on block 7
-				{"reward.useginicoeff", true},           // voted on block 8
-				{"reward.minimumstake", "5000000"},      // voted on block 9
+				{"reward.mintingamount", "96000000000"},   // voted on block 4
+				{"reward.ratio", "34/33/33"},              // voted on block 5
+				{"reward.useginicoeff", true},             // voted on block 6
+				{"reward.minimumstake", "5000000"},        // voted on block 7
 			},
 			expected: []governanceItem{
 				{vote{"governance.governancemode", "none"}, 6},
 				{vote{"istanbul.committeesize", uint64(4)}, 6},
 				{vote{"governance.unitprice", uint64(2000000)}, 9},
 				{vote{"reward.mintingamount", "96000000000"}, 9},
-				{vote{"reward.ratio", "34/33/33"}, 12},
+				{vote{"reward.ratio", "34/33/33"}, 9},
 				{vote{"reward.useginicoeff", true}, 12},
-				{vote{"reward.minimumstake", "5000000"}, 15},
+				{vote{"reward.minimumstake", "5000000"}, 12},
 				// check governance items on current block
 				{vote{"governance.governancemode", "none"}, 0},
 				{vote{"istanbul.committeesize", uint64(4)}, 0},
@@ -873,20 +870,18 @@ func TestGovernance_Votes(t *testing.T) {
 				{"governance.governancemode", "none"},   // voted on block 1
 				{"governance.governancemode", "single"}, // voted on block 2
 				{"governance.governancemode", "none"},   // voted on block 3
-				{},                                      // voted on block 4
-				{"governance.governancemode", "single"}, // voted on block 5
-				{"governance.governancemode", "none"},   // voted on block 6
-				{},                                      // voted on block 7
+				{"governance.governancemode", "single"}, // voted on block 4
+				{"governance.governancemode", "none"},   // voted on block 5
+				{"governance.governancemode", "single"}, // voted on block 6
+				{"governance.governancemode", "none"},   // voted on block 7
 				{"governance.governancemode", "single"}, // voted on block 8
 				{"governance.governancemode", "none"},   // voted on block 9
 			},
 			expected: []governanceItem{
 				{vote{"governance.governancemode", "single"}, 6},
-				{vote{"governance.governancemode", "single"}, 9},
+				{vote{"governance.governancemode", "none"}, 9},
 				{vote{"governance.governancemode", "single"}, 12},
 				{vote{"governance.governancemode", "none"}, 15},
-				// check governance items on current block
-				{vote{"governance.governancemode", "none"}, 0},
 			},
 		},
 		{
@@ -894,12 +889,10 @@ func TestGovernance_Votes(t *testing.T) {
 				{"governance.governancemode", "none"},     // voted on block 1
 				{"istanbul.committeesize", uint64(4)},     // voted on block 2
 				{"governance.unitprice", uint64(2000000)}, // voted on block 3
-				{},                                      // voted on block 4
-				{"governance.governancemode", "single"}, // voted on block 5
-				{"istanbul.committeesize", uint64(22)},  // voted on block 6
-				{},                                      // voted on block 7
-				{"governance.unitprice", uint64(2)},     // voted on block 8
-				{"governance.governancemode", "none"},   // voted on block 9
+				{"governance.governancemode", "single"},   // voted on block 4
+				{"istanbul.committeesize", uint64(22)},    // voted on block 5
+				{"governance.unitprice", uint64(2)},       // voted on block 6
+				{"governance.governancemode", "none"},     // voted on block 7
 			},
 			expected: []governanceItem{
 				// governance mode for all blocks
@@ -914,11 +907,10 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"governance.governancemode", "single"}, 9},
 				{vote{"governance.governancemode", "single"}, 10},
 				{vote{"governance.governancemode", "single"}, 11},
-				{vote{"governance.governancemode", "single"}, 12},
-				{vote{"governance.governancemode", "single"}, 13},
-				{vote{"governance.governancemode", "single"}, 14},
-				{vote{"governance.governancemode", "none"}, 15},
-				{vote{"governance.governancemode", "none"}, 16},
+				{vote{"governance.governancemode", "none"}, 12},
+				{vote{"governance.governancemode", "none"}, 13},
+				{vote{"governance.governancemode", "none"}, 14},
+				{vote{"governance.governancemode", "none"}, 0}, // check on current
 
 				// committee size for all blocks
 				{vote{"istanbul.committeesize", uint64(21)}, 1},
@@ -929,14 +921,13 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"istanbul.committeesize", uint64(4)}, 6},
 				{vote{"istanbul.committeesize", uint64(4)}, 7},
 				{vote{"istanbul.committeesize", uint64(4)}, 8},
-				{vote{"istanbul.committeesize", uint64(4)}, 9},
-				{vote{"istanbul.committeesize", uint64(4)}, 10},
-				{vote{"istanbul.committeesize", uint64(4)}, 11},
+				{vote{"istanbul.committeesize", uint64(22)}, 9},
+				{vote{"istanbul.committeesize", uint64(22)}, 10},
+				{vote{"istanbul.committeesize", uint64(22)}, 11},
 				{vote{"istanbul.committeesize", uint64(22)}, 12},
 				{vote{"istanbul.committeesize", uint64(22)}, 13},
 				{vote{"istanbul.committeesize", uint64(22)}, 14},
-				{vote{"istanbul.committeesize", uint64(22)}, 15},
-				{vote{"istanbul.committeesize", uint64(22)}, 16},
+				{vote{"istanbul.committeesize", uint64(22)}, 0}, // check on current
 
 				// unitprice for all blocks
 				{vote{"governance.unitprice", uint64(1)}, 1},
@@ -953,8 +944,7 @@ func TestGovernance_Votes(t *testing.T) {
 				{vote{"governance.unitprice", uint64(2)}, 12},
 				{vote{"governance.unitprice", uint64(2)}, 13},
 				{vote{"governance.unitprice", uint64(2)}, 14},
-				{vote{"governance.unitprice", uint64(2)}, 15},
-				{vote{"governance.unitprice", uint64(2)}, 16},
+				{vote{"governance.unitprice", uint64(2)}, 0}, // check on current
 			},
 		},
 	}
@@ -984,9 +974,7 @@ func TestGovernance_Votes(t *testing.T) {
 		)
 
 		for _, v := range tc.votes {
-			if v != (vote{}) {
-				engine.governance.AddVote(v.key, v.value)
-			}
+			engine.governance.AddVote(v.key, v.value)
 			previousBlock = currentBlock
 			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
 			_, err = chain.InsertChain(types.Blocks{currentBlock})
