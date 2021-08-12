@@ -653,6 +653,126 @@ func makeExpectedResult(indices []int, candidate []common.Address) []common.Addr
 	return copyAndSortAddrs(expected)
 }
 
+func TestSnapshot_MinimumStaking2(t *testing.T) {
+	type vote struct {
+		key   string
+		value interface{}
+	}
+	type expected struct {
+		blocks     []uint64
+		validators []int
+		demoted    []int
+	}
+	type testcase struct {
+		stakingInfo []uint64
+		votes       []vote
+		expected    []expected
+	}
+
+	testcases := []testcase{
+		{
+			[]uint64{8000000, 7000000, 6000000, 5000000},
+			[]vote{
+				{"governance.governancemode", "none"}, // on epoch 1
+				{"reward.minimumstake", "5500000"},    // on epoch 2
+				{"reward.minimumstake", "6500000"},    // on epoch 3
+				{"reward.minimumstake", "7500000"},    // on epoch 4
+				{"reward.minimumstake", "8500000"},    // on epoch 5
+			},
+			[]expected{
+				{[]uint64{0, 1, 2, 3, 4, 5, 6, 7, 8}, []int{0, 1, 2, 3}, []int{}},
+				{[]uint64{9, 10, 11}, []int{0, 1, 2}, []int{3}},
+				{[]uint64{12, 13, 14}, []int{0, 1}, []int{2, 3}},
+				{[]uint64{15, 16, 17}, []int{0}, []int{1, 2, 3}},
+			},
+		},
+		{
+			[]uint64{8000000, 7000000, 6000000, 5000000},
+			[]vote{
+				{"reward.minimumstake", "7500000"},      // on epoch 1
+				{"governance.governancemode", "none"},   // on epoch 2
+				{"governance.governancemode", "single"}, // on epoch 3
+				{"governance.governingnode", 1},         // on epoch 4
+				{"governance.governingnode", 2},         // on epoch 5
+			},
+			[]expected{
+				{[]uint64{0, 1, 2, 3, 4, 5}, []int{0, 1, 2, 3}, []int{}},
+				{[]uint64{6, 7, 8}, []int{0}, []int{1, 2, 3}},
+			},
+		},
+	}
+
+	testEpoch := 3
+
+	var configItems []interface{}
+	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
+	configItems = append(configItems, proposerUpdateInterval(1))
+	configItems = append(configItems, epoch(testEpoch))
+	configItems = append(configItems, governanceMode("single"))
+	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(4000000)))
+	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+
+	for _, tc := range testcases {
+		chain, engine := newBlockChain(4, configItems...)
+
+		// set old staking manager after finishing this test.
+		oldStakingManager := reward.GetStakingManager()
+
+		// set new staking manager with the given staking information.
+		stakingInfo := makeFakeStakingInfo(0, nodeKeys, tc.stakingInfo)
+		reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+
+		var (
+			previousBlock, currentBlock *types.Block = nil, chain.Genesis()
+		)
+
+		for _, v := range tc.votes {
+			// vote a vote in each epoch
+			if v.key == "governance.governingnode" {
+				idx := v.value.(int)
+				v.value = addrs[idx].String()
+			}
+			engine.governance.AddVote(v.key, v.value)
+
+			for i := 0; i < testEpoch; i++ {
+				previousBlock = currentBlock
+				currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+				_, err := chain.InsertChain(types.Blocks{currentBlock})
+				assert.NoError(t, err)
+			}
+		}
+
+		// insert blocks on extra epoch
+		for i := 0; i < 2*testEpoch; i++ {
+			previousBlock = currentBlock
+			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
+			_, err := chain.InsertChain(types.Blocks{currentBlock})
+			assert.NoError(t, err)
+		}
+
+		for _, e := range tc.expected {
+			for _, num := range e.blocks {
+				block := chain.GetBlockByNumber(num)
+				snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil)
+				assert.NoError(t, err)
+
+				validators := toAddressList(snap.ValSet.List())
+				demoted := toAddressList(snap.ValSet.DemotedList())
+
+				expectedValidators := makeExpectedResult(e.validators, addrs)
+				expectedDemoted := makeExpectedResult(e.demoted, addrs)
+
+				assert.Equal(t, expectedValidators, validators)
+				assert.Equal(t, expectedDemoted, demoted)
+			}
+		}
+
+		reward.SetTestStakingManager(oldStakingManager)
+		engine.Stop()
+	}
+}
+
 func TestSnapshot_MinimumStaking(t *testing.T) {
 	type testcase struct {
 		stakingAmounts       []uint64 // test staking amounts of each validator
