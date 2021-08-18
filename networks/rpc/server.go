@@ -427,7 +427,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 			e := reply[req.callb.errPos].Interface().(error)
 			rpcErrorResponsesCounter.Inc(1)
 			res := codec.CreateErrorResponse(&req.id, &callbackError{e.Error()})
-			logger.Error("RPCError", "reqId", fmt.Sprintf("%s", req.id), "err", e, "method", fmt.Sprintf("%s%s%s", req.svcname, serviceMethodSeparator, req.callb.method.Name))
+			logger.Trace("RPCError", "reqId", fmt.Sprintf("%s", req.id), "err", e, "method", fmt.Sprintf("%s%s%s", req.svcname, serviceMethodSeparator, req.callb.method.Name))
 			return res, nil
 		}
 	}
