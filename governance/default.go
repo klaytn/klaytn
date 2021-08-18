@@ -750,7 +750,9 @@ func (g *Governance) GetGovernanceChange() map[string]interface{} {
 	return nil
 }
 
-func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
+// WriteGovernanceForNextEpoch creates governance items for next epoch and writes them to the database.
+// The governance items on next epoch will be the given `governance` items applied on the top of past epoch items.
+func (gov *Governance) WriteGovernanceForNextEpoch(number uint64, governance []byte) {
 	var epoch uint64
 	var ok bool
 
@@ -787,7 +789,7 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 			govSet := NewGovernanceSet()
 			govSet.Import(govItems)
 
-			// Store new currentSet to governance database
+			// Store new governance items for next epoch to governance database
 			if err := gov.WriteGovernance(number, govSet, tempSet); err != nil {
 				logger.Crit("Failed to store new governance data", "number", number, "err", err)
 			}
@@ -799,7 +801,7 @@ func (gov *Governance) removeDuplicatedVote(vote *GovernanceVote, number uint64)
 	gov.RemoveVote(vote.Key, vote.Value, number)
 }
 
-func (gov *Governance) UpdateCurrentGovernance(num uint64) {
+func (gov *Governance) UpdateCurrentSet(num uint64) {
 	newNumber, newGovernanceSet, _ := gov.ReadGovernance(num)
 	// Do the change only when the governance actually changed
 	if newGovernanceSet != nil && newNumber > gov.actualGovernanceBlock.Load().(uint64) {

@@ -179,10 +179,10 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 		}
 
 		if number%snap.Epoch == 0 {
+			gov.UpdateCurrentSet(number)
 			if len(header.Governance) > 0 {
-				gov.UpdateGovernance(number, header.Governance)
+				gov.WriteGovernanceForNextEpoch(number, header.Governance)
 			}
-			gov.UpdateCurrentGovernance(number)
 			gov.ClearVotes(number)
 
 			// Reload governance values because epoch changed
