@@ -17,6 +17,7 @@
 package governance
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -468,6 +469,9 @@ func (gov *Governance) GetMinimumStakingAtNumber(num uint64) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	bigMinStaking, _ := new(big.Int).SetString(minStaking.(string), 10)
+	bigMinStaking, ok := new(big.Int).SetString(minStaking.(string), 10)
+	if !ok {
+		return 0, fmt.Errorf("invalid number string: %v", minStaking)
+	}
 	return bigMinStaking.Uint64(), nil
 }
