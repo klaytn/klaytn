@@ -653,7 +653,7 @@ func makeExpectedResult(indices []int, candidate []common.Address) []common.Addr
 	return copyAndSortAddrs(expected)
 }
 
-func TestSnapshot_MinimumStaking2(t *testing.T) {
+func TestSnapshot_MinimumStaking(t *testing.T) {
 	type vote struct {
 		key   string
 		value interface{}
@@ -673,31 +673,61 @@ func TestSnapshot_MinimumStaking2(t *testing.T) {
 		{
 			[]uint64{8000000, 7000000, 6000000, 5000000},
 			[]vote{
-				{"governance.governancemode", "none"}, // on epoch 1
-				{"reward.minimumstake", "5500000"},    // on epoch 2
-				{"reward.minimumstake", "6500000"},    // on epoch 3
-				{"reward.minimumstake", "7500000"},    // on epoch 4
-				{"reward.minimumstake", "8500000"},    // on epoch 5
+				{"governance.governancemode", "none"}, // voted on epoch 1, applied from 6-8
+				{"reward.minimumstake", "5500000"},    // voted on epoch 2, applied from 9-11
+				{"reward.minimumstake", "6500000"},    // voted on epoch 3, applied from 12-14
+				{"reward.minimumstake", "7500000"},    // voted on epoch 4, applied from 15-17
+				{"reward.minimumstake", "8500000"},    // voted on epoch 5, applied from 18-20
+				{"reward.minimumstake", "7500000"},    // voted on epoch 6, applied from 21-23
+				{"reward.minimumstake", "6500000"},    // voted on epoch 7, applied from 24-26
+				{"reward.minimumstake", "5500000"},    // voted on epoch 8, applied from 27-29
+				{"reward.minimumstake", "4500000"},    // voted on epoch 8, applied from 30-32
 			},
 			[]expected{
 				{[]uint64{0, 1, 2, 3, 4, 5, 6, 7, 8}, []int{0, 1, 2, 3}, []int{}},
 				{[]uint64{9, 10, 11}, []int{0, 1, 2}, []int{3}},
 				{[]uint64{12, 13, 14}, []int{0, 1}, []int{2, 3}},
 				{[]uint64{15, 16, 17}, []int{0}, []int{1, 2, 3}},
+				{[]uint64{18, 19, 20}, []int{0, 1, 2, 3}, []int{}},
+				{[]uint64{21, 22, 23}, []int{0}, []int{1, 2, 3}},
+				{[]uint64{24, 25, 26}, []int{0, 1}, []int{2, 3}},
+				{[]uint64{27, 28, 29}, []int{0, 1, 2}, []int{3}},
+				{[]uint64{30, 31, 32}, []int{0, 1, 2, 3}, []int{}},
 			},
 		},
 		{
-			[]uint64{8000000, 7000000, 6000000, 5000000},
+			[]uint64{5000000, 6000000, 7000000, 8000000},
 			[]vote{
-				{"reward.minimumstake", "7500000"},      // on epoch 1
-				{"governance.governancemode", "none"},   // on epoch 2
-				{"governance.governancemode", "single"}, // on epoch 3
-				{"governance.governingnode", 1},         // on epoch 4
-				{"governance.governingnode", 2},         // on epoch 5
+				{"reward.minimumstake", "8500000"}, // voted on epoch 1, applied from 6-8
+				{"reward.minimumstake", "7500000"}, // voted on epoch 2, applied from 9-11
+				{"reward.minimumstake", "6500000"}, // voted on epoch 3, applied from 12-14
+				{"reward.minimumstake", "5500000"}, // voted on epoch 4, applied from 15-17
+				{"reward.minimumstake", "4500000"}, // voted on epoch 5, applied from 18-20
+				{"reward.minimumstake", "5500000"}, // voted on epoch 6, applied from 21-23
+				{"reward.minimumstake", "6500000"}, // voted on epoch 7, applied from 24-26
+				{"reward.minimumstake", "7500000"}, // voted on epoch 8, applied from 27-29
+				{"reward.minimumstake", "8500000"}, // voted on epoch 8, applied from 30-32
+			},
+			[]expected{
+				{[]uint64{0, 1, 2, 3, 4, 5, 6, 7, 8}, []int{0, 1, 2, 3}, []int{}},
+				{[]uint64{9, 10, 11}, []int{0, 3}, []int{1, 2}},
+				{[]uint64{12, 13, 14}, []int{0, 2, 3}, []int{1}},
+				{[]uint64{15, 16, 17, 18, 19, 20, 21, 22, 23}, []int{0, 1, 2, 3}, []int{}},
+				{[]uint64{24, 25, 26}, []int{0, 2, 3}, []int{1}},
+				{[]uint64{27, 28, 29}, []int{0, 3}, []int{1, 2}},
+				{[]uint64{30, 31, 32}, []int{0, 1, 2, 3}, []int{}},
+			},
+		},
+		{
+			[]uint64{6000000, 6000000, 5000000, 5000000},
+			[]vote{
+				{"reward.minimumstake", "5500000"}, // voted on epoch 1, applied from 6-8
+				{"governance.governingnode", 2},    // voted on epoch 2, applied from 9-11
 			},
 			[]expected{
 				{[]uint64{0, 1, 2, 3, 4, 5}, []int{0, 1, 2, 3}, []int{}},
-				{[]uint64{6, 7, 8}, []int{0}, []int{1, 2, 3}},
+				{[]uint64{6, 7, 8}, []int{0, 1}, []int{2, 3}},
+				{[]uint64{9, 10, 11}, []int{0, 1, 2}, []int{3}},
 			},
 		},
 	}
@@ -773,7 +803,7 @@ func TestSnapshot_MinimumStaking2(t *testing.T) {
 	}
 }
 
-func TestSnapshot_MinimumStaking(t *testing.T) {
+func TestSnapshot_MinimumStaking2(t *testing.T) {
 	type testcase struct {
 		stakingAmounts       []uint64 // test staking amounts of each validator
 		isIstanbulCompatible bool     // whether or not if the inserted block is istanbul compatible
