@@ -89,6 +89,8 @@ type ValidatorSet interface {
 	GetByIndex(i uint64) Validator
 	// Get validator by given address
 	GetByAddress(addr common.Address) (int, Validator)
+	// Get demoted validator by given address
+	GetDemotedByAddress(addr common.Address) (int, Validator)
 	// Get current proposer
 	GetProposer() Validator
 	// Check whether the validator with given address is a proposer

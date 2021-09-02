@@ -304,6 +304,9 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 
 func (gov *Governance) checkVote(address common.Address, authorize bool, valset istanbul.ValidatorSet) bool {
 	_, validator := valset.GetByAddress(address)
+	if validator == nil {
+		_, validator = valset.GetDemotedByAddress(address)
+	}
 	return (validator != nil && !authorize) || (validator == nil && authorize)
 }
 

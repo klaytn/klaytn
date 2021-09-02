@@ -256,6 +256,10 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, istanbul.Valid
 	return -1, nil
 }
 
+func (valSet *defaultSet) GetDemotedByAddress(addr common.Address) (int, istanbul.Validator) {
+	return -1, nil
+}
+
 func (valSet *defaultSet) GetProposer() istanbul.Validator {
 	proposer := valSet.proposer.Load()
 	if proposer == nil {
