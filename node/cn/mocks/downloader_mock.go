@@ -108,6 +108,32 @@ func (mr *MockProtocolManagerDownloaderMockRecorder) Progress() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Progress", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).Progress))
 }
 
+// StartBlockSync mocks base method
+func (m *MockProtocolManagerDownloader) StartBlockSync() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartBlockSync")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartBlockSync ndicates an expected call of StartBlockSync
+func (mr *MockProtocolManagerDownloaderMockRecorder) StartBlockSync() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartBlockSync", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).StartBlockSync))
+}
+
+// StopBlockSync mocks base method
+func (m *MockProtocolManagerDownloader) StopBlockSync() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopBlockSync")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopBlockSync ndicates an expected call of StopBlockSync
+func (mr *MockProtocolManagerDownloaderMockRecorder) StopBlockSync() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopBlockSync", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).StopBlockSync))
+}
+
 // RegisterPeer mocks base method
 func (m *MockProtocolManagerDownloader) RegisterPeer(arg0 string, arg1 int, arg2 downloader.Peer) error {
 	m.ctrl.T.Helper()

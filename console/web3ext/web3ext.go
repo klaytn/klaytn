@@ -270,6 +270,16 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
+			name: 'startBlockSync',
+			call: 'admin_startBlockSync',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'stopBlockSync',
+			call: 'admin_stopBlockSync',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'startHTTP',
 			call: 'admin_startHTTP',
 			params: 5,

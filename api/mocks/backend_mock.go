@@ -419,6 +419,32 @@ func (mr *MockBackendMockRecorder) Progress() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Progress", reflect.TypeOf((*MockBackend)(nil).Progress))
 }
 
+// StartBlockSync mocks base method
+func (m *MockBackend) StartBlockSync() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartBlockSync")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartBlockSync ndicates an expected call of StartBlockSync
+func (mr *MockBackendMockRecorder) StartBlockSync() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartBlockSync", reflect.TypeOf((*MockBackend)(nil).StartBlockSync))
+}
+
+// StopBlockSync mocks base method
+func (m *MockBackend) StopBlockSync() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopBlockSync")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopBlockSync ndicates an expected call of StopBlockSync
+func (mr *MockBackendMockRecorder) StopBlockSync() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopBlockSync", reflect.TypeOf((*MockBackend)(nil).StopBlockSync))
+}
+
 // ProtocolVersion mocks base method
 func (m *MockBackend) ProtocolVersion() int {
 	m.ctrl.T.Helper()

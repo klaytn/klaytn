@@ -100,6 +100,22 @@ func (api *PrivateAdminAPI) ExportChain(file string) (bool, error) {
 	return true, nil
 }
 
+// StartBlockSync starts node block sync.
+func (api *PrivateAdminAPI) StartBlockSync() (bool, error) {
+	if err := api.cn.protocolManager.Downloader().StartBlockSync(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// StopBlockSync stops node block sync.
+func (api *PrivateAdminAPI) StopBlockSync() (bool, error) {
+	if err := api.cn.protocolManager.Downloader().StopBlockSync(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func hasAllBlocks(chain work.BlockChain, bs []*types.Block) bool {
 	for _, b := range bs {
 		if !chain.HasBlock(b.Hash(), b.NumberU64()) {

@@ -74,6 +74,8 @@ var (
 
 var (
 	errBusy                    = errors.New("busy")
+	errSyncAlreadyStop         = errors.New("syncing already stopped")
+	errSyncAlreadyStart        = errors.New("syncing already started")
 	errUnknownPeer             = errors.New("peer is unknown or unhealthy")
 	errBadPeer                 = errors.New("action from bad peer ignored")
 	errStallingPeer            = errors.New("peer is stalling")
@@ -120,6 +122,7 @@ type Downloader struct {
 	// Status
 	synchroniseMock func(id string, hash common.Hash) error // Replacement for synchronise during testing
 	synchronising   int32
+	syncStopped     int32
 	notified        int32
 	committed       int32
 
@@ -230,6 +233,7 @@ func New(mode SyncMode, stateDB database.DBManager, stateBloom *statedb.SyncBloo
 			processed: stateDB.ReadFastTrieProgress(),
 		},
 		trackStateReq: make(chan *stateReq),
+		syncStopped:   int32(0),
 	}
 	go dl.qosTuner()
 	go dl.stateFetcher()
@@ -265,6 +269,22 @@ func (d *Downloader) Progress() klaytn.SyncProgress {
 		PulledStates:  d.syncStatsState.processed,
 		KnownStates:   d.syncStatsState.processed + d.syncStatsState.pending,
 	}
+}
+
+// StopBlockSync change downloader.syncStopped to 1.
+func (d *Downloader) StopBlockSync() error {
+	if !atomic.CompareAndSwapInt32(&d.syncStopped, 0, 1) {
+		return errSyncAlreadyStop
+	}
+	return nil
+}
+
+// StartBlockSync change downloader.syncStopped to 0.
+func (d *Downloader) StartBlockSync() error {
+	if !atomic.CompareAndSwapInt32(&d.syncStopped, 1, 0) {
+		return errSyncAlreadyStart
+	}
+	return nil
 }
 
 func (d *Downloader) getMode() SyncMode {
@@ -318,6 +338,9 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode 
 	switch err {
 	case nil, errBusy, errCanceled:
 		return err
+	case errSyncAlreadyStop:
+		logger.Warn("Synchronisation already stopped. If you want to start syncing, use admin_startBlockSync()")
+		return err
 	}
 
 	if errors.Is(err, errInvalidChain) {
@@ -357,6 +380,9 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	}
 	// TODO-Klaytn-Downloader Below code can be replaced by mutex.
 	// Make sure only one goroutine is ever allowed past this point at once
+	if atomic.LoadInt32(&d.syncStopped) == 1 {
+		return errSyncAlreadyStop
+	}
 	if !atomic.CompareAndSwapInt32(&d.synchronising, 0, 1) {
 		return errBusy
 	}
