@@ -178,6 +178,19 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			return nil, errUnauthorized
 		}
 
+		if number%snap.Epoch == 0 {
+			gov.UpdateCurrentSet(number)
+			if len(header.Governance) > 0 {
+				gov.WriteGovernanceForNextEpoch(number, header.Governance)
+			}
+			gov.ClearVotes(number)
+
+			// Reload governance values because epoch changed
+			snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, number)
+			snap.Votes = make([]governance.GovernanceVote, 0)
+			snap.Tally = make([]governance.GovernanceTallyItem, 0)
+		}
+
 		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr)
 		if policy == uint64(params.WeightedRandom) {
 			// Snapshot of block N (Snapshot_N) should contain proposers for N+1 and following blocks.
@@ -203,19 +216,6 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			} else {
 				logger.Trace("Can't refreshing proposers while creating snapshot due to lack of required header", "snap.Number", snap.Number)
 			}
-		}
-
-		if number%snap.Epoch == 0 {
-			if len(header.Governance) > 0 {
-				gov.UpdateGovernance(number, header.Governance)
-			}
-			gov.UpdateCurrentGovernance(number)
-			gov.ClearVotes(number)
-
-			// Reload governance values because epoch changed
-			snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, number)
-			snap.Votes = make([]governance.GovernanceVote, 0)
-			snap.Tally = make([]governance.GovernanceTallyItem, 0)
 		}
 	}
 	snap.Number += uint64(len(headers))
