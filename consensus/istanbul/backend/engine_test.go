@@ -80,7 +80,8 @@ func makeCommittedSeals(hash common.Hash) [][]byte {
 func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
 	// generate a genesis block
 	genesis := blockchain.DefaultGenesisBlock()
-	genesis.Config = params.TestChainConfig
+	config := *params.TestChainConfig // copy test chain config which may be modified
+	genesis.Config = &config
 	genesis.Timestamp = uint64(time.Now().Unix())
 
 	var (
