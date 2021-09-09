@@ -237,11 +237,12 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 		for _, vhost := range vhosts {
 			if vhost == "*" {
 				return &fasthttp.Server{
-					Concurrency:  ConcurrencyLimit,
-					Handler:      srv.HandleFastHTTP,
-					ReadTimeout:  timeouts.ReadTimeout,
-					WriteTimeout: timeouts.WriteTimeout,
-					IdleTimeout:  timeouts.IdleTimeout,
+					Concurrency:        ConcurrencyLimit,
+					Handler:            srv.HandleFastHTTP,
+					ReadTimeout:        timeouts.ReadTimeout,
+					WriteTimeout:       timeouts.WriteTimeout,
+					IdleTimeout:        timeouts.IdleTimeout,
+					MaxRequestBodySize: common.MaxRequestContentLength,
 				}
 			}
 		}
@@ -260,11 +261,12 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
 	return &fasthttp.Server{
-		Concurrency:  ConcurrencyLimit,
-		Handler:      fhandler,
-		ReadTimeout:  timeouts.ReadTimeout,
-		WriteTimeout: timeouts.WriteTimeout,
-		IdleTimeout:  timeouts.IdleTimeout,
+		Concurrency:        ConcurrencyLimit,
+		Handler:            fhandler,
+		ReadTimeout:        timeouts.ReadTimeout,
+		WriteTimeout:       timeouts.WriteTimeout,
+		IdleTimeout:        timeouts.IdleTimeout,
+		MaxRequestBodySize: common.MaxRequestContentLength,
 	}
 }
 
