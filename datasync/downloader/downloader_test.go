@@ -1338,6 +1338,31 @@ func testBlockHeaderAttackerDropping(t *testing.T, protocol int) {
 	}
 }
 
+func TestBlockSyncFail(t *testing.T) {
+	t.Parallel()
+
+	// Define the disconnection requirement for individual hash fetch errors
+	tests := []struct {
+		result error
+		stop   int32
+	}{
+		{errSyncAlreadyStop, 1}, // Sync failed, syncAlreadyStopErr occurs
+	}
+	// Run the tests and check disconnection status
+	tester := newTester()
+	defer tester.terminate()
+
+	for i, tt := range tests {
+		// Simulate a synchronisation and check the required result
+		tester.downloader.syncStopped = tt.stop
+
+		id := fmt.Sprintf("test %d", i)
+		if err := tester.downloader.Synchronise(id, tester.genesis.Hash(), big.NewInt(1000), FullSync); err != tt.result {
+			t.Errorf("test %d: stop sync fail : have %v, want %v", i, tt.result, err)
+		}
+	}
+}
+
 // Tests that synchronisation progress (origin block number, current block number
 // and highest block number) is tracked and updated correctly.
 func TestSyncProgress62(t *testing.T)      { testSyncProgress(t, 62, FullSync) }
