@@ -654,7 +654,7 @@ func makeExpectedResult(indices []int, candidate []common.Address) []common.Addr
 	return copyAndSortAddrs(expected)
 }
 
-func TestSnapshot_MinimumStaking(t *testing.T) {
+func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 	type vote struct {
 		key   string
 		value interface{}
@@ -671,7 +671,8 @@ func TestSnapshot_MinimumStaking(t *testing.T) {
 	}
 
 	testcases := []testcase{
-		{ // test the validators are updated properly when minimum staking is changed in none mode
+		{
+			// test the validators are updated properly when minimum staking is changed in none mode
 			[]uint64{8000000, 7000000, 6000000, 5000000},
 			[]vote{
 				{"governance.governancemode", "none"}, // voted on epoch 1, applied from 6-8
@@ -696,7 +697,8 @@ func TestSnapshot_MinimumStaking(t *testing.T) {
 				{[]uint64{30, 31, 32}, []int{0, 1, 2, 3}, []int{}},
 			},
 		},
-		{ // test the validators (including governing node) are updated properly when minimum staking is changed in single mode
+		{
+			// test the validators (including governing node) are updated properly when minimum staking is changed in single mode
 			[]uint64{5000000, 6000000, 7000000, 8000000},
 			[]vote{
 				{"reward.minimumstake", "8500000"}, // voted on epoch 1, applied from 6-8
@@ -710,7 +712,7 @@ func TestSnapshot_MinimumStaking(t *testing.T) {
 				{"reward.minimumstake", "8500000"}, // voted on epoch 9, applied from 30-32
 			},
 			[]expected{
-				// 0 is governing node, so it is included in th validators all the time
+				// 0 is governing node, so it is included in the validators all the time
 				{[]uint64{0, 1, 2, 3, 4, 5, 6, 7, 8}, []int{0, 1, 2, 3}, []int{}},
 				{[]uint64{9, 10, 11}, []int{0, 3}, []int{1, 2}},
 				{[]uint64{12, 13, 14}, []int{0, 2, 3}, []int{1}},
@@ -728,7 +730,7 @@ func TestSnapshot_MinimumStaking(t *testing.T) {
 				{"governance.governingnode", 2},    // voted on epoch 2, applied from 9-11
 			},
 			[]expected{
-				// 0 is governing node, so it is included in th validators all the time
+				// 0 is governing node, so it is included in the validators all the time
 				{[]uint64{0, 1, 2, 3, 4, 5}, []int{0, 1, 2, 3}, []int{}},
 				{[]uint64{6, 7, 8}, []int{0, 1}, []int{2, 3}},
 				{[]uint64{9, 10, 11}, []int{0, 1, 2}, []int{3}},
@@ -807,7 +809,7 @@ func TestSnapshot_MinimumStaking(t *testing.T) {
 	}
 }
 
-func TestSnapshot_MinimumStaking2(t *testing.T) {
+func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 	type testcase struct {
 		stakingAmounts       []uint64 // test staking amounts of each validator
 		isIstanbulCompatible bool     // whether or not if the inserted block is istanbul compatible
