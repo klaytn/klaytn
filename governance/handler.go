@@ -17,6 +17,7 @@
 package governance
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -54,7 +55,7 @@ var GovernanceItems = map[int]check{
 	params.Ratio:                   {stringT, checkRatio, nil},
 	params.UseGiniCoeff:            {boolT, checkUint64andBool, updateUseGiniCoeff},
 	params.DeferredTxFee:           {boolT, checkUint64andBool, nil},
-	params.MinimumStake:            {stringT, checkBigInt, updateMinimumStakingAmount},
+	params.MinimumStake:            {stringT, checkBigInt, nil},
 	params.StakeUpdateInterval:     {uint64T, checkUint64andBool, updateStakingUpdateInterval},
 	params.ProposerRefreshInterval: {uint64T, checkUint64andBool, updateProposerUpdateInterval},
 	params.Epoch:                   {uint64T, checkUint64andBool, nil},
@@ -389,6 +390,7 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 			(governanceMode == params.GovernanceMode_Ballot && currentVotes > valset.TotalVotingPower()/2) {
 			switch GovernanceKeyMap[gVote.Key] {
 			case params.AddValidator:
+				//reward.GetStakingInfo()
 				valset.AddValidator(gVote.Value.(common.Address))
 			case params.RemoveValidator:
 				target := gVote.Value.(common.Address)
@@ -461,4 +463,16 @@ func (gov *Governance) GetGoverningInfoAtNumber(num uint64) (bool, common.Addres
 	}
 
 	return true, govNode.(common.Address), nil
+}
+
+func (gov *Governance) GetMinimumStakingAtNumber(num uint64) (uint64, error) {
+	minStaking, err := gov.GetItemAtNumberByIntKey(num, params.MinimumStake)
+	if err != nil {
+		return 0, err
+	}
+	bigMinStaking, ok := new(big.Int).SetString(minStaking.(string), 10)
+	if !ok {
+		return 0, fmt.Errorf("invalid number string: %v", minStaking)
+	}
+	return bigMinStaking.Uint64(), nil
 }

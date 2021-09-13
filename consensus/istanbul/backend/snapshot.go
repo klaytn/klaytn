@@ -199,14 +199,19 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			//
 			// Proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
 			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
-			isSingle, govNode, err := gov.GetGoverningInfoAtNumber(number + 1)
+			isSingle, govNode, err := gov.GetGoverningInfoAtNumber(number)
+			if err != nil {
+				return nil, err
+			}
+
+			minStaking, err := gov.GetMinimumStakingAtNumber(number)
 			if err != nil {
 				return nil, err
 			}
 
 			pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
 			if pHeader != nil {
-				if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config(), isSingle, govNode); err != nil {
+				if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config(), isSingle, govNode, minStaking); err != nil {
 					// There are three error cases and they just don't refresh proposers
 					// (1) no validator at all
 					// (2) invalid formatted hash
