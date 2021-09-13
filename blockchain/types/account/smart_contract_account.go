@@ -56,7 +56,7 @@ type smartContractAccountSerializableJSON struct {
 	StorageRoot   common.Hash                      `json:"storageRoot"`
 	CodeHash      []byte                           `json:"codeHash"`
 	CodeFormat    params.CodeFormat                `json:"codeFormat"`
-	VmVersion     params.VmVersion                 `json:"vmVersion,omitempty"`
+	VmVersion     params.VmVersion                 `json:"vmVersion"`
 }
 
 func newSmartContractAccount() *SmartContractAccount {
