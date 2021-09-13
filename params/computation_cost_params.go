@@ -22,9 +22,7 @@ package params
 
 const (
 	// Computation cost for opcodes
-	ShlComputationCost            = 1603
-	ShrComputationCost            = 1346
-	SarComputationCost            = 1815
+	ExtCodeHashComputationCost    = 1000
 	Create2ComputationCost        = 10000
 	StaticCallComputationCost     = 10000
 	ReturnDataSizeComputationCost = 10
@@ -39,8 +37,6 @@ const (
 	SdivComputationCost           = 739
 	ModComputationCost            = 812
 	SmodComputationCost           = 560
-	AddmodComputationCost         = 3349
-	MulmodComputationCost         = 4757
 	ExpComputationCost            = 5000
 	SignExtendComputationCost     = 481
 	LtComputationCost             = 201
@@ -50,19 +46,18 @@ const (
 	EqComputationCost             = 220
 	IszeroComputationCost         = 165
 	AndComputationCost            = 288
-	XorComputationCost            = 657
 	OrComputationCost             = 160
-	NotComputationCost            = 1289
 	ByteComputationCost           = 589
 	Sha3ComputationCost           = 2465
 	AddressComputationCost        = 284
+	BalanceComputationCost        = 1407
 	OriginComputationCost         = 210
 	CallerComputationCost         = 188
 	CallValueComputationCost      = 149
 	CallDataLoadComputationCost   = 596
 	CallDataSizeComputationCost   = 194
 	CallDataCopyComputationCost   = 100
-	ChainIDComputationCost        = 150
+	ChainIDComputationCost        = 120
 	CodeSizeComputationCost       = 145
 	CodeCopyComputationCost       = 898
 	GasPriceComputationCost       = 131
@@ -78,6 +73,7 @@ const (
 	MloadComputationCost          = 376
 	MstoreComputationCost         = 288
 	Mstore8ComputationCost        = 5142
+	SloadComputationCost          = 835
 	SstoreComputationCost         = 1548
 	JumpComputationCost           = 253
 	JumpiComputationCost          = 176
@@ -102,7 +98,7 @@ const (
 	Dup14ComputationCost          = 143
 	Dup15ComputationCost          = 237
 	Dup16ComputationCost          = 149
-	SelfBalanceComputationCost    = 150
+	SelfBalanceComputationCost    = 374
 	Swap1ComputationCost          = 141
 	Swap2ComputationCost          = 156
 	Swap3ComputationCost          = 145
@@ -130,13 +126,21 @@ const (
 	ReturnComputationCost         = 0
 	SelfDestructComputationCost   = 0
 
-	// Istanbul version of BalanceGas, SloadGas, ExtcodeHash is added.
-	BalanceComputationCostEIP150             = 1407
-	BalanceComputationCostEIP1884            = 2462
-	SloadComputationCostEIP150               = 835
-	SloadComputationCostEIP1884              = 3340
-	ExtCodeHashComputationCostConstantinople = 1000
-	ExtCodeHashComputationCostEIP1884        = 1750
+	// Opcode Computation Cost Modification
+	AddmodComputationCost         = 3349
+	AddmodComputationCostIstanbul = 1410
+	MulmodComputationCost         = 4757
+	MulmodComputationCostIstanbul = 1760
+	NotComputationCost            = 1289
+	NotComputationCostIstanbul    = 364
+	ShlComputationCost            = 1603
+	ShlComputationCostIstanbul    = 478
+	ShrComputationCost            = 1346
+	ShrComputationCostIstanbul    = 498
+	SarComputationCost            = 1815
+	SarComputationCostIstanbul    = 834
+	XorComputationCost            = 657
+	XorComputationCostIstanbul    = 454
 
 	// Computation cost for precompiled contracts
 	EcrecoverComputationCost            = 113150

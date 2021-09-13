@@ -50,11 +50,6 @@ func enable1884(jt *JumpTable) {
 	jt[BALANCE].constantGas = params.BalanceGasEIP1884
 	jt[EXTCODEHASH].constantGas = params.ExtcodeHashGasEIP1884
 
-	// Computation cost changes
-	jt[SLOAD].computationCost = params.SloadComputationCostEIP1884
-	jt[BALANCE].computationCost = params.BalanceComputationCostEIP1884
-	jt[EXTCODEHASH].computationCost = params.ExtCodeHashComputationCostEIP1884
-
 	// New opcode
 	jt[SELFBALANCE] = &operation{
 		execute:         opSelfBalance,
@@ -95,4 +90,16 @@ func opChainID(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *
 func enable2200(jt *JumpTable) {
 	jt[SLOAD].constantGas = params.SloadGasEIP2200
 	jt[SSTORE].dynamicGas = gasSStoreEIP2200
+}
+
+// enableIstanbulComputationCostModification modifies ADDMOD, MULMOD, NOT, XOR, SHL, SHR, SAR computation cost
+// The modification is activated with istanbulCompatible change activation.
+func enableIstanbulComputationCostModification(jt *JumpTable) {
+	jt[ADDMOD].computationCost = params.AddmodComputationCostIstanbul
+	jt[MULMOD].computationCost = params.MulmodComputationCostIstanbul
+	jt[NOT].computationCost = params.NotComputationCostIstanbul
+	jt[XOR].computationCost = params.XorComputationCostIstanbul
+	jt[SHL].computationCost = params.ShlComputationCostIstanbul
+	jt[SHR].computationCost = params.ShrComputationCostIstanbul
+	jt[SAR].computationCost = params.SarComputationCostIstanbul
 }
