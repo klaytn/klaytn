@@ -66,7 +66,7 @@ var (
 	// BaobabChainConfig contains the chain parameters to run a node on the Baobab test network.
 	BaobabChainConfig = &ChainConfig{
 		ChainID:                 big.NewInt(int64(BaobabNetworkId)),
-		IstanbulCompatibleBlock: nil,
+		IstanbulCompatibleBlock: big.NewInt(75373312),
 		DeriveShaImpl:           2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
