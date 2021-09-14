@@ -332,6 +332,12 @@ var callSendTx = 0
 
 // handle executes a request and returns the response from the callback.
 func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest, subCnt *int32) (interface{}, func()) {
+	method := ""
+	if req.callb != nil {
+		method = fmt.Sprintf("%s%s%s", req.svcname, serviceMethodSeparator, req.callb.method.Name)
+	}
+	logger.Trace("Request info", "reqId", fmt.Sprintf("%s", req.id), "reqErr", req.err, "isUnsubscribe", req.isUnsubscribe, "reqMethod", method)
+
 	if req.err != nil {
 		rpcErrorResponsesCounter.Inc(1)
 		return codec.CreateErrorResponse(&req.id, req.err), nil
@@ -421,6 +427,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 			e := reply[req.callb.errPos].Interface().(error)
 			rpcErrorResponsesCounter.Inc(1)
 			res := codec.CreateErrorResponse(&req.id, &callbackError{e.Error()})
+			logger.Trace("RPCError", "reqId", fmt.Sprintf("%s", req.id), "err", e, "method", fmt.Sprintf("%s%s%s", req.svcname, serviceMethodSeparator, req.callb.method.Name))
 			return res, nil
 		}
 	}
