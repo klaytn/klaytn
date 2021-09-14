@@ -208,6 +208,7 @@ func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state
 	vmError := func() error { return nil }
 
 	context := blockchain.NewEVMContext(msg, header, b.cn.BlockChain(), nil)
+	vmCfg.UseOpcodeComputationCost = true
 	return vm.NewEVM(context, state, b.cn.chainConfig, &vmCfg), vmError, nil
 }
 
