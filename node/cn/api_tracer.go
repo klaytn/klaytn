@@ -535,7 +535,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 
 		vmctx := blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 
-		vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{})
+		vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{UseOpcodeComputationCost: true})
 		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
 			failed = kerr.ErrTxInvalid
 			break
@@ -628,9 +628,10 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 
 			// Swap out the noop logger to the standard tracer
 			vmConf = vm.Config{
-				Debug:                   true,
-				Tracer:                  vm.NewJSONLogger(&logConfig, bufio.NewWriter(dump)),
-				EnablePreimageRecording: true,
+				Debug:                    true,
+				Tracer:                   vm.NewJSONLogger(&logConfig, bufio.NewWriter(dump)),
+				EnablePreimageRecording:  true,
+				UseOpcodeComputationCost: true,
 			}
 		}
 		// Execute the transaction and flush any traces to disk
@@ -802,7 +803,7 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 		tracer = vm.NewStructLogger(config.LogConfig)
 	}
 	// Run the transaction with tracing enabled.
-	vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{Debug: true, Tracer: tracer})
+	vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{Debug: true, Tracer: tracer, UseOpcodeComputationCost: true})
 
 	ret, gas, kerr := blockchain.ApplyMessage(vmenv, message)
 	if kerr.ErrTxInvalid != nil {
@@ -893,7 +894,7 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 			return msg, context, statedb, nil
 		}
 		// Not yet the searched for transaction, execute on top of the current state
-		vmenv := vm.NewEVM(context, statedb, api.config, &vm.Config{})
+		vmenv := vm.NewEVM(context, statedb, api.config, &vm.Config{UseOpcodeComputationCost: true})
 		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
