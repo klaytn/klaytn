@@ -998,6 +998,14 @@ func BenchmarkOpSuicide(b *testing.B) {
 	opBenchmark(b, opSuicide, addr)
 }
 
+func BenchmarkOpChainID(b *testing.B) {
+	opBenchmark(b, opChainID)
+}
+
+func BenchmarkOpSelfBalance(b *testing.B) {
+	opBenchmark(b, opSelfBalance)
+}
+
 func BenchmarkOpPush1(b *testing.B) {
 	opBenchmark(b, opPush1)
 }
