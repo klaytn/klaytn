@@ -105,6 +105,8 @@ type weightedCouncil struct {
 	validatorMu sync.RWMutex // this validator mutex protects concurrent usage of validators and demotedValidators
 	selector    istanbul.ProposalSelector
 
+	// TODO-Klaytn-Governance proposers means that the proposers for next block, so refactor it.
+	// proposers are determined on a specific block, but it can be removed after votes.
 	proposers         []istanbul.Validator
 	proposersBlockNum uint64 // block number when proposers is determined
 
@@ -520,6 +522,7 @@ func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
 		}
 	}
 
+	// TODO-Klaytn-Governance the new validator is added on validators only and demoted after `Refresh` method. It is better to update here if it is demoted ones.
 	// TODO-Klaytn-Issue1336 Update for governance implementation. How to determine initial value for rewardAddress and votingPower ?
 	valSet.validators = append(valSet.validators, newWeightedValidator(address, common.Address{}, 1000, 0))
 
@@ -617,13 +620,9 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 //   (1) already has up-do-date proposers
 //   (2) successfully calculated up-do-date proposers
 func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
+	// TODO-Klaytn-Governance divide the following logic into two parts: proposers update / validators update
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
-
-	if valSet.proposersBlockNum == blockNum {
-		// already refreshed
-		return nil
-	}
 
 	// Check errors
 	numValidators := len(valSet.validators)
@@ -661,6 +660,11 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 
 		weightedValidators, stakingAmounts, demotedValidators, _ = filterValidators(isSingle, governingNode, weightedValidators, stakingAmounts, minStaking)
 		valSet.setValidators(weightedValidators, demotedValidators)
+	}
+
+	if valSet.proposersBlockNum == blockNum {
+		// proposers are already refreshed
+		return nil
 	}
 
 	totalStaking := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
