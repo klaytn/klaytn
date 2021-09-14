@@ -617,13 +617,9 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 //   (1) already has up-do-date proposers
 //   (2) successfully calculated up-do-date proposers
 func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
+	// TODO-Governance divide the following logic into two parts: proposers update / validators update
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
-
-	if valSet.proposersBlockNum == blockNum {
-		// already refreshed
-		return nil
-	}
 
 	// Check errors
 	numValidators := len(valSet.validators)
@@ -661,6 +657,11 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 
 		weightedValidators, stakingAmounts, demotedValidators, _ = filterValidators(isSingle, governingNode, weightedValidators, stakingAmounts, minStaking)
 		valSet.setValidators(weightedValidators, demotedValidators)
+	}
+
+	if valSet.proposersBlockNum == blockNum {
+		// proposers are already refreshed
+		return nil
 	}
 
 	totalStaking := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
