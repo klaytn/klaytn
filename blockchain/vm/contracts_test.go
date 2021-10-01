@@ -32,9 +32,11 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -223,5 +225,98 @@ func benchJson(name, addr string, b *testing.B) {
 	}
 	for _, test := range tests {
 		benchmarkPrecompiled(addr, test, b)
+	}
+}
+
+// TestEVM_CVE_2021_39137 tests an EVM vulnerability described in https://nvd.nist.gov/vuln/detail/CVE-2021-39137.
+// The vulnerable EVM bytecode exploited in Ethereum is used as a test code.
+// Test code reference: https://etherscan.io/tx/0x1cb6fb36633d270edefc04d048145b4298e67b8aa82a9e5ec4aa1435dd770ce4.
+func TestEVM_CVE_2021_39137(t *testing.T) {
+	fromAddr := common.HexToAddress("0x1a02a619e51cc5f8a2a61d2a60f6c80476ee8ead")
+	contractAddr := common.HexToAddress("0x8eae784e072e961f76948a785b62c9a950fb17ae")
+
+	testCases := []struct {
+		name           string
+		expectedResult []byte
+		testCode       []byte
+	}{
+		{
+			"staticCall test",
+			contractAddr.Bytes(),
+			hexutil.MustDecode("0x3034526020600760203460045afa602034343e604034f3"),
+			/*
+				// Pseudo code of the decompiled testCode
+				memory[0:0x20] = address(this); // put contract address with padding left zero into the memory
+				staticCall(gas, 0x04, 0x0, 0x20, 0x07, 0x20);  // operands: gas, to, in offset, in size, out offset, out size
+				memory[0:0x20] = returnDataCopy(); // put the returned data from staticCall into the memory
+				return memory[0:0x40];
+
+				// Disassembly
+				0000    30  ADDRESS
+				0001    34  CALLVALUE
+				0002    52  MSTORE
+				0003    60  PUSH1 0x20
+				0005    60  PUSH1 0x07
+				0007    60  PUSH1 0x20
+				0009    34  CALLVALUE
+				000A    60  PUSH1 0x04
+				000C    5A  GAS
+				000D    FA  STATICCALL
+				000E    60  PUSH1 0x20
+				0010    34  CALLVALUE
+				0011    34  CALLVALUE
+				0012    3E  RETURNDATACOPY
+				0013    60  PUSH1 0x40
+				0015    34  CALLVALUE
+				0016    F3  *RETURN
+			*/
+		},
+		{
+			"call test",
+			contractAddr.Bytes(),
+			hexutil.MustDecode("0x30345260206007602060003460045af1602034343e604034f3"),
+		},
+		{
+			"callCode test",
+			contractAddr.Bytes(),
+			hexutil.MustDecode("0x30345260206007602060003460045af2602034343e604034f3"),
+		},
+		{
+			"delegateCall test",
+			contractAddr.Bytes(),
+			hexutil.MustDecode("0x3034526020600760203460045af4602034343e604034f3"),
+		},
+	}
+
+	gasLimit := uint64(99999999)
+	tracer := NewStructLogger(nil)
+	vmctx := Context{
+		CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
+		Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
+	}
+	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+
+	for _, tc := range testCases {
+		stateDb.SetCode(contractAddr, tc.testCode)
+
+		evm := NewEVM(vmctx, stateDb, params.TestChainConfig, &Config{Debug: true, Tracer: tracer})
+		ret, _, err := evm.Call(AccountRef(fromAddr), contractAddr, nil, gasLimit, new(big.Int))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if testing.Verbose() {
+			buf := new(bytes.Buffer)
+			WriteTrace(buf, tracer.StructLogs())
+			if buf.Len() == 0 {
+				t.Log("no EVM operation logs generated")
+			} else {
+				t.Log("EVM operation log:\n" + buf.String())
+			}
+			t.Logf("EVM output: 0x%x", tracer.Output())
+			t.Logf("EVM error: %v", tracer.Error())
+		}
+
+		assert.Equal(t, tc.expectedResult, ret[12:32])
 	}
 }
