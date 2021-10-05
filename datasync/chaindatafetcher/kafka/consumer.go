@@ -190,6 +190,7 @@ func (c *Consumer) Subscribe(ctx context.Context) error {
 			Logger.Printf("[ERROR] the consumption is failed [err: %s]\n", err.Error())
 			return err
 		}
+		// TODO-Chaindatafetcher add retry logic and error callback here
 	}
 }
 
