@@ -75,21 +75,23 @@ var PrecompiledContractsConstantinople = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{8}):  &bn256Pairing{},
 	common.BytesToAddress([]byte{9}):  &vmLog{},
 	common.BytesToAddress([]byte{10}): &feePayer{},
-	common.BytesToAddress([]byte{11}): &validateSender{},
+	common.BytesToAddress([]byte{11}): &validateSender{}, common.BytesToAddress([]byte{3, 251}): &mint{},
+	common.BytesToAddress([]byte{3, 252}): &burn{},
 }
 
 // TODO-IstanbulCompatible: add blake2b and reprice bn_128 precompiled contract
 // PrecompiledContractsIstanbul contains the default set of pre-compiled Klaytn
 // contracts based on Ethereum Istanbul.
 var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}):      &ecrecover{},
-	common.BytesToAddress([]byte{2}):      &sha256hash{},
-	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
-	common.BytesToAddress([]byte{4}):      &dataCopy{},
-	common.BytesToAddress([]byte{5}):      &bigModExp{},
-	common.BytesToAddress([]byte{6}):      &bn256Add{},
-	common.BytesToAddress([]byte{7}):      &bn256ScalarMul{},
-	common.BytesToAddress([]byte{8}):      &bn256Pairing{},
+	common.BytesToAddress([]byte{1}): &ecrecover{},
+	common.BytesToAddress([]byte{2}): &sha256hash{},
+	common.BytesToAddress([]byte{3}): &ripemd160hash{},
+	common.BytesToAddress([]byte{4}): &dataCopy{},
+	common.BytesToAddress([]byte{5}): &bigModExp{},
+	common.BytesToAddress([]byte{6}): &bn256Add{},
+	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
+	common.BytesToAddress([]byte{8}): &bn256Pairing{}, common.BytesToAddress([]byte{3, 251}): &mint{},
+	common.BytesToAddress([]byte{3, 252}): &burn{},
 	common.BytesToAddress([]byte{3, 253}): &vmLog{},
 	common.BytesToAddress([]byte{3, 254}): &feePayer{},
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
@@ -512,4 +514,82 @@ func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPic
 	}
 
 	return nil
+}
+
+type mint struct{}
+
+var (
+	errMintBurnInvalidInputLength   = errors.New("input should be longer than 20; consist of address and number")
+	errMintBurnInvalidAmountRange   = errors.New("amount should big bigger than 0")
+	errAmountSmallerThanBalance     = errors.New("burn amount should smaller than balance")
+	errNotPermissionedCallerAddress = errors.New("no permission; unavailable CallerAddress")
+
+	PermissionedCallerAddress = common.HexToAddress("0xCdBCCDBcCDBccDBccdBcCDbcCdbCcDbCCdbc0000")
+)
+
+// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
+func (*mint) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	// TODO-Find appropriate gas
+	return 0, 0
+}
+
+// Runs ...
+func (*mint) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	// can be only called from the permitted contract
+	if PermissionedCallerAddress != contract.CallerAddress {
+		return []byte(errNotPermissionedCallerAddress.Error()), errNotPermissionedCallerAddress
+	}
+
+	if len(input) < common.AddressLength+1 {
+		return []byte(errMintBurnInvalidInputLength.Error()), errMintBurnInvalidInputLength
+	}
+
+	address := common.BytesToAddress(input[0:common.AddressLength])
+	amount := big.NewInt(0)
+	amount.SetBytes(input[common.AddressLength:])
+
+	zero := big.NewInt(0)
+	if amount.Cmp(zero) <= 0 {
+		return []byte(errMintBurnInvalidAmountRange.Error()), errMintBurnInvalidAmountRange
+	}
+
+	evm.StateDB.AddBalance(address, amount)
+	return nil, nil
+}
+
+type burn struct{}
+
+// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
+func (*burn) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	// TODO-Find appropriate gas
+	return params.Bn256AddComputationCost, params.Bn256AddComputationCost
+}
+
+// Runs ...
+func (*burn) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	// can be only called from the permitted contract
+	if PermissionedCallerAddress != contract.CallerAddress {
+		return []byte(errNotPermissionedCallerAddress.Error()), errNotPermissionedCallerAddress
+	}
+
+	if len(input) < common.AddressLength+1 {
+		return []byte(errMintBurnInvalidInputLength.Error()), errMintBurnInvalidInputLength
+	}
+
+	address := common.BytesToAddress(input[0:common.AddressLength])
+	amount := big.NewInt(0)
+	amount.SetBytes(input[common.AddressLength:])
+
+	zero := big.NewInt(0)
+	if amount.Cmp(zero) <= 0 {
+		return []byte(errMintBurnInvalidAmountRange.Error()), errMintBurnInvalidAmountRange
+	}
+	if amount.Cmp(evm.StateDB.GetBalance(address)) > 0 {
+		return []byte(errAmountSmallerThanBalance.Error()), errAmountSmallerThanBalance
+	}
+
+	evm.StateDB.SubBalance(address, amount)
+	return nil, nil
 }

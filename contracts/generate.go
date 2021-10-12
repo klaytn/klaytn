@@ -26,6 +26,9 @@ package contracts
 
 //go:generate abigen --sol ./kip13/InterfaceIdentifier.sol --pkg kip13 --out ./kip13/InterfaceIdentifier.go
 
+//go:generate abigen --sol ./MintBurnWithPermission/mintBurn.sol --pkg MintBurnWithPermission --out ./MintBurnWithPermission/mintBurn.go
+//go:generate //go:generate abigen --sol ./MintBurnWithPermission/mintBurnTest.sol --pkg MintBurnWithPermission --out ./MintBurnWithPermission/mintBurnTest.go
+
 //`credit.sol` was compiled by solidity@0.4.24.
 // This code data was included in cypress genesis file.
 ////go:generate abigen --sol ./cypress/credit.sol --pkg cypress --out ./cypress/credit.go
