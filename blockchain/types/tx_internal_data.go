@@ -53,6 +53,7 @@ const (
 	TxTypeCancel, TxTypeFeeDelegatedCancel, TxTypeFeeDelegatedCancelWithRatio
 	TxTypeBatch, _, _
 	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
+	TxTypeBalanceLimitUpdate, _, _
 	TxTypeLast, _, _
 )
 
@@ -72,6 +73,7 @@ const (
 	TxValueKeyFeePayer
 	TxValueKeyFeeRatioOfFeePayer
 	TxValueKeyCodeFormat
+	TxValueKeyBalanceLimit
 )
 
 var (
@@ -96,6 +98,7 @@ var (
 	errValueKeyDataMustByteSlice         = errors.New("Data must be a slice of bytes")
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
+	errValueKeyBalanceLimitMustBigInt    = errors.New("Balance limit must be a type of *big.Int")
 )
 
 func (t TxValueKeyType) String() string {
@@ -126,6 +129,8 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyFeeRatioOfFeePayer"
 	case TxValueKeyCodeFormat:
 		return "TxValueKeyCodeFormat"
+	case TxValueKeyBalanceLimit:
+		return "TxValueKeyBalanceLimit"
 	}
 
 	return "UndefinedTxValueKeyType"
@@ -181,6 +186,8 @@ func (t TxType) String() string {
 		return "TxTypeFeeDelegatedChainDataAnchoring"
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return "TxTypeFeeDelegatedChainDataAnchoringWithRatio"
+	case TxTypeBalanceLimitUpdate:
+		return "TxTypeBalanceLimitUpdate"
 	}
 
 	return "UndefinedTxType"
@@ -216,6 +223,10 @@ func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
 
 func (t TxType) IsChainDataAnchoring() bool {
 	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeChainDataAnchoring
+}
+
+func (t TxType) IsBalanceLimitUpdate() bool {
+	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeBalanceLimitUpdate
 }
 
 type FeeRatio uint8
@@ -356,6 +367,7 @@ type StateDB interface {
 	IncNonce(common.Address)
 	Exist(common.Address) bool
 	UpdateKey(addr common.Address, key accountkey.AccountKey, currentBlockNumber uint64) error
+	SetBalanceLimit(addr common.Address, balanceLimit *big.Int)
 	CreateEOA(addr common.Address, humanReadable bool, key accountkey.AccountKey)
 	CreateSmartContractAccount(addr common.Address, format params.CodeFormat)
 	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat)
@@ -413,6 +425,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedChainDataAnchoring(), nil
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatio(), nil
+	case TxTypeBalanceLimitUpdate:
+		return newTxInternalDataBalanceLimitUpdate(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -466,6 +480,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithMap(values)
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatioWithMap(values)
+	case TxTypeBalanceLimitUpdate:
+		return newTxInternalDataBalanceLimitUpdateWithMap(values)
 	}
 
 	return nil, errUndefinedTxType

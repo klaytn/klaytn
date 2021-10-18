@@ -58,7 +58,7 @@ func TestAccountCreationDisable(t *testing.T) {
 	errUndefinedTxType := errors.New("undefined tx type")
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestContractDeployWithDisabledAddress(t *testing.T) {
 	}
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

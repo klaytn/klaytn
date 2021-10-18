@@ -36,12 +36,13 @@ var (
 )
 
 type DumpAccount struct {
-	Balance  string            `json:"balance"`
-	Nonce    uint64            `json:"nonce"`
-	Root     string            `json:"root"`
-	CodeHash string            `json:"codeHash"`
-	Code     string            `json:"code"`
-	Storage  map[string]string `json:"storage"`
+	Balance      string            `json:"balance"`
+	Nonce        uint64            `json:"nonce"`
+	Root         string            `json:"root"`
+	CodeHash     string            `json:"codeHash"`
+	Code         string            `json:"code"`
+	Storage      map[string]string `json:"storage"`
+	BalanceLimit string            `json:"balanceLimit"`
 }
 
 type Dump struct {
@@ -66,12 +67,13 @@ func (self *StateDB) RawDump() Dump {
 
 		obj := self.getStateObject(common.BytesToAddress(addr))
 		acc := DumpAccount{
-			Balance:  data.GetBalance().String(),
-			Nonce:    data.GetNonce(),
-			Root:     common.Bytes2Hex([]byte{}),
-			CodeHash: common.Bytes2Hex([]byte{}),
-			Code:     common.Bytes2Hex([]byte{}),
-			Storage:  make(map[string]string),
+			Balance:      data.GetBalance().String(),
+			Nonce:        data.GetNonce(),
+			Root:         common.Bytes2Hex([]byte{}),
+			CodeHash:     common.Bytes2Hex([]byte{}),
+			Code:         common.Bytes2Hex([]byte{}),
+			Storage:      make(map[string]string),
+			BalanceLimit: "",
 		}
 		if pa := account.GetProgramAccount(data); pa != nil {
 			acc.Root = common.Bytes2Hex(pa.GetStorageRoot().Bytes())
@@ -87,6 +89,9 @@ func (self *StateDB) RawDump() Dump {
 			acc.Storage[common.Bytes2Hex(storageTrie.GetKey(storageIt.Key))] = common.Bytes2Hex(storageIt.Value)
 		}
 		dump.Accounts[common.Bytes2Hex(addr)] = acc
+		if eoa := account.GetEOA(data); eoa != nil {
+			acc.BalanceLimit = eoa.GetBalanceLimit().String()
+		}
 	}
 	return dump
 }

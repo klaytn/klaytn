@@ -161,7 +161,7 @@ func genBlocks(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	assert.Equal(t, nil, err)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 

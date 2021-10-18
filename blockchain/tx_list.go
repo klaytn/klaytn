@@ -334,7 +334,13 @@ func (l *txList) Filter(senderBalance *big.Int, pool *TxPool) (types.Transaction
 			}
 		}
 		// For other transactions, all tx cost should be payable by the sender.
-		return senderBalance.Cmp(tx.Cost()) < 0
+		if senderBalance.Cmp(tx.Cost()) < 0 {
+			return true
+		}
+		if tx.To() != nil && !CanBeTransferred(pool.getBalanceLimit, pool.getBalance, *tx.To(), tx.Value()) {
+			return true
+		}
+		return false
 	})
 
 	// If the list was strict, filter anything above the lowest nonce

@@ -123,6 +123,8 @@ const (
 	TxGasValueTransfer     uint64 = 21000
 	TxGasContractExecution uint64 = 21000
 
+	TxGasBalanceLimitUpdate uint64 = 0
+
 	TxDataGas uint64 = 100
 )
 

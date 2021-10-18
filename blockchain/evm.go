@@ -24,6 +24,7 @@ import (
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
@@ -49,15 +50,16 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		beneficiary = *author
 	}
 	return vm.Context{
-		CanTransfer: CanTransfer,
-		Transfer:    Transfer,
-		GetHash:     GetHashFn(header, chain),
-		Origin:      msg.ValidatedSender(),
-		Coinbase:    beneficiary,
-		BlockNumber: new(big.Int).Set(header.Number),
-		Time:        new(big.Int).Set(header.Time),
-		BlockScore:  new(big.Int).Set(header.BlockScore),
-		GasPrice:    new(big.Int).Set(msg.GasPrice()),
+		CanTransfer:      CanTransfer,
+		CanBeTransferred: CanBeTransferred,
+		Transfer:         Transfer,
+		GetHash:          GetHashFn(header, chain),
+		Origin:           msg.ValidatedSender(),
+		Coinbase:         beneficiary,
+		BlockNumber:      new(big.Int).Set(header.Number),
+		Time:             new(big.Int).Set(header.Time),
+		BlockScore:       new(big.Int).Set(header.BlockScore),
+		GasPrice:         new(big.Int).Set(msg.GasPrice()),
 	}
 }
 
@@ -100,6 +102,19 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 // This does not take the necessary gas in to account to make the transfer valid.
 func CanTransfer(db vm.StateDB, addr common.Address, amount *big.Int) bool {
 	return db.GetBalance(addr).Cmp(amount) >= 0
+}
+
+func CanBeTransferred(balanceLimitGetter vm.BalanceLimitGetterFunc, balanceGetter vm.BalanceGetterFunc, receiver common.Address, amount *big.Int) bool {
+	//balanceLimit, err := db.GetBalanceLimit(receiver)
+	balanceLimit, err := balanceLimitGetter(receiver)
+	if err == account.ErrNotEOA { // check only for EOA
+		return true
+	} else if err == account.ErrNilAccount { // use initial balance limit if not set
+		balanceLimit = account.GetInitialBalanceLimit()
+	}
+	balanceBeforeTransfer := new(big.Int).Set(balanceGetter(receiver))
+	balanceAfterTransfer := new(big.Int).Add(balanceBeforeTransfer, amount)
+	return balanceLimit.Cmp(balanceAfterTransfer) >= 0
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db

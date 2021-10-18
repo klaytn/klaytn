@@ -265,7 +265,7 @@ func executeQuickSortTransactions(c *deployedContract, transactions types.Transa
 func executeSmartContract(b *testing.B, opt *ContractExecutionOption, prof *profile.Profiler) {
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(2000, 4)
+	bcdata, err := NewBCData(2000, 4, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -353,7 +353,7 @@ func BenchmarkStorageTrieStore(b *testing.B) {
 func executeSmartContractForStorageTrie(b *testing.B, opt *ContractExecutionOption, prof *profile.Profiler) {
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(2000, 4)
+	bcdata, err := NewBCData(2000, 4, nil)
 	if err != nil {
 		b.Fatal(err)
 	}

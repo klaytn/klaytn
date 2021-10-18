@@ -33,6 +33,7 @@ var (
 	ErrDepth                             = errors.New("max call depth exceeded")
 	ErrTraceLimitReached                 = errors.New("the number of logs reached the specified limit")
 	ErrInsufficientBalance               = errors.New("insufficient balance for transfer")
+	ErrExceedBalanceLimit                = errors.New("balance exceeds its fund limit after transfer")
 	ErrContractAddressCollision          = errors.New("contract address collision")
 	ErrTotalTimeLimitReached             = errors.New("reached the total execution time limit for txs in a block")
 	ErrOpcodeComputationCostLimitReached = errors.New(fmt.Sprintf("reached the opcode computation cost limit (%d) for tx", params.OpcodeComputationCostLimit))

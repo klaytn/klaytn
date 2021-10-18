@@ -92,7 +92,7 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 	cacheSender bool) {
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(maxAccounts, numValidators)
+	bcdata, err := NewBCData(maxAccounts, numValidators, nil)
 	if err != nil {
 		b.Fatal(err)
 	}

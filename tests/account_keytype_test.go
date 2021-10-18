@@ -29,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/profile"
@@ -324,6 +325,12 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyAnchoredData] = dataAnchor
 		values[types.TxValueKeyFeePayer] = recipient.Addr
 		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+	case types.TxTypeBalanceLimitUpdate:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyBalanceLimit] = account.GetInitialBalanceLimit()
 	}
 
 	tx, err := types.NewTransactionWithMap(txType, values)
@@ -370,7 +377,7 @@ func signTxWithVariousKeyTypes(signer types.EIP155Signer, tx *types.Transaction,
 			err = tx.SignWithKeys(signer, sender.Keys)
 		}
 	} else if accKeyType == accountkey.AccountKeyTypeRoleBased {
-		if txType.IsAccountUpdate() {
+		if txType.IsAccountUpdate() || txType.IsBalanceLimitUpdate() {
 			err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{sender.Keys[accountkey.RoleAccountUpdate]})
 		} else {
 			err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{sender.Keys[accountkey.RoleTransaction]})
@@ -395,7 +402,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -599,7 +606,7 @@ func TestAccountUpdateMultiSigKeyMaxKey(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -724,7 +731,7 @@ func TestAccountUpdateMultiSigKeyBigThreshold(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -837,7 +844,7 @@ func TestAccountUpdateMultiSigKeyDupPrvKeys(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -949,7 +956,7 @@ func TestAccountUpdateMultiSigKeyWeightOverflow(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1069,7 +1076,7 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1215,7 +1222,7 @@ func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1480,7 +1487,7 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1669,7 +1676,7 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1804,7 +1811,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1967,7 +1974,8 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 			// Only RoleTransaction can generate valid signature as a sender except account update txs.
 			// RoleAccountUpdate can generate valid signature for account update txs.
 			if keyType == int(accountkey.RoleAccountUpdate) && txType.IsAccountUpdate() ||
-				keyType == int(accountkey.RoleTransaction) && !txType.IsAccountUpdate() {
+				keyType == int(accountkey.RoleAccountUpdate) && txType.IsBalanceLimitUpdate() ||
+				keyType == int(accountkey.RoleTransaction) && !txType.IsAccountUpdate() && !txType.IsBalanceLimitUpdate() {
 				// Do not make a block since account update tx can change sender's keys.
 				receipt, _, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, nil, err)
@@ -2005,7 +2013,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

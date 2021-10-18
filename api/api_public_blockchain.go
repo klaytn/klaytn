@@ -126,6 +126,17 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	return (*hexutil.Big)(state.GetBalance(address)), state.Error()
 }
 
+// GetBalanceLimit returns the balance limit amount of the given account at the the given block.
+func (s *PublicBlockChainAPI) GetBalanceLimit(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*hexutil.Big, error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if err != nil {
+		return nil, err
+	}
+
+	balanceLimit, err := state.GetBalanceLimit(address)
+	return (*hexutil.Big)(balanceLimit), err
+}
+
 // AccountCreated returns true if the account associated with the address is created.
 // It returns false otherwise.
 func (s *PublicBlockChainAPI) AccountCreated(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {

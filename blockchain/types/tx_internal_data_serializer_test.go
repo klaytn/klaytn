@@ -29,13 +29,14 @@ import (
 )
 
 var (
-	to        = common.HexToAddress("7b65B75d204aBed71587c9E519a89277766EE1d0")
-	key, from = defaultTestKey()
-	feePayer  = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
-	nonce     = uint64(1234)
-	amount    = big.NewInt(10)
-	gasLimit  = uint64(1000000)
-	gasPrice  = big.NewInt(25)
+	to           = common.HexToAddress("7b65B75d204aBed71587c9E519a89277766EE1d0")
+	key, from    = defaultTestKey()
+	feePayer     = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
+	nonce        = uint64(1234)
+	amount       = big.NewInt(10)
+	gasLimit     = uint64(1000000)
+	gasPrice     = big.NewInt(25)
+	balanceLimit = big.NewInt(1000000)
 )
 
 // TestTransactionSerialization tests RLP/JSON serialization for TxInternalData
@@ -66,6 +67,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"Cancel", genCancelTransaction()},
 		{"FeeDelegatedCancel", genFeeDelegatedCancelTransaction()},
 		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
+		{"BalanceLimitUpdate", genBalanceLimitUpdateTransaction()},
 	}
 
 	var testcases = []struct {
@@ -688,6 +690,23 @@ func genFeeDelegatedCancelWithRatioTransaction() TxInternalData {
 		TxValueKeyFrom:               from,
 		TxValueKeyFeePayer:           feePayer,
 		TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return d
+}
+
+func genBalanceLimitUpdateTransaction() TxInternalData {
+	d, err := NewTxInternalDataWithMap(TxTypeBalanceLimitUpdate, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:        nonce,
+		TxValueKeyGasLimit:     0,
+		TxValueKeyGasPrice:     big.NewInt(0),
+		TxValueKeyFrom:         from,
+		TxValueKeyBalanceLimit: balanceLimit,
 	})
 
 	if err != nil {

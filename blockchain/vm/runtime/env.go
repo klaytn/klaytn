@@ -27,9 +27,10 @@ import (
 
 func NewEnv(cfg *Config) *vm.EVM {
 	context := vm.Context{
-		CanTransfer: blockchain.CanTransfer,
-		Transfer:    blockchain.Transfer,
-		GetHash:     cfg.GetHashFn,
+		CanTransfer:      blockchain.CanTransfer,
+		CanBeTransferred: blockchain.CanBeTransferred,
+		Transfer:         blockchain.Transfer,
+		GetHash:          cfg.GetHashFn,
 
 		Origin:      cfg.Origin,
 		Coinbase:    cfg.Coinbase,
