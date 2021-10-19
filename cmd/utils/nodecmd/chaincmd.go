@@ -67,6 +67,20 @@ participating.
 
 It expects the genesis file as argument.`,
 	}
+
+	DumpGenesisCommand = cli.Command{
+		Action:    utils.MigrateFlags(dumpGenesis),
+		Name:      "dumpgenesis",
+		Usage:     "Dumps genesis block JSON configuration to stdout",
+		ArgsUsage: "",
+		Flags: []cli.Flag{
+			utils.CypressFlag,
+			utils.BaobabFlag,
+		},
+		Category: "BLOCKCHAIN COMMANDS",
+		Description: `
+The dumpgenesis command dumps the genesis block configuration in JSON format to stdout.`,
+	}
 )
 
 // initGenesis will initialise the given JSON format genesis file and writes it as
@@ -111,6 +125,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 	params.SetStakingUpdateInterval(genesis.Config.Governance.Reward.StakingUpdateInterval)
 	params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
+	params.SetMinimumStakingAmount(genesis.Config.Governance.Reward.MinimumStake)
 
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
@@ -151,6 +166,7 @@ func initGenesis(ctx *cli.Context) error {
 		}
 
 		// Write governance items to database
+		// If governance data already exist, it'll be skipped with an error log and will not return an error
 		if err := governance.NewGovernance(genesis.Config, chainDB).WriteGovernance(0, govSet,
 			governance.NewGovernanceSet()); err != nil {
 			logger.Crit("Failed to write governance items", "err", err)
@@ -158,6 +174,17 @@ func initGenesis(ctx *cli.Context) error {
 
 		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())
 		chainDB.Close()
+	}
+	return nil
+}
+
+func dumpGenesis(ctx *cli.Context) error {
+	genesis := utils.MakeGenesis(ctx)
+	if genesis == nil {
+		genesis = blockchain.DefaultGenesisBlock()
+	}
+	if err := json.NewEncoder(os.Stdout).Encode(genesis); err != nil {
+		logger.Crit("could not encode genesis")
 	}
 	return nil
 }

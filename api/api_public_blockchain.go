@@ -78,8 +78,8 @@ func (s *PublicBlockChainAPI) ChainId() *hexutil.Big {
 
 // IsContractAccount returns true if the account associated with addr has a non-empty codeHash.
 // It returns false otherwise.
-func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return false, err
 	}
@@ -99,7 +99,7 @@ func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address com
 // GetBlockReceipts returns all the transaction receipts for the given block hash.
 func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash common.Hash) ([]map[string]interface{}, error) {
 	receipts := s.b.GetBlockReceipts(ctx, blockHash)
-	block, err := s.b.GetBlock(ctx, blockHash)
+	block, err := s.b.BlockByHash(ctx, blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -116,10 +116,10 @@ func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockHash co
 }
 
 // GetBalance returns the amount of peb for the given address in the state of the
-// given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
-// block numbers are also allowed.
-func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*hexutil.Big, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+// given block number or hash. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
+// block numbers and hash are also allowed.
+func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -128,8 +128,8 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 // AccountCreated returns true if the account associated with the address is created.
 // It returns false otherwise.
-func (s *PublicBlockChainAPI) AccountCreated(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+func (s *PublicBlockChainAPI) AccountCreated(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return false, err
 	}
@@ -137,8 +137,8 @@ func (s *PublicBlockChainAPI) AccountCreated(ctx context.Context, address common
 }
 
 // GetAccount returns account information of an input address.
-func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*account.AccountSerializer, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*account.AccountSerializer, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return &account.AccountSerializer{}, err
 	}
@@ -148,6 +148,16 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	}
 	serAcc := account.NewAccountSerializerWithAccount(acc)
 	return serAcc, state.Error()
+}
+
+// GetHeaderByNumber returns the requested canonical block header.
+func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
+	return s.b.HeaderByNumber(ctx, number)
+}
+
+// GetHeaderByHash returns the requested header by hash.
+func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	return s.b.HeaderByHash(ctx, hash)
 }
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
@@ -163,16 +173,16 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
-	block, err := s.b.GetBlock(ctx, blockHash)
+	block, err := s.b.BlockByHash(ctx, blockHash)
 	if err != nil {
 		return nil, err
 	}
 	return s.rpcOutputBlock(block, true, fullTx)
 }
 
-// GetCode returns the code stored at the given address in the state for the given block number.
-func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+// GetCode returns the code stored at the given address in the state for the given block number or hash.
+func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -182,9 +192,9 @@ func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Addres
 
 // GetStorageAt returns the storage from the state at the given address, key and
 // block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta block
-// numbers are also allowed.
-func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.Address, key string, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+// numbers and hash are also allowed.
+func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.Address, key string, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -194,8 +204,8 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 
 // GetAccountKey returns the account key of EOA at a given address.
 // If the account of the given address is a Legacy Account or a Smart Contract Account, it will return nil.
-func (s *PublicBlockChainAPI) GetAccountKey(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*accountkey.AccountKeySerializer, error) {
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+func (s *PublicBlockChainAPI) GetAccountKey(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*accountkey.AccountKeySerializer, error) {
+	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return &accountkey.AccountKeySerializer{}, err
 	}
@@ -229,10 +239,10 @@ type CallArgs struct {
 	Data     hexutil.Bytes   `json:"data"`
 }
 
-func DoCall(ctx context.Context, b Backend, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config, timeout time.Duration, globalGasCap *big.Int) ([]byte, uint64, uint64, bool, error) {
+func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, vmCfg vm.Config, timeout time.Duration, globalGasCap *big.Int) ([]byte, uint64, uint64, bool, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
-	state, header, err := b.StateAndHeaderByNumber(ctx, blockNr)
+	state, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
 		return nil, 0, 0, false, err
 	}
@@ -258,7 +268,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNr rpc.BlockNumb
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(args.Data, args.To == nil, true)
+	intrinsicGas, err := types.IntrinsicGas(args.Data, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, 0, false, err
 	}
@@ -308,15 +318,15 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNr rpc.BlockNumb
 	return res, gas, evm.GetOpCodeComputationCost(), kerr.Status != types.ReceiptStatusSuccessful, err
 }
 
-// Call executes the given transaction on the state for the given block number.
+// Call executes the given transaction on the state for the given block number or hash.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
-func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
-	result, _, _, _, err := DoCall(ctx, s.b, args, blockNr, vm.Config{}, localTxExecutionTime, s.b.RPCGasCap())
+func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	result, _, _, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{}, localTxExecutionTime, s.b.RPCGasCap())
 	return (hexutil.Bytes)(result), err
 }
 
-func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber) (hexutil.Uint64, error) {
-	_, _, computationCost, _, err := DoCall(ctx, s.b, args, blockNr, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, s.b.RPCGasCap())
+func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
+	_, _, computationCost, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, s.b.RPCGasCap())
 	return (hexutil.Uint64)(computationCost), err
 }
 
@@ -348,7 +358,7 @@ func (s *PublicBlockChainAPI) DoEstimateGas(ctx context.Context, b Backend, args
 	executable := func(gas uint64) bool {
 		args.Gas = hexutil.Uint64(gas)
 
-		_, _, _, failed, err := DoCall(ctx, b, args, rpc.LatestBlockNumber, vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, gasCap)
+		_, _, _, failed, err := DoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), vm.Config{UseOpcodeComputationCost: true}, localTxExecutionTime, gasCap)
 		if err != nil || failed {
 			return false
 		}

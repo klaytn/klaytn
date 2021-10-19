@@ -485,24 +485,22 @@ func (self *worker) commitNewWork() {
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
-	tstart := time.Now()
 	parent := self.chain.CurrentBlock()
 
 	// TODO-Klaytn drop or missing tx
+	tstart := time.Now()
 	tstamp := tstart.Unix()
 	if self.nodetype == common.CONSENSUSNODE {
-		if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
-			//if self.nodetype == p2p.ENDPOINTNODE {
-			//	tstamp = parent.Time().Int64() + 5
-			//} else {
-			tstamp = parent.Time().Int64() + 1
-			//}
-		}
-		// this will ensure we're not going off too far in the future
-		if now := time.Now().Unix(); tstamp > now+1 {
-			wait := time.Duration(tstamp-now) * time.Second
+		ideal := parent.Time().Int64() + params.BlockGenerationInterval
+		// If a timestamp of this block is faster than the ideal timestamp,
+		// wait for a while and get a new timestamp
+		if tstamp < ideal {
+			wait := time.Duration(ideal-tstamp) * time.Second
 			logger.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
 			time.Sleep(wait)
+
+			tstart = time.Now()    // refresh for metrics
+			tstamp = tstart.Unix() // refresh for block timestamp
 		}
 	}
 
@@ -626,7 +624,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	chEVM := make(chan *vm.EVM, 1)
 
 	go func() {
-		blockTimer := time.NewTimer(params.TotalTimeLimit)
+		blockTimer := time.NewTimer(params.BlockGenerationTimeLimit)
 		timeout := false
 		var evm *vm.EVM
 
@@ -655,7 +653,6 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	}()
 
 	vmConfig := &vm.Config{
-		JumpTable:                vm.ConstantinopleInstructionSet,
 		RunningEVM:               chEVM,
 		UseOpcodeComputationCost: true,
 	}
@@ -669,7 +666,7 @@ CommitTransactionLoop:
 		// Retrieve the next transaction and abort if all done
 		tx := txs.Peek()
 		if tx == nil {
-			// To indicate that it does not have enough transactions for params.TotalTimeLimit.
+			// To indicate that it does not have enough transactions for params.BlockGenerationTimeLimit.
 			if numTxsChecked > 0 {
 				usedAllTxsCounter.Inc(1)
 			}

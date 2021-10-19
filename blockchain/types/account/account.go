@@ -44,7 +44,7 @@ const (
 	AccountValueKeyCodeHash
 	AccountValueKeyHumanReadable
 	AccountValueKeyAccountKey
-	AccountValueKeyCodeFormat
+	AccountValueKeyCodeInfo
 )
 
 func (a AccountType) String() string {
@@ -113,10 +113,11 @@ type ProgramAccount interface {
 	GetStorageRoot() common.Hash
 	GetCodeHash() []byte
 	GetCodeFormat() params.CodeFormat
+	GetVmVersion() params.VmVersion
 
 	SetStorageRoot(h common.Hash)
 	SetCodeHash(h []byte)
-	SetCodeFormat(cf params.CodeFormat)
+	SetCodeInfo(codeInfo params.CodeInfo)
 }
 
 type AccountWithKey interface {

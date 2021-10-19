@@ -66,37 +66,40 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
 }
 
-// GetValidators retrieves the list of authorized validators at the specified block.
+// GetValidators retrieves the list of authorized validators with the given block number.
 func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
-	// Retrieve the requested block number (or current if none requested)
-	var header *types.Header
-	if number == nil || *number == rpc.LatestBlockNumber {
-		header = api.chain.CurrentHeader()
-	} else {
-		header = api.chain.GetHeaderByNumber(uint64(number.Int64()))
-	}
-	// Ensure we have an actually valid block and return the validators from its snapshot
-	if header == nil {
-		return nil, errUnknownBlock
-	}
-	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.GetSnapshot(number)
 	if err != nil {
 		return nil, err
 	}
 	return snap.validators(), nil
 }
 
-// GetValidatorsAtHash retrieves the state snapshot at a given block.
+// GetValidatorsAtHash retrieves the list of authorized validators with the given block hash.
 func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
-	header := api.chain.GetHeaderByHash(hash)
-	if header == nil {
-		return nil, errUnknownBlock
-	}
-	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.GetSnapshotAtHash(hash)
 	if err != nil {
 		return nil, err
 	}
 	return snap.validators(), nil
+}
+
+// GetDemotedValidators retrieves the list of authorized, but demoted validators with the given block number.
+func (api *API) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address, error) {
+	snap, err := api.GetSnapshot(number)
+	if err != nil {
+		return nil, err
+	}
+	return snap.demotedValidators(), nil
+}
+
+// GetDemotedValidatorsAtHash retrieves the list of authorized, but demoted validators with the given block hash.
+func (api *API) GetDemotedValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
+	snap, err := api.GetSnapshotAtHash(hash)
+	if err != nil {
+		return nil, err
+	}
+	return snap.demotedValidators(), nil
 }
 
 // Candidates returns the current candidates the node tries to uphold and vote on.
@@ -180,7 +183,8 @@ func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, 
 		logger.Error("Failed to get snapshot.", "hash", header.Hash(), "err", err)
 		return nil, errInternalError
 	}
-	return snap.validators(), nil
+
+	return append(snap.validators(), snap.demotedValidators()...), nil
 }
 
 func (api *APIExtension) GetCouncilSize(number *rpc.BlockNumber) (int, error) {
@@ -209,6 +213,15 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 	}
 
 	blockNumber := header.Number.Uint64()
+	if blockNumber == 0 {
+		// The committee of genesis block can not be calculated because it requires a previous block.
+		istanbulExtra, err := types.ExtractIstanbulExtra(header)
+		if err != nil {
+			return nil, errExtractIstanbulExtra
+		}
+		return istanbulExtra.Validators, nil
+	}
+
 	round := header.Round()
 	view := &istanbul.View{
 		Sequence: new(big.Int).SetUint64(blockNumber),

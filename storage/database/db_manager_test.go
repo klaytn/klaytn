@@ -18,6 +18,7 @@ package database
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -905,6 +906,80 @@ func TestDBManager_StateMigrationDBPath(t *testing.T) {
 			assert.Equal(t, 1, len(newDirNames)) // check if DB is removed
 			assert.Equal(t, initialDirNames[0], newDirNames[0], "old DB should remain")
 		}
+	}
+}
+
+func TestDBManager_WriteGovernanceIdx(t *testing.T) {
+	testIdxes := []uint64{100, 200, 300}
+
+	for _, dbm := range dbManagers {
+		// normal case
+		{
+			// write test indexes
+			for _, idx := range testIdxes {
+				assert.Nil(t, dbm.WriteGovernanceIdx(idx))
+			}
+
+			// get the stored indexes
+			encodedIdxes, err := dbm.GetMiscDB().Get(governanceHistoryKey)
+			assert.Nil(t, err)
+
+			// read and check the indexes from the database
+			actualIdxes := make([]uint64, 0)
+			assert.Nil(t, json.Unmarshal(encodedIdxes, &actualIdxes))
+			assert.Equal(t, testIdxes, actualIdxes)
+		}
+
+		// unexpected case: try to write a governance index not in ascending order
+		{
+			assert.NotNil(t, dbm.WriteGovernanceIdx(testIdxes[0]))
+		}
+
+		// remove test data from database
+		_ = dbm.GetMiscDB().Delete(governanceHistoryKey)
+	}
+}
+
+func TestDBManager_ReadRecentGovernanceIdx(t *testing.T) {
+	testIdxes := []uint64{100, 200, 300}
+
+	for _, dbm := range dbManagers {
+		// check empty
+		idxes, err := dbm.ReadRecentGovernanceIdx(0)
+		assert.Nil(t, idxes)
+		assert.NotNil(t, err)
+
+		// normal case
+		{
+			// write indexes on the database
+			data, err := json.Marshal(testIdxes)
+			assert.Nil(t, err)
+			assert.Nil(t, dbm.GetMiscDB().Put(governanceHistoryKey, data))
+
+			// read and check the indexes from the database
+			idxes, err = dbm.ReadRecentGovernanceIdx(0)
+			assert.Equal(t, testIdxes, idxes)
+			assert.Nil(t, err)
+		}
+
+		// unexpected case: the governance indexes in the database is not in ascending order
+		{
+			invalidTestIdxes := append(testIdxes, testIdxes[0])
+			expectedIdxes := append([]uint64{testIdxes[0]}, testIdxes...)
+
+			// write invalid indexes on the database
+			data, err := json.Marshal(invalidTestIdxes)
+			assert.Nil(t, err)
+			assert.Nil(t, dbm.GetMiscDB().Put(governanceHistoryKey, data))
+
+			// read and check the indexes from the database
+			idxes, err = dbm.ReadRecentGovernanceIdx(0)
+			assert.Nil(t, err)
+			assert.Equal(t, expectedIdxes, idxes)
+		}
+
+		// remove test data from database
+		_ = dbm.GetMiscDB().Delete(governanceHistoryKey)
 	}
 }
 

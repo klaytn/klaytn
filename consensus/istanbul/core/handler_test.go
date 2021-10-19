@@ -17,6 +17,8 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/fork"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +47,7 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	})
 
 	eventMux := new(event.TypeMux)
-	validatorSet := validator.NewWeightedCouncil(validatorAddrs, validatorAddrs, nil, nil,
+	validatorSet := validator.NewWeightedCouncil(validatorAddrs, nil, validatorAddrs, nil, nil,
 		istanbul.WeightedRandom, committeeSize, 0, 0, &blockchain.BlockChain{})
 
 	mockCtrl := gomock.NewController(t)
@@ -216,6 +218,9 @@ func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block,
 // TestCore_handleEvents_scenario_invalidSender tests `handleEvents` function of `istanbul.core` with a scenario.
 // It posts an invalid message and a valid message of each istanbul message type.
 func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	validatorAddrs, validatorKeyMap := genValidators(30)
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
@@ -392,6 +397,9 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 }
 
 func TestCore_handlerMsg(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
 	validatorAddrs, validatorKeyMap := genValidators(10)
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()

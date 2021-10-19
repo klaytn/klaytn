@@ -182,7 +182,7 @@ type Governance struct {
 
 	db           database.DBManager
 	itemCache    common.Cache
-	idxCache     []uint64
+	idxCache     []uint64 // elements should be in ascending order
 	idxCacheLock *sync.RWMutex
 
 	// The block number when current governance information was changed
@@ -266,7 +266,14 @@ func (vl *VoteMap) Clear() {
 	vl.mu.Lock()
 	defer vl.mu.Unlock()
 
-	vl.items = make(map[string]VoteStatus)
+	// TODO-Governance if vote is not casted, it can remain forever. So, it would be better to add expiration.
+	newItems := make(map[string]VoteStatus)
+	for k, v := range vl.items {
+		if !v.Casted {
+			newItems[k] = v
+		}
+	}
+	vl.items = newItems
 }
 
 func (vl *VoteMap) Size() int {
@@ -442,6 +449,10 @@ func NewGovernanceInitialize(chainConfig *params.ChainConfig, dbm database.DBMan
 func (g *Governance) updateGovernanceParams() {
 	params.SetStakingUpdateInterval(g.StakingUpdateInterval())
 	params.SetProposerUpdateInterval(g.ProposerUpdateInterval())
+
+	if minimumStakingAmount, ok := new(big.Int).SetString(g.MinimumStake(), 10); ok {
+		params.SetMinimumStakingAmount(minimumStakingAmount)
+	}
 
 	// NOTE: HumanReadable related functions are inactivated now
 	if txGasHumanReadable, ok := g.currentSet.GetValue(params.ConstTxGasHumanReadable); ok {
@@ -648,6 +659,8 @@ func (g *Governance) addGovernanceCache(num uint64, data GovernanceSet) {
 	defer g.idxCacheLock.Unlock()
 
 	if len(g.idxCache) > 0 && num <= g.idxCache[len(g.idxCache)-1] {
+		logger.Error("The same or more recent governance index exist. Skip updating governance cache",
+			"newIdx", num, "govIdxes", g.idxCache)
 		return
 	}
 	cKey := getGovernanceCacheKey(num)
@@ -673,6 +686,8 @@ func (g *Governance) WriteGovernance(num uint64, data GovernanceSet, delta Gover
 	g.idxCacheLock.RUnlock()
 
 	if len(indices) > 0 && num <= indices[len(indices)-1] {
+		logger.Error("The same or more recent governance index exist. Skip writing governance",
+			"newIdx", num, "govIdxes", indices)
 		return nil
 	}
 
@@ -735,7 +750,9 @@ func (g *Governance) GetGovernanceChange() map[string]interface{} {
 	return nil
 }
 
-func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
+// WriteGovernanceForNextEpoch creates governance items for next epoch and writes them to the database.
+// The governance items on next epoch will be the given `governance` items applied on the top of past epoch items.
+func (gov *Governance) WriteGovernanceForNextEpoch(number uint64, governance []byte) {
 	var epoch uint64
 	var ok bool
 
@@ -764,8 +781,16 @@ func (gov *Governance) UpdateGovernance(number uint64, governance []byte) {
 			tempItems = adjustDecodedSet(tempItems)
 			tempSet.Import(tempItems)
 
-			// Store new currentSet to governance database
-			if err := gov.WriteGovernance(number, gov.currentSet, tempSet); err != nil {
+			_, govItems, err := gov.ReadGovernance(number)
+			if err != nil {
+				logger.Error("Failed to read governance", "number", number, "err", err)
+				return
+			}
+			govSet := NewGovernanceSet()
+			govSet.Import(govItems)
+
+			// Store new governance items for next epoch to governance database
+			if err := gov.WriteGovernance(number, govSet, tempSet); err != nil {
 				logger.Crit("Failed to store new governance data", "number", number, "err", err)
 			}
 		}
@@ -776,7 +801,7 @@ func (gov *Governance) removeDuplicatedVote(vote *GovernanceVote, number uint64)
 	gov.RemoveVote(vote.Key, vote.Value, number)
 }
 
-func (gov *Governance) UpdateCurrentGovernance(num uint64) {
+func (gov *Governance) UpdateCurrentSet(num uint64) {
 	newNumber, newGovernanceSet, _ := gov.ReadGovernance(num)
 	// Do the change only when the governance actually changed
 	if newGovernanceSet != nil && newNumber > gov.actualGovernanceBlock.Load().(uint64) {

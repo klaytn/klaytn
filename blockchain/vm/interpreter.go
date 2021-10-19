@@ -38,7 +38,7 @@ type Config struct {
 	NoRecursion             bool   // Disables call, callcode, delegate call and create
 	EnablePreimageRecording bool   // Enables recording of SHA3/keccak preimages
 
-	JumpTable [256]operation // EVM instruction table, automatically populated if unset
+	JumpTable [256]*operation // EVM instruction table, automatically populated if unset
 
 	// RunningEVM is to indicate the running EVM and used to stop the EVM.
 	RunningEVM chan *EVM
@@ -51,6 +51,9 @@ type Config struct {
 
 	// Prefetching is true if the EVM is used for prefetching.
 	Prefetching bool
+
+	// Additional EIPs that are to be enabled
+	ExtraEips []int
 }
 
 // keccakState wraps sha3.state. In addition to the usual hash methods, it also supports
@@ -66,9 +69,8 @@ type keccakState interface {
 // The Interpreter will run the byte code VM based on the passed
 // configuration.
 type Interpreter struct {
-	evm      *EVM
-	cfg      *Config
-	gasTable params.GasTable
+	evm *EVM
+	cfg *Config
 
 	intPool *intPool
 
@@ -84,14 +86,27 @@ func NewEVMInterpreter(evm *EVM, cfg *Config) *Interpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
-	if !cfg.JumpTable[STOP].valid {
-		cfg.JumpTable = ConstantinopleInstructionSet
+	if cfg.JumpTable[STOP] == nil {
+		var jt JumpTable
+		switch {
+		case evm.chainRules.IsIstanbul:
+			jt = IstanbulInstructionSet
+		default:
+			jt = ConstantinopleInstructionSet
+		}
+		for i, eip := range cfg.ExtraEips {
+			if err := EnableEIP(eip, &jt); err != nil {
+				// Disable it, so caller can check if it's activated or not
+				cfg.ExtraEips = append(cfg.ExtraEips[:i], cfg.ExtraEips[i+1:]...)
+				logger.Error("EIP activation failed", "eip", eip, "error", err)
+			}
+		}
+		cfg.JumpTable = jt
 	}
 
 	return &Interpreter{
-		evm:      evm,
-		cfg:      cfg,
-		gasTable: evm.ChainConfig().GasTable(evm.BlockNumber),
+		evm: evm,
+		cfg: cfg,
 	}
 }
 
@@ -214,7 +229,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc)
 		operation := in.cfg.JumpTable[op]
-		if !operation.valid {
+		if operation == nil {
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op)) // TODO-Klaytn-Issue615
 		}
 		// Validate stack
@@ -236,6 +251,7 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		}
 
 		// Static portion of gas
+		cost = operation.constantGas // For tracing
 		if !contract.UseGas(operation.constantGas) {
 			return nil, kerrors.ErrOutOfGas
 		}
@@ -281,8 +297,10 @@ func (in *Interpreter) Run(contract *Contract, input []byte) (ret []byte, err er
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
 		if operation.dynamicGas != nil {
-			cost, err = operation.dynamicGas(in.gasTable, in.evm, contract, stack, mem, memorySize)
-			if err != nil || !contract.UseGas(cost) {
+			var dynamicCost uint64
+			dynamicCost, err = operation.dynamicGas(in.evm, contract, stack, mem, memorySize)
+			cost += dynamicCost // total cost, for debug tracing
+			if err != nil || !contract.UseGas(dynamicCost) {
 				return nil, kerrors.ErrOutOfGas // TODO-Klaytn-Issue615
 			}
 		}

@@ -82,6 +82,20 @@ func (mr *MockEngineMockRecorder) CalcBlockScore(arg0, arg1, arg2 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalcBlockScore", reflect.TypeOf((*MockEngine)(nil).CalcBlockScore), arg0, arg1, arg2)
 }
 
+// CanVerifyHeadersConcurrently mocks base method
+func (m *MockEngine) CanVerifyHeadersConcurrently() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CanVerifyHeadersConcurrently")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// CanVerifyHeadersConcurrently indicates an expected call of CanVerifyHeadersConcurrently
+func (mr *MockEngineMockRecorder) CanVerifyHeadersConcurrently() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanVerifyHeadersConcurrently", reflect.TypeOf((*MockEngine)(nil).CanVerifyHeadersConcurrently))
+}
+
 // Finalize mocks base method
 func (m *MockEngine) Finalize(arg0 consensus.ChainReader, arg1 *types.Header, arg2 *state.StateDB, arg3 []*types.Transaction, arg4 []*types.Receipt) (*types.Block, error) {
 	m.ctrl.T.Helper()
@@ -109,6 +123,21 @@ func (m *MockEngine) Prepare(arg0 consensus.ChainReader, arg1 *types.Header) err
 func (mr *MockEngineMockRecorder) Prepare(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Prepare", reflect.TypeOf((*MockEngine)(nil).Prepare), arg0, arg1)
+}
+
+// PreprocessHeaderVerification mocks base method
+func (m *MockEngine) PreprocessHeaderVerification(arg0 []*types.Header) (chan<- struct{}, <-chan error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreprocessHeaderVerification", arg0)
+	ret0, _ := ret[0].(chan<- struct{})
+	ret1, _ := ret[1].(<-chan error)
+	return ret0, ret1
+}
+
+// PreprocessHeaderVerification indicates an expected call of PreprocessHeaderVerification
+func (mr *MockEngineMockRecorder) PreprocessHeaderVerification(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreprocessHeaderVerification", reflect.TypeOf((*MockEngine)(nil).PreprocessHeaderVerification), arg0)
 }
 
 // Protocol mocks base method

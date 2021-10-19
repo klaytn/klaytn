@@ -48,6 +48,38 @@ type precompiledTest struct {
 	NoBenchmark     bool // Benchmark primarily the worst-cases
 }
 
+// precompiledFailureTest defines the input/error pairs for precompiled
+// contract failure tests.
+type precompiledFailureTest struct {
+	Input         string
+	ExpectedError string
+	Name          string
+}
+
+// EIP-152 test vectors
+var blake2FMalformedInputTests = []precompiledFailureTest{
+	{
+		Input:         "",
+		ExpectedError: errBlake2FInvalidInputLength.Error(),
+		Name:          "vector 0: empty input",
+	},
+	{
+		Input:         "00000c48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af54fa5d182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b61626300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000001",
+		ExpectedError: errBlake2FInvalidInputLength.Error(),
+		Name:          "vector 1: less than 213 bytes input",
+	},
+	{
+		Input:         "000000000c48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af54fa5d182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b61626300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000001",
+		ExpectedError: errBlake2FInvalidInputLength.Error(),
+		Name:          "vector 2: more than 213 bytes input",
+	},
+	{
+		Input:         "0000000c48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af54fa5d182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b61626300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000002",
+		ExpectedError: errBlake2FInvalidFinalFlag.Error(),
+		Name:          "vector 3: malformed final block indicator flag",
+	},
+}
+
 // This function prepares background environment for running vmLog, feePayer, validateSender tests.
 // It generates contract, evm, EOA test object.
 func prepare(reqGas uint64) (*Contract, *EVM, error) {
@@ -59,7 +91,7 @@ func prepare(reqGas uint64) (*Contract, *EVM, error) {
 	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
 	stateDb.Prepare(txhash, common.Hash{}, 0)
-	evm := NewEVM(Context{}, stateDb, params.TestChainConfig, &Config{})
+	evm := NewEVM(Context{BlockNumber: big.NewInt(0)}, stateDb, &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
 
 	// Only stdout logging is tested to avoid file handling. It is used at vmLog test.
 	params.VMLogTarget = params.VMLogToStdout
@@ -73,7 +105,7 @@ func prepare(reqGas uint64) (*Contract, *EVM, error) {
 }
 
 func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
-	p := PrecompiledContractsConstantinople[common.HexToAddress(addr)]
+	p := PrecompiledContractsIstanbul[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.Input)
 	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 
@@ -90,7 +122,7 @@ func testPrecompiled(addr string, test precompiledTest, t *testing.T) {
 }
 
 func testPrecompiledOOG(addr string, test precompiledTest, t *testing.T) {
-	p := PrecompiledContractsConstantinople[common.HexToAddress(addr)]
+	p := PrecompiledContractsIstanbul[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.Input)
 	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 	reqGas -= 1
@@ -110,11 +142,31 @@ func testPrecompiledOOG(addr string, test precompiledTest, t *testing.T) {
 	})
 }
 
+func testPrecompiledFailure(addr string, test precompiledFailureTest, t *testing.T) {
+	p := PrecompiledContractsIstanbul[common.HexToAddress(addr)]
+	in := common.Hex2Bytes(test.Input)
+	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
+
+	contract, evm, _ := prepare(reqGas)
+
+	t.Run(test.Name, func(t *testing.T) {
+		_, _, err := RunPrecompiledContract(p, in, contract, evm)
+		if err.Error() != test.ExpectedError {
+			t.Errorf("Expected error [%v], got [%v]", test.ExpectedError, err)
+		}
+		// Verify that the precompile did not touch the input buffer
+		exp := common.Hex2Bytes(test.Input)
+		if !bytes.Equal(in, exp) {
+			t.Errorf("Precompiled %v modified input data", addr)
+		}
+	})
+}
+
 func benchmarkPrecompiled(addr string, test precompiledTest, bench *testing.B) {
 	if test.NoBenchmark {
 		return
 	}
-	p := PrecompiledContractsConstantinople[common.HexToAddress(addr)]
+	p := PrecompiledContractsIstanbul[common.HexToAddress(addr)]
 	in := common.Hex2Bytes(test.Input)
 	reqGas, _ := p.GetRequiredGasAndComputationCost(in)
 
@@ -175,17 +227,21 @@ func BenchmarkPrecompiledBn256ScalarMul(b *testing.B) { benchJson("bn256ScalarMu
 func TestPrecompiledBn256Pairing(t *testing.T)      { testJson("bn256Pairing", "08", t) }
 func BenchmarkPrecompiledBn256Pairing(b *testing.B) { benchJson("bn256Pairing", "08", b) }
 
+func TestPrecompiledBlake2F(t *testing.T)              { testJson("blake2F", "09", t) }
+func BenchmarkPrecompiledBlake2F(b *testing.B)         { benchJson("blake2F", "09", b) }
+func TestPrecompileBlake2FMalformedInput(t *testing.T) { testJsonFail("blake2F", "09", t) }
+
 // Tests the sample inputs of the vmLog
-func TestPrecompiledVmLog(t *testing.T)      { testJson("vmLog", "09", t) }
-func BenchmarkPrecompiledVmLog(b *testing.B) { benchJson("vmLog", "09", b) }
+func TestPrecompiledVmLog(t *testing.T)      { testJson("vmLog", "3fd", t) }
+func BenchmarkPrecompiledVmLog(b *testing.B) { benchJson("vmLog", "3fd", b) }
 
 // Tests the sample inputs of the feePayer
-func TestFeePayerContract(t *testing.T)         { testJson("feePayer", "0a", t) }
-func BenchmarkPrecompiledFeePayer(b *testing.B) { benchJson("feePayer", "0a", b) }
+func TestFeePayerContract(t *testing.T)         { testJson("feePayer", "3fe", t) }
+func BenchmarkPrecompiledFeePayer(b *testing.B) { benchJson("feePayer", "3fe", b) }
 
 // Tests the sample inputs of the validateSender
-func TestValidateSenderContract(t *testing.T)         { testJson("validateSender", "0b", t) }
-func BenchmarkPrecompiledValidateSender(b *testing.B) { benchJson("validateSender", "0b", b) }
+func TestValidateSenderContract(t *testing.T)         { testJson("validateSender", "3ff", t) }
+func BenchmarkPrecompiledValidateSender(b *testing.B) { benchJson("validateSender", "3ff", b) }
 
 // Tests OOG (out-of-gas) of modExp
 func TestPrecompiledModExpOOG(t *testing.T) {
@@ -208,6 +264,16 @@ func loadJson(name string) ([]precompiledTest, error) {
 	return testcases, err
 }
 
+func loadJsonFail(name string) ([]precompiledFailureTest, error) {
+	data, err := ioutil.ReadFile(fmt.Sprintf("testdata/precompiles/fail-%v.json", name))
+	if err != nil {
+		return nil, err
+	}
+	var testcases []precompiledFailureTest
+	err = json.Unmarshal(data, &testcases)
+	return testcases, err
+}
+
 func testJson(name, addr string, t *testing.T) {
 	tests, err := loadJson(name)
 	if err != nil {
@@ -215,6 +281,16 @@ func testJson(name, addr string, t *testing.T) {
 	}
 	for _, test := range tests {
 		testPrecompiled(addr, test, t)
+	}
+}
+
+func testJsonFail(name, addr string, t *testing.T) {
+	tests, err := loadJsonFail(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range tests {
+		testPrecompiledFailure(addr, test, t)
 	}
 }
 

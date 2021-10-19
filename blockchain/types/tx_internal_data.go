@@ -357,8 +357,8 @@ type StateDB interface {
 	Exist(common.Address) bool
 	UpdateKey(addr common.Address, key accountkey.AccountKey, currentBlockNumber uint64) error
 	CreateEOA(addr common.Address, humanReadable bool, key accountkey.AccountKey)
-	CreateSmartContractAccount(addr common.Address, format params.CodeFormat)
-	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat)
+	CreateSmartContractAccount(addr common.Address, format params.CodeFormat, r params.Rules)
+	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat, r params.Rules)
 	IsProgramAccount(addr common.Address) bool
 	IsContractAvailable(addr common.Address) bool
 	IsValidCodeFormat(addr common.Address) bool
@@ -509,15 +509,22 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error) {
+func IntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
-	if contractCreation && homestead {
+	if contractCreation {
 		gas = params.TxGasContractCreation
 	} else {
 		gas = params.TxGas
 	}
-	gasPayloadWithGas, err := IntrinsicGasPayloadLegacy(gas, data)
+
+	var gasPayloadWithGas uint64
+	var err error
+	if r.IsIstanbul {
+		gasPayloadWithGas, err = IntrinsicGasPayload(gas, data)
+	} else {
+		gasPayloadWithGas, err = IntrinsicGasPayloadLegacy(gas, data)
+	}
 	if err != nil {
 		return 0, err
 	}

@@ -304,7 +304,7 @@ func (api *PrivateDebugAPI) traceChain(ctx context.Context, start, end *types.Bl
 				traced += uint64(len(txs))
 			}
 			// Generate the next state snapshot fast without tracing
-			_, _, _, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{})
+			_, _, _, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{UseOpcodeComputationCost: true})
 			if err != nil {
 				failed = err
 				break
@@ -535,7 +535,7 @@ func (api *PrivateDebugAPI) traceBlock(ctx context.Context, block *types.Block, 
 
 		vmctx := blockchain.NewEVMContext(msg, block.Header(), api.cn.blockchain, nil)
 
-		vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{})
+		vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{UseOpcodeComputationCost: true})
 		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
 			failed = kerr.ErrTxInvalid
 			break
@@ -601,7 +601,7 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 		dumps  []string
 	)
 	for i, tx := range block.Transactions() {
-		// Prepare the trasaction for un-traced execution
+		// Prepare the transaction for un-traced execution
 		msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, block.NumberU64())
 		if err != nil {
 			logger.Warn("Tracing failed", "hash", tx.Hash(), "block", block.NumberU64(), "err", err)
@@ -628,9 +628,10 @@ func (api *PrivateDebugAPI) standardTraceBlockToFile(ctx context.Context, block 
 
 			// Swap out the noop logger to the standard tracer
 			vmConf = vm.Config{
-				Debug:                   true,
-				Tracer:                  vm.NewJSONLogger(&logConfig, bufio.NewWriter(dump)),
-				EnablePreimageRecording: true,
+				Debug:                    true,
+				Tracer:                   vm.NewJSONLogger(&logConfig, bufio.NewWriter(dump)),
+				EnablePreimageRecording:  true,
+				UseOpcodeComputationCost: true,
 			}
 		}
 		// Execute the transaction and flush any traces to disk
@@ -710,7 +711,7 @@ func (api *PrivateDebugAPI) computeStateDB(block *types.Block, reexec uint64) (*
 		if block = api.cn.blockchain.GetBlockByNumber(block.NumberU64() + 1); block == nil {
 			return nil, fmt.Errorf("block #%d not found", block.NumberU64()+1)
 		}
-		_, _, _, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{})
+		_, _, _, _, _, err := api.cn.blockchain.Processor().Process(block, statedb, vm.Config{UseOpcodeComputationCost: true})
 		if err != nil {
 			return nil, fmt.Errorf("processing block %d failed: %v", block.NumberU64(), err)
 		}
@@ -802,7 +803,7 @@ func (api *PrivateDebugAPI) traceTx(ctx context.Context, message blockchain.Mess
 		tracer = vm.NewStructLogger(config.LogConfig)
 	}
 	// Run the transaction with tracing enabled.
-	vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{Debug: true, Tracer: tracer})
+	vmenv := vm.NewEVM(vmctx, statedb, api.config, &vm.Config{Debug: true, Tracer: tracer, UseOpcodeComputationCost: true})
 
 	ret, gas, kerr := blockchain.ApplyMessage(vmenv, message)
 	if kerr.ErrTxInvalid != nil {
@@ -893,7 +894,7 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int, ree
 			return msg, context, statedb, nil
 		}
 		// Not yet the searched for transaction, execute on top of the current state
-		vmenv := vm.NewEVM(context, statedb, api.config, &vm.Config{})
+		vmenv := vm.NewEVM(context, statedb, api.config, &vm.Config{UseOpcodeComputationCost: true})
 		if _, _, kerr := blockchain.ApplyMessage(vmenv, msg); kerr.ErrTxInvalid != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}

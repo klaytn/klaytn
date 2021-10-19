@@ -33,8 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/go-redis/redis/v7"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -47,7 +45,9 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
+	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/log"
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -250,6 +250,11 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
+	}
+
+	// set hardForkBlockNumberConfig which will be used as a global variable
+	if err := fork.SetHardForkBlockNumberConfig(bc.chainConfig); err != nil {
+		return nil, err
 	}
 
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
@@ -1309,7 +1314,13 @@ func (bc *BlockChain) writeBlockLogsToRemoteCache(blockLogsKey []byte, receipts 
 		return
 	}
 	// TODO-Klaytn-KES: refine this not to use trieNodeCache
-	bc.stateCache.TrieDB().TrieNodeCache().Set(blockLogsKey, encodedBlockLogs)
+	cache, ok := bc.stateCache.TrieDB().TrieNodeCache().(*statedb.HybridCache)
+	if !ok {
+		logger.Error("only HybridCache supports block logs writing",
+			"TrieNodeCacheType", reflect.TypeOf(bc.stateCache.TrieDB().TrieNodeCache()))
+	} else {
+		cache.Remote().Set(blockLogsKey, encodedBlockLogs)
+	}
 }
 
 // writeBlockWithStateSerial writes the block and all associated state to the database in serial manner.
@@ -1582,7 +1593,15 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		seals[i] = true
 	}
 
-	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
+	var (
+		abort   chan<- struct{}
+		results <-chan error
+	)
+	if bc.engine.CanVerifyHeadersConcurrently() {
+		abort, results = bc.engine.VerifyHeaders(bc, headers, seals)
+	} else {
+		abort, results = bc.engine.PreprocessHeaderVerification(headers)
+	}
 	defer close(abort)
 
 	// Start a parallel signature recovery (signer will fluke on fork transition, minimal perf loss)
@@ -1620,7 +1639,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				// current block is not the last one, so prefetch the right next block
 				followup := chain[i+1]
 				go func(start time.Time) {
-					throwaway, _ := state.NewForPrefetching(parent.Root(), bc.stateCache)
+					throwaway, err := state.NewForPrefetching(parent.Root(), bc.stateCache)
+					if throwaway == nil || err != nil {
+						logger.Warn("failed to get StateDB for prefetcher", "err", err,
+							"parentBlockNum", parent.NumberU64(), "currBlockNum", bc.CurrentBlock().NumberU64())
+						return
+					}
+
 					vmCfg := bc.vmConfig
 					vmCfg.Prefetching = true
 					bc.prefetcher.Prefetch(followup, throwaway, vmCfg, &followupInterrupt)
@@ -1641,6 +1666,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		bstart := time.Now()
 
 		err := <-results
+		if !bc.engine.CanVerifyHeadersConcurrently() && err == nil {
+			err = bc.engine.VerifyHeader(bc, block.Header(), true)
+		}
+
 		if err == nil {
 			err = bc.validator.ValidateBody(block)
 		}

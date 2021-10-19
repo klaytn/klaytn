@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
@@ -233,7 +234,7 @@ func (t *TxInternalDataLegacy) RecoverPubkey(txhash common.Hash, homestead bool,
 }
 
 func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return IntrinsicGas(t.Payload, t.Recipient == nil, true)
+	return IntrinsicGas(t.Payload, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
 func (t *TxInternalDataLegacy) SerializeForSign() []interface{} {

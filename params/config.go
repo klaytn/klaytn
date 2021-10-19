@@ -30,8 +30,8 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	CypressGenesisHash      = common.HexToHash("// todo generate new hash for cypress") // cypress genesis hash to enforce below configs on
-	BaobabGenesisHash       = common.HexToHash("// todo generate new hash for baobab")  // baobab genesis hash to enforce below configs on
+	CypressGenesisHash      = common.HexToHash("0xc72e5293c3c3ba38ed8ae910f780e4caaa9fb95e79784f7ab74c3c262ea7137e") // cypress genesis hash to enforce below configs on
+	BaobabGenesisHash       = common.HexToHash("0xe33ff05ceec2581ca9496f38a2bf9baad5d4eed629e896ccb33d1dc991bc4b4a") // baobab genesis hash to enforce below configs on
 	AuthorAddressForTesting = common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949")
 	mintingAmount, _        = new(big.Int).SetString("9600000000000000000", 10)
 )
@@ -66,7 +66,7 @@ var (
 	// BaobabChainConfig contains the chain parameters to run a node on the Baobab test network.
 	BaobabChainConfig = &ChainConfig{
 		ChainID:                 big.NewInt(int64(BaobabNetworkId)),
-		IstanbulCompatibleBlock: nil,
+		IstanbulCompatibleBlock: big.NewInt(75373312),
 		DeriveShaImpl:           2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -263,13 +263,6 @@ func (c *ChainConfig) String() string {
 // IsIstanbul returns whether num is either equal to the istanbul block or greater.
 func (c *ChainConfig) IsIstanbul(num *big.Int) bool {
 	return isForked(c.IstanbulCompatibleBlock, num)
-}
-
-// GasTable returns the gas table corresponding to the current phase.
-//
-// The returned GasTable's fields shouldn't, under any circumstances, be changed.
-func (c *ChainConfig) GasTable(num *big.Int) GasTable {
-	return GasTableCypress
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported

@@ -29,6 +29,8 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/fork"
+	"github.com/klaytn/klaytn/params"
 )
 
 const (
@@ -143,6 +145,10 @@ func (valSet *defaultSet) List() []istanbul.Validator {
 	return valSet.validators
 }
 
+func (valSet *defaultSet) DemotedList() []istanbul.Validator {
+	return nil
+}
+
 // SubList composes a committee after setting a proposer with a default value.
 // This functions returns whole validators if it failed to compose a committee.
 func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
@@ -196,6 +202,9 @@ func (valSet *defaultSet) SubListWithProposer(prevHash common.Hash, proposerAddr
 
 	// seed will be used to select a random committee
 	seed, err := ConvertHashToSeed(prevHash)
+	if fork.Rules(view.Sequence).IsIstanbul {
+		seed += view.Round.Int64()
+	}
 	if err != nil {
 		logger.Error("failed to convert hash to seed", "prevHash", prevHash, "err", err)
 		return validators
@@ -244,6 +253,10 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, istanbul.Valid
 	// TODO-Klaytn-Istanbul: Enable this log when non-committee nodes don't call `core.startNewRound()`
 	// logger.Warn("failed to find an address in the validator list",
 	// 	"address", addr, "validatorAddrs", valSet.validators.AddressStringList())
+	return -1, nil
+}
+
+func (valSet *defaultSet) GetDemotedByAddress(addr common.Address) (int, istanbul.Validator) {
 	return -1, nil
 }
 
@@ -360,7 +373,7 @@ func (valSet *defaultSet) F() int {
 
 func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
-func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64) error {
+func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
 	return nil
 }
 func (valSet *defaultSet) SetBlockNum(blockNum uint64)     { /* Do nothing */ }

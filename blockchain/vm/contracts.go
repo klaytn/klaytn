@@ -23,6 +23,7 @@ package vm
 import (
 	"crypto/ecdsa"
 	"crypto/sha256"
+	"encoding/binary"
 	"errors"
 	"math/big"
 	"strconv"
@@ -33,6 +34,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/crypto/blake2b"
 	"github.com/klaytn/klaytn/crypto/bn256"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/log"
@@ -70,15 +72,15 @@ var PrecompiledContractsConstantinople = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{3}):  &ripemd160hash{},
 	common.BytesToAddress([]byte{4}):  &dataCopy{},
 	common.BytesToAddress([]byte{5}):  &bigModExp{},
-	common.BytesToAddress([]byte{6}):  &bn256Add{},
-	common.BytesToAddress([]byte{7}):  &bn256ScalarMul{},
-	common.BytesToAddress([]byte{8}):  &bn256Pairing{},
+	common.BytesToAddress([]byte{6}):  &bn256AddConstantinople{},
+	common.BytesToAddress([]byte{7}):  &bn256ScalarMulConstantinople{},
+	common.BytesToAddress([]byte{8}):  &bn256PairingConstantinople{},
 	common.BytesToAddress([]byte{9}):  &vmLog{},
 	common.BytesToAddress([]byte{10}): &feePayer{},
 	common.BytesToAddress([]byte{11}): &validateSender{},
 }
 
-// TODO-IstanbulCompatible: add blake2b and reprice bn_128 precompiled contract
+// DO NOT USE 0x3FD, 0x3FE, 0x3FF ADDRESSES BEFORE ISTANBUL CHANGE ACTIVATED.
 // PrecompiledContractsIstanbul contains the default set of pre-compiled Klaytn
 // contracts based on Ethereum Istanbul.
 var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
@@ -87,9 +89,10 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
 	common.BytesToAddress([]byte{4}):      &dataCopy{},
 	common.BytesToAddress([]byte{5}):      &bigModExp{},
-	common.BytesToAddress([]byte{6}):      &bn256Add{},
-	common.BytesToAddress([]byte{7}):      &bn256ScalarMul{},
-	common.BytesToAddress([]byte{8}):      &bn256Pairing{},
+	common.BytesToAddress([]byte{6}):      &bn256AddIstanbul{},
+	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
+	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
+	common.BytesToAddress([]byte{9}):      &blake2F{},
 	common.BytesToAddress([]byte{3, 253}): &vmLog{},
 	common.BytesToAddress([]byte{3, 254}): &feePayer{},
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
@@ -325,16 +328,9 @@ func newTwistPoint(blob []byte) (*bn256.G2, error) {
 	return p, nil
 }
 
-// bn256Add implements a native elliptic curve point addition.
-type bn256Add struct{}
-
-// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
-// and the computation cost of the precompiled contract.
-func (c *bn256Add) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
-	return params.Bn256AddGas, params.Bn256AddComputationCost
-}
-
-func (c *bn256Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+// runBn256Add implements the Bn256Add precompile, referenced by both
+// Constantinople and Istanbul operations.
+func runBn256Add(input []byte) ([]byte, error) {
 	x, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
 		return nil, err
@@ -348,16 +344,33 @@ func (c *bn256Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte, erro
 	return res.Marshal(), nil
 }
 
-// bn256ScalarMul implements a native elliptic curve scalar multiplication.
-type bn256ScalarMul struct{}
+// bn256Add implements a native elliptic curve point addition conforming to
+// Istanbul consensus rules.
+type bn256AddIstanbul struct{}
 
-// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
-// and the computation cost of the precompiled contract.
-func (c *bn256ScalarMul) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
-	return params.Bn256ScalarMulGas, params.Bn256ScalarMulComputationCost
+func (c *bn256AddIstanbul) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.Bn256AddGasIstanbul, params.Bn256AddComputationCost
 }
 
-func (c *bn256ScalarMul) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+func (c *bn256AddIstanbul) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	return runBn256Add(input)
+}
+
+// bn256AddByzantium implements a native elliptic curve point addition
+// conforming to Byzantium consensus rules.
+type bn256AddConstantinople struct{}
+
+func (c *bn256AddConstantinople) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.Bn256AddGasConstantinople, params.Bn256AddComputationCost
+}
+
+func (c *bn256AddConstantinople) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	return runBn256Add(input)
+}
+
+// runBn256ScalarMul implements the Bn256ScalarMul precompile, referenced by
+// both Constantionple and Istanbul operations.
+func runBn256ScalarMul(input []byte) ([]byte, error) {
 	p, err := newCurvePoint(getData(input, 0, 64))
 	if err != nil {
 		return nil, err
@@ -365,6 +378,30 @@ func (c *bn256ScalarMul) Run(input []byte, contract *Contract, evm *EVM) ([]byte
 	res := new(bn256.G1)
 	res.ScalarMult(p, new(big.Int).SetBytes(getData(input, 64, 32)))
 	return res.Marshal(), nil
+}
+
+// bn256ScalarMulIstanbul implements a native elliptic curve scalar
+// multiplication conforming to Istanbul consensus rules.
+type bn256ScalarMulIstanbul struct{}
+
+func (c *bn256ScalarMulIstanbul) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.Bn256ScalarMulGasIstanbul, params.Bn256ScalarMulComputationCost
+}
+
+func (c *bn256ScalarMulIstanbul) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	return runBn256ScalarMul(input)
+}
+
+// bn256ScalarMulByzantium implements a native elliptic curve scalar
+// multiplication conforming to Byzantium consensus rules.
+type bn256ScalarMulConstantinople struct{}
+
+func (c *bn256ScalarMulConstantinople) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.Bn256ScalarMulGasConstantinople, params.Bn256ScalarMulComputationCost
+}
+
+func (c *bn256ScalarMulConstantinople) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	return runBn256ScalarMul(input)
 }
 
 var (
@@ -378,18 +415,9 @@ var (
 	errBadPairingInput = errors.New("bad elliptic curve pairing size")
 )
 
-// bn256Pairing implements a pairing pre-compile for the bn256 curve
-type bn256Pairing struct{}
-
-// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
-// and the computation cost of the precompiled contract.
-func (c *bn256Pairing) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
-	numParings := uint64(len(input) / 192)
-	return params.Bn256PairingBaseGas + numParings*params.Bn256PairingPerPointGas,
-		params.Bn256ParingBaseComputationCost + numParings*params.Bn256ParingPerPointComputationCost
-}
-
-func (c *bn256Pairing) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+// runBn256Pairing implements the Bn256Pairing precompile, referenced by both
+// Byzantium and Istanbul operations.
+func runBn256Pairing(input []byte) ([]byte, error) {
 	// Handle some corner cases cheaply
 	if len(input)%192 > 0 {
 		return nil, errBadPairingInput
@@ -416,6 +444,96 @@ func (c *bn256Pairing) Run(input []byte, contract *Contract, evm *EVM) ([]byte, 
 		return true32Byte, nil
 	}
 	return false32Byte, nil
+}
+
+// bn256PairingIstanbul implements a pairing pre-compile for the bn256 curve
+// conforming to Istanbul consensus rules.
+type bn256PairingIstanbul struct{}
+
+func (c *bn256PairingIstanbul) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	numParings := uint64(len(input) / 192)
+	return params.Bn256PairingBaseGasIstanbul + numParings*params.Bn256PairingPerPointGasIstanbul,
+		params.Bn256ParingBaseComputationCost + numParings*params.Bn256ParingPerPointComputationCost
+}
+
+func (c *bn256PairingIstanbul) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	return runBn256Pairing(input)
+}
+
+// bn256PairingConstantinople implements a pairing pre-compile for the bn256 curve
+// conforming to Constantinople consensus rules.
+type bn256PairingConstantinople struct{}
+
+func (c *bn256PairingConstantinople) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	numParings := uint64(len(input) / 192)
+	return params.Bn256PairingBaseGasConstantinople + numParings*params.Bn256PairingPerPointGasConstantinople,
+		params.Bn256ParingBaseComputationCost + numParings*params.Bn256ParingPerPointComputationCost
+}
+
+func (c *bn256PairingConstantinople) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	return runBn256Pairing(input)
+}
+
+type blake2F struct{}
+
+const (
+	blake2FInputLength        = 213
+	blake2FFinalBlockBytes    = byte(1)
+	blake2FNonFinalBlockBytes = byte(0)
+)
+
+var (
+	errBlake2FInvalidInputLength = errors.New("invalid input length")
+	errBlake2FInvalidFinalFlag   = errors.New("invalid final flag")
+)
+
+func (c *blake2F) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	// If the input is malformed, we can't calculate the gas, return 0 and let the
+	// actual call choke and fault.
+	if len(input) != blake2FInputLength {
+		return 0, 0
+	}
+	gas := uint64(binary.BigEndian.Uint32(input[0:4]))
+	return gas, params.Blake2bBaseComputationCost + params.Blake2bScaleComputationCost*gas
+}
+
+func (c *blake2F) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	// Make sure the input is valid (correct length and final flag)
+	if len(input) != blake2FInputLength {
+		return nil, errBlake2FInvalidInputLength
+	}
+	if input[212] != blake2FNonFinalBlockBytes && input[212] != blake2FFinalBlockBytes {
+		return nil, errBlake2FInvalidFinalFlag
+	}
+	// Parse the input into the Blake2b call parameters
+	var (
+		rounds = binary.BigEndian.Uint32(input[0:4])
+		final  = (input[212] == blake2FFinalBlockBytes)
+
+		h [8]uint64
+		m [16]uint64
+		t [2]uint64
+	)
+	for i := 0; i < 8; i++ {
+		offset := 4 + i*8
+		h[i] = binary.LittleEndian.Uint64(input[offset : offset+8])
+	}
+	for i := 0; i < 16; i++ {
+		offset := 68 + i*8
+		m[i] = binary.LittleEndian.Uint64(input[offset : offset+8])
+	}
+	t[0] = binary.LittleEndian.Uint64(input[196:204])
+	t[1] = binary.LittleEndian.Uint64(input[204:212])
+
+	// Execute the compression function, extract and return the result
+	blake2b.F(&h, m, t, final, rounds)
+
+	output := make([]byte, 64)
+	for i := 0; i < 8; i++ {
+		offset := i * 8
+		binary.LittleEndian.PutUint64(output[offset:offset+8], h[i])
+	}
+	return output, nil
 }
 
 // vmLog implemented as a native contract.
@@ -461,7 +579,7 @@ func (c *validateSender) GetRequiredGasAndComputationCost(input []byte) (uint64,
 }
 
 func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	if err := c.validateSender(input, evm.StateDB); err != nil {
+	if err := c.validateSender(input, evm.StateDB, evm.BlockNumber.Uint64()); err != nil {
 		// If return error makes contract execution failed, do not return the error.
 		// Instead, print log.
 		logger.Trace("validateSender failed", "err", err)
@@ -470,7 +588,7 @@ func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte
 	return []byte{1}, nil
 }
 
-func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPicker) error {
+func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
 	ptr := input
 
 	// Parse the first 20 bytes. They represent an address to be verified.
@@ -507,7 +625,7 @@ func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPic
 	}
 
 	k := picker.GetKey(from)
-	if err := accountkey.ValidateAccountKey(from, k, pubs, accountkey.RoleTransaction); err != nil {
+	if err := accountkey.ValidateAccountKey(currentBlockNumber, from, k, pubs, accountkey.RoleTransaction); err != nil {
 		return err
 	}
 

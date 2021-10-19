@@ -64,7 +64,7 @@ func (a *AccountKeyPublic) Equal(b AccountKey) bool {
 	return a.PublicKeySerializable.Equal(tb.PublicKeySerializable)
 }
 
-func (a *AccountKeyPublic) Validate(r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
+func (a *AccountKeyPublic) Validate(currentBlockNumber uint64, r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
 	// AccountKeyPublic has only one public key.
 	if len(recoveredKeys) != 1 {
 		return false
@@ -81,7 +81,7 @@ func (a *AccountKeyPublic) AccountCreationGas(currentBlockNumber uint64) (uint64
 	return numKeys * params.TxAccountCreationGasPerKey, nil
 }
 
-func (a *AccountKeyPublic) SigValidationGas(currentBlockNumber uint64, r RoleType) (uint64, error) {
+func (a *AccountKeyPublic) SigValidationGas(currentBlockNumber uint64, r RoleType, validSigNum int) (uint64, error) {
 	return (numKeys - 1) * params.TxValidationGasPerKey, nil
 }
 

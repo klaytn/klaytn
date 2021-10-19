@@ -32,8 +32,8 @@ import (
 // StateDB is an EVM database for full state querying.
 type StateDB interface {
 	CreateAccount(common.Address)
-	CreateSmartContractAccount(addr common.Address, format params.CodeFormat)
-	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat)
+	CreateSmartContractAccount(addr common.Address, format params.CodeFormat, r params.Rules)
+	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat, r params.Rules)
 	CreateEOA(addr common.Address, humanReadable bool, key accountkey.AccountKey)
 
 	SubBalance(common.Address, *big.Int)
@@ -48,10 +48,13 @@ type StateDB interface {
 	GetCode(common.Address) []byte
 	SetCode(common.Address, []byte) error
 	GetCodeSize(common.Address) int
+	GetVmVersion(common.Address) (params.VmVersion, bool)
 
 	AddRefund(uint64)
+	SubRefund(uint64)
 	GetRefund() uint64
 
+	GetCommittedState(common.Address, common.Hash) common.Hash
 	GetState(common.Address, common.Hash) common.Hash
 	SetState(common.Address, common.Hash, common.Hash)
 

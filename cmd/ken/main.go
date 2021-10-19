@@ -54,6 +54,7 @@ func init() {
 	app.Commands = []cli.Command{
 		// See utils/nodecmd/chaincmd.go:
 		nodecmd.InitCommand,
+		nodecmd.DumpGenesisCommand,
 
 		// See utils/nodecmd/accountcmd.go
 		nodecmd.AccountCommand,

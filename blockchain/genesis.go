@@ -238,17 +238,24 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		if storedcfg.Governance == nil {
 			logger.Crit("Failed to read governance. storedcfg.Governance == nil")
 		}
+		if storedcfg.Governance.Reward == nil {
+			logger.Crit("Failed to read governance. storedcfg.Governance.Reward == nil")
+		}
 		if storedcfg.Governance.Reward.StakingUpdateInterval != 0 {
 			params.SetStakingUpdateInterval(storedcfg.Governance.Reward.StakingUpdateInterval)
 		}
 		if storedcfg.Governance.Reward.ProposerUpdateInterval != 0 {
 			params.SetProposerUpdateInterval(storedcfg.Governance.Reward.ProposerUpdateInterval)
 		}
+		if storedcfg.Governance.Reward.MinimumStake != nil &&
+			storedcfg.Governance.Reward.MinimumStake.Cmp(common.Big0) > 0 {
+			params.SetMinimumStakingAmount(storedcfg.Governance.Reward.MinimumStake)
+		}
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
-	if genesis == nil && stored != params.CypressGenesisHash {
+	if genesis == nil && params.CypressGenesisHash != stored && params.BaobabGenesisHash != stored {
 		return storedcfg, stored, nil
 	}
 
@@ -270,6 +277,10 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	switch {
 	case g != nil:
 		return g.Config
+	case ghash == params.CypressGenesisHash:
+		return params.CypressChainConfig
+	case ghash == params.BaobabGenesisHash:
+		return params.BaobabChainConfig
 	default:
 		return params.AllGxhashProtocolChanges
 	}

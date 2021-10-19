@@ -24,6 +24,8 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/klaytn/klaytn/consensus"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
@@ -142,7 +144,7 @@ func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, addr common.Address, epoch uint64) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, addr common.Address, policy uint64, chain consensus.ChainReader) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -176,19 +178,49 @@ func (s *Snapshot) apply(headers []*types.Header, gov *governance.Governance, ad
 			return nil, errUnauthorized
 		}
 
-		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr)
-
 		if number%snap.Epoch == 0 {
+			gov.UpdateCurrentSet(number)
 			if len(header.Governance) > 0 {
-				gov.UpdateGovernance(number, header.Governance)
+				gov.WriteGovernanceForNextEpoch(number, header.Governance)
 			}
-			gov.UpdateCurrentGovernance(number)
 			gov.ClearVotes(number)
 
 			// Reload governance values because epoch changed
 			snap.Epoch, snap.Policy, snap.CommitteeSize = getGovernanceValue(gov, number)
 			snap.Votes = make([]governance.GovernanceVote, 0)
 			snap.Tally = make([]governance.GovernanceTallyItem, 0)
+		}
+
+		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr)
+		if policy == uint64(params.WeightedRandom) {
+			// Snapshot of block N (Snapshot_N) should contain proposers for N+1 and following blocks.
+			// Validators for Block N+1 can be calculated based on the staking information from the previous stakingUpdateInterval block.
+			// If the governance mode is single, the governing node is added to validator all the time.
+			//
+			// Proposers for Block N+1 can be calculated from the nearest previous proposersUpdateInterval block.
+			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
+			isSingle, govNode, err := gov.GetGoverningInfoAtNumber(number)
+			if err != nil {
+				return nil, err
+			}
+
+			minStaking, err := gov.GetMinimumStakingAtNumber(number)
+			if err != nil {
+				return nil, err
+			}
+
+			pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
+			if pHeader != nil {
+				if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config(), isSingle, govNode, minStaking); err != nil {
+					// There are three error cases and they just don't refresh proposers
+					// (1) no validator at all
+					// (2) invalid formatted hash
+					// (3) no staking info available
+					logger.Trace("Skip refreshing proposers while creating snapshot", "snap.Number", snap.Number, "pHeader.Number", pHeader.Number.Uint64(), "err", err)
+				}
+			} else {
+				logger.Trace("Can't refreshing proposers while creating snapshot due to lack of required header", "snap.Number", snap.Number)
+			}
 		}
 	}
 	snap.Number += uint64(len(headers))
@@ -222,6 +254,15 @@ func (s *Snapshot) validators() []common.Address {
 		validators = append(validators, validator.Address())
 	}
 	return sortValidatorArray(validators)
+}
+
+// demotedValidators retrieves the list of authorized, but demoted validators in ascending order.
+func (s *Snapshot) demotedValidators() []common.Address {
+	demotedValidators := make([]common.Address, 0, len(s.ValSet.DemotedList()))
+	for _, demotedValidator := range s.ValSet.DemotedList() {
+		demotedValidators = append(demotedValidators, demotedValidator.Address())
+	}
+	return sortValidatorArray(demotedValidators)
 }
 
 func (s *Snapshot) committee(prevHash common.Hash, view *istanbul.View) []common.Address {
@@ -263,6 +304,7 @@ type snapshotJSON struct {
 	Weights           []uint64         `json:"weight"`
 	Proposers         []common.Address `json:"proposers"`
 	ProposersBlockNum uint64           `json:"proposersBlockNum"`
+	DemotedValidators []common.Address `json:"demotedValidators"`
 }
 
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
@@ -272,10 +314,11 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	var proposers []common.Address
 	var proposersBlockNum uint64
 	var validators []common.Address
+	var demotedValidators []common.Address
 
 	// TODO-Klaytn-Issue1166 For weightedCouncil
 	if s.ValSet.Policy() == istanbul.WeightedRandom {
-		validators, rewardAddrs, votingPowers, weights, proposers, proposersBlockNum = validator.GetWeightedCouncilData(s.ValSet)
+		validators, demotedValidators, rewardAddrs, votingPowers, weights, proposers, proposersBlockNum = validator.GetWeightedCouncilData(s.ValSet)
 	} else {
 		validators = s.validators()
 	}
@@ -294,6 +337,7 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 		Weights:           weights,
 		Proposers:         proposers,
 		ProposersBlockNum: proposersBlockNum,
+		DemotedValidators: demotedValidators,
 	}
 }
 
@@ -312,7 +356,7 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 
 	// TODO-Klaytn-Issue1166 For weightedCouncil
 	if j.Policy == istanbul.WeightedRandom {
-		s.ValSet = validator.NewWeightedCouncil(j.Validators, j.RewardAddrs, j.VotingPowers, j.Weights, j.Policy, j.SubGroupSize, j.Number, j.ProposersBlockNum, nil)
+		s.ValSet = validator.NewWeightedCouncil(j.Validators, j.DemotedValidators, j.RewardAddrs, j.VotingPowers, j.Weights, j.Policy, j.SubGroupSize, j.Number, j.ProposersBlockNum, nil)
 		validator.RecoverWeightedCouncilProposer(s.ValSet, j.Proposers)
 	} else {
 		s.ValSet = validator.NewSubSet(j.Validators, j.Policy, j.SubGroupSize)

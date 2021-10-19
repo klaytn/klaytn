@@ -219,9 +219,20 @@ func (self *StateDB) Preimages() map[common.Hash][]byte {
 	return self.preimages
 }
 
+// AddRefund adds gas to the refund counter
 func (self *StateDB) AddRefund(gas uint64) {
 	self.journal.append(refundChange{prev: self.refund})
 	self.refund += gas
+}
+
+// SubRefund removes gas from the refund counter.
+// This method will panic if the refund counter goes below zero
+func (self *StateDB) SubRefund(gas uint64) {
+	self.journal.append(refundChange{prev: self.refund})
+	if gas > self.refund {
+		panic("Refund counter below zero")
+	}
+	self.refund -= gas
 }
 
 // Exist reports whether the given account address exists in the state.
@@ -309,10 +320,20 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	return common.BytesToHash(stateObject.CodeHash())
 }
 
-func (self *StateDB) GetState(addr common.Address, bhash common.Hash) common.Hash {
+// GetState retrieves a value from the given account's storage trie.
+func (self *StateDB) GetState(addr common.Address, hash common.Hash) common.Hash {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
-		return stateObject.GetState(self.db, bhash)
+		return stateObject.GetState(self.db, hash)
+	}
+	return common.Hash{}
+}
+
+// GetCommittedState retrieves a value from the given account's committed storage trie.
+func (self *StateDB) GetCommittedState(addr common.Address, hash common.Hash) common.Hash {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.GetCommittedState(self.db, hash)
 	}
 	return common.Hash{}
 }
@@ -345,6 +366,19 @@ func (self *StateDB) IsValidCodeFormat(addr common.Address) bool {
 		return false
 	}
 	return false
+}
+
+// GetVmVersion return false when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
+func (self *StateDB) GetVmVersion(addr common.Address) (params.VmVersion, bool) {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		pa := account.GetProgramAccount(stateObject.account)
+		if pa != nil {
+			return pa.GetVmVersion(), true
+		}
+		return params.VmVersion0, false
+	}
+	return params.VmVersion0, false
 }
 
 func (self *StateDB) GetKey(addr common.Address) accountkey.AccountKey {
@@ -634,16 +668,16 @@ func (self *StateDB) CreateEOA(addr common.Address, humanReadable bool, key acco
 	}
 }
 
-func (self *StateDB) CreateSmartContractAccount(addr common.Address, format params.CodeFormat) {
-	self.CreateSmartContractAccountWithKey(addr, false, accountkey.NewAccountKeyFail(), format)
+func (self *StateDB) CreateSmartContractAccount(addr common.Address, format params.CodeFormat, r params.Rules) {
+	self.CreateSmartContractAccountWithKey(addr, false, accountkey.NewAccountKeyFail(), format, r)
 }
 
-func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat) {
+func (self *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat, r params.Rules) {
 	values := map[account.AccountValueKeyType]interface{}{
 		account.AccountValueKeyNonce:         uint64(1),
 		account.AccountValueKeyHumanReadable: humanReadable,
 		account.AccountValueKeyAccountKey:    key,
-		account.AccountValueKeyCodeFormat:    format,
+		account.AccountValueKeyCodeInfo:      params.NewCodeInfoWithRules(format, r),
 	}
 	new, prev := self.createObjectWithMap(addr, account.SmartContractAccountType, values)
 	if prev != nil {
@@ -656,19 +690,14 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 	if so == nil {
 		return
 	}
-
-	// When iterating over the storage check the cache first
-	for h, value := range so.cachedStorage {
-		cb(h, value)
-	}
-
 	it := statedb.NewIterator(so.getStorageTrie(db.db).NodeIterator(nil))
 	for it.Next() {
-		// ignore cached values
 		key := common.BytesToHash(db.trie.GetKey(it.Key))
-		if _, ok := so.cachedStorage[key]; !ok {
-			cb(key, common.BytesToHash(it.Value))
+		if value, dirty := so.dirtyStorage[key]; dirty {
+			cb(key, value)
+			continue
 		}
+		cb(key, common.BytesToHash(it.Value))
 	}
 }
 

@@ -16,20 +16,44 @@
 
 package fork
 
-var (
-	// hardForkConfig will not be changed unless it is a test code.
-	// The test code can override this value via `UpdateHardForkConfig`.
-	hardForkConfig = &HardForkConfig{}
+import (
+	"errors"
+	"math/big"
+
+	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/params"
 )
 
-// HardForkConfig defines a block number for each hard fork feature.
-type HardForkConfig struct {
+var (
+	// hardForkBlockNumberConfig contains only hardFork block number
+	hardForkBlockNumberConfig *params.ChainConfig
+
+	logger = log.NewModuleLogger(log.FORK)
+)
+
+// Rules returns the hard fork information
+// CAUTIOUS: Use it when chainConfig value is not reachable
+func Rules(blockNumber *big.Int) *params.Rules {
+	if hardForkBlockNumberConfig == nil {
+		logger.Crit("fork.Rules should never be called before hardForkBlockNumberConfig initialization.")
+	}
+	rules := hardForkBlockNumberConfig.Rules(blockNumber)
+	return &rules
 }
 
-// UpdateHardForkConfig sets values in HardForkConfig if it is not nil.
-// NOTE: this is only for test code to give flexibility of the test code.
-func UpdateHardForkConfig(h *HardForkConfig) {
-	if h != nil {
-		hardForkConfig = h
+// SetHardForkBlockNumberConfig sets values in HardForkConfig if it is not nil.
+// CAUTIOUS: Calling this function is can be dangerous, so avoid using it except tests
+func SetHardForkBlockNumberConfig(h *params.ChainConfig) error {
+	// ensure that the allocation is done only when h is not nil
+	if h == nil {
+		return errors.New("hardForkBlockNumberConfig cannot be initialized as nil")
 	}
+	hardForkBlockNumberConfig = h
+	return nil
+}
+
+// ClearHardForkBlockNumberConfig sets nil
+// Use only in tests
+func ClearHardForkBlockNumberConfig() {
+	hardForkBlockNumberConfig = nil
 }

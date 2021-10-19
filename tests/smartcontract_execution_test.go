@@ -99,7 +99,7 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 		return nil, err
 	}
 
-	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+	signer := types.MakeSigner(bcdata.bc.Config(), header.Number)
 	msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, bcdata.bc.CurrentBlock().NumberU64())
 	if err != nil {
 		return nil, err
@@ -407,7 +407,9 @@ func executeSmartContractForStorageTrie(b *testing.B, opt *ContractExecutionOpti
 
 			state, _ := bcdata.bc.State()
 			for _, tx := range transactions {
-				tx.AsMessageWithAccountKeyPicker(signer, state, bcdata.bc.CurrentBlock().NumberU64())
+				if _, err := tx.AsMessageWithAccountKeyPicker(signer, state, bcdata.bc.CurrentBlock().NumberU64()); err != nil {
+					b.Fatal(err)
+				}
 			}
 			fmt.Printf("run %v tx validated \n", run)
 

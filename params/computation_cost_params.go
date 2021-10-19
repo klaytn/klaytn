@@ -22,9 +22,6 @@ package params
 
 const (
 	// Computation cost for opcodes
-	ShlComputationCost            = 1603
-	ShrComputationCost            = 1346
-	SarComputationCost            = 1815
 	ExtCodeHashComputationCost    = 1000
 	Create2ComputationCost        = 10000
 	StaticCallComputationCost     = 10000
@@ -40,8 +37,6 @@ const (
 	SdivComputationCost           = 739
 	ModComputationCost            = 812
 	SmodComputationCost           = 560
-	AddmodComputationCost         = 3349
-	MulmodComputationCost         = 4757
 	ExpComputationCost            = 5000
 	SignExtendComputationCost     = 481
 	LtComputationCost             = 201
@@ -51,9 +46,7 @@ const (
 	EqComputationCost             = 220
 	IszeroComputationCost         = 165
 	AndComputationCost            = 288
-	XorComputationCost            = 657
 	OrComputationCost             = 160
-	NotComputationCost            = 1289
 	ByteComputationCost           = 589
 	Sha3ComputationCost           = 2465
 	AddressComputationCost        = 284
@@ -64,6 +57,7 @@ const (
 	CallDataLoadComputationCost   = 596
 	CallDataSizeComputationCost   = 194
 	CallDataCopyComputationCost   = 100
+	ChainIDComputationCost        = 120
 	CodeSizeComputationCost       = 145
 	CodeCopyComputationCost       = 898
 	GasPriceComputationCost       = 131
@@ -104,6 +98,7 @@ const (
 	Dup14ComputationCost          = 143
 	Dup15ComputationCost          = 237
 	Dup16ComputationCost          = 149
+	SelfBalanceComputationCost    = 374
 	Swap1ComputationCost          = 141
 	Swap2ComputationCost          = 156
 	Swap3ComputationCost          = 145
@@ -131,6 +126,22 @@ const (
 	ReturnComputationCost         = 0
 	SelfDestructComputationCost   = 0
 
+	// Opcode Computation Cost Modification
+	AddmodComputationCost         = 3349
+	AddmodComputationCostIstanbul = 1410
+	MulmodComputationCost         = 4757
+	MulmodComputationCostIstanbul = 1760
+	NotComputationCost            = 1289
+	NotComputationCostIstanbul    = 364
+	ShlComputationCost            = 1603
+	ShlComputationCostIstanbul    = 478
+	ShrComputationCost            = 1346
+	ShrComputationCostIstanbul    = 498
+	SarComputationCost            = 1815
+	SarComputationCostIstanbul    = 834
+	XorComputationCost            = 657
+	XorComputationCostIstanbul    = 454
+
 	// Computation cost for precompiled contracts
 	EcrecoverComputationCost            = 113150
 	Sha256PerWordComputationCost        = 100
@@ -150,4 +161,6 @@ const (
 	FeePayerComputationCost             = 10
 	ValidateSenderPerSigComputationCost = 180000
 	ValidateSenderBaseComputationCost   = 10000
+	Blake2bBaseComputationCost          = 10000
+	Blake2bScaleComputationCost         = 10
 )

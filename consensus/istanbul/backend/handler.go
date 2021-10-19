@@ -104,7 +104,13 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 	for sb.chain == nil {
 		return errNoChainReader
 	}
-	for _, val := range sb.getValidators(sb.chain.CurrentHeader().Number.Uint64(), sb.chain.CurrentHeader().Hash()).List() {
+	validators := sb.getValidators(sb.chain.CurrentHeader().Number.Uint64(), sb.chain.CurrentHeader().Hash())
+	for _, val := range validators.List() {
+		if addr == val.Address() {
+			return nil
+		}
+	}
+	for _, val := range validators.DemotedList() {
 		if addr == val.Address() {
 			return nil
 		}

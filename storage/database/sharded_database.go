@@ -17,12 +17,20 @@
 package database
 
 import (
+	"bytes"
+	"container/heap"
+	"context"
 	"fmt"
 	"path"
 	"strconv"
+	"sync"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 var errKeyLengthZero = fmt.Errorf("database key for sharded database should be greater than 0")
+
+const numShardsLimit = 256
 
 type shardedDB struct {
 	fn        string
@@ -46,8 +54,6 @@ type sdbBatchResult struct {
 // newShardedDB creates database with numShards shards, or partitions.
 // The type of database is specified DBConfig.DBType.
 func newShardedDB(dbc *DBConfig, et DBEntryType, numShards uint) (*shardedDB, error) {
-	const numShardsLimit = 16
-
 	if numShards == 0 {
 		logger.Crit("numShards should be greater than 0!")
 	}
@@ -155,75 +161,247 @@ func (db *shardedDB) Close() {
 	}
 }
 
-type shardedDBIterator struct {
-	// TODO-Klaytn implement this later.
-	iterators []Iterator
-	key       []byte
-	value     []byte
+// Not enough size of channel slows down the iterator
+const shardedDBCombineChanSize = 1024 // Size of resultCh
+const shardedDBSubChannelSize = 128   // Size of each sub-channel of resultChs
 
-	//numBatches uint
-	//
-	//taskCh   chan pdbBatchTask
-	//resultCh chan pdbBatchResult
+// shardedDBIterator iterates all items of each shardDB.
+// This is useful when you want to get items in serial in binary-alphabetigcal order.
+type shardedDBIterator struct {
+	parallelIterator shardedDBParallelIterator
+
+	resultCh chan common.Entry
+	key      []byte // current key
+	value    []byte // current value
 }
 
 // NewIterator creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix, starting at a particular
 // initial key (or after, if it does not exist).
-func (pdb *shardedDB) NewIterator(prefix []byte, start []byte) Iterator {
-	// TODO-Klaytn implement this later.
-	return nil
+func (db *shardedDB) NewIterator(prefix []byte, start []byte) Iterator {
+	it := &shardedDBIterator{
+		parallelIterator: db.NewParallelIterator(context.TODO(), prefix, start, nil),
+		resultCh:         make(chan common.Entry, shardedDBCombineChanSize),
+	}
+
+	go it.runCombineWorker()
+
+	return it
 }
 
-func (pdi *shardedDBIterator) Next() bool {
-	// TODO-Klaytn implement this later.
-	//var minIter Iterator
-	//minIdx := -1
-	//minKey := []byte{0}
-	//minKeyValue := []byte{0}
-	//
-	//for idx, iter := range pdi.iterators {
-	//	if iter != nil {
-	//		if bytes.Compare(minKey, iter.Key()) >= 0 {
-	//			minIdx = idx
-	//			minIter = iter
-	//			minKey = iter.Key()
-	//			minKeyValue = iter.Value()
-	//		}
-	//	}
-	//}
-	//
-	//if minIter == nil {
-	//	return false
-	//}
-	//
-	//pdi.key = minKey
-	//pdi.value = minKeyValue
-	//
-	//if !minIter.Next() {
-	//	pdi.iterators[minIdx] = nil
-	//}
-	//
+// NewIteratorUnsorted creates a iterator over the entire keyspace contained within
+// the key-value database. This is useful when you want to get items fast in serial.
+// If you want to get ordered items in serial, checkout shardedDB.NewIterator()
+// If you want to get items in parallel from channels, checkout shardedDB.NewParallelIterator()
+// IteratorUnsorted is a implementation of Iterator and data are accessed with
+// Next(), Key() and Value() methods. With ChanIterator, data can be accessed with
+// channels. The channels are gained with Channels() method.
+func (db *shardedDB) NewIteratorUnsorted(prefix []byte, start []byte) Iterator {
+	resultCh := make(chan common.Entry, shardedDBCombineChanSize)
+	return &shardedDBIterator{
+		parallelIterator: db.NewParallelIterator(context.TODO(), prefix, start, resultCh),
+		resultCh:         resultCh,
+	}
+}
+
+// runCombineWorker fetches any key/value from resultChs and put the data in resultCh
+// in binary-alphabetical order.
+func (it *shardedDBIterator) runCombineWorker() {
+
+	// creates min-priority queue smallest values from each iterators
+	entries := &entryHeap{}
+	heap.Init(entries)
+	for i, ch := range it.parallelIterator.resultChs {
+		if e, ok := <-ch; ok {
+			heap.Push(entries, entryWithShardNum{e, i})
+		}
+	}
+
+chanIter:
+	for len(*entries) != 0 {
+		// check if done
+		select {
+		case <-it.parallelIterator.ctx.Done():
+			logger.Trace("[shardedDBIterator] combine worker ends due to ctx")
+			break chanIter
+		default:
+		}
+
+		// look for smallest key
+		minEntry := heap.Pop(entries).(entryWithShardNum)
+
+		// fill resultCh with smallest key
+		it.resultCh <- minEntry.Entry
+
+		// fill used entry with new entry
+		// skip this if channel is closed
+		if e, ok := <-it.parallelIterator.resultChs[minEntry.shardNum]; ok {
+			heap.Push(entries, entryWithShardNum{e, minEntry.shardNum})
+		}
+	}
+	logger.Trace("[shardedDBIterator] combine worker finished")
+	close(it.resultCh)
+}
+
+// Next gets the next item from iterators.
+func (it *shardedDBIterator) Next() bool {
+	e, ok := <-it.resultCh
+	if !ok {
+		logger.Debug("[shardedDBIterator] Next is called on closed channel")
+		return false
+	}
+	it.key, it.value = e.Key, e.Val
 	return true
 }
 
-func (pdi *shardedDBIterator) Error() error {
-	// TODO-Klaytn implement this later.
+func (it *shardedDBIterator) Error() error {
+	for i, iter := range it.parallelIterator.iterators {
+		if iter.Error() != nil {
+			logger.Error("[shardedDBIterator] error from iterator",
+				"err", iter.Error(), "shardNum", i, "key", it.key, "val", it.value)
+			return iter.Error()
+		}
+	}
 	return nil
 }
 
-func (pdi *shardedDBIterator) Key() []byte {
-	// TODO-Klaytn implement this later.
-	return nil
+func (it *shardedDBIterator) Key() []byte {
+	return it.key
 }
 
-func (pdi *shardedDBIterator) Value() []byte {
-	// TODO-Klaytn implement this later.
-	return nil
+func (it *shardedDBIterator) Value() []byte {
+	return it.value
 }
 
-func (pdi *shardedDBIterator) Release() {
-	// TODO-Klaytn implement this later.
+func (it *shardedDBIterator) Release() {
+	it.parallelIterator.cancel()
+}
+
+type entryWithShardNum struct {
+	common.Entry
+	shardNum int
+}
+
+type entryHeap []entryWithShardNum
+
+func (e entryHeap) Len() int {
+	return len(e)
+}
+
+func (e entryHeap) Less(i, j int) bool {
+	return bytes.Compare(e[i].Key, e[j].Key) < 0
+}
+func (e entryHeap) Swap(i, j int) {
+	e[i], e[j] = e[j], e[i]
+}
+func (e *entryHeap) Push(x interface{}) {
+	*e = append(*e, x.(entryWithShardNum))
+}
+
+func (e *entryHeap) Pop() interface{} {
+	old := *e
+	n := len(old)
+	element := old[n-1]
+	*e = old[0 : n-1]
+	return element
+}
+
+// shardedDBParallelIterator creates iterators for each shard DB.
+// Channels subscribing each iterators can be gained.
+// Each iterators fetch values in binary-alphabetical order.
+// This is useful when you want to operate on each items in parallel.
+type shardedDBParallelIterator struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	iterators []Iterator
+
+	combinedChan bool // all workers put items to one resultChan
+	shardNum     int  // num of shards left to iterate
+	shardNumMu   *sync.Mutex
+	resultChs    []chan common.Entry
+}
+
+// NewParallelIterator creates iterators for each shard DB. This is useful when you
+// want to operate on each items in parallel.
+// If `resultCh` is given, all items are written to `resultCh`, unsorted with a
+// particular key prefix, starting at a particular initial key. If `resultCh`
+// is not given, new channels are created for each DB. Items are written to
+// corresponding channels in binary-alphabetical order. The channels can be
+// gained by calling `Channels()`.
+//
+// If you want to get ordered items in serial, checkout shardedDB.NewIterator()
+// If you want to get unordered items in serial with Iterator Interface,
+// checkout shardedDB.NewIteratorUnsorted().
+func (db *shardedDB) NewParallelIterator(ctx context.Context, prefix []byte, start []byte, resultCh chan common.Entry) shardedDBParallelIterator {
+	if ctx == nil {
+		ctx = context.TODO()
+	}
+
+	it := shardedDBParallelIterator{
+		ctx:          ctx,
+		cancel:       nil,
+		iterators:    make([]Iterator, len(db.shards)),
+		combinedChan: resultCh != nil,
+		shardNum:     len(db.shards),
+		shardNumMu:   &sync.Mutex{},
+		resultChs:    make([]chan common.Entry, len(db.shards)),
+	}
+	it.ctx, it.cancel = context.WithCancel(ctx)
+
+	for i, shard := range db.shards {
+		it.iterators[i] = shard.NewIterator(prefix, start)
+		if resultCh == nil {
+			it.resultChs[i] = make(chan common.Entry, shardedDBSubChannelSize)
+		} else {
+			it.resultChs[i] = resultCh
+		}
+		go it.runChanWorker(it.ctx, it.iterators[i], it.resultChs[i])
+	}
+
+	return it
+}
+
+// runChanWorker runs a worker. The worker gets key/value pair from
+// `it` and push the value to `resultCh`.
+// `iterator.Release()` is called after all iterating is finished.
+// `resultCh` is closed after the iterating is finished.
+func (sit *shardedDBParallelIterator) runChanWorker(ctx context.Context, it Iterator, resultCh chan common.Entry) {
+iter:
+	for it.Next() {
+		select {
+		case <-ctx.Done():
+			break iter
+		default:
+		}
+		key := make([]byte, len(it.Key()))
+		val := make([]byte, len(it.Value()))
+		copy(key, it.Key())
+		copy(val, it.Value())
+		resultCh <- common.Entry{Key: key, Val: val}
+	}
+	// Release the iterator. There is nothing to iterate anymore.
+	it.Release()
+	// Close `resultCh`. If it is `combinedChan`, the close only happens
+	// when this is the last living worker.
+	sit.shardNumMu.Lock()
+	defer sit.shardNumMu.Unlock()
+	if sit.shardNum--; sit.combinedChan && sit.shardNum > 0 {
+		return
+	}
+	close(resultCh)
+}
+
+// Channels returns channels that can subscribe on.
+func (it *shardedDBParallelIterator) Channels() []chan common.Entry {
+	return it.resultChs
+}
+
+// Release stops all iterators, channels and workers
+// Even Release() is called, there could be some items left in the channel.
+// Each iterator.Release() is called in `runChanWorker`.
+func (it *shardedDBParallelIterator) Release() {
+	it.cancel()
 }
 
 func (db *shardedDB) NewBatch() Batch {
@@ -255,7 +433,7 @@ type shardedDBBatch struct {
 }
 
 func (sdbBatch *shardedDBBatch) Put(key []byte, value []byte) error {
-	if ShardIndex, err := shardIndexByKey(key, uint(sdbBatch.numBatches)); err != nil {
+	if ShardIndex, err := shardIndexByKey(key, sdbBatch.numBatches); err != nil {
 		return err
 	} else {
 		return sdbBatch.batches[ShardIndex].Put(key, value)
@@ -263,7 +441,7 @@ func (sdbBatch *shardedDBBatch) Put(key []byte, value []byte) error {
 }
 
 func (sdbBatch *shardedDBBatch) Delete(key []byte) error {
-	if ShardIndex, err := shardIndexByKey(key, uint(sdbBatch.numBatches)); err != nil {
+	if ShardIndex, err := shardIndexByKey(key, sdbBatch.numBatches); err != nil {
 		return err
 	} else {
 		return sdbBatch.batches[ShardIndex].Delete(key)

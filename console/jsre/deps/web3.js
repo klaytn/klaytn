@@ -5340,15 +5340,19 @@ var Iban = require('../iban');
 var transfer = require('../transfer');
 
 var blockCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "klay_getBlockByHash" : "klay_getBlockByNumber";
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? "klay_getBlockByHash" : "klay_getBlockByNumber";
+};
+
+var headerCall = function (args) {
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? "klay_getHeaderByHash" : "klay_getHeaderByNumber";
 };
 
 var transactionFromBlockCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getTransactionByBlockHashAndIndex' : 'klay_getTransactionByBlockNumberAndIndex';
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'klay_getTransactionByBlockHashAndIndex' : 'klay_getTransactionByBlockNumberAndIndex';
 };
 
 var getBlockTransactionCountCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getBlockTransactionCountByHash' : 'klay_getBlockTransactionCountByNumber';
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'klay_getBlockTransactionCountByHash' : 'klay_getBlockTransactionCountByNumber';
 };
 
 function Klay(web3) {
@@ -5420,6 +5424,13 @@ var methods = function () {
         params: 2,
         inputFormatter: [formatters.inputBlockNumberFormatter, function (val) { return !!val; }],
         outputFormatter: formatters.outputBlockFormatter
+    });
+
+    var getHeader = new Method({
+        name: 'getHeader',
+        call: headerCall,
+        params: 1,
+        inputFormatter: [formatters.inputBlockNumberFormatter]
     });
 
     var getCompilers = new Method({
@@ -5538,6 +5549,7 @@ var methods = function () {
         getStorageAt,
         getCode,
         getBlock,
+        getHeader,
         getCompilers,
         getBlockTransactionCount,
         getTransaction,

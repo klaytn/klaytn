@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,7 +38,11 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-var logger = log.NewModuleLogger(log.StorageDatabase)
+var (
+	logger = log.NewModuleLogger(log.StorageDatabase)
+
+	errGovIdxAlreadyExist = errors.New("a governance idx of the more recent or the same block exist")
+)
 
 type DBManager interface {
 	IsParallelDBWrite() bool
@@ -1989,6 +1994,10 @@ func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uin
 		return err
 	}
 	if err := dbm.WriteGovernanceIdx(num); err != nil {
+		if err == errGovIdxAlreadyExist {
+			// Overwriting existing data is not allowed, but the attempt is not considered as a failure.
+			return nil
+		}
 		return err
 	}
 	return db.Put(makeKey(governancePrefix, num), b)
@@ -2003,6 +2012,13 @@ func (dbm *databaseManager) WriteGovernanceIdx(num uint64) error {
 			return err
 		}
 	}
+
+	if len(newSlice) > 0 && num <= newSlice[len(newSlice)-1] {
+		logger.Error("The same or more recent governance index exist. Skip writing governance index",
+			"newIdx", num, "govIdxes", newSlice)
+		return errGovIdxAlreadyExist
+	}
+
 	newSlice = append(newSlice, num)
 
 	data, err := json.Marshal(newSlice)
@@ -2037,6 +2053,11 @@ func (dbm *databaseManager) ReadRecentGovernanceIdx(count int) ([]uint64, error)
 		if e := json.Unmarshal(history, &idxHistory); e != nil {
 			return nil, e
 		}
+
+		// Make sure idxHistory should be in ascending order
+		sort.Slice(idxHistory, func(i, j int) bool {
+			return idxHistory[i] < idxHistory[j]
+		})
 
 		max := 0
 		leng := len(idxHistory)
