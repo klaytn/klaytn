@@ -1014,3 +1014,80 @@ func getFilesInDir(t *testing.T, dirPath string, substr string) []string {
 
 	return dirNames
 }
+
+func TestDBManager_WriteAndReadAccountSnapshot(t *testing.T) {
+	var (
+		hash     common.Hash
+		expected []byte
+		actual   []byte
+	)
+
+	for _, dbm := range dbManagers {
+		// read unknown key
+		hash, _ = genRandomData()
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Nil(t, actual)
+
+		// write and read with empty hash
+		_, expected = genRandomData()
+		dbm.WriteAccountSnapshot(common.Hash{}, expected)
+		actual = dbm.ReadAccountSnapshot(common.Hash{})
+		assert.Equal(t, expected, actual)
+
+		// write and read with empty data
+		hash, _ = genRandomData()
+		dbm.WriteAccountSnapshot(hash, []byte{})
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Equal(t, []byte{}, actual)
+
+		// write and read with random hash and data
+		hash, expected = genRandomData()
+		dbm.WriteAccountSnapshot(hash, expected)
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Equal(t, expected, actual)
+	}
+}
+
+func TestDBManager_DeleteAccountSnapshot(t *testing.T) {
+	var (
+		hash     common.Hash
+		expected []byte
+		actual   []byte
+	)
+
+	for _, dbm := range dbManagers {
+		// delete unknown key
+		hash, _ = genRandomData()
+		dbm.DeleteAccountSnapshot(hash)
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Nil(t, actual)
+
+		// delete empty hash
+		_, expected = genRandomData()
+		dbm.WriteAccountSnapshot(common.Hash{}, expected)
+		dbm.DeleteAccountSnapshot(common.Hash{})
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Nil(t, actual)
+
+		// write and read with empty data
+		hash, _ = genRandomData()
+		dbm.WriteAccountSnapshot(hash, []byte{})
+		dbm.DeleteAccountSnapshot(hash)
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Nil(t, actual)
+
+		// write and read with random hash and data
+		hash, expected = genRandomData()
+		dbm.WriteAccountSnapshot(hash, expected)
+		dbm.DeleteAccountSnapshot(hash)
+		actual = dbm.ReadAccountSnapshot(hash)
+		assert.Nil(t, actual)
+	}
+}
+
+func genRandomData() (common.Hash, []byte) {
+	rb := common.MakeRandomBytes(common.HashLength)
+	hash := common.BytesToHash(rb)
+	data := common.MakeRandomBytes(100)
+	return hash, data
+}

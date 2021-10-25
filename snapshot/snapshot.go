@@ -17,6 +17,7 @@
 //
 // This file is derived from core/state/snapshot/snapshot.go (2021/10/21).
 // Modified and improved for the klaytn development.
+
 package snapshot
 
 import (
