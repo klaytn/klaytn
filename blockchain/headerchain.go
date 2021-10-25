@@ -351,43 +351,82 @@ func (hc *HeaderChain) SetCurrentHeader(head *types.Header) {
 	hc.currentHeaderHash = head.Hash()
 }
 
-// DeleteCallback is a callback function that is called by SetHead before
-// each header is deleted.
-type DeleteCallback func(common.Hash, uint64)
+type (
+	// UpdateHeadBlocksCallback is a callback function that is called by SetHead
+	// before head header is updated. The method will return the actual block it
+	// updated the head to (missing state) and a flag if setHead should continue
+	// rewinding till that forcefully (exceeded ancient limits)
+	UpdateHeadBlocksCallback func(*types.Header)
 
-// SetHead rewinds the local chain to a new head. Everything above the new head
-// will be deleted and the new one set.
-func (hc *HeaderChain) SetHead(head uint64, delFn DeleteCallback) {
-	height := uint64(0)
+	// DeleteBlockContentCallback is a callback function that is called by SetHead
+	// before each header is deleted.
+	DeleteBlockContentCallback func(common.Hash, uint64)
+)
 
-	if hdr := hc.CurrentHeader(); hdr != nil {
-		height = hdr.Number.Uint64()
-	}
-
+func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, delFn DeleteBlockContentCallback) {
+	var (
+		parentHash common.Hash
+		origin     = true
+	)
 	for hdr := hc.CurrentHeader(); hdr != nil && hdr.Number.Uint64() > head; hdr = hc.CurrentHeader() {
-		hash := hdr.Hash()
 		num := hdr.Number.Uint64()
-		if delFn != nil {
-			delFn(hash, num)
-		}
-		hc.chainDB.DeleteHeader(hash, num)
-		hc.chainDB.DeleteTd(hash, num)
 
-		hc.currentHeader.Store(hc.GetHeader(hdr.ParentHash, hdr.Number.Uint64()-1))
+		// Rewind block chain to new head.
+		parent := hc.GetHeader(hdr.ParentHash, num-1)
+		if parent == nil {
+			parent = hc.genesisHeader
+		}
+		parentHash = parent.Hash()
+
+		// Notably, since geth has the possibility for setting the head to a low
+		// height which is even lower than ancient head.
+		// In order to ensure that the head is always no higher than the data in
+		// the database (ancient store or active store), we need to update head
+		// first then remove the relative data from the database.
+		//
+		// Update head first(head fast block, head full block) before deleting the data.
+		if updateFn != nil {
+			updateFn(parent)
+		}
+		// Update head header then.
+		hc.chainDB.WriteHeadHeaderHash(parentHash)
+
+		hc.currentHeader.Store(parent)
+		hc.currentHeaderHash = parentHash
+
+		// If this is the first iteration, wipe any leftover data upwards too so
+		// we don't end up with dangling daps in the database
+		var nums []uint64
+		if origin {
+			for n := num + 1; len(hc.chainDB.ReadAllHashes(n)) > 0; n++ {
+				nums = append([]uint64{n}, nums...) // suboptimal, but we don't really expect this path
+			}
+			origin = false
+		}
+		nums = append(nums, num)
+
+		// Remove the related data from the database on all sidechains
+		for _, num := range nums {
+			// Gather all the side fork hashes
+			hashes := hc.chainDB.ReadAllHashes(num)
+			if len(hashes) == 0 {
+				// No hashes in the database whatsoever, probably frozen already
+				hashes = append(hashes, hdr.Hash())
+			}
+			for _, hash := range hashes {
+				if delFn != nil {
+					delFn(hash, num)
+				}
+				hc.chainDB.DeleteHeader(hash, num)
+				hc.chainDB.DeleteTd(hash, num)
+			}
+			hc.chainDB.DeleteCanonicalHash(num)
+		}
 	}
-	// Roll back the canonical chain numbering
-	for i := height; i > head; i-- {
-		hc.chainDB.DeleteCanonicalHash(i)
-	}
+	// Flush all accumulated deletions.
+
 	// Clear out any stale content from the caches
 	hc.chainDB.ClearHeaderChainCache()
-
-	if hc.CurrentHeader() == nil {
-		hc.currentHeader.Store(hc.genesisHeader)
-	}
-	hc.currentHeaderHash = hc.CurrentHeader().Hash()
-
-	hc.chainDB.WriteHeadHeaderHash(hc.currentHeaderHash)
 }
 
 // SetGenesis sets a new genesis block header for the chain
