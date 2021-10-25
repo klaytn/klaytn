@@ -64,6 +64,7 @@ type DBManager interface {
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
+	GetSnapshotDB() Database
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -177,6 +178,15 @@ type DBManager interface {
 	ReadChainConfig(hash common.Hash) *params.ChainConfig
 	WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
 
+	// from accessors_snapshot.go
+	ReadAccountSnapshot(hash common.Hash) []byte
+	WriteAccountSnapshot(hash common.Hash, entry []byte)
+	DeleteAccountSnapshot(hash common.Hash)
+
+	ReadStorageSnapshot(accountHash, storageHash common.Hash) []byte
+	WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte)
+	DeleteStorageSnapshot(accountHash, storageHash common.Hash)
+
 	// below operations are used in parent chain side, not child chain side.
 	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
 	ConvertChildChainBlockHashToParentChainTxHash(scBlockHash common.Hash) common.Hash
@@ -242,6 +252,7 @@ const (
 	StateTrieMigrationDB
 	TxLookUpEntryDB
 	bridgeServiceDB
+	SnapshotDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -262,6 +273,7 @@ var dbBaseDirs = [databaseEntryTypeSize]string{
 	"statetrie_migrated", // "statetrie_migrated_#N" path will be used. (#N is a migrated block number.)
 	"txlookup",
 	"bridgeservice",
+	"snapshot",
 }
 
 // Sum of dbConfigRatio should be 100.
@@ -272,9 +284,10 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 	5,  // BodyDB
 	5,  // ReceiptsDB
 	40, // StateTrieDB
-	40, // StateTrieMigrationDB
+	20, // StateTrieMigrationDB
 	2,  // TXLookUpEntryDB
 	1,  // bridgeServiceDB
+	20, // SnapshotDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -743,6 +756,10 @@ func (dbm *databaseManager) GetStateTrieMigrationDB() Database {
 
 func (dbm *databaseManager) GetMiscDB() Database {
 	return dbm.dbs[MiscDB]
+}
+
+func (dbm *databaseManager) GetSnapshotDB() Database {
+	return dbm.dbs[SnapshotDB]
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
@@ -1794,6 +1811,52 @@ func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.Chain
 	}
 	if err := db.Put(configKey(hash), data); err != nil {
 		logger.Crit("Failed to store chain config", "err", err)
+	}
+}
+
+// ReadAccountSnapshot retrieves the snapshot entry of an account trie leaf.
+func (dbm *databaseManager) ReadAccountSnapshot(hash common.Hash) []byte {
+	db := dbm.getDatabase(SnapshotDB)
+	data, _ := db.Get(AccountSnapshotKey(hash))
+	return data
+}
+
+// WriteAccountSnapshot stores the snapshot entry of an account trie leaf.
+func (dbm *databaseManager) WriteAccountSnapshot(hash common.Hash, entry []byte) {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Put(AccountSnapshotKey(hash), entry); err != nil {
+		logger.Crit("Failed to store account snapshot", "err", err)
+	}
+}
+
+// DeleteAccountSnapshot removes the snapshot entry of an account trie leaf.
+func (dbm *databaseManager) DeleteAccountSnapshot(hash common.Hash) {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Delete(AccountSnapshotKey(hash)); err != nil {
+		logger.Crit("Failed to delete account snapshot", "err", err)
+	}
+}
+
+// ReadStorageSnapshot retrieves the snapshot entry of an storage trie leaf.
+func (dbm *databaseManager) ReadStorageSnapshot(accountHash, storageHash common.Hash) []byte {
+	db := dbm.getDatabase(SnapshotDB)
+	data, _ := db.Get(StorageSnapshotKey(accountHash, storageHash))
+	return data
+}
+
+// WriteStorageSnapshot stores the snapshot entry of an storage trie leaf.
+func (dbm *databaseManager) WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte) {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Put(StorageSnapshotKey(accountHash, storageHash), entry); err != nil {
+		logger.Crit("Failed to store storage snapshot", "err", err)
+	}
+}
+
+// DeleteStorageSnapshot removes the snapshot entry of an storage trie leaf.
+func (dbm *databaseManager) DeleteStorageSnapshot(accountHash, storageHash common.Hash) {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Delete(StorageSnapshotKey(accountHash, storageHash)); err != nil {
+		logger.Crit("Failed to delete storage snapshot", "err", err)
 	}
 }
 
