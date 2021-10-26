@@ -106,7 +106,7 @@ func (p entrySlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 // as the existent proof. The test cases are generated randomly.
 func TestRangeProof(t *testing.T) {
 	trie, vals := randomTrie(4096)
-	var entries entrySlice
+	entries := entrySlice{}
 	for _, kv := range vals {
 		entries = append(entries, kv)
 	}
@@ -139,7 +139,7 @@ func TestRangeProof(t *testing.T) {
 // The test cases are generated randomly.
 func TestRangeProofWithNonExistentProof(t *testing.T) {
 	trie, vals := randomTrie(4096)
-	var entries entrySlice
+	entries := entrySlice{}
 	for _, kv := range vals {
 		entries = append(entries, kv)
 	}
@@ -211,7 +211,7 @@ func TestRangeProofWithNonExistentProof(t *testing.T) {
 // - There exists a gap between the last element and the right edge proof
 func TestRangeProofWithInvalidNonExistentProof(t *testing.T) {
 	trie, vals := randomTrie(4096)
-	var entries entrySlice
+	entries := entrySlice{}
 	for _, kv := range vals {
 		entries = append(entries, kv)
 	}
@@ -268,7 +268,7 @@ func TestRangeProofWithInvalidNonExistentProof(t *testing.T) {
 // non-existent one.
 func TestOneElementRangeProof(t *testing.T) {
 	trie, vals := randomTrie(4096)
-	var entries entrySlice
+	entries := entrySlice{}
 	for _, kv := range vals {
 		entries = append(entries, kv)
 	}
@@ -355,7 +355,7 @@ func TestOneElementRangeProof(t *testing.T) {
 // The edge proofs can be nil.
 func TestAllElementsProof(t *testing.T) {
 	trie, vals := randomTrie(4096)
-	var entries entrySlice
+	entries := entrySlice{}
 	for _, kv := range vals {
 		entries = append(entries, kv)
 	}
@@ -405,7 +405,7 @@ func TestAllElementsProof(t *testing.T) {
 func TestSingleSideRangeProof(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		trie := new(Trie)
-		var entries entrySlice
+		entries := entrySlice{}
 		for i := 0; i < 4096; i++ {
 			value := &kv{randBytes(32), randBytes(20), false}
 			trie.Update(value.k, value.v)
@@ -440,7 +440,7 @@ func TestSingleSideRangeProof(t *testing.T) {
 func TestReverseSingleSideRangeProof(t *testing.T) {
 	for i := 0; i < 64; i++ {
 		trie := new(Trie)
-		var entries entrySlice
+		entries := entrySlice{}
 		for i := 0; i < 4096; i++ {
 			value := &kv{randBytes(32), randBytes(20), false}
 			trie.Update(value.k, value.v)
@@ -476,7 +476,7 @@ func TestReverseSingleSideRangeProof(t *testing.T) {
 // The prover is expected to detect the error.
 func TestBadRangeProof(t *testing.T) {
 	trie, vals := randomTrie(4096)
-	var entries entrySlice
+	entries := entrySlice{}
 	for _, kv := range vals {
 		entries = append(entries, kv)
 	}
@@ -579,7 +579,7 @@ func TestGappedRangeProof(t *testing.T) {
 // TestSameSideProofs tests the element is not in the range covered by proofs
 func TestSameSideProofs(t *testing.T) {
 	trie, vals := randomTrie(4096)
-	var entries entrySlice
+	entries := entrySlice{}
 	for _, kv := range vals {
 		entries = append(entries, kv)
 	}
@@ -695,7 +695,7 @@ func TestHasRightElement(t *testing.T) {
 // The first edge proof must be a non-existent proof.
 func TestEmptyRangeProof(t *testing.T) {
 	trie, vals := randomTrie(4096)
-	var entries entrySlice
+	entries := entrySlice{}
 	for _, kv := range vals {
 		entries = append(entries, kv)
 	}
@@ -730,7 +730,7 @@ func TestEmptyRangeProof(t *testing.T) {
 func TestBloatedProof(t *testing.T) {
 	// Use a small trie
 	trie, kvs := nonRandomTrie(100)
-	var entries entrySlice
+	entries := entrySlice{}
 	for _, kv := range kvs {
 		entries = append(entries, kv)
 	}
