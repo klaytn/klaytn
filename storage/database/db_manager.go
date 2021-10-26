@@ -284,10 +284,10 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 	5,  // BodyDB
 	5,  // ReceiptsDB
 	40, // StateTrieDB
-	35, // StateTrieMigrationDB
+	20, // StateTrieMigrationDB
 	2,  // TXLookUpEntryDB
 	1,  // bridgeServiceDB
-	5,  // SnapshotDB
+	20, // SnapshotDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
