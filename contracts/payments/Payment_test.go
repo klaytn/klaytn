@@ -86,7 +86,6 @@ func TestPayment_sendPayment(t *testing.T) {
 	backend := env.backend
 	sender := env.accounts[0]
 	receiver := env.accounts[1]
-	thirdParty := env.accounts[2]
 	contract := env.paymentContract
 
 	// subscribe SendPayment event
@@ -111,15 +110,10 @@ func TestPayment_sendPayment(t *testing.T) {
 	hash := item.Hash
 
 	// B는 getPayments 실행 시 결과를 확인할 수 있음
-	getPayment, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+	getPayment, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(getPayment))
 	assert.Equal(t, getPayment, [][32]byte{hash})
-
-	// C는 getPayments 실행 시 결과를 확인할 수 없음
-	getPayment, err = contract.GetPayments(&bind.CallOpts{From: thirdParty.From})
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(getPayment))
 }
 
 func TestPayment_sendPayment_noZero(t *testing.T) {
@@ -223,7 +217,7 @@ func TestPayment_isAbleToSettle(t *testing.T) {
 
 	// SettleInterval가 지나기 전에는 isAbleToSettle 실행 시 False인 것을 확인
 	{
-		isAbleToSettle, err := contract.IsAbleToSettle(&bind.CallOpts{From: receiver.From}, hash)
+		isAbleToSettle, err := contract.IsAbleToSettle(&bind.CallOpts{}, hash)
 		assert.NoError(t, err)
 		assert.False(t, isAbleToSettle)
 	}
@@ -235,7 +229,7 @@ func TestPayment_isAbleToSettle(t *testing.T) {
 			backend.Commit()
 		}
 
-		isAbleToSettle, err := contract.IsAbleToSettle(&bind.CallOpts{From: receiver.From}, hash)
+		isAbleToSettle, err := contract.IsAbleToSettle(&bind.CallOpts{}, hash)
 		assert.NoError(t, err)
 		assert.True(t, isAbleToSettle)
 	}
@@ -294,7 +288,7 @@ func TestPayment_settlePayment(t *testing.T) {
 	}
 	// getPayments를 호출하여 두 트랜잭션이 리턴되는 것을 확인
 	{
-		getPayments, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+		getPayments, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 		assert.NoError(t, err)
 		assert.Equal(t, 2, len(getPayments))
 		assert.Contains(t, getPayments, previousHash)
@@ -309,7 +303,7 @@ func TestPayment_settlePayment(t *testing.T) {
 	}
 	// getPayments를 호출하여 조건을 만족하지 못한 (블록 생성 후) 트랜잭션이 리턴되는 것을 확인
 	{
-		getPayment, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+		getPayment, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(getPayment))
 		assert.Equal(t, afterHash, getPayment[0])
@@ -379,7 +373,7 @@ func TestPayment_settlePayment_empty(t *testing.T) {
 	contract := env.paymentContract
 
 	// getPayments를 호출하여 받을 Payment가 없는 것을 확인
-	getPayment, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+	getPayment, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(getPayment))
 
@@ -390,7 +384,7 @@ func TestPayment_settlePayment_empty(t *testing.T) {
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
 	// getPayments를 호출하여 상태 변화가 없음을 확인
-	getPayment, err = contract.GetPayments(&bind.CallOpts{From: receiver.From})
+	getPayment, err = contract.GetPayments(&bind.CallOpts{}, receiver.From)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(getPayment))
 }
@@ -471,7 +465,7 @@ func TestPayment_settlePayment_pending(t *testing.T) {
 		backend.Commit()
 		CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-		getPayments, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+		getPayments, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(getPayments))
 		assert.Contains(t, getPayments, hash)
@@ -484,7 +478,7 @@ func TestPayment_settlePayment_pending(t *testing.T) {
 		backend.Commit()
 		CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-		getPayments, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+		getPayments, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(getPayments))
 	}
@@ -606,7 +600,7 @@ func TestPayment_settlePayment_cancelEmpty(t *testing.T) {
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
 	// getPayments를 호출하여 받은 Payment가 없음을 확인
-	getPayments, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+	getPayments, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(getPayments))
 
@@ -617,7 +611,7 @@ func TestPayment_settlePayment_cancelEmpty(t *testing.T) {
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
 	// getPayments를 호출하여 받은 Payment가 없음을 확인
-	getPayments, err = contract.GetPayments(&bind.CallOpts{From: receiver.From})
+	getPayments, err = contract.GetPayments(&bind.CallOpts{}, receiver.From)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(getPayments))
 }
@@ -731,7 +725,7 @@ func TestPayment_cancelPayment(t *testing.T) {
 	hash = item.Hash
 
 	// getPayments를 호출하여 트랜잭션이 리턴되는 것을 확인
-	getPayments, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+	getPayments, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(getPayments))
 	assert.Equal(t, hash, getPayments[0])
@@ -743,7 +737,7 @@ func TestPayment_cancelPayment(t *testing.T) {
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
 	// getPayments를 호출하여 취소하지 않은 트랜잭션만 리턴되는 것을 확인
-	getPayments, err = contract.GetPayments(&bind.CallOpts{From: receiver.From})
+	getPayments, err = contract.GetPayments(&bind.CallOpts{}, receiver.From)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(getPayments))
 }
@@ -817,7 +811,7 @@ func TestPayment_cancelPayment_empty(t *testing.T) {
 	contract := env.paymentContract
 
 	// getPayments를 호출
-	getPayments, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+	getPayments, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(getPayments))
 
@@ -832,7 +826,7 @@ func TestPayment_cancelPayment_empty(t *testing.T) {
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
 
 	// getPayments를 호출하여 상태 변화가 없음을 확인
-	getPayments, err = contract.GetPayments(&bind.CallOpts{From: receiver.From})
+	getPayments, err = contract.GetPayments(&bind.CallOpts{}, receiver.From)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(getPayments))
 }
@@ -924,7 +918,7 @@ func TestPayment_settlePayment_cancelPayment(t *testing.T) {
 
 	// 트랜잭션 1, 3, 4번이 있는 것을 확인
 	{
-		getPayment, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+		getPayment, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 		assert.NoError(t, err)
 		assert.Equal(t, 3, len(getPayment))
 		assert.Contains(t, getPayment, hashes[0])
@@ -946,7 +940,7 @@ func TestPayment_settlePayment_cancelPayment(t *testing.T) {
 
 	// 1, 3, 4번째 payment가 settle되는 것을 확인
 	{
-		getPayment, err := contract.GetPayments(&bind.CallOpts{From: receiver.From})
+		getPayment, err := contract.GetPayments(&bind.CallOpts{}, receiver.From)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(getPayment))
 	}

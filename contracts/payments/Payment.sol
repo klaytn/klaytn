@@ -23,7 +23,7 @@ contract Payment {
         }
     }
 
-    modifier txHashExsits(bytes32 txHash) {
+    modifier txHashExists(bytes32 txHash) {
         require(txs[txHash].amount != 0, "Such txHash does not exist.");
         _;
     }
@@ -52,7 +52,7 @@ contract Payment {
         emit SendPayment(msg.sender, receiver, msg.value, hash);
     }
 
-    function cancelPayment(bytes32 txHash) public txHashExsits(txHash) onlyReceiver(txHash) {
+    function cancelPayment(bytes32 txHash) public txHashExists(txHash) onlyReceiver(txHash) {
         // give back money to sender
         address sender = txs[txHash].sender;
         uint amount = txs[txHash].amount;
@@ -100,19 +100,24 @@ contract Payment {
         return sendinfo.blockNumber + SettleInterval <= block.number;
     }
 
-    function isAbleToSettle(bytes32 txHash) public view txHashExsits(txHash) onlyReceiver(txHash) returns (bool) {
+    function isAbleToSettle(bytes32 txHash) public view txHashExists(txHash) returns (bool) {
         return isAbleToSettleInternal(txHash);
     }
 
-    function getPayments() public view returns (bytes32[] memory) {
+    function getPaymentInfo(bytes32 txHash) public view txHashExists(txHash) returns (SendInfo memory) {
+        SendInfo memory sendInfo = txs[txHash];
+        return sendInfo;
+    }
+
+    function getPayments(address receiver) public view returns (bytes32[] memory) {
         // check if the queue exits
-        if (address(receiverInfos[msg.sender]) == address(0)) {
+        if (address(receiverInfos[receiver]) == address(0)) {
             bytes32[] memory empty;
             return empty;
         }
 
         // get tx hashes
-        bytes32[] memory hashes = receiverInfos[msg.sender].getAll();
+        bytes32[] memory hashes = receiverInfos[receiver].getAll();
         // little trick to filter array
         uint256 resultCount;
         for (uint i = 0; i < hashes.length; i++) {
@@ -135,20 +140,20 @@ contract Payment {
         return result;
     }
 
-    function getSettleablePayments() public view returns (bytes32[] memory) {
+    function getSettleablePayments(address receiver) public view returns (bytes32[] memory) {
         // check if the queue exits
-        if (address(receiverInfos[msg.sender]) == address(0)) {
+        if (address(receiverInfos[receiver]) == address(0)) {
             bytes32[] memory empty;
             return empty;
         }
 
         // get tx hashes
-        bytes32[] memory hashes = receiverInfos[msg.sender].getAll();
+        bytes32[] memory hashes = receiverInfos[receiver].getAll();
         // little trick to filter array
         uint256 resultCount;
         for (uint i = 0; i < hashes.length; i++) {
             bytes32 hash = hashes[i];
-            if (txs[hash].amount != 0 // check if canceld
+            if (txs[hash].amount != 0 // check if canceled
                 && isAbleToSettleInternal(hash)) {// check if able to settle
                 resultCount++;
             }
