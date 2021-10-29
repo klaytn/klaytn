@@ -366,10 +366,9 @@ type (
 func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, delFn DeleteBlockContentCallback) {
 	var (
 		parentHash common.Hash
-		origin     = true
 	)
 	for hdr := hc.CurrentHeader(); hdr != nil && hdr.Number.Uint64() > head; hdr = hc.CurrentHeader() {
-		num := hdr.Number.Uint64()
+		hash, num := hdr.Hash(), hdr.Number.Uint64()
 
 		// Rewind block chain to new head.
 		parent := hc.GetHeader(hdr.ParentHash, num-1)
@@ -391,39 +390,22 @@ func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, d
 		// Update head header then.
 		hc.chainDB.WriteHeadHeaderHash(parentHash)
 
+		// Remove the related data from the database on all sidechains
+		if delFn != nil {
+			delFn(hash, num)
+		}
+
+		//Rewind header chain to new head.
+		hc.chainDB.DeleteHeader(hash, num)
+		hc.chainDB.DeleteTd(hash, num)
+		hc.chainDB.DeleteCanonicalHash(num)
+
 		hc.currentHeader.Store(parent)
 		hc.currentHeaderHash = parentHash
-
-		// If this is the first iteration, wipe any leftover data upwards too so
-		// we don't end up with dangling daps in the database
-		var nums []uint64
-		if origin {
-			for n := num + 1; len(hc.chainDB.ReadAllHashes(n)) > 0; n++ {
-				nums = append([]uint64{n}, nums...) // suboptimal, but we don't really expect this path
-			}
-			origin = false
-		}
-		nums = append(nums, num)
-
-		// Remove the related data from the database on all sidechains
-		for _, num := range nums {
-			// Gather all the side fork hashes
-			hashes := hc.chainDB.ReadAllHashes(num)
-			if len(hashes) == 0 {
-				// No hashes in the database whatsoever, probably frozen already
-				hashes = append(hashes, hdr.Hash())
-			}
-			for _, hash := range hashes {
-				if delFn != nil {
-					delFn(hash, num)
-				}
-				hc.chainDB.DeleteHeader(hash, num)
-				hc.chainDB.DeleteTd(hash, num)
-			}
-			hc.chainDB.DeleteCanonicalHash(num)
-		}
 	}
-	// Flush all accumulated deletions.
+
+	// TODO-Klaytn The code was difficult to apply because the way to create batch between Klaytn and Ethereum was different.
+	// batch.Write()
 
 	// Clear out any stale content from the caches
 	hc.chainDB.ClearHeaderChainCache()

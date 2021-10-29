@@ -461,6 +461,7 @@ func (bc *BlockChain) SetHead(head uint64) error {
 		if currentBlock := bc.CurrentBlock(); currentBlock != nil && header.Number.Uint64() < currentBlock.NumberU64() {
 			newHeadBlock := bc.GetBlock(header.Hash(), header.Number.Uint64())
 			if newHeadBlock == nil {
+				logger.Error("Gap in the chain, rewinding to genesis", "number", header.Number, "hash", header.Hash())
 				newHeadBlock = bc.genesisBlock
 			} else {
 				if _, err := state.New(newHeadBlock.Root(), bc.stateCache); err != nil {
