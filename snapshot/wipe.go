@@ -21,6 +21,10 @@
 package snapshot
 
 import (
+	"bytes"
+	"time"
+
+	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/rcrowley/go-metrics"
 )
@@ -31,6 +35,60 @@ import (
 //
 // Origin is included for wiping and limit is excluded if they are specified.
 func wipeKeyRange(db database.DBManager, kind string, prefix []byte, origin []byte, limit []byte, keylen int, meter metrics.Meter, report bool) error {
-	// TODO-Klaytn-Snapshot port wipeKeyRange
+	// Batch deletions together to avoid holding an iterator for too long
+	var (
+		batch = db.NewSnapshotDBBatch()
+		items int
+	)
+	// Iterate over the key-range and delete all of them
+	start, logged := time.Now(), time.Now()
+
+	it := db.GetSnapshotDB().NewIterator(prefix, origin)
+	var stop []byte
+	if limit != nil {
+		stop = append(prefix, limit...)
+	}
+	for it.Next() {
+		// Skip any keys with the correct prefix but wrong length (trie nodes)
+		key := it.Key()
+		if !bytes.HasPrefix(key, prefix) {
+			break
+		}
+		if len(key) != keylen {
+			continue
+		}
+		if stop != nil && bytes.Compare(key, stop) >= 0 {
+			break
+		}
+		// Delete the key and periodically recreate the batch and iterator
+		batch.Delete(key)
+		items++
+
+		if items%10000 == 0 {
+			// Batch too large (or iterator too long lived, flush and recreate)
+			it.Release()
+			if err := batch.Write(); err != nil {
+				return err
+			}
+			batch.Reset()
+			seekPos := key[len(prefix):]
+			it = db.GetSnapshotDB().NewIterator(prefix, seekPos)
+
+			if time.Since(logged) > 8*time.Second && report {
+				logger.Info("Deleting state snapshot leftovers", "kind", kind, "wiped", items, "elapsed", common.PrettyDuration(time.Since(start)))
+				logged = time.Now()
+			}
+		}
+	}
+	it.Release()
+	if err := batch.Write(); err != nil {
+		return err
+	}
+	if meter != nil {
+		meter.Mark(int64(items))
+	}
+	if report {
+		logger.Info("Deleted state snapshot leftovers", "kind", kind, "wiped", items, "elapsed", common.PrettyDuration(time.Since(start)))
+	}
 	return nil
 }
