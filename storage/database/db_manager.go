@@ -832,6 +832,8 @@ func (dbm *databaseManager) ReadAllHashes(number uint64) []common.Hash {
 
 	hashes := make([]common.Hash, 0, 1)
 	it := db.NewIterator(prefix, nil)
+	defer it.Release()
+
 	for it.Next() {
 		if key := it.Key(); len(key) == len(prefix)+32 {
 			hashes = append(hashes, common.BytesToHash(key[len(key)-32:]))
