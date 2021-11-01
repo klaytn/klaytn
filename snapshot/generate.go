@@ -21,6 +21,7 @@
 package snapshot
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/rcrowley/go-metrics"
@@ -40,6 +42,17 @@ var (
 )
 
 var (
+	snapGeneratedAccountMeter     = metrics.NewRegisteredMeter("state/snapshot/generation/account/generated", nil)
+	snapRecoveredAccountMeter     = metrics.NewRegisteredMeter("state/snapshot/generation/account/recovered", nil)
+	snapWipedAccountMeter         = metrics.NewRegisteredMeter("state/snapshot/generation/account/wiped", nil)
+	snapMissallAccountMeter       = metrics.NewRegisteredMeter("state/snapshot/generation/account/missall", nil)
+	snapGeneratedStorageMeter     = metrics.NewRegisteredMeter("state/snapshot/generation/storage/generated", nil)
+	snapRecoveredStorageMeter     = metrics.NewRegisteredMeter("state/snapshot/generation/storage/recovered", nil)
+	snapWipedStorageMeter         = metrics.NewRegisteredMeter("state/snapshot/generation/storage/wiped", nil)
+	snapMissallStorageMeter       = metrics.NewRegisteredMeter("state/snapshot/generation/storage/missall", nil)
+	snapSuccessfulRangeProofMeter = metrics.NewRegisteredMeter("state/snapshot/generation/proof/success", nil)
+	snapFailedRangeProofMeter     = metrics.NewRegisteredMeter("state/snapshot/generation/proof/failure", nil)
+
 	// snapAccountProveCounter measures time spent on the account proving
 	snapAccountProveCounter = metrics.NewRegisteredCounter("state/snapshot/generation/duration/account/prove", nil)
 	// snapAccountTrieReadCounter measures time spent on the account trie iteration
@@ -275,4 +288,168 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 			proofErr: err,
 			tr:       tr},
 		nil
+}
+
+// onStateCallback is a function that is called by generateRange, when processing a range of
+// accounts or storage slots. For each element, the callback is invoked.
+// If 'delete' is true, then this element (and potential slots) needs to be deleted from the snapshot.
+// If 'write' is true, then this element needs to be updated with the 'val'.
+// If 'write' is false, then this element is already correct, and needs no update. However,
+// for accounts, the storage trie of the account needs to be checked.
+// The 'val' is the canonical encoding of the value (not the slim format for accounts)
+type onStateCallback func(key []byte, val []byte, write bool, delete bool) error
+
+// generateRange generates the state segment with particular prefix. Generation can
+// either verify the correctness of existing state through rangeproof and skip
+// generation, or iterate trie to regenerate state on demand.
+func (dl *diskLayer) generateRange(root common.Hash, prefix []byte, kind string, origin []byte, max int, stats *generatorStats, onState onStateCallback, valueConvertFn func([]byte) ([]byte, error)) (bool, []byte, error) {
+	// Use range prover to check the validity of the flat state in the range
+	result, err := dl.proveRange(stats, root, prefix, kind, origin, max, valueConvertFn)
+	if err != nil {
+		return false, nil, err
+	}
+	last := result.last()
+
+	// Construct contextual logger
+	logCtx := []interface{}{"kind", kind, "prefix", hexutil.Encode(prefix)}
+	if len(origin) > 0 {
+		logCtx = append(logCtx, "origin", hexutil.Encode(origin))
+	}
+	localLogger := logger.NewWith(logCtx)
+
+	// The range prover says the range is correct, skip trie iteration
+	if result.valid() {
+		snapSuccessfulRangeProofMeter.Mark(1)
+		localLogger.Trace("Proved state range", "last", hexutil.Encode(last))
+
+		// The verification is passed, process each state with the given
+		// callback function. If this state represents a contract, the
+		// corresponding storage check will be performed in the callback
+		if err := result.forEach(func(key []byte, val []byte) error { return onState(key, val, false, false) }); err != nil {
+			return false, nil, err
+		}
+		// Only abort the iteration when both database and trie are exhausted
+		return !result.diskMore && !result.trieMore, last, nil
+	}
+	localLogger.Trace("Detected outdated state range", "last", hexutil.Encode(last), "err", result.proofErr)
+	snapFailedRangeProofMeter.Mark(1)
+
+	// Special case, the entire trie is missing. In the original trie scheme,
+	// all the duplicated subtries will be filter out(only one copy of data
+	// will be stored). While in the snapshot model, all the storage tries
+	// belong to different contracts will be kept even they are duplicated.
+	// Track it to a certain extent remove the noise data used for statistics.
+	if origin == nil && last == nil {
+		meter := snapMissallAccountMeter
+		if kind == "storage" {
+			meter = snapMissallStorageMeter
+		}
+		meter.Mark(1)
+	}
+
+	// We use the snap data to build up a cache which can be used by the
+	// main account trie as a primary lookup when resolving hashes
+	var snapNodeCache database.DBManager
+	if len(result.keys) > 0 {
+		snapNodeCache = database.NewMemoryDBManager()
+		snapTrieDb := statedb.NewDatabase(snapNodeCache)
+		snapTrie, _ := statedb.NewTrie(common.Hash{}, snapTrieDb)
+		for i, key := range result.keys {
+			snapTrie.Update(key, result.vals[i])
+		}
+		root, _ := snapTrie.Commit(nil)
+		// TODO-Klaytn update proper block number
+		snapTrieDb.Commit(root, false, 0)
+	}
+	tr := result.tr
+	if tr == nil {
+		tr, err = statedb.NewTrie(root, dl.triedb)
+		if err != nil {
+			stats.Log("Trie missing, state snapshotting paused", dl.root, dl.genMarker)
+			return false, nil, errMissingTrie
+		}
+	}
+
+	var (
+		trieMore       bool
+		nodeIt         = tr.NodeIterator(origin)
+		iter           = statedb.NewIterator(nodeIt)
+		kvkeys, kvvals = result.keys, result.vals
+
+		// counters
+		count     = 0 // number of states delivered by iterator
+		created   = 0 // states created from the trie
+		updated   = 0 // states updated from the trie
+		deleted   = 0 // states not in trie, but were in snapshot
+		untouched = 0 // states already correct
+
+		// timers
+		start    = time.Now()
+		internal time.Duration
+	)
+	nodeIt.AddResolver(snapNodeCache)
+	for iter.Next() {
+		if last != nil && bytes.Compare(iter.Key, last) > 0 {
+			trieMore = true
+			break
+		}
+		count++
+		write := true
+		created++
+		for len(kvkeys) > 0 {
+			if cmp := bytes.Compare(kvkeys[0], iter.Key); cmp < 0 {
+				// delete the key
+				istart := time.Now()
+				if err := onState(kvkeys[0], nil, false, true); err != nil {
+					return false, nil, err
+				}
+				kvkeys = kvkeys[1:]
+				kvvals = kvvals[1:]
+				deleted++
+				internal += time.Since(istart)
+				continue
+			} else if cmp == 0 {
+				// the snapshot key can be overwritten
+				created--
+				if write = !bytes.Equal(kvvals[0], iter.Value); write {
+					updated++
+				} else {
+					untouched++
+				}
+				kvkeys = kvkeys[1:]
+				kvvals = kvvals[1:]
+			}
+			break
+		}
+		istart := time.Now()
+		if err := onState(iter.Key, iter.Value, write, false); err != nil {
+			return false, nil, err
+		}
+		internal += time.Since(istart)
+	}
+	if iter.Err != nil {
+		return false, nil, iter.Err
+	}
+	// Delete all stale snapshot states remaining
+	istart := time.Now()
+	for _, key := range kvkeys {
+		if err := onState(key, nil, false, true); err != nil {
+			return false, nil, err
+		}
+		deleted += 1
+	}
+	internal += time.Since(istart)
+
+	// Update metrics for counting trie iteration
+	if kind == "storage" {
+		snapStorageTrieReadCounter.Inc((time.Since(start) - internal).Nanoseconds())
+	} else {
+		snapAccountTrieReadCounter.Inc((time.Since(start) - internal).Nanoseconds())
+	}
+	localLogger.Debug("Regenerated state range", "root", root, "last", hexutil.Encode(last),
+		"count", count, "created", created, "updated", updated, "untouched", untouched, "deleted", deleted)
+
+	// If there are either more trie items, or there are more snap items
+	// (in the next segment), then we need to keep working
+	return !trieMore && !result.diskMore, last, nil
 }
