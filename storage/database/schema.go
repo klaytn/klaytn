@@ -48,7 +48,11 @@ var (
 
 	sectionHeadKeyPrefix = []byte("shead")
 
+	// snapshotKeyPrefix is a governance snapshot prefix
 	snapshotKeyPrefix = []byte("snapshot")
+
+	// snapshotRootKey tracks the hash of the last snapshot.
+	snapshotRootKey = []byte("SnapshotRoot")
 
 	// Data item prefixes (use single byte to avoid mixing data types, avoid `i`, used for indexes).
 	headerPrefix       = []byte("h") // headerPrefix + num (uint64 big endian) + hash -> header

@@ -179,6 +179,10 @@ type DBManager interface {
 	WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
 
 	// from accessors_snapshot.go
+	ReadSnapshotRoot() common.Hash
+	WriteSnapshotRoot(root common.Hash)
+	DeleteSnapshotRoot()
+
 	ReadAccountSnapshot(hash common.Hash) []byte
 	WriteAccountSnapshot(hash common.Hash, entry []byte)
 	DeleteAccountSnapshot(hash common.Hash)
@@ -1816,6 +1820,37 @@ func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.Chain
 	}
 }
 
+// ReadSnapshotRoot retrieves the root of the block whose state is contained in
+// the persisted snapshot.
+func (dbm *databaseManager) ReadSnapshotRoot() common.Hash {
+	db := dbm.getDatabase(SnapshotDB)
+	data, _ := db.Get(snapshotRootKey)
+	if len(data) != common.HashLength {
+		return common.Hash{}
+	}
+	return common.BytesToHash(data)
+}
+
+// WriteSnapshotRoot stores the root of the block whose state is contained in
+// the persisted snapshot.
+func (dbm *databaseManager) WriteSnapshotRoot(root common.Hash) {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Put(snapshotRootKey, root[:]); err != nil {
+		logger.Crit("Failed to store snapshot root", "err", err)
+	}
+}
+
+// DeleteSnapshotRoot deletes the hash of the block whose state is contained in
+// the persisted snapshot. Since snapshots are not immutable, this  method can
+// be used during updates, so a crash or failure will mark the entire snapshot
+// invalid.
+func (dbm *databaseManager) DeleteSnapshotRoot() {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Delete(snapshotRootKey); err != nil {
+		logger.Crit("Failed to remove snapshot root", "err", err)
+	}
+}
+
 // ReadAccountSnapshot retrieves the snapshot entry of an account trie leaf.
 func (dbm *databaseManager) ReadAccountSnapshot(hash common.Hash) []byte {
 	db := dbm.getDatabase(SnapshotDB)
@@ -2187,6 +2222,9 @@ func (dbm *databaseManager) NewSnapshotDBBatch() SnapshotDBBatch {
 type SnapshotDBBatch interface {
 	Batch
 
+	WriteSnapshotRoot(root common.Hash)
+	DeleteSnapshotRoot(root common.Hash)
+
 	WriteAccountSnapshot(hash common.Hash, entry []byte)
 	DeleteAccountSnapshot(hash common.Hash)
 
@@ -2196,6 +2234,14 @@ type SnapshotDBBatch interface {
 
 type snapshotDBBatch struct {
 	Batch
+}
+
+func (batch *snapshotDBBatch) WriteSnapshotRoot(root common.Hash) {
+	writeSnapshotRoot(batch, root)
+}
+
+func (batch *snapshotDBBatch) DeleteSnapshotRoot(root common.Hash) {
+	deleteSnapshotRoot(batch, root)
 }
 
 func (batch *snapshotDBBatch) WriteAccountSnapshot(hash common.Hash, entry []byte) {
@@ -2212,6 +2258,18 @@ func (batch *snapshotDBBatch) WriteStorageSnapshot(accountHash, storageHash comm
 
 func (batch *snapshotDBBatch) DeleteStorageSnapshot(accountHash, storageHash common.Hash) {
 	deleteStorageSnapshot(batch, accountHash, storageHash)
+}
+
+func writeSnapshotRoot(db KeyValueWriter, root common.Hash) {
+	if err := db.Put(snapshotRootKey, root[:]); err != nil {
+		logger.Crit("Failed to store snapshot root", "err", err)
+	}
+}
+
+func deleteSnapshotRoot(db KeyValueWriter, root common.Hash) {
+	if err := db.Delete(snapshotRootKey); err != nil {
+		logger.Crit("Failed to remove snapshot root", "err", err)
+	}
 }
 
 func writeAccountSnapshot(db KeyValueWriter, hash common.Hash, entry []byte) {

@@ -26,16 +26,31 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"time"
 
+	"github.com/VictoriaMetrics/fastcache"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/rcrowley/go-metrics"
 )
 
 var (
+	// accountCheckRange is the upper limit of the number of accounts involved in
+	// each range check. This is a value estimated based on experience. If this
+	// value is too large, the failure rate of range prove will increase. Otherwise
+	// the the value is too small, the efficiency of the state recovery will decrease.
+	accountCheckRange = 128
+
+	// storageCheckRange is the upper limit of the number of storage slots involved
+	// in each range check. This is a value estimated based on experience. If this
+	// value is too large, the failure rate of range prove will increase. Otherwise
+	// the the value is too small, the efficiency of the state recovery will decrease.
+	storageCheckRange = 1024
+
 	// errMissingTrie is returned if the target trie is missing while the generation
 	// is running. In this case the generation is aborted and wait the new signal.
 	errMissingTrie = errors.New("missing trie")
@@ -117,6 +132,41 @@ func (gs *generatorStats) Log(msg string, root common.Hash, marker []byte) {
 		}
 	}
 	logger.Info(msg, ctx...)
+}
+
+// generateSnapshot regenerates a brand new snapshot based on an existing state
+// database and head block asynchronously. The snapshot is returned immediately
+// and generation is continued in the background until done.
+func generateSnapshot(db database.DBManager, triedb *statedb.Database, cache int, root common.Hash) *diskLayer {
+	// Create a new disk layer with an initialized state marker at zero
+	var (
+		stats     = &generatorStats{start: time.Now()}
+		batch     = db.NewSnapshotDBBatch()
+		genMarker = []byte{} // Initialized but empty!
+	)
+
+	batch.WriteSnapshotRoot(root)
+	journalProgress(batch, genMarker, stats)
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to write initialized state marker", "err", err)
+	}
+	base := &diskLayer{
+		diskdb:     db,
+		triedb:     triedb,
+		root:       root,
+		cache:      fastcache.New(cache * 1024 * 1024),
+		genMarker:  genMarker,
+		genPending: make(chan struct{}),
+		genAbort:   make(chan chan *generatorStats),
+	}
+	go base.generate(stats)
+	logger.Debug("Start snapshot generation", "root", root)
+	return base
+}
+
+// journalProgress persists the generator stats into the database to resume later.
+func journalProgress(db database.KeyValueWriter, marker []byte, stats *generatorStats) {
+	// TODO-Klaytn-Snapshot implement journal progress after porting journal.go
 }
 
 // proofResult contains the output of range proving which can be used
@@ -452,4 +502,246 @@ func (dl *diskLayer) generateRange(root common.Hash, prefix []byte, kind string,
 	// If there are either more trie items, or there are more snap items
 	// (in the next segment), then we need to keep working
 	return !trieMore && !result.diskMore, last, nil
+}
+
+// generate is a background thread that iterates over the state and storage tries,
+// constructing the state snapshot. All the arguments are purely for statistics
+// gathering and logging, since the method surfs the blocks as they arrive, often
+// being restarted.
+func (dl *diskLayer) generate(stats *generatorStats) {
+	var (
+		accMarker    []byte
+		accountRange = accountCheckRange
+	)
+	if len(dl.genMarker) > 0 { // []byte{} is the start, use nil for that
+		// Always reset the initial account range as 1
+		// whenever recover from the interruption.
+		accMarker, accountRange = dl.genMarker[:common.HashLength], 1
+	}
+
+	var (
+		batch     = dl.diskdb.NewSnapshotDBBatch()
+		logged    = time.Now()
+		accOrigin = common.CopyBytes(accMarker)
+		abort     chan *generatorStats
+	)
+	stats.Log("Resuming state snapshot generation", dl.root, dl.genMarker)
+
+	checkAndFlush := func(currentLocation []byte) error {
+		select {
+		case abort = <-dl.genAbort:
+		default:
+		}
+		if batch.ValueSize() > database.IdealBatchSize || abort != nil {
+			if bytes.Compare(currentLocation, dl.genMarker) < 0 {
+				logger.Error("Snapshot generator went backwards",
+					"currentLocation", fmt.Sprintf("%x", currentLocation),
+					"genMarker", fmt.Sprintf("%x", dl.genMarker))
+			}
+
+			// Flush out the batch anyway no matter it's empty or not.
+			// It's possible that all the states are recovered and the
+			// generation indeed makes progress.
+			journalProgress(batch, currentLocation, stats)
+
+			if err := batch.Write(); err != nil {
+				return err
+			}
+			batch.Reset()
+
+			dl.lock.Lock()
+			dl.genMarker = currentLocation
+			dl.lock.Unlock()
+
+			if abort != nil {
+				stats.Log("Aborting state snapshot generation", dl.root, currentLocation)
+				return errors.New("aborted")
+			}
+		}
+		if time.Since(logged) > 8*time.Second {
+			stats.Log("Generating state snapshot", dl.root, currentLocation)
+			logged = time.Now()
+		}
+		return nil
+	}
+
+	onAccount := func(key []byte, val []byte, write bool, delete bool) error {
+		var (
+			start       = time.Now()
+			accountHash = common.BytesToHash(key)
+		)
+		if delete {
+			batch.DeleteAccountSnapshot(accountHash)
+			snapWipedAccountMeter.Mark(1)
+
+			// Ensure that any previous snapshot storage values are cleared
+			prefix := append(database.SnapshotStoragePrefix, accountHash.Bytes()...)
+			keyLen := len(database.SnapshotStoragePrefix) + 2*common.HashLength
+			if err := wipeKeyRange(dl.diskdb, "storage", prefix, nil, nil, keyLen, snapWipedStorageMeter, false); err != nil {
+				return err
+			}
+			snapAccountWriteCounter.Inc(time.Since(start).Nanoseconds())
+			return nil
+		}
+		// Retrieve the current account and flatten it into the internal format
+		var acc struct {
+			Nonce    uint64
+			Balance  *big.Int
+			Root     common.Hash
+			CodeHash []byte
+		}
+		if err := rlp.DecodeBytes(val, &acc); err != nil {
+			logger.Crit("Invalid account encountered during snapshot creation", "err", err)
+		}
+		// If the account is not yet in-progress, write it out
+		if accMarker == nil || !bytes.Equal(accountHash[:], accMarker) {
+			dataLen := len(val) // Approximate size, saves us a round of RLP-encoding
+			if !write {
+				if bytes.Equal(acc.CodeHash, emptyCode[:]) {
+					dataLen -= 32
+				}
+				if acc.Root == emptyRoot {
+					dataLen -= 32
+				}
+				snapRecoveredAccountMeter.Mark(1)
+			} else {
+				data := SlimAccountRLP(acc.Nonce, acc.Balance, acc.Root, acc.CodeHash)
+				dataLen = len(data)
+				batch.WriteAccountSnapshot(accountHash, data)
+				snapGeneratedAccountMeter.Mark(1)
+			}
+			stats.storage += common.StorageSize(1 + common.HashLength + dataLen)
+			stats.accounts++
+		}
+		marker := accountHash[:]
+		// If the snap generation goes here after interrupted, genMarker may go backward
+		// when last genMarker is consisted of accountHash and storageHash
+		if accMarker != nil && bytes.Equal(marker, accMarker) && len(dl.genMarker) > common.HashLength {
+			marker = dl.genMarker[:]
+		}
+		// If we've exceeded our batch allowance or termination was requested, flush to disk
+		if err := checkAndFlush(marker); err != nil {
+			return err
+		}
+		// If the iterated account is the contract, create a further loop to
+		// verify or regenerate the contract storage.
+		if acc.Root == emptyRoot {
+			// If the root is empty, we still need to ensure that any previous snapshot
+			// storage values are cleared
+			// TODO: investigate if this can be avoided, this will be very costly since it
+			// affects every single EOA account
+			//  - Perhaps we can avoid if where codeHash is emptyCode
+			prefix := append(database.SnapshotStoragePrefix, accountHash.Bytes()...)
+			keyLen := len(database.SnapshotStoragePrefix) + 2*common.HashLength
+			if err := wipeKeyRange(dl.diskdb, "storage", prefix, nil, nil, keyLen, snapWipedStorageMeter, false); err != nil {
+				return err
+			}
+			snapAccountWriteCounter.Inc(time.Since(start).Nanoseconds())
+		} else {
+			snapAccountWriteCounter.Inc(time.Since(start).Nanoseconds())
+
+			var storeMarker []byte
+			if accMarker != nil && bytes.Equal(accountHash[:], accMarker) && len(dl.genMarker) > common.HashLength {
+				storeMarker = dl.genMarker[common.HashLength:]
+			}
+			onStorage := func(key []byte, val []byte, write bool, delete bool) error {
+				defer func(start time.Time) {
+					snapStorageWriteCounter.Inc(time.Since(start).Nanoseconds())
+				}(time.Now())
+
+				if delete {
+					batch.DeleteStorageSnapshot(accountHash, common.BytesToHash(key))
+					snapWipedStorageMeter.Mark(1)
+					return nil
+				}
+				if write {
+					batch.WriteStorageSnapshot(accountHash, common.BytesToHash(key), val)
+					snapGeneratedStorageMeter.Mark(1)
+				} else {
+					snapRecoveredStorageMeter.Mark(1)
+				}
+				stats.storage += common.StorageSize(1 + 2*common.HashLength + len(val))
+				stats.slots++
+
+				// If we've exceeded our batch allowance or termination was requested, flush to disk
+				if err := checkAndFlush(append(accountHash[:], key...)); err != nil {
+					return err
+				}
+				return nil
+			}
+			var storeOrigin = common.CopyBytes(storeMarker)
+			for {
+				exhausted, last, err := dl.generateRange(acc.Root, append(database.SnapshotStoragePrefix, accountHash.Bytes()...), "storage", storeOrigin, storageCheckRange, stats, onStorage, nil)
+				if err != nil {
+					return err
+				}
+				if exhausted {
+					break
+				}
+				if storeOrigin = increaseKey(last); storeOrigin == nil {
+					break // special case, the last is 0xffffffff...fff
+				}
+			}
+		}
+		// Some account processed, unmark the marker
+		accMarker = nil
+		return nil
+	}
+
+	// Global loop for regerating the entire state trie + all layered storage tries.
+	for {
+		exhausted, last, err := dl.generateRange(dl.root, database.SnapshotAccountPrefix, "account", accOrigin, accountRange, stats, onAccount, FullAccountRLP)
+		// The procedure it aborted, either by external signal or internal error
+		if err != nil {
+			if abort == nil { // aborted by internal error, wait the signal
+				abort = <-dl.genAbort
+			}
+			abort <- stats
+			return
+		}
+		// Abort the procedure if the entire snapshot is generated
+		if exhausted {
+			break
+		}
+		if accOrigin = increaseKey(last); accOrigin == nil {
+			break // special case, the last is 0xffffffff...fff
+		}
+		accountRange = accountCheckRange
+	}
+	// Snapshot fully generated, set the marker to nil.
+	// Note even there is nothing to commit, persist the
+	// generator anyway to mark the snapshot is complete.
+	journalProgress(batch, nil, stats)
+	if err := batch.Write(); err != nil {
+		logger.Error("Failed to flush batch", "err", err)
+
+		abort = <-dl.genAbort
+		abort <- stats
+		return
+	}
+	batch.Reset()
+
+	logger.Info("Generated state snapshot", "accounts", stats.accounts, "slots", stats.slots,
+		"storage", stats.storage, "elapsed", common.PrettyDuration(time.Since(stats.start)))
+
+	dl.lock.Lock()
+	dl.genMarker = nil
+	close(dl.genPending)
+	dl.lock.Unlock()
+
+	// Someone will be looking for us, wait it out
+	abort = <-dl.genAbort
+	abort <- nil
+}
+
+// increaseKey increase the input key by one bit. Return nil if the entire
+// addition operation overflows,
+func increaseKey(key []byte) []byte {
+	for i := len(key) - 1; i >= 0; i-- {
+		key[i]++
+		if key[i] != 0x0 {
+			return key
+		}
+	}
+	return nil
 }
