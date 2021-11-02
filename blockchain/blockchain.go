@@ -21,14 +21,19 @@
 package blockchain
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn"
+	"github.com/klaytn/klaytn/accounts/abi"
+	"github.com/klaytn/klaytn/common/math"
 	"io"
 	"math/big"
 	mrand "math/rand"
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -2456,4 +2461,132 @@ func CheckBlockChainVersion(chainDB database.DBManager) error {
 		chainDB.WriteDatabaseVersion(BlockChainVersion)
 	}
 	return nil
+}
+
+var NodeWhitelistContractAddr = common.HexToAddress("0xcbdcnodewhitelistcontract000000000000000")
+
+const NodeWhitelistABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"addedNode\",\"type\":\"string\"}],\"name\":\"AddNode\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"deletedNode\",\"type\":\"string\"}],\"name\":\"DelNode\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"node\",\"type\":\"string\"}],\"name\":\"addNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"node\",\"type\":\"string\"}],\"name\":\"delNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getWhitelist\",\"outputs\":[{\"internalType\":\"string[]\",\"name\":\"\",\"type\":\"string[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"setAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// GetNodeWhitelist returns the latest version of whitelist stored in the specific smart contract.
+func (bc *BlockChain) GetNodeWhitelist() []string {
+	var whitelist []string
+	abii, err := abi.JSON(strings.NewReader(NodeWhitelistABI))
+	if err != nil {
+		logger.Error("failed to retrieving abii from abi string", "err", err)
+		return whitelist
+	}
+
+	input, err := abii.Pack("getWhitelist")
+	if err != nil {
+		logger.Error("failed packing abi", "err", err)
+		return whitelist
+	}
+
+	result, _, err := bc.contractCaller(common.Address{}, NodeWhitelistContractAddr, input)
+	if err = abii.Unpack(&whitelist, "getWhitelist", result); err != nil {
+		logger.Error("failed unpacking abi", "err", err)
+		return whitelist
+	}
+	return whitelist
+}
+
+// SubscribeNodeWhitelist makes a subscription to ChainHeadEvent and then periodically sends the latest
+// whitelist to the given channel.
+func (bc *BlockChain) SubscribeNodeWhitelist(whitelistCh chan []string) {
+	chainHeadEvent := make(chan ChainHeadEvent, chainHeadChanSize)
+	sub := bc.SubscribeChainHeadEvent(chainHeadEvent)
+	defer sub.Unsubscribe()
+
+	onOffFlag := true
+	for {
+		select {
+		case <-chainHeadEvent:
+			// 주기적으로 화이트 리스트 확인
+			if onOffFlag {
+				whitelistCh <- bc.GetNodeWhitelist()
+			} else {
+				var emptySlice []string
+				whitelistCh <- emptySlice
+			}
+
+			onOffFlag = !onOffFlag
+		case err := <-sub.Err():
+			logger.Error("Error from chain head event subscription", "err", err)
+			return
+		case <-bc.quit:
+			logger.Info("Stop subscribing whitelist add node event due to the closed blockchain")
+			return
+		}
+	}
+}
+
+// contractCaller is used to call contract instead of real transaction execution.
+func (bc *BlockChain) contractCaller(from, to common.Address, input []byte) ([]byte, bool, error) {
+	call := klaytn.CallMsg{From: from, To: &to, Data: input}
+	stateDB, err := bc.State()
+	if err != nil {
+		logger.Error("failed to get blockchain stateDB", "err", err)
+		return nil, false, err
+	}
+
+	result, _, status, err := bc.callContract(context.TODO(), call, bc.CurrentBlock(), stateDB)
+	return result, status, err
+}
+
+// callContract is used to call contract instead of real transaction execution.
+func (bc *BlockChain) callContract(ctx context.Context, call klaytn.CallMsg, block *types.Block, statedb *state.StateDB) ([]byte, uint64, bool, error) {
+	// Set default gas & gas price if none were set
+	gas, gasPrice := uint64(call.Gas), call.GasPrice
+	if gas == 0 {
+		gas = math.MaxUint64 / 2
+	}
+	if gasPrice == nil || gasPrice.Sign() == 0 {
+		gasPrice = new(big.Int).SetUint64(25 * params.Ston)
+	}
+
+	intrinsicGas, err := types.IntrinsicGas(call.Data, call.To == nil, true)
+	if err != nil {
+		return nil, 0, false, err
+	}
+
+	// Create new call message
+	msg := types.NewMessage(call.From, call.To, 0, call.Value, gas, gasPrice, call.Data, false, intrinsicGas)
+
+	// Setup context so it may be cancelled the call has completed
+	// or, in case of unmetered gas, setup a context with a timeout.
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+
+	// Make sure the context is cancelled when the call has completed
+	// this makes sure resources are cleaned up.
+	defer cancel()
+
+	statedb.SetBalance(msg.ValidatedSender(), math.MaxBig256)
+	vmError := func() error { return nil }
+
+	context := NewEVMContext(msg, block.Header(), bc, nil)
+	evm := vm.NewEVM(context, statedb, bc.chainConfig, &vm.Config{})
+	// Wait for the context to be done and cancel the evm. Even if the
+	// EVM has finished, cancelling may be done (repeatedly)
+	go func() {
+		<-ctx.Done()
+		evm.Cancel(vm.CancelByCtxDone)
+	}()
+
+	res, gas, kerr := ApplyMessage(evm, msg)
+	err = kerr.ErrTxInvalid
+	if err := vmError(); err != nil {
+		return nil, 0, false, err
+	}
+
+	// Propagate error of Receipt as JSON RPC error
+	if err == nil {
+		err = GetVMerrFromReceiptStatus(kerr.Status)
+	}
+
+	return res, gas, kerr.Status != types.ReceiptStatusSuccessful, err
+}
+
+type NodeWhitelistGetter interface {
+	GetNodeWhitelist() []string
+	SubscribeNodeWhitelist(whitelistCh chan []string)
 }

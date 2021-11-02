@@ -22,6 +22,7 @@ package node
 
 import (
 	"crypto/ecdsa"
+	"github.com/klaytn/klaytn/blockchain"
 	"reflect"
 
 	"github.com/klaytn/klaytn/accounts"
@@ -114,4 +115,6 @@ type Service interface {
 
 	// set components (blockchain, txpool, ..) in core service
 	SetComponents(components []interface{})
+
+	NodeWhitelistGetter() blockchain.NodeWhitelistGetter
 }

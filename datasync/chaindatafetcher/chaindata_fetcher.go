@@ -552,3 +552,7 @@ func (f *ChainDataFetcher) retryFunc(insert HandleChainEventFn) HandleChainEvent
 func (f *ChainDataFetcher) status() string {
 	return fmt.Sprintf("{fetching: %v, rangeFetching: %v}", atomic.LoadUint32(&f.fetchingStarted), atomic.LoadUint32(&f.rangeFetchingStarted))
 }
+
+func (f *ChainDataFetcher) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+	return nil
+}

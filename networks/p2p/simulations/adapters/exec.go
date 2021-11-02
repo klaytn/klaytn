@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn/blockchain"
 	"io"
 	"net"
 	"os"
@@ -489,6 +490,10 @@ func (s *snapshotService) Components() []interface{} {
 }
 
 func (s *snapshotService) SetComponents(components []interface{}) {
+}
+
+func (s *snapshotService) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+	return nil
 }
 
 // SnapshotAPI provides an RPC method to create snapshots of services

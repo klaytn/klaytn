@@ -308,4 +308,8 @@ type BlockChain interface {
 	// KES
 	BlockSubscriptionLoop(pool *blockchain.TxPool)
 	CloseBlockSubscriptionLoop()
+
+	// NodeWhitelistGetter
+	GetNodeWhitelist() []string
+	SubscribeNodeWhitelist(newNodesCh chan []string)
 }
