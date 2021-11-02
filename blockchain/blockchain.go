@@ -453,8 +453,8 @@ func (bc *BlockChain) loadLastState() error {
 func (bc *BlockChain) SetHead(head uint64) error {
 	logger.Warn("Rewinding blockchain", "target", head)
 
-	bc.chainmu.Lock()
-	defer bc.chainmu.Unlock()
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
 
 	updateFn := func(header *types.Header) {
 		// Rewind the block chain, ensuring we don't end up with a stateless head block
