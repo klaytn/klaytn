@@ -31,9 +31,9 @@ import (
 
 // diskLayer is a low level persistent snapshot built on top of a key-value store.
 type diskLayer struct {
-	diskdb database.Database // Key-value store containing the base snapshot
-	triedb *statedb.Database // Trie node cache for reconstruction purposes
-	cache  *fastcache.Cache  // Cache to avoid hitting the disk for direct access
+	diskdb database.DBManager // Key-value store containing the base snapshot
+	triedb *statedb.Database  // Trie node cache for reconstruction purposes
+	cache  *fastcache.Cache   // Cache to avoid hitting the disk for direct access
 
 	root  common.Hash // Root hash of the base snapshot
 	stale bool        // Signals that the layer became stale (state progressed)

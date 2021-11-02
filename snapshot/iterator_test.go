@@ -34,10 +34,10 @@ import (
 
 // TODO-snapshot remove the following function after porting diffToDisk method
 func createTestDiskLayer(db database.DBManager, accounts map[common.Hash][]byte, storages map[common.Hash]map[common.Hash][]byte) *diskLayer {
-	batch := db.GetSnapshotDB().NewBatch()
+	batch := db.NewSnapshotDBBatch()
 
 	for hash, data := range accounts {
-		db.WriteAccountSnapshot(hash, data)
+		batch.WriteAccountSnapshot(hash, data)
 		batch.Write()
 		batch.Reset()
 	}
@@ -45,9 +45,9 @@ func createTestDiskLayer(db database.DBManager, accounts map[common.Hash][]byte,
 	for accountHash, storage := range storages {
 		for storageHash, data := range storage {
 			if len(data) > 0 {
-				db.WriteStorageSnapshot(accountHash, storageHash, data)
+				batch.WriteStorageSnapshot(accountHash, storageHash, data)
 			} else {
-				db.DeleteStorageSnapshot(accountHash, storageHash)
+				batch.DeleteStorageSnapshot(accountHash, storageHash)
 			}
 			batch.Write()
 			batch.Reset()
@@ -55,7 +55,7 @@ func createTestDiskLayer(db database.DBManager, accounts map[common.Hash][]byte,
 	}
 
 	return &diskLayer{
-		diskdb: db.GetSnapshotDB(),
+		diskdb: db,
 	}
 }
 

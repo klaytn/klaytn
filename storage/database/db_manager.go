@@ -187,6 +187,8 @@ type DBManager interface {
 	WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte)
 	DeleteStorageSnapshot(accountHash, storageHash common.Hash)
 
+	NewSnapshotDBBatch() SnapshotDBBatch
+
 	// below operations are used in parent chain side, not child chain side.
 	WriteChildChainTxHash(ccBlockHash common.Hash, ccTxHash common.Hash)
 	ConvertChildChainBlockHashToParentChainTxHash(scBlockHash common.Hash) common.Hash
@@ -2184,4 +2186,62 @@ func (dbm *databaseManager) ReadChainDataFetcherCheckpoint() (uint64, error) {
 		return 0, nil
 	}
 	return binary.BigEndian.Uint64(data), nil
+}
+
+func (dbm *databaseManager) NewSnapshotDBBatch() SnapshotDBBatch {
+	return &snapshotDBBatch{dbm.NewBatch(SnapshotDB)}
+}
+
+type SnapshotDBBatch interface {
+	Batch
+
+	WriteAccountSnapshot(hash common.Hash, entry []byte)
+	DeleteAccountSnapshot(hash common.Hash)
+
+	WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte)
+	DeleteStorageSnapshot(accountHash, storageHash common.Hash)
+}
+
+type snapshotDBBatch struct {
+	Batch
+}
+
+func (batch *snapshotDBBatch) WriteAccountSnapshot(hash common.Hash, entry []byte) {
+	writeAccountSnapshot(batch, hash, entry)
+}
+
+func (batch *snapshotDBBatch) DeleteAccountSnapshot(hash common.Hash) {
+	deleteAccountSnapshot(batch, hash)
+}
+
+func (batch *snapshotDBBatch) WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte) {
+	writeStorageSnapshot(batch, accountHash, storageHash, entry)
+}
+
+func (batch *snapshotDBBatch) DeleteStorageSnapshot(accountHash, storageHash common.Hash) {
+	deleteStorageSnapshot(batch, accountHash, storageHash)
+}
+
+func writeAccountSnapshot(db KeyValueWriter, hash common.Hash, entry []byte) {
+	if err := db.Put(AccountSnapshotKey(hash), entry); err != nil {
+		logger.Crit("Failed to store account snapshot", "err", err)
+	}
+}
+
+func deleteAccountSnapshot(db KeyValueWriter, hash common.Hash) {
+	if err := db.Delete(AccountSnapshotKey(hash)); err != nil {
+		logger.Crit("Failed to delete account snapshot", "err", err)
+	}
+}
+
+func writeStorageSnapshot(db KeyValueWriter, accountHash, storageHash common.Hash, entry []byte) {
+	if err := db.Put(StorageSnapshotKey(accountHash, storageHash), entry); err != nil {
+		logger.Crit("Failed to store storage snapshot", "err", err)
+	}
+}
+
+func deleteStorageSnapshot(db KeyValueWriter, accountHash, storageHash common.Hash) {
+	if err := db.Delete(StorageSnapshotKey(accountHash, storageHash)); err != nil {
+		logger.Crit("Failed to delete storage snapshot", "err", err)
+	}
 }
