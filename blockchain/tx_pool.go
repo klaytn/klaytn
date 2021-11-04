@@ -693,6 +693,15 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 	}
 
+	// receiver balance cannot exceed its balance limit
+	// Only EOA has balance limit
+	if tx.To() != nil { // If tx.Recipient is nil, a new contract will be deployed
+		if !CanBeTransferred(pool.getBalanceLimit, pool.getBalance, *tx.To(), tx.Value()) {
+			logger.Trace("[tx_pool] receiver balance cannot exceed its fund limit ", "to", tx.To(), "balance", pool.getBalance(*tx.To()), "value", tx.Value())
+			return ErrExceedBalanceLimit
+		}
+	}
+
 	intrGas, err := tx.IntrinsicGas(pool.currentBlockNumber)
 	intrGas += gasFrom + gasFeePayer
 	if err != nil {
@@ -1379,6 +1388,10 @@ func (pool *TxPool) getNonce(addr common.Address) uint64 {
 // getBalance returns the balance of the account from the cache. If it is not in the cache, it gets the balance from the stateDB.
 func (pool *TxPool) getBalance(addr common.Address) *big.Int {
 	return pool.currentState.GetBalance(addr)
+}
+
+func (pool *TxPool) getBalanceLimit(addr common.Address) (*big.Int, error) {
+	return pool.currentState.GetBalanceLimit(addr)
 }
 
 // GetPendingNonce is a method to check the last nonce value of pending in external API.

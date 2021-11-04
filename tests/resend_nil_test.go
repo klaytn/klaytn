@@ -53,7 +53,7 @@ func BenchmarkResendNilDereference(t *testing.B) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

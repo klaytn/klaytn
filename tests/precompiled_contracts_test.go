@@ -38,7 +38,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(2000, 4)
+	bcdata, err := NewBCData(2000, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

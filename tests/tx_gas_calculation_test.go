@@ -100,7 +100,7 @@ func TestGasCalculation(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	assert.Equal(t, nil, err)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
@@ -812,6 +812,16 @@ func genMapForChainDataAnchoring(from TestAccount, gasPrice *big.Int, txType typ
 		types.TxValueKeyAnchoredData: data,
 	}
 	return values, intrinsic + gasPayload
+}
+func genMapForBalanceLimitUpdate(from TestAccount, gasPrice *big.Int, balanceLimit *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:        from.GetNonce(),
+		types.TxValueKeyFrom:         from.GetAddr(),
+		types.TxValueKeyGasLimit:     gasLimit,
+		types.TxValueKeyGasPrice:     gasPrice,
+		types.TxValueKeyBalanceLimit: balanceLimit,
+	}
+	return values, 0
 }
 
 func genKlaytnLegacyAccount(t *testing.T) TestAccount {

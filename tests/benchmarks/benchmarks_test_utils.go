@@ -73,9 +73,10 @@ func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) 
 	// runtime.go:Execute()
 	cfg := makeBenchConfig()
 	context := vm.Context{
-		CanTransfer: blockchain.CanTransfer,
-		Transfer:    blockchain.Transfer,
-		GetHash:     func(uint64) common.Hash { return common.Hash{} },
+		CanTransfer:      blockchain.CanTransfer,
+		CanBeTransferred: blockchain.CanBeTransferred,
+		Transfer:         blockchain.Transfer,
+		GetHash:          func(uint64) common.Hash { return common.Hash{} },
 
 		Origin:      cfg.Origin,
 		BlockNumber: cfg.BlockNumber,

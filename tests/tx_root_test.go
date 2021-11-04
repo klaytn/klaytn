@@ -48,7 +48,7 @@ func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha types.
 	// Initialize blockchain
 	start := time.Now()
 	maxAccounts := numTransactions * 2
-	bcdata, err := NewBCData(maxAccounts, numValidators)
+	bcdata, err := NewBCData(maxAccounts, numValidators, nil)
 	if err != nil {
 		b.Fatal(err)
 	}

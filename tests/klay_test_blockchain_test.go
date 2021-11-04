@@ -71,7 +71,7 @@ type BCData struct {
 var dir = "chaindata"
 var nodeAddr = common.StringToAddress("nodeAddr")
 
-func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
+func NewBCData(maxAccounts, numValidators int, initialBalance *big.Int) (*BCData, error) {
 	if numValidators > maxAccounts {
 		return nil, errors.New("maxAccounts should be bigger numValidators!!")
 	}
@@ -115,7 +115,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
-	bc, genesis, err := initBlockChain(chainDb, nil, addrs, validatorAddresses, nil, engine)
+	bc, genesis, err := initBlockChain(chainDb, nil, addrs, validatorAddresses, nil, engine, initialBalance)
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +412,7 @@ func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
 }
 
 func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, coinbaseAddrs []*common.Address, validators []common.Address,
-	genesis *blockchain.Genesis, engine consensus.Engine) (*blockchain.BlockChain, *blockchain.Genesis, error) {
+	genesis *blockchain.Genesis, engine consensus.Engine, initialBalance *big.Int) (*blockchain.BlockChain, *blockchain.Genesis, error) {
 
 	extraData, err := prepareIstanbulExtra(validators)
 
@@ -427,8 +427,11 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 	}
 
 	alloc := make(blockchain.GenesisAlloc)
+	if initialBalance == nil {
+		initialBalance = new(big.Int).Mul(big.NewInt(1e16), big.NewInt(params.KLAY))
+	}
 	for _, a := range coinbaseAddrs {
-		alloc[*a] = blockchain.GenesisAccount{Balance: new(big.Int).Mul(big.NewInt(1e16), big.NewInt(params.KLAY))}
+		alloc[*a] = blockchain.GenesisAccount{Balance: initialBalance}
 	}
 
 	genesis.Alloc = alloc

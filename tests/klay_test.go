@@ -328,7 +328,7 @@ func testValueTransfer(t *testing.T, opt *testOption) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +373,7 @@ func TestValueTransferRing(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -435,7 +435,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -640,7 +640,7 @@ func BenchmarkValueTransfer(t *testing.B) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -696,7 +696,7 @@ func BenchmarkNewValueTransfer(t *testing.B) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

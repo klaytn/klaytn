@@ -68,6 +68,9 @@ var (
 	// the balance of the user's account.
 	ErrInsufficientFundsFrom = errors.New("insufficient funds of the sender for value ")
 
+	// ErrExceedBalanceLimit is returned if the balance of the receiver exceeds the balance limit.
+	ErrExceedBalanceLimit = errors.New("receiver balance cannot exceed its fund limit ")
+
 	// ErrInsufficientFundsFeePayer is returned if the fee of a transaction is higher than
 	// the balance of the fee payer's account.
 	ErrInsufficientFundsFeePayer = errors.New("insufficient funds of the fee payer for gas * price")

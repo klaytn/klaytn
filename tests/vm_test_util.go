@@ -137,23 +137,30 @@ func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
 	initialCall := true
 	canTransfer := func(db vm.StateDB, address common.Address, amount *big.Int) bool {
 		if initialCall {
-			initialCall = false
 			return true
 		}
 		return blockchain.CanTransfer(db, address, amount)
 	}
+	canBeTransferred := func(balanceLimitGetter vm.BalanceLimitGetterFunc, balanceGetter vm.BalanceGetterFunc, receiver common.Address, amount *big.Int) bool {
+		if initialCall {
+			initialCall = false
+			return true
+		}
+		return blockchain.CanBeTransferred(balanceLimitGetter, balanceGetter, receiver, amount)
+	}
 	transfer := func(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {}
 	context := vm.Context{
-		CanTransfer: canTransfer,
-		Transfer:    transfer,
-		GetHash:     vmTestBlockHash,
-		Origin:      t.json.Exec.Origin,
-		Coinbase:    t.json.Env.Coinbase,
-		BlockNumber: new(big.Int).SetUint64(t.json.Env.Number),
-		Time:        new(big.Int).SetUint64(t.json.Env.Timestamp),
-		GasLimit:    t.json.Env.GasLimit,
-		BlockScore:  t.json.Env.BlockScore,
-		GasPrice:    t.json.Exec.GasPrice,
+		CanTransfer:      canTransfer,
+		CanBeTransferred: canBeTransferred,
+		Transfer:         transfer,
+		GetHash:          vmTestBlockHash,
+		Origin:           t.json.Exec.Origin,
+		Coinbase:         t.json.Env.Coinbase,
+		BlockNumber:      new(big.Int).SetUint64(t.json.Env.Number),
+		Time:             new(big.Int).SetUint64(t.json.Env.Timestamp),
+		GasLimit:         t.json.Env.GasLimit,
+		BlockScore:       t.json.Env.BlockScore,
+		GasPrice:         t.json.Exec.GasPrice,
 	}
 	vmconfig.NoRecursion = true
 	return vm.NewEVM(context, statedb, params.CypressChainConfig, &vmconfig)

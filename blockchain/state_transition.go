@@ -262,7 +262,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		// when the EVM is still running while the block proposer's total
 		// execution time of txs for a candidate block reached the predefined
 		// limit.
-		if errTxFailed == vm.ErrInsufficientBalance || errTxFailed == vm.ErrTotalTimeLimitReached {
+		if errTxFailed == vm.ErrInsufficientBalance || errTxFailed == vm.ErrExceedBalanceLimit || errTxFailed == vm.ErrTotalTimeLimitReached {
 			kerr.ErrTxInvalid = errTxFailed
 			kerr.Status = getReceiptStatusFromErrTxFailed(nil)
 			return nil, 0, kerr

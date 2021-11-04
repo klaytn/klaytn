@@ -292,7 +292,10 @@ func TestEVM_CVE_2021_39137(t *testing.T) {
 	tracer := NewStructLogger(nil)
 	vmctx := Context{
 		CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
-		Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
+		CanBeTransferred: func(BalanceLimitGetterFunc, BalanceGetterFunc, common.Address, *big.Int) bool {
+			return true
+		},
+		Transfer: func(StateDB, common.Address, common.Address, *big.Int) {},
 	}
 	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
 

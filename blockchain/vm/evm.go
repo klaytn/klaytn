@@ -45,11 +45,18 @@ const (
 type (
 	// CanTransferFunc is the signature of a transfer guard function
 	CanTransferFunc func(StateDB, common.Address, *big.Int) bool
+	// CanBeTransferredFunc is the signature of a transfer guard function
+	CanBeTransferredFunc func(BalanceLimitGetterFunc, BalanceGetterFunc, common.Address, *big.Int) bool
 	// TransferFunc is the signature of a transfer function
 	TransferFunc func(StateDB, common.Address, common.Address, *big.Int)
 	// GetHashFunc returns the nth block hash in the blockchain
 	// and is used by the BLOCKHASH EVM op code.
 	GetHashFunc func(uint64) common.Hash
+
+	// BalanceLimitGetterFunc is the signature for CanBeTransferredFunc
+	BalanceLimitGetterFunc func(common.Address) (*big.Int, error)
+	// BalanceGetterFunc is the signature for CanBeTransferredFunc
+	BalanceGetterFunc func(common.Address) *big.Int
 )
 
 // isProgramAccount returns true if the address is one of the following:
@@ -96,6 +103,9 @@ type Context struct {
 	// CanTransfer returns whether the account contains
 	// sufficient KLAY to transfer the value
 	CanTransfer CanTransferFunc
+	// CanBeTransferred returns whether the receiver's balance
+	// doesn't go over limit after the transfer
+	CanBeTransferred CanBeTransferredFunc
 	// Transfer transfers KLAY from one account to the other
 	Transfer TransferFunc
 	// GetHash returns the hash corresponding to n
@@ -215,6 +225,11 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
+	// Fail if we're trying to transfer receiver's balance limit
+	// This only checks balance limit of EOA. Smart cotracts doesn't have balance limit.
+	if !evm.Context.CanBeTransferred(evm.StateDB.GetBalanceLimit, evm.StateDB.GetBalance, addr, value) {
+		return nil, gas, ErrExceedBalanceLimit
+	}
 
 	var (
 		to       = AccountRef(addr)
@@ -306,6 +321,11 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 	// Fail if we're trying to transfer more than the available balance
 	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
+	}
+	// Fail if we're trying to transfer receiver's balance limit
+	// This only checks balance limit of EOA. Smart cotracts doesn't have balance limit.
+	if !evm.Context.CanBeTransferred(evm.StateDB.GetBalanceLimit, evm.StateDB.GetBalance, addr, value) {
+		return nil, gas, ErrExceedBalanceLimit
 	}
 
 	if !isProgramAccount(addr, evm.StateDB) {
@@ -440,6 +460,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	if !evm.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
+	// Skip CanBeTransferred. `create` is always called on smart contracts.
 
 	// Increasing nonce since a failed tx with one of following error will be loaded on a block.
 	evm.StateDB.IncNonce(caller.Address())

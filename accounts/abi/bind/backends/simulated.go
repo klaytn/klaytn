@@ -36,7 +36,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
@@ -176,6 +175,19 @@ func (b *SimulatedBackend) BalanceAt(ctx context.Context, contract common.Addres
 	}
 
 	return stateDB.GetBalance(contract), nil
+}
+
+// BalanceAt returns the peb balance of a certain account in the blockchain.
+func (b *SimulatedBackend) BalanceLimitAt(ctx context.Context, contract common.Address, blockNumber *big.Int) (*big.Int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	stateDB, err := b.stateByBlockNumber(ctx, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	return stateDB.GetBalanceLimit(contract)
 }
 
 // NonceAt returns the nonce of a certain account in the blockchain.
@@ -485,7 +497,7 @@ func (b *SimulatedBackend) callContract(_ context.Context, call klaytn.CallMsg, 
 	}
 	// Set infinite balance to the fake caller account.
 	from := stateDB.GetOrNewStateObject(call.From)
-	from.SetBalance(math.MaxBig256)
+	from.SetBalance(new(big.Int).Mul(big.NewInt(1e16), big.NewInt(params.KLAY)))
 	// Execute the call.
 	nonce := from.Nonce()
 	intrinsicGas, _ := types.IntrinsicGas(call.Data, call.To == nil, true)

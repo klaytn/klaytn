@@ -26,6 +26,7 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
@@ -75,6 +76,8 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap, gas = genMapForCancel(from, gasPrice, txType)
 	case types.TxTypeChainDataAnchoring:
 		valueMap, gas = genMapForChainDataAnchoring(from, gasPrice, txType)
+	case types.TxTypeBalanceLimitUpdate:
+		valueMap, gas = genMapForBalanceLimitUpdate(from, gasPrice, account.GetInitialBalanceLimit(), txType)
 	}
 
 	if txType.IsFeeDelegatedTransaction() {
@@ -117,7 +120,7 @@ func TestValidationPoolInsert(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +243,7 @@ func TestValidationBlockTx(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -413,7 +416,7 @@ func TestValidationInvalidSig(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -556,7 +559,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -623,7 +626,7 @@ func TestInvalidBalance(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1015,7 +1018,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1421,7 +1424,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1577,7 +1580,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1718,7 +1721,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

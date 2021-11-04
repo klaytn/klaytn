@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -301,10 +302,16 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 		initialCall = true
 		canTransfer = func(db StateDB, address common.Address, amount *big.Int) bool {
 			if initialCall {
-				initialCall = false
 				return true
 			}
 			return db.GetBalance(address).Cmp(amount) >= 0
+		}
+		canBeTransferred = func(balanceLimitGetter BalanceLimitGetterFunc, balanceGetter BalanceGetterFunc, receiver common.Address, amount *big.Int) bool {
+			if initialCall {
+				initialCall = false
+				return true
+			}
+			return blockchain.CanBeTransferred(balanceLimitGetter, balanceGetter, receiver, amount)
 		}
 
 		ctx = Context{
@@ -317,8 +324,9 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 			GetHash: func(num uint64) common.Hash {
 				return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(num)).String())))
 			},
-			CanTransfer: canTransfer,
-			Transfer:    func(db StateDB, sender, recipient common.Address, amount *big.Int) {},
+			CanTransfer:      canTransfer,
+			CanBeTransferred: canBeTransferred,
+			Transfer:         func(db StateDB, sender, recipient common.Address, amount *big.Int) {},
 		}
 
 		memDBManager = database.NewMemoryDBManager()

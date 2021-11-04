@@ -359,6 +359,16 @@ func (self *stateObject) setBalance(amount *big.Int) {
 	self.account.SetBalance(amount)
 }
 
+func (self *stateObject) SetBalanceLimit(amount *big.Int) {
+	self.setBalanceLimit(amount)
+}
+
+func (self *stateObject) setBalanceLimit(amount *big.Int) {
+	if eoa := account.GetEOA(self.account); eoa != nil {
+		eoa.SetBalanceLimit(amount)
+	}
+}
+
 // Return the gas back to the origin. Used by the Virtual machine or Closures
 func (c *stateObject) ReturnGas(gas *big.Int) {}
 
@@ -454,6 +464,13 @@ func (self *stateObject) CodeHash() []byte {
 
 func (self *stateObject) Balance() *big.Int {
 	return self.account.GetBalance()
+}
+
+func (self *stateObject) BalanceLimit() *big.Int {
+	if eoa := account.GetEOA(self.account); eoa != nil {
+		return eoa.GetBalanceLimit()
+	}
+	return common.Big0
 }
 
 //func (self *stateObject) HumanReadable() bool {

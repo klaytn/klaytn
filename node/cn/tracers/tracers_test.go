@@ -154,15 +154,16 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	*/
 	origin, _ := signer.Sender(tx)
 	context := vm.Context{
-		CanTransfer: blockchain.CanTransfer,
-		Transfer:    blockchain.Transfer,
-		Origin:      origin,
-		Coinbase:    common.Address{},
-		BlockNumber: new(big.Int).SetUint64(8000000),
-		Time:        new(big.Int).SetUint64(5),
-		BlockScore:  big.NewInt(0x30000),
-		GasLimit:    uint64(6000000),
-		GasPrice:    big.NewInt(1),
+		CanTransfer:      blockchain.CanTransfer,
+		CanBeTransferred: blockchain.CanBeTransferred,
+		Transfer:         blockchain.Transfer,
+		Origin:           origin,
+		Coinbase:         common.Address{},
+		BlockNumber:      new(big.Int).SetUint64(8000000),
+		Time:             new(big.Int).SetUint64(5),
+		BlockScore:       big.NewInt(0x30000),
+		GasLimit:         uint64(6000000),
+		GasPrice:         big.NewInt(1),
 	}
 	alloc := blockchain.GenesisAlloc{}
 	// The code pushes 'deadbeef' into memory, then the other params, and calls CREATE2, then returns
@@ -333,14 +334,15 @@ func TestCallTracer(t *testing.T) {
 			origin, _ := signer.Sender(tx)
 
 			context := vm.Context{
-				CanTransfer: blockchain.CanTransfer,
-				Transfer:    blockchain.Transfer,
-				Origin:      origin,
-				BlockNumber: new(big.Int).SetUint64(uint64(test.Context.Number)),
-				Time:        new(big.Int).SetUint64(uint64(test.Context.Time)),
-				BlockScore:  (*big.Int)(test.Context.BlockScore),
-				GasLimit:    uint64(test.Context.GasLimit),
-				GasPrice:    tx.GasPrice(),
+				CanTransfer:      blockchain.CanTransfer,
+				CanBeTransferred: blockchain.CanBeTransferred,
+				Transfer:         blockchain.Transfer,
+				Origin:           origin,
+				BlockNumber:      new(big.Int).SetUint64(uint64(test.Context.Number)),
+				Time:             new(big.Int).SetUint64(uint64(test.Context.Time)),
+				BlockScore:       (*big.Int)(test.Context.BlockScore),
+				GasLimit:         uint64(test.Context.GasLimit),
+				GasPrice:         tx.GasPrice(),
 			}
 			statedb := tests.MakePreState(database.NewMemoryDBManager(), test.Genesis.Alloc)
 
@@ -434,14 +436,15 @@ func TestInternalCallTracer(t *testing.T) {
 			origin, _ := signer.Sender(tx)
 
 			context := vm.Context{
-				CanTransfer: blockchain.CanTransfer,
-				Transfer:    blockchain.Transfer,
-				Origin:      origin,
-				BlockNumber: new(big.Int).SetUint64(uint64(test.Context.Number)),
-				Time:        new(big.Int).SetUint64(uint64(test.Context.Time)),
-				BlockScore:  (*big.Int)(test.Context.BlockScore),
-				GasLimit:    uint64(test.Context.GasLimit),
-				GasPrice:    tx.GasPrice(),
+				CanTransfer:      blockchain.CanTransfer,
+				CanBeTransferred: blockchain.CanBeTransferred,
+				Transfer:         blockchain.Transfer,
+				Origin:           origin,
+				BlockNumber:      new(big.Int).SetUint64(uint64(test.Context.Number)),
+				Time:             new(big.Int).SetUint64(uint64(test.Context.Time)),
+				BlockScore:       (*big.Int)(test.Context.BlockScore),
+				GasLimit:         uint64(test.Context.GasLimit),
+				GasPrice:         tx.GasPrice(),
 			}
 			statedb := tests.MakePreState(database.NewMemoryDBManager(), test.Genesis.Alloc)
 

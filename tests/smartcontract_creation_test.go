@@ -112,7 +112,7 @@ func genOptions(b *testing.B) ([]testData, error) {
 func deploySmartContract(b *testing.B, opt *testOption, prof *profile.Profiler) {
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators)
+	bcdata, err := NewBCData(opt.numMaxAccounts, opt.numValidators, nil)
 	if err != nil {
 		b.Fatal(err)
 	}

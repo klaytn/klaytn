@@ -45,6 +45,7 @@ const (
 	AccountValueKeyHumanReadable
 	AccountValueKeyAccountKey
 	AccountValueKeyCodeFormat
+	AccountValueBalanceLimit
 )
 
 func (a AccountType) String() string {
@@ -105,6 +106,14 @@ type Account interface {
 	String() string
 }
 
+// Account
+type EOA interface {
+	Account
+
+	GetBalanceLimit() *big.Int
+	SetBalanceLimit(b *big.Int)
+}
+
 // ProgramAccount is an interface of an account having a program (code + storage).
 // This interface is implemented by LegacyAccount and SmartContractAccount.
 type ProgramAccount interface {
@@ -152,6 +161,14 @@ func NewAccountWithMap(t AccountType, values map[AccountValueKeyType]interface{}
 	}
 
 	return nil, ErrUndefinedAccountType
+}
+
+func GetEOA(a Account) EOA {
+	if eoa, ok := a.(EOA); ok {
+		return eoa
+	}
+
+	return nil
 }
 
 func GetProgramAccount(a Account) ProgramAccount {

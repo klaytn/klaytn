@@ -31,6 +31,8 @@ package contracts
 
 //go:generate abigen --sol ./payments/Payment.sol --pkg payments --out ./payments/Payment.go
 
+//go:generate abigen --sol ./balanceLimit/SendKlay.sol --pkg balanceLimit --out ./balanceLimit/SendKlay.go
+
 //`credit.sol` was compiled by solidity@0.4.24.
 // This code data was included in cypress genesis file.
 ////go:generate abigen --sol ./cypress/credit.sol --pkg cypress --out ./cypress/credit.go

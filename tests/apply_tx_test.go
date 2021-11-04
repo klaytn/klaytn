@@ -259,7 +259,7 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 	}
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -350,7 +350,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -481,7 +481,7 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCData(6, 4, nil)
 	if err != nil {
 		b.Fatal(err)
 	}

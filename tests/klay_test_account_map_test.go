@@ -20,8 +20,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/types/account"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
 	"github.com/klaytn/klaytn/crypto"
@@ -31,8 +34,9 @@ import (
 // AddressBalanceMap
 ////////////////////////////////////////////////////////////////////////////////
 type AccountInfo struct {
-	balance *big.Int
-	nonce   uint64
+	balance      *big.Int
+	nonce        uint64
+	balanceLimit *big.Int
 }
 
 type AccountMap struct {
@@ -80,7 +84,7 @@ func (a *AccountMap) IncNonce(addr common.Address) {
 }
 
 func (a *AccountMap) Set(addr common.Address, v *big.Int, nonce uint64) {
-	a.m[addr] = &AccountInfo{new(big.Int).Set(v), nonce}
+	a.m[addr] = &AccountInfo{new(big.Int).Set(v), nonce, account.GetInitialBalanceLimit()}
 }
 
 func (a *AccountMap) Initialize(bcdata *BCData) error {
@@ -125,14 +129,24 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 			}
 			feePayer = tx.ValidatedFeePayer()
 		}
-		if to == nil {
+		if to == nil && tx.Type() != types.TxTypeBalanceLimitUpdate {
 			nonce := a.GetNonce(from)
 			addr := crypto.CreateAddress(from, nonce)
 			to = &addr
 		}
-
-		a.AddBalance(*to, v)
-		a.SubBalance(from, v)
+		// Fail if we're trying to transfer more than the available balance
+		if !a.canTransfer(from, v) {
+			return vm.ErrInsufficientBalance // TODO-Klaytn-Issue615
+		}
+		// Fail if we're trying to transfer receiver's balance limit
+		// This only checks balance limit of EOA. Smart cotracts doesn't have balance limit.
+		if tx.Type() != types.TxTypeBalanceLimitUpdate {
+			if !a.canBeTransferred(*to, v) {
+				return vm.ErrExceedBalanceLimit
+			}
+			a.AddBalance(*to, v)
+			a.SubBalance(from, v)
+		}
 
 		// TODO-Klaytn: This gas fee calculation is correct only if the transaction is a value transfer transaction.
 		// Calculate the correct transaction fee by checking the corresponding receipt.
@@ -165,6 +179,9 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 		if tx.Type() == types.TxTypeSmartContractDeploy || tx.Type() == types.TxTypeFeeDelegatedSmartContractDeploy || tx.Type() == types.TxTypeFeeDelegatedSmartContractDeployWithRatio {
 			a.IncNonce(*to)
 		}
+		if t, ok := tx.GetTxInternalData().(*types.TxInternalDataBalanceLimitUpdate); ok {
+			a.m[from].balanceLimit = new(big.Int).Set(t.BalanceLimit)
+		}
 	}
 
 	return nil
@@ -184,4 +201,24 @@ func (a *AccountMap) Verify(statedb *state.StateDB) error {
 	}
 
 	return nil
+}
+
+func (a *AccountMap) canTransfer(addr common.Address, amount *big.Int) bool {
+	return a.m[addr].balance.Cmp(amount) >= 0
+}
+
+func (a *AccountMap) canBeTransferred(receiver common.Address, amount *big.Int) bool {
+	balanceLimitGetter := func(addr common.Address) (*big.Int, error) {
+		if accountInfo, ok := a.m[addr]; ok {
+			return accountInfo.balanceLimit, nil
+		}
+		return nil, account.ErrNotEOA
+	}
+	balanceGetter := func(addr common.Address) *big.Int {
+		if accountInfo, ok := a.m[addr]; ok {
+			return accountInfo.balance
+		}
+		return new(big.Int)
+	}
+	return blockchain.CanBeTransferred(balanceLimitGetter, balanceGetter, receiver, amount)
 }
