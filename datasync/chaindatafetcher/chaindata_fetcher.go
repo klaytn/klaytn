@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn/datasync/downloader"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -554,5 +555,9 @@ func (f *ChainDataFetcher) status() string {
 }
 
 func (f *ChainDataFetcher) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+	return nil
+}
+
+func (f *ChainDataFetcher) SynchronisingChecker() downloader.SynchronisingChecker {
 	return nil
 }

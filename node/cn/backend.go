@@ -661,3 +661,7 @@ func (s *CN) Stop() error {
 func (s *CN) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
 	return s.blockchain
 }
+
+func (s *CN) SynchronisingChecker() downloader.SynchronisingChecker {
+	return s.protocolManager.Downloader()
+}
