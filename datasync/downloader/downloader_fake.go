@@ -46,4 +46,5 @@ func (*FakeDownloader) Terminate() {}
 func (*FakeDownloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	return nil
 }
+func (*FakeDownloader) Synchronising() bool           { return false }
 func (*FakeDownloader) Progress() klaytn.SyncProgress { return klaytn.SyncProgress{} }

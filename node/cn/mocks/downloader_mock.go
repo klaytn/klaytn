@@ -5,14 +5,13 @@
 package mocks
 
 import (
-	big "math/big"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	klaytn "github.com/klaytn/klaytn"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	downloader "github.com/klaytn/klaytn/datasync/downloader"
+	big "math/big"
+	reflect "reflect"
 )
 
 // MockProtocolManagerDownloader is a mock of ProtocolManagerDownloader interface
@@ -134,6 +133,20 @@ func (m *MockProtocolManagerDownloader) Synchronise(arg0 string, arg1 common.Has
 func (mr *MockProtocolManagerDownloaderMockRecorder) Synchronise(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Synchronise", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).Synchronise), arg0, arg1, arg2, arg3)
+}
+
+// Synchronising mocks base method
+func (m *MockProtocolManagerDownloader) Synchronising() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Synchronising")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Synchronising indicates an expected call of Synchronising
+func (mr *MockProtocolManagerDownloaderMockRecorder) Synchronising() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Synchronising", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).Synchronising))
 }
 
 // Terminate mocks base method
