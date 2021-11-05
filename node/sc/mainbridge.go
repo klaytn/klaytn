@@ -538,3 +538,7 @@ func (mb *MainBridge) Stop() error {
 func errResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
 }
+
+func (mb *MainBridge) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+	return mb.blockchain
+}

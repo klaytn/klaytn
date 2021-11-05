@@ -458,3 +458,7 @@ func (ds *DBSyncer) bulkInsert(sqlStr string, vals []interface{}, blockNumber ui
 func (ds *DBSyncer) HandleLogsEvent(logs []*types.Log) error {
 	return nil
 }
+
+func (ds *DBSyncer) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+	return ds.blockchain
+}

@@ -23,6 +23,7 @@ package simulations
 import (
 	"context"
 	"fmt"
+	"github.com/klaytn/klaytn/blockchain"
 	"math/rand"
 	"net/http/httptest"
 	"reflect"
@@ -125,8 +126,9 @@ func (t *testService) Stop() error {
 	return nil
 }
 
-func (s *testService) Components() []interface{}              { return nil }
-func (s *testService) SetComponents(components []interface{}) {}
+func (s *testService) Components() []interface{}                           { return nil }
+func (s *testService) SetComponents(components []interface{})              {}
+func (s *testService) NodeWhitelistGetter() blockchain.NodeWhitelistGetter { return nil }
 
 // handshake performs a peer handshake by sending and expecting an empty
 // message with the given code

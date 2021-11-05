@@ -5,10 +5,6 @@
 package mocks
 
 import (
-	io "io"
-	big "math/big"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/klaytn/klaytn/blockchain"
 	state "github.com/klaytn/klaytn/blockchain/state"
@@ -19,6 +15,9 @@ import (
 	event "github.com/klaytn/klaytn/event"
 	params "github.com/klaytn/klaytn/params"
 	rlp "github.com/klaytn/klaytn/rlp"
+	io "io"
+	big "math/big"
+	reflect "reflect"
 )
 
 // MockBlockChain is a mock of BlockChain interface
@@ -365,6 +364,20 @@ func (m *MockBlockChain) GetLogsByHash(arg0 common.Hash) [][]*types.Log {
 func (mr *MockBlockChainMockRecorder) GetLogsByHash(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogsByHash", reflect.TypeOf((*MockBlockChain)(nil).GetLogsByHash), arg0)
+}
+
+// GetNodeWhitelist mocks base method
+func (m *MockBlockChain) GetNodeWhitelist() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNodeWhitelist")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// GetNodeWhitelist indicates an expected call of GetNodeWhitelist
+func (mr *MockBlockChainMockRecorder) GetNodeWhitelist() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeWhitelist", reflect.TypeOf((*MockBlockChain)(nil).GetNodeWhitelist))
 }
 
 // GetReceiptsByBlockHash mocks base method
@@ -956,6 +969,18 @@ func (m *MockBlockChain) SubscribeLogsEvent(arg0 chan<- []*types.Log) event.Subs
 func (mr *MockBlockChainMockRecorder) SubscribeLogsEvent(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeLogsEvent", reflect.TypeOf((*MockBlockChain)(nil).SubscribeLogsEvent), arg0)
+}
+
+// SubscribeNodeWhitelist mocks base method
+func (m *MockBlockChain) SubscribeNodeWhitelist(arg0 chan []string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SubscribeNodeWhitelist", arg0)
+}
+
+// SubscribeNodeWhitelist indicates an expected call of SubscribeNodeWhitelist
+func (mr *MockBlockChainMockRecorder) SubscribeNodeWhitelist(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeNodeWhitelist", reflect.TypeOf((*MockBlockChain)(nil).SubscribeNodeWhitelist), arg0)
 }
 
 // SubscribeRemovedLogsEvent mocks base method
