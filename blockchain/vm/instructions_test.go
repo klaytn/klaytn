@@ -28,9 +28,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
@@ -311,7 +311,15 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 				initialCall = false
 				return true
 			}
-			return blockchain.CanBeTransferred(balanceLimitGetter, balanceGetter, receiver, amount)
+			balanceLimit, err := balanceLimitGetter(receiver)
+			if err == account.ErrNotEOA { // check only for EOA
+				return true
+			} else if err == account.ErrNilAccount { // use initial balance limit if not set
+				balanceLimit = account.GetInitialBalanceLimit()
+			}
+			balanceBeforeTransfer := new(big.Int).Set(balanceGetter(receiver))
+			balanceAfterTransfer := new(big.Int).Add(balanceBeforeTransfer, amount)
+			return balanceLimit.Cmp(balanceAfterTransfer) >= 0
 		}
 
 		ctx = Context{
