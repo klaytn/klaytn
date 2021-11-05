@@ -460,7 +460,7 @@ func (ds *DBSyncer) HandleLogsEvent(logs []*types.Log) error {
 	return nil
 }
 
-func (ds *DBSyncer) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+func (ds *DBSyncer) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return ds.blockchain
 }
 

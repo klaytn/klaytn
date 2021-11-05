@@ -764,7 +764,7 @@ func (sb *SubBridge) Stop() error {
 	return nil
 }
 
-func (sb *SubBridge) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+func (sb *SubBridge) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return sb.blockchain
 }
 

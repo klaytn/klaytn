@@ -22,7 +22,6 @@ package node
 
 import (
 	"crypto/ecdsa"
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"reflect"
 
@@ -117,6 +116,6 @@ type Service interface {
 	// set components (blockchain, txpool, ..) in core service
 	SetComponents(components []interface{})
 
-	NodeWhitelistGetter() blockchain.NodeWhitelistGetter
+	NodeWhitelistGetter() p2p.NodeWhitelistGetter
 	SynchronisingChecker() downloader.SynchronisingChecker
 }

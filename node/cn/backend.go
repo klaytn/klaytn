@@ -658,7 +658,7 @@ func (s *CN) Stop() error {
 	return nil
 }
 
-func (s *CN) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+func (s *CN) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return s.blockchain
 }
 

@@ -22,7 +22,6 @@ package node_test
 
 import (
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/p2p"
@@ -46,7 +45,7 @@ func (s *SampleService) Start(p2p.Server) error                                {
 func (s *SampleService) Stop() error                                           { fmt.Println("Service stopping..."); return nil }
 func (s *SampleService) Components() []interface{}                             { return nil }
 func (s *SampleService) SetComponents(components []interface{})                {}
-func (s *SampleService) NodeWhitelistGetter() blockchain.NodeWhitelistGetter   { return nil }
+func (s *SampleService) NodeWhitelistGetter() p2p.NodeWhitelistGetter          { return nil }
 func (s *SampleService) SynchronisingChecker() downloader.SynchronisingChecker { return nil }
 
 func ExampleService() {

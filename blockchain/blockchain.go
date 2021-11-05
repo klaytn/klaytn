@@ -2586,7 +2586,3 @@ func (bc *BlockChain) callContract(ctx context.Context, call klaytn.CallMsg, blo
 	return res, gas, kerr.Status != types.ReceiptStatusSuccessful, err
 }
 
-type NodeWhitelistGetter interface {
-	GetNodeWhitelist() []string
-	SubscribeNodeWhitelist(whitelistCh chan []string)
-}

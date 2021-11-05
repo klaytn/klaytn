@@ -23,7 +23,6 @@ package simulations
 import (
 	"context"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"math/rand"
 	"net/http/httptest"
@@ -129,7 +128,7 @@ func (t *testService) Stop() error {
 
 func (s *testService) Components() []interface{}                             { return nil }
 func (s *testService) SetComponents(components []interface{})                {}
-func (s *testService) NodeWhitelistGetter() blockchain.NodeWhitelistGetter   { return nil }
+func (s *testService) NodeWhitelistGetter() p2p.NodeWhitelistGetter          { return nil }
 func (s *testService) SynchronisingChecker() downloader.SynchronisingChecker { return nil }
 
 // handshake performs a peer handshake by sending and expecting an empty

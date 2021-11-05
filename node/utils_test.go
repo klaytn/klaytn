@@ -24,7 +24,6 @@
 package node
 
 import (
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"reflect"
 
@@ -41,7 +40,7 @@ func (s *NoopService) Start(p2p.Server) error                                { r
 func (s *NoopService) Stop() error                                           { return nil }
 func (s *NoopService) Components() []interface{}                             { return nil }
 func (s *NoopService) SetComponents(components []interface{})                {}
-func (s *NoopService) NodeWhitelistGetter() blockchain.NodeWhitelistGetter   { return nil }
+func (s *NoopService) NodeWhitelistGetter() p2p.NodeWhitelistGetter          { return nil }
 func (s *NoopService) SynchronisingChecker() downloader.SynchronisingChecker { return nil }
 
 func NewNoopService(*ServiceContext) (Service, error) { return new(NoopService), nil }
@@ -103,7 +102,7 @@ func (s *InstrumentedService) Components() []interface{} {
 func (s *InstrumentedService) SetComponents(components []interface{}) {
 }
 
-func (s *InstrumentedService) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+func (s *InstrumentedService) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return nil
 }
 
