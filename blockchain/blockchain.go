@@ -2463,7 +2463,7 @@ func CheckBlockChainVersion(chainDB database.DBManager) error {
 	return nil
 }
 
-var NodeWhitelistContractAddr = common.HexToAddress("0xcbdcnodewhitelistcontract000000000000000")
+var NodeWhitelistContractAddr = common.HexToAddress("0xcbdc0000cbdc0000cbdc0000cbdc0000cbdc0000")
 
 const NodeWhitelistABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"addedNode\",\"type\":\"string\"}],\"name\":\"AddNode\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"deletedNode\",\"type\":\"string\"}],\"name\":\"DelNode\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"node\",\"type\":\"string\"}],\"name\":\"addNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"node\",\"type\":\"string\"}],\"name\":\"delNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getWhitelist\",\"outputs\":[{\"internalType\":\"string[]\",\"name\":\"\",\"type\":\"string[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"setAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
