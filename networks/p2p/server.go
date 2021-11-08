@@ -24,7 +24,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"net"
 	"strconv"
 	"strings"
@@ -191,24 +190,13 @@ func NewServer(config Config) Server {
 	}
 }
 
-// InitWhitelist initializes static nodes with the node information
-// stored in the specific smart contract.
+// InitWhitelist initializes node-whitelist related variables.
 func (srv *BaseServer) InitWhitelist(wlm NodeWhitelistGetter) {
 	if wlm == nil {
 		return
 	}
 	srv.wlg = wlm
-	srv.whitelistMap = genWhitelistMap(srv.wlg.GetNodeWhitelist())
-
-	srv.Logger.Info("trying to initialize static nodes with whitelist",
-		"len(whitelist)", len(srv.whitelistMap))
-	for nodeID, node := range srv.whitelistMap {
-		srv.Logger.Info("", "n.ID", node.ID, "n.TCP", node.TCP,
-			"n.UDP", node.UDP, "n.IP", node.IP, "n.String()", node.String(), "n.PortOrder", node.PortOrder)
-		// TODO-Need to decide whether to replace StaticNodes or append to the existing StaticNodes
-		srv.Logger.Info("added a node from the whitelist to static nodes", "node", nodeID)
-		srv.Config.StaticNodes = append(srv.Config.StaticNodes, node)
-	}
+	srv.whitelistMap = make(map[discover.NodeID]*discover.Node)
 }
 
 // UpdatePeerWithNewWhitelist reflects the given whitelist to its peer management.
@@ -275,8 +263,23 @@ func genWhitelistMap(whitelist []string) map[discover.NodeID]*discover.Node {
 	return whitelistMap
 }
 
-func (srv *BaseServer) SetSynchronisingChecker(sc downloader.SynchronisingChecker) {
+func (srv *BaseServer) SetSynchronisingChecker(sc SynchronisingChecker) {
 	srv.synchroniseChecker = sc
+}
+
+// NeedToCheckNodeWhitelist returns if we need to check the node-whitelist
+// to manage the node's peers.
+func (srv *BaseServer) NeedToCheckNodeWhitelist() bool {
+	// if we don't have any peers, we don't check node-whitelist.
+	if len(srv.Peers()) == 0 {
+		return false
+	}
+	// if we don't have synchroniseChecker, we don't check node-whitelist
+	if srv.synchroniseChecker == nil {
+		return false
+	}
+	// it checks node-whitelist only if we're not synchronising-it means the node has the latest block
+	return !srv.synchroniseChecker.Synchronising()
 }
 
 // Server manages all peer connections.
@@ -371,7 +374,7 @@ type Server interface {
 
 	// SetSynchronisingChecker sets synchronisingChecker which returns whether the node
 	// is currently synchronising.
-	SetSynchronisingChecker(sc downloader.SynchronisingChecker)
+	SetSynchronisingChecker(sc SynchronisingChecker)
 }
 
 // MultiChannelServer is a server that uses a multi channel.
@@ -658,9 +661,8 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 		return DiscUnexpectedIdentity
 	}
 
-	// Checks if the node is on the whitelist,
-	// only if the node has one or more peers and is not in synchronising.
-	if len(srv.Peers()) > 0 && !srv.synchroniseChecker.Synchronising() {
+	// Checks if the node is on the whitelist
+	if srv.NeedToCheckNodeWhitelist() {
 		if srv.wlg != nil && !srv.IsOnTheWhitelist(c.id) {
 			srv.logger.Warn("non-whitelisted node tries to make connection", "id", c.id,
 				"addr", c.fd.RemoteAddr(), "conn", c.flags)
@@ -1055,7 +1057,7 @@ type BaseServer struct {
 	whitelistMapLock sync.Mutex
 	whitelistCh      chan []string
 
-	synchroniseChecker downloader.SynchronisingChecker
+	synchroniseChecker SynchronisingChecker
 }
 
 type peerOpFunc func(map[discover.NodeID]*Peer)
@@ -1824,9 +1826,8 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 		return DiscUnexpectedIdentity
 	}
 
-	// Checks if the node is on the whitelist,
-	// only if the node has one or more peers and is not in synchronising.
-	if len(srv.Peers()) > 0 && !srv.synchroniseChecker.Synchronising() {
+	// Checks if the node is on the whitelist
+	if srv.NeedToCheckNodeWhitelist() {
 		if srv.wlg != nil && !srv.IsOnTheWhitelist(c.id) {
 			srv.logger.Warn("non-whitelisted node tries to make connection", "id", c.id,
 				"addr", c.fd.RemoteAddr(), "conn", c.flags)
@@ -2080,4 +2081,8 @@ func ConvertStringToConnType(s string) common.ConnType {
 type NodeWhitelistGetter interface {
 	GetNodeWhitelist() []string
 	SubscribeNodeWhitelist(whitelistCh chan []string)
+}
+
+type SynchronisingChecker interface {
+	Synchronising() bool
 }

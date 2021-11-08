@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -558,6 +557,6 @@ func (f *ChainDataFetcher) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return nil
 }
 
-func (f *ChainDataFetcher) SynchronisingChecker() downloader.SynchronisingChecker {
+func (f *ChainDataFetcher) SynchronisingChecker() p2p.SynchronisingChecker {
 	return nil
 }

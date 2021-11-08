@@ -2490,26 +2490,17 @@ func (bc *BlockChain) GetNodeWhitelist() []string {
 	return whitelist
 }
 
-// SubscribeNodeWhitelist makes a subscription to ChainHeadEvent and then periodically sends the latest
+// SubscribeNodeWhitelist makes a subscription to ChainHeadEvent and then sends the latest
 // whitelist to the given channel.
 func (bc *BlockChain) SubscribeNodeWhitelist(whitelistCh chan []string) {
 	chainHeadEvent := make(chan ChainHeadEvent, chainHeadChanSize)
 	sub := bc.SubscribeChainHeadEvent(chainHeadEvent)
 	defer sub.Unsubscribe()
 
-	onOffFlag := true
 	for {
 		select {
 		case <-chainHeadEvent:
-			// 주기적으로 화이트 리스트 확인
-			if onOffFlag {
-				whitelistCh <- bc.GetNodeWhitelist()
-			} else {
-				var emptySlice []string
-				whitelistCh <- emptySlice
-			}
-
-			onOffFlag = !onOffFlag
+			whitelistCh <- bc.GetNodeWhitelist()
 		case err := <-sub.Err():
 			logger.Error("Error from chain head event subscription", "err", err)
 			return
@@ -2585,4 +2576,3 @@ func (bc *BlockChain) callContract(ctx context.Context, call klaytn.CallMsg, blo
 
 	return res, gas, kerr.Status != types.ReceiptStatusSuccessful, err
 }
-

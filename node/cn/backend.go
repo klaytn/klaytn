@@ -662,6 +662,6 @@ func (s *CN) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return s.blockchain
 }
 
-func (s *CN) SynchronisingChecker() downloader.SynchronisingChecker {
+func (s *CN) SynchronisingChecker() p2p.SynchronisingChecker {
 	return s.protocolManager.Downloader()
 }

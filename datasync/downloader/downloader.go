@@ -271,10 +271,6 @@ func (d *Downloader) getMode() SyncMode {
 	return SyncMode(atomic.LoadUint32(&d.mode))
 }
 
-type SynchronisingChecker interface {
-	Synchronising() bool
-}
-
 // Synchronising returns whether the downloader is currently retrieving blocks.
 func (d *Downloader) Synchronising() bool {
 	return atomic.LoadInt32(&d.synchronising) > 0

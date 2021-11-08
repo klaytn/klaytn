@@ -22,7 +22,6 @@ package node
 
 import (
 	"crypto/ecdsa"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"reflect"
 
 	"github.com/klaytn/klaytn/accounts"
@@ -117,5 +116,5 @@ type Service interface {
 	SetComponents(components []interface{})
 
 	NodeWhitelistGetter() p2p.NodeWhitelistGetter
-	SynchronisingChecker() downloader.SynchronisingChecker
+	SynchronisingChecker() p2p.SynchronisingChecker
 }

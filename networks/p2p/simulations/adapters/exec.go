@@ -27,7 +27,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"io"
 	"net"
 	"os"
@@ -496,7 +495,7 @@ func (s *snapshotService) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return nil
 }
 
-func (s *snapshotService) SynchronisingChecker() downloader.SynchronisingChecker {
+func (s *snapshotService) SynchronisingChecker() p2p.SynchronisingChecker {
 	return nil
 }
 
