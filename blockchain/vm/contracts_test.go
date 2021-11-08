@@ -291,7 +291,8 @@ func TestEVM_CVE_2021_39137(t *testing.T) {
 	gasLimit := uint64(99999999)
 	tracer := NewStructLogger(nil)
 	vmctx := Context{
-		CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
+		IsActiveAccount: func(types.AccountStatusGetterFunc, common.Address) bool { return true },
+		CanTransfer:     func(StateDB, common.Address, *big.Int) bool { return true },
 		CanBeTransferred: func(BalanceLimitGetterFunc, BalanceGetterFunc, common.Address, *big.Int) bool {
 			return true
 		},

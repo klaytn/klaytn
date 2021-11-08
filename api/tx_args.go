@@ -73,6 +73,7 @@ var isTxField = func() map[types.TxType]map[string]bool {
 		types.TxTypeFeeDelegatedCancel:                          types.TxInternalDataFeeDelegatedCancel{},
 		types.TxTypeFeeDelegatedCancelWithRatio:                 types.TxInternalDataFeeDelegatedCancelWithRatio{},
 		types.TxTypeBalanceLimitUpdate:                          types.TxInternalDataBalanceLimitUpdate{},
+		types.TxTypeAccountStatusUpdate:                         types.TxInternalDataAccountStatusUpdate{},
 	}
 
 	// generate field maps for each tx type
@@ -118,8 +119,9 @@ type SendTxArgs struct {
 	CodeFormat    *params.CodeFormat `json:"codeFormat"`
 	HumanReadable *bool              `json:"humanReadable"`
 
-	Key          *hexutil.Bytes `json:"key"`
-	BalanceLimit *hexutil.Big   `json:"balanceLimit"`
+	Key           *hexutil.Bytes  `json:"key"`
+	BalanceLimit  *hexutil.Big    `json:"balanceLimit"`
+	AccountStatus *hexutil.Uint64 `json:"accountStatus"`
 
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
@@ -233,6 +235,9 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	}
 	if args.BalanceLimit != nil {
 		values[types.TxValueKeyBalanceLimit] = (*big.Int)(args.BalanceLimit)
+	}
+	if args.AccountStatus != nil {
+		values[types.TxValueKeyAccountStatus] = uint64(*args.AccountStatus)
 	}
 	if args.Key != nil {
 		serializer := accountkey.NewAccountKeySerializer()

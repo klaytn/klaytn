@@ -20,9 +20,11 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/kerrors"
@@ -54,6 +56,7 @@ const (
 	TxTypeBatch, _, _
 	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
 	TxTypeBalanceLimitUpdate, _, _
+	TxTypeAccountStatusUpdate, _, _
 	TxTypeLast, _, _
 )
 
@@ -74,6 +77,7 @@ const (
 	TxValueKeyFeeRatioOfFeePayer
 	TxValueKeyCodeFormat
 	TxValueKeyBalanceLimit
+	TxValueKeyAccountStatus
 )
 
 var (
@@ -84,21 +88,22 @@ var (
 	errCannotBeSignedByFeeDelegator           = errors.New("this transaction type cannot be signed by a fee delegator")
 	errUndefinedKeyRemains                    = errors.New("undefined key remains")
 
-	errValueKeyHumanReadableMustBool     = errors.New("HumanReadable must be a type of bool")
-	errValueKeyAccountKeyMustAccountKey  = errors.New("AccountKey must be a type of AccountKey")
-	errValueKeyAnchoredDataMustByteSlice = errors.New("AnchoredData must be a slice of bytes")
-	errValueKeyNonceMustUint64           = errors.New("Nonce must be a type of uint64")
-	errValueKeyToMustAddress             = errors.New("To must be a type of common.Address")
-	errValueKeyToMustAddressPointer      = errors.New("To must be a type of *common.Address")
-	errValueKeyAmountMustBigInt          = errors.New("Amount must be a type of *big.Int")
-	errValueKeyGasLimitMustUint64        = errors.New("GasLimit must be a type of uint64")
-	errValueKeyGasPriceMustBigInt        = errors.New("GasPrice must be a type of *big.Int")
-	errValueKeyFromMustAddress           = errors.New("From must be a type of common.Address")
-	errValueKeyFeePayerMustAddress       = errors.New("FeePayer must be a type of common.Address")
-	errValueKeyDataMustByteSlice         = errors.New("Data must be a slice of bytes")
-	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
-	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
-	errValueKeyBalanceLimitMustBigInt    = errors.New("Balance limit must be a type of *big.Int")
+	errValueKeyHumanReadableMustBool      = errors.New("HumanReadable must be a type of bool")
+	errValueKeyAccountKeyMustAccountKey   = errors.New("AccountKey must be a type of AccountKey")
+	errValueKeyAnchoredDataMustByteSlice  = errors.New("AnchoredData must be a slice of bytes")
+	errValueKeyNonceMustUint64            = errors.New("Nonce must be a type of uint64")
+	errValueKeyToMustAddress              = errors.New("To must be a type of common.Address")
+	errValueKeyToMustAddressPointer       = errors.New("To must be a type of *common.Address")
+	errValueKeyAmountMustBigInt           = errors.New("Amount must be a type of *big.Int")
+	errValueKeyGasLimitMustUint64         = errors.New("GasLimit must be a type of uint64")
+	errValueKeyGasPriceMustBigInt         = errors.New("GasPrice must be a type of *big.Int")
+	errValueKeyFromMustAddress            = errors.New("From must be a type of common.Address")
+	errValueKeyFeePayerMustAddress        = errors.New("FeePayer must be a type of common.Address")
+	errValueKeyDataMustByteSlice          = errors.New("Data must be a slice of bytes")
+	errValueKeyFeeRatioMustUint8          = errors.New("FeeRatio must be a type of uint8")
+	errValueKeyCodeFormatInvalid          = errors.New("The smart contract code format is invalid")
+	errValueKeyBalanceLimitMustBigInt     = errors.New("Balance limit must be a type of *big.Int")
+	errValueKeyAccountStatusMustBeInRange = errors.New(fmt.Sprintf("Account status must be less than %d", account.AccountStatusLast))
 )
 
 func (t TxValueKeyType) String() string {
@@ -131,6 +136,8 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyCodeFormat"
 	case TxValueKeyBalanceLimit:
 		return "TxValueKeyBalanceLimit"
+	case TxValueKeyAccountStatus:
+		return "TxValueKeyAccountStatus"
 	}
 
 	return "UndefinedTxValueKeyType"
@@ -188,6 +195,8 @@ func (t TxType) String() string {
 		return "TxTypeFeeDelegatedChainDataAnchoringWithRatio"
 	case TxTypeBalanceLimitUpdate:
 		return "TxTypeBalanceLimitUpdate"
+	case TxTypeAccountStatusUpdate:
+		return "TxTypeAccountStatusUpdate"
 	}
 
 	return "UndefinedTxType"
@@ -227,6 +236,10 @@ func (t TxType) IsChainDataAnchoring() bool {
 
 func (t TxType) IsBalanceLimitUpdate() bool {
 	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeBalanceLimitUpdate
+}
+
+func (t TxType) IsAccountStatusUpdate() bool {
+	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeAccountStatusUpdate
 }
 
 type FeeRatio uint8
@@ -368,6 +381,8 @@ type StateDB interface {
 	Exist(common.Address) bool
 	UpdateKey(addr common.Address, key accountkey.AccountKey, currentBlockNumber uint64) error
 	SetBalanceLimit(addr common.Address, balanceLimit *big.Int)
+	GetAccountStatus(addr common.Address) (account.AccountStatus, error)
+	SetAccountStatus(addr common.Address, status account.AccountStatus)
 	CreateEOA(addr common.Address, humanReadable bool, key accountkey.AccountKey)
 	CreateSmartContractAccount(addr common.Address, format params.CodeFormat)
 	CreateSmartContractAccountWithKey(addr common.Address, humanReadable bool, key accountkey.AccountKey, format params.CodeFormat)
@@ -427,6 +442,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatio(), nil
 	case TxTypeBalanceLimitUpdate:
 		return newTxInternalDataBalanceLimitUpdate(), nil
+	case TxTypeAccountStatusUpdate:
+		return newTxInternalDataAccountStatusUpdate(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -482,6 +499,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatioWithMap(values)
 	case TxTypeBalanceLimitUpdate:
 		return newTxInternalDataBalanceLimitUpdateWithMap(values)
+	case TxTypeAccountStatusUpdate:
+		return newTxInternalDataAccountStatusUpdateWithMap(values)
 	}
 
 	return nil, errUndefinedTxType

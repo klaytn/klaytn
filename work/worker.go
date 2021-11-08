@@ -21,6 +21,7 @@
 package work
 
 import (
+	"errors"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -757,7 +758,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardb
 
 	receipt, _, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
-		if err != vm.ErrInsufficientBalance && err != vm.ErrExceedBalanceLimit && err != vm.ErrTotalTimeLimitReached {
+		if err != vm.ErrInsufficientBalance && err != vm.ErrExceedBalanceLimit && errors.Is(err, types.ErrAccountStatusStopSender) && errors.Is(err, types.ErrAccountStatusStopReceiver) && err != vm.ErrTotalTimeLimitReached {
 			tx.MarkUnexecutable(true)
 		}
 		env.state.RevertToSnapshot(snap)

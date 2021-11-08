@@ -824,6 +824,17 @@ func genMapForBalanceLimitUpdate(from TestAccount, gasPrice *big.Int, balanceLim
 	return values, 0
 }
 
+func genMapForAccountStatusUpdate(from TestAccount, gasPrice *big.Int, status uint64, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:         from.GetNonce(),
+		types.TxValueKeyFrom:          from.GetAddr(),
+		types.TxValueKeyGasLimit:      gasLimit,
+		types.TxValueKeyGasPrice:      gasPrice,
+		types.TxValueKeyAccountStatus: status,
+	}
+	return values, 0
+}
+
 func genKlaytnLegacyAccount(t *testing.T) TestAccount {
 	// For KlaytnLegacy
 	klaytnLegacy, err := createAnonymousAccount(getRandomPrivateKeyString(t))

@@ -70,6 +70,7 @@ func TestTxRLPEncode(t *testing.T) {
 		testTxRLPEncodeFeeDelegatedChainDataAnchoringWithRatio,
 
 		testTxBalanceLimitUpdate,
+		testTxAccountStatusUpdate,
 	}
 
 	for _, f := range funcs {
@@ -1433,6 +1434,41 @@ func testTxBalanceLimitUpdate(t *testing.T) {
 		tx.GasLimit,
 		tx.From,
 		tx.BalanceLimit,
+		tx.TxSignatures,
+	})
+	assert.Equal(t, nil, err)
+
+	printRLPEncode(chainId, signer, sigRLP, txHashRLP, txHashRLP, rawTx)
+}
+
+func testTxAccountStatusUpdate(t *testing.T) {
+	tx := genAccountStatusUpdateTransaction().(*TxInternalDataAccountStatusUpdate)
+
+	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	chainId := params.BFTTestChainConfig.ChainID
+	rawTx := &Transaction{data: tx}
+	rawTx.Sign(signer, key)
+
+	sigRLP := new(bytes.Buffer)
+
+	err := rlp.Encode(sigRLP, []interface{}{
+		tx.SerializeForSignToBytes(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+	assert.Equal(t, nil, err)
+
+	txHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(txHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(txHashRLP, []interface{}{
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.From,
+		tx.AccountStatus,
 		tx.TxSignatures,
 	})
 	assert.Equal(t, nil, err)

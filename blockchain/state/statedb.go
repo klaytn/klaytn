@@ -287,6 +287,21 @@ func (self *StateDB) GetAccount(addr common.Address) account.Account {
 	return nil
 }
 
+func (self *StateDB) GetAccountStatus(addr common.Address) (account.AccountStatus, error) {
+	// Return error for contracts.
+	// There is no account status for contracts.
+	if self.IsProgramAccount(addr) || common.IsPrecompiledContractAddress(addr) {
+		return account.AccountStatusUndefined, account.ErrNotEOA
+	}
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.AccountStatus(), nil
+	}
+	// Return error if the address is not found in stateDB.
+	// The address could be either contract or EOA.
+	return account.AccountStatusUndefined, account.ErrNilAccount
+}
+
 func (self *StateDB) IsContractAccount(addr common.Address) bool {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
@@ -442,6 +457,13 @@ func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 	stateObject := self.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetNonce(nonce)
+	}
+}
+
+func (self *StateDB) SetAccountStatus(addr common.Address, status account.AccountStatus) {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetAccountStatus(status)
 	}
 }
 
@@ -652,6 +674,7 @@ func (self *StateDB) CreateEOA(addr common.Address, humanReadable bool, key acco
 		account.AccountValueKeyHumanReadable: humanReadable,
 		account.AccountValueKeyAccountKey:    key,
 		account.AccountValueBalanceLimit:     account.GetInitialBalanceLimit(),
+		account.AccountValueStatus:           uint64(0),
 	}
 	new, prev := self.createObjectWithMap(addr, account.ExternallyOwnedAccountType, values)
 	if prev != nil {

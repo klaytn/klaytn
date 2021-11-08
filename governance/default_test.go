@@ -523,7 +523,7 @@ func TestVoteValueNilInterface(t *testing.T) {
 }
 
 func TestBaoBabGenesisHash(t *testing.T) {
-	baobabHash := common.HexToHash("0xc2d73d3512806fb265ff9b916dc49560b653065116ba4f9eadbe21681dc8121d")
+	baobabHash := common.HexToHash("0x780b02514702539bc11065c7e27b782fa77bf58271803ae944d766e1743b7ae6")
 	genesis := blockchain.DefaultBaobabGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
 	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)
@@ -536,7 +536,7 @@ func TestBaoBabGenesisHash(t *testing.T) {
 }
 
 func TestCypressGenesisHash(t *testing.T) {
-	cypressHash := common.HexToHash("0x9f49444a84f635e43c26a34d96971f44136784a6ade308269736f89cd939f86c")
+	cypressHash := common.HexToHash("0x2ceaf6dc4bdfca888a1cb536983f12fd6fba8a6e035aa9b54c8910f0921a0836")
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
 	blockchain.InitDeriveSha(genesis.Config.DeriveShaImpl)

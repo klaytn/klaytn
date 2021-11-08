@@ -640,6 +640,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 	from := tx.ValidatedSender()
 
+	// check if from/to account is in active state
+	if err = tx.ValidateAccountStatus(IsActiveAccount, pool.currentState); err != nil {
+		return err
+	}
+
 	// Ensure the transaction adheres to nonce ordering
 	if pool.getNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow

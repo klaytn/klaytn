@@ -73,6 +73,7 @@ func prepareInterpreterAndContract(code []byte) (*vm.Interpreter, *vm.Contract) 
 	// runtime.go:Execute()
 	cfg := makeBenchConfig()
 	context := vm.Context{
+		IsActiveAccount:  blockchain.IsActiveAccount,
 		CanTransfer:      blockchain.CanTransfer,
 		CanBeTransferred: blockchain.CanBeTransferred,
 		Transfer:         blockchain.Transfer,

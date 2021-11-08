@@ -46,6 +46,7 @@ const (
 	AccountValueKeyAccountKey
 	AccountValueKeyCodeFormat
 	AccountValueBalanceLimit
+	AccountValueStatus
 )
 
 func (a AccountType) String() string {
@@ -112,6 +113,8 @@ type EOA interface {
 
 	GetBalanceLimit() *big.Int
 	SetBalanceLimit(b *big.Int)
+	GetAccountStatus() AccountStatus
+	SetAccountStatus(AccountStatus)
 }
 
 // ProgramAccount is an interface of an account having a program (code + storage).

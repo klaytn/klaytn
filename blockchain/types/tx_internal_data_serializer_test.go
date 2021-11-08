@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -29,14 +30,15 @@ import (
 )
 
 var (
-	to           = common.HexToAddress("7b65B75d204aBed71587c9E519a89277766EE1d0")
-	key, from    = defaultTestKey()
-	feePayer     = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
-	nonce        = uint64(1234)
-	amount       = big.NewInt(10)
-	gasLimit     = uint64(1000000)
-	gasPrice     = big.NewInt(25)
-	balanceLimit = big.NewInt(1000000)
+	to            = common.HexToAddress("7b65B75d204aBed71587c9E519a89277766EE1d0")
+	key, from     = defaultTestKey()
+	feePayer      = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
+	nonce         = uint64(1234)
+	amount        = big.NewInt(10)
+	gasLimit      = uint64(1000000)
+	gasPrice      = big.NewInt(25)
+	balanceLimit  = big.NewInt(1000000)
+	accountStatus = uint64(account.AccountStatusActive)
 )
 
 // TestTransactionSerialization tests RLP/JSON serialization for TxInternalData
@@ -68,6 +70,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"FeeDelegatedCancel", genFeeDelegatedCancelTransaction()},
 		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
 		{"BalanceLimitUpdate", genBalanceLimitUpdateTransaction()},
+		{"AccountStatusUpdate", genAccountStatusUpdateTransaction()},
 	}
 
 	var testcases = []struct {
@@ -707,6 +710,23 @@ func genBalanceLimitUpdateTransaction() TxInternalData {
 		TxValueKeyGasPrice:     big.NewInt(0),
 		TxValueKeyFrom:         from,
 		TxValueKeyBalanceLimit: balanceLimit,
+	})
+
+	if err != nil {
+		// Since we do not have testing.T here, call panic() instead of t.Fatal().
+		panic(err)
+	}
+
+	return d
+}
+
+func genAccountStatusUpdateTransaction() TxInternalData {
+	d, err := NewTxInternalDataWithMap(TxTypeAccountStatusUpdate, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:         nonce,
+		TxValueKeyGasLimit:      0,
+		TxValueKeyGasPrice:      big.NewInt(0),
+		TxValueKeyFrom:          from,
+		TxValueKeyAccountStatus: accountStatus,
 	})
 
 	if err != nil {

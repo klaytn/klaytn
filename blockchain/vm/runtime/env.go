@@ -27,6 +27,7 @@ import (
 
 func NewEnv(cfg *Config) *vm.EVM {
 	context := vm.Context{
+		IsActiveAccount:  blockchain.IsActiveAccount,
 		CanTransfer:      blockchain.CanTransfer,
 		CanBeTransferred: blockchain.CanBeTransferred,
 		Transfer:         blockchain.Transfer,

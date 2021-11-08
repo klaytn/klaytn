@@ -331,6 +331,12 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = gasPrice
 		values[types.TxValueKeyBalanceLimit] = account.GetInitialBalanceLimit()
+	case types.TxTypeAccountStatusUpdate:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyFrom] = sender.Addr
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyAccountStatus] = uint64(account.AccountStatusActive)
 	}
 
 	tx, err := types.NewTransactionWithMap(txType, values)
@@ -377,7 +383,7 @@ func signTxWithVariousKeyTypes(signer types.EIP155Signer, tx *types.Transaction,
 			err = tx.SignWithKeys(signer, sender.Keys)
 		}
 	} else if accKeyType == accountkey.AccountKeyTypeRoleBased {
-		if txType.IsAccountUpdate() || txType.IsBalanceLimitUpdate() {
+		if txType.IsAccountUpdate() || txType.IsBalanceLimitUpdate() || txType.IsAccountStatusUpdate() {
 			err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{sender.Keys[accountkey.RoleAccountUpdate]})
 		} else {
 			err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{sender.Keys[accountkey.RoleTransaction]})
@@ -1975,7 +1981,8 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 			// RoleAccountUpdate can generate valid signature for account update txs.
 			if keyType == int(accountkey.RoleAccountUpdate) && txType.IsAccountUpdate() ||
 				keyType == int(accountkey.RoleAccountUpdate) && txType.IsBalanceLimitUpdate() ||
-				keyType == int(accountkey.RoleTransaction) && !txType.IsAccountUpdate() && !txType.IsBalanceLimitUpdate() {
+				keyType == int(accountkey.RoleAccountUpdate) && txType.IsAccountStatusUpdate() ||
+				keyType == int(accountkey.RoleTransaction) && !txType.IsAccountUpdate() && !txType.IsBalanceLimitUpdate() && !txType.IsAccountStatusUpdate() {
 				// Do not make a block since account update tx can change sender's keys.
 				receipt, _, err := applyTransaction(t, bcdata, tx)
 				assert.Equal(t, nil, err)
