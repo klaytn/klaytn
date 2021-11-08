@@ -109,6 +109,7 @@ func TestTrimLeftZeroes(t *testing.T) {
 		arr []byte
 		exp []byte
 	}{
+		{FromHex("0x0fffff00ff00"), FromHex("0x0fffff00ff00")},
 		{FromHex("0x00ffff00ff0000"), FromHex("0xffff00ff0000")},
 		{FromHex("0x00000000000000"), []byte{}},
 		{FromHex("0xff"), FromHex("0xff")},
@@ -128,6 +129,7 @@ func TestTrimRightZeroes(t *testing.T) {
 		arr []byte
 		exp []byte
 	}{
+		{FromHex("0x00ffff00ff0f"), FromHex("0x00ffff00ff0f")},
 		{FromHex("0x00ffff00ff0000"), FromHex("0x00ffff00ff")},
 		{FromHex("0x00000000000000"), []byte{}},
 		{FromHex("0xff"), FromHex("0xff")},

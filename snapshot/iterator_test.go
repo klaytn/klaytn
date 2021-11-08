@@ -27,9 +27,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/klaytn/klaytn/storage/database"
-
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/storage/database"
 )
 
 // TODO-snapshot remove the following function after porting diffToDisk method
