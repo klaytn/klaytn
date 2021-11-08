@@ -46,50 +46,45 @@ func TestDefaultGenesisBlock(t *testing.T) {
 }
 
 func TestHardCodedChainConfigUpdate(t *testing.T) {
+	cypressGenesisBlock, baobabGenesisBlock := genCypressGenesisBlock(), genBaobabGenesisBlock()
 	tests := []struct {
-		name          string
-		newHFBlock    *big.Int
-		originHFBlock *big.Int
-		fn            func(database.DBManager, *big.Int) (*params.ChainConfig, common.Hash, error)
-		wantConfig    *params.ChainConfig
-		wantHash      common.Hash
-		wantErr       error
-		resetFn       func(*big.Int)
+		name             string
+		newHFBlock       *big.Int
+		originHFBlock    *big.Int
+		fn               func(database.DBManager, *big.Int) (*params.ChainConfig, common.Hash, error)
+		wantConfig       *params.ChainConfig
+		wantHash         common.Hash
+		wantErr          error
+		wantStoredConfig *params.ChainConfig
+		resetFn          func(*big.Int)
 	}{
 		{
-			name:          "cypress chainConfig update",
-			originHFBlock: nil,
-			newHFBlock:    big.NewInt(3),
+			name:       "cypress chainConfig update",
+			newHFBlock: big.NewInt(3),
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
-				genCypressGenesisBlock().MustCommit(db)
-				params.CypressChainConfig.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, nil, params.CypressNetworkId, false, false)
+				cypressGenesisBlock.MustCommit(db)
+				cypressGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
+				return SetupGenesisBlock(db, cypressGenesisBlock, params.CypressNetworkId, false, false)
 			},
-			wantHash:   params.CypressGenesisHash,
-			wantConfig: params.CypressChainConfig,
-			resetFn: func(originHFBlock *big.Int) {
-				params.CypressChainConfig.IstanbulCompatibleBlock = originHFBlock
-			},
+			wantHash:         params.CypressGenesisHash,
+			wantConfig:       cypressGenesisBlock.Config,
+			wantStoredConfig: cypressGenesisBlock.Config,
 		},
 		{
-			name:          "baobab chainConfig update",
-			originHFBlock: nil,
-			newHFBlock:    big.NewInt(3),
+			name:       "baobab chainConfig update",
+			newHFBlock: big.NewInt(90909999),
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
-				genBaobabGenesisBlock().MustCommit(db)
-				params.BaobabChainConfig.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, nil, params.BaobabNetworkId, false, false)
+				baobabGenesisBlock.MustCommit(db)
+				baobabGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
+				return SetupGenesisBlock(db, baobabGenesisBlock, params.BaobabNetworkId, false, false)
 			},
-			wantHash:   params.BaobabGenesisHash,
-			wantConfig: params.BaobabChainConfig,
-			resetFn: func(originHFBlock *big.Int) {
-				params.BaobabChainConfig.IstanbulCompatibleBlock = originHFBlock
-			},
+			wantHash:         params.BaobabGenesisHash,
+			wantConfig:       baobabGenesisBlock.Config,
+			wantStoredConfig: baobabGenesisBlock.Config,
 		},
 		{
-			name:          "incompatible config in DB",
-			originHFBlock: nil,
-			newHFBlock:    big.NewInt(3),
+			name:       "incompatible config in DB",
+			newHFBlock: big.NewInt(3),
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
 				// Commit the 'old' genesis block with Istanbul transition at #2.
 				// Advance to block #4, past the Istanbul transition block of customGenesis.
@@ -101,22 +96,19 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 
 				blocks, _ := GenerateChain(genesis.Config, genesisBlock, gxhash.NewFaker(), db, 4, nil)
 				bc.InsertChain(blocks)
-				bc.CurrentBlock()
 				// This should return a compatibility error.
 				newConfig := *genesis
 				newConfig.Config.IstanbulCompatibleBlock = newHFBlock
 				return SetupGenesisBlock(db, &newConfig, params.CypressNetworkId, true, false)
 			},
-			wantHash:   params.CypressGenesisHash,
-			wantConfig: params.CypressChainConfig,
+			wantHash:         params.CypressGenesisHash,
+			wantConfig:       cypressGenesisBlock.Config,
+			wantStoredConfig: params.CypressChainConfig,
 			wantErr: &params.ConfigCompatError{
 				What:         "Istanbul Block",
 				StoredConfig: nil,
 				NewConfig:    big.NewInt(3),
 				RewindTo:     2,
-			},
-			resetFn: func(originHFBlock *big.Int) {
-				params.CypressChainConfig.IstanbulCompatibleBlock = originHFBlock
 			},
 		},
 	}
@@ -138,16 +130,10 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 			// Check stored chainConfig
 			storedChainConfig := db.ReadChainConfig(test.wantHash)
 			assert.Equal(t, storedChainConfig, test.wantConfig, test.name+": stored chainConfig is not compatible")
-
-			// Reset hard fork block number
-			test.resetFn(test.originHFBlock)
 		} else {
-			// Reset hard fork block number
-			test.resetFn(test.originHFBlock)
-
 			// Check stored chainConfig
 			storedChainConfig := db.ReadChainConfig(test.wantHash)
-			assert.Equal(t, storedChainConfig, test.wantConfig, test.name+": stored chainConfig is not compatible")
+			assert.Equal(t, storedChainConfig, test.wantStoredConfig, test.name+": stored chainConfig is not compatible")
 		}
 	}
 }
@@ -305,7 +291,6 @@ func TestSetupGenesis(t *testing.T) {
 
 				blocks, _ := GenerateChain(customGenesis.Config, genesis, gxhash.NewFaker(), db, 4, nil)
 				bc.InsertChain(blocks)
-				bc.CurrentBlock()
 				// This should return a compatibility error.
 				newConfig := *customGenesis
 				newConfig.Config.IstanbulCompatibleBlock = big.NewInt(3)
@@ -346,14 +331,18 @@ func TestSetupGenesis(t *testing.T) {
 }
 
 func genCypressGenesisBlock() *Genesis {
+	copyOfCypressChainConfig := *params.CypressChainConfig
 	genesis := DefaultGenesisBlock()
+	genesis.Config = &copyOfCypressChainConfig
 	genesis.Governance = SetGenesisGovernance(genesis)
 	InitDeriveSha(genesis.Config.DeriveShaImpl)
 	return genesis
 }
 
 func genBaobabGenesisBlock() *Genesis {
+	copyOfBaobabChainConfig := *params.BaobabChainConfig
 	genesis := DefaultBaobabGenesisBlock()
+	genesis.Config = &copyOfBaobabChainConfig
 	genesis.Governance = SetGenesisGovernance(genesis)
 	InitDeriveSha(genesis.Config.DeriveShaImpl)
 	return genesis
