@@ -274,8 +274,8 @@ func (srv *BaseServer) NeedToCheckNodeWhitelist() bool {
 	if len(srv.Peers()) == 0 {
 		return false
 	}
-	// if we don't have synchroniseChecker, we don't check node-whitelist
-	if srv.synchroniseChecker == nil {
+	// if we don't have synchroniseChecker or whitelistGetter, we don't check node-whitelist
+	if srv.synchroniseChecker == nil || srv.wlg == nil {
 		return false
 	}
 	// it checks node-whitelist only if we're not synchronising-it means the node has the latest block
@@ -663,7 +663,7 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 
 	// Checks if the node is on the whitelist
 	if srv.NeedToCheckNodeWhitelist() {
-		if srv.wlg != nil && !srv.IsOnTheWhitelist(c.id) {
+		if !srv.IsOnTheWhitelist(c.id) {
 			srv.logger.Warn("non-whitelisted node tries to make connection", "id", c.id,
 				"addr", c.fd.RemoteAddr(), "conn", c.flags)
 			return DiscNotOnNodeWhitelist
@@ -1828,7 +1828,7 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 
 	// Checks if the node is on the whitelist
 	if srv.NeedToCheckNodeWhitelist() {
-		if srv.wlg != nil && !srv.IsOnTheWhitelist(c.id) {
+		if !srv.IsOnTheWhitelist(c.id) {
 			srv.logger.Warn("non-whitelisted node tries to make connection", "id", c.id,
 				"addr", c.fd.RemoteAddr(), "conn", c.flags)
 			return DiscNotOnNodeWhitelist
