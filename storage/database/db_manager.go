@@ -64,7 +64,6 @@ type DBManager interface {
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
-	GetSnapshotDB() Database
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -190,6 +189,8 @@ type DBManager interface {
 	ReadStorageSnapshot(accountHash, storageHash common.Hash) []byte
 	WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte)
 	DeleteStorageSnapshot(accountHash, storageHash common.Hash)
+
+	NewSnapshotDBIterator(prefix []byte, start []byte) Iterator
 
 	NewSnapshotDBBatch() SnapshotDBBatch
 
@@ -762,10 +763,6 @@ func (dbm *databaseManager) GetStateTrieMigrationDB() Database {
 
 func (dbm *databaseManager) GetMiscDB() Database {
 	return dbm.dbs[MiscDB]
-}
-
-func (dbm *databaseManager) GetSnapshotDB() Database {
-	return dbm.dbs[SnapshotDB]
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
@@ -1895,6 +1892,11 @@ func (dbm *databaseManager) DeleteStorageSnapshot(accountHash, storageHash commo
 	if err := db.Delete(StorageSnapshotKey(accountHash, storageHash)); err != nil {
 		logger.Crit("Failed to delete storage snapshot", "err", err)
 	}
+}
+
+func (dbm *databaseManager) NewSnapshotDBIterator(prefix []byte, start []byte) Iterator {
+	db := dbm.getDatabase(SnapshotDB)
+	return db.NewIterator(prefix, start)
 }
 
 // WriteChildChainTxHash writes stores a transaction hash of a transaction which contains

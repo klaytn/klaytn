@@ -222,7 +222,7 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 		diskMore = false
 	)
 
-	iter := dl.diskdb.GetSnapshotDB().NewIterator(prefix, origin)
+	iter := dl.diskdb.NewSnapshotDBIterator(prefix, origin)
 	defer iter.Release()
 
 	var start = time.Now()
