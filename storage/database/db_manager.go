@@ -2225,7 +2225,7 @@ type SnapshotDBBatch interface {
 	Batch
 
 	WriteSnapshotRoot(root common.Hash)
-	DeleteSnapshotRoot(root common.Hash)
+	DeleteSnapshotRoot()
 
 	WriteAccountSnapshot(hash common.Hash, entry []byte)
 	DeleteAccountSnapshot(hash common.Hash)
@@ -2242,8 +2242,8 @@ func (batch *snapshotDBBatch) WriteSnapshotRoot(root common.Hash) {
 	writeSnapshotRoot(batch, root)
 }
 
-func (batch *snapshotDBBatch) DeleteSnapshotRoot(root common.Hash) {
-	deleteSnapshotRoot(batch, root)
+func (batch *snapshotDBBatch) DeleteSnapshotRoot() {
+	deleteSnapshotRoot(batch)
 }
 
 func (batch *snapshotDBBatch) WriteAccountSnapshot(hash common.Hash, entry []byte) {
@@ -2268,7 +2268,7 @@ func writeSnapshotRoot(db KeyValueWriter, root common.Hash) {
 	}
 }
 
-func deleteSnapshotRoot(db KeyValueWriter, root common.Hash) {
+func deleteSnapshotRoot(db KeyValueWriter) {
 	if err := db.Delete(snapshotRootKey); err != nil {
 		logger.Crit("Failed to remove snapshot root", "err", err)
 	}

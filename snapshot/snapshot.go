@@ -21,11 +21,13 @@
 package snapshot
 
 import (
+	"bytes"
 	"errors"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -52,9 +54,37 @@ var (
 	snapshotCleanStorageReadMeter  = metrics.NewRegisteredMeter("state/snapshot/clean/storage/read", nil)
 	snapshotCleanStorageWriteMeter = metrics.NewRegisteredMeter("state/snapshot/clean/storage/write", nil)
 
-	snapshotDirtyAccountMissMeter = metrics.NewRegisteredMeter("state/snapshot/dirty/account/miss", nil)
+	snapshotDirtyAccountHitMeter   = metrics.NewRegisteredMeter("state/snapshot/dirty/account/hit", nil)
+	snapshotDirtyAccountMissMeter  = metrics.NewRegisteredMeter("state/snapshot/dirty/account/miss", nil)
+	snapshotDirtyAccountInexMeter  = metrics.NewRegisteredMeter("state/snapshot/dirty/account/inex", nil)
+	snapshotDirtyAccountReadMeter  = metrics.NewRegisteredMeter("state/snapshot/dirty/account/read", nil)
+	snapshotDirtyAccountWriteMeter = metrics.NewRegisteredMeter("state/snapshot/dirty/account/write", nil)
 
-	snapshotDirtyStorageMissMeter = metrics.NewRegisteredMeter("state/snapshot/dirty/storage/miss", nil)
+	snapshotDirtyStorageHitMeter   = metrics.NewRegisteredMeter("state/snapshot/dirty/storage/hit", nil)
+	snapshotDirtyStorageMissMeter  = metrics.NewRegisteredMeter("state/snapshot/dirty/storage/miss", nil)
+	snapshotDirtyStorageInexMeter  = metrics.NewRegisteredMeter("state/snapshot/dirty/storage/inex", nil)
+	snapshotDirtyStorageReadMeter  = metrics.NewRegisteredMeter("state/snapshot/dirty/storage/read", nil)
+	snapshotDirtyStorageWriteMeter = metrics.NewRegisteredMeter("state/snapshot/dirty/storage/write", nil)
+
+	snapshotDirtyAccountHitDepthHist = metrics.NewRegisteredHistogram("state/snapshot/dirty/account/hit/depth", nil, metrics.NewExpDecaySample(1028, 0.015))
+	snapshotDirtyStorageHitDepthHist = metrics.NewRegisteredHistogram("state/snapshot/dirty/storage/hit/depth", nil, metrics.NewExpDecaySample(1028, 0.015))
+
+	snapshotFlushAccountItemMeter = metrics.NewRegisteredMeter("state/snapshot/flush/account/item", nil)
+	snapshotFlushAccountSizeMeter = metrics.NewRegisteredMeter("state/snapshot/flush/account/size", nil)
+	snapshotFlushStorageItemMeter = metrics.NewRegisteredMeter("state/snapshot/flush/storage/item", nil)
+	snapshotFlushStorageSizeMeter = metrics.NewRegisteredMeter("state/snapshot/flush/storage/size", nil)
+
+	// TODO-Klaytn-Snapshot update snapshotBloomIndexTimer
+	//snapshotBloomIndexTimer = metrics.NewRegisteredResettingTimer("state/snapshot/bloom/index", nil)
+	snapshotBloomErrorGauge = metrics.NewRegisteredGaugeFloat64("state/snapshot/bloom/error", nil)
+
+	snapshotBloomAccountTrueHitMeter  = metrics.NewRegisteredMeter("state/snapshot/bloom/account/truehit", nil)
+	snapshotBloomAccountFalseHitMeter = metrics.NewRegisteredMeter("state/snapshot/bloom/account/falsehit", nil)
+	snapshotBloomAccountMissMeter     = metrics.NewRegisteredMeter("state/snapshot/bloom/account/miss", nil)
+
+	snapshotBloomStorageTrueHitMeter  = metrics.NewRegisteredMeter("state/snapshot/bloom/storage/truehit", nil)
+	snapshotBloomStorageFalseHitMeter = metrics.NewRegisteredMeter("state/snapshot/bloom/storage/falsehit", nil)
+	snapshotBloomStorageMissMeter     = metrics.NewRegisteredMeter("state/snapshot/bloom/storage/miss", nil)
 
 	// ErrSnapshotStale is returned from data accessors if the underlying snapshot
 	// layer had been invalidated due to the chain progressing forward far enough
@@ -65,6 +95,14 @@ var (
 	// is being generated currently and the requested data item is not yet in the
 	// range of accounts covered.
 	ErrNotCoveredYet = errors.New("not covered yet")
+
+	// ErrNotConstructed is returned if the callers want to iterate the snapshot
+	// while the generation is not finished yet.
+	ErrNotConstructed = errors.New("snapshot is not constructed")
+
+	// errSnapshotCycle is returned if a snapshot is attempted to be inserted
+	// that forms a cycle in the snapshot tree.
+	errSnapshotCycle = errors.New("snapshot cycle")
 )
 
 // Snapshot represents the functionality supported by a snapshot storage layer.
@@ -118,4 +156,145 @@ type snapshot interface {
 
 	// StorageIterator creates a storage iterator over an arbitrary layer.
 	StorageIterator(account common.Hash, seek common.Hash) (StorageIterator, bool)
+}
+
+// diffToDisk merges a bottom-most diff into the persistent disk layer underneath
+// it. The method will panic if called onto a non-bottom-most diff layer.
+//
+// The disk layer persistence should be operated in an atomic way. All updates should
+// be discarded if the whole transition if not finished.
+func diffToDisk(bottom *diffLayer) *diskLayer {
+	var (
+		base  = bottom.parent.(*diskLayer)
+		batch = base.diskdb.NewSnapshotDBBatch()
+		stats *generatorStats
+	)
+	// If the disk layer is running a snapshot generator, abort it
+	if base.genAbort != nil {
+		abort := make(chan *generatorStats)
+		base.genAbort <- abort
+		stats = <-abort
+	}
+	// Put the deletion in the batch writer, flush all updates in the final step.
+	batch.DeleteSnapshotRoot()
+
+	// Mark the original base as stale as we're going to create a new wrapper
+	base.lock.Lock()
+	if base.stale {
+		panic("parent disk layer is stale") // we've committed into the same base from two children, boo
+	}
+	base.stale = true
+	base.lock.Unlock()
+
+	// Destroy all the destructed accounts from the database
+	for hash := range bottom.destructSet {
+		// Skip any account not covered yet by the snapshot
+		if base.genMarker != nil && bytes.Compare(hash[:], base.genMarker) > 0 {
+			continue
+		}
+		// Remove all storage slots
+		batch.DeleteAccountSnapshot(hash)
+		base.cache.Set(hash[:], nil)
+
+		it := base.diskdb.NewSnapshotDBIterator(database.StorageSnapshotsKey(hash), nil)
+		for it.Next() {
+			if key := it.Key(); len(key) == 65 { // TODO(karalabe): Yuck, we should move this into the iterator
+				batch.Delete(key)
+				base.cache.Del(key[1:])
+				snapshotFlushStorageItemMeter.Mark(1)
+
+				// Ensure we don't delete too much data blindly (contract can be
+				// huge). It's ok to flush, the root will go missing in case of a
+				// crash and we'll detect and regenerate the snapshot.
+				if batch.ValueSize() > database.IdealBatchSize {
+					if err := batch.Write(); err != nil {
+						logger.Crit("Failed to write storage deletions", "err", err)
+					}
+					batch.Reset()
+				}
+			}
+		}
+		it.Release()
+	}
+	// Push all updated accounts into the database
+	for hash, data := range bottom.accountData {
+		// Skip any account not covered yet by the snapshot
+		if base.genMarker != nil && bytes.Compare(hash[:], base.genMarker) > 0 {
+			continue
+		}
+		// Push the account to disk
+		batch.WriteAccountSnapshot(hash, data)
+		base.cache.Set(hash[:], data)
+		snapshotCleanAccountWriteMeter.Mark(int64(len(data)))
+
+		snapshotFlushAccountItemMeter.Mark(1)
+		snapshotFlushAccountSizeMeter.Mark(int64(len(data)))
+
+		// Ensure we don't write too much data blindly. It's ok to flush, the
+		// root will go missing in case of a crash and we'll detect and regen
+		// the snapshot.
+		if batch.ValueSize() > database.IdealBatchSize {
+			if err := batch.Write(); err != nil {
+				logger.Crit("Failed to write storage deletions", "err", err)
+			}
+			batch.Reset()
+		}
+	}
+	// Push all the storage slots into the database
+	for accountHash, storage := range bottom.storageData {
+		// Skip any account not covered yet by the snapshot
+		if base.genMarker != nil && bytes.Compare(accountHash[:], base.genMarker) > 0 {
+			continue
+		}
+		// Generation might be mid-account, track that case too
+		midAccount := base.genMarker != nil && bytes.Equal(accountHash[:], base.genMarker[:common.HashLength])
+
+		for storageHash, data := range storage {
+			// Skip any slot not covered yet by the snapshot
+			if midAccount && bytes.Compare(storageHash[:], base.genMarker[common.HashLength:]) > 0 {
+				continue
+			}
+			if len(data) > 0 {
+				batch.WriteStorageSnapshot(accountHash, storageHash, data)
+				base.cache.Set(append(accountHash[:], storageHash[:]...), data)
+				snapshotCleanStorageWriteMeter.Mark(int64(len(data)))
+			} else {
+				batch.DeleteStorageSnapshot(accountHash, storageHash)
+				base.cache.Set(append(accountHash[:], storageHash[:]...), nil)
+			}
+			snapshotFlushStorageItemMeter.Mark(1)
+			snapshotFlushStorageSizeMeter.Mark(int64(len(data)))
+		}
+	}
+	// Update the snapshot block marker and write any remainder data
+	batch.WriteSnapshotRoot(bottom.root)
+
+	// Write out the generator progress marker and report
+	journalProgress(batch, base.genMarker, stats)
+
+	// Flush all the updates in the single db operation. Ensure the
+	// disk layer transition is atomic.
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to write leftover snapshot", "err", err)
+	}
+	logger.Debug("Journalled disk layer", "root", bottom.root, "complete", base.genMarker == nil)
+	res := &diskLayer{
+		root:       bottom.root,
+		cache:      base.cache,
+		diskdb:     base.diskdb,
+		triedb:     base.triedb,
+		genMarker:  base.genMarker,
+		genPending: base.genPending,
+	}
+	// If snapshot generation hasn't finished yet, port over all the starts and
+	// continue where the previous round left off.
+	//
+	// Note, the `base.genAbort` comparison is not used normally, it's checked
+	// to allow the tests to play with the marker without triggering this path.
+	if base.genMarker != nil && base.genAbort != nil {
+		res.genMarker = base.genMarker
+		res.genAbort = make(chan chan *generatorStats)
+		go res.generate(stats)
+	}
+	return res
 }
