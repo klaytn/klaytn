@@ -166,6 +166,5 @@ func (dl *diskLayer) Storage(accountHash, storageHash common.Hash) ([]byte, erro
 // the specified data items. Note, the maps are retained by the method to avoid
 // copying everything.
 func (dl *diskLayer) Update(blockHash common.Hash, destructs map[common.Hash]struct{}, accounts map[common.Hash][]byte, storage map[common.Hash]map[common.Hash][]byte) *diffLayer {
-	// TODO-Klaytn-Snapshot add after difflayer is ported
-	panic("implement me")
+	return newDiffLayer(dl, blockHash, destructs, accounts, storage)
 }

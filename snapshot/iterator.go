@@ -21,6 +21,10 @@
 package snapshot
 
 import (
+	"bytes"
+	"fmt"
+	"sort"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"
 )
@@ -65,6 +69,98 @@ type StorageIterator interface {
 	// be returned if the iterator becomes invalid
 	Slot() []byte
 }
+
+// diffAccountIterator is an account iterator that steps over the accounts (both
+// live and deleted) contained within a single diff layer. Higher order iterators
+// will use the deleted accounts to skip deeper iterators.
+type diffAccountIterator struct {
+	// curHash is the current hash the iterator is positioned on. The field is
+	// explicitly tracked since the referenced diff layer might go stale after
+	// the iterator was positioned and we don't want to fail accessing the old
+	// hash as long as the iterator is not touched any more.
+	curHash common.Hash
+
+	layer *diffLayer    // Live layer to retrieve values from
+	keys  []common.Hash // Keys left in the layer to iterate
+	fail  error         // Any failures encountered (stale)
+}
+
+// AccountIterator creates an account iterator over a single diff layer.
+func (dl *diffLayer) AccountIterator(seek common.Hash) AccountIterator {
+	// Seek out the requested starting account
+	hashes := dl.AccountList()
+	index := sort.Search(len(hashes), func(i int) bool {
+		return bytes.Compare(seek[:], hashes[i][:]) <= 0
+	})
+	// Assemble and returned the already seeked iterator
+	return &diffAccountIterator{
+		layer: dl,
+		keys:  hashes[index:],
+	}
+}
+
+// Next steps the iterator forward one element, returning false if exhausted.
+func (it *diffAccountIterator) Next() bool {
+	// If the iterator was already stale, consider it a programmer error. Although
+	// we could just return false here, triggering this path would probably mean
+	// somebody forgot to check for Error, so lets blow up instead of undefined
+	// behavior that's hard to debug.
+	if it.fail != nil {
+		panic(fmt.Sprintf("called Next of failed iterator: %v", it.fail))
+	}
+	// Stop iterating if all keys were exhausted
+	if len(it.keys) == 0 {
+		return false
+	}
+	if it.layer.Stale() {
+		it.fail, it.keys = ErrSnapshotStale, nil
+		return false
+	}
+	// Iterator seems to be still alive, retrieve and cache the live hash
+	it.curHash = it.keys[0]
+	// key cached, shift the iterator and notify the user of success
+	it.keys = it.keys[1:]
+	return true
+}
+
+// Error returns any failure that occurred during iteration, which might have
+// caused a premature iteration exit (e.g. snapshot stack becoming stale).
+func (it *diffAccountIterator) Error() error {
+	return it.fail
+}
+
+// Hash returns the hash of the account the iterator is currently at.
+func (it *diffAccountIterator) Hash() common.Hash {
+	return it.curHash
+}
+
+// Account returns the RLP encoded slim account the iterator is currently at.
+// This method may _fail_, if the underlying layer has been flattened between
+// the call to Next and Account. That type of error will set it.Err.
+// This method assumes that flattening does not delete elements from
+// the accountdata mapping (writing nil into it is fine though), and will panic
+// if elements have been deleted.
+//
+// Note the returned account is not a copy, please don't modify it.
+func (it *diffAccountIterator) Account() []byte {
+	it.layer.lock.RLock()
+	blob, ok := it.layer.accountData[it.curHash]
+	if !ok {
+		if _, ok := it.layer.destructSet[it.curHash]; ok {
+			it.layer.lock.RUnlock()
+			return nil
+		}
+		panic(fmt.Sprintf("iterator referenced non-existent account: %x", it.curHash))
+	}
+	it.layer.lock.RUnlock()
+	if it.layer.Stale() {
+		it.fail, it.keys = ErrSnapshotStale, nil
+	}
+	return blob
+}
+
+// Release is a noop for diff account iterators as there are no held resources.
+func (it *diffAccountIterator) Release() {}
 
 // diskAccountIterator is an account iterator that steps over the live accounts
 // contained within a disk layer.
@@ -132,6 +228,107 @@ func (it *diskAccountIterator) Release() {
 		it.it = nil
 	}
 }
+
+// diffStorageIterator is a storage iterator that steps over the specific storage
+// (both live and deleted) contained within a single diff layer. Higher order
+// iterators will use the deleted slot to skip deeper iterators.
+type diffStorageIterator struct {
+	// curHash is the current hash the iterator is positioned on. The field is
+	// explicitly tracked since the referenced diff layer might go stale after
+	// the iterator was positioned and we don't want to fail accessing the old
+	// hash as long as the iterator is not touched any more.
+	curHash common.Hash
+	account common.Hash
+
+	layer *diffLayer    // Live layer to retrieve values from
+	keys  []common.Hash // Keys left in the layer to iterate
+	fail  error         // Any failures encountered (stale)
+}
+
+// StorageIterator creates a storage iterator over a single diff layer.
+// Except the storage iterator is returned, there is an additional flag
+// "destructed" returned. If it's true then it means the whole storage is
+// destructed in this layer(maybe recreated too), don't bother deeper layer
+// for storage retrieval.
+func (dl *diffLayer) StorageIterator(account common.Hash, seek common.Hash) (StorageIterator, bool) {
+	// Create the storage for this account even it's marked
+	// as destructed. The iterator is for the new one which
+	// just has the same address as the deleted one.
+	hashes, destructed := dl.StorageList(account)
+	index := sort.Search(len(hashes), func(i int) bool {
+		return bytes.Compare(seek[:], hashes[i][:]) <= 0
+	})
+	// Assemble and returned the already seeked iterator
+	return &diffStorageIterator{
+		layer:   dl,
+		account: account,
+		keys:    hashes[index:],
+	}, destructed
+}
+
+// Next steps the iterator forward one element, returning false if exhausted.
+func (it *diffStorageIterator) Next() bool {
+	// If the iterator was already stale, consider it a programmer error. Although
+	// we could just return false here, triggering this path would probably mean
+	// somebody forgot to check for Error, so lets blow up instead of undefined
+	// behavior that's hard to debug.
+	if it.fail != nil {
+		panic(fmt.Sprintf("called Next of failed iterator: %v", it.fail))
+	}
+	// Stop iterating if all keys were exhausted
+	if len(it.keys) == 0 {
+		return false
+	}
+	if it.layer.Stale() {
+		it.fail, it.keys = ErrSnapshotStale, nil
+		return false
+	}
+	// Iterator seems to be still alive, retrieve and cache the live hash
+	it.curHash = it.keys[0]
+	// key cached, shift the iterator and notify the user of success
+	it.keys = it.keys[1:]
+	return true
+}
+
+// Error returns any failure that occurred during iteration, which might have
+// caused a premature iteration exit (e.g. snapshot stack becoming stale).
+func (it *diffStorageIterator) Error() error {
+	return it.fail
+}
+
+// Hash returns the hash of the storage slot the iterator is currently at.
+func (it *diffStorageIterator) Hash() common.Hash {
+	return it.curHash
+}
+
+// Slot returns the raw storage slot value the iterator is currently at.
+// This method may _fail_, if the underlying layer has been flattened between
+// the call to Next and Value. That type of error will set it.Err.
+// This method assumes that flattening does not delete elements from
+// the storage mapping (writing nil into it is fine though), and will panic
+// if elements have been deleted.
+//
+// Note the returned slot is not a copy, please don't modify it.
+func (it *diffStorageIterator) Slot() []byte {
+	it.layer.lock.RLock()
+	storage, ok := it.layer.storageData[it.account]
+	if !ok {
+		panic(fmt.Sprintf("iterator referenced non-existent account storage: %x", it.account))
+	}
+	// Storage slot might be nil(deleted), but it must exist
+	blob, ok := storage[it.curHash]
+	if !ok {
+		panic(fmt.Sprintf("iterator referenced non-existent storage slot: %x", it.curHash))
+	}
+	it.layer.lock.RUnlock()
+	if it.layer.Stale() {
+		it.fail, it.keys = ErrSnapshotStale, nil
+	}
+	return blob
+}
+
+// Release is a noop for diff account iterators as there are no held resources.
+func (it *diffStorageIterator) Release() {}
 
 // diskStorageIterator is a storage iterator that steps over the live storage
 // contained within a disk layer.
@@ -204,5 +401,3 @@ func (it *diskStorageIterator) Release() {
 		it.it = nil
 	}
 }
-
-// TODO-snapshot implement diffAccountIterator / diffStroageIterator
