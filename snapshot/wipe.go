@@ -43,7 +43,7 @@ func wipeKeyRange(db database.DBManager, kind string, prefix []byte, origin []by
 	// Iterate over the key-range and delete all of them
 	start, logged := time.Now(), time.Now()
 
-	it := db.GetSnapshotDB().NewIterator(prefix, origin)
+	it := db.NewSnapshotDBIterator(prefix, origin)
 	var stop []byte
 	if limit != nil {
 		stop = append(prefix, limit...)
@@ -72,7 +72,7 @@ func wipeKeyRange(db database.DBManager, kind string, prefix []byte, origin []by
 			}
 			batch.Reset()
 			seekPos := key[len(prefix):]
-			it = db.GetSnapshotDB().NewIterator(prefix, seekPos)
+			it = db.NewSnapshotDBIterator(prefix, seekPos)
 
 			if time.Since(logged) > 8*time.Second && report {
 				logger.Info("Deleting state snapshot leftovers", "kind", kind, "wiped", items, "elapsed", common.PrettyDuration(time.Since(start)))
