@@ -181,7 +181,7 @@ type DBManager interface {
 	// from accessors_snapshot.go
 	ReadSnapshotRoot() common.Hash
 	WriteSnapshotRoot(root common.Hash)
-	DeleteSnapshotRoot(root common.Hash)
+	DeleteSnapshotRoot()
 
 	ReadAccountSnapshot(hash common.Hash) []byte
 	WriteAccountSnapshot(hash common.Hash, entry []byte)
@@ -1844,7 +1844,7 @@ func (dbm *databaseManager) WriteSnapshotRoot(root common.Hash) {
 // the persisted snapshot. Since snapshots are not immutable, this  method can
 // be used during updates, so a crash or failure will mark the entire snapshot
 // invalid.
-func (dbm *databaseManager) DeleteSnapshotRoot(root common.Hash) {
+func (dbm *databaseManager) DeleteSnapshotRoot() {
 	db := dbm.getDatabase(SnapshotDB)
 	if err := db.Delete(snapshotRootKey); err != nil {
 		logger.Crit("Failed to remove snapshot root", "err", err)
