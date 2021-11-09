@@ -210,12 +210,11 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 
 	// The snap state is exhausted, pass the entire key/val set for verification
 	if origin == nil && !diskMore {
-		tr, err := statedb.NewSecureTrie(root, dl.triedb)
-		if err != nil {
-			return nil, err
-		}
-
-		//stackTr := trie.NewStackTrie(nil)
+		var (
+			dbm    = database.NewMemoryDBManager()
+			triedb = statedb.NewDatabase(dbm)
+		)
+		tr, _ := statedb.NewSecureTrie(common.Hash{}, triedb)
 		for i, key := range keys {
 			tr.TryUpdate(key, vals[i])
 		}
