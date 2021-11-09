@@ -22,41 +22,11 @@ package snapshot
 
 import (
 	"bytes"
-	"io/ioutil"
 	"math/rand"
-	"os"
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/storage/database"
 )
-
-// TODO-snapshot remove the following function after porting diffToDisk method
-func createTestDiskLayer(db database.DBManager, accounts map[common.Hash][]byte, storages map[common.Hash]map[common.Hash][]byte) *diskLayer {
-	batch := db.NewSnapshotDBBatch()
-
-	for hash, data := range accounts {
-		batch.WriteAccountSnapshot(hash, data)
-		batch.Write()
-		batch.Reset()
-	}
-
-	for accountHash, storage := range storages {
-		for storageHash, data := range storage {
-			if len(data) > 0 {
-				batch.WriteStorageSnapshot(accountHash, storageHash, data)
-			} else {
-				batch.DeleteStorageSnapshot(accountHash, storageHash)
-			}
-			batch.Write()
-			batch.Reset()
-		}
-	}
-
-	return &diskLayer{
-		diskdb: db,
-	}
-}
 
 // TestAccountIteratorBasics tests some simple single-layer(diff and disk) iteration
 func TestAccountIteratorBasics(t *testing.T) {
@@ -82,25 +52,13 @@ func TestAccountIteratorBasics(t *testing.T) {
 			storage[h] = accStorage
 		}
 	}
-	// TODO-snapshot uncomment after porting difflayer.go
-	//// Add some (identical) layers on top
-	//diffLayer := newDiffLayer(emptyLayer(), common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
-	//it := diffLayer.AccountIterator(common.Hash{})
-	//verifyIterator(t, 100, it, verifyNothing) // Nil is allowed for single layer iterator
-	//
-	//diskLayer := diffToDisk(diffLayer)
+	// Add some (identical) layers on top
+	diffLayer := newDiffLayer(emptyLayer(), common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	it := diffLayer.AccountIterator(common.Hash{})
+	verifyIterator(t, 100, it, verifyNothing) // Nil is allowed for single layer iterator
 
-	// TODO-snapshot the following disklayer creation is temporary and will be removed after porting difflayer.go
-	dir, err := ioutil.TempDir("", "klaytn-test-snapshot-data")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(dir)
-	dbc := &database.DBConfig{Dir: dir, DBType: database.LevelDB, LevelDBCacheSize: 32, OpenFilesLimit: 32}
-	db := database.NewDBManager(dbc)
-	diskLayer := createTestDiskLayer(db, accounts, storage)
-
-	it := diskLayer.AccountIterator(common.Hash{})
+	diskLayer := diffToDisk(diffLayer)
+	it = diskLayer.AccountIterator(common.Hash{})
 	verifyIterator(t, 100, it, verifyNothing) // Nil is allowed for single layer iterator
 }
 
@@ -132,24 +90,14 @@ func TestStorageIteratorBasics(t *testing.T) {
 		storage[h] = accStorage
 		nilStorage[h] = nilstorage
 	}
-	// TODO-snapshot uncomment after porting difflayer.go
-	//// Add some (identical) layers on top
-	//diffLayer := newDiffLayer(emptyLayer(), common.Hash{}, nil, copyAccounts(accounts), copyStorage(storage))
-	//for account := range accounts {
-	//	it, _ := diffLayer.StorageIterator(account, common.Hash{})
-	//	verifyIterator(t, 100, it, verifyNothing) // Nil is allowed for single layer iterator
-	//}
-
-	// TODO-snapshot the following disklayer creation is temporary and will be removed after porting difflayer.go
-	dir, err := ioutil.TempDir("", "klaytn-test-snapshot-data")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
+	// Add some (identical) layers on top
+	diffLayer := newDiffLayer(emptyLayer(), common.Hash{}, nil, copyAccounts(accounts), copyStorage(storage))
+	for account := range accounts {
+		it, _ := diffLayer.StorageIterator(account, common.Hash{})
+		verifyIterator(t, 100, it, verifyNothing) // Nil is allowed for single layer iterator
 	}
-	defer os.RemoveAll(dir)
-	dbc := &database.DBConfig{Dir: dir, DBType: database.LevelDB, LevelDBCacheSize: 32, OpenFilesLimit: 32}
-	db := database.NewDBManager(dbc)
-	diskLayer := createTestDiskLayer(db, accounts, storage)
 
+	diskLayer := diffToDisk(diffLayer)
 	for account := range accounts {
 		it, _ := diskLayer.StorageIterator(account, common.Hash{})
 		verifyIterator(t, 100-nilStorage[account], it, verifyNothing) // Nil is allowed for single layer iterator
