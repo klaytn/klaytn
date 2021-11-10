@@ -164,6 +164,8 @@ type Config struct {
 
 	// NetworkID to use for selecting peers to connect to
 	NetworkID uint64
+
+	UseNodeWhitelist bool
 }
 
 // NewServer returns a new Server interface.
@@ -282,6 +284,10 @@ func (srv *BaseServer) SetSynchronisingChecker(sc SynchronisingChecker) {
 // NeedToCheckNodeWhitelist returns if we need to check the node-whitelist
 // to manage the node's peers.
 func (srv *BaseServer) NeedToCheckNodeWhitelist() bool {
+	// if the feature is not enabled, we don't check node-whitelist
+	if !srv.Config.UseNodeWhitelist {
+		return false
+	}
 	// if we don't have any peers, we don't check node-whitelist.
 	if len(srv.Peers()) == 0 {
 		return false
