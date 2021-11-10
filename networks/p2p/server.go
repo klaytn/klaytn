@@ -208,6 +208,18 @@ func (srv *BaseServer) UpdatePeerWithNewWhitelist(dialstate dialer, peers map[di
 	}
 
 	newWhitelistMap := genWhitelistMap(newWhitelist)
+	// remove peers not on the whitelist
+	for _, peer := range peers {
+		if _, exist := newWhitelistMap[peer.ID()]; !exist {
+			logger.Info("Removed a peer which has been removed from the whitelist",
+				"node", peer.ID())
+			dialstate.removeStatic(&discover.Node{ID: peer.ID()})
+			if p, ok := peers[peer.ID()]; ok {
+				p.Disconnect(DiscNotOnNodeWhitelist)
+			}
+		}
+	}
+
 	// not on the new whitelist, but on the old whitelist => removed node
 	for oldNodeID, oldNode := range srv.whitelistMap {
 		if _, exist := newWhitelistMap[oldNodeID]; !exist {
@@ -215,7 +227,7 @@ func (srv *BaseServer) UpdatePeerWithNewWhitelist(dialstate dialer, peers map[di
 				"node", oldNodeID)
 			dialstate.removeStatic(oldNode)
 			if p, ok := peers[oldNode.ID]; ok {
-				p.Disconnect(DiscRequested)
+				p.Disconnect(DiscNotOnNodeWhitelist)
 			}
 		}
 	}
