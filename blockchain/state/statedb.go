@@ -674,7 +674,7 @@ func (self *StateDB) CreateEOA(addr common.Address, humanReadable bool, key acco
 		account.AccountValueKeyHumanReadable: humanReadable,
 		account.AccountValueKeyAccountKey:    key,
 		account.AccountValueBalanceLimit:     account.GetInitialBalanceLimit(),
-		account.AccountValueStatus:           uint64(0),
+		account.AccountValueStatus:           uint64(account.AccountStatusActive),
 	}
 	new, prev := self.createObjectWithMap(addr, account.ExternallyOwnedAccountType, values)
 	if prev != nil {
