@@ -34,6 +34,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/bloombits"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/gxhash"
@@ -188,6 +189,19 @@ func (b *SimulatedBackend) BalanceLimitAt(ctx context.Context, contract common.A
 	}
 
 	return stateDB.GetBalanceLimit(contract)
+}
+
+// AccountStatusAt returns the account status of the given EOA
+func (b *SimulatedBackend) AccountStatusAt(ctx context.Context, addr common.Address, blockNumber *big.Int) (account.AccountStatus, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	stateDB, err := b.stateByBlockNumber(ctx, blockNumber)
+	if err != nil {
+		return account.AccountStatusUndefined, err
+	}
+
+	return stateDB.GetAccountStatus(addr)
 }
 
 // NonceAt returns the nonce of a certain account in the blockchain.

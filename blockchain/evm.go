@@ -50,6 +50,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		beneficiary = *author
 	}
 	return vm.Context{
+		IsActiveAccount:  IsActiveAccount,
 		CanTransfer:      CanTransfer,
 		CanBeTransferred: CanBeTransferred,
 		Transfer:         Transfer,
@@ -96,6 +97,20 @@ func GetHashFn(ref *types.Header, chain ChainContext) func(n uint64) common.Hash
 		}
 		return common.Hash{}
 	}
+}
+
+// IsActiveAccount checks if the given account is in stopped account status
+func IsActiveAccount(accountStatusGetter types.AccountStatusGetterFunc, addr common.Address) bool {
+	accountStatus, err := accountStatusGetter(addr)
+	if err == account.ErrNotEOA {
+		// There is no stop status for contracts.
+		return true
+	} else if err == account.ErrNilAccount {
+		// Nil accounts are active, because initial status is active.
+		return true
+	}
+	// Check if the account status is not "stop".
+	return accountStatus != account.AccountStatusStop
 }
 
 // CanTransfer checks whether there are enough funds in the address' account to make a transfer.

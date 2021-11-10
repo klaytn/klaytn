@@ -154,6 +154,7 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	*/
 	origin, _ := signer.Sender(tx)
 	context := vm.Context{
+		IsActiveAccount:  blockchain.IsActiveAccount,
 		CanTransfer:      blockchain.CanTransfer,
 		CanBeTransferred: blockchain.CanBeTransferred,
 		Transfer:         blockchain.Transfer,
@@ -334,6 +335,7 @@ func TestCallTracer(t *testing.T) {
 			origin, _ := signer.Sender(tx)
 
 			context := vm.Context{
+				IsActiveAccount:  blockchain.IsActiveAccount,
 				CanTransfer:      blockchain.CanTransfer,
 				CanBeTransferred: blockchain.CanBeTransferred,
 				Transfer:         blockchain.Transfer,
@@ -436,6 +438,7 @@ func TestInternalCallTracer(t *testing.T) {
 			origin, _ := signer.Sender(tx)
 
 			context := vm.Context{
+				IsActiveAccount:  blockchain.IsActiveAccount,
 				CanTransfer:      blockchain.CanTransfer,
 				CanBeTransferred: blockchain.CanBeTransferred,
 				Transfer:         blockchain.Transfer,

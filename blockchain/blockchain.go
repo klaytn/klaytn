@@ -2400,6 +2400,12 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, chainConfig, vmConfig)
+
+	// check if from/to account is in active state
+	if err = msg.ValidateAccountStatus(context.IsActiveAccount, statedb); err != nil {
+		return nil, 0, nil, err
+	}
+
 	// Apply the transaction to the current state (included in the env)
 	_, gas, kerr := ApplyMessage(vmenv, msg)
 	err = kerr.ErrTxInvalid

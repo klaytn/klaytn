@@ -1,4 +1,4 @@
-package balanceLimit
+package sendKlay
 
 import (
 	"context"
@@ -7,101 +7,15 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	DefaultGasLimit = 5000000
-)
-
-// CheckReceipt can check if the tx receipt has expected status.
-func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Duration, expectedStatus uint, t *testing.T) {
-	timeoutContext, cancelTimeout := context.WithTimeout(context.Background(), duration)
-	defer cancelTimeout()
-
-	receipt, err := bind.WaitMined(timeoutContext, b, tx)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, expectedStatus, receipt.Status)
-}
-
-func ValueTransfer(backend *backends.SimulatedBackend, from *bind.TransactOpts, to common.Address, value *big.Int, t *testing.T) (*types.Transaction, error) {
-	ctx := context.Background()
-
-	nonce, err := backend.NonceAt(ctx, from.From, nil)
-	assert.Equal(t, err, nil)
-
-	chainID, err := backend.ChainID(ctx)
-	assert.Equal(t, err, nil)
-
-	gasPrice, err := backend.SuggestGasPrice(ctx)
-	assert.Equal(t, err, nil)
-
-	tx := types.NewTransaction(
-		nonce,
-		to,
-		value,
-		DefaultGasLimit,
-		gasPrice,
-		nil)
-
-	signedTx, err := from.Signer(types.NewEIP155Signer(chainID), from.From, tx)
-	assert.Equal(t, err, nil)
-	err = backend.SendTransaction(ctx, signedTx)
-
-	return signedTx, err
-}
-
-type balanceLimitContractTestEnv struct {
-	backend             *backends.SimulatedBackend
-	sender              *bind.TransactOpts
-	receiver            *bind.TransactOpts
-	contract            *SendKlay
-	contractAddress     common.Address
-	initialBalanceLimit *big.Int
-}
-
-func generateBalanceLimitContractTestEnv(t *testing.T) *balanceLimitContractTestEnv {
-	senderKey, _ := crypto.GenerateKey()
-	sender := bind.NewKeyedTransactor(senderKey)
-	sender.GasLimit = DefaultGasLimit
-
-	receiverKey, _ := crypto.GenerateKey()
-	receiver := bind.NewKeyedTransactor(receiverKey)
-	receiver.GasLimit = DefaultGasLimit
-
-	// generate backend with deployed
-	alloc := blockchain.GenesisAlloc{
-		sender.From: {
-			Balance: new(big.Int).Mul(big.NewInt(100), account.GetInitialBalanceLimit()),
-		},
-	}
-	backend := backends.NewSimulatedBackend(alloc)
-
-	// Deploy
-	contractAddress, tx, contract, err := DeploySendKlay(sender, backend)
-	assert.NoError(t, err)
-	backend.Commit()
-	assert.Nil(t, bind.CheckWaitMined(backend, tx))
-
-	return &balanceLimitContractTestEnv{
-		backend:             backend,
-		sender:              sender,
-		receiver:            receiver,
-		contract:            contract,
-		contractAddress:     contractAddress,
-		initialBalanceLimit: account.GetInitialBalanceLimit(),
-	}
-}
-
 // contract에 대해 getBalanceLimit을 호출할 때, ErrNotEOA (“Not a EOA”)에러 발생
 func TestBalanceLimit_contract_getBalanceLimit(t *testing.T) {
-	env := generateBalanceLimitContractTestEnv(t)
+	env := generateSendKlayContractTestEnv(t)
 	defer env.backend.Close()
 
 	backend := env.backend
@@ -115,7 +29,7 @@ func TestBalanceLimit_contract_getBalanceLimit(t *testing.T) {
 
 // contract를 생성할 때 balanceLimit의 제한이 없는 것을 확인
 func TestBalanceLimit_contract_create(t *testing.T) {
-	env := generateBalanceLimitContractTestEnv(t)
+	env := generateSendKlayContractTestEnv(t)
 	defer env.backend.Close()
 
 	backend := env.backend
@@ -132,7 +46,7 @@ func TestBalanceLimit_contract_create(t *testing.T) {
 
 // EOA → contract로 cbdc를 전송할 때, 제한이 없는 것을 확인
 func TestBalanceLimit_contract_payable(t *testing.T) {
-	env := generateBalanceLimitContractTestEnv(t)
+	env := generateSendKlayContractTestEnv(t)
 	defer env.backend.Close()
 
 	backend := env.backend
@@ -151,7 +65,7 @@ func TestBalanceLimit_contract_payable(t *testing.T) {
 
 // EOA → contract로 cbdc를 전송할 때, 제한이 없는 것을 확인
 func TestBalanceLimit_contract_receive(t *testing.T) {
-	env := generateBalanceLimitContractTestEnv(t)
+	env := generateSendKlayContractTestEnv(t)
 	defer env.backend.Close()
 
 	backend := env.backend
@@ -169,7 +83,7 @@ func TestBalanceLimit_contract_receive(t *testing.T) {
 
 // EOA → contract로 cbdc를 전송할 때, 제한이 없는 것을 확인
 func TestBalanceLimit_contract_fallback(t *testing.T) {
-	env := generateBalanceLimitContractTestEnv(t)
+	env := generateSendKlayContractTestEnv(t)
 	defer env.backend.Close()
 
 	backend := env.backend
@@ -187,7 +101,7 @@ func TestBalanceLimit_contract_fallback(t *testing.T) {
 
 // contract → EOA로 cbdc 전송 시 receiver의 balanceLimit을 지키는 것을 확인
 func TestBalanceLimit_contract_transfer(t *testing.T) {
-	env := generateBalanceLimitContractTestEnv(t)
+	env := generateSendKlayContractTestEnv(t)
 	defer env.backend.Close()
 
 	backend := env.backend
@@ -222,7 +136,7 @@ func TestBalanceLimit_contract_transfer(t *testing.T) {
 
 // contract → EOA로 cbdc 전송 시 receiver의 balanceLimit을 지키는 것을 확인
 func TestBalanceLimit_contract_send(t *testing.T) {
-	env := generateBalanceLimitContractTestEnv(t)
+	env := generateSendKlayContractTestEnv(t)
 	defer env.backend.Close()
 
 	backend := env.backend
@@ -257,7 +171,7 @@ func TestBalanceLimit_contract_send(t *testing.T) {
 
 // contract → EOA로 cbdc 전송 시 receiver의 balanceLimit을 지키는 것을 확인
 func TestBalanceLimit_contract_call(t *testing.T) {
-	env := generateBalanceLimitContractTestEnv(t)
+	env := generateSendKlayContractTestEnv(t)
 	defer env.backend.Close()
 
 	backend := env.backend

@@ -124,6 +124,7 @@ func genEOA() *ExternallyOwnedAccount {
 		AccountValueKeyHumanReadable: humanReadable,
 		AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
 		AccountValueBalanceLimit:     GetInitialBalanceLimit(),
+		AccountValueStatus:           AccountStatusActive,
 	})
 }
 
@@ -137,6 +138,8 @@ func genEOAWithPublicKey() *ExternallyOwnedAccount {
 		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
 		AccountValueKeyHumanReadable: humanReadable,
 		AccountValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
+		AccountValueBalanceLimit:     GetInitialBalanceLimit(),
+		AccountValueStatus:           AccountStatusActive,
 	})
 }
 

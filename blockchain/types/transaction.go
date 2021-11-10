@@ -24,17 +24,18 @@ import (
 	"container/heap"
 	"crypto/ecdsa"
 	"encoding/json"
-	"errors"
 	"io"
 	"math/big"
 	"sync"
 	"sync/atomic"
 
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -47,6 +48,8 @@ var (
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
 	errNotFeeDelegationTransaction    = errors.New("not a fee delegation type transaction")
 	errInvalidValueMap                = errors.New("tx fields should be filled with valid values")
+	ErrAccountStatusStopSender        = errors.New("stopped account cannot send a transaction")
+	ErrAccountStatusStopReceiver      = errors.New("stopped account cannot receive a transaction")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
@@ -239,6 +242,30 @@ func (tx *Transaction) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 
 func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {
 	return tx.data.Validate(db, blockNumber)
+}
+
+type (
+	// IsActiveAccountFunc is the signature of a transfer guard function
+	IsActiveAccountFunc func(AccountStatusGetterFunc, common.Address) bool
+	// AccountStatusGetterFunc is the signature for IsActiveAccountFunc
+	AccountStatusGetterFunc func(common.Address) (account.AccountStatus, error)
+)
+
+func (tx *Transaction) ValidateAccountStatus(isActiveAccount IsActiveAccountFunc, db StateDB) error {
+	// check if "from" is an active account
+	from := tx.ValidatedSender()
+	if !isActiveAccount(db.GetAccountStatus, from) &&
+		// RoleAccountUpdate can make transaction on any account status
+		tx.GetRoleTypeForValidation() != accountkey.RoleAccountUpdate {
+		return errors.Wrap(ErrAccountStatusStopSender, "stopped account is "+from.String())
+	}
+
+	// check if "to" is an active account
+	if to := tx.To(); to != nil && !isActiveAccount(db.GetAccountStatus, *to) {
+		return errors.Wrap(ErrAccountStatusStopReceiver, "stopped account is "+to.String())
+	}
+
+	return nil
 }
 
 // ValidateMutableValue conducts validation of the sender's account key and additional validation for each transaction type.

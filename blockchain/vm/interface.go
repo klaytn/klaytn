@@ -24,6 +24,7 @@ import (
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/params"
@@ -42,6 +43,9 @@ type StateDB interface {
 
 	GetBalanceLimit(common.Address) (*big.Int, error)
 	SetBalanceLimit(common.Address, *big.Int)
+
+	GetAccountStatus(addr common.Address) (account.AccountStatus, error)
+	SetAccountStatus(common.Address, account.AccountStatus)
 
 	GetNonce(common.Address) uint64
 	IncNonce(common.Address)

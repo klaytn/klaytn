@@ -59,7 +59,7 @@ func (s *StateSuite) TestDump(c *checker.C) {
 	// check that dump contains the state objects that are in trie
 	got := string(s.state.Dump())
 	want := `{
-    "root": "3b2d129c6cdd805f81f462d3918a16ddba1d896908efe8fc085ba88e0d3b7e64",
+    "root": "5f6b14ef65209ce85421118b7cffbc63dc91fc3e2972c98cbe0410a906fb4620",
     "accounts": {
         "0000000000000000000000000000000000000001": {
             "balance": "22",
@@ -68,7 +68,8 @@ func (s *StateSuite) TestDump(c *checker.C) {
             "codeHash": "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
             "code": "",
             "storage": {},
-            "balanceLimit": ""
+            "balanceLimit": "",
+            "accountStatus": 1
         },
         "0000000000000000000000000000000000000002": {
             "balance": "44",
@@ -77,7 +78,8 @@ func (s *StateSuite) TestDump(c *checker.C) {
             "codeHash": "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
             "code": "",
             "storage": {},
-            "balanceLimit": ""
+            "balanceLimit": "",
+            "accountStatus": 1
         },
         "0000000000000000000000000000000000000102": {
             "balance": "0",
@@ -86,7 +88,8 @@ func (s *StateSuite) TestDump(c *checker.C) {
             "codeHash": "87874902497a5bb968da31a2998d8f22e949d1ef6214bcdedd8bae24cca4b9e3",
             "code": "03030303030303",
             "storage": {},
-            "balanceLimit": ""
+            "balanceLimit": "",
+            "accountStatus": 1
         }
     }
 }`

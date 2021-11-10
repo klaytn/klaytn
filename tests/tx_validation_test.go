@@ -78,6 +78,8 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap, gas = genMapForChainDataAnchoring(from, gasPrice, txType)
 	case types.TxTypeBalanceLimitUpdate:
 		valueMap, gas = genMapForBalanceLimitUpdate(from, gasPrice, account.GetInitialBalanceLimit(), txType)
+	case types.TxTypeAccountStatusUpdate:
+		valueMap, gas = genMapForAccountStatusUpdate(from, gasPrice, uint64(account.AccountStatusActive), txType)
 	}
 
 	if txType.IsFeeDelegatedTransaction() {

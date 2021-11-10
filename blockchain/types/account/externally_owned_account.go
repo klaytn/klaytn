@@ -38,15 +38,26 @@ func GetInitialBalanceLimit() *big.Int {
 	return new(big.Int).Mul(big.NewInt(params.KLAY), big.NewInt(params.KLAY))
 }
 
+type AccountStatus uint8
+
+const (
+	AccountStatusUndefined AccountStatus = iota
+	AccountStatusActive
+	AccountStatusStop
+	AccountStatusLast
+)
+
 // ExternallyOwnedAccount represents a Klaytn account used by a user.
 type ExternallyOwnedAccount struct {
 	*AccountCommon
-	balanceLimit *big.Int
+	balanceLimit  *big.Int
+	accountStatus AccountStatus
 }
 
 type externallyOwnedAccountSerializable struct {
 	CommonSerializable *accountCommonSerializable
 	BalanceLimit       *big.Int
+	AccountStatus      uint64
 }
 
 type externallyOwnedAccountSerializableJSON struct {
@@ -55,6 +66,7 @@ type externallyOwnedAccountSerializableJSON struct {
 	HumanReadable bool                             `json:"humanReadable"`
 	Key           *accountkey.AccountKeySerializer `json:"key"`
 	BalanceLimit  *hexutil.Big                     `json:"balanceLimit"`
+	AccountStatus uint64                           `json:"accountStatus"`
 }
 
 // newExternallyOwnedAccount creates an ExternallyOwnedAccount object with default values.
@@ -62,6 +74,7 @@ func newExternallyOwnedAccount() *ExternallyOwnedAccount {
 	return &ExternallyOwnedAccount{
 		AccountCommon: newAccountCommon(),
 		balanceLimit:  GetInitialBalanceLimit(),
+		accountStatus: AccountStatusActive,
 	}
 }
 
@@ -74,9 +87,15 @@ func newExternallyOwnedAccountWithMap(values map[AccountValueKeyType]interface{}
 		balanceLimit.Set(GetInitialBalanceLimit())
 	}
 
+	var accountStatus AccountStatus
+	if v, ok := values[AccountValueStatus].(uint64); ok && v <= uint64(AccountStatusLast) {
+		accountStatus = AccountStatus(v)
+	}
+
 	return &ExternallyOwnedAccount{
 		AccountCommon: newAccountCommonWithMap(values),
 		balanceLimit:  balanceLimit,
+		accountStatus: accountStatus,
 	}
 }
 
@@ -84,12 +103,14 @@ func (e *ExternallyOwnedAccount) toSerializable() *externallyOwnedAccountSeriali
 	return &externallyOwnedAccountSerializable{
 		CommonSerializable: e.AccountCommon.toSerializable(),
 		BalanceLimit:       e.balanceLimit,
+		AccountStatus:      uint64(e.accountStatus),
 	}
 }
 
 func (e *ExternallyOwnedAccount) fromSerializable(o *externallyOwnedAccountSerializable) {
 	e.AccountCommon.fromSerializable(o.CommonSerializable)
 	e.balanceLimit = o.BalanceLimit
+	e.accountStatus = AccountStatus(o.AccountStatus)
 }
 
 func (e *ExternallyOwnedAccount) EncodeRLP(w io.Writer) error {
@@ -100,6 +121,7 @@ func (e *ExternallyOwnedAccount) DecodeRLP(s *rlp.Stream) error {
 	serialized := &externallyOwnedAccountSerializable{
 		newAccountCommonSerializable(),
 		new(big.Int),
+		0,
 	}
 	if err := s.Decode(serialized); err != nil {
 		return err
@@ -117,6 +139,7 @@ func (e *ExternallyOwnedAccount) MarshalJSON() ([]byte, error) {
 		HumanReadable: e.humanReadable,
 		Key:           accountkey.NewAccountKeySerializerWithAccountKey(e.key),
 		BalanceLimit:  (*hexutil.Big)(e.balanceLimit),
+		AccountStatus: uint64(e.accountStatus),
 	})
 }
 
@@ -132,6 +155,7 @@ func (e *ExternallyOwnedAccount) UnmarshalJSON(b []byte) error {
 	e.humanReadable = serialized.HumanReadable
 	e.key = serialized.Key.GetKey()
 	e.balanceLimit = (*big.Int)(serialized.BalanceLimit)
+	e.accountStatus = (AccountStatus)(serialized.AccountStatus)
 
 	return nil
 }
@@ -144,8 +168,16 @@ func (e *ExternallyOwnedAccount) GetBalanceLimit() *big.Int {
 	return new(big.Int).Set(e.balanceLimit)
 }
 
+func (e *ExternallyOwnedAccount) GetAccountStatus() AccountStatus {
+	return e.accountStatus
+}
+
 func (e *ExternallyOwnedAccount) SetBalanceLimit(balanceLimit *big.Int) {
 	e.balanceLimit.Set(balanceLimit)
+}
+
+func (e *ExternallyOwnedAccount) SetAccountStatus(status AccountStatus) {
+	e.accountStatus = status
 }
 
 func (e *ExternallyOwnedAccount) Dump() {
@@ -154,14 +186,16 @@ func (e *ExternallyOwnedAccount) Dump() {
 
 func (e *ExternallyOwnedAccount) String() string {
 	return fmt.Sprintf(`Common: %s
-	BalanceLimit: %s`,
-		e.AccountCommon.String(), e.balanceLimit.String())
+	BalanceLimit: %s
+	AccountStatus: %d`,
+		e.AccountCommon.String(), e.balanceLimit.String(), e.accountStatus)
 }
 
 func (e *ExternallyOwnedAccount) DeepCopy() Account {
 	return &ExternallyOwnedAccount{
 		AccountCommon: e.AccountCommon.DeepCopy(),
 		balanceLimit:  e.balanceLimit,
+		accountStatus: e.accountStatus,
 	}
 }
 
@@ -171,9 +205,7 @@ func (e *ExternallyOwnedAccount) Equal(a Account) bool {
 		return false
 	}
 
-	if e.balanceLimit.Cmp(e2.balanceLimit) != 0 {
-		return false
-	}
-
-	return e.AccountCommon.Equal(e2.AccountCommon)
+	return e.AccountCommon.Equal(e2.AccountCommon) &&
+		e.balanceLimit.Cmp(e2.balanceLimit) == 0 &&
+		e.accountStatus == e2.accountStatus
 }

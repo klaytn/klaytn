@@ -16,7 +16,6 @@
 package tests
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -24,19 +23,22 @@ import (
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
+	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/pkg/errors"
 )
 
 ////////////////////////////////////////////////////////////////////////////////
 // AddressBalanceMap
 ////////////////////////////////////////////////////////////////////////////////
 type AccountInfo struct {
-	balance      *big.Int
-	nonce        uint64
-	balanceLimit *big.Int
+	balance       *big.Int
+	nonce         uint64
+	balanceLimit  *big.Int
+	accountStatus account.AccountStatus
 }
 
 type AccountMap struct {
@@ -84,7 +86,7 @@ func (a *AccountMap) IncNonce(addr common.Address) {
 }
 
 func (a *AccountMap) Set(addr common.Address, v *big.Int, nonce uint64) {
-	a.m[addr] = &AccountInfo{new(big.Int).Set(v), nonce, account.GetInitialBalanceLimit()}
+	a.m[addr] = &AccountInfo{new(big.Int).Set(v), nonce, account.GetInitialBalanceLimit(), account.AccountStatusActive}
 }
 
 func (a *AccountMap) Initialize(bcdata *BCData) error {
@@ -129,6 +131,13 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 			}
 			feePayer = tx.ValidatedFeePayer()
 		}
+
+		// check if from/to account is in active state
+		if err := a.validateAccountStatus(tx); err != nil {
+			return err
+		}
+
+		// create a new address for deployed contract
 		if to == nil && tx.Type() != types.TxTypeBalanceLimitUpdate {
 			nonce := a.GetNonce(from)
 			addr := crypto.CreateAddress(from, nonce)
@@ -182,6 +191,9 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 		if t, ok := tx.GetTxInternalData().(*types.TxInternalDataBalanceLimitUpdate); ok {
 			a.m[from].balanceLimit = new(big.Int).Set(t.BalanceLimit)
 		}
+		if t, ok := tx.GetTxInternalData().(*types.TxInternalDataAccountStatusUpdate); ok {
+			a.m[from].accountStatus = t.AccountStatus
+		}
 	}
 
 	return nil
@@ -200,6 +212,28 @@ func (a *AccountMap) Verify(statedb *state.StateDB) error {
 		}
 	}
 
+	return nil
+}
+
+func (a *AccountMap) validateAccountStatus(tx *types.Transaction) error {
+	accountStatusGetter := func(addr common.Address) (account.AccountStatus, error) {
+		if accountInfo, ok := a.m[addr]; ok {
+			return accountInfo.accountStatus, nil
+		}
+		return account.AccountStatusUndefined, account.ErrNotEOA
+	}
+
+	// check if "from" is an active account
+	if !blockchain.IsActiveAccount(accountStatusGetter, tx.ValidatedSender()) &&
+		// RoleAccountUpdate can make transaction on any account status
+		tx.GetRoleTypeForValidation() != accountkey.RoleAccountUpdate {
+		return errors.Wrap(types.ErrAccountStatusStopSender, "stopped account is "+tx.ValidatedSender().String())
+	}
+
+	// check if "to" is an active account
+	if to := tx.To(); to != nil && !blockchain.IsActiveAccount(accountStatusGetter, *to) {
+		return errors.Wrap(types.ErrAccountStatusStopReceiver, "stopped account is "+to.String())
+	}
 	return nil
 }
 
