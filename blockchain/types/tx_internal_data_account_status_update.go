@@ -97,7 +97,8 @@ func newTxInternalDataAccountStatusUpdateWithMap(values map[TxValueKeyType]inter
 		return nil, errValueKeyFromMustAddress
 	}
 
-	if v, ok := values[TxValueKeyAccountStatus].(uint64); ok && v < uint64(account.AccountStatusLast) {
+	if v, ok := values[TxValueKeyAccountStatus].(uint64); ok &&
+		uint64(account.AccountStatusUndefined) < v && v < uint64(account.AccountStatusLast) {
 		d.AccountStatus = account.AccountStatus(v)
 		delete(values, TxValueKeyAccountStatus)
 	} else {
@@ -303,6 +304,9 @@ func (t *TxInternalDataAccountStatusUpdate) Validate(stateDB StateDB, currentBlo
 func (t *TxInternalDataAccountStatusUpdate) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	if stateDB.IsProgramAccount(t.From) || common.IsPrecompiledContractAddress(t.From) {
 		return account.ErrNotEOA
+	}
+	if t.AccountStatus <= account.AccountStatusUndefined || account.AccountStatusLast <= t.AccountStatus {
+		return errValueKeyAccountStatusMustBeInRange
 	}
 	return nil
 }

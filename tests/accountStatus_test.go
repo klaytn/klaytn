@@ -155,8 +155,17 @@ func TestAccountStatus_setAccountStatus_Range(t *testing.T) {
 	signer := env.signer
 	sender := env.sender
 
+	// accountStatus가 account.AccountStatusUndefined 일 때 실패
+	valueMapForCreation, _ := genMapForTxTypes(sender, nil, types.TxTypeAccountStatusUpdate)
+	valueMapForCreation[types.TxValueKeyGasLimit] = uint64(0) // AccountStatusUpdate does not require gas
+	valueMapForCreation[types.TxValueKeyGasPrice] = big.NewInt(0)
+	valueMapForCreation[types.TxValueKeyAccountStatus] = uint64(account.AccountStatusUndefined)
+
+	_, err := types.NewTransactionWithMap(types.TxTypeAccountStatusUpdate, valueMapForCreation)
+	assert.Error(t, err)
+
 	// accountStatusLast 보다 작은 값에 대해서 setAccountStatus 성공
-	for accountStatus := account.AccountStatus(0); accountStatus < account.AccountStatusLast; accountStatus++ {
+	for accountStatus := account.AccountStatus(1); accountStatus < account.AccountStatusLast; accountStatus++ {
 		tx := AccountStatusUpdate(sender, accountStatus, signer, nil, t)
 
 		txs := []*types.Transaction{tx}
