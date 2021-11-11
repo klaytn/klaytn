@@ -64,6 +64,7 @@ type DBManager interface {
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
 	GetMiscDB() Database
+	GetSnapshotDB() Database
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -771,6 +772,10 @@ func (dbm *databaseManager) GetStateTrieMigrationDB() Database {
 
 func (dbm *databaseManager) GetMiscDB() Database {
 	return dbm.dbs[MiscDB]
+}
+
+func (dbm *databaseManager) GetSnapshotDB() Database {
+	return dbm.dbs[SnapshotDB]
 }
 
 func (dbm *databaseManager) GetMemDB() *MemDB {
