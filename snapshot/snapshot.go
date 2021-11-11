@@ -27,12 +27,12 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/klaytn/klaytn/storage/statedb"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
+	"github.com/klaytn/klaytn/storage/statedb"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -182,7 +182,123 @@ type Tree struct {
 	onFlatten func() // Hook invoked when the bottom most diff layers are flattened
 }
 
-// TODO-Klaytn-Snapshot port New, waitBuild, Disable method
+// New attempts to load an already existing snapshot from a persistent key-value
+// store (with a number of memory layers from a journal), ensuring that the head
+// of the snapshot matches the expected one.
+//
+// If the snapshot is missing or the disk layer is broken, the snapshot will be
+// reconstructed using both the existing data and the state trie.
+// The repair happens on a background thread.
+//
+// If the memory layers in the journal do not match the disk layer (e.g. there is
+// a gap) or the journal is missing, there are two repair cases:
+//
+// - if the 'recovery' parameter is true, all memory diff-layers will be discarded.
+//   This case happens when the snapshot is 'ahead' of the state trie.
+// - otherwise, the entire snapshot is considered invalid and will be recreated on
+//   a background thread.
+func New(diskdb database.DBManager, triedb *statedb.Database, cache int, root common.Hash, async bool, rebuild bool, recovery bool) (*Tree, error) {
+	// Create a new, empty snapshot tree
+	snap := &Tree{
+		diskdb: diskdb,
+		triedb: triedb,
+		cache:  cache,
+		layers: make(map[common.Hash]snapshot),
+	}
+	if !async {
+		defer snap.waitBuild()
+	}
+	// Attempt to load a previously persisted snapshot and rebuild one if failed
+	head, disabled, err := loadSnapshot(diskdb, triedb, cache, root, recovery)
+	if disabled {
+		logger.Warn("Snapshot maintenance disabled (syncing)")
+		return snap, nil
+	}
+	if err != nil {
+		if rebuild {
+			logger.Warn("Failed to load snapshot, regenerating", "err", err)
+			snap.Rebuild(root)
+			return snap, nil
+		}
+		return nil, err // Bail out the error, don't rebuild automatically.
+	}
+	// Existing snapshot loaded, seed all the layers
+	for head != nil {
+		snap.layers[head.Root()] = head
+		head = head.Parent()
+	}
+	return snap, nil
+}
+
+// waitBuild blocks until the snapshot finishes rebuilding. This method is meant
+// to be used by tests to ensure we're testing what we believe we are.
+func (t *Tree) waitBuild() {
+	// Find the rebuild termination channel
+	var done chan struct{}
+
+	t.lock.RLock()
+	for _, layer := range t.layers {
+		if layer, ok := layer.(*diskLayer); ok {
+			done = layer.genPending
+			break
+		}
+	}
+	t.lock.RUnlock()
+
+	// Wait until the snapshot is generated
+	if done != nil {
+		<-done
+	}
+}
+
+// Disable interrupts any pending snapshot generator, deletes all the snapshot
+// layers in memory and marks snapshots disabled globally. In order to resume
+// the snapshot functionality, the caller must invoke Rebuild.
+func (t *Tree) Disable() {
+	// Interrupt any live snapshot layers
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	for _, layer := range t.layers {
+		switch layer := layer.(type) {
+		case *diskLayer:
+			// If the base layer is generating, abort it
+			if layer.genAbort != nil {
+				abort := make(chan *generatorStats)
+				layer.genAbort <- abort
+				<-abort
+			}
+			// Layer should be inactive now, mark it as stale
+			layer.lock.Lock()
+			layer.stale = true
+			layer.lock.Unlock()
+
+		case *diffLayer:
+			// If the layer is a simple diff, simply mark as stale
+			layer.lock.Lock()
+			atomic.StoreUint32(&layer.stale, 1)
+			layer.lock.Unlock()
+
+		default:
+			panic(fmt.Sprintf("unknown layer type: %T", layer))
+		}
+	}
+	t.layers = map[common.Hash]snapshot{}
+
+	// Delete all snapshot liveness information from the database
+	batch := t.diskdb.NewSnapshotDBBatch()
+
+	batch.WriteSnapshotDisabled()
+	batch.DeleteSnapshotRoot()
+	batch.DeleteSnapshotJournal()
+	batch.DeleteSnapshotGenerator()
+	batch.DeleteSnapshotRecoveryNumber()
+	// Note, we don't delete the sync progress
+
+	if err := batch.Write(); err != nil {
+		logger.Crit("Failed to disable snapshots", "err", err)
+	}
+}
 
 // Snapshot retrieves a snapshot belonging to the given block root, or nil if no
 // snapshot is maintained for that block.
@@ -543,6 +659,46 @@ func diffToDisk(bottom *diffLayer) *diskLayer {
 		go res.generate(stats)
 	}
 	return res
+}
+
+// Journal commits an entire diff hierarchy to disk into a single journal entry.
+// This is meant to be used during shutdown to persist the snapshot without
+// flattening everything down (bad for reorgs).
+//
+// The method returns the root hash of the base layer that needs to be persisted
+// to disk as a trie too to allow continuing any pending generation op.
+func (t *Tree) Journal(root common.Hash) (common.Hash, error) {
+	// Retrieve the head snapshot to journal from var snap snapshot
+	snap := t.Snapshot(root)
+	if snap == nil {
+		return common.Hash{}, fmt.Errorf("snapshot [%#x] missing", root)
+	}
+	// Run the journaling
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	// Firstly write out the metadata of journal
+	journal := new(bytes.Buffer)
+	if err := rlp.Encode(journal, journalVersion); err != nil {
+		return common.Hash{}, err
+	}
+	diskroot := t.diskRoot()
+	if diskroot == (common.Hash{}) {
+		return common.Hash{}, errors.New("invalid disk root")
+	}
+	// Secondly write out the disk layer root, ensure the
+	// diff journal is continuous with disk.
+	if err := rlp.Encode(journal, diskroot); err != nil {
+		return common.Hash{}, err
+	}
+	// Finally write out the journal of each layer in reverse order.
+	base, err := snap.(snapshot).Journal(journal)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	// Store the journal into the database and return
+	t.diskdb.WriteSnapshotJournal(journal.Bytes())
+	return base, nil
 }
 
 // Rebuild wipes all available snapshot data from the persistent database and
