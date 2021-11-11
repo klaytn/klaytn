@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/gxhash"
@@ -34,6 +35,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestDefaultGenesisBlock tests the genesis block generation functions: DefaultGenesisBlock, DefaultBaobabGenesisBlock
 func TestDefaultGenesisBlock(t *testing.T) {
 	block := genCypressGenesisBlock().ToBlock(common.Hash{}, nil)
 	if block.Hash() != params.CypressGenesisHash {
@@ -45,6 +47,7 @@ func TestDefaultGenesisBlock(t *testing.T) {
 	}
 }
 
+// TestHardCodedChainConfigUpdate tests the public network's chainConfig update.
 func TestHardCodedChainConfigUpdate(t *testing.T) {
 	cypressGenesisBlock, baobabGenesisBlock := genCypressGenesisBlock(), genBaobabGenesisBlock()
 	tests := []struct {
@@ -52,10 +55,10 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 		newHFBlock       *big.Int
 		originHFBlock    *big.Int
 		fn               func(database.DBManager, *big.Int) (*params.ChainConfig, common.Hash, error)
-		wantConfig       *params.ChainConfig
+		wantConfig       *params.ChainConfig // expect value of the SetupGenesisBlock's first return value
 		wantHash         common.Hash
 		wantErr          error
-		wantStoredConfig *params.ChainConfig
+		wantStoredConfig *params.ChainConfig // expect value of the stored config in DB
 		resetFn          func(*big.Int)
 	}{
 		{
@@ -126,15 +129,9 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 		stored := db.ReadBlock(test.wantHash, 0)
 		assert.Equal(t, stored.Hash(), test.wantHash, test.name+": stored genesis block is not compatible")
 
-		if test.wantErr == nil {
-			// Check stored chainConfig
-			storedChainConfig := db.ReadChainConfig(test.wantHash)
-			assert.Equal(t, storedChainConfig, test.wantConfig, test.name+": stored chainConfig is not compatible")
-		} else {
-			// Check stored chainConfig
-			storedChainConfig := db.ReadChainConfig(test.wantHash)
-			assert.Equal(t, storedChainConfig, test.wantStoredConfig, test.name+": stored chainConfig is not compatible")
-		}
+		// Check stored chainConfig
+		storedChainConfig := db.ReadChainConfig(test.wantHash)
+		assert.Equal(t, storedChainConfig, test.wantStoredConfig, test.name+": stored chainConfig is not compatible")
 	}
 }
 
@@ -353,10 +350,12 @@ func genCustomGenesisBlock(customChainId uint64) *Genesis {
 		Config: &params.ChainConfig{
 			ChainID:                 new(big.Int).SetUint64(customChainId),
 			IstanbulCompatibleBlock: big.NewInt(2),
-			DeriveShaImpl:           2,
+			DeriveShaImpl:           types.ImplDeriveShaConcat,
 		},
 		Alloc: GenesisAlloc{
-			{1}: {Balance: big.NewInt(1), Storage: map[common.Hash]common.Hash{{1}: {1}}},
+			common.BytesToAddress([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}): {
+				Balance: big.NewInt(1), Storage: map[common.Hash]common.Hash{{1}: {1}},
+			},
 		},
 	}
 	genesis.Config.SetDefaults()
