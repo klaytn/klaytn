@@ -412,6 +412,65 @@ func (dl *diffLayer) Update(blockRoot common.Hash, destructs map[common.Hash]str
 	return newDiffLayer(dl, blockRoot, destructs, accounts, storage)
 }
 
+// flatten pushes all data from this point downwards, flattening everything into
+// a single diff at the bottom. Since usually the lowermost diff is the largest,
+// the flattening builds up from there in reverse.
+func (dl *diffLayer) flatten() snapshot {
+	// If the parent is not diff, we're the first in line, return unmodified
+	parent, ok := dl.parent.(*diffLayer)
+	if !ok {
+		return dl
+	}
+	// Parent is a diff, flatten it first (note, apart from weird corned cases,
+	// flatten will realistically only ever merge 1 layer, so there's no need to
+	// be smarter about grouping flattens together).
+	parent = parent.flatten().(*diffLayer)
+
+	parent.lock.Lock()
+	defer parent.lock.Unlock()
+
+	// Before actually writing all our data to the parent, first ensure that the
+	// parent hasn't been 'corrupted' by someone else already flattening into it
+	if atomic.SwapUint32(&parent.stale, 1) != 0 {
+		panic("parent diff layer is stale") // we've flattened into the same parent from two children, boo
+	}
+	// Overwrite all the updated accounts blindly, merge the sorted list
+	for hash := range dl.destructSet {
+		parent.destructSet[hash] = struct{}{}
+		delete(parent.accountData, hash)
+		delete(parent.storageData, hash)
+	}
+	for hash, data := range dl.accountData {
+		parent.accountData[hash] = data
+	}
+	// Overwrite all the updated storage slots (individually)
+	for accountHash, storage := range dl.storageData {
+		// If storage didn't exist (or was deleted) in the parent, overwrite blindly
+		if _, ok := parent.storageData[accountHash]; !ok {
+			parent.storageData[accountHash] = storage
+			continue
+		}
+		// Storage exists in both parent and child, merge the slots
+		comboData := parent.storageData[accountHash]
+		for storageHash, data := range storage {
+			comboData[storageHash] = data
+		}
+		parent.storageData[accountHash] = comboData
+	}
+	// Return the combo parent
+	return &diffLayer{
+		parent:      parent.parent,
+		origin:      parent.origin,
+		root:        dl.root,
+		destructSet: parent.destructSet,
+		accountData: parent.accountData,
+		storageData: parent.storageData,
+		storageList: make(map[common.Hash][]common.Hash),
+		diffed:      dl.diffed,
+		memory:      parent.memory + dl.memory,
+	}
+}
+
 // AccountList returns a sorted list of all accounts in this diffLayer, including
 // the deleted ones.
 //
