@@ -179,6 +179,13 @@ type DBManager interface {
 	WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
 
 	// from accessors_snapshot.go
+	ReadSnapshotJournal() []byte
+	WriteSnapshotJournal(journal []byte)
+	DeleteSnapshotJournal()
+	ReadSnapshotGenerator() []byte
+	WriteSnapshotGenerator(generator []byte)
+	DeleteSnapshotGenerator()
+
 	ReadSnapshotDisabled() bool
 	WriteSnapshotDisabled()
 	DeleteSnapshotDisabled()
@@ -1827,6 +1834,58 @@ func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.Chain
 	}
 	if err := db.Put(configKey(hash), data); err != nil {
 		logger.Crit("Failed to store chain config", "err", err)
+	}
+}
+
+// ReadSnapshotJournal retrieves the serialized in-memory diff layers saved at
+// the last shutdown. The blob is expected to be max a few 10s of megabytes.
+func (dbm *databaseManager) ReadSnapshotJournal() []byte {
+	db := dbm.getDatabase(SnapshotDB)
+	data, _ := db.Get(snapshotJournalKey)
+	return data
+}
+
+// WriteSnapshotJournal stores the serialized in-memory diff layers to save at
+// shutdown. The blob is expected to be max a few 10s of megabytes.
+func (dbm *databaseManager) WriteSnapshotJournal(journal []byte) {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Put(snapshotJournalKey, journal); err != nil {
+		logger.Crit("Failed to store snapshot journal", "err", err)
+	}
+}
+
+// DeleteSnapshotJournal deletes the serialized in-memory diff layers saved at
+// the last shutdown
+func (dbm *databaseManager) DeleteSnapshotJournal() {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Delete(snapshotJournalKey); err != nil {
+		logger.Crit("Failed to remove snapshot journal", "err", err)
+	}
+}
+
+// ReadSnapshotGenerator retrieves the serialized snapshot generator saved at
+// the last shutdown.
+func (dbm *databaseManager) ReadSnapshotGenerator() []byte {
+	db := dbm.getDatabase(SnapshotDB)
+	data, _ := db.Get(SnapshotGeneratorKey)
+	return data
+}
+
+// WriteSnapshotGenerator stores the serialized snapshot generator to save at
+// shutdown.
+func (dbm *databaseManager) WriteSnapshotGenerator(generator []byte) {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Put(SnapshotGeneratorKey, generator); err != nil {
+		logger.Crit("Failed to store snapshot generator", "err", err)
+	}
+}
+
+// DeleteSnapshotGenerator deletes the serialized snapshot generator saved at
+// the last shutdown
+func (dbm *databaseManager) DeleteSnapshotGenerator() {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Delete(SnapshotGeneratorKey); err != nil {
+		logger.Crit("Failed to remove snapshot generator", "err", err)
 	}
 }
 

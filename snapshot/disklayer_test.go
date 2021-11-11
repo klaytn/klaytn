@@ -26,6 +26,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/klaytn/klaytn/rlp"
+
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"
 
@@ -431,81 +433,80 @@ func TestDiskPartialMerge(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-Snapshot uncomment after porting journal.go
-//// Tests that when the bottom-most diff layer is merged into the disk
-//// layer whether the corresponding generator is persisted correctly.
-//func TestDiskGeneratorPersistence(t *testing.T) {
-//	var (
-//		accOne        = randomHash()
-//		accTwo        = randomHash()
-//		accOneSlotOne = randomHash()
-//		accOneSlotTwo = randomHash()
-//
-//		accThree     = randomHash()
-//		accThreeSlot = randomHash()
-//		baseRoot     = randomHash()
-//		diffRoot     = randomHash()
-//		diffTwoRoot  = randomHash()
-//		genMarker    = append(randomHash().Bytes(), randomHash().Bytes()...)
-//	)
-//	// Testing scenario 1, the disk layer is still under the construction.
-//	db := database.NewMemoryDBManager()
-//
-//	db.WriteAccountSnapshot(accOne, accOne[:])
-//	db.WriteStorageSnapshot(accOne, accOneSlotOne, accOneSlotOne[:])
-//	db.WriteStorageSnapshot(accOne, accOneSlotTwo, accOneSlotTwo[:])
-//	db.WriteSnapshotRoot(baseRoot)
-//
-//	// Create a disk layer based on all above updates
-//	snaps := &Tree{
-//		layers: map[common.Hash]snapshot{
-//			baseRoot: &diskLayer{
-//				diskdb:    db,
-//				cache:     fastcache.New(500 * 1024),
-//				root:      baseRoot,
-//				genMarker: genMarker,
-//			},
-//		},
-//	}
-//	// Modify or delete some accounts, flatten everything onto disk
-//	if err := snaps.Update(diffRoot, baseRoot, nil, map[common.Hash][]byte{
-//		accTwo: accTwo[:],
-//	}, nil); err != nil {
-//		t.Fatalf("failed to update snapshot tree: %v", err)
-//	}
-//	if err := snaps.Cap(diffRoot, 0); err != nil {
-//		t.Fatalf("failed to flatten snapshot tree: %v", err)
-//	}
-//	blob := db.ReadSnapshotGenerator()
-//	var generator journalGenerator
-//	if err := rlp.DecodeBytes(blob, &generator); err != nil {
-//		t.Fatalf("Failed to decode snapshot generator %v", err)
-//	}
-//	if !bytes.Equal(generator.Marker, genMarker) {
-//		t.Fatalf("Generator marker is not matched")
-//	}
-//	// Test scenario 2, the disk layer is fully generated
-//	// Modify or delete some accounts, flatten everything onto disk
-//	if err := snaps.Update(diffTwoRoot, diffRoot, nil, map[common.Hash][]byte{
-//		accThree: accThree.Bytes(),
-//	}, map[common.Hash]map[common.Hash][]byte{
-//		accThree: {accThreeSlot: accThreeSlot.Bytes()},
-//	}); err != nil {
-//		t.Fatalf("failed to update snapshot tree: %v", err)
-//	}
-//	diskLayer := snaps.layers[snaps.diskRoot()].(*diskLayer)
-//	diskLayer.genMarker = nil // Construction finished
-//	if err := snaps.Cap(diffTwoRoot, 0); err != nil {
-//		t.Fatalf("failed to flatten snapshot tree: %v", err)
-//	}
-//	blob = db.ReadSnapshotGenerator()
-//	if err := rlp.DecodeBytes(blob, &generator); err != nil {
-//		t.Fatalf("Failed to decode snapshot generator %v", err)
-//	}
-//	if len(generator.Marker) != 0 {
-//		t.Fatalf("Failed to update snapshot generator")
-//	}
-//}
+// Tests that when the bottom-most diff layer is merged into the disk
+// layer whether the corresponding generator is persisted correctly.
+func TestDiskGeneratorPersistence(t *testing.T) {
+	var (
+		accOne        = randomHash()
+		accTwo        = randomHash()
+		accOneSlotOne = randomHash()
+		accOneSlotTwo = randomHash()
+
+		accThree     = randomHash()
+		accThreeSlot = randomHash()
+		baseRoot     = randomHash()
+		diffRoot     = randomHash()
+		diffTwoRoot  = randomHash()
+		genMarker    = append(randomHash().Bytes(), randomHash().Bytes()...)
+	)
+	// Testing scenario 1, the disk layer is still under the construction.
+	db := database.NewMemoryDBManager()
+
+	db.WriteAccountSnapshot(accOne, accOne[:])
+	db.WriteStorageSnapshot(accOne, accOneSlotOne, accOneSlotOne[:])
+	db.WriteStorageSnapshot(accOne, accOneSlotTwo, accOneSlotTwo[:])
+	db.WriteSnapshotRoot(baseRoot)
+
+	// Create a disk layer based on all above updates
+	snaps := &Tree{
+		layers: map[common.Hash]snapshot{
+			baseRoot: &diskLayer{
+				diskdb:    db,
+				cache:     fastcache.New(500 * 1024),
+				root:      baseRoot,
+				genMarker: genMarker,
+			},
+		},
+	}
+	// Modify or delete some accounts, flatten everything onto disk
+	if err := snaps.Update(diffRoot, baseRoot, nil, map[common.Hash][]byte{
+		accTwo: accTwo[:],
+	}, nil); err != nil {
+		t.Fatalf("failed to update snapshot tree: %v", err)
+	}
+	if err := snaps.Cap(diffRoot, 0); err != nil {
+		t.Fatalf("failed to flatten snapshot tree: %v", err)
+	}
+	blob := db.ReadSnapshotGenerator()
+	var generator journalGenerator
+	if err := rlp.DecodeBytes(blob, &generator); err != nil {
+		t.Fatalf("Failed to decode snapshot generator %v", err)
+	}
+	if !bytes.Equal(generator.Marker, genMarker) {
+		t.Fatalf("Generator marker is not matched")
+	}
+	// Test scenario 2, the disk layer is fully generated
+	// Modify or delete some accounts, flatten everything onto disk
+	if err := snaps.Update(diffTwoRoot, diffRoot, nil, map[common.Hash][]byte{
+		accThree: accThree.Bytes(),
+	}, map[common.Hash]map[common.Hash][]byte{
+		accThree: {accThreeSlot: accThreeSlot.Bytes()},
+	}); err != nil {
+		t.Fatalf("failed to update snapshot tree: %v", err)
+	}
+	diskLayer := snaps.layers[snaps.diskRoot()].(*diskLayer)
+	diskLayer.genMarker = nil // Construction finished
+	if err := snaps.Cap(diffTwoRoot, 0); err != nil {
+		t.Fatalf("failed to flatten snapshot tree: %v", err)
+	}
+	blob = db.ReadSnapshotGenerator()
+	if err := rlp.DecodeBytes(blob, &generator); err != nil {
+		t.Fatalf("Failed to decode snapshot generator %v", err)
+	}
+	if len(generator.Marker) != 0 {
+		t.Fatalf("Failed to update snapshot generator")
+	}
+}
 
 // Tests that merging something into a disk layer persists it into the database
 // and invalidates any previously written and cached values, discarding anything

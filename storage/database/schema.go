@@ -51,6 +51,12 @@ var (
 	// snapshotKeyPrefix is a governance snapshot prefix
 	snapshotKeyPrefix = []byte("snapshot")
 
+	// snapshotJournalKey tracks the in-memory diff layers across restarts.
+	snapshotJournalKey = []byte("SnapshotJournal")
+
+	// SnapshotGeneratorKey tracks the snapshot generation marker across restarts.
+	SnapshotGeneratorKey = []byte("SnapshotGenerator")
+
 	// snapshotDisabledKey flags that the snapshot should not be maintained due to initial sync.
 	snapshotDisabledKey = []byte("SnapshotDisabled")
 

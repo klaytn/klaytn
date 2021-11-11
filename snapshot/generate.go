@@ -166,7 +166,39 @@ func generateSnapshot(db database.DBManager, triedb *statedb.Database, cache int
 
 // journalProgress persists the generator stats into the database to resume later.
 func journalProgress(db database.KeyValueWriter, marker []byte, stats *generatorStats) {
-	// TODO-Klaytn-Snapshot implement journal progress after porting journal.go
+	// Write out the generator marker. Note it's a standalone disk layer generator
+	// which is not mixed with journal. It's ok if the generator is persisted while
+	// journal is not.
+	entry := journalGenerator{
+		Done:   marker == nil,
+		Marker: marker,
+	}
+	if stats != nil {
+		entry.Accounts = stats.accounts
+		entry.Slots = stats.slots
+		entry.Storage = uint64(stats.storage)
+	}
+	blob, err := rlp.EncodeToBytes(entry)
+	if err != nil {
+		panic(err) // Cannot happen, here to catch dev errors
+	}
+	var logstr string
+	switch {
+	case marker == nil:
+		logstr = "done"
+	case bytes.Equal(marker, []byte{}):
+		logstr = "empty"
+	case len(marker) == common.HashLength:
+		logstr = fmt.Sprintf("%#x", marker)
+	default:
+		logstr = fmt.Sprintf("%#x:%#x", marker[:common.HashLength], marker[common.HashLength:])
+	}
+	logger.Debug("Journalled generator progress", "progress", logstr)
+
+	// TODO-Klaytn-Snapshot refactor the following db write
+	if err := db.Put(database.SnapshotGeneratorKey, blob); err != nil {
+		logger.Crit("Failed to store snapshot generator", "err", err)
+	}
 }
 
 // proofResult contains the output of range proving which can be used
