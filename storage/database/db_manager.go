@@ -182,6 +182,7 @@ type DBManager interface {
 	ReadSnapshotJournal() []byte
 	WriteSnapshotJournal(journal []byte)
 	DeleteSnapshotJournal()
+
 	ReadSnapshotGenerator() []byte
 	WriteSnapshotGenerator(generator []byte)
 	DeleteSnapshotGenerator()
@@ -2362,6 +2363,18 @@ type SnapshotDBBatch interface {
 
 	WriteStorageSnapshot(accountHash, storageHash common.Hash, entry []byte)
 	DeleteStorageSnapshot(accountHash, storageHash common.Hash)
+
+	WriteSnapshotJournal(journal []byte)
+	DeleteSnapshotJournal()
+
+	WriteSnapshotGenerator(generator []byte)
+	DeleteSnapshotGenerator()
+
+	WriteSnapshotDisabled()
+	DeleteSnapshotDisabled()
+
+	WriteSnapshotRecoveryNumber(number uint64)
+	DeleteSnapshotRecoveryNumber()
 }
 
 type snapshotDBBatch struct {
@@ -2390,6 +2403,38 @@ func (batch *snapshotDBBatch) WriteStorageSnapshot(accountHash, storageHash comm
 
 func (batch *snapshotDBBatch) DeleteStorageSnapshot(accountHash, storageHash common.Hash) {
 	deleteStorageSnapshot(batch, accountHash, storageHash)
+}
+
+func (batch *snapshotDBBatch) WriteSnapshotJournal(journal []byte) {
+	writeSnapshotJournal(batch, journal)
+}
+
+func (batch *snapshotDBBatch) DeleteSnapshotJournal() {
+	deleteSnapshotJournal(batch)
+}
+
+func (batch *snapshotDBBatch) WriteSnapshotGenerator(generator []byte) {
+	writeSnapshotGenerator(batch, generator)
+}
+
+func (batch *snapshotDBBatch) DeleteSnapshotGenerator() {
+	deleteSnapshotGenerator(batch)
+}
+
+func (batch *snapshotDBBatch) WriteSnapshotDisabled() {
+	writeSnapshotDisabled(batch)
+}
+
+func (batch *snapshotDBBatch) DeleteSnapshotDisabled() {
+	deleteSnapshotDisabled(batch)
+}
+
+func (batch *snapshotDBBatch) WriteSnapshotRecoveryNumber(number uint64) {
+	writeSnapshotRecoveryNumber(batch, number)
+}
+
+func (batch *snapshotDBBatch) DeleteSnapshotRecoveryNumber() {
+	deleteSnapshotRecoveryNumber(batch)
 }
 
 func writeSnapshotRoot(db KeyValueWriter, root common.Hash) {
@@ -2425,5 +2470,55 @@ func writeStorageSnapshot(db KeyValueWriter, accountHash, storageHash common.Has
 func deleteStorageSnapshot(db KeyValueWriter, accountHash, storageHash common.Hash) {
 	if err := db.Delete(StorageSnapshotKey(accountHash, storageHash)); err != nil {
 		logger.Crit("Failed to delete storage snapshot", "err", err)
+	}
+}
+
+func writeSnapshotJournal(db KeyValueWriter, journal []byte) {
+	if err := db.Put(snapshotJournalKey, journal); err != nil {
+		logger.Crit("Failed to store snapshot journal", "err", err)
+	}
+}
+
+func deleteSnapshotJournal(db KeyValueWriter) {
+	if err := db.Delete(snapshotJournalKey); err != nil {
+		logger.Crit("Failed to remove snapshot journal", "err", err)
+	}
+}
+
+func writeSnapshotGenerator(db KeyValueWriter, generator []byte) {
+	if err := db.Put(SnapshotGeneratorKey, generator); err != nil {
+		logger.Crit("Failed to store snapshot generator", "err", err)
+	}
+}
+
+func deleteSnapshotGenerator(db KeyValueWriter) {
+	if err := db.Delete(SnapshotGeneratorKey); err != nil {
+		logger.Crit("Failed to remove snapshot generator", "err", err)
+	}
+}
+
+func writeSnapshotDisabled(db KeyValueWriter) {
+	if err := db.Put(snapshotDisabledKey, []byte("42")); err != nil {
+		logger.Crit("Failed to store snapshot disabled flag", "err", err)
+	}
+}
+
+func deleteSnapshotDisabled(db KeyValueWriter) {
+	if err := db.Delete(snapshotDisabledKey); err != nil {
+		logger.Crit("Failed to remove snapshot disabled flag", "err", err)
+	}
+}
+
+func writeSnapshotRecoveryNumber(db KeyValueWriter, number uint64) {
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], number)
+	if err := db.Put(snapshotRecoveryKey, buf[:]); err != nil {
+		logger.Crit("Failed to store snapshot recovery number", "err", err)
+	}
+}
+
+func deleteSnapshotRecoveryNumber(db KeyValueWriter) {
+	if err := db.Delete(snapshotRecoveryKey); err != nil {
+		logger.Crit("Failed to remove snapshot recovery number", "err", err)
 	}
 }
