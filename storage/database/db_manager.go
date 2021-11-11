@@ -178,6 +178,14 @@ type DBManager interface {
 	WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
 
 	// from accessors_snapshot.go
+	ReadSnapshotDisabled() bool
+	WriteSnapshotDisabled()
+	DeleteSnapshotDisabled()
+
+	ReadSnapshotRecoveryNumber() *uint64
+	WriteSnapshotRecoveryNumber(number uint64)
+	DeleteSnapshotRecoveryNumber()
+
 	ReadSnapshotRoot() common.Hash
 	WriteSnapshotRoot(root common.Hash)
 	DeleteSnapshotRoot()
@@ -1814,6 +1822,64 @@ func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.Chain
 	}
 	if err := db.Put(configKey(hash), data); err != nil {
 		logger.Crit("Failed to store chain config", "err", err)
+	}
+}
+
+// ReadSnapshotDisabled retrieves if the snapshot maintenance is disabled.
+func (dbm *databaseManager) ReadSnapshotDisabled() bool {
+	db := dbm.getDatabase(SnapshotDB)
+	disabled, _ := db.Has(snapshotDisabledKey)
+	return disabled
+}
+
+// WriteSnapshotDisabled stores the snapshot pause flag.
+func (dbm *databaseManager) WriteSnapshotDisabled() {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Put(snapshotDisabledKey, []byte("42")); err != nil {
+		logger.Crit("Failed to store snapshot disabled flag", "err", err)
+	}
+}
+
+// DeleteSnapshotDisabled deletes the flag keeping the snapshot maintenance disabled.
+func (dbm *databaseManager) DeleteSnapshotDisabled() {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Delete(snapshotDisabledKey); err != nil {
+		logger.Crit("Failed to remove snapshot disabled flag", "err", err)
+	}
+}
+
+// ReadSnapshotRecoveryNumber retrieves the block number of the last persisted
+// snapshot layer.
+func (dbm *databaseManager) ReadSnapshotRecoveryNumber() *uint64 {
+	db := dbm.getDatabase(SnapshotDB)
+	data, _ := db.Get(snapshotRecoveryKey)
+	if len(data) == 0 {
+		return nil
+	}
+	if len(data) != 8 {
+		return nil
+	}
+	number := binary.BigEndian.Uint64(data)
+	return &number
+}
+
+// WriteSnapshotRecoveryNumber stores the block number of the last persisted
+// snapshot layer.
+func (dbm *databaseManager) WriteSnapshotRecoveryNumber(number uint64) {
+	db := dbm.getDatabase(SnapshotDB)
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], number)
+	if err := db.Put(snapshotRecoveryKey, buf[:]); err != nil {
+		logger.Crit("Failed to store snapshot recovery number", "err", err)
+	}
+}
+
+// DeleteSnapshotRecoveryNumber deletes the block number of the last persisted
+// snapshot layer.
+func (dbm *databaseManager) DeleteSnapshotRecoveryNumber() {
+	db := dbm.getDatabase(SnapshotDB)
+	if err := db.Delete(snapshotRecoveryKey); err != nil {
+		logger.Crit("Failed to remove snapshot recovery number", "err", err)
 	}
 }
 

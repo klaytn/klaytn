@@ -23,7 +23,9 @@ package snapshot
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/klaytn/klaytn/storage/statedb"
 
@@ -181,6 +183,8 @@ type Tree struct {
 	onFlatten func() // Hook invoked when the bottom most diff layers are flattened
 }
 
+// TODO-Klaytn-Snapshot port New, waitBuild, Disable method
+
 // Snapshot retrieves a snapshot belonging to the given block root, or nil if no
 // snapshot is maintained for that block.
 func (t *Tree) Snapshot(blockRoot common.Hash) Snapshot {
@@ -188,6 +192,217 @@ func (t *Tree) Snapshot(blockRoot common.Hash) Snapshot {
 	defer t.lock.RUnlock()
 
 	return t.layers[blockRoot]
+}
+
+// Snapshots returns all visited layers from the topmost layer with specific
+// root and traverses downward. The layer amount is limited by the given number.
+// If nodisk is set, then disk layer is excluded.
+func (t *Tree) Snapshots(root common.Hash, limits int, nodisk bool) []Snapshot {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	if limits == 0 {
+		return nil
+	}
+	layer := t.layers[root]
+	if layer == nil {
+		return nil
+	}
+	var ret []Snapshot
+	for {
+		if _, isdisk := layer.(*diskLayer); isdisk && nodisk {
+			break
+		}
+		ret = append(ret, layer)
+		limits -= 1
+		if limits == 0 {
+			break
+		}
+		parent := layer.Parent()
+		if parent == nil {
+			break
+		}
+		layer = parent
+	}
+	return ret
+}
+
+// Update adds a new snapshot into the tree, if that can be linked to an existing
+// old parent. It is disallowed to insert a disk layer (the origin of all).
+func (t *Tree) Update(blockRoot common.Hash, parentRoot common.Hash, destructs map[common.Hash]struct{}, accounts map[common.Hash][]byte, storage map[common.Hash]map[common.Hash][]byte) error {
+	// Reject noop updates to avoid self-loops in the snapshot tree. This is a
+	// special case that can only happen for Clique networks where empty blocks
+	// don't modify the state (0 block subsidy).
+	//
+	// Although we could silently ignore this internally, it should be the caller's
+	// responsibility to avoid even attempting to insert such a snapshot.
+	if blockRoot == parentRoot {
+		return errSnapshotCycle
+	}
+	// Generate a new snapshot on top of the parent
+	parent := t.Snapshot(parentRoot)
+	if parent == nil {
+		return fmt.Errorf("parent [%#x] snapshot missing", parentRoot)
+	}
+	snap := parent.(snapshot).Update(blockRoot, destructs, accounts, storage)
+
+	// Save the new snapshot for later
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	t.layers[snap.root] = snap
+	return nil
+}
+
+// Cap traverses downwards the snapshot tree from a head block hash until the
+// number of allowed layers are crossed. All layers beyond the permitted number
+// are flattened downwards.
+//
+// Note, the final diff layer count in general will be one more than the amount
+// requested. This happens because the bottom-most diff layer is the accumulator
+// which may or may not overflow and cascade to disk. Since this last layer's
+// survival is only known *after* capping, we need to omit it from the count if
+// we want to ensure that *at least* the requested number of diff layers remain.
+func (t *Tree) Cap(root common.Hash, layers int) error {
+	// Retrieve the head snapshot to cap from
+	snap := t.Snapshot(root)
+	if snap == nil {
+		return fmt.Errorf("snapshot [%#x] missing", root)
+	}
+	diff, ok := snap.(*diffLayer)
+	if !ok {
+		return fmt.Errorf("snapshot [%#x] is disk layer", root)
+	}
+	// If the generator is still running, use a more aggressive cap
+	diff.origin.lock.RLock()
+	if diff.origin.genMarker != nil && layers > 8 {
+		layers = 8
+	}
+	diff.origin.lock.RUnlock()
+
+	// Run the internal capping and discard all stale layers
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	// Flattening the bottom-most diff layer requires special casing since there's
+	// no child to rewire to the grandparent. In that case we can fake a temporary
+	// child for the capping and then remove it.
+	if layers == 0 {
+		// If full commit was requested, flatten the diffs and merge onto disk
+		diff.lock.RLock()
+		base := diffToDisk(diff.flatten().(*diffLayer))
+		diff.lock.RUnlock()
+
+		// Replace the entire snapshot tree with the flat base
+		t.layers = map[common.Hash]snapshot{base.root: base}
+		return nil
+	}
+	persisted := t.cap(diff, layers)
+
+	// Remove any layer that is stale or links into a stale layer
+	children := make(map[common.Hash][]common.Hash)
+	for root, snap := range t.layers {
+		if diff, ok := snap.(*diffLayer); ok {
+			parent := diff.parent.Root()
+			children[parent] = append(children[parent], root)
+		}
+	}
+	var remove func(root common.Hash)
+	remove = func(root common.Hash) {
+		delete(t.layers, root)
+		for _, child := range children[root] {
+			remove(child)
+		}
+		delete(children, root)
+	}
+	for root, snap := range t.layers {
+		if snap.Stale() {
+			remove(root)
+		}
+	}
+	// If the disk layer was modified, regenerate all the cumulative blooms
+	if persisted != nil {
+		var rebloom func(root common.Hash)
+		rebloom = func(root common.Hash) {
+			if diff, ok := t.layers[root].(*diffLayer); ok {
+				diff.rebloom(persisted)
+			}
+			for _, child := range children[root] {
+				rebloom(child)
+			}
+		}
+		rebloom(persisted.root)
+	}
+	return nil
+}
+
+// cap traverses downwards the diff tree until the number of allowed layers are
+// crossed. All diffs beyond the permitted number are flattened downwards. If the
+// layer limit is reached, memory cap is also enforced (but not before).
+//
+// The method returns the new disk layer if diffs were persisted into it.
+//
+// Note, the final diff layer count in general will be one more than the amount
+// requested. This happens because the bottom-most diff layer is the accumulator
+// which may or may not overflow and cascade to disk. Since this last layer's
+// survival is only known *after* capping, we need to omit it from the count if
+// we want to ensure that *at least* the requested number of diff layers remain.
+func (t *Tree) cap(diff *diffLayer, layers int) *diskLayer {
+	// Dive until we run out of layers or reach the persistent database
+	for i := 0; i < layers-1; i++ {
+		// If we still have diff layers below, continue down
+		if parent, ok := diff.parent.(*diffLayer); ok {
+			diff = parent
+		} else {
+			// Diff stack too shallow, return without modifications
+			return nil
+		}
+	}
+	// We're out of layers, flatten anything below, stopping if it's the disk or if
+	// the memory limit is not yet exceeded.
+	switch parent := diff.parent.(type) {
+	case *diskLayer:
+		return nil
+
+	case *diffLayer:
+		// Hold the write lock until the flattened parent is linked correctly.
+		// Otherwise, the stale layer may be accessed by external reads in the
+		// meantime.
+		diff.lock.Lock()
+		defer diff.lock.Unlock()
+
+		// Flatten the parent into the grandparent. The flattening internally obtains a
+		// write lock on grandparent.
+		flattened := parent.flatten().(*diffLayer)
+		t.layers[flattened.root] = flattened
+
+		// Invoke the hook if it's registered. Ugly hack.
+		if t.onFlatten != nil {
+			t.onFlatten()
+		}
+		diff.parent = flattened
+		if flattened.memory < aggregatorMemoryLimit {
+			// Accumulator layer is smaller than the limit, so we can abort, unless
+			// there's a snapshot being generated currently. In that case, the trie
+			// will move from underneath the generator so we **must** merge all the
+			// partial data down into the snapshot and restart the generation.
+			if flattened.parent.(*diskLayer).genAbort == nil {
+				return nil
+			}
+		}
+	default:
+		panic(fmt.Sprintf("unknown data layer: %T", parent))
+	}
+	// If the bottom-most layer is larger than our memory cap, persist to disk
+	bottom := diff.parent.(*diffLayer)
+
+	bottom.lock.RLock()
+	base := diffToDisk(bottom)
+	bottom.lock.RUnlock()
+
+	t.layers[base.root] = base
+	diff.parent = base
+	return base
 }
 
 // diffToDisk merges a bottom-most diff into the persistent disk layer underneath
@@ -329,4 +544,161 @@ func diffToDisk(bottom *diffLayer) *diskLayer {
 		go res.generate(stats)
 	}
 	return res
+}
+
+// Rebuild wipes all available snapshot data from the persistent database and
+// discard all caches and diff layers. Afterwards, it starts a new snapshot
+// generator with the given root hash.
+func (t *Tree) Rebuild(root common.Hash) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	// Firstly delete any recovery flag in the database. Because now we are
+	// building a brand new snapshot. Also reenable the snapshot feature.
+	t.diskdb.DeleteSnapshotRecoveryNumber()
+	t.diskdb.DeleteSnapshotDisabled()
+
+	// Iterate over and mark all layers stale
+	for _, layer := range t.layers {
+		switch layer := layer.(type) {
+		case *diskLayer:
+			// If the base layer is generating, abort it and save
+			if layer.genAbort != nil {
+				abort := make(chan *generatorStats)
+				layer.genAbort <- abort
+				<-abort
+			}
+			// Layer should be inactive now, mark it as stale
+			layer.lock.Lock()
+			layer.stale = true
+			layer.lock.Unlock()
+
+		case *diffLayer:
+			// If the layer is a simple diff, simply mark as stale
+			layer.lock.Lock()
+			atomic.StoreUint32(&layer.stale, 1)
+			layer.lock.Unlock()
+
+		default:
+			panic(fmt.Sprintf("unknown layer type: %T", layer))
+		}
+	}
+	// Start generating a new snapshot from scratch on a background thread. The
+	// generator will run a wiper first if there's not one running right now.
+	logger.Info("Rebuilding state snapshot")
+	t.layers = map[common.Hash]snapshot{
+		root: generateSnapshot(t.diskdb, t.triedb, t.cache, root),
+	}
+}
+
+// AccountIterator creates a new account iterator for the specified root hash and
+// seeks to a starting account hash.
+func (t *Tree) AccountIterator(root common.Hash, seek common.Hash) (AccountIterator, error) {
+	ok, err := t.generating()
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		return nil, ErrNotConstructed
+	}
+	return newFastAccountIterator(t, root, seek)
+}
+
+// StorageIterator creates a new storage iterator for the specified root hash and
+// account. The iterator will be move to the specific start position.
+func (t *Tree) StorageIterator(root common.Hash, account common.Hash, seek common.Hash) (StorageIterator, error) {
+	ok, err := t.generating()
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		return nil, ErrNotConstructed
+	}
+	return newFastStorageIterator(t, root, account, seek)
+}
+
+// Verify iterates the whole state(all the accounts as well as the corresponding storages)
+// with the specific root and compares the re-computed hash with the original one.
+func (t *Tree) Verify(root common.Hash) error {
+	acctIt, err := t.AccountIterator(root, common.Hash{})
+	if err != nil {
+		return err
+	}
+	defer acctIt.Release()
+
+	got, err := generateTrieRoot(acctIt, common.Hash{}, trieGenerate, func(accountHash, codeHash common.Hash, stat *generateStats) (common.Hash, error) {
+		storageIt, err := t.StorageIterator(root, accountHash, common.Hash{})
+		if err != nil {
+			return common.Hash{}, err
+		}
+		defer storageIt.Release()
+
+		hash, err := generateTrieRoot(storageIt, accountHash, trieGenerate, nil, stat, false)
+		if err != nil {
+			return common.Hash{}, err
+		}
+		return hash, nil
+	}, newGenerateStats(), true)
+
+	if err != nil {
+		return err
+	}
+	if got != root {
+		return fmt.Errorf("state root hash mismatch: got %x, want %x", got, root)
+	}
+	return nil
+}
+
+// disklayer is an internal helper function to return the disk layer.
+// The lock of snapTree is assumed to be held already.
+func (t *Tree) disklayer() *diskLayer {
+	var snap snapshot
+	for _, s := range t.layers {
+		snap = s
+		break
+	}
+	if snap == nil {
+		return nil
+	}
+	switch layer := snap.(type) {
+	case *diskLayer:
+		return layer
+	case *diffLayer:
+		return layer.origin
+	default:
+		panic(fmt.Sprintf("%T: undefined layer", snap))
+	}
+}
+
+// diskRoot is a internal helper function to return the disk layer root.
+// The lock of snapTree is assumed to be held already.
+func (t *Tree) diskRoot() common.Hash {
+	disklayer := t.disklayer()
+	if disklayer == nil {
+		return common.Hash{}
+	}
+	return disklayer.Root()
+}
+
+// generating is an internal helper function which reports whether the snapshot
+// is still under the construction.
+func (t *Tree) generating() (bool, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	layer := t.disklayer()
+	if layer == nil {
+		return false, errors.New("disk layer is missing")
+	}
+	layer.lock.RLock()
+	defer layer.lock.RUnlock()
+	return layer.genMarker != nil, nil
+}
+
+// diskRoot is a external helper function to return the disk layer root.
+func (t *Tree) DiskRoot() common.Hash {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	return t.diskRoot()
 }
