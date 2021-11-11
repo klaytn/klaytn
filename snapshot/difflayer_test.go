@@ -21,6 +21,10 @@
 package snapshot
 
 import (
+	"bytes"
+	"math/rand"
+	"testing"
+
 	"github.com/VictoriaMetrics/fastcache"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/storage/database"
@@ -51,6 +55,184 @@ func copyStorage(storage map[common.Hash]map[common.Hash][]byte) map[common.Hash
 		}
 	}
 	return copy
+}
+
+// TestMergeBasics tests some simple merges
+func TestMergeBasics(t *testing.T) {
+	var (
+		destructs = make(map[common.Hash]struct{})
+		accounts  = make(map[common.Hash][]byte)
+		storage   = make(map[common.Hash]map[common.Hash][]byte)
+	)
+	// Fill up a parent
+	for i := 0; i < 100; i++ {
+		h := randomHash()
+		data := randomAccount()
+
+		accounts[h] = data
+		if rand.Intn(4) == 0 {
+			destructs[h] = struct{}{}
+		}
+		if rand.Intn(2) == 0 {
+			accStorage := make(map[common.Hash][]byte)
+			value := make([]byte, 32)
+			rand.Read(value)
+			accStorage[randomHash()] = value
+			storage[h] = accStorage
+		}
+	}
+	// Add some (identical) layers on top
+	parent := newDiffLayer(emptyLayer(), common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	child := newDiffLayer(parent, common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	child = newDiffLayer(child, common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	child = newDiffLayer(child, common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	child = newDiffLayer(child, common.Hash{}, copyDestructs(destructs), copyAccounts(accounts), copyStorage(storage))
+	// And flatten
+	merged := (child.flatten()).(*diffLayer)
+
+	{ // Check account lists
+		if have, want := len(merged.accountList), 0; have != want {
+			t.Errorf("accountList wrong: have %v, want %v", have, want)
+		}
+		if have, want := len(merged.AccountList()), len(accounts); have != want {
+			t.Errorf("AccountList() wrong: have %v, want %v", have, want)
+		}
+		if have, want := len(merged.accountList), len(accounts); have != want {
+			t.Errorf("accountList [2] wrong: have %v, want %v", have, want)
+		}
+	}
+	{ // Check account drops
+		if have, want := len(merged.destructSet), len(destructs); have != want {
+			t.Errorf("accountDrop wrong: have %v, want %v", have, want)
+		}
+	}
+	{ // Check storage lists
+		i := 0
+		for aHash, sMap := range storage {
+			if have, want := len(merged.storageList), i; have != want {
+				t.Errorf("[1] storageList wrong: have %v, want %v", have, want)
+			}
+			list, _ := merged.StorageList(aHash)
+			if have, want := len(list), len(sMap); have != want {
+				t.Errorf("[2] StorageList() wrong: have %v, want %v", have, want)
+			}
+			if have, want := len(merged.storageList[aHash]), len(sMap); have != want {
+				t.Errorf("storageList wrong: have %v, want %v", have, want)
+			}
+			i++
+		}
+	}
+}
+
+// TestMergeDelete tests some deletion
+func TestMergeDelete(t *testing.T) {
+	var (
+		storage = make(map[common.Hash]map[common.Hash][]byte)
+	)
+	// Fill up a parent
+	h1 := common.HexToHash("0x01")
+	h2 := common.HexToHash("0x02")
+
+	flipDrops := func() map[common.Hash]struct{} {
+		return map[common.Hash]struct{}{
+			h2: {},
+		}
+	}
+	flipAccs := func() map[common.Hash][]byte {
+		return map[common.Hash][]byte{
+			h1: randomAccount(),
+		}
+	}
+	flopDrops := func() map[common.Hash]struct{} {
+		return map[common.Hash]struct{}{
+			h1: {},
+		}
+	}
+	flopAccs := func() map[common.Hash][]byte {
+		return map[common.Hash][]byte{
+			h2: randomAccount(),
+		}
+	}
+	// Add some flipAccs-flopping layers on top
+	parent := newDiffLayer(emptyLayer(), common.Hash{}, flipDrops(), flipAccs(), storage)
+	child := parent.Update(common.Hash{}, flopDrops(), flopAccs(), storage)
+	child = child.Update(common.Hash{}, flipDrops(), flipAccs(), storage)
+	child = child.Update(common.Hash{}, flopDrops(), flopAccs(), storage)
+	child = child.Update(common.Hash{}, flipDrops(), flipAccs(), storage)
+	child = child.Update(common.Hash{}, flopDrops(), flopAccs(), storage)
+	child = child.Update(common.Hash{}, flipDrops(), flipAccs(), storage)
+
+	if data, _ := child.Account(h1); data == nil {
+		t.Errorf("last diff layer: expected %x account to be non-nil", h1)
+	}
+	if data, _ := child.Account(h2); data != nil {
+		t.Errorf("last diff layer: expected %x account to be nil", h2)
+	}
+	if _, ok := child.destructSet[h1]; ok {
+		t.Errorf("last diff layer: expected %x drop to be missing", h1)
+	}
+	if _, ok := child.destructSet[h2]; !ok {
+		t.Errorf("last diff layer: expected %x drop to be present", h1)
+	}
+	// And flatten
+	merged := (child.flatten()).(*diffLayer)
+
+	if data, _ := merged.Account(h1); data == nil {
+		t.Errorf("merged layer: expected %x account to be non-nil", h1)
+	}
+	if data, _ := merged.Account(h2); data != nil {
+		t.Errorf("merged layer: expected %x account to be nil", h2)
+	}
+	if _, ok := merged.destructSet[h1]; !ok { // Note, drops stay alive until persisted to disk!
+		t.Errorf("merged diff layer: expected %x drop to be present", h1)
+	}
+	if _, ok := merged.destructSet[h2]; !ok { // Note, drops stay alive until persisted to disk!
+		t.Errorf("merged diff layer: expected %x drop to be present", h1)
+	}
+	// If we add more granular metering of memory, we can enable this again,
+	// but it's not implemented for now
+	//if have, want := merged.memory, child.memory; have != want {
+	//	t.Errorf("mem wrong: have %d, want %d", have, want)
+	//}
+}
+
+// This tests that if we create a new account, and set a slot, and then merge
+// it, the lists will be correct.
+func TestInsertAndMerge(t *testing.T) {
+	// Fill up a parent
+	var (
+		acc    = common.HexToHash("0x01")
+		slot   = common.HexToHash("0x02")
+		parent *diffLayer
+		child  *diffLayer
+	)
+	{
+		var (
+			destructs = make(map[common.Hash]struct{})
+			accounts  = make(map[common.Hash][]byte)
+			storage   = make(map[common.Hash]map[common.Hash][]byte)
+		)
+		parent = newDiffLayer(emptyLayer(), common.Hash{}, destructs, accounts, storage)
+	}
+	{
+		var (
+			destructs = make(map[common.Hash]struct{})
+			accounts  = make(map[common.Hash][]byte)
+			storage   = make(map[common.Hash]map[common.Hash][]byte)
+		)
+		accounts[acc] = randomAccount()
+		storage[acc] = make(map[common.Hash][]byte)
+		storage[acc][slot] = []byte{0x01}
+		child = newDiffLayer(parent, common.Hash{}, destructs, accounts, storage)
+	}
+	// And flatten
+	merged := (child.flatten()).(*diffLayer)
+	{ // Check that slot value is present
+		have, _ := merged.Storage(acc, slot)
+		if want := []byte{0x01}; !bytes.Equal(have, want) {
+			t.Errorf("merged slot value wrong: have %x, want %x", have, want)
+		}
+	}
 }
 
 func emptyLayer() *diskLayer {
