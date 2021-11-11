@@ -23,6 +23,9 @@ package snapshot
 import (
 	"bytes"
 	"errors"
+	"sync"
+
+	"github.com/klaytn/klaytn/storage/statedb"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
@@ -156,6 +159,35 @@ type snapshot interface {
 
 	// StorageIterator creates a storage iterator over an arbitrary layer.
 	StorageIterator(account common.Hash, seek common.Hash) (StorageIterator, bool)
+}
+
+// Tree is an Ethereum state snapshot tree. It consists of one persistent base
+// layer backed by a key-value store, on top of which arbitrarily many in-memory
+// diff layers are topped. The memory diffs can form a tree with branching, but
+// the disk layer is singleton and common to all. If a reorg goes deeper than the
+// disk layer, everything needs to be deleted.
+//
+// The goal of a state snapshot is twofold: to allow direct access to account and
+// storage data to avoid expensive multi-level trie lookups; and to allow sorted,
+// cheap iteration of the account/storage tries for sync aid.
+type Tree struct {
+	diskdb database.DBManager       // Persistent database to store the snapshot
+	triedb *statedb.Database        // In-memory cache to access the trie through
+	cache  int                      // Megabytes permitted to use for read caches
+	layers map[common.Hash]snapshot // Collection of all known layers
+	lock   sync.RWMutex
+
+	// Test hooks
+	onFlatten func() // Hook invoked when the bottom most diff layers are flattened
+}
+
+// Snapshot retrieves a snapshot belonging to the given block root, or nil if no
+// snapshot is maintained for that block.
+func (t *Tree) Snapshot(blockRoot common.Hash) Snapshot {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	return t.layers[blockRoot]
 }
 
 // diffToDisk merges a bottom-most diff into the persistent disk layer underneath

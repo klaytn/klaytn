@@ -104,6 +104,73 @@ func TestStorageIteratorBasics(t *testing.T) {
 	}
 }
 
+type testIterator struct {
+	values []byte
+}
+
+func newTestIterator(values ...byte) *testIterator {
+	return &testIterator{values}
+}
+
+func (ti *testIterator) Seek(common.Hash) {
+	panic("implement me")
+}
+
+func (ti *testIterator) Next() bool {
+	ti.values = ti.values[1:]
+	return len(ti.values) > 0
+}
+
+func (ti *testIterator) Error() error {
+	return nil
+}
+
+func (ti *testIterator) Hash() common.Hash {
+	return common.BytesToHash([]byte{ti.values[0]})
+}
+
+func (ti *testIterator) Account() []byte {
+	return nil
+}
+
+func (ti *testIterator) Slot() []byte {
+	return nil
+}
+
+func (ti *testIterator) Release() {}
+
+func TestFastIteratorBasics(t *testing.T) {
+	type testCase struct {
+		lists   [][]byte
+		expKeys []byte
+	}
+	for i, tc := range []testCase{
+		{lists: [][]byte{{0, 1, 8}, {1, 2, 8}, {2, 9}, {4},
+			{7, 14, 15}, {9, 13, 15, 16}},
+			expKeys: []byte{0, 1, 2, 4, 7, 8, 9, 13, 14, 15, 16}},
+		{lists: [][]byte{{0, 8}, {1, 2, 8}, {7, 14, 15}, {8, 9},
+			{9, 10}, {10, 13, 15, 16}},
+			expKeys: []byte{0, 1, 2, 7, 8, 9, 10, 13, 14, 15, 16}},
+	} {
+		var iterators []*weightedIterator
+		for i, data := range tc.lists {
+			it := newTestIterator(data...)
+			iterators = append(iterators, &weightedIterator{it, i})
+		}
+		fi := &fastIterator{
+			iterators: iterators,
+			initiated: false,
+		}
+		count := 0
+		for fi.Next() {
+			if got, exp := fi.Hash()[31], tc.expKeys[count]; exp != got {
+				t.Errorf("tc %d, [%d]: got %d exp %d", i, count, got, exp)
+			}
+			count++
+		}
+	}
+}
+
 type verifyContent int
 
 const (
