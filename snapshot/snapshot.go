@@ -146,11 +146,10 @@ type snapshot interface {
 	// Note, the maps are retained by the method to avoid copying everything.
 	Update(blockRoot common.Hash, destructs map[common.Hash]struct{}, accounts map[common.Hash][]byte, storage map[common.Hash]map[common.Hash][]byte) *diffLayer
 
-	// TODO-Klaytn-Snapshot port journal.go first
-	//// Journal commits an entire diff hierarchy to disk into a single journal entry.
-	//// This is meant to be used during shutdown to persist the snapshot without
-	//// flattening everything down (bad for reorgs).
-	//Journal(buffer *bytes.Buffer) (common.Hash, error)
+	// Journal commits an entire diff hierarchy to disk into a single journal entry.
+	// This is meant to be used during shutdown to persist the snapshot without
+	// flattening everything down (bad for reorgs).
+	Journal(buffer *bytes.Buffer) (common.Hash, error)
 
 	// Stale return whether this layer has become stale (was flattened across) or
 	// if it's still live.
