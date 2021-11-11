@@ -208,11 +208,10 @@ func (n *Node) Start() error {
 			p2pServer.AddProtocols(service.Protocols())
 		}
 		if service.NodeWhitelistGetter() != nil {
-			// TODO-Below line will be updated in the upcoming PR
-			// p2pServer.InitWhitelist(service.NodeWhitelistGetter())
+			p2pServer.InitWhitelist(service.NodeWhitelistGetter())
 		}
 		if service.SynchronisingChecker() != nil {
-			// TODO-Below line will be updated in the upcoming PR
+			p2pServer.SetSynchronisingChecker(service.SynchronisingChecker())
 		}
 		for _, s := range services {
 			// TODO-Klaytn-ServiceChain call setcomponents repeatedly for same component

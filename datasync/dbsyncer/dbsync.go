@@ -19,7 +19,6 @@ package dbsyncer
 import (
 	"context"
 	"database/sql"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"strings"
 	"time"
 
@@ -460,10 +459,10 @@ func (ds *DBSyncer) HandleLogsEvent(logs []*types.Log) error {
 	return nil
 }
 
-func (ds *DBSyncer) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+func (ds *DBSyncer) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return ds.blockchain
 }
 
-func (ds *DBSyncer) SynchronisingChecker() downloader.SynchronisingChecker {
+func (ds *DBSyncer) SynchronisingChecker() p2p.SynchronisingChecker {
 	return nil
 }

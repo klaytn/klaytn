@@ -164,6 +164,8 @@ type Config struct {
 
 	// NetworkID to use for selecting peers to connect to
 	NetworkID uint64
+
+	UseNodeWhitelist bool
 }
 
 // NewServer returns a new Server interface.
@@ -188,6 +190,114 @@ func NewServer(config Config) Server {
 			BaseServer: bServer,
 		}
 	}
+}
+
+// InitWhitelist initializes node-whitelist related variables.
+func (srv *BaseServer) InitWhitelist(wlm NodeWhitelistGetter) {
+	if wlm == nil {
+		return
+	}
+	srv.wlg = wlm
+	srv.whitelistMap = make(map[discover.NodeID]*discover.Node)
+}
+
+// UpdatePeerWithNewWhitelist reflects the given whitelist to its peer management.
+func (srv *BaseServer) UpdatePeerWithNewWhitelist(dialstate dialer, peers map[discover.NodeID]*Peer, newWhitelist []string) {
+	// If the node is in synchronising, it does not update peer with the whitelist,
+	// since its whitelist is not the latest one.
+	if srv.synchroniseChecker.Synchronising() {
+		return
+	}
+
+	newWhitelistMap := genWhitelistMap(newWhitelist)
+	// remove peers not on the whitelist
+	for _, peer := range peers {
+		if _, exist := newWhitelistMap[peer.ID()]; !exist {
+			logger.Info("Removed a peer which has been removed from the whitelist",
+				"node", peer.ID())
+			dialstate.removeStatic(&discover.Node{ID: peer.ID()})
+			if p, ok := peers[peer.ID()]; ok {
+				p.Disconnect(DiscNotOnNodeWhitelist)
+			}
+		}
+	}
+
+	// not on the new whitelist, but on the old whitelist => removed node
+	for oldNodeID, oldNode := range srv.whitelistMap {
+		if _, exist := newWhitelistMap[oldNodeID]; !exist {
+			logger.Info("Removed the node which has been removed from the whitelist",
+				"node", oldNodeID)
+			dialstate.removeStatic(oldNode)
+			if p, ok := peers[oldNode.ID]; ok {
+				p.Disconnect(DiscNotOnNodeWhitelist)
+			}
+		}
+	}
+
+	// on the new whitelist, but not on the old whitelist => newly added node
+	for newNodeID, newNode := range newWhitelistMap {
+		if _, exist := srv.whitelistMap[newNodeID]; !exist {
+			logger.Info("Added the node which has been added to the whitelist",
+				"node", newNodeID)
+			dialstate.addStatic(newNode)
+		}
+	}
+
+	// overwrite server's whitelist with the new one
+	srv.whitelistMapLock.Lock()
+	srv.whitelistMap = newWhitelistMap
+	srv.whitelistMapLock.Unlock()
+}
+
+// IsOnTheWhitelist checks if the given nodeID is on the whitelist.
+func (srv *BaseServer) IsOnTheWhitelist(nodeID discover.NodeID) bool {
+	srv.whitelistMapLock.Lock()
+	defer srv.whitelistMapLock.Unlock()
+	_, exist := srv.whitelistMap[nodeID]
+	return exist
+}
+
+// GetWhitelistMap returns a whitelist map.
+func (srv *BaseServer) GetWhitelistMap() map[discover.NodeID]*discover.Node {
+	return genWhitelistMap(srv.wlg.GetNodeWhitelist())
+}
+
+// genWhitelistMap generates a whitelist nodeID-node map with the given whitelist kni-existence map,
+func genWhitelistMap(whitelist []string) map[discover.NodeID]*discover.Node {
+	whitelistMap := make(map[discover.NodeID]*discover.Node)
+	for _, kni := range whitelist {
+		n, err := discover.ParseNode(kni)
+		if err != nil {
+			logger.Error("failed to parse whitelist node info, invalid kni",
+				"err", err, "kni", kni)
+			continue
+		}
+		whitelistMap[n.ID] = n
+	}
+	return whitelistMap
+}
+
+func (srv *BaseServer) SetSynchronisingChecker(sc SynchronisingChecker) {
+	srv.synchroniseChecker = sc
+}
+
+// NeedToCheckNodeWhitelist returns if we need to check the node-whitelist
+// to manage the node's peers.
+func (srv *BaseServer) NeedToCheckNodeWhitelist() bool {
+	// if the feature is not enabled, we don't check node-whitelist
+	if !srv.Config.UseNodeWhitelist {
+		return false
+	}
+	// if we don't have any peers, we don't check node-whitelist.
+	if len(srv.Peers()) == 0 {
+		return false
+	}
+	// if we don't have synchroniseChecker or whitelistGetter, we don't check node-whitelist
+	if srv.synchroniseChecker == nil || srv.wlg == nil {
+		return false
+	}
+	// it checks node-whitelist only if we're not synchronising-it means the node has the latest block
+	return !srv.synchroniseChecker.Synchronising()
 }
 
 // Server manages all peer connections.
@@ -275,6 +385,14 @@ type Server interface {
 	// NodeDialer is used to connect to nodes in the network, typically by using
 	// an underlying net.Dialer but also using net.Pipe in tests.
 	NodeDialer
+
+	// InitWhitelist initializes static nodes with the node information
+	// stored in the specific smart contract.
+	InitWhitelist(wlm NodeWhitelistGetter)
+
+	// SetSynchronisingChecker sets synchronisingChecker which returns whether the node
+	// is currently synchronising.
+	SetSynchronisingChecker(sc SynchronisingChecker)
 }
 
 // MultiChannelServer is a server that uses a multi channel.
@@ -403,6 +521,12 @@ func (srv *MultiChannelServer) Start() (err error) {
 		} else {
 			srv.logger.Error("P2P server might be useless, listening address is missing")
 		}
+	}
+
+	// SubscribeWhitelist only if we have WhitelistGetter
+	if srv.wlg != nil {
+		srv.whitelistCh = make(chan []string, 1024)
+		go srv.wlg.SubscribeNodeWhitelist(srv.whitelistCh)
 	}
 
 	srv.loopWG.Add(1)
@@ -554,6 +678,16 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
 		return DiscUnexpectedIdentity
 	}
+
+	// Checks if the node is on the whitelist
+	if srv.NeedToCheckNodeWhitelist() {
+		if !srv.IsOnTheWhitelist(c.id) {
+			srv.logger.Warn("non-whitelisted node tries to make connection", "id", c.id,
+				"addr", c.fd.RemoteAddr(), "conn", c.flags)
+			return DiscNotOnNodeWhitelist
+		}
+	}
+
 	err = srv.checkpoint(c, srv.posthandshake)
 	if err != nil {
 		clog.Trace("Rejected peer before protocol handshake", "err", err)
@@ -648,6 +782,9 @@ running:
 		scheduleTasks()
 
 		select {
+		case newWhitelist := <-srv.whitelistCh:
+			srv.UpdatePeerWithNewWhitelist(dialstate, peers, newWhitelist)
+
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
 			break running
@@ -932,6 +1069,13 @@ type BaseServer struct {
 	loopWG        sync.WaitGroup // loop, listenLoop
 	peerFeed      event.Feed
 	logger        log.Logger
+
+	wlg              NodeWhitelistGetter
+	whitelistMap     map[discover.NodeID]*discover.Node
+	whitelistMapLock sync.Mutex
+	whitelistCh      chan []string
+
+	synchroniseChecker SynchronisingChecker
 }
 
 type peerOpFunc func(map[discover.NodeID]*Peer)
@@ -1299,6 +1443,12 @@ func (srv *BaseServer) Start() (err error) {
 		}
 	}
 
+	// SubscribeWhitelist only if we have WhitelistGetter
+	if srv.wlg != nil {
+		srv.whitelistCh = make(chan []string, 1024)
+		go srv.wlg.SubscribeNodeWhitelist(srv.whitelistCh)
+	}
+
 	srv.loopWG.Add(1)
 	go srv.run(dialer)
 	srv.running = true
@@ -1387,6 +1537,9 @@ running:
 		scheduleTasks()
 
 		select {
+		case newWhitelist := <-srv.whitelistCh:
+			srv.UpdatePeerWithNewWhitelist(dialstate, peers, newWhitelist)
+
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
 			break running
@@ -1690,6 +1843,16 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
 		return DiscUnexpectedIdentity
 	}
+
+	// Checks if the node is on the whitelist
+	if srv.NeedToCheckNodeWhitelist() {
+		if !srv.IsOnTheWhitelist(c.id) {
+			srv.logger.Warn("non-whitelisted node tries to make connection", "id", c.id,
+				"addr", c.fd.RemoteAddr(), "conn", c.flags)
+			return DiscNotOnNodeWhitelist
+		}
+	}
+
 	err = srv.checkpoint(c, srv.posthandshake)
 	if err != nil {
 		clog.Trace("Rejected peer before protocol handshake", "err", err)
@@ -1931,4 +2094,13 @@ func ConvertStringToConnType(s string) common.ConnType {
 	default:
 		return common.UNKNOWNNODE
 	}
+}
+
+type NodeWhitelistGetter interface {
+	GetNodeWhitelist() []string
+	SubscribeNodeWhitelist(whitelistCh chan []string)
+}
+
+type SynchronisingChecker interface {
+	Synchronising() bool
 }

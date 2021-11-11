@@ -27,8 +27,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"io"
 	"net"
 	"os"
@@ -493,11 +491,11 @@ func (s *snapshotService) Components() []interface{} {
 func (s *snapshotService) SetComponents(components []interface{}) {
 }
 
-func (s *snapshotService) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+func (s *snapshotService) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return nil
 }
 
-func (s *snapshotService) SynchronisingChecker() downloader.SynchronisingChecker {
+func (s *snapshotService) SynchronisingChecker() p2p.SynchronisingChecker {
 	return nil
 }
 

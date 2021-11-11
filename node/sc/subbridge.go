@@ -24,7 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"io"
 	"math/big"
 	"net"
@@ -764,10 +763,10 @@ func (sb *SubBridge) Stop() error {
 	return nil
 }
 
-func (sb *SubBridge) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+func (sb *SubBridge) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return sb.blockchain
 }
 
-func (sb *SubBridge) SynchronisingChecker() downloader.SynchronisingChecker {
+func (sb *SubBridge) SynchronisingChecker() p2p.SynchronisingChecker {
 	return nil
 }

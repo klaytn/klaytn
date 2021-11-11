@@ -23,7 +23,6 @@ package sc
 import (
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/datasync/downloader"
 	"io"
 	"math/big"
 	"net"
@@ -540,10 +539,10 @@ func errResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
 }
 
-func (mb *MainBridge) NodeWhitelistGetter() blockchain.NodeWhitelistGetter {
+func (mb *MainBridge) NodeWhitelistGetter() p2p.NodeWhitelistGetter {
 	return mb.blockchain
 }
 
-func (sb *MainBridge) SynchronisingChecker() downloader.SynchronisingChecker {
+func (sb *MainBridge) SynchronisingChecker() p2p.SynchronisingChecker {
 	return nil
 }

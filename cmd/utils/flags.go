@@ -622,6 +622,10 @@ var (
 		Usage: "Max request content length in byte for http, websocket and gRPC",
 		Value: common.MaxRequestContentLength,
 	}
+	EnableNodeWhitelistFlag = cli.BoolFlag{
+		Name:  "enablenodewhitelist",
+		Usage: "Enables peer management by node whitelist",
+	}
 
 	// ATM the url is left to the user and deployment to
 	JSpathFlag = cli.StringFlag{
@@ -1324,6 +1328,12 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 
 	common.MaxRequestContentLength = ctx.GlobalInt(MaxRequestContentLengthFlag.Name)
+	cfg.UseNodeWhitelist = ctx.GlobalBool(EnableNodeWhitelistFlag.Name)
+	if cfg.UseNodeWhitelist {
+		logger.Info("Peer management by node whitelist is enabled")
+	} else {
+		logger.Info("Peer management by node whitelist is disabled")
+	}
 
 	cfg.NetworkID, _ = getNetworkId(ctx)
 }
