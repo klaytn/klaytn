@@ -57,7 +57,7 @@ type ExternallyOwnedAccount struct {
 type externallyOwnedAccountSerializable struct {
 	CommonSerializable *accountCommonSerializable
 	BalanceLimit       *big.Int
-	AccountStatus      uint64
+	AccountStatus      *big.Int
 }
 
 type externallyOwnedAccountSerializableJSON struct {
@@ -66,7 +66,7 @@ type externallyOwnedAccountSerializableJSON struct {
 	HumanReadable bool                             `json:"humanReadable"`
 	Key           *accountkey.AccountKeySerializer `json:"key"`
 	BalanceLimit  *hexutil.Big                     `json:"balanceLimit"`
-	AccountStatus uint64                           `json:"accountStatus"`
+	AccountStatus *hexutil.Big                     `json:"accountStatus"`
 }
 
 // newExternallyOwnedAccount creates an ExternallyOwnedAccount object with default values.
@@ -103,14 +103,14 @@ func (e *ExternallyOwnedAccount) toSerializable() *externallyOwnedAccountSeriali
 	return &externallyOwnedAccountSerializable{
 		CommonSerializable: e.AccountCommon.toSerializable(),
 		BalanceLimit:       e.balanceLimit,
-		AccountStatus:      uint64(e.accountStatus),
+		AccountStatus:      big.NewInt(int64(e.accountStatus)),
 	}
 }
 
 func (e *ExternallyOwnedAccount) fromSerializable(o *externallyOwnedAccountSerializable) {
 	e.AccountCommon.fromSerializable(o.CommonSerializable)
 	e.balanceLimit = o.BalanceLimit
-	e.accountStatus = AccountStatus(o.AccountStatus)
+	e.accountStatus = AccountStatus(o.AccountStatus.Int64())
 }
 
 func (e *ExternallyOwnedAccount) EncodeRLP(w io.Writer) error {
@@ -121,7 +121,7 @@ func (e *ExternallyOwnedAccount) DecodeRLP(s *rlp.Stream) error {
 	serialized := &externallyOwnedAccountSerializable{
 		newAccountCommonSerializable(),
 		new(big.Int),
-		0,
+		big.NewInt(int64(AccountStatusUndefined)),
 	}
 	if err := s.Decode(serialized); err != nil {
 		return err
@@ -139,7 +139,7 @@ func (e *ExternallyOwnedAccount) MarshalJSON() ([]byte, error) {
 		HumanReadable: e.humanReadable,
 		Key:           accountkey.NewAccountKeySerializerWithAccountKey(e.key),
 		BalanceLimit:  (*hexutil.Big)(e.balanceLimit),
-		AccountStatus: uint64(e.accountStatus),
+		AccountStatus: (*hexutil.Big)(big.NewInt(int64(e.accountStatus))),
 	})
 }
 
@@ -155,7 +155,7 @@ func (e *ExternallyOwnedAccount) UnmarshalJSON(b []byte) error {
 	e.humanReadable = serialized.HumanReadable
 	e.key = serialized.Key.GetKey()
 	e.balanceLimit = (*big.Int)(serialized.BalanceLimit)
-	e.accountStatus = (AccountStatus)(serialized.AccountStatus)
+	e.accountStatus = (AccountStatus)(((*big.Int)(serialized.AccountStatus)).Int64())
 
 	return nil
 }

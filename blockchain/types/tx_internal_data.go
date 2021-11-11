@@ -103,7 +103,7 @@ var (
 	errValueKeyFeeRatioMustUint8          = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid          = errors.New("The smart contract code format is invalid")
 	errValueKeyBalanceLimitMustBigInt     = errors.New("Balance limit must be a type of *big.Int")
-	errValueKeyAccountStatusMustBeInRange = errors.New(fmt.Sprintf("Account status must be less than %d", account.AccountStatusLast))
+	errValueKeyAccountStatusMustBeInRange = errors.New(fmt.Sprintf("Account status must be bigger than 0 and less than %d", account.AccountStatusLast))
 )
 
 func (t TxValueKeyType) String() string {
