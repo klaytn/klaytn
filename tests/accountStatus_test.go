@@ -128,7 +128,7 @@ func TestAccountStatus_setAccountStatus_EOA(t *testing.T) {
 	signer := env.signer
 	sender := env.sender
 
-	for accountStatus := account.AccountStatus(0); accountStatus < account.AccountStatusLast; accountStatus++ {
+	for accountStatus := account.AccountStatusUndefined + 1; accountStatus < account.AccountStatusLast; accountStatus++ {
 		// setAccountStatus 호출
 		tx := AccountStatusUpdate(sender, accountStatus, signer, nil, t)
 
