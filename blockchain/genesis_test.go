@@ -353,7 +353,7 @@ func genCustomGenesisBlock(customChainId uint64) *Genesis {
 			DeriveShaImpl:           types.ImplDeriveShaConcat,
 		},
 		Alloc: GenesisAlloc{
-			common.BytesToAddress([]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}): {
+			common.HexToAddress("0x0100000000000000000000000000000000000000"): {
 				Balance: big.NewInt(1), Storage: map[common.Hash]common.Hash{{1}: {1}},
 			},
 		},
