@@ -2239,7 +2239,7 @@ func TestAccountKeyUpdateLegacyToPublic(t *testing.T) {
 			types.TxValueKeyGasLimit:   gasLimit,
 			types.TxValueKeyGasPrice:   gasPrice,
 			types.TxValueKeyAccountKey: acckey,
-			types.TxValueKeyFeePayer: feepayer,
+			types.TxValueKeyFeePayer:   feepayer,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
 		assert.Equal(t, nil, err)
@@ -2267,7 +2267,7 @@ func TestAccountKeyUpdateLegacyToPublic(t *testing.T) {
 			types.TxValueKeyGasLimit:   gasLimit,
 			types.TxValueKeyGasPrice:   gasPrice,
 			types.TxValueKeyAccountKey: acckey,
-			types.TxValueKeyFeePayer: feepayer,
+			types.TxValueKeyFeePayer:   feepayer,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
 		assert.Equal(t, nil, err)
