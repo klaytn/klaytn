@@ -177,7 +177,7 @@ func (e *AccountCommon) SetHumanReadable(h bool) {
 }
 
 func (e *AccountCommon) SetKey(k accountkey.AccountKey) {
-	e.key = k
+	e.key = k.DeepCopy()
 }
 
 func (e *AccountCommon) ReplaceKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
