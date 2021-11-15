@@ -524,7 +524,7 @@ func (srv *MultiChannelServer) Start() (err error) {
 	}
 
 	// SubscribeWhitelist only if we have WhitelistGetter
-	if srv.wlg != nil {
+	if srv.wlg != nil && srv.UseNodeWhitelist {
 		srv.whitelistCh = make(chan []string, 1024)
 		go srv.wlg.SubscribeNodeWhitelist(srv.whitelistCh)
 	}
@@ -1444,7 +1444,7 @@ func (srv *BaseServer) Start() (err error) {
 	}
 
 	// SubscribeWhitelist only if we have WhitelistGetter
-	if srv.wlg != nil {
+	if srv.wlg != nil && srv.UseNodeWhitelist {
 		srv.whitelistCh = make(chan []string, 1024)
 		go srv.wlg.SubscribeNodeWhitelist(srv.whitelistCh)
 	}
