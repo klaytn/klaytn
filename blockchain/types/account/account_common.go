@@ -201,6 +201,7 @@ func (e *AccountCommon) DeepCopy() *AccountCommon {
 }
 
 func (e *AccountCommon) UpdateKey(newKey accountkey.AccountKey, currentBlockNumber uint64) error {
+	newKey = newKey.DeepCopy()
 	if e.key.Type() == newKey.Type() {
 		return e.key.Update(newKey, currentBlockNumber)
 	}

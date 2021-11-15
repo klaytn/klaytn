@@ -352,6 +352,18 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	}
 	prof.Profile("main_mineABlock", time.Now().Sub(start))
 
+	txs := make(types.Transactions, len(b.Transactions()))
+	for i, tt := range b.Transactions() {
+		encodedTx, err := rlp.EncodeToBytes(tt)
+		if err != nil {
+			return err
+		}
+		decodedTx := types.Transaction{}
+		rlp.DecodeBytes(encodedTx, &decodedTx)
+		txs[i] = &decodedTx
+	}
+	b = b.WithBody(txs)
+
 	// Insert the block into the blockchain
 	start = time.Now()
 	if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil {
