@@ -45,7 +45,7 @@ func TestPrivateDebugAPI_TraceChain(t *testing.T) {
 	// from == nil
 	{
 		mockCtrl, api, _, _, mockMiner := createCNMocks(t)
-		mockMiner.EXPECT().PendingBlock().Return(nil).Times(2g)
+		mockMiner.EXPECT().PendingBlock().Return(nil).Times(2)
 		sub, err := api.TraceChain(context.Background(), rpc.PendingBlockNumber, rpc.PendingBlockNumber, nil)
 		assert.Nil(t, sub)
 		assert.Error(t, err)
