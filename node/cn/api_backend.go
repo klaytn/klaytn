@@ -34,7 +34,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
 	"github.com/klaytn/klaytn/params"
@@ -83,7 +82,8 @@ func (b *CNAPIBackend) SetHead(number uint64) {
 func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
+		block := b.cn.miner.PendingBlock()
+		return block.Header(), nil
 	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
@@ -120,7 +120,8 @@ func (b *CNAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*typ
 func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
 	// Pending block is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
+		block := b.cn.miner.PendingBlock()
+		return block, nil
 	}
 	// Otherwise resolve and return the block
 	if blockNr == rpc.LatestBlockNumber {
@@ -150,7 +151,8 @@ func (b *CNAPIBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash rp
 func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		return nil, nil, kerrors.ErrPendingBlockNotSupported
+		block, state := b.cn.miner.Pending()
+		return state, block.Header(), nil
 	}
 	// Otherwise resolve the block number and return its state
 	header, err := b.HeaderByNumber(ctx, blockNr)
