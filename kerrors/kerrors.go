@@ -53,5 +53,4 @@ var (
 
 	ErrDeprecated               = errors.New("deprecated feature")
 	ErrNotSupported             = errors.New("not supported")
-	ErrPendingBlockNotSupported = errors.New("pending block is not supported")
 )

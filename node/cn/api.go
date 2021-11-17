@@ -36,7 +36,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
@@ -217,8 +216,13 @@ func NewPublicDebugAPI(cn *CN) *PublicDebugAPI {
 // DumpBlock retrieves the entire state of the database at a given block.
 func (api *PublicDebugAPI) DumpBlock(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (state.Dump, error) {
 	if *blockNrOrHash.BlockNumber == rpc.PendingBlockNumber {
-		return state.Dump{}, kerrors.ErrPendingBlockNotSupported
+		// If we're dumping the pending state, we need to request
+		// both the pending block as well as the pending state from
+		// the miner and operate on those
+		_, stateDb := api.cn.miner.Pending()
+		return stateDb.RawDump(), nil
 	}
+
 	var block *types.Block
 	var err error
 	if *blockNrOrHash.BlockNumber == rpc.LatestBlockNumber {

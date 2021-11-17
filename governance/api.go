@@ -25,7 +25,6 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
@@ -65,11 +64,9 @@ var (
 
 // TODO-Klaytn-Governance: Refine this API and consider the gas price of txpool
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber{
 		ret := api.governance.UnitPrice()
 		return (*hexutil.Big)(big.NewInt(0).SetUint64(ret)), nil
-	} else if *num == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
 	} else {
 		blockNum := num.Int64()
 
@@ -150,10 +147,8 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber{
 		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
-	} else if *num == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -167,10 +162,8 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 
 func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
-	} else if *num == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -196,10 +189,8 @@ func (api *PublicGovernanceAPI) IdxCacheFromDb() []uint64 {
 // TODO-Klaytn: Return error if invalid input is given such as pending or a too big number
 func (api *PublicGovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber{
 		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
-	} else if *num == rpc.PendingBlockNumber {
-		return nil
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -263,36 +254,35 @@ func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
 	return val.(uint64), nil
 }
 
-// Disabled APIs
-// func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
-// 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-// 		// If the value hasn't been set in governance, set it with default value
-// 		if ret := api.governance.GetGovernanceValue(params.ConstTxGasHumanReadable); ret == nil {
-// 			return api.setDefaultTxGasHumanReadable()
-// 		} else {
-// 			return ret.(uint64), nil
-// 		}
-// 	} else {
-// 		blockNum := num.Int64()
-//
-// 		if blockNum > api.chain.CurrentHeader().Number.Int64() {
-// 			return 0, errUnknownBlock
-// 		}
-//
-// 		if ret, err := api.governance.GetGovernanceItemAtNumber(uint64(blockNum), GovernanceKeyMapReverse[params.ConstTxGasHumanReadable]); err == nil && ret != nil {
-// 			return ret.(uint64), nil
-// 		} else {
-// 			logger.Error("Failed to retrieve TxGasHumanReadable, sending default value", "err", err)
-// 			return api.setDefaultTxGasHumanReadable()
-// 		}
-// 	}
-// }
-//
-// func (api *GovernanceKlayAPI) setDefaultTxGasHumanReadable() (uint64, error) {
-// 	err := api.governance.currentSet.SetValue(params.ConstTxGasHumanReadable, params.TxGasHumanReadable)
-// 	if err != nil {
-// 		return 0, errSetDefaultFailure
-// 	} else {
-// 		return params.TxGasHumanReadable, nil
-// 	}
-// }
+func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+		// If the value hasn't been set in governance, set it with default value
+		if ret := api.governance.GetGovernanceValue(params.ConstTxGasHumanReadable); ret == nil {
+			return api.setDefaultTxGasHumanReadable()
+		} else {
+			return ret.(uint64), nil
+		}
+	} else {
+		blockNum := num.Int64()
+
+		if blockNum > api.chain.CurrentHeader().Number.Int64() {
+			return 0, errUnknownBlock
+		}
+
+		if ret, err := api.governance.GetGovernanceItemAtNumber(uint64(blockNum), GovernanceKeyMapReverse[params.ConstTxGasHumanReadable]); err == nil && ret != nil {
+			return ret.(uint64), nil
+		} else {
+			logger.Error("Failed to retrieve TxGasHumanReadable, sending default value", "err", err)
+			return api.setDefaultTxGasHumanReadable()
+		}
+	}
+}
+
+func (api *GovernanceKlayAPI) setDefaultTxGasHumanReadable() (uint64, error) {
+	err := api.governance.currentSet.SetValue(params.ConstTxGasHumanReadable, params.TxGasHumanReadable)
+	if err != nil {
+		return 0, errSetDefaultFailure
+	} else {
+		return params.TxGasHumanReadable, nil
+	}
+}
