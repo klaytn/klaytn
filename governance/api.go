@@ -64,7 +64,7 @@ var (
 
 // TODO-Klaytn-Governance: Refine this API and consider the gas price of txpool
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber{
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		ret := api.governance.UnitPrice()
 		return (*hexutil.Big)(big.NewInt(0).SetUint64(ret)), nil
 	} else {
@@ -147,7 +147,7 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber{
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
@@ -189,7 +189,7 @@ func (api *PublicGovernanceAPI) IdxCacheFromDb() []uint64 {
 // TODO-Klaytn: Return error if invalid input is given such as pending or a too big number
 func (api *PublicGovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber{
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
 	} else {
 		blockNumber = uint64(num.Int64())
