@@ -254,35 +254,36 @@ func (api *GovernanceKlayAPI) GasPriceAtNumber(num int64) (uint64, error) {
 	return val.(uint64), nil
 }
 
-func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		// If the value hasn't been set in governance, set it with default value
-		if ret := api.governance.GetGovernanceValue(params.ConstTxGasHumanReadable); ret == nil {
-			return api.setDefaultTxGasHumanReadable()
-		} else {
-			return ret.(uint64), nil
-		}
-	} else {
-		blockNum := num.Int64()
-
-		if blockNum > api.chain.CurrentHeader().Number.Int64() {
-			return 0, errUnknownBlock
-		}
-
-		if ret, err := api.governance.GetGovernanceItemAtNumber(uint64(blockNum), GovernanceKeyMapReverse[params.ConstTxGasHumanReadable]); err == nil && ret != nil {
-			return ret.(uint64), nil
-		} else {
-			logger.Error("Failed to retrieve TxGasHumanReadable, sending default value", "err", err)
-			return api.setDefaultTxGasHumanReadable()
-		}
-	}
-}
-
-func (api *GovernanceKlayAPI) setDefaultTxGasHumanReadable() (uint64, error) {
-	err := api.governance.currentSet.SetValue(params.ConstTxGasHumanReadable, params.TxGasHumanReadable)
-	if err != nil {
-		return 0, errSetDefaultFailure
-	} else {
-		return params.TxGasHumanReadable, nil
-	}
-}
+// Disabled APIs
+// func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
+// 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
+// 		// If the value hasn't been set in governance, set it with default value
+// 		if ret := api.governance.GetGovernanceValue(params.ConstTxGasHumanReadable); ret == nil {
+// 			return api.setDefaultTxGasHumanReadable()
+// 		} else {
+// 			return ret.(uint64), nil
+// 		}
+// 	} else {
+// 		blockNum := num.Int64()
+//
+// 		if blockNum > api.chain.CurrentHeader().Number.Int64() {
+// 			return 0, errUnknownBlock
+// 		}
+//
+// 		if ret, err := api.governance.GetGovernanceItemAtNumber(uint64(blockNum), GovernanceKeyMapReverse[params.ConstTxGasHumanReadable]); err == nil && ret != nil {
+// 			return ret.(uint64), nil
+// 		} else {
+// 			logger.Error("Failed to retrieve TxGasHumanReadable, sending default value", "err", err)
+// 			return api.setDefaultTxGasHumanReadable()
+// 		}
+// 	}
+// }
+//
+// func (api *GovernanceKlayAPI) setDefaultTxGasHumanReadable() (uint64, error) {
+// 	err := api.governance.currentSet.SetValue(params.ConstTxGasHumanReadable, params.TxGasHumanReadable)
+// 	if err != nil {
+// 		return 0, errSetDefaultFailure
+// 	} else {
+// 		return params.TxGasHumanReadable, nil
+// 	}
+// }
