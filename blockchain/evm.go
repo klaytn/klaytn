@@ -22,6 +22,7 @@ package blockchain
 
 import (
 	"math/big"
+	"reflect"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
@@ -42,11 +43,18 @@ type ChainContext interface {
 // NewEVMContext creates a new context for use in the EVM.
 func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author *common.Address) vm.Context {
 	// If we don't have an explicit author (i.e. not mining), extract from the header
-	var beneficiary common.Address
+	var (
+		beneficiary common.Address
+		baseFee     *big.Int
+	)
+
 	if author == nil {
 		beneficiary, _ = chain.Engine().Author(header) // Ignore error, we're past header validation
 	} else {
 		beneficiary = *author
+	}
+	if reflect.ValueOf(header).Elem().FieldByName("baseFeePerGas").IsValid() == false {
+		baseFee = big.NewInt(0)
 	}
 	return vm.Context{
 		CanTransfer: CanTransfer,
@@ -58,6 +66,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		Time:        new(big.Int).Set(header.Time),
 		BlockScore:  new(big.Int).Set(header.BlockScore),
 		GasPrice:    new(big.Int).Set(msg.GasPrice()),
+		BaseFee:     baseFee,
 	}
 }
 
