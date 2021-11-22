@@ -21,13 +21,11 @@
 package blockchain
 
 import (
-	"math/big"
-	"reflect"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
+	"math/big"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -53,9 +51,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	} else {
 		beneficiary = *author
 	}
-	if reflect.ValueOf(header).Elem().FieldByName("baseFeePerGas").IsValid() == false {
-		baseFee = big.NewInt(0)
-	}
+	baseFee = big.NewInt(0)
 	return vm.Context{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
