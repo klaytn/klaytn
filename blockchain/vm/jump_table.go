@@ -70,7 +70,7 @@ var (
 type JumpTable [256]*operation
 
 // newLondonInstructionSet returns the frontier, homestead, byzantium,
-// constantinople, istanbul, petersburg, berlin and london instructions.
+// constantinople, istanbul, petersburg and london instructions.
 func newLondonInstructionSet() JumpTable {
 	instructionSet := newIstanbulInstructionSet()
 	// TODO-klaytn: base fee opcode will be enabled
