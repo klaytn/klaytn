@@ -163,6 +163,8 @@ const (
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
+	// "Compatible" means that it is EVM compatible(the opcode and precompiled contracts are the same as Ethereum EVM).
+	// In other words, not all the hard fork items are included.
 	IstanbulCompatibleBlock *big.Int `json:"istanbulCompatibleBlock,omitempty"` // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
 	LondonCompatibleBlock   *big.Int `json:"londonCompatibleBlock,omitempty"`   // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
 
