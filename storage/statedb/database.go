@@ -130,6 +130,10 @@ func (n rawNode) canUnload(uint16, uint16) bool { panic("this should never end u
 func (n rawNode) cache() (hashNode, bool)       { panic("this should never end up in a live trie") }
 func (n rawNode) fstring(ind string) string     { panic("this should never end up in a live trie") }
 func (n rawNode) lenEncoded() uint16            { panic("this should never end up in a live trie") }
+func (n rawNode) EncodeRLP(w io.Writer) error {
+	_, err := w.Write([]byte(n))
+	return err
+}
 
 // rawFullNode represents only the useful data content of a full node, with the
 // caches and flags stripped out to minimize its data database. This type honors
@@ -232,7 +236,7 @@ func gatherChildren(n node, children *[]common.Hash) {
 	case hashNode:
 		*children = append(*children, common.BytesToHash(n))
 
-	case valueNode, nil:
+	case valueNode, nil, rawNode:
 
 	default:
 		panic(fmt.Sprintf("unknown node type: %T", n))
