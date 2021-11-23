@@ -54,11 +54,11 @@ func returnToPool(st *StackTrie) {
 // in order. Once it determines that a subtree will no longer be inserted
 // into, it will hash it and free up the memory it uses.
 type StackTrie struct {
-	nodeType  uint8                // node type (as in branch, ext, leaf)
-	val       []byte               // value contained by this node if it's a leaf
-	key       []byte               // key chunk covered by this (full|ext) node
-	keyOffset int                  // offset of the key chunk inside a full key
-	children  [16]*StackTrie       // list of children (for fullnodes and exts)
+	nodeType  uint8              // node type (as in branch, ext, leaf)
+	val       []byte             // value contained by this node if it's a leaf
+	key       []byte             // key chunk covered by this (full|ext) node
+	keyOffset int                // offset of the key chunk inside a full key
+	children  [16]*StackTrie     // list of children (for fullnodes and exts)
 	db        database.DBManager // Pointer to the commit db, can be nil
 }
 

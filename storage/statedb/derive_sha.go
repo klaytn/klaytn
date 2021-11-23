@@ -49,7 +49,7 @@ func (d DeriveShaOrig) DeriveSha(list types.DerivableList) common.Hash {
 		rlp.Encode(keybuf, uint(0))
 		trie.Update(keybuf.Bytes(), list.GetRlp(0))
 	}
-	for i:=0x80; i<list.Len(); i++{
+	for i := 0x80; i < list.Len(); i++ {
 		keybuf.Reset()
 		rlp.Encode(keybuf, uint(i))
 		trie.Update(keybuf.Bytes(), list.GetRlp(i))
