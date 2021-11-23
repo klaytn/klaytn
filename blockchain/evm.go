@@ -21,11 +21,12 @@
 package blockchain
 
 import (
+	"math/big"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
-	"math/big"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
