@@ -14,6 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from trie/stacktrie.go (2021/11/23).
+// Modified and improved for the klaytn development.
 
 package statedb
 
