@@ -229,6 +229,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
+	if err := newcfg.CheckConfigForkOrder(); err != nil {
+		return newcfg, common.Hash{}, err
+	}
 	storedcfg := db.ReadChainConfig(stored)
 	if storedcfg == nil {
 		logger.Info("Found genesis block without chain config")

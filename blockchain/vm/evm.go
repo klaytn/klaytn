@@ -563,6 +563,8 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 	// There are contracts which uses latest precompiled contract map (regardless of deployment time)
 	// If new HF is added, please add new case below
 	switch {
+	case evm.chainRules.IsLondon:
+		fallthrough
 	case evm.chainRules.IsIstanbul:
 		if ok, mapWithVmVersion := getPrecompiledContractMapWithVmVersion(); ok {
 			return mapWithVmVersion
