@@ -41,6 +41,7 @@ var (
 	CypressChainConfig = &ChainConfig{
 		ChainID:                 big.NewInt(int64(CypressNetworkId)),
 		IstanbulCompatibleBlock: nil,
+		LondonCompatibleBlock:   nil,
 		DeriveShaImpl:           2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
@@ -67,6 +68,7 @@ var (
 	BaobabChainConfig = &ChainConfig{
 		ChainID:                 big.NewInt(int64(BaobabNetworkId)),
 		IstanbulCompatibleBlock: big.NewInt(75373312),
+		LondonCompatibleBlock:   nil,
 		DeriveShaImpl:           2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -161,7 +163,10 @@ const (
 type ChainConfig struct {
 	ChainID *big.Int `json:"chainId"` // chainId identifies the current chain and is used for replay protection
 
+	// "Compatible" means that it is EVM compatible(the opcode and precompiled contracts are the same as Ethereum EVM).
+	// In other words, not all the hard fork items are included.
 	IstanbulCompatibleBlock *big.Int `json:"istanbulCompatibleBlock,omitempty"` // IstanbulCompatibleBlock switch block (nil = no fork, 0 = already on istanbul)
+	LondonCompatibleBlock   *big.Int `json:"londonCompatibleBlock,omitempty"`   // LondonCompatibleBlock switch block (nil = no fork, 0 = already on london)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -241,18 +246,20 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
+			c.LondonCompatibleBlock,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
+			c.LondonCompatibleBlock,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -263,6 +270,11 @@ func (c *ChainConfig) String() string {
 // IsIstanbul returns whether num is either equal to the istanbul block or greater.
 func (c *ChainConfig) IsIstanbul(num *big.Int) bool {
 	return isForked(c.IstanbulCompatibleBlock, num)
+}
+
+// IsLondon returns whether num is either equal to the london block or greater.
+func (c *ChainConfig) IsLondon(num *big.Int) bool {
+	return isForked(c.LondonCompatibleBlock, num)
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -283,9 +295,46 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 	return lasterr
 }
 
+// CheckConfigForkOrder checks that we don't "skip" any forks, geth isn't pluggable enough
+// to guarantee that forks can be implemented in a different order than on official networks
+func (c *ChainConfig) CheckConfigForkOrder() error {
+	type fork struct {
+		name     string
+		block    *big.Int
+		optional bool // if true, the fork may be nil and next fork is still allowed
+	}
+	var lastFork fork
+	for _, cur := range []fork{
+		{name: "istanbulBlock", block: c.IstanbulCompatibleBlock},
+		{name: "londonBlock", block: c.LondonCompatibleBlock},
+	} {
+		if lastFork.name != "" {
+			// Next one must be higher number
+			if lastFork.block == nil && cur.block != nil {
+				return fmt.Errorf("unsupported fork ordering: %v not enabled, but %v enabled at %v",
+					lastFork.name, cur.name, cur.block)
+			}
+			if lastFork.block != nil && cur.block != nil {
+				if lastFork.block.Cmp(cur.block) > 0 {
+					return fmt.Errorf("unsupported fork ordering: %v enabled at %v, but %v enabled at %v",
+						lastFork.name, lastFork.block, cur.name, cur.block)
+				}
+			}
+		}
+		// If it was optional and not set, then ignore it
+		if !cur.optional || cur.block != nil {
+			lastFork = cur
+		}
+	}
+	return nil
+}
+
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {
 	if isForkIncompatible(c.IstanbulCompatibleBlock, newcfg.IstanbulCompatibleBlock, head) {
 		return newCompatError("Istanbul Block", c.IstanbulCompatibleBlock, newcfg.IstanbulCompatibleBlock)
+	}
+	if isForkIncompatible(c.LondonCompatibleBlock, newcfg.LondonCompatibleBlock, head) {
+		return newCompatError("London Block", c.LondonCompatibleBlock, newcfg.LondonCompatibleBlock)
 	}
 	return nil
 }
@@ -400,6 +449,7 @@ func (err *ConfigCompatError) Error() string {
 type Rules struct {
 	ChainID    *big.Int
 	IsIstanbul bool
+	IsLondon   bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -411,6 +461,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	return Rules{
 		ChainID:    new(big.Int).Set(chainID),
 		IsIstanbul: c.IsIstanbul(num),
+		IsLondon:   c.IsLondon(num),
 	}
 }
 
