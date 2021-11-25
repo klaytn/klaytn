@@ -40,7 +40,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/tracers"
@@ -114,10 +113,9 @@ type txTraceTask struct {
 func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.BlockNumber, config *TraceConfig) (*rpc.Subscription, error) {
 	// Fetch the block interval that we want to trace
 	var from, to *types.Block
-
 	switch start {
 	case rpc.PendingBlockNumber:
-		return nil, kerrors.ErrPendingBlockNotSupported
+		from = api.cn.miner.PendingBlock()
 	case rpc.LatestBlockNumber:
 		from = api.cn.blockchain.CurrentBlock()
 	default:
@@ -125,7 +123,7 @@ func (api *PrivateDebugAPI) TraceChain(ctx context.Context, start, end rpc.Block
 	}
 	switch end {
 	case rpc.PendingBlockNumber:
-		return nil, kerrors.ErrPendingBlockNotSupported
+		to = api.cn.miner.PendingBlock()
 	case rpc.LatestBlockNumber:
 		to = api.cn.blockchain.CurrentBlock()
 	default:
@@ -371,7 +369,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(ctx context.Context, number rpc.B
 
 	switch number {
 	case rpc.PendingBlockNumber:
-		return nil, kerrors.ErrPendingBlockNotSupported
+		block = api.cn.miner.PendingBlock()
 	case rpc.LatestBlockNumber:
 		block = api.cn.blockchain.CurrentBlock()
 	default:
