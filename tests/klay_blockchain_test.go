@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/accounts/keystore"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -144,7 +145,11 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.Node, *cn.CN, error) {
 	var klaytnNode *cn.CN
 
-	fullNode, err := node.New(&node.Config{DataDir: dir, UseLightweightKDF: true, P2P: p2p.Config{PrivateKey: validator.Keys[0]}})
+	fullNode, err := node.New(&node.Config{
+		DataDir:           dir,
+		UseLightweightKDF: true,
+		P2P:               p2p.Config{PrivateKey: validator.Keys[0], NoListen: true},
+	})
 	if err != nil {
 		t.Fatalf("failed to create node: %v", err)
 	}
@@ -170,6 +175,11 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	cnConf.Rewardbase = validator.Addr
 	cnConf.SingleDB = false
 	cnConf.NumStateTrieShards = 4
+
+	ks := fullNode.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
+	if _, err := ks.ImportECDSA(validator.Keys[0], ""); err != nil {
+		return nil, nil, errors.WithMessage(err, "failed to make a node key")
+	}
 
 	if err = fullNode.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, cnConf) }); err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to register Klaytn protocol")
