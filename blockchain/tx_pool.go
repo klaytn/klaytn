@@ -536,8 +536,8 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
-	//pool.mu.Lock()
-	//defer pool.mu.Unlock()
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
 
@@ -546,6 +546,20 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 		pending[addr] = list.Flatten()
 	}
 	return pending, nil
+}
+
+func (pool *TxPool) PendingTransactionByPriceAndNonce() *types.TransactionsByPriceAndNonce {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	pool.txMu.Lock()
+	defer pool.txMu.Unlock()
+
+	pending := make(map[common.Address]types.Transactions)
+	for addr, list := range pool.pending {
+		pending[addr] = list.Flatten()
+	}
+
+	return types.NewTransactionsByPriceAndNonce(pool.signer, pending)
 }
 
 // CachedPendingTxByCount retrieves about number of currently processable transactions

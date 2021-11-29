@@ -469,16 +469,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 }
 
 func (self *worker) commitNewWork() {
-	var pending map[common.Address]types.Transactions
 	var err error
-	if self.nodetype == common.CONSENSUSNODE {
-		// Check any fork transitions needed
-		pending, err = self.backend.TxPool().Pending()
-		if err != nil {
-			logger.Error("Failed to fetch pending transactions", "err", err)
-			return
-		}
-	}
 
 	self.mu.Lock()
 	defer self.mu.Unlock()
@@ -529,7 +520,7 @@ func (self *worker) commitNewWork() {
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
-		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
+		txs := self.backend.TxPool().PendingTransactionByPriceAndNonce()
 		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
 		finishedCommitTx := time.Now()
 
