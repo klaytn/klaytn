@@ -960,7 +960,9 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 		return errNotAllowedAnchoringTx
 	}
 
+	pool.mu.RLock()
 	poolSize := uint64(len(pool.all))
+	pool.mu.RUnlock()
 	if poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		return fmt.Errorf("txpool is full: %d", poolSize)
 	}
@@ -992,7 +994,9 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 // If given transactions exceed the capacity of TxPool, it slices the given transactions
 // so it can fit into TxPool's capacity.
 func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error {
+	pool.mu.RLock()
 	poolSize := uint64(len(pool.all))
+	pool.mu.RUnlock()
 	poolCapacity := int(pool.config.ExecSlotsAll + pool.config.NonExecSlotsAll - poolSize)
 	numTxs := len(txs)
 
