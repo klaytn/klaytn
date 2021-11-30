@@ -150,20 +150,6 @@ func (mr *MockTxPoolMockRecorder) Pending() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockTxPool)(nil).Pending))
 }
 
-// PendingTransactionByPriceAndNonce mocks base method
-func (m *MockTxPool) PendingTransactionByPriceAndNonce() *types.TransactionsByPriceAndNonce {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PendingTransactionByPriceAndNonce")
-	ret0, _ := ret[0].(*types.TransactionsByPriceAndNonce)
-	return ret0
-}
-
-// PendingTransactionByPriceAndNonce indicates an expected call of PendingTransactionByPriceAndNonce
-func (mr *MockTxPoolMockRecorder) PendingTransactionByPriceAndNonce() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingTransactionByPriceAndNonce", reflect.TypeOf((*MockTxPool)(nil).PendingTransactionByPriceAndNonce))
-}
-
 // SetGasPrice mocks base method
 func (m *MockTxPool) SetGasPrice(arg0 *big.Int) {
 	m.ctrl.T.Helper()
