@@ -177,9 +177,7 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 	cnConf.NumStateTrieShards = 4
 
 	ks := fullNode.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	if _, err := ks.ImportECDSA(validator.Keys[0], ""); err != nil {
-		return nil, nil, errors.WithMessage(err, "failed to make a node key")
-	}
+	_, _ = ks.ImportECDSA(validator.Keys[0], "") // import a node key
 
 	if err = fullNode.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, cnConf) }); err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to register Klaytn protocol")
