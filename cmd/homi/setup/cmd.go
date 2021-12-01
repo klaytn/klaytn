@@ -124,6 +124,7 @@ Args :
 			istSubGroupFlag,
 			cliqueEpochFlag,
 			cliquePeriodFlag,
+			istanbulCompatibleBlockNumberFlag,
 		},
 		ArgsUsage: "type",
 	}
@@ -478,28 +479,37 @@ func gen(ctx *cli.Context) error {
 	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(cnNum)
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
 
-	var genesisJsonBytes []byte
+	var (
+		genesisJson      *blockchain.Genesis
+		genesisJsonBytes []byte
+	)
 
 	validatorNodeAddrs := make([]common.Address, numValidators)
 	copy(validatorNodeAddrs, nodeAddrs[:numValidators])
 
 	if cypressTest {
-		genesisJsonBytes, _ = json.MarshalIndent(genCypressTestGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genCypressTestGenesis(validatorNodeAddrs, testAddrs)
 	} else if cypress {
-		genesisJsonBytes, _ = json.MarshalIndent(genCypressGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genCypressGenesis(validatorNodeAddrs, testAddrs)
 	} else if baobabTest {
-		genesisJsonBytes, _ = json.MarshalIndent(genBaobabTestGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genBaobabTestGenesis(validatorNodeAddrs, testAddrs)
 	} else if baobab {
-		genesisJsonBytes, _ = json.MarshalIndent(genBaobabGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genBaobabGenesis(validatorNodeAddrs, testAddrs)
 	} else if cliqueFlag {
-		genesisJsonBytes, _ = json.MarshalIndent(genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid), "", "    ")
+		genesisJson = genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	} else if serviceChain {
-		genesisJsonBytes, _ = json.MarshalIndent(genServiceChainGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genServiceChainGenesis(validatorNodeAddrs, testAddrs)
 	} else if serviceChainTest {
-		genesisJsonBytes, _ = json.MarshalIndent(genServiceChainTestGenesis(validatorNodeAddrs, testAddrs), "", "    ")
+		genesisJson = genServiceChainTestGenesis(validatorNodeAddrs, testAddrs)
 	} else {
-		genesisJsonBytes, _ = json.MarshalIndent(genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid), "", "    ")
+		genesisJson = genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	}
+
+	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
+	// TODO-klaytn: enable below line when londonCompatible protocol upgrade implementation is finished
+	//genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
+
+	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)
 	lastIssuedPortNum = uint16(ctx.Int(p2pPortFlag.Name))
 

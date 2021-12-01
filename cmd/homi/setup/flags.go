@@ -323,4 +323,10 @@ var (
 		Usage: "clique period",
 		Value: params.DefaultPeriod,
 	}
+
+	istanbulCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "istanbul-compatible-blocknumber",
+		Usage: "istanbulCompatible blockNumber",
+		Value: 0,
+	}
 )
