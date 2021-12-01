@@ -102,6 +102,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.NetworkIdFlag,
 	utils.RPCCORSDomainFlag,
 	utils.RPCVirtualHostsFlag,
+	utils.RPCNonEthCompatibleFlag,
 	utils.MetricsEnabledFlag,
 	utils.PrometheusExporterFlag,
 	utils.PrometheusExporterPortFlag,

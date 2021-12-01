@@ -68,6 +68,10 @@ var (
 
 	// MaxWebsocketConnections is a maximum number of websocket connections
 	MaxWebsocketConnections int32 = 3000
+
+	// NonEthCompatible is a bool value that determines whether to use return formatting of the eth namespace API  provided for compatibility.
+	// It can be overwritten by rpc.eth.noncompatible flag
+	NonEthCompatible = false
 )
 
 // NewServer will create a new server instance with no registered handlers.
@@ -518,8 +522,9 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			continue
 		}
 
-		// for ethereum compatibility. convert ethereum namespace to klay namespace.
-		if r.service == "eth" {
+		if NonEthCompatible && r.service == "eth"{
+			// when NonEthCompatible is true, the return formatting for the eth namespace API provided for Ethereum compatibility is disabled.
+			// convert ethereum namespace to klay namespace.
 			r.service = "klay"
 		}
 
