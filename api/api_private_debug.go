@@ -77,7 +77,7 @@ func (api *PrivateDebugAPI) ChaindbCompact() error {
 }
 
 // SetHead rewinds the head of the blockchain to a previous block.
-func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64){
+func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) {
 	// TODO-Klaytn-Issue655 Error is returned until this API is redesigned and implemented again
 	// return blockchain.ErrNotYetImplementedAPI
 
