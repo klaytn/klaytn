@@ -522,7 +522,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			continue
 		}
 
-		if NonEthCompatible && r.service == "eth"{
+		if NonEthCompatible && r.service == "eth" {
 			// when NonEthCompatible is true, the return formatting for the eth namespace API provided for Ethereum compatibility is disabled.
 			// convert ethereum namespace to klay namespace.
 			r.service = "klay"
