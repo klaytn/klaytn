@@ -76,7 +76,7 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 }
 
 func (b *CNAPIBackend) SetHead(number uint64) {
-	//b.cn.protocolManager.downloader.Cancel()
+	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.blockchain.SetHead(number)
 }
 
