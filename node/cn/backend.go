@@ -465,27 +465,43 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	apis := api.GetAPIs(s.APIBackend)
+	ethAPI := api.NewEthereumAPI(s)
+	apis := api.GetAPIs(s.APIBackend, ethAPI)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+
+	publicCNKlayAPI := NewPublicKlayAPI(s)
+	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
+	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
+
+	ethAPI.SetPublicCNKlayAPI(publicCNKlayAPI)
+	ethAPI.SetPublicFilterAPI(publicFilterAPI)
+	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
+
+	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicKlayAPI(s),
+			Service:   publicCNKlayAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux),
+			Service:   publicDownloaderAPI,
+			Public:    true,
+		}, {
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   publicDownloaderAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   filters.NewPublicFilterAPI(s.APIBackend, false),
+			Service:   publicFilterAPI,
 			Public:    true,
 		}, {
 			Namespace: "admin",
@@ -513,7 +529,12 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   governance.NewGovernanceKlayAPI(s.governance, s.blockchain),
+			Service:   governanceKlayAPI,
+			Public:    true,
+		}, {
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   ethAPI,
 			Public:    true,
 		},
 	}...)

@@ -89,23 +89,34 @@ type Backend interface {
 	GetTxLookupInfoAndReceiptInCache(Hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 }
 
-func GetAPIs(apiBackend Backend) []rpc.API {
+func GetAPIs(apiBackend Backend, ethAPI *EthereumAPI) []rpc.API {
 	nonceLock := new(AddrLocker)
+
+	publicKlayAPI := NewPublicKlayAPI(apiBackend)
+	publicBlockChainAPI := NewPublicBlockChainAPI(apiBackend)
+	publicTransactionPoolAPI := NewPublicTransactionPoolAPI(apiBackend, nonceLock)
+	publicAccountAPI := NewPublicAccountAPI(apiBackend.AccountManager())
+
+	ethAPI.SetPublicKlayAPI(publicKlayAPI)
+	ethAPI.SetPublicBlockChainAPI(publicBlockChainAPI)
+	ethAPI.SetPublicTransactionPoolAPI(publicTransactionPoolAPI)
+	ethAPI.SetPublicAccountAPI(publicAccountAPI)
+
 	return []rpc.API{
 		{
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicKlayAPI(apiBackend),
+			Service:   publicKlayAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicBlockChainAPI(apiBackend),
+			Service:   publicBlockChainAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicTransactionPoolAPI(apiBackend, nonceLock),
+			Service:   publicTransactionPoolAPI,
 			Public:    true,
 		}, {
 			Namespace: "txpool",
@@ -124,7 +135,7 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicAccountAPI(apiBackend.AccountManager()),
+			Service:   publicAccountAPI,
 			Public:    true,
 		}, {
 			Namespace: "personal",
