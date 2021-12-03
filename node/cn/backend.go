@@ -473,11 +473,11 @@ func (s *CN) APIs() []rpc.API {
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
+	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
-
-	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
+	ethAPI.SetPublicDownloaderAPI(publicDownloaderAPI)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -488,11 +488,6 @@ func (s *CN) APIs() []rpc.API {
 			Public:    true,
 		}, {
 			Namespace: "klay",
-			Version:   "1.0",
-			Service:   publicDownloaderAPI,
-			Public:    true,
-		}, {
-			Namespace: "eth",
 			Version:   "1.0",
 			Service:   publicDownloaderAPI,
 			Public:    true,

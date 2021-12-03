@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/node/cn/filters"
 )
@@ -8,8 +9,9 @@ import (
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
 // TODO-Klaytn: Removed unused variable
 type EthereumAPI struct {
-	publicFilterAPI   *filters.PublicFilterAPI
-	governanceKlayAPI *governance.GovernanceKlayAPI
+	publicFilterAPI     *filters.PublicFilterAPI
+	governanceKlayAPI   *governance.GovernanceKlayAPI
+	publicDownloaderAPI *downloader.PublicDownloaderAPI
 
 	publicKlayAPI            *PublicKlayAPI
 	publicBlockChainAPI      *PublicBlockChainAPI
@@ -22,7 +24,7 @@ type EthereumAPI struct {
 // Therefore, it is necessary to use APIs defined in two different packages(cn and api),
 // so those apis will be defined through a setter.
 func NewEthereumAPI() *EthereumAPI {
-	return &EthereumAPI{nil, nil, nil, nil, nil, nil}
+	return &EthereumAPI{nil, nil, nil, nil, nil, nil, nil}
 }
 
 // SetPublicFilterAPI sets publicFilterAPI
@@ -33,6 +35,11 @@ func (api *EthereumAPI) SetPublicFilterAPI(publicFilterAPI *filters.PublicFilter
 // SetGovernanceKlayAPI sets governanceKlayAPI
 func (api *EthereumAPI) SetGovernanceKlayAPI(governanceKlayAPI *governance.GovernanceKlayAPI) {
 	api.governanceKlayAPI = governanceKlayAPI
+}
+
+// SetPublicDownloaderAPI sets publicDownloaderAPI
+func (api *EthereumAPI) SetPublicDownloaderAPI(publicDownloaderAPI *downloader.PublicDownloaderAPI) {
+	api.publicDownloaderAPI = publicDownloaderAPI
 }
 
 // SetPublicKlayAPI sets publicKlayAPI
