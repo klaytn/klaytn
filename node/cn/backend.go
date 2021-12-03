@@ -465,17 +465,15 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	ethAPI := api.NewEthereumAPI(s)
+	ethAPI := api.NewEthereumAPI()
 	apis := api.GetAPIs(s.APIBackend, ethAPI)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
-	publicCNKlayAPI := NewPublicKlayAPI(s)
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
 
-	ethAPI.SetPublicCNKlayAPI(publicCNKlayAPI)
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
 
@@ -486,7 +484,7 @@ func (s *CN) APIs() []rpc.API {
 		{
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   publicCNKlayAPI,
+			Service:   NewPublicKlayAPI(s),
 			Public:    true,
 		}, {
 			Namespace: "klay",
