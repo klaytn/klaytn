@@ -103,6 +103,7 @@ type blockChain interface {
 type TxPoolConfig struct {
 	NoLocals           bool          // Whether local transaction handling should be disabled
 	AllowLocalAnchorTx bool          // if this is true, the txpool allow locally submitted anchor transactions
+	DenyRemoteTx       bool          // Denies remote transactions receiving from other peers
 	Journal            string        // Journal of local transactions to survive node restarts
 	JournalInterval    time.Duration // Time interval to regenerate the local transaction journal
 
@@ -920,6 +921,9 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // HandleTxMsg transfers transactions to a channel where handleTxMsg calls AddRemotes
 // to handle them. This is made not to wait from the results from TxPool.AddRemotes.
 func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
+	if pool.config.DenyRemoteTx {
+		return
+	}
 	senderCacher.recover(pool.signer, txs)
 	pool.txMsgCh <- txs
 }
