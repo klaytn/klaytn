@@ -456,6 +456,10 @@ var (
 		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server",
 		Value: rpc.ConcurrencyLimit,
 	}
+	RPCNonEthCompatibleFlag = cli.BoolFlag{
+		Name:  "rpc.eth.noncompatible",
+		Usage: "Disables the eth namespace API return formatting for compatibility",
+	}
 	WSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
 		Usage: "Enable the WS-RPC server",
@@ -1388,6 +1392,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	}
 	if ctx.GlobalIsSet(LightKDFFlag.Name) {
 		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
+	}
+	if ctx.GlobalIsSet(RPCNonEthCompatibleFlag.Name) {
+		rpc.NonEthCompatible = ctx.GlobalBool(RPCNonEthCompatibleFlag.Name)
 	}
 }
 
