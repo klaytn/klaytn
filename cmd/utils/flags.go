@@ -152,6 +152,10 @@ var (
 		Name:  "txpool.allow-local-anchortx",
 		Usage: "Allow locally submitted anchoring transactions",
 	}
+	TxPoolDenyRemoteTxFlag = cli.BoolFlag{
+		Name:  "txpool.deny.remotetx",
+		Usage: "Deny remote transaction receiving from other peers. Use only for emergency cases",
+	}
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
 		Usage: "Disk journal for local transaction to survive node restarts",
@@ -1397,6 +1401,9 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	}
 	if ctx.GlobalIsSet(TxPoolAllowLocalAnchorTxFlag.Name) {
 		cfg.AllowLocalAnchorTx = ctx.GlobalBool(TxPoolAllowLocalAnchorTxFlag.Name)
+	}
+	if ctx.GlobalIsSet(TxPoolDenyRemoteTxFlag.Name) {
+		cfg.DenyRemoteTx = ctx.GlobalBool(TxPoolDenyRemoteTxFlag.Name)
 	}
 	if ctx.GlobalIsSet(TxPoolJournalFlag.Name) {
 		cfg.Journal = ctx.GlobalString(TxPoolJournalFlag.Name)
