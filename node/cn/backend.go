@@ -477,7 +477,6 @@ func (s *CN) APIs() []rpc.API {
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
-	ethAPI.SetPublicDownloaderAPI(publicDownloaderAPI)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -492,7 +491,7 @@ func (s *CN) APIs() []rpc.API {
 			Service:   publicDownloaderAPI,
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   publicFilterAPI,
 			Public:    true,
