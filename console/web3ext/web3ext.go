@@ -39,10 +39,6 @@ var Modules = map[string]string{
 }
 
 const Eth_JS = `
-var blockWithConsensusInfoCall = function (args) {
-    return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "eth_getBlockWithConsensusInfoByHash" : "eth_getBlockWithConsensusInfoByNumber";
-};
-
 web3._extend({
 	property: 'eth',
 	methods: [
