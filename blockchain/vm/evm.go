@@ -221,6 +221,10 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		return nil, gas, nil
 	}
 
+	// Fail if we're trying to transfer from stopped account
+	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, caller.Address()) {
+		return nil, gas, errors.Wrap(types.ErrAccountStatusStopSender, "stopped account is "+caller.Address().String())
+	}
 	// Fail if we're trying to transfer to stopped account
 	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, addr) {
 		return nil, gas, errors.Wrap(types.ErrAccountStatusStopReceiver, "stopped account is "+addr.String())
@@ -323,6 +327,10 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 		return nil, gas, nil
 	}
 
+	// Fail if we're trying to transfer from stopped account
+	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, caller.Address()) {
+		return nil, gas, errors.Wrap(types.ErrAccountStatusStopSender, "stopped account is "+caller.Address().String())
+	}
 	// Fail if we're trying to transfer to stopped account
 	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, addr) {
 		return nil, gas, errors.Wrap(types.ErrAccountStatusStopReceiver, "stopped account is "+addr.String())
@@ -465,6 +473,11 @@ func (c *codeAndHash) Hash() common.Hash {
 
 // Create creates a new contract using code as deployment code.
 func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address, humanReadable bool, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+	// Fail if we're trying to transfer from stopped account
+	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, caller.Address()) {
+		return nil, common.Address{}, gas, errors.Wrap(types.ErrAccountStatusStopSender, "stopped account is "+caller.Address().String())
+	}
+
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if evm.depth > int(params.CallCreateDepth) {
