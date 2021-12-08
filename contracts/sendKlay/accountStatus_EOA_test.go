@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"math/big"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -85,4 +86,60 @@ func TestAccountStatus_EOA_ReceiptStatus_To(t *testing.T) {
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrStoppedAccountTo, t)
+}
+
+// 한 블록에 setAccountStatus과 ValueTransfer를 반복적으로 호출했을 때 AccountStatus가 Active일 때 tx가 성공한 것을 확인
+func TestAccountStatus_pending_setAccountStatus_valueTransfer(t *testing.T) {
+	env := generateSendKlayEOATestEnv(t)
+	defer env.backend.Close()
+
+	backend := env.backend
+	sender := env.sender[0]
+
+	var successTxs []*types.Transaction
+	var failTxs []*types.Transaction
+
+	senderNonce := uint64(0)
+
+	tryNum := 100
+	transferMax := math.MaxInt32
+
+	for i := 0; i <= tryNum; i++ {
+		transferAmount := rand.Intn(transferMax)
+
+		// AccountStatusUpdate tx (Active)
+		txAccountStatusActive, err := setAccountStatus(backend, sender, account.AccountStatusActive, senderNonce, t)
+		assert.NoError(t, err)
+		successTxs = append(successTxs, txAccountStatusActive)
+		senderNonce++
+
+		// value transfer tx (성공)
+		txSuccess, err := ValueTransfer(backend, sender, sender.From, big.NewInt(int64(transferAmount)), senderNonce, t)
+		assert.NoError(t, err)
+		successTxs = append(successTxs, txSuccess)
+		senderNonce++
+
+		// AccountStatusUpdate tx (Stop)
+		txAccountStatusStop, err := setAccountStatus(backend, sender, account.AccountStatusStop, senderNonce, t)
+		assert.NoError(t, err)
+		successTxs = append(successTxs, txAccountStatusStop)
+		senderNonce++
+
+		// value transfer tx (실패)
+		txFail, err := ValueTransfer(backend, sender, sender.From, big.NewInt(int64(transferAmount)), senderNonce, t)
+		assert.NoError(t, err)
+		failTxs = append(failTxs, txFail)
+		senderNonce++
+	}
+
+	// 블록 생성
+	backend.Commit()
+
+	// 트랜잭션 성공/실패값 확인
+	for _, tx := range successTxs {
+		CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+	}
+	for _, tx := range failTxs {
+		CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrStoppedAccountFrom, t)
+	}
 }
