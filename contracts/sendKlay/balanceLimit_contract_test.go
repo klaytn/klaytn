@@ -2,6 +2,7 @@ package sendKlay
 
 import (
 	"context"
+	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -57,7 +58,7 @@ func TestBalanceLimit_contract_payable(t *testing.T) {
 
 	// contract에 InitialBalanceLimit보다 큰 값을 전송
 	transferValue := new(big.Int).Mul(initialBalanceLimit, big.NewInt(10))
-	tx, err := ValueTransfer(backend, sender, contractAddress, transferValue, t)
+	tx, err := ValueTransfer(backend, sender, contractAddress, transferValue, math.MaxUint64, t)
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)

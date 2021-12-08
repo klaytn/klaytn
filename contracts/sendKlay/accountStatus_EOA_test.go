@@ -2,6 +2,7 @@ package sendKlay
 
 import (
 	"context"
+	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -35,7 +36,7 @@ func TestAccountStatus_setAccountStatus_newAccount(t *testing.T) {
 	setStatus := account.AccountStatusStop
 
 	// setBalanceLimit 호출
-	tx, err := setAccountStatus(backend, sender, setStatus, t)
+	tx, err := setAccountStatus(backend, sender, setStatus, math.MaxUint64, t)
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -55,12 +56,12 @@ func TestAccountStatus_EOA_ReceiptStatus_From(t *testing.T) {
 	sender := env.sender[0]
 	receiver := env.receiver[0]
 
-	tx, err := setAccountStatus(backend, sender, account.AccountStatusStop, t)
+	tx, err := setAccountStatus(backend, sender, account.AccountStatusStop, math.MaxUint64, t)
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-	tx, err = ValueTransfer(backend, sender, receiver.From, big.NewInt(0), t)
+	tx, err = ValueTransfer(backend, sender, receiver.From, big.NewInt(0), math.MaxUint64, t)
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrStoppedAccountFrom, t)
@@ -75,12 +76,12 @@ func TestAccountStatus_EOA_ReceiptStatus_To(t *testing.T) {
 	sender := env.sender[0]
 	receiver := env.receiver[0]
 
-	tx, err := setAccountStatus(backend, receiver, account.AccountStatusStop, t)
+	tx, err := setAccountStatus(backend, receiver, account.AccountStatusStop, math.MaxUint64, t)
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
-	tx, err = ValueTransfer(backend, sender, receiver.From, big.NewInt(0), t)
+	tx, err = ValueTransfer(backend, sender, receiver.From, big.NewInt(0), math.MaxUint64, t)
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrStoppedAccountTo, t)

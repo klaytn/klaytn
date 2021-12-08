@@ -10,6 +10,7 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
+	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,7 +38,7 @@ func TestBalanceLimit_EOA_setBalanceLimit_newAccount(t *testing.T) {
 	balanceLimit := big.NewInt(100)
 
 	// setBalanceLimit 호출
-	tx := setBalanceLimit(backend, sender, balanceLimit, t)
+	tx := setBalanceLimit(backend, sender, balanceLimit, math.MaxUint64, t)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 
@@ -60,7 +61,7 @@ func TestBalanceLimit_EOA_InitialBalanceLimit(t *testing.T) {
 	min := 0
 	max := math.MaxInt32
 	transferAmount := big.NewInt(int64(rand.Intn(max-min) + min))
-	tx, err := ValueTransfer(backend, sender, receiver.From, transferAmount, t)
+	tx, err := ValueTransfer(backend, sender, receiver.From, transferAmount, math.MaxUint64, t)
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
