@@ -231,6 +231,8 @@ func TestGasCalculation(t *testing.T) {
 		reservoir.AddNonce()
 	}
 
+	usedGas := uint64(0)
+	calculatedGasUsed := uint64(0)
 	for _, f := range testFunctions {
 		for _, sender := range accountTypes {
 			toAccount := reservoir
@@ -256,7 +258,7 @@ func TestGasCalculation(t *testing.T) {
 				t.Run(Name, func(t *testing.T) {
 					tx, intrinsic := f.genTx(t, signer, sender.account, toAccount, nil, gasPrice)
 					acocuntValidationGas := sender.account.GetValidationGas(senderRole)
-					testGasValidation(t, bcdata, tx, intrinsic+acocuntValidationGas)
+					testGasValidation(t, bcdata, tx, intrinsic+acocuntValidationGas, &usedGas, &calculatedGasUsed)
 				})
 			} else {
 				// For FeeDelegated(WithRatio) Transactions
@@ -265,7 +267,7 @@ func TestGasCalculation(t *testing.T) {
 					t.Run(Name, func(t *testing.T) {
 						tx, intrinsic := f.genTx(t, signer, sender.account, toAccount, payer.account, gasPrice)
 						acocuntsValidationGas := sender.account.GetValidationGas(senderRole) + payer.account.GetValidationGas(accountkey.RoleFeePayer)
-						testGasValidation(t, bcdata, tx, intrinsic+acocuntsValidationGas)
+						testGasValidation(t, bcdata, tx, intrinsic+acocuntsValidationGas, &usedGas, &calculatedGasUsed)
 					})
 				}
 			}
@@ -274,11 +276,15 @@ func TestGasCalculation(t *testing.T) {
 	}
 }
 
-func testGasValidation(t *testing.T, bcdata *BCData, tx *types.Transaction, validationGas uint64) {
-	receipt, gas, err := applyTransaction(t, bcdata, tx)
+func testGasValidation(t *testing.T, bcdata *BCData, tx *types.Transaction, validationGas uint64, usedGas *uint64, calculatedGasUsed *uint64) {
+	receipt, gas, err := applyTransactionWithUsedGas(t, bcdata, tx, usedGas)
 	assert.Equal(t, nil, err)
 
 	assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
+
+	*calculatedGasUsed += receipt.GasUsed
+	assert.Equal(t, true, receipt.GasUsed <= receipt.CumulativeGasUsed)
+	assert.Equal(t, *calculatedGasUsed, receipt.CumulativeGasUsed)
 
 	assert.Equal(t, validationGas, gas)
 }

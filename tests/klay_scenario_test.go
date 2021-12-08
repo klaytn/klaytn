@@ -2001,7 +2001,15 @@ func compileSolidity(filename string) (code []string, abiStr []string) {
 
 // applyTransaction setups variables to call block.ApplyTransaction() for tests.
 // It directly returns values from block.ApplyTransaction().
+// This function uses uint64(0) as the default usedGas value.
 func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*types.Receipt, uint64, error) {
+	usedGas := uint64(0)
+	return applyTransactionWithUsedGas(t, bcdata, tx, &usedGas)
+}
+
+// applyTransaction setups variables to call block.ApplyTransaction() for tests.
+// It directly returns values from block.ApplyTransaction().
+func applyTransactionWithUsedGas(t *testing.T, bcdata *BCData, tx *types.Transaction, usedGas *uint64) (*types.Receipt, uint64, error) {
 	state, err := bcdata.bc.State()
 	assert.Equal(t, nil, err)
 
@@ -2018,7 +2026,6 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
 		BlockScore: big.NewInt(0),
 	}
-	usedGas := uint64(0)
-	receipt, gas, _, err := bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, &usedGas, vmConfig)
+	receipt, gas, _, err := bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, usedGas, vmConfig)
 	return receipt, gas, err
 }

@@ -101,6 +101,8 @@ type Receipt struct {
 	TxHash          common.Hash    `json:"transactionHash" gencodec:"required"`
 	ContractAddress common.Address `json:"contractAddress"`
 	GasUsed         uint64         `json:"gasUsed" gencodec:"required"`
+
+	CumulativeGasUsed uint64 `json:"cumulativeGasUsed"`
 }
 
 type receiptMarshaling struct {
@@ -126,11 +128,12 @@ type receiptStorageRLP struct {
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
-func NewReceipt(status uint, txHash common.Hash, gasUsed uint64) *Receipt {
+func NewReceipt(status uint, txHash common.Hash, gasUsed uint64, cumulativeGasUsed uint64) *Receipt {
 	return &Receipt{
-		Status:  status,
-		TxHash:  txHash,
-		GasUsed: gasUsed,
+		Status:            status,
+		TxHash:            txHash,
+		GasUsed:           gasUsed,
+		CumulativeGasUsed: cumulativeGasUsed,
 	}
 }
 
