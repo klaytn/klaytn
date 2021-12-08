@@ -40,6 +40,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.KeyStoreDirFlag,
 	utils.TxPoolNoLocalsFlag,
 	utils.TxPoolAllowLocalAnchorTxFlag,
+	utils.TxPoolDenyRemoteTxFlag,
 	utils.TxPoolJournalFlag,
 	utils.TxPoolJournalIntervalFlag,
 	utils.TxPoolPriceLimitFlag,

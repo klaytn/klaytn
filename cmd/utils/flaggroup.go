@@ -66,6 +66,7 @@ var FlagGroups = []FlagGroup{
 		Flags: []cli.Flag{
 			TxPoolNoLocalsFlag,
 			TxPoolAllowLocalAnchorTxFlag,
+			TxPoolDenyRemoteTxFlag,
 			TxPoolJournalFlag,
 			TxPoolJournalIntervalFlag,
 			TxPoolPriceLimitFlag,
