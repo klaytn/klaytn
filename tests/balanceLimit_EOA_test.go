@@ -13,6 +13,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -92,7 +93,7 @@ func ValueTransfer(sender *TestAccountType, receiver *TestAccountType, amount *b
 	return tx
 }
 
-func BalanceLimitUpdate(account *TestAccountType, balanceLimit *big.Int, signer types.EIP155Signer, t *testing.T) *types.Transaction {
+func BalanceLimitUpdate(account *TestAccountType, balanceLimit *big.Int, signer types.EIP155Signer, keys []*ecdsa.PrivateKey, t *testing.T) *types.Transaction {
 	valueMapForCreation, _ := genMapForTxTypes(account, nil, types.TxTypeBalanceLimitUpdate)
 	valueMapForCreation[types.TxValueKeyGasLimit] = uint64(0) // BalanceLimit does not require gas
 	valueMapForCreation[types.TxValueKeyGasPrice] = big.NewInt(0)
@@ -100,6 +101,10 @@ func BalanceLimitUpdate(account *TestAccountType, balanceLimit *big.Int, signer 
 
 	tx, err := types.NewTransactionWithMap(types.TxTypeBalanceLimitUpdate, valueMapForCreation)
 	assert.Equal(t, nil, err)
+
+	if keys == nil {
+		keys = account.Keys
+	}
 
 	err = tx.SignWithKeys(signer, account.Keys)
 	assert.Equal(t, nil, err)
@@ -183,7 +188,7 @@ func TestBalanceLimit_EOA_setBalanceLimit(t *testing.T) {
 
 	// B에 setBalanceLimit을 이용하여 InitialBalanceLimit 더 높은 값(=NewBalanceLimit)으로 한도 변경
 	{
-		tx := BalanceLimitUpdate(receiver, newBalanceLimit, signer, t)
+		tx := BalanceLimitUpdate(receiver, newBalanceLimit, signer, nil, t)
 
 		txs := []*types.Transaction{tx}
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
@@ -255,7 +260,7 @@ func TestBalanceLimit_EOA_klay_account(t *testing.T) {
 
 	// setBalanceLimit 호출 (셋팅하는 값은 rand로)
 	{
-		tx := BalanceLimitUpdate(sender, newBalanceLimit, signer, t)
+		tx := BalanceLimitUpdate(sender, newBalanceLimit, signer, nil, t)
 
 		txs := []*types.Transaction{tx}
 		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
