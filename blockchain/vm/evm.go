@@ -31,7 +31,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
-	"github.com/pkg/errors"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -223,11 +222,11 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 
 	// Fail if we're trying to transfer from stopped account
 	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, caller.Address()) {
-		return nil, gas, errors.Wrap(types.ErrAccountStatusStopSender, "stopped account is "+caller.Address().String())
+		return nil, gas, types.ErrAccountStatusStopSender
 	}
 	// Fail if we're trying to transfer to stopped account
 	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, addr) {
-		return nil, gas, errors.Wrap(types.ErrAccountStatusStopReceiver, "stopped account is "+addr.String())
+		return nil, gas, types.ErrAccountStatusStopReceiver
 	}
 
 	// Fail if we're trying to execute above the call depth limit
@@ -329,11 +328,11 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 
 	// Fail if we're trying to transfer from stopped account
 	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, caller.Address()) {
-		return nil, gas, errors.Wrap(types.ErrAccountStatusStopSender, "stopped account is "+caller.Address().String())
+		return nil, gas, types.ErrAccountStatusStopSender
 	}
 	// Fail if we're trying to transfer to stopped account
 	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, addr) {
-		return nil, gas, errors.Wrap(types.ErrAccountStatusStopReceiver, "stopped account is "+addr.String())
+		return nil, gas, types.ErrAccountStatusStopReceiver
 	}
 
 	// Fail if we're trying to execute above the call depth limit
@@ -475,7 +474,7 @@ func (c *codeAndHash) Hash() common.Hash {
 func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address, humanReadable bool, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
 	// Fail if we're trying to transfer from stopped account
 	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, caller.Address()) {
-		return nil, common.Address{}, gas, errors.Wrap(types.ErrAccountStatusStopSender, "stopped account is "+caller.Address().String())
+		return nil, common.Address{}, gas, types.ErrAccountStatusStopSender
 	}
 
 	// Depth check execution. Fail if we're trying to execute above the
