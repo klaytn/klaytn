@@ -91,9 +91,11 @@ const (
 	// The new errors for CBDC is set after ReceiptStatusLast.
 	// If they are set before ReceiptStatusLast, there could be conflict
 	// in receipt status with public klaytn repo.
+	ReceiptStatusCBDCErrStart          = uint(0xcbdc000)
 	ReceiptStatusErrStoppedAccountFrom = uint(0xcbdc001)
 	ReceiptStatusErrStoppedAccountTo   = uint(0xcbdc002)
 	ReceiptStatusErrExceedBalanceLimit = uint(0xcbdc003)
+	ReceiptStatusCBDCErrLast           = uint(0xcbdc004)
 )
 
 // Receipt represents the results of a transaction.

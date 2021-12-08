@@ -70,3 +70,25 @@ func TestBalanceLimit_EOA_InitialBalanceLimit(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, account.GetInitialBalanceLimit(), limit)
 }
+
+// txError로 ReceiptStatusErrExceedBalanceLimit가 발생하는지 확인
+func TestBalanceLimit_EOA_ReceiptStatus(t *testing.T) {
+	env := generateSendKlayEOATestEnv(t)
+	defer env.backend.Close()
+
+	backend := env.backend
+	sender := env.sender[0]
+	receiver := env.receiver[0]
+
+	balanceLimit := big.NewInt(100)
+	transferAmount := big.NewInt(200)
+
+	tx := setBalanceLimit(backend, receiver, balanceLimit, t)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err := ValueTransfer(backend, sender, receiver.From, transferAmount, t)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrExceedBalanceLimit, t)
+}

@@ -2,6 +2,7 @@ package sendKlay
 
 import (
 	"context"
+	"math/big"
 	"testing"
 	"time"
 
@@ -43,4 +44,44 @@ func TestAccountStatus_setAccountStatus_newAccount(t *testing.T) {
 	status, err := backend.AccountStatusAt(context.Background(), sender.From, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, setStatus, status)
+}
+
+// txError로 ReceiptStatusErrStoppedAccountFrom 발생하는지 확인
+func TestAccountStatus_EOA_ReceiptStatus_From(t *testing.T) {
+	env := generateSendKlayEOATestEnv(t)
+	defer env.backend.Close()
+
+	backend := env.backend
+	sender := env.sender[0]
+	receiver := env.receiver[0]
+
+	tx, err := setAccountStatus(backend, sender, account.AccountStatusStop, t)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = ValueTransfer(backend, sender, receiver.From, big.NewInt(0), t)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrStoppedAccountFrom, t)
+}
+
+// txError로 ReceiptStatusErrStoppedAccountTo 발생하는지 확인
+func TestAccountStatus_EOA_ReceiptStatus_To(t *testing.T) {
+	env := generateSendKlayEOATestEnv(t)
+	defer env.backend.Close()
+
+	backend := env.backend
+	sender := env.sender[0]
+	receiver := env.receiver[0]
+
+	tx, err := setAccountStatus(backend, receiver, account.AccountStatusStop, t)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
+
+	tx, err = ValueTransfer(backend, sender, receiver.From, big.NewInt(0), t)
+	assert.NoError(t, err)
+	backend.Commit()
+	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusErrStoppedAccountTo, t)
 }

@@ -38,6 +38,16 @@ func TestGetVMerrFromReceiptStatus(t *testing.T) {
 	if err.Error() != expectedErr.Error() {
 		t.Fatalf("Invalid err, want %s, got %s", expectedErr, err)
 	}
+	err = GetVMerrFromReceiptStatus(types.ReceiptStatusCBDCErrStart)
+	expectedErr = ErrInvalidReceiptStatus
+	if err.Error() != expectedErr.Error() {
+		t.Fatalf("Invalid err, want %s, got %s", expectedErr, err)
+	}
+	err = GetVMerrFromReceiptStatus(types.ReceiptStatusCBDCErrLast)
+	expectedErr = ErrInvalidReceiptStatus
+	if err.Error() != expectedErr.Error() {
+		t.Fatalf("Invalid err, want %s, got %s", expectedErr, err)
+	}
 
 	err = GetVMerrFromReceiptStatus(types.ReceiptStatusSuccessful)
 	if err != nil {
@@ -80,5 +90,9 @@ func TestPrintErrorCodeTable(t *testing.T) {
 		for i := uint(types.ReceiptStatusErrDefault); i < types.ReceiptStatusLast; i++ {
 			fmt.Printf("|0x%02x|%s|\n", i, receiptstatus2errTxFailed[i])
 		}
+		for i := uint(types.ReceiptStatusCBDCErrStart) + 1; i < types.ReceiptStatusCBDCErrLast; i++ {
+			fmt.Printf("|0x%02x|%s|\n", i, receiptstatus2errTxFailed[i])
+		}
+
 	}
 }
