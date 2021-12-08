@@ -284,7 +284,7 @@ func (t *TxInternalDataChainDataAnchoring) Execute(sender ContractRef, vm VM, st
 func (t *TxInternalDataChainDataAnchoring) MakeRPCOutput() map[string]interface{} {
 	decoded, err := DecodeAnchoringDataToJSON(t.Payload)
 	if err != nil {
-		logger.Error("decode anchor payload", "err", err)
+		logger.Trace("decode anchor payload", "err", err)
 	}
 
 	return map[string]interface{}{
@@ -302,7 +302,7 @@ func (t *TxInternalDataChainDataAnchoring) MakeRPCOutput() map[string]interface{
 func (t *TxInternalDataChainDataAnchoring) MarshalJSON() ([]byte, error) {
 	decoded, err := DecodeAnchoringDataToJSON(t.Payload)
 	if err != nil {
-		logger.Error("decode anchor payload", "err", err)
+		logger.Trace("decode anchor payload", "err", err)
 	}
 	return json.Marshal(TxInternalDataChainDataAnchoringJSON{
 		t.Type(),
