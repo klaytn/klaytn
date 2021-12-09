@@ -22,6 +22,8 @@ package node
 
 import (
 	"bytes"
+	"encoding/json"
+	"github.com/klaytn/klaytn/networks/p2p/discover"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -154,4 +156,112 @@ func TestNodeKeyPersistency(t *testing.T) {
 			t.Fatalf("ephemeral node key persisted to disk")
 		}
 	*/
+}
+
+func TestConfig_ParsePersistentNodes(t *testing.T) {
+	type expect struct {
+		node  string
+		proxy string
+	}
+	tests := []struct {
+		name        string
+		nodes       []string
+		proxyURL    string
+		expects     []expect
+		assertNodes func(t *testing.T, nodes []*discover.Node)
+	}{
+		{
+			name: "success",
+			nodes: []string{
+				"kni://a3fd567e0e1bb9f7d7a20385b797563883ebb9d45ff6f05a588b56256f46bd649b7ecc8e3e17cc50df4599c1809463e66ad964f7a3fb6cf4c768c25d647f2c02@1.1.1.1:3000",
+				"enode://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@2.2.2.2:52150",
+			},
+			proxyURL: "",
+			expects: []expect{
+				{
+					"kni://a3fd567e0e1bb9f7d7a20385b797563883ebb9d45ff6f05a588b56256f46bd649b7ecc8e3e17cc50df4599c1809463e66ad964f7a3fb6cf4c768c25d647f2c02@1.1.1.1:3000",
+					"",
+				}, {
+					"kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@2.2.2.2:52150",
+					"",
+				},
+			},
+		}, {
+			name: "success with ignored invalid kni",
+			nodes: []string{
+				"kni://a3fd567e0e1bb9f7d7a20385b797563883ebb9d45ff6f05a588b56256f46bd649b7ecc8e3e17cc50df4599c1809463e66ad964f7a3fb6cf4c768c25d647f2c02@1.1.1.1:3000",
+				"unknown://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@1234.com:52150",
+				"enode://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@2.2.2.2:52150",
+			},
+			proxyURL: "",
+			expects: []expect{
+				{
+					"kni://a3fd567e0e1bb9f7d7a20385b797563883ebb9d45ff6f05a588b56256f46bd649b7ecc8e3e17cc50df4599c1809463e66ad964f7a3fb6cf4c768c25d647f2c02@1.1.1.1:3000",
+					"",
+				}, {
+					"kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@2.2.2.2:52150",
+					"",
+				},
+			},
+		}, {
+			name: "success with proxy",
+			nodes: []string{
+				"kni://a3fd567e0e1bb9f7d7a20385b797563883ebb9d45ff6f05a588b56256f46bd649b7ecc8e3e17cc50df4599c1809463e66ad964f7a3fb6cf4c768c25d647f2c02@1.1.1.1:3000",
+				"enode://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@2.2.2.2:52150",
+			},
+			proxyURL: "socks5://10.100.10.1:3500",
+			expects: []expect{
+				{
+					"kni://a3fd567e0e1bb9f7d7a20385b797563883ebb9d45ff6f05a588b56256f46bd649b7ecc8e3e17cc50df4599c1809463e66ad964f7a3fb6cf4c768c25d647f2c02@1.1.1.1:3000",
+					"socks5://10.100.10.1:3500",
+				}, {
+					"kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@2.2.2.2:52150",
+					"socks5://10.100.10.1:3500",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := datadirStaticNodes
+			conf := setupNodeConfigs(t, tt.nodes, path)
+			defer os.RemoveAll(conf.DataDir)
+			conf.P2P.ProxyURL = tt.proxyURL
+
+			nodes := conf.parsePersistentNodes(conf.ResolvePath(path))
+
+			if len(tt.expects) != len(nodes) {
+				t.Fatalf("expected nodes: %d, got: %d", len(tt.expects), len(nodes))
+			}
+			for i, n := range nodes {
+				if tt.expects[i].node != n.String() {
+					t.Fatalf("#%d expected node: %s, got: %s", i, tt.expects[i].node, n.String())
+				}
+				if tt.expects[i].proxy != n.ProxyURL {
+					t.Fatalf("#%d expected proxy: %s, got: %s", i, tt.expects[i].proxy, n.ProxyURL)
+				}
+			}
+		})
+	}
+}
+
+func setupNodeConfigs(t *testing.T, nodes []string, nodepath string) *Config {
+	// Setup temporary directory.
+	dir, err := ioutil.TempDir("", "node-config-test")
+	if err != nil {
+		t.Fatalf("failed to setup temporary directory: %v", err)
+	}
+	c := &Config{DataDir: dir}
+	if err := os.MkdirAll(c.ResolvePath(""), os.ModePerm); err != nil {
+		t.Fatalf("failed to setup temporary data directory: %v", err)
+	}
+	// Setup node config files.
+	if nodepath != "" {
+		nodeBytes, _ := json.Marshal(&nodes)
+		if err := ioutil.WriteFile(c.ResolvePath(nodepath), nodeBytes, os.ModePerm); err != nil {
+			t.Fatalf("failed to write node configs %s: %v", c.ResolvePath(nodepath), err)
+		}
+	}
+	return c
 }

@@ -601,7 +601,7 @@ type dialError struct {
 // dial performs the actual connection attempt.
 func (t *dialTask) dial(srv Server, dest *discover.Node) error {
 	dialTryCounter.Inc(1)
-	logger.Debug("[Dial] Dialing node", "id", dest.ID, "addr", &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)})
+	logger.Debug("[Dial] Dialing node", "id", dest.ID, "addr", &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)}, "proxy", dest.ProxyURL)
 
 	fd, err := srv.Dial(dest)
 	if err != nil {
@@ -619,7 +619,7 @@ func (t *dialTask) dialMulti(srv Server, dest *discover.Node) error {
 	for _, tcp := range dest.TCPs {
 		addresses = append(addresses, &net.TCPAddr{IP: dest.IP, Port: int(tcp)})
 	}
-	logger.Debug("[Dial] Dialing node", "id", dest.ID, "addresses", addresses)
+	logger.Debug("[Dial] Dialing node", "id", dest.ID, "addresses", addresses, "proxy", dest.ProxyURL)
 
 	fds, err := srv.DialMulti(dest)
 	if err != nil {

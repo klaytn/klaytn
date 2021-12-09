@@ -49,7 +49,7 @@ func NewPrivateAdminAPI(node *Node) *PrivateAdminAPI {
 // addPeerInternal does common part for AddPeer.
 func addPeerInternal(server p2p.Server, url string, onParentChain bool) (*discover.Node, error) {
 	// Try to add the url as a static peer and return
-	node, err := discover.ParseNode(url)
+	node, err := discover.ParseNodeWithProxy(url, server.GetProxyURL())
 	if err != nil {
 		return nil, fmt.Errorf("invalid kni: %v", err)
 	}
@@ -81,7 +81,7 @@ func (api *PrivateAdminAPI) RemovePeer(url string) (bool, error) {
 		return false, ErrNodeStopped
 	}
 	// Try to remove the url as a static peer and return
-	node, err := discover.ParseNode(url)
+	node, err := discover.ParseNodeWithProxy(url, server.GetProxyURL())
 	if err != nil {
 		return false, fmt.Errorf("invalid kni: %v", err)
 	}
