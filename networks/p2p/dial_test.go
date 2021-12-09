@@ -23,6 +23,7 @@ package p2p
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/nettest"
 	"net"
 	"reflect"
@@ -861,34 +862,30 @@ func TestDialResolve(t *testing.T) {
 
 func TestTCPDialer_Dial(t *testing.T) {
 	ln, err := nettest.NewLocalListener("tcp")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer ln.Close()
 	ip, port, err := splitHostPort(ln.Addr().String())
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	dialer := TCPDialer{Dialer: &net.Dialer{}}
 	c, err := dialer.Dial(discover.NewNode(uintID(1), net.ParseIP(ip), 0, uint16(port), nil, discover.NodeTypeCN))
 
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	c.Close()
 }
 
 func TestTCPDialer_DialViaProxy(t *testing.T) {
 	ln, err := nettest.NewLocalListener("tcp")
+	assert.NoError(t, err)
 	wg := sync.WaitGroup{}
-	if err != nil {
-		t.Fatal(err)
-	}
+	connected := false
 	wg.Add(1)
 	go func() {
 		// TODO: require assertion of socks5 protocol such as auth methods?
-		defer wg.Done()
+		defer func() {
+			connected = true
+			wg.Done()
+		}()
 		if conn, _ := ln.Accept(); conn != nil {
 			conn.Close()
 		}
@@ -903,7 +900,9 @@ func TestTCPDialer_DialViaProxy(t *testing.T) {
 		discover.NodeTypeCN,
 		fmt.Sprintf("socks5://%s", ln.Addr().String()),
 	))
+
 	wg.Wait()
+	assert.True(t, connected)
 }
 
 func TestTCPDialer_DialMulti(t *testing.T) {
@@ -913,14 +912,11 @@ func TestTCPDialer_DialMulti(t *testing.T) {
 	)
 	for i := 0; i < 3; i++ {
 		ln, err := nettest.NewLocalListener("tcp")
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, err)
 		listeners = append(listeners, ln)
+
 		_, port, err := splitHostPort(ln.Addr().String())
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, err)
 		ports = append(ports, uint16(port))
 	}
 	defer func() {
@@ -939,12 +935,8 @@ func TestTCPDialer_DialMulti(t *testing.T) {
 		discover.NodeTypeCN),
 	)
 
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(conns) != len(listeners) {
-		t.Errorf("want connections: %d, got: %d", len(listeners), len(conns))
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, len(listeners), len(conns))
 	for _, conn := range conns {
 		conn.Close()
 	}

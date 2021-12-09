@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -231,16 +232,10 @@ func TestConfig_ParsePersistentNodes(t *testing.T) {
 
 			nodes := conf.parsePersistentNodes(conf.ResolvePath(path))
 
-			if len(tt.expects) != len(nodes) {
-				t.Fatalf("expected nodes: %d, got: %d", len(tt.expects), len(nodes))
-			}
+			assert.Equal(t, len(tt.expects), len(nodes))
 			for i, n := range nodes {
-				if tt.expects[i].node != n.String() {
-					t.Fatalf("#%d expected node: %s, got: %s", i, tt.expects[i].node, n.String())
-				}
-				if tt.expects[i].proxy != n.ProxyURL {
-					t.Fatalf("#%d expected proxy: %s, got: %s", i, tt.expects[i].proxy, n.ProxyURL)
-				}
+				assert.Equal(t, tt.expects[i].node, n.String())
+				assert.Equal(t, tt.expects[i].proxy, n.ProxyURL)
 			}
 		})
 	}
@@ -249,19 +244,16 @@ func TestConfig_ParsePersistentNodes(t *testing.T) {
 func setupNodeConfigs(t *testing.T, nodes []string, nodepath string) *Config {
 	// Setup temporary directory.
 	dir, err := ioutil.TempDir("", "node-config-test")
-	if err != nil {
-		t.Fatalf("failed to setup temporary directory: %v", err)
-	}
+	assert.NoError(t, err)
 	c := &Config{DataDir: dir}
-	if err := os.MkdirAll(c.ResolvePath(""), os.ModePerm); err != nil {
-		t.Fatalf("failed to setup temporary data directory: %v", err)
-	}
+	err = os.MkdirAll(c.ResolvePath(""), os.ModePerm)
+	assert.NoError(t, err)
+
 	// Setup node config files.
 	if nodepath != "" {
 		nodeBytes, _ := json.Marshal(&nodes)
-		if err := ioutil.WriteFile(c.ResolvePath(nodepath), nodeBytes, os.ModePerm); err != nil {
-			t.Fatalf("failed to write node configs %s: %v", c.ResolvePath(nodepath), err)
-		}
+		err := ioutil.WriteFile(c.ResolvePath(nodepath), nodeBytes, os.ModePerm)
+		assert.NoError(t, err)
 	}
 	return c
 }

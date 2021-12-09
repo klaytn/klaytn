@@ -71,10 +71,11 @@ func ExampleNewNode() {
 }
 
 var parseNodeTests = []struct {
-	rawurl, proxyurl string
-	wantError        string
-	wantResult       *Node
-	wantNodeString   string
+	rawurl         string
+	proxyurl       string
+	wantError      string
+	wantResult     *Node
+	wantNodeString string
 }{
 	{
 		rawurl:    "http://foobar",
