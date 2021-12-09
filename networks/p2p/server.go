@@ -166,6 +166,10 @@ type Config struct {
 	NetworkID uint64
 
 	UseNodeWhitelist bool
+
+	// ProxyURL is the endpoint of proxy server when connecting the peers
+	// such as socks5 proxy url "socks5://user:pass@10.100.21.8:30303".
+	ProxyURL string
 }
 
 // NewServer returns a new Server interface.
@@ -209,7 +213,7 @@ func (srv *BaseServer) UpdatePeerWithNewWhitelist(dialstate dialer, peers map[di
 		return
 	}
 
-	newWhitelistMap := genWhitelistMap(newWhitelist)
+	newWhitelistMap := genWhitelistMap(newWhitelist, srv.Config.ProxyURL)
 	// remove peers not on the whitelist
 	for _, peer := range peers {
 		if _, exist := newWhitelistMap[peer.ID()]; !exist {
@@ -259,14 +263,14 @@ func (srv *BaseServer) IsOnTheWhitelist(nodeID discover.NodeID) bool {
 
 // GetWhitelistMap returns a whitelist map.
 func (srv *BaseServer) GetWhitelistMap() map[discover.NodeID]*discover.Node {
-	return genWhitelistMap(srv.wlg.GetNodeWhitelist())
+	return genWhitelistMap(srv.wlg.GetNodeWhitelist(), srv.Config.ProxyURL)
 }
 
 // genWhitelistMap generates a whitelist nodeID-node map with the given whitelist kni-existence map,
-func genWhitelistMap(whitelist []string) map[discover.NodeID]*discover.Node {
+func genWhitelistMap(whitelist []string, proxyURL string) map[discover.NodeID]*discover.Node {
 	whitelistMap := make(map[discover.NodeID]*discover.Node)
 	for _, kni := range whitelist {
-		n, err := discover.ParseNode(kni)
+		n, err := discover.ParseNodeWithProxy(kni, proxyURL)
 		if err != nil {
 			logger.Error("failed to parse whitelist node info, invalid kni",
 				"err", err, "kni", kni)
@@ -298,6 +302,10 @@ func (srv *BaseServer) NeedToCheckNodeWhitelist() bool {
 	}
 	// it checks node-whitelist only if we're not synchronising-it means the node has the latest block
 	return !srv.synchroniseChecker.Synchronising()
+}
+
+func (srv *BaseServer) GetProxyURL() string {
+	return srv.Config.ProxyURL
 }
 
 // Server manages all peer connections.
@@ -393,6 +401,9 @@ type Server interface {
 	// SetSynchronisingChecker sets synchronisingChecker which returns whether the node
 	// is currently synchronising.
 	SetSynchronisingChecker(sc SynchronisingChecker)
+
+	// GetProxyURL returns the proxy url.
+	GetProxyURL() string
 }
 
 // MultiChannelServer is a server that uses a multi channel.
@@ -792,7 +803,7 @@ running:
 			// This channel is used by AddPeer to add to the
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
-			srv.logger.Debug("Adding static node", "node", n)
+			srv.logger.Debug("Adding static node", "node", n, "proxyURL", srv.Config.ProxyURL)
 			dialstate.addStatic(n)
 		case n := <-srv.removestatic:
 			// This channel is used by RemovePeer to send a

@@ -215,6 +215,7 @@ var FlagGroups = []FlagGroup{
 			NetworkIdFlag,
 			BaobabFlag,
 			CypressFlag,
+			ProxyFlag,
 		},
 	},
 	{

@@ -88,6 +88,7 @@ var CommonNodeFlags = []cli.Flag{
 	utils.MaxConnectionsFlag,
 	utils.MaxRequestContentLengthFlag,
 	utils.EnableNodeWhitelistFlag,
+	utils.ProxyFlag,
 	utils.MaxPendingPeersFlag,
 	utils.TargetGasLimitFlag,
 	utils.NATFlag,

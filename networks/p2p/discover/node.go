@@ -45,12 +45,13 @@ const NodeIDBits = 512
 // Node represents a host on the network.
 // The fields of Node may not be modified.
 type Node struct {
-	IP    net.IP   // len 4 for IPv4 or 16 for IPv6
-	UDP   uint16   // discovery port numbers
-	TCP   uint16   // TCP listening port number
-	TCPs  []uint16 // TCP listening port number including both main port and subports
-	ID    NodeID   // the node's public key
-	NType NodeType // the node's type (cn, pn, en, bn)
+	IP       net.IP   // len 4 for IPv4 or 16 for IPv6
+	UDP      uint16   // discovery port numbers
+	TCP      uint16   // TCP listening port number
+	TCPs     []uint16 // TCP listening port number including both main port and subports
+	ID       NodeID   // the node's public key
+	NType    NodeType // the node's type (cn, pn, en, bn)
+	ProxyURL string   // the proxy url
 
 	// This is a cached copy of sha3(ID) which is used for node
 	// distance calculations. This is part of Node in order to make it
@@ -68,17 +69,23 @@ type Node struct {
 // NewNode creates a new node. It is mostly meant to be used for
 // testing purposes.
 func NewNode(id NodeID, ip net.IP, udpPort, tcpPort uint16, tcpSubports []uint16, nType NodeType) *Node {
+	return NewNodeWithProxy(id, ip, udpPort, tcpPort, tcpSubports, nType, "")
+}
+
+// NewNodeWithProxy creates a new node with the given proxyURL.
+func NewNodeWithProxy(id NodeID, ip net.IP, udpPort, tcpPort uint16, tcpSubports []uint16, nType NodeType, proxyURL string) *Node {
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
 	}
 	node := &Node{
-		IP:    ip,
-		UDP:   udpPort,
-		TCP:   tcpPort,
-		TCPs:  tcpSubports,
-		ID:    id,
-		NType: nType,
-		sha:   crypto.Keccak256Hash(id[:]),
+		IP:       ip,
+		UDP:      udpPort,
+		TCP:      tcpPort,
+		TCPs:     tcpSubports,
+		ID:       id,
+		NType:    nType,
+		ProxyURL: proxyURL,
+		sha:      crypto.Keccak256Hash(id[:]),
 	}
 	node.AddSubport(tcpPort)
 	return node
@@ -167,17 +174,23 @@ var lookupIPFunc = net.LookupIP
 //    kni://<hex node id>@10.3.58.6:30303?&subport=30304&discport=30301[&ntype=cn|pn|en|bn]
 //    enode://<hex node id>@10.3.58.6:30303?discport=30301[&ntype=cn|pn|en|bn]
 func ParseNode(rawurl string) (*Node, error) {
+	return ParseNodeWithProxy(rawurl, "")
+}
+
+// ParseNodeWithProxy parses a node designator from the given raw, proxy urls.
+// See ParseNode function for more details.
+func ParseNodeWithProxy(rawurl, proxyurl string) (*Node, error) {
 	if m := incompleteNodeURL.FindStringSubmatch(rawurl); m != nil {
 		id, err := HexID(m[1])
 		if err != nil {
 			return nil, fmt.Errorf("invalid node ID (%v)", err)
 		}
-		return NewNode(id, nil, 0, 0, nil, NodeTypeUnknown), nil
+		return NewNodeWithProxy(id, nil, 0, 0, nil, NodeTypeUnknown, proxyurl), nil
 	}
-	return parseComplete(rawurl)
+	return parseComplete(rawurl, proxyurl)
 }
 
-func parseComplete(rawurl string) (*Node, error) {
+func parseComplete(rawurl, proxyurl string) (*Node, error) {
 	var (
 		id               NodeID
 		tcpPort, udpPort uint64
@@ -240,7 +253,7 @@ func parseComplete(rawurl string) (*Node, error) {
 	if qv.Get("ntype") != "" {
 		nType = ParseNodeType(qv.Get("ntype"))
 	}
-	return NewNode(id, ip, uint16(udpPort), uint16(tcpPort), tcpSubports, nType), nil
+	return NewNodeWithProxy(id, ip, uint16(udpPort), uint16(tcpPort), tcpSubports, nType, proxyurl), nil
 }
 
 // MustParseNode parses a node URL. It panics if the URL is not valid.
