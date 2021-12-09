@@ -2443,7 +2443,8 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	statedb.Finalise(true, false)
 	*usedGas += gas
 
-	receipt := types.NewReceipt(kerr.Status, tx.Hash(), gas, *usedGas)
+	receipt := types.NewReceipt(kerr.Status, tx.Hash(), gas)
+	receipt.SetCumulativeGasUsed(*usedGas)
 	// if the transaction created a contract, store the creation address in the receipt.
 	msg.FillContractAddress(vmenv.Context.Origin, receipt)
 	// Set the receipt logs and create a bloom for filtering

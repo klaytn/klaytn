@@ -132,7 +132,7 @@ func newBlockWithParentHash(blockNum int, parentHash common.Hash) *types.Block {
 }
 
 func newReceipt(gasUsed int) *types.Receipt {
-	rct := types.NewReceipt(uint(gasUsed), common.Hash{}, uint64(gasUsed), uint64(gasUsed))
+	rct := types.NewReceipt(uint(gasUsed), common.Hash{}, uint64(gasUsed))
 	rct.Logs = []*types.Log{}
 	rct.Bloom = types.Bloom{}
 	return rct
