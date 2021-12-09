@@ -26,7 +26,9 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"golang.org/x/net/proxy"
 	"net"
+	"net/url"
 	"time"
 
 	"github.com/klaytn/klaytn/common/math"
@@ -52,6 +54,12 @@ const (
 	maxResolveDelay     = time.Hour
 )
 
+// A Dialer is a means to establish a connection.
+type Dialer interface {
+	// Dial connects to the address on the named network.
+	Dial(network, addr string) (c net.Conn, err error)
+}
+
 // NodeDialer is used to connect to nodes in the network, typically by using
 // an underlying net.Dialer but also using net.Pipe in tests.
 type NodeDialer interface {
@@ -62,17 +70,35 @@ type NodeDialer interface {
 // TCPDialer implements the NodeDialer interface by using a net.Dialer to
 // create TCP connections to nodes in the network.
 type TCPDialer struct {
-	*net.Dialer
+	Dialer
 }
 
 // Dial creates a TCP connection to the node.
 func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
+	if dest.ProxyURL != "" {
+		proxyDialer, err := newProxyDialer("tcp", dest.ProxyURL, t.Dialer)
+		if err != nil {
+			return nil, err
+		}
+		t.Dialer = proxyDialer
+	}
 	addr := &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)}
 	return t.Dialer.Dial("tcp", addr.String())
 }
 
 // DialMulti creates TCP connections to the node.
 func (t TCPDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
+	if len(dest.TCPs) == 0 {
+		return []net.Conn{}, nil
+	}
+	if dest.ProxyURL != "" {
+		proxyDialer, err := newProxyDialer("tcp", dest.ProxyURL, t.Dialer)
+		if err != nil {
+			return nil, err
+		}
+		t.Dialer = proxyDialer
+	}
+
 	var conns []net.Conn
 	if dest.TCPs != nil || len(dest.TCPs) != 0 {
 		conns = make([]net.Conn, 0, len(dest.TCPs))
@@ -81,11 +107,34 @@ func (t TCPDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
 			conn, err := t.Dialer.Dial("tcp", addr.String())
 			conns = append(conns, conn)
 			if err != nil {
+				// TODO: require to close previous connections?
 				return nil, err
 			}
 		}
 	}
 	return conns, nil
+}
+
+// newProxyDialer creates a new proxy.Dialer from the given proxyURL.
+// Supports currently "socks5" proxy.
+func newProxyDialer(network, proxyURL string, forward Dialer) (proxy.Dialer, error) {
+	u, err := url.Parse(proxyURL)
+	if err != nil {
+		return nil, err
+	}
+	if u.Scheme != "socks5" {
+		return nil, fmt.Errorf("unsupported proxy scheme: %s", u.Scheme)
+	}
+
+	var auth *proxy.Auth
+	if u.User != nil {
+		password, _ := u.User.Password()
+		auth = &proxy.Auth{
+			User:     u.User.Username(),
+			Password: password,
+		}
+	}
+	return proxy.SOCKS5(network, u.Host, auth, forward)
 }
 
 // dialstate schedules dials and discovery lookups.
@@ -364,7 +413,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 				s.dialing[id] = t.flags
 				newtasks = append(newtasks, t)
 				logger.Info("[Dial] Add dial candidate from static nodes", "id", t.dest.ID,
-					"NodeType", t.dest.NType, "ip", t.dest.IP, "mainPort", t.dest.TCP, "port", t.dest.TCPs)
+					"NodeType", t.dest.NType, "ip", t.dest.IP, "mainPort", t.dest.TCP, "port", t.dest.TCPs, "proxy", t.dest.ProxyURL)
 			default:
 				logger.Trace("[Dial] Skipped addStaticDial", "reason", err, "to", t.dest)
 			}
