@@ -68,7 +68,7 @@ var (
 	BaobabChainConfig = &ChainConfig{
 		ChainID:                 big.NewInt(int64(BaobabNetworkId)),
 		IstanbulCompatibleBlock: big.NewInt(75373312),
-		LondonCompatibleBlock:   nil,
+		LondonCompatibleBlock:   big.NewInt(80295291),
 		DeriveShaImpl:           2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
