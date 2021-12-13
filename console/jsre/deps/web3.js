@@ -6094,21 +6094,21 @@ var methods = function () {
 
     var importRawKey = new Method({
         name: 'importRawKey',
-		call: 'personal_importRawKey',
-		params: 2
+        call: 'personal_importRawKey',
+        params: 2
     });
 
     var sign = new Method({
         name: 'sign',
-		call: 'personal_sign',
-		params: 3,
-		inputFormatter: [null, formatters.inputAddressFormatter, null]
+        call: 'personal_sign',
+        params: 3,
+        inputFormatter: [null, formatters.inputAddressFormatter, null]
     });
 
     var ecRecover = new Method({
         name: 'ecRecover',
-		call: 'personal_ecRecover',
-		params: 2
+        call: 'personal_ecRecover',
+        params: 2
     });
 
     var unlockAccount = new Method({
@@ -6527,53 +6527,53 @@ var klay = function () {
 
 /// @returns an array of objects describing web3.eth.filter api methods
 var eth = function () {
-	var newFilterCall = function (args) {
-		var type = args[0];
+    var newFilterCall = function (args) {
+        var type = args[0];
 
-		switch(type) {
-			case 'latest':
-				args.shift();
-				this.params = 0;
-				return 'eth_newBlockFilter';
-			case 'pending':
-				args.shift();
-				this.params = 0;
-				return 'eth_newPendingTransactionFilter';
-			default:
-				return 'eth_newFilter';
-		}
-	};
+        switch(type) {
+            case 'latest':
+                args.shift();
+                this.params = 0;
+                return 'eth_newBlockFilter';
+            case 'pending':
+                args.shift();
+                this.params = 0;
+                return 'eth_newPendingTransactionFilter';
+            default:
+                return 'eth_newFilter';
+        }
+    };
 
-	var newFilter = new Method({
-		name: 'newFilter',
-		call: newFilterCall,
-		params: 1
-	});
+    var newFilter = new Method({
+        name: 'newFilter',
+        call: newFilterCall,
+        params: 1
+    });
 
-	var uninstallFilter = new Method({
-		name: 'uninstallFilter',
-		call: 'eth_uninstallFilter',
-		params: 1
-	});
+    var uninstallFilter = new Method({
+        name: 'uninstallFilter',
+        call: 'eth_uninstallFilter',
+        params: 1
+    });
 
-	var getLogs = new Method({
-		name: 'getLogs',
-		call: 'eth_getFilterLogs',
-		params: 1
-	});
+    var getLogs = new Method({
+        name: 'getLogs',
+        call: 'eth_getFilterLogs',
+        params: 1
+    });
 
-	var poll = new Method({
-		name: 'poll',
-		call: 'eth_getFilterChanges',
-		params: 1
-	});
+    var poll = new Method({
+        name: 'poll',
+        call: 'eth_getFilterChanges',
+        params: 1
+    });
 
-	return [
-		newFilter,
-		uninstallFilter,
-		getLogs,
-		poll
-	];
+    return [
+        newFilter,
+        uninstallFilter,
+        getLogs,
+        poll
+    ];
 };
 
 /// @returns an array of objects describing web3.shh.watch api methods
@@ -6605,7 +6605,7 @@ var shh = function () {
 
 module.exports = {
     klay: klay,
-	eth: eth,
+    eth: eth,
     shh: shh
 };
 
