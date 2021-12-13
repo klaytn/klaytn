@@ -329,4 +329,10 @@ var (
 		Usage: "istanbulCompatible blockNumber",
 		Value: 0,
 	}
+
+	londonCompatibleBlockNumberFlag = cli.Int64Flag{
+		Name:  "london-compatible-blocknumber",
+		Usage: "londonCompatible blockNumber",
+		Value: 0,
+	}
 )
