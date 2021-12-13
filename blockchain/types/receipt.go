@@ -137,10 +137,6 @@ func NewReceipt(status uint, txHash common.Hash, gasUsed uint64) *Receipt {
 	}
 }
 
-func (r *Receipt) SetCumulativeGasUsed(cumulativeGasUsed uint64) {
-	r.CumulativeGasUsed = cumulativeGasUsed
-}
-
 // EncodeRLP implements rlp.Encoder, and flattens the consensus fields of a receipt
 // into an RLP stream. If no post state is present, byzantium fork is assumed.
 func (r *Receipt) EncodeRLP(w io.Writer) error {
