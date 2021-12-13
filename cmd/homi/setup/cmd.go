@@ -125,6 +125,7 @@ Args :
 			cliqueEpochFlag,
 			cliquePeriodFlag,
 			istanbulCompatibleBlockNumberFlag,
+			londonCompatibleBlockNumberFlag,
 		},
 		ArgsUsage: "type",
 	}
@@ -506,8 +507,7 @@ func gen(ctx *cli.Context) error {
 	}
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
-	// TODO-klaytn: enable below line when londonCompatible protocol upgrade implementation is finished
-	//genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)
