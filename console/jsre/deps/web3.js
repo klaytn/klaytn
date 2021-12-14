@@ -5435,12 +5435,6 @@ var methods = function () {
         inputFormatter: [formatters.inputBlockNumberFormatter]
     });
 
-    var getCompilers = new Method({
-        name: 'getCompilers',
-        call: 'klay_getCompilers',
-        params: 0
-    });
-
     var getBlockTransactionCount = new Method({
         name: 'getBlockTransactionCount',
         call: getBlockTransactionCountCall,
@@ -5528,31 +5522,12 @@ var methods = function () {
         outputFormatter: utils.toDecimal
     });
 
-    var compileSolidity = new Method({
-        name: 'compile.solidity',
-        call: 'klay_compileSolidity',
-        params: 1
-    });
-
-    var compileLLL = new Method({
-        name: 'compile.lll',
-        call: 'klay_compileLLL',
-        params: 1
-    });
-
-    var compileSerpent = new Method({
-        name: 'compile.serpent',
-        call: 'klay_compileSerpent',
-        params: 1
-    });
-
     return [
         getBalance,
         getStorageAt,
         getCode,
         getBlock,
         getHeader,
-        getCompilers,
         getBlockTransactionCount,
         getTransaction,
         getDecodedAnchoringTransactionByHash,
@@ -5565,9 +5540,6 @@ var methods = function () {
         signTransaction,
         sendTransaction,
         sign,
-        compileSolidity,
-        compileLLL,
-        compileSerpent
     ];
 };
 
@@ -5767,12 +5739,6 @@ var methods = function () {
 
     });
 
-    var getCompilers = new Method({
-        name: 'getCompilers',
-        call: 'eth_getCompilers',
-        params: 0
-    });
-
     var getBlockTransactionCount = new Method({
         name: 'getBlockTransactionCount',
         call: getBlockTransactionCountCall,
@@ -5862,24 +5828,6 @@ var methods = function () {
         outputFormatter: utils.toDecimal
     });
 
-    var compileSolidity = new Method({
-        name: 'compile.solidity',
-        call: 'eth_compileSolidity',
-        params: 1
-    });
-
-    var compileLLL = new Method({
-        name: 'compile.lll',
-        call: 'eth_compileLLL',
-        params: 1
-    });
-
-    var compileSerpent = new Method({
-        name: 'compile.serpent',
-        call: 'eth_compileSerpent',
-        params: 1
-    });
-
     var submitWork = new Method({
         name: 'submitWork',
         call: 'eth_submitWork',
@@ -5898,7 +5846,6 @@ var methods = function () {
         getCode,
         getBlock,
         getUncle,
-        getCompilers,
         getBlockTransactionCount,
         getBlockUncleCount,
         getTransaction,
@@ -5911,9 +5858,6 @@ var methods = function () {
         signTransaction,
         sendTransaction,
         sign,
-        compileSolidity,
-        compileLLL,
-        compileSerpent,
         submitWork,
         getWork
     ];
