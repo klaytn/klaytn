@@ -215,10 +215,8 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		all:          make(map[common.Hash]*types.Transaction),
 		pendingNonce: make(map[common.Address]uint64),
 		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
-		// TODO-Klaytn We use ChainConfig.UnitPrice to initialize TxPool.gasPrice,
-		//         later we have to change this rule when governance of UnitPrice is determined.
-		gasPrice: new(big.Int).SetUint64(chainconfig.UnitPrice),
-		txMsgCh:  make(chan types.Transactions, txMsgChSize),
+		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
+		txMsgCh:      make(chan types.Transactions, txMsgChSize),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
