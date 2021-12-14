@@ -80,19 +80,19 @@ func (api *EthereumAPI) SetPublicAccountAPI(publicAccountAPI *PublicAccountAPI) 
 	api.publicAccountAPI = publicAccountAPI
 }
 
-// Etherbase is the address that mining rewards will be send to
+// Etherbase is the address that mining rewards will be send to.
 func (api *EthereumAPI) Etherbase() (common.Address, error) {
 	// TODO-Klaytn: Not implemented yet.
 	return common.StringToAddress("0x0"), nil
 }
 
-// Coinbase is the address that mining rewards will be send to (alias for Etherbase)
+// Coinbase is the address that mining rewards will be send to (alias for Etherbase).
 func (api *EthereumAPI) Coinbase() (common.Address, error) {
 	// TODO-Klaytn: Not implemented yet.
 	return common.StringToAddress("0x0"), nil
 }
 
-// Hashrate returns the POW hashrate
+// Hashrate returns the POW hashrate.
 func (api *EthereumAPI) Hashrate() hexutil.Uint64 {
 	// TODO-Klaytn: Not implemented yet.
 	return 0
