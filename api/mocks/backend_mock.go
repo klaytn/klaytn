@@ -60,6 +60,21 @@ func (mr *MockBackendMockRecorder) AccountManager() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountManager", reflect.TypeOf((*MockBackend)(nil).AccountManager))
 }
 
+// BlockByHash mocks base method
+func (m *MockBackend) BlockByHash(arg0 context.Context, arg1 common.Hash) (*types.Block, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BlockByHash", arg0, arg1)
+	ret0, _ := ret[0].(*types.Block)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BlockByHash indicates an expected call of BlockByHash
+func (mr *MockBackendMockRecorder) BlockByHash(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockByHash", reflect.TypeOf((*MockBackend)(nil).BlockByHash), arg0, arg1)
+}
+
 // BlockByNumber mocks base method
 func (m *MockBackend) BlockByNumber(arg0 context.Context, arg1 rpc.BlockNumber) (*types.Block, error) {
 	m.ctrl.T.Helper()
@@ -144,21 +159,6 @@ func (m *MockBackend) EventMux() *event.TypeMux {
 func (mr *MockBackendMockRecorder) EventMux() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventMux", reflect.TypeOf((*MockBackend)(nil).EventMux))
-}
-
-// GetBlock mocks base method
-func (m *MockBackend) BlockByHash(arg0 context.Context, arg1 common.Hash) (*types.Block, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BlockByHash", arg0, arg1)
-	ret0, _ := ret[0].(*types.Block)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetBlock indicates an expected call of GetBlock
-func (mr *MockBackendMockRecorder) GetBlock(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockByHash", reflect.TypeOf((*MockBackend)(nil).BlockByHash), arg0, arg1)
 }
 
 // GetBlockReceipts mocks base method
@@ -332,21 +332,6 @@ func (mr *MockBackendMockRecorder) GetTxLookupInfoAndReceiptInCache(arg0 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTxLookupInfoAndReceiptInCache", reflect.TypeOf((*MockBackend)(nil).GetTxLookupInfoAndReceiptInCache), arg0)
 }
 
-// HeaderByNumber mocks base method
-func (m *MockBackend) HeaderByNumber(arg0 context.Context, arg1 rpc.BlockNumber) (*types.Header, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HeaderByNumber", arg0, arg1)
-	ret0, _ := ret[0].(*types.Header)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// HeaderByNumber indicates an expected call of HeaderByNumber
-func (mr *MockBackendMockRecorder) HeaderByNumber(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeaderByNumber", reflect.TypeOf((*MockBackend)(nil).HeaderByNumber), arg0, arg1)
-}
-
 // HeaderByHash mocks base method
 func (m *MockBackend) HeaderByHash(arg0 context.Context, arg1 common.Hash) (*types.Header, error) {
 	m.ctrl.T.Helper()
@@ -360,6 +345,21 @@ func (m *MockBackend) HeaderByHash(arg0 context.Context, arg1 common.Hash) (*typ
 func (mr *MockBackendMockRecorder) HeaderByHash(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeaderByHash", reflect.TypeOf((*MockBackend)(nil).HeaderByHash), arg0, arg1)
+}
+
+// HeaderByNumber mocks base method
+func (m *MockBackend) HeaderByNumber(arg0 context.Context, arg1 rpc.BlockNumber) (*types.Header, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HeaderByNumber", arg0, arg1)
+	ret0, _ := ret[0].(*types.Header)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HeaderByNumber indicates an expected call of HeaderByNumber
+func (mr *MockBackendMockRecorder) HeaderByNumber(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeaderByNumber", reflect.TypeOf((*MockBackend)(nil).HeaderByNumber), arg0, arg1)
 }
 
 // HeaderByNumberOrHash mocks base method
@@ -492,7 +492,7 @@ func (mr *MockBackendMockRecorder) StateAndHeaderByNumber(arg0, arg1 interface{}
 // StateAndHeaderByNumberOrHash mocks base method
 func (m *MockBackend) StateAndHeaderByNumberOrHash(arg0 context.Context, arg1 rpc.BlockNumberOrHash) (*state.StateDB, *types.Header, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StateAndHeaderByNumber", arg0, arg1)
+	ret := m.ctrl.Call(m, "StateAndHeaderByNumberOrHash", arg0, arg1)
 	ret0, _ := ret[0].(*state.StateDB)
 	ret1, _ := ret[1].(*types.Header)
 	ret2, _ := ret[2].(error)
