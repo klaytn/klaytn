@@ -375,13 +375,13 @@ func (api *EthereumAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHa
 	return nil, nil
 }
 
-// GetUncleCountByBlockNumber returns number of uncles in the block for the given block number
+// GetUncleCountByBlockNumber returns number of uncles in the block for the given block number.
 func (api *EthereumAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
 	// TODO-Klaytn: Not implemented yet.
 	return nil
 }
 
-// GetUncleCountByBlockHash returns number of uncles in the block for the given block hash
+// GetUncleCountByBlockHash returns number of uncles in the block for the given block hash.
 func (api *EthereumAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
 	// TODO-Klaytn: Not implemented yet.
 	return nil
@@ -526,13 +526,13 @@ func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context
 	return nil
 }
 
-// GetTransactionCount returns the number of transactions the given address has sent for the given block number
+// GetTransactionCount returns the number of transactions the given address has sent for the given block number.
 func (api *EthereumAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
 	// TODO-Klaytn: Not implemented yet.
 	return nil, nil
 }
 
-// GetTransactionByHash returns the transaction for the given hash
+// GetTransactionByHash returns the transaction for the given hash.
 func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*EthRPCTransaction, error) {
 	// TODO-Klaytn: Not implemented yet.
 	return nil, nil
