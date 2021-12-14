@@ -674,7 +674,7 @@ func (api *EthereumAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs,
 	return common.HexToHash("0x"), nil
 }
 
-// Accounts returns the collection of accounts this node manages
+// Accounts returns the collection of accounts this node manages.
 func (api *EthereumAPI) Accounts() []common.Address {
 	// TODO-Klaytn: Not implemented yet.
 	return nil
