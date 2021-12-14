@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -502,52 +503,218 @@ type EthRPCTransaction struct {
 	S                *hexutil.Big    `json:"s"`
 }
 
+// newEthRPCTransactionFromBlockAndIndex creates an EthRPCTransaction from block and index parameters.
+func newEthRPCTransactionFromBlockAndIndex(b *types.Block, index uint64) (*EthRPCTransaction, error) {
+	txs := b.Transactions()
+	if index >= uint64(len(txs)) {
+		return nil, errors.New("invalid transaction index")
+	}
+	return newEthRPCTransaction(txs[index], b.Hash(), b.NumberU64(), index)
+}
+
+// newEthRPCTransaction creates an EthRPCTransaction from Klaytn transaction.
+func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) (*EthRPCTransaction, error) {
+	// When an unknown transaction is requested through rpc call,
+	// nil is returned by Klaytn API, and it is handled.
+	if tx == nil {
+		return nil, nil
+	}
+
+	from := getFrom(tx)
+
+	// If to is nil, it is fills with from.
+	to := tx.To()
+	if to == nil {
+		to = &from
+	}
+
+	// If tx is not TxTypeLegacyTransaction, the type is converted to TxTypeLegacyTransaction.
+	// TODO-Klaytn: In the case of Ethereum transaction type,
+	//  it must be returned as it is without converting the type.
+	typeInt := hexutil.Uint64(tx.Type())
+	if types.TxType(typeInt) != types.TxTypeLegacyTransaction {
+		typeInt = hexutil.Uint64(types.TxTypeLegacyTransaction)
+	}
+
+	signature := tx.GetTxInternalData().RawSignatureValues()[0]
+
+	result := &EthRPCTransaction{
+		Type:     typeInt,
+		From:     from,
+		Gas:      hexutil.Uint64(tx.Gas()),
+		GasPrice: (*hexutil.Big)(tx.GasPrice()),
+		Hash:     tx.Hash(),
+		Input:    tx.Data(),
+		Nonce:    hexutil.Uint64(tx.Nonce()),
+		To:       to,
+		Value:    (*hexutil.Big)(tx.Value()),
+		V:        (*hexutil.Big)(signature.V),
+		R:        (*hexutil.Big)(signature.R),
+		S:        (*hexutil.Big)(signature.S),
+	}
+
+	if blockHash != (common.Hash{}) {
+		result.BlockHash = &blockHash
+		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
+		result.TransactionIndex = (*hexutil.Uint64)(&index)
+	}
+
+	// TODO-Klaytn: Have to add additional fields for ethereum transaction types.
+
+	return result, nil
+}
+
+// newEthRPCPendingTransaction creates an EthRPCTransaction for pending tx.
+func newEthRPCPendingTransaction(tx *types.Transaction) (*EthRPCTransaction, error) {
+	return newEthRPCTransaction(tx, common.Hash{}, 0, 0)
+}
+
 // GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) *EthRPCTransaction {
-	// TODO-Klaytn: Not implemented yet.
+	block, err := api.publicTransactionPoolAPI.b.BlockByNumber(ctx, blockNr)
+	if block != nil && err == nil {
+		ethTx, err := newEthRPCTransactionFromBlockAndIndex(block, uint64(index))
+		if ethTx == nil || err != nil {
+			return nil
+		}
+		return ethTx
+	}
 	return nil
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *EthRPCTransaction {
-	// TODO-Klaytn: Not implemented yet.
+	block, err := api.publicTransactionPoolAPI.b.BlockByHash(ctx, blockHash)
+	if block != nil && err == nil {
+		ethTx, err := newEthRPCTransactionFromBlockAndIndex(block, uint64(index))
+		if ethTx == nil || err != nil {
+			return nil
+		}
+		return ethTx
+	}
 	return nil
 }
 
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
 func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockNumberAndIndex(ctx, blockNr, index)
+	if rawTx == nil || err != nil {
+		return nil
+	}
+
+	return rawTx
 }
 
 // GetRawTransactionByBlockHashAndIndex returns the bytes of the transaction for the given block hash and index.
 func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockHashAndIndex(ctx, blockHash, index)
+	if rawTx == nil || err != nil {
+		return nil
+	}
+
+	return rawTx
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
 func (api *EthereumAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicTransactionPoolAPI.GetTransactionCount(ctx, address, blockNrOrHash)
 }
 
 // GetTransactionByHash returns the transaction for the given hash.
 func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*EthRPCTransaction, error) {
-	// TODO-Klaytn: Not implemented yet.
+	// Try to return an already finalized transaction
+	if tx, blockHash, blockNumber, index := api.publicTransactionPoolAPI.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
+		return newEthRPCTransaction(tx, blockHash, blockNumber, index)
+	}
+	// No finalized transaction, try to retrieve it from the pool
+	if tx := api.publicTransactionPoolAPI.b.GetPoolTransaction(hash); tx != nil {
+		return newEthRPCPendingTransaction(tx)
+	}
+	// Transaction unknown, return as such
 	return nil, nil
 }
 
 // GetRawTransactionByHash returns the bytes of the transaction for the given hash.
 func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByHash(ctx, hash)
+	if rawTx == nil || err != nil {
+		return nil, err
+	}
+
+	return rawTx, nil
 }
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	// Formats return Klaytn Transaction Receipt to the Ethereum Transaction Receipt.
+	tx, blockHash, blockNumber, index, receipt := api.publicTransactionPoolAPI.b.GetTxLookupInfoAndReceipt(ctx, hash)
+
+	receipts := api.publicTransactionPoolAPI.b.GetBlockReceipts(ctx, blockHash)
+	cumulativeGasUsed := uint64(0)
+	for i := uint64(0); i <= index; i++ {
+		cumulativeGasUsed += receipts[i].GasUsed
+	}
+
+	ethTx, err := newEthTransactionReceipt(tx, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
+	if ethTx == nil || err != nil {
+		return nil, err
+	}
+	return ethTx, nil
+}
+
+// newEthTransactionReceipt creates a transaction receipt in Ethereum format.
+func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber, index, cumulativeGasUsed uint64, receipt *types.Receipt) (map[string]interface{}, error) {
+	// When an unknown transaction receipt is requested through rpc call,
+	// nil is returned by Klaytn API, and it is handled.
+	if tx == nil || receipt == nil {
+		return nil, nil
+	}
+
+	from := getFrom(tx)
+
+	// If to is nil, it is fills with from.
+	to := tx.To()
+	if to == nil {
+		to = &from
+	}
+
+	// If tx is not TxTypeLegacyTransaction, the type is converted to TxTypeLegacyTransaction.
+	// TODO-Klaytn: In the case of Ethereum transaction type,
+	//  it must be returned as it is without converting the type.
+	typeInt := tx.Type()
+	if typeInt != types.TxTypeLegacyTransaction {
+		typeInt = types.TxTypeLegacyTransaction
+	}
+
+	fields := map[string]interface{}{
+		"blockHash":         blockHash,
+		"blockNumber":       hexutil.Uint64(blockNumber),
+		"transactionHash":   tx.Hash(),
+		"transactionIndex":  hexutil.Uint64(index),
+		"from":              getFrom(tx),
+		"to":                to,
+		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
+		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
+		"contractAddress":   nil,
+		"logs":              receipt.Logs,
+		"logsBloom":         receipt.Bloom,
+		"type":              hexutil.Uint(typeInt),
+	}
+
+	fields["effectiveGasPrice"] = tx.GasPrice()
+
+	// Always use the "status" field and Ignore the "root" field.
+	fields["status"] = hexutil.Uint(receipt.Status)
+
+	if receipt.Logs == nil {
+		fields["logs"] = [][]*types.Log{}
+	}
+	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
+	if receipt.ContractAddress != (common.Address{}) {
+		fields["contractAddress"] = receipt.ContractAddress
+	}
+
+	return fields, nil
 }
 
 // EthTransactionArgs represents the arguments to construct a new transaction
@@ -634,8 +801,7 @@ func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransaction
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return common.HexToHash("0x"), nil
+	return api.publicTransactionPoolAPI.SendRawTransaction(ctx, input)
 }
 
 // Sign calculates an ECDSA signature for:
@@ -648,8 +814,7 @@ func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.By
 //
 // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sign
 func (api *EthereumAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicTransactionPoolAPI.Sign(addr, data)
 }
 
 // SignTransaction will sign the given transaction with the from account.
@@ -663,8 +828,23 @@ func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransaction
 // PendingTransactions returns the transactions that are in the transaction pool
 // and have a from address that is one of the accounts this node manages.
 func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	pending, err := api.publicTransactionPoolAPI.b.GetPoolTransactions()
+	if err != nil {
+		return nil, err
+	}
+	accounts := getAccountsFromWallets(api.publicTransactionPoolAPI.b.AccountManager().Wallets())
+	transactions := make([]*EthRPCTransaction, 0, len(pending))
+	for _, tx := range pending {
+		from := getFrom(tx)
+		if _, exists := accounts[from]; exists {
+			ethTx, err := newEthRPCPendingTransaction(tx)
+			if err != nil {
+				return nil, err
+			}
+			transactions = append(transactions, ethTx)
+		}
+	}
+	return transactions, nil
 }
 
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
