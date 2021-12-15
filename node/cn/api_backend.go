@@ -23,8 +23,9 @@ package cn
 import (
 	"context"
 	"fmt"
-	"github.com/klaytn/klaytn/consensus"
 	"math/big"
+
+	"github.com/klaytn/klaytn/consensus"
 
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"

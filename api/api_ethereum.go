@@ -19,10 +19,11 @@ package api
 import (
 	"context"
 	"encoding/binary"
-	"github.com/klaytn/klaytn/params"
 	"math/big"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/params"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"

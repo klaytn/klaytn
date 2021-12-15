@@ -21,8 +21,9 @@
 package blockchain
 
 import (
-	"github.com/klaytn/klaytn/params"
 	"math/big"
+
+	"github.com/klaytn/klaytn/params"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
