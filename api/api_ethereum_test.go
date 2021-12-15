@@ -126,7 +126,6 @@ func checkEthereumBlockOrHeaderFormat(
 
 	extraData := ethBlockOrHeader["extraData"]
 	assert.Equal(t, hexutil.Bytes(DummyExtraData), extraData)
-	t.Log(extraData)
 
 	gasLimit := ethBlockOrHeader["gasLimit"]
 	assert.Equal(t, hexutil.Uint64(DummyGasLimit), gasLimit)
