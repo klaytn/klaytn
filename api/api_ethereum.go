@@ -34,7 +34,8 @@ import (
 )
 
 const (
-	// EmptySha3Uncles always have value which is the result of crypto.Keccak256Hash([]byte{})
+	// EmptySha3Uncles always have value which is the result of
+	// `crypto.Keccak256Hash(rlp.EncodeToBytes([]*types.Header(nil)).String())`
 	// because there is no uncles in Klaytn.
 	// Just use const value because we don't have to calculate it everytime which always be same result.
 	EmptySha3Uncles = "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"

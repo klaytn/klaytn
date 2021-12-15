@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/klaytn/klaytn/rlp"
+
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/params"
 
@@ -121,8 +123,11 @@ func checkEthereumBlockOrHeaderFormat(
 	mixHash := ethBlockOrHeader["mixHash"]
 	assert.Equal(t, common.Hash{}, mixHash)
 
+	emptySha3Uncles, err := rlp.EncodeToBytes([]*types.Header(nil))
+	assert.NoError(t, err)
 	sha3Uncles := ethBlockOrHeader["sha3Uncles"]
 	assert.Equal(t, common.HexToHash(EmptySha3Uncles), sha3Uncles)
+	assert.Equal(t, emptySha3Uncles, sha3Uncles)
 
 	extraData := ethBlockOrHeader["extraData"]
 	assert.Equal(t, hexutil.Bytes(DummyExtraData), extraData)
@@ -134,7 +139,7 @@ func checkEthereumBlockOrHeaderFormat(
 	assert.Equal(t, (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee)), baseFeePerGas)
 
 	// returnedKeys must have all keys of the Ethereum header.
-	var returnedKeys []string
+	returnedKeys := make([]string, len(ethBlockOrHeader))
 	for k := range ethBlockOrHeader {
 		returnedKeys = append(returnedKeys, k)
 	}
