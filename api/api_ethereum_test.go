@@ -135,7 +135,7 @@ func checkEthereumBlockOrHeaderFormat(
 
 	// returnedKeys must have all keys of the Ethereum header.
 	var returnedKeys []string
-	for k, _ := range ethBlockOrHeader {
+	for k := range ethBlockOrHeader {
 		returnedKeys = append(returnedKeys, k)
 	}
 	existed := func(key string) bool {
@@ -147,7 +147,7 @@ func checkEthereumBlockOrHeaderFormat(
 		return false
 	}
 	existsOrNot := false
-	for k, _ := range expectedResult {
+	for k := range expectedResult {
 		existsOrNot = existed(k)
 	}
 	assert.True(t, existsOrNot)
