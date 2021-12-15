@@ -3,15 +3,16 @@ package api
 import (
 	"bytes"
 	"context"
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/accounts/mocks"
-	"github.com/klaytn/klaytn/storage/database"
 	"math/big"
 	"reflect"
 	"testing"
 
+	"github.com/klaytn/klaytn/accounts"
+	mock_accounts "github.com/klaytn/klaytn/accounts/mocks"
+	"github.com/klaytn/klaytn/storage/database"
+
 	"github.com/golang/mock/gomock"
-	"github.com/klaytn/klaytn/api/mocks"
+	mock_api "github.com/klaytn/klaytn/api/mocks"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -225,6 +226,7 @@ func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRP
 
 func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts []*types.Receipt, ethReceipt map[string]interface{}, kReceipt map[string]interface{}, idx uint64) {
 	tx := block.Transactions()[idx]
+
 	// Check the common receipt fields.
 	blockHash, ok := ethReceipt["blockHash"]
 	if !ok {
