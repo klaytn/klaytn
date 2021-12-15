@@ -2,7 +2,7 @@
 // Source: github.com/klaytn/klaytn/api (interfaces: Backend)
 
 // Package mock_api is a generated GoMock package.
-package mocks
+package mock_api
 
 import (
 	context "context"
