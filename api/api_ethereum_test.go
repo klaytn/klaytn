@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/klaytn/klaytn/crypto"
 	"math/big"
 	"reflect"
 	"testing"
@@ -123,8 +124,9 @@ func checkEthereumBlockOrHeaderFormat(
 	mixHash := ethBlockOrHeader["mixHash"]
 	assert.Equal(t, common.Hash{}, mixHash)
 
-	emptySha3Uncles, err := rlp.EncodeToBytes([]*types.Header(nil))
+	emptyUncleHeaders, err := rlp.EncodeToBytes([]*types.Header(nil))
 	assert.NoError(t, err)
+	emptySha3Uncles := crypto.Keccak256Hash(emptyUncleHeaders)
 	sha3Uncles := ethBlockOrHeader["sha3Uncles"]
 	assert.Equal(t, common.HexToHash(EmptySha3Uncles), sha3Uncles)
 	assert.Equal(t, emptySha3Uncles, sha3Uncles)
