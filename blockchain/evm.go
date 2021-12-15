@@ -21,6 +21,7 @@
 package blockchain
 
 import (
+	"github.com/klaytn/klaytn/params"
 	"math/big"
 
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -52,7 +53,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	} else {
 		beneficiary = *author
 	}
-	baseFee = big.NewInt(0)
+	baseFee = new(big.Int).SetUint64(params.BaseFee)
 	return vm.Context{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,

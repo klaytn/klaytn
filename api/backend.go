@@ -24,6 +24,8 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/klaytn/klaytn/consensus"
+
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
@@ -49,6 +51,7 @@ type Backend interface {
 	EventMux() *event.TypeMux
 	AccountManager() accounts.AccountManager
 	RPCGasCap() *big.Int // global gas cap for klay_call over rpc: DoS protection
+	Engine() consensus.Engine
 
 	// BlockChain API
 	SetHead(number uint64)
