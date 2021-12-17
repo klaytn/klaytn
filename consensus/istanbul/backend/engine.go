@@ -654,6 +654,12 @@ func getPrevHeaderAndUpdateParents(chain consensus.ChainReader, number uint64, h
 	return header
 }
 
+// CreateSnapshot does not return a snapshot but creates a new snapshot at a given point in time.
+func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
+	_, err := sb.snapshot(chain, number, hash, parents)
+	return err
+}
+
 // snapshot retrieves the authorization snapshot at a given point in time.
 func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
