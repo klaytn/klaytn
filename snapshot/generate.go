@@ -26,8 +26,9 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
 	"time"
+
+	"github.com/klaytn/klaytn/blockchain/types/account"
 
 	"github.com/VictoriaMetrics/fastcache"
 	"github.com/klaytn/klaytn/common"
@@ -397,7 +398,7 @@ func (dl *diskLayer) generateRange(root common.Hash, prefix []byte, kind string,
 	if len(origin) > 0 {
 		logCtx = append(logCtx, "origin", hexutil.Encode(origin))
 	}
-	localLogger := logger.NewWith(logCtx)
+	localLogger := logger.NewWith(logCtx...)
 
 	// The range prover says the range is correct, skip trie iteration
 	if result.valid() {
@@ -615,31 +616,27 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 			snapAccountWriteCounter.Inc(time.Since(start).Nanoseconds())
 			return nil
 		}
-		// Retrieve the current account and flatten it into the internal format
-		var acc struct {
-			Nonce    uint64
-			Balance  *big.Int
-			Root     common.Hash
-			CodeHash []byte
-		}
-		if err := rlp.DecodeBytes(val, &acc); err != nil {
+		serializer := account.NewAccountSerializer()
+		if err := rlp.DecodeBytes(val, serializer); err != nil {
 			logger.Crit("Invalid account encountered during snapshot creation", "err", err)
 		}
+		acc := serializer.GetAccount()
 		// If the account is not yet in-progress, write it out
 		if accMarker == nil || !bytes.Equal(accountHash[:], accMarker) {
 			dataLen := len(val) // Approximate size, saves us a round of RLP-encoding
+			// TODO-Klaytn-Snapshot consider slim account in order to save space for emptyRootHash, emptyCodeHash
 			if !write {
-				if bytes.Equal(acc.CodeHash, emptyCode[:]) {
-					dataLen -= 32
-				}
-				if acc.Root == emptyRoot {
-					dataLen -= 32
-				}
+				//if bytes.Equal(acc.CodeHash, emptyCode[:]) {
+				//	dataLen -= 32
+				//}
+				//if acc.Root == emptyRoot {
+				//	dataLen -= 32
+				//}
 				snapRecoveredAccountMeter.Mark(1)
 			} else {
-				data := SlimAccountRLP(acc.Nonce, acc.Balance, acc.Root, acc.CodeHash)
-				dataLen = len(data)
-				batch.WriteAccountSnapshot(accountHash, data)
+				//data := SlimAccountRLP(acc.Nonce, acc.Balance, acc.Root, acc.CodeHash)
+				//dataLen = len(data)
+				batch.WriteAccountSnapshot(accountHash, val)
 				snapGeneratedAccountMeter.Mark(1)
 			}
 			stats.storage += common.StorageSize(1 + common.HashLength + dataLen)
@@ -657,7 +654,14 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 		}
 		// If the iterated account is the contract, create a further loop to
 		// verify or regenerate the contract storage.
-		if acc.Root == emptyRoot {
+		contractAcc, ok := acc.(*account.SmartContractAccount)
+		if !ok {
+			accMarker = nil
+			return nil
+		}
+
+		rootHash := contractAcc.GetStorageRoot()
+		if rootHash == emptyRoot {
 			// If the root is empty, we still need to ensure that any previous snapshot
 			// storage values are cleared
 			// TODO: investigate if this can be avoided, this will be very costly since it
@@ -703,7 +707,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 			}
 			var storeOrigin = common.CopyBytes(storeMarker)
 			for {
-				exhausted, last, err := dl.generateRange(acc.Root, append(database.SnapshotStoragePrefix, accountHash.Bytes()...), "storage", storeOrigin, storageCheckRange, stats, onStorage, nil)
+				exhausted, last, err := dl.generateRange(rootHash, append(database.SnapshotStoragePrefix, accountHash.Bytes()...), "storage", storeOrigin, storageCheckRange, stats, onStorage, nil)
 				if err != nil {
 					return err
 				}
@@ -722,7 +726,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 
 	// Global loop for regerating the entire state trie + all layered storage tries.
 	for {
-		exhausted, last, err := dl.generateRange(dl.root, database.SnapshotAccountPrefix, "account", accOrigin, accountRange, stats, onAccount, FullAccountRLP)
+		exhausted, last, err := dl.generateRange(dl.root, database.SnapshotAccountPrefix, "account", accOrigin, accountRange, stats, onAccount, nil)
 		// The procedure it aborted, either by external signal or internal error
 		if err != nil {
 			if abort == nil { // aborted by internal error, wait the signal

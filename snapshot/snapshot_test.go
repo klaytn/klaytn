@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/blockchain/types/account"
+
 	"github.com/VictoriaMetrics/fastcache"
 	"github.com/klaytn/klaytn/storage/database"
 
@@ -48,13 +50,9 @@ func randomHash() common.Hash {
 // randomAccount generates a random account and returns it RLP encoded.
 func randomAccount() []byte {
 	root := randomHash()
-	a := Account{
-		Balance:  big.NewInt(rand.Int63()),
-		Nonce:    rand.Uint64(),
-		Root:     root[:],
-		CodeHash: emptyCode[:],
-	}
-	data, _ := rlp.EncodeToBytes(a)
+	a, _ := genSmartContractAccount(rand.Uint64(), big.NewInt(rand.Int63()), root, emptyCode[:])
+	serializer := account.NewAccountSerializerWithAccount(a)
+	data, _ := rlp.EncodeToBytes(serializer)
 	return data
 }
 
@@ -465,7 +463,7 @@ func TestReadStateDuringFlattening(t *testing.T) {
 	snap := snaps.Snapshot(common.HexToHash("0xa3"))
 
 	// Register the testing hook to access the state after flattening
-	var result = make(chan *Account)
+	var result = make(chan account.Account)
 	snaps.onFlatten = func() {
 		// Spin up a thread to read the account from the pre-created
 		// snapshot handler. It's expected to be blocked.
