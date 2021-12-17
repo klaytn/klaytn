@@ -1825,7 +1825,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		cache, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, i, cache)
 
-		// update CurrentSet if it is at an epoch block
+		// update governance CurrentSet if it is at an epoch block
 		if bc.engine.CreateSnapshot(bc, block.NumberU64(), block.Hash(), nil) != nil {
 			return i, events, coalescedLogs, err
 		}
