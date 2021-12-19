@@ -598,7 +598,7 @@ func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, b
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
 func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
 	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockNumberAndIndex(ctx, blockNr, index)
-	if rawTx == nil || err != nil {
+	if err != nil {
 		return nil
 	}
 
