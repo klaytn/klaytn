@@ -572,14 +572,16 @@ func newEthRPCPendingTransaction(tx *types.Transaction) (*EthRPCTransaction, err
 // GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) *EthRPCTransaction {
 	block, err := api.publicTransactionPoolAPI.b.BlockByNumber(ctx, blockNr)
-	if block != nil && err == nil {
-		ethTx, err := newEthRPCTransactionFromBlockAndIndex(block, uint64(index))
-		if ethTx == nil || err != nil {
-			return nil
-		}
-		return ethTx
+	if block == nil || err != nil {
+		return nil
 	}
-	return nil
+
+	ethTx, err := newEthRPCTransactionFromBlockAndIndex(block, uint64(index))
+	if ethTx == nil || err != nil {
+		return nil
+	}
+
+	return ethTx
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
