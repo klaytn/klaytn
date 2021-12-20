@@ -455,19 +455,45 @@ func (bc *BlockChain) SetHead(head uint64) error {
 
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
+	bc.chainmu.Lock()
+	defer bc.chainmu.Unlock()
 
 	updateFn := func(header *types.Header) {
 		// Rewind the block chain, ensuring we don't end up with a stateless head block
+
 		if currentBlock := bc.CurrentBlock(); currentBlock != nil && header.Number.Uint64() < currentBlock.NumberU64() {
 			newHeadBlock := bc.GetBlock(header.Hash(), header.Number.Uint64())
 			if newHeadBlock == nil {
 				logger.Error("Gap in the chain, rewinding to genesis", "number", header.Number, "hash", header.Hash())
 				newHeadBlock = bc.genesisBlock
 			} else {
-				if _, err := state.New(newHeadBlock.Root(), bc.stateCache); err != nil {
-					// Rewound state missing, rolled back to before pivot, reset to genesis
-					newHeadBlock = bc.genesisBlock
+				// Block exists, keep rewinding until we find one with state,
+				// keeping rewinding until we exceed the optional threshold
+
+				for{
+					if _, err := state.New(newHeadBlock.Root(), bc.stateCache); err != nil {
+						// Rewound state missing, rolled back to before pivot, reset to genesis
+						logger.Trace("Block state missing, rewinding further", "number", newHeadBlock.NumberU64(), "hash", newHeadBlock.Hash())
+						parent := bc.GetBlock(newHeadBlock.ParentHash(),newHeadBlock.NumberU64()-1)
+						if parent != nil{
+							newHeadBlock = parent
+							continue
+						}
+						logger.Error("Missing block in the middle, aiming genesis", "number", newHeadBlock.NumberU64()-1, "hash", newHeadBlock.ParentHash())
+						newHeadBlock = bc.genesisBlock
+					} else {
+						// if newHeadBlock has state but blocknumber is 0
+						if newHeadBlock.NumberU64() == 0 {
+							logger.Trace("Rewound to block with state", "number", newHeadBlock.NumberU64(), "hash", newHeadBlock.Hash().String())
+							break
+						}
+						// if newHeadBlock has state, then rewind first
+						logger.Debug("Skipping block with threshold state", "number", newHeadBlock.NumberU64(), "hash", newHeadBlock.Hash().String(), "root", newHeadBlock.Root().String())
+						break
+					}
+
 				}
+
 			}
 			bc.db.WriteHeadBlockHash(newHeadBlock.Hash())
 
