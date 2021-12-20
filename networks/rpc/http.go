@@ -96,6 +96,11 @@ type HTTPTimeouts struct {
 	// is zero, the value of ReadTimeout is used. If both are
 	// zero, ReadHeaderTimeout is used.
 	IdleTimeout time.Duration
+
+	// ExecutionTimeout is the maximum duration for processing the
+	// entire request. If the process is over the time,
+	// the request is stopped immediately and timeout message is sent to client.
+	ExecutionTimeout time.Duration
 }
 
 // DefaultHTTPTimeouts represents the default timeout values used if further
@@ -104,6 +109,7 @@ var DefaultHTTPTimeouts = HTTPTimeouts{
 	ReadTimeout:  30 * time.Second,
 	WriteTimeout: 30 * time.Second,
 	IdleTimeout:  120 * time.Second,
+	ExecutionTimeout: 30 * time.Second,
 }
 
 // DialHTTPWithClient creates a new RPC client that connects to an RPC server over HTTP
@@ -238,7 +244,7 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 			if vhost == "*" {
 				return &fasthttp.Server{
 					Concurrency:        ConcurrencyLimit,
-					Handler:            srv.HandleFastHTTP,
+					Handler:            fasthttp.TimeoutHandler(srv.HandleFastHTTP, timeouts.ExecutionTimeout, "timeout"),
 					ReadTimeout:        timeouts.ReadTimeout,
 					WriteTimeout:       timeouts.WriteTimeout,
 					IdleTimeout:        timeouts.IdleTimeout,
@@ -258,6 +264,7 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 	}
 
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
+	fhandler = fasthttp.TimeoutHandler(fhandler, timeouts.ExecutionTimeout, "timeout")
 
 	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
 	return &fasthttp.Server{

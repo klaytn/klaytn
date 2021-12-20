@@ -548,6 +548,26 @@ var (
 		Usage: "Maximum allowed number of return items for log collecting filter API",
 		Value: filters.GetLogsMaxItems,
 	}
+	RPCReadTimeout = cli.IntFlag{
+		Name:  "rpcreadtimeout",
+		Usage: "HTTP-RPC server read timeout",
+		Value: int(rpc.DefaultHTTPTimeouts.ReadTimeout),
+	}
+	RPCWriteTimeoutFlag = cli.IntFlag{
+		Name:  "rpcwritetimeout",
+		Usage: "HTTP-RPC server write timeout",
+		Value: int(rpc.DefaultHTTPTimeouts.WriteTimeout),
+	}
+	RPCIdleTimeoutFlag = cli.IntFlag{
+		Name:  "rpcidletimeout",
+		Usage: "HTTP-RPC server idle timeout",
+		Value: int(rpc.DefaultHTTPTimeouts.IdleTimeout),
+	}
+	RPCExecutionTimeoutFlag = cli.IntFlag{
+		Name:  "rpcexecutiontimeout",
+		Usage: "HTTP-RPC server execution timeout",
+		Value: int(rpc.DefaultHTTPTimeouts.ExecutionTimeout),
+	}
 
 	// Network Settings
 	NodeTypeFlag = cli.StringFlag{
@@ -1182,6 +1202,18 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(RPCConcurrencyLimit.Name) {
 		rpc.ConcurrencyLimit = ctx.GlobalInt(RPCConcurrencyLimit.Name)
 		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
+	}
+	if ctx.GlobalIsSet(RPCReadTimeout.Name) {
+		cfg.HTTPTimeouts.ReadTimeout = time.Duration(ctx.GlobalInt(RPCReadTimeout.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCWriteTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.WriteTimeout = time.Duration(ctx.GlobalInt(RPCWriteTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCIdleTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.IdleTimeout = time.Duration(ctx.GlobalInt(RPCIdleTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCExecutionTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.ExecutionTimeout = time.Duration(ctx.GlobalInt(RPCExecutionTimeoutFlag.Name)) * time.Second
 	}
 }
 

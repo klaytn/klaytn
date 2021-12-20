@@ -140,6 +140,10 @@ var CommonRPCFlags = []cli.Flag{
 	utils.WSMaxConnections,
 	utils.IPCDisabledFlag,
 	utils.IPCPathFlag,
+	utils.RPCReadTimeout,
+	utils.RPCWriteTimeoutFlag,
+	utils.RPCIdleTimeoutFlag,
+	utils.RPCExecutionTimeoutFlag,
 }
 
 var KCNFlags = []cli.Flag{
