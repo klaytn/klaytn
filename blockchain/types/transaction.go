@@ -220,11 +220,15 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Gas() uint64               { return tx.data.GetGasLimit() }
-func (tx *Transaction) GasPrice() *big.Int        { return new(big.Int).Set(tx.data.GetPrice()) }
-func (tx *Transaction) Value() *big.Int           { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64             { return tx.data.GetAccountNonce() }
-func (tx *Transaction) CheckNonce() bool          { return tx.checkNonce }
+func (tx *Transaction) Gas() uint64        { return tx.data.GetGasLimit() }
+func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.GetPrice()) }
+func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64      { return tx.data.GetAccountNonce() }
+func (tx *Transaction) CheckNonce() bool {
+	tx.mu.RLock()
+	defer tx.mu.RUnlock()
+	return tx.checkNonce
+}
 func (tx *Transaction) Type() TxType              { return tx.data.Type() }
 func (tx *Transaction) IsLegacyTransaction() bool { return tx.data.IsLegacyTransaction() }
 func (tx *Transaction) ValidatedSender() common.Address {
@@ -430,7 +434,9 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		return nil, err
 	}
 
+	tx.mu.Lock()
 	tx.checkNonce = true
+	tx.mu.Unlock()
 
 	gasFeePayer := uint64(0)
 	if tx.IsFeeDelegatedTransaction() {
