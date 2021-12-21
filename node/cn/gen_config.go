@@ -25,14 +25,19 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		NetworkId               uint64
 		SyncMode                downloader.SyncMode
 		NoPruning               bool
+		WorkerDisable           bool
+		DownloaderDisable       bool
+		FetcherDisable          bool
 		ParentOperatorAddr      *common.Address `toml:",omitempty"`
 		AnchoringPeriod         uint64
 		SentChainTxsLimit       uint64
 		OverwriteGenesis        bool
+		StartBlockNumber        uint64
 		DBType                  database.DBType
 		SkipBcVersionCheck      bool `toml:"-"`
 		SingleDB                bool
 		NumStateTrieShards      uint
+		EnableDBPerfMetrics     bool
 		LevelDBCompression      database.LevelDBCompressionType
 		LevelDBBufferPool       bool
 		LevelDBCacheSize        int
@@ -63,20 +68,26 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		AutoRestartFlag         bool
 		RestartTimeOutFlag      time.Duration
 		DaemonPathFlag          string
+		RPCGasCap               *big.Int `toml:",omitempty"`
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
 	enc.NetworkId = c.NetworkId
 	enc.SyncMode = c.SyncMode
 	enc.NoPruning = c.NoPruning
+	enc.WorkerDisable = c.WorkerDisable
+	enc.DownloaderDisable = c.DownloaderDisable
+	enc.FetcherDisable = c.FetcherDisable
 	enc.ParentOperatorAddr = c.ParentOperatorAddr
 	enc.AnchoringPeriod = c.AnchoringPeriod
 	enc.SentChainTxsLimit = c.SentChainTxsLimit
 	enc.OverwriteGenesis = c.OverwriteGenesis
+	enc.StartBlockNumber = c.StartBlockNumber
 	enc.DBType = c.DBType
 	enc.SkipBcVersionCheck = c.SkipBcVersionCheck
 	enc.SingleDB = c.SingleDB
 	enc.NumStateTrieShards = c.NumStateTrieShards
+	enc.EnableDBPerfMetrics = c.EnableDBPerfMetrics
 	enc.LevelDBCompression = c.LevelDBCompression
 	enc.LevelDBBufferPool = c.LevelDBBufferPool
 	enc.LevelDBCacheSize = c.LevelDBCacheSize
@@ -107,6 +118,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.AutoRestartFlag = c.AutoRestartFlag
 	enc.RestartTimeOutFlag = c.RestartTimeOutFlag
 	enc.DaemonPathFlag = c.DaemonPathFlag
+	enc.RPCGasCap = c.RPCGasCap
 	return &enc, nil
 }
 
@@ -117,14 +129,19 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		NetworkId               *uint64
 		SyncMode                *downloader.SyncMode
 		NoPruning               *bool
+		WorkerDisable           *bool
+		DownloaderDisable       *bool
+		FetcherDisable          *bool
 		ParentOperatorAddr      *common.Address `toml:",omitempty"`
 		AnchoringPeriod         *uint64
 		SentChainTxsLimit       *uint64
 		OverwriteGenesis        *bool
+		StartBlockNumber        *uint64
 		DBType                  *database.DBType
 		SkipBcVersionCheck      *bool `toml:"-"`
 		SingleDB                *bool
 		NumStateTrieShards      *uint
+		EnableDBPerfMetrics     *bool
 		LevelDBCompression      *database.LevelDBCompressionType
 		LevelDBBufferPool       *bool
 		LevelDBCacheSize        *int
@@ -155,6 +172,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		AutoRestartFlag         *bool
 		RestartTimeOutFlag      *time.Duration
 		DaemonPathFlag          *string
+		RPCGasCap               *big.Int `toml:",omitempty"`
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -172,6 +190,15 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.NoPruning != nil {
 		c.NoPruning = *dec.NoPruning
 	}
+	if dec.WorkerDisable != nil {
+		c.WorkerDisable = *dec.WorkerDisable
+	}
+	if dec.DownloaderDisable != nil {
+		c.DownloaderDisable = *dec.DownloaderDisable
+	}
+	if dec.FetcherDisable != nil {
+		c.FetcherDisable = *dec.FetcherDisable
+	}
 	if dec.ParentOperatorAddr != nil {
 		c.ParentOperatorAddr = dec.ParentOperatorAddr
 	}
@@ -184,6 +211,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.OverwriteGenesis != nil {
 		c.OverwriteGenesis = *dec.OverwriteGenesis
 	}
+	if dec.StartBlockNumber != nil {
+		c.StartBlockNumber = *dec.StartBlockNumber
+	}
 	if dec.DBType != nil {
 		c.DBType = *dec.DBType
 	}
@@ -195,6 +225,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.NumStateTrieShards != nil {
 		c.NumStateTrieShards = *dec.NumStateTrieShards
+	}
+	if dec.EnableDBPerfMetrics != nil {
+		c.EnableDBPerfMetrics = *dec.EnableDBPerfMetrics
 	}
 	if dec.LevelDBCompression != nil {
 		c.LevelDBCompression = *dec.LevelDBCompression
@@ -285,6 +318,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.DaemonPathFlag != nil {
 		c.DaemonPathFlag = *dec.DaemonPathFlag
+	}
+	if dec.RPCGasCap != nil {
+		c.RPCGasCap = dec.RPCGasCap
 	}
 	return nil
 }

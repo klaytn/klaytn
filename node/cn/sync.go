@@ -183,7 +183,7 @@ func (pm *ProtocolManager) getSyncMode(currentBlock *types.Block) downloader.Syn
 // synchronise tries to sync up our local block chain with a remote peer.
 func (pm *ProtocolManager) synchronise(peer Peer) {
 	// Short circuit if no peers are available
-	if peer == nil {
+	if peer == nil || pm.tmpstop {
 		return
 	}
 	// Make sure the peer's TD is higher than our own

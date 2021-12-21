@@ -122,6 +122,8 @@ type ProtocolManager struct {
 
 	nodetype          common.ConnType
 	txResendUseLegacy bool
+
+	tmpstop bool
 }
 
 // NewProtocolManager returns a new Klaytn sub protocol manager. The Klaytn sub protocol manages peers capable
@@ -365,6 +367,9 @@ func (pm *ProtocolManager) Stop() {
 	pm.wg.Wait()
 
 	logger.Info("Klaytn protocol stopped")
+}
+func (pm *ProtocolManager) SetTmpStop(flag bool) {
+	pm.tmpstop = flag
 }
 
 func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {

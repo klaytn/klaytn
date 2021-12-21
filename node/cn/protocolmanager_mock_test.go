@@ -141,6 +141,18 @@ func (mr *MockBackendProtocolManagerMockRecorder) SetRewardbaseWallet(arg0 inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRewardbaseWallet", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetRewardbaseWallet), arg0)
 }
 
+// SetTmpStop mocks base method.
+func (m *MockBackendProtocolManager) SetTmpStop(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetTmpStop", arg0)
+}
+
+// SetTmpStop indicates an expected call of SetTmpStop.
+func (mr *MockBackendProtocolManagerMockRecorder) SetTmpStop(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTmpStop", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetTmpStop), arg0)
+}
+
 // SetWsEndPoint mocks base method
 func (m *MockBackendProtocolManager) SetWsEndPoint(arg0 string) {
 	m.ctrl.T.Helper()

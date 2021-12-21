@@ -38,6 +38,18 @@ func (m *MockProtocolManagerDownloader) EXPECT() *MockProtocolManagerDownloaderM
 	return m.recorder
 }
 
+// Cancel mocks base method.
+func (m *MockProtocolManagerDownloader) Cancel() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Cancel")
+}
+
+// Cancel indicates an expected call of Cancel.
+func (mr *MockProtocolManagerDownloaderMockRecorder) Cancel() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cancel", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).Cancel))
+}
+
 // DeliverBodies mocks base method
 func (m *MockProtocolManagerDownloader) DeliverBodies(arg0 string, arg1 [][]*types.Transaction) error {
 	m.ctrl.T.Helper()
