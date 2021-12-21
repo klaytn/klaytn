@@ -268,7 +268,7 @@ func TestJsonTestcases(t *testing.T) {
 
 func initStateDB(db database.DBManager) *state.StateDB {
 	sdb := state.NewDatabase(db)
-	statedb, _ := state.New(common.Hash{}, sdb)
+	statedb, _ := state.New(common.Hash{}, sdb, nil)
 
 	contractAddress := common.HexToAddress("0x18f30de96ce789fe778b9a5f420f6fdbbd9b34d8")
 	code := "60ca60205260005b612710811015630000004557602051506020515060205150602051506020515060205150602051506020515060205150602051506001016300000007565b00"
@@ -291,7 +291,7 @@ func initStateDB(db database.DBManager) *state.StateDB {
 
 	// Commit and re-open to start with a clean state.
 	root, _ := statedb.Commit(false)
-	statedb, _ = state.New(root, sdb)
+	statedb, _ = state.New(root, sdb, nil)
 
 	return statedb
 }
