@@ -242,6 +242,12 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	go pool.loop()
 	go pool.handleTxMsg()
 
+	if !DisableSpamThrottlerAtRuntime {
+		if err := pool.StartSpamThrottler(DefaultSpamThrottlerConfig); err != nil {
+			logger.Error("Failed to start spam throttler", "err", err)
+		}
+	}
+
 	return pool
 }
 
@@ -452,6 +458,8 @@ func (pool *TxPool) Stop() {
 	if pool.journal != nil {
 		pool.journal.close()
 	}
+
+	pool.StopThrottler()
 	logger.Info("Transaction pool stopped")
 }
 
@@ -922,8 +930,102 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 	if pool.config.DenyRemoteTx {
 		return
 	}
+
+	// Filter spam txs based on to-address of failed txs
+	spamThrottler := GetSpamThrottler()
+	if spamThrottler != nil {
+		pool.mu.RLock()
+		poolSize := uint64(len(pool.all))
+		pool.mu.RUnlock()
+
+		// Activate spam throttler when pool has enough txs
+		if poolSize > uint64(spamThrottler.config.activateTxPoolSize) {
+			allowTxs, throttleTxs := spamThrottler.classifyTxs(txs)
+
+			for _, tx := range throttleTxs {
+				select {
+				case spamThrottler.throttleCh <- tx:
+				default:
+					logger.Trace("drop a tx when throttleTxs channel is full", "txHash", tx.Hash())
+				}
+			}
+
+			txs = allowTxs
+		}
+	}
+
+	// TODO-Klaytn: Consider removing the next line and move the above logic to `addTx` or `AddRemotes`
 	senderCacher.recover(pool.signer, txs)
 	pool.txMsgCh <- txs
+}
+
+func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
+	ticker := time.Tick(time.Second)
+
+	for {
+		select {
+		case <-spamThrottler.quitCh:
+			logger.Info("Stop a throttle loop")
+			return
+
+		case <-ticker:
+			txs := types.Transactions{}
+			for tx := range spamThrottler.throttleCh {
+				txs = append(txs, tx)
+
+				if txs.Len() > int(spamThrottler.config.throttleTPS) {
+					break
+				}
+			}
+			if len(txs) > 0 {
+				pool.AddRemotes(txs)
+			}
+		}
+	}
+}
+
+func (pool *TxPool) StartSpamThrottler(conf *throttlerConfig) error {
+	spamThrottlerMu.Lock()
+	defer spamThrottlerMu.Unlock()
+
+	if spamThrottler != nil {
+		return errors.New("A spam throttler is already started")
+	}
+
+	if conf == nil {
+		conf = DefaultSpamThrottlerConfig
+	}
+
+	if err := validateConfig(conf); err != nil {
+		return err
+	}
+
+	t := &throttler{
+		config:     conf,
+		candidates: make(map[*common.Address]int),
+		throttled:  make(map[*common.Address]int),
+		allowed:    make(map[*common.Address]bool),
+		mu:         new(sync.RWMutex),
+		threshold:  conf.initialThreshold,
+		throttleCh: make(chan *types.Transaction, conf.throttleTPS*3),
+		quitCh:     make(chan struct{}),
+	}
+
+	go pool.throttleLoop(t)
+
+	spamThrottler = t
+	return nil
+}
+
+func (pool *TxPool) StopThrottler() {
+	spamThrottlerMu.Lock()
+
+	if spamThrottler != nil {
+		close(spamThrottler.quitCh)
+	}
+
+	spamThrottler = nil
+	spamThrottlerMu.Unlock()
 }
 
 // handleTxMsg calls TxPool.AddRemotes by retrieving transactions from TxPool.txMsgCh.
