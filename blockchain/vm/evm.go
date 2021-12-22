@@ -111,6 +111,7 @@ type Context struct {
 	BlockNumber *big.Int       // Provides information for NUMBER
 	Time        *big.Int       // Provides information for TIME
 	BlockScore  *big.Int       // Provides information for DIFFICULTY
+	BaseFee     *big.Int       // Provides information for BASEFEE
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -563,6 +564,8 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 	// There are contracts which uses latest precompiled contract map (regardless of deployment time)
 	// If new HF is added, please add new case below
 	switch {
+	case evm.chainRules.IsLondon:
+		fallthrough
 	case evm.chainRules.IsIstanbul:
 		if ok, mapWithVmVersion := getPrecompiledContractMapWithVmVersion(); ok {
 			return mapWithVmVersion

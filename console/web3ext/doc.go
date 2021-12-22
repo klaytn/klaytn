@@ -40,5 +40,7 @@ APIs are categorized as follows. If you want to know more detail, please refer t
   - clique
   - governance
   - bootnode
+  - chaindatafetcher
+  - eth
 */
 package web3ext

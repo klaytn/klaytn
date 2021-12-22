@@ -2192,3 +2192,100 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 		prof.PrintProfileInfo()
 	}
 }
+
+func TestAccountKeyUpdateLegacyToPublic(t *testing.T) {
+	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasLimit := uint64(1000000)
+
+	if testing.Verbose() {
+		enableLog()
+	}
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	var txs types.Transactions
+
+	// make TxPool to test validation in 'TxPool add' process
+	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+
+	{
+		addr := *bcdata.addrs[1]
+		feepayer := *bcdata.addrs[0]
+		acckey := accountkey.NewAccountKeyWeightedMultiSigWithValues(1,
+			accountkey.WeightedPublicKeys{
+				accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&bcdata.privKeys[1].PublicKey)),
+				accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&bcdata.privKeys[2].PublicKey)),
+			})
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(0),
+			types.TxValueKeyFrom:       addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: acckey,
+			types.TxValueKeyFeePayer:   feepayer,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{bcdata.privKeys[1]})
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayerWithKeys(signer, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+	}
+	{
+		addr := *bcdata.addrs[1]
+		feepayer := *bcdata.addrs[0]
+		acckey := accountkey.NewAccountKeyWeightedMultiSigWithValues(1,
+			accountkey.WeightedPublicKeys{
+				accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&bcdata.privKeys[1].PublicKey)),
+				accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&bcdata.privKeys[3].PublicKey)),
+			})
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(1),
+			types.TxValueKeyFrom:       addr,
+			types.TxValueKeyGasLimit:   gasLimit,
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccountKey: acckey,
+			types.TxValueKeyFeePayer:   feepayer,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedAccountUpdate, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{bcdata.privKeys[1]})
+		assert.Equal(t, nil, err)
+
+		err = tx.SignFeePayerWithKeys(signer, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+	}
+	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+		t.Fatal(err)
+	}
+
+	// select account key types to be tested
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}

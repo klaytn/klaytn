@@ -103,6 +103,7 @@ type blockChain interface {
 type TxPoolConfig struct {
 	NoLocals           bool          // Whether local transaction handling should be disabled
 	AllowLocalAnchorTx bool          // if this is true, the txpool allow locally submitted anchor transactions
+	DenyRemoteTx       bool          // Denies remote transactions receiving from other peers
 	Journal            string        // Journal of local transactions to survive node restarts
 	JournalInterval    time.Duration // Time interval to regenerate the local transaction journal
 
@@ -215,10 +216,8 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		all:          make(map[common.Hash]*types.Transaction),
 		pendingNonce: make(map[common.Address]uint64),
 		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
-		// TODO-Klaytn We use ChainConfig.UnitPrice to initialize TxPool.gasPrice,
-		//         later we have to change this rule when governance of UnitPrice is determined.
-		gasPrice: new(big.Int).SetUint64(chainconfig.UnitPrice),
-		txMsgCh:  make(chan types.Transactions, txMsgChSize),
+		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
+		txMsgCh:      make(chan types.Transactions, txMsgChSize),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
@@ -536,8 +535,8 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
-	//pool.mu.Lock()
-	//defer pool.mu.Unlock()
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
 
@@ -920,6 +919,9 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // HandleTxMsg transfers transactions to a channel where handleTxMsg calls AddRemotes
 // to handle them. This is made not to wait from the results from TxPool.AddRemotes.
 func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
+	if pool.config.DenyRemoteTx {
+		return
+	}
 	senderCacher.recover(pool.signer, txs)
 	pool.txMsgCh <- txs
 }
@@ -946,7 +948,9 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 		return errNotAllowedAnchoringTx
 	}
 
+	pool.mu.RLock()
 	poolSize := uint64(len(pool.all))
+	pool.mu.RUnlock()
 	if poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		return fmt.Errorf("txpool is full: %d", poolSize)
 	}
@@ -978,7 +982,9 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 // If given transactions exceed the capacity of TxPool, it slices the given transactions
 // so it can fit into TxPool's capacity.
 func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error {
+	pool.mu.RLock()
 	poolSize := uint64(len(pool.all))
+	pool.mu.RUnlock()
 	poolCapacity := int(pool.config.ExecSlotsAll + pool.config.NonExecSlotsAll - poolSize)
 	numTxs := len(txs)
 

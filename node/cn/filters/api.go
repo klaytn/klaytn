@@ -34,7 +34,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/storage/database"
 )
@@ -457,14 +456,6 @@ func (args *FilterCriteria) UnmarshalJSON(data []byte) error {
 	var raw input
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
-	}
-
-	if raw.From != nil && *raw.From == rpc.PendingBlockNumber {
-		return kerrors.ErrPendingBlockNotSupported
-	}
-
-	if raw.ToBlock != nil && *raw.ToBlock == rpc.PendingBlockNumber {
-		return kerrors.ErrPendingBlockNotSupported
 	}
 
 	if raw.From != nil {
