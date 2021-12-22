@@ -626,6 +626,10 @@ var (
 		Name:  "enablenodewhitelist",
 		Usage: "Enables peer management by node whitelist",
 	}
+	ProxyFlag = cli.StringFlag{
+		Name:  "proxy",
+		Usage: "Proxy endpoint for connecting peers",
+	}
 
 	// ATM the url is left to the user and deployment to
 	JSpathFlag = cli.StringFlag{
@@ -1333,6 +1337,13 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 		logger.Info("Peer management by node whitelist is enabled")
 	} else {
 		logger.Info("Peer management by node whitelist is disabled")
+	}
+
+	cfg.ProxyURL = ctx.GlobalString(ProxyFlag.Name)
+	if cfg.ProxyURL != "" {
+		logger.Info(fmt.Sprintf("Enabled proxy server: %s", cfg.ProxyURL))
+	} else {
+		logger.Info("Disabled proxy server")
 	}
 
 	cfg.NetworkID, _ = getNetworkId(ctx)

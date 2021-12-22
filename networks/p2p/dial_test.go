@@ -22,8 +22,13 @@ package p2p
 
 import (
 	"encoding/binary"
+	"fmt"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/nettest"
 	"net"
 	"reflect"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -855,6 +860,88 @@ func TestDialResolve(t *testing.T) {
 	}
 }
 
+func TestTCPDialer_Dial(t *testing.T) {
+	ln, err := nettest.NewLocalListener("tcp")
+	assert.NoError(t, err)
+	defer ln.Close()
+	ip, port, err := splitHostPort(ln.Addr().String())
+	assert.NoError(t, err)
+
+	dialer := TCPDialer{Dialer: &net.Dialer{}}
+	c, err := dialer.Dial(discover.NewNode(uintID(1), net.ParseIP(ip), 0, uint16(port), nil, discover.NodeTypeCN))
+
+	assert.NoError(t, err)
+	c.Close()
+}
+
+func TestTCPDialer_DialViaProxy(t *testing.T) {
+	ln, err := nettest.NewLocalListener("tcp")
+	assert.NoError(t, err)
+	wg := sync.WaitGroup{}
+	connected := false
+	wg.Add(1)
+	go func() {
+		// TODO: require assertion of socks5 protocol such as auth methods?
+		defer func() {
+			connected = true
+			wg.Done()
+		}()
+		if conn, _ := ln.Accept(); conn != nil {
+			conn.Close()
+		}
+	}()
+
+	dialer := TCPDialer{Dialer: &net.Dialer{}}
+	dialer.Dial(discover.NewNodeWithProxy(uintID(1),
+		net.ParseIP("127.0.0.1"),
+		0,
+		uint16(1000),
+		nil,
+		discover.NodeTypeCN,
+		fmt.Sprintf("socks5://%s", ln.Addr().String()),
+	))
+
+	wg.Wait()
+	assert.True(t, connected)
+}
+
+func TestTCPDialer_DialMulti(t *testing.T) {
+	var (
+		listeners []net.Listener
+		ports     []uint16
+	)
+	for i := 0; i < 3; i++ {
+		ln, err := nettest.NewLocalListener("tcp")
+		assert.NoError(t, err)
+		listeners = append(listeners, ln)
+
+		_, port, err := splitHostPort(ln.Addr().String())
+		assert.NoError(t, err)
+		ports = append(ports, uint16(port))
+	}
+	defer func() {
+		for _, ln := range listeners {
+			ln.Close()
+		}
+	}()
+
+	dialer := TCPDialer{Dialer: &net.Dialer{}}
+	conns, err := dialer.DialMulti(discover.NewNode(
+		uintID(1),
+		net.ParseIP("127.0.0.1"),
+		0,
+		ports[0],
+		ports[1:],
+		discover.NodeTypeCN),
+	)
+
+	assert.NoError(t, err)
+	assert.Equal(t, len(listeners), len(conns))
+	for _, conn := range conns {
+		conn.Close()
+	}
+}
+
 // compares task lists but doesn't care about the order.
 func sametasks(a, b []task) bool {
 	if len(a) != len(b) {
@@ -876,6 +963,18 @@ func uintID(i uint32) discover.NodeID {
 	var id discover.NodeID
 	binary.BigEndian.PutUint32(id[:], i)
 	return id
+}
+
+func splitHostPort(addr string) (string, int, error) {
+	ip, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", 0, err
+	}
+	portInt, err := strconv.ParseInt(port, 10, 64)
+	if err != nil {
+		return "", 0, err
+	}
+	return ip, int(portInt), nil
 }
 
 // implements discoverTable for TestDialResolve
