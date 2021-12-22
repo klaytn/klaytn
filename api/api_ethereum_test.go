@@ -198,13 +198,16 @@ func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRP
 
 	// Check the optional field of Klaytn transactions.
 	assert.Equal(t, 0, bytes.Compare(ethTx.Input, tx.Data()))
-	// Klaytn transactions that do not use the 'To' field
-	// fill in 'To' with from during converting to EthereumRPCTransaction.
+
 	to := tx.To()
-	if to == nil {
-		to = &from
+	switch tx.Type() {
+	case types.TxTypeAccountUpdate, types.TxTypeFeeDelegatedAccountUpdate, types.TxTypeFeeDelegatedAccountUpdateWithRatio,
+		types.TxTypeCancel, types.TxTypeFeeDelegatedCancel, types.TxTypeFeeDelegatedCancelWithRatio,
+		types.TxTypeChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:
+		assert.Equal(t, &from, ethTx.To)
+	default:
+		assert.Equal(t, to, ethTx.To)
 	}
-	assert.Equal(t, to, ethTx.To)
 	value := tx.Value()
 	assert.Equal(t, value, ethTx.Value.ToInt())
 
