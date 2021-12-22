@@ -512,24 +512,27 @@ func newEthRPCTransactionFromBlockIndex(b *types.Block, index uint64) (*EthRPCTr
 	return newEthRPCTransaction(txs[index], b.Hash(), b.NumberU64(), index)
 }
 
-// newEthRPCTransaction creates an EthRPCTransaction from Klaytn transaction.
-func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) (*EthRPCTransaction, error) {
-	// When an unknown transaction is requested through rpc call,
-	// nil is returned by Klaytn API, and it is handled.
-	if tx == nil {
-		return nil, nil
-	}
-
-	from := getFrom(tx)
-	to := tx.To()
-
+// resolveToField returns value which fits to `to` field based on transaction types.
+// This function is used when converting Klaytn transactions to Ethereum transaction types.
+func resolveToField(tx *types.Transaction) *common.Address {
 	switch tx.Type() {
 	case types.TxTypeAccountUpdate, types.TxTypeFeeDelegatedAccountUpdate, types.TxTypeFeeDelegatedAccountUpdateWithRatio,
 		types.TxTypeCancel, types.TxTypeFeeDelegatedCancel, types.TxTypeFeeDelegatedCancelWithRatio,
 		types.TxTypeChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		// These type of transactions actually do not have `to` address, but Ethereum always have `to` field,
 		// so we Klaytn developers decided to fill the `to` field with `from` address value in these case.
-		to = &from
+		from := getFrom(tx)
+		return &from
+	}
+	return tx.To()
+}
+
+// newEthRPCTransaction creates an EthRPCTransaction from Klaytn transaction.
+func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) (*EthRPCTransaction, error) {
+	// When an unknown transaction is requested through rpc call,
+	// nil is returned by Klaytn API, and it is handled.
+	if tx == nil {
+		return nil, nil
 	}
 
 	// If tx is not TxTypeLegacyTransaction, the type is converted to TxTypeLegacyTransaction.
@@ -544,13 +547,13 @@ func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNum
 
 	result := &EthRPCTransaction{
 		Type:     typeInt,
-		From:     from,
+		From:     getFrom(tx),
 		Gas:      hexutil.Uint64(tx.Gas()),
 		GasPrice: (*hexutil.Big)(tx.GasPrice()),
 		Hash:     tx.Hash(),
 		Input:    tx.Data(),
 		Nonce:    hexutil.Uint64(tx.Nonce()),
-		To:       to,
+		To:       resolveToField(tx),
 		Value:    (*hexutil.Big)(tx.Value()),
 		V:        (*hexutil.Big)(signature.V),
 		R:        (*hexutil.Big)(signature.R),
@@ -676,18 +679,6 @@ func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, bloc
 		return nil, nil
 	}
 
-	from := getFrom(tx)
-	to := tx.To()
-
-	switch tx.Type() {
-	case types.TxTypeAccountUpdate, types.TxTypeFeeDelegatedAccountUpdate, types.TxTypeFeeDelegatedAccountUpdateWithRatio,
-		types.TxTypeCancel, types.TxTypeFeeDelegatedCancel, types.TxTypeFeeDelegatedCancelWithRatio,
-		types.TxTypeChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:
-		// These type of transactions actually do not have `to` address, but Ethereum always have `to` field,
-		// so we Klaytn developers decided to fill the `to` field with `from` address value in these case.
-		to = &from
-	}
-
 	// If tx is not TxTypeLegacyTransaction, the type is converted to TxTypeLegacyTransaction.
 	// TODO-Klaytn: In the case of Ethereum transaction type,
 	//  it must be returned as it is without converting the type.
@@ -702,7 +693,7 @@ func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, bloc
 		"transactionHash":   tx.Hash(),
 		"transactionIndex":  hexutil.Uint64(index),
 		"from":              getFrom(tx),
-		"to":                to,
+		"to":                resolveToField(tx),
 		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
 		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
 		"contractAddress":   nil,
