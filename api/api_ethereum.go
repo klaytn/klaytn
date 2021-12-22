@@ -677,10 +677,14 @@ func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, bloc
 	}
 
 	from := getFrom(tx)
-
-	// If to is nil, it is fills with from.
 	to := tx.To()
-	if to == nil {
+
+	switch tx.Type() {
+	case types.TxTypeAccountUpdate, types.TxTypeFeeDelegatedAccountUpdate, types.TxTypeFeeDelegatedAccountUpdateWithRatio,
+		types.TxTypeCancel, types.TxTypeFeeDelegatedCancel, types.TxTypeFeeDelegatedCancelWithRatio,
+		types.TxTypeChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:
+		// These type of transactions actually do not have `to` address, but Ethereum always have `to` field,
+		// so we Klaytn developers decided to fill the `to` field with `from` address value in these case.
 		to = &from
 	}
 

@@ -265,14 +265,18 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 	// fill in 'To' with from during converting format.
 	toInTx := tx.To()
 	fromAddress := getFrom(tx)
-	if toInTx == nil {
-		toInTx = &fromAddress
-	}
 	to, ok := ethReceipt["to"]
 	if !ok {
 		t.Fatal("to is not defined in Ethereum transaction receipt format.")
 	}
-	assert.Equal(t, to.(*common.Address).String(), toInTx.String())
+	switch tx.Type() {
+	case types.TxTypeAccountUpdate, types.TxTypeFeeDelegatedAccountUpdate, types.TxTypeFeeDelegatedAccountUpdateWithRatio,
+		types.TxTypeCancel, types.TxTypeFeeDelegatedCancel, types.TxTypeFeeDelegatedCancelWithRatio,
+		types.TxTypeChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:
+		assert.Equal(t, &fromAddress, to)
+	default:
+		assert.Equal(t, toInTx, to)
+	}
 
 	gasUsed, ok := ethReceipt["gasUsed"]
 	if !ok {
