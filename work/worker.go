@@ -425,6 +425,11 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				events = append(events, blockchain.ChainHeadEvent{Block: block})
 			}
 
+			// update governance CurrentSet if it is at an epoch block
+			if err := self.engine.CreateSnapshot(self.chain, block.NumberU64(), block.Hash(), nil); err != nil {
+				logger.Error("Failed to call snapshot", "err", err)
+			}
+
 			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
 				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)

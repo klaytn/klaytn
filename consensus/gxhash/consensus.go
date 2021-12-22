@@ -67,6 +67,11 @@ func (gxhash *Gxhash) PreprocessHeaderVerification(headers []*types.Header) (cha
 	panic("this method is not used for PoW engine")
 }
 
+// CreateSnapshot is not used for PoW engine.
+func (gxhash *Gxhash) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
+	return nil
+}
+
 // VerifyHeader checks whether a header conforms to the consensus rules of the
 // stock Klaytn gxhash engine.
 func (gxhash *Gxhash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
