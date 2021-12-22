@@ -176,6 +176,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 			BlockInterval:       DefaultBlockInterval,
 			TriesInMemory:       DefaultTriesInMemory,
 			TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
+			SnapshotCacheSize:   512,
 		}
 		blockchain, _ := NewBlockChain(db, cacheConfig, config, engine, vm.Config{})
 		defer blockchain.Stop()

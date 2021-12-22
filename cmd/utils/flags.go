@@ -275,6 +275,15 @@ var (
 		Name:  "db.no-perf-metrics",
 		Usage: "Disables performance metrics of database's read and write operations",
 	}
+	SnapshotFlag = cli.BoolFlag{
+		Name:  "snapshot",
+		Usage: "Enables snapshot-database mode",
+	}
+	SnapshotCacheSizeFlag = cli.IntFlag{
+		Name:  "snapshot.cache-size",
+		Usage: "Size of in-memory cache of the state snapshot cache (in MiB)",
+		Value: 512,
+	}
 	TrieMemoryCacheSizeFlag = cli.IntFlag{
 		Name:  "state.cache-size",
 		Usage: "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
@@ -1678,6 +1687,15 @@ func SetKlayConfig(ctx *cli.Context, stack *node.Node, cfg *cn.Config) {
 	}
 
 	params.OpcodeComputationCostLimit = ctx.GlobalUint64(OpcodeComputationCostLimitFlag.Name)
+
+	if ctx.GlobalIsSet(SnapshotFlag.Name) {
+		cfg.SnapshotCacheSize = ctx.GlobalInt(SnapshotCacheSizeFlag.Name)
+		if cfg.StartBlockNumber != 0 {
+			logger.Crit("State snapshot should not be used with --start-block-num", "num", cfg.StartBlockNumber)
+		}
+	} else {
+		cfg.SnapshotCacheSize = 0 // snapshot disabled
+	}
 
 	// Override any default configs for hard coded network.
 	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
