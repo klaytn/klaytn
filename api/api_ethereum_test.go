@@ -7,11 +7,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
 	mock_accounts "github.com/klaytn/klaytn/accounts/mocks"
-	"github.com/klaytn/klaytn/storage/database"
-
-	"github.com/golang/mock/gomock"
 	mock_api "github.com/klaytn/klaytn/api/mocks"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -21,6 +19,7 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 

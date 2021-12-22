@@ -503,8 +503,8 @@ type EthRPCTransaction struct {
 	S                *hexutil.Big    `json:"s"`
 }
 
-// newEthRPCTransactionFromBlockAndIndex creates an EthRPCTransaction from block and index parameters.
-func newEthRPCTransactionFromBlockAndIndex(b *types.Block, index uint64) (*EthRPCTransaction, error) {
+// newEthRPCTransactionFromBlockIndex creates an EthRPCTransaction from block and index parameters.
+func newEthRPCTransactionFromBlockIndex(b *types.Block, index uint64) (*EthRPCTransaction, error) {
 	txs := b.Transactions()
 	if index >= uint64(len(txs)) {
 		return nil, errors.New("invalid transaction index")
@@ -580,7 +580,7 @@ func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context,
 		return nil
 	}
 
-	ethTx, err := newEthRPCTransactionFromBlockAndIndex(block, uint64(index))
+	ethTx, err := newEthRPCTransactionFromBlockIndex(block, uint64(index))
 	if ethTx == nil || err != nil {
 		return nil
 	}
@@ -592,7 +592,7 @@ func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context,
 func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *EthRPCTransaction {
 	block, err := api.publicTransactionPoolAPI.b.BlockByHash(ctx, blockHash)
 	if block != nil && err == nil {
-		ethTx, err := newEthRPCTransactionFromBlockAndIndex(block, uint64(index))
+		ethTx, err := newEthRPCTransactionFromBlockIndex(block, uint64(index))
 		if ethTx == nil || err != nil {
 			return nil
 		}
