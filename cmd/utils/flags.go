@@ -152,6 +152,10 @@ var (
 		Name:  "txpool.allow-local-anchortx",
 		Usage: "Allow locally submitted anchoring transactions",
 	}
+	TxPoolDenyRemoteTxFlag = cli.BoolFlag{
+		Name:  "txpool.deny.remotetx",
+		Usage: "Deny remote transaction receiving from other peers. Use only for emergency cases",
+	}
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
 		Usage: "Disk journal for local transaction to survive node restarts",
@@ -455,6 +459,10 @@ var (
 		Name:  "rpc.concurrencylimit",
 		Usage: "Sets a limit of concurrent connection number of HTTP-RPC server",
 		Value: rpc.ConcurrencyLimit,
+	}
+	RPCNonEthCompatibleFlag = cli.BoolFlag{
+		Name:  "rpc.eth.noncompatible",
+		Usage: "Disables the eth namespace API return formatting for compatibility",
 	}
 	WSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
@@ -1389,6 +1397,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(LightKDFFlag.Name) {
 		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
 	}
+	if ctx.GlobalIsSet(RPCNonEthCompatibleFlag.Name) {
+		rpc.NonEthCompatible = ctx.GlobalBool(RPCNonEthCompatibleFlag.Name)
+	}
 }
 
 func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
@@ -1397,6 +1408,9 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	}
 	if ctx.GlobalIsSet(TxPoolAllowLocalAnchorTxFlag.Name) {
 		cfg.AllowLocalAnchorTx = ctx.GlobalBool(TxPoolAllowLocalAnchorTxFlag.Name)
+	}
+	if ctx.GlobalIsSet(TxPoolDenyRemoteTxFlag.Name) {
+		cfg.DenyRemoteTx = ctx.GlobalBool(TxPoolDenyRemoteTxFlag.Name)
 	}
 	if ctx.GlobalIsSet(TxPoolJournalFlag.Name) {
 		cfg.Journal = ctx.GlobalString(TxPoolJournalFlag.Name)

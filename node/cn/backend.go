@@ -213,12 +213,13 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	setEngineType(chainConfig)
 
-	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json.
-	//         So let's update cn.Config.GasPrice using ChainConfig.UnitPrice.
-	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
-
-	logger.Info("Initialised chain configuration", "config", chainConfig)
+	// load governance state
 	governance := governance.NewGovernanceInitialize(chainConfig, chainDB)
+
+	// Set latest unitPrice/gasPrice
+	chainConfig.UnitPrice = governance.UnitPrice()
+	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
+	logger.Info("Initialised chain configuration", "config", chainConfig)
 
 	cn := &CN{
 		config:            config,
@@ -292,8 +293,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
 	governance.SetTxPool(cn.txPool)
-	// Synchronize unitprice
-	cn.txPool.SetGasPrice(big.NewInt(0).SetUint64(governance.UnitPrice()))
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
@@ -337,7 +336,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	gpoParams := config.GPO
 
-	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json and updated config.GasPrice with same value.
+	// NOTE-Klaytn Now we use latest unitPrice
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 
@@ -466,10 +465,17 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	apis := api.GetAPIs(s.APIBackend)
+	apis, ethAPI := api.GetAPIs(s.APIBackend)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+
+	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
+	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
+	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
+
+	ethAPI.SetPublicFilterAPI(publicFilterAPI)
+	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
@@ -481,12 +487,12 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux),
+			Service:   publicDownloaderAPI,
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "eth",
 			Version:   "1.0",
-			Service:   filters.NewPublicFilterAPI(s.APIBackend, false),
+			Service:   publicDownloaderAPI,
 			Public:    true,
 		}, {
 			Namespace: "admin",
@@ -514,7 +520,12 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   governance.NewGovernanceKlayAPI(s.governance, s.blockchain),
+			Service:   governanceKlayAPI,
+			Public:    true,
+		}, {
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   ethAPI,
 			Public:    true,
 		},
 	}...)

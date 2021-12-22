@@ -66,6 +66,7 @@ var FlagGroups = []FlagGroup{
 		Flags: []cli.Flag{
 			TxPoolNoLocalsFlag,
 			TxPoolAllowLocalAnchorTxFlag,
+			TxPoolDenyRemoteTxFlag,
 			TxPoolJournalFlag,
 			TxPoolJournalIntervalFlag,
 			TxPoolPriceLimitFlag,
@@ -247,6 +248,7 @@ var FlagGroups = []FlagGroup{
 			RPCApiFlag,
 			RPCGlobalGasCap,
 			RPCConcurrencyLimit,
+			RPCNonEthCompatibleFlag,
 			IPCDisabledFlag,
 			IPCPathFlag,
 			WSEnabledFlag,

@@ -103,3 +103,23 @@ func enableIstanbulComputationCostModification(jt *JumpTable) {
 	jt[SHR].computationCost = params.ShrComputationCostIstanbul
 	jt[SAR].computationCost = params.SarComputationCostIstanbul
 }
+
+// enable3198 applies EIP-3198 (BASEFEE Opcode)
+// - Adds an opcode that returns the current block's base fee.
+func enable3198(jt *JumpTable) {
+	// New opcode
+	jt[BASEFEE] = &operation{
+		execute:         opBaseFee,
+		constantGas:     GasQuickStep,
+		minStack:        minStack(0, 1),
+		maxStack:        maxStack(0, 1),
+		computationCost: params.BaseFeeComputationCost,
+	}
+}
+
+// opBaseFee implements BASEFEE opcode
+func opBaseFee(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+	baseFee := evm.interpreter.intPool.get().Set(evm.Context.BaseFee)
+	stack.push(baseFee)
+	return nil, nil
+}

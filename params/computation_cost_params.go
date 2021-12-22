@@ -57,7 +57,6 @@ const (
 	CallDataLoadComputationCost   = 596
 	CallDataSizeComputationCost   = 194
 	CallDataCopyComputationCost   = 100
-	ChainIDComputationCost        = 120
 	CodeSizeComputationCost       = 145
 	CodeCopyComputationCost       = 898
 	GasPriceComputationCost       = 131
@@ -98,7 +97,6 @@ const (
 	Dup14ComputationCost          = 143
 	Dup15ComputationCost          = 237
 	Dup16ComputationCost          = 149
-	SelfBalanceComputationCost    = 374
 	Swap1ComputationCost          = 141
 	Swap2ComputationCost          = 156
 	Swap3ComputationCost          = 145
@@ -126,22 +124,6 @@ const (
 	ReturnComputationCost         = 0
 	SelfDestructComputationCost   = 0
 
-	// Opcode Computation Cost Modification
-	AddmodComputationCost         = 3349
-	AddmodComputationCostIstanbul = 1410
-	MulmodComputationCost         = 4757
-	MulmodComputationCostIstanbul = 1760
-	NotComputationCost            = 1289
-	NotComputationCostIstanbul    = 364
-	ShlComputationCost            = 1603
-	ShlComputationCostIstanbul    = 478
-	ShrComputationCost            = 1346
-	ShrComputationCostIstanbul    = 498
-	SarComputationCost            = 1815
-	SarComputationCostIstanbul    = 834
-	XorComputationCost            = 657
-	XorComputationCostIstanbul    = 454
-
 	// Computation cost for precompiled contracts
 	EcrecoverComputationCost            = 113150
 	Sha256PerWordComputationCost        = 100
@@ -161,6 +143,29 @@ const (
 	FeePayerComputationCost             = 10
 	ValidateSenderPerSigComputationCost = 180000
 	ValidateSenderBaseComputationCost   = 10000
-	Blake2bBaseComputationCost          = 10000
-	Blake2bScaleComputationCost         = 10
+
+	// computation costs for opcode added at istanbulCompatible Protocol Upgrade
+	ChainIDComputationCost      = 120
+	SelfBalanceComputationCost  = 374
+	Blake2bBaseComputationCost  = 10000
+	Blake2bScaleComputationCost = 10
+
+	// computation costs for opcode added at londonCompatible Protocol Upgrade
+	BaseFeeComputationCost = 198
+
+	// Opcode Computation Cost Modification
+	AddmodComputationCost         = 3349
+	AddmodComputationCostIstanbul = 1410
+	MulmodComputationCost         = 4757
+	MulmodComputationCostIstanbul = 1760
+	NotComputationCost            = 1289
+	NotComputationCostIstanbul    = 364
+	ShlComputationCost            = 1603
+	ShlComputationCostIstanbul    = 478
+	ShrComputationCost            = 1346
+	ShrComputationCostIstanbul    = 498
+	SarComputationCost            = 1815
+	SarComputationCostIstanbul    = 834
+	XorComputationCost            = 657
+	XorComputationCostIstanbul    = 454
 )
