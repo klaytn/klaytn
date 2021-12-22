@@ -17,10 +17,11 @@
 package blockchain
 
 import (
+	"testing"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/params"
-	"testing"
 )
 
 // Tests a sethead for a short canonical chain where a recent block was already
