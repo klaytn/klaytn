@@ -550,23 +550,23 @@ var (
 	}
 	RPCReadTimeout = cli.IntFlag{
 		Name:  "rpcreadtimeout",
-		Usage: "HTTP-RPC server read timeout",
-		Value: int(rpc.DefaultHTTPTimeouts.ReadTimeout),
+		Usage: "HTTP-RPC server read timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.ReadTimeout / time.Second),
 	}
 	RPCWriteTimeoutFlag = cli.IntFlag{
 		Name:  "rpcwritetimeout",
-		Usage: "HTTP-RPC server write timeout",
-		Value: int(rpc.DefaultHTTPTimeouts.WriteTimeout),
+		Usage: "HTTP-RPC server write timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.WriteTimeout / time.Second),
 	}
 	RPCIdleTimeoutFlag = cli.IntFlag{
 		Name:  "rpcidletimeout",
-		Usage: "HTTP-RPC server idle timeout",
-		Value: int(rpc.DefaultHTTPTimeouts.IdleTimeout),
+		Usage: "HTTP-RPC server idle timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.IdleTimeout / time.Second),
 	}
 	RPCExecutionTimeoutFlag = cli.IntFlag{
 		Name:  "rpcexecutiontimeout",
-		Usage: "HTTP-RPC server execution timeout",
-		Value: int(rpc.DefaultHTTPTimeouts.ExecutionTimeout),
+		Usage: "HTTP-RPC server execution timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
 	}
 
 	// Network Settings
