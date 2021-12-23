@@ -26,7 +26,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 )
 
-// TODO-Klaytn: move these variables into txpool when blockchain struct contains a txpool interface
+// TODO-Klaytn: move these variables into TxPool when BlockChain struct contains a TxPool interface
 // spamThrottler need to be accessed by both of TxPool and BlockChain.
 var (
 	DisableSpamThrottlerAtRuntime            = false
@@ -42,7 +42,7 @@ var (
 )
 
 type throttler struct {
-	config *throttlerConfig
+	config *ThrottlerConfig
 
 	candidates map[*common.Address]int  // throttle candidates with spam weight. Not for concurrent use
 	throttled  map[*common.Address]int  // throttled addresses. It requires mu.lock for concurrent use
@@ -54,28 +54,28 @@ type throttler struct {
 	quitCh     chan struct{}
 }
 
-type throttlerConfig struct {
-	activateTxPoolSize uint `json:"activate_tx_pool_size"`
-	targetFailRatio    uint `json:"target_fail_ratio"`
-	throttleTPS        uint `json:"throttle_tps"`
-	weightMapSize      uint `json:"weight_map_size"`
+type ThrottlerConfig struct {
+	ActivateTxPoolSize uint `json:"activate_tx_pool_size"`
+	TargetFailRatio    uint `json:"target_fail_ratio"`
+	ThrottleTPS        uint `json:"throttle_tps"`
+	WeightMapSize      uint `json:"weight_map_size"`
 
-	increaseWeight   int `json:"increase_weight"`
-	decreaseWeight   int `json:"decrease_weight"`
-	initialThreshold int `json:"initial_threshold"` // initialThreshold <= threshold <= throttledWeight
-	throttledWeight  int `json:"throttled_weight"`
+	IncreaseWeight   int `json:"increase_weight"`
+	DecreaseWeight   int `json:"decrease_weight"`
+	InitialThreshold int `json:"initial_threshold"` // InitialThreshold <= threshold <= ThrottledWeight
+	ThrottledWeight  int `json:"throttled_weight"`
 }
 
-var DefaultSpamThrottlerConfig = &throttlerConfig{
-	activateTxPoolSize: 1000,
-	targetFailRatio:    10,
-	throttleTPS:        10,    // len(throttleCh) = throttleTPS * 3 = 32KB * 10 * 3 = 960KB
-	weightMapSize:      10000, // (20 + 4)B * 10000 = 240KB
+var DefaultSpamThrottlerConfig = &ThrottlerConfig{
+	ActivateTxPoolSize: 1000,
+	TargetFailRatio:    10,
+	ThrottleTPS:        10,    // len(throttleCh) = ThrottleTPS * 3 = 32KB * 10 * 3 = 960KB
+	WeightMapSize:      10000, // (20 + 4)B * 10000 = 240KB
 
-	increaseWeight:   5,
-	decreaseWeight:   1,
-	initialThreshold: 100,
-	throttledWeight:  300,
+	IncreaseWeight:   5,
+	DecreaseWeight:   1,
+	InitialThreshold: 100,
+	ThrottledWeight:  300,
 }
 
 func GetSpamThrottler() *throttler {
@@ -85,17 +85,17 @@ func GetSpamThrottler() *throttler {
 	return t
 }
 
-func validateConfig(conf *throttlerConfig) error {
+func validateConfig(conf *ThrottlerConfig) error {
 	if conf == nil {
-		return errors.New("nil throttlerConfig")
+		return errors.New("nil ThrottlerConfig")
 	}
 
-	if conf.targetFailRatio > 100 {
-		return errors.New("invalid throttlerConfig. 0 <= targetFailRatio <= 100")
+	if conf.TargetFailRatio > 100 {
+		return errors.New("invalid ThrottlerConfig. 0 <= TargetFailRatio <= 100")
 	}
 
-	if conf.initialThreshold > conf.increaseWeight && conf.initialThreshold < conf.throttledWeight {
-		return errors.New("invalid throttlerConfig. increaseWeight < initialThreshold < throttledWeight")
+	if conf.InitialThreshold <= conf.IncreaseWeight || conf.InitialThreshold >= conf.ThrottledWeight {
+		return errors.New("invalid ThrottlerConfig. IncreaseWeight < InitialThreshold < ThrottledWeight")
 	}
 
 	return nil
@@ -105,20 +105,20 @@ func validateConfig(conf *throttlerConfig) error {
 func (t *throttler) adjustThreshold(ratio uint) {
 	var newThreshold int
 	// Decrease threshold if a fail ratio is bigger than target value to put more addresses in throttled map
-	if ratio > t.config.targetFailRatio {
-		newThreshold = t.threshold - t.config.increaseWeight
+	if ratio > t.config.TargetFailRatio {
+		newThreshold = t.threshold - t.config.IncreaseWeight
 
 		// Set minimum threshold
-		if newThreshold < t.config.increaseWeight {
-			newThreshold = t.config.increaseWeight
+		if newThreshold < t.config.IncreaseWeight {
+			newThreshold = t.config.IncreaseWeight
 		}
 
-		// Increase threshold if a fail ratio is smaller than target ratio until it exceeds initialThreshold
+		// Increase threshold if a fail ratio is smaller than target ratio until it exceeds InitialThreshold
 	} else {
-		newThreshold = t.threshold + t.config.increaseWeight
+		newThreshold = t.threshold + t.config.IncreaseWeight
 
-		if newThreshold > t.config.initialThreshold {
-			newThreshold = t.config.initialThreshold
+		if newThreshold > t.config.InitialThreshold {
+			newThreshold = t.config.InitialThreshold
 		}
 	}
 
@@ -152,7 +152,7 @@ func (t *throttler) updateThrottled(newThrottled []*common.Address) {
 
 	// Decrease spam weight for all throttled addresses.
 	for addr, remained := range t.throttled {
-		t.throttled[addr] = remained - t.config.decreaseWeight
+		t.throttled[addr] = remained - t.config.DecreaseWeight
 		if t.throttled[addr] < 0 {
 			removeThrottled = append(removeThrottled, addr)
 		}
@@ -164,7 +164,7 @@ func (t *throttler) updateThrottled(newThrottled []*common.Address) {
 	}
 
 	for _, addr := range newThrottled {
-		t.throttled[addr] = t.config.throttledWeight
+		t.throttled[addr] = t.config.ThrottledWeight
 	}
 
 	size := len(t.throttled)
@@ -195,18 +195,18 @@ func (t *throttler) updateThrottlerState(txs types.Transactions, receipts types.
 
 			weight := t.candidates[toAddr]
 			if weight == 0 {
-				if mapSize >= t.config.weightMapSize {
+				if mapSize >= t.config.WeightMapSize {
 					continue
 				}
 				mapSize++
 			}
-			t.candidates[toAddr] = weight + t.config.increaseWeight
+			t.candidates[toAddr] = weight + t.config.IncreaseWeight
 		}
 	}
 
 	// Decrease spam weight for all candidates and update throttle lists in throttled.
 	for addr, weight := range t.candidates {
-		newWeight := weight - t.config.decreaseWeight
+		newWeight := weight - t.config.DecreaseWeight
 
 		switch {
 		case newWeight < 0:
@@ -255,4 +255,45 @@ func (t *throttler) classifyTxs(txs types.Transactions) (types.Transactions, typ
 	t.mu.RUnlock()
 
 	return allowTxs, throttleTxs
+}
+
+// SetAllowed resets the allowed list of throttler. The previous list will be abandoned.
+func (t *throttler) SetAllowed(addrs []*common.Address) {
+	t.mu.Lock()
+	t.allowed = make(map[*common.Address]bool)
+	for _, addr := range addrs {
+		if addr == nil {
+			continue
+		}
+		t.allowed[addr] = true
+	}
+	t.mu.Unlock()
+}
+
+func (t *throttler) GetAllowed() []*common.Address {
+	var addrs []*common.Address
+
+	t.mu.RLock()
+	for addr := range t.allowed {
+		addrs = append(addrs, addr)
+	}
+	t.mu.RUnlock()
+
+	return addrs
+}
+
+func (t *throttler) GetThrottled() []*common.Address {
+	var addrs []*common.Address
+
+	t.mu.RLock()
+	for addr := range t.throttled {
+		addrs = append(addrs, addr)
+	}
+	t.mu.RUnlock()
+
+	return addrs
+}
+
+func (t *throttler) GetConfig() *ThrottlerConfig {
+	return t.config
 }
