@@ -461,7 +461,7 @@ func (pool *TxPool) Stop() {
 		pool.journal.close()
 	}
 
-	pool.StopThrottler()
+	pool.StopSpamThrottler()
 	logger.Info("Transaction pool stopped")
 }
 
@@ -941,7 +941,7 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 		pool.mu.RUnlock()
 
 		// Activate spam throttler when pool has enough txs
-		if poolSize > uint64(spamThrottler.config.activateTxPoolSize) {
+		if poolSize > uint64(spamThrottler.config.ActivateTxPoolSize) {
 			allowTxs, throttleTxs := spamThrottler.classifyTxs(txs)
 
 			for _, tx := range throttleTxs {
@@ -963,12 +963,12 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 
 func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
 	ticker := time.Tick(time.Second)
-	throttleNum := int(spamThrottler.config.throttleTPS)
+	throttleNum := int(spamThrottler.config.ThrottleTPS)
 
 	for {
 		select {
 		case <-spamThrottler.quitCh:
-			logger.Info("Stop a throttle loop")
+			logger.Info("Stop spam throttler loop")
 			return
 
 		case <-ticker:
@@ -991,12 +991,12 @@ func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
 	}
 }
 
-func (pool *TxPool) StartSpamThrottler(conf *throttlerConfig) error {
+func (pool *TxPool) StartSpamThrottler(conf *ThrottlerConfig) error {
 	spamThrottlerMu.Lock()
 	defer spamThrottlerMu.Unlock()
 
 	if spamThrottler != nil {
-		return errors.New("A spam throttler is already started")
+		return errors.New("spam throttler was already running")
 	}
 
 	if conf == nil {
@@ -1013,18 +1013,19 @@ func (pool *TxPool) StartSpamThrottler(conf *throttlerConfig) error {
 		throttled:  make(map[*common.Address]int),
 		allowed:    make(map[*common.Address]bool),
 		mu:         new(sync.RWMutex),
-		threshold:  conf.initialThreshold,
-		throttleCh: make(chan *types.Transaction, conf.throttleTPS*3),
+		threshold:  conf.InitialThreshold,
+		throttleCh: make(chan *types.Transaction, conf.ThrottleTPS*3),
 		quitCh:     make(chan struct{}),
 	}
 
 	go pool.throttleLoop(t)
 
 	spamThrottler = t
+	logger.Info("Start spam throttler", "config", *conf)
 	return nil
 }
 
-func (pool *TxPool) StopThrottler() {
+func (pool *TxPool) StopSpamThrottler() {
 	spamThrottlerMu.Lock()
 
 	if spamThrottler != nil {
