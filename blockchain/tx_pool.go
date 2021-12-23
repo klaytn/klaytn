@@ -961,6 +961,7 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 
 func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
 	ticker := time.Tick(time.Second)
+	throttleNum := int(spamThrottler.config.throttleTPS)
 
 	for {
 		select {
@@ -970,13 +971,17 @@ func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
 
 		case <-ticker:
 			txs := types.Transactions{}
-			for tx := range spamThrottler.throttleCh {
-				txs = append(txs, tx)
 
-				if txs.Len() > int(spamThrottler.config.throttleTPS) {
-					break
-				}
+			iterNum := len(spamThrottler.throttleCh)
+			if iterNum > throttleNum {
+				iterNum = throttleNum
 			}
+
+			for i := 0; i < iterNum; i++ {
+				tx := <-spamThrottler.throttleCh
+				txs = append(txs, tx)
+			}
+
 			if len(txs) > 0 {
 				pool.AddRemotes(txs)
 			}
