@@ -206,6 +206,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		// Initialize DeriveSha implementation
 		InitDeriveSha(genesis.Config.DeriveShaImpl)
 		block, err := genesis.Commit(common.Hash{}, db)
+		if err != nil {
+			return genesis.Config, common.Hash{}, err
+		}
 		return genesis.Config, block.Hash(), err
 	}
 
@@ -351,6 +354,9 @@ func (g *Genesis) Commit(baseStateRoot common.Hash, db database.DBManager) (*typ
 	config := g.Config
 	if config == nil {
 		config = params.AllGxhashProtocolChanges
+	}
+	if err := config.CheckConfigForkOrder(); err != nil {
+		return nil, err
 	}
 	db.WriteChainConfig(block.Hash(), config)
 	return block, nil
