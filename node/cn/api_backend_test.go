@@ -151,10 +151,18 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 	defer mockCtrl.Finish()
 
+	mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
+	mockDownloader.EXPECT().Cancel().Times(1)
+	pm := &ProtocolManager{downloader: mockDownloader}
+	api.cn.protocolManager = pm
 	number := uint64(123)
 	mockBlockChain.EXPECT().SetHead(number).Times(1)
 
 	api.SetHead(number)
+	block := newBlock(int(number))
+	expectedHeader := block.Header()
+	mockBlockChain.EXPECT().CurrentHeader().Return(expectedHeader).Times(1)
+	assert.Equal(t, expectedHeader, mockBlockChain.CurrentHeader())
 }
 
 func TestCNAPIBackend_HeaderByNumber(t *testing.T) {

@@ -38,10 +38,10 @@ func (m *MockBackendProtocolManager) EXPECT() *MockBackendProtocolManagerMockRec
 }
 
 // Downloader mocks base method.
-func (m *MockBackendProtocolManager) Downloader() *MockBackendProtocolManagerMockRecorder {
+func (m *MockBackendProtocolManager) Downloader() ProtocolManagerDownloader {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Downloader")
-	ret0, _ := ret[0].(*MockBackendProtocolManagerMockRecorder)
+	ret0, _ := ret[0].(ProtocolManagerDownloader)
 	return ret0
 }
 
