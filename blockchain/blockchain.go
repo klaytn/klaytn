@@ -2502,6 +2502,8 @@ func (bc *BlockChain) SubscribeNodeWhitelist(whitelistCh chan []string) {
 	chainHeadEvent := make(chan ChainHeadEvent, chainHeadChanSize)
 	sub := bc.SubscribeChainHeadEvent(chainHeadEvent)
 	defer sub.Unsubscribe()
+	// before to subscribe chain head event, publish to whitelist event for initializing.
+	whitelistCh <- bc.GetNodeWhitelist()
 
 	for {
 		select {
