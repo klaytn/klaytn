@@ -19,6 +19,7 @@ package blockchain
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/rcrowley/go-metrics"
 
@@ -35,10 +36,11 @@ var (
 )
 
 var (
-	thresholdGauge     = metrics.NewRegisteredGauge("txpool/throttler/threshold", nil)
-	candidateSizeGauge = metrics.NewRegisteredGauge("txpool/throttler/candidate/size", nil)
-	throttledSizeGauge = metrics.NewRegisteredGauge("txpool/throttler/throttled/size", nil)
-	allowedSizeGauge   = metrics.NewRegisteredGauge("txpool/throttler/allowed/size", nil)
+	thresholdGauge           = metrics.NewRegisteredGauge("txpool/throttler/threshold", nil)
+	candidateSizeGauge       = metrics.NewRegisteredGauge("txpool/throttler/candidate/size", nil)
+	throttledSizeGauge       = metrics.NewRegisteredGauge("txpool/throttler/throttled/size", nil)
+	allowedSizeGauge         = metrics.NewRegisteredGauge("txpool/throttler/allowed/size", nil)
+	throttlerUpdateTimeGauge = metrics.NewRegisteredGauge("txpool/throttler/update/time", nil)
 )
 
 type throttler struct {
@@ -179,6 +181,7 @@ func (t *throttler) updateThrottlerState(txs types.Transactions, receipts types.
 	var removeCandidate []*common.Address
 	var newThrottled []*common.Address
 
+	startTime := time.Now()
 	numFailed := 0
 	failRatio := uint(0)
 	mapSize := uint(len(t.candidates))
@@ -236,6 +239,7 @@ func (t *throttler) updateThrottlerState(txs types.Transactions, receipts types.
 
 	// Update metrics
 	candidateSizeGauge.Update(int64(len(t.candidates)))
+	throttlerUpdateTimeGauge.Update(int64(time.Since(startTime)))
 }
 
 // classifyTxs classifies given txs into allowTxs and throttleTxs.
