@@ -341,6 +341,10 @@ web3._extend({
 			name: 'getSpamThrottlerThrottleList',
 			call: 'admin_getSpamThrottlerThrottleList',
 		}),
+		new web3._extend.Method({
+			name: 'getSpamThrottlerCandidateList',
+			call: 'admin_getSpamThrottlerCandidateList',
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

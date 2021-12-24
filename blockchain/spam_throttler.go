@@ -297,6 +297,13 @@ func (t *throttler) GetThrottled() []*common.Address {
 	return addrs
 }
 
+func (t *throttler) GetCandidates() map[*common.Address]int {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	return t.candidates
+}
+
 func (t *throttler) GetConfig() *ThrottlerConfig {
 	return t.config
 }

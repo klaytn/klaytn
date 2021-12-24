@@ -1450,8 +1450,8 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	}
 
 	// PN specific txpool setting
-	if ctx.GlobalIsSet(TxPoolSpamThrottlerDisableFlag.Name) && NodeTypeFlag.Value == "pn" {
-		cfg.EnableSpamThrottlerAtRuntime = ctx.GlobalBool(TxPoolSpamThrottlerDisableFlag.Name)
+	if NodeTypeFlag.Value == "pn" {
+		cfg.EnableSpamThrottlerAtRuntime = !ctx.GlobalIsSet(TxPoolSpamThrottlerDisableFlag.Name)
 	}
 }
 
