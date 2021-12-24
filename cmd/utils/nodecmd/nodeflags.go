@@ -156,7 +156,7 @@ var KPNFlags = []cli.Flag{
 	utils.TxResendUseLegacyFlag,
 	utils.CypressFlag,
 	utils.BaobabFlag,
-	utils.TxPoolSpamThrottlerDisalbleFlag,
+	utils.TxPoolSpamThrottlerDisableFlag,
 }
 
 var KENFlags = []cli.Flag{
@@ -247,7 +247,7 @@ var KSPNFlags = []cli.Flag{
 	utils.TxResendIntervalFlag,
 	utils.TxResendCountFlag,
 	utils.TxResendUseLegacyFlag,
-	utils.TxPoolSpamThrottlerDisalbleFlag,
+	utils.TxPoolSpamThrottlerDisableFlag,
 	utils.ServiceChainSignerFlag,
 	utils.AnchoringPeriodFlag,
 	utils.SentChainTxsLimit,

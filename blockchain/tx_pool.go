@@ -118,7 +118,8 @@ type TxPoolConfig struct {
 	KeepLocals bool          // Disables removing timed-out local transactions
 	Lifetime   time.Duration // Maximum amount of time non-executable transaction are queued
 
-	NoAccountCreation bool // Whether account creation transactions should be disabled
+	NoAccountCreation            bool // Whether account creation transactions should be disabled
+	EnableSpamThrottlerAtRuntime bool // Enable txpool spam throttler at runtime
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -244,7 +245,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	go pool.loop()
 	go pool.handleTxMsg()
 
-	if !DisableSpamThrottlerAtRuntime {
+	if config.EnableSpamThrottlerAtRuntime {
 		if err := pool.StartSpamThrottler(DefaultSpamThrottlerConfig); err != nil {
 			logger.Error("Failed to start spam throttler", "err", err)
 		}
