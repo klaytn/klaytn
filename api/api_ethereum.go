@@ -41,11 +41,7 @@ const (
 	EmptySha3Uncles = "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
 	// DummyGasLimit exists for supporting Ethereum compatible data structure.
 	// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
-	DummyGasLimit uint64 = 99999999
-	// DummyExtraData exists for supporting Ethereum compatible data structure.
-	// ExtraData field is used for signatures of validators in Klaytn,
-	// but there is no validator mechanism in Ethereum.
-	DummyExtraData = "klaytn validator signatures"
+	DummyGasLimit uint64 = 999999999
 )
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
@@ -751,7 +747,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) map[string]interfac
 		"miner":            proposer,
 		"difficulty":       (*hexutil.Big)(head.BlockScore),
 		"totalDifficulty":  (*hexutil.Big)(api.publicKlayAPI.b.GetTd(head.Hash())),
-		"extraData":        hexutil.Bytes(DummyExtraData),
+		"extraData":        hexutil.Bytes{},
 		"size":             hexutil.Uint64(head.Size()),
 		"gasLimit":         hexutil.Uint64(DummyGasLimit),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
