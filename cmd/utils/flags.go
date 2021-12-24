@@ -206,7 +206,7 @@ var (
 		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
 	// PN specific txpool settings
-	TxPoolSpamThrottlerDisalbleFlag = cli.BoolFlag{
+	TxPoolSpamThrottlerDisableFlag = cli.BoolFlag{
 		Name:  "txpool.spamthrottler.disable",
 		Usage: "Disable txpool spam throttler prototype",
 	}
@@ -1443,8 +1443,8 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	}
 
 	// PN specific txpool setting
-	if ctx.GlobalIsSet(TxPoolSpamThrottlerDisalbleFlag.Name) {
-		blockchain.DisableSpamThrottlerAtRuntime = ctx.GlobalBool(TxPoolSpamThrottlerDisalbleFlag.Name)
+	if ctx.GlobalIsSet(TxPoolSpamThrottlerDisableFlag.Name) && NodeTypeFlag.Value == "pn" {
+		cfg.EnableSpamThrottlerAtRuntime = ctx.GlobalBool(TxPoolSpamThrottlerDisableFlag.Name)
 	}
 }
 
