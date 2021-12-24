@@ -251,6 +251,14 @@ func (api *PrivateAdminAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([
 	return throttler.GetThrottled(), nil
 }
 
+func (api *PrivateAdminAPI) GetSpamThrottlerCandidateList(ctx context.Context) (map[*common.Address]int, error) {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return nil, errors.New("spam throttler is not running")
+	}
+	return throttler.GetCandidates(), nil
+}
+
 // PublicDebugAPI is the collection of Klaytn full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
