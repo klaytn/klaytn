@@ -19,7 +19,7 @@ func newTestThrottler(config *ThrottlerConfig) *throttler {
 		allowed:    make(map[common.Address]bool),
 		mu:         new(sync.RWMutex),
 		threshold:  config.InitialThreshold,
-		throttleCh: make(chan *types.Transaction, config.ThrottleTPS*3),
+		throttleCh: make(chan *types.Transaction, config.ThrottleTPS*5),
 		quitCh:     make(chan struct{}),
 	}
 }
@@ -40,7 +40,7 @@ func TestThrottler_updateThrottlerState(t *testing.T) {
 			candidateNum:    0,
 			candidateWeight: 0,
 			throttledNum:    1,
-			throttledWeight: testConfig.ThrottledWeight,
+			throttledWeight: testConfig.ThrottleSeconds,
 		},
 		{
 			tcName:       "one address generates not enough fail txs to be throttled",

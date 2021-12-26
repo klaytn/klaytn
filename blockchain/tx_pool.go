@@ -1013,7 +1013,7 @@ func (pool *TxPool) StartSpamThrottler(conf *ThrottlerConfig) error {
 		allowed:    make(map[common.Address]bool),
 		mu:         new(sync.RWMutex),
 		threshold:  conf.InitialThreshold,
-		throttleCh: make(chan *types.Transaction, conf.ThrottleTPS*3),
+		throttleCh: make(chan *types.Transaction, conf.ThrottleTPS*5),
 		quitCh:     make(chan struct{}),
 	}
 
@@ -1026,13 +1026,17 @@ func (pool *TxPool) StartSpamThrottler(conf *ThrottlerConfig) error {
 
 func (pool *TxPool) StopSpamThrottler() {
 	spamThrottlerMu.Lock()
+	defer spamThrottlerMu.Unlock()
 
 	if spamThrottler != nil {
 		close(spamThrottler.quitCh)
 	}
 
 	spamThrottler = nil
-	spamThrottlerMu.Unlock()
+	candidateSizeGauge.Update(0)
+	throttledSizeGauge.Update(0)
+	allowedSizeGauge.Update(0)
+	throttlerUpdateTimeGauge.Update(0)
 }
 
 // handleTxMsg calls TxPool.AddRemotes by retrieving transactions from TxPool.txMsgCh.
