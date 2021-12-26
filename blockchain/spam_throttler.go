@@ -45,10 +45,10 @@ var (
 type throttler struct {
 	config *ThrottlerConfig
 
-	candidates map[*common.Address]int  // throttle candidates with spam weight. Not for concurrent use
-	throttled  map[*common.Address]int  // throttled addresses. It requires mu.lock for concurrent use
-	allowed    map[*common.Address]bool // white listed addresses. It requires mu.lock for concurrent use
-	mu         *sync.RWMutex            // mutex for throttled and allowed
+	candidates map[common.Address]int  // throttle candidates with spam weight. Not for concurrent use
+	throttled  map[common.Address]int  // throttled addresses. It requires mu.lock for concurrent use
+	allowed    map[common.Address]bool // white listed addresses. It requires mu.lock for concurrent use
+	mu         *sync.RWMutex           // mutex for throttled and allowed
 
 	threshold  int
 	throttleCh chan *types.Transaction
@@ -130,10 +130,10 @@ func (t *throttler) adjustThreshold(ratio uint) {
 }
 
 // newAllowed generates a new allowed list of throttler.
-func (t *throttler) newAllowed(allowed []*common.Address) {
+func (t *throttler) newAllowed(allowed []common.Address) {
 	t.mu.Lock()
 
-	a := make(map[*common.Address]bool, len(allowed))
+	a := make(map[common.Address]bool, len(allowed))
 	for _, addr := range allowed {
 		a[addr] = true
 	}
@@ -147,8 +147,8 @@ func (t *throttler) newAllowed(allowed []*common.Address) {
 }
 
 // updateThrottled removes outdated addresses from the throttle list and adds new addresses to the list.
-func (t *throttler) updateThrottled(newThrottled []*common.Address) {
-	var removeThrottled []*common.Address
+func (t *throttler) updateThrottled(newThrottled []common.Address) {
+	var removeThrottled []common.Address
 	t.mu.Lock()
 
 	// Decrease spam weight for all throttled addresses.
@@ -177,8 +177,8 @@ func (t *throttler) updateThrottled(newThrottled []*common.Address) {
 
 // updateThrottlerState updates the throttle list by calculating spam weight of candidates.
 func (t *throttler) updateThrottlerState(txs types.Transactions, receipts types.Receipts) {
-	var removeCandidate []*common.Address
-	var newThrottled []*common.Address
+	var removeCandidate []common.Address
+	var newThrottled []common.Address
 
 	startTime := time.Now()
 	numFailed := 0
@@ -195,14 +195,15 @@ func (t *throttler) updateThrottlerState(txs types.Transactions, receipts types.
 				continue
 			}
 
-			weight := t.candidates[toAddr]
+			weight := t.candidates[*toAddr]
 			if weight == 0 {
 				if mapSize >= t.config.WeightMapSize {
 					continue
 				}
 				mapSize++
 			}
-			t.candidates[toAddr] = weight + t.config.IncreaseWeight
+
+			t.candidates[*toAddr] = weight + t.config.IncreaseWeight
 		}
 	}
 
@@ -211,7 +212,7 @@ func (t *throttler) updateThrottlerState(txs types.Transactions, receipts types.
 		newWeight := weight - t.config.DecreaseWeight
 
 		switch {
-		case newWeight < 0:
+		case newWeight <= 0:
 			removeCandidate = append(removeCandidate, addr)
 
 		case newWeight > t.threshold:
@@ -249,7 +250,7 @@ func (t *throttler) classifyTxs(txs types.Transactions) (types.Transactions, typ
 
 	t.mu.RLock()
 	for _, tx := range txs {
-		if tx.To() != nil && t.throttled[tx.To()] > 0 && t.allowed[tx.To()] == false {
+		if tx.To() != nil && t.throttled[*tx.To()] > 0 && t.allowed[*tx.To()] == false {
 			throttleTxs = append(throttleTxs, tx)
 		} else {
 			allowTxs = append(allowTxs, tx)
@@ -261,20 +262,17 @@ func (t *throttler) classifyTxs(txs types.Transactions) (types.Transactions, typ
 }
 
 // SetAllowed resets the allowed list of throttler. The previous list will be abandoned.
-func (t *throttler) SetAllowed(addrs []*common.Address) {
+func (t *throttler) SetAllowed(addrs []common.Address) {
 	t.mu.Lock()
-	t.allowed = make(map[*common.Address]bool)
+	t.allowed = make(map[common.Address]bool)
 	for _, addr := range addrs {
-		if addr == nil {
-			continue
-		}
 		t.allowed[addr] = true
 	}
 	t.mu.Unlock()
 }
 
-func (t *throttler) GetAllowed() []*common.Address {
-	var addrs []*common.Address
+func (t *throttler) GetAllowed() []common.Address {
+	var addrs []common.Address
 
 	t.mu.RLock()
 	for addr := range t.allowed {
@@ -285,8 +283,8 @@ func (t *throttler) GetAllowed() []*common.Address {
 	return addrs
 }
 
-func (t *throttler) GetThrottled() []*common.Address {
-	var addrs []*common.Address
+func (t *throttler) GetThrottled() []common.Address {
+	var addrs []common.Address
 
 	t.mu.RLock()
 	for addr := range t.throttled {
@@ -297,7 +295,7 @@ func (t *throttler) GetThrottled() []*common.Address {
 	return addrs
 }
 
-func (t *throttler) GetCandidates() map[*common.Address]int {
+func (t *throttler) GetCandidates() map[common.Address]int {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 

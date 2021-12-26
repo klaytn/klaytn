@@ -1008,9 +1008,9 @@ func (pool *TxPool) StartSpamThrottler(conf *ThrottlerConfig) error {
 
 	t := &throttler{
 		config:     conf,
-		candidates: make(map[*common.Address]int),
-		throttled:  make(map[*common.Address]int),
-		allowed:    make(map[*common.Address]bool),
+		candidates: make(map[common.Address]int),
+		throttled:  make(map[common.Address]int),
+		allowed:    make(map[common.Address]bool),
 		mu:         new(sync.RWMutex),
 		threshold:  conf.InitialThreshold,
 		throttleCh: make(chan *types.Transaction, conf.ThrottleTPS*3),

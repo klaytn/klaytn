@@ -226,7 +226,7 @@ func (api *PrivateAdminAPI) StartSpamThrottler(ctx context.Context, config *bloc
 	return api.cn.txPool.StartSpamThrottler(config)
 }
 
-func (api *PrivateAdminAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs []*common.Address) error {
+func (api *PrivateAdminAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs []common.Address) error {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return errors.New("spam throttler is not running")
@@ -235,7 +235,7 @@ func (api *PrivateAdminAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs
 	return nil
 }
 
-func (api *PrivateAdminAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]*common.Address, error) {
+func (api *PrivateAdminAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]common.Address, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
@@ -243,7 +243,7 @@ func (api *PrivateAdminAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]*c
 	return throttler.GetAllowed(), nil
 }
 
-func (api *PrivateAdminAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([]*common.Address, error) {
+func (api *PrivateAdminAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([]common.Address, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
@@ -251,7 +251,7 @@ func (api *PrivateAdminAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([
 	return throttler.GetThrottled(), nil
 }
 
-func (api *PrivateAdminAPI) GetSpamThrottlerCandidateList(ctx context.Context) (map[*common.Address]int, error) {
+func (api *PrivateAdminAPI) GetSpamThrottlerCandidateList(ctx context.Context) (map[common.Address]int, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
