@@ -40,6 +40,7 @@ var (
 	throttledSizeGauge       = metrics.NewRegisteredGauge("txpool/throttler/throttled/size", nil)
 	allowedSizeGauge         = metrics.NewRegisteredGauge("txpool/throttler/allowed/size", nil)
 	throttlerUpdateTimeGauge = metrics.NewRegisteredGauge("txpool/throttler/update/time", nil)
+	throttlerDropCount       = metrics.NewRegisteredCounter("txpool/throttler/dropped/count", nil)
 )
 
 type throttler struct {
