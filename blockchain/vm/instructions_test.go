@@ -312,6 +312,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVM, contract *Contr
 			BlockScore:  big.NewInt(0),
 			Coinbase:    common.HexToAddress("0xf4b0cb429b7d341bf467f2d51c09b64cd9add37c"),
 			GasPrice:    big.NewInt(1),
+			BaseFee:     big.NewInt(1000000000000000000),
 			GasLimit:    uint64(1000000000000000),
 			Time:        big.NewInt(1488928920),
 			GetHash: func(num uint64) common.Hash {
@@ -998,14 +999,6 @@ func BenchmarkOpSuicide(b *testing.B) {
 	opBenchmark(b, opSuicide, addr)
 }
 
-func BenchmarkOpChainID(b *testing.B) {
-	opBenchmark(b, opChainID)
-}
-
-func BenchmarkOpSelfBalance(b *testing.B) {
-	opBenchmark(b, opSelfBalance)
-}
-
 func BenchmarkOpPush1(b *testing.B) {
 	opBenchmark(b, opPush1)
 }
@@ -1354,6 +1347,18 @@ func BenchmarkOpLog4(b *testing.B) {
 	size := 4
 	stacks := genStacksForLog(size)
 	opBenchmark(b, makeLog(size), stacks...)
+}
+
+func BenchmarkOpChainID(b *testing.B) {
+	opBenchmark(b, opChainID)
+}
+
+func BenchmarkOpSelfBalance(b *testing.B) {
+	opBenchmark(b, opSelfBalance)
+}
+
+func BenchmarkOpBaseFee(b *testing.B) {
+	opBenchmark(b, opBaseFee)
 }
 
 func genStacksForDup(size int) []string {

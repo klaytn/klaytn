@@ -25,7 +25,6 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
@@ -65,11 +64,9 @@ var (
 
 // TODO-Klaytn-Governance: Refine this API and consider the gas price of txpool
 func (api *GovernanceKlayAPI) GasPriceAt(num *rpc.BlockNumber) (*hexutil.Big, error) {
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		ret := api.governance.UnitPrice()
 		return (*hexutil.Big)(big.NewInt(0).SetUint64(ret)), nil
-	} else if *num == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
 	} else {
 		blockNum := num.Int64()
 
@@ -150,10 +147,8 @@ func (api *PublicGovernanceAPI) TotalVotingPower() (float64, error) {
 
 func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
-	} else if *num == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -167,10 +162,8 @@ func (api *PublicGovernanceAPI) ItemsAt(num *rpc.BlockNumber) (map[string]interf
 
 func (api *PublicGovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
-	} else if *num == rpc.PendingBlockNumber {
-		return nil, kerrors.ErrPendingBlockNotSupported
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -196,10 +189,8 @@ func (api *PublicGovernanceAPI) IdxCacheFromDb() []uint64 {
 // TODO-Klaytn: Return error if invalid input is given such as pending or a too big number
 func (api *PublicGovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.governance.blockChain.CurrentHeader().Number.Uint64()
-	} else if *num == rpc.PendingBlockNumber {
-		return nil
 	} else {
 		blockNumber = uint64(num.Int64())
 	}

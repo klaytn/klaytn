@@ -206,6 +206,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		// Initialize DeriveSha implementation
 		InitDeriveSha(genesis.Config.DeriveShaImpl)
 		block, err := genesis.Commit(common.Hash{}, db)
+		if err != nil {
+			return genesis.Config, common.Hash{}, err
+		}
 		return genesis.Config, block.Hash(), err
 	}
 
@@ -229,6 +232,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
+	if err := newcfg.CheckConfigForkOrder(); err != nil {
+		return newcfg, common.Hash{}, err
+	}
 	storedcfg := db.ReadChainConfig(stored)
 	if storedcfg == nil {
 		logger.Info("Found genesis block without chain config")
@@ -348,6 +354,9 @@ func (g *Genesis) Commit(baseStateRoot common.Hash, db database.DBManager) (*typ
 	config := g.Config
 	if config == nil {
 		config = params.AllGxhashProtocolChanges
+	}
+	if err := config.CheckConfigForkOrder(); err != nil {
+		return nil, err
 	}
 	db.WriteChainConfig(block.Hash(), config)
 	return block, nil

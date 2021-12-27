@@ -103,6 +103,7 @@ type blockChain interface {
 type TxPoolConfig struct {
 	NoLocals           bool          // Whether local transaction handling should be disabled
 	AllowLocalAnchorTx bool          // if this is true, the txpool allow locally submitted anchor transactions
+	DenyRemoteTx       bool          // Denies remote transactions receiving from other peers
 	Journal            string        // Journal of local transactions to survive node restarts
 	JournalInterval    time.Duration // Time interval to regenerate the local transaction journal
 
@@ -117,7 +118,8 @@ type TxPoolConfig struct {
 	KeepLocals bool          // Disables removing timed-out local transactions
 	Lifetime   time.Duration // Maximum amount of time non-executable transaction are queued
 
-	NoAccountCreation bool // Whether account creation transactions should be disabled
+	NoAccountCreation            bool // Whether account creation transactions should be disabled
+	EnableSpamThrottlerAtRuntime bool // Enable txpool spam throttler at runtime
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -215,10 +217,8 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		all:          make(map[common.Hash]*types.Transaction),
 		pendingNonce: make(map[common.Address]uint64),
 		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
-		// TODO-Klaytn We use ChainConfig.UnitPrice to initialize TxPool.gasPrice,
-		//         later we have to change this rule when governance of UnitPrice is determined.
-		gasPrice: new(big.Int).SetUint64(chainconfig.UnitPrice),
-		txMsgCh:  make(chan types.Transactions, txMsgChSize),
+		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
+		txMsgCh:      make(chan types.Transactions, txMsgChSize),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(&pool.all)
@@ -242,6 +242,12 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	pool.wg.Add(2)
 	go pool.loop()
 	go pool.handleTxMsg()
+
+	if config.EnableSpamThrottlerAtRuntime {
+		if err := pool.StartSpamThrottler(DefaultSpamThrottlerConfig); err != nil {
+			logger.Error("Failed to start spam throttler", "err", err)
+		}
+	}
 
 	return pool
 }
@@ -453,6 +459,8 @@ func (pool *TxPool) Stop() {
 	if pool.journal != nil {
 		pool.journal.close()
 	}
+
+	pool.StopSpamThrottler()
 	logger.Info("Transaction pool stopped")
 }
 
@@ -920,8 +928,117 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // HandleTxMsg transfers transactions to a channel where handleTxMsg calls AddRemotes
 // to handle them. This is made not to wait from the results from TxPool.AddRemotes.
 func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
+	if pool.config.DenyRemoteTx {
+		return
+	}
+
+	// Filter spam txs based on to-address of failed txs
+	spamThrottler := GetSpamThrottler()
+	if spamThrottler != nil {
+		pool.mu.RLock()
+		poolSize := uint64(len(pool.all))
+		pool.mu.RUnlock()
+
+		// Activate spam throttler when pool has enough txs
+		if poolSize > uint64(spamThrottler.config.ActivateTxPoolSize) {
+			allowTxs, throttleTxs := spamThrottler.classifyTxs(txs)
+
+			for _, tx := range throttleTxs {
+				select {
+				case spamThrottler.throttleCh <- tx:
+				default:
+					logger.Trace("drop a tx when throttleTxs channel is full", "txHash", tx.Hash())
+					throttlerDropCount.Inc(1)
+				}
+			}
+
+			txs = allowTxs
+		}
+	}
+
+	// TODO-Klaytn: Consider removing the next line and move the above logic to `addTx` or `AddRemotes`
 	senderCacher.recover(pool.signer, txs)
 	pool.txMsgCh <- txs
+}
+
+func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
+	ticker := time.Tick(time.Second)
+	throttleNum := int(spamThrottler.config.ThrottleTPS)
+
+	for {
+		select {
+		case <-spamThrottler.quitCh:
+			logger.Info("Stop spam throttler loop")
+			return
+
+		case <-ticker:
+			txs := types.Transactions{}
+
+			iterNum := len(spamThrottler.throttleCh)
+			if iterNum > throttleNum {
+				iterNum = throttleNum
+			}
+
+			for i := 0; i < iterNum; i++ {
+				tx := <-spamThrottler.throttleCh
+				txs = append(txs, tx)
+			}
+
+			if len(txs) > 0 {
+				pool.AddRemotes(txs)
+			}
+		}
+	}
+}
+
+func (pool *TxPool) StartSpamThrottler(conf *ThrottlerConfig) error {
+	spamThrottlerMu.Lock()
+	defer spamThrottlerMu.Unlock()
+
+	if spamThrottler != nil {
+		return errors.New("spam throttler was already running")
+	}
+
+	if conf == nil {
+		conf = DefaultSpamThrottlerConfig
+	}
+
+	if err := validateConfig(conf); err != nil {
+		return err
+	}
+
+	t := &throttler{
+		config:     conf,
+		candidates: make(map[common.Address]int),
+		throttled:  make(map[common.Address]int),
+		allowed:    make(map[common.Address]bool),
+		mu:         new(sync.RWMutex),
+		threshold:  conf.InitialThreshold,
+		throttleCh: make(chan *types.Transaction, conf.ThrottleTPS*5),
+		quitCh:     make(chan struct{}),
+	}
+
+	go pool.throttleLoop(t)
+
+	spamThrottler = t
+	logger.Info("Start spam throttler", "config", *conf)
+	return nil
+}
+
+func (pool *TxPool) StopSpamThrottler() {
+	spamThrottlerMu.Lock()
+	defer spamThrottlerMu.Unlock()
+
+	if spamThrottler != nil {
+		close(spamThrottler.quitCh)
+	}
+
+	spamThrottler = nil
+	candidateSizeGauge.Update(0)
+	throttledSizeGauge.Update(0)
+	allowedSizeGauge.Update(0)
+	throttlerUpdateTimeGauge.Update(0)
+	throttlerDropCount.Clear()
 }
 
 // handleTxMsg calls TxPool.AddRemotes by retrieving transactions from TxPool.txMsgCh.

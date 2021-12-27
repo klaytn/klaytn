@@ -152,6 +152,10 @@ var (
 		Name:  "txpool.allow-local-anchortx",
 		Usage: "Allow locally submitted anchoring transactions",
 	}
+	TxPoolDenyRemoteTxFlag = cli.BoolFlag{
+		Name:  "txpool.deny.remotetx",
+		Usage: "Deny remote transaction receiving from other peers. Use only for emergency cases",
+	}
 	TxPoolJournalFlag = cli.StringFlag{
 		Name:  "txpool.journal",
 		Usage: "Disk journal for local transaction to survive node restarts",
@@ -201,6 +205,12 @@ var (
 		Usage: "Maximum amount of time non-executable transaction are queued",
 		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
+	// PN specific txpool settings
+	TxPoolSpamThrottlerDisableFlag = cli.BoolFlag{
+		Name:  "txpool.spamthrottler.disable",
+		Usage: "Disable txpool spam throttler prototype",
+	}
+
 	// KES
 	KESNodeTypeServiceFlag = cli.BoolFlag{
 		Name:  "kes.nodetype.service",
@@ -1398,6 +1408,9 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	if ctx.GlobalIsSet(TxPoolAllowLocalAnchorTxFlag.Name) {
 		cfg.AllowLocalAnchorTx = ctx.GlobalBool(TxPoolAllowLocalAnchorTxFlag.Name)
 	}
+	if ctx.GlobalIsSet(TxPoolDenyRemoteTxFlag.Name) {
+		cfg.DenyRemoteTx = ctx.GlobalBool(TxPoolDenyRemoteTxFlag.Name)
+	}
 	if ctx.GlobalIsSet(TxPoolJournalFlag.Name) {
 		cfg.Journal = ctx.GlobalString(TxPoolJournalFlag.Name)
 	}
@@ -1427,6 +1440,11 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 
 	if ctx.GlobalIsSet(TxPoolLifetimeFlag.Name) {
 		cfg.Lifetime = ctx.GlobalDuration(TxPoolLifetimeFlag.Name)
+	}
+
+	// PN specific txpool setting
+	if NodeTypeFlag.Value == "pn" {
+		cfg.EnableSpamThrottlerAtRuntime = !ctx.GlobalIsSet(TxPoolSpamThrottlerDisableFlag.Name)
 	}
 }
 
