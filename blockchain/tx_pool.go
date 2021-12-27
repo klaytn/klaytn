@@ -948,6 +948,7 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 				case spamThrottler.throttleCh <- tx:
 				default:
 					logger.Trace("drop a tx when throttleTxs channel is full", "txHash", tx.Hash())
+					throttlerDropCount.Inc(1)
 				}
 			}
 
@@ -1037,6 +1038,7 @@ func (pool *TxPool) StopSpamThrottler() {
 	throttledSizeGauge.Update(0)
 	allowedSizeGauge.Update(0)
 	throttlerUpdateTimeGauge.Update(0)
+	throttlerDropCount.Clear()
 }
 
 // handleTxMsg calls TxPool.AddRemotes by retrieving transactions from TxPool.txMsgCh.
