@@ -47,8 +47,8 @@ type throttler struct {
 	config *ThrottlerConfig
 
 	candidates map[common.Address]int  // throttle candidates with spam weight. Not for concurrent use
-	throttled  map[common.Address]int  // throttled addresses. It requires mu.lock for concurrent use
-	allowed    map[common.Address]bool // white listed addresses. It requires mu.lock for concurrent use
+	throttled  map[common.Address]int  // throttled addresses with throttle time. Requires mu.lock for concurrent use
+	allowed    map[common.Address]bool // white listed addresses. Requires mu.lock for concurrent use
 	mu         *sync.RWMutex           // mutex for throttled and allowed
 
 	threshold  int
@@ -62,24 +62,26 @@ type ThrottlerConfig struct {
 	ThrottleTPS        uint `json:"throttle_tps"`
 	MaxCandidates      uint `json:"max_candidates"`
 
-	IncreaseWeight   int `json:"increase_weight"`
-	DecreaseWeight   int `json:"decrease_weight"`
-	InitialThreshold int `json:"initial_threshold"`
-	MinimumThreshold int `json:"minimum_threshold"`
-	ThrottleSeconds  int `json:"throttle_seconds"`
+	IncreaseWeight      int `json:"increase_weight"`
+	DecreaseWeight      int `json:"decrease_weight"`
+	InitialThreshold    int `json:"initial_threshold"`
+	MinimumThreshold    int `json:"minimum_threshold"`
+	ThresholdAdjustment int `json:"threshold_adjustment"`
+	ThrottleSeconds     int `json:"throttle_seconds"`
 }
 
 var DefaultSpamThrottlerConfig = &ThrottlerConfig{
 	ActivateTxPoolSize: 1000,
 	TargetFailRatio:    20,
-	ThrottleTPS:        100,   // len(throttleCh) = ThrottleTPS * 3 = 32KB * 10 * 5 = 960KB
+	ThrottleTPS:        100,   // len(throttleCh) = ThrottleTPS * 5. 32KB * 100 * 5 = 16MB
 	MaxCandidates:      10000, // (20 + 4)B * 10000 = 240KB
 
-	IncreaseWeight:   5,
-	DecreaseWeight:   1,
-	InitialThreshold: 500,
-	MinimumThreshold: 100,
-	ThrottleSeconds:  300,
+	IncreaseWeight:      5,
+	DecreaseWeight:      1,
+	InitialThreshold:    500,
+	MinimumThreshold:    100,
+	ThresholdAdjustment: 5,
+	ThrottleSeconds:     300,
 }
 
 func GetSpamThrottler() *throttler {
@@ -96,9 +98,6 @@ func validateConfig(conf *ThrottlerConfig) error {
 	if conf.TargetFailRatio > 100 {
 		return errors.New("invalid ThrottlerConfig. 0 <= TargetFailRatio <= 100")
 	}
-	if conf.MinimumThreshold <= conf.IncreaseWeight {
-		return errors.New("invalid ThrottlerConfig. IncreaseWeight < MinimumThreshold")
-	}
 	if conf.InitialThreshold < conf.MinimumThreshold {
 		return errors.New("invalid ThrottlerConfig. MinimumThreshold <= InitialThreshold")
 	}
@@ -111,8 +110,8 @@ func (t *throttler) adjustThreshold(ratio uint) {
 	var newThreshold int
 	// Decrease threshold if a fail ratio is bigger than target value to put more addresses in throttled map
 	if ratio > t.config.TargetFailRatio {
-		if t.threshold > t.config.IncreaseWeight {
-			newThreshold = t.threshold - t.config.IncreaseWeight
+		if t.threshold-t.config.ThresholdAdjustment > t.config.MinimumThreshold {
+			newThreshold = t.threshold - t.config.ThresholdAdjustment
 		} else {
 			// Set minimum threshold
 			newThreshold = t.config.MinimumThreshold
@@ -120,8 +119,8 @@ func (t *throttler) adjustThreshold(ratio uint) {
 
 		// Increase threshold if a fail ratio is smaller than target ratio until it exceeds InitialThreshold
 	} else {
-		if t.threshold < t.config.InitialThreshold-t.config.IncreaseWeight {
-			newThreshold = t.threshold + t.config.IncreaseWeight
+		if t.threshold+t.config.ThresholdAdjustment < t.config.InitialThreshold {
+			newThreshold = t.threshold + t.config.ThresholdAdjustment
 		} else {
 			// Set maximum threshold
 			newThreshold = t.config.InitialThreshold
@@ -152,9 +151,9 @@ func (t *throttler) updateThrottled(newThrottled []common.Address) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	// Decrease spam weight for all throttled addresses.
+	// Decrease throttling remained time for all throttled addresses.
 	for addr, remained := range t.throttled {
-		t.throttled[addr] = remained - t.config.DecreaseWeight
+		t.throttled[addr] = remained - 1
 		if t.throttled[addr] < 0 {
 			removeThrottled = append(removeThrottled, addr)
 		}
