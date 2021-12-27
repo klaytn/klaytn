@@ -259,12 +259,12 @@ func (t *throttler) classifyTxs(txs types.Transactions) (types.Transactions, typ
 }
 
 // SetAllowed resets the allowed list of throttler. The previous list will be abandoned.
-func (t *throttler) SetAllowed(addrs []common.Address) {
+func (t *throttler) SetAllowed(list []common.Address) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	t.allowed = make(map[common.Address]bool)
-	for _, addr := range addrs {
+	for _, addr := range list {
 		t.allowed[addr] = true
 	}
 }
@@ -273,22 +273,22 @@ func (t *throttler) GetAllowed() []common.Address {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	var addrs []common.Address
+	allowList := make([]common.Address, 0)
 	for addr := range t.allowed {
-		addrs = append(addrs, addr)
+		allowList = append(allowList, addr)
 	}
-	return addrs
+	return allowList
 }
 
 func (t *throttler) GetThrottled() []common.Address {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	var addrs []common.Address
+	throttledList := make([]common.Address, 0)
 	for addr := range t.throttled {
-		addrs = append(addrs, addr)
+		throttledList = append(throttledList, addr)
 	}
-	return addrs
+	return throttledList
 }
 
 func (t *throttler) GetCandidates() map[common.Address]int {
