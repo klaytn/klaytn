@@ -67,6 +67,8 @@ type TxPool interface {
 	Get(hash common.Hash) *types.Transaction
 	Stats() (int, int)
 	Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
+	StartSpamThrottler(conf *blockchain.ThrottlerConfig) error
+	StopSpamThrottler()
 }
 
 // Backend wraps all methods required for mining.

@@ -162,6 +162,20 @@ func (mr *MockTxPoolMockRecorder) SetGasPrice(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetGasPrice", reflect.TypeOf((*MockTxPool)(nil).SetGasPrice), arg0)
 }
 
+// StartSpamThrottler mocks base method
+func (m *MockTxPool) StartSpamThrottler(arg0 *blockchain.ThrottlerConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartSpamThrottler", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartSpamThrottler indicates an expected call of StartSpamThrottler
+func (mr *MockTxPoolMockRecorder) StartSpamThrottler(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSpamThrottler", reflect.TypeOf((*MockTxPool)(nil).StartSpamThrottler), arg0)
+}
+
 // Stats mocks base method
 func (m *MockTxPool) Stats() (int, int) {
 	m.ctrl.T.Helper()
@@ -187,6 +201,18 @@ func (m *MockTxPool) Stop() {
 func (mr *MockTxPoolMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockTxPool)(nil).Stop))
+}
+
+// StopSpamThrottler mocks base method
+func (m *MockTxPool) StopSpamThrottler() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "StopSpamThrottler")
+}
+
+// StopSpamThrottler indicates an expected call of StopSpamThrottler
+func (mr *MockTxPoolMockRecorder) StopSpamThrottler() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopSpamThrottler", reflect.TypeOf((*MockTxPool)(nil).StopSpamThrottler))
 }
 
 // SubscribeNewTxsEvent mocks base method

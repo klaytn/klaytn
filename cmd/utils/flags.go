@@ -205,6 +205,12 @@ var (
 		Usage: "Maximum amount of time non-executable transaction are queued",
 		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
+	// PN specific txpool settings
+	TxPoolSpamThrottlerDisableFlag = cli.BoolFlag{
+		Name:  "txpool.spamthrottler.disable",
+		Usage: "Disable txpool spam throttler prototype",
+	}
+
 	// KES
 	KESNodeTypeServiceFlag = cli.BoolFlag{
 		Name:  "kes.nodetype.service",
@@ -1473,6 +1479,11 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 
 	if ctx.GlobalIsSet(TxPoolLifetimeFlag.Name) {
 		cfg.Lifetime = ctx.GlobalDuration(TxPoolLifetimeFlag.Name)
+	}
+
+	// PN specific txpool setting
+	if NodeTypeFlag.Value == "pn" {
+		cfg.EnableSpamThrottlerAtRuntime = !ctx.GlobalIsSet(TxPoolSpamThrottlerDisableFlag.Name)
 	}
 }
 

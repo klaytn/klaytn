@@ -201,6 +201,64 @@ func (api *PrivateAdminAPI) SaveTrieNodeCacheToDisk() error {
 	return api.cn.BlockChain().SaveTrieNodeCacheToDisk()
 }
 
+func (api *PrivateAdminAPI) SpamThrottlerConfig(ctx context.Context) (*blockchain.ThrottlerConfig, error) {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return nil, errors.New("spam throttler is not running")
+	}
+	return throttler.GetConfig(), nil
+}
+
+func (api *PrivateAdminAPI) StopSpamThrottler(ctx context.Context) error {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return errors.New("spam throttler was already stopped")
+	}
+	api.cn.txPool.StopSpamThrottler()
+	return nil
+}
+
+func (api *PrivateAdminAPI) StartSpamThrottler(ctx context.Context, config *blockchain.ThrottlerConfig) error {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler != nil {
+		return errors.New("spam throttler is already running")
+	}
+	return api.cn.txPool.StartSpamThrottler(config)
+}
+
+func (api *PrivateAdminAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs []common.Address) error {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return errors.New("spam throttler is not running")
+	}
+	throttler.SetAllowed(addrs)
+	return nil
+}
+
+func (api *PrivateAdminAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]common.Address, error) {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return nil, errors.New("spam throttler is not running")
+	}
+	return throttler.GetAllowed(), nil
+}
+
+func (api *PrivateAdminAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([]common.Address, error) {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return nil, errors.New("spam throttler is not running")
+	}
+	return throttler.GetThrottled(), nil
+}
+
+func (api *PrivateAdminAPI) GetSpamThrottlerCandidateList(ctx context.Context) (map[common.Address]int, error) {
+	throttler := blockchain.GetSpamThrottler()
+	if throttler == nil {
+		return nil, errors.New("spam throttler is not running")
+	}
+	return throttler.GetCandidates(), nil
+}
+
 // PublicDebugAPI is the collection of Klaytn full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
