@@ -102,7 +102,7 @@ func BalanceLimitUpdate(account *TestAccountType, balanceLimit *big.Int, signer 
 	tx, err := types.NewTransactionWithMap(types.TxTypeBalanceLimitUpdate, valueMapForCreation)
 	assert.Equal(t, nil, err)
 
-	if keys == nil {
+	if len(keys) == 0 {
 		keys = account.Keys
 	}
 

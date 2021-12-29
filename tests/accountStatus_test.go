@@ -85,7 +85,7 @@ func AccountStatusUpdate(account *TestAccountType, accountStatus account.Account
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountStatusUpdate, valueMapForCreation)
 	assert.Equal(t, nil, err)
 
-	if keys == nil {
+	if len(keys) == 0 {
 		keys = account.Keys
 	}
 	err = tx.SignWithKeys(signer, keys)

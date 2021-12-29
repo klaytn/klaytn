@@ -169,7 +169,7 @@ func TestBalanceLimit_pending_setBalanceLimit_valueTransfer(t *testing.T) {
 
 	for i := 0; i <= tryNum; i++ {
 		transferAmountSuccess := rand.Intn(transferMax)
-		transferAmountFail := rand.Intn(transferMax)
+		transferAmountFail := rand.Intn(transferMax-1) + 1 // should be bigger than 0
 		balanceLimit += transferAmountSuccess
 		transferSum += transferAmountSuccess
 
