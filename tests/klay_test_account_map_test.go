@@ -152,7 +152,7 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 		// This only checks balance limit of EOA. Smart cotracts doesn't have balance limit.
 		if tx.Type() != types.TxTypeBalanceLimitUpdate {
 			if !a.canBeTransferred(*to, v) {
-				return vm.ErrExceedBalanceLimit
+				return kerrors.ErrExceedBalanceLimit
 			}
 			a.AddBalance(*to, v)
 			a.SubBalance(from, v)

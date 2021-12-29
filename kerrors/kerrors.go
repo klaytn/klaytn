@@ -35,6 +35,7 @@ var (
 	ErrInvalidCodeFormat          = errors.New("smart contract code format is invalid")
 	ErrAccountStatusStopSender    = errors.New("stopped account cannot send a transaction")
 	ErrAccountStatusStopReceiver  = errors.New("stopped account cannot receive a transaction")
+	ErrExceedBalanceLimit         = errors.New("balance exceeds its fund limit after transfer")
 
 	// Error codes related to account keys.
 	ErrAccountAlreadyExists                 = errors.New("account already exists")

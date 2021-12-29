@@ -240,7 +240,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	// Fail if we're trying to transfer receiver's balance limit
 	// This only checks balance limit of EOA. Smart cotracts doesn't have balance limit.
 	if !evm.Context.CanBeTransferred(evm.StateDB.GetBalanceLimit, evm.StateDB.GetBalance, addr, value) {
-		return nil, gas, ErrExceedBalanceLimit
+		return nil, gas, kerrors.ErrExceedBalanceLimit
 	}
 
 	var (
@@ -346,7 +346,7 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 	// Fail if we're trying to transfer receiver's balance limit
 	// This only checks balance limit of EOA. Smart cotracts doesn't have balance limit.
 	if !evm.Context.CanBeTransferred(evm.StateDB.GetBalanceLimit, evm.StateDB.GetBalance, addr, value) {
-		return nil, gas, ErrExceedBalanceLimit
+		return nil, gas, kerrors.ErrExceedBalanceLimit
 	}
 
 	if !isProgramAccount(addr, evm.StateDB) {

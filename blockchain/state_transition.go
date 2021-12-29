@@ -312,7 +312,7 @@ var errTxFailed2receiptstatus = map[error]uint{
 	kerrors.ErrInvalidCodeFormat:                    types.ReceiptStatusErrInvalidCodeFormat,
 	kerrors.ErrAccountStatusStopSender:              types.ReceiptStatusErrStoppedAccountFrom,
 	kerrors.ErrAccountStatusStopReceiver:            types.ReceiptStatusErrStoppedAccountTo,
-	vm.ErrExceedBalanceLimit:                        types.ReceiptStatusErrExceedBalanceLimit,
+	kerrors.ErrExceedBalanceLimit:                   types.ReceiptStatusErrExceedBalanceLimit,
 }
 
 var receiptstatus2errTxFailed = map[uint]error{
@@ -348,7 +348,7 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrInvalidCodeFormat:                    kerrors.ErrInvalidCodeFormat,
 	types.ReceiptStatusErrStoppedAccountFrom:                   kerrors.ErrAccountStatusStopSender,
 	types.ReceiptStatusErrStoppedAccountTo:                     kerrors.ErrAccountStatusStopReceiver,
-	types.ReceiptStatusErrExceedBalanceLimit:                   vm.ErrExceedBalanceLimit,
+	types.ReceiptStatusErrExceedBalanceLimit:                   kerrors.ErrExceedBalanceLimit,
 }
 
 // getReceiptStatusFromErrTxFailed returns corresponding ReceiptStatus for VM error.
