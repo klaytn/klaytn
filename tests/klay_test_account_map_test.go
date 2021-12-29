@@ -28,6 +28,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/contracts/reward/contract"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/kerrors"
 	"github.com/pkg/errors"
 )
 
@@ -227,12 +228,12 @@ func (a *AccountMap) validateAccountStatus(tx *types.Transaction) error {
 	if !blockchain.IsActiveAccount(accountStatusGetter, tx.ValidatedSender()) &&
 		// RoleAccountUpdate can make transaction on any account status
 		tx.GetRoleTypeForValidation() != accountkey.RoleAccountUpdate {
-		return errors.Wrap(types.ErrAccountStatusStopSender, "stopped account is "+tx.ValidatedSender().String())
+		return errors.Wrap(kerrors.ErrAccountStatusStopSender, "stopped account is "+tx.ValidatedSender().String())
 	}
 
 	// check if "to" is an active account
 	if to := tx.To(); to != nil && !blockchain.IsActiveAccount(accountStatusGetter, *to) {
-		return errors.Wrap(types.ErrAccountStatusStopReceiver, "stopped account is "+to.String())
+		return errors.Wrap(kerrors.ErrAccountStatusStopReceiver, "stopped account is "+to.String())
 	}
 	return nil
 }

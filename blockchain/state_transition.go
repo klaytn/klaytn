@@ -310,8 +310,8 @@ var errTxFailed2receiptstatus = map[error]uint{
 	kerrors.ErrDeprecated:                           types.ReceiptStatusErrDeprecated,
 	kerrors.ErrNotSupported:                         types.ReceiptStatusErrNotSupported,
 	kerrors.ErrInvalidCodeFormat:                    types.ReceiptStatusErrInvalidCodeFormat,
-	types.ErrAccountStatusStopSender:                types.ReceiptStatusErrStoppedAccountFrom,
-	types.ErrAccountStatusStopReceiver:              types.ReceiptStatusErrStoppedAccountTo,
+	kerrors.ErrAccountStatusStopSender:              types.ReceiptStatusErrStoppedAccountFrom,
+	kerrors.ErrAccountStatusStopReceiver:            types.ReceiptStatusErrStoppedAccountTo,
 	vm.ErrExceedBalanceLimit:                        types.ReceiptStatusErrExceedBalanceLimit,
 }
 
@@ -346,8 +346,8 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrDeprecated:                           kerrors.ErrDeprecated,
 	types.ReceiptStatusErrNotSupported:                         kerrors.ErrNotSupported,
 	types.ReceiptStatusErrInvalidCodeFormat:                    kerrors.ErrInvalidCodeFormat,
-	types.ReceiptStatusErrStoppedAccountFrom:                   types.ErrAccountStatusStopSender,
-	types.ReceiptStatusErrStoppedAccountTo:                     types.ErrAccountStatusStopReceiver,
+	types.ReceiptStatusErrStoppedAccountFrom:                   kerrors.ErrAccountStatusStopSender,
+	types.ReceiptStatusErrStoppedAccountTo:                     kerrors.ErrAccountStatusStopReceiver,
 	types.ReceiptStatusErrExceedBalanceLimit:                   vm.ErrExceedBalanceLimit,
 }
 

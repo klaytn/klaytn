@@ -33,6 +33,8 @@ var (
 	ErrNotProgramAccount          = errors.New("not a program account (e.g., an account having code and storage)")
 	ErrPrecompiledContractAddress = errors.New("the address is reserved for pre-compiled contracts")
 	ErrInvalidCodeFormat          = errors.New("smart contract code format is invalid")
+	ErrAccountStatusStopSender    = errors.New("stopped account cannot send a transaction")
+	ErrAccountStatusStopReceiver  = errors.New("stopped account cannot receive a transaction")
 
 	// Error codes related to account keys.
 	ErrAccountAlreadyExists                 = errors.New("account already exists")

@@ -48,8 +48,6 @@ var (
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
 	errNotFeeDelegationTransaction    = errors.New("not a fee delegation type transaction")
 	errInvalidValueMap                = errors.New("tx fields should be filled with valid values")
-	ErrAccountStatusStopSender        = errors.New("stopped account cannot send a transaction")
-	ErrAccountStatusStopReceiver      = errors.New("stopped account cannot receive a transaction")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
@@ -257,12 +255,12 @@ func (tx *Transaction) ValidateAccountStatus(isActiveAccount IsActiveAccountFunc
 	if !isActiveAccount(db.GetAccountStatus, from) &&
 		// RoleAccountUpdate can make transaction on any account status
 		tx.GetRoleTypeForValidation() != accountkey.RoleAccountUpdate {
-		return errors.Wrap(ErrAccountStatusStopSender, "stopped account is "+from.String())
+		return errors.Wrap(kerrors.ErrAccountStatusStopSender, "stopped account is "+from.String())
 	}
 
 	// check if "to" is an active account
 	if to := tx.To(); to != nil && !isActiveAccount(db.GetAccountStatus, *to) {
-		return errors.Wrap(ErrAccountStatusStopReceiver, "stopped account is "+to.String())
+		return errors.Wrap(kerrors.ErrAccountStatusStopReceiver, "stopped account is "+to.String())
 	}
 
 	return nil

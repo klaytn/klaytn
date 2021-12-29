@@ -12,6 +12,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -455,7 +456,7 @@ func TestAccountStatus_ErrorMessage(t *testing.T) {
 	tx = ValueTransfer(sender, sender, transferAmount, signer, t)
 
 	err := txpool.AddRemote(tx)
-	assert.True(t, errors.Is(err, types.ErrAccountStatusStopSender))
+	assert.True(t, errors.Is(err, kerrors.ErrAccountStatusStopSender))
 }
 
 // klay_getAccount에서 AccountStatus을 보여주는 것을 확인
