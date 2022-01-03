@@ -371,6 +371,8 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 // * When blockNr is -2 the pending chain head is returned.
 func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	klaytnHeader, err := api.publicBlockChainAPI.GetHeaderByNumber(ctx, number)
+	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
+	err = nil
 	if klaytnHeader != nil && err == nil {
 		response := api.rpcMarshalHeader(klaytnHeader)
 		if number == rpc.PendingBlockNumber {
