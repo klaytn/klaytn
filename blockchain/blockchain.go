@@ -472,7 +472,7 @@ func (bc *BlockChain) SetHead(head uint64) error {
 
 				for {
 					if _, err := state.New(newHeadBlock.Root(), bc.stateCache); err != nil {
-						// Rewound state missing, rolled back to before pivot, reset to genesis
+						// Rewound state missing, rolled back to the parent block, reset to genesis
 						logger.Trace("Block state missing, rewinding further", "number", newHeadBlock.NumberU64(), "hash", newHeadBlock.Hash())
 						parent := bc.GetBlock(newHeadBlock.ParentHash(), newHeadBlock.NumberU64()-1)
 						if parent != nil {
