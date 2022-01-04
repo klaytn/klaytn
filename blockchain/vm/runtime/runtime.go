@@ -25,9 +25,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"

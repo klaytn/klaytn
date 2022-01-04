@@ -24,8 +24,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/klaytn/klaytn/consensus"
-
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
@@ -33,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
