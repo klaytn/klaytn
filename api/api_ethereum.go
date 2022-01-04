@@ -750,7 +750,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) map[string]interfac
 		"difficulty":      (*hexutil.Big)(head.BlockScore),
 		"totalDifficulty": (*hexutil.Big)(api.publicKlayAPI.b.GetTd(head.Hash())),
 		// extraData always return empty Bytes because actual value of extraData in Klaytn header cannot be used as meaningful way because
-		// we cannot provide original header of Klaytn and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Klaytn.      |
+		// we cannot provide original header of Klaytn and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Klaytn.
 		"extraData":        hexutil.Bytes{},
 		"size":             hexutil.Uint64(head.Size()),
 		"gasLimit":         hexutil.Uint64(DummyGasLimit),
