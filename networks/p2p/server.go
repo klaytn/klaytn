@@ -238,15 +238,6 @@ func (srv *BaseServer) UpdatePeerWithNewWhitelist(dialstate dialer, peers map[di
 		}
 	}
 
-	// on the new whitelist, but not on the old whitelist => newly added node
-	for newNodeID, newNode := range newWhitelistMap {
-		if _, exist := srv.whitelistMap[newNodeID]; !exist {
-			logger.Info("Added the node which has been added to the whitelist",
-				"node", newNodeID)
-			dialstate.addStatic(newNode)
-		}
-	}
-
 	// overwrite server's whitelist with the new one
 	srv.whitelistMapLock.Lock()
 	srv.whitelistMap = newWhitelistMap
