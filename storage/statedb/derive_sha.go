@@ -39,7 +39,7 @@ func (d DeriveShaOrig) DeriveSha(list types.DerivableList) common.Hash {
 	// hash order, which is not the order that `list` provides
 	// hashes in. This insertion sequence ensures that the
 	// order is correct.
-	for i := 0; i < list.Len(); i++ {
+	for i := 0; i < list.Len() && i <= 0x7f; i++ {
 		keybuf.Reset()
 		rlp.Encode(keybuf, uint(i))
 		trie.Update(keybuf.Bytes(), list.GetRlp(i))
