@@ -23,14 +23,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/params"
-
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/filters"
+	"github.com/klaytn/klaytn/params"
 )
 
 const (

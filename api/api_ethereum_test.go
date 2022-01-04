@@ -7,20 +7,17 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/klaytn/klaytn/crypto"
-
-	"github.com/klaytn/klaytn/rlp"
-
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/params"
-
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/mocks"
-
 	"github.com/golang/mock/gomock"
+
 	mock_api "github.com/klaytn/klaytn/api/mocks"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/consensus/mocks"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
 )
 
