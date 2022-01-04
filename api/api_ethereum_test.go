@@ -118,7 +118,6 @@ func checkEthereumBlockOrHeaderFormat(
 
 	// Check immutable values.
 	// these values only exists for supporting Ethereum compatible data structures.
-	// 1. Check nonce
 	nonce := ethBlockOrHeader["nonce"]
 	assert.Equal(t, BlockNonce{}, nonce)
 
