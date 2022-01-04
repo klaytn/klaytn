@@ -315,6 +315,7 @@ func (st *StackTrie) insert(key, value []byte) {
 		// keys differ, and 3) one leaf for the differentiated
 		// component of each key.
 		if diffidx >= len(st.key) {
+			logger.Info("existing Key?","diffidx",diffidx,"len st.key",len(st.key),"key",key,"st.key",st.key)
 			panic("Trying to insert into existing key")
 		}
 
