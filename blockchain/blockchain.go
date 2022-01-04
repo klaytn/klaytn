@@ -460,7 +460,6 @@ func (bc *BlockChain) SetHead(head uint64) error {
 
 	updateFn := func(header *types.Header) {
 		// Rewind the block chain, ensuring we don't end up with a stateless head block
-
 		if currentBlock := bc.CurrentBlock(); currentBlock != nil && header.Number.Uint64() < currentBlock.NumberU64() {
 			newHeadBlock := bc.GetBlock(header.Hash(), header.Number.Uint64())
 			if newHeadBlock == nil {
@@ -469,7 +468,6 @@ func (bc *BlockChain) SetHead(head uint64) error {
 			} else {
 				// Block exists, keep rewinding until we find one with state,
 				// keeping rewinding until we exceed the optional threshold
-
 				for {
 					if _, err := state.New(newHeadBlock.Root(), bc.stateCache); err != nil {
 						// Rewound state missing, rolled back to the parent block, reset to genesis
