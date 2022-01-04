@@ -264,6 +264,8 @@ func NewCodeInfoWithRules(codeFormat CodeFormat, r Rules) CodeInfo {
 	switch {
 	// If new HF is added, please add new case below
 	// case r.IsNextHF:          // If this HF is backward compatible with vmVersion1.
+	case r.IsLondon:
+		fallthrough
 	case r.IsIstanbul:
 		vmVersion = VmVersion1
 	default:

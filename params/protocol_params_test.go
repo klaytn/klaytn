@@ -47,10 +47,12 @@ func TestSetVmVersion(t *testing.T) {
 	testCaseSetIstanbulHFField := []struct {
 		cf                        CodeFormat
 		isDeployedAfterIstanbulHF bool
+		ifDeployedAfterLondonHF   bool
 		expectCi                  CodeInfo
 	}{
-		{CodeFormatEVM, false, 0b00000000},
-		{CodeFormatEVM, true, 0b00010000},
+		{CodeFormatEVM, false, false, 0b00000000},
+		{CodeFormatEVM, true, false, 0b00010000},
+		{CodeFormatEVM, true, true, 0b00010000},
 	}
 	for _, tc := range testCaseSetIstanbulHFField {
 		assert.Equal(t, tc.expectCi, NewCodeInfoWithRules(tc.cf, Rules{IsIstanbul: tc.isDeployedAfterIstanbulHF}))
