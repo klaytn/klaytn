@@ -224,7 +224,7 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 		values[types.TxValueKeyAmount] = (*big.Int)(args.Amount)
 	}
 	if args.Payload != nil {
-		// chain datat anchoring type uses the TxValueKeyAnchoredData field
+		// chain data anchoring type uses the TxValueKeyAnchoredData field
 		if args.TypeInt.IsChainDataAnchoring() {
 			values[types.TxValueKeyAnchoredData] = ([]byte)(*args.Payload)
 		} else {
