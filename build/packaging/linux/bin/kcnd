@@ -119,7 +119,8 @@ __kill_timeout() {
     kill -9 $PIDNUM && echo "Killed"
 }
 
-start() {
+#------------------------Related to Klaytn node functions-----------------------------
+start_node() {
     __pid_run
     [ -n "$pid" ] && echo "kcnd already running...[$pid]" && return
 
@@ -281,24 +282,26 @@ start() {
     $BIN/kcn $OPTIONS >> ${LOG_DIR}/kcnd.out 2>&1 &
     RETVAL=$?
     PIDNUM=$!
+
     set +f
     if [ $RETVAL = 0 ]; then
         echo $PIDNUM > ${pidfile}
-        echo "OK"
+        echo "Success to start node."
     else
-        echo "Fail"
+        echo "Fail to start node."
     fi
+
     return $RETVAL
 }
 
-stop() {
+stop_node() {
     __pid_run
     [ -z "$pid" ] && echo "kcnd is not running" && return
     echo -n "Shutting down kcnd:  "
     __kill_timeout $(eval "cat ${pidfile}") && rm -f ${pidfile}
 }
 
-status() {
+status_node() {
     __pid_run
     if [ -n "$pid" ]; then
         echo "kcnd is running"
@@ -306,6 +309,33 @@ status() {
         echo "kcnd is down"
     fi
 }
+
+#--------------------- Public functions --------------------------
+start() {
+    start_node
+    RET=$?
+    if [ $RET = 0 ]; then
+        if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+            start_auto_restart_daemon
+        fi
+    fi
+}
+
+stop() {
+    if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+        stop_auto_restart_daemon
+    fi
+    stop_node
+}
+
+
+status() {
+    status_node
+    if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+        status_auto_restart_daemon
+    fi
+}
+
 
 restart() {
     stop
@@ -332,3 +362,4 @@ case "$1" in
         ;;
 esac
 exit 0
+
