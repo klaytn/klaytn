@@ -340,9 +340,9 @@ start_node() {
     set +f
     if [ $RETVAL = 0 ]; then
         echo $PIDNUM > ${pidfile}
-        echo "OK"
+        echo "Success to start node."
     else
-        echo "Fail"
+        echo "Fail to start node."
     fi
     return $RETVAL
 }
