@@ -44,9 +44,9 @@ func BenchmarkDeriveSha(b *testing.B) {
 	}
 }
 
-func BenchmarkDeriveShaOrig(b *testing.B){
-	b.Run("1000test-stackTrie",func(b *testing.B) {
-		benchDeriveSha(b,1000,4,statedb.DeriveShaOrig{})
+func BenchmarkDeriveShaOrig(b *testing.B) {
+	b.Run("1000test-stackTrie", func(b *testing.B) {
+		benchDeriveSha(b, 1000, 4, statedb.DeriveShaOrig{})
 	})
 }
 
