@@ -77,7 +77,7 @@ type Transaction struct {
 	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
 	markedUnexecutable int32
 
-	// lock for protecting AsMessageWithAccountKeyPicker().
+	// lock for protecting fields in Transaction struct
 	mu sync.RWMutex
 }
 
