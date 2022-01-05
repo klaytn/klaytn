@@ -21,6 +21,7 @@ kspn=/usr/bin/kspn
 prog=kspnd
 lockfile=${LOCKFILE-/var/lock/subsys/kspnd}
 pidfile=${PIDFILE-/var/run/kspnd.pid}
+auto_restart_daemon_pidfile=/var/run/restart_daemon.pid
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
