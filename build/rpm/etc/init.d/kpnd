@@ -55,9 +55,8 @@ __auto_restart_daemon() {
             fi
             echo "INFO[`date`] Sleep for backOffTime.... ${backOffTime} seconds."
             sleep $backOffTime
-            echo "INFO[`date`] -------------------> start network"
+            echo -n "INFO[`date`] "
             start_node
-            echo "INFO[`date`] -------------------> start network"
             backOffTime=$(echo $backOffTime $coeff | awk '{printf "%.1f\n",$1*$2}')
 
             echo "INFO[`date`] backOffTime = ${backOffTime}, Restarted node pid = ${PID_NUM}"
