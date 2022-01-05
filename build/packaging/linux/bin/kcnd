@@ -312,12 +312,14 @@ status_node() {
 
 #--------------------- Public functions --------------------------
 start() {
-    start_node
-    RET=$?
-    if [ $RET = 0 ]; then
-        if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
-            start_auto_restart_daemon
-        fi
+    if [ ! -d $LOG_DIR ]; then
+        mkdir -p $LOG_DIR
+    fi
+
+    if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+        start_auto_restart_daemon
+    else
+        start_node
     fi
 }
 
