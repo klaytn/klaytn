@@ -1,4 +1,3 @@
-#linux kend
 #!/usr/bin/env bash
 
 BIN=$(cd "$(dirname $0)"; pwd)
