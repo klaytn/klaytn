@@ -18,7 +18,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -504,10 +503,11 @@ type EthRPCTransaction struct {
 }
 
 // newEthRPCTransactionFromBlockIndex creates an EthRPCTransaction from block and index parameters.
-func newEthRPCTransactionFromBlockIndex(b *types.Block, index uint64) (*EthRPCTransaction, error) {
+func newEthRPCTransactionFromBlockIndex(b *types.Block, index uint64) *EthRPCTransaction {
 	txs := b.Transactions()
 	if index >= uint64(len(txs)) {
-		return nil, errors.New("invalid transaction index")
+		logger.Error("invalid transaction index", "given index", index, "length of txs", len(txs))
+		return nil
 	}
 	return newEthRPCTransaction(txs[index], b.Hash(), b.NumberU64(), index)
 }
@@ -528,11 +528,11 @@ func resolveToField(tx *types.Transaction) *common.Address {
 }
 
 // newEthRPCTransaction creates an EthRPCTransaction from Klaytn transaction.
-func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) (*EthRPCTransaction, error) {
+func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) *EthRPCTransaction {
 	// When an unknown transaction is requested through rpc call,
 	// nil is returned by Klaytn API, and it is handled.
 	if tx == nil {
-		return nil, nil
+		return nil
 	}
 
 	// If tx is not TxTypeLegacyTransaction, the type is converted to TxTypeLegacyTransaction.
@@ -568,11 +568,11 @@ func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNum
 
 	// TODO-Klaytn: Have to add additional fields for ethereum transaction types.
 
-	return result, nil
+	return result
 }
 
 // newEthRPCPendingTransaction creates an EthRPCTransaction for pending tx.
-func newEthRPCPendingTransaction(tx *types.Transaction) (*EthRPCTransaction, error) {
+func newEthRPCPendingTransaction(tx *types.Transaction) *EthRPCTransaction {
 	return newEthRPCTransaction(tx, common.Hash{}, 0, 0)
 }
 
@@ -583,8 +583,8 @@ func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context,
 		return nil
 	}
 
-	ethTx, err := newEthRPCTransactionFromBlockIndex(block, uint64(index))
-	if ethTx == nil || err != nil {
+	ethTx := newEthRPCTransactionFromBlockIndex(block, uint64(index))
+	if ethTx == nil {
 		return nil
 	}
 
@@ -595,8 +595,8 @@ func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context,
 func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *EthRPCTransaction {
 	block, err := api.publicTransactionPoolAPI.b.BlockByHash(ctx, blockHash)
 	if block != nil && err == nil {
-		ethTx, err := newEthRPCTransactionFromBlockIndex(block, uint64(index))
-		if ethTx == nil || err != nil {
+		ethTx := newEthRPCTransactionFromBlockIndex(block, uint64(index))
+		if ethTx == nil {
 			return nil
 		}
 		return ethTx
@@ -633,11 +633,11 @@ func (api *EthereumAPI) GetTransactionCount(ctx context.Context, address common.
 func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*EthRPCTransaction, error) {
 	// Try to return an already finalized transaction
 	if tx, blockHash, blockNumber, index := api.publicTransactionPoolAPI.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
-		return newEthRPCTransaction(tx, blockHash, blockNumber, index)
+		return newEthRPCTransaction(tx, blockHash, blockNumber, index), nil
 	}
 	// No finalized transaction, try to retrieve it from the pool
 	if tx := api.publicTransactionPoolAPI.b.GetPoolTransaction(hash); tx != nil {
-		return newEthRPCPendingTransaction(tx)
+		return newEthRPCPendingTransaction(tx), nil
 	}
 	// Transaction unknown, return as such
 	return nil, nil
@@ -838,9 +838,9 @@ func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
 	for _, tx := range pending {
 		from := getFrom(tx)
 		if _, exists := accounts[from]; exists {
-			ethTx, err := newEthRPCPendingTransaction(tx)
-			if err != nil {
-				return nil, err
+			ethTx := newEthRPCPendingTransaction(tx)
+			if ethTx == nil {
+				return nil, nil
 			}
 			transactions = append(transactions, ethTx)
 		}
