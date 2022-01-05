@@ -44,6 +44,19 @@ __auto_restart_daemon_pid_run() {
     fi
 }
 
+__kill_timeout() {
+    local PIDNUM=$1
+    kill $PIDNUM
+    for i in `seq 0 100 $((1000 * $STOP_TIMEOUT))`; do
+        if ! kill -0 $PIDNUM 2> /dev/null; then
+            echo "OK"
+            return
+        fi
+        sleep 0.1
+    done
+    kill -9 $PIDNUM && echo "Killed"
+}
+
 #------------------------Related Auto restart daemon functions-----------------------------
 __auto_restart_daemon() {
     local backOffTime=$AUTO_RESTART_INTERVAL
@@ -104,19 +117,6 @@ status_auto_restart_daemon() {
     else
         echo "auto restart daemon is down."
     fi
-}
-
-__kill_timeout() {
-    local PIDNUM=$1
-    kill $PIDNUM
-    for i in `seq 0 100 $((1000 * $STOP_TIMEOUT))`; do
-        if ! kill -0 $PIDNUM 2> /dev/null; then
-            echo "OK"
-            return
-        fi
-        sleep 0.1
-    done
-    kill -9 $PIDNUM && echo "Killed"
 }
 
 #------------------------Related to Klaytn node functions-----------------------------
