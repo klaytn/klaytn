@@ -21,6 +21,7 @@
 package blockchain
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
@@ -73,9 +74,11 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 			wantConfig:       cypressGenesisBlock.Config,
 			wantStoredConfig: cypressGenesisBlock.Config,
 		},
+		// TODO-klaytn: add more cypress test cases after cypress hard fork block numbers are added
 		{
-			name:       "baobab chainConfig update",
-			newHFBlock: big.NewInt(90909999),
+			// Because of the fork-ordering check logic, the istanbulCompatibleBlock should be less than the londonCompatibleBlock
+			name:       "baobab chainConfig update - correct hard-fork block number order",
+			newHFBlock: big.NewInt(79999999),
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
 				baobabGenesisBlock.MustCommit(db)
 				baobabGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
@@ -84,6 +87,21 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 			wantHash:         params.BaobabGenesisHash,
 			wantConfig:       baobabGenesisBlock.Config,
 			wantStoredConfig: baobabGenesisBlock.Config,
+		},
+		{
+			// This test fails because the new istanbulCompatibleBlock(90909999) is larger than londonCompatibleBlock(80295291)
+			name:       "baobab chainConfig update - wrong hard-fork block number order",
+			newHFBlock: big.NewInt(90909999),
+			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
+				baobabGenesisBlock.MustCommit(db)
+				baobabGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
+				return SetupGenesisBlock(db, baobabGenesisBlock, params.BaobabNetworkId, false, false)
+			},
+			wantHash:         common.Hash{},
+			wantConfig:       baobabGenesisBlock.Config,
+			wantStoredConfig: nil,
+			wantErr: fmt.Errorf("unsupported fork ordering: %v enabled at %v, but %v enabled at %v",
+				"istanbulBlock", big.NewInt(90909999), "londonBlock", big.NewInt(80295291)),
 		},
 		{
 			name:       "incompatible config in DB",
@@ -121,17 +139,19 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 		config, hash, err := test.fn(db, test.newHFBlock)
 
 		// Check the return values
-		assert.Equal(t, err, test.wantErr, test.name+": err is mismatching")
-		assert.Equal(t, config, test.wantConfig, test.name+": config is mismatching")
-		assert.Equal(t, hash, test.wantHash, test.name+": hash is mismatching")
+		assert.Equal(t, test.wantErr, err, test.name+": err is mismatching")
+		assert.Equal(t, test.wantConfig, config, test.name+": config is mismatching")
+		assert.Equal(t, test.wantHash, hash, test.name+": hash is mismatching")
 
 		// Check stored genesis block
-		stored := db.ReadBlock(test.wantHash, 0)
-		assert.Equal(t, stored.Hash(), test.wantHash, test.name+": stored genesis block is not compatible")
+		if test.wantHash != (common.Hash{}) {
+			stored := db.ReadBlock(test.wantHash, 0)
+			assert.Equal(t, test.wantHash, stored.Hash(), test.name+": stored genesis block is not compatible")
+		}
 
 		// Check stored chainConfig
 		storedChainConfig := db.ReadChainConfig(test.wantHash)
-		assert.Equal(t, storedChainConfig, test.wantStoredConfig, test.name+": stored chainConfig is not compatible")
+		assert.Equal(t, test.wantStoredConfig, storedChainConfig, test.name+": stored chainConfig is not compatible")
 	}
 }
 
