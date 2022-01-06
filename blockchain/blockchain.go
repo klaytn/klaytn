@@ -450,6 +450,9 @@ func (bc *BlockChain) loadLastState() error {
 	return nil
 }
 
+// SetHead rewinds the local chain to a new head with the extra condition
+// that the rewind must pass the specified state root. The method will try to
+// delete minimal data from disk whilst retaining chain consistency.
 func (bc *BlockChain) SetHead(head uint64) error {
 	logger.Warn("Rewinding blockchain", "target", head)
 

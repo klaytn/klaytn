@@ -404,9 +404,6 @@ func (hc *HeaderChain) SetHead(head uint64, updateFn UpdateHeadBlocksCallback, d
 		hc.currentHeaderHash = parentHash
 	}
 
-	// TODO-Klaytn The code was difficult to apply because the way to create batch between Klaytn and Ethereum was different.
-	// batch.Write()
-
 	// Clear out any stale content from the caches
 	hc.chainDB.ClearHeaderChainCache()
 }
