@@ -75,7 +75,7 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 		},
 		{
 			name:       "baobab chainConfig update",
-			newHFBlock: big.NewInt(90909999),
+			newHFBlock: big.NewInt(79999999),
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
 				baobabGenesisBlock.MustCommit(db)
 				baobabGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
