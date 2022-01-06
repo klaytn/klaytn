@@ -579,7 +579,7 @@ func newEthRPCPendingTransaction(tx *types.Transaction) *EthRPCTransaction {
 // GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) *EthRPCTransaction {
 	block, err := api.publicTransactionPoolAPI.b.BlockByNumber(ctx, blockNr)
-	if block == nil || err != nil {
+	if err != nil {
 		return nil
 	}
 
@@ -617,7 +617,7 @@ func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Conte
 // GetRawTransactionByBlockHashAndIndex returns the bytes of the transaction for the given block hash and index.
 func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
 	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockHashAndIndex(ctx, blockHash, index)
-	if rawTx == nil || err != nil {
+	if err != nil {
 		return nil
 	}
 
@@ -646,7 +646,7 @@ func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Ha
 // GetRawTransactionByHash returns the bytes of the transaction for the given hash.
 func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
 	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByHash(ctx, hash)
-	if rawTx == nil || err != nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -665,7 +665,7 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 	}
 
 	ethTx, err := newEthTransactionReceipt(tx, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
-	if ethTx == nil || err != nil {
+	if err != nil {
 		return nil, err
 	}
 	return ethTx, nil
