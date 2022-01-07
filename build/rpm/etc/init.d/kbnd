@@ -104,71 +104,71 @@ status_auto_restart_daemon() {
 #------------------------Related to Klaytn node functions-----------------------------
 
 start_node() {
-        echo -n "Starting $prog: "
-        if [ ! -d ${LOG_DIR} ]; then
-                mkdir -p ${LOG_DIR}
-        fi
+    echo -n "Starting $prog: "
+    if [ ! -d ${LOG_DIR} ]; then
+            mkdir -p ${LOG_DIR}
+    fi
 
-        if [ ! -d $DATA_DIR ]; then
-            mkdir -p $DATA_DIR
-        fi
+    if [ ! -d $DATA_DIR ]; then
+        mkdir -p $DATA_DIR
+    fi
 
-        __pids_var_run "$prog" "$pidfile"
-        [ -n "$pid" ] && echo && return
+    __pids_var_run "$prog" "$pidfile"
+    [ -n "$pid" ] && echo && return
 
-        if [ ! -f $KEY_PATH ]; then
-            echo
-            echo "  [ERROR] : KEY_PATH is not defined in /etc/kbnd/conf/kbnd.conf"
-            exit 1
-        fi
-
-        set -f
-        OPTIONS="--nodekey ${KEY_PATH}"
-        if [[ ! -z $NETWORK_ID ]] && [[ $NETWORK_ID != "" ]]; then
-            OPTIONS="$OPTIONS --networkid $NETWORK_ID"
-        fi
-
-        if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
-            OPTIONS="$OPTIONS --metrics"
-        fi
-
-        if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
-            OPTIONS="$OPTIONS --prometheus"
-        fi
-
-        if [ ! -z $DATA_DIR ]; then
-            OPTIONS="$OPTIONS --datadir $DATA_DIR"
-        fi
-
-        if [[ ! -z $AUTHORIZED_NODES ]] && [[ $AUTHORIZED_NODES != "" ]]; then
-            OPTIONS="$OPTIONS --authorized-nodes $AUTHORIZED_NODES"
-        fi
-
-        if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
-            OPTIONS="$OPTIONS $ADDITIONAL"
-        fi
-
-        $kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
-        RETVAL=$?
-        PIDNUM=$!
-        set +f
-        if [ $RETVAL = 0 ]; then
-                echo $PIDNUM > ${pidfile}
-                touch ${lockfile}
-                success "$prog startup"
-        else
-                failure "$prog startup"
-        fi
+    if [ ! -f $KEY_PATH ]; then
         echo
-        return $RETVAL
+        echo "  [ERROR] : KEY_PATH is not defined in /etc/kbnd/conf/kbnd.conf"
+        exit 1
+    fi
+
+    set -f
+    OPTIONS="--nodekey ${KEY_PATH}"
+    if [[ ! -z $NETWORK_ID ]] && [[ $NETWORK_ID != "" ]]; then
+        OPTIONS="$OPTIONS --networkid $NETWORK_ID"
+    fi
+
+    if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
+        OPTIONS="$OPTIONS --metrics"
+    fi
+
+    if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
+        OPTIONS="$OPTIONS --prometheus"
+    fi
+
+    if [ ! -z $DATA_DIR ]; then
+        OPTIONS="$OPTIONS --datadir $DATA_DIR"
+    fi
+
+    if [[ ! -z $AUTHORIZED_NODES ]] && [[ $AUTHORIZED_NODES != "" ]]; then
+        OPTIONS="$OPTIONS --authorized-nodes $AUTHORIZED_NODES"
+    fi
+
+    if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+        OPTIONS="$OPTIONS $ADDITIONAL"
+    fi
+
+    $kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
+    RETVAL=$?
+    PIDNUM=$!
+    set +f
+    if [ $RETVAL = 0 ]; then
+            echo $PIDNUM > ${pidfile}
+            touch ${lockfile}
+            success "$prog startup"
+    else
+            failure "$prog startup"
+    fi
+    echo
+    return $RETVAL
 }
 
 stop_node() {
-        echo -n "Shutting down $prog: "
-        killproc -p ${pidfile} -d ${STOP_TIMEOUT} kbn
-        RETVAL=$?
-        echo
-        [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+    echo -n "Shutting down $prog: "
+    killproc -p ${pidfile} -d ${STOP_TIMEOUT} kbn
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
 }
 
 #--------------------- Public functions --------------------------
