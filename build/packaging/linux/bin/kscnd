@@ -20,7 +20,7 @@ if [ ! -d $DATA_DIR ]; then
 fi
 
 pidfile=$DATA_DIR/kscnd.pid
-auto_restart_daemon_pidfile=$DATA_DIR/restart_daemon.pid
+auto_restart_daemon_pidfile=$DATA_DIR/restart_daemon_kscnd.pid
 
 __pid_run() {
     unset pid

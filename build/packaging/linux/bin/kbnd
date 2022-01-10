@@ -8,7 +8,7 @@ STOP_TIMEOUT=10 # seconds to wait for a clean exit
 source $CONF/kbnd.conf
 
 pidfile=$CMD_HOME/kbnd.pid
-auto_restart_daemon_pidfile=$DATA_DIR/restart_daemon.pid
+auto_restart_daemon_pidfile=$DATA_DIR/restart_daemon_kbnd.pid
 
 __pid_run() {
     unset pid

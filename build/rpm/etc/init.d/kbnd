@@ -21,7 +21,7 @@ kbn=/usr/bin/kbn
 prog=kbnd
 lockfile=${LOCKFILE-/var/lock/subsys/kbnd}
 pidfile=${PIDFILE-/var/run/kbnd.pid}
-auto_restart_daemon_pidfile=/var/run/restart_daemon.pid
+auto_restart_daemon_pidfile=/var/run/restart_daemon_kbnd.pid
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 

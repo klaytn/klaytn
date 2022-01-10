@@ -21,7 +21,7 @@ ksen=/usr/bin/ksen
 prog=ksend
 lockfile=${LOCKFILE-/var/lock/subsys/ksend}
 pidfile=${PIDFILE-/var/run/ksend.pid}
-auto_restart_daemon_pidfile=/var/run/restart_daemon.pid
+auto_restart_daemon_pidfile=/var/run/restart_daemon_ksend.pid
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 

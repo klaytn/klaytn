@@ -21,7 +21,7 @@ kcn=/usr/bin/kcn
 prog=kcnd
 lockfile=${LOCKFILE-/var/lock/subsys/kcnd}
 pidfile=${PIDFILE-/var/run/kcnd.pid}
-auto_restart_daemon_pidfile=/var/run/restart_daemon.pid
+auto_restart_daemon_pidfile=/var/run/restart_daemon_kcnd.pid
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
