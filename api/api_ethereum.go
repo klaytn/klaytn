@@ -369,10 +369,9 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 // * When blockNr is -1 the chain head is returned.
 // * When blockNr is -2 the pending chain head is returned.
 func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
-	klaytnHeader, err := api.publicBlockChainAPI.GetHeaderByNumber(ctx, number)
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	err = nil
-	if klaytnHeader != nil && err == nil {
+	klaytnHeader, _ := api.publicBlockChainAPI.GetHeaderByNumber(ctx, number)
+	if klaytnHeader != nil {
 		response := api.rpcMarshalHeader(klaytnHeader)
 		if number == rpc.PendingBlockNumber {
 			// Pending header need to nil out a few fields
@@ -382,7 +381,7 @@ func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockN
 		}
 		return response, nil
 	}
-	return nil, err
+	return nil, nil
 }
 
 // GetHeaderByHash returns the requested header by hash.
@@ -734,7 +733,7 @@ func (api *EthereumAPI) Accounts() []common.Address {
 func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) map[string]interface{} {
 	proposer, err := api.publicKlayAPI.b.Engine().Author(head)
 	if err != nil {
-		logger.Error("Failed to fetch author during marshaling header: %s", err.Error(), nil)
+		logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
 	}
 	result := map[string]interface{}{
 		"number":          (*hexutil.Big)(head.Number),
