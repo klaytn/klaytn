@@ -164,7 +164,7 @@ const (
 
 	TxDataGas uint64 = 100
 
-	// BaseFee exists for Supporting Ethereum compatible data structure.
+	// BaseFee exists for supporting Ethereum compatible data structure.
 	BaseFee uint64 = 0
 )
 
