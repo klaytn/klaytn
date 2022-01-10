@@ -2,6 +2,7 @@ package sendKlay
 
 import (
 	"context"
+	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -36,7 +37,7 @@ func TestAccountStatus_contract_transfer(t *testing.T) {
 	contract := env.contract
 
 	// receiver의 AccountStatus를 Stop로 설정함
-	tx, err := setAccountStatus(backend, receiver, account.AccountStatusStop, t)
+	tx, err := setAccountStatus(backend, receiver, account.AccountStatusStop, math.MaxUint64, t)
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -68,7 +69,7 @@ func TestAccountStatus_contract_send(t *testing.T) {
 	contract := env.contract
 
 	// receiver의 AccountStatus를 Stop로 설정함
-	tx, err := setAccountStatus(backend, receiver, account.AccountStatusStop, t)
+	tx, err := setAccountStatus(backend, receiver, account.AccountStatusStop, math.MaxUint64, t)
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
@@ -100,7 +101,7 @@ func TestAccountStatus_contract_call(t *testing.T) {
 	contract := env.contract
 
 	// receiver의 AccountStatus를 Stop로 설정함
-	tx, err := setAccountStatus(backend, receiver, account.AccountStatusStop, t)
+	tx, err := setAccountStatus(backend, receiver, account.AccountStatusStop, math.MaxUint64, t)
 	assert.NoError(t, err)
 	backend.Commit()
 	CheckReceipt(backend, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)

@@ -3,6 +3,7 @@ package sendKlay
 import (
 	"context"
 	"crypto/ecdsa"
+	"math"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -115,11 +116,14 @@ func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Dur
 	assert.Equal(t, expectedStatus, receipt.Status)
 }
 
-func ValueTransfer(backend *backends.SimulatedBackend, from *bind.TransactOpts, to common.Address, value *big.Int, t *testing.T) (*types.Transaction, error) {
+func ValueTransfer(backend *backends.SimulatedBackend, from *bind.TransactOpts, to common.Address, value *big.Int, nonce uint64, t *testing.T) (*types.Transaction, error) {
 	ctx := context.Background()
 
-	nonce, err := backend.NonceAt(ctx, from.From, nil)
-	assert.Equal(t, err, nil)
+	if nonce == math.MaxUint64 {
+		var err error
+		nonce, err = backend.NonceAt(ctx, from.From, nil)
+		assert.Equal(t, err, nil)
+	}
 
 	chainID, err := backend.ChainID(ctx)
 	assert.Equal(t, err, nil)
@@ -142,11 +146,14 @@ func ValueTransfer(backend *backends.SimulatedBackend, from *bind.TransactOpts, 
 	return signedTx, err
 }
 
-func setBalanceLimit(backend *backends.SimulatedBackend, from *bind.TransactOpts, balanceLimit *big.Int, t *testing.T) *types.Transaction {
+func setBalanceLimit(backend *backends.SimulatedBackend, from *bind.TransactOpts, balanceLimit *big.Int, nonce uint64, t *testing.T) *types.Transaction {
 	ctx := context.Background()
 
-	nonce, err := backend.NonceAt(ctx, from.From, nil)
-	assert.NoError(t, err)
+	if nonce == math.MaxUint64 {
+		var err error
+		nonce, err = backend.NonceAt(ctx, from.From, nil)
+		assert.NoError(t, err)
+	}
 
 	chainID, err := backend.ChainID(ctx)
 	assert.NoError(t, err)
@@ -168,11 +175,14 @@ func setBalanceLimit(backend *backends.SimulatedBackend, from *bind.TransactOpts
 	return signedTx
 }
 
-func setAccountStatus(backend *backends.SimulatedBackend, from *bind.TransactOpts, accountStatus account.AccountStatus, t *testing.T) (*types.Transaction, error) {
+func setAccountStatus(backend *backends.SimulatedBackend, from *bind.TransactOpts, accountStatus account.AccountStatus, nonce uint64, t *testing.T) (*types.Transaction, error) {
 	ctx := context.Background()
 
-	nonce, err := backend.NonceAt(ctx, from.From, nil)
-	assert.Equal(t, err, nil)
+	if nonce == math.MaxUint64 {
+		var err error
+		nonce, err = backend.NonceAt(ctx, from.From, nil)
+		assert.Equal(t, err, nil)
+	}
 
 	chainID, err := backend.ChainID(ctx)
 	assert.Equal(t, err, nil)

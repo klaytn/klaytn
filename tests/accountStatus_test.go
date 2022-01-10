@@ -86,7 +86,7 @@ func AccountStatusUpdate(account *TestAccountType, accountStatus account.Account
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountStatusUpdate, valueMapForCreation)
 	assert.Equal(t, nil, err)
 
-	if keys == nil {
+	if len(keys) == 0 {
 		keys = account.Keys
 	}
 	err = tx.SignWithKeys(signer, keys)
@@ -551,5 +551,128 @@ func TestAccountStatus_RoleUpdate(t *testing.T) {
 		receipt, _, err := applyTransaction(t, bcdata, tx)
 		assert.NoError(t, err)
 		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	}
+}
+
+// 한 블록에 setAccountStatus을 여러번 호출했을 때 마지막 값만 반영되는 것을 확인
+func TestAccountStatus_pending_multi_AccountStatus(t *testing.T) {
+	env := generateAccountStatusTestEnv(t)
+	defer env.bcdata.Shutdown()
+
+	prof := env.prof
+	accountMap := env.accountMap
+	bcdata := env.bcdata
+	signer := env.signer
+	receiver := env.receivers[0]
+	tryNum := int64(100)
+
+	var txs types.Transactions
+
+	for i := int64(1); i <= tryNum; i++ {
+		// account status update (Active)
+		{
+			tx := AccountStatusUpdate(receiver, account.AccountStatusActive, signer, nil, t)
+
+			txs = append(txs, tx)
+
+			receiver.AddNonce()
+		}
+
+		// account status update (Stop)
+		{
+			tx := AccountStatusUpdate(receiver, account.AccountStatusStop, signer, nil, t)
+
+			txs = append(txs, tx)
+
+			receiver.AddNonce()
+		}
+	}
+
+	// 블록 생성 (모든 tx 하나의 블록에)
+	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+		t.Fatal(err)
+	}
+
+	// 최종 AccountStatus 값과 Nonce 값 확인
+	statedb, err := bcdata.bc.State()
+	assert.NoError(t, err)
+	acc := statedb.GetAccount(receiver.Addr)
+	eoa, ok := acc.(account.EOA)
+	assert.True(t, ok)
+	assert.Equal(t, account.AccountStatusStop, eoa.GetAccountStatus())
+	assert.Equal(t, tryNum*2, int64(eoa.GetNonce()))
+}
+
+// 한 블록에 setAccountStatus과 Account Update를 반복했을 때, roleAccountUpdate가 setAccountStatus할 수 있는 것을 확인
+func TestAccountStatus_pending_setAccountStatus_accountUpdate(t *testing.T) {
+	env := generateBalanceLimitEOATestEnv(t)
+	defer env.bcdata.Shutdown()
+
+	prof := env.prof
+	accountMap := env.accountMap
+	bcdata := env.bcdata
+	signer := env.signer
+	sender := env.sender
+	keyRoleUpdate := sender.GetUpdateKeys()
+
+	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+
+	var txs types.Transactions
+
+	// 한 account에 대하여 다음 tx를 100개 생성
+	tryNum := int64(100)
+	for i := int64(0); i < tryNum; i++ {
+		// account status update (stop)
+		{
+			tx := AccountStatusUpdate(sender, account.AccountStatusStop, signer, keyRoleUpdate, t)
+
+			txs = append(txs, tx)
+
+			sender.AddNonce()
+		}
+
+		// account status update (active)
+		{
+			tx := AccountStatusUpdate(sender, account.AccountStatusActive, signer, keyRoleUpdate, t)
+
+			txs = append(txs, tx)
+
+			sender.AddNonce()
+		}
+
+		// account update
+		{
+			// generate a role-based key
+			prvKeys := genTestKeys(3)
+			roleKey := accountkey.NewAccountKeyRoleBasedWithValues(accountkey.AccountKeyRoleBased{
+				accountkey.NewAccountKeyPublicWithValue(&prvKeys[0].PublicKey),
+				accountkey.NewAccountKeyPublicWithValue(&keyRoleUpdate[0].PublicKey),
+				accountkey.NewAccountKeyPublicWithValue(&prvKeys[2].PublicKey),
+			})
+			// create tx
+			values := map[types.TxValueKeyType]interface{}{
+				types.TxValueKeyNonce:      sender.Nonce,
+				types.TxValueKeyFrom:       sender.Addr,
+				types.TxValueKeyGasLimit:   gasLimit,
+				types.TxValueKeyGasPrice:   gasPrice,
+				types.TxValueKeyAccountKey: roleKey,
+			}
+
+			tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, values)
+			assert.Equal(t, nil, err)
+
+			// sign with the previous update key
+			err = tx.SignWithKeys(signer, keyRoleUpdate)
+			assert.Equal(t, nil, err)
+
+			txs = append(txs, tx)
+
+			sender.AddNonce()
+		}
+	}
+
+	// 블록 생성 (모든 tx 하나의 블록에)
+	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+		t.Fatal(err)
 	}
 }
