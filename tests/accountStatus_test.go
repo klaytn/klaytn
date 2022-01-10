@@ -12,6 +12,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common/profile"
+	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -289,8 +290,8 @@ func TestAccountStatus_From(t *testing.T) {
 			assert.Equal(t, nil, err)
 
 			receipt, _, err := applyTransaction(t, bcdata, tx)
-			assert.True(t, errors.Is(err, types.ErrAccountStatusStopSender))
-			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.NoError(t, err)
+			assert.Equal(t, types.ReceiptStatusErrStoppedAccountFrom, receipt.Status)
 		}
 
 		// non-legacy transaction에 대해 확인
@@ -301,8 +302,8 @@ func TestAccountStatus_From(t *testing.T) {
 			tx := ValueTransfer(sender, receiver, transferAmount, signer, t)
 
 			receipt, _, err := applyTransaction(t, bcdata, tx)
-			assert.True(t, errors.Is(err, types.ErrAccountStatusStopSender))
-			assert.Equal(t, (*types.Receipt)(nil), receipt)
+			assert.NoError(t, err)
+			assert.Equal(t, types.ReceiptStatusErrStoppedAccountFrom, receipt.Status)
 		}
 	}
 
@@ -413,7 +414,7 @@ func TestAccountStatus_To(t *testing.T) {
 	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 		t.Fatal(err)
 	}
-	sender.AddNonce()
+	receiver.AddNonce()
 
 	// 수신인에게 value transfer 실행 시 실패 확인
 	min := 0
@@ -422,8 +423,8 @@ func TestAccountStatus_To(t *testing.T) {
 	tx = ValueTransfer(sender, receiver, transferAmount, signer, t)
 
 	receipt, _, err := applyTransaction(t, bcdata, tx)
-	assert.True(t, errors.Is(err, types.ErrAccountStatusStopReceiver))
-	assert.Equal(t, (*types.Receipt)(nil), receipt)
+	assert.NoError(t, err)
+	assert.Equal(t, types.ReceiptStatusErrStoppedAccountTo, receipt.Status)
 }
 
 // AccountStatus가 Stop일 때 tx를 보내면 에러 발생하는 것을 확인 (txpool 에러 발생)
@@ -455,7 +456,7 @@ func TestAccountStatus_ErrorMessage(t *testing.T) {
 	tx = ValueTransfer(sender, sender, transferAmount, signer, t)
 
 	err := txpool.AddRemote(tx)
-	assert.True(t, errors.Is(err, types.ErrAccountStatusStopSender))
+	assert.True(t, errors.Is(err, kerrors.ErrAccountStatusStopSender))
 }
 
 // klay_getAccount에서 AccountStatus을 보여주는 것을 확인

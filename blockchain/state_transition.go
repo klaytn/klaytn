@@ -262,7 +262,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 		// when the EVM is still running while the block proposer's total
 		// execution time of txs for a candidate block reached the predefined
 		// limit.
-		if errTxFailed == vm.ErrInsufficientBalance || errTxFailed == vm.ErrExceedBalanceLimit || errTxFailed == vm.ErrTotalTimeLimitReached {
+		if errTxFailed == vm.ErrInsufficientBalance || errTxFailed == vm.ErrTotalTimeLimitReached {
 			kerr.ErrTxInvalid = errTxFailed
 			kerr.Status = getReceiptStatusFromErrTxFailed(nil)
 			return nil, 0, kerr
@@ -310,6 +310,9 @@ var errTxFailed2receiptstatus = map[error]uint{
 	kerrors.ErrDeprecated:                           types.ReceiptStatusErrDeprecated,
 	kerrors.ErrNotSupported:                         types.ReceiptStatusErrNotSupported,
 	kerrors.ErrInvalidCodeFormat:                    types.ReceiptStatusErrInvalidCodeFormat,
+	kerrors.ErrAccountStatusStopSender:              types.ReceiptStatusErrStoppedAccountFrom,
+	kerrors.ErrAccountStatusStopReceiver:            types.ReceiptStatusErrStoppedAccountTo,
+	kerrors.ErrExceedBalanceLimit:                   types.ReceiptStatusErrExceedBalanceLimit,
 }
 
 var receiptstatus2errTxFailed = map[uint]error{
@@ -343,6 +346,9 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrDeprecated:                           kerrors.ErrDeprecated,
 	types.ReceiptStatusErrNotSupported:                         kerrors.ErrNotSupported,
 	types.ReceiptStatusErrInvalidCodeFormat:                    kerrors.ErrInvalidCodeFormat,
+	types.ReceiptStatusErrStoppedAccountFrom:                   kerrors.ErrAccountStatusStopSender,
+	types.ReceiptStatusErrStoppedAccountTo:                     kerrors.ErrAccountStatusStopReceiver,
+	types.ReceiptStatusErrExceedBalanceLimit:                   kerrors.ErrExceedBalanceLimit,
 }
 
 // getReceiptStatusFromErrTxFailed returns corresponding ReceiptStatus for VM error.

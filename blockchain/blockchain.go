@@ -24,9 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/common/math"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -38,21 +35,23 @@ import (
 	"sync/atomic"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/go-redis/redis/v7"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/klaytn/klaytn"
+	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/common/mclock"
 	"github.com/klaytn/klaytn/common/prque"
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/log"
+	klaytnmetrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -2400,11 +2399,6 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, chainConfig, vmConfig)
-
-	// check if from/to account is in active state
-	if err = msg.ValidateAccountStatus(context.IsActiveAccount, statedb); err != nil {
-		return nil, 0, nil, err
-	}
 
 	// Apply the transaction to the current state (included in the env)
 	_, gas, kerr := ApplyMessage(vmenv, msg)

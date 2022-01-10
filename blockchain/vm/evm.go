@@ -31,7 +31,6 @@ import (
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
-	"github.com/pkg/errors"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -221,9 +220,13 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		return nil, gas, nil
 	}
 
+	// Fail if we're trying to transfer from stopped account
+	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, caller.Address()) {
+		return nil, gas, kerrors.ErrAccountStatusStopSender
+	}
 	// Fail if we're trying to transfer to stopped account
 	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, addr) {
-		return nil, gas, errors.Wrap(types.ErrAccountStatusStopReceiver, "stopped account is "+addr.String())
+		return nil, gas, kerrors.ErrAccountStatusStopReceiver
 	}
 
 	// Fail if we're trying to execute above the call depth limit
@@ -237,7 +240,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	// Fail if we're trying to transfer receiver's balance limit
 	// This only checks balance limit of EOA. Smart cotracts doesn't have balance limit.
 	if !evm.Context.CanBeTransferred(evm.StateDB.GetBalanceLimit, evm.StateDB.GetBalance, addr, value) {
-		return nil, gas, ErrExceedBalanceLimit
+		return nil, gas, kerrors.ErrExceedBalanceLimit
 	}
 
 	var (
@@ -323,9 +326,13 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 		return nil, gas, nil
 	}
 
+	// Fail if we're trying to transfer from stopped account
+	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, caller.Address()) {
+		return nil, gas, kerrors.ErrAccountStatusStopSender
+	}
 	// Fail if we're trying to transfer to stopped account
 	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, addr) {
-		return nil, gas, errors.Wrap(types.ErrAccountStatusStopReceiver, "stopped account is "+addr.String())
+		return nil, gas, kerrors.ErrAccountStatusStopReceiver
 	}
 
 	// Fail if we're trying to execute above the call depth limit
@@ -339,7 +346,7 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 	// Fail if we're trying to transfer receiver's balance limit
 	// This only checks balance limit of EOA. Smart cotracts doesn't have balance limit.
 	if !evm.Context.CanBeTransferred(evm.StateDB.GetBalanceLimit, evm.StateDB.GetBalance, addr, value) {
-		return nil, gas, ErrExceedBalanceLimit
+		return nil, gas, kerrors.ErrExceedBalanceLimit
 	}
 
 	if !isProgramAccount(addr, evm.StateDB) {
@@ -465,6 +472,11 @@ func (c *codeAndHash) Hash() common.Hash {
 
 // Create creates a new contract using code as deployment code.
 func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address, humanReadable bool, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+	// Fail if we're trying to transfer from stopped account
+	if !evm.IsActiveAccount(evm.StateDB.GetAccountStatus, caller.Address()) {
+		return nil, common.Address{}, gas, kerrors.ErrAccountStatusStopSender
+	}
+
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if evm.depth > int(params.CallCreateDepth) {

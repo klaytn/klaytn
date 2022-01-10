@@ -11,7 +11,6 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/common/profile"
 	"github.com/stretchr/testify/assert"
@@ -149,8 +148,8 @@ func TestBalanceLimit_EOA_InitialBalanceLimit_newAccount(t *testing.T) {
 		tx := ValueTransfer(sender, receivers[2], transferAmount, signer, t)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, vm.ErrExceedBalanceLimit, err)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.NoError(t, err)
+		assert.Equal(t, types.ReceiptStatusErrExceedBalanceLimit, receipt.Status)
 	}
 }
 
@@ -178,8 +177,8 @@ func TestBalanceLimit_EOA_setBalanceLimit(t *testing.T) {
 		tx := ValueTransfer(sender, receiver, transferAmount, signer, t)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, vm.ErrExceedBalanceLimit, err)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.NoError(t, err)
+		assert.Equal(t, types.ReceiptStatusErrExceedBalanceLimit, receipt.Status)
 	}
 
 	// B에 setBalanceLimit을 이용하여 InitialBalanceLimit 더 높은 값(=NewBalanceLimit)으로 한도 변경
@@ -211,8 +210,8 @@ func TestBalanceLimit_EOA_setBalanceLimit(t *testing.T) {
 		tx := ValueTransfer(sender, receiver, transferAmount, signer, t)
 
 		receipt, _, err := applyTransaction(t, bcdata, tx)
-		assert.Equal(t, vm.ErrExceedBalanceLimit, err)
-		assert.Equal(t, (*types.Receipt)(nil), receipt)
+		assert.NoError(t, err)
+		assert.Equal(t, types.ReceiptStatusErrExceedBalanceLimit, receipt.Status)
 	}
 }
 
