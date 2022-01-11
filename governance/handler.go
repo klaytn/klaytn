@@ -168,12 +168,28 @@ func (gov *Governance) checkKey(k string) bool {
 	return false
 }
 
+func (gov *Governance) checkValue(key string, val interface{}) bool {
+
+	if key == "istanbul.committeesize" && val == uint64(0) {
+		return false
+	}
+	if key == "reward.minimumstake" {
+		if v, ok := new(big.Int).SetString(val.(string), 10); ok {
+			if v.Cmp(common.Big0) <= 0 {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
 func (gov *Governance) ValidateVote(vote *GovernanceVote) (*GovernanceVote, bool) {
 	vote.Key = gov.getKey(vote.Key)
 	key := GovernanceKeyMap[vote.Key]
 	vote.Value = gov.adjustValueType(vote.Key, vote.Value)
 
-	if gov.checkKey(vote.Key) && gov.checkType(vote) {
+	if gov.checkKey(vote.Key) && gov.checkType(vote) && gov.checkValue(vote.Key, vote.Value) {
 		return vote, GovernanceItems[key].validator(vote.Key, vote.Value)
 	}
 	return vote, false
