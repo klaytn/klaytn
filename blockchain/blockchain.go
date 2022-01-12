@@ -1336,9 +1336,6 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 			"hash", block.Hash(), "parentHash", block.ParentHash())
 		return WriteResult{Status: NonStatTy}, consensus.ErrUnknownAncestor
 	}
-	// Make sure no inconsistent state is leaked during insertion
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
 
 	if !bc.ShouldTryInserting(block) {
 		return WriteResult{Status: NonStatTy}, ErrKnownBlock
@@ -1404,9 +1401,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 			"hash", block.Hash(), "parentHash", block.ParentHash())
 		return WriteResult{Status: NonStatTy}, consensus.ErrUnknownAncestor
 	}
-	// Make sure no inconsistent state is leaked during insertion
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
+
 
 	if !bc.ShouldTryInserting(block) {
 		return WriteResult{Status: NonStatTy}, ErrKnownBlock
