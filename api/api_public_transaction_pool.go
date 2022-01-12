@@ -207,6 +207,7 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 		return nil
 	}
 	fields := newRPCTransaction(tx, blockHash, blockNumber, index)
+	fields["type"] = hexutil.Uint64(fields["typeInt"].(types.TxType))
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
