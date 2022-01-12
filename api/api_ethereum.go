@@ -372,7 +372,10 @@ func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockN
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
 	klaytnHeader, _ := api.publicBlockChainAPI.GetHeaderByNumber(ctx, number)
 	if klaytnHeader != nil {
-		response := api.rpcMarshalHeader(klaytnHeader)
+		response, err := api.rpcMarshalHeader(klaytnHeader)
+		if err != nil {
+			return nil, err
+		}
 		if number == rpc.PendingBlockNumber {
 			// Pending header need to nil out a few fields
 			for _, field := range []string{"hash", "nonce", "miner"} {
@@ -386,9 +389,14 @@ func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockN
 
 // GetHeaderByHash returns the requested header by hash.
 func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
+	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
 	klaytnHeader, _ := api.publicBlockChainAPI.GetHeaderByHash(ctx, hash)
 	if klaytnHeader != nil {
-		return api.rpcMarshalHeader(klaytnHeader)
+		response, err := api.rpcMarshalHeader(klaytnHeader)
+		if err != nil {
+			return nil
+		}
+		return response
 	}
 	return nil
 }
@@ -729,11 +737,14 @@ func (api *EthereumAPI) Accounts() []common.Address {
 	return nil
 }
 
-// rpcMarshalHeader marshal block header as Ethereum compatible format
-func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) map[string]interface{} {
+// rpcMarshalHeader marshal block header as Ethereum compatible format.
+// It returns error when fetching Author which is block proposer is failed.
+func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interface{}, error) {
 	proposer, err := api.publicKlayAPI.b.Engine().Author(head)
 	if err != nil {
+		// miner is the field Klaytn should provide the correct value. It's not the field dummy value is allowed.
 		logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
+		return nil, err
 	}
 	result := map[string]interface{}{
 		"number":          (*hexutil.Big)(head.Number),
@@ -759,5 +770,5 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) map[string]interfac
 		"baseFeePerGas":    (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee)),
 	}
 
-	return result
+	return result, nil
 }
