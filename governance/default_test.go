@@ -115,7 +115,7 @@ var tstData = []voteValue{
 	{k: "reward.minimumstake", v: "2000000000000000000000000", e: true},
 	{k: "reward.minimumstake", v: 200000000000000, e: false},
 	{k: "reward.minimumstake", v: "-1", e: false},
-	{k: "reward.minimumstake", v: "0", e: false},
+	{k: "reward.minimumstake", v: "0", e: true},
 	{k: "reward.minimumstake", v: 0, e: false},
 	{k: "reward.minimumstake", v: 1.1, e: false},
 	{k: "reward.stakingupdateinterval", v: uint64(20), e: false},
