@@ -524,7 +524,7 @@ var (
 	errAmountSmallerThanBalance     = errors.New("burn amount should smaller than balance")
 	errNotPermissionedCallerAddress = errors.New("no permission; unavailable CallerAddress")
 
-	PermissionedCallerAddress = common.HexToAddress("0xCdBCCDBcCDBccDBccdBcCDbcCdbCcDbCCdbc0000")
+	PermissionedCallerAddress = common.HexToAddress("0xcbdc000000000000000000000000000000000000")
 )
 
 // GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
