@@ -1402,7 +1402,6 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 		return WriteResult{Status: NonStatTy}, consensus.ErrUnknownAncestor
 	}
 
-
 	if !bc.ShouldTryInserting(block) {
 		return WriteResult{Status: NonStatTy}, ErrKnownBlock
 	}
