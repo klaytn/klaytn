@@ -175,7 +175,7 @@ func (gov *Governance) checkValue(key string, val interface{}) bool {
 	}
 	if key == "reward.minimumstake" {
 		if v, ok := new(big.Int).SetString(val.(string), 10); ok {
-			if v.Cmp(common.Big0) <= 0 {
+			if v.Cmp(common.Big0) < 0 {
 				return false
 			}
 		}
