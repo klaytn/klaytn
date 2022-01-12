@@ -47,10 +47,28 @@ func testGetHeader(t *testing.T, testAPIName string) {
 	// GetHeader APIs calls internally below methods.
 	mockBackend.EXPECT().Engine().Return(mockEngine)
 	// Author is called when calculates miner field of Header.
-	mockEngine.EXPECT().Author(gomock.Any()).Return(common.Address{}, nil)
-	mockBackend.EXPECT().GetTd(gomock.Any()).Return(new(big.Int))
+	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
+	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
+	var dummyTotalDifficulty uint64 = 5
+	mockBackend.EXPECT().GetTd(gomock.Any()).Return(new(big.Int).SetUint64(dummyTotalDifficulty))
 
-	header := types.CopyHeader(&types.Header{}) // Creates an empty header
+	// Create dummy header
+	header := types.CopyHeader(&types.Header{
+		ParentHash:  common.HexToHash("0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348"),
+		Rewardbase:  common.Address{},
+		Root:        common.HexToHash("0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9"),
+		ReceiptHash: common.HexToHash("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
+		Bloom:       types.Bloom{},
+		BlockScore:  new(big.Int).SetUint64(1),
+		Number:      new(big.Int).SetUint64(4),
+		GasUsed:     uint64(10000),
+		Time:        new(big.Int).SetUint64(1641363540),
+		TimeFoS:     uint8(85),
+		Extra:       common.Hex2Bytes("0xd983010701846b6c617988676f312e31362e338664617277696e000000000000f89ed5949712f943b296758aaae79944ec975884188d3a96b8415a0614be7fd5ea40f11ce558e02993bd55f11ae72a3cfbc861875a57483ec5ec3adda3e5845fd7ab271d670c755480f9ef5b8dd731f4e1f032fff5d165b763ac01f843b8418867d3733167a0c737fa5b62dcc59ec3b0af5748bcc894e7990a0b5a642da4546713c9127b3358cdfe7894df1ca1db5a97560599986d7f1399003cd63660b98200"),
+		Governance:  []byte{},
+		Vote:        []byte{},
+	})
+
 	var blockParam interface{}
 	switch testAPIName {
 	case "GetHeaderByNumber":
@@ -73,31 +91,31 @@ func testGetHeader(t *testing.T, testAPIName string) {
 
 	expected := make(map[string]interface{})
 	assert.NoError(t, json.Unmarshal([]byte(`
-    {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "result": {
-            "baseFeePerGas": "0xf79eb1429",
-            "difficulty": "0x29daf6647fd2b7",
-            "extraData": "0x75732d656173742d37",
-            "gasLimit": "0x1c9c32b",
-            "gasUsed": "0x28b484",
-            "hash": "0x5de0dc71dec2e724be002dcad135b602810769ce26e16b3b06862405e08ca71b",
-            "logsBloom": "0x02200022800002050000084080014015001001004b0002440401060a0830000200014041044010180010430018800119120098000800200241c2090a4020011040004400002201081800440a340020a4000820100848081020003000892050105a05000002100000200012c0800408982000085100000c4040a03814000800200812210100200010004018410d80004214800123210400082002214620100021028800120309200802008291c8e000904210080008110900010100081000101000501002010a0080311886000008000000240900400000100200a402005830200010300804020200000002310000008004004080a58000550000508000000000",
-            "miner": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
-            "mixHash": "0x6d266344754999c95ad189f78257d31c276c63c689d864c31fdc62fcb481e5f0",
-            "nonce": "0x8b232816a7045c51",
-            "number": "0xd208de",
-            "parentHash": "0x99fcd33dddd763835ba8bdc842853d973496a7e64ea2f6cf826bc2c338e23b0c",
-            "receiptsRoot": "0xd3d70ed54a9274ba3191bf2d4fd8738c5d782fe17c8bfb45c03a25dc04120c35",
-            "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-            "size": "0x23a",
-            "stateRoot": "0x1076e6726164bd6f74720a717242584109f37c55017d004eefccf9ec3be76c18",
-            "timestamp": "0x61b0a6c6",
-            "totalDifficulty": "0x7a58841ac2bdc5d1e97",
-            "transactionsRoot": "0x6ec8daca98c1005d9bbd7716b5e94180e2bf0e6b77770174563a166337369344"
-        }
-    }   
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+		"baseFeePerGas": "0x0",
+		"difficulty": "0x1",
+		"extraData": "0x",
+		"gasLimit": "0x3b9ac9ff",
+		"gasUsed": "0x2710",
+		"hash": "0x55dc3fb675db73376149a9c03c04ece912360a87f9d4e0138212eb8a0400df08",
+		"logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+		"miner": "0x9712f943b296758aaae79944ec975884188d3a96",
+		"mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+		"nonce": "0x0000000000000000",
+		"number": "0x4",
+		"parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
+		"receiptsRoot": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+		"sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+		"size": "0x20c",
+		"stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
+		"timestamp": "0x61d53854",
+		"totalDifficulty": "0x5",
+		"transactionsRoot": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+	  }
+	}
     `), &expected))
 	checkEthereumBlockOrHeaderFormat(t, expected, ethHeader)
 }
@@ -114,7 +132,6 @@ func checkEthereumBlockOrHeaderFormat(
 	assert.True(t, ok)
 
 	// Check immutable values.
-	// these values only exists for supporting Ethereum compatible data structures.
 	nonce := ethBlockOrHeader["nonce"]
 	assert.Equal(t, BlockNonce{}, nonce)
 
@@ -137,22 +154,25 @@ func checkEthereumBlockOrHeaderFormat(
 	baseFeePerGas := ethBlockOrHeader["baseFeePerGas"]
 	assert.Equal(t, (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee)), baseFeePerGas)
 
-	// returnedKeys must have all keys of the Ethereum header.
-	returnedKeys := make([]string, len(ethBlockOrHeader))
-	for k := range ethBlockOrHeader {
-		returnedKeys = append(returnedKeys, k)
-	}
-	existed := func(key string) bool {
-		for _, ek := range returnedKeys {
-			if key == ek {
-				return true
-			}
-		}
-		return false
-	}
-	existsOrNot := false
-	for k := range expectedResult {
-		existsOrNot = existed(k)
-	}
-	assert.True(t, existsOrNot)
+	// Check other values
+	// make sure that rpcMarshalHeader assigns fields values properly.
+	expectedGasUsed, _ := new(big.Int).SetString(expectedResult["gasUsed"].(string)[2:], 16)
+	assert.Equal(t, hexutil.Uint64(expectedGasUsed.Uint64()), ethBlockOrHeader["gasUsed"])
+	expectedBloom := types.Bloom{}
+	expectedBloom.SetBytes(common.Hex2Bytes(expectedResult["logsBloom"].(string)))
+	assert.Equal(t, expectedBloom, ethBlockOrHeader["logsBloom"].(types.Bloom))
+	assert.Equal(t, common.HexToAddress(expectedResult["miner"].(string)), ethBlockOrHeader["miner"].(common.Address))
+	expectedNumber, _ := new(big.Int).SetString(expectedResult["number"].(string)[2:], 16)
+	assert.Equal(t, expectedNumber.Uint64(), ethBlockOrHeader["number"].(*hexutil.Big).ToInt().Uint64())
+	assert.Equal(t, common.HexToHash(expectedResult["hash"].(string)), ethBlockOrHeader["hash"].(common.Hash))
+	assert.Equal(t, common.HexToHash(expectedResult["parentHash"].(string)), ethBlockOrHeader["parentHash"].(common.Hash))
+	assert.Equal(t, common.HexToHash(expectedResult["receiptsRoot"].(string)), ethBlockOrHeader["receiptsRoot"].(common.Hash))
+	assert.Equal(t, expectedResult["size"].(string), ethBlockOrHeader["size"].(hexutil.Uint64).String())
+	assert.Equal(t, common.HexToHash(expectedResult["stateRoot"].(string)), ethBlockOrHeader["stateRoot"].(common.Hash))
+	expectedTimestamp, _ := new(big.Int).SetString(expectedResult["timestamp"].(string)[2:], 16)
+	actualTimeStamp, _ := ethBlockOrHeader["timestamp"].(hexutil.Big)
+	assert.Equal(t, expectedTimestamp.Uint64(), actualTimeStamp.ToInt().Uint64())
+	expectedTotalDifficulty, _ := new(big.Int).SetString(expectedResult["totalDifficulty"].(string)[2:], 16)
+	assert.Equal(t, expectedTotalDifficulty.Uint64(), ethBlockOrHeader["totalDifficulty"].(*hexutil.Big).ToInt().Uint64())
+	assert.Equal(t, common.HexToHash(expectedResult["transactionsRoot"].(string)), ethBlockOrHeader["receiptsRoot"].(common.Hash))
 }
