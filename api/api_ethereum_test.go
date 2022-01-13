@@ -12,12 +12,8 @@ import (
 	mock_api "github.com/klaytn/klaytn/api/mocks"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus/mocks"
-	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,6 +52,7 @@ func testGetHeader(t *testing.T, testAPIName string) {
 	header := types.CopyHeader(&types.Header{
 		ParentHash:  common.HexToHash("0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348"),
 		Rewardbase:  common.Address{},
+		TxHash:      common.HexToHash("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
 		Root:        common.HexToHash("0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9"),
 		ReceiptHash: common.HexToHash("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
 		Bloom:       types.Bloom{},
@@ -100,7 +97,7 @@ func testGetHeader(t *testing.T, testAPIName string) {
 		"extraData": "0x",
 		"gasLimit": "0x3b9ac9ff",
 		"gasUsed": "0x2710",
-		"hash": "0x55dc3fb675db73376149a9c03c04ece912360a87f9d4e0138212eb8a0400df08",
+		"hash": "0xd6d5d8295f612bc824762f1945f4271c73aee9306bcf91e151d269369526ba60",
 		"logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 		"miner": "0x9712f943b296758aaae79944ec975884188d3a96",
 		"mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -130,49 +127,11 @@ func checkEthereumBlockOrHeaderFormat(
 ) {
 	expectedResult, ok := expected["result"].(map[string]interface{})
 	assert.True(t, ok)
-
-	// Check immutable values.
-	nonce := ethBlockOrHeader["nonce"]
-	assert.Equal(t, BlockNonce{}, nonce)
-
-	mixHash := ethBlockOrHeader["mixHash"]
-	assert.Equal(t, common.Hash{}, mixHash)
-
-	emptyUncleHeaders, err := rlp.EncodeToBytes([]*types.Header(nil))
+	marshaledExpectedResult, err := json.Marshal(expectedResult)
 	assert.NoError(t, err)
-	emptySha3Uncles := crypto.Keccak256Hash(emptyUncleHeaders)
-	sha3Uncles := ethBlockOrHeader["sha3Uncles"]
-	assert.Equal(t, common.HexToHash(EmptySha3Uncles), sha3Uncles)
-	assert.Equal(t, emptySha3Uncles, sha3Uncles)
-
-	extraData := ethBlockOrHeader["extraData"]
-	assert.Equal(t, hexutil.Bytes{}, extraData)
-
-	gasLimit := ethBlockOrHeader["gasLimit"]
-	assert.Equal(t, hexutil.Uint64(DummyGasLimit), gasLimit)
-
-	baseFeePerGas := ethBlockOrHeader["baseFeePerGas"]
-	assert.Equal(t, (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee)), baseFeePerGas)
-
-	// Check other values
-	// make sure that rpcMarshalHeader assigns fields values properly.
-	expectedGasUsed, _ := new(big.Int).SetString(expectedResult["gasUsed"].(string)[2:], 16)
-	assert.Equal(t, hexutil.Uint64(expectedGasUsed.Uint64()), ethBlockOrHeader["gasUsed"])
-	expectedBloom := types.Bloom{}
-	expectedBloom.SetBytes(common.Hex2Bytes(expectedResult["logsBloom"].(string)))
-	assert.Equal(t, expectedBloom, ethBlockOrHeader["logsBloom"].(types.Bloom))
-	assert.Equal(t, common.HexToAddress(expectedResult["miner"].(string)), ethBlockOrHeader["miner"].(common.Address))
-	expectedNumber, _ := new(big.Int).SetString(expectedResult["number"].(string)[2:], 16)
-	assert.Equal(t, expectedNumber.Uint64(), ethBlockOrHeader["number"].(*hexutil.Big).ToInt().Uint64())
-	assert.Equal(t, common.HexToHash(expectedResult["hash"].(string)), ethBlockOrHeader["hash"].(common.Hash))
-	assert.Equal(t, common.HexToHash(expectedResult["parentHash"].(string)), ethBlockOrHeader["parentHash"].(common.Hash))
-	assert.Equal(t, common.HexToHash(expectedResult["receiptsRoot"].(string)), ethBlockOrHeader["receiptsRoot"].(common.Hash))
-	assert.Equal(t, expectedResult["size"].(string), ethBlockOrHeader["size"].(hexutil.Uint64).String())
-	assert.Equal(t, common.HexToHash(expectedResult["stateRoot"].(string)), ethBlockOrHeader["stateRoot"].(common.Hash))
-	expectedTimestamp, _ := new(big.Int).SetString(expectedResult["timestamp"].(string)[2:], 16)
-	actualTimeStamp, _ := ethBlockOrHeader["timestamp"].(hexutil.Big)
-	assert.Equal(t, expectedTimestamp.Uint64(), actualTimeStamp.ToInt().Uint64())
-	expectedTotalDifficulty, _ := new(big.Int).SetString(expectedResult["totalDifficulty"].(string)[2:], 16)
-	assert.Equal(t, expectedTotalDifficulty.Uint64(), ethBlockOrHeader["totalDifficulty"].(*hexutil.Big).ToInt().Uint64())
-	assert.Equal(t, common.HexToHash(expectedResult["transactionsRoot"].(string)), ethBlockOrHeader["receiptsRoot"].(common.Hash))
+	t.Logf("expectedResult: %s\n", marshaledExpectedResult)
+	marshaledEthBlockOrHeader, err := json.Marshal(ethBlockOrHeader)
+	assert.NoError(t, err)
+	t.Logf("actualResult: %s\n", marshaledEthBlockOrHeader)
+	assert.Equal(t, marshaledExpectedResult, marshaledEthBlockOrHeader)
 }
