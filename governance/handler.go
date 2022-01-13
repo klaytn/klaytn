@@ -32,37 +32,83 @@ import (
 )
 
 type check struct {
-	t         reflect.Type
-	validator func(k string, v interface{}) bool
-	trigger   func(g *Governance, k string, v interface{})
+	checkValueType func(v interface{}) bool
+	validator      func(k string, v interface{}) bool
+	isEqual        func(v1 interface{}, v2 interface{}) bool
+	trigger        func(g *Governance, k string, v interface{})
 }
 
 var (
-	stringT  = reflect.TypeOf("")
-	uint64T  = reflect.TypeOf(uint64(0))
-	addressT = reflect.TypeOf(common.StringToAddress("0x0"))
-	boolT    = reflect.TypeOf(true)
-	float64T = reflect.TypeOf(float64(0.0))
+	stringT       = reflect.TypeOf("")
+	uint64T       = reflect.TypeOf(uint64(0))
+	addressT      = reflect.TypeOf(common.StringToAddress("0x0"))
+	addressSliceT = reflect.TypeOf([]common.Address{})
+	boolT         = reflect.TypeOf(true)
+	float64T      = reflect.TypeOf(float64(0.0))
 )
 
 var GovernanceItems = map[int]check{
-	params.GovernanceMode:          {stringT, checkGovernanceMode, nil},
-	params.GoverningNode:           {addressT, checkAddress, nil},
-	params.UnitPrice:               {uint64T, checkUint64andBool, updateUnitPrice},
-	params.AddValidator:            {addressT, checkAddress, nil},
-	params.RemoveValidator:         {addressT, checkAddress, nil},
-	params.MintingAmount:           {stringT, checkBigInt, nil},
-	params.Ratio:                   {stringT, checkRatio, nil},
-	params.UseGiniCoeff:            {boolT, checkUint64andBool, updateUseGiniCoeff},
-	params.DeferredTxFee:           {boolT, checkUint64andBool, nil},
-	params.MinimumStake:            {stringT, checkBigInt, nil},
-	params.StakeUpdateInterval:     {uint64T, checkUint64andBool, updateStakingUpdateInterval},
-	params.ProposerRefreshInterval: {uint64T, checkUint64andBool, updateProposerUpdateInterval},
-	params.Epoch:                   {uint64T, checkUint64andBool, nil},
-	params.Policy:                  {uint64T, checkUint64andBool, updateProposerPolicy},
-	params.CommitteeSize:           {uint64T, checkUint64andBool, nil},
-	params.ConstTxGasHumanReadable: {uint64T, checkUint64andBool, updateTxGasHumanReadable},
-	params.Timeout:                 {uint64T, checkUint64andBool, nil},
+	params.GovernanceMode:          {isStringType, checkGovernanceMode, compareEqual, nil},
+	params.GoverningNode:           {isAddressType, checkAddress, compareEqual, nil},
+	params.UnitPrice:               {isUint64Type, checkUint64andBool, compareEqual, updateUnitPrice},
+	params.AddValidator:            {isAddressType, checkAddress, compareAddress, nil},
+	params.RemoveValidator:         {isAddressType, checkAddress, compareAddress, nil},
+	params.MintingAmount:           {isStringType, checkBigInt, compareEqual, nil},
+	params.Ratio:                   {isStringType, checkRatio, compareEqual, nil},
+	params.UseGiniCoeff:            {isBoolType, checkUint64andBool, compareEqual, updateUseGiniCoeff},
+	params.DeferredTxFee:           {isBoolType, checkUint64andBool, compareEqual, nil},
+	params.MinimumStake:            {isStringType, checkMinimumStake, compareEqual, nil},
+	params.StakeUpdateInterval:     {isUint64Type, checkUint64andBool, compareEqual, updateStakingUpdateInterval},
+	params.ProposerRefreshInterval: {isUint64Type, checkUint64andBool, compareEqual, updateProposerUpdateInterval},
+	params.Epoch:                   {isUint64Type, checkUint64andBool, compareEqual, nil},
+	params.Policy:                  {isUint64Type, checkUint64andBool, compareEqual, updateProposerPolicy},
+	params.CommitteeSize:           {isUint64Type, checkCommitteeSize, compareEqual, nil},
+	params.ConstTxGasHumanReadable: {isUint64Type, checkUint64andBool, compareEqual, updateTxGasHumanReadable},
+	params.Timeout:                 {isUint64Type, checkUint64andBool, compareEqual, nil},
+}
+
+func isStringType(v interface{}) bool { return stringT == reflect.TypeOf(v) }
+
+func isUint64Type(v interface{}) bool { return uint64T == reflect.TypeOf(v) }
+
+func isBoolType(v interface{}) bool { return boolT == reflect.TypeOf(v) }
+
+func isAddressType(v interface{}) bool {
+	return addressSliceT == reflect.TypeOf(v) || addressT == reflect.TypeOf(v)
+}
+
+func compareEqual(v1 interface{}, v2 interface{}) bool {
+	return v1 == v2
+}
+
+func compareAddress(v1 interface{}, v2 interface{}) bool {
+	if reflect.TypeOf(v1) != reflect.TypeOf(v2) || reflect.TypeOf(v1) != reflect.TypeOf(common.Address{}) && reflect.TypeOf(v1) != reflect.TypeOf([]common.Address{}) {
+		return false
+	}
+
+	if reflect.TypeOf(v1) == reflect.TypeOf(common.Address{}) {
+		return v1 == v2
+	}
+
+	addressSlice1, addressSlice2 := v1.([]common.Address), v2.([]common.Address)
+	if len(addressSlice1) != len(addressSlice2) {
+		return false
+	}
+
+	for _, addressV1 := range addressSlice1 {
+		for idx, addressV2 := range addressSlice2 {
+			if addressV1 == addressV2 {
+				addressSlice2[idx] = addressSlice2[len(addressSlice2)-1]
+				addressSlice2 = addressSlice2[:len(addressSlice2)-1]
+			}
+		}
+	}
+
+	if len(addressSlice2) > 0 {
+		return false
+	}
+
+	return true
 }
 
 func updateTxGasHumanReadable(g *Governance, k string, v interface{}) {
@@ -127,11 +173,10 @@ func (g *Governance) AddVote(key string, val interface{}) bool {
 
 func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 	k := GovernanceKeyMap[key]
-	reqType := GovernanceItems[k].t
 	var x interface{}
 
 	// When an int value comes from JS console, it comes as a float64
-	if reqType == uint64T && reflect.TypeOf(val) == float64T {
+	if GovernanceItems[k].checkValueType(uint64(0)) && reflect.TypeOf(val) == float64T {
 		x = uint64(val.(float64))
 		if float64(x.(uint64)) == val.(float64) {
 			return x
@@ -139,8 +184,32 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 		return val
 	}
 
+	if (k == params.AddValidator || k == params.RemoveValidator) && reflect.TypeOf(val) == stringT {
+		addresses := strings.Split(val.(string), ",")
+
+		if len(addresses) == 0 {
+			return val
+		}
+
+		if len(addresses) == 1 {
+			x = common.HexToAddress(val.(string))
+			return x
+		}
+
+		var nodeAddresses []common.Address
+		for _, str := range strings.Split(val.(string), ",") {
+			if common.IsHexAddress(str) {
+				nodeAddresses = append(nodeAddresses, common.HexToAddress(str))
+			} else {
+				return val
+			}
+		}
+		x = nodeAddresses
+		return x
+	}
+
 	// address comes as a form of string from JS console
-	if reqType == addressT && reflect.TypeOf(val) == stringT {
+	if GovernanceItems[k].checkValueType(common.Address{}) && reflect.TypeOf(val) == stringT {
 		if common.IsHexAddress(val.(string)) {
 			x = common.HexToAddress(val.(string))
 			return x
@@ -157,7 +226,7 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 
 func (gov *Governance) checkType(vote *GovernanceVote) bool {
 	key := GovernanceKeyMap[vote.Key]
-	return GovernanceItems[key].t == reflect.TypeOf(vote.Value)
+	return GovernanceItems[key].checkValueType(vote.Value)
 }
 
 func (gov *Governance) checkKey(k string) bool {
@@ -204,6 +273,22 @@ func checkGovernanceMode(k string, v interface{}) bool {
 		return true
 	}
 	return false
+}
+
+func checkCommitteeSize(k string, v interface{}) bool {
+	if v.(uint64) == uint64(0) {
+		return false
+	}
+	return checkUint64andBool(k, v)
+}
+
+func checkMinimumStake(k string, v interface{}) bool {
+	if val, ok := new(big.Int).SetString(v.(string), 10); ok {
+		if val.Cmp(common.Big0) < 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func checkUint64andBool(k string, v interface{}) bool {
@@ -263,12 +348,28 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 				return valset, votes, tally
 			}
 		case params.AddValidator:
-			if !gov.checkVote(gVote.Value.(common.Address), true, valset) {
-				return valset, votes, tally
+			if reflect.TypeOf(gVote.Value) == addressT {
+				if !gov.checkVote(gVote.Value.(common.Address), true, valset) {
+					return valset, votes, tally
+				}
+			} else {
+				for _, address := range gVote.Value.([]common.Address) {
+					if !gov.checkVote(address, true, valset) {
+						return valset, votes, tally
+					}
+				}
 			}
 		case params.RemoveValidator:
-			if !gov.checkVote(gVote.Value.(common.Address), false, valset) {
-				return valset, votes, tally
+			if reflect.TypeOf(gVote.Value) == addressT {
+				if !gov.checkVote(gVote.Value.(common.Address), false, valset) {
+					return valset, votes, tally
+				}
+			} else {
+				for _, address := range gVote.Value.([]common.Address) {
+					if !gov.checkVote(address, false, valset) {
+						return valset, votes, tally
+					}
+				}
 			}
 		}
 
@@ -351,7 +452,7 @@ func (gov *Governance) changeGovernanceTally(tally []GovernanceTallyItem, key st
 	copy(ret, tally)
 
 	for idx, v := range tally {
-		if v.Key == key && v.Value == value {
+		if v.Key == key && GovernanceItems[GovernanceKeyMap[key]].isEqual(v.Value, value) {
 			if isAdd {
 				ret[idx].Votes += vp
 			} else {
@@ -391,11 +492,22 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 			switch GovernanceKeyMap[gVote.Key] {
 			case params.AddValidator:
 				//reward.GetStakingInfo()
-				valset.AddValidator(gVote.Value.(common.Address))
+				if reflect.TypeOf(gVote.Value) == addressT {
+					valset.AddValidator(gVote.Value.(common.Address))
+				} else {
+					for _, address := range gVote.Value.([]common.Address) {
+						valset.AddValidator(address)
+					}
+				}
 			case params.RemoveValidator:
-				target := gVote.Value.(common.Address)
-				valset.RemoveValidator(target)
-				votes = gov.removeVotesFromRemovedNode(votes, target)
+				if reflect.TypeOf(gVote.Value) == addressT {
+					valset.RemoveValidator(gVote.Value.(common.Address))
+				} else {
+					for _, target := range gVote.Value.([]common.Address) {
+						valset.RemoveValidator(target)
+						votes = gov.removeVotesFromRemovedNode(votes, target)
+					}
+				}
 			case params.Timeout:
 				timeout := gVote.Value.(uint64)
 				atomic.StoreUint64(&istanbul.DefaultConfig.Timeout, timeout)

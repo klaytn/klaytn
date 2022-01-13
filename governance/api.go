@@ -19,7 +19,6 @@ package governance
 import (
 	"errors"
 	"math/big"
-	"reflect"
 	"strings"
 	"sync/atomic"
 
@@ -96,11 +95,7 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 		return "", errPermissionDenied
 	}
 	if strings.ToLower(key) == "governance.removevalidator" {
-		if reflect.TypeOf(val).String() != "string" {
-			return "", errInvalidKeyValue
-		}
-		target := val.(string)
-		if !common.IsHexAddress(target) {
+		if _, ok := api.governance.ValidateVote(&GovernanceVote{Key: key, Value: val}); !ok {
 			return "", errInvalidKeyValue
 		}
 		if api.isRemovingSelf(val) {
@@ -114,13 +109,12 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 }
 
 func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
-	target := val.(string)
-
-	if common.HexToAddress(target) == api.governance.nodeAddress.Load().(common.Address) {
-		return true
-	} else {
-		return false
+	for _, str := range strings.Split(val.(string), ",") {
+		if common.HexToAddress(str) == api.governance.nodeAddress.Load().(common.Address) {
+			return true
+		}
 	}
+	return false
 }
 
 func (api *PublicGovernanceAPI) ShowTally() []*returnTally {

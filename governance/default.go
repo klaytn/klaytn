@@ -345,7 +345,7 @@ func (gs *GovernanceSet) SetValue(itemType int, value interface{}) error {
 
 	key := GovernanceKeyMapReverse[itemType]
 
-	if GovernanceItems[itemType].t != reflect.TypeOf(value) {
+	if !GovernanceItems[itemType].checkValueType(value) {
 		return ErrValueTypeMismatch
 	}
 	gs.items[key] = value
@@ -498,7 +498,7 @@ func (g *Governance) getKey(k string) string {
 
 // RemoveVote remove a vote from the voteMap to prevent repetitive addition of same vote
 func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
-	if g.voteMap.GetValue(key).Value == value {
+	if GovernanceItems[GovernanceKeyMap[key]].isEqual(g.voteMap.GetValue(key).Value, value) {
 		g.voteMap.SetValue(key, VoteStatus{
 			Value:  value,
 			Casted: true,
@@ -521,18 +521,35 @@ func (g *Governance) ClearVotes(num uint64) {
 // parseVoteValue parse vote.Value from []uint8 to appropriate type
 func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, error) {
 	var val interface{}
-	k := GovernanceKeyMap[gVote.Key]
+	k, ok := GovernanceKeyMap[gVote.Key]
+	if ok == false {
+		logger.Warn("Unknown key was given", "key", k)
+		return nil, ErrUnknownKey
+	}
 
-	// filter out if vote value is an interface list
-	if reflect.TypeOf(gVote.Value) == reflect.TypeOf([]interface{}{}) {
+	if (k == params.AddValidator || k == params.RemoveValidator) && (reflect.TypeOf(gVote.Value) != reflect.TypeOf([]interface{}{}) && reflect.TypeOf(gVote.Value) != reflect.TypeOf([]uint8{})) {
+		return nil, ErrValueTypeMismatch
+	}
+
+	if (k != params.AddValidator && k != params.RemoveValidator) && reflect.TypeOf(gVote.Value) != reflect.TypeOf([]uint8{}) {
 		return nil, ErrValueTypeMismatch
 	}
 
 	switch k {
 	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio:
 		val = string(gVote.Value.([]uint8))
-	case params.GoverningNode, params.AddValidator, params.RemoveValidator:
+	case params.GoverningNode:
 		val = common.BytesToAddress(gVote.Value.([]uint8))
+	case params.AddValidator, params.RemoveValidator:
+		if reflect.TypeOf(gVote.Value) != reflect.TypeOf([]interface{}{}) {
+			val = common.BytesToAddress(gVote.Value.([]uint8))
+		} else {
+			var nodeAddresses []common.Address
+			for _, item := range gVote.Value.([]interface{}) {
+				nodeAddresses = append(nodeAddresses, common.BytesToAddress(item.([]uint8)))
+			}
+			val = nodeAddresses
+		}
 	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout:
 		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
 		val = binary.BigEndian.Uint64(gVote.Value.([]uint8))
@@ -543,8 +560,6 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		} else {
 			val = false
 		}
-	default:
-		logger.Warn("Unknown key was given", "key", k)
 	}
 	gVote.Value = val
 	return gVote, nil
