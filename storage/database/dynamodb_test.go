@@ -65,7 +65,7 @@ func (s *SuiteDynamoDB) TearDownSuite() {
 	}
 }
 
-func TestDynamoDB(t *testing.T) {
+func testDynamoDB(t *testing.T) {
 	suite.Run(t, new(SuiteDynamoDB))
 }
 

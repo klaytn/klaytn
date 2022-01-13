@@ -33,7 +33,7 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
-func TestPrecompiledContract(t *testing.T) {
+func testPrecompiledContract(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
