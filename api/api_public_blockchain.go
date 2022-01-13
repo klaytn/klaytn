@@ -522,6 +522,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 
 	output := tx.MakeRPCOutput()
 
+	output["type"] = hexutil.Uint64(output["typeInt"].(types.TxType))
 	output["senderTxHash"] = tx.SenderTxHashAll()
 	output["blockHash"] = blockHash
 	output["blockNumber"] = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
