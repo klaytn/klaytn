@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
+	"github.com/klaytn/klaytn/params"
 )
 
 // ChainContext supports retrieving headers and consensus parameters from the
@@ -52,7 +53,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	} else {
 		beneficiary = *author
 	}
-	baseFee = big.NewInt(0)
+	baseFee = new(big.Int).SetUint64(params.BaseFee)
 	return vm.Context{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,

@@ -33,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/gasprice"
@@ -314,4 +315,8 @@ func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 
 func (b *CNAPIBackend) RPCGasCap() *big.Int {
 	return b.cn.config.RPCGasCap
+}
+
+func (b *CNAPIBackend) Engine() consensus.Engine {
+	return b.cn.engine
 }

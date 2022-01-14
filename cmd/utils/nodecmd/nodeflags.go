@@ -140,6 +140,10 @@ var CommonRPCFlags = []cli.Flag{
 	utils.WSMaxConnections,
 	utils.IPCDisabledFlag,
 	utils.IPCPathFlag,
+	utils.RPCReadTimeout,
+	utils.RPCWriteTimeoutFlag,
+	utils.RPCIdleTimeoutFlag,
+	utils.RPCExecutionTimeoutFlag,
 }
 
 var KCNFlags = []cli.Flag{
@@ -156,6 +160,7 @@ var KPNFlags = []cli.Flag{
 	utils.TxResendUseLegacyFlag,
 	utils.CypressFlag,
 	utils.BaobabFlag,
+	utils.TxPoolSpamThrottlerDisableFlag,
 }
 
 var KENFlags = []cli.Flag{
@@ -246,6 +251,7 @@ var KSPNFlags = []cli.Flag{
 	utils.TxResendIntervalFlag,
 	utils.TxResendCountFlag,
 	utils.TxResendUseLegacyFlag,
+	utils.TxPoolSpamThrottlerDisableFlag,
 	utils.ServiceChainSignerFlag,
 	utils.AnchoringPeriodFlag,
 	utils.SentChainTxsLimit,

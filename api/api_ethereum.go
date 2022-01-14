@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"encoding/binary"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -28,6 +29,18 @@ import (
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/filters"
+	"github.com/klaytn/klaytn/params"
+)
+
+const (
+	// EmptySha3Uncles always have value which is the result of
+	// `crypto.Keccak256Hash(rlp.EncodeToBytes([]*types.Header(nil)).String())`
+	// because there is no uncles in Klaytn.
+	// Just use const value because we don't have to calculate it everytime which always be same result.
+	EmptySha3Uncles = "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
+	// DummyGasLimit exists for supporting Ethereum compatible data structure.
+	// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
+	DummyGasLimit uint64 = 999999999
 )
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
@@ -120,6 +133,28 @@ func (api *EthereumAPI) GetWork() ([4]string, error) {
 // mix-hash) that a sufficient amount of computation has been carried
 // out on a block.
 type BlockNonce [8]byte
+
+// EncodeNonce converts the given integer to a block nonce.
+func EncodeNonce(i uint64) BlockNonce {
+	var n BlockNonce
+	binary.BigEndian.PutUint64(n[:], i)
+	return n
+}
+
+// Uint64 returns the integer value of a block nonce.
+func (n BlockNonce) Uint64() uint64 {
+	return binary.BigEndian.Uint64(n[:])
+}
+
+// MarshalText encodes n as a hex string with 0x prefix.
+func (n BlockNonce) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(n[:]).MarshalText()
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (n *BlockNonce) UnmarshalText(input []byte) error {
+	return hexutil.UnmarshalFixedText("BlockNonce", input, n[:])
+}
 
 // SubmitWork can be used by external miner to submit their POW solution.
 // It returns an indication if the work was accepted.
@@ -334,13 +369,35 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 // * When blockNr is -1 the chain head is returned.
 // * When blockNr is -2 the pending chain head is returned.
 func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
+	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
+	klaytnHeader, _ := api.publicBlockChainAPI.GetHeaderByNumber(ctx, number)
+	if klaytnHeader != nil {
+		response, err := api.rpcMarshalHeader(klaytnHeader)
+		if err != nil {
+			return nil, err
+		}
+		if number == rpc.PendingBlockNumber {
+			// Pending header need to nil out a few fields
+			for _, field := range []string{"hash", "nonce", "miner"} {
+				response[field] = nil
+			}
+		}
+		return response, nil
+	}
 	return nil, nil
 }
 
 // GetHeaderByHash returns the requested header by hash.
 func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
-	// TODO-Klaytn: Not implemented yet.
+	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
+	klaytnHeader, _ := api.publicBlockChainAPI.GetHeaderByHash(ctx, hash)
+	if klaytnHeader != nil {
+		response, err := api.rpcMarshalHeader(klaytnHeader)
+		if err != nil {
+			return nil
+		}
+		return response
+	}
 	return nil
 }
 
@@ -859,4 +916,40 @@ func (api *EthereumAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs,
 func (api *EthereumAPI) Accounts() []common.Address {
 	// TODO-Klaytn: Not implemented yet.
 	return nil
+}
+
+// rpcMarshalHeader marshal block header as Ethereum compatible format.
+// It returns error when fetching Author which is block proposer is failed.
+func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interface{}, error) {
+	proposer, err := api.publicKlayAPI.b.Engine().Author(head)
+	if err != nil {
+		// miner is the field Klaytn should provide the correct value. It's not the field dummy value is allowed.
+		logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
+		return nil, err
+	}
+	result := map[string]interface{}{
+		"number":          (*hexutil.Big)(head.Number),
+		"hash":            head.Hash(),
+		"parentHash":      head.ParentHash,
+		"nonce":           BlockNonce{},  // There is no block nonce concept in Klaytn, so it must be empty.
+		"mixHash":         common.Hash{}, // Klaytn does not use mixHash, so it must be empty.
+		"sha3Uncles":      common.HexToHash(EmptySha3Uncles),
+		"logsBloom":       head.Bloom,
+		"stateRoot":       head.Root,
+		"miner":           proposer,
+		"difficulty":      (*hexutil.Big)(head.BlockScore),
+		"totalDifficulty": (*hexutil.Big)(api.publicKlayAPI.b.GetTd(head.Hash())),
+		// extraData always return empty Bytes because actual value of extraData in Klaytn header cannot be used as meaningful way because
+		// we cannot provide original header of Klaytn and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Klaytn.
+		"extraData":        hexutil.Bytes{},
+		"size":             hexutil.Uint64(head.Size()),
+		"gasLimit":         hexutil.Uint64(DummyGasLimit),
+		"gasUsed":          hexutil.Uint64(head.GasUsed),
+		"timestamp":        hexutil.Big(*head.Time),
+		"transactionsRoot": head.TxHash,
+		"receiptsRoot":     head.ReceiptHash,
+		"baseFeePerGas":    (*hexutil.Big)(new(big.Int).SetUint64(params.BaseFee)),
+	}
+
+	return result, nil
 }

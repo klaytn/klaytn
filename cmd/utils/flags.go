@@ -205,6 +205,12 @@ var (
 		Usage: "Maximum amount of time non-executable transaction are queued",
 		Value: cn.GetDefaultConfig().TxPool.Lifetime,
 	}
+	// PN specific txpool settings
+	TxPoolSpamThrottlerDisableFlag = cli.BoolFlag{
+		Name:  "txpool.spamthrottler.disable",
+		Usage: "Disable txpool spam throttler prototype",
+	}
+
 	// KES
 	KESNodeTypeServiceFlag = cli.BoolFlag{
 		Name:  "kes.nodetype.service",
@@ -547,6 +553,26 @@ var (
 		Name:  "api.filter.getLogs.maxitems",
 		Usage: "Maximum allowed number of return items for log collecting filter API",
 		Value: filters.GetLogsMaxItems,
+	}
+	RPCReadTimeout = cli.IntFlag{
+		Name:  "rpcreadtimeout",
+		Usage: "HTTP-RPC server read timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.ReadTimeout / time.Second),
+	}
+	RPCWriteTimeoutFlag = cli.IntFlag{
+		Name:  "rpcwritetimeout",
+		Usage: "HTTP-RPC server write timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.WriteTimeout / time.Second),
+	}
+	RPCIdleTimeoutFlag = cli.IntFlag{
+		Name:  "rpcidletimeout",
+		Usage: "HTTP-RPC server idle timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.IdleTimeout / time.Second),
+	}
+	RPCExecutionTimeoutFlag = cli.IntFlag{
+		Name:  "rpcexecutiontimeout",
+		Usage: "HTTP-RPC server execution timeout (seconds)",
+		Value: int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
 	}
 
 	// Network Settings
@@ -1183,6 +1209,18 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 		rpc.ConcurrencyLimit = ctx.GlobalInt(RPCConcurrencyLimit.Name)
 		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
 	}
+	if ctx.GlobalIsSet(RPCReadTimeout.Name) {
+		cfg.HTTPTimeouts.ReadTimeout = time.Duration(ctx.GlobalInt(RPCReadTimeout.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCWriteTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.WriteTimeout = time.Duration(ctx.GlobalInt(RPCWriteTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCIdleTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.IdleTimeout = time.Duration(ctx.GlobalInt(RPCIdleTimeoutFlag.Name)) * time.Second
+	}
+	if ctx.GlobalIsSet(RPCExecutionTimeoutFlag.Name) {
+		cfg.HTTPTimeouts.ExecutionTimeout = time.Duration(ctx.GlobalInt(RPCExecutionTimeoutFlag.Name)) * time.Second
+	}
 }
 
 // setWS creates the WebSocket RPC listener interface string from the set
@@ -1441,6 +1479,11 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 
 	if ctx.GlobalIsSet(TxPoolLifetimeFlag.Name) {
 		cfg.Lifetime = ctx.GlobalDuration(TxPoolLifetimeFlag.Name)
+	}
+
+	// PN specific txpool setting
+	if NodeTypeFlag.Value == "pn" {
+		cfg.EnableSpamThrottlerAtRuntime = !ctx.GlobalIsSet(TxPoolSpamThrottlerDisableFlag.Name)
 	}
 }
 

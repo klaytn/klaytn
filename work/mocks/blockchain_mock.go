@@ -215,7 +215,7 @@ func (mr *MockBlockChainMockRecorder) Genesis() *gomock.Call {
 // GetBlock mocks base method
 func (m *MockBlockChain) GetBlock(arg0 common.Hash, arg1 uint64) *types.Block {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BlockByHash", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetBlock", arg0, arg1)
 	ret0, _ := ret[0].(*types.Block)
 	return ret0
 }
@@ -223,7 +223,7 @@ func (m *MockBlockChain) GetBlock(arg0 common.Hash, arg1 uint64) *types.Block {
 // GetBlock indicates an expected call of GetBlock
 func (mr *MockBlockChainMockRecorder) GetBlock(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockByHash", reflect.TypeOf((*MockBlockChain)(nil).GetBlock), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlock", reflect.TypeOf((*MockBlockChain)(nil).GetBlock), arg0, arg1)
 }
 
 // GetBlockByHash mocks base method

@@ -212,12 +212,13 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	setEngineType(chainConfig)
 
-	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json.
-	//         So let's update cn.Config.GasPrice using ChainConfig.UnitPrice.
-	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
-
-	logger.Info("Initialised chain configuration", "config", chainConfig)
+	// load governance state
 	governance := governance.NewGovernanceInitialize(chainConfig, chainDB)
+
+	// Set latest unitPrice/gasPrice
+	chainConfig.UnitPrice = governance.UnitPrice()
+	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
+	logger.Info("Initialised chain configuration", "config", chainConfig)
 
 	cn := &CN{
 		config:            config,
@@ -291,8 +292,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
 	governance.SetTxPool(cn.txPool)
-	// Synchronize unitprice
-	cn.txPool.SetGasPrice(big.NewInt(0).SetUint64(governance.UnitPrice()))
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
@@ -336,7 +335,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	gpoParams := config.GPO
 
-	// NOTE-Klaytn Now we use ChainConfig.UnitPrice from genesis.json and updated config.GasPrice with same value.
+	// NOTE-Klaytn Now we use latest unitPrice
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 
@@ -488,6 +487,11 @@ func (s *CN) APIs() []rpc.API {
 			Namespace: "klay",
 			Version:   "1.0",
 			Service:   publicDownloaderAPI,
+			Public:    true,
+		}, {
+			Namespace: "klay",
+			Version:   "1.0",
+			Service:   publicFilterAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",
