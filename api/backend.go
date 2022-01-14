@@ -31,6 +31,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
@@ -49,6 +50,7 @@ type Backend interface {
 	EventMux() *event.TypeMux
 	AccountManager() accounts.AccountManager
 	RPCGasCap() *big.Int // global gas cap for klay_call over rpc: DoS protection
+	Engine() consensus.Engine
 
 	// BlockChain API
 	SetHead(number uint64)
