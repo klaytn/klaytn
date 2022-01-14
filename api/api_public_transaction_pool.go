@@ -235,6 +235,7 @@ func RpcOutputReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber 
 	fields["transactionHash"] = fields["hash"]
 	delete(fields, "hash")
 
+	fields["cumulativeGasUsed"] = hexutil.Uint64(0)
 	return fields
 }
 
