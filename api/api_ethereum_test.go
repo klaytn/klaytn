@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"math/big"
 	"reflect"
@@ -142,7 +143,6 @@ func checkEthereumBlockOrHeaderFormat(
 	t.Logf("actualResult: %s\n", marshaledEthBlockOrHeader)
 	assert.Equal(t, marshaledExpectedResult, marshaledEthBlockOrHeader)
 }
-
 
 // TestEthereumAPI_GetTransactionByBlockNumberAndIndex tests GetTransactionByBlockNumberAndIndex.
 func TestEthereumAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
