@@ -640,25 +640,16 @@ func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context,
 		return nil
 	}
 
-	ethTx := newEthRPCTransactionFromBlockIndex(block, uint64(index))
-	if ethTx == nil {
-		return nil
-	}
-
-	return ethTx
+	return newEthRPCTransactionFromBlockIndex(block, uint64(index))
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *EthRPCTransaction {
 	block, err := api.publicTransactionPoolAPI.b.BlockByHash(ctx, blockHash)
-	if block != nil && err == nil {
-		ethTx := newEthRPCTransactionFromBlockIndex(block, uint64(index))
-		if ethTx == nil {
-			return nil
-		}
-		return ethTx
+	if err != nil || block == nil {
+		return nil	
 	}
-	return nil
+	return newEthRPCTransactionFromBlockIndex(block, uint64(index))
 }
 
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
