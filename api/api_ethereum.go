@@ -647,7 +647,7 @@ func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context,
 func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *EthRPCTransaction {
 	block, err := api.publicTransactionPoolAPI.b.BlockByHash(ctx, blockHash)
 	if err != nil || block == nil {
-		return nil	
+		return nil
 	}
 	return newEthRPCTransactionFromBlockIndex(block, uint64(index))
 }
