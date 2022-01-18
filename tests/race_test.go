@@ -19,12 +19,18 @@
 package tests
 
 import (
+	"fmt"
+	"math/big"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
 )
 
 // TestRaceBetweenTxpoolAddAndCommitNewWork tests race conditions between `Txpool.add` and `commitNewWork`.
@@ -88,5 +94,65 @@ func TestRaceBetweenTxpoolAddAndCommitNewWork(t *testing.T) {
 	// stop node before ending the test code
 	if err := fullNode.Stop(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestRaceAsMessageWithAccountPickerForFeePayer tests calling AsMessageWithAccountPicker of a fee delegated transaction
+// where a fee payer may be inserted wrongly due to concurrent issue.
+func TestRaceAsMessageWithAccountPickerForFeePayer(t *testing.T) {
+	if testing.Verbose() {
+		enableLog() // Change verbosity level in the function if needed
+	}
+
+	// Configure and generate a sample block chain
+	var (
+		gendb = database.NewMemoryDBManager()
+
+		// create a sender and a feepayer
+		from, _     = createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594389999")
+		feePayer, _ = createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
+
+		funds = new(big.Int).Mul(big.NewInt(1e16), big.NewInt(params.KLAY))
+		gspec = &blockchain.Genesis{
+			Config: params.TestChainConfig,
+			Alloc: blockchain.GenesisAlloc{
+				from.GetAddr():     {Balance: funds},
+				feePayer.GetAddr(): {Balance: funds},
+			},
+		}
+		genesis = gspec.MustCommit(gendb)
+		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+	)
+
+	iterNum := 10000
+	errCh := make(chan error, 2*iterNum)
+
+	for i := 0; i < iterNum; i++ {
+		tx, _ := genFeeDelegatedChainDataAnchoring(t, signer, from, nil, feePayer, big.NewInt(1234))
+		for i := 0; i < 2; i++ {
+			go func() {
+				stateDB, err := state.New(genesis.Root(), state.NewDatabase(gendb))
+				if err != nil {
+					panic(err)
+				}
+
+				msg, err := tx.AsMessageWithAccountKeyPicker(signer, stateDB, 0)
+				if err != nil {
+					panic(err)
+				}
+
+				if msg.ValidatedFeePayer() != feePayer.GetAddr() {
+					errCh <- fmt.Errorf("expected: %v, actual: %v", feePayer.GetAddr().String(), msg.ValidatedFeePayer().String())
+				} else {
+					errCh <- nil
+				}
+			}()
+		}
+	}
+
+	for i := 0; i < 2*iterNum; i++ {
+		if err := <-errCh; err != nil {
+			t.Fatal(err)
+		}
 	}
 }
