@@ -70,7 +70,7 @@ func TestAccountCreationDisable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -142,7 +142,7 @@ func TestContractDeployWithDisabledAddress(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{

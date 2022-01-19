@@ -449,7 +449,7 @@ func TestKeyStore_SignTx(t *testing.T) {
 	sig1 := tx.RawSignatureValues()
 
 	// get another signature from a signing function in types package
-	signer := types.NewEIP155Signer(chainID)
+	signer := types.LatestSignerForChainID(chainID)
 	if tx.SignWithKeys(signer, []*ecdsa.PrivateKey{senderPrvKey}) != nil {
 		t.Fatal("Error to sign")
 	}
@@ -490,7 +490,7 @@ func TestKeyStore_SignTxAsFeePayer(t *testing.T) {
 	}
 
 	// get another signature from a signing function in types package
-	signer := types.NewEIP155Signer(chainID)
+	signer := types.LatestSignerForChainID(chainID)
 	if tx.SignFeePayerWithKeys(signer, []*ecdsa.PrivateKey{feePayerPrvKey}) != nil {
 		t.Fatal("Error to sign")
 	}

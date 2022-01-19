@@ -97,7 +97,7 @@ func BenchmarkEvmOp(t *testing.B) {
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	if !isCompilerAvailable() {
 		fmt.Println("skip this test since compiler is not available on this machine.")
