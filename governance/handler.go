@@ -55,12 +55,12 @@ var GovernanceItems = map[int]check{
 	params.Ratio:                   {stringT, checkRatio, nil},
 	params.UseGiniCoeff:            {boolT, checkUint64andBool, updateUseGiniCoeff},
 	params.DeferredTxFee:           {boolT, checkUint64andBool, nil},
-	params.MinimumStake:            {stringT, checkBigInt, nil},
+	params.MinimumStake:            {stringT, checkRewardMinimumStake, nil},
 	params.StakeUpdateInterval:     {uint64T, checkUint64andBool, updateStakingUpdateInterval},
 	params.ProposerRefreshInterval: {uint64T, checkUint64andBool, updateProposerUpdateInterval},
 	params.Epoch:                   {uint64T, checkUint64andBool, nil},
 	params.Policy:                  {uint64T, checkUint64andBool, updateProposerPolicy},
-	params.CommitteeSize:           {uint64T, checkUint64andBool, nil},
+	params.CommitteeSize:           {uint64T, checkCommitteeSize, nil},
 	params.ConstTxGasHumanReadable: {uint64T, checkUint64andBool, updateTxGasHumanReadable},
 	params.Timeout:                 {uint64T, checkUint64andBool, nil},
 }
@@ -204,6 +204,29 @@ func checkGovernanceMode(k string, v interface{}) bool {
 		return true
 	}
 	return false
+}
+
+func checkCommitteeSize(k string, v interface{}) bool {
+	if !checkUint64andBool(k, v) {
+		return false
+	}
+	if v == uint64(0) {
+		return false
+	}
+	return true
+}
+
+func checkRewardMinimumStake(k string, v interface{}) bool {
+	if !checkBigInt(k, v) {
+		return false
+	}
+	if v, ok := new(big.Int).SetString(v.(string), 10); ok {
+		if v.Cmp(common.Big0) < 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 func checkUint64andBool(k string, v interface{}) bool {
