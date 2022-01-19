@@ -1257,9 +1257,18 @@ func isReorganizationRequired(localTd, externTd *big.Int, currentBlock, block *t
 }
 
 // WriteBlockWithState writes the block and all associated state to the database.
+// If we are to use writeBlockWithState alone, we should use mutex to protect internal state.
+func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteResult, error) {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
+	return bc.writeBlockWithState(block,receipts,stateDB)
+}
+
+// writeBlockWithState writes the block and all associated state to the database.
 // If BlockChain.parallelDBWrite is true, it calls writeBlockWithStateParallel.
 // If not, it calls writeBlockWithStateSerial.
-func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteResult, error) {
+func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteResult, error) {
 	var status WriteResult
 	var err error
 	if bc.parallelDBWrite {
@@ -1752,7 +1761,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		afterValidate := time.Now()
 
 		// Write the block to the chain and get the writeResult.
-		writeResult, err := bc.WriteBlockWithState(block, receipts, stateDB)
+		writeResult, err := bc.writeBlockWithState(block, receipts, stateDB)
 		if err != nil {
 			atomic.StoreUint32(&followupInterrupt, 1)
 			if err == ErrKnownBlock {
