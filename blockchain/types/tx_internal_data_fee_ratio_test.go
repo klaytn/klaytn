@@ -23,7 +23,7 @@ import "testing"
 func TestFeeRatioCheck(t *testing.T) {
 	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
 		tx, err := NewTxInternalData(i)
-		if err == nil && (i&TxTypeFeeDelegatedWithRatioTransactions != 0) {
+		if err == nil && (uint8(i)&TxFeeDelegationWithRatioBitMask != 0) {
 			if _, ok := tx.(TxInternalDataFeeRatio); !ok {
 				t.Fatalf("GetFeeRatio() is not implemented. tx=%s", tx.String())
 			}
@@ -36,7 +36,7 @@ func TestFeeRatioCheck(t *testing.T) {
 func TestFeeDelegatedCheck(t *testing.T) {
 	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
 		tx, err := NewTxInternalData(i)
-		if err == nil && (i&TxTypeFeeDelegatedTransactions != 0) {
+		if err == nil && (uint8(i)&TxFeeDelegationBitMask != 0) {
 			if _, ok := tx.(TxInternalDataFeePayer); !ok {
 				t.Fatalf("GetFeePayer() is not implemented. tx=%s", tx.String())
 			}
