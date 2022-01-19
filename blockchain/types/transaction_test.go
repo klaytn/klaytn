@@ -304,3 +304,20 @@ func TestIntrinsicGas(t *testing.T) {
 		assert.Equal(t, nil, err)
 	}
 }
+
+func TestIsFeeDelegation(t *testing.T) {
+	assert.False(t, TxTypeLegacyTransaction.IsFeeDelegatedTransaction())
+	assert.False(t, TxTypeLegacyTransaction.IsFeeDelegatedWithRatioTransaction())
+
+	assert.False(t, TxTypeValueTransfer.IsFeeDelegatedTransaction())
+	assert.False(t, TxTypeValueTransfer.IsFeeDelegatedWithRatioTransaction())
+
+	assert.True(t, TxTypeFeeDelegatedAccountUpdate.IsFeeDelegatedTransaction())
+	assert.False(t, TxTypeFeeDelegatedAccountUpdate.IsFeeDelegatedWithRatioTransaction())
+
+	assert.True(t, TxTypeFeeDelegatedValueTransfer.IsFeeDelegatedTransaction())
+	assert.True(t, TxTypeFeeDelegatedValueTransferWithRatio.IsFeeDelegatedWithRatioTransaction())
+
+	assert.True(t, TxTypeFeeDelegatedAccountUpdateWithRatio.IsFeeDelegatedTransaction())
+	assert.True(t, TxTypeFeeDelegatedAccountUpdateWithRatio.IsFeeDelegatedWithRatioTransaction())
+}
