@@ -1262,7 +1262,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	return bc.writeBlockWithState(block,receipts,stateDB)
+	return bc.writeBlockWithState(block, receipts, stateDB)
 }
 
 // writeBlockWithState writes the block and all associated state to the database.
