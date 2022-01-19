@@ -37,8 +37,8 @@
 # directory in the root of your repository.
 #/docs/ @doctocat
 /accounts/      @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313 @hqjang-pepper
-/api/           @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313 @jimni1222 @sirano11 @aeharvlee
-/blockchain/    @KimKyungup @aidan-kwon @jeongkyun-oh @ehnuje @winnie-byun @jimni1222 @sirano11
+/api/           @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313 @jimni1222 @sirano11 @aeharvlee @mckim19
+/blockchain/    @KimKyungup @aidan-kwon @jeongkyun-oh @ehnuje @winnie-byun @jimni1222 @sirano11 @mckim19
 /build/         @KimKyungup @aidan-kwon @jeongkyun-oh
 /client/        @aidan-kwon @jeongkyun-oh @hqjang-pepper
 /cmd/           @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313
@@ -51,7 +51,7 @@
 /db_migration/  @KimKyungup @aidan-kwon @jeongkyun-oh @winnie-byun
 /event/
 /fork/
-/governance/    @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313 @hqjang-pepper
+/governance/    @KimKyungup @aidan-kwon @jeongkyun-oh @yoomee1313 @hqjang-pepper @mckim19
 /kerrors/
 /log/           @KimKyungup @aidan-kwon @jeongkyun-oh @winnie-byun
 /metrics/       @KimKyungup @aidan-kwon @jeongkyun-oh @ehnuje

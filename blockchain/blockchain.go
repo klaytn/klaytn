@@ -1809,6 +1809,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		}
 		atomic.StoreUint32(&followupInterrupt, 1)
 
+		// Update to-address based spam throttler when spamThrottler is enabled and a single block is fetched.
+		spamThrottler := GetSpamThrottler()
+		if spamThrottler != nil && len(chain) == 1 {
+			spamThrottler.updateThrottlerState(block.Transactions(), receipts)
+		}
+
 		// Update the metrics subsystem with all the measurements
 		accountReadTimer.Update(stateDB.AccountReads)
 		accountHashTimer.Update(stateDB.AccountHashes)

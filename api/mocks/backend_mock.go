@@ -17,6 +17,7 @@ import (
 	types "github.com/klaytn/klaytn/blockchain/types"
 	vm "github.com/klaytn/klaytn/blockchain/vm"
 	common "github.com/klaytn/klaytn/common"
+	consensus "github.com/klaytn/klaytn/consensus"
 	event "github.com/klaytn/klaytn/event"
 	rpc "github.com/klaytn/klaytn/networks/rpc"
 	params "github.com/klaytn/klaytn/params"
@@ -146,6 +147,21 @@ func (mr *MockBackendMockRecorder) CurrentBlock() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlock", reflect.TypeOf((*MockBackend)(nil).CurrentBlock))
 }
+
+
+func (m *MockBackend) Engine() consensus.Engine {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Engine")
+	ret0, _ := ret[0].(consensus.Engine)
+	return ret0
+}
+
+// Engine indicates an expected call of Engine.
+func (mr *MockBackendMockRecorder) Engine() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBackend)(nil).Engine))
+}
+
 
 // EventMux mocks base method.
 func (m *MockBackend) EventMux() *event.TypeMux {

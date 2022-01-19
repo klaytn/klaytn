@@ -442,6 +442,33 @@ web3._extend({
 			call: 'admin_setMaxSubscriptionPerWSConn',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'startSpamThrottler',
+			call: 'admin_startSpamThrottler',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'stopSpamThrottler',
+			call: 'admin_stopSpamThrottler',
+		}),
+		new web3._extend.Method({
+			name: 'setSpamThrottlerWhiteList',
+			call: 'admin_setSpamThrottlerWhiteList',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'getSpamThrottlerWhiteList',
+			call: 'admin_getSpamThrottlerWhiteList',
+		}),
+		new web3._extend.Method({
+			name: 'getSpamThrottlerThrottleList',
+			call: 'admin_getSpamThrottlerThrottleList',
+		}),
+		new web3._extend.Method({
+			name: 'getSpamThrottlerCandidateList',
+			call: 'admin_getSpamThrottlerCandidateList',
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -459,6 +486,10 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'stateMigrationStatus',
 			getter: 'admin_stateMigrationStatus'
+		}),
+		new web3._extend.Property({
+			name: 'spamThrottlerConfig',
+			getter: 'admin_spamThrottlerConfig'
 		}),
 	]
 });
