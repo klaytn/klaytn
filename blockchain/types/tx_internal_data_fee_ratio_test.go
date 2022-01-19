@@ -23,7 +23,7 @@ import "testing"
 func TestFeeRatioCheck(t *testing.T) {
 	for i := TxTypeLegacyTransaction; i < TxTypeLast; i++ {
 		tx, err := NewTxInternalData(i)
-		if err == nil && (uint8(i)&TxFeeDelegationBitMask != 0) {
+		if err == nil && (uint8(i)&TxFeeDelegationWithRatioBitMask != 0) {
 			if _, ok := tx.(TxInternalDataFeeRatio); !ok {
 				t.Fatalf("GetFeeRatio() is not implemented. tx=%s", tx.String())
 			}
