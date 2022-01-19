@@ -74,7 +74,6 @@ const (
 	TxValueKeyCodeFormat
 )
 
-
 const (
 	TxFeeDelegationBitMask uint8 = 1
 	TxFeeDelegationWithRatioBitMask uint8 = 2
