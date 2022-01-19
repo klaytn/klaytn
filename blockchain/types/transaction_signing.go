@@ -58,6 +58,24 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 	return NewEIP155Signer(config.ChainID)
 }
 
+// LatestSigner returns the 'most permissive' Signer available for the given chain
+// configuration.
+//
+// Use this in transaction-handling code where the current block number is unknown. If you
+// have the current block number available, use MakeSigner instead.
+func LatestSigner(config *params.ChainConfig) Signer {
+	return NewEIP155Signer(config.ChainID)
+}
+
+// LatestSignerForChainID returns the 'most permissive' Signer available.
+//
+// Use this in transaction-handling code where the current block number and fork
+// configuration are unknown. If you have a ChainConfig, use LatestSigner instead.
+// If you have a ChainConfig and know the current block number, use MakeSigner instead.
+func LatestSignerForChainID(chainID *big.Int) Signer {
+	return NewEIP155Signer(chainID)
+}
+
 // SignTx signs the transaction using the given signer and private key
 func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
 	h := s.Hash(tx)
