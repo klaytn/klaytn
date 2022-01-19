@@ -323,7 +323,7 @@ func generateTx(t *testing.T) *types.Transaction {
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 
-	signer := types.NewEIP155Signer(big.NewInt(18))
+	signer := types.LatestSignerForChainID(big.NewInt(18))
 	tx1, err := types.SignTx(types.NewTransaction(0, addr, new(big.Int), 0, new(big.Int), nil), signer, key)
 	if err != nil {
 		t.Fatal(err)

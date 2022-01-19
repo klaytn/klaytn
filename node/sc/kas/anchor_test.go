@@ -181,7 +181,7 @@ func testBlockToAnchoringDataInternalType0(t *testing.T, period uint64) {
 func genTransactions(n uint64) (types.Transactions, error) {
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
-	signer := types.NewEIP155Signer(big.NewInt(18))
+	signer := types.LatestSignerForChainID(big.NewInt(18))
 
 	txs := types.Transactions{}
 

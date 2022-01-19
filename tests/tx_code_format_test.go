@@ -75,7 +75,7 @@ func TestCodeFormat(t *testing.T) {
 		Nonce: uint64(0),
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	testCodeFormat := func(tx *types.Transaction, state error) {

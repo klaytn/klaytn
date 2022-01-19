@@ -53,13 +53,13 @@ var (
 		big.NewInt(1),
 		common.FromHex("5544"),
 	).WithSignature(
-		NewEIP155Signer(common.Big1),
+		LatestSignerForChainID(common.Big1),
 		common.Hex2Bytes("98ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4a8887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a301"),
 	)
 )
 
 func TestTransactionSigHash(t *testing.T) {
-	signer := NewEIP155Signer(common.Big1)
+	signer := LatestSignerForChainID(common.Big1)
 	if signer.Hash(emptyTx) != common.HexToHash("a715f8447b97e3105d2cc0a8aca1466fa3a02f7cc6d2f9a3fe89f2581c9111c5") {
 		t.Errorf("empty transaction hash mismatch, ɡot %x", signer.Hash(emptyTx))
 	}
@@ -99,7 +99,7 @@ func TestRecipientEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := NewEIP155Signer(common.Big1)
+	signer := LatestSignerForChainID(common.Big1)
 
 	from, err := Sender(signer, tx)
 	if err != nil {
@@ -118,7 +118,7 @@ func TestRecipientNormal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := NewEIP155Signer(common.Big1)
+	signer := LatestSignerForChainID(common.Big1)
 
 	from, err := Sender(signer, tx)
 	if err != nil {
@@ -140,7 +140,7 @@ func TestTransactionPriceNonceSort(t *testing.T) {
 		keys[i], _ = crypto.GenerateKey()
 	}
 
-	signer := NewEIP155Signer(common.Big1)
+	signer := LatestSignerForChainID(common.Big1)
 	// Generate a batch of transactions with overlapping values, but shifted nonces
 	groups := map[common.Address]Transactions{}
 	for start, key := range keys {

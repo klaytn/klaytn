@@ -260,7 +260,7 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 		return nil, err
 	}
 
-	signer := types.NewEIP155Signer(chainId)
+	signer := types.LatestSignerForChainID(chainId)
 	signedTx, err := opts.Signer(signer, opts.From, rawTx)
 	if err != nil {
 		return nil, err

@@ -509,7 +509,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
 	var from common.Address
 	if tx.IsLegacyTransaction() {
-		signer := types.NewEIP155Signer(tx.ChainId())
+		signer := types.LatestSignerForChainID(tx.ChainId())
 		from, _ = types.Sender(signer, tx)
 	} else {
 		from, _ = tx.From()

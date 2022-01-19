@@ -51,7 +51,7 @@ var (
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
-	return NewEIP155Signer(deriveChainId(V))
+	return LatestSignerForChainID(deriveChainId(V))
 }
 
 type Transaction struct {

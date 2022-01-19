@@ -110,7 +110,7 @@ func TestRoleBasedAccount(t *testing.T) {
 		AccKey:     accKey,
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 0. Transfer (reservoir -> `colin`) using a legacy transaction.
@@ -323,7 +323,7 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeValueTransfer.
@@ -454,7 +454,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// RoleBasedKey having LegacyKeys for all roles
@@ -667,7 +667,7 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeValueTransfer.
@@ -794,7 +794,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeValueTransfer.
@@ -980,7 +980,7 @@ func TestAccountUpdateToRoleBasedToPub(t *testing.T) {
 		fmt.Println("colinAddr = ", colin.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Create an account colin using TxTypeValueTransfer.

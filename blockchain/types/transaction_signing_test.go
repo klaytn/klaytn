@@ -140,17 +140,17 @@ func TestChainId(t *testing.T) {
 	tx := NewTransaction(0, common.Address{}, new(big.Int), 0, new(big.Int), nil)
 
 	var err error
-	tx, err = SignTx(tx, NewEIP155Signer(big.NewInt(1)), key)
+	tx, err = SignTx(tx, LatestSignerForChainID(big.NewInt(1)), key)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = Sender(NewEIP155Signer(big.NewInt(2)), tx)
+	_, err = Sender(LatestSignerForChainID(big.NewInt(2)), tx)
 	if err != ErrInvalidChainId {
 		t.Error("expected error:", ErrInvalidChainId)
 	}
 
-	_, err = Sender(NewEIP155Signer(big.NewInt(1)), tx)
+	_, err = Sender(LatestSignerForChainID(big.NewInt(1)), tx)
 	if err != nil {
 		t.Error("expected no error")
 	}
@@ -220,7 +220,7 @@ func testValidateValueTransfer(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -269,7 +269,7 @@ func testValidateFeeDelegatedValueTransfer(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -356,7 +356,7 @@ func testValidateFeeDelegatedValueTransferWithRatio(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -445,7 +445,7 @@ func testValidateValueTransferMemo(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -495,7 +495,7 @@ func testValidateFeeDelegatedValueTransferMemo(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -584,7 +584,7 @@ func testValidateFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -728,7 +728,7 @@ func testValidateAccountUpdate(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -778,7 +778,7 @@ func testValidateFeeDelegatedAccountUpdate(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -867,7 +867,7 @@ func testValidateFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -958,7 +958,7 @@ func testValidateSmartContractDeploy(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1009,7 +1009,7 @@ func testValidateFeeDelegatedSmartContractDeploy(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1100,7 +1100,7 @@ func testValidateFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1193,7 +1193,7 @@ func testValidateSmartContractExecution(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1243,7 +1243,7 @@ func testValidateFeeDelegatedSmartContractExecution(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1332,7 +1332,7 @@ func testValidateFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1423,7 +1423,7 @@ func testValidateCancel(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1470,7 +1470,7 @@ func testValidateFeeDelegatedCancel(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1553,7 +1553,7 @@ func testValidateFeeDelegatedCancelWithRatio(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1638,7 +1638,7 @@ func testValidateChainDataAnchoring(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1686,7 +1686,7 @@ func testValidateFeeDelegatedChainDataAnchoring(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from
@@ -1771,7 +1771,7 @@ func testValidateFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
 	tx := &Transaction{data: internalTx}
 
 	chainid := big.NewInt(1)
-	signer := NewEIP155Signer(chainid)
+	signer := LatestSignerForChainID(chainid)
 
 	prv, from := defaultTestKey()
 	internalTx.From = from

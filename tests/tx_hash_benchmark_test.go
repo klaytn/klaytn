@@ -55,7 +55,7 @@ func BenchmarkTxHash(b *testing.B) {
 }
 
 func benchmarkTxHash(b *testing.B, genTx genTx) {
-	signer := types.NewEIP155Signer(common.Big1)
+	signer := types.LatestSignerForChainID(common.Big1)
 
 	// Initialize blockchain
 	bcdata, err := NewBCData(6, 4)

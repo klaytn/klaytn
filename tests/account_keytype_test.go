@@ -358,7 +358,7 @@ func expectedTestResultForDefaultTx(accountKeyType accountkey.AccountKeyType, tx
 	return nil
 }
 
-func signTxWithVariousKeyTypes(signer types.EIP155Signer, tx *types.Transaction, sender *TestAccountType) (*types.Transaction, error) {
+func signTxWithVariousKeyTypes(signer types.Signer, tx *types.Transaction, sender *TestAccountType) (*types.Transaction, error) {
 	var err error
 	txType := tx.Type()
 	accKeyType := sender.AccKey.Type()
@@ -432,7 +432,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 		code = "0x608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029"
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// create a smart contract account for contract execution test
 	{
@@ -652,7 +652,7 @@ func TestAccountUpdateMultiSigKeyMaxKey(t *testing.T) {
 		fmt.Println("multisigAddr = ", multisig.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Transfer (reservoir -> anon) using a legacy transaction.
@@ -768,7 +768,7 @@ func TestAccountUpdateMultiSigKeyBigThreshold(t *testing.T) {
 		fmt.Println("multisigAddr = ", multisig.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Transfer (reservoir -> anon) using a legacy transaction.
@@ -881,7 +881,7 @@ func TestAccountUpdateMultiSigKeyDupPrvKeys(t *testing.T) {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
@@ -999,7 +999,7 @@ func TestAccountUpdateMultiSigKeyWeightOverflow(t *testing.T) {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
@@ -1100,7 +1100,7 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
@@ -1246,7 +1246,7 @@ func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 	keys := genTestKeys(2)
 
@@ -1519,7 +1519,7 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Transfer (reservoir -> anon) using a legacy transaction.
@@ -1708,7 +1708,7 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 		fmt.Println("roleAddr = ", roleKey.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// transfer (reservoir -> anon) using a legacy transaction.
@@ -1848,7 +1848,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 		fmt.Println("roleBasedAddr = ", roleBased.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
@@ -2049,7 +2049,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 		fmt.Println("roleBasedAddr = ", roleBased.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	feeTxTypes := []types.TxType{
 		types.TxTypeFeeDelegatedValueTransfer,
@@ -2222,7 +2222,7 @@ func TestAccountKeyUpdateLegacyToPublic(t *testing.T) {
 	var txs types.Transactions
 
 	// make TxPool to test validation in 'TxPool add' process
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	{
 		addr := *bcdata.addrs[1]

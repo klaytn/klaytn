@@ -129,7 +129,7 @@ func TestValidationPoolInsert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -252,7 +252,7 @@ func TestValidationBlockTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -404,7 +404,7 @@ func TestValidationInvalidSig(t *testing.T) {
 
 	var invalidCases = []struct {
 		Name string
-		fn   func(*testing.T, types.TxType, *TestAccountType, *TestAccountType, types.EIP155Signer) (*types.Transaction, error)
+		fn   func(*testing.T, types.TxType, *TestAccountType, *TestAccountType, types.Signer) (*types.Transaction, error)
 	}{
 		{"invalidSender", testInvalidSenderSig},
 		{"invalidFeePayer", testInvalidFeePayerSig},
@@ -425,7 +425,7 @@ func TestValidationInvalidSig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -499,7 +499,7 @@ func TestValidationInvalidSig(t *testing.T) {
 }
 
 // testInvalidSenderSig generates invalid txs signed by an invalid sender.
-func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.EIP155Signer) (*types.Transaction, error) {
+func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.Signer) (*types.Transaction, error) {
 	if !txType.IsLegacyTransaction() {
 		newAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 		assert.Equal(t, nil, err)
@@ -526,7 +526,7 @@ func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAcco
 }
 
 // testInvalidFeePayerSig generates invalid txs signed by an invalid fee payer.
-func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.EIP155Signer) (*types.Transaction, error) {
+func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.Signer) (*types.Transaction, error) {
 	if txType.IsFeeDelegatedTransaction() {
 		newAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 		assert.Equal(t, nil, err)
@@ -568,7 +568,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -635,7 +635,7 @@ func TestInvalidBalance(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -1027,7 +1027,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -1433,7 +1433,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -1589,7 +1589,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -1730,7 +1730,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{

@@ -287,7 +287,7 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// Prepare a next block header.
 	author := bcdata.addrs[0]
@@ -382,7 +382,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// Deploy smart contract (reservoir -> contract)
 	{
@@ -508,7 +508,7 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 		fmt.Println("anonAddr = ", anon.Addr.String())
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Create an account sender using TxTypeValueTransfer.

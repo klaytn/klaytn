@@ -45,7 +45,7 @@ var (
 		Alloc:  blockchain.GenesisAlloc{address: {Balance: funds}},
 	}
 	genesis = testGenesis.MustCommit(gendb)
-	signer  = types.NewEIP155Signer(config.ChainID)
+	signer  = types.LatestSignerForChainID(config.ChainID)
 )
 
 type SuiteRepository struct {

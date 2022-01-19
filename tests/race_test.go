@@ -60,7 +60,7 @@ func TestRaceBetweenTxpoolAddAndCommitNewWork(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				signer := types.NewEIP155Signer(chainId)
+				signer := types.LatestSignerForChainID(chainId)
 				if err := tx.Sign(signer, richAccount.Keys[0]); err != nil {
 					t.Fatal(err)
 				}
@@ -71,7 +71,7 @@ func TestRaceBetweenTxpoolAddAndCommitNewWork(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				signer := types.NewEIP155Signer(chainId)
+				signer := types.LatestSignerForChainID(chainId)
 				if err := tx.Sign(signer, richAccount.Keys[0]); err != nil {
 					t.Fatal(err)
 				}
@@ -121,7 +121,7 @@ func TestRaceAsMessageWithAccountPickerForFeePayer(t *testing.T) {
 			},
 		}
 		genesis = gspec.MustCommit(gendb)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 
 	iterNum := 10000

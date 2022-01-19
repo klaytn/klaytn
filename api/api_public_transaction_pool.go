@@ -466,7 +466,7 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface
 	}
 	transactions := make([]map[string]interface{}, 0, len(pending))
 	for _, tx := range pending {
-		signer := types.NewEIP155Signer(tx.ChainId())
+		signer := types.LatestSignerForChainID(tx.ChainId())
 		from, _ := types.Sender(signer, tx)
 		if _, exists := accounts[from]; exists {
 			transactions = append(transactions, newRPCPendingTransaction(tx))
@@ -494,7 +494,7 @@ func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxAr
 	}
 
 	for _, p := range pending {
-		signer := types.NewEIP155Signer(p.ChainId())
+		signer := types.LatestSignerForChainID(p.ChainId())
 		wantSigHash := signer.Hash(matchTx)
 
 		if pFrom, err := types.Sender(signer, p); err == nil && pFrom == sendArgs.From && signer.Hash(p) == wantSigHash {

@@ -282,7 +282,7 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.GetPrivateKey())
+		return types.SignTx(tx, types.LatestSignerForChainID(chainID), unlockedKey.GetPrivateKey())
 	}
 	return nil, ErrChainIdNil
 }
@@ -299,7 +299,7 @@ func (ks *KeyStore) SignTxAsFeePayer(a accounts.Account, tx *types.Transaction, 
 	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTxAsFeePayer(tx, types.NewEIP155Signer(chainID), unlockedKey.GetPrivateKey())
+		return types.SignTxAsFeePayer(tx, types.LatestSignerForChainID(chainID), unlockedKey.GetPrivateKey())
 	}
 	return nil, ErrChainIdNil
 }
@@ -329,7 +329,7 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 	if chainID == nil {
 		return nil, ErrChainIdNil
 	}
-	return types.SignTx(tx, types.NewEIP155Signer(chainID), key.GetPrivateKey())
+	return types.SignTx(tx, types.LatestSignerForChainID(chainID), key.GetPrivateKey())
 }
 
 // SignTxAsFeePayerWithPassphrase signs the transaction as a fee payer if the private key
@@ -345,7 +345,7 @@ func (ks *KeyStore) SignTxAsFeePayerWithPassphrase(a accounts.Account, passphras
 	if chainID == nil {
 		return nil, ErrChainIdNil
 	}
-	return types.SignTxAsFeePayer(tx, types.NewEIP155Signer(chainID), key.GetPrivateKey())
+	return types.SignTxAsFeePayer(tx, types.LatestSignerForChainID(chainID), key.GetPrivateKey())
 }
 
 // Unlock unlocks the given account indefinitely.

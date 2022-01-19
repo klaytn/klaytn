@@ -58,7 +58,7 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 	}
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// reservoir account

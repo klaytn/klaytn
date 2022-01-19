@@ -462,7 +462,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), stateDB, header)
+	work := NewTask(self.config, types.LatestSignerForChainID(self.config.ChainID), stateDB, header)
 	if self.nodetype != common.CONSENSUSNODE {
 		work.Block = parent
 	}

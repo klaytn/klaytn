@@ -87,7 +87,7 @@ func TransferSignedTx(auth *bind.TransactOpts, backend *backends.SimulatedBacken
 		gasPrice,
 		nil)
 
-	signedTx, err := auth.Signer(types.NewEIP155Signer(chainID), auth.From, tx)
+	signedTx, err := auth.Signer(types.LatestSignerForChainID(chainID), auth.From, tx)
 	assert.Equal(t, err, nil)
 
 	fee := big.NewInt(0)
