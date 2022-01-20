@@ -92,6 +92,7 @@ type stateObject struct {
 
 	originStorage Storage // Storage cache of original entries to dedup rewrites
 	dirtyStorage  Storage // Storage entries that need to be flushed to disk
+	fakeStorage   Storage // Fake storage which constructed by caller for debugging purpose.
 
 	// Cache flags.
 	// When an object is marked suicided it will be delete from the trie
@@ -231,6 +232,24 @@ func (self *stateObject) SetState(db Database, key, value common.Hash) {
 		prevalue: prev,
 	})
 	self.setState(key, value)
+}
+
+// SetStorage replaces the entire state storage with the given one.
+//
+// After this function is called, all original state will be ignored and state
+// lookup only happens in the fake state storage.
+//
+// Note this function should only be used for debugging purpose.
+func (self *stateObject) SetStorage(storage map[common.Hash]common.Hash) {
+	// Allocate fake storage if it's nil.
+	if self.fakeStorage == nil {
+		self.fakeStorage = make(Storage)
+	}
+	for key, value := range storage {
+		self.fakeStorage[key] = value
+	}
+	// Don't bother journal since this function should only be used for
+	// debugging and the `fake` storage won't be committed to database.
 }
 
 // IsContractAccount returns true is the account has a non-empty codeHash.
