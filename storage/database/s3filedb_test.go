@@ -67,11 +67,11 @@ func (s *SuiteS3FileDB) TearDownSuite() {
 	}
 }
 
-func TestSuiteS3FileDB(t *testing.T) {
+func testSuiteS3FileDB(t *testing.T) {
 	suite.Run(t, new(SuiteS3FileDB))
 }
 
-func (s *SuiteS3FileDB) TestS3FileDB() {
+func (s *SuiteS3FileDB) testS3FileDB() {
 	testKey := common.MakeRandomBytes(32)
 	testVal := common.MakeRandomBytes(1024 * 1024)
 
@@ -101,7 +101,7 @@ func (s *SuiteS3FileDB) TestS3FileDB() {
 	}
 }
 
-func (s *SuiteS3FileDB) TestS3FileDB_Overwrite() {
+func (s *SuiteS3FileDB) testS3FileDB_Overwrite() {
 	testKey := common.MakeRandomBytes(32)
 	var testVals [][]byte
 	for i := 0; i < 10; i++ {
@@ -132,7 +132,7 @@ func (s *SuiteS3FileDB) TestS3FileDB_Overwrite() {
 	s.Equal(len(testVals), len(uris))
 }
 
-func (s *SuiteS3FileDB) TestS3FileDB_EmptyDelete() {
+func (s *SuiteS3FileDB) testS3FileDB_EmptyDelete() {
 	testKey := common.MakeRandomBytes(256)
 	s.NoError(s.s3DB.delete(testKey))
 	s.NoError(s.s3DB.delete(testKey))

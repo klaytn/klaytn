@@ -39,7 +39,7 @@ func getTestRedisConfig() *TrieNodeCacheConfig {
 	}
 }
 
-func TestSubscription(t *testing.T) {
+func testSubscription(t *testing.T) {
 	msg1 := "testMessage1"
 	msg2 := "testMessage2"
 
@@ -85,7 +85,7 @@ func TestSubscription(t *testing.T) {
 }
 
 // TestRedisCache tests basic operations of redis cache
-func TestRedisCache(t *testing.T) {
+func testRedisCache(t *testing.T) {
 	cache, err := newRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
@@ -101,7 +101,7 @@ func TestRedisCache(t *testing.T) {
 }
 
 // TestRedisCache_Set_LargeData check whether redis cache can store an large data (5MB).
-func TestRedisCache_Set_LargeData(t *testing.T) {
+func testRedisCache_Set_LargeData(t *testing.T) {
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +115,7 @@ func TestRedisCache_Set_LargeData(t *testing.T) {
 }
 
 // TestRedisCache_SetAsync tests basic operations of redis cache using SetAsync instead of Set.
-func TestRedisCache_SetAsync(t *testing.T) {
+func testRedisCache_SetAsync(t *testing.T) {
 	cache, err := newRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
@@ -132,7 +132,7 @@ func TestRedisCache_SetAsync(t *testing.T) {
 }
 
 // TestRedisCache_SetAsync_LargeData check whether redis cache can store an large data asynchronously (5MB).
-func TestRedisCache_SetAsync_LargeData(t *testing.T) {
+func testRedisCache_SetAsync_LargeData(t *testing.T) {
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -147,7 +147,7 @@ func TestRedisCache_SetAsync_LargeData(t *testing.T) {
 }
 
 // TestRedisCache_SetAsync_LargeNumberItems asynchronously sets lots of items exceeding channel size.
-func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
+func testRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +193,7 @@ func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 }
 
 // TestRedisCache_Timeout tests timout feature of redis client.
-func TestRedisCache_Timeout(t *testing.T) {
+func testRedisCache_Timeout(t *testing.T) {
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:11234")
 		if err != nil {
