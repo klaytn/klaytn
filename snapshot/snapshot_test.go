@@ -37,6 +37,7 @@ func randomHash() common.Hash {
 	return hash
 }
 
+// TODO-Klaytn-Snapshot the below Account should be updated to Klaytn account model
 // randomAccount generates a random account and returns it RLP encoded.
 func randomAccount() []byte {
 	root := randomHash()
