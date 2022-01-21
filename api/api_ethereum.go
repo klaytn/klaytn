@@ -38,9 +38,6 @@ const (
 	// because there is no uncles in Klaytn.
 	// Just use const value because we don't have to calculate it everytime which always be same result.
 	EmptySha3Uncles = "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
-	// DummyGasLimit exists for supporting Ethereum compatible data structure.
-	// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
-	DummyGasLimit uint64 = 999999999
 )
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
@@ -955,9 +952,10 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 		"totalDifficulty": (*hexutil.Big)(api.publicKlayAPI.b.GetTd(head.Hash())),
 		// extraData always return empty Bytes because actual value of extraData in Klaytn header cannot be used as meaningful way because
 		// we cannot provide original header of Klaytn and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Klaytn.
-		"extraData":        hexutil.Bytes{},
-		"size":             hexutil.Uint64(head.Size()),
-		"gasLimit":         hexutil.Uint64(DummyGasLimit),
+		"extraData": hexutil.Bytes{},
+		"size":      hexutil.Uint64(head.Size()),
+		// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
+		"gasLimit":         hexutil.Uint64(params.UpperGasLimit),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
 		"timestamp":        hexutil.Big(*head.Time),
 		"transactionsRoot": head.TxHash,
