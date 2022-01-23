@@ -479,14 +479,14 @@ func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
 func (api *EthereumAPI) GetBlockTransactionCountByNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	transactionCount, _ := api.publicTransactionPoolAPI.GetBlockTransactionCountByNumber(ctx, blockNr)
+	return transactionCount
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
 func (api *EthereumAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	transactionCount, _ := api.publicTransactionPoolAPI.GetBlockTransactionCountByHash(ctx, blockHash)
+	return transactionCount
 }
 
 // accessListResult returns an optional accesslist
