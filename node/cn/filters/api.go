@@ -426,6 +426,11 @@ func (api *PublicFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 	return []interface{}{}, fmt.Errorf("filter not found")
 }
 
+// Events return private field events of PublicFilterAPI.
+func (api *PublicFilterAPI) Events() *EventSystem {
+	return api.events
+}
+
 // returnHashes is a helper that will return an empty hash array case the given hash array is nil,
 // otherwise the given hashes array is returned.
 func returnHashes(hashes []common.Hash) []common.Hash {
