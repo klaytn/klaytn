@@ -189,15 +189,13 @@ func (api *EthereumAPI) GetHashrate() uint64 {
 //
 // https://eth.wiki/json-rpc/API#eth_newpendingtransactionfilter
 func (api *EthereumAPI) NewPendingTransactionFilter() rpc.ID {
-	// TODO-Klaytn: Not implemented yet.
-	return ""
+	return api.publicFilterAPI.NewPendingTransactionFilter()
 }
 
 // NewPendingTransactions creates a subscription that is triggered each time a transaction
 // enters the transaction pool and was signed from one of the transactions this nodes manages.
 func (api *EthereumAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicFilterAPI.NewPendingTransactions(ctx)
 }
 
 // NewBlockFilter creates a filter that fetches blocks that are imported into the chain.
@@ -205,8 +203,7 @@ func (api *EthereumAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscr
 //
 // https://eth.wiki/json-rpc/API#eth_newblockfilter
 func (api *EthereumAPI) NewBlockFilter() rpc.ID {
-	// TODO-Klaytn: Not implemented yet.
-	return ""
+	return api.publicFilterAPI.NewBlockFilter()
 }
 
 // NewHeads send a notification each time a new (header) block is appended to the chain.
@@ -216,13 +213,9 @@ func (api *EthereumAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error)
 }
 
 // Logs creates a subscription that fires for all new log that match the given filter criteria.
-func (api *EthereumAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc.Subscription, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+func (api *EthereumAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (*rpc.Subscription, error) {
+	return api.publicFilterAPI.Logs(ctx, crit)
 }
-
-// FilterCriteria represents a request to create a new filter.
-type FilterCriteria filters.FilterCriteria
 
 // NewFilter creates a new filter and returns the filter id. It can be
 // used to retrieve logs when the state changes. This method cannot be
@@ -237,25 +230,22 @@ type FilterCriteria filters.FilterCriteria
 // In case "fromBlock" > "toBlock" an error is returned.
 //
 // https://eth.wiki/json-rpc/API#eth_newfilter
-func (api *EthereumAPI) NewFilter(crit FilterCriteria) (rpc.ID, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return "", nil
+func (api *EthereumAPI) NewFilter(crit filters.FilterCriteria) (rpc.ID, error) {
+	return api.publicFilterAPI.NewFilter(crit)
 }
 
 // GetLogs returns logs matching the given argument that are stored within the state.
 //
 // https://eth.wiki/json-rpc/API#eth_getlogs
-func (api *EthereumAPI) GetLogs(ctx context.Context, crit FilterCriteria) ([]*types.Log, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+func (api *EthereumAPI) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([]*types.Log, error) {
+	return api.publicFilterAPI.GetLogs(ctx, crit)
 }
 
 // UninstallFilter removes the filter with the given filter id.
 //
 // https://eth.wiki/json-rpc/API#eth_uninstallfilter
 func (api *EthereumAPI) UninstallFilter(id rpc.ID) bool {
-	// TODO-Klaytn: Not implemented yet.
-	return false
+	return api.publicFilterAPI.UninstallFilter(id)
 }
 
 // GetFilterLogs returns the logs for the filter with the given id.
@@ -263,8 +253,7 @@ func (api *EthereumAPI) UninstallFilter(id rpc.ID) bool {
 //
 // https://eth.wiki/json-rpc/API#eth_getfilterlogs
 func (api *EthereumAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicFilterAPI.GetFilterLogs(ctx, id)
 }
 
 // GetFilterChanges returns the logs for the filter with the given id since
@@ -275,20 +264,17 @@ func (api *EthereumAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.
 //
 // https://eth.wiki/json-rpc/API#eth_getfilterchanges
 func (api *EthereumAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicFilterAPI.GetFilterChanges(id)
 }
 
-// GasPrice returns a suggestion for a gas price for legacy transactions.
+// GasPrice returns a suggestion for a gas price.
 func (api *EthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicKlayAPI.GasPrice(ctx)
 }
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (api *EthereumAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicKlayAPI.GasPrice(ctx)
 }
 
 type feeHistoryResult struct {
@@ -314,28 +300,24 @@ func (api *EthereumAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex,
 // - pulledStates:  number of state entries processed until now
 // - knownStates:   number of known state entries that still need to be pulled
 func (api *EthereumAPI) Syncing() (interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicKlayAPI.Syncing()
 }
 
 // ChainId is the EIP-155 replay-protection chain id for the current ethereum chain config.
 func (api *EthereumAPI) ChainId() (*hexutil.Big, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicBlockChainAPI.ChainId(), nil
 }
 
 // BlockNumber returns the block number of the chain head.
 func (api *EthereumAPI) BlockNumber() hexutil.Uint64 {
-	// TODO-Klaytn: Not implemented yet.
-	return 0
+	return api.publicBlockChainAPI.BlockNumber()
 }
 
 // GetBalance returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
 func (api *EthereumAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicBlockChainAPI.GetBalance(ctx, address, blockNrOrHash)
 }
 
 // EthAccountResult structs for GetProof
@@ -446,16 +428,14 @@ func (api *EthereumAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash 
 
 // GetCode returns the code stored at the given address in the state for the given block number.
 func (api *EthereumAPI) GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicBlockChainAPI.GetCode(ctx, address, blockNrOrHash)
 }
 
 // GetStorageAt returns the storage from the state at the given address, key and
 // block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta block
 // numbers are also allowed.
 func (api *EthereumAPI) GetStorageAt(ctx context.Context, address common.Address, key string, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicBlockChainAPI.GetStorageAt(ctx, address, key, blockNrOrHash)
 }
 
 // EthOverrideAccount indicates the overriding fields of account during the execution
@@ -905,8 +885,7 @@ func (api *EthereumAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs,
 
 // Accounts returns the collection of accounts this node manages.
 func (api *EthereumAPI) Accounts() []common.Address {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	return api.publicAccountAPI.Accounts()
 }
 
 // rpcMarshalHeader marshal block header as Ethereum compatible format.
