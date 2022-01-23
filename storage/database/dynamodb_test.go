@@ -67,7 +67,7 @@ func TestDynamoDB(t *testing.T) {
 	suite.Run(t, new(SuiteDynamoDB))
 }
 
-func (s *SuiteDynamoDB) TestDynamoDB_Put() {
+func (s *SuiteDynamoDB) SampleTestDynamoDB_Put() {
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -89,7 +89,7 @@ func (s *SuiteDynamoDB) TestDynamoDB_Put() {
 	s.NoError(returnedErr)
 }
 
-func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
+func (s *SuiteDynamoDB) SampleTestDynamoBatch_Write() {
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -120,7 +120,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
 	}
 }
 
-func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
+func (s *SuiteDynamoDB) SampleTestDynamoBatch_Write_LargeData() {
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -151,7 +151,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
 	}
 }
 
-func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
+func (s *SuiteDynamoDB) SampleTestDynamoBatch_Write_DuplicatedKey() {
 	dynamo, err := newDynamoDB(GetTestDynamoConfig())
 	if err != nil {
 		s.FailNow("failed to create dynamoDB", err)
@@ -186,7 +186,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
 
 // TestDynamoBatch_Write_MultiTables checks if there is no error when working with more than one tables.
 // This also checks if shared workers works as expected.
-func (s *SuiteDynamoDB) TestDynamoBatch_Write_MultiTables() {
+func (s *SuiteDynamoDB) SampleTestDynamoBatch_Write_MultiTables() {
 	// this test might end with Crit, enableLog to find out the log
 	//enableLog()
 
@@ -264,7 +264,7 @@ func (dynamo *dynamoDB) deleteDB() {
 
 // TestDynamoDB_Retry tests whether dynamoDB client retries successfully.
 // A fake server is setup to simulate a server with a request count.
-func TestDynamoDB_Retry(t *testing.T) {
+func SampleTestDynamoDB_Retry(t *testing.T) {
 	// This test needs a new dynamoDBClient having a fake endpoint.
 	oldClient := dynamoDBClient
 	dynamoDBClient = nil

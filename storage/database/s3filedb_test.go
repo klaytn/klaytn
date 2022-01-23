@@ -67,7 +67,7 @@ func (s *SuiteS3FileDB) TearDownSuite() {
 	}
 }
 
-func TestSuiteS3FileDB(t *testing.T) {
+func SampleTestSuiteS3FileDB(t *testing.T) {
 	suite.Run(t, new(SuiteS3FileDB))
 }
 

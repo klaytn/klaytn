@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDynamoDBReadOnly_Put(t *testing.T) {
+func SampleTestDynamoDBReadOnly_Put(t *testing.T) {
 	dynamo, err := newDynamoDBReadOnly(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
@@ -54,7 +54,7 @@ func TestDynamoDBReadOnly_Put(t *testing.T) {
 	assert.Equal(t, err.Error(), dataNotFoundErr.Error())
 }
 
-func TestDynamoDBReadOnly_Write(t *testing.T) {
+func SampleTestDynamoDBReadOnly_Write(t *testing.T) {
 	dynamo, err := newDynamoDBReadOnly(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {

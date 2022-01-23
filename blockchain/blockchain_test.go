@@ -1630,7 +1630,7 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 	assert.EqualValues(t, targetBlock, newHeadBlock)
 }
 
-func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
+func SampleTestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
 	// prepare blockchain
 	blockchain := &BlockChain{
 		stateCache: state.NewDatabaseWithNewCache(database.NewMemoryDBManager(), &statedb.TrieNodeCacheConfig{

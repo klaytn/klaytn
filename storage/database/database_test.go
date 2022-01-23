@@ -104,7 +104,7 @@ var test_values = []string{"a", "1251", "\x00123\x00"}
 var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
 
 // TestDatabase_PutGet tests the basic put and get operations.
-func TestDatabase_PutGet(t *testing.T) {
+func SampleTestDatabase_PutGet(t *testing.T) {
 	for _, dbCreateFn := range testDatabases {
 		db, remove := dbCreateFn()
 		defer remove()
@@ -113,7 +113,7 @@ func TestDatabase_PutGet(t *testing.T) {
 }
 
 // TestDatabase_ParallelPutGet tests the parallel put and get operations.
-func TestDatabase_ParallelPutGet(t *testing.T) {
+func SampleTestDatabase_ParallelPutGet(t *testing.T) {
 	for _, dbCreateFn := range testDatabases {
 		db, remove := dbCreateFn()
 		defer remove()
@@ -123,7 +123,7 @@ func TestDatabase_ParallelPutGet(t *testing.T) {
 
 // TestDatabase_NotFoundErr checks if an empty database returns
 // dataNotFoundErr for the given  random key.
-func TestDatabase_NotFoundErr(t *testing.T) {
+func SampleTestDatabase_NotFoundErr(t *testing.T) {
 	for _, dbCreateFn := range testDatabases {
 		db, remove := dbCreateFn()
 		defer remove()
@@ -135,7 +135,7 @@ func TestDatabase_NotFoundErr(t *testing.T) {
 }
 
 // TestDatabase_NilValue checks if all database write/read nil value in the same way.
-func TestDatabase_NilValue(t *testing.T) {
+func SampleTestDatabase_NilValue(t *testing.T) {
 	for _, dbCreateFn := range testDatabases {
 		db, remove := dbCreateFn()
 		defer remove()
