@@ -135,6 +135,7 @@ var tstData = []voteValue{
 	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c", e: true},
 	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c5869", e: true},
 	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x828880c5f09cc1cc6a58715e3fe2b4c4cf3c58", e: false},
+	{k: "governance.addvalidator", v: "0x639e5ebfc483716fbac9810b230ff6ad487f366c,0x639e5ebfc483716fbac9810b230ff6ad487f366c", e: false},
 }
 
 var goodVotes = []voteValue{

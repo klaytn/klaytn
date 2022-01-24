@@ -82,7 +82,8 @@ func compareEqual(v1 interface{}, v2 interface{}) bool {
 }
 
 func compareAddress(v1 interface{}, v2 interface{}) bool {
-	if reflect.TypeOf(v1) != reflect.TypeOf(v2) || reflect.TypeOf(v1) != reflect.TypeOf(common.Address{}) && reflect.TypeOf(v1) != reflect.TypeOf([]common.Address{}) {
+	if (reflect.TypeOf(v1) != reflect.TypeOf(v2)) ||
+		(reflect.TypeOf(v1) != reflect.TypeOf(common.Address{}) && reflect.TypeOf(v1) != reflect.TypeOf([]common.Address{})) {
 		return false
 	}
 
@@ -90,25 +91,7 @@ func compareAddress(v1 interface{}, v2 interface{}) bool {
 		return v1 == v2
 	}
 
-	addressSlice1, addressSlice2 := v1.([]common.Address), v2.([]common.Address)
-	if len(addressSlice1) != len(addressSlice2) {
-		return false
-	}
-
-	for _, addressV1 := range addressSlice1 {
-		for idx, addressV2 := range addressSlice2 {
-			if addressV1 == addressV2 {
-				addressSlice2[idx] = addressSlice2[len(addressSlice2)-1]
-				addressSlice2 = addressSlice2[:len(addressSlice2)-1]
-			}
-		}
-	}
-
-	if len(addressSlice2) > 0 {
-		return false
-	}
-
-	return true
+	return reflect.DeepEqual(v1.([]common.Address), v2.([]common.Address))
 }
 
 func updateTxGasHumanReadable(g *Governance, k string, v interface{}) {
@@ -319,6 +302,23 @@ func checkBigInt(k string, v interface{}) bool {
 }
 
 func checkAddress(k string, v interface{}) bool {
+	// if value contains single address, return true
+	if reflect.TypeOf(v) == reflect.TypeOf(common.Address{}) {
+		return true
+	}
+
+	// if value contains multiple addresses and if there's identical addresses, return false
+	var addressExists map[common.Address]bool
+	addressExists = make(map[common.Address]bool)
+	for _, address := range v.([]common.Address) {
+		if _, ok := addressExists[address]; ok {
+			return false
+		} else {
+			addressExists[address] = true
+		}
+	}
+
+	// if value contains multiple addresses and if all addresses are different, return true
 	return true
 }
 
