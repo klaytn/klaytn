@@ -522,17 +522,23 @@ func (g *Governance) ClearVotes(num uint64) {
 func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, error) {
 	var val interface{}
 	k, ok := GovernanceKeyMap[gVote.Key]
-	if ok == false {
+	if !ok {
 		logger.Warn("Unknown key was given", "key", k)
 		return nil, ErrUnknownKey
 	}
 
-	if (k == params.AddValidator || k == params.RemoveValidator) && (reflect.TypeOf(gVote.Value) != reflect.TypeOf([]interface{}{}) && reflect.TypeOf(gVote.Value) != reflect.TypeOf([]uint8{})) {
-		return nil, ErrValueTypeMismatch
-	}
-
-	if (k != params.AddValidator && k != params.RemoveValidator) && reflect.TypeOf(gVote.Value) != reflect.TypeOf([]uint8{}) {
-		return nil, ErrValueTypeMismatch
+	// checking type of gVote.Value
+	switch k {
+	case params.AddValidator, params.RemoveValidator:
+		// gVote.Value type should be [][]interface{}(multiple node removal/addition) or []uint8(single node removal/addition)
+		if reflect.TypeOf(gVote.Value) != reflect.TypeOf([]interface{}{}) && reflect.TypeOf(gVote.Value) != reflect.TypeOf([]uint8{}) {
+			return nil, ErrValueTypeMismatch
+		}
+	default:
+		// gVote.Value type should be []uint8
+		if reflect.TypeOf(gVote.Value) != reflect.TypeOf([]uint8{}) {
+			return nil, ErrValueTypeMismatch
+		}
 	}
 
 	switch k {

@@ -197,7 +197,7 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 		}
 
 		var nodeAddresses []common.Address
-		for _, str := range strings.Split(val.(string), ",") {
+		for _, str := range addresses {
 			if common.IsHexAddress(str) {
 				nodeAddresses = append(nodeAddresses, common.HexToAddress(str))
 			} else {
