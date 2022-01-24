@@ -163,6 +163,9 @@ const (
 	TxGasContractExecution uint64 = 21000
 
 	TxDataGas uint64 = 100
+
+	// BaseFee exists for supporting Ethereum compatible data structure.
+	BaseFee uint64 = 0
 )
 
 const (

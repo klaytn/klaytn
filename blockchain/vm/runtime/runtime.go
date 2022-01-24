@@ -25,9 +25,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
@@ -89,7 +88,7 @@ func setDefaults(cfg *Config) {
 		}
 	}
 	if cfg.BaseFee == nil {
-		cfg.BaseFee = big.NewInt(0)
+		cfg.BaseFee = new(big.Int).SetUint64(params.BaseFee)
 	}
 }
 
