@@ -35,6 +35,8 @@ import (
 	"reflect"
 )
 
+//go:generate gencodec -type AccessTuple -out gen_access_tuple.go
+
 // AccessList is an EIP-2930 access list
 type AccessList []AccessTuple
 
