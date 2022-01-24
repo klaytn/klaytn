@@ -20,7 +20,10 @@
 
 package blockchain
 
-import "errors"
+import (
+	"errors"
+	"github.com/klaytn/klaytn/blockchain/types"
+)
 
 var (
 	// ErrKnownBlock is returned when a block to import is already known locally.
@@ -102,6 +105,10 @@ var (
 
 	// ErrInvalidReceiptStatus is returned if status of receipt is invalid from GetVMerrFromReceiptStatus
 	ErrInvalidReceiptStatus = errors.New("unknown receipt status")
+
+	// ErrTxTypeNotSupported is returned if a transaction is not supported in the
+	// current network configuration.
+	ErrTxTypeNotSupported = types.ErrTxTypeNotSupported
 
 	// ErrVMDefault is returned if status of receipt is ReceiptStatusErrDefault from GetVMerrFromReceiptStatus
 	ErrVMDefault = errors.New("VM error occurs while running smart contract")

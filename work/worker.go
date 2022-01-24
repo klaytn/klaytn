@@ -727,6 +727,11 @@ CommitTransactionLoop:
 			// NOTE-Klaytn Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
 
+		case blockchain.ErrTxTypeNotSupported:
+			// Pop the unsupported transaction without shifting in the next from the account
+			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
+			txs.Pop()
+
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
