@@ -175,8 +175,9 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 		}
 
 		if len(addresses) == 1 {
-			if common.IsHexAddress(val.(string)) {
-				x = common.HexToAddress(val.(string))
+			str := strings.Trim(val.(string), " ")
+			if common.IsHexAddress(str) {
+				x = common.HexToAddress(str)
 				return x
 			} else {
 				return val
@@ -186,6 +187,7 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 		if len(addresses) >= 2 {
 			var nodeAddresses []common.Address
 			for _, str := range addresses {
+				str = strings.Trim(str, " ")
 				if common.IsHexAddress(str) {
 					nodeAddresses = append(nodeAddresses, common.HexToAddress(str))
 				} else {
