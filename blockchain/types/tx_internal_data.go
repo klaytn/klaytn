@@ -43,7 +43,7 @@ const (
 	//   <base type>, <fee-delegated type>, and <fee-delegated type with a fee ratio>
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
-	TxTypeLegacyTransaction, _, _ TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
+	TxTypeLegacyTransaction, TxTypeAccessList, _ TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
 	TxTypeAccountCreation, _, _
@@ -72,6 +72,7 @@ const (
 	TxValueKeyFeePayer
 	TxValueKeyFeeRatioOfFeePayer
 	TxValueKeyCodeFormat
+	TxValueAccessList
 )
 
 const (
@@ -101,6 +102,7 @@ var (
 	errValueKeyDataMustByteSlice         = errors.New("Data must be a slice of bytes")
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
+	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
 )
 
 func (t TxValueKeyType) String() string {
@@ -471,7 +473,10 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithMap(values)
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatioWithMap(values)
+	case TxTypeAccessList:
+		return newTxInternalDataAccessListWithMap(values)
 	}
+
 
 	return nil, errUndefinedTxType
 }
