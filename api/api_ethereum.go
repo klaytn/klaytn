@@ -19,7 +19,6 @@ package api
 import (
 	"context"
 	"encoding/binary"
-	"github.com/klaytn/klaytn/crypto"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -27,6 +26,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/filters"
