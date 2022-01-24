@@ -44,6 +44,12 @@ func BenchmarkDeriveSha(b *testing.B) {
 	}
 }
 
+func BenchmarkDeriveShaOrig(b *testing.B) {
+	b.Run("1000test-stackTrie", func(b *testing.B) {
+		benchDeriveSha(b, 1000, 4, statedb.DeriveShaOrig{})
+	})
+}
+
 func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha types.IDeriveSha) {
 	// Initialize blockchain
 	start := time.Now()
