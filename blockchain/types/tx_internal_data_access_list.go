@@ -274,7 +274,7 @@ func (t *TxInternalDataAccessList) RecoverPubkey(txhash common.Hash, homestead b
 }
 
 func (t *TxInternalDataAccessList) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return IntrinsicGas(t.Payload, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	return IntrinsicGas(t.Payload, t.AccessList, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
 func (t *TxInternalDataAccessList) SerializeForSign() []interface{} {

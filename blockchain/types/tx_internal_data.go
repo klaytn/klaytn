@@ -519,7 +519,7 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, error) {
+func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r params.Rules) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
 	if contractCreation {
@@ -535,8 +535,17 @@ func IntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, e
 	} else {
 		gasPayloadWithGas, err = IntrinsicGasPayloadLegacy(gas, data)
 	}
+
 	if err != nil {
 		return 0, err
+	}
+
+	// We charge additional gas for the accessList:
+	// ACCESS_LIST_ADDRESS_COST : gas per address in AccessList
+	// ACCESS_LIST_STORAGE_KEY_COST : gas per storage key in AccessList
+	if accessList != nil {
+		gasPayloadWithGas += uint64(len(accessList)) * params.TxAccessListAddressGas
+		gasPayloadWithGas += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
 	}
 
 	return gasPayloadWithGas, nil

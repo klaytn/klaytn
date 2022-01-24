@@ -488,7 +488,7 @@ func (b *SimulatedBackend) callContract(_ context.Context, call klaytn.CallMsg, 
 	from.SetBalance(math.MaxBig256)
 	// Execute the call.
 	nonce := from.Nonce()
-	intrinsicGas, _ := types.IntrinsicGas(call.Data, call.To == nil, b.config.Rules(block.Number()))
+	intrinsicGas, _ := types.IntrinsicGas(call.Data, nil, call.To == nil, b.config.Rules(block.Number()))
 	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, call.GasPrice, call.Data, true, intrinsicGas)
 
 	evmContext := blockchain.NewEVMContext(msg, block.Header(), b.blockchain, nil)
