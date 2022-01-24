@@ -320,3 +320,7 @@ func (b *CNAPIBackend) RPCGasCap() *big.Int {
 func (b *CNAPIBackend) Engine() consensus.Engine {
 	return b.cn.engine
 }
+
+func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
+	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
+}

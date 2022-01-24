@@ -176,6 +176,24 @@ func (mr *MockBackendMockRecorder) EventMux() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventMux", reflect.TypeOf((*MockBackend)(nil).EventMux))
 }
 
+// FeeHistory mocks base method.
+func (m *MockBackend) FeeHistory(arg0 context.Context, arg1 int, arg2 rpc.BlockNumber, arg3 []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FeeHistory", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*big.Int)
+	ret1, _ := ret[1].([][]*big.Int)
+	ret2, _ := ret[2].([]*big.Int)
+	ret3, _ := ret[3].([]float64)
+	ret4, _ := ret[4].(error)
+	return ret0, ret1, ret2, ret3, ret4
+}
+
+// FeeHistory indicates an expected call of FeeHistory.
+func (mr *MockBackendMockRecorder) FeeHistory(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeeHistory", reflect.TypeOf((*MockBackend)(nil).FeeHistory), arg0, arg1, arg2, arg3)
+}
+
 // GetBlockReceipts mocks base method.
 func (m *MockBackend) GetBlockReceipts(arg0 context.Context, arg1 common.Hash) types.Receipts {
 	m.ctrl.T.Helper()
