@@ -555,7 +555,7 @@ func TestVoteValueNilInterface(t *testing.T) {
 		}
 		// Parse vote.Value and make it has appropriate type
 		_, err := gov.ParseVoteValue(gVote)
-		assert.Equal(t, nil, err)
+		assert.Equal(t, ErrValueTypeMismatch, err)
 	}
 
 	{
@@ -567,7 +567,7 @@ func TestVoteValueNilInterface(t *testing.T) {
 
 		// Parse vote.Value and make it has appropriate type
 		_, err := gov.ParseVoteValue(gVote)
-		assert.Equal(t, nil, err)
+		assert.Equal(t, ErrValueTypeMismatch, err)
 	}
 }
 

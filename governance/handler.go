@@ -184,7 +184,7 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 		return val
 	}
 
-	if (k == params.AddValidator || k == params.RemoveValidator) && reflect.TypeOf(val) == stringT {
+	if GovernanceItems[k].checkValueType(common.Address{}) && reflect.TypeOf(val) == stringT {
 		addresses := strings.Split(val.(string), ",")
 
 		if len(addresses) == 0 {
@@ -192,26 +192,24 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 		}
 
 		if len(addresses) == 1 {
-			x = common.HexToAddress(val.(string))
-			return x
-		}
-
-		var nodeAddresses []common.Address
-		for _, str := range addresses {
-			if common.IsHexAddress(str) {
-				nodeAddresses = append(nodeAddresses, common.HexToAddress(str))
+			if common.IsHexAddress(val.(string)) {
+				x = common.HexToAddress(val.(string))
+				return x
 			} else {
 				return val
 			}
 		}
-		x = nodeAddresses
-		return x
-	}
 
-	// address comes as a form of string from JS console
-	if GovernanceItems[k].checkValueType(common.Address{}) && reflect.TypeOf(val) == stringT {
-		if common.IsHexAddress(val.(string)) {
-			x = common.HexToAddress(val.(string))
+		if len(addresses) >= 2 {
+			var nodeAddresses []common.Address
+			for _, str := range addresses {
+				if common.IsHexAddress(str) {
+					nodeAddresses = append(nodeAddresses, common.HexToAddress(str))
+				} else {
+					return val
+				}
+			}
+			x = nodeAddresses
 			return x
 		}
 	}
