@@ -34,9 +34,9 @@ __auto_restart_daemon_pid_run() {
     if [ ! -f $auto_restart_daemon_pidfile ]; then
         return
     fi
-    AUTO_RESTART_DAEMON_PID_NUM=$(eval "cat $auto_restart_daemon_pidfile")
+    AUTO_RESTART_DAEMON_PID_NUM=$(cat $auto_restart_daemon_pidfile)
     if [[ ! -z "$AUTO_RESTART_DAEMON_PID_NUM" ]]; then
-        export auto_restart_daemon_pid=$(eval "ps -p $AUTO_RESTART_DAEMON_PID_NUM -o pid=")
+        export auto_restart_daemon_pid=$(ps -p $AUTO_RESTART_DAEMON_PID_NUM -o pid=)
     fi
 }
 #------------------------Related Auto restart daemon functions-----------------------------
@@ -60,7 +60,7 @@ __auto_restart_daemon() {
             backOffTime=$(echo $backOffTime $coeff | awk '{printf "%.1f\n",$1*$2}')
 
             echo "INFO[`date`] backOffTime = ${backOffTime}, Restarted node pid = ${PID_NUM}"
-            PID_NUM=$(eval "cat $pidfile")
+            PID_NUM=$(cat $pidfile)
             echo ""
         fi
     done
