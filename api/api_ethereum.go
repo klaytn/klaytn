@@ -50,41 +50,6 @@ const (
 	DummyGasLimit uint64 = 999999999
 )
 
-// EthExecutionResult includes all output after executing given evm
-// message no matter the execution itself is successful or not.
-type EthExecutionResult struct {
-	UsedGas    uint64 // Total used gas but include the refunded gas
-	Err        error  // Any error encountered during the execution
-	ReturnData []byte // Returned data from evm(function result or data supplied with revert opcode)
-}
-
-// Unwrap returns the internal evm error which allows us for further
-// analysis outside.
-func (result *EthExecutionResult) Unwrap() error {
-	return result.Err
-}
-
-// Failed returns the indicator whether the execution is successful or not
-func (result *EthExecutionResult) Failed() bool { return result.Err != nil }
-
-// Return is a helper function to help caller distinguish between revert reason
-// and function return. Return returns the data after execution if no error occurs.
-func (result *EthExecutionResult) Return() []byte {
-	if result.Err != nil {
-		return nil
-	}
-	return common.CopyBytes(result.ReturnData)
-}
-
-// Revert returns the concrete revert reason if the execution is aborted by `REVERT`
-// opcode. Note the reason can be nil if no data supplied with revert opcode.
-func (result *EthExecutionResult) Revert() []byte {
-	if result.Err != vm.ErrExecutionReverted {
-		return nil
-	}
-	return common.CopyBytes(result.ReturnData)
-}
-
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
 // TODO-Klaytn: Removed unused variable
 type EthereumAPI struct {
@@ -562,11 +527,12 @@ func (diff *EthStateOverride) Apply(state *state.StateDB) error {
 // Note, this function doesn't make and changes in the state/blockchain and is
 // useful to execute and retrieve values.
 func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Bytes, error) {
-	result, err := EthDoCall(ctx, api.publicBlockChainAPI.b, args, blockNrOrHash, overrides, localTxExecutionTime, api.publicBlockChainAPI.b.RPCGasCap().Uint64())
-	if err != nil {
-		return nil, err
+	gasCap := uint64(0)
+	if rpcGasCap := api.publicBlockChainAPI.b.RPCGasCap(); rpcGasCap != nil {
+		gasCap = rpcGasCap.Uint64()
 	}
-	return result.Return(), result.Err
+	result, _, err := EthDoCall(ctx, api.publicBlockChainAPI.b, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
+	return (hexutil.Bytes)(result), err
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
@@ -576,7 +542,11 @@ func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs
 	if blockNrOrHash != nil {
 		bNrOrHash = *blockNrOrHash
 	}
-	return EthDoEstimateGas(ctx, api.publicBlockChainAPI.b, args, bNrOrHash, api.publicBlockChainAPI.b.RPCGasCap().Uint64())
+	gasCap := uint64(0)
+	if rpcGasCap := api.publicBlockChainAPI.b.RPCGasCap(); rpcGasCap != nil {
+		gasCap = rpcGasCap.Uint64()
+	}
+	return EthDoEstimateGas(ctx, api.publicBlockChainAPI.b, args, bNrOrHash, gasCap)
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
@@ -824,7 +794,11 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 			AccessList:           args.AccessList,
 		}
 		pendingBlockNr := rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
-		estimated, err := EthDoEstimateGas(ctx, b, callArgs, pendingBlockNr, b.RPCGasCap().Uint64())
+		gasCap := uint64(0)
+		if rpcGasCap := b.RPCGasCap(); rpcGasCap != nil {
+			gasCap = rpcGasCap.Uint64()
+		}
+		estimated, err := EthDoEstimateGas(ctx, b, callArgs, pendingBlockNr, gasCap)
 		if err != nil {
 			return err
 		}
@@ -853,7 +827,8 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	if args.Gas != nil && uint64(*args.Gas) >= params.TxGas {
 		hi = uint64(*args.Gas)
 	} else {
-		// There is no actual gas limit in Klaytn.
+		// Ethereum set hi as gas ceiling of the block but,
+		// there is no actual gas limit in Klaytn, so we set it as params.UpperGasLimit.
 		hi = params.UpperGasLimit
 	}
 	// Normalize the max fee per gas the call is willing to spend.
@@ -902,26 +877,20 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	cap = hi
 
 	// Create a helper to check if a gas allowance results in an executable transaction
-	executable := func(gas uint64) (bool, *EthExecutionResult, error) {
+	executable := func(gas uint64) (bool, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
-
-		result, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
+		_, _, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
 		if err != nil {
-			return true, nil, err
+			return false, err
 		}
-		return result.Failed(), result, nil
+		return true, nil
 	}
+	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
-		failed, _, err := executable(mid)
+		isExecutable, _ := executable(mid)
 
-		// If the error is not nil(consensus error), it means the provided message
-		// call or transaction will never be accepted no matter how much gas it is
-		// assigned. Return the error directly, don't struggle anymore.
-		if err != nil {
-			return 0, err
-		}
-		if failed {
+		if !isExecutable {
 			lo = mid
 		} else {
 			hi = mid
@@ -929,11 +898,11 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	}
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
-		failed, _, err := executable(hi)
+		isExecutable, err := executable(hi)
 		if err != nil {
 			return 0, err
 		}
-		if failed {
+		if !isExecutable {
 			return 0, fmt.Errorf("gas required exceeds allowance or always failing transaction")
 		}
 	}
@@ -942,6 +911,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 
 // ToMessage change EthTransactionArgs to types.Transaction in Klaytn.
 func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error) {
+	// Reject invalid combinations of pre- and post-1559 fee styles
 	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
 		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
 	}
@@ -966,6 +936,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		gasTipCap *big.Int
 	)
 	if baseFee == nil {
+		// If there's no basefee, then it must be a non-1559 execution
 		gasPrice = new(big.Int)
 		if args.GasPrice != nil {
 			gasPrice = args.GasPrice.ToInt()
@@ -999,7 +970,8 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		value = args.Value.ToInt()
 	}
 	data := args.data()
-	// Klaytn does not support accessList yet
+
+	// TODO-Klaytn: Klaytn does not support accessList yet.
 	// var accessList AccessList
 	// if args.AccessList != nil {
 	//	 accessList = *args.AccessList
@@ -1148,15 +1120,15 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 	return result, nil
 }
 
-func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) (*EthExecutionResult, error) {
+func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) ([]byte, uint64, error) {
 	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	st, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if st == nil || err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if err := overrides.Apply(st); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// Setup context so it may be cancelled the call has completed
@@ -1175,15 +1147,15 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
 	intrinsicGas, err := types.IntrinsicGas(args.data(), args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	msg, err := args.ToMessage(globalGasCap, fixedBaseFee, intrinsicGas)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	evm, vmError, err := b.GetEVM(ctx, msg, st, header, vm.Config{})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -1193,26 +1165,21 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	}()
 
 	// Execute the message.
-	ret, gas, kerr := blockchain.ApplyMessage(evm, msg)
-	result := &EthExecutionResult{
-		UsedGas:    gas,
-		Err:        kerr.ErrTxInvalid,
-		ReturnData: ret,
-	}
+	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
 	err = kerr.ErrTxInvalid
 	if err := vmError(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	// If the timer caused an abort, return an appropriate error message
 	if evm.Cancelled() {
-		return nil, fmt.Errorf("execution aborted (timeout = %v)", timeout)
+		return nil, 0, fmt.Errorf("execution aborted (timeout = %v)", timeout)
 	}
 
 	if err == nil {
 		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
 	}
 	if err != nil {
-		return result, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
+		return nil, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
 	}
-	return result, nil
+	return res, gas, nil
 }
