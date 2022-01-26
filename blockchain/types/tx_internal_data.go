@@ -74,9 +74,11 @@ const (
 	TxValueKeyCodeFormat
 )
 
+type TxTypeMask uint8
+
 const (
-	TxFeeDelegationBitMask          uint8 = 1
-	TxFeeDelegationWithRatioBitMask uint8 = 2
+	TxFeeDelegationBitMask          TxTypeMask = 1
+	TxFeeDelegationWithRatioBitMask TxTypeMask = 2
 )
 
 var (
@@ -212,11 +214,11 @@ func (t TxType) IsLegacyTransaction() bool {
 }
 
 func (t TxType) IsFeeDelegatedTransaction() bool {
-	return (uint8(t) & (TxFeeDelegationBitMask | TxFeeDelegationWithRatioBitMask)) != 0x0
+	return (TxTypeMask(t) & (TxFeeDelegationBitMask | TxFeeDelegationWithRatioBitMask)) != 0x0
 }
 
 func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
-	return (uint8(t) & TxFeeDelegationWithRatioBitMask) != 0x0
+	return (TxTypeMask(t) & TxFeeDelegationWithRatioBitMask) != 0x0
 }
 
 func (t TxType) IsChainDataAnchoring() bool {
