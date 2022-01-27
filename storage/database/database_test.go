@@ -101,10 +101,12 @@ var test_values = []string{"a", "1251", "\x00123\x00"}
 //var test_values = []string{"", "a", "1251", "\x00123\x00"} original test_values; modified since badgerDB can't store empty key
 
 // TODO-Klaytn-Database Need to add DynamoDB to the below list.
-var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
+var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB}
+
+//var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB} if want to include the dynamo test, use this line
 
 // TestDatabase_PutGet tests the basic put and get operations.
-func SampleTestDatabase_PutGet(t *testing.T) {
+func TestDatabase_PutGet(t *testing.T) {
 	for _, dbCreateFn := range testDatabases {
 		db, remove := dbCreateFn()
 		defer remove()
@@ -113,7 +115,7 @@ func SampleTestDatabase_PutGet(t *testing.T) {
 }
 
 // TestDatabase_ParallelPutGet tests the parallel put and get operations.
-func SampleTestDatabase_ParallelPutGet(t *testing.T) {
+func TestDatabase_ParallelPutGet(t *testing.T) {
 	for _, dbCreateFn := range testDatabases {
 		db, remove := dbCreateFn()
 		defer remove()
@@ -123,7 +125,7 @@ func SampleTestDatabase_ParallelPutGet(t *testing.T) {
 
 // TestDatabase_NotFoundErr checks if an empty database returns
 // dataNotFoundErr for the given  random key.
-func SampleTestDatabase_NotFoundErr(t *testing.T) {
+func TestDatabase_NotFoundErr(t *testing.T) {
 	for _, dbCreateFn := range testDatabases {
 		db, remove := dbCreateFn()
 		defer remove()
@@ -135,7 +137,7 @@ func SampleTestDatabase_NotFoundErr(t *testing.T) {
 }
 
 // TestDatabase_NilValue checks if all database write/read nil value in the same way.
-func SampleTestDatabase_NilValue(t *testing.T) {
+func TestDatabase_NilValue(t *testing.T) {
 	for _, dbCreateFn := range testDatabases {
 		db, remove := dbCreateFn()
 		defer remove()
