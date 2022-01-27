@@ -266,12 +266,14 @@ func (dl *diskLayer) proveRange(stats *generatorStats, root common.Hash, prefix 
 	}
 	// Verify the snapshot segment with range prover, ensure that all flat states
 	// in this range correspond to merkle trie.
-	cont, err := statedb.VerifyRangeProof(root, origin, last, keys, vals, proof)
+	// TODO-Klaytn-Snapshot this comment has to be uncommented after VerifyRangeProof implementation
+	//cont, err := statedb.VerifyRangeProof(root, origin, last, keys, vals, proof)
 	return &proofResult{
 			keys:     keys,
 			vals:     vals,
 			diskMore: diskMore,
-			trieMore: cont,
+			// TODO-Klaytn-Snapshot this comment has to be uncommented after VerifyRangeProof implementation
+			//trieMore: cont,
 			proofErr: err,
 			tr:       tr},
 		nil
