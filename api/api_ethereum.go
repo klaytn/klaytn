@@ -844,20 +844,20 @@ type EthTransactionArgs struct {
 }
 
 // from retrieves the transaction sender address.
-func (arg *EthTransactionArgs) from() common.Address {
-	if arg.From == nil {
+func (args *EthTransactionArgs) from() common.Address {
+	if args.From == nil {
 		return common.Address{}
 	}
-	return *arg.From
+	return *args.From
 }
 
 // data retrieves the transaction calldata. Input field is preferred.
-func (arg *EthTransactionArgs) data() []byte {
-	if arg.Input != nil {
-		return *arg.Input
+func (args *EthTransactionArgs) data() []byte {
+	if args.Input != nil {
+		return *args.Input
 	}
-	if arg.Data != nil {
-		return *arg.Data
+	if args.Data != nil {
+		return *args.Data
 	}
 	return nil
 }
@@ -969,103 +969,6 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 		args.ChainID = id
 	}
 	return nil
-}
-
-func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
-	// Binary search the gas requirement, as it may be higher than the amount used
-	var (
-		lo  uint64 = params.TxGas - 1
-		hi  uint64
-		cap uint64
-	)
-	// Use zero address if sender unspecified.
-	if args.From == nil {
-		args.From = new(common.Address)
-	}
-	// Determine the highest gas limit can be used during the estimation.
-	if args.Gas != nil && uint64(*args.Gas) >= params.TxGas {
-		hi = uint64(*args.Gas)
-	} else {
-		// Ethereum set hi as gas ceiling of the block but,
-		// there is no actual gas limit in Klaytn, so we set it as params.UpperGasLimit.
-		hi = params.UpperGasLimit
-	}
-	// Normalize the max fee per gas the call is willing to spend.
-	var feeCap *big.Int
-	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
-		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-	} else if args.GasPrice != nil {
-		feeCap = args.GasPrice.ToInt()
-	} else if args.MaxFeePerGas != nil {
-		feeCap = args.MaxFeePerGas.ToInt()
-	} else {
-		feeCap = common.Big0
-	}
-	// recap the highest gas limit with account's available balance.
-	if feeCap.BitLen() != 0 {
-		state, _, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
-		if err != nil {
-			return 0, err
-		}
-		balance := state.GetBalance(*args.From) // from can't be nil
-		available := new(big.Int).Set(balance)
-		if args.Value != nil {
-			if args.Value.ToInt().Cmp(available) >= 0 {
-				return 0, errors.New("insufficient funds for transfer")
-			}
-			available.Sub(available, args.Value.ToInt())
-		}
-		allowance := new(big.Int).Div(available, feeCap)
-
-		// If the allowance is larger than maximum uint64, skip checking
-		if allowance.IsUint64() && hi > allowance.Uint64() {
-			transfer := args.Value
-			if transfer == nil {
-				transfer = new(hexutil.Big)
-			}
-			logger.Warn("Gas estimation capped by limited funds", "original", hi, "balance", balance,
-				"sent", transfer.ToInt(), "maxFeePerGas", feeCap, "fundable", allowance)
-			hi = allowance.Uint64()
-		}
-	}
-	// Recap the highest gas allowance with specified gascap.
-	if gasCap != 0 && hi > gasCap {
-		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
-		hi = gasCap
-	}
-	cap = hi
-
-	// Create a helper to check if a gas allowance results in an executable transaction
-	executable := func(gas uint64) (bool, error) {
-		args.Gas = (*hexutil.Uint64)(&gas)
-		_, _, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
-		if err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-	// Execute the binary search and hone in on an executable gas limit
-	for lo+1 < hi {
-		mid := (hi + lo) / 2
-		isExecutable, _ := executable(mid)
-
-		if !isExecutable {
-			lo = mid
-		} else {
-			hi = mid
-		}
-	}
-	// Reject the transaction as invalid if it still fails at the highest allowance
-	if hi == cap {
-		isExecutable, err := executable(hi)
-		if err != nil {
-			return 0, err
-		}
-		if !isExecutable {
-			return 0, fmt.Errorf("gas required exceeds allowance or always failing transaction")
-		}
-	}
-	return hexutil.Uint64(hi), nil
 }
 
 // ToMessage change EthTransactionArgs to types.Transaction in Klaytn.
@@ -1354,4 +1257,101 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 		return nil, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
 	}
 	return res, gas, nil
+}
+
+func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
+	// Binary search the gas requirement, as it may be higher than the amount used
+	var (
+		lo  uint64 = params.TxGas - 1
+		hi  uint64
+		cap uint64
+	)
+	// Use zero address if sender unspecified.
+	if args.From == nil {
+		args.From = new(common.Address)
+	}
+	// Determine the highest gas limit can be used during the estimation.
+	if args.Gas != nil && uint64(*args.Gas) >= params.TxGas {
+		hi = uint64(*args.Gas)
+	} else {
+		// Ethereum set hi as gas ceiling of the block but,
+		// there is no actual gas limit in Klaytn, so we set it as params.UpperGasLimit.
+		hi = params.UpperGasLimit
+	}
+	// Normalize the max fee per gas the call is willing to spend.
+	var feeCap *big.Int
+	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
+		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	} else if args.GasPrice != nil {
+		feeCap = args.GasPrice.ToInt()
+	} else if args.MaxFeePerGas != nil {
+		feeCap = args.MaxFeePerGas.ToInt()
+	} else {
+		feeCap = common.Big0
+	}
+	// recap the highest gas limit with account's available balance.
+	if feeCap.BitLen() != 0 {
+		state, _, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+		if err != nil {
+			return 0, err
+		}
+		balance := state.GetBalance(*args.From) // from can't be nil
+		available := new(big.Int).Set(balance)
+		if args.Value != nil {
+			if args.Value.ToInt().Cmp(available) >= 0 {
+				return 0, errors.New("insufficient funds for transfer")
+			}
+			available.Sub(available, args.Value.ToInt())
+		}
+		allowance := new(big.Int).Div(available, feeCap)
+
+		// If the allowance is largser than maximum uint64, skip checking
+		if allowance.IsUint64() && hi > allowance.Uint64() {
+			transfer := args.Value
+			if transfer == nil {
+				transfer = new(hexutil.Big)
+			}
+			logger.Warn("Gas estimation capped by limited funds", "original", hi, "balance", balance,
+				"sent", transfer.ToInt(), "maxFeePerGas", feeCap, "fundable", allowance)
+			hi = allowance.Uint64()
+		}
+	}
+	// Recap the highest gas allowance with specified gascap.
+	if gasCap != 0 && hi > gasCap {
+		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
+		hi = gasCap
+	}
+	cap = hi
+
+	// Create a helper to check if a gas allowance results in an executable transaction
+	executable := func(gas uint64) (bool, error) {
+		args.Gas = (*hexutil.Uint64)(&gas)
+		_, _, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	// Execute the binary search and hone in on an executable gas limit
+	for lo+1 < hi {
+		mid := (hi + lo) / 2
+		isExecutable, _ := executable(mid)
+
+		if !isExecutable {
+			lo = mid
+		} else {
+			hi = mid
+		}
+	}
+	// Reject the transaction as invalid if it still fails at the highest allowance
+	if hi == cap {
+		isExecutable, err := executable(hi)
+		if err != nil {
+			return 0, err
+		}
+		if !isExecutable {
+			return 0, fmt.Errorf("gas required exceeds allowance or always failing transaction")
+		}
+	}
+	return hexutil.Uint64(hi), nil
 }
