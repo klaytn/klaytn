@@ -873,7 +873,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.BaseFee.
 	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
 
-	// If user specifies both maxPriorityfee and maxFee, then we do not
+	// If user specifies both maxPriorityFee and maxFee, then we do not
 	// need to consult the chain for defaults. It's definitely a London tx.
 	if args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil {
 		if b.ChainConfig().IsLondon(head.Number) && args.GasPrice == nil {
@@ -921,7 +921,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	} else {
 		// Both maxPriorityFee and maxFee set by caller. Sanity-check their internal relation
 		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
-			return errors.New("maxFeePerGas or maxPriorityFeePerGas specified but london is not active yet")
+			return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
 		}
 	}
 	if args.Value == nil {
