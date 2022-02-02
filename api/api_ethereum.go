@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -41,6 +42,15 @@ const (
 	// DummyGasLimit exists for supporting Ethereum compatible data structure.
 	// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
 	DummyGasLimit uint64 = 999999999
+	// ZeroHashrate exists for supporting Ethereum compatible data structure.
+	// There is no POW mining mechanism in Klaytn.
+	ZeroHashrate uint64 = 0
+	// ZeroUncleCount is always zero because there is no uncle blocks in Klaytn.
+	ZeroUncleCount uint = 0
+)
+
+var (
+	errNoMiningWork = errors.New("no mining work available yet")
 )
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
@@ -53,6 +63,7 @@ type EthereumAPI struct {
 	publicBlockChainAPI      *PublicBlockChainAPI
 	publicTransactionPoolAPI *PublicTransactionPoolAPI
 	publicAccountAPI         *PublicAccountAPI
+	publicGovernanceAPI      *governance.PublicGovernanceAPI
 }
 
 // NewEthereumAPI creates a new ethereum API.
@@ -60,7 +71,7 @@ type EthereumAPI struct {
 // Therefore, it is necessary to use APIs defined in two different packages(cn and api),
 // so those apis will be defined through a setter.
 func NewEthereumAPI() *EthereumAPI {
-	return &EthereumAPI{nil, nil, nil, nil, nil, nil}
+	return &EthereumAPI{nil, nil, nil, nil, nil, nil, nil}
 }
 
 // SetPublicFilterAPI sets publicFilterAPI
@@ -93,40 +104,37 @@ func (api *EthereumAPI) SetPublicAccountAPI(publicAccountAPI *PublicAccountAPI) 
 	api.publicAccountAPI = publicAccountAPI
 }
 
-// Etherbase is the address that mining rewards will be send to.
-func (api *EthereumAPI) Etherbase() (common.Address, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return common.StringToAddress("0x0"), nil
+// SetPublicGovernanceAPI sets publicGovernanceAPI
+func (api *EthereumAPI) SetPublicGovernanceAPI(publicGovernanceAPI *governance.PublicGovernanceAPI) {
+	api.publicGovernanceAPI = publicGovernanceAPI
 }
 
-// Coinbase is the address that mining rewards will be send to (alias for Etherbase).
+// Etherbase is the address of operating node.
+// Unlike Ethereum, it only returns the node address because Klaytn does not have a POW mechanism.
+func (api *EthereumAPI) Etherbase() (common.Address, error) {
+	return api.publicGovernanceAPI.NodeAddress(), nil
+}
+
+// Coinbase is the address of operating node (alias for Etherbase).
 func (api *EthereumAPI) Coinbase() (common.Address, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return common.StringToAddress("0x0"), nil
+	return api.Etherbase()
 }
 
 // Hashrate returns the POW hashrate.
+// Unlike Ethereum, it always returns ZeroHashrate because Klaytn does not have a POW mechanism.
 func (api *EthereumAPI) Hashrate() hexutil.Uint64 {
-	// TODO-Klaytn: Not implemented yet.
-	return 0
+	return hexutil.Uint64(ZeroHashrate)
 }
 
 // Mining returns an indication if this node is currently mining.
+// Unlike Ethereum, it always returns false because Klaytn does not have a POW mechanism,
 func (api *EthereumAPI) Mining() bool {
-	// TODO-Klaytn: Not implemented yet.
 	return false
 }
 
-// GetWork returns a work package for external miner.
-//
-// The work package consists of 3 strings:
-//   result[0] - 32 bytes hex encoded current block header pow-hash
-//   result[1] - 32 bytes hex encoded seed hash used for DAG
-//   result[2] - 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
-//   result[3] - hex encoded block number
+// GetWork returns an errNoMiningWork because klaytn does not have a POW mechanism.
 func (api *EthereumAPI) GetWork() ([4]string, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return [4]string{}, nil
+	return [4]string{}, errNoMiningWork
 }
 
 // A BlockNonce is a 64-bit hash which proves (combined with the
@@ -156,29 +164,19 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 	return hexutil.UnmarshalFixedText("BlockNonce", input, n[:])
 }
 
-// SubmitWork can be used by external miner to submit their POW solution.
-// It returns an indication if the work was accepted.
-// Note either an invalid solution, a stale work a non-existent work will return false.
+// SubmitWork returns false because klaytn does not have a POW mechanism.
 func (api *EthereumAPI) SubmitWork(nonce BlockNonce, hash, digest common.Hash) bool {
-	// TODO-Klaytn: Not implemented yet.
 	return false
 }
 
-// SubmitHashrate can be used for remote miners to submit their hash rate.
-// This enables the node to report the combined hash rate of all miners
-// which submit work through this node.
-//
-// It accepts the miner hash rate and an identifier which must be unique
-// between nodes.
+// SubmitHashrate returns false because klaytn does not have a POW mechanism.
 func (api *EthereumAPI) SubmitHashrate(rate hexutil.Uint64, id common.Hash) bool {
-	// TODO-Klaytn: Not implemented yet.
 	return false
 }
 
-// GetHashrate returns the current hashrate for local CPU miner and remote miner.
+// GetHashrate returns ZeroHashrate because klaytn does not have a POW mechanism.
 func (api *EthereumAPI) GetHashrate() uint64 {
-	// TODO-Klaytn: Not implemented yet.
-	return 0
+	return ZeroHashrate
 }
 
 // NewPendingTransactionFilter creates a filter that fetches pending transaction hashes
@@ -418,30 +416,26 @@ func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fu
 	return nil, nil
 }
 
-// GetUncleByBlockNumberAndIndex returns the uncle block for the given block hash and index. When fullTx is true
-// all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
+// GetUncleByBlockNumberAndIndex returns nil because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
 	return nil, nil
 }
 
-// GetUncleByBlockHashAndIndex returns the uncle block for the given block hash and index. When fullTx is true
-// all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
+// GetUncleByBlockHashAndIndex returns nil because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
 	return nil, nil
 }
 
-// GetUncleCountByBlockNumber returns number of uncles in the block for the given block number.
+// GetUncleCountByBlockNumber returns 0 because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	uncleCount := hexutil.Uint(ZeroUncleCount)
+	return &uncleCount
 }
 
-// GetUncleCountByBlockHash returns number of uncles in the block for the given block hash.
+// GetUncleCountByBlockHash returns 0 because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	uncleCount := hexutil.Uint(ZeroUncleCount)
+	return &uncleCount
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number.
