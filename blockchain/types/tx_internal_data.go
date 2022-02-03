@@ -226,11 +226,11 @@ func (t TxType) IsLegacyTransaction() bool {
 }
 
 func (t TxType) IsFeeDelegatedTransaction() bool {
-	return (TxTypeMask(t) & (TxFeeDelegationBitMask | TxFeeDelegationWithRatioBitMask)) != 0x0 && !t.IsEthTypedTransaction()
+	return (TxTypeMask(t)&(TxFeeDelegationBitMask|TxFeeDelegationWithRatioBitMask)) != 0x0 && !t.IsEthTypedTransaction()
 }
 
 func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
-	return (TxTypeMask(t) & TxFeeDelegationWithRatioBitMask) != 0x0 && !t.IsEthTypedTransaction()
+	return (TxTypeMask(t)&TxFeeDelegationWithRatioBitMask) != 0x0 && !t.IsEthTypedTransaction()
 }
 
 func (t TxType) IsEthTypedTransaction() bool {
