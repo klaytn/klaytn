@@ -421,6 +421,8 @@ func TestValidationInvalidSig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -504,7 +506,7 @@ func TestValidationInvalidSig(t *testing.T) {
 
 // testInvalidSenderSig generates invalid txs signed by an invalid sender.
 func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.Signer) (*types.Transaction, error) {
-	if !txType.IsLegacyTransaction() {
+	if !txType.IsLegacyTransaction() && !txType.IsEthTypedTransaction() {
 		newAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 		assert.Equal(t, nil, err)
 
