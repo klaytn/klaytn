@@ -61,7 +61,7 @@ type TxInternalDataAccessList struct {
 	AccountNonce uint64
 	Price        *big.Int
 	GasLimit	 uint64
-	Recipient    *common.Address // nil means contract creation.
+	Recipient    *common.Address `rlp:"nil"`// nil means contract creation.
 	Amount       *big.Int
 	Payload      []byte
 	AccessList   AccessList
@@ -87,6 +87,7 @@ type TxInternalDataAccessListJSON struct {
 	TxSignatures TxSignaturesJSON `json:"signatures"`
 	AccessList	 AccessList       `json:"accessList"`
 	Hash         *common.Hash     `json:"hash"`
+	ChainID      *hexutil.Big      `json:"chainId"`
 }
 
 func newEmptyTxInternalDataAccessList() *TxInternalDataAccessList {
@@ -105,10 +106,11 @@ func newTxInternalDataAccessList() *TxInternalDataAccessList {
 		V:            new(big.Int),
 		R:            new(big.Int),
 		S:            new(big.Int),
+		ChainID:      new(big.Int),
 	}
 }
 
-func newTxInternalDataAccessListWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList AccessList) *TxInternalDataAccessList{
+func newTxInternalDataAccessListWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList AccessList, chainID *big.Int) *TxInternalDataAccessList{
 	d := newTxInternalDataAccessList()
 
 	d.AccountNonce = nonce
@@ -127,6 +129,10 @@ func newTxInternalDataAccessListWithValues(nonce uint64, to *common.Address, amo
 
 	if accessList != nil {
 		copy(d.AccessList, accessList)
+	}
+
+	if chainID != nil {
+		d.ChainID.Set(chainID)
 	}
 
 	return d
@@ -182,6 +188,13 @@ func newTxInternalDataAccessListWithMap(values map[TxValueKeyType]interface{}) (
 		delete(values, TxValueAccessList)
 	} else {
 		return nil, errValueKeyAccessListInvalid
+	}
+
+	if v, ok:= values[TxValueChainID].(*big.Int); ok {
+		d.ChainID.Set(v)
+		delete(values, TxValueChainID)
+	} else {
+		return nil, errValueKeyChainIDInvalid
 	}
 
 	if len(values) != 0 {
