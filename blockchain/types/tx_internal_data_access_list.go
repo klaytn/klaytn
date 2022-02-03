@@ -14,14 +14,15 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-
 package types
-
 
 import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"reflect"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -31,8 +32,6 @@ import (
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
-	"math/big"
-	"reflect"
 )
 
 //go:generate gencodec -type AccessTuple -out gen_access_tuple.go
@@ -42,8 +41,8 @@ type AccessList []AccessTuple
 
 // AccessTuple is the element type of an access list
 type AccessTuple struct {
-	Address      common.Address
-	StorageKeys  []common.Hash
+	Address     common.Address
+	StorageKeys []common.Hash
 }
 
 // StorageKeys returns the total number of storage keys in the access list.
@@ -60,16 +59,16 @@ type TxInternalDataAccessList struct {
 	ChainID      *big.Int
 	AccountNonce uint64
 	Price        *big.Int
-	GasLimit	 uint64
-	Recipient    *common.Address `rlp:"nil"`// nil means contract creation.
+	GasLimit     uint64
+	Recipient    *common.Address `rlp:"nil"` // nil means contract creation.
 	Amount       *big.Int
 	Payload      []byte
 	AccessList   AccessList
 
 	// Signature values
-	V            *big.Int
-	R            *big.Int
-	S            *big.Int
+	V *big.Int
+	R *big.Int
+	S *big.Int
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -81,13 +80,13 @@ type TxInternalDataAccessListJSON struct {
 	AccountNonce hexutil.Uint64   `json:"nonce"`
 	Price        *hexutil.Big     `json:"gasPrice"`
 	GasLimit     hexutil.Uint64   `json:"gas"`
-	Recipient    *common.Address   `json:"to"`
+	Recipient    *common.Address  `json:"to"`
 	Amount       *hexutil.Big     `json:"value"`
 	Payload      hexutil.Bytes    `json:"input"`
 	TxSignatures TxSignaturesJSON `json:"signatures"`
-	AccessList	 AccessList       `json:"accessList"`
+	AccessList   AccessList       `json:"accessList"`
 	Hash         *common.Hash     `json:"hash"`
-	ChainID      *hexutil.Big      `json:"chainId"`
+	ChainID      *hexutil.Big     `json:"chainId"`
 }
 
 func newEmptyTxInternalDataAccessList() *TxInternalDataAccessList {
@@ -110,7 +109,7 @@ func newTxInternalDataAccessList() *TxInternalDataAccessList {
 	}
 }
 
-func newTxInternalDataAccessListWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList AccessList, chainID *big.Int) *TxInternalDataAccessList{
+func newTxInternalDataAccessListWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList AccessList, chainID *big.Int) *TxInternalDataAccessList {
 	d := newTxInternalDataAccessList()
 
 	d.AccountNonce = nonce
@@ -183,14 +182,14 @@ func newTxInternalDataAccessListWithMap(values map[TxValueKeyType]interface{}) (
 		return nil, errValueKeyGasPriceMustBigInt
 	}
 
-	if v, ok:= values[TxValueAccessList].(AccessList); ok {
+	if v, ok := values[TxValueAccessList].(AccessList); ok {
 		copy(d.AccessList, v)
 		delete(values, TxValueAccessList)
 	} else {
 		return nil, errValueKeyAccessListInvalid
 	}
 
-	if v, ok:= values[TxValueChainID].(*big.Int); ok {
+	if v, ok := values[TxValueChainID].(*big.Int); ok {
 		d.ChainID.Set(v)
 		delete(values, TxValueChainID)
 	} else {

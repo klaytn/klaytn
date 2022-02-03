@@ -234,14 +234,14 @@ func genLegacyTransaction() TxInternalData {
 
 func genAccessListTransaction() TxInternalData {
 	tx, err := NewTxInternalDataWithMap(TxTypeAccessList, map[TxValueKeyType]interface{}{
-		TxValueKeyNonce: nonce,
-		TxValueKeyTo: to,
-		TxValueKeyAmount: amount,
+		TxValueKeyNonce:    nonce,
+		TxValueKeyTo:       to,
+		TxValueKeyAmount:   amount,
 		TxValueKeyGasLimit: gasLimit,
 		TxValueKeyGasPrice: gasPrice,
-		TxValueKeyData: []byte("1234"),
-		TxValueAccessList: accesses,
-		TxValueChainID: big.NewInt(2),
+		TxValueKeyData:     []byte("1234"),
+		TxValueAccessList:  accesses,
+		TxValueChainID:     big.NewInt(2),
 	})
 
 	if err != nil {

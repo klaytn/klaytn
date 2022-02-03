@@ -513,7 +513,6 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-
 	// Check transaction validity
 	block := b.blockchain.CurrentBlock()
 	signer := types.MakeSigner(b.blockchain.Config(), block.Number())

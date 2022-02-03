@@ -247,7 +247,7 @@ type Signer interface {
 	Equal(Signer) bool
 }
 
-type eip2930Signer struct {EIP155Signer}
+type eip2930Signer struct{ EIP155Signer }
 
 // NewEIP2930Signer returns a signer that accepts EIP-2930 access list transactions,
 // EIP-155 replay protected transactions, and legacy transactions.
@@ -344,9 +344,8 @@ func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
 // HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
 // It does not uniquely identify the transaction.
 func (s eip2930Signer) HashFeePayer(tx *Transaction) (common.Hash, error) {
-	 return s.EIP155Signer.HashFeePayer(tx)
+	return s.EIP155Signer.HashFeePayer(tx)
 }
-
 
 // EIP155Transaction implements Signer using the EIP155 rules.
 type EIP155Signer struct {

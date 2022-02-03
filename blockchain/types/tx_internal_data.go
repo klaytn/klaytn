@@ -106,9 +106,9 @@ var (
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
-	errValueKeyChainIDInvalid         = errors.New("ChainID must be a type of AccessList")
+	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of AccessList")
 
-	ErrTxTypeNotSupported                     = errors.New("transaction type not supported")
+	ErrTxTypeNotSupported = errors.New("transaction type not supported")
 )
 
 func (t TxValueKeyType) String() string {
@@ -497,7 +497,6 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 	case TxTypeAccessList:
 		return newTxInternalDataAccessListWithMap(values)
 	}
-
 
 	return nil, errUndefinedTxType
 }

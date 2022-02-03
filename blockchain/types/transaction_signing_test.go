@@ -985,7 +985,7 @@ func testValidateSmartContractDeploy(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, tx,  h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)

@@ -22,6 +22,7 @@ package blockchain
 
 import (
 	"errors"
+
 	"github.com/klaytn/klaytn/blockchain/types"
 )
 
