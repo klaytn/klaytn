@@ -133,6 +133,7 @@ func NewBridgeTxPool(config BridgeTxPoolConfig) *BridgeTxPool {
 	return pool
 }
 
+// Deprecated: This function is deprecated. Use SetLatestSigner instead.
 // SetEIP155Signer set signer of txpool.
 func (pool *BridgeTxPool) SetEIP155Signer(chainID *big.Int) {
 	pool.signer = types.NewEIP155Signer(chainID)

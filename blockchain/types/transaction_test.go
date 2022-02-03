@@ -63,13 +63,13 @@ var (
 	)
 
 	accessListTx = TxInternalDataAccessList{
-		ChainID:  big.NewInt(1),
-		AccountNonce:    3,
-		Recipient:       &testAddr,
-		Amount:    big.NewInt(10),
-		GasLimit:      25000,
-		Price: big.NewInt(1),
-		Payload:     common.FromHex("5544"),
+		ChainID:      big.NewInt(1),
+		AccountNonce: 3,
+		Recipient:    &testAddr,
+		Amount:       big.NewInt(10),
+		GasLimit:     25000,
+		Price:        big.NewInt(1),
+		Payload:      common.FromHex("5544"),
 	}
 
 	emptyEip2718Tx = &Transaction{
@@ -458,7 +458,6 @@ func TestIsFeeDelegation(t *testing.T) {
 	assert.True(t, TxTypeFeeDelegatedAccountUpdateWithRatio.IsFeeDelegatedWithRatioTransaction())
 }
 
-
 // TestTransactionCoding tests serializing/de-serializing to/from rlp and JSON.
 func TestTransactionCoding(t *testing.T) {
 	key, err := crypto.GenerateKey()
@@ -477,49 +476,49 @@ func TestTransactionCoding(t *testing.T) {
 		case 0:
 			// Legacy tx.
 			txData = &TxInternalDataLegacy{
-				AccountNonce:    i,
-				Recipient:       &recipient,
-				GasLimit:      1,
-				Price: big.NewInt(2),
-				Payload:     []byte("abcdef"),
+				AccountNonce: i,
+				Recipient:    &recipient,
+				GasLimit:     1,
+				Price:        big.NewInt(2),
+				Payload:      []byte("abcdef"),
 			}
 		case 1:
 			// Legacy tx contract creation.
 			txData = &TxInternalDataLegacy{
-				AccountNonce:    i,
-				GasLimit:      1,
-				Price: big.NewInt(2),
-				Payload:     []byte("abcdef"),
+				AccountNonce: i,
+				GasLimit:     1,
+				Price:        big.NewInt(2),
+				Payload:      []byte("abcdef"),
 			}
 		case 2:
 			// Tx with non-zero access list.
 			txData = &TxInternalDataAccessList{
-				ChainID:    big.NewInt(1),
-				AccountNonce:      i,
-				Recipient:         &recipient,
-				GasLimit:        123457,
-				Price:   big.NewInt(10),
-				AccessList: accesses,
-				Payload:       []byte("abcdef"),
+				ChainID:      big.NewInt(1),
+				AccountNonce: i,
+				Recipient:    &recipient,
+				GasLimit:     123457,
+				Price:        big.NewInt(10),
+				AccessList:   accesses,
+				Payload:      []byte("abcdef"),
 			}
 		case 3:
 			// Tx with empty access list.
 			txData = &TxInternalDataAccessList{
-				ChainID:  big.NewInt(1),
-				AccountNonce:    i,
-				Recipient:       &recipient,
-				GasLimit:      123457,
-				Price: big.NewInt(10),
-				Payload:     []byte("abcdef"),
+				ChainID:      big.NewInt(1),
+				AccountNonce: i,
+				Recipient:    &recipient,
+				GasLimit:     123457,
+				Price:        big.NewInt(10),
+				Payload:      []byte("abcdef"),
 			}
 		case 4:
 			// Contract creation with access list.
 			txData = &TxInternalDataAccessList{
-				ChainID:    big.NewInt(1),
-				AccountNonce:      i,
-				GasLimit:        123457,
-				Price:   big.NewInt(10),
-				AccessList: accesses,
+				ChainID:      big.NewInt(1),
+				AccountNonce: i,
+				GasLimit:     123457,
+				Price:        big.NewInt(10),
+				AccessList:   accesses,
 			}
 		}
 

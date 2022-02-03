@@ -451,6 +451,16 @@ func (s *PublicTransactionPoolAPI) SignTransactionAsFeePayer(ctx context.Context
 	return &SignTransactionResult{data, feePayerSignedTx}, nil
 }
 
+func getAccountsFromWallets(wallets []accounts.Wallet) map[common.Address]struct{} {
+	accounts := make(map[common.Address]struct{})
+	for _, wallet := range wallets {
+		for _, account := range wallet.Accounts() {
+			accounts[account.Address] = struct{}{}
+		}
+	}
+	return accounts
+}
+
 // PendingTransactions returns the transactions that are in the transaction pool
 // and have a from address that is one of the accounts this node manages.
 func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface{}, error) {
@@ -458,16 +468,10 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface
 	if err != nil {
 		return nil, err
 	}
-	accounts := make(map[common.Address]struct{})
-	for _, wallet := range s.b.AccountManager().Wallets() {
-		for _, account := range wallet.Accounts() {
-			accounts[account.Address] = struct{}{}
-		}
-	}
+	accounts := getAccountsFromWallets(s.b.AccountManager().Wallets())
 	transactions := make([]map[string]interface{}, 0, len(pending))
 	for _, tx := range pending {
-		signer := types.LatestSignerForChainID(tx.ChainId())
-		from, _ := types.Sender(signer, tx)
+		from := getFrom(tx)
 		if _, exists := accounts[from]; exists {
 			transactions = append(transactions, newRPCPendingTransaction(tx))
 		}

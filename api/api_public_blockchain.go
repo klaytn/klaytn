@@ -504,9 +504,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx)
 }
 
-// newRPCTransaction returns a transaction that will serialize to the RPC
-// representation, with the given location metadata set (if available).
-func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
+func getFrom(tx *types.Transaction) common.Address {
 	var from common.Address
 	if tx.IsLegacyTransaction() {
 		signer := types.LatestSignerForChainID(tx.ChainId())
@@ -514,6 +512,13 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	} else {
 		from, _ = tx.From()
 	}
+	return from
+}
+
+// newRPCTransaction returns a transaction that will serialize to the RPC
+// representation, with the given location metadata set (if available).
+func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
+	from := getFrom(tx)
 
 	output := tx.MakeRPCOutput()
 
