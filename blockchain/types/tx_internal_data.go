@@ -43,7 +43,7 @@ const (
 	//   <base type>, <fee-delegated type>, and <fee-delegated type with a fee ratio>
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
-	TxTypeLegacyTransaction, TxTypeFeeDelegatedTransactions, TxTypeFeeDelegatedWithRatioTransactions TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
+	TxTypeLegacyTransaction, _, _ TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
 	TxTypeAccountCreation, _, _
@@ -72,6 +72,13 @@ const (
 	TxValueKeyFeePayer
 	TxValueKeyFeeRatioOfFeePayer
 	TxValueKeyCodeFormat
+)
+
+type TxTypeMask uint8
+
+const (
+	TxFeeDelegationBitMask          TxTypeMask = 1
+	TxFeeDelegationWithRatioBitMask TxTypeMask = 2
 )
 
 var (
@@ -207,11 +214,11 @@ func (t TxType) IsLegacyTransaction() bool {
 }
 
 func (t TxType) IsFeeDelegatedTransaction() bool {
-	return (t & (TxTypeFeeDelegatedTransactions | TxTypeFeeDelegatedWithRatioTransactions)) != 0x0
+	return (TxTypeMask(t) & (TxFeeDelegationBitMask | TxFeeDelegationWithRatioBitMask)) != 0x0
 }
 
 func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
-	return (t & TxTypeFeeDelegatedWithRatioTransactions) != 0x0
+	return (TxTypeMask(t) & TxFeeDelegationWithRatioBitMask) != 0x0
 }
 
 func (t TxType) IsChainDataAnchoring() bool {
