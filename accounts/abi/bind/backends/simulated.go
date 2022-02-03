@@ -513,7 +513,12 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	sender, err := types.Sender(types.LatestSignerForChainID(b.config.ChainID), tx)
+
+	// Check transaction validity
+	block := b.blockchain.CurrentBlock()
+	signer := types.MakeSigner(b.blockchain.Config(), block.Number())
+	sender, err := types.Sender(signer, tx)
+
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))
 	}
@@ -522,7 +527,8 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
 	}
 
-	blocks, _ := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
+	// Include tx in chain.
+	blocks, _ := blockchain.GenerateChain(b.config, block, gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTxWithChain(b.blockchain, tx)
 		}

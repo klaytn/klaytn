@@ -21,6 +21,7 @@
 package types
 
 import (
+	"bytes"
 	"container/heap"
 	"crypto/ecdsa"
 	"encoding/json"
@@ -96,6 +97,14 @@ func NewTransactionWithMap(t TxType, values map[TxValueKeyType]interface{}) (tx 
 	}
 	tx = &Transaction{data: txdata}
 	return tx, retErr
+}
+
+// NewTx creates a new transaction.
+func NewTx(data TxInternalData) *Transaction {
+	tx := new(Transaction)
+	tx.data = data
+
+	return tx
 }
 
 func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
@@ -181,6 +190,15 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, serializer)
 }
 
+// MarshalBinary returns the canonical encoding of the transaction.
+// For legacy transactions, it returns the RLP encoding. For EIP-2718 typed
+// transactions, it returns the type and payload.
+func (tx *Transaction) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+	err := tx.EncodeRLP(&buf)
+	return buf.Bytes(), err
+}
+
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	serializer := newTxInternalDataSerializer()
@@ -195,6 +213,19 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	tx.data = serializer.tx
 	tx.Size()
 
+	return nil
+}
+
+// UnmarshalBinary decodes the canonical encoding of transactions.
+// It supports legacy RLP transactions and EIP2718 typed transactions.
+func (tx *Transaction) UnmarshalBinary(b []byte) error {
+	newTx := &Transaction{}
+	if err := rlp.DecodeBytes(b, newTx); err != nil {
+		return err
+	}
+
+	tx.data = newTx.data
+	tx.Size()
 	return nil
 }
 
@@ -386,7 +417,10 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	v := rlpHash(tx)
+	var v common.Hash
+
+	v = rlpHash(tx)
+
 	tx.hash.Store(v)
 	return v
 }
@@ -456,18 +490,28 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 // WithSignature returns a new transaction with the given signature.
 // This signature needs to be formatted as described in the yellow paper (v+27).
 func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, error) {
-	r, s, v, err := signer.SignatureValues(sig)
+	r, s, v, err := signer.SignatureValues(tx, sig)
 	if err != nil {
 		return nil, err
 	}
 	cpy := &Transaction{data: tx.data}
+
+	if tx.Type().IsEthTypedTransaction() {
+		te, ok := cpy.data.(TxInternalDataEthTyped)
+		if !ok {
+			cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}})
+			return cpy, nil
+		}
+		te.setSignatureValues(signer.ChainID(), v, r, s)
+	}
+
 	cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}})
 	return cpy, nil
 }
 
 // WithFeePayerSignature returns a new transaction with the given fee payer signature.
 func (tx *Transaction) WithFeePayerSignature(signer Signer, sig []byte) (*Transaction, error) {
-	r, s, v, err := signer.SignatureValues(sig)
+	r, s, v, err := signer.SignatureValues(tx, sig)
 	if err != nil {
 		return nil, err
 	}
@@ -492,7 +536,7 @@ func (tx *Transaction) Fee() *big.Int {
 // Sign signs the tx with the given signer and private key.
 func (tx *Transaction) Sign(s Signer, prv *ecdsa.PrivateKey) error {
 	h := s.Hash(tx)
-	sig, err := NewTxSignatureWithValues(s, h, prv)
+	sig, err := NewTxSignatureWithValues(s, tx, h, prv)
 	if err != nil {
 		return err
 	}
@@ -504,7 +548,7 @@ func (tx *Transaction) Sign(s Signer, prv *ecdsa.PrivateKey) error {
 // SignWithKeys signs the tx with the given signer and a slice of private keys.
 func (tx *Transaction) SignWithKeys(s Signer, prv []*ecdsa.PrivateKey) error {
 	h := s.Hash(tx)
-	sig, err := NewTxSignaturesWithValues(s, h, prv)
+	sig, err := NewTxSignaturesWithValues(s, tx, h, prv)
 	if err != nil {
 		return err
 	}
@@ -519,7 +563,7 @@ func (tx *Transaction) SignFeePayer(s Signer, prv *ecdsa.PrivateKey) error {
 	if err != nil {
 		return err
 	}
-	sig, err := NewTxSignatureWithValues(s, h, prv)
+	sig, err := NewTxSignatureWithValues(s, tx, h, prv)
 	if err != nil {
 		return err
 	}
@@ -537,7 +581,7 @@ func (tx *Transaction) SignFeePayerWithKeys(s Signer, prv []*ecdsa.PrivateKey) e
 	if err != nil {
 		return err
 	}
-	sig, err := NewTxSignaturesWithValues(s, h, prv)
+	sig, err := NewTxSignaturesWithValues(s, tx, h, prv)
 	if err != nil {
 		return err
 	}

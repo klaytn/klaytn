@@ -52,28 +52,43 @@ type sigCachePubkey struct {
 	pubkey []*ecdsa.PublicKey
 }
 
-// TODO-Klaytn-RemoveLater Remove the second parameter blockNumber
 // MakeSigner returns a Signer based on the given chain config and block number.
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
-	return NewEIP155Signer(config.ChainID)
+	var signer Signer
+
+	if config.IsLondon(blockNumber) {
+		signer = NewEIP2930Signer(config.ChainID)
+	} else {
+		signer = NewEIP155Signer(config.ChainID)
+	}
+
+	return signer
 }
 
 // LatestSigner returns the 'most permissive' Signer available for the given chain
-// configuration.
+// configuration. Specifically, this enables support of EIP-155 replay protection and
+// EIP-2930 access list transactions when their respective forks are scheduled to occur at
+// any block number in the chain config.
 //
 // Use this in transaction-handling code where the current block number is unknown. If you
 // have the current block number available, use MakeSigner instead.
 func LatestSigner(config *params.ChainConfig) Signer {
+	if config.LondonCompatibleBlock != nil {
+		return NewEIP2930Signer(config.ChainID)
+	}
+
 	return NewEIP155Signer(config.ChainID)
 }
 
-// LatestSignerForChainID returns the 'most permissive' Signer available.
+// LatestSignerForChainID returns the 'most permissive' Signer available. Specifically,
+// this enables support for EIP-155 replay protection and all implemented EIP-2718
+// transaction types if chainID is non-nil.
 //
 // Use this in transaction-handling code where the current block number and fork
 // configuration are unknown. If you have a ChainConfig, use LatestSigner instead.
 // If you have a ChainConfig and know the current block number, use MakeSigner instead.
 func LatestSignerForChainID(chainID *big.Int) Signer {
-	return NewEIP155Signer(chainID)
+	return NewEIP2930Signer(chainID)
 }
 
 // SignTx signs the transaction using the given signer and private key
@@ -83,6 +98,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 	if err != nil {
 		return nil, err
 	}
+
 	return tx.WithSignature(s, sig)
 }
 
@@ -219,14 +235,118 @@ type Signer interface {
 	SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error)
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
-	SignatureValues(sig []byte) (r, s, v *big.Int, err error)
-	// Hash returns the hash to be signed.
+	SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error)
+	// ChainID returns the chain id.
+	ChainID() *big.Int
+	// Hash returns 'signature hash', i.e. the transaction hash that is signed by the
+	// private key. This hash does not uniquely identify the transaction.
 	Hash(tx *Transaction) common.Hash
 	// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
 	HashFeePayer(tx *Transaction) (common.Hash, error)
 	// Equal returns true if the given signer is the same as the receiver.
 	Equal(Signer) bool
 }
+
+type eip2930Signer struct {EIP155Signer}
+
+// NewEIP2930Signer returns a signer that accepts EIP-2930 access list transactions,
+// EIP-155 replay protected transactions, and legacy transactions.
+func NewEIP2930Signer(chainId *big.Int) Signer {
+	return eip2930Signer{NewEIP155Signer(chainId)}
+}
+
+// ChainID returns the chain id.
+func (s eip2930Signer) ChainID() *big.Int {
+	return s.chainId
+}
+
+// Equal returns true if the given signer is the same as the receiver.
+func (s eip2930Signer) Equal(s2 Signer) bool {
+	eip2930, ok := s2.(eip2930Signer)
+	return ok && eip2930.chainId.Cmp(s.chainId) == 0
+}
+
+// Sender returns the sender address of the transaction.
+func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
+	if tx.Type() != TxTypeAccessList {
+		return s.EIP155Signer.Sender(tx)
+	}
+
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return common.Address{}, ErrInvalidChainId
+	}
+
+	return tx.data.RecoverAddress(s.Hash(tx), true, func(v *big.Int) *big.Int {
+		// AL txs are defined to use 0 and 1 as their recovery
+		// id, add 27 to become equivalent to unprotected Homestead signatures.
+		V := new(big.Int).Add(v, big.NewInt(27))
+		return V
+	})
+}
+
+// SenderPubkey returns the public key derived from tx signature and txhash.
+func (s eip2930Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
+	if tx.Type() != TxTypeAccessList {
+		return s.EIP155Signer.SenderPubkey(tx)
+	}
+
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return nil, ErrInvalidChainId
+	}
+
+	return tx.data.RecoverPubkey(s.Hash(tx), true, func(v *big.Int) *big.Int {
+		// AL txs are defined to use 0 and 1 as their recovery
+		// id, add 27 to become equivalent to unprotected Homestead signatures.
+		V := new(big.Int).Add(v, big.NewInt(27))
+		return V
+	})
+}
+
+// SenderFeePayer returns the public key derived from tx signature and txhash.
+func (s eip2930Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
+	//EIP-2930(Optional access list transaction) tx don't supported fee-delegation.
+	return s.EIP155Signer.SenderFeePayer(tx)
+}
+
+// SignatureValues returns a new transaction with the given signature. This signature
+// needs to be in the [R || S || V] format where V is 0 or 1.
+func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	if tx.Type() != TxTypeAccessList {
+		return s.EIP155Signer.SignatureValues(tx, sig)
+	}
+
+	if len(sig) != crypto.SignatureLength {
+		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
+	}
+
+	if tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
+		return nil, nil, nil, ErrInvalidChainId
+	}
+
+	R = new(big.Int).SetBytes(sig[:32])
+	S = new(big.Int).SetBytes(sig[32:64])
+	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset]))
+
+	return R, S, V, nil
+}
+
+// Hash returns the hash to be signed by the sender.
+// It does not uniquely identify the transaction.
+func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
+	if tx.Type() != TxTypeAccessList {
+		return s.EIP155Signer.Hash(tx)
+	}
+
+	infs := append([]interface{}{s.ChainID()}, tx.data.SerializeForSign()...)
+	return prefixedRlpHash(byte(tx.Type()), infs)
+}
+
+// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
+// It does not uniquely identify the transaction.
+func (s eip2930Signer) HashFeePayer(tx *Transaction) (common.Hash, error) {
+	 return s.EIP155Signer.HashFeePayer(tx)
+}
+
 
 // EIP155Transaction implements Signer using the EIP155 rules.
 type EIP155Signer struct {
@@ -243,6 +363,11 @@ func NewEIP155Signer(chainId *big.Int) EIP155Signer {
 	}
 }
 
+// ChainID returns the chain id.
+func (s EIP155Signer) ChainID() *big.Int {
+	return s.chainId
+}
+
 func (s EIP155Signer) Equal(s2 Signer) bool {
 	eip155, ok := s2.(EIP155Signer)
 	return ok && eip155.chainId.Cmp(s.chainId) == 0
@@ -251,6 +376,10 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
+	if tx.Type().IsEthTypedTransaction() {
+		return common.Address{}, ErrTxTypeNotSupported
+	}
+
 	if !tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute Sender!", "tx", string(b))
@@ -266,6 +395,10 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func (s EIP155Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
+	if tx.Type().IsEthTypedTransaction() {
+		return nil, ErrTxTypeNotSupported
+	}
+
 	if tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
@@ -281,6 +414,10 @@ func (s EIP155Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) 
 }
 
 func (s EIP155Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
+	if tx.Type().IsEthTypedTransaction() {
+		return nil, ErrTxTypeNotSupported
+	}
+
 	if tx.IsLegacyTransaction() {
 		b, _ := json.Marshal(tx)
 		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
@@ -306,9 +443,13 @@ func (s EIP155Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error
 	})
 }
 
-// WithSignature returns a new transaction with the given signature. This signature
+// SignatureValues returns a new transaction with the given signature. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
-func (s EIP155Signer) SignatureValues(sig []byte) (R, S, V *big.Int, err error) {
+func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	if tx.Type().IsEthTypedTransaction() {
+		return nil, nil, nil, ErrTxTypeNotSupported
+	}
+
 	if len(sig) != crypto.SignatureLength {
 		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
 	}
