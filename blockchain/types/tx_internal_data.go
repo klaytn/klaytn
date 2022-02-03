@@ -141,6 +141,8 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyCodeFormat"
 	case TxValueChainID:
 		return "TxValueKeyChainID"
+	case TxValueAccessList:
+		return "TxValueAccessList"
 	}
 
 	return "UndefinedTxValueKeyType"
@@ -196,6 +198,8 @@ func (t TxType) String() string {
 		return "TxTypeFeeDelegatedChainDataAnchoring"
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return "TxTypeFeeDelegatedChainDataAnchoringWithRatio"
+	case TxTypeAccessList:
+		return "TxTypeAccessList"
 	}
 
 	return "UndefinedTxType"
@@ -222,11 +226,11 @@ func (t TxType) IsLegacyTransaction() bool {
 }
 
 func (t TxType) IsFeeDelegatedTransaction() bool {
-	return (TxTypeMask(t) & (TxFeeDelegationBitMask | TxFeeDelegationWithRatioBitMask)) != 0x0
+	return (TxTypeMask(t) & (TxFeeDelegationBitMask | TxFeeDelegationWithRatioBitMask)) != 0x0 && !t.IsEthTypedTransaction()
 }
 
 func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
-	return (TxTypeMask(t) & TxFeeDelegationWithRatioBitMask) != 0x0
+	return (TxTypeMask(t) & TxFeeDelegationWithRatioBitMask) != 0x0 && !t.IsEthTypedTransaction()
 }
 
 func (t TxType) IsEthTypedTransaction() bool {

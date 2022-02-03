@@ -324,6 +324,15 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyAnchoredData] = dataAnchor
 		values[types.TxValueKeyFeePayer] = recipient.Addr
 		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+	case types.TxTypeAccessList:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueChainID] = big.NewInt(1)
+		values[types.TxValueKeyData] = dataCode
+		values[types.TxValueAccessList] = types.AccessList{}
 	}
 
 	tx, err := types.NewTransactionWithMap(txType, values)
@@ -551,7 +560,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 		// tests for all txTypes
 		for _, txType := range txTypes {
 			// skip if tx type is legacy transaction and sender is not legacy.
-			if txType == types.TxTypeLegacyTransaction &&
+			if (txType.IsLegacyTransaction() || txType.IsEthTypedTransaction()) &&
 				!sender.AccKey.Type().IsLegacyAccountKey() {
 				continue
 			}
