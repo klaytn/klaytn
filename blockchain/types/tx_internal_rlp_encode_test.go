@@ -221,7 +221,6 @@ func testTxRLPEncodeAccessList(t *testing.T) {
 	printRLPEncode(signer.ChainID(), signer, sigRLP, txHashRLP, txHashRLP, rawTx)
 }
 
-
 func testTxRLPEncodeValueTransfer(t *testing.T) {
 	tx := genValueTransferTransaction().(*TxInternalDataValueTransfer)
 

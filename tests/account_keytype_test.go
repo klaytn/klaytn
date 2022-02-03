@@ -408,6 +408,8 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 	defer bcdata.Shutdown()
 
@@ -1861,7 +1863,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
-		if i == types.TxTypeLegacyTransaction {
+		if i == types.TxTypeLegacyTransaction || i == types.TxTypeAccessList {
 			continue // accounts with role-based key cannot a send legacy tx.
 		}
 		_, err := types.NewTxInternalData(i)

@@ -85,6 +85,10 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 	}
 
+	if txType == types.TxTypeAccessList {
+		valueMap, gas = genMapForAccessListTransaction(from, to, gasPrice, txType)
+	}
+
 	return valueMap, gas
 }
 
