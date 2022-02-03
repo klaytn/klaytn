@@ -140,7 +140,7 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err %v", err)
 	}
-	signer := types.NewEIP155Signer(big.NewInt(1))
+	signer := types.LatestSignerForChainID(big.NewInt(1))
 	tx, err := types.SignTx(unsignedTx, signer, privateKeyECDSA)
 	if err != nil {
 		t.Fatalf("err %v", err)

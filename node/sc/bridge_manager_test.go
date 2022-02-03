@@ -865,7 +865,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		unsignedTx := types.NewTransaction(nonce, pBridgeAddr, big.NewInt(testKLAY+KLAYFee), testGasLimit, gasPrice, []byte{})
 
 		chainID, _ := sim.ChainID(context.Background())
-		tx, err = types.SignTx(unsignedTx, types.NewEIP155Signer(chainID), AliceKey)
+		tx, err = types.SignTx(unsignedTx, types.LatestSignerForChainID(chainID), AliceKey)
 		sim.SendTransaction(context.Background(), tx)
 		assert.Equal(t, nil, err)
 

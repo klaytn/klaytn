@@ -126,7 +126,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 		fmt.Println("decoupledPrvKey = ", (*hexutil.Big)(decoupled.Keys[0].D))
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	var txs types.Transactions
