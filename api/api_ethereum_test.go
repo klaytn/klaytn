@@ -8,6 +8,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/governance"
+
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/accounts"
 	mock_accounts "github.com/klaytn/klaytn/accounts/mocks"
@@ -24,6 +27,100 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
+
+// TestEthereumAPI_Etherbase tests Etherbase.
+func TestEthereumAPI_Etherbase(t *testing.T) {
+	testNodeAddress(t, "Etherbase")
+}
+
+// TestEthereumAPI_Coinbase tests Coinbase.
+func TestEthereumAPI_Coinbase(t *testing.T) {
+	testNodeAddress(t, "Coinbase")
+}
+
+// testNodeAddress generates nodeAddress and tests Etherbase and Coinbase.
+func testNodeAddress(t *testing.T, testAPIName string) {
+	gov := governance.NewGovernance(
+		&params.ChainConfig{},
+		database.NewMemoryDBManager(),
+	)
+	key, _ := crypto.GenerateKey()
+	nodeAddress := crypto.PubkeyToAddress(key.PublicKey)
+	gov.SetNodeAddress(nodeAddress)
+
+	api := EthereumAPI{publicGovernanceAPI: governance.NewGovernanceAPI(gov)}
+	results := reflect.ValueOf(&api).MethodByName(testAPIName).Call([]reflect.Value{})
+	result, ok := results[0].Interface().(common.Address)
+	assert.True(t, ok)
+	assert.Equal(t, nodeAddress, result)
+}
+
+// TestEthereumAPI_Hashrate tests Hasharate.
+func TestEthereumAPI_Hashrate(t *testing.T) {
+	api := &EthereumAPI{}
+	assert.Equal(t, hexutil.Uint64(ZeroHashrate), api.Hashrate())
+}
+
+// TestEthereumAPI_Mining tests Mining.
+func TestEthereumAPI_Mining(t *testing.T) {
+	api := &EthereumAPI{}
+	assert.Equal(t, false, api.Mining())
+}
+
+// TestEthereumAPI_GetWork tests GetWork.
+func TestEthereumAPI_GetWork(t *testing.T) {
+	api := &EthereumAPI{}
+	_, err := api.GetWork()
+	assert.Equal(t, errNoMiningWork, err)
+}
+
+// TestEthereumAPI_SubmitWork tests SubmitWork.
+func TestEthereumAPI_SubmitWork(t *testing.T) {
+	api := &EthereumAPI{}
+	assert.Equal(t, false, api.SubmitWork(BlockNonce{}, common.Hash{}, common.Hash{}))
+}
+
+// TestEthereumAPI_SubmitHashrate tests SubmitHashrate.
+func TestEthereumAPI_SubmitHashrate(t *testing.T) {
+	api := &EthereumAPI{}
+	assert.Equal(t, false, api.SubmitHashrate(hexutil.Uint64(0), common.Hash{}))
+}
+
+// TestEthereumAPI_GetHashrate tests GetHashrate.
+func TestEthereumAPI_GetHashrate(t *testing.T) {
+	api := &EthereumAPI{}
+	assert.Equal(t, ZeroHashrate, api.GetHashrate())
+}
+
+// TestEthereumAPI_GetUncleByBlockNumberAndIndex tests GetUncleByBlockNumberAndIndex.
+func TestEthereumAPI_GetUncleByBlockNumberAndIndex(t *testing.T) {
+	api := &EthereumAPI{}
+	uncleBlock, err := api.GetUncleByBlockNumberAndIndex(context.Background(), rpc.BlockNumber(0), hexutil.Uint(0))
+	assert.NoError(t, err)
+	assert.Nil(t, uncleBlock)
+}
+
+// TestEthereumAPI_GetUncleByBlockHashAndIndex tests GetUncleByBlockHashAndIndex.
+func TestEthereumAPI_GetUncleByBlockHashAndIndex(t *testing.T) {
+	api := &EthereumAPI{}
+	uncleBlock, err := api.GetUncleByBlockHashAndIndex(context.Background(), common.Hash{}, hexutil.Uint(0))
+	assert.NoError(t, err)
+	assert.Nil(t, uncleBlock)
+}
+
+// TestTestEthereumAPI_GetUncleCountByBlockNumber tests GetUncleCountByBlockNumber.
+func TestTestEthereumAPI_GetUncleCountByBlockNumber(t *testing.T) {
+	api := &EthereumAPI{}
+	uncleCount := hexutil.Uint(ZeroUncleCount)
+	assert.Equal(t, uncleCount, *api.GetUncleCountByBlockNumber(context.Background(), rpc.BlockNumber(0)))
+}
+
+// TestTestEthereumAPI_GetUncleCountByBlockHash tests GetUncleCountByBlockHash.
+func TestTestEthereumAPI_GetUncleCountByBlockHash(t *testing.T) {
+	api := &EthereumAPI{}
+	uncleCount := hexutil.Uint(ZeroUncleCount)
+	assert.Equal(t, uncleCount, *api.GetUncleCountByBlockHash(context.Background(), common.Hash{}))
+}
 
 // TestEthereumAPI_GetHeaderByNumber tests GetHeaderByNumber.
 func TestEthereumAPI_GetHeaderByNumber(t *testing.T) {

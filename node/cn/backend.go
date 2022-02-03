@@ -471,10 +471,12 @@ func (s *CN) APIs() []rpc.API {
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
 	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
+	publicGovernanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
 	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
+	ethAPI.SetPublicGovernanceAPI(publicGovernanceAPI)
 
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{

@@ -114,7 +114,7 @@ func NewBridgeTxPool(config BridgeTxPoolConfig) *BridgeTxPool {
 		closed: make(chan struct{}),
 	}
 
-	pool.SetEIP155Signer(config.ParentChainID)
+	pool.SetLatestSigner(config.ParentChainID)
 
 	// load from disk
 	pool.journal = newBridgeTxJournal(config.Journal)
@@ -133,9 +133,15 @@ func NewBridgeTxPool(config BridgeTxPoolConfig) *BridgeTxPool {
 	return pool
 }
 
+// Deprecated: This function is deprecated. Use SetLatestSigner instead.
 // SetEIP155Signer set signer of txpool.
 func (pool *BridgeTxPool) SetEIP155Signer(chainID *big.Int) {
 	pool.signer = types.NewEIP155Signer(chainID)
+}
+
+// SetLatestSigner set latest signer to txpool
+func (pool *BridgeTxPool) SetLatestSigner(chainID *big.Int) {
+	pool.signer = types.LatestSignerForChainID(chainID)
 }
 
 // loop is the transaction pool's main event loop, waiting for and reacting to
