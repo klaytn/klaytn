@@ -942,7 +942,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 	return result, nil
 }
 
-// rpcMarshalHeader marshal block as Ethereum compatible format
+// rpcMarshalBlock marshal block as Ethereum compatible format
 func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclTx, fullTx bool) (map[string]interface{}, error) {
 	fields, err := api.rpcMarshalHeader(block.Header())
 	if err != nil {
