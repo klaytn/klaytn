@@ -27,7 +27,6 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
@@ -183,6 +182,7 @@ func newTxInternalDataAccessListWithMap(values map[TxValueKeyType]interface{}) (
 	}
 
 	if v, ok := values[TxValueAccessList].(AccessList); ok {
+		d.AccessList = make(AccessList, len(v))
 		copy(d.AccessList, v)
 		delete(values, TxValueAccessList)
 	} else {
@@ -313,9 +313,7 @@ func (t *TxInternalDataAccessList) SerializeForSign() []interface{} {
 }
 
 func (t *TxInternalDataAccessList) SenderTxHash() common.Hash {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, t.Type())
-	rlp.Encode(hw, []interface{}{
+	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,
 		t.Price,
@@ -328,11 +326,6 @@ func (t *TxInternalDataAccessList) SenderTxHash() common.Hash {
 		t.R,
 		t.S,
 	})
-
-	h := common.Hash{}
-	hw.Sum(h[:0])
-
-	return h
 }
 
 func (t *TxInternalDataAccessList) IsLegacyTransaction() bool {
@@ -361,17 +354,12 @@ func (t *TxInternalDataAccessList) String() string {
 	tx := &Transaction{data: t}
 
 	v, r, s := t.V, t.R, t.S
-	if v != nil {
-		// make a best guess about the signer and use that to derive
-		// the sender.
-		signer := deriveSigner(v)
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
-		} else {
-			from = fmt.Sprintf("%x", f[:])
-		}
+
+	signer := LatestSignerForChainID(t.ChainId())
+	if f, err := Sender(signer, tx); err != nil { // derive but don't cache
+		from = "[invalid sender: invalid sig]"
 	} else {
-		from = "[invalid sender: nil V field]"
+		from = fmt.Sprintf("%x", f[:])
 	}
 
 	if t.GetRecipient() == nil {
@@ -390,7 +378,7 @@ func (t *TxInternalDataAccessList) String() string {
 	GasLimit  %#x
 	Value:    %#x
 	Data:     0x%x
-   AccessList: %s
+   AccessList: %x
 	V:        %#x
 	R:        %#x
 	S:        %#x
