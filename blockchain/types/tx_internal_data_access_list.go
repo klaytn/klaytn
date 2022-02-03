@@ -250,6 +250,10 @@ func (t *TxInternalDataAccessList) GetPayload() []byte {
 	return t.Payload
 }
 
+func (t *TxInternalDataAccessList) GetAccessList() AccessList {
+	return t.AccessList
+}
+
 func (t *TxInternalDataAccessList) SetHash(hash *common.Hash) {
 	t.Hash = hash
 }
@@ -269,7 +273,8 @@ func (t *TxInternalDataAccessList) RawSignatureValues() TxSignatures {
 }
 
 func (t *TxInternalDataAccessList) ValidateSignature() bool {
-	return validateSignature(t.V, t.R, t.S)
+	v := byte(t.V.Uint64())
+	return crypto.ValidateSignatureValues(v, t.R, t.S, false)
 }
 
 func (t *TxInternalDataAccessList) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
@@ -292,6 +297,10 @@ func (t *TxInternalDataAccessList) IntrinsicGas(currentBlockNumber uint64) (uint
 	return IntrinsicGas(t.Payload, t.AccessList, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
+func (t *TxInternalDataAccessList) setSignatureValues(chainID, v, r, s *big.Int) {
+	t.ChainID, t.V, t.R, t.S = chainID, v, r, s
+}
+
 func (t *TxInternalDataAccessList) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.AccountNonce,
@@ -302,32 +311,6 @@ func (t *TxInternalDataAccessList) SerializeForSign() []interface{} {
 		t.Payload,
 		t.AccessList,
 	}
-}
-
-func (t *TxInternalDataAccessList) SerializeForEthTypedTxSignToBytes() []byte {
-	b, _ := rlp.EncodeToBytes(struct {
-		TxType TxType
-		ChainID      *big.Int
-		AccountNonce uint64
-		Price        *big.Int
-		GasLimit	 uint64
-		Recipient    *common.Address // nil means contract creation.
-		Amount       *big.Int
-		Payload      []byte
-		AccessList   AccessList
-	}{
-		t.Type(),
-		t.ChainID,
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
-	})
-
-	return b
 }
 
 func (t *TxInternalDataAccessList) SenderTxHash() common.Hash {
@@ -342,6 +325,9 @@ func (t *TxInternalDataAccessList) SenderTxHash() common.Hash {
 		t.Amount,
 		t.Payload,
 		t.AccessList,
+		t.V,
+		t.R,
+		t.S,
 	})
 
 	h := common.Hash{}
@@ -494,6 +480,7 @@ func (t *TxInternalDataAccessList) MarshalJSON() ([]byte, error) {
 		TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
 		t.AccessList,
 		t.Hash,
+		(*hexutil.Big)(t.ChainID),
 	})
 }
 
@@ -514,6 +501,7 @@ func (t *TxInternalDataAccessList) UnmarshalJSON(bytes []byte) error {
 	t.R = (*big.Int)(js.TxSignatures[0].R)
 	t.S = (*big.Int)(js.TxSignatures[0].S)
 	t.Hash = js.Hash
+	t.ChainID = (*big.Int)(js.ChainID)
 
 	return nil
 }

@@ -359,6 +359,13 @@ type TxInternalDataPayload interface {
 	GetPayload() []byte
 }
 
+// TxInternalDataEthTyped has a function related to EIP-2718 Ethereum typed transaction.
+// For supporting new typed transaction defined EIP-2718, We provide an interface `TxInternalDataEthTyped `
+type TxInternalDataEthTyped interface {
+	setSignatureValues(chainID, v, r, s *big.Int)
+	GetAccessList() AccessList
+}
+
 // Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
 // TODO-Klaytn-Refactoring: Transaction and related data structures should be a new package.
 type VM interface {
@@ -430,6 +437,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedChainDataAnchoring(), nil
 	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatio(), nil
+	case TxTypeAccessList:
+		return newTxInternalDataAccessList(), nil
 	}
 
 	return nil, errUndefinedTxType
