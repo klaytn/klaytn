@@ -23,7 +23,10 @@ package snapshot
 import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/log"
 )
+
+var logger = log.NewModuleLogger(log.Snapshot)
 
 var (
 	// emptyRoot is the known root hash of an empty trie.
