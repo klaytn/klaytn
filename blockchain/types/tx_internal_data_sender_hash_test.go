@@ -56,6 +56,7 @@ func TestTransactionSenderTxHash(t *testing.T) {
 		{"Cancel", genCancelTransaction()},
 		{"FeeDelegatedCancel", genFeeDelegatedCancelTransaction()},
 		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
+		{"AccessList", genAccessListTransaction()},
 	}
 
 	var testcases = []struct {
@@ -409,6 +410,28 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 			v.Payload,
 			v.FeeRatio,
 			v.TxSignatures,
+		})
+
+		h := common.Hash{}
+
+		hw.Sum(h[:0])
+		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
+		assert.Equal(t, h, senderTxHash)
+	case *TxInternalDataAccessList:
+		hw := sha3.NewKeccak256()
+		rlp.Encode(hw, rawTx.Type())
+		rlp.Encode(hw, []interface{}{
+			v.ChainID,
+			v.AccountNonce,
+			v.Price,
+			v.GasLimit,
+			v.Recipient,
+			v.Amount,
+			v.Payload,
+			v.AccessList,
+			v.V,
+			v.R,
+			v.S,
 		})
 
 		h := common.Hash{}

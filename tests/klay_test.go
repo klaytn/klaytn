@@ -481,7 +481,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 			uint(0),
 			uint(0),
 		})
-		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		sig, err := types.NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
 		if err != nil {
 			panic(err)
 		}
@@ -531,7 +531,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 			uint(0),
 			uint(0),
 		})
-		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		sig, err := types.NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
 		if err != nil {
 			panic(err)
 		}
@@ -584,7 +584,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 			uint(0),
 			uint(0),
 		})
-		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		sig, err := types.NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
 		if err != nil {
 			panic(err)
 		}

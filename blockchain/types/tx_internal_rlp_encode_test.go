@@ -1407,3 +1407,42 @@ func defaultFeePayerKey() *ecdsa.PrivateKey {
 	key, _ := crypto.HexToECDSA("b9d5558443585bca6f225b935950e3f6e69f9da8a5809a83f51c3365dff53936")
 	return key
 }
+
+func testTxRLPEncodeAccessList(t *testing.T) {
+	tx := genAccessListTransaction().(*TxInternalDataAccessList)
+
+	signer := LatestSignerForChainID(big.NewInt(2))
+	rawTx := &Transaction{data: tx}
+	rawTx.Sign(signer, key)
+
+	sigRLP := new(bytes.Buffer)
+	err := rlp.Encode(sigRLP, []interface{}{
+		tx.ChainID,
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.Payload,
+		tx.AccessList,
+	})
+	assert.Equal(t, nil, err)
+
+	txHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(txHashRLP, []interface{}{
+		tx.ChainID,
+		tx.AccountNonce,
+		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.Payload,
+		tx.AccessList,
+		tx.V,
+		tx.R,
+		tx.S,
+	})
+	assert.Equal(t, nil, err)
+
+	printRLPEncode(signer.ChainID(), signer, sigRLP, txHashRLP, txHashRLP, rawTx)
+}
