@@ -38,7 +38,7 @@ import (
 // AccessList is an EIP-2930 access list
 type AccessList []AccessTuple
 
-// AccessTuple is the element type of an access list
+// AccessTuple is the element type of the access list
 type AccessTuple struct {
 	Address     common.Address
 	StorageKeys []common.Hash
