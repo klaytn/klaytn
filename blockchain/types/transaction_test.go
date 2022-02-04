@@ -430,23 +430,6 @@ func TestIntrinsicGas(t *testing.T) {
 	}
 }
 
-func TestIsFeeDelegation(t *testing.T) {
-	assert.False(t, TxTypeLegacyTransaction.IsFeeDelegatedTransaction())
-	assert.False(t, TxTypeLegacyTransaction.IsFeeDelegatedWithRatioTransaction())
-
-	assert.False(t, TxTypeValueTransfer.IsFeeDelegatedTransaction())
-	assert.False(t, TxTypeValueTransfer.IsFeeDelegatedWithRatioTransaction())
-
-	assert.True(t, TxTypeFeeDelegatedAccountUpdate.IsFeeDelegatedTransaction())
-	assert.False(t, TxTypeFeeDelegatedAccountUpdate.IsFeeDelegatedWithRatioTransaction())
-
-	assert.True(t, TxTypeFeeDelegatedValueTransfer.IsFeeDelegatedTransaction())
-	assert.True(t, TxTypeFeeDelegatedValueTransferWithRatio.IsFeeDelegatedWithRatioTransaction())
-
-	assert.True(t, TxTypeFeeDelegatedAccountUpdateWithRatio.IsFeeDelegatedTransaction())
-	assert.True(t, TxTypeFeeDelegatedAccountUpdateWithRatio.IsFeeDelegatedWithRatioTransaction())
-}
-
 // TestTransactionCoding tests serializing/de-serializing to/from rlp and JSON.
 func TestTransactionCoding(t *testing.T) {
 	key, err := crypto.GenerateKey()
