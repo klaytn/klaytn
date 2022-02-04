@@ -133,7 +133,7 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 // prefixedRlpHash writes the prefix into the hasher before rlp-encoding the
-// given interface. It's used for typed transactions.
+// given interface. It's used for ethereum typed transactions.
 func prefixedRlpHash(prefix byte, x interface{}) (h common.Hash) {
 	hw := sha3.NewKeccak256()
 	hw.Reset()
