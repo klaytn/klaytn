@@ -330,9 +330,9 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyAmount] = amount
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = gasPrice
-		values[types.TxValueChainID] = big.NewInt(1)
+		values[types.TxValueKeyChainID] = big.NewInt(1)
 		values[types.TxValueKeyData] = dataCode
-		values[types.TxValueAccessList] = types.AccessList{}
+		values[types.TxValueKeyAccessList] = types.AccessList{}
 	}
 
 	tx, err := types.NewTransactionWithMap(txType, values)

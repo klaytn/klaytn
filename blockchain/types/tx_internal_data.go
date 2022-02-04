@@ -73,8 +73,8 @@ const (
 	TxValueKeyFeePayer
 	TxValueKeyFeeRatioOfFeePayer
 	TxValueKeyCodeFormat
-	TxValueAccessList
-	TxValueChainID
+	TxValueKeyAccessList
+	TxValueKeyChainID
 )
 
 type TxTypeMask uint8
@@ -140,10 +140,10 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyFeeRatioOfFeePayer"
 	case TxValueKeyCodeFormat:
 		return "TxValueKeyCodeFormat"
-	case TxValueChainID:
+	case TxValueKeyChainID:
 		return "TxValueKeyChainID"
-	case TxValueAccessList:
-		return "TxValueAccessList"
+	case TxValueKeyAccessList:
+		return "TxValueKeyAccessList"
 	}
 
 	return "UndefinedTxValueKeyType"

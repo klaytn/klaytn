@@ -683,14 +683,14 @@ func genMapForAccessListTransaction(from TestAccount, to TestAccount, gasPrice *
 	gasPayload += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
 
 	values := map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:    from.GetNonce(),
-		types.TxValueKeyTo:       to.GetAddr(),
-		types.TxValueKeyAmount:   amount,
-		types.TxValueKeyData:     data,
-		types.TxValueKeyGasLimit: gasLimit,
-		types.TxValueKeyGasPrice: gasPrice,
-		types.TxValueAccessList:  accessList,
-		types.TxValueChainID:     big.NewInt(1),
+		types.TxValueKeyNonce:      from.GetNonce(),
+		types.TxValueKeyTo:         to.GetAddr(),
+		types.TxValueKeyAmount:     amount,
+		types.TxValueKeyData:       data,
+		types.TxValueKeyGasLimit:   gasLimit,
+		types.TxValueKeyGasPrice:   gasPrice,
+		types.TxValueKeyAccessList: accessList,
+		types.TxValueKeyChainID:    big.NewInt(1),
 	}
 	return values, intrinsic + gasPayload
 }

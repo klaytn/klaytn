@@ -181,17 +181,17 @@ func newTxInternalDataAccessListWithMap(values map[TxValueKeyType]interface{}) (
 		return nil, errValueKeyGasPriceMustBigInt
 	}
 
-	if v, ok := values[TxValueAccessList].(AccessList); ok {
+	if v, ok := values[TxValueKeyAccessList].(AccessList); ok {
 		d.AccessList = make(AccessList, len(v))
 		copy(d.AccessList, v)
-		delete(values, TxValueAccessList)
+		delete(values, TxValueKeyAccessList)
 	} else {
 		return nil, errValueKeyAccessListInvalid
 	}
 
-	if v, ok := values[TxValueChainID].(*big.Int); ok {
+	if v, ok := values[TxValueKeyChainID].(*big.Int); ok {
 		d.ChainID.Set(v)
-		delete(values, TxValueChainID)
+		delete(values, TxValueKeyChainID)
 	} else {
 		return nil, errValueKeyChainIDInvalid
 	}
