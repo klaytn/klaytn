@@ -417,10 +417,7 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	var v common.Hash
-
-	v = rlpHash(tx)
-
+	v := rlpHash(tx)
 	tx.hash.Store(v)
 	return v
 }
