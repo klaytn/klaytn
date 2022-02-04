@@ -498,11 +498,9 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 
 	if tx.Type().IsEthTypedTransaction() {
 		te, ok := cpy.data.(TxInternalDataEthTyped)
-		if !ok {
-			cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}})
-			return cpy, nil
+		if ok {
+			te.setSignatureValues(signer.ChainID(), v, r, s)
 		}
-		te.setSignatureValues(signer.ChainID(), v, r, s)
 	}
 
 	cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}})
