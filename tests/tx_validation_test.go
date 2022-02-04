@@ -125,6 +125,8 @@ func TestValidationPoolInsert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -248,6 +250,8 @@ func TestValidationBlockTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -633,6 +637,8 @@ func TestInvalidBalance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1025,6 +1031,8 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1431,6 +1439,8 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1587,6 +1597,8 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
