@@ -259,7 +259,7 @@ func (t *TxInternalDataAccessList) SetHash(hash *common.Hash) {
 
 func (t *TxInternalDataAccessList) SetSignature(signatures TxSignatures) {
 	if len(signatures) != 1 {
-		logger.Crit("AccessListTransaction receives a single signature only!")
+		logger.Crit("AccessListTransaction can receive only single signature!")
 	}
 
 	t.V = signatures[0].V
