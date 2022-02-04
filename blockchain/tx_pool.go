@@ -450,6 +450,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 	// Update all fork indicator by next pending block number.
 	next := new(big.Int).Add(newHead.Number, big.NewInt(1))
+	// TODO-Klaytn-AccessList: Make another hardfork for eip2718 instead of London
 	pool.eip2718 = pool.chainconfig.IsLondon(next)
 }
 

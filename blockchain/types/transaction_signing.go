@@ -56,6 +56,7 @@ type sigCachePubkey struct {
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 	var signer Signer
 
+	// TODO-Klaytn-AccessList: Make another hardfork for EIP2930Signer instead of London
 	if config.IsLondon(blockNumber) {
 		signer = NewEIP2930Signer(config.ChainID)
 	} else {

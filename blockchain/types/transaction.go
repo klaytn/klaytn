@@ -191,7 +191,7 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 }
 
 // MarshalBinary returns the canonical encoding of the transaction.
-// For legacy transactions, it returns the RLP encoding. For EIP-2718 typed
+// For legacy transactions, it returns the RLP encoding. For typed
 // transactions, it returns the type and payload.
 func (tx *Transaction) MarshalBinary() ([]byte, error) {
 	var buf bytes.Buffer

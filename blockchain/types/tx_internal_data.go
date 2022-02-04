@@ -43,6 +43,7 @@ const (
 	//   <base type>, <fee-delegated type>, and <fee-delegated type with a fee ratio>
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
+	// TODO-Klaytn-AccessList: Change TxTypeAccessList to another seperated value.
 	TxTypeLegacyTransaction, TxTypeAccessList, _ TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
@@ -106,7 +107,7 @@ var (
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
-	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of AccessList")
+	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of ChainID")
 
 	ErrTxTypeNotSupported = errors.New("transaction type not supported")
 )
@@ -226,10 +227,12 @@ func (t TxType) IsLegacyTransaction() bool {
 }
 
 func (t TxType) IsFeeDelegatedTransaction() bool {
+	// TODO-Klaytn-AccessList: Remove IsEthTypedTransaction related condition after TxTypeAccessList value changed
 	return (TxTypeMask(t)&(TxFeeDelegationBitMask|TxFeeDelegationWithRatioBitMask)) != 0x0 && !t.IsEthTypedTransaction()
 }
 
 func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
+	// TODO-Klaytn-AccessList: Remove IsEthTypedTransaction related condition after TxTypeAccessList value changed
 	return (TxTypeMask(t)&TxFeeDelegationWithRatioBitMask) != 0x0 && !t.IsEthTypedTransaction()
 }
 
