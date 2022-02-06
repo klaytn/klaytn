@@ -21,6 +21,7 @@ package database
 
 import (
 	"bytes"
+	"github.com/klaytn/klaytn/storage"
 	"strings"
 	"testing"
 
@@ -67,7 +68,9 @@ func (s *SuiteS3FileDB) TearDownSuite() {
 	}
 }
 
-func SampleTestSuiteS3FileDB(t *testing.T) {
+func TestSuiteS3FileDB(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	suite.Run(t, new(SuiteS3FileDB))
 }
 

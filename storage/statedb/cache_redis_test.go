@@ -18,6 +18,7 @@ package statedb
 
 import (
 	"bytes"
+	"github.com/klaytn/klaytn/storage"
 	"net"
 	"strings"
 	"sync"
@@ -39,7 +40,9 @@ func getTestRedisConfig() *TrieNodeCacheConfig {
 	}
 }
 
-func SampleTestSubscription(t *testing.T) {
+func TestSubscription(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	msg1 := "testMessage1"
 	msg2 := "testMessage2"
 
@@ -85,7 +88,10 @@ func SampleTestSubscription(t *testing.T) {
 }
 
 // TestRedisCache tests basic operations of redis cache
-func SampleTestRedisCache(t *testing.T) {
+func TestRedisCache(t *testing.T) {
+	storage.SkipLocalTest(t)
+	//tests.SkipLocalTest(t)
+
 	cache, err := newRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
@@ -101,7 +107,9 @@ func SampleTestRedisCache(t *testing.T) {
 }
 
 // TestRedisCache_Set_LargeData check whether redis cache can store an large data (5MB).
-func SampleTestRedisCache_Set_LargeData(t *testing.T) {
+func TestRedisCache_Set_LargeData(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +123,9 @@ func SampleTestRedisCache_Set_LargeData(t *testing.T) {
 }
 
 // TestRedisCache_SetAsync tests basic operations of redis cache using SetAsync instead of Set.
-func SampleTestRedisCache_SetAsync(t *testing.T) {
+func TestRedisCache_SetAsync(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	cache, err := newRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
 
@@ -132,7 +142,9 @@ func SampleTestRedisCache_SetAsync(t *testing.T) {
 }
 
 // TestRedisCache_SetAsync_LargeData check whether redis cache can store an large data asynchronously (5MB).
-func SampleTestRedisCache_SetAsync_LargeData(t *testing.T) {
+func TestRedisCache_SetAsync_LargeData(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -147,7 +159,9 @@ func SampleTestRedisCache_SetAsync_LargeData(t *testing.T) {
 }
 
 // TestRedisCache_SetAsync_LargeNumberItems asynchronously sets lots of items exceeding channel size.
-func SampleTestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
+func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	cache, err := newRedisCache(getTestRedisConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +207,9 @@ func SampleTestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 }
 
 // TestRedisCache_Timeout tests timout feature of redis client.
-func SampleTestRedisCache_Timeout(t *testing.T) {
+func TestRedisCache_Timeout(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:11234")
 		if err != nil {

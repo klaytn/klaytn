@@ -21,13 +21,16 @@
 package database
 
 import (
+	"github.com/klaytn/klaytn/storage"
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/stretchr/testify/assert"
 )
 
-func SampleTestDynamoDBReadOnly_Put(t *testing.T) {
+func TestDynamoDBReadOnly_Put(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	dynamo, err := newDynamoDBReadOnly(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
@@ -54,7 +57,9 @@ func SampleTestDynamoDBReadOnly_Put(t *testing.T) {
 	assert.Equal(t, err.Error(), dataNotFoundErr.Error())
 }
 
-func SampleTestDynamoDBReadOnly_Write(t *testing.T) {
+func TestDynamoDBReadOnly_Write(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	dynamo, err := newDynamoDBReadOnly(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
