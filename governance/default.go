@@ -527,42 +527,50 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		return nil, ErrUnknownKey
 	}
 
-	// if value contains multiple addresses, gVote.Value type should be [][]uint8{}
-	if v, ok := gVote.Value.([]interface{}); ok && len(v) != 0 {
-		for _, item := range v {
-			if in, ok := item.([]uint8); !ok || len(in) != common.AddressLength {
-				return nil, ErrValueTypeMismatch
-			}
-		}
-		// in other correct cases, gVote.Value type should be []uint8{}
-	} else if v, ok := gVote.Value.([]uint8); ok {
-		if GovernanceItems[k].checkValueType(common.Address{}) && len(v) != common.AddressLength {
-			return nil, ErrValueTypeMismatch
-		}
-		// otherwise, return ErrValueTypeMismatch (e.g. gVote.Value = nil)
-	} else {
-		return nil, ErrValueTypeMismatch
-	}
-
 	switch k {
 	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio:
-		val = string(gVote.Value.([]uint8))
+		v, ok := gVote.Value.([]uint8)
+		if !ok {
+			return nil, ErrValueTypeMismatch
+		}
+		val = string(v)
 	case params.GoverningNode, params.AddValidator, params.RemoveValidator:
 		if v, ok := gVote.Value.([]uint8); ok {
+			if GovernanceItems[k].checkValueType(common.Address{}) && len(v) != common.AddressLength {
+				return nil, ErrValueTypeMismatch
+			}
 			val = common.BytesToAddress(v)
-		} else {
+		} else if addresses, ok := gVote.Value.([]interface{}); ok {
+			// if value contains multiple addresses, gVote.Value type should be [][]uint8{}
+			if len(addresses) == 0 {
+				return nil, ErrValueTypeMismatch
+			}
 			var nodeAddresses []common.Address
-			for _, item := range gVote.Value.([]interface{}) {
+			for _, item := range addresses {
+				if in, ok := item.([]uint8); !ok || len(in) != common.AddressLength {
+					return nil, ErrValueTypeMismatch
+				}
 				nodeAddresses = append(nodeAddresses, common.BytesToAddress(item.([]uint8)))
 			}
 			val = nodeAddresses
+		} else {
+			return nil, ErrValueTypeMismatch
 		}
+
 	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout:
-		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
-		val = binary.BigEndian.Uint64(gVote.Value.([]uint8))
+		v, ok := gVote.Value.([]uint8)
+		if !ok {
+			return nil, ErrValueTypeMismatch
+		}
+		v = append(make([]byte, 8-len(v)), v...)
+		val = binary.BigEndian.Uint64(v)
 	case params.UseGiniCoeff, params.DeferredTxFee:
-		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
-		if binary.BigEndian.Uint64(gVote.Value.([]uint8)) != uint64(0) {
+		v, ok := gVote.Value.([]uint8)
+		if !ok {
+			return nil, ErrValueTypeMismatch
+		}
+		v = append(make([]byte, 8-len(v)), v...)
+		if binary.BigEndian.Uint64(v) != uint64(0) {
 			val = true
 		} else {
 			val = false
