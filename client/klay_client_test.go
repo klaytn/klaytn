@@ -22,10 +22,14 @@ package client
 
 import (
 	"context"
+	"fmt"
+	fastws "github.com/clevergo/websocket"
+	//gorillaws "github.com/gorilla/websocket"
 	"github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/stretchr/testify/assert"
 	"log"
+	"net/http"
 	"testing"
 )
 
@@ -46,19 +50,100 @@ var (
 	// _ = klaytn.PendingStateEventer(&Client{})
 )
 
+//func TestDialWebsocketAuth(t *testing.T) {
+//	url := "wss://KASKZCTSDT07NI1PM54OKL85:nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP@node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
+//	c, err := Dial(url)
+//	assert.Nil(t, err)
+//
+//	ch := make(chan *types.Header, 2)
+//	sub, err := c.SubscribeNewHead(context.Background(), ch)
+//	assert.Nil(t, err)
+//
+//	select {
+//	case ev := <-ch:
+//		log.Printf("New block header: %v", ev.Number)
+//	case err := <-sub.Err():
+//		log.Printf("Error while subcription: %v", err)
+//	}
+//}
+
 func TestDialWebsocketAuth(t *testing.T) {
 	url := "wss://KASKZCTSDT07NI1PM54OKL85:nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP@node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
-	c, err := Dial(url)
-	assert.Nil(t, err)
+	url = "wss://node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
+	auth := "Basic S0FTS1pDVFNEVDA3TkkxUE01NE9LTDg1Om5QRkRGZjFRaDNaeTVWZk5tWXdsM1dWX1ZxX1JfRG1vM2NCdG5jYlA="
 
-	ch := make(chan *types.Header, 2)
-	sub, err := c.SubscribeNewHead(context.Background(), ch)
-	assert.Nil(t, err)
+	_ = auth
+	/*		header := http.Header(make(map[string][]string))
+			header.Add("Authorization", auth)
+			ctx := context.Background()
+			dialer := goril.Dialer{
+				ReadBufferSize:  1024,
+				WriteBufferSize: 1024,
+			}
+			conn, resp, err := dialer.DialContext(ctx, url, header)
+			fmt.Println(conn)
+			fmt.Println(resp)
+			fmt.Println(err)
+	*/
+	if 1 == 1 {
 
-	select {
-	case ev := <-ch:
-		log.Printf("New block header: %v", ev.Number)
-	case err := <-sub.Err():
-		log.Printf("Error while subcription: %v", err)
+		// {"jsonrpc":"2.0", "id": 1, "method": "klay_subscribe", "params": ["newHeads"]}
+		ctx := context.Background()
+		_ = ctx
+
+		dialer := fastws.Dialer{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+		}
+		header := http.Header(make(map[string][]string))
+		header.Add("Authorization", auth)
+
+		conn, resp, err := dialer.Dial(url, header)
+		fmt.Println(conn)
+		fmt.Println(resp)
+		fmt.Println(err)
+
+		err = conn.WriteJSON(map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"method":  "klay_subscribe",
+			"params":  []string{"newHeads"},
+		})
+		fmt.Println("write err", err)
+
+		//		time.Sleep(time.Second * 2)
+
+		//		var r interface{}
+		//		conn.ReadJSON(r)
+		//		fmt.Println("resp", r)
+
+		_, msg, _ := conn.ReadMessage()
+		fmt.Println("read bytes", string(msg))
+		_, msg, _ = conn.ReadMessage()
+		fmt.Println("read bytes", string(msg))
+		_, msg, _ = conn.ReadMessage()
+		fmt.Println("read bytes", string(msg))
+		_, msg, _ = conn.ReadMessage()
+		fmt.Println("read bytes", string(msg))
+		_, msg, _ = conn.ReadMessage()
+		fmt.Println("read bytes", string(msg))
+
+	}
+
+	if 1 == 0 {
+
+		c, err := Dial(url)
+		assert.Nil(t, err)
+
+		ch := make(chan *types.Header, 2)
+		sub, err := c.SubscribeNewHead(context.Background(), ch)
+		assert.Nil(t, err)
+
+		select {
+		case ev := <-ch:
+			log.Printf("New block header: %v", ev.Number)
+		case err := <-sub.Err():
+			log.Printf("Error while subcription: %v", err)
+		}
 	}
 }
