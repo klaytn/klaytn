@@ -20,7 +20,14 @@
 
 package client
 
-import "github.com/klaytn/klaytn"
+import (
+	"context"
+	"github.com/klaytn/klaytn"
+	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/stretchr/testify/assert"
+	"log"
+	"testing"
+)
 
 // Verify that Client implements the Klaytn interfaces.
 var (
@@ -38,3 +45,20 @@ var (
 	_ = klaytn.GasEstimator(&Client{})
 	// _ = klaytn.PendingStateEventer(&Client{})
 )
+
+func TestDialWebsocketAuth(t *testing.T) {
+	url := "wss://KASKZCTSDT07NI1PM54OKL85:nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP@node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
+	c, err := Dial(url)
+	assert.Nil(t, err)
+
+	ch := make(chan *types.Header, 2)
+	sub, err := c.SubscribeNewHead(context.Background(), ch)
+	assert.Nil(t, err)
+
+	select {
+	case ev := <-ch:
+		log.Printf("New block header: %v", ev.Number)
+	case err := <-sub.Err():
+		log.Printf("Error while subcription: %v", err)
+	}
+}
