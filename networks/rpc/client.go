@@ -36,6 +36,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	gorillaws "github.com/gorilla/websocket"
 	"github.com/klaytn/klaytn/log"
 	"github.com/pkg/errors"
 )
@@ -111,26 +112,33 @@ func (msg *jsonrpcMessage) String() string {
 }
 
 // Client represents a connection to an RPC server.
+// The client now supports Gorilla websocket, which allows http basic authentication method.
 type Client struct {
-	idCounter   uint32
-	connectFunc func(ctx context.Context) (net.Conn, error)
-	isHTTP      bool
+	idCounter            uint32
+	connectFunc          func(ctx context.Context) (net.Conn, error)
+	connectGorillaWSFunc func(ctx context.Context) (*gorillaws.Conn, error)
+	isHTTP               bool
+	isGorillaWS          bool // when isGorillaWS is true, control path goes to gorilla related ones.
 
 	// writeConn is only safe to access outside dispatch, with the
 	// write lock held. The write lock is taken by sending on
 	// requestOp and released by sending on sendDone.
 	writeConn net.Conn
 
+	// writeGorillaWSConn is used for gorilla websocket support
+	writeGorillaWSConn *gorillaws.Conn
+
 	// for dispatch
-	close       chan struct{}
-	didQuit     chan struct{}                  // closed when client quits
-	reconnected chan net.Conn                  // where write/reconnect sends the new connection
-	readErr     chan error                     // errors from read
-	readResp    chan []*jsonrpcMessage         // valid messages from read
-	requestOp   chan *requestOp                // for registering response IDs
-	sendDone    chan error                     // signals write completion, releases write lock
-	respWait    map[string]*requestOp          // active requests
-	subs        map[string]*ClientSubscription // active subscriptions
+	close                chan struct{}
+	didQuit              chan struct{}                  // closed when client quits
+	reconnected          chan net.Conn                  // where write/reconnect sends the new connection
+	reconnectedGorillaWS chan *gorillaws.Conn           // where gorilla ws write/reconnect sends the new connection
+	readErr              chan error                     // errors from read
+	readResp             chan []*jsonrpcMessage         // valid messages from read
+	requestOp            chan *requestOp                // for registering response IDs
+	sendDone             chan error                     // signals write completion, releases write lock
+	respWait             map[string]*requestOp          // active requests
+	subs                 map[string]*ClientSubscription // active subscriptions
 }
 
 type requestOp struct {
@@ -248,6 +256,34 @@ func NewClient(initctx context.Context, connectFunc func(context.Context) (net.C
 	if !isHTTP {
 		go c.dispatch(conn)
 	}
+	return c, nil
+}
+
+// NewGorillaWSClient creates a new client object that uses Gorilla websocket
+func NewGorillaWSClient(initctx context.Context, connectFunc func(context.Context) (*gorillaws.Conn, error)) (*Client, error) {
+	conn, err := connectFunc(initctx)
+	if err != nil {
+		return nil, err
+	}
+	//_, isHTTP := conn.(*httpConn)
+	c := &Client{
+		writeConn:            nil,
+		isHTTP:               false,
+		isGorillaWS:          true,
+		connectFunc:          nil,
+		writeGorillaWSConn:   conn,
+		connectGorillaWSFunc: connectFunc,
+		close:                make(chan struct{}),
+		didQuit:              make(chan struct{}),
+		reconnected:          make(chan net.Conn),
+		readErr:              make(chan error),
+		readResp:             make(chan []*jsonrpcMessage),
+		requestOp:            make(chan *requestOp),
+		sendDone:             make(chan error, 1),
+		respWait:             make(map[string]*requestOp),
+		subs:                 make(map[string]*ClientSubscription),
+	}
+	go c.dispatchGorillaWS(conn)
 	return c, nil
 }
 
@@ -511,18 +547,29 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 	if !ok {
 		deadline = time.Now().Add(defaultWriteTimeout)
 	}
+
 	// The previous write failed. Try to establish a new connection.
-	if c.writeConn == nil {
-		if err := c.reconnect(ctx); err != nil {
-			return err
+	// Checking whether the client object uses Gorilla websocket,
+	// so that the client can write through Gorilla websocket.
+	if !c.isGorillaWS {
+		if c.writeConn == nil {
+			if err := c.reconnect(ctx); err != nil {
+				return err
+			}
 		}
+		c.writeConn.SetWriteDeadline(deadline)
+		err := json.NewEncoder(c.writeConn).Encode(msg)
+		if err != nil {
+			c.writeConn = nil
+		}
+		return err
+	} else {
+		err := c.writeGorillaWSConn.WriteJSON(msg)
+		if err != nil {
+			c.writeGorillaWSConn = nil
+		}
+		return err
 	}
-	c.writeConn.SetWriteDeadline(deadline)
-	err := json.NewEncoder(c.writeConn).Encode(msg)
-	if err != nil {
-		c.writeConn = nil
-	}
-	return err
 }
 
 func (c *Client) reconnect(ctx context.Context) error {
@@ -638,6 +685,103 @@ func (c *Client) dispatch(conn net.Conn) {
 	}
 }
 
+// dispatchGorillaWS is the main loop of the client that uses Gorilla websocket.
+// It sends readGorillaWS messages to waiting calls to Call and BatchCall
+// and subscription notifications to registered subscriptions.
+func (c *Client) dispatchGorillaWS(conn *gorillaws.Conn) {
+	// Spawn the initial read loop.
+	go c.readGorillaWS(conn)
+
+	var (
+		lastOp        *requestOp    // tracks last send operation
+		requestOpLock = c.requestOp // nil while the send lock is held
+		reading       = true        // if true, a read loop is running
+	)
+	defer close(c.didQuit)
+	defer func() {
+		c.closeRequestOps(ErrClientQuit)
+		conn.Close()
+		if reading {
+			// Empty read channels until read is dead.
+			for {
+				select {
+				case <-c.readResp:
+				case <-c.readErr:
+					return
+				}
+			}
+		}
+	}()
+
+	for {
+		select {
+		case <-c.close:
+			return
+
+			// Read path.
+		case batch := <-c.readResp:
+			for _, msg := range batch {
+				switch {
+				case msg.isNotification():
+					logger.Trace("rpc client Notification", "msg", log.Lazy{Fn: func() string {
+						return fmt.Sprint("<-readResp: notification ", msg)
+					}})
+					c.handleNotification(msg)
+				case msg.isResponse():
+					logger.Trace("rpc client Response", "msg", log.Lazy{Fn: func() string {
+						return fmt.Sprint("<-readResp: response ", msg)
+					}})
+					c.handleResponse(msg)
+				default:
+					logger.Debug("rpc client default", "msg", log.Lazy{Fn: func() string {
+						return fmt.Sprint("<-readResp: dropping weird message", msg)
+					}})
+					// TODO: maybe close
+				}
+			}
+
+		case err := <-c.readErr:
+			logger.Debug("<-readErr", "err", err)
+			c.closeRequestOps(err)
+			conn.Close()
+			reading = false
+
+		case newconn := <-c.reconnectedGorillaWS:
+			logger.Debug("<-reconnected Gorilla WS", "reading", reading, "remote", conn.RemoteAddr())
+			if reading {
+				// Wait for the previous read loop to exit. This is a rare case.
+				conn.Close()
+				<-c.readErr
+			}
+			go c.readGorillaWS(newconn)
+			reading = true
+			conn = newconn
+
+			// Send path.
+		case op := <-requestOpLock:
+			// Stop listening for further send ops until the current one is done.
+			requestOpLock = nil
+			lastOp = op
+			for _, id := range op.ids {
+				c.respWait[string(id)] = op
+			}
+
+		case err := <-c.sendDone:
+			if err != nil {
+				// Remove response handlers for the last send. We remove those here
+				// because the error is already handled in Call or BatchCall. When the
+				// read loop goes down, it will signal all other current operations.
+				for _, id := range lastOp.ids {
+					delete(c.respWait, string(id))
+				}
+			}
+			// Listen for send ops again.
+			requestOpLock = c.requestOp
+			lastOp = nil
+		}
+	}
+}
+
 // closeRequestOps unblocks pending send ops and active subscriptions.
 func (c *Client) closeRequestOps(err error) {
 	didClose := make(map[*requestOp]bool)
@@ -710,6 +854,38 @@ func (c *Client) read(conn net.Conn) error {
 		dec = json.NewDecoder(conn)
 	)
 	readMessage := func() (rs []*jsonrpcMessage, err error) {
+		buf = buf[:0]
+		if err = dec.Decode(&buf); err != nil {
+			return nil, err
+		}
+		if isBatch(buf) {
+			err = json.Unmarshal(buf, &rs)
+		} else {
+			rs = make([]*jsonrpcMessage, 1)
+			err = json.Unmarshal(buf, &rs[0])
+		}
+		return rs, err
+	}
+
+	for {
+		resp, err := readMessage()
+		if err != nil {
+			c.readErr <- err
+			return err
+		}
+		c.readResp <- resp
+	}
+}
+
+// readGorillaWS is called on a dedicated goroutine.
+
+func (c *Client) readGorillaWS(conn *gorillaws.Conn) error {
+
+	readMessage := func() (rs []*jsonrpcMessage, err error) {
+		_, reader, err := conn.NextReader()
+		//if err != nil {}
+		dec := json.NewDecoder(reader)
+		var buf json.RawMessage
 		buf = buf[:0]
 		if err = dec.Decode(&buf); err != nil {
 			return nil, err

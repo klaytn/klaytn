@@ -24,8 +24,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	gorillaws "github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"net/url"
@@ -42,6 +44,11 @@ import (
 
 	fastws "github.com/clevergo/websocket"
 	"github.com/valyala/fasthttp"
+)
+
+const (
+	wsReadBuffer  = 1024
+	wsWriteBuffer = 1024
 )
 
 // websocketJSONCodec is a custom JSON codec with payload size enforcement and
@@ -275,9 +282,43 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 		return nil, err
 	}
 
-	return NewClient(ctx, func(ctx context.Context) (net.Conn, error) {
-		return wsDialContext(ctx, config)
+	auth := "Basic S0FTS1pDVFNEVDA3TkkxUE01NE9LTDg1Om5QRkRGZjFRaDNaeTVWZk5tWXdsM1dWX1ZxX1JfRG1vM2NCdG5jYlA="
+	config.Header.Add("Authorization", auth)
+	fmt.Println("endpoint", endpoint)
+	fmt.Println("origin", origin)
+	fmt.Println("header", config.Header)
+
+	return NewGorillaWSClient(ctx, func(ctx context.Context) (*gorillaws.Conn, error) {
+		dialer := gorillaws.Dialer{
+			ReadBufferSize:  wsReadBuffer,
+			WriteBufferSize: wsWriteBuffer,
+		}
+
+		header := http.Header(make(map[string][]string))
+		header.Add("Authorization", auth)
+
+		conn, resp, err := dialer.Dial(endpoint, header)
+		fmt.Println("resp", resp)
+		fmt.Println("Dial Done")
+		return conn, err
 	})
+}
+
+func wsClientHeaders(endpoint, origin string) (string, http.Header, error) {
+	endpointURL, err := url.Parse(endpoint)
+	if err != nil {
+		return endpoint, nil, err
+	}
+	header := make(http.Header)
+	if origin != "" {
+		header.Add("origin", origin)
+	}
+	if endpointURL.User != nil {
+		b64auth := base64.StdEncoding.EncodeToString([]byte(endpointURL.User.String()))
+		header.Add("authorization", "Basic "+b64auth)
+		endpointURL.User = nil
+	}
+	return endpointURL.String(), header, nil
 }
 
 func wsDialContext(ctx context.Context, config *websocket.Config) (*websocket.Conn, error) {
