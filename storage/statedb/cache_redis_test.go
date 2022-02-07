@@ -18,7 +18,6 @@ package statedb
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/storage"
 	"net"
 	"strings"
 	"sync"
@@ -26,6 +25,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v7"
+	"github.com/klaytn/klaytn/storage"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -21,10 +21,10 @@
 package database
 
 import (
-	"github.com/klaytn/klaytn/storage"
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/storage"
 	"github.com/stretchr/testify/assert"
 )
 

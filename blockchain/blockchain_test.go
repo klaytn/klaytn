@@ -46,6 +46,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
@@ -1630,7 +1631,9 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 	assert.EqualValues(t, targetBlock, newHeadBlock)
 }
 
-func SampleTestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
+func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	// prepare blockchain
 	blockchain := &BlockChain{
 		stateCache: state.NewDatabaseWithNewCache(database.NewMemoryDBManager(), &statedb.TrieNodeCacheConfig{

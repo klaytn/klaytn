@@ -2,10 +2,10 @@ package statedb
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/storage"
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/storage"
 	"github.com/stretchr/testify/assert"
 )
 

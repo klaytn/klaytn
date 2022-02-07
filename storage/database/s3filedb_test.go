@@ -21,14 +21,13 @@ package database
 
 import (
 	"bytes"
-	"github.com/klaytn/klaytn/storage"
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/storage"
 	"github.com/stretchr/testify/suite"
 )
 

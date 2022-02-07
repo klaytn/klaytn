@@ -20,7 +20,6 @@
 package database
 
 import (
-	"github.com/klaytn/klaytn/storage"
 	"net"
 	"strconv"
 	"strings"
@@ -28,10 +27,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/storage"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
