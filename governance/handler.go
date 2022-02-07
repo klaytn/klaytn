@@ -159,22 +159,29 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 	var x interface{}
 
 	// When an int value comes from JS console, it comes as a float64
-	if GovernanceItems[k].checkValueType(uint64(0)) && reflect.TypeOf(val) == float64T {
-		x = uint64(val.(float64))
-		if float64(x.(uint64)) == val.(float64) {
+	if GovernanceItems[k].checkValueType(uint64(0)) {
+		v, ok := val.(float64)
+		if !ok {
+			return val
+		}
+		x = uint64(v)
+		if float64(x.(uint64)) == v {
 			return x
 		}
 		return val
 	}
 
-	if GovernanceItems[k].checkValueType(common.Address{}) && reflect.TypeOf(val) == stringT {
-		addresses := strings.Split(val.(string), ",")
-
-		if len(addresses) == 0 {
+	// Otherwise, it comes as a string
+	v, ok := val.(string)
+	if !ok {
+		return val
+	}
+	if GovernanceItems[k].checkValueType(common.Address{}) {
+		addresses := strings.Split(v, ",")
+		switch len(addresses) {
+		case 0:
 			return val
-		}
-
-		if len(addresses) == 1 {
+		case 1:
 			str := strings.Trim(val.(string), " ")
 			if common.IsHexAddress(str) {
 				x = common.HexToAddress(str)
@@ -182,9 +189,7 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 			} else {
 				return val
 			}
-		}
-
-		if len(addresses) >= 2 {
+		default:
 			var nodeAddresses []common.Address
 			for _, str := range addresses {
 				str = strings.Trim(str, " ")
@@ -197,14 +202,11 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 			x = nodeAddresses
 			return x
 		}
-	}
-
-	// If a string text come as uppercase, make it into lowercase
-	if reflect.TypeOf(val) == stringT {
-		x = strings.ToLower(val.(string))
+	} else {
+		// If a string text come as uppercase, make it into lowercase
+		x = strings.ToLower(v)
 		return x
 	}
-	return val
 }
 
 func (gov *Governance) checkType(vote *GovernanceVote) bool {
@@ -304,14 +306,15 @@ func checkBigInt(k string, v interface{}) bool {
 }
 
 func checkAddress(k string, v interface{}) bool {
-	// if value contains single address, return true
-	if reflect.TypeOf(v) == reflect.TypeOf(common.Address{}) {
+	if _, ok := v.(common.Address); ok {
 		return true
 	}
+	if _, ok := v.([]common.Address); !ok {
+		return false
+	}
 
-	// if value contains multiple addresses and if there's identical addresses, return false
-	var addressExists map[common.Address]bool
-	addressExists = make(map[common.Address]bool)
+	// there should not be identical addresses, if value contains multiple addresses
+	addressExists := make(map[common.Address]bool)
 	for _, address := range v.([]common.Address) {
 		if _, ok := addressExists[address]; ok {
 			return false
@@ -319,8 +322,6 @@ func checkAddress(k string, v interface{}) bool {
 			addressExists[address] = true
 		}
 	}
-
-	// if value contains multiple addresses and if all addresses are different, return true
 	return true
 }
 

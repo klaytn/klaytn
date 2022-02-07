@@ -527,48 +527,30 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		return nil, ErrUnknownKey
 	}
 
-	// checking type of gVote.Value
-	switch k {
-	case params.AddValidator, params.RemoveValidator:
-		if reflect.TypeOf(gVote.Value) != reflect.TypeOf([]interface{}{}) && reflect.TypeOf(gVote.Value) != reflect.TypeOf([]uint8{}) {
-			return nil, ErrValueTypeMismatch
-		}
-
-		// if value contains multiple addresses, gVote.Value type should be [][]uint8{}
-		if reflect.TypeOf(gVote.Value) == reflect.TypeOf([]interface{}{}) {
-			for _, item := range gVote.Value.([]interface{}) {
-				if reflect.TypeOf(item) != reflect.TypeOf([]uint8{}) {
-					return nil, ErrValueTypeMismatch
-				}
-				if len(item.([]uint8)) != common.AddressLength {
-					return nil, ErrValueTypeMismatch
-				}
+	// if value contains multiple addresses, gVote.Value type should be [][]uint8{}
+	if v, ok := gVote.Value.([]interface{}); ok && len(v) != 0 {
+		for _, item := range v {
+			if in, ok := item.([]uint8); !ok || len(in) != common.AddressLength {
+				return nil, ErrValueTypeMismatch
 			}
-			break
 		}
-		// if value contains single addresses, gVote.Value type should be []uint8{}
-		fallthrough
-	default:
-		// Neither governance.addvalidator key nor governance.removevalidator key, gVote.Value type should be []uint8{}
-		if reflect.TypeOf(gVote.Value) != reflect.TypeOf([]uint8{}) {
+		// in other correct cases, gVote.Value type should be []uint8{}
+	} else if v, ok := gVote.Value.([]uint8); ok {
+		if GovernanceItems[k].checkValueType(common.Address{}) && len(v) != common.AddressLength {
 			return nil, ErrValueTypeMismatch
 		}
-		if GovernanceItems[k].checkValueType(common.Address{}) && len(gVote.Value.([]uint8)) != common.AddressLength {
-			return nil, ErrValueTypeMismatch
-		}
+		// otherwise, return ErrValueTypeMismatch (e.g. gVote.Value = nil)
+	} else {
+		return nil, ErrValueTypeMismatch
 	}
 
 	switch k {
 	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio:
 		val = string(gVote.Value.([]uint8))
-	case params.GoverningNode:
-		val = common.BytesToAddress(gVote.Value.([]uint8))
-	case params.AddValidator, params.RemoveValidator:
-		if reflect.TypeOf(gVote.Value) == reflect.TypeOf([]uint8{}) {
-			// value contains single node address, so convert the value to common.address type
-			val = common.BytesToAddress(gVote.Value.([]uint8))
+	case params.GoverningNode, params.AddValidator, params.RemoveValidator:
+		if v, ok := gVote.Value.([]uint8); ok {
+			val = common.BytesToAddress(v)
 		} else {
-			// value contains multiple node addresses, so convert the value to array of common.address
 			var nodeAddresses []common.Address
 			for _, item := range gVote.Value.([]interface{}) {
 				nodeAddresses = append(nodeAddresses, common.BytesToAddress(item.([]uint8)))
