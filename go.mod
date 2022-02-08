@@ -3,6 +3,7 @@ module github.com/klaytn/klaytn
 go 1.13
 
 require (
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/Shopify/sarama v1.26.4
 	github.com/VictoriaMetrics/fastcache v1.5.7
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf

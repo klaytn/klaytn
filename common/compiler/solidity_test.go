@@ -19,6 +19,8 @@ package compiler
 import (
 	"os/exec"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -36,6 +38,24 @@ contract test {
 func skipWithoutSolc(t *testing.T) {
 	if _, err := exec.LookPath("solc"); err != nil {
 		t.Skip(err)
+	}
+}
+
+func TestExtractSourceVersion(t *testing.T) {
+	tests := []struct {
+		source   string
+		expected []string
+	}{
+		{"pragma solidity ^0.4.24;\n", []string{"^0.4.24"}},
+		{"pragma solidity 0.4.24;\n", []string{"0.4.24"}},
+		{"pragma solidity ^0.4.24;\n", []string{"^0.4.24"}},
+		{"pragma solidity 0.4.24;\npragma solidity 0.4.25;\n", []string{"0.4.24", "0.4.25"}},
+		{"pragma solidity 0.4.24;\n//pragma solidity 0.4.25;\n", []string{"0.4.24"}},
+		{"//pragma solidity 0.4.24;\npragma solidity 0.4.25;\n", []string{"0.4.25"}},
+	}
+	for _, test := range tests {
+		v := extractSourceVersion(test.source)
+		assert.Equal(t, test.expected, v)
 	}
 }
 
@@ -70,9 +90,51 @@ func TestSolidityCompiler(t *testing.T) {
 func TestSolidityCompileError(t *testing.T) {
 	skipWithoutSolc(t)
 
+	// Force syntax error by removing some characters.
 	contracts, err := CompileSolidityString("", testSource[4:])
 	if err == nil {
 		t.Errorf("error expected compiling source. got none. result %v", contracts)
 	}
 	t.Logf("error: %v", err)
+}
+
+func TestSolcCanCompile(t *testing.T) {
+	solcVersion := "0.8.11"
+	tests := []struct {
+		version  string
+		expected bool
+	}{
+		{"^0.8.11", true},
+		{"^0.4.24", false},
+		{"^0.5.6", false},
+		{"0.5.6", false},
+	}
+
+	for _, test := range tests {
+		r, err := solcCanCompile(solcVersion, []string{test.version})
+		assert.Equal(t, test.expected, r)
+		assert.Nil(t, err)
+	}
+}
+
+func TestSolidityCompileVersions(t *testing.T) {
+	// Usually only one version of solc is installed, if any.
+	// But CompileSolidityOrLoad will work in all cases.
+
+	versions := []string{"0.4.24", "0.8.11"}
+	for _, version := range versions {
+		t.Logf("testing version %s", version)
+
+		path := "../../contracts/compiler/version_" + version + ".sol"
+
+		contracts, err := CompileSolidityOrLoad("", path)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(contracts))
+
+		for _, contract := range contracts {
+			assert.NotNil(t, contract.Code)
+			assert.NotNil(t, contract.Info.AbiDefinition)
+			assert.Equal(t, version, contract.Info.CompilerVersion)
+		}
+	}
 }
