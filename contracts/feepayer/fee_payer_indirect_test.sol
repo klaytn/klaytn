@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.4.24;
+pragma solidity ^0.8.11;
 
 interface FeePayer {
-    function GetFeePayer() public returns (address);
+    function GetFeePayer() external returns (address);
 }
 
 contract FeePayerIndirect {
