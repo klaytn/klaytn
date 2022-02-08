@@ -44,7 +44,7 @@ const (
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
 	// TODO-Klaytn-AccessList: Change TxTypeAccessList to another seperated value.
-	TxTypeLegacyTransaction, TxTypeAccessList, _ TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
+	TxTypeLegacyTransaction, TxTypeAccessList, TxTypeDynamicFee TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
 	TxTypeAccountCreation, _, _
@@ -75,6 +75,8 @@ const (
 	TxValueKeyCodeFormat
 	TxValueKeyAccessList
 	TxValueKeyChainID
+	TxValueKeyGasTipCap
+	TxValueKeyGasFeeCap
 )
 
 type TxTypeMask uint8
@@ -144,6 +146,10 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyChainID"
 	case TxValueKeyAccessList:
 		return "TxValueKeyAccessList"
+	case TxValueKeyGasTipCap:
+		return "TxValueKeyGasTipCap"
+	case TxValueKeyGasFeeCap:
+		return "TxValueKeyGasFeeCap"
 	}
 
 	return "UndefinedTxValueKeyType"
@@ -201,6 +207,8 @@ func (t TxType) String() string {
 		return "TxTypeFeeDelegatedChainDataAnchoringWithRatio"
 	case TxTypeAccessList:
 		return "TxTypeAccessList"
+	case TxTypeDynamicFee:
+		return "TxTypeDynamicFee"
 	}
 
 	return "UndefinedTxType"
@@ -237,7 +245,7 @@ func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
 }
 
 func (t TxType) IsEthTypedTransaction() bool {
-	return t == TxTypeAccessList
+	return t == TxTypeAccessList || t == TxTypeDynamicFee
 }
 
 func (t TxType) IsChainDataAnchoring() bool {
@@ -373,6 +381,8 @@ type TxInternalDataPayload interface {
 type TxInternalDataEthTyped interface {
 	setSignatureValues(chainID, v, r, s *big.Int)
 	GetAccessList() AccessList
+	gasTipCap() *big.Int
+	gasFeeCap() *big.Int
 }
 
 // Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
