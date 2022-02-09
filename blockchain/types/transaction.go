@@ -261,10 +261,12 @@ func (tx *Transaction) CheckNonce() bool {
 	defer tx.mu.RUnlock()
 	return tx.checkNonce
 }
-func (tx *Transaction) Type() TxType              { return tx.data.Type() }
-func (tx *Transaction) IsLegacyTransaction() bool { return tx.Type().IsLegacyTransaction() }
+func (tx *Transaction) Type() TxType                { return tx.data.Type() }
+func (tx *Transaction) IsLegacyTransaction() bool   { return tx.Type().IsLegacyTransaction() }
 func (tx *Transaction) IsEthTypedTransaction() bool { return tx.Type().IsEthTypedTransaction() }
-func (tx *Transaction) IsEthereumTransaction() bool { return tx.IsLegacyTransaction() || tx.IsEthTypedTransaction() }
+func (tx *Transaction) IsEthereumTransaction() bool {
+	return tx.IsLegacyTransaction() || tx.IsEthTypedTransaction()
+}
 
 func (tx *Transaction) ValidatedSender() common.Address {
 	tx.mu.RLock()
