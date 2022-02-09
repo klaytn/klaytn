@@ -48,6 +48,7 @@ var (
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
 	errNotFeeDelegationTransaction    = errors.New("not a fee delegation type transaction")
 	errInvalidValueMap                = errors.New("tx fields should be filled with valid values")
+	errNotImplementTxInternalEthTyped = errors.New("not implement TxInternalDataEthTyped")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
@@ -497,6 +498,8 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 		te, ok := cpy.data.(TxInternalDataEthTyped)
 		if ok {
 			te.setSignatureValues(signer.ChainID(), v, r, s)
+		} else {
+			return nil, errNotImplementTxInternalEthTyped
 		}
 	}
 
