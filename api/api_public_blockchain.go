@@ -506,7 +506,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 
 func getFrom(tx *types.Transaction) common.Address {
 	var from common.Address
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		signer := types.LatestSignerForChainID(tx.ChainId())
 		from, _ = types.Sender(signer, tx)
 	} else {

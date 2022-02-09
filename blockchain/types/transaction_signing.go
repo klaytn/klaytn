@@ -123,12 +123,12 @@ type AccountKeyPicker interface {
 }
 
 // Sender returns the address of the transaction.
-// If a legacy transaction, it calls SenderFrom().
+// If an ethereum transaction, it calls SenderFrom().
 // Otherwise, it just returns tx.From() because the other transaction types have the field `from`.
 // NOTE: this function should not be called if tx signature validation is required.
 // In that situtation, you should call ValidateSender().
 func Sender(signer Signer, tx *Transaction) (common.Address, error) {
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		return SenderFrom(signer, tx)
 	}
 
@@ -316,17 +316,12 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 		return s.EIP155Signer.SignatureValues(tx, sig)
 	}
 
-	if len(sig) != crypto.SignatureLength {
-		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
-	}
-
 	if tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
 		return nil, nil, nil, ErrInvalidChainId
 	}
 
-	R = new(big.Int).SetBytes(sig[:32])
-	S = new(big.Int).SetBytes(sig[32:64])
-	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset]))
+	R, S, _ = decodeSignature(sig)
+	V = big.NewInt(int64(sig[64]))
 
 	return R, S, V, nil
 }
@@ -450,13 +445,10 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 		return nil, nil, nil, ErrTxTypeNotSupported
 	}
 
-	if len(sig) != crypto.SignatureLength {
-		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
-	}
-	R = new(big.Int).SetBytes(sig[:32])
-	S = new(big.Int).SetBytes(sig[32:64])
-	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset] + 35))
+	R, S, _ = decodeSignature(sig)
+	V = big.NewInt(int64(sig[64] + 35))
 	V.Add(V, s.chainIdMul)
+
 	return R, S, V, nil
 }
 
@@ -575,4 +567,14 @@ func deriveChainId(v *big.Int) *big.Int {
 	}
 	v = new(big.Int).Sub(v, big.NewInt(35))
 	return v.Div(v, common.Big2)
+}
+
+func decodeSignature(sig []byte) (r, s, v *big.Int) {
+	if len(sig) != crypto.SignatureLength {
+		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
+	}
+	r = new(big.Int).SetBytes(sig[:32])
+	s = new(big.Int).SetBytes(sig[32:64])
+	v = new(big.Int).SetBytes([]byte{sig[64] + 27})
+	return r, s, v
 }

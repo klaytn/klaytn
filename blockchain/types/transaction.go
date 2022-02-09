@@ -48,6 +48,7 @@ var (
 	errNotImplementTxInternalDataFrom = errors.New("not implement TxInternalDataFrom")
 	errNotFeeDelegationTransaction    = errors.New("not a fee delegation type transaction")
 	errInvalidValueMap                = errors.New("tx fields should be filled with valid values")
+	errNotImplementTxInternalEthTyped = errors.New("not implement TxInternalDataEthTyped")
 )
 
 // deriveSigner makes a *best* guess about which signer to use.
@@ -260,8 +261,13 @@ func (tx *Transaction) CheckNonce() bool {
 	defer tx.mu.RUnlock()
 	return tx.checkNonce
 }
-func (tx *Transaction) Type() TxType              { return tx.data.Type() }
-func (tx *Transaction) IsLegacyTransaction() bool { return tx.data.IsLegacyTransaction() }
+func (tx *Transaction) Type() TxType                { return tx.data.Type() }
+func (tx *Transaction) IsLegacyTransaction() bool   { return tx.Type().IsLegacyTransaction() }
+func (tx *Transaction) IsEthTypedTransaction() bool { return tx.Type().IsEthTypedTransaction() }
+func (tx *Transaction) IsEthereumTransaction() bool {
+	return tx.IsLegacyTransaction() || tx.IsEthTypedTransaction()
+}
+
 func (tx *Transaction) ValidatedSender() common.Address {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()
@@ -292,7 +298,7 @@ func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {
 func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBlockNumber uint64) error {
 	// validate the sender's account key
 	accKey := db.GetKey(tx.ValidatedSender())
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		if !accKey.Type().IsLegacyAccountKey() {
 			return ErrInvalidSigSender
 		}
@@ -373,7 +379,7 @@ func (tx *Transaction) To() *common.Address {
 // Since a legacy transaction (TxInternalDataLegacy) does not have the field `from`,
 // calling From() is failed for `TxInternalDataLegacy`.
 func (tx *Transaction) From() (common.Address, error) {
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		return common.Address{}, errLegacyTransaction
 	}
 
@@ -497,6 +503,8 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 		te, ok := cpy.data.(TxInternalDataEthTyped)
 		if ok {
 			te.setSignatureValues(signer.ChainID(), v, r, s)
+		} else {
+			return nil, errNotImplementTxInternalEthTyped
 		}
 	}
 
@@ -635,7 +643,7 @@ func (tx *Transaction) String() string {
 // ValidateSender finds a sender from both legacy and new types of transactions.
 // It returns the senders address and gas used for the tx validation.
 func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, currentBlockNumber uint64) (uint64, error) {
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		addr, err := Sender(signer, tx)
 		// Legacy transaction cannot be executed unless the account has a legacy key.
 		if p.GetKey(addr).Type().IsLegacyAccountKey() == false {
