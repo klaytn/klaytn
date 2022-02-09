@@ -123,12 +123,12 @@ type AccountKeyPicker interface {
 }
 
 // Sender returns the address of the transaction.
-// If a legacy transaction, it calls SenderFrom().
+// If an ethereum transaction, it calls SenderFrom().
 // Otherwise, it just returns tx.From() because the other transaction types have the field `from`.
 // NOTE: this function should not be called if tx signature validation is required.
 // In that situtation, you should call ValidateSender().
 func Sender(signer Signer, tx *Transaction) (common.Address, error) {
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		return SenderFrom(signer, tx)
 	}
 

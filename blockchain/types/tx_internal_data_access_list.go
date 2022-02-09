@@ -329,7 +329,7 @@ func (t *TxInternalDataAccessList) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataAccessList) IsLegacyTransaction() bool {
-	return true
+	return false
 }
 
 func (t *TxInternalDataAccessList) Equal(a TxInternalData) bool {

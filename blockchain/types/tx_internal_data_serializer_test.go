@@ -163,7 +163,7 @@ func testTransactionJSON(t *testing.T, tx TxInternalData) {
 // Copied from api/api_public_blockchain.go
 func newRPCTransaction(tx *Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
 	var from common.Address
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		signer := LatestSignerForChainID(tx.ChainId())
 		from, _ = Sender(signer, tx)
 	} else {
