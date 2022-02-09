@@ -98,7 +98,7 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 		if _, ok := api.governance.ValidateVote(&GovernanceVote{Key: key, Value: val}); !ok {
 			return "", errInvalidKeyValue
 		}
-		if api.isRemovingSelf(val) {
+		if api.isRemovingSelf(val.(string)) {
 			return "", errRemoveSelf
 		}
 	}
@@ -108,8 +108,8 @@ func (api *PublicGovernanceAPI) Vote(key string, val interface{}) (string, error
 	return "", errInvalidKeyValue
 }
 
-func (api *PublicGovernanceAPI) isRemovingSelf(val interface{}) bool {
-	for _, str := range strings.Split(val.(string), ",") {
+func (api *PublicGovernanceAPI) isRemovingSelf(val string) bool {
+	for _, str := range strings.Split(val, ",") {
 		str = strings.Trim(str, " ")
 		if common.HexToAddress(str) == api.governance.nodeAddress.Load().(common.Address) {
 			return true

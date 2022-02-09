@@ -344,8 +344,7 @@ func (gs *GovernanceSet) SetValue(itemType int, value interface{}) error {
 	defer gs.mu.Unlock()
 
 	key := GovernanceKeyMapReverse[itemType]
-
-	if !GovernanceItems[itemType].checkValueType(value) {
+	if !checkValueType(value, GovernanceItems[itemType].t) {
 		return ErrValueTypeMismatch
 	}
 	gs.items[key] = value
@@ -498,7 +497,9 @@ func (g *Governance) getKey(k string) string {
 
 // RemoveVote remove a vote from the voteMap to prevent repetitive addition of same vote
 func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
-	if GovernanceItems[GovernanceKeyMap[key]].isEqual(g.voteMap.GetValue(key).Value, value) {
+	k := GovernanceKeyMap[key]
+	if isEqualValue(k, g.voteMap.GetValue(key).Value, value) {
+		//if GovernanceItems[k].isEqual(g.voteMap.GetValue(key).Value, value) {
 		g.voteMap.SetValue(key, VoteStatus{
 			Value:  value,
 			Casted: true,
@@ -536,7 +537,8 @@ func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, err
 		val = string(v)
 	case params.GoverningNode, params.AddValidator, params.RemoveValidator:
 		if v, ok := gVote.Value.([]uint8); ok {
-			if GovernanceItems[k].checkValueType(common.Address{}) && len(v) != common.AddressLength {
+			// if value contains single address, gVote.Value type should be []uint8{}
+			if len(v) != common.AddressLength {
 				return nil, ErrValueTypeMismatch
 			}
 			val = common.BytesToAddress(v)
