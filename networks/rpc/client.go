@@ -571,8 +571,9 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 				return err
 			}
 		}
-		fmt.Println("write json")
+		fmt.Println("write json msg", msg)
 		err := c.writeGorillaWSConn.WriteJSON(msg)
+		fmt.Println("error write json", err)
 		if err != nil {
 			c.writeGorillaWSConn = nil
 		}
@@ -919,6 +920,7 @@ func (c *Client) read(conn net.Conn) error {
 func (c *Client) readGorillaWS(conn *gorillaws.Conn) error {
 
 	readMessage := func() (rs []*jsonrpcMessage, err error) {
+		fmt.Println("before nextreader")
 		_, reader, err := conn.NextReader()
 		fmt.Println("redaer = ", reader, "err = ", err)
 		if err != nil {

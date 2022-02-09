@@ -72,13 +72,17 @@ func TestWebsocketLargeCall(t *testing.T) {
 
 	// set message size
 	messageSize := 200
+	fmt.Println("before get message size")
 	messageSize, err = client.getMessageSize(method)
 	fmt.Println("get message size ", messageSize, err)
 	assert.NoError(t, err)
-	requestMaxLen := common.MaxRequestContentLength - messageSize
+	requestMaxLen := common.MaxRequestContentLength - messageSize - 50000
+	//requestMaxLen = 800
 
 	// This call sends slightly less than the limit and should work.
 	arg := strings.Repeat("x", requestMaxLen-1)
+	fmt.Println("before client call ", result)
+
 	assert.NoError(t, client.Call(&result, method, arg, 1), "valid call didn't work")
 	fmt.Println(" client call ", result)
 	assert.Equal(t, arg, result.String, "wrong string echoed")

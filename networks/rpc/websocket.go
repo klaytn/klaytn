@@ -33,6 +33,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -67,6 +68,8 @@ var websocketJSONCodec = websocket.Codec{
 		return dec.Decode(v)
 	},
 }
+
+var wsBufferPool = new(sync.Pool)
 
 // WebsocketHandler returns a handler that serves JSON-RPC to WebSocket connections.
 //
@@ -292,6 +295,7 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 		dialer := gorillaws.Dialer{
 			ReadBufferSize:  wsReadBuffer,
 			WriteBufferSize: wsWriteBuffer,
+			WriteBufferPool: wsBufferPool,
 		}
 		//fmt.Println("header")
 		//fmt.Println("dialer.dial before")
@@ -300,7 +304,9 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 		_ = resp
 		//fmt.Println("dialer.dial after")
 		//fmt.Println("resp", resp)
-		//fmt.Println("Dial Done", conn)
+		fmt.Println("Dial Done - conn", conn)
+		fmt.Println("Dial Done - resp", resp)
+		fmt.Println("Dial Done - err", err)
 		return conn, err
 	})
 }
