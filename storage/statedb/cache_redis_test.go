@@ -90,7 +90,6 @@ func TestSubscription(t *testing.T) {
 // TestRedisCache tests basic operations of redis cache
 func TestRedisCache(t *testing.T) {
 	storage.SkipLocalTest(t)
-	//tests.SkipLocalTest(t)
 
 	cache, err := newRedisCache(getTestRedisConfig())
 	assert.Nil(t, err)
