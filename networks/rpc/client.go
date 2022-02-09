@@ -354,9 +354,6 @@ func (c *Client) CallContext(ctx context.Context, result interface{}, method str
 	} else {
 		err = c.send(ctx, op, msg)
 	}
-	if err != nil {
-		return err
-	}
 
 	// dispatch has accepted the request and will close the channel it when it quits.
 	switch resp, err := op.wait(ctx); {
@@ -571,7 +568,7 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 				return err
 			}
 		}
-		fmt.Println("write json msg", msg)
+
 		err := c.writeGorillaWSConn.WriteJSON(msg)
 		fmt.Println("error write json", err)
 		if err != nil {

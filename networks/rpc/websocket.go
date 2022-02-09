@@ -62,9 +62,11 @@ var websocketJSONCodec = websocket.Codec{
 	},
 	// Unmarshal is a specialized unmarshaller to properly convert numbers.
 	Unmarshal: func(msg []byte, payloadType byte, v interface{}) error {
+		fmt.Println("Unmarshal msg was", string(msg))
 		dec := json.NewDecoder(bytes.NewReader(msg))
 		dec.UseNumber()
-
+		fmt.Println("unmarshal return ---", dec)
+		//unmarshal return --- &{0xc0007080c0 [] {[] 0 0 {<nil> false [] <nil> 0} <nil> <nil> true false} 0 0 {<nil> false [] <nil> 0} <nil> 0 []}
 		return dec.Decode(v)
 	},
 }
@@ -101,7 +103,14 @@ func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 				return websocketJSONCodec.Send(conn, v)
 			}
 			decoder := func(v interface{}) error {
-				return websocketJSONCodec.Receive(conn, v)
+				fmt.Println("websocket server handler before decoding", conn)
+				//var msg []byte
+				//conn.Read(msg)
+				//fmt.Println("websocket server readed:", len(msg), string(msg))
+				err := websocketJSONCodec.Receive(conn, v)
+				fmt.Println("jsoncodec receive", err, "||||", v)
+				return err
+				//return websocketJSONCodec.Receive(conn, v)
 			}
 			srv.ServeCodec(NewCodec(conn, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
 		},

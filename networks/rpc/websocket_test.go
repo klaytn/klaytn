@@ -55,6 +55,7 @@ func TestWebsocketLargeCall(t *testing.T) {
 	)
 	defer srv.Stop()
 	defer httpsrv.Close()
+	fmt.Println("server", httpsrv.Listener.Addr())
 	time.Sleep(100 * time.Millisecond)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -73,6 +74,7 @@ func TestWebsocketLargeCall(t *testing.T) {
 	// set message size
 	messageSize := 200
 	fmt.Println("before get message size")
+
 	messageSize, err = client.getMessageSize(method)
 	fmt.Println("get message size ", messageSize, err)
 	assert.NoError(t, err)
