@@ -48,7 +48,23 @@ var (
 
 	sectionHeadKeyPrefix = []byte("shead")
 
+	// snapshotKeyPrefix is a governance snapshot prefix
 	snapshotKeyPrefix = []byte("snapshot")
+
+	// snapshotJournalKey tracks the in-memory diff layers across restarts.
+	snapshotJournalKey = []byte("SnapshotJournal")
+
+	// SnapshotGeneratorKey tracks the snapshot generation marker across restarts.
+	SnapshotGeneratorKey = []byte("SnapshotGenerator")
+
+	// snapshotDisabledKey flags that the snapshot should not be maintained due to initial sync.
+	snapshotDisabledKey = []byte("SnapshotDisabled")
+
+	// snapshotRecoveryKey tracks the snapshot recovery marker across restarts.
+	snapshotRecoveryKey = []byte("SnapshotRecovery")
+
+	// snapshotRootKey tracks the hash of the last snapshot.
+	snapshotRootKey = []byte("SnapshotRoot")
 
 	// Data item prefixes (use single byte to avoid mixing data types, avoid `i`, used for indexes).
 	headerPrefix       = []byte("h") // headerPrefix + num (uint64 big endian) + hash -> header
@@ -150,6 +166,11 @@ func AccountSnapshotKey(hash common.Hash) []byte {
 // StorageSnapshotKey = SnapshotStoragePrefix + account hash + storage hash
 func StorageSnapshotKey(accountHash, storageHash common.Hash) []byte {
 	return append(append(SnapshotStoragePrefix, accountHash.Bytes()...), storageHash.Bytes()...)
+}
+
+// StorageSnapshotsKey = SnapshotStoragePrefix + account hash + storage hash
+func StorageSnapshotsKey(accountHash common.Hash) []byte {
+	return append(SnapshotStoragePrefix, accountHash.Bytes()...)
 }
 
 func SenderTxHashToTxHashKey(senderTxHash common.Hash) []byte {
