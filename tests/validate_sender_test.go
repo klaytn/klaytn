@@ -95,7 +95,7 @@ func TestValidateSenderContract(t *testing.T) {
 			"c32c471b732e2f56103e2f8e8cfd52792ef548f05f326e546a7d1fbf9d0419ed"},
 		multisig2Initial.Addr)
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
 	// Transfer (reservoir -> multisig) using a legacy transaction.
