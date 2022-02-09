@@ -320,7 +320,8 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 		return nil, nil, nil, ErrInvalidChainId
 	}
 
-	R, S, V = decodeSignature(sig)
+	R, S, _ = decodeSignature(sig)
+	V = big.NewInt(int64(sig[64]))
 
 	return R, S, V, nil
 }
@@ -444,8 +445,10 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 		return nil, nil, nil, ErrTxTypeNotSupported
 	}
 
-	R, S, V = decodeSignature(sig)
+	R, S, _ = decodeSignature(sig)
+	V = big.NewInt(int64(sig[64] + 35))
 	V.Add(V, s.chainIdMul)
+
 	return R, S, V, nil
 }
 
