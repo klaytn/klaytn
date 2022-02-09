@@ -135,13 +135,7 @@ func TestEthereumAPI_GetHeaderByHash(t *testing.T) {
 // testGetHeader generates data to test GetHeader related functions in EthereumAPI
 // and actually tests the API function passed as a parameter.
 func testGetHeader(t *testing.T, testAPIName string) {
-	mockCtrl := gomock.NewController(t)
-	mockBackend := mock_api.NewMockBackend(mockCtrl)
-
-	api := EthereumAPI{
-		publicKlayAPI:       NewPublicKlayAPI(mockBackend),
-		publicBlockChainAPI: NewPublicBlockChainAPI(mockBackend),
-	}
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
 
 	// Creates a MockEngine.
 	mockEngine := mocks.NewMockEngine(mockCtrl)
@@ -200,7 +194,7 @@ func testGetHeader(t *testing.T, testAPIName string) {
 		"baseFeePerGas": "0x0",
 		"difficulty": "0x1",
 		"extraData": "0x",
-		"gasLimit": "0x3b9ac9ff",
+		"gasLimit": "0xe8d4a50fff",
 		"gasUsed": "0x2710",
 		"hash": "0xd6d5d8295f612bc824762f1945f4271c73aee9306bcf91e151d269369526ba60",
 		"logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -222,29 +216,564 @@ func testGetHeader(t *testing.T, testAPIName string) {
 	checkEthereumBlockOrHeaderFormat(t, expected, ethHeader)
 }
 
+// TestEthereumAPI_GetBlockByNumber tests GetBlockByNumber.
+func TestEthereumAPI_GetBlockByNumber(t *testing.T) {
+	testGetBlock(t, "GetBlockByNumber", false)
+	testGetBlock(t, "GetBlockByNumber", true)
+}
+
+// TestEthereumAPI_GetBlockByHash tests GetBlockByHash.
+func TestEthereumAPI_GetBlockByHash(t *testing.T) {
+	testGetBlock(t, "GetBlockByHash", false)
+	testGetBlock(t, "GetBlockByHash", true)
+}
+
+// testGetBlock generates data to test GetBlock related functions in EthereumAPI
+// and actually tests the API function passed as a parameter.
+func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+
+	// Creates a MockEngine.
+	mockEngine := mocks.NewMockEngine(mockCtrl)
+	// GetHeader APIs calls internally below methods.
+	mockBackend.EXPECT().Engine().Return(mockEngine)
+	// Author is called when calculates miner field of Header.
+	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
+	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
+	var dummyTotalDifficulty uint64 = 5
+	mockBackend.EXPECT().GetTd(gomock.Any()).Return(new(big.Int).SetUint64(dummyTotalDifficulty))
+
+	// Create dummy header
+	header := types.CopyHeader(&types.Header{ParentHash: common.HexToHash("0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348"), Rewardbase: common.Address{}, TxHash: common.HexToHash("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
+		Root:        common.HexToHash("0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9"),
+		ReceiptHash: common.HexToHash("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
+		Bloom:       types.Bloom{},
+		BlockScore:  new(big.Int).SetUint64(1),
+		Number:      new(big.Int).SetUint64(4),
+		GasUsed:     uint64(10000),
+		Time:        new(big.Int).SetUint64(1641363540),
+		TimeFoS:     uint8(85),
+		Extra:       common.Hex2Bytes("0xd983010701846b6c617988676f312e31362e338664617277696e000000000000f89ed5949712f943b296758aaae79944ec975884188d3a96b8415a0614be7fd5ea40f11ce558e02993bd55f11ae72a3cfbc861875a57483ec5ec3adda3e5845fd7ab271d670c755480f9ef5b8dd731f4e1f032fff5d165b763ac01f843b8418867d3733167a0c737fa5b62dcc59ec3b0af5748bcc894e7990a0b5a642da4546713c9127b3358cdfe7894df1ca1db5a97560599986d7f1399003cd63660b98200"),
+		Governance:  []byte{},
+		Vote:        []byte{},
+	})
+	block, _, _, _, _ := createTestData(t, header)
+	var blockParam interface{}
+	switch testAPIName {
+	case "GetBlockByNumber":
+		blockParam = rpc.BlockNumber(block.NumberU64())
+		mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil)
+	case "GetBlockByHash":
+		blockParam = block.Hash()
+		mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(block, nil)
+	}
+
+	results := reflect.ValueOf(&api).MethodByName(testAPIName).Call(
+		[]reflect.Value{
+			reflect.ValueOf(context.Background()),
+			reflect.ValueOf(blockParam),
+			reflect.ValueOf(fullTxs),
+		},
+	)
+	ethBlock, ok := results[0].Interface().(map[string]interface{})
+	assert.Equal(t, true, ok)
+	assert.NotEqual(t, ethBlock, nil)
+
+	expected := make(map[string]interface{})
+	if fullTxs {
+		assert.NoError(t, json.Unmarshal([]byte(`
+    {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "baseFeePerGas": "0x0",
+        "difficulty": "0x1",
+        "extraData": "0x",
+        "gasLimit": "0xe8d4a50fff",
+        "gasUsed": "0x2710",
+        "hash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+        "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "miner": "0x9712f943b296758aaae79944ec975884188d3a96",
+        "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "nonce": "0x0000000000000000",
+        "number": "0x4",
+        "parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
+        "receiptsRoot": "0xf6278dd71ffc1637f78dc2ee54f6f9e64d4b1633c1179dfdbc8c3b482efbdbec",
+        "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+        "size": "0xe44",
+        "stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
+        "timestamp": "0x61d53854",
+        "totalDifficulty": "0x5",
+        "transactions": [
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x0000000000000000000000000000000000000000",
+              "gas": "0x1c9c380",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x6231f24f79d28bb5b8425ce577b3b77cd9c1ab766fcfc5233358a2b1c2f4ff70",
+              "input": "0x3078653331393765386630303030303030303030303030303030303030303030303065306265663939623461323232383665323736333062343835643036633561313437636565393331303030303030303030303030303030303030303030303030313538626566663863386364656264363436353461646435663661316439393337653733353336633030303030303030303030303030303030303030303030303030303030303030303030303030303030303030323962623565376662366265616533326366383030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030306530303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303138303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030316236306662343631346132326530303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303031303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030343030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303031353862656666386338636465626436343635346164643566366131643939333765373335333663303030303030303030303030303030303030303030303030373462613033313938666564326231356135316166323432623963363366616633633866346433343030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303033303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
+              "nonce": "0x0",
+              "to": "0x3736346135356338333362313038373730343930",
+              "transactionIndex": "0x0",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3036656164333031646165616636376537376538",
+              "gas": "0x989680",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xf146858415c060eae65a389cbeea8aeadc79461038fbee331ffd97b41279dd63",
+              "input": "0x",
+              "nonce": "0x1",
+              "to": "0x3364613566326466626334613262333837316462",
+              "transactionIndex": "0x1",
+              "value": "0x5",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3730323366383135666136613633663761613063",
+              "gas": "0x1312d00",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x0a01fc67bb4c15c32fa43563c0fcf05cd5bf2fdcd4ec78122b5d0295993bca24",
+              "input": "0x68656c6c6f",
+              "nonce": "0x2",
+              "to": "0x3336623562313539333066323466653862616538",
+              "transactionIndex": "0x2",
+              "value": "0x3",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x1312d00",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x486f7561375c38f1627264f8676f92ec0dd1c4a7c52002ba8714e61fcc6bb649",
+              "input": "0x",
+              "nonce": "0x3",
+              "to": "0x3936663364636533666637396132333733653330",
+              "transactionIndex": "0x3",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x5f5e100",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xbd3e57cd31dd3d6679326f7a949f0de312e9ae53bec5ef3c23b43a5319c220a4",
+              "input": "0x",
+              "nonce": "0x4",
+              "to": null,
+              "transactionIndex": "0x4",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xff666129a0c7227b17681d668ecdef5d6681fc93dbd58856eea1374880c598b0",
+              "input": "0x",
+              "nonce": "0x5",
+              "to": "0x3632323232656162393565396564323963346266",
+              "transactionIndex": "0x5",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xa8ad4f295f2acff9ef56b476b1c52ecb74fb3fd95a789d768c2edb3376dbeacf",
+              "input": "0x",
+              "nonce": "0x6",
+              "to": "0x3936663364636533666637396132333733653330",
+              "transactionIndex": "0x6",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x47dbfd201fc1dd4188fd2003c6328a09bf49414be607867ca3a5d63573aede93",
+              "input": "0xf8ad80b8aaf8a8a0072409b14b96f9d7dbf4788dbc68c5d30bd5fac1431c299e0ab55c92e70a28a4a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a00000000000000000000000000000000000000000000000000000000000000000a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a00000000000000000000000000000000000000000000000000000000000000000808080",
+              "nonce": "0x7",
+              "to": "0x3936663364636533666637396132333733653330",
+              "transactionIndex": "0x7",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3036656164333031646165616636376537376538",
+              "gas": "0x989680",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x2283294e89b41df2df4dd37c375a3f51c3ad11877aa0a4b59d0f68cf5cfd865a",
+              "input": "0x",
+              "nonce": "0x8",
+              "to": "0x3364613566326466626334613262333837316462",
+              "transactionIndex": "0x8",
+              "value": "0x5",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3730323366383135666136613633663761613063",
+              "gas": "0x1312d00",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x80e05750d02d22d73926179a0611b431ae7658846406f836e903d76191423716",
+              "input": "0x68656c6c6f",
+              "nonce": "0x9",
+              "to": "0x3336623562313539333066323466653862616538",
+              "transactionIndex": "0x9",
+              "value": "0x3",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x1312d00",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xe8abdee5e8fef72fe4d98f7dbef36000407e97874e8c880df4d85646958dd2c1",
+              "input": "0x",
+              "nonce": "0xa",
+              "to": "0x3936663364636533666637396132333733653330",
+              "transactionIndex": "0xa",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x5f5e100",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x4c970be1815e58e6f69321202ce38b2e5c5e5ecb70205634848afdbc57224811",
+              "input": "0x",
+              "nonce": "0xb",
+              "to": null,
+              "transactionIndex": "0xb",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x7ff0a809387d0a4cab77624d467f4d65ffc1ac95f4cc46c2246daab0407a7d83",
+              "input": "0x",
+              "nonce": "0xc",
+              "to": "0x3632323232656162393565396564323963346266",
+              "transactionIndex": "0xc",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xb510b11415b39d18a972a00e3b43adae1e0f583ea0481a4296e169561ff4d916",
+              "input": "0x",
+              "nonce": "0xd",
+              "to": "0x3936663364636533666637396132333733653330",
+              "transactionIndex": "0xd",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xab466145fb71a2d24d6f6af3bddf3bcfa43c20a5937905dd01963eaf9fc5e382",
+              "input": "0xf8ad80b8aaf8a8a0072409b14b96f9d7dbf4788dbc68c5d30bd5fac1431c299e0ab55c92e70a28a4a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a00000000000000000000000000000000000000000000000000000000000000000a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a00000000000000000000000000000000000000000000000000000000000000000808080",
+              "nonce": "0xe",
+              "to": "0x3936663364636533666637396132333733653330",
+              "transactionIndex": "0xe",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3036656164333031646165616636376537376538",
+              "gas": "0x989680",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xec714ab0875768f482daeabf7eb7be804e3c94bc1f1b687359da506c7f3a66b2",
+              "input": "0x",
+              "nonce": "0xf",
+              "to": "0x3364613566326466626334613262333837316462",
+              "transactionIndex": "0xf",
+              "value": "0x5",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3730323366383135666136613633663761613063",
+              "gas": "0x1312d00",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x069af125fe88784e46f90ace9960a09e5d23e6ace20350062be75964a7ece8e6",
+              "input": "0x68656c6c6f",
+              "nonce": "0x10",
+              "to": "0x3336623562313539333066323466653862616538",
+              "transactionIndex": "0x10",
+              "value": "0x3",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x1312d00",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x4a6bb7b2cd68265eb6a693aa270daffa3cc297765267f92be293b12e64948c82",
+              "input": "0x",
+              "nonce": "0x11",
+              "to": "0x3936663364636533666637396132333733653330",
+              "transactionIndex": "0x11",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x5f5e100",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xa354fe3fdde6292e85545e6327c314827a20e0d7a1525398b38526fe28fd36e1",
+              "input": "0x",
+              "nonce": "0x12",
+              "to": null,
+              "transactionIndex": "0x12",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x5bb64e885f196f7b515e62e3b90496864d960e2f5e0d7ad88550fa1c875ca691",
+              "input": "0x",
+              "nonce": "0x13",
+              "to": "0x3632323232656162393565396564323963346266",
+              "transactionIndex": "0x13",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x6f4308b3c98db2db215d02c0df24472a215df7aa283261fcb06a6c9f796df9af",
+              "input": "0x",
+              "nonce": "0x14",
+              "to": "0x3936663364636533666637396132333733653330",
+              "transactionIndex": "0x14",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+            {
+              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockNumber": "0x4",
+              "from": "0x3936663364636533666637396132333733653330",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0x1df88d113f0c5833c1f7264687cd6ac43888c232600ffba8d3a7d89bb5013e71",
+              "input": "0xf8ad80b8aaf8a8a0072409b14b96f9d7dbf4788dbc68c5d30bd5fac1431c299e0ab55c92e70a28a4a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a00000000000000000000000000000000000000000000000000000000000000000a056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421a00000000000000000000000000000000000000000000000000000000000000000808080",
+              "nonce": "0x15",
+              "to": "0x3936663364636533666637396132333733653330",
+              "transactionIndex": "0x15",
+              "value": "0x0",
+              "type": "0x0",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            }
+        ],
+        "transactionsRoot": "0x0a83e34ab7302f42f4a9203e8295f545517645989da6555d8cbdc1e9599df85b",
+        "uncles": []
+      }
+    }
+    `,
+		), &expected))
+	} else {
+		assert.NoError(t, json.Unmarshal([]byte(`
+    {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "baseFeePerGas": "0x0",
+        "difficulty": "0x1",
+        "extraData": "0x",
+        "gasLimit": "0xe8d4a50fff",
+        "gasUsed": "0x2710",
+        "hash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+        "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "miner": "0x9712f943b296758aaae79944ec975884188d3a96",
+        "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "nonce": "0x0000000000000000",
+        "number": "0x4",
+        "parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
+        "receiptsRoot": "0xf6278dd71ffc1637f78dc2ee54f6f9e64d4b1633c1179dfdbc8c3b482efbdbec",
+        "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+        "size": "0xe44",
+        "stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
+        "timestamp": "0x61d53854",
+        "totalDifficulty": "0x5",
+        "transactions": [
+            "0x6231f24f79d28bb5b8425ce577b3b77cd9c1ab766fcfc5233358a2b1c2f4ff70",
+            "0xf146858415c060eae65a389cbeea8aeadc79461038fbee331ffd97b41279dd63",
+            "0x0a01fc67bb4c15c32fa43563c0fcf05cd5bf2fdcd4ec78122b5d0295993bca24",
+            "0x486f7561375c38f1627264f8676f92ec0dd1c4a7c52002ba8714e61fcc6bb649",
+            "0xbd3e57cd31dd3d6679326f7a949f0de312e9ae53bec5ef3c23b43a5319c220a4",
+            "0xff666129a0c7227b17681d668ecdef5d6681fc93dbd58856eea1374880c598b0",
+            "0xa8ad4f295f2acff9ef56b476b1c52ecb74fb3fd95a789d768c2edb3376dbeacf",
+            "0x47dbfd201fc1dd4188fd2003c6328a09bf49414be607867ca3a5d63573aede93",
+            "0x2283294e89b41df2df4dd37c375a3f51c3ad11877aa0a4b59d0f68cf5cfd865a",
+            "0x80e05750d02d22d73926179a0611b431ae7658846406f836e903d76191423716",
+            "0xe8abdee5e8fef72fe4d98f7dbef36000407e97874e8c880df4d85646958dd2c1",
+            "0x4c970be1815e58e6f69321202ce38b2e5c5e5ecb70205634848afdbc57224811",
+            "0x7ff0a809387d0a4cab77624d467f4d65ffc1ac95f4cc46c2246daab0407a7d83",
+            "0xb510b11415b39d18a972a00e3b43adae1e0f583ea0481a4296e169561ff4d916",
+            "0xab466145fb71a2d24d6f6af3bddf3bcfa43c20a5937905dd01963eaf9fc5e382",
+            "0xec714ab0875768f482daeabf7eb7be804e3c94bc1f1b687359da506c7f3a66b2",
+            "0x069af125fe88784e46f90ace9960a09e5d23e6ace20350062be75964a7ece8e6",
+            "0x4a6bb7b2cd68265eb6a693aa270daffa3cc297765267f92be293b12e64948c82",
+            "0xa354fe3fdde6292e85545e6327c314827a20e0d7a1525398b38526fe28fd36e1",
+            "0x5bb64e885f196f7b515e62e3b90496864d960e2f5e0d7ad88550fa1c875ca691",
+            "0x6f4308b3c98db2db215d02c0df24472a215df7aa283261fcb06a6c9f796df9af",
+            "0x1df88d113f0c5833c1f7264687cd6ac43888c232600ffba8d3a7d89bb5013e71"
+        ],
+        "transactionsRoot": "0x0a83e34ab7302f42f4a9203e8295f545517645989da6555d8cbdc1e9599df85b",
+        "uncles": []
+      }
+    }
+    `,
+		), &expected))
+	}
+	checkEthereumBlockOrHeaderFormat(t, expected, ethBlock)
+}
+
 // checkEthereumHeaderFormat checks that ethBlockOrHeader returned from
 // GetHeader or GetBlock APIs have all keys of the Ethereum data structure and
 // also checks the immutable values are well-defined or not.
 func checkEthereumBlockOrHeaderFormat(
 	t *testing.T,
 	expected map[string]interface{},
-	ethBlockOrHeader map[string]interface{},
+	actual map[string]interface{},
 ) {
+	marshaledActual, err := json.Marshal(actual)
+	assert.NoError(t, err)
+	actualResult := make(map[string]interface{})
+	assert.NoError(t, json.Unmarshal(marshaledActual, &actualResult))
+
 	expectedResult, ok := expected["result"].(map[string]interface{})
 	assert.True(t, ok)
 	marshaledExpectedResult, err := json.Marshal(expectedResult)
 	assert.NoError(t, err)
 	t.Logf("expectedResult: %s\n", marshaledExpectedResult)
-	marshaledEthBlockOrHeader, err := json.Marshal(ethBlockOrHeader)
-	assert.NoError(t, err)
-	t.Logf("actualResult: %s\n", marshaledEthBlockOrHeader)
-	assert.Equal(t, marshaledExpectedResult, marshaledEthBlockOrHeader)
+	t.Logf("actualResult: %s\n", marshaledActual)
+	// Because the order of key in map is not guaranteed in Go, comparing the maps
+	// by iterating keys is reasonable approach.
+	for key := range expectedResult {
+		assert.Equal(t, expectedResult[key], actualResult[key])
+	}
 }
 
 // TestEthereumAPI_GetTransactionByBlockNumberAndIndex tests GetTransactionByBlockNumberAndIndex.
 func TestEthereumAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
-	block, txs, _, _, _ := createTestData(t)
+	block, txs, _, _, _ := createTestData(t, nil)
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
@@ -261,7 +790,7 @@ func TestEthereumAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 // TestEthereumAPI_GetTransactionByBlockHashAndIndex tests GetTransactionByBlockHashAndIndex.
 func TestEthereumAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
-	block, txs, _, _, _ := createTestData(t)
+	block, txs, _, _, _ := createTestData(t, nil)
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
@@ -278,7 +807,7 @@ func TestEthereumAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
 // TestEthereumAPI_GetTransactionByHash tests GetTransactionByHash.
 func TestEthereumAPI_GetTransactionByHash(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
-	block, txs, txHashMap, _, _ := createTestData(t)
+	block, txs, txHashMap, _, _ := createTestData(t, nil)
 
 	// Define queryFromPool for ReadTxAndLookupInfo function return tx from hash map.
 	// MockDatabaseManager will initiate data with txHashMap, block and queryFromPool.
@@ -304,7 +833,7 @@ func TestEthereumAPI_GetTransactionByHash(t *testing.T) {
 // TestEthereumAPI_GetTransactionByHash tests GetTransactionByHash from transaction pool.
 func TestEthereumAPI_GetTransactionByHashFromPool(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
-	block, txs, txHashMap, _, _ := createTestData(t)
+	block, txs, txHashMap, _, _ := createTestData(t, nil)
 
 	// Define queryFromPool for ReadTxAndLookupInfo function return nil.
 	// MockDatabaseManager will initiate data with txHashMap, block and queryFromPool.
@@ -335,7 +864,7 @@ func TestEthereumAPI_GetTransactionByHashFromPool(t *testing.T) {
 // TestEthereumAPI_PendingTransactionstests PendingTransactions.
 func TestEthereumAPI_PendingTransactions(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
-	_, txs, txHashMap, _, _ := createTestData(t)
+	_, txs, txHashMap, _, _ := createTestData(t, nil)
 
 	mockAccountManager := mock_accounts.NewMockAccountManager(mockCtrl)
 	mockBackend.EXPECT().AccountManager().Return(mockAccountManager)
@@ -361,7 +890,7 @@ func TestEthereumAPI_PendingTransactions(t *testing.T) {
 // TestEthereumAPI_GetTransactionReceipt tests GetTransactionReceipt.
 func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
-	block, txs, txHashMap, receiptMap, receipts := createTestData(t)
+	block, txs, txHashMap, receiptMap, receipts := createTestData(t, nil)
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().GetTxLookupInfoAndReceipt(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -394,6 +923,8 @@ func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend,
 
 	api := EthereumAPI{
 		publicTransactionPoolAPI: NewPublicTransactionPoolAPI(mockBackend, new(AddrLocker)),
+		publicKlayAPI:            NewPublicKlayAPI(mockBackend),
+		publicBlockChainAPI:      NewPublicBlockChainAPI(mockBackend),
 	}
 	return mockCtrl, mockBackend, api
 }
@@ -561,7 +1092,7 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 	}
 }
 
-func createTestData(t *testing.T) (*types.Block, types.Transactions, map[common.Hash]*types.Transaction, map[common.Hash]*types.Receipt, []*types.Receipt) {
+func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Transactions, map[common.Hash]*types.Transaction, map[common.Hash]*types.Receipt, []*types.Receipt) {
 	var txs types.Transactions
 
 	var gasPrice = big.NewInt(25 * params.Ston)
@@ -1265,7 +1796,12 @@ func createTestData(t *testing.T) (*types.Block, types.Transactions, map[common.
 	}
 
 	// Create a block which includes all transaction data.
-	block := types.NewBlock(&types.Header{Number: big.NewInt(1)}, txs, nil)
+	var block *types.Block
+	if header != nil {
+		block = types.NewBlock(header, txs, receipts)
+	} else {
+		block = types.NewBlock(&types.Header{Number: big.NewInt(1)}, txs, nil)
+	}
 
 	return block, txs, txHashMap, receiptMap, receipts
 }

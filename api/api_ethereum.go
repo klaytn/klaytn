@@ -387,15 +387,28 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 // * When fullTx is true all transactions in the block are returned, otherwise
 //   only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
+	if klaytnBlock != nil && err == nil {
+		response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
+		if err == nil && number == rpc.PendingBlockNumber {
+			// Pending blocks need to nil out a few fields
+			for _, field := range []string{"hash", "nonce", "miner"} {
+				response[field] = nil
+			}
+		}
+		return response, err
+	}
+	return nil, err
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+	return api.rpcMarshalBlock(klaytnBlock, true, fullTx)
 }
 
 // GetUncleByBlockNumberAndIndex returns nil because there is no uncle block in Klaytn.
@@ -541,6 +554,16 @@ func newEthRPCTransactionFromBlockIndex(b *types.Block, index uint64) *EthRPCTra
 		return nil
 	}
 	return newEthRPCTransaction(txs[index], b.Hash(), b.NumberU64(), index)
+}
+
+// newEthRPCTransactionFromBlockHash returns a transaction that will serialize to the RPC representation.
+func newEthRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) *EthRPCTransaction {
+	for idx, tx := range b.Transactions() {
+		if tx.Hash() == hash {
+			return newEthRPCTransactionFromBlockIndex(b, uint64(idx))
+		}
+	}
+	return nil
 }
 
 // resolveToField returns value which fits to `to` field based on transaction types.
@@ -905,9 +928,10 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 		"totalDifficulty": (*hexutil.Big)(api.publicKlayAPI.b.GetTd(head.Hash())),
 		// extraData always return empty Bytes because actual value of extraData in Klaytn header cannot be used as meaningful way because
 		// we cannot provide original header of Klaytn and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Klaytn.
-		"extraData":        hexutil.Bytes{},
-		"size":             hexutil.Uint64(head.Size()),
-		"gasLimit":         hexutil.Uint64(DummyGasLimit),
+		"extraData": hexutil.Bytes{},
+		"size":      hexutil.Uint64(head.Size()),
+		// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
+		"gasLimit":         hexutil.Uint64(params.UpperGasLimit),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
 		"timestamp":        hexutil.Big(*head.Time),
 		"transactionsRoot": head.TxHash,
@@ -916,4 +940,37 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 	}
 
 	return result, nil
+}
+
+// rpcMarshalBlock marshal block as Ethereum compatible format
+func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclTx, fullTx bool) (map[string]interface{}, error) {
+	fields, err := api.rpcMarshalHeader(block.Header())
+	if err != nil {
+		return nil, err
+	}
+	fields["size"] = hexutil.Uint64(block.Size())
+
+	if inclTx {
+		formatTx := func(tx *types.Transaction) (interface{}, error) {
+			return tx.Hash(), nil
+		}
+		if fullTx {
+			formatTx = func(tx *types.Transaction) (interface{}, error) {
+				return newEthRPCTransactionFromBlockHash(block, tx.Hash()), nil
+			}
+		}
+		txs := block.Transactions()
+		transactions := make([]interface{}, len(txs))
+		var err error
+		for i, tx := range txs {
+			if transactions[i], err = formatTx(tx); err != nil {
+				return nil, err
+			}
+		}
+		fields["transactions"] = transactions
+	}
+	// There is no uncles in Klaytn
+	fields["uncles"] = []common.Hash{}
+
+	return fields, nil
 }
