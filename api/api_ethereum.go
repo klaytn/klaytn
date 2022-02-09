@@ -1190,7 +1190,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	// TODO-Klaytn: Klaytn is using fixed baseFee as now.
+	// TODO-Klaytn: Klaytn is using fixed baseFee as now. If we change this fixed baseFee as dynamic baseFee, we should update this logic too
 	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
 	intrinsicGas, err := types.IntrinsicGas(args.data(), args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
