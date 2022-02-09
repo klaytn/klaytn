@@ -206,8 +206,37 @@ func (api *EthereumAPI) NewBlockFilter() rpc.ID {
 
 // NewHeads send a notification each time a new (header) block is appended to the chain.
 func (api *EthereumAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	notifier, supported := rpc.NotifierFromContext(ctx)
+	if !supported {
+		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
+	}
+
+	rpcSub := notifier.CreateSubscription()
+	go func() {
+		headers := make(chan *types.Header)
+		headersSub := api.publicFilterAPI.Events().SubscribeNewHeads(headers)
+
+		for {
+			select {
+			case h := <-headers:
+				header, err := api.rpcMarshalHeader(h)
+				if err != nil {
+					logger.Error("Failed to marshal header during newHeads subscription", "err", err)
+					headersSub.Unsubscribe()
+					return
+				}
+				notifier.Notify(rpcSub.ID, header)
+			case <-rpcSub.Err():
+				headersSub.Unsubscribe()
+				return
+			case <-notifier.Closed():
+				headersSub.Unsubscribe()
+				return
+			}
+		}
+	}()
+
+	return rpcSub, nil
 }
 
 // Logs creates a subscription that fires for all new log that match the given filter criteria.
