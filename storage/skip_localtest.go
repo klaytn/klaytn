@@ -6,7 +6,7 @@ import (
 )
 
 func SkipLocalTest(t *testing.T) {
-	if os.Getenv("CI") == "" {
+	if os.Getenv("CI") != "true" {
 		t.Skip("Skipping testing in Local environment")
 	}
 }
