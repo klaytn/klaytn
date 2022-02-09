@@ -162,7 +162,6 @@ func (mr *MockBackendMockRecorder) Engine() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBackend)(nil).Engine))
 }
 
-
 // EventMux mocks base method.
 func (m *MockBackend) EventMux() *event.TypeMux {
 	m.ctrl.T.Helper()
