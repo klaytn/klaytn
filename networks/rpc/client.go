@@ -547,10 +547,10 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 	if !ok {
 		deadline = time.Now().Add(defaultWriteTimeout)
 	}
-
 	// The previous write failed. Try to establish a new connection.
-	// Checking whether the client object uses Gorilla websocket,
-	// so that the client can write through Gorilla websocket.
+
+	// Checks whether the client object uses Gorilla websocket,
+	// so that the client can write to proper one.
 	if !c.isGorillaWS {
 		if c.writeConn == nil {
 			if err := c.reconnect(ctx); err != nil {
@@ -563,12 +563,15 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 			c.writeConn = nil
 		}
 		return err
-	} else { // gorilla ws
+	} else { // The client is using Gorilla websocket
+		fmt.Println("write goriall conn", c.writeGorillaWSConn)
 		if c.writeGorillaWSConn == nil {
-			if err := c.GorillaWSreconnect(ctx); err != nil {
+			fmt.Println("reconnect gorilla ws try")
+			if err := c.reconnectGorillaWS(ctx); err != nil {
 				return err
 			}
 		}
+		fmt.Println("write json")
 		err := c.writeGorillaWSConn.WriteJSON(msg)
 		if err != nil {
 			c.writeGorillaWSConn = nil
@@ -577,7 +580,6 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 	}
 }
 
-// writeGorillaWSConn
 func (c *Client) reconnect(ctx context.Context) error {
 	newconn, err := c.connectFunc(ctx)
 	if err != nil {
@@ -594,19 +596,29 @@ func (c *Client) reconnect(ctx context.Context) error {
 	}
 }
 
-func (c *Client) GorillaWSreconnect(ctx context.Context) error {
+func (c *Client) reconnectGorillaWS(ctx context.Context) error {
+	fmt.Println("reconnect gws")
 	newconn, err := c.connectGorillaWSFunc(ctx)
 	if err != nil {
-		logger.Trace(fmt.Sprintf("reconnect failed: %v", err))
+		logger.Trace(fmt.Sprintf("reconnect using Gorilla Websocket failed: %v", err))
 		return err
 	}
+	fmt.Println("reconnect select ")
 	select {
+
 	case c.reconnectedGorillaWS <- newconn:
+		fmt.Println("channel reconnected")
 		c.writeGorillaWSConn = newconn
 		return nil
 	case <-c.didQuit:
+		fmt.Println("channel close")
+
 		newconn.Close()
 		return ErrClientQuit
+	default:
+		fmt.Println("hang on default on reconnectgorillaws")
+		return nil
+
 	}
 }
 
@@ -738,6 +750,7 @@ func (c *Client) dispatchGorillaWS(conn *gorillaws.Conn) {
 	for {
 		select {
 		case <-c.close:
+			fmt.Println("close")
 			return
 
 			// Read path.
@@ -763,9 +776,11 @@ func (c *Client) dispatchGorillaWS(conn *gorillaws.Conn) {
 			}
 
 		case err := <-c.readErr:
+			fmt.Println("readerr")
 			logger.Debug("<-readErr", "err", err)
 			c.closeRequestOps(err)
 			conn.Close()
+
 			reading = false
 
 		case newconn := <-c.reconnectedGorillaWS:
@@ -905,10 +920,21 @@ func (c *Client) readGorillaWS(conn *gorillaws.Conn) error {
 
 	readMessage := func() (rs []*jsonrpcMessage, err error) {
 		_, reader, err := conn.NextReader()
-		//if err != nil {}
+		fmt.Println("redaer = ", reader, "err = ", err)
+		if err != nil {
+
+			return nil, err
+		}
+
 		dec := json.NewDecoder(reader)
+		if dec == nil {
+			fmt.Println(err)
+			return
+		}
 		var buf json.RawMessage
 		buf = buf[:0]
+		fmt.Println("dec", dec)
+		fmt.Println("buf", buf)
 		if err = dec.Decode(&buf); err != nil {
 			return nil, err
 		}
@@ -922,9 +948,12 @@ func (c *Client) readGorillaWS(conn *gorillaws.Conn) error {
 	}
 
 	for {
+		fmt.Println("read message")
+		//resp, err := readMessage()
 		resp, err := readMessage()
 		if err != nil {
 			c.readErr <- err
+			fmt.Println("for   ", err)
 			return err
 		}
 		c.readResp <- resp

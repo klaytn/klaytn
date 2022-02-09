@@ -277,29 +277,30 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 			origin = "http://" + strings.ToLower(origin)
 		}
 	}
-	config, err := websocket.NewConfig(endpoint, origin)
+	endpoint, header, err := wsClientHeaders(endpoint, origin)
 	if err != nil {
 		return nil, err
 	}
 
-	auth := "Basic S0FTS1pDVFNEVDA3TkkxUE01NE9LTDg1Om5QRkRGZjFRaDNaeTVWZk5tWXdsM1dWX1ZxX1JfRG1vM2NCdG5jYlA="
-	config.Header.Add("Authorization", auth)
-	fmt.Println("endpoint", endpoint)
-	fmt.Println("origin", origin)
-	fmt.Println("header", config.Header)
+	// websocket.NewConfig() is not used on Gorilla Websocket library
+	//config, err := websocket.NewConfig(endpoint, origin)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	return NewGorillaWSClient(ctx, func(ctx context.Context) (*gorillaws.Conn, error) {
 		dialer := gorillaws.Dialer{
 			ReadBufferSize:  wsReadBuffer,
 			WriteBufferSize: wsWriteBuffer,
 		}
-
-		header := http.Header(make(map[string][]string))
-		header.Add("Authorization", auth)
+		//fmt.Println("header")
+		//fmt.Println("dialer.dial before")
 
 		conn, resp, err := dialer.Dial(endpoint, header)
-		fmt.Println("resp", resp)
-		fmt.Println("Dial Done")
+		_ = resp
+		//fmt.Println("dialer.dial after")
+		//fmt.Println("resp", resp)
+		//fmt.Println("Dial Done", conn)
 		return conn, err
 	})
 }

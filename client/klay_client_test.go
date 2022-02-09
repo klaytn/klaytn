@@ -21,12 +21,7 @@
 package client
 
 import (
-	"context"
-	"fmt"
-	fastws "github.com/clevergo/websocket"
 	"github.com/klaytn/klaytn"
-	"net/http"
-	"testing"
 )
 
 // Verify that Client implements the Klaytn interfaces.
@@ -45,43 +40,3 @@ var (
 	_ = klaytn.GasEstimator(&Client{})
 	// _ = klaytn.PendingStateEventer(&Client{})
 )
-
-func TestDialWebsocketAuth(t *testing.T) {
-	url := "wss://node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
-	auth := ""
-
-	ctx := context.Background()
-	_ = ctx
-
-	dialer := fastws.Dialer{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-	}
-	header := http.Header(make(map[string][]string))
-	header.Add("Authorization", auth)
-
-	conn, resp, err := dialer.Dial(url, header)
-	fmt.Println(conn)
-	fmt.Println(resp)
-	fmt.Println(err)
-
-	err = conn.WriteJSON(map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      1,
-		"method":  "klay_subscribe",
-		"params":  []string{"newHeads"},
-	})
-	fmt.Println("write err", err)
-
-	_, msg, _ := conn.ReadMessage()
-	fmt.Println("read bytes", string(msg))
-	_, msg, _ = conn.ReadMessage()
-	fmt.Println("read bytes", string(msg))
-	_, msg, _ = conn.ReadMessage()
-	fmt.Println("read bytes", string(msg))
-	_, msg, _ = conn.ReadMessage()
-	fmt.Println("read bytes", string(msg))
-	_, msg, _ = conn.ReadMessage()
-	fmt.Println("read bytes", string(msg))
-
-}

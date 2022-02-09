@@ -22,6 +22,8 @@ package rpc
 
 import (
 	"context"
+	"fmt"
+	gorillaws "github.com/gorilla/websocket"
 	"net"
 	"net/http/httptest"
 	"strings"
@@ -58,6 +60,7 @@ func TestWebsocketLargeCall(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	client, err := DialWebsocket(ctx, wsAddr, "")
+	fmt.Println("dial web socket ", client, err)
 	if err != nil {
 		t.Fatalf("can't dial: %v", err)
 	}
@@ -70,17 +73,22 @@ func TestWebsocketLargeCall(t *testing.T) {
 	// set message size
 	messageSize := 200
 	messageSize, err = client.getMessageSize(method)
+	fmt.Println("get message size ", messageSize, err)
 	assert.NoError(t, err)
 	requestMaxLen := common.MaxRequestContentLength - messageSize
 
 	// This call sends slightly less than the limit and should work.
 	arg := strings.Repeat("x", requestMaxLen-1)
 	assert.NoError(t, client.Call(&result, method, arg, 1), "valid call didn't work")
+	fmt.Println(" client call ", result)
 	assert.Equal(t, arg, result.String, "wrong string echoed")
 
 	// This call sends slightly larger than the allowed size and shouldn't work.
 	arg = strings.Repeat("x", requestMaxLen)
+	fmt.Println("before client call 2 ", result)
 	assert.Error(t, client.Call(&result, method, arg), "no error for too large call")
+	fmt.Println(" client call 2 ", result)
+
 }
 
 func newTestListener() net.Listener {
@@ -151,4 +159,94 @@ func testWebsocketMaxConnections(t *testing.T, addr string, maxConnections int) 
 	for _, client := range closers {
 		client.Close()
 	}
+}
+func TestWebsocketClientHeaders(t *testing.T) {
+	t.Parallel()
+
+	endpoint, header, err := wsClientHeaders("wss://testuser:test-PASS_01@example.com:1234", "https://example.com")
+	if err != nil {
+		t.Fatalf("wsGetConfig failed: %s", err)
+	}
+	if endpoint != "wss://example.com:1234" {
+		t.Fatal("User should have been stripped from the URL")
+	}
+	if header.Get("authorization") != "Basic dGVzdHVzZXI6dGVzdC1QQVNTXzAx" {
+		t.Fatal("Basic auth header is incorrect")
+	}
+	if header.Get("origin") != "https://example.com" {
+		t.Fatal("Origin not set")
+	}
+}
+
+func TestDialWebsocketAuth(t *testing.T) {
+
+	var (
+		srv     = newTestServer("websocket test", new(Service))
+		httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"http://example.com"}))
+		wsURL   = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
+	)
+	defer srv.Stop()
+	defer httpsrv.Close()
+	_ = wsURL
+
+	//client, err := DialWebsocket(context.Background(), wsURL, "http://example.com")
+	//if err == nil {
+	//	fmt.Println("tttttttt")
+	//	client.Close()
+	//	t.Fatal("no error for wrong origin")
+	//}
+
+	url := "wss://node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
+	//url := "wss://KASKZCTSDT07NI1PM54OKL85:nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP@node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
+	//auth := "wss://KASKZCTSDT07NI1PM54OKL85:nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP@node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
+	//auth := "Basic S0FTS1pDVFNEVDA3TkkxUE01NE9LTDg1Om5QRkRGZjFRaDNaeTVWZk5tWXdsM1dWX1ZxX1JfRG1vM2NCdG5jYlA="
+	url = "wss://KASKZCTSDT07NI1PM54OKL85:nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP@node-api.klaytnapi.com/v1/ws/open?chain-id=1001"
+	//username := "foo"
+	//password := "bar"
+	//username = "KASKZCTSDT07NI1PM54OKL85"
+	//password = "nPFDFf1Qh3Zy5VfNmYwl3WV_Vq_R_Dmo3cBtncbP"
+	//authHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
+	////fmt.Println(authHeader)
+
+	ctx := context.Background()
+	_ = ctx
+
+	//client := DialWebsocket(ctx, endpoint, "")
+
+	dialer := gorillaws.Dialer{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+	//endpoint, header, err := wsClientHeaders(endpoint, origin)
+	endpoint, header, err := wsClientHeaders(url, "")
+	fmt.Println("endpoint  ", endpoint)
+	fmt.Println("header  ", header)
+	fmt.Println(err)
+
+	//header := http.Header(make(map[string][]string))
+	//header.Add("Authorization", authHeader)
+
+	//client, err := DialWebsocket(context.Background(), wsURL, "http://example.com")
+	//if err == nil {
+	//	fmt.Println("tttttttt")
+	//	client.Close()
+	//	t.Fatal("no error for wrong origin")
+	//}
+
+	conn, resp, err := dialer.Dial(endpoint, header)
+	//conn, resp, err := dialer.Dial(wsURL, header)
+	fmt.Println(conn)
+	fmt.Println("resp111111", resp)
+	fmt.Println(err)
+	//t.Fatal("no error for wrong origin")
+	err = conn.WriteJSON(map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "klay_subscribe",
+		"params":  []string{"newHeads"},
+	})
+
+	_, msg, _ := conn.ReadMessage()
+	fmt.Println("read bytes", string(msg))
+
 }
