@@ -49,10 +49,10 @@ var (
 
 var GovernanceItems = map[int]check{
 	params.GovernanceMode:          {isStringType, checkGovernanceMode, compareEqual, nil},
-	params.GoverningNode:           {isAddressType, checkAddress, compareEqual, nil},
+	params.GoverningNode:           {isAddressType, checkAddressOrListOfUniqueAddresses, compareEqual, nil},
 	params.UnitPrice:               {isUint64Type, checkUint64andBool, compareEqual, updateUnitPrice},
-	params.AddValidator:            {isAddressType, checkAddress, compareAddress, nil},
-	params.RemoveValidator:         {isAddressType, checkAddress, compareAddress, nil},
+	params.AddValidator:            {isAddressType, checkAddressOrListOfUniqueAddresses, compareAddress, nil},
+	params.RemoveValidator:         {isAddressType, checkAddressOrListOfUniqueAddresses, compareAddress, nil},
 	params.MintingAmount:           {isStringType, checkBigInt, compareEqual, nil},
 	params.Ratio:                   {isStringType, checkRatio, compareEqual, nil},
 	params.UseGiniCoeff:            {isBoolType, checkUint64andBool, compareEqual, updateUseGiniCoeff},
@@ -182,7 +182,7 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 		case 0:
 			return val
 		case 1:
-			str := strings.Trim(val.(string), " ")
+			str := strings.Trim(v, " ")
 			if common.IsHexAddress(str) {
 				x = common.HexToAddress(str)
 				return x
@@ -305,7 +305,7 @@ func checkBigInt(k string, v interface{}) bool {
 	return false
 }
 
-func checkAddress(k string, v interface{}) bool {
+func checkAddressOrListOfUniqueAddresses(k string, v interface{}) bool {
 	if _, ok := v.(common.Address); ok {
 		return true
 	}
@@ -349,34 +349,30 @@ func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes 
 		key := GovernanceKeyMap[gVote.Key]
 		switch key {
 		case params.GoverningNode:
-			_, addr := valset.GetByAddress(gVote.Value.(common.Address))
+			v, ok := gVote.Value.(common.Address)
+			if !ok {
+				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
+				return valset, votes, tally
+			}
+			_, addr := valset.GetByAddress(v)
 			if addr == nil {
 				logger.Warn("Invalid governing node address", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 				return valset, votes, tally
 			}
-		case params.AddValidator:
-			if reflect.TypeOf(gVote.Value) == addressT {
-				if !gov.checkVote(gVote.Value.(common.Address), true, valset) {
+		case params.AddValidator, params.RemoveValidator:
+			authorize := key == params.AddValidator
+			if addr, ok := gVote.Value.(common.Address); ok {
+				if !gov.checkVote(addr, authorize, valset) {
 					return valset, votes, tally
 				}
-			} else {
-				for _, address := range gVote.Value.([]common.Address) {
-					if !gov.checkVote(address, true, valset) {
+			} else if addresses, ok := gVote.Value.([]common.Address); ok {
+				for _, address := range addresses {
+					if !gov.checkVote(address, authorize, valset) {
 						return valset, votes, tally
 					}
 				}
-			}
-		case params.RemoveValidator:
-			if reflect.TypeOf(gVote.Value) == addressT {
-				if !gov.checkVote(gVote.Value.(common.Address), false, valset) {
-					return valset, votes, tally
-				}
 			} else {
-				for _, address := range gVote.Value.([]common.Address) {
-					if !gov.checkVote(address, false, valset) {
-						return valset, votes, tally
-					}
-				}
+				logger.Warn("Invalid value Type", "number", header.Number, "Validator", gVote.Validator, "key", gVote.Key, "value", gVote.Value)
 			}
 		}
 
