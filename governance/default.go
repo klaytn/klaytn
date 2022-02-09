@@ -499,7 +499,6 @@ func (g *Governance) getKey(k string) string {
 func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
 	k := GovernanceKeyMap[key]
 	if isEqualValue(k, g.voteMap.GetValue(key).Value, value) {
-		//if GovernanceItems[k].isEqual(g.voteMap.GetValue(key).Value, value) {
 		g.voteMap.SetValue(key, VoteStatus{
 			Value:  value,
 			Casted: true,
@@ -519,7 +518,7 @@ func (g *Governance) ClearVotes(num uint64) {
 	logger.Info("Governance votes are cleared", "num", num)
 }
 
-// parseVoteValue parse vote.Value from []uint8 to appropriate type
+// parseVoteValue parse vote.Value from []uint8, [][]uint8 to appropriate type
 func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, error) {
 	var val interface{}
 	k, ok := GovernanceKeyMap[gVote.Key]
