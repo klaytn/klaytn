@@ -313,7 +313,7 @@ func checkAddressOrListOfUniqueAddresses(k string, v interface{}) bool {
 		return false
 	}
 
-	// there should not be identical addresses, if value contains multiple addresses
+	// there should not be duplicated addresses, if value contains multiple addresses
 	addressExists := make(map[common.Address]bool)
 	for _, address := range v.([]common.Address) {
 		if _, ok := addressExists[address]; ok {
