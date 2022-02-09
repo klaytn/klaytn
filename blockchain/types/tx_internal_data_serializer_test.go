@@ -162,7 +162,7 @@ func testTransactionJSON(t *testing.T, tx TxInternalData) {
 func newRPCTransaction(tx *Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
 	var from common.Address
 	if tx.IsLegacyTransaction() {
-		signer := NewEIP155Signer(tx.ChainId())
+		signer := LatestSignerForChainID(tx.ChainId())
 		from, _ = Sender(signer, tx)
 	} else {
 		from, _ = tx.From()

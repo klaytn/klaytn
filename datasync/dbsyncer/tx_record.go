@@ -65,7 +65,7 @@ func MakeTxDBRow(block *types.Block, txKey uint64, tx *types.Transaction, receip
 
 	from := ""
 	if tx.IsLegacyTransaction() {
-		signer := types.NewEIP155Signer(tx.ChainId())
+		signer := types.LatestSignerForChainID(tx.ChainId())
 		addr, err := types.Sender(signer, tx)
 		if err != nil {
 			logger.Error("fail to tx.From", "err", err)

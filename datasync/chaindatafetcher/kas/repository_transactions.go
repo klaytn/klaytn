@@ -62,7 +62,7 @@ func transformToTxs(event blockchain.ChainEvent) ([]*Tx, map[common.Address]stru
 		// from
 		var from common.Address
 		if rawTx.IsLegacyTransaction() {
-			signer := types.NewEIP155Signer(rawTx.ChainId())
+			signer := types.LatestSignerForChainID(rawTx.ChainId())
 			from, _ = types.Sender(signer, rawTx)
 		} else {
 			from, _ = rawTx.From()
