@@ -563,7 +563,12 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 			c.writeConn = nil
 		}
 		return err
-	} else {
+	} else { // gorilla ws
+		if c.writeGorillaWSConn == nil {
+			if err := c.GorillaWSreconnect(ctx); err != nil {
+				return err
+			}
+		}
 		err := c.writeGorillaWSConn.WriteJSON(msg)
 		if err != nil {
 			c.writeGorillaWSConn = nil
@@ -572,6 +577,7 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 	}
 }
 
+// writeGorillaWSConn
 func (c *Client) reconnect(ctx context.Context) error {
 	newconn, err := c.connectFunc(ctx)
 	if err != nil {
@@ -581,6 +587,22 @@ func (c *Client) reconnect(ctx context.Context) error {
 	select {
 	case c.reconnected <- newconn:
 		c.writeConn = newconn
+		return nil
+	case <-c.didQuit:
+		newconn.Close()
+		return ErrClientQuit
+	}
+}
+
+func (c *Client) GorillaWSreconnect(ctx context.Context) error {
+	newconn, err := c.connectGorillaWSFunc(ctx)
+	if err != nil {
+		logger.Trace(fmt.Sprintf("reconnect failed: %v", err))
+		return err
+	}
+	select {
+	case c.reconnectedGorillaWS <- newconn:
+		c.writeGorillaWSConn = newconn
 		return nil
 	case <-c.didQuit:
 		newconn.Close()
