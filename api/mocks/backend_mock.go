@@ -148,7 +148,6 @@ func (mr *MockBackendMockRecorder) CurrentBlock() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlock", reflect.TypeOf((*MockBackend)(nil).CurrentBlock))
 }
 
-
 func (m *MockBackend) Engine() consensus.Engine {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Engine")
