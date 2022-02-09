@@ -49,14 +49,28 @@ func TestWebsocketLargeCall(t *testing.T) {
 
 	// create server
 	var (
-		srv     = newTestServer("service", new(Service))
-		httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"*"}))
-		wsAddr  = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
+	//srv = newTestServer("service", new(Service))
+	//httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"*"}))
+	//httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"*"}))
+	//wsAddr = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
+	)
+
+	// create server
+	var (
+		srv    = newTestServer("service", new(Service))
+		ln     = newTestListener()
+		wsAddr = "ws://" + ln.Addr().String()
 	)
 	defer srv.Stop()
-	defer httpsrv.Close()
-	fmt.Println("server", httpsrv.Listener.Addr())
+	defer ln.Close()
+
+	go NewFastWSServer([]string{"*"}, srv).Serve(ln)
 	time.Sleep(100 * time.Millisecond)
+
+	//defer srv.Stop()
+	//defer httpsrv.Close()
+	//fmt.Println("server", httpsrv.Listener.Addr())
+	//time.Sleep(100 * time.Millisecond)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -78,23 +92,17 @@ func TestWebsocketLargeCall(t *testing.T) {
 	messageSize, err = client.getMessageSize(method)
 	fmt.Println("get message size ", messageSize, err)
 	assert.NoError(t, err)
-	requestMaxLen := common.MaxRequestContentLength - messageSize - 50000
-	//requestMaxLen = 800
-
+	requestMaxLen := common.MaxRequestContentLength - messageSize
+	requestMaxLen = 500
 	// This call sends slightly less than the limit and should work.
 	arg := strings.Repeat("x", requestMaxLen-1)
-	fmt.Println("before client call ", result)
 
 	assert.NoError(t, client.Call(&result, method, arg, 1), "valid call didn't work")
-	fmt.Println(" client call ", result)
 	assert.Equal(t, arg, result.String, "wrong string echoed")
 
 	// This call sends slightly larger than the allowed size and shouldn't work.
 	arg = strings.Repeat("x", requestMaxLen)
-	fmt.Println("before client call 2 ", result)
 	assert.Error(t, client.Call(&result, method, arg), "no error for too large call")
-	fmt.Println(" client call 2 ", result)
-
 }
 
 func newTestListener() net.Listener {
@@ -107,15 +115,27 @@ func newTestListener() net.Listener {
 
 func TestWSServer_MaxConnections(t *testing.T) {
 	// create server
+	//var (
+
+	//	srv = newTestServer("service", new(Service))
+	//	ln  = newTestListener()
+	//)
+	//defer srv.Stop()
+	//defer ln.Close()
+	// create server
 	var (
 		srv = newTestServer("service", new(Service))
 		ln  = newTestListener()
+		//wsAddr = "ws://" + ln.Addr().String()
 	)
 	defer srv.Stop()
 	defer ln.Close()
 
-	go NewWSServer([]string{"*"}, srv).Serve(ln)
+	go NewFastWSServer([]string{"*"}, srv).Serve(ln)
 	time.Sleep(100 * time.Millisecond)
+
+	//go NewWSServer([]string{"*"}, srv).Serve(ln)
+	//time.Sleep(100 * time.Millisecond)
 
 	// set max websocket connections
 	MaxWebsocketConnections = 3

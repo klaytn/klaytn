@@ -100,15 +100,19 @@ func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 			}
 
 			encoder := func(v interface{}) error {
+				fmt.Println("SERVER - 123123websocket server handler before1111111111 encoding", conn)
+
 				return websocketJSONCodec.Send(conn, v)
 			}
 			decoder := func(v interface{}) error {
-				fmt.Println("websocket server handler before decoding", conn)
+				fmt.Println("SERVER - 123123websocket server handler before decoding", conn)
 				//var msg []byte
 				//conn.Read(msg)
 				//fmt.Println("websocket server readed:", len(msg), string(msg))
+				fmt.Println("\n\n\n12312312jsoncodec receive")
+
 				err := websocketJSONCodec.Receive(conn, v)
-				fmt.Println("jsoncodec receive", err, "||||", v)
+				fmt.Println("\n\n\n\n111111111111111111jsoncodec receive", err, "||||", v)
 				return err
 				//return websocketJSONCodec.Receive(conn, v)
 			}
@@ -311,6 +315,7 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 
 		conn, resp, err := dialer.Dial(endpoint, header)
 		_ = resp
+
 		//fmt.Println("dialer.dial after")
 		//fmt.Println("resp", resp)
 		fmt.Println("Dial Done - conn", conn)
