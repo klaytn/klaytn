@@ -46,12 +46,22 @@ func randomHash() common.Hash {
 	return hash
 }
 
-// TODO-Klaytn-Snapshot the below Account should be updated to Klaytn account model
 // randomAccount generates a random account and returns it RLP encoded.
 func randomAccount() []byte {
-	root := randomHash()
-	a, _ := genSmartContractAccount(rand.Uint64(), big.NewInt(rand.Int63()), root, emptyCode[:])
-	serializer := account.NewAccountSerializerWithAccount(a)
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	var (
+		acc  account.Account
+		root = randomHash()
+	)
+
+	if rand.Uint32()%2 == 0 {
+		acc, _ = genExternallyOwnedAccount(rand.Uint64(), big.NewInt(rand.Int63()))
+	} else {
+		acc, _ = genSmartContractAccount(rand.Uint64(), big.NewInt(rand.Int63()), root, emptyCode[:])
+	}
+
+	serializer := account.NewAccountSerializerWithAccount(acc)
 	data, _ := rlp.EncodeToBytes(serializer)
 	return data
 }
