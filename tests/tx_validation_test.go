@@ -89,6 +89,10 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap, gas = genMapForAccessListTransaction(from, to, gasPrice, txType)
 	}
 
+	if txType == types.TxTypeDynamicFee {
+		valueMap, gas = genMapForDynamicFeeTransaction(from, to, gasPrice, txType)
+	}
+
 	return valueMap, gas
 }
 
@@ -349,7 +353,12 @@ func decreaseNonce(txType types.TxType, values txValueMap, contract common.Addre
 
 // decreaseGasLimit changes gasLimit to 12345678
 func decreaseGasLimit(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	(*big.Int).SetUint64(values[types.TxValueKeyGasPrice].(*big.Int), 12345678)
+	if txType == types.TxTypeDynamicFee {
+		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
+		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
+	} else {
+		(*big.Int).SetUint64(values[types.TxValueKeyGasPrice].(*big.Int), 12345678)
+	}
 
 	return values, blockchain.ErrInvalidUnitPrice
 }

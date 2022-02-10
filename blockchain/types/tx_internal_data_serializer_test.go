@@ -36,6 +36,8 @@ var (
 	amount    = big.NewInt(10)
 	gasLimit  = uint64(1000000)
 	gasPrice  = big.NewInt(25)
+	gasTipCap = big.NewInt(25)
+	gasFeeCap = big.NewInt(25)
 	accesses  = AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
 )
 
@@ -68,6 +70,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"FeeDelegatedCancel", genFeeDelegatedCancelTransaction()},
 		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
 		{"AccessList", genAccessListTransaction()},
+		{"DynamicFee", genDynamicFeeTransaction()},
 	}
 
 	var testcases = []struct {
@@ -239,6 +242,26 @@ func genAccessListTransaction() TxInternalData {
 		TxValueKeyAmount:     amount,
 		TxValueKeyGasLimit:   gasLimit,
 		TxValueKeyGasPrice:   gasPrice,
+		TxValueKeyData:       []byte("1234"),
+		TxValueKeyAccessList: accesses,
+		TxValueKeyChainID:    big.NewInt(2),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
+}
+
+func genDynamicFeeTransaction() TxInternalData {
+	tx, err := NewTxInternalDataWithMap(TxTypeDynamicFee, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:      nonce,
+		TxValueKeyTo:         to,
+		TxValueKeyAmount:     amount,
+		TxValueKeyGasLimit:   gasLimit,
+		TxValueKeyGasFeeCap:  gasFeeCap,
+		TxValueKeyGasTipCap:  gasTipCap,
 		TxValueKeyData:       []byte("1234"),
 		TxValueKeyAccessList: accesses,
 		TxValueKeyChainID:    big.NewInt(2),

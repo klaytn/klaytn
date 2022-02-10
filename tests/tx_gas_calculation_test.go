@@ -57,6 +57,7 @@ func TestGasCalculation(t *testing.T) {
 	}{
 		{"LegacyTransaction", genLegacyTransaction},
 		{"AccessListTransaction", genAccessListTransaction},
+		{"DynamicFeeTransaction", genDynamicFeeTransaction},
 
 		{"ValueTransfer", genValueTransfer},
 		{"ValueTransferWithMemo", genValueTransferWithMemo},
@@ -240,7 +241,7 @@ func TestGasCalculation(t *testing.T) {
 			senderRole := accountkey.RoleTransaction
 
 			// LegacyTransaction can be used only by the KlaytnAccount with AccountKeyLegacy.
-			if sender.Type != "KlaytnLegacy" && (strings.Contains(f.Name, "Legacy") || strings.Contains(f.Name, "Access")) {
+			if sender.Type != "KlaytnLegacy" && (strings.Contains(f.Name, "Legacy") || strings.Contains(f.Name, "Access") || strings.Contains(f.Name, "Dynamic")) {
 				continue
 			}
 
@@ -300,6 +301,17 @@ func genLegacyTransaction(t *testing.T, signer types.Signer, from TestAccount, t
 func genAccessListTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
 	values, intrinsic := genMapForAccessListTransaction(from, to, gasPrice, types.TxTypeAccessList)
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccessList, values)
+	assert.Equal(t, nil, err)
+
+	err = tx.SignWithKeys(signer, from.GetTxKeys())
+	assert.Equal(t, nil, err)
+
+	return tx, intrinsic
+}
+
+func genDynamicFeeTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
+	values, intrinsic := genMapForDynamicFeeTransaction(from, to, gasPrice, types.TxTypeAccessList)
+	tx, err := types.NewTransactionWithMap(types.TxTypeDynamicFee, values)
 	assert.Equal(t, nil, err)
 
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
@@ -671,7 +683,6 @@ func genMapForLegacyTransaction(from TestAccount, to TestAccount, gasPrice *big.
 	return values, intrinsic + gasPayload
 }
 
-// Generate map functions
 func genMapForAccessListTransaction(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
 	intrinsic := getIntrinsicGas(txType)
 	amount := big.NewInt(100000)
@@ -689,6 +700,30 @@ func genMapForAccessListTransaction(from TestAccount, to TestAccount, gasPrice *
 		types.TxValueKeyData:       data,
 		types.TxValueKeyGasLimit:   gasLimit,
 		types.TxValueKeyGasPrice:   gasPrice,
+		types.TxValueKeyAccessList: accessList,
+		types.TxValueKeyChainID:    big.NewInt(1),
+	}
+	return values, intrinsic + gasPayload
+}
+
+func genMapForDynamicFeeTransaction(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	intrinsic := getIntrinsicGas(txType)
+	amount := big.NewInt(100000)
+	data := []byte{0x11, 0x22}
+	gasPayload := uint64(len(data)) * params.TxDataGas
+	accessList := types.AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+
+	gasPayload += uint64(len(accessList)) * params.TxAccessListAddressGas
+	gasPayload += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
+
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      from.GetNonce(),
+		types.TxValueKeyTo:         to.GetAddr(),
+		types.TxValueKeyAmount:     amount,
+		types.TxValueKeyData:       data,
+		types.TxValueKeyGasLimit:   gasLimit,
+		types.TxValueKeyGasFeeCap:   gasPrice,
+		types.TxValueKeyGasTipCap:   gasPrice,
 		types.TxValueKeyAccessList: accessList,
 		types.TxValueKeyChainID:    big.NewInt(1),
 	}
