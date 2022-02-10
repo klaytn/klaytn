@@ -20,7 +20,9 @@
 
 package client
 
-import "github.com/klaytn/klaytn"
+import (
+	"github.com/klaytn/klaytn"
+)
 
 // Verify that Client implements the Klaytn interfaces.
 var (

@@ -18,6 +18,7 @@
 // This file is derived from build/update-license.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
+//go:build none
 // +build none
 
 /*
@@ -527,7 +528,7 @@ var (
 		"networks/rpc/http.go":                               "rpc/http.go",
 		"networks/rpc/inproc.go":                             "rpc/inproc.go",
 		"networks/rpc/utils.go":                              "rpc/utils.go",
-		"networks/rpc/websocket.go":                          "rpc/websocket.go",
+		"networks/rpc/backup_websocket.go":                   "rpc/backup_websocket.go",
 		"networks/rpc/client_example_test.go":                "rpc/client_example_test.go",
 		"networks/rpc/client_test.go":                        "rpc/client_test.go",
 		"networks/rpc/endpoints.go":                          "rpc/endpoints.go",
