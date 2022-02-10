@@ -57,6 +57,8 @@ func TestTransactionSenderTxHash(t *testing.T) {
 		{"FeeDelegatedCancel", genFeeDelegatedCancelTransaction()},
 		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
 		{"AccessList", genAccessListTransaction()},
+		{"DynamicFee", genDynamicFeeTransaction()},
+
 	}
 
 	var testcases = []struct {
@@ -439,6 +441,23 @@ func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
 		hw.Sum(h[:0])
 		senderTxHash := rawTx.GetTxInternalData().SenderTxHash()
 		assert.Equal(t, h, senderTxHash)
+	case *TxInternalDataDynamicFee:
+		hw := sha3.NewKeccak256()
+		rlp.Encode(hw, rawTx.Type())
+		rlp.Encode(hw, []interface{}{
+			v.ChainID,
+			v.AccountNonce,
+			v.GasTipCap,
+			v.GasFeeCap,
+			v.GasLimit,
+			v.Recipient,
+			v.Amount,
+			v.Payload,
+			v.AccessList,
+			v.V,
+			v.R,
+			v.S,
+		})
 
 	default:
 		t.Fatal("Undefined tx type.")

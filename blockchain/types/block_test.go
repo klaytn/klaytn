@@ -260,6 +260,91 @@ func TestEIP2718BlockEncoding(t *testing.T) {
 	}
 }
 
+func TestEIP1559BlockEncoding(t *testing.T) {
+	b := genBlock()
+
+	blockEnc := common.FromHex("f9044df902a9a06e3826cd2407f01ceaad3cebc1235102001c0bb9a0f8c915ab2958303bc0972c945a0043070275d9f6054307ee7348bd660849d90fa0f412a15cb6477bd1b0e48e8fc2d101292a5c1bb9c0b78f7a1129fea4f865fb97a0f412a15cb6477bd1b0e48e8fc2d101292a5c1bb9c0b78f7a1129fea4f865fb99a0f412a15cb6477bd1b0e48e8fc2d101292a5c1bb9c0b78f7a1129fea4f865fba9b90100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006634313261313563623634373762643162306534386538666332643130313239326135633162623963306237386637613131323966656134663836356662613966343132613135636236343737626431623065343865386663326431303132393261356331626239633062373866376131313239666561346638363566626139663431326131356362363437376264316230653438653866633264313031323932613563316262396330623738663761313132396665613466383635666261390a0964845c5d1e931480b8deb8dc7b22676f7665726e696e676e6f6465223a22307865373333636234643237396461363936663330643437306638633034646563623534666362306432222c22676f7665726e616e63656d6f6465223a2273696e676c65222c22726577617264223a7b226d696e74696e67616d6f756e74223a393630303030303030303030303030303030302c22726174696f223a2233342f33332f3333227d2c22626674223a7b2265706f6368223a33303030302c22706f6c696379223a302c22737562223a32317d2c22756e69745072696365223a32353030303030303030307da2e194e733cb4d279da696f30d470f8c04decb54fcb0d28565706f6368853330303030f9019ef85f800a82c35094095e7baea6a6c7c4c2dfeb977efac326af552d870a8025a09bea4c4daac7c7c52e093e6a4c35dbbcf8856f1af7b059ba20253e70848d094fa08a8fae537ce25ed8cb5af9adac3f141af69bd515bd2ba031522df09b97dd72b101f89b01800a8301e24194095e7baea6a6c7c4c2dfeb977efac326af552d878080f838f7940000000000000000000000000000000000000001e1a0000000000000000000000000000000000000000000000000000000000000000001a03dbacc8d0259f2508625e97fdfc57cd85fdd16e5821bc2c10bdd1a52649e8335a0476e10695b183a87b0aa292a7f4b78ef0c3fbe62aa2c42c84e1d9c3da159ef1402f89c01800a0a8301e24194095e7baea6a6c7c4c2dfeb977efac326af552d878080f838f7940000000000000000000000000000000000000002e1a0000000000000000000000000000000000000000000000000000000000000000001a03dbacc8d0259f2508625e97fdfc57cd85fdd16e5821bc2c10bdd1a52649e8335a0476e10695b183a87b0aa292a7f4b78ef0c3fbe62aa2c42c84e1d9c3da159ef14")
+	var block Block
+	if err := rlp.DecodeBytes(blockEnc, &block); err != nil {
+		t.Fatal("decode error: ", err)
+	}
+	check := func(f string, got, want interface{}) {
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s mismatch: got %v, want %v", f, got, want)
+		}
+	}
+
+	check("ParentHash", block.ParentHash(), b.ParentHash())
+	check("Rewardbase", block.Rewardbase(), b.Rewardbase())
+	check("Root", block.Root(), b.Root())
+	check("TxHash", block.TxHash(), b.TxHash())
+	check("ReceiptHash", block.ReceiptHash(), b.ReceiptHash())
+	check("Bloom", block.Bloom(), b.Bloom())
+	check("BlockScore", block.BlockScore(), b.BlockScore())
+	check("NUmber", block.Number(), b.Number())
+	check("GasUsed", block.GasUsed(), b.GasUsed())
+	check("Time", block.Time(), b.Time())
+	check("TimeFoS", block.TimeFoS(), b.TimeFoS())
+	check("Extra", block.Extra(), b.Extra())
+	check("Hash", block.Hash(), b.Hash())
+	check("Size", block.Size(), common.StorageSize(len(blockEnc)))
+
+	// Create legacy tx.
+	to := common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87")
+	tx1 := NewTx(&TxInternalDataLegacy{
+		AccountNonce: 0,
+		Recipient:    &to,
+		Amount:       big.NewInt(10),
+		GasLimit:     50000,
+		Price:        big.NewInt(10),
+	})
+	sig := common.Hex2Bytes("9bea4c4daac7c7c52e093e6a4c35dbbcf8856f1af7b059ba20253e70848d094f8a8fae537ce25ed8cb5af9adac3f141af69bd515bd2ba031522df09b97dd72b100")
+	tx1, _ = tx1.WithSignature(LatestSignerForChainID(big.NewInt(1)), sig)
+
+	// Create ACL tx.
+	addr := common.HexToAddress("0x0000000000000000000000000000000000000001")
+	tx2 := NewTx(&TxInternalDataAccessList{
+		ChainID:      big.NewInt(1),
+		AccountNonce: 0,
+		Recipient:    &to,
+		GasLimit:     123457,
+		Price:        big.NewInt(10),
+		AccessList:   AccessList{{Address: addr, StorageKeys: []common.Hash{{0}}}},
+	})
+	sig2 := common.Hex2Bytes("3dbacc8d0259f2508625e97fdfc57cd85fdd16e5821bc2c10bdd1a52649e8335476e10695b183a87b0aa292a7f4b78ef0c3fbe62aa2c42c84e1d9c3da159ef1401")
+	tx2, _ = tx2.WithSignature(LatestSignerForChainID(big.NewInt(1)), sig2)
+
+	// Create DynamicFee tx.
+	addr2 := common.HexToAddress("0x0000000000000000000000000000000000000002")
+	tx3 := NewTx(&TxInternalDataDynamicFee{
+		ChainID:      big.NewInt(1),
+		AccountNonce: 0,
+		Recipient:    &to,
+		GasLimit:     123457,
+		GasFeeCap:        big.NewInt(10),
+		GasTipCap:        big.NewInt(10),
+		AccessList:   AccessList{{Address: addr2, StorageKeys: []common.Hash{{0}}}},
+	})
+	sig3 := common.Hex2Bytes("3dbacc8d0259f2508625e97fdfc57cd85fdd16e5821bc2c10bdd1a52649e8335476e10695b183a87b0aa292a7f4b78ef0c3fbe62aa2c42c84e1d9c3da159ef1401")
+	tx3, _ = tx3.WithSignature(LatestSignerForChainID(big.NewInt(1)), sig3)
+
+
+	check("len(Transactions)", len(block.Transactions()), 3)
+	check("Transactions[0].Hash", block.Transactions()[0].Hash(), tx1.Hash())
+	check("Transactions[1].Hash", block.Transactions()[1].Hash(), tx2.Hash())
+	check("Transactions[1].Type()", block.Transactions()[1].Type(), TxTypeAccessList)
+	check("Transactions[2].Hash", block.Transactions()[2].Hash(), tx3.Hash())
+	check("Transactions[2].Type()", block.Transactions()[2].Type(), TxTypeDynamicFee)
+
+	ourBlockEnc, err := rlp.EncodeToBytes(&block)
+	if err != nil {
+		t.Fatal("encode error: ", err)
+	}
+	if !bytes.Equal(ourBlockEnc, blockEnc) {
+		t.Errorf("encoded block mismatch:\ngot:  %x\nwant: %x", ourBlockEnc, blockEnc)
+	}
+}
+
 func BenchmarkBlockEncodingHashWithInterface(b *testing.B) {
 	data, err := ioutil.ReadFile("../../tests/b1.rlp")
 	if err != nil {

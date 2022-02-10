@@ -100,6 +100,11 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 // The address "contact" should exist before calling this function.
 func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txType types.TxType, contractAddr common.Address) (*types.Transaction, *TestAccountType, error) {
 	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+
+	//For Dynamic fee tx.
+	gasTipCap := new(big.Int).SetUint64(25 * params.Ston)
+	gasFeeCap := new(big.Int).SetUint64(25 * params.Ston)
+
 	gasLimit := uint64(10000000)
 	amount := new(big.Int).SetUint64(1)
 
@@ -330,6 +335,16 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyAmount] = amount
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyChainID] = big.NewInt(1)
+		values[types.TxValueKeyData] = dataCode
+		values[types.TxValueKeyAccessList] = types.AccessList{}
+	case types.TxTypeDynamicFee:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasFeeCap] = gasFeeCap
+		values[types.TxValueKeyGasTipCap] = gasTipCap
 		values[types.TxValueKeyChainID] = big.NewInt(1)
 		values[types.TxValueKeyData] = dataCode
 		values[types.TxValueKeyAccessList] = types.AccessList{}
@@ -1863,7 +1878,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
-		if i == types.TxTypeLegacyTransaction || i == types.TxTypeAccessList {
+		if i.IsLegacyTransaction() || i.IsEthTypedTransaction() {
 			continue // accounts with role-based key cannot a send legacy tx.
 		}
 		_, err := types.NewTxInternalData(i)
