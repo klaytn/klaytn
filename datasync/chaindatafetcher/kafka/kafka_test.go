@@ -39,6 +39,7 @@ import (
 
 type KafkaSuite struct {
 	suite.Suite
+	conf     *KafkaConfig
 	kfk      *Kafka
 	consumer sarama.Consumer
 	topic    string
@@ -47,17 +48,17 @@ type KafkaSuite struct {
 // In order to test KafkaSuite, any available kafka broker must be connectable with "kafka:9094".
 // If no kafka broker is available, the KafkaSuite tests are skipped.
 func (s *KafkaSuite) SetupTest() {
-	config := GetDefaultKafkaConfig()
-	config.Brokers = []string{"kafka:9094"}
-	kfk, err := NewKafka(config)
+	s.conf = GetDefaultKafkaConfig()
+	s.conf.Brokers = []string{"kafka:9094"}
+	kfk, err := NewKafka(s.conf)
 	if err == sarama.ErrOutOfBrokers {
-		s.T().Log("Failed connecting to brokers", config.Brokers)
+		s.T().Log("Failed connecting to brokers", s.conf.Brokers)
 		s.T().Skip()
 	}
 	s.NoError(err)
 	s.kfk = kfk
 
-	consumer, err := sarama.NewConsumer(config.Brokers, config.SaramaConfig)
+	consumer, err := sarama.NewConsumer(s.conf.Brokers, s.conf.SaramaConfig)
 	s.NoError(err)
 	s.consumer = consumer
 	s.topic = "test-topic"
@@ -138,6 +139,23 @@ func (s *KafkaSuite) TestKafka_setupTopic() {
 	// try to create duplicated topic
 	err = s.kfk.setupTopic(topicName)
 	s.NoError(err)
+}
+
+func (s *KafkaSuite) TestKafka_setupTopicConcurrency() {
+	topicName := "test-setup-concurrency-topic"
+	wg := sync.WaitGroup{}
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			kaf, err := NewKafka(s.conf)
+			s.NoError(err)
+
+			err = kaf.setupTopic(topicName)
+			s.NoError(err)
+		}()
+	}
+	wg.Wait()
 }
 
 func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {
