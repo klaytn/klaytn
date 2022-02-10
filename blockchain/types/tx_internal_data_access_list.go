@@ -377,7 +377,7 @@ func (t *TxInternalDataAccessList) String() string {
 		GasLimit  %#x
 		Value:    %#x
 		Data:     0x%x
-	   AccessList: %x
+		AccessList: %x
 		V:        %#x
 		R:        %#x
 		S:        %#x
