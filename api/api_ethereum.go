@@ -50,9 +50,6 @@ const (
 	// because there is no uncles in Klaytn.
 	// Just use const value because we don't have to calculate it everytime which always be same result.
 	EmptySha3Uncles = "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
-	// DummyGasLimit exists for supporting Ethereum compatible data structure.
-	// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
-	DummyGasLimit uint64 = 999999999
 	// ZeroHashrate exists for supporting Ethereum compatible data structure.
 	// There is no POW mining mechanism in Klaytn.
 	ZeroHashrate uint64 = 0
@@ -312,7 +309,7 @@ func (api *EthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (api *EthereumAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	return api.publicKlayAPI.GasPrice(ctx)
+	return api.publicKlayAPI.MaxPriorityFeePerGas(ctx)
 }
 
 type FeeHistoryResult struct {
@@ -649,29 +646,16 @@ func (api *EthereumAPI) GetBlockTransactionCountByHash(ctx context.Context, bloc
 	return transactionCount
 }
 
-// accessListResult returns an optional accesslist
-// Its the result of the `debug_createAccessList` RPC call.
-// It contains an error if the transaction itself failed.
-type accessListResult struct {
-	Accesslist *AccessList    `json:"accessList"`
-	Error      string         `json:"error,omitempty"`
-	GasUsed    hexutil.Uint64 `json:"gasUsed"`
-}
-
-// AccessList is an EIP-2930 access list.
-type AccessList []AccessTuple
-
-// AccessTuple is the element type of an access list.
-type AccessTuple struct {
-	Address     common.Address `json:"address"        gencodec:"required"`
-	StorageKeys []common.Hash  `json:"storageKeys"    gencodec:"required"`
-}
-
 // CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
 func (api *EthereumAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (*accessListResult, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	// To use CreateAccess of PublicBlockChainAPI, we need to convert the EthTransactionArgs to SendTxArgs.
+	// However, since SendTxArgs does not yet support MaxFeePerGas and MaxPriorityFeePerGas, the conversion logic is bound to be incomplete.
+	// Since this parameter is not actually used and currently only returns an empty result value, implement the logic to return an empty result separately,
+	// and later, when the API is actually implemented, add the relevant fields to SendTxArgs and call the function in PublicBlockChainAPI.
+	// TODO-Klaytn: Modify below logic to use api.publicBlockChainAPI.CreateAccessList
+	result := &accessListResult{Accesslist: &AccessList{}, GasUsed: hexutil.Uint64(0)}
+	return result, nil
 }
 
 // EthRPCTransaction represents a transaction that will serialize to the RPC representation of a transaction

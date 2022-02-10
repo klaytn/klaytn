@@ -52,6 +52,11 @@ func (s *PublicKlayAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
 }
 
+// MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
+func (s *PublicKlayAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
+	return s.GasPrice(ctx)
+}
+
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
 // yet received the latest block headers from its pears. In case it is synchronizing:
 // - startingBlock: block number this node started to synchronise from
