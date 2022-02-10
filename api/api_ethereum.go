@@ -577,6 +577,9 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 		gasCap = rpcGasCap.Uint64()
 	}
 	result, _, err := EthDoCall(ctx, api.publicBlockChainAPI.b, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
+	if isReverted(err) {
+		return nil, newRevertError(result)
+	}
 	return (hexutil.Bytes)(result), err
 }
 
@@ -1452,7 +1455,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		}
 		if !isExecutable {
 			if ret != nil {
-				if vmErr == vm.ErrExecutionReverted || strings.Contains(vmErr.Error(), vm.ErrExecutionReverted.Error()) {
+				if isReverted(vmErr) {
 					return 0, newRevertError(ret)
 				}
 				return 0, vmErr
@@ -1470,6 +1473,14 @@ func isVMError(err error) bool {
 		if err == vmError || strings.Contains(err.Error(), vmError.Error()) {
 			return true
 		}
+	}
+	return false
+}
+
+// isReverted checks given error is vm.ErrExecutionReverted
+func isReverted(err error) bool {
+	if err == vm.ErrExecutionReverted || strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+		return true
 	}
 	return false
 }
