@@ -341,22 +341,22 @@ func (t *TxInternalDataDynamicFee) String() string {
 	}
 	enc, _ := rlp.EncodeToBytes(t)
 	return fmt.Sprintf(`
-	TX(%x)
-	Contract: %v
-	From:     %s
-	To:       %s
-	Nonce:    %v
-	GasTipCap: %#x
-	GasFeeCap: %#x
-	GasLimit  %#x
-	Value:    %#x
-	Data:     0x%x
-   AccessList: %x
-	V:        %#x
-	R:        %#x
-	S:        %#x
-	Hex:      %x
-`,
+		TX(%x)
+		Contract: %v
+		From:     %s
+		To:       %s
+		Nonce:    %v
+		GasTipCap: %#x
+		GasFeeCap: %#x
+		GasLimit  %#x
+		Value:    %#x
+		Data:     0x%x
+	   AccessList: %x
+		V:        %#x
+		R:        %#x
+		S:        %#x
+		Hex:      %x
+	`,
 		tx.Hash(),
 		t.GetRecipient() == nil,
 		from,
