@@ -22,11 +22,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/klaytn/klaytn/accounts/abi"
 	"math/big"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/klaytn/klaytn/accounts/abi"
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
