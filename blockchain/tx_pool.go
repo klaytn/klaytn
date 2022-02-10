@@ -199,6 +199,7 @@ type TxPool struct {
 	txMsgCh chan types.Transactions
 
 	eip2718 bool // Fork indicator whether we are using EIP-2718 type transactions.
+	eip1559 bool // Fork indicator whether we are using EIP-1559 type transactions.
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -452,6 +453,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	next := new(big.Int).Add(newHead.Number, big.NewInt(1))
 	// TODO-Klaytn-AccessList: Make another hardfork for eip2718 instead of London
 	pool.eip2718 = pool.chainconfig.IsLondon(next)
+	pool.eip1559 = pool.chainconfig.IsLondon(next)
 }
 
 // Stop terminates the transaction pool.
@@ -626,6 +628,10 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// Accept only legacy transactions until EIP-2718/2930 activates.
 	if !pool.eip2718 && tx.IsEthTypedTransaction() {
+		return ErrTxTypeNotSupported
+	}
+	// Reject dynamic fee transactions until EIP-1559 activates.
+	if !pool.eip1559 && tx.Type() == types.TxTypeDynamicFee {
 		return ErrTxTypeNotSupported
 	}
 
