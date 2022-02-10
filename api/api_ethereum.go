@@ -22,7 +22,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn/accounts/abi"
 	"math/big"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -58,6 +60,7 @@ const (
 
 var (
 	errNoMiningWork = errors.New("no mining work available yet")
+	vmErrors        = []error{vm.ErrCodeStoreOutOfGas, vm.ErrDepth, vm.ErrTraceLimitReached, vm.ErrInsufficientBalance, vm.ErrContractAddressCollision, vm.ErrTotalTimeLimitReached, vm.ErrOpcodeComputationCostLimitReached, vm.ErrFailedOnSetCode, vm.ErrWriteProtection, vm.ErrReturnDataOutOfBounds, vm.ErrExecutionReverted, vm.ErrMaxCodeSizeExceeded, vm.ErrInvalidJump}
 )
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
@@ -1338,7 +1341,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
 	}
 	if err != nil {
-		return nil, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
+		return res, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
 	}
 	return res, gas, nil
 }
@@ -1389,7 +1392,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		}
 		allowance := new(big.Int).Div(available, feeCap)
 
-		// If the allowance is largser than maximum uint64, skip checking
+		// If the allowance is larger than maximum uint64, skip checking
 		if allowance.IsUint64() && hi > allowance.Uint64() {
 			transfer := args.Value
 			if transfer == nil {
@@ -1407,19 +1410,32 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	}
 	cap = hi
 
-	// Create a helper to check if a gas allowance results in an executable transaction
-	executable := func(gas uint64) (bool, error) {
+	// Create a helper to check if a gas allowance results in an executable transaction.
+	// executable returns
+	// - bool: true when a call with given args and gas is executable.
+	// - []byte: EVM execution result.
+	// - error: error occurred during EVM execution.
+	// - error: consensus error which is not EVM related error (less balance of caller, wrong nonce, etc...).
+	executable := func(gas uint64) (bool, []byte, error, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
-		_, _, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
+		ret, _, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
 		if err != nil {
-			return false, err
+			if isVMError(err) {
+				// If err is vmError, return vmError with returned data
+				return false, ret, err, nil
+			}
+			// Returns error when it is not VM error (less balance or wrong nonce, etc...).
+			return false, nil, nil, err
 		}
-		return true, nil
+		return true, ret, nil, nil
 	}
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
-		isExecutable, _ := executable(mid)
+		isExecutable, _, _, err := executable(mid)
+		if err != nil {
+			return 0, err
+		}
 
 		if !isExecutable {
 			lo = mid
@@ -1429,13 +1445,62 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	}
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
-		isExecutable, err := executable(hi)
+		isExecutable, ret, vmErr, err := executable(hi)
 		if err != nil {
 			return 0, err
 		}
 		if !isExecutable {
-			return 0, fmt.Errorf("gas required exceeds allowance or always failing transaction")
+			if ret != nil {
+				if vmErr == vm.ErrExecutionReverted || strings.Contains(vmErr.Error(), vm.ErrExecutionReverted.Error()) {
+					return 0, newRevertError(ret)
+				}
+				return 0, vmErr
+			}
+			// Otherwise, the specified gas cap is too low
+			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
 		}
 	}
 	return hexutil.Uint64(hi), nil
+}
+
+// isVMError returns true if given error is occurred during EVM execution.
+func isVMError(err error) bool {
+	for _, vmError := range vmErrors {
+		if err == vmError || strings.Contains(err.Error(), vmError.Error()) {
+			return true
+		}
+	}
+	return false
+}
+
+// newRevertError wraps data returned when EVM execution was reverted.
+// Make sure that data is returned when execution reverted situation.
+func newRevertError(data []byte) *revertError {
+	reason, errUnpack := abi.UnpackRevert(data)
+	err := errors.New("execution reverted")
+	if errUnpack == nil {
+		err = fmt.Errorf("execution reverted: %v", reason)
+	}
+	return &revertError{
+		error:  err,
+		reason: hexutil.Encode(data),
+	}
+}
+
+// revertError is an API error that encompassas an EVM revertal with JSON error
+// code and a binary data blob.
+type revertError struct {
+	error
+	reason string // revert reason hex encoded
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e *revertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e *revertError) ErrorData() interface{} {
+	return e.reason
 }
