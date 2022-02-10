@@ -390,7 +390,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func (s EIP155Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.Type().IsEthTypedTransaction() {
+	if tx.IsEthTypedTransaction() {
 		return nil, ErrTxTypeNotSupported
 	}
 
