@@ -443,7 +443,7 @@ func (t *TxInternalDataAccessList) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
 		"typeInt":    t.Type(),
 		"type":       t.Type().String(),
-		"chainID":    t.ChainId(),
+		"chainID":    (*hexutil.Big)(t.ChainId()),
 		"gas":        hexutil.Uint64(t.GasLimit),
 		"gasPrice":   (*hexutil.Big)(t.Price),
 		"input":      hexutil.Bytes(t.Payload),
