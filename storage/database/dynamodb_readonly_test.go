@@ -24,10 +24,13 @@ import (
 	"testing"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/storage"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDynamoDBReadOnly_Put(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	dynamo, err := newDynamoDBReadOnly(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
@@ -55,6 +58,8 @@ func TestDynamoDBReadOnly_Put(t *testing.T) {
 }
 
 func TestDynamoDBReadOnly_Write(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	dynamo, err := newDynamoDBReadOnly(GetTestDynamoConfig())
 	defer dynamo.deleteDB()
 	if err != nil {
