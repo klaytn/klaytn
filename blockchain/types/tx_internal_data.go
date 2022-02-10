@@ -110,6 +110,8 @@ var (
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
 	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of ChainID")
+	errValueKeyGasTipCapMustBigInt        = errors.New("GasTipCap must be a type of *big.Int")
+	errValueKeyGasFeeCapMustBigInt        = errors.New("GasFeeCap must be a type of *big.Int")
 
 	ErrTxTypeNotSupported = errors.New("transaction type not supported")
 )
@@ -381,8 +383,8 @@ type TxInternalDataPayload interface {
 type TxInternalDataEthTyped interface {
 	setSignatureValues(chainID, v, r, s *big.Int)
 	GetAccessList() AccessList
-	gasTipCap() *big.Int
-	gasFeeCap() *big.Int
+	GetGasTipCap() *big.Int
+	GetGasFeeCap() *big.Int
 }
 
 // Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
@@ -458,6 +460,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatio(), nil
 	case TxTypeAccessList:
 		return newTxInternalDataAccessList(), nil
+	case TxTypeDynamicFee:
+		return newTxInternalDataDynamicFee(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -513,6 +517,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatioWithMap(values)
 	case TxTypeAccessList:
 		return newTxInternalDataAccessListWithMap(values)
+	case TxTypeDynamicFee:
+		return newTxInternalDataDynamicFeeWithMap(values)
 	}
 
 	return nil, errUndefinedTxType
