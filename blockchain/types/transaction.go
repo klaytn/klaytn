@@ -51,7 +51,7 @@ var (
 
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
-	return NewEIP155Signer(deriveChainId(V))
+	return LatestSignerForChainID(deriveChainId(V))
 }
 
 type Transaction struct {
@@ -77,8 +77,8 @@ type Transaction struct {
 	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
 	markedUnexecutable int32
 
-	// lock for protecting AsMessageWithAccountKeyPicker().
-	mu sync.Mutex
+	// lock for protecting fields in Transaction struct
+	mu sync.RWMutex
 }
 
 // NewTransactionWithMap generates a tx from tx field values.
@@ -220,16 +220,32 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Gas() uint64                           { return tx.data.GetGasLimit() }
-func (tx *Transaction) GasPrice() *big.Int                    { return new(big.Int).Set(tx.data.GetPrice()) }
-func (tx *Transaction) Value() *big.Int                       { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64                         { return tx.data.GetAccountNonce() }
-func (tx *Transaction) CheckNonce() bool                      { return tx.checkNonce }
-func (tx *Transaction) Type() TxType                          { return tx.data.Type() }
-func (tx *Transaction) IsLegacyTransaction() bool             { return tx.data.IsLegacyTransaction() }
-func (tx *Transaction) ValidatedSender() common.Address       { return tx.validatedSender }
-func (tx *Transaction) ValidatedFeePayer() common.Address     { return tx.validatedFeePayer }
-func (tx *Transaction) ValidatedIntrinsicGas() uint64         { return tx.validatedIntrinsicGas }
+func (tx *Transaction) Gas() uint64        { return tx.data.GetGasLimit() }
+func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.GetPrice()) }
+func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64      { return tx.data.GetAccountNonce() }
+func (tx *Transaction) CheckNonce() bool {
+	tx.mu.RLock()
+	defer tx.mu.RUnlock()
+	return tx.checkNonce
+}
+func (tx *Transaction) Type() TxType              { return tx.data.Type() }
+func (tx *Transaction) IsLegacyTransaction() bool { return tx.data.IsLegacyTransaction() }
+func (tx *Transaction) ValidatedSender() common.Address {
+	tx.mu.RLock()
+	defer tx.mu.RUnlock()
+	return tx.validatedSender
+}
+func (tx *Transaction) ValidatedFeePayer() common.Address {
+	tx.mu.RLock()
+	defer tx.mu.RUnlock()
+	return tx.validatedFeePayer
+}
+func (tx *Transaction) ValidatedIntrinsicGas() uint64 {
+	tx.mu.RLock()
+	defer tx.mu.RUnlock()
+	return tx.validatedIntrinsicGas
+}
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
 func (tx *Transaction) GetTxInternalData() TxInternalData     { return tx.data }
 
@@ -244,23 +260,23 @@ func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {
 // ValidateMutableValue conducts validation of the sender's account key and additional validation for each transaction type.
 func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBlockNumber uint64) error {
 	// validate the sender's account key
-	accKey := db.GetKey(tx.validatedSender)
+	accKey := db.GetKey(tx.ValidatedSender())
 	if tx.IsLegacyTransaction() {
 		if !accKey.Type().IsLegacyAccountKey() {
 			return ErrInvalidSigSender
 		}
 	} else {
 		pubkey, err := SenderPubkey(signer, tx)
-		if err != nil || accountkey.ValidateAccountKey(currentBlockNumber, tx.validatedSender, accKey, pubkey, tx.GetRoleTypeForValidation()) != nil {
+		if err != nil || accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedSender(), accKey, pubkey, tx.GetRoleTypeForValidation()) != nil {
 			return ErrInvalidSigSender
 		}
 	}
 
 	// validate the fee payer's account key
 	if tx.IsFeeDelegatedTransaction() {
-		feePayerAccKey := db.GetKey(tx.validatedFeePayer)
+		feePayerAccKey := db.GetKey(tx.ValidatedFeePayer())
 		feePayerPubkey, err := SenderFeePayerPubkey(signer, tx)
-		if err != nil || accountkey.ValidateAccountKey(currentBlockNumber, tx.validatedFeePayer, feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
+		if err != nil || accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedFeePayer(), feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
 			return ErrInvalidSigFeePayer
 		}
 	}
@@ -397,7 +413,7 @@ func (tx *Transaction) FillContractAddress(from common.Address, r *Receipt) {
 // Execute performs execution of the transaction. This function will be called from StateTransition.TransitionDb().
 // Since each transaction type performs different execution, this function calls TxInternalData.TransitionDb().
 func (tx *Transaction) Execute(vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error) {
-	sender := NewAccountRefWithFeePayer(tx.validatedSender, tx.validatedFeePayer)
+	sender := NewAccountRefWithFeePayer(tx.ValidatedSender(), tx.ValidatedFeePayer())
 	return tx.data.Execute(sender, vm, stateDB, currentBlockNumber, gas, value)
 }
 
@@ -418,7 +434,9 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		return nil, err
 	}
 
+	tx.mu.Lock()
 	tx.checkNonce = true
+	tx.mu.Unlock()
 
 	gasFeePayer := uint64(0)
 	if tx.IsFeeDelegatedTransaction() {
@@ -584,10 +602,12 @@ func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, current
 		if p.GetKey(addr).Type().IsLegacyAccountKey() == false {
 			return 0, kerrors.ErrLegacyTransactionMustBeWithLegacyKey
 		}
+		tx.mu.Lock()
 		if tx.validatedSender == (common.Address{}) {
 			tx.validatedSender = addr
 			tx.validatedFeePayer = addr
 		}
+		tx.mu.Unlock()
 		return 0, err
 	}
 
@@ -611,10 +631,12 @@ func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, current
 		return 0, ErrInvalidSigSender
 	}
 
+	tx.mu.Lock()
 	if tx.validatedSender == (common.Address{}) {
 		tx.validatedSender = from
 		tx.validatedFeePayer = from
 	}
+	tx.mu.Unlock()
 
 	return gasKey, nil
 }
@@ -644,9 +666,11 @@ func (tx *Transaction) ValidateFeePayer(signer Signer, p AccountKeyPicker, curre
 		return 0, ErrInvalidSigFeePayer
 	}
 
+	tx.mu.Lock()
 	if tx.validatedFeePayer == tx.validatedSender {
 		tx.validatedFeePayer = feePayer
 	}
+	tx.mu.Unlock()
 
 	return gasKey, nil
 }

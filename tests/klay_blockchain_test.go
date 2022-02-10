@@ -197,7 +197,7 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType) (*node.
 // deployRandomTxs creates a random transaction
 func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, txNum int) {
 	var tx *types.Transaction
-	signer := types.NewEIP155Signer(chainId)
+	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 
 	txNuminABlock := 100
@@ -221,7 +221,7 @@ func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender 
 
 // deployValueTransferTx deploy value transfer transactions
 func deployValueTransferTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, toAcc *TestAccountType) {
-	signer := types.NewEIP155Signer(chainId)
+	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 
 	tx, _ := genLegacyTransaction(t, signer, sender, toAcc, nil, gasPrice)
@@ -233,7 +233,7 @@ func deployValueTransferTx(t *testing.T, txpool work.TxPool, chainId *big.Int, s
 
 // deployContractDeployTx deploy contrac
 func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, contractDeployCode string) common.Address {
-	signer := types.NewEIP155Signer(chainId)
+	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 
 	values := map[types.TxValueKeyType]interface{}{
@@ -264,7 +264,7 @@ func deployContractDeployTx(t *testing.T, txpool work.TxPool, chainId *big.Int, 
 }
 
 func deployContractExecutionTx(t *testing.T, txpool work.TxPool, chainId *big.Int, sender *TestAccountType, contractAddr common.Address) {
-	signer := types.NewEIP155Signer(chainId)
+	signer := types.LatestSignerForChainID(chainId)
 	gasPrice := big.NewInt(25 * params.Ston)
 	contractExecutionPayload := "0x197e70e40000000000000000000000000000000000000000000000000000000000000001"
 

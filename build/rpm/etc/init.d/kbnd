@@ -21,75 +21,174 @@ kbn=/usr/bin/kbn
 prog=kbnd
 lockfile=${LOCKFILE-/var/lock/subsys/kbnd}
 pidfile=${PIDFILE-/var/run/kbnd.pid}
+auto_restart_daemon_pidfile=/var/run/restart_daemon_kbnd.pid
 RETVAL=0
 STOP_TIMEOUT=${STOP_TIMEOUT-10}
 
-start() {
-        echo -n "Starting $prog: "
-        if [ ! -d ${LOG_DIR} ]; then
-                mkdir -p ${LOG_DIR}
+__pid_run() {
+  __pids_var_run $prog $pidfile
+}
+
+__auto_restart_daemon_pid_run() {
+    unset auto_restart_daemon_pid
+    if [ ! -f $auto_restart_daemon_pidfile ]; then
+        return
+    fi
+    AUTO_RESTART_DAEMON_PID_NUM=$(cat $auto_restart_daemon_pidfile)
+    if [[ ! -z "$AUTO_RESTART_DAEMON_PID_NUM" ]]; then
+        export auto_restart_daemon_pid=$(ps -p $AUTO_RESTART_DAEMON_PID_NUM -o pid=)
+    fi
+}
+#------------------------Related Auto restart daemon functions-----------------------------
+__auto_restart_daemon() {
+    local backOffTime=$AUTO_RESTART_INTERVAL
+    local coeff=2
+    while :
+    do
+        sleep 1
+        __pid_run
+        if [ -z "$pid" ]; then
+            echo "INFO[`date`] node[${PID_NUM}] is down"
+            if [ -f $pidfile ]; then
+                echo "INFO[`date`] remove redundant pid file"
+                rm -f ${lockfile} ${pidfile}
+            fi
+            echo "INFO[`date`] Sleep for backOffTime.... ${backOffTime} seconds."
+            sleep $backOffTime
+            echo -n "INFO[`date`] "
+            start_node
+            backOffTime=$(echo $backOffTime $coeff | awk '{printf "%.1f\n",$1*$2}')
+
+            echo "INFO[`date`] backOffTime = ${backOffTime}, Restarted node pid = ${PID_NUM}"
+            PID_NUM=$(cat $pidfile)
+            echo ""
         fi
+    done
+}
 
-        if [ ! -d $DATA_DIR ]; then
-            mkdir -p $DATA_DIR
-        fi
+start_auto_restart_daemon() {
+    __auto_restart_daemon_pid_run
+    if [ -z $auto_restart_daemon_pid ]; then
+        __auto_restart_daemon >> ${LOG_DIR}/restart_daemon.out 2>&1 &
+        disown
+        AUTO_RESTART_DAEMON_PID_NUM=$!
+        AUTO_RESTART_DAEMON_RETVAL=$?
 
-        __pids_var_run "$prog" "$pidfile"
-        [ -n "$pid" ] && echo && return
-
-        if [ ! -f $KEY_PATH ]; then
-            echo
-            echo "  [ERROR] : KEY_PATH is not defined in /etc/kbnd/conf/kbnd.conf"
-            exit 1
-        fi
-
-        set -f
-        OPTIONS="--nodekey ${KEY_PATH}"
-        if [[ ! -z $NETWORK_ID ]] && [[ $NETWORK_ID != "" ]]; then
-            OPTIONS="$OPTIONS --networkid $NETWORK_ID"
-        fi
-
-        if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
-            OPTIONS="$OPTIONS --metrics"
-        fi
-
-        if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
-            OPTIONS="$OPTIONS --prometheus"
-        fi
-
-        if [ ! -z $DATA_DIR ]; then
-            OPTIONS="$OPTIONS --datadir $DATA_DIR"
-        fi
-
-        if [[ ! -z $AUTHORIZED_NODES ]] && [[ $AUTHORIZED_NODES != "" ]]; then
-            OPTIONS="$OPTIONS --authorized-nodes $AUTHORIZED_NODES"
-        fi
-
-        if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
-            OPTIONS="$OPTIONS $ADDITIONAL"
-        fi
-
-        $kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
-        RETVAL=$?
-        PIDNUM=$!
         set +f
-        if [ $RETVAL = 0 ]; then
-                echo $PIDNUM > ${pidfile}
-                touch ${lockfile}
-                success "$prog startup"
+        if [ $AUTO_RESTART_DAEMON_RETVAL = 0 ]; then
+            echo $AUTO_RESTART_DAEMON_PID_NUM > ${auto_restart_daemon_pidfile}
+            echo "Success to start auto restart daemon."
         else
-                failure "$prog startup"
+            echo "Fail to start auto restart daemon."
         fi
+    fi
+}
+
+stop_auto_restart_daemon() {
+    echo -n "Shutting down auto restart daemon: "
+    killproc -p ${auto_restart_daemon_pidfile} -d ${STOP_TIMEOUT}
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && rm -f ${auto_restart_daemon_lockfile} ${auto_restart_daemon_pidfile}
+}
+
+status_auto_restart_daemon() {
+    __auto_restart_daemon_pid_run
+    if [ -n "$auto_restart_daemon_pid" ]; then
+        echo "auto restart daemon is running."
+    else
+        echo "auto restart daemon is down."
+    fi
+}
+
+#------------------------Related to Klaytn node functions-----------------------------
+
+start_node() {
+    echo -n "Starting $prog: "
+    if [ ! -d ${LOG_DIR} ]; then
+            mkdir -p ${LOG_DIR}
+    fi
+
+    if [ ! -d $DATA_DIR ]; then
+        mkdir -p $DATA_DIR
+    fi
+
+    __pids_var_run "$prog" "$pidfile"
+    [ -n "$pid" ] && echo && return
+
+    if [ ! -f $KEY_PATH ]; then
         echo
-        return $RETVAL
+        echo "  [ERROR] : KEY_PATH is not defined in /etc/kbnd/conf/kbnd.conf"
+        exit 1
+    fi
+
+    set -f
+    OPTIONS="--nodekey ${KEY_PATH}"
+    if [[ ! -z $NETWORK_ID ]] && [[ $NETWORK_ID != "" ]]; then
+        OPTIONS="$OPTIONS --networkid $NETWORK_ID"
+    fi
+
+    if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
+        OPTIONS="$OPTIONS --metrics"
+    fi
+
+    if [[ ! -z $PROMETHEUS ]] && [[ $PROMETHEUS -eq 1 ]]; then
+        OPTIONS="$OPTIONS --prometheus"
+    fi
+
+    if [ ! -z $DATA_DIR ]; then
+        OPTIONS="$OPTIONS --datadir $DATA_DIR"
+    fi
+
+    if [[ ! -z $AUTHORIZED_NODES ]] && [[ $AUTHORIZED_NODES != "" ]]; then
+        OPTIONS="$OPTIONS --authorized-nodes $AUTHORIZED_NODES"
+    fi
+
+    if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
+        OPTIONS="$OPTIONS $ADDITIONAL"
+    fi
+
+    $kbn ${OPTIONS} >> ${LOG_DIR}/kbnd.out 2>&1 &
+    RETVAL=$?
+    PIDNUM=$!
+    set +f
+    if [ $RETVAL = 0 ]; then
+            echo $PIDNUM > ${pidfile}
+            touch ${lockfile}
+            success "$prog startup"
+    else
+            failure "$prog startup"
+    fi
+    echo
+    return $RETVAL
+}
+
+stop_node() {
+    echo -n "Shutting down $prog: "
+    killproc -p ${pidfile} -d ${STOP_TIMEOUT} kbn
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+}
+
+#--------------------- Public functions --------------------------
+start() {
+    if [ ! -d $LOG_DIR ]; then
+        mkdir -p $LOG_DIR
+    fi
+
+    if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+        start_auto_restart_daemon
+    else
+        start_node
+    fi
 }
 
 stop() {
-        echo -n "Shutting down $prog: "
-        killproc -p ${pidfile} -d ${STOP_TIMEOUT} kbn
-        RETVAL=$?
-        echo
-        [ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+    if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+        stop_auto_restart_daemon
+    fi
+    stop_node
 }
 
 case "$1" in
@@ -101,6 +200,9 @@ case "$1" in
         ;;
     status)
         status -p ${pidfile} -l ${lockfile} $kbn
+        if [ ! -z $AUTO_RESTART_NODE ] && [[ $AUTO_RESTART_NODE -eq 1 ]]; then
+            status_auto_restart_daemon
+        fi
         ;;
     restart)
         stop

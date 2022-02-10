@@ -17,6 +17,7 @@
 package governance
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
@@ -43,10 +44,14 @@ var tstData = []voteValue{
 	{k: "istanbul.epoch", v: "bad", e: false},
 	{k: "istanbul.epoch", v: float64(30000.00), e: true},
 	{k: "istanbul.Epoch", v: float64(30000.10), e: false},
+	{k: "istanbul.epoch", v: true, e: false},
 	{k: "istanbul.committeesize", v: uint64(7), e: true},
 	{k: "istanbul.committeesize", v: float64(7.0), e: true},
 	{k: "istanbul.committeesize", v: float64(7.1), e: false},
 	{k: "istanbul.committeesize", v: "7", e: false},
+	{k: "istanbul.committeesize", v: true, e: false},
+	{k: "istanbul.committeesize", v: float64(-7), e: false},
+	{k: "istanbul.committeesize", v: uint64(0), e: false},
 	{k: "istanbul.policy", v: "roundrobin", e: false},
 	{k: "istanbul.policy", v: "RoundRobin", e: false},
 	{k: "istanbul.policy", v: "sticky", e: false},
@@ -57,6 +62,7 @@ var tstData = []voteValue{
 	{k: "istanbul.policy", v: uint64(2), e: false},
 	{k: "istanbul.policy", v: float64(1.2), e: false},
 	{k: "istanbul.policy", v: float64(1.0), e: false},
+	{k: "istanbul.policy", v: true, e: false},
 	{k: "governance.governancemode", v: "none", e: true},
 	{k: "governance.governancemode", v: "single", e: true},
 	{k: "governance.governancemode", v: "ballot", e: true},
@@ -72,10 +78,13 @@ var tstData = []voteValue{
 	{k: "governance.governingnode", v: "0x000000000000000000000000000xxxx000000000", e: false},
 	{k: "governance.governingnode", v: "address", e: false},
 	{k: "governance.governingnode", v: 0, e: false},
+	{k: "governance.governingnode", v: true, e: false},
 	{k: "governance.unitprice", v: float64(0.0), e: true},
+	{k: "governance.unitprice", v: float64(0.1), e: false},
 	{k: "governance.unitprice", v: uint64(25000000000), e: true},
 	{k: "governance.unitprice", v: float64(-10), e: false},
 	{k: "governance.unitprice", v: "25000000000", e: false},
+	{k: "governance.unitprice", v: true, e: false},
 	{k: "reward.useginicoeff", v: false, e: true},
 	{k: "reward.useginicoeff", v: true, e: true},
 	{k: "reward.useginicoeff", v: "true", e: false},
@@ -85,9 +94,17 @@ var tstData = []voteValue{
 	{k: "reward.mintingamount", v: "0", e: true},
 	{k: "reward.mintingamount", v: 96000, e: false},
 	{k: "reward.mintingamount", v: "many", e: false},
+	{k: "reward.mintingamount", v: true, e: false},
 	{k: "reward.ratio", v: "30/40/30", e: true},
 	{k: "reward.ratio", v: "10/10/80", e: true},
 	{k: "reward.ratio", v: "30/70", e: false},
+	{k: "reward.ratio", v: "30/40/31", e: false},
+	{k: "reward.ratio", v: "30/40/29", e: false},
+	{k: "reward.ratio", v: 30 / 40 / 30, e: false},
+	{k: "reward.ratio", v: "0/0/100", e: true},
+	{k: "reward.ratio", v: "0/100/0", e: true},
+	{k: "reward.ratio", v: "100/0/0", e: true},
+	{k: "reward.ratio", v: "0/0/0", e: false},
 	{k: "reward.ratio", v: "30.5/40/29.5", e: false},
 	{k: "reward.ratio", v: "30.5/40/30.5", e: false},
 	{k: "reward.deferredtxfee", v: true, e: true},
@@ -97,10 +114,21 @@ var tstData = []voteValue{
 	{k: "reward.deferredtxfee", v: "true", e: false},
 	{k: "reward.minimumstake", v: "2000000000000000000000000", e: true},
 	{k: "reward.minimumstake", v: 200000000000000, e: false},
+	{k: "reward.minimumstake", v: "-1", e: false},
+	{k: "reward.minimumstake", v: "0", e: true},
+	{k: "reward.minimumstake", v: 0, e: false},
+	{k: "reward.minimumstake", v: 1.1, e: false},
 	{k: "reward.stakingupdateinterval", v: uint64(20), e: false},
+	{k: "reward.stakingupdateinterval", v: float64(20.0), e: false},
+	{k: "reward.stakingupdateinterval", v: float64(20.2), e: false},
+	{k: "reward.stakingupdateinterval", v: "20", e: false},
 	{k: "reward.proposerupdateinterval", v: uint64(20), e: false},
+	{k: "reward.proposerupdateinterval", v: float64(20.0), e: false},
+	{k: "reward.proposerupdateinterval", v: float64(20.2), e: false},
+	{k: "reward.proposerupdateinterval", v: "20", e: false},
 	{k: "istanbul.timeout", v: uint64(10000), e: true},
 	{k: "istanbul.timeout", v: uint64(5000), e: true},
+	{k: "istanbul.timeout", v: float64(-1000), e: false},
 	{k: "istanbul.timeout", v: true, e: false},
 	{k: "istanbul.timeout", v: "10", e: false},
 	{k: "istanbul.timeout", v: 5.3, e: false},
@@ -181,10 +209,9 @@ func TestGovernance_AddVote(t *testing.T) {
 
 	for _, val := range tstData {
 		ret := gov.AddVote(val.k, val.v)
-		if ret != val.e {
-			t.Errorf("Want %v, got %v for %v and %v", val.e, ret, val.k, val.v)
-		}
+		assert.Equal(t, val.e, ret, fmt.Sprintf("key %v, value %v", val.k, val.v))
 	}
+
 }
 
 func TestGovernance_RemoveVote(t *testing.T) {

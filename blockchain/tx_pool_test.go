@@ -77,7 +77,7 @@ func transaction(nonce uint64, gaslimit uint64, key *ecdsa.PrivateKey) *types.Tr
 
 func pricedTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
 	tx, _ := types.SignTx(types.NewTransaction(nonce, common.HexToAddress("0xAAAA"), big.NewInt(100), gaslimit, gasprice, nil),
-		types.NewEIP155Signer(params.TestChainConfig.ChainID), key)
+		types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)
 	return tx
 }
 
@@ -149,7 +149,7 @@ func validateEvents(events chan NewTxsEvent, count int) error {
 }
 
 func deriveSender(tx *types.Transaction) (common.Address, error) {
-	signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	return types.Sender(signer, tx)
 }
 
@@ -387,7 +387,7 @@ func TestTransactionNegativeValue(t *testing.T) {
 	pool, key := setupTxPool()
 	defer pool.Stop()
 
-	signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(-1), 100, big.NewInt(1), nil), signer, key)
 	from, _ := deriveSender(tx)
 	pool.currentState.AddBalance(from, big.NewInt(1))
@@ -441,7 +441,7 @@ func TestTransactionDoubleNonce(t *testing.T) {
 	}
 	resetState()
 
-	signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	tx1, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 100000, big.NewInt(1), nil), signer, key)
 	tx2, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(2), nil), signer, key)
 	tx3, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(1), nil), signer, key)

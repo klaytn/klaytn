@@ -72,6 +72,9 @@ var isTxField = func() map[types.TxType]map[string]bool {
 		types.TxTypeCancel:                                      types.TxInternalDataCancel{},
 		types.TxTypeFeeDelegatedCancel:                          types.TxInternalDataFeeDelegatedCancel{},
 		types.TxTypeFeeDelegatedCancelWithRatio:                 types.TxInternalDataFeeDelegatedCancelWithRatio{},
+		types.TxTypeChainDataAnchoring:                          types.TxInternalDataChainDataAnchoring{},
+		types.TxTypeFeeDelegatedChainDataAnchoring:              types.TxInternalDataFeeDelegatedChainDataAnchoring{},
+		types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:     types.TxInternalDataFeeDelegatedChainDataAnchoringWithRatio{},
 	}
 
 	// generate field maps for each tx type
@@ -221,7 +224,12 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 		values[types.TxValueKeyAmount] = (*big.Int)(args.Amount)
 	}
 	if args.Payload != nil {
-		values[types.TxValueKeyData] = ([]byte)(*args.Payload)
+		// chain data anchoring type uses the TxValueKeyAnchoredData field
+		if args.TypeInt.IsChainDataAnchoring() {
+			values[types.TxValueKeyAnchoredData] = ([]byte)(*args.Payload)
+		} else {
+			values[types.TxValueKeyData] = ([]byte)(*args.Payload)
+		}
 	}
 	if args.CodeFormat != nil {
 		values[types.TxValueKeyCodeFormat] = *args.CodeFormat

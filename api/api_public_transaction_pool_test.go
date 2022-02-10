@@ -42,6 +42,9 @@ var internalDataTypes = map[types.TxType]interface{}{
 	types.TxTypeCancel:                                      types.TxInternalDataCancel{},
 	types.TxTypeFeeDelegatedCancel:                          types.TxInternalDataFeeDelegatedCancel{},
 	types.TxTypeFeeDelegatedCancelWithRatio:                 types.TxInternalDataFeeDelegatedCancelWithRatio{},
+	types.TxTypeChainDataAnchoring:                          types.TxInternalDataChainDataAnchoring{},
+	types.TxTypeFeeDelegatedChainDataAnchoring:              types.TxInternalDataFeeDelegatedChainDataAnchoring{},
+	types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:     types.TxInternalDataFeeDelegatedChainDataAnchoringWithRatio{},
 }
 
 // test values of tx field.
