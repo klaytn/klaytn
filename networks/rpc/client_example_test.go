@@ -1,4 +1,4 @@
-// Modifications Copyright 2018 The klaytn Authors
+// Modifications Copyright 2022 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -14,22 +14,19 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-//
-// This file is derived from rpc/client_example_test.go (2018/06/04).
-// Modified and improved for the klaytn development.
 
 package rpc_test
 
 import (
 	"context"
 	"fmt"
+	"github.com/klaytn/klaytn/networks/rpc"
 	"math/big"
 	"time"
-
-	"github.com/klaytn/klaytn/networks/rpc"
+	//"github.com/ethereum/go-ethereum/rpc"
 )
 
-// In this example, our client whishes to track the latest 'block number'
+// In this example, our client wishes to track the latest 'block number'
 // known to the server. The server supports two methods:
 //
 // eth_getBlockByNumber("latest", {})
@@ -70,7 +67,7 @@ func subscribeBlocks(client *rpc.Client, subch chan Block) {
 	defer cancel()
 
 	// Subscribe to new blocks.
-	sub, err := client.KlaySubscribe(ctx, subch, "newHeads")
+	sub, err := client.EthSubscribe(ctx, subch, "newHeads")
 	if err != nil {
 		fmt.Println("subscribe error:", err)
 		return

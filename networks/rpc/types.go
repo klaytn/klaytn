@@ -1,3 +1,4 @@
+// Modifications Copyright 2022 The klaytn Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -21,17 +22,16 @@
 package rpc
 
 import (
+	"context"
 	"encoding/json"
-	"reflect"
-	"sync"
-
 	"fmt"
 	"math"
+	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"gopkg.in/fatih/set.v0"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -40,24 +40,6 @@ type API struct {
 	Version   string      // api version for DApp's
 	Service   interface{} // receiver instance which holds the methods
 	Public    bool        // indication if the methods must be considered safe for public use
-}
-
-// callback is a method callback which was registered in the server
-type callback struct {
-	rcvr        reflect.Value  // receiver of method
-	method      reflect.Method // callback
-	argTypes    []reflect.Type // input argument types
-	hasCtx      bool           // method's first argument is a context (not included in argTypes)
-	errPos      int            // err return idx, of -1 when method cannot return error
-	isSubscribe bool           // indication if the callback is a subscription
-}
-
-// service represents a registered object
-type service struct {
-	name          string        // name for service
-	typ           reflect.Type  // receiver type
-	callbacks     callbacks     // registered handlers
-	subscriptions subscriptions // available subscriptions/notifications
 }
 
 // serverRequest is an incoming request
@@ -70,19 +52,15 @@ type serverRequest struct {
 	err           Error
 }
 
-type serviceRegistry map[string]*service // collection of services
-type callbacks map[string]*callback      // collection of RPC callbacks
-type subscriptions map[string]*callback  // collection of subscription callbacks
+//type serviceRegistry map[string]*service // collection of services
+type callbacks map[string]*callback     // collection of RPC callbacks
+type subscriptions map[string]*callback // collection of subscription callbacks
 
-// Server represents a RPC server
-type Server struct {
-	services serviceRegistry
-
-	run      int32
-	codecsMu sync.Mutex
-	codecs   *set.Set
-
-	wsConnCount int32
+type jsonRequest struct {
+	Method  string          `json:"method"`
+	Version string          `json:"jsonrpc"`
+	Id      json.RawMessage `json:"id,omitempty"`
+	Payload json.RawMessage `json:"params,omitempty"`
 }
 
 // rpcRequest represents a raw incoming RPC request
@@ -105,25 +83,152 @@ type Error interface {
 // a RPC session. Implementations must be go-routine safe since the codec can be called in
 // multiple go-routines concurrently.
 type ServerCodec interface {
-	// Read next request
-	ReadRequestHeaders() ([]rpcRequest, bool, Error)
-	// Parse request argument to the given types
-	ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, Error)
-	// Assemble success response, expects response id and payload
-	CreateResponse(id interface{}, reply interface{}) interface{}
-	// Assemble error response, expects response id and error
-	CreateErrorResponse(id interface{}, err Error) interface{}
-	// Assemble error response with extra information about the error through info
-	CreateErrorResponseWithInfo(id interface{}, err Error, info interface{}) interface{}
-	// Create notification response
-	CreateNotification(id, namespace string, event interface{}) interface{}
-	// Write msg to client.
-	Write(msg interface{}) error
-	// Close underlying data stream
+	Read() (msgs []*jsonrpcMessage, isBatch bool, err error)
 	Close()
-	// Closed when underlying connection is closed
-	Closed() <-chan interface{}
+	jsonWriter
+	ReadRequestHeaders() ([]rpcRequest, bool, Error)
 }
+
+// ReadRequestHeaders will read new requests without parsing the arguments. It will
+// return a collection of requests, an indication if these requests are in batch
+// form or an error when the incoming message could not be read/parsed.
+func (c *jsonCodec) ReadRequestHeaders() ([]rpcRequest, bool, Error) {
+	c.decMu.Lock()
+	defer c.decMu.Unlock()
+
+	var incomingMsg json.RawMessage
+	if err := c.decode(&incomingMsg); err != nil {
+		return nil, false, &invalidRequestError{err.Error()}
+	}
+	if isBatch(incomingMsg) {
+		return parseBatchRequest(incomingMsg)
+	}
+	return parseRequest(incomingMsg)
+}
+
+// checkReqId returns an error when the given reqId isn't valid for RPC method calls.
+// valid id's are strings, numbers or null
+func checkReqId(reqId json.RawMessage) error {
+	if len(reqId) == 0 {
+		return fmt.Errorf("missing request id")
+	}
+	if _, err := strconv.ParseFloat(string(reqId), 64); err == nil {
+		return nil
+	}
+	var str string
+	if err := json.Unmarshal(reqId, &str); err == nil {
+		return nil
+	}
+	return fmt.Errorf("invalid request id")
+}
+
+// parseRequest will parse a single request from the given RawMessage. It will return
+// the parsed request, an indication if the request was a batch or an error when
+// the request could not be parsed.
+func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
+	var in jsonRequest
+	if err := json.Unmarshal(incomingMsg, &in); err != nil {
+		return nil, false, &invalidMessageError{err.Error()}
+	}
+
+	if err := checkReqId(in.Id); err != nil {
+		return nil, false, &invalidMessageError{err.Error()}
+	}
+
+	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
+	if strings.HasSuffix(in.Method, subscribeMethodSuffix) {
+		reqs := []rpcRequest{{id: &in.Id, isPubSub: true}}
+		if len(in.Payload) > 0 {
+			// first param must be subscription name
+			var subscribeMethod [1]string
+			if err := json.Unmarshal(in.Payload, &subscribeMethod); err != nil {
+				logger.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
+				return nil, false, &invalidRequestError{"Unable to parse subscription request"}
+			}
+
+			reqs[0].service, reqs[0].method = strings.TrimSuffix(in.Method, subscribeMethodSuffix), subscribeMethod[0]
+			reqs[0].params = in.Payload
+			return reqs, false, nil
+		}
+		return nil, false, &invalidRequestError{"Unable to parse subscription request"}
+	}
+
+	if strings.HasSuffix(in.Method, unsubscribeMethodSuffix) {
+		return []rpcRequest{{id: &in.Id, isPubSub: true,
+			method: in.Method, params: in.Payload}}, false, nil
+	}
+
+	elems := strings.Split(in.Method, serviceMethodSeparator)
+	if len(elems) != 2 {
+		return nil, false, &methodNotFoundError{in.Method}
+	}
+
+	// regular RPC call
+	if len(in.Payload) == 0 {
+		return []rpcRequest{{service: elems[0], method: elems[1], id: &in.Id}}, false, nil
+	}
+
+	return []rpcRequest{{service: elems[0], method: elems[1], id: &in.Id, params: in.Payload}}, false, nil
+}
+
+// parseBatchRequest will parse a batch request into a collection of requests from the given RawMessage, an indication
+// if the request was a batch or an error when the request could not be read.
+func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
+	var in []jsonRequest
+	if err := json.Unmarshal(incomingMsg, &in); err != nil {
+		return nil, false, &invalidMessageError{err.Error()}
+	}
+
+	requests := make([]rpcRequest, len(in))
+	for i, r := range in {
+		if err := checkReqId(r.Id); err != nil {
+			return nil, false, &invalidMessageError{err.Error()}
+		}
+
+		id := &in[i].Id
+
+		// subscribe are special, they will always use `subscriptionMethod` as first param in the payload
+		if strings.HasSuffix(r.Method, subscribeMethodSuffix) {
+			requests[i] = rpcRequest{id: id, isPubSub: true}
+			if len(r.Payload) > 0 {
+				// first param must be subscription name
+				var subscribeMethod [1]string
+				if err := json.Unmarshal(r.Payload, &subscribeMethod); err != nil {
+					logger.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
+					return nil, false, &invalidRequestError{"Unable to parse subscription request"}
+				}
+
+				requests[i].service, requests[i].method = strings.TrimSuffix(r.Method, subscribeMethodSuffix), subscribeMethod[0]
+				requests[i].params = r.Payload
+				continue
+			}
+
+			return nil, true, &invalidRequestError{"Unable to parse (un)subscribe request arguments"}
+		}
+
+		if strings.HasSuffix(r.Method, unsubscribeMethodSuffix) {
+			requests[i] = rpcRequest{id: id, isPubSub: true, method: r.Method, params: r.Payload}
+			continue
+		}
+
+		if len(r.Payload) == 0 {
+			requests[i] = rpcRequest{id: id, params: nil}
+		} else {
+			requests[i] = rpcRequest{id: id, params: r.Payload}
+		}
+		if elem := strings.Split(r.Method, serviceMethodSeparator); len(elem) == 2 {
+			requests[i].service, requests[i].method = elem[0], elem[1]
+		} else {
+			requests[i].err = &methodNotFoundError{r.Method}
+		}
+	}
+
+	return requests, true, nil
+}
+
+// ServerCodec implements reading, parsing and writing RPC messages for the server side of
+// a RPC session. Implementations must be go-routine safe since the codec can be called in
+// multiple go-routines concurrently.
 
 type BlockNumber int64
 
@@ -292,4 +397,14 @@ func NewBlockNumberOrHashWithHash(hash common.Hash, canonical bool) BlockNumberO
 		BlockHash:        &hash,
 		RequireCanonical: canonical,
 	}
+}
+
+// jsonWriter can write JSON messages to its underlying connection.
+// Implementations must be safe for concurrent use.
+type jsonWriter interface {
+	Write(context.Context, interface{}) error
+	// Closed returns a channel which is closed when the connection is closed.
+	Closed() <-chan interface{}
+	// RemoteAddr returns the peer address of the connection.
+	RemoteAddr() string
 }
