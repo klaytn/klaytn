@@ -446,7 +446,7 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 	}
 
 	R, S, _ = decodeSignature(sig)
-	V = big.NewInt(int64(sig[64] + 35))
+	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset] + 35))
 	V.Add(V, s.chainIdMul)
 
 	return R, S, V, nil
