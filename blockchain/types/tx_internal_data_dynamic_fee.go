@@ -450,7 +450,7 @@ func (t *TxInternalDataDynamicFee) Execute(sender ContractRef, vm VM, stateDB St
 func (t *TxInternalDataDynamicFee) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
 		"typeInt":    t.Type(),
-		"chainId":    t.ChainId(),
+		"chainId":    (*hexutil.Big)(t.ChainId()),
 		"type":       t.Type().String(),
 		"gas":        hexutil.Uint64(t.GasLimit),
 		"maxPriorityFeePerGas":   (*hexutil.Big)(t.GasTipCap),
