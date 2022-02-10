@@ -1,4 +1,3 @@
-// Modifications Copyright 2018 The klaytn Authors
 // Copyright 2018 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -14,14 +13,12 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-//
-// This file is derived from rpc/endpoints.go (2018/06/04).
-// Modified and improved for the klaytn development.
 
 package rpc
 
 import (
 	"net"
+	//"github.com/ethereum/go-ethereum/log"
 )
 
 // StartHTTPEndpoint starts the HTTP RPC endpoint, configured with cors/vhosts/modules
@@ -53,35 +50,6 @@ func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []str
 	return listener, handler, err
 }
 
-// StartHTTPEndpoint starts the HTTP RPC endpoint, configured with cors/vhosts/modules
-func StartFastHTTPEndpoint(endpoint string, apis []API, modules []string, cors []string, vhosts []string, timeouts HTTPTimeouts) (net.Listener, *Server, error) {
-	// Generate the whitelist based on the allowed modules
-	whitelist := make(map[string]bool)
-	for _, module := range modules {
-		whitelist[module] = true
-	}
-	// Register all the APIs exposed by the services
-	handler := NewServer()
-	for _, api := range apis {
-		if whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
-			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
-				return nil, nil, err
-			}
-			logger.Debug("FastHTTP registered", "namespace", api.Namespace)
-		}
-	}
-	// All APIs registered, start the HTTP listener
-	var (
-		listener net.Listener
-		err      error
-	)
-	if listener, err = net.Listen("tcp4", endpoint); err != nil {
-		return nil, nil, err
-	}
-	go NewFastHTTPServer(cors, vhosts, timeouts, handler).Serve(listener)
-	return listener, handler, err
-}
-
 // StartWSEndpoint starts a websocket endpoint
 func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool) (net.Listener, *Server, error) {
 
@@ -109,36 +77,6 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 		return nil, nil, err
 	}
 	go NewWSServer(wsOrigins, handler).Serve(listener)
-	return listener, handler, err
-
-}
-
-func StartFastWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool) (net.Listener, *Server, error) {
-
-	// Generate the whitelist based on the allowed modules
-	whitelist := make(map[string]bool)
-	for _, module := range modules {
-		whitelist[module] = true
-	}
-	// Register all the APIs exposed by the services
-	handler := NewServer()
-	for _, api := range apis {
-		if exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
-			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
-				return nil, nil, err
-			}
-			logger.Debug("FastWebSocket registered", "service", api.Service, "namespace", api.Namespace)
-		}
-	}
-	// All APIs registered, start the HTTP listener
-	var (
-		listener net.Listener
-		err      error
-	)
-	if listener, err = net.Listen("tcp4", endpoint); err != nil {
-		return nil, nil, err
-	}
-	go NewFastWSServer(wsOrigins, handler).Serve(listener)
 	return listener, handler, err
 
 }

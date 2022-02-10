@@ -3,6 +3,7 @@ package rpc
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -130,12 +131,16 @@ func getRPCRequests(r *http.Request) ([]rpcRequest, bool, error) {
 		return nil, false, err
 	}
 	r.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
+	body := io.LimitReader(r.Body, maxRequestContentLength)
+	conn := &httpServerConn{Reader: body, Writer: nil, r: r}
 
 	// parse request API method
-	codec := NewJSONCodec(&httpReadWriteNopCloser{ioutil.NopCloser(bytes.NewReader(reqBody)), bytes.NewBufferString("")})
+	codec := NewJSONCodec(conn)
+
 	defer codec.Close()
 
 	return codec.ReadRequestHeaders()
+
 }
 
 // printRPCErrorLog prints an error log if responseBody contains RPC error message.

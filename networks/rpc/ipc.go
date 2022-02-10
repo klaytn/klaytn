@@ -1,4 +1,3 @@
-// Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -14,21 +13,20 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-//
-// This file is derived from rpc/ipc.go (2018/06/04).
-// Modified and improved for the klaytn development.
 
 package rpc
 
 import (
 	"context"
-	"net"
-
 	"github.com/klaytn/klaytn/networks/p2p/netutil"
+	"net"
+	//"github.com/ethereum/go-ethereum/log"
+	//"github.com/ethereum/go-ethereum/p2p/netutil"
+	//"github.com/klaytn/klaytn/networks/p2p/netutil"
 )
 
 // ServeListener accepts connections on l, serving JSON-RPC on them.
-func (srv *Server) ServeListener(l net.Listener) error {
+func (s *Server) ServeListener(l net.Listener) error {
 	for {
 		conn, err := l.Accept()
 		if netutil.IsTemporaryError(err) {
@@ -37,8 +35,8 @@ func (srv *Server) ServeListener(l net.Listener) error {
 		} else if err != nil {
 			return err
 		}
-		logger.Trace("Accepted connection", "addr", conn.RemoteAddr())
-		go srv.ServeCodec(NewJSONCodec(conn), OptionMethodInvocation|OptionSubscriptions)
+		logger.Trace("Accepted RPC connection", "conn", conn.RemoteAddr())
+		go s.ServeCodec(NewJSONCodec(conn), OptionMethodInvocation|OptionSubscriptions)
 	}
 }
 
@@ -49,7 +47,11 @@ func (srv *Server) ServeListener(l net.Listener) error {
 // The context is used for the initial connection establishment. It does not
 // affect subsequent interactions with the client.
 func DialIPC(ctx context.Context, endpoint string) (*Client, error) {
-	return NewClient(ctx, func(ctx context.Context) (net.Conn, error) {
-		return newIPCConnection(ctx, endpoint)
+	return newClient(ctx, func(ctx context.Context) (ServerCodec, error) {
+		conn, err := newIPCConnection(ctx, endpoint)
+		if err != nil {
+			return nil, err
+		}
+		return NewJSONCodec(conn), err
 	})
 }

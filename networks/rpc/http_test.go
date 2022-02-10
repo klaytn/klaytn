@@ -21,8 +21,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/klaytn/klaytn/common"
 )
 
 func TestHTTPErrorResponseWithDelete(t *testing.T) {
@@ -34,7 +32,7 @@ func TestHTTPErrorResponseWithPut(t *testing.T) {
 }
 
 func TestHTTPErrorResponseWithMaxContentLength(t *testing.T) {
-	body := make([]rune, common.MaxRequestContentLength+1)
+	body := make([]rune, maxRequestContentLength+1)
 	testHTTPErrorResponse(t,
 		http.MethodPost, contentType, string(body), http.StatusRequestEntityTooLarge)
 }

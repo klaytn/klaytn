@@ -9,8 +9,8 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
 	github.com/aws/aws-sdk-go v1.34.0
 	github.com/cespare/cp v1.0.0
-	github.com/clevergo/websocket v1.0.0
 	github.com/davecgh/go-spew v1.1.1
+	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/badger v1.6.0
 	github.com/docker/docker v1.13.1
 	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712
@@ -60,8 +60,8 @@ require (
 	go.uber.org/multierr v1.2.0 // indirect
 	go.uber.org/zap v1.10.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/net v0.0.0-20200813134508-3edf25e44fcc
-	golang.org/x/sys v0.0.0-20211025112917-711f33c9992c
+	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
 	google.golang.org/grpc v1.27.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 	gopkg.in/fatih/set.v0 v0.1.0
