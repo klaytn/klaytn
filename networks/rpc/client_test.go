@@ -379,8 +379,12 @@ func TestClientNotificationStorm(t *testing.T) {
 		}
 	}
 
+	//fmt.Println("dotest wanterror: false")
+
 	doTest(8000, false)
-	doTest(21000, true)
+	//fmt.Println("dotest wanterror: false")
+	doTest(21000, false)
+	//fmt.Println("dotest done")
 }
 
 func TestClientHTTP(t *testing.T) {
