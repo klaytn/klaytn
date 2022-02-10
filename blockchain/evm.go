@@ -46,6 +46,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 	var (
 		beneficiary common.Address
 		baseFee     *big.Int
+		effectiveGasPrice *big.Int
 	)
 
 	if author == nil {
@@ -54,6 +55,8 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		beneficiary = *author
 	}
 	baseFee = new(big.Int).SetUint64(params.BaseFee)
+	effectiveGasPrice = msg.EffectiveGasPrice(baseFee)
+
 	return vm.Context{
 		CanTransfer: CanTransfer,
 		Transfer:    Transfer,
@@ -63,7 +66,7 @@ func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author
 		BlockNumber: new(big.Int).Set(header.Number),
 		Time:        new(big.Int).Set(header.Time),
 		BlockScore:  new(big.Int).Set(header.BlockScore),
-		GasPrice:    new(big.Int).Set(msg.GasPrice()),
+		GasPrice:    new(big.Int).Set(effectiveGasPrice),
 		BaseFee:     baseFee,
 	}
 }
