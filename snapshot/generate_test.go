@@ -149,7 +149,7 @@ func hashData(input []byte) common.Hash {
 
 // Tests that snapshot generation with existent flat state.
 func TestGenerateExistentState(t *testing.T) {
-	if true {
+	if false {
 		enableLog()
 	}
 
@@ -513,7 +513,7 @@ func TestGenerateCorruptAccountTrie(t *testing.T) {
 // trie node for a storage trie. It's similar to internal corruption but it is
 // handled differently inside the generator.
 func TestGenerateMissingStorageTrie(t *testing.T) {
-	if testing.Verbose() {
+	if false {
 		enableLog()
 	}
 	// We can't use statedb to make a test trie (circular dependency), so make
