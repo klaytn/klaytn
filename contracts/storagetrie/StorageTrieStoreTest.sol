@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.8.11;
 
 contract StorageTrieStoreTest {
     struct Identity {
@@ -18,11 +18,11 @@ contract StorageTrieStoreTest {
         _;
     }
 
-    constructor() public {
+    constructor() {
         owner = msg.sender;
     }
 
-    function insertIdentity(string _serialNumber, string _publicKey, string _hash)
+    function insertIdentity(string calldata _serialNumber, string calldata _publicKey, string calldata _hash)
         public 
     {
         require(bytes(_serialNumber).length > 0);
@@ -32,10 +32,10 @@ contract StorageTrieStoreTest {
         identites[_serialNumber] = Identity(_publicKey, _hash);
     }
 
-    function getIdentity(string _serialNumber)
+    function getIdentity(string calldata _serialNumber)
         public
         view
-        returns (string, string) 
+        returns (string memory, string memory) 
     {
         require(bytes(_serialNumber).length > 0);
 
@@ -43,7 +43,7 @@ contract StorageTrieStoreTest {
         return (identity.publicKey, identity.hash);
     }
 
-    function deleteIdentity(string _serialNumber)
+    function deleteIdentity(string calldata _serialNumber)
         public
         onlyOwner 
     {
@@ -52,7 +52,7 @@ contract StorageTrieStoreTest {
         delete identites[_serialNumber];
     }
 
-    function insertCaCertificate(string _caKey, string _caCert)
+    function insertCaCertificate(string calldata _caKey, string calldata _caCert)
         public
         onlyOwner 
     {
@@ -62,17 +62,17 @@ contract StorageTrieStoreTest {
         caCertificates[_caKey] = _caCert;
     }
 
-    function getCaCertificate(string _caKey)
+    function getCaCertificate(string calldata _caKey)
         public
         view
-        returns (string) 
+        returns (string memory) 
     {
         require(bytes(_caKey).length > 0);
 
         return caCertificates[_caKey];
     }
 
-    function deleteCaCertificate(string _caKey)
+    function deleteCaCertificate(string calldata _caKey)
         public
         onlyOwner 
     {
