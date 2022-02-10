@@ -599,14 +599,14 @@ func TestGovernance_initializeCache(t *testing.T) {
 		err := gov.initializeCache()
 
 		// 3. check the affected values with expected results
-		assert.Equal(t, nil, err)
+		assert.NoError(t, err)
 
 		v, ok := gov.currentSet.GetValue(GovernanceKeyMap["governance.unitprice"])
-		assert.Equal(t, true, ok)
+		assert.True(t, ok)
 		assert.Equal(t, tc.unitPriceInCurrentSet, v)
 
 		assert.Equal(t, tc.blockNums, gov.idxCache[1:]) // the order should be same
-		assert.Equal(t, true, gov.itemCache.Contains(getGovernanceCacheKey(tc.blockNums[tc.governanceUpdateNum-1])))
+		assert.True(t, gov.itemCache.Contains(getGovernanceCacheKey(tc.blockNums[tc.governanceUpdateNum-1])))
 		assert.Equal(t, tc.actualGovernanceBlock, gov.actualGovernanceBlock.Load().(uint64))
 	}
 }
