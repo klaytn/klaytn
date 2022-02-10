@@ -626,8 +626,8 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
-	// Accept only klaytn transactions until EIP-2718/2930 activates.
-	if !pool.eip2718 && tx.Type().IsEthTypedTransaction() {
+	// Accept only legacy transactions until EIP-2718/2930 activates.
+	if !pool.eip2718 && tx.IsEthTypedTransaction() {
 		return ErrTxTypeNotSupported
 	}
 	// Reject dynamic fee transactions until EIP-1559 activates.

@@ -421,7 +421,7 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 		return nil, nil, nil, ErrInvalidChainId
 	}
 
-	R, S, _ = decodeSignature(sig)
+	R, S = decodeSignature(sig)
 	V = big.NewInt(int64(sig[64]))
 
 	return R, S, V, nil
@@ -472,7 +472,7 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type().IsEthTypedTransaction() {
+	if tx.IsEthTypedTransaction() {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 
@@ -491,7 +491,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 }
 
 func (s EIP155Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.Type().IsEthTypedTransaction() {
+	if tx.IsEthTypedTransaction() {
 		return nil, ErrTxTypeNotSupported
 	}
 
@@ -510,7 +510,7 @@ func (s EIP155Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) 
 }
 
 func (s EIP155Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.Type().IsEthTypedTransaction() {
+	if tx.IsEthTypedTransaction() {
 		return nil, ErrTxTypeNotSupported
 	}
 
@@ -546,8 +546,8 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 		return nil, nil, nil, ErrTxTypeNotSupported
 	}
 
-	R, S, _ = decodeSignature(sig)
-	V = big.NewInt(int64(sig[64] + 35))
+	R, S = decodeSignature(sig)
+	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset] + 35))
 	V.Add(V, s.chainIdMul)
 
 	return R, S, V, nil
@@ -670,12 +670,11 @@ func deriveChainId(v *big.Int) *big.Int {
 	return v.Div(v, common.Big2)
 }
 
-func decodeSignature(sig []byte) (r, s, v *big.Int) {
+func decodeSignature(sig []byte) (r, s *big.Int) {
 	if len(sig) != crypto.SignatureLength {
 		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
 	}
 	r = new(big.Int).SetBytes(sig[:32])
 	s = new(big.Int).SetBytes(sig[32:64])
-	v = new(big.Int).SetBytes([]byte{sig[64] + 27})
-	return r, s, v
+	return r, s
 }
