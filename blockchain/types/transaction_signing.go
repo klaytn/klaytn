@@ -371,7 +371,7 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type().IsEthTypedTransaction() {
+	if tx.IsEthTypedTransaction() {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 
