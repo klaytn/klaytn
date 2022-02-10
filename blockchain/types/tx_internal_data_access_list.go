@@ -215,10 +215,7 @@ func (t *TxInternalDataAccessList) GetRoleTypeForValidation() accountkey.RoleTyp
 }
 
 func (t *TxInternalDataAccessList) ChainId() *big.Int {
-	if t.ChainID != nil {
-		return t.ChainID
-	}
-	return deriveChainId(t.V)
+	return t.ChainID
 }
 
 func (t *TxInternalDataAccessList) GetAccountNonce() uint64 {
@@ -338,7 +335,8 @@ func (t *TxInternalDataAccessList) Equal(a TxInternalData) bool {
 		return false
 	}
 
-	return t.AccountNonce == ta.AccountNonce &&
+	return t.ChainID.Cmp(ta.ChainID) == 0 &&
+		t.AccountNonce == ta.AccountNonce &&
 		t.Price.Cmp(ta.Price) == 0 &&
 		t.GasLimit == ta.GasLimit &&
 		equalRecipient(t.Recipient, ta.Recipient) &&
@@ -369,23 +367,25 @@ func (t *TxInternalDataAccessList) String() string {
 	}
 	enc, _ := rlp.EncodeToBytes(t)
 	return fmt.Sprintf(`
-	TX(%x)
-	Contract: %v
-	From:     %s
-	To:       %s
-	Nonce:    %v
-	GasPrice: %#x
-	GasLimit  %#x
-	Value:    %#x
-	Data:     0x%x
-   AccessList: %x
-	V:        %#x
-	R:        %#x
-	S:        %#x
-	Hex:      %x
-`,
+		TX(%x)
+		Contract: %v
+		Chaind:   %#x
+		From:     %s
+		To:       %s
+		Nonce:    %v
+		GasPrice: %#x
+		GasLimit  %#x
+		Value:    %#x
+		Data:     0x%x
+	   AccessList: %x
+		V:        %#x
+		R:        %#x
+		S:        %#x
+		Hex:      %x
+	`,
 		tx.Hash(),
 		t.GetRecipient() == nil,
+		t.ChainId(),
 		from,
 		to,
 		t.GetAccountNonce(),
@@ -443,6 +443,7 @@ func (t *TxInternalDataAccessList) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
 		"typeInt":    t.Type(),
 		"type":       t.Type().String(),
+		"chainID":    t.ChainId(),
 		"gas":        hexutil.Uint64(t.GasLimit),
 		"gasPrice":   (*hexutil.Big)(t.Price),
 		"input":      hexutil.Bytes(t.Payload),
