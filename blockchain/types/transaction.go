@@ -26,11 +26,12 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
-	"github.com/klaytn/klaytn/common/math"
 	"io"
 	"math/big"
 	"sync"
 	"sync/atomic"
+
+	"github.com/klaytn/klaytn/common/math"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
@@ -291,8 +292,8 @@ func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
 	return tx.GasPrice()
 }
 
-func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64      { return tx.data.GetAccountNonce() }
+func (tx *Transaction) Value() *big.Int { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64   { return tx.data.GetAccountNonce() }
 func (tx *Transaction) CheckNonce() bool {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()

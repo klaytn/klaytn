@@ -321,13 +321,12 @@ func TestEIP1559BlockEncoding(t *testing.T) {
 		AccountNonce: 0,
 		Recipient:    &to,
 		GasLimit:     123457,
-		GasFeeCap:        big.NewInt(10),
-		GasTipCap:        big.NewInt(10),
+		GasFeeCap:    big.NewInt(10),
+		GasTipCap:    big.NewInt(10),
 		AccessList:   AccessList{{Address: addr2, StorageKeys: []common.Hash{{0}}}},
 	})
 	sig3 := common.Hex2Bytes("3dbacc8d0259f2508625e97fdfc57cd85fdd16e5821bc2c10bdd1a52649e8335476e10695b183a87b0aa292a7f4b78ef0c3fbe62aa2c42c84e1d9c3da159ef1401")
 	tx3, _ = tx3.WithSignature(LatestSignerForChainID(big.NewInt(1)), sig3)
-
 
 	check("len(Transactions)", len(block.Transactions()), 3)
 	check("Transactions[0].Hash", block.Transactions()[0].Hash(), tx1.Hash())

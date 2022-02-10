@@ -44,8 +44,8 @@ type ChainContext interface {
 func NewEVMContext(msg Message, header *types.Header, chain ChainContext, author *common.Address) vm.Context {
 	// If we don't have an explicit author (i.e. not mining), extract from the header
 	var (
-		beneficiary common.Address
-		baseFee     *big.Int
+		beneficiary       common.Address
+		baseFee           *big.Int
 		effectiveGasPrice *big.Int
 	)
 

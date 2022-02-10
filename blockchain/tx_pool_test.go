@@ -23,13 +23,14 @@ package blockchain
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/fork"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/klaytn/klaytn/fork"
 
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -40,7 +41,6 @@ import (
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
-
 
 var (
 	// testTxPoolConfig is a transaction pool configuration without stateful disk
@@ -96,15 +96,15 @@ func pricedTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ec
 
 func dynamicFeeTx(nonce uint64, gaslimit uint64, gasFee *big.Int, tip *big.Int, key *ecdsa.PrivateKey) *types.Transaction {
 	dynamicTx := types.NewTx(&types.TxInternalDataDynamicFee{
-		ChainID:    params.TestChainConfig.ChainID,
-		AccountNonce:      nonce,
-		GasTipCap:        tip,
-		GasFeeCap:     gasFee,
-		GasLimit:        gaslimit,
-		Recipient:         &common.Address{},
-		Amount:      big.NewInt(100),
-		Payload:       nil,
-		AccessList: nil,
+		ChainID:      params.TestChainConfig.ChainID,
+		AccountNonce: nonce,
+		GasTipCap:    tip,
+		GasFeeCap:    gasFee,
+		GasLimit:     gaslimit,
+		Recipient:    &common.Address{},
+		Amount:       big.NewInt(100),
+		Payload:      nil,
+		AccessList:   nil,
 	})
 
 	signedTx, _ := types.SignTx(dynamicTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)

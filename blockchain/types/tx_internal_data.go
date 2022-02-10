@@ -110,8 +110,8 @@ var (
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
 	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of ChainID")
-	errValueKeyGasTipCapMustBigInt        = errors.New("GasTipCap must be a type of *big.Int")
-	errValueKeyGasFeeCapMustBigInt        = errors.New("GasFeeCap must be a type of *big.Int")
+	errValueKeyGasTipCapMustBigInt       = errors.New("GasTipCap must be a type of *big.Int")
+	errValueKeyGasFeeCapMustBigInt       = errors.New("GasFeeCap must be a type of *big.Int")
 
 	ErrTxTypeNotSupported = errors.New("transaction type not supported")
 )

@@ -58,7 +58,6 @@ func TestTransactionSenderTxHash(t *testing.T) {
 		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
 		{"AccessList", genAccessListTransaction()},
 		{"DynamicFee", genDynamicFeeTransaction()},
-
 	}
 
 	var testcases = []struct {

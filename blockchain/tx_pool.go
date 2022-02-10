@@ -670,7 +670,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 	}
 
-
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
 	if tx.Size() > MaxTxDataSize {
 		return ErrOversizedData
