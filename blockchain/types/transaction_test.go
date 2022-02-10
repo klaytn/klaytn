@@ -72,8 +72,7 @@ var (
 		Payload:      common.FromHex("5544"),
 	}
 
-
-	accessAddr = common.HexToAddress("0x0000000000000000000000000000000000000001")
+	accessAddr   = common.HexToAddress("0x0000000000000000000000000000000000000001")
 	dynamicFeeTx = TxInternalDataDynamicFee{
 		ChainID:      big.NewInt(1),
 		AccountNonce: 3,
@@ -101,7 +100,7 @@ var (
 
 	signedEip1559Tx, _ = emptyEip1559Tx.WithSignature(
 		NewLondonSigner(big.NewInt(1)),
-		common.Hex2Bytes("c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b266032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d3752101"),)
+		common.Hex2Bytes("c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b266032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d3752101"))
 )
 
 func TestTransactionSigHash(t *testing.T) {

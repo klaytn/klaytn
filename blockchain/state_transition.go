@@ -138,14 +138,14 @@ func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
 	effectiveGasPrice := msg.EffectiveGasPrice(evm.BaseFee)
 
 	return &StateTransition{
-		evm:      evm,
-		msg:      msg,
-		gasPrice: effectiveGasPrice,
+		evm:       evm,
+		msg:       msg,
+		gasPrice:  effectiveGasPrice,
 		gasFeeCap: msg.GasFeeCap(),
 		gasTipCap: msg.GasTipCap(),
-		value:    msg.Value(),
-		data:     msg.Data(),
-		state:    evm.StateDB,
+		value:     msg.Value(),
+		data:      msg.Data(),
+		state:     evm.StateDB,
 	}
 }
 

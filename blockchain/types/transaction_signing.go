@@ -248,7 +248,7 @@ type Signer interface {
 	Equal(Signer) bool
 }
 
-type londonSigner struct {eip2930Signer}
+type londonSigner struct{ eip2930Signer }
 
 // NewLondonSigner returns a signer that accepts
 // - EIP-1559 dynamic fee transactions

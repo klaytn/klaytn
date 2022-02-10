@@ -20,6 +20,9 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"reflect"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -28,20 +31,18 @@ import (
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
-	"math/big"
-	"reflect"
 )
 
 type TxInternalDataDynamicFee struct {
-	ChainID           *big.Int
-	AccountNonce      uint64
-	GasTipCap         *big.Int // a.k.a. maxPriorityFeePerGas
-	GasFeeCap         *big.Int // a.k.a. maxFeePerGas
-	GasLimit          uint64
-	Recipient         *common.Address `rlp:"nil"` // nil means contract creation
-	Amount            *big.Int
-	Payload           []byte
-	AccessList        AccessList
+	ChainID      *big.Int
+	AccountNonce uint64
+	GasTipCap    *big.Int // a.k.a. maxPriorityFeePerGas
+	GasFeeCap    *big.Int // a.k.a. maxFeePerGas
+	GasLimit     uint64
+	Recipient    *common.Address `rlp:"nil"` // nil means contract creation
+	Amount       *big.Int
+	Payload      []byte
+	AccessList   AccessList
 
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
@@ -64,12 +65,11 @@ type TxInternalDataDynamicFeeJSON struct {
 	Payload              hexutil.Bytes    `json:"input"`
 	TxSignatures         TxSignaturesJSON `json:"signatures"`
 
-	AccessList           AccessList       `json:"accessList"`
-	ChainID              *hexutil.Big     `json:"chainId"`
+	AccessList AccessList   `json:"accessList"`
+	ChainID    *hexutil.Big `json:"chainId"`
 
-	Hash                 *common.Hash     `json:"hash"`
+	Hash *common.Hash `json:"hash"`
 }
-
 
 func newEmptyTxInternalDataDynamicFee() *TxInternalDataDynamicFee {
 	return &TxInternalDataDynamicFee{}
@@ -77,15 +77,15 @@ func newEmptyTxInternalDataDynamicFee() *TxInternalDataDynamicFee {
 
 func newTxInternalDataDynamicFee() *TxInternalDataDynamicFee {
 	return &TxInternalDataDynamicFee{
-		ChainID: new(big.Int),
+		ChainID:      new(big.Int),
 		AccountNonce: 0,
-		GasTipCap:         new(big.Int),
-		GasFeeCap:         new(big.Int),
-		GasLimit:          0,
-		Recipient:         nil,
-		Amount:            new(big.Int),
-		Payload:           []byte{},
-		AccessList:        AccessList{},
+		GasTipCap:    new(big.Int),
+		GasFeeCap:    new(big.Int),
+		GasLimit:     0,
+		Recipient:    nil,
+		Amount:       new(big.Int),
+		Payload:      []byte{},
+		AccessList:   AccessList{},
 
 		// Signature values
 		V: new(big.Int),
@@ -449,18 +449,18 @@ func (t *TxInternalDataDynamicFee) Execute(sender ContractRef, vm VM, stateDB St
 
 func (t *TxInternalDataDynamicFee) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
-		"typeInt":    t.Type(),
-		"chainId":    (*hexutil.Big)(t.ChainId()),
-		"type":       t.Type().String(),
-		"gas":        hexutil.Uint64(t.GasLimit),
-		"maxPriorityFeePerGas":   (*hexutil.Big)(t.GasTipCap),
-		"maxFeePerGas": (*hexutil.Big)(t.GasFeeCap),
-		"input":      hexutil.Bytes(t.Payload),
-		"nonce":      hexutil.Uint64(t.AccountNonce),
-		"to":         t.Recipient,
-		"value":      (*hexutil.Big)(t.Amount),
-		"accessList": t.AccessList,
-		"signatures": TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
+		"typeInt":              t.Type(),
+		"chainId":              (*hexutil.Big)(t.ChainId()),
+		"type":                 t.Type().String(),
+		"gas":                  hexutil.Uint64(t.GasLimit),
+		"maxPriorityFeePerGas": (*hexutil.Big)(t.GasTipCap),
+		"maxFeePerGas":         (*hexutil.Big)(t.GasFeeCap),
+		"input":                hexutil.Bytes(t.Payload),
+		"nonce":                hexutil.Uint64(t.AccountNonce),
+		"to":                   t.Recipient,
+		"value":                (*hexutil.Big)(t.Amount),
+		"accessList":           t.AccessList,
+		"signatures":           TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
 	}
 }
 
@@ -508,6 +508,3 @@ func (t *TxInternalDataDynamicFee) UnmarshalJSON(bytes []byte) error {
 func (t *TxInternalDataDynamicFee) setSignatureValues(chainID, v, r, s *big.Int) {
 	t.ChainID, t.V, t.R, t.S = chainID, v, r, s
 }
-
-
-

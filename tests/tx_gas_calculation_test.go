@@ -722,8 +722,8 @@ func genMapForDynamicFeeTransaction(from TestAccount, to TestAccount, gasPrice *
 		types.TxValueKeyAmount:     amount,
 		types.TxValueKeyData:       data,
 		types.TxValueKeyGasLimit:   gasLimit,
-		types.TxValueKeyGasFeeCap:   gasPrice,
-		types.TxValueKeyGasTipCap:   gasPrice,
+		types.TxValueKeyGasFeeCap:  gasPrice,
+		types.TxValueKeyGasTipCap:  gasPrice,
 		types.TxValueKeyAccessList: accessList,
 		types.TxValueKeyChainID:    big.NewInt(1),
 	}
