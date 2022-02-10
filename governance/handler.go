@@ -127,7 +127,6 @@ func (g *Governance) AddVote(key string, val interface{}) bool {
 
 func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 	k := GovernanceKeyMap[key]
-	var x interface{}
 
 	// When an int value comes from JS console, it comes as a float64
 	if GovernanceItems[k].t == uint64T {
@@ -135,9 +134,8 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 		if !ok {
 			return val
 		}
-		x = uint64(v)
-		if float64(x.(uint64)) == v {
-			return x
+		if float64(uint64(v)) == v {
+			return uint64(v)
 		}
 		return val
 	}
@@ -155,8 +153,7 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 		case 1:
 			str := strings.Trim(v, " ")
 			if common.IsHexAddress(str) {
-				x = common.HexToAddress(str)
-				return x
+				return common.HexToAddress(str)
 			} else {
 				return val
 			}
@@ -170,13 +167,11 @@ func (g *Governance) adjustValueType(key string, val interface{}) interface{} {
 					return val
 				}
 			}
-			x = nodeAddresses
-			return x
+			return nodeAddresses
 		}
 	} else {
 		// If a string text come as uppercase, make it into lowercase
-		x = strings.ToLower(v)
-		return x
+		return strings.ToLower(v)
 	}
 }
 
@@ -493,16 +488,16 @@ func (gov *Governance) addNewVote(valset istanbul.ValidatorSet, votes []Governan
 			switch GovernanceKeyMap[gVote.Key] {
 			case params.AddValidator:
 				//reward.GetStakingInfo()
-				if reflect.TypeOf(gVote.Value) == addressT {
-					valset.AddValidator(gVote.Value.(common.Address))
+				if addr, ok := gVote.Value.(common.Address); ok {
+					valset.AddValidator(addr)
 				} else {
 					for _, address := range gVote.Value.([]common.Address) {
 						valset.AddValidator(address)
 					}
 				}
 			case params.RemoveValidator:
-				if reflect.TypeOf(gVote.Value) == addressT {
-					valset.RemoveValidator(gVote.Value.(common.Address))
+				if addr, ok := gVote.Value.(common.Address); ok {
+					valset.RemoveValidator(addr)
 				} else {
 					for _, target := range gVote.Value.([]common.Address) {
 						valset.RemoveValidator(target)
