@@ -58,7 +58,7 @@ func (s *PublicKlayAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big,
 	return s.GasPrice(ctx)
 }
 
-type feeHistoryResult struct {
+type FeeHistoryResult struct {
 	OldestBlock  *hexutil.Big     `json:"oldestBlock"`
 	Reward       [][]*hexutil.Big `json:"reward,omitempty"`
 	BaseFee      []*hexutil.Big   `json:"baseFeePerGas,omitempty"`
@@ -66,12 +66,12 @@ type feeHistoryResult struct {
 }
 
 // FeeHistory returns data relevant for fee estimation based on the specified range of blocks.
-func (s *PublicKlayAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*feeHistoryResult, error) {
+func (s *PublicKlayAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
 	oldest, reward, baseFee, gasUsed, err := s.b.FeeHistory(ctx, int(blockCount), lastBlock, rewardPercentiles)
 	if err != nil {
 		return nil, err
 	}
-	results := &feeHistoryResult{
+	results := &FeeHistoryResult{
 		OldestBlock:  (*hexutil.Big)(oldest),
 		GasUsedRatio: gasUsed,
 	}
