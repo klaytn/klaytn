@@ -1,3 +1,4 @@
+// Modifications Copyright 2022 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -24,10 +25,10 @@ import (
 // DialInProc attaches an in-process connection to the given RPC server.
 func DialInProc(handler *Server) *Client {
 	initctx := context.Background()
-	c, _ := NewClient(initctx, func(context.Context) (net.Conn, error) {
+	c, _ := newClient(initctx, func(context.Context) (ServerCodec, error) {
 		p1, p2 := net.Pipe()
 		go handler.ServeCodec(NewJSONCodec(p1), OptionMethodInvocation|OptionSubscriptions)
-		return p2, nil
+		return NewJSONCodec(p2), nil
 	})
 	return c
 }
