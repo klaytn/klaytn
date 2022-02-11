@@ -41,7 +41,7 @@ func NewTxSignatures() TxSignatures {
 	return TxSignatures{NewTxSignature()}
 }
 
-func NewTxSignaturesWithValues(signer Signer, txhash common.Hash, prv []*ecdsa.PrivateKey) (TxSignatures, error) {
+func NewTxSignaturesWithValues(signer Signer, tx *Transaction, txhash common.Hash, prv []*ecdsa.PrivateKey) (TxSignatures, error) {
 	if len(prv) == 0 {
 		return nil, kerrors.ErrEmptySlice
 	}
@@ -51,7 +51,7 @@ func NewTxSignaturesWithValues(signer Signer, txhash common.Hash, prv []*ecdsa.P
 	txsigs := make(TxSignatures, len(prv))
 
 	for i, p := range prv {
-		t, err := NewTxSignatureWithValues(signer, txhash, p)
+		t, err := NewTxSignatureWithValues(signer, tx, txhash, p)
 		if err != nil {
 			return nil, err
 		}

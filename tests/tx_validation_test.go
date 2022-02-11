@@ -85,6 +85,10 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 	}
 
+	if txType == types.TxTypeAccessList {
+		valueMap, gas = genMapForAccessListTransaction(from, to, gasPrice, txType)
+	}
+
 	return valueMap, gas
 }
 
@@ -121,6 +125,8 @@ func TestValidationPoolInsert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -244,6 +250,8 @@ func TestValidationBlockTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -417,6 +425,8 @@ func TestValidationInvalidSig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -500,7 +510,7 @@ func TestValidationInvalidSig(t *testing.T) {
 
 // testInvalidSenderSig generates invalid txs signed by an invalid sender.
 func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.Signer) (*types.Transaction, error) {
-	if !txType.IsLegacyTransaction() {
+	if !txType.IsLegacyTransaction() && !txType.IsEthTypedTransaction() {
 		newAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 		assert.Equal(t, nil, err)
 
@@ -627,6 +637,8 @@ func TestInvalidBalance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1019,6 +1031,8 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1425,6 +1439,8 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1581,6 +1597,8 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification

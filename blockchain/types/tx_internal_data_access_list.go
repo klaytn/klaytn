@@ -1,4 +1,4 @@
-// Copyright 2019 The klaytn Authors
+// Copyright 2022 The klaytn Authors
 // This file is part of the klaytn library.
 //
 // The klaytn library is free software: you can redistribute it and/or modify
@@ -17,41 +17,65 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/sha3"
 	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/kerrors"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
 
-type TxInternalDataLegacy struct {
-	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
-	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
-	GasLimit     uint64          `json:"gas"      gencodec:"required"`
-	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
-	Amount       *big.Int        `json:"value"    gencodec:"required"`
-	Payload      []byte          `json:"input"    gencodec:"required"`
+//go:generate gencodec -type AccessTuple -out gen_access_tuple.go
+
+// AccessList is an EIP-2930 access list
+type AccessList []AccessTuple
+
+// AccessTuple is the element type of the access list
+type AccessTuple struct {
+	Address     common.Address
+	StorageKeys []common.Hash
+}
+
+// StorageKeys returns the total number of storage keys in the access list.
+func (al AccessList) StorageKeys() int {
+	sum := 0
+	for _, tuple := range al {
+		sum += len(tuple.StorageKeys)
+	}
+	return sum
+}
+
+// TxInternalDataAccessList is the data of EIP-2930 access list transactions.
+type TxInternalDataAccessList struct {
+	ChainID      *big.Int
+	AccountNonce uint64
+	Price        *big.Int
+	GasLimit     uint64
+	Recipient    *common.Address `rlp:"nil"` // nil means contract creation.
+	Amount       *big.Int
+	Payload      []byte
+	AccessList   AccessList
 
 	// Signature values
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
-	S *big.Int `json:"s" gencodec:"required"`
+	V *big.Int
+	R *big.Int
+	S *big.Int
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
-type TxInternalDataLegacyJSON struct {
+type TxInternalDataAccessListJSON struct {
+	Type         TxType           `json:"typeInt"`
+	TypeStr      string           `json:"type"`
 	AccountNonce hexutil.Uint64   `json:"nonce"`
 	Price        *hexutil.Big     `json:"gasPrice"`
 	GasLimit     hexutil.Uint64   `json:"gas"`
@@ -59,29 +83,33 @@ type TxInternalDataLegacyJSON struct {
 	Amount       *hexutil.Big     `json:"value"`
 	Payload      hexutil.Bytes    `json:"input"`
 	TxSignatures TxSignaturesJSON `json:"signatures"`
+	AccessList   AccessList       `json:"accessList"`
 	Hash         *common.Hash     `json:"hash"`
+	ChainID      *hexutil.Big     `json:"chainId"`
 }
 
-func newEmptyTxInternalDataLegacy() *TxInternalDataLegacy {
-	return &TxInternalDataLegacy{}
+func newEmptyTxInternalDataAccessList() *TxInternalDataAccessList {
+	return &TxInternalDataAccessList{}
 }
 
-func newTxInternalDataLegacy() *TxInternalDataLegacy {
-	return &TxInternalDataLegacy{
+func newTxInternalDataAccessList() *TxInternalDataAccessList {
+	return &TxInternalDataAccessList{
 		AccountNonce: 0,
 		Recipient:    nil,
 		Payload:      []byte{},
 		Amount:       new(big.Int),
 		GasLimit:     0,
+		AccessList:   AccessList{},
 		Price:        new(big.Int),
 		V:            new(big.Int),
 		R:            new(big.Int),
 		S:            new(big.Int),
+		ChainID:      new(big.Int),
 	}
 }
 
-func newTxInternalDataLegacyWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *TxInternalDataLegacy {
-	d := newTxInternalDataLegacy()
+func newTxInternalDataAccessListWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList AccessList, chainID *big.Int) *TxInternalDataAccessList {
+	d := newTxInternalDataAccessList()
 
 	d.AccountNonce = nonce
 	d.Recipient = to
@@ -97,11 +125,19 @@ func newTxInternalDataLegacyWithValues(nonce uint64, to *common.Address, amount 
 		d.Price.Set(gasPrice)
 	}
 
+	if accessList != nil {
+		copy(d.AccessList, accessList)
+	}
+
+	if chainID != nil {
+		d.ChainID.Set(chainID)
+	}
+
 	return d
 }
 
-func newTxInternalDataLegacyWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataLegacy, error) {
-	d := newTxInternalDataLegacy()
+func newTxInternalDataAccessListWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataAccessList, error) {
+	d := newTxInternalDataAccessList()
 
 	if v, ok := values[TxValueKeyNonce].(uint64); ok {
 		d.AccountNonce = v
@@ -145,6 +181,21 @@ func newTxInternalDataLegacyWithMap(values map[TxValueKeyType]interface{}) (*TxI
 		return nil, errValueKeyGasPriceMustBigInt
 	}
 
+	if v, ok := values[TxValueKeyAccessList].(AccessList); ok {
+		d.AccessList = make(AccessList, len(v))
+		copy(d.AccessList, v)
+		delete(values, TxValueKeyAccessList)
+	} else {
+		return nil, errValueKeyAccessListInvalid
+	}
+
+	if v, ok := values[TxValueKeyChainID].(*big.Int); ok {
+		d.ChainID.Set(v)
+		delete(values, TxValueKeyChainID)
+	} else {
+		return nil, errValueKeyChainIDInvalid
+	}
+
 	if len(values) != 0 {
 		for k := range values {
 			logger.Warn("unnecessary key", k.String())
@@ -155,74 +206,79 @@ func newTxInternalDataLegacyWithMap(values map[TxValueKeyType]interface{}) (*TxI
 	return d, nil
 }
 
-func (t *TxInternalDataLegacy) Type() TxType {
-	return TxTypeLegacyTransaction
+func (t *TxInternalDataAccessList) Type() TxType {
+	return TxTypeAccessList
 }
 
-func (t *TxInternalDataLegacy) GetRoleTypeForValidation() accountkey.RoleType {
+func (t *TxInternalDataAccessList) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataLegacy) ChainId() *big.Int {
-	return deriveChainId(t.V)
+func (t *TxInternalDataAccessList) ChainId() *big.Int {
+	return t.ChainID
 }
 
-func (t *TxInternalDataLegacy) GetAccountNonce() uint64 {
+func (t *TxInternalDataAccessList) GetAccountNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataLegacy) GetPrice() *big.Int {
+func (t *TxInternalDataAccessList) GetPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
-func (t *TxInternalDataLegacy) GetGasLimit() uint64 {
+func (t *TxInternalDataAccessList) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataLegacy) GetRecipient() *common.Address {
+func (t *TxInternalDataAccessList) GetRecipient() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataLegacy) GetAmount() *big.Int {
+func (t *TxInternalDataAccessList) GetAmount() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataLegacy) GetHash() *common.Hash {
+func (t *TxInternalDataAccessList) GetHash() *common.Hash {
 	return t.Hash
 }
 
-func (t *TxInternalDataLegacy) GetPayload() []byte {
+func (t *TxInternalDataAccessList) GetPayload() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataLegacy) SetHash(h *common.Hash) {
-	t.Hash = h
+func (t *TxInternalDataAccessList) GetAccessList() AccessList {
+	return t.AccessList
 }
 
-func (t *TxInternalDataLegacy) SetSignature(s TxSignatures) {
-	if len(s) != 1 {
-		logger.Crit("LegacyTransaction receives a single signature only!")
+func (t *TxInternalDataAccessList) SetHash(hash *common.Hash) {
+	t.Hash = hash
+}
+
+func (t *TxInternalDataAccessList) SetSignature(signatures TxSignatures) {
+	if len(signatures) != 1 {
+		logger.Crit("AccessListTransaction can receive only single signature!")
 	}
 
-	t.V = s[0].V
-	t.R = s[0].R
-	t.S = s[0].S
+	t.V = signatures[0].V
+	t.R = signatures[0].R
+	t.S = signatures[0].S
 }
 
-func (t *TxInternalDataLegacy) RawSignatureValues() TxSignatures {
+func (t *TxInternalDataAccessList) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
-func (t *TxInternalDataLegacy) ValidateSignature() bool {
-	return validateSignature(t.V, t.R, t.S)
+func (t *TxInternalDataAccessList) ValidateSignature() bool {
+	v := byte(t.V.Uint64())
+	return crypto.ValidateSignatureValues(v, t.R, t.S, false)
 }
 
-func (t *TxInternalDataLegacy) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
+func (t *TxInternalDataAccessList) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
 	V := vfunc(t.V)
 	return recoverPlain(txhash, t.R, t.S, V, homestead)
 }
 
-func (t *TxInternalDataLegacy) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
+func (t *TxInternalDataAccessList) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
 	V := vfunc(t.V)
 
 	pk, err := recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
@@ -233,11 +289,15 @@ func (t *TxInternalDataLegacy) RecoverPubkey(txhash common.Hash, homestead bool,
 	return []*ecdsa.PublicKey{pk}, nil
 }
 
-func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return IntrinsicGas(t.Payload, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+func (t *TxInternalDataAccessList) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+	return IntrinsicGas(t.Payload, t.AccessList, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
-func (t *TxInternalDataLegacy) SerializeForSign() []interface{} {
+func (t *TxInternalDataAccessList) setSignatureValues(chainID, v, r, s *big.Int) {
+	t.ChainID, t.V, t.R, t.S = chainID, v, r, s
+}
+
+func (t *TxInternalDataAccessList) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.AccountNonce,
 		t.Price,
@@ -245,79 +305,59 @@ func (t *TxInternalDataLegacy) SerializeForSign() []interface{} {
 		t.Recipient,
 		t.Amount,
 		t.Payload,
+		t.AccessList,
 	}
 }
 
-func (t *TxInternalDataLegacy) SenderTxHash() common.Hash {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, []interface{}{
+func (t *TxInternalDataAccessList) SenderTxHash() common.Hash {
+	return prefixedRlpHash(byte(t.Type()), []interface{}{
+		t.ChainID,
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
 		t.Recipient,
 		t.Amount,
 		t.Payload,
+		t.AccessList,
 		t.V,
 		t.R,
 		t.S,
 	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
 }
 
-func (t *TxInternalDataLegacy) IsLegacyTransaction() bool {
-	return true
-}
-
-func (t *TxInternalDataLegacy) equalHash(a *TxInternalDataLegacy) bool {
-	if t.GetHash() == nil && a.GetHash() == nil {
-		return true
-	}
-
-	if t.GetHash() != nil && a.GetHash() != nil &&
-		bytes.Equal(t.GetHash().Bytes(), a.GetHash().Bytes()) {
-		return true
-	}
-
+func (t *TxInternalDataAccessList) IsLegacyTransaction() bool {
 	return false
 }
 
-func (t *TxInternalDataLegacy) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataLegacy)
+func (t *TxInternalDataAccessList) Equal(a TxInternalData) bool {
+	ta, ok := a.(*TxInternalDataAccessList)
 	if !ok {
 		return false
 	}
 
-	return t.AccountNonce == ta.AccountNonce &&
+	return t.ChainID.Cmp(ta.ChainID) == 0 &&
+		t.AccountNonce == ta.AccountNonce &&
 		t.Price.Cmp(ta.Price) == 0 &&
 		t.GasLimit == ta.GasLimit &&
 		equalRecipient(t.Recipient, ta.Recipient) &&
 		t.Amount.Cmp(ta.Amount) == 0 &&
+		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
 		t.V.Cmp(ta.V) == 0 &&
 		t.R.Cmp(ta.R) == 0 &&
 		t.S.Cmp(ta.S) == 0
 }
 
-func (t *TxInternalDataLegacy) String() string {
+func (t *TxInternalDataAccessList) String() string {
 	var from, to string
 	tx := &Transaction{data: t}
 
 	v, r, s := t.V, t.R, t.S
-	if v != nil {
-		// make a best guess about the signer and use that to derive
-		// the sender.
-		signer := deriveSigner(v)
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
-		} else {
-			from = fmt.Sprintf("%x", f[:])
-		}
+
+	signer := LatestSignerForChainID(t.ChainId())
+	if f, err := Sender(signer, tx); err != nil { // derive but don't cache
+		from = "[invalid sender: invalid sig]"
 	} else {
-		from = "[invalid sender: nil V field]"
+		from = fmt.Sprintf("%x", f[:])
 	}
 
 	if t.GetRecipient() == nil {
@@ -327,22 +367,25 @@ func (t *TxInternalDataLegacy) String() string {
 	}
 	enc, _ := rlp.EncodeToBytes(t)
 	return fmt.Sprintf(`
-	TX(%x)
-	Contract: %v
-	From:     %s
-	To:       %s
-	Nonce:    %v
-	GasPrice: %#x
-	GasLimit  %#x
-	Value:    %#x
-	Data:     0x%x
-	V:        %#x
-	R:        %#x
-	S:        %#x
-	Hex:      %x
-`,
+		TX(%x)
+		Contract: %v
+		Chaind:   %#x
+		From:     %s
+		To:       %s
+		Nonce:    %v
+		GasPrice: %#x
+		GasLimit  %#x
+		Value:    %#x
+		Data:     0x%x
+		AccessList: %x
+		V:        %#x
+		R:        %#x
+		S:        %#x
+		Hex:      %x
+	`,
 		tx.Hash(),
 		t.GetRecipient() == nil,
+		t.ChainId(),
 		from,
 		to,
 		t.GetAccountNonce(),
@@ -350,6 +393,7 @@ func (t *TxInternalDataLegacy) String() string {
 		t.GetGasLimit(),
 		t.GetAmount(),
 		t.GetPayload(),
+		t.AccessList,
 		v,
 		r,
 		s,
@@ -357,7 +401,7 @@ func (t *TxInternalDataLegacy) String() string {
 	)
 }
 
-func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataAccessList) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	if t.Recipient != nil {
 		if common.IsPrecompiledContractAddress(*t.Recipient) {
 			return kerrors.ErrPrecompiledContractAddress
@@ -366,17 +410,17 @@ func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
-func (t *TxInternalDataLegacy) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataAccessList) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	return nil
 }
 
-func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Receipt) {
+func (t *TxInternalDataAccessList) FillContractAddress(from common.Address, r *Receipt) {
 	if t.Recipient == nil {
 		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce)
 	}
 }
 
-func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
+func (t *TxInternalDataAccessList) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	///////////////////////////////////////////////////////
 	// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
 	//start := time.Now()
@@ -395,22 +439,26 @@ func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateD
 	return ret, usedGas, err
 }
 
-func (t *TxInternalDataLegacy) MakeRPCOutput() map[string]interface{} {
+func (t *TxInternalDataAccessList) MakeRPCOutput() map[string]interface{} {
 	return map[string]interface{}{
 		"typeInt":    t.Type(),
 		"type":       t.Type().String(),
+		"chainID":    (*hexutil.Big)(t.ChainId()),
 		"gas":        hexutil.Uint64(t.GasLimit),
 		"gasPrice":   (*hexutil.Big)(t.Price),
 		"input":      hexutil.Bytes(t.Payload),
 		"nonce":      hexutil.Uint64(t.AccountNonce),
 		"to":         t.Recipient,
 		"value":      (*hexutil.Big)(t.Amount),
+		"accessList": t.AccessList,
 		"signatures": TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
 	}
 }
 
-func (t *TxInternalDataLegacy) MarshalJSON() ([]byte, error) {
-	return json.Marshal(TxInternalDataLegacyJSON{
+func (t *TxInternalDataAccessList) MarshalJSON() ([]byte, error) {
+	return json.Marshal(TxInternalDataAccessListJSON{
+		t.Type(),
+		t.Type().String(),
 		(hexutil.Uint64)(t.AccountNonce),
 		(*hexutil.Big)(t.Price),
 		(hexutil.Uint64)(t.GasLimit),
@@ -418,13 +466,15 @@ func (t *TxInternalDataLegacy) MarshalJSON() ([]byte, error) {
 		(*hexutil.Big)(t.Amount),
 		t.Payload,
 		TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
+		t.AccessList,
 		t.Hash,
+		(*hexutil.Big)(t.ChainID),
 	})
 }
 
-func (t *TxInternalDataLegacy) UnmarshalJSON(b []byte) error {
-	js := &TxInternalDataLegacyJSON{}
-	if err := json.Unmarshal(b, js); err != nil {
+func (t *TxInternalDataAccessList) UnmarshalJSON(bytes []byte) error {
+	js := &TxInternalDataAccessListJSON{}
+	if err := json.Unmarshal(bytes, js); err != nil {
 		return err
 	}
 
@@ -434,10 +484,12 @@ func (t *TxInternalDataLegacy) UnmarshalJSON(b []byte) error {
 	t.Recipient = js.Recipient
 	t.Amount = (*big.Int)(js.Amount)
 	t.Payload = js.Payload
+	t.AccessList = js.AccessList
 	t.V = (*big.Int)(js.TxSignatures[0].V)
 	t.R = (*big.Int)(js.TxSignatures[0].R)
 	t.S = (*big.Int)(js.TxSignatures[0].S)
 	t.Hash = js.Hash
+	t.ChainID = (*big.Int)(js.ChainID)
 
 	return nil
 }

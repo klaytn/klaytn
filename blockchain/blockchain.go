@@ -159,8 +159,7 @@ type BlockChain struct {
 	scope         event.SubscriptionScope
 	genesisBlock  *types.Block
 
-	mu      sync.RWMutex // global mutex for locking chain operations
-	chainmu sync.RWMutex // blockchain insertion lock
+	mu sync.RWMutex // global mutex for locking chain operations
 
 	checkpoint       int          // checkpoint counts towards the new checkpoint
 	currentBlock     atomic.Value // Current head of the block chain
@@ -1258,9 +1257,18 @@ func isReorganizationRequired(localTd, externTd *big.Int, currentBlock, block *t
 }
 
 // WriteBlockWithState writes the block and all associated state to the database.
+// If we are to use writeBlockWithState alone, we should use mutex to protect internal state.
+func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteResult, error) {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
+	return bc.writeBlockWithState(block, receipts, stateDB)
+}
+
+// writeBlockWithState writes the block and all associated state to the database.
 // If BlockChain.parallelDBWrite is true, it calls writeBlockWithStateParallel.
 // If not, it calls writeBlockWithStateSerial.
-func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteResult, error) {
+func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteResult, error) {
 	var status WriteResult
 	var err error
 	if bc.parallelDBWrite {
@@ -1337,9 +1345,6 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 			"hash", block.Hash(), "parentHash", block.ParentHash())
 		return WriteResult{Status: NonStatTy}, consensus.ErrUnknownAncestor
 	}
-	// Make sure no inconsistent state is leaked during insertion
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
 
 	if !bc.ShouldTryInserting(block) {
 		return WriteResult{Status: NonStatTy}, ErrKnownBlock
@@ -1405,9 +1410,6 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 			"hash", block.Hash(), "parentHash", block.ParentHash())
 		return WriteResult{Status: NonStatTy}, consensus.ErrUnknownAncestor
 	}
-	// Make sure no inconsistent state is leaked during insertion
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
 
 	if !bc.ShouldTryInserting(block) {
 		return WriteResult{Status: NonStatTy}, ErrKnownBlock
@@ -1572,8 +1574,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
-	bc.chainmu.Lock()
-	defer bc.chainmu.Unlock()
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
 
 	// A queued approach to delivering events. This is generally
 	// faster than direct delivery and requires much less mutex
@@ -1721,9 +1723,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				winner[j], winner[len(winner)-1-j] = winner[len(winner)-1-j], winner[j]
 			}
 			// Import all the pruned blocks to make the state available
-			bc.chainmu.Unlock()
+			bc.mu.Unlock()
 			_, evs, logs, err := bc.insertChain(winner)
-			bc.chainmu.Lock()
+			bc.mu.Lock()
 			events, coalescedLogs = evs, logs
 
 			if err != nil {
@@ -1759,7 +1761,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		afterValidate := time.Now()
 
 		// Write the block to the chain and get the writeResult.
-		writeResult, err := bc.WriteBlockWithState(block, receipts, stateDB)
+		writeResult, err := bc.writeBlockWithState(block, receipts, stateDB)
 		if err != nil {
 			atomic.StoreUint32(&followupInterrupt, 1)
 			if err == ErrKnownBlock {
@@ -2262,41 +2264,19 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 	}
 
 	// Make sure only one thread manipulates the chain at once
-	bc.chainmu.Lock()
-	defer bc.chainmu.Unlock()
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
 
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
 	whFunc := func(header *types.Header) error {
-		bc.mu.Lock()
-		defer bc.mu.Unlock()
 
 		_, err := bc.hc.WriteHeader(header)
 		return err
 	}
 
 	return bc.hc.InsertHeaderChain(chain, whFunc, start)
-}
-
-// writeHeader writes a header into the local chain, given that its parent is
-// already known. If the total blockscore of the newly inserted header becomes
-// greater than the current known TD, the canonical chain is re-routed.
-//
-// Note: This method is not concurrent-safe with inserting blocks simultaneously
-// into the chain, as side effects caused by reorganisations cannot be emulated
-// without the real blocks. Hence, writing headers directly should only be done
-// in two scenarios: pure-header mode of operation (light clients), or properly
-// separated header/block phases (non-archive clients).
-func (bc *BlockChain) writeHeader(header *types.Header) error {
-	bc.wg.Add(1)
-	defer bc.wg.Done()
-
-	bc.mu.Lock()
-	defer bc.mu.Unlock()
-
-	_, err := bc.hc.WriteHeader(header)
-	return err
 }
 
 // CurrentHeader retrieves the current head header of the canonical chain. The

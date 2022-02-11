@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klaytn/klaytn/storage"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,6 +21,8 @@ func getTestHybridConfig() *TrieNodeCacheConfig {
 
 // TestHybridCache_Set tests whether a hybrid cache can set an item into both of local and remote caches.
 func TestHybridCache_Set(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	cache, err := newHybridCache(getTestHybridConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -45,6 +48,8 @@ func TestHybridCache_Set(t *testing.T) {
 
 // TestHybridCache_Get tests whether a hybrid cache can get an item from both of local and remote caches.
 func TestHybridCache_Get(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	// Prepare caches to be integrated with a hybrid cache
 	localCache := newFastCache(getTestHybridConfig())
 	remoteCache, err := newRedisCache(getTestHybridConfig())
@@ -102,6 +107,8 @@ func TestHybridCache_Get(t *testing.T) {
 
 // TestHybridCache_Has tests whether a hybrid cache can check an item from both of local and remote caches.
 func TestHybridCache_Has(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	// Prepare caches to be integrated with a hybrid cache
 	localCache := newFastCache(getTestHybridConfig())
 	remoteCache, err := newRedisCache(getTestHybridConfig())
