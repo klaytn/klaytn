@@ -775,6 +775,7 @@ func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 	if !tx.IsEthereumTransaction() {
 		enc.Type = hexutil.Uint64(types.TxTypeLegacyTransaction)
 	}
+	enc.Hash = tx.Hash()
 	signature := tx.GetTxInternalData().RawSignatureValues()[0]
 	// Initialize signature values when it is nil.
 	if signature.V == nil {
