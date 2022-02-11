@@ -126,10 +126,10 @@ func TestEIP2718TransactionSigHash(t *testing.T) {
 func TestEIP1559TransactionSigHash(t *testing.T) {
 	s := NewLondonSigner(big.NewInt(1))
 	if s.Hash(emptyEip1559Tx) != common.HexToHash("a52ce25a7d108740bce8fbb2dfa1f26793b2e8eea94a7700bedbae13cbdd8a0f") {
-		t.Errorf("empty EIP-2718 transaction hash mismatch, got %x", s.Hash(emptyEip2718Tx))
+		t.Errorf("empty EIP-1559 transaction hash mismatch, got %x", s.Hash(emptyEip2718Tx))
 	}
 	if s.Hash(signedEip1559Tx) != common.HexToHash("a52ce25a7d108740bce8fbb2dfa1f26793b2e8eea94a7700bedbae13cbdd8a0f") {
-		t.Errorf("signed EIP-2718 transaction hash mismatch, got %x", s.Hash(signedEip2718Tx))
+		t.Errorf("signed EIP-1559 transaction hash mismatch, got %x", s.Hash(signedEip2718Tx))
 	}
 }
 
