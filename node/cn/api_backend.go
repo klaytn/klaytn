@@ -206,8 +206,6 @@ func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 }
 
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
-	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GasPrice()))
 	vmError := func() error { return nil }
 
 	context := blockchain.NewEVMContext(msg, header, b.cn.BlockChain(), nil)
