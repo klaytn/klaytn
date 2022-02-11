@@ -311,11 +311,16 @@ func isEqualValue(k int, v1 interface{}, v2 interface{}) bool {
 		return false
 	}
 
-	if GovernanceItems[k].t != addressT || reflect.TypeOf(v1) == addressT {
-		return v1 == v2
+	if GovernanceItems[k].t == addressT && reflect.TypeOf(v1) != addressT {
+		value1, ok1 := v1.([]common.Address)
+		value2, ok2 := v2.([]common.Address)
+		if ok1 == false || ok2 == false {
+			return false
+		}
+		return reflect.DeepEqual(value1, value2)
 	}
 
-	return reflect.DeepEqual(v1.([]common.Address), v2.([]common.Address))
+	return v1 == v2
 }
 
 func (gov *Governance) HandleGovernanceVote(valset istanbul.ValidatorSet, votes []GovernanceVote, tally []GovernanceTallyItem, header *types.Header, proposer common.Address, self common.Address) (istanbul.ValidatorSet, []GovernanceVote, []GovernanceTallyItem) {
