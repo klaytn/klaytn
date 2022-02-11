@@ -51,7 +51,7 @@ func (serializer *TxInternalDataSerializer) EncodeRLP(w io.Writer) error {
 	}
 
 	if serializer.txType.IsEthTypedTransaction() {
-		ethType := uint8(serializer.txType & 0x00FF)
+		ethType := uint8(serializer.txType)
 		if _, err := w.Write([]byte{TxTypeEthEnvelope, ethType}); err != nil {
 			return err
 		}
