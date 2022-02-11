@@ -311,6 +311,22 @@ func (t *TxInternalDataAccessList) SerializeForSign() []interface{} {
 	}
 }
 
+func (t *TxInternalDataAccessList) TxHash() common.Hash {
+	return prefixedRlpHash(byte(t.Type()), []interface{}{
+		t.ChainID,
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.Payload,
+		t.AccessList,
+		t.V,
+		t.R,
+		t.S,
+	})
+}
+
 func (t *TxInternalDataAccessList) SenderTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
@@ -367,7 +383,7 @@ func (t *TxInternalDataAccessList) String() string {
 	} else {
 		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
 	}
-	enc, _ := rlp.EncodeToBytes(t)
+	enc, _ := rlp.EncodeToBytes(tx)
 	return fmt.Sprintf(`
 		TX(%x)
 		Contract: %v
