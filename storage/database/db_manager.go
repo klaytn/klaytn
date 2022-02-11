@@ -219,6 +219,7 @@ type DBManager interface {
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
 	WriteGovernanceState(b []byte) error
 	ReadGovernanceState() ([]byte, error)
+	//TODO-Klaytn implement governance DB deletion methods.
 
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)

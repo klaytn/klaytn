@@ -536,6 +536,7 @@ func (bc *BlockChain) SetHead(head uint64) error {
 	// Clear out any stale content from the caches
 	bc.futureBlocks.Purge()
 	bc.db.ClearBlockChainCache()
+	//TODO-Klaytn add governance DB deletion logic.
 
 	return bc.loadLastState()
 }
