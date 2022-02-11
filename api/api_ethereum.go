@@ -649,7 +649,13 @@ type EthRPCTransaction struct {
 	S                *hexutil.Big      `json:"s"`
 }
 
-// ethTxJSON is the JSON representation of internal transaction data.
+// ethTxJSON is the JSON representation of Ethereum transaction.
+// ethTxJSON is used by eth namespace APIs which returns Transaction object as it is.
+// Because every transaction in Klaytn, implements json.Marshaler interface (MarshalJSON), but
+// it is marshaled for Klaytn format only.
+// e.g. Ethereum transaction have V, R, and S field for signature but,
+// Klaytn transaction have types.TxSignaturesJSON which includes array of signatures which is not
+// applicable for Ethereum transaction.
 type ethTxJSON struct {
 	Type hexutil.Uint64 `json:"type"`
 
@@ -768,9 +774,11 @@ func newEthRPCPendingTransaction(tx *types.Transaction) *EthRPCTransaction {
 }
 
 // formatTxToEthTxJSON format Transaction to ethTxJSON.
+// Use this function for only Ethereum typed transaction.
 func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 	var enc ethTxJSON
 
+	enc.Type = hexutil.Uint64(tx.Type())
 	// If tx is not Ethereum transaction, the type is converted to TxTypeLegacyTransaction.
 	if !tx.IsEthereumTransaction() {
 		enc.Type = hexutil.Uint64(types.TxTypeLegacyTransaction)
