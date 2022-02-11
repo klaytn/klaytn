@@ -624,7 +624,7 @@ func (api *EthereumAPI) CreateAccessList(ctx context.Context, args EthTransactio
 	// Since this parameter is not actually used and currently only returns an empty result value, implement the logic to return an empty result separately,
 	// and later, when the API is actually implemented, add the relevant fields to SendTxArgs and call the function in PublicBlockChainAPI.
 	// TODO-Klaytn: Modify below logic to use api.publicBlockChainAPI.CreateAccessList
-	result := &AccessListResult{Accesslist: &AccessList{}, GasUsed: hexutil.Uint64(0)}
+	result := &AccessListResult{Accesslist: &types.AccessList{}, GasUsed: hexutil.Uint64(0)}
 	return result, nil
 }
 
@@ -632,25 +632,25 @@ func (api *EthereumAPI) CreateAccessList(ctx context.Context, args EthTransactio
 // RPCTransaction in go-ethereum has been renamed to EthRPCTransaction.
 // RPCTransaction is defined in go-ethereum's internal package, so RPCTransaction is redefined here as EthRPCTransaction.
 type EthRPCTransaction struct {
-	BlockHash        *common.Hash    `json:"blockHash"`
-	BlockNumber      *hexutil.Big    `json:"blockNumber"`
-	From             common.Address  `json:"from"`
-	Gas              hexutil.Uint64  `json:"gas"`
-	GasPrice         *hexutil.Big    `json:"gasPrice"`
-	GasFeeCap        *hexutil.Big    `json:"maxFeePerGas,omitempty"`
-	GasTipCap        *hexutil.Big    `json:"maxPriorityFeePerGas,omitempty"`
-	Hash             common.Hash     `json:"hash"`
-	Input            hexutil.Bytes   `json:"input"`
-	Nonce            hexutil.Uint64  `json:"nonce"`
-	To               *common.Address `json:"to"`
-	TransactionIndex *hexutil.Uint64 `json:"transactionIndex"`
-	Value            *hexutil.Big    `json:"value"`
-	Type             hexutil.Uint64  `json:"type"`
-	Accesses         *AccessList     `json:"accessList,omitempty"`
-	ChainID          *hexutil.Big    `json:"chainId,omitempty"`
-	V                *hexutil.Big    `json:"v"`
-	R                *hexutil.Big    `json:"r"`
-	S                *hexutil.Big    `json:"s"`
+	BlockHash        *common.Hash      `json:"blockHash"`
+	BlockNumber      *hexutil.Big      `json:"blockNumber"`
+	From             common.Address    `json:"from"`
+	Gas              hexutil.Uint64    `json:"gas"`
+	GasPrice         *hexutil.Big      `json:"gasPrice"`
+	GasFeeCap        *hexutil.Big      `json:"maxFeePerGas,omitempty"`
+	GasTipCap        *hexutil.Big      `json:"maxPriorityFeePerGas,omitempty"`
+	Hash             common.Hash       `json:"hash"`
+	Input            hexutil.Bytes     `json:"input"`
+	Nonce            hexutil.Uint64    `json:"nonce"`
+	To               *common.Address   `json:"to"`
+	TransactionIndex *hexutil.Uint64   `json:"transactionIndex"`
+	Value            *hexutil.Big      `json:"value"`
+	Type             hexutil.Uint64    `json:"type"`
+	Accesses         *types.AccessList `json:"accessList,omitempty"`
+	ChainID          *hexutil.Big      `json:"chainId,omitempty"`
+	V                *hexutil.Big      `json:"v"`
+	R                *hexutil.Big      `json:"r"`
+	S                *hexutil.Big      `json:"s"`
 }
 
 // newEthRPCTransactionFromBlockIndex creates an EthRPCTransaction from block and index parameters.
@@ -891,8 +891,8 @@ type EthTransactionArgs struct {
 	Input *hexutil.Bytes `json:"input"`
 
 	// Introduced by AccessListTxType transaction.
-	AccessList *AccessList  `json:"accessList,omitempty"`
-	ChainID    *hexutil.Big `json:"chainId,omitempty"`
+	AccessList *types.AccessList `json:"accessList,omitempty"`
+	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 }
 
 // from retrieves the transaction sender address.
@@ -1127,7 +1127,7 @@ type TxData interface {
 	copy() TxData // creates a deep copy and initializes all fields
 
 	chainID() *big.Int
-	accessList() AccessList
+	accessList() types.AccessList
 	data() []byte
 	gas() uint64
 	gasPrice() *big.Int
