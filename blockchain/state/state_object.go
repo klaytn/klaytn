@@ -232,13 +232,13 @@ func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.
 	}
 	// If the snapshot is unavailable or reading from it fails, load from the database.
 	if self.db.snap == nil || err != nil {
-		if meter != nil {
-			// If we already spent time checking the snapshot, account for it
-			// and reset the readStart
-			*meter += time.Since(readStart)
-			readStart = time.Now()
-		}
 		if EnabledExpensive {
+			if meter != nil {
+				// If we already spent time checking the snapshot, account for it
+				// and reset the readStart
+				*meter += time.Since(readStart)
+				readStart = time.Now()
+			}
 			meter = &self.db.StorageReads
 		}
 		// Load from DB in case it is missing.
