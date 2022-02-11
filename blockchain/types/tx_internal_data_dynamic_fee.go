@@ -343,6 +343,7 @@ func (t *TxInternalDataDynamicFee) String() string {
 	return fmt.Sprintf(`
 		TX(%x)
 		Contract: %v
+		Chaind:   %#x
 		From:     %s
 		To:       %s
 		Nonce:    %v
@@ -351,7 +352,7 @@ func (t *TxInternalDataDynamicFee) String() string {
 		GasLimit  %#x
 		Value:    %#x
 		Data:     0x%x
-	   AccessList: %x
+	    AccessList: %x
 		V:        %#x
 		R:        %#x
 		S:        %#x
@@ -359,6 +360,7 @@ func (t *TxInternalDataDynamicFee) String() string {
 	`,
 		tx.Hash(),
 		t.GetRecipient() == nil,
+		t.ChainId(),
 		from,
 		to,
 		t.GetAccountNonce(),
