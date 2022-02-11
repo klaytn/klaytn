@@ -404,7 +404,7 @@ type ExecutionResult struct {
 // accessListResult returns an optional accesslist
 // Its the result of the `debug_createAccessList` RPC call.
 // It contains an error if the transaction itself failed.
-type accessListResult struct {
+type AccessListResult struct {
 	Accesslist *AccessList    `json:"accessList"`
 	Error      string         `json:"error,omitempty"`
 	GasUsed    hexutil.Uint64 `json:"gasUsed"`
@@ -422,8 +422,8 @@ type AccessTuple struct {
 // CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
 // TODO-Klaytn: Have to implement logic. For now, Klaytn does not implement actual access list logic, so return empty access list result.
-func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args SendTxArgs, blockNrOrHash *rpc.BlockNumberOrHash) (*accessListResult, error) {
-	result := &accessListResult{Accesslist: &AccessList{}, GasUsed: hexutil.Uint64(0)}
+func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args SendTxArgs, blockNrOrHash *rpc.BlockNumberOrHash) (*AccessListResult, error) {
+	result := &AccessListResult{Accesslist: &AccessList{}, GasUsed: hexutil.Uint64(0)}
 	return result, nil
 }
 

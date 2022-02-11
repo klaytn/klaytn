@@ -618,13 +618,13 @@ func (api *EthereumAPI) GetBlockTransactionCountByHash(ctx context.Context, bloc
 
 // CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
-func (api *EthereumAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (*accessListResult, error) {
+func (api *EthereumAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (*AccessListResult, error) {
 	// To use CreateAccess of PublicBlockChainAPI, we need to convert the EthTransactionArgs to SendTxArgs.
 	// However, since SendTxArgs does not yet support MaxFeePerGas and MaxPriorityFeePerGas, the conversion logic is bound to be incomplete.
 	// Since this parameter is not actually used and currently only returns an empty result value, implement the logic to return an empty result separately,
 	// and later, when the API is actually implemented, add the relevant fields to SendTxArgs and call the function in PublicBlockChainAPI.
 	// TODO-Klaytn: Modify below logic to use api.publicBlockChainAPI.CreateAccessList
-	result := &accessListResult{Accesslist: &AccessList{}, GasUsed: hexutil.Uint64(0)}
+	result := &AccessListResult{Accesslist: &AccessList{}, GasUsed: hexutil.Uint64(0)}
 	return result, nil
 }
 
