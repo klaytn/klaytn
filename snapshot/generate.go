@@ -624,18 +624,9 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 		// If the account is not yet in-progress, write it out
 		if accMarker == nil || !bytes.Equal(accountHash[:], accMarker) {
 			dataLen := len(val) // Approximate size, saves us a round of RLP-encoding
-			// TODO-Klaytn-Snapshot consider slim account in order to save space for emptyRootHash, emptyCodeHash
 			if !write {
-				//if bytes.Equal(acc.CodeHash, emptyCode[:]) {
-				//	dataLen -= 32
-				//}
-				//if acc.Root == emptyRoot {
-				//	dataLen -= 32
-				//}
 				snapRecoveredAccountMeter.Mark(1)
 			} else {
-				//data := SlimAccountRLP(acc.Nonce, acc.Balance, acc.Root, acc.CodeHash)
-				//dataLen = len(data)
 				batch.WriteAccountSnapshot(accountHash, val)
 				snapGeneratedAccountMeter.Mark(1)
 			}
