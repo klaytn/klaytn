@@ -21,7 +21,6 @@
 package snapshot
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math"
@@ -29,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -192,7 +192,7 @@ func runReport(stats *generateStats, stop chan bool) {
 // generateTrieRoot generates the trie hash based on the snapshot iterator.
 // It can be used for generating account trie, storage trie or even the
 // whole state which connects the accounts and the corresponding storages.
-func generateTrieRoot(it Iterator, account common.Hash, generatorFn trieGeneratorFn, leafCallback leafCallbackFn, stats *generateStats, report bool) (common.Hash, error) {
+func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGeneratorFn, leafCallback leafCallbackFn, stats *generateStats, report bool) (common.Hash, error) {
 	var (
 		in      = make(chan trieKV)         // chan to pass leaves
 		out     = make(chan common.Hash, 1) // chan to collect result
@@ -243,16 +243,13 @@ func generateTrieRoot(it Iterator, account common.Hash, generatorFn trieGenerato
 	)
 	// Start to feed leaves
 	for it.Next() {
-		if account == (common.Hash{}) {
+		if accountHash == (common.Hash{}) {
 			var (
 				err      error
 				fullData []byte
 			)
 			if leafCallback == nil {
-				fullData, err = FullAccountRLP(it.(AccountIterator).Account())
-				if err != nil {
-					return stop(err)
-				}
+				fullData = it.(AccountIterator).Account()
 			} else {
 				// Wait until the semaphore allows us to continue, aborting if
 				// a sub-task failed
@@ -261,23 +258,31 @@ func generateTrieRoot(it Iterator, account common.Hash, generatorFn trieGenerato
 					return stop(err)
 				}
 				// Fetch the next account and process it concurrently
-				account, err := FullAccount(it.(AccountIterator).Account())
-				if err != nil {
+				serializer := account.NewAccountSerializer()
+				if err := rlp.DecodeBytes(it.(AccountIterator).Account(), serializer); err != nil {
+					logger.Error("Failed to decode an account from iterator", "err", err)
 					return stop(err)
 				}
+				acc := serializer.GetAccount()
 				go func(hash common.Hash) {
-					subroot, err := leafCallback(hash, common.BytesToHash(account.CodeHash), stats)
+					contract, ok := acc.(*account.SmartContractAccount)
+					if !ok {
+						results <- nil
+						return
+					}
+					subroot, err := leafCallback(hash, common.BytesToHash(contract.GetCodeHash()), stats)
 					if err != nil {
 						results <- err
 						return
 					}
-					if !bytes.Equal(account.Root, subroot.Bytes()) {
-						results <- fmt.Errorf("invalid subroot(path %x), want %x, have %x", hash, account.Root, subroot)
+					rootHash := contract.GetStorageRoot()
+					if rootHash != subroot {
+						results <- fmt.Errorf("invalid subroot(path %x), want %x, have %x", hash, rootHash, subroot)
 						return
 					}
 					results <- nil
 				}(it.Hash())
-				fullData, err = rlp.EncodeToBytes(account)
+				fullData, err = rlp.EncodeToBytes(serializer)
 				if err != nil {
 					return stop(err)
 				}
@@ -291,20 +296,20 @@ func generateTrieRoot(it Iterator, account common.Hash, generatorFn trieGenerato
 		// Accumulate the generation statistic if it's required.
 		processed++
 		if time.Since(logged) > 3*time.Second && stats != nil {
-			if account == (common.Hash{}) {
+			if accountHash == (common.Hash{}) {
 				stats.progressAccounts(it.Hash(), processed)
 			} else {
-				stats.progressContract(account, it.Hash(), processed)
+				stats.progressContract(accountHash, it.Hash(), processed)
 			}
 			logged, processed = time.Now(), 0
 		}
 	}
 	// Commit the last part statistic.
 	if processed > 0 && stats != nil {
-		if account == (common.Hash{}) {
+		if accountHash == (common.Hash{}) {
 			stats.finishAccounts(processed)
 		} else {
-			stats.finishContract(account, processed)
+			stats.finishContract(accountHash, processed)
 		}
 	}
 	return stop(nil)
