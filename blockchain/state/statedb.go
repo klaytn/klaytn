@@ -123,7 +123,7 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 	sdb := &StateDB{
 		db:                       db,
 		trie:                     tr,
-		snaps:                    nil,
+		snaps:                    nil, // TODO-Klaytn-Snapshot the snaps will be inserted with a parameter of New method
 		stateObjects:             make(map[common.Address]*stateObject),
 		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
 		stateObjectsDirty:        make(map[common.Address]struct{}),
