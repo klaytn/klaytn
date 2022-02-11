@@ -49,7 +49,8 @@ type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
 	AccountManager() accounts.AccountManager
-	RPCGasCap() *big.Int // global gas cap for klay_call over rpc: DoS protection
+	RPCGasCap() *big.Int  // global gas cap for klay_call over rpc: DoS protection
+	RPCTxFeeCap() float64 // global tx fee cap for all transaction related APIs
 	Engine() consensus.Engine
 
 	// BlockChain API

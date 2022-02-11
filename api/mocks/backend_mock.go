@@ -462,6 +462,20 @@ func (mr *MockBackendMockRecorder) RPCGasCap() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RPCGasCap", reflect.TypeOf((*MockBackend)(nil).RPCGasCap))
 }
 
+// RPCTxFeeCap mocks base method.
+func (m *MockBackend) RPCTxFeeCap() float64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RPCTxFeeCap")
+	ret0, _ := ret[0].(float64)
+	return ret0
+}
+
+// RPCTxFeeCap indicates an expected call of RPCTxFeeCap.
+func (mr *MockBackendMockRecorder) RPCTxFeeCap() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RPCTxFeeCap", reflect.TypeOf((*MockBackend)(nil).RPCTxFeeCap))
+}
+
 // SendTx mocks base method.
 func (m *MockBackend) SendTx(arg0 context.Context, arg1 *types.Transaction) error {
 	m.ctrl.T.Helper()

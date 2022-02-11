@@ -320,6 +320,10 @@ func (b *CNAPIBackend) RPCGasCap() *big.Int {
 	return b.cn.config.RPCGasCap
 }
 
+func (b *CNAPIBackend) RPCTxFeeCap() float64 {
+	return b.cn.config.RPCTxFeeCap
+}
+
 func (b *CNAPIBackend) Engine() consensus.Engine {
 	return b.cn.engine
 }
