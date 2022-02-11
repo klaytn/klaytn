@@ -577,6 +577,67 @@ func TestCypressGenesisHash(t *testing.T) {
 	}
 }
 
+func TestGovernance_initializeCache(t *testing.T) {
+	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	config := getTestConfig()
+	config.Istanbul.Epoch = 30
+
+	gov := NewGovernanceInitialize(config, dbm)
+
+	testData := []struct {
+		// test input
+		governanceUpdateNum int
+		blockNums           []uint64
+		unitPrices          []uint64
+		currentBlockNum     int64
+		// expected result
+		unitPriceInCurrentSet uint64
+		actualGovernanceBlock uint64
+	}{
+		{3, []uint64{30, 60, 90}, []uint64{2, 3, 4}, 90, 3, 60},
+		{3, []uint64{30, 60, 90}, []uint64{2, 3, 4}, 110, 3, 60},
+		{3, []uint64{30, 60, 90}, []uint64{2, 3, 4}, 130, 4, 90},
+	}
+
+	for _, tc := range testData {
+		// 1. initializing
+
+		// store governance items to the governance db for 'tc.governanceUpdateNum' times
+		for idx := 0; idx < tc.governanceUpdateNum; idx++ {
+			config.UnitPrice = tc.unitPrices[idx]
+
+			src := GetGovernanceItemsFromChainConfig(config)
+			delta := NewGovernanceSet()
+
+			if ret := gov.WriteGovernance(tc.blockNums[idx], src, delta); ret != nil {
+				t.Errorf("Error in testing WriteGovernance, %v", ret)
+			}
+		}
+		// store head block (fake block, it only contains block number) to the headerDB
+		header := &types.Header{Number: big.NewInt(tc.currentBlockNum)}
+		gov.db.WriteHeadBlockHash(header.Hash())
+		gov.db.WriteHeader(header)
+
+		// reset idxCache and itemCache. purpose - reproduce the environment of the restarted node
+		gov.idxCache = nil
+		gov.itemCache.Purge()
+
+		// 2. call initializeCache
+		err := gov.initializeCache()
+
+		// 3. check the affected values with expected results
+		assert.NoError(t, err)
+
+		v, ok := gov.currentSet.GetValue(GovernanceKeyMap["governance.unitprice"])
+		assert.True(t, ok)
+		assert.Equal(t, tc.unitPriceInCurrentSet, v)
+
+		assert.Equal(t, tc.blockNums, gov.idxCache[1:]) // the order should be same
+		assert.True(t, gov.itemCache.Contains(getGovernanceCacheKey(tc.blockNums[tc.governanceUpdateNum-1])))
+		assert.Equal(t, tc.actualGovernanceBlock, gov.actualGovernanceBlock.Load().(uint64))
+	}
+}
+
 func TestWriteGovernance_idxCache(t *testing.T) {
 	gov := getGovernance()
 
