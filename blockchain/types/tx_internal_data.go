@@ -35,7 +35,7 @@ const MaxFeeRatio FeeRatio = 100
 
 const SubTxTypeBits uint = 3
 
-type TxType uint8
+type TxType uint16
 
 const (
 	// TxType declarations
@@ -44,7 +44,7 @@ const (
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
 	// TODO-Klaytn-AccessList: Change TxTypeAccessList to another seperated value.
-	TxTypeLegacyTransaction, TxTypeAccessList, TxTypeDynamicFee TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
+	TxTypeLegacyTransaction, _, _ TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
 	TxTypeAccountCreation, _, _
@@ -55,6 +55,9 @@ const (
 	TxTypeBatch, _, _
 	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
 	TxTypeLast, _, _
+	TxTypeEthEnvelope = 0x78
+	TxTypeAccessList = 0x7801
+	TxTypeDynamicFee = 0x7802
 )
 
 type TxValueKeyType uint
@@ -250,6 +253,10 @@ func (t TxType) IsEthTypedTransaction() bool {
 	return t == TxTypeAccessList || t == TxTypeDynamicFee
 }
 
+func (t TxType) IsEthereumTransaction() bool {
+	return t.IsLegacyTransaction() || t.IsEthTypedTransaction()
+}
+
 func (t TxType) IsChainDataAnchoring() bool {
 	return (t &^ ((1 << SubTxTypeBits) - 1)) == TxTypeChainDataAnchoring
 }
@@ -389,6 +396,7 @@ type TxInternalDataEthTyped interface {
 type TxInternalDataBaseFee interface {
 	GetGasTipCap() *big.Int
 	GetGasFeeCap() *big.Int
+	TxHash() common.Hash
 }
 
 // Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
