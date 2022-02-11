@@ -247,7 +247,6 @@ func (self *stateObject) GetCommittedState(db Database, key common.Hash) common.
 			return common.Hash{}
 		}
 	}
-
 	if len(enc) > 0 {
 		_, content, _, err := rlp.Split(enc)
 		if err != nil {
