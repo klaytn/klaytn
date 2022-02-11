@@ -101,7 +101,7 @@ func (b *LocalBackend) callContract(ctx context.Context, call klaytn.CallMsg, bl
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(call.Data, call.To == nil, b.config.Rules(block.Number()))
+	intrinsicGas, err := types.IntrinsicGas(call.Data, nil, call.To == nil, b.config.Rules(block.Number()))
 	if err != nil {
 		return nil, 0, false, err
 	}

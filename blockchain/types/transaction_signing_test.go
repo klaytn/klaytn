@@ -70,7 +70,7 @@ func TestEIP155RawSignatureValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, s, v, err := signer.SignatureValues(sig)
+	r, s, v, err := signer.SignatureValues(tx, sig)
 
 	sigs := tx.RawSignatureValues()
 	txV, txR, txS := sigs[0].V, sigs[0].R, sigs[0].S
@@ -245,7 +245,7 @@ func testValidateValueTransfer(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -299,7 +299,7 @@ func testValidateFeeDelegatedValueTransfer(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -325,7 +325,7 @@ func testValidateFeeDelegatedValueTransfer(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -387,7 +387,7 @@ func testValidateFeeDelegatedValueTransferWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -414,7 +414,7 @@ func testValidateFeeDelegatedValueTransferWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -471,7 +471,7 @@ func testValidateValueTransferMemo(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -526,7 +526,7 @@ func testValidateFeeDelegatedValueTransferMemo(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -553,7 +553,7 @@ func testValidateFeeDelegatedValueTransferMemo(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -616,7 +616,7 @@ func testValidateFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -644,7 +644,7 @@ func testValidateFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -754,7 +754,7 @@ func testValidateAccountUpdate(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -809,7 +809,7 @@ func testValidateFeeDelegatedAccountUpdate(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -836,7 +836,7 @@ func testValidateFeeDelegatedAccountUpdate(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -899,7 +899,7 @@ func testValidateFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -927,7 +927,7 @@ func testValidateFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -985,7 +985,7 @@ func testValidateSmartContractDeploy(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1041,7 +1041,7 @@ func testValidateFeeDelegatedSmartContractDeploy(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1069,7 +1069,7 @@ func testValidateFeeDelegatedSmartContractDeploy(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -1133,7 +1133,7 @@ func testValidateFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1162,7 +1162,7 @@ func testValidateFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -1219,7 +1219,7 @@ func testValidateSmartContractExecution(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1274,7 +1274,7 @@ func testValidateFeeDelegatedSmartContractExecution(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1301,7 +1301,7 @@ func testValidateFeeDelegatedSmartContractExecution(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -1364,7 +1364,7 @@ func testValidateFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1392,7 +1392,7 @@ func testValidateFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -1446,7 +1446,7 @@ func testValidateCancel(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1498,7 +1498,7 @@ func testValidateFeeDelegatedCancel(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1522,7 +1522,7 @@ func testValidateFeeDelegatedCancel(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -1582,7 +1582,7 @@ func testValidateFeeDelegatedCancelWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1607,7 +1607,7 @@ func testValidateFeeDelegatedCancelWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -1662,7 +1662,7 @@ func testValidateChainDataAnchoring(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1715,7 +1715,7 @@ func testValidateFeeDelegatedChainDataAnchoring(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1740,7 +1740,7 @@ func testValidateFeeDelegatedChainDataAnchoring(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)
@@ -1801,7 +1801,7 @@ func testValidateFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	sig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{prv})
+	sig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{prv})
 	assert.Equal(t, nil, err)
 
 	tx.SetSignature(sig)
@@ -1827,7 +1827,7 @@ func testValidateFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
 		uint(0),
 	})
 
-	feePayerSig, err := NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{feePayerPrv})
+	feePayerSig, err := NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{feePayerPrv})
 	assert.Equal(t, nil, err)
 
 	tx.SetFeePayerSignatures(feePayerSig)

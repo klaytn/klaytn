@@ -36,6 +36,7 @@ var (
 	amount    = big.NewInt(10)
 	gasLimit  = uint64(1000000)
 	gasPrice  = big.NewInt(25)
+	accesses  = AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
 )
 
 // TestTransactionSerialization tests RLP/JSON serialization for TxInternalData
@@ -66,6 +67,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"Cancel", genCancelTransaction()},
 		{"FeeDelegatedCancel", genFeeDelegatedCancelTransaction()},
 		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
+		{"AccessList", genAccessListTransaction()},
 	}
 
 	var testcases = []struct {
@@ -161,7 +163,7 @@ func testTransactionJSON(t *testing.T, tx TxInternalData) {
 // Copied from api/api_public_blockchain.go
 func newRPCTransaction(tx *Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
 	var from common.Address
-	if tx.IsLegacyTransaction() {
+	if tx.IsEthereumTransaction() {
 		signer := LatestSignerForChainID(tx.ChainId())
 		from, _ = Sender(signer, tx)
 	} else {
@@ -180,7 +182,9 @@ func newRPCTransaction(tx *Transaction, blockHash common.Hash, blockNumber uint6
 }
 
 func testTransactionRPC(t *testing.T, tx TxInternalData) {
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	//TODO - To test AccessList tx, it need to latest signer.
+	//signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	signer := LatestSignerForChainID(big.NewInt(2))
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -226,6 +230,25 @@ func genLegacyTransaction() TxInternalData {
 	}
 
 	return txdata
+}
+
+func genAccessListTransaction() TxInternalData {
+	tx, err := NewTxInternalDataWithMap(TxTypeAccessList, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:      nonce,
+		TxValueKeyTo:         to,
+		TxValueKeyAmount:     amount,
+		TxValueKeyGasLimit:   gasLimit,
+		TxValueKeyGasPrice:   gasPrice,
+		TxValueKeyData:       []byte("1234"),
+		TxValueKeyAccessList: accesses,
+		TxValueKeyChainID:    big.NewInt(2),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
 }
 
 func genValueTransferTransaction() TxInternalData {

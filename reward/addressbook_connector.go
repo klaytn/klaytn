@@ -73,7 +73,7 @@ func (ac *addressBookConnector) makeMsgToAddressBook(r params.Rules) (*types.Tra
 		return nil, err
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(data, false, r)
+	intrinsicGas, err := types.IntrinsicGas(data, nil, false, r)
 	if err != nil {
 		return nil, err
 	}

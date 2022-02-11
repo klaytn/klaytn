@@ -19,6 +19,7 @@ package tests
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -450,9 +451,22 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 		return nil, nil, err
 	}
 
-	genesis.Config = chainConfig
+	// The chainConfig value has been modified while executing test. (ex, The test included executing applyTransaction())
+	// Therefore, a deep copy is required to prevent the chainConfing value from being modified.
+	var cfg params.ChainConfig
+	b, err := json.Marshal(chainConfig)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	chain, err := blockchain.NewBlockChain(db, cacheConfig, chainConfig, engine, vm.Config{})
+	err = json.Unmarshal(b, &cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	genesis.Config = &cfg
+
+	chain, err := blockchain.NewBlockChain(db, cacheConfig, genesis.Config, engine, vm.Config{})
 	if err != nil {
 		return nil, nil, err
 	}

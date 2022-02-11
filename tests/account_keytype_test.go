@@ -324,6 +324,15 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyAnchoredData] = dataAnchor
 		values[types.TxValueKeyFeePayer] = recipient.Addr
 		values[types.TxValueKeyFeeRatioOfFeePayer] = ratio
+	case types.TxTypeAccessList:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasPrice] = gasPrice
+		values[types.TxValueKeyChainID] = big.NewInt(1)
+		values[types.TxValueKeyData] = dataCode
+		values[types.TxValueKeyAccessList] = types.AccessList{}
 	}
 
 	tx, err := types.NewTransactionWithMap(txType, values)
@@ -399,6 +408,8 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 	defer bcdata.Shutdown()
 
@@ -551,7 +562,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 		// tests for all txTypes
 		for _, txType := range txTypes {
 			// skip if tx type is legacy transaction and sender is not legacy.
-			if txType == types.TxTypeLegacyTransaction &&
+			if (txType.IsLegacyTransaction() || txType.IsEthTypedTransaction()) &&
 				!sender.AccKey.Type().IsLegacyAccountKey() {
 				continue
 			}
@@ -1852,7 +1863,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
-		if i == types.TxTypeLegacyTransaction {
+		if i == types.TxTypeLegacyTransaction || i == types.TxTypeAccessList {
 			continue // accounts with role-based key cannot a send legacy tx.
 		}
 		_, err := types.NewTxInternalData(i)

@@ -456,7 +456,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 
 	// case 1. AccountUpdate
 	{
-		tx := new(types.Transaction)
+		tx := types.NewTx(&types.TxInternalDataAccountUpdate{})
 		txtype := types.TxTypeAccountUpdate
 
 		wrongEncodedKey := []byte{0x10}
@@ -481,7 +481,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 			uint(0),
 			uint(0),
 		})
-		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		sig, err := types.NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
 		if err != nil {
 			panic(err)
 		}
@@ -506,7 +506,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 
 	// case 2. FeeDelegatedAccountUpdate
 	{
-		tx := new(types.Transaction)
+		tx := types.NewTx(&types.TxInternalDataFeeDelegatedAccountUpdate{})
 		txtype := types.TxTypeFeeDelegatedAccountUpdate
 
 		wrongEncodedKey := []byte{0x10}
@@ -531,7 +531,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 			uint(0),
 			uint(0),
 		})
-		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		sig, err := types.NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
 		if err != nil {
 			panic(err)
 		}
@@ -558,7 +558,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 
 	// case 3. FeeDelegatedAccountUpdateWithRatio
 	{
-		tx := new(types.Transaction)
+		tx := types.NewTx(&types.TxInternalDataFeeDelegatedAccountUpdateWithRatio{})
 		txtype := types.TxTypeFeeDelegatedAccountUpdateWithRatio
 
 		wrongEncodedKey := []byte{0x10}
@@ -584,7 +584,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 			uint(0),
 			uint(0),
 		})
-		sig, err := types.NewTxSignaturesWithValues(signer, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
+		sig, err := types.NewTxSignaturesWithValues(signer, tx, h, []*ecdsa.PrivateKey{bcdata.privKeys[0]})
 		if err != nil {
 			panic(err)
 		}

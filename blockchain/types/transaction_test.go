@@ -24,7 +24,10 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"math/big"
+	"reflect"
 	"testing"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
@@ -38,6 +41,8 @@ import (
 // The values in those tests are from the Transaction Tests
 // at github.com/ethereum/tests.
 var (
+	testAddr = common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b")
+
 	emptyTx = NewTransaction(
 		0,
 		common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
@@ -47,7 +52,7 @@ var (
 
 	rightvrsTx, _ = NewTransaction(
 		3,
-		common.HexToAddress("b94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+		testAddr,
 		big.NewInt(10),
 		2000,
 		big.NewInt(1),
@@ -55,6 +60,25 @@ var (
 	).WithSignature(
 		LatestSignerForChainID(common.Big1),
 		common.Hex2Bytes("98ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4a8887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a301"),
+	)
+
+	accessListTx = TxInternalDataAccessList{
+		ChainID:      big.NewInt(1),
+		AccountNonce: 3,
+		Recipient:    &testAddr,
+		Amount:       big.NewInt(10),
+		GasLimit:     25000,
+		Price:        big.NewInt(1),
+		Payload:      common.FromHex("5544"),
+	}
+
+	emptyEip2718Tx = &Transaction{
+		data: &accessListTx,
+	}
+
+	signedEip2718Tx, _ = emptyEip2718Tx.WithSignature(
+		NewEIP2930Signer(big.NewInt(1)),
+		common.Hex2Bytes("c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b266032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d3752101"),
 	)
 )
 
@@ -65,6 +89,107 @@ func TestTransactionSigHash(t *testing.T) {
 	}
 	if signer.Hash(rightvrsTx) != common.HexToHash("bd63ce94e66c7ffbce3b61023bbf9ee6df36047525b123201dcb5c4332f105ae") {
 		t.Errorf("RightVRS transaction hash mismatch, ɡot %x", signer.Hash(rightvrsTx))
+	}
+}
+
+func TestEIP2718TransactionSigHash(t *testing.T) {
+	s := NewEIP2930Signer(big.NewInt(1))
+	if s.Hash(emptyEip2718Tx) != common.HexToHash("49b486f0ec0a60dfbbca2d30cb07c9e8ffb2a2ff41f29a1ab6737475f6ff69f3") {
+		t.Errorf("empty EIP-2718 transaction hash mismatch, got %x", s.Hash(emptyEip2718Tx))
+	}
+	if s.Hash(signedEip2718Tx) != common.HexToHash("49b486f0ec0a60dfbbca2d30cb07c9e8ffb2a2ff41f29a1ab6737475f6ff69f3") {
+		t.Errorf("signed EIP-2718 transaction hash mismatch, got %x", s.Hash(signedEip2718Tx))
+	}
+}
+
+// This test checks signature operations on access list transactions.
+func TestEIP2930Signer(t *testing.T) {
+
+	var (
+		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		keyAddr = crypto.PubkeyToAddress(key.PublicKey)
+		signer1 = NewEIP2930Signer(big.NewInt(1))
+		signer2 = NewEIP2930Signer(big.NewInt(2))
+		tx0     = NewTx(&TxInternalDataAccessList{AccountNonce: 1, ChainID: new(big.Int)})
+		tx1     = NewTx(&TxInternalDataAccessList{ChainID: big.NewInt(1), AccountNonce: 1, V: new(big.Int), R: new(big.Int), S: new(big.Int)})
+		tx2, _  = SignTx(NewTx(&TxInternalDataAccessList{ChainID: big.NewInt(2), AccountNonce: 1}), signer2, key)
+	)
+
+	tests := []struct {
+		tx             *Transaction
+		signer         Signer
+		wantSignerHash common.Hash
+		wantSenderErr  error
+		wantSignErr    error
+		wantHash       common.Hash // after signing
+	}{
+		{
+			tx:             tx0,
+			signer:         signer1,
+			wantSignerHash: common.HexToHash("846ad7672f2a3a40c1f959cd4a8ad21786d620077084d84c8d7c077714caa139"),
+			wantSenderErr:  ErrInvalidChainId,
+			wantHash:       common.HexToHash("1ccd12d8bbdb96ea391af49a35ab641e219b2dd638dea375f2bc94dd290f2549"),
+		},
+		{
+			tx:             tx1,
+			signer:         signer1,
+			wantSenderErr:  ErrInvalidSig,
+			wantSignerHash: common.HexToHash("846ad7672f2a3a40c1f959cd4a8ad21786d620077084d84c8d7c077714caa139"),
+			wantHash:       common.HexToHash("1ccd12d8bbdb96ea391af49a35ab641e219b2dd638dea375f2bc94dd290f2549"),
+		},
+		{
+			// This checks what happens when trying to sign an unsigned tx for the wrong chain.
+			tx:             tx1,
+			signer:         signer2,
+			wantSenderErr:  ErrInvalidChainId,
+			wantSignerHash: common.HexToHash("367967247499343401261d718ed5aa4c9486583e4d89251afce47f4a33c33362"),
+			wantSignErr:    ErrInvalidChainId,
+		},
+		{
+			// This checks what happens when trying to re-sign a signed tx for the wrong chain.
+			tx:             tx2,
+			signer:         signer1,
+			wantSenderErr:  ErrInvalidChainId,
+			wantSignerHash: common.HexToHash("846ad7672f2a3a40c1f959cd4a8ad21786d620077084d84c8d7c077714caa139"),
+			wantSignErr:    ErrInvalidChainId,
+		},
+	}
+
+	for i, test := range tests {
+		sigHash := test.signer.Hash(test.tx)
+		if sigHash != test.wantSignerHash {
+			t.Errorf("test %d: wrong sig hash: got %x, want %x", i, sigHash, test.wantSignerHash)
+		}
+		sender, err := Sender(test.signer, test.tx)
+		if err != test.wantSenderErr {
+			t.Errorf("test %d: wrong Sender error %q", i, err)
+		}
+		if err == nil && sender != keyAddr {
+			t.Errorf("test %d: wrong sender address %x", i, sender)
+		}
+		signedTx, err := SignTx(test.tx, test.signer, key)
+		if err != test.wantSignErr {
+			t.Fatalf("test %d: wrong SignTx error %q", i, err)
+		}
+		if signedTx != nil {
+			if signedTx.Hash() != test.wantHash {
+				t.Errorf("test %d: wrong tx hash after signing: got %x, want %x", i, signedTx.Hash(), test.wantHash)
+			}
+		}
+	}
+}
+
+func TestEIP2718TransactionEncode(t *testing.T) {
+	// RLP representation
+	{
+		have, err := rlp.EncodeToBytes(signedEip2718Tx)
+		if err != nil {
+			t.Fatalf("encode error: %v", err)
+		}
+		want := common.FromHex("01f8630103018261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544c001a0c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b2660a032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d37521")
+		if !bytes.Equal(have, want) {
+			t.Errorf("encoded RLP mismatch, got %x", have)
+		}
 	}
 }
 
@@ -287,20 +412,150 @@ func TestIntrinsicGas(t *testing.T) {
 		data, err = hex.DecodeString(tc.inputString) // decode input string to hex data
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, false, params.Rules{IsIstanbul: false})
+		gas, err = IntrinsicGas(data, nil, false, params.Rules{IsIstanbul: false})
 		assert.Equal(t, tc.expectGas1, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, false, params.Rules{IsIstanbul: true})
+		gas, err = IntrinsicGas(data, nil, false, params.Rules{IsIstanbul: true})
 		assert.Equal(t, tc.expectGas2, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, true, params.Rules{IsIstanbul: false})
+		gas, err = IntrinsicGas(data, nil, true, params.Rules{IsIstanbul: false})
 		assert.Equal(t, tc.expectGas3, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, true, params.Rules{IsIstanbul: true})
+		gas, err = IntrinsicGas(data, nil, true, params.Rules{IsIstanbul: true})
 		assert.Equal(t, tc.expectGas4, gas)
 		assert.Equal(t, nil, err)
 	}
+}
+
+// TestTransactionCoding tests serializing/de-serializing to/from rlp and JSON.
+func TestTransactionCoding(t *testing.T) {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("could not generate key: %v", err)
+	}
+	var (
+		signer    = NewEIP2930Signer(common.Big1)
+		addr      = common.HexToAddress("0x0000000000000000000000000000000000000001")
+		recipient = common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87")
+		accesses  = AccessList{{Address: addr, StorageKeys: []common.Hash{{0}}}}
+	)
+	for i := uint64(0); i < 500; i++ {
+		var txData TxInternalData
+		switch i % 5 {
+		case 0:
+			// Legacy tx.
+			txData = &TxInternalDataLegacy{
+				AccountNonce: i,
+				Recipient:    &recipient,
+				GasLimit:     1,
+				Price:        big.NewInt(2),
+				Payload:      []byte("abcdef"),
+			}
+		case 1:
+			// Legacy tx contract creation.
+			txData = &TxInternalDataLegacy{
+				AccountNonce: i,
+				GasLimit:     1,
+				Price:        big.NewInt(2),
+				Payload:      []byte("abcdef"),
+			}
+		case 2:
+			// Tx with non-zero access list.
+			txData = &TxInternalDataAccessList{
+				ChainID:      big.NewInt(1),
+				AccountNonce: i,
+				Recipient:    &recipient,
+				GasLimit:     123457,
+				Price:        big.NewInt(10),
+				AccessList:   accesses,
+				Payload:      []byte("abcdef"),
+			}
+		case 3:
+			// Tx with empty access list.
+			txData = &TxInternalDataAccessList{
+				ChainID:      big.NewInt(1),
+				AccountNonce: i,
+				Recipient:    &recipient,
+				GasLimit:     123457,
+				Price:        big.NewInt(10),
+				Payload:      []byte("abcdef"),
+			}
+		case 4:
+			// Contract creation with access list.
+			txData = &TxInternalDataAccessList{
+				ChainID:      big.NewInt(1),
+				AccountNonce: i,
+				GasLimit:     123457,
+				Price:        big.NewInt(10),
+				AccessList:   accesses,
+			}
+		}
+
+		transaction := Transaction{data: txData}
+		tx, err := SignTx(&transaction, signer, key)
+		if err != nil {
+			t.Fatalf("could not sign transaction: %v", err)
+		}
+		// RLP
+		parsedTx, err := encodeDecodeBinary(tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertEqual(parsedTx, tx)
+
+		// JSON
+		parsedTx, err = encodeDecodeJSON(tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertEqual(parsedTx, tx)
+	}
+}
+
+func encodeDecodeJSON(tx *Transaction) (*Transaction, error) {
+	data, err := json.Marshal(tx)
+	if err != nil {
+		return nil, fmt.Errorf("json encoding failed: %v", err)
+	}
+	var parsedTx = &Transaction{}
+	if err := json.Unmarshal(data, &parsedTx); err != nil {
+		return nil, fmt.Errorf("json decoding failed: %v", err)
+	}
+	return parsedTx, nil
+}
+
+func encodeDecodeBinary(tx *Transaction) (*Transaction, error) {
+	data, err := tx.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("rlp encoding failed: %v", err)
+	}
+	var parsedTx = &Transaction{}
+	if err := parsedTx.UnmarshalBinary(data); err != nil {
+		return nil, fmt.Errorf("rlp decoding failed: %v", err)
+	}
+	return parsedTx, nil
+}
+
+func assertEqual(orig *Transaction, cpy *Transaction) error {
+	// compare nonce, price, gaslimit, recipient, amount, payload, V, R, S
+	if want, got := orig.Hash(), cpy.Hash(); want != got {
+		return fmt.Errorf("parsed tx differs from original tx, want %v, got %v", want, got)
+	}
+	if want, got := orig.ChainId(), cpy.ChainId(); want.Cmp(got) != 0 {
+		return fmt.Errorf("invalid chain id, want %d, got %d", want, got)
+	}
+
+	if orig.Type().IsEthTypedTransaction() && cpy.Type().IsEthTypedTransaction() {
+		tOrig := orig.data.(TxInternalDataEthTyped)
+		tCpy := cpy.data.(TxInternalDataEthTyped)
+
+		if !reflect.DeepEqual(tOrig.GetAccessList(), tCpy.GetAccessList()) {
+			return fmt.Errorf("access list wrong!")
+		}
+	}
+
+	return nil
 }
