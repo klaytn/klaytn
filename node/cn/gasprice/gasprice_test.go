@@ -89,7 +89,7 @@ func newTestBackend(t *testing.T) *testBackend {
 
 		toaddr := common.Address{}
 		data := make([]byte, 1)
-		gas, _ := types.IntrinsicGas(data, false, params.TestChainConfig.Rules(big.NewInt(0)))
+		gas, _ := types.IntrinsicGas(data, nil, false, params.TestChainConfig.Rules(big.NewInt(0)))
 		signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
 		tx, _ := types.SignTx(types.NewTransaction(b.TxNonce(addr), toaddr, big.NewInt(1), gas, nil, data), signer, key)
 		b.AddTx(tx)
