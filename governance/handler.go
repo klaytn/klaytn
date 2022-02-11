@@ -47,7 +47,7 @@ var (
 
 var GovernanceItems = map[int]check{
 	params.GovernanceMode:          {stringT, checkGovernanceMode, nil},
-	params.GoverningNode:           {addressT, checkAddressOrListOfUniqueAddresses, nil},
+	params.GoverningNode:           {addressT, checkAddress, nil},
 	params.UnitPrice:               {uint64T, checkUint64andBool, updateUnitPrice},
 	params.AddValidator:            {addressT, checkAddressOrListOfUniqueAddresses, nil},
 	params.RemoveValidator:         {addressT, checkAddressOrListOfUniqueAddresses, nil},
@@ -286,8 +286,15 @@ func checkBigInt(k string, v interface{}) bool {
 	return false
 }
 
-func checkAddressOrListOfUniqueAddresses(k string, v interface{}) bool {
+func checkAddress(k string, v interface{}) bool {
 	if _, ok := v.(common.Address); ok {
+		return true
+	}
+	return false
+}
+
+func checkAddressOrListOfUniqueAddresses(k string, v interface{}) bool {
+	if checkAddress(k, v) {
 		return true
 	}
 	if _, ok := v.([]common.Address); !ok {
