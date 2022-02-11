@@ -61,7 +61,6 @@ const (
 
 var (
 	errNoMiningWork = errors.New("no mining work available yet")
-	vmErrors        = []error{vm.ErrCodeStoreOutOfGas, vm.ErrDepth, vm.ErrTraceLimitReached, vm.ErrInsufficientBalance, vm.ErrContractAddressCollision, vm.ErrTotalTimeLimitReached, vm.ErrOpcodeComputationCostLimitReached, vm.ErrFailedOnSetCode, vm.ErrWriteProtection, vm.ErrReturnDataOutOfBounds, vm.ErrExecutionReverted, vm.ErrMaxCodeSizeExceeded, vm.ErrInvalidJump}
 )
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
@@ -1424,7 +1423,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		args.Gas = (*hexutil.Uint64)(&gas)
 		ret, _, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
 		if err != nil {
-			if isVMError(err) {
+			if vm.IsVMError(err) {
 				// If err is vmError, return vmError with returned data
 				return false, ret, err, nil
 			}
@@ -1465,16 +1464,6 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		}
 	}
 	return hexutil.Uint64(hi), nil
-}
-
-// isVMError returns true if given error is occurred during EVM execution.
-func isVMError(err error) bool {
-	for _, vmError := range vmErrors {
-		if err == vmError || strings.Contains(err.Error(), vmError.Error()) {
-			return true
-		}
-	}
-	return false
 }
 
 // isReverted checks given error is vm.ErrExecutionReverted
