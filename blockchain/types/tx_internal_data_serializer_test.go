@@ -18,6 +18,7 @@ package types
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 
@@ -123,6 +124,10 @@ func testTransactionRLP(t *testing.T, tx TxInternalData) {
 	b, err := rlp.EncodeToBytes(enc)
 	if err != nil {
 		panic(err)
+	}
+
+	if tx.Type().IsEthTypedTransaction() {
+		assert.Equal(t, byte(TxTypeEthEnvelope), b[0])
 	}
 
 	dec := newTxInternalDataSerializer()
