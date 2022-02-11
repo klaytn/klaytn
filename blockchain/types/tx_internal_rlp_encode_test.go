@@ -41,6 +41,7 @@ func TestTxRLPEncode(t *testing.T) {
 	funcs := []testingF{
 		testTxRLPEncodeLegacy,
 		testTxRLPEncodeAccessList,
+		testTxRLPEncodeDynamicFee,
 
 		testTxRLPEncodeValueTransfer,
 		testTxRLPEncodeFeeDelegatedValueTransfer,
@@ -207,6 +208,55 @@ func testTxRLPEncodeAccessList(t *testing.T) {
 		tx.ChainID,
 		tx.AccountNonce,
 		tx.Price,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.Payload,
+		tx.AccessList,
+		tx.V,
+		tx.R,
+		tx.S,
+	})
+	assert.Equal(t, nil, err)
+
+	printRLPEncode(signer.ChainID(), signer, sigRLP, txHashRLP, txHashRLP, rawTx)
+}
+
+func testTxRLPEncodeDynamicFee(t *testing.T) {
+	//prvKey, _:= crypto.HexToECDSA("0cfd086137699e1371a78e648748be0011de423269805c28d2d7b9973dcdb3ad")
+	tx := genDynamicFeeTransaction().(*TxInternalDataDynamicFee)
+
+	signer := LatestSignerForChainID(big.NewInt(2))
+	rawTx := &Transaction{data: tx}
+	rawTx.Sign(signer, key)
+
+	//sigRLP := new(bytes.Buffer)
+	sigRLP := new(bytes.Buffer)
+	err := rlp.Encode(sigRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(sigRLP, []interface{}{
+		tx.ChainID,
+		tx.AccountNonce,
+		tx.GasTipCap,
+		tx.GasFeeCap,
+		tx.GasLimit,
+		tx.Recipient,
+		tx.Amount,
+		tx.Payload,
+		tx.AccessList,
+	})
+	assert.Equal(t, nil, err)
+
+	txHashRLP := new(bytes.Buffer)
+	err = rlp.Encode(txHashRLP, tx.Type())
+	assert.Equal(t, nil, err)
+
+	err = rlp.Encode(txHashRLP, []interface{}{
+		tx.ChainID,
+		tx.AccountNonce,
+		tx.GasTipCap,
+		tx.GasFeeCap,
 		tx.GasLimit,
 		tx.Recipient,
 		tx.Amount,
