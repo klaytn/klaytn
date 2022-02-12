@@ -311,7 +311,7 @@ func (tx *Transaction) Type() TxType                { return tx.data.Type() }
 func (tx *Transaction) IsLegacyTransaction() bool   { return tx.Type().IsLegacyTransaction() }
 func (tx *Transaction) IsEthTypedTransaction() bool { return tx.Type().IsEthTypedTransaction() }
 func (tx *Transaction) IsEthereumTransaction() bool {
-	return tx.IsLegacyTransaction() || tx.IsEthTypedTransaction()
+	return tx.Type().IsEthereumTransaction()
 }
 
 func (tx *Transaction) ValidatedSender() common.Address {
@@ -469,7 +469,15 @@ func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	v := rlpHash(tx)
+
+	var v common.Hash
+	if tx.IsEthTypedTransaction() {
+		te := tx.data.(TxInternalDataEthTyped)
+		v = te.TxHash()
+	} else {
+		v = rlpHash(tx)
+	}
+
 	tx.hash.Store(v)
 	return v
 }

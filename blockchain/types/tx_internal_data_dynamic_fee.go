@@ -339,10 +339,11 @@ func (t *TxInternalDataDynamicFee) String() string {
 	} else {
 		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
 	}
-	enc, _ := rlp.EncodeToBytes(t)
+	enc, _ := rlp.EncodeToBytes(tx)
 	return fmt.Sprintf(`
 		TX(%x)
 		Contract: %v
+		Chaind:   %#x
 		From:     %s
 		To:       %s
 		Nonce:    %v
@@ -351,7 +352,7 @@ func (t *TxInternalDataDynamicFee) String() string {
 		GasLimit  %#x
 		Value:    %#x
 		Data:     0x%x
-	   AccessList: %x
+	    AccessList: %x
 		V:        %#x
 		R:        %#x
 		S:        %#x
@@ -359,6 +360,7 @@ func (t *TxInternalDataDynamicFee) String() string {
 	`,
 		tx.Hash(),
 		t.GetRecipient() == nil,
+		t.ChainId(),
 		from,
 		to,
 		t.GetAccountNonce(),
@@ -386,6 +388,23 @@ func (t *TxInternalDataDynamicFee) SerializeForSign() []interface{} {
 		t.Payload,
 		t.AccessList,
 	}
+}
+
+func (t *TxInternalDataDynamicFee) TxHash() common.Hash {
+	return prefixedRlpHash(byte(t.Type()), []interface{}{
+		t.ChainID,
+		t.AccountNonce,
+		t.GasTipCap,
+		t.GasFeeCap,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.Payload,
+		t.AccessList,
+		t.V,
+		t.R,
+		t.S,
+	})
 }
 
 func (t *TxInternalDataDynamicFee) SenderTxHash() common.Hash {
