@@ -1285,7 +1285,9 @@ func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransaction
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
-	return api.publicTransactionPoolAPI.SendRawTransaction(ctx, input)
+	inputBytes := []byte{byte(types.TxTypeEthEnvelope)}
+	inputBytes = append(inputBytes, input...)
+	return api.publicTransactionPoolAPI.SendRawTransaction(ctx, inputBytes)
 }
 
 // Sign calculates an ECDSA signature for:
