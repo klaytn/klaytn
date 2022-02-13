@@ -723,16 +723,16 @@ func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNum
 		return nil
 	}
 
-	typeInt := hexutil.Uint64(types.RemoveTxTypeEthEnvelope(tx.Type()))
+	typeInt := tx.Type()
 	// If tx is not Ethereum transaction, the type is converted to TxTypeLegacyTransaction.
 	if !tx.IsEthereumTransaction() {
-		typeInt = hexutil.Uint64(types.TxTypeLegacyTransaction)
+		typeInt = types.TxTypeLegacyTransaction
 	}
 
 	signature := tx.GetTxInternalData().RawSignatureValues()[0]
 
 	result := &EthRPCTransaction{
-		Type:     typeInt,
+		Type:     hexutil.Uint64(types.RemoveTxTypeEthEnvelope(typeInt)),
 		From:     getFrom(tx),
 		Gas:      hexutil.Uint64(tx.Gas()),
 		GasPrice: (*hexutil.Big)(tx.GasPrice()),
@@ -752,7 +752,7 @@ func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNum
 		result.TransactionIndex = (*hexutil.Uint64)(&index)
 	}
 
-	switch types.TxType(typeInt) {
+	switch typeInt {
 	case types.TxTypeAccessList:
 		al := tx.AccessList()
 		result.Accesses = &al
@@ -778,7 +778,7 @@ func newEthRPCPendingTransaction(tx *types.Transaction) *EthRPCTransaction {
 func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 	var enc ethTxJSON
 
-	enc.Type = hexutil.Uint64(tx.Type())
+	enc.Type = hexutil.Uint64(types.RemoveTxTypeEthEnvelope(tx.Type()))
 	// If tx is not Ethereum transaction, the type is converted to TxTypeLegacyTransaction.
 	if !tx.IsEthereumTransaction() {
 		enc.Type = hexutil.Uint64(types.TxTypeLegacyTransaction)
@@ -811,8 +811,12 @@ func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 	case types.TxTypeAccessList:
 		al := tx.AccessList()
 		enc.AccessList = &al
+		enc.ChainID = (*hexutil.Big)(tx.ChainId())
 		enc.GasPrice = (*hexutil.Big)(tx.GasPrice())
 	case types.TxTypeDynamicFee:
+		al := tx.AccessList()
+		enc.AccessList = &al
+		enc.ChainID = (*hexutil.Big)(tx.ChainId())
 		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap())
 		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap())
 	default:
@@ -915,7 +919,7 @@ func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, bloc
 		return nil, nil
 	}
 
-	typeInt := types.RemoveTxTypeEthEnvelope(tx.Type())
+	typeInt := tx.Type()
 	// If tx is not Ethereum transaction, the type is converted to TxTypeLegacyTransaction.
 	if !tx.IsEthereumTransaction() {
 		typeInt = types.TxTypeLegacyTransaction
@@ -933,7 +937,7 @@ func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, bloc
 		"contractAddress":   nil,
 		"logs":              receipt.Logs,
 		"logsBloom":         receipt.Bloom,
-		"type":              hexutil.Uint(typeInt),
+		"type":              hexutil.Uint(types.RemoveTxTypeEthEnvelope(typeInt)),
 	}
 
 	fields["effectiveGasPrice"] = tx.GasPrice()
