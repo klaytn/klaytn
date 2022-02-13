@@ -81,7 +81,7 @@ func (serializer *TxInternalDataSerializer) DecodeRLP(s *rlp.Stream) error {
 		if err := s.Decode(&ethType); err != nil {
 			return err
 		}
-		serializer.txType = serializer.txType << 8 | ethType
+		serializer.txType = serializer.txType<<8 | ethType
 	}
 
 	var err error

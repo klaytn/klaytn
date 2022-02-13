@@ -56,8 +56,8 @@ const (
 	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
 	TxTypeLast, _, _
 	TxTypeEthEnvelope = 0x78
-	TxTypeAccessList = 0x7801
-	TxTypeDynamicFee = 0x7802
+	TxTypeAccessList  = 0x7801
+	TxTypeDynamicFee  = 0x7802
 )
 
 type TxValueKeyType uint
