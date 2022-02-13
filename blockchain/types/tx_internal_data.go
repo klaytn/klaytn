@@ -55,9 +55,9 @@ const (
 	TxTypeBatch, _, _
 	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
 	TxTypeLast, _, _
-	TxTypeEthEnvelope = 0x78
-	TxTypeAccessList  = 0x7801
-	TxTypeDynamicFee  = 0x7802
+	TxTypeEthEnvelope = TxType(0x78)
+	TxTypeAccessList  = TxType(0x7801)
+	TxTypeDynamicFee  = TxType(0x7802)
 )
 
 type TxValueKeyType uint
@@ -633,4 +633,12 @@ func NewAccountCreationTransactionWithMap(values map[TxValueKeyType]interface{})
 		return nil, err
 	}
 	return &Transaction{data: txdata}, nil
+}
+
+// RemoveTxTypeEthEnvelope returns Ethereum tx type integer.
+// Because Klaytn has its own transaction type system,
+// it does not use the tpye integer of Ethereum as it is,
+// but prefixes it with types.TxTypeEthEnvelope(0x78) internally.
+func RemoveTxTypeEthEnvelope(ethType TxType) TxType {
+	return ethType & 0b0000000011111111
 }

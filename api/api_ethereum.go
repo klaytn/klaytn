@@ -723,7 +723,7 @@ func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNum
 		return nil
 	}
 
-	typeInt := hexutil.Uint64(tx.Type())
+	typeInt := hexutil.Uint64(types.RemoveTxTypeEthEnvelope(tx.Type()))
 	// If tx is not Ethereum transaction, the type is converted to TxTypeLegacyTransaction.
 	if !tx.IsEthereumTransaction() {
 		typeInt = hexutil.Uint64(types.TxTypeLegacyTransaction)
@@ -915,7 +915,7 @@ func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, bloc
 		return nil, nil
 	}
 
-	typeInt := tx.Type()
+	typeInt := types.RemoveTxTypeEthEnvelope(tx.Type())
 	// If tx is not Ethereum transaction, the type is converted to TxTypeLegacyTransaction.
 	if !tx.IsEthereumTransaction() {
 		typeInt = types.TxTypeLegacyTransaction
