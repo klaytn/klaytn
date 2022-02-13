@@ -23,11 +23,12 @@ package types
 import (
 	"bytes"
 	"fmt"
-	"github.com/klaytn/klaytn/common/hexutil"
 	"io/ioutil"
 	"math/big"
 	"reflect"
 	"testing"
+
+	"github.com/klaytn/klaytn/common/hexutil"
 
 	"github.com/stretchr/testify/assert"
 
