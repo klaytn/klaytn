@@ -1332,7 +1332,8 @@ func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransaction
 	if err != nil {
 		return nil, err
 	}
-	return &EthSignTransactionResult{data, formatTxToEthTxJSON(tx)}, nil
+	// Return rawTx except types.TxTypeEthEnvelope: 0x78(= 1 byte)
+	return &EthSignTransactionResult{data[1:], formatTxToEthTxJSON(tx)}, nil
 }
 
 // PendingTransactions returns the transactions that are in the transaction pool
