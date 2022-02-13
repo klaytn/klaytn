@@ -76,7 +76,7 @@ func (self Storage) Copy() Storage {
 // Finally, call CommitStorageTrie to write the modified storage trie into a database.
 type stateObject struct {
 	address  common.Address
-	addrHash common.Hash // hash of ethereum address of the account
+	addrHash common.Hash // hash of the address of the account
 	account  account.Account
 	db       *StateDB
 
