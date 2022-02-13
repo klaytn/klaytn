@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
@@ -28,6 +32,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var dummyChainConfigForEthereumAPITest = &params.ChainConfig{
+	ChainID:                 new(big.Int).SetUint64(111111),
+	IstanbulCompatibleBlock: new(big.Int).SetUint64(0),
+	LondonCompatibleBlock:   new(big.Int).SetUint64(0),
+	UnitPrice:               25000000000, // 25 ston
+}
+
 // TestEthereumAPI_Etherbase tests Etherbase.
 func TestEthereumAPI_Etherbase(t *testing.T) {
 	testNodeAddress(t, "Etherbase")
@@ -41,7 +52,7 @@ func TestEthereumAPI_Coinbase(t *testing.T) {
 // testNodeAddress generates nodeAddress and tests Etherbase and Coinbase.
 func testNodeAddress(t *testing.T, testAPIName string) {
 	gov := governance.NewGovernance(
-		&params.ChainConfig{},
+		dummyChainConfigForEthereumAPITest,
 		database.NewMemoryDBManager(),
 	)
 	key, _ := crypto.GenerateKey()
@@ -918,6 +929,7 @@ func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend, EthereumAPI) {
 	mockCtrl := gomock.NewController(t)
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
 
 	blockchain.InitDeriveSha(types.ImplDeriveShaOriginal)
 
@@ -1856,4 +1868,352 @@ func NewMockWallet(txs types.Transactions) *MockWallet {
 // Accounts implements accounts.Wallet, returning an account list.
 func (mw *MockWallet) Accounts() []accounts.Account {
 	return mw.accounts
+}
+
+// TestEthTransactionArgs_setDefaults tests setDefaults method of EthTransactionArgs.
+func TestEthTransactionArgs_setDefaults(t *testing.T) {
+	_, mockBackend, _ := testInitForEthApi(t)
+	// To clarify the exact scope of this test, it is assumed that the user must fill in the gas.
+	// Because when user does not specify gas, it calls estimateGas internally and it requires
+	// many backend calls which are not directly related with this test.
+	gas := hexutil.Uint64(1000000)
+	from := common.HexToAddress("0x2eaad2bf70a070aaa2e007beee99c6148f47718e")
+	poolNonce := uint64(1)
+	accountNonce := uint64(5)
+	to := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
+	byteCode := common.Hex2Bytes("6080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680632e64cec114604e5780636057361d146076575b600080fd5b348015605957600080fd5b50606060a0565b6040518082815260200191505060405180910390f35b348015608157600080fd5b50609e6004803603810190808035906020019092919050505060a9565b005b60008054905090565b80600081905550505600a165627a7a723058207783dba41884f73679e167576362b7277f88458815141651f48ca38c25b498f80029")
+	unitPrice := new(big.Int).SetUint64(dummyChainConfigForEthereumAPITest.UnitPrice)
+	value := new(big.Int).SetUint64(500)
+	testSet := []struct {
+		txArgs              EthTransactionArgs
+		expectedResult      EthTransactionArgs
+		dynamicFeeParamsSet bool
+		nonceSet            bool
+		chainIdSet          bool
+		expectedError       error
+	}{
+		{
+			txArgs: EthTransactionArgs{
+				From:                 nil,
+				To:                   nil,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         nil,
+				MaxPriorityFeePerGas: nil,
+				Value:                nil,
+				Nonce:                nil,
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              nil,
+			},
+			expectedResult: EthTransactionArgs{
+				From:                 nil,
+				To:                   nil,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(unitPrice),
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(new(big.Int)),
+				Nonce:                (*hexutil.Uint64)(&poolNonce),
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+			},
+			dynamicFeeParamsSet: false,
+			nonceSet:            false,
+			chainIdSet:          false,
+			expectedError:       nil,
+		},
+		{
+			txArgs: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             (*hexutil.Big)(unitPrice),
+				MaxFeePerGas:         nil,
+				MaxPriorityFeePerGas: nil,
+				Value:                (*hexutil.Big)(value),
+				Nonce:                nil,
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              nil,
+			},
+			expectedResult: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             (*hexutil.Big)(unitPrice),
+				MaxFeePerGas:         nil,
+				MaxPriorityFeePerGas: nil,
+				Value:                (*hexutil.Big)(value),
+				Nonce:                (*hexutil.Uint64)(&poolNonce),
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+			},
+			dynamicFeeParamsSet: false,
+			nonceSet:            false,
+			chainIdSet:          false,
+			expectedError:       nil,
+		},
+		{
+			txArgs: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(new(big.Int).SetUint64(1)),
+				MaxPriorityFeePerGas: nil,
+				Value:                (*hexutil.Big)(value),
+				Nonce:                nil,
+				Data:                 nil,
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              nil,
+			},
+			expectedResult:      EthTransactionArgs{},
+			dynamicFeeParamsSet: false,
+			nonceSet:            false,
+			chainIdSet:          false,
+			expectedError:       fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", unitPrice.Text(16)),
+		},
+		{
+			txArgs: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         nil,
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                nil,
+				Data:                 nil,
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              nil,
+			},
+			expectedResult: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(unitPrice),
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                (*hexutil.Uint64)(&poolNonce),
+				Data:                 nil,
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+			},
+			dynamicFeeParamsSet: false,
+			nonceSet:            false,
+			chainIdSet:          false,
+			expectedError:       nil,
+		},
+		{
+			txArgs: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         nil,
+				MaxPriorityFeePerGas: (*hexutil.Big)(new(big.Int).SetUint64(1)),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                nil,
+				Data:                 nil,
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              nil,
+			},
+			expectedResult:      EthTransactionArgs{},
+			dynamicFeeParamsSet: false,
+			nonceSet:            false,
+			chainIdSet:          false,
+			expectedError:       fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", unitPrice.Text(16)),
+		},
+		{
+			txArgs: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(unitPrice),
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                nil,
+				Data:                 nil,
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              nil,
+			},
+			expectedResult: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(unitPrice),
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                (*hexutil.Uint64)(&poolNonce),
+				Data:                 nil,
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+			},
+			dynamicFeeParamsSet: true,
+			nonceSet:            false,
+			chainIdSet:          false,
+			expectedError:       nil,
+		},
+		{
+			txArgs: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         nil,
+				MaxPriorityFeePerGas: nil,
+				Value:                (*hexutil.Big)(value),
+				Nonce:                (*hexutil.Uint64)(&accountNonce),
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              nil,
+			},
+			expectedResult: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(unitPrice),
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                (*hexutil.Uint64)(&accountNonce),
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+			},
+			dynamicFeeParamsSet: false,
+			nonceSet:            true,
+			chainIdSet:          false,
+			expectedError:       nil,
+		},
+		{
+			txArgs: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(unitPrice),
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                (*hexutil.Uint64)(&accountNonce),
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              nil,
+			},
+			expectedResult: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(unitPrice),
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                (*hexutil.Uint64)(&accountNonce),
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+			},
+			dynamicFeeParamsSet: true,
+			nonceSet:            true,
+			chainIdSet:          false,
+			expectedError:       nil,
+		},
+		{
+			txArgs: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(unitPrice),
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                (*hexutil.Uint64)(&accountNonce),
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              (*hexutil.Big)(new(big.Int).SetUint64(1234)),
+			},
+			expectedResult: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(unitPrice),
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                (*hexutil.Uint64)(&accountNonce),
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                nil,
+				AccessList:           nil,
+				ChainID:              (*hexutil.Big)(new(big.Int).SetUint64(1234)),
+			},
+			dynamicFeeParamsSet: true,
+			nonceSet:            true,
+			chainIdSet:          true,
+			expectedError:       nil,
+		},
+		{
+			txArgs: EthTransactionArgs{
+				From:                 &from,
+				To:                   &to,
+				Gas:                  &gas,
+				GasPrice:             nil,
+				MaxFeePerGas:         (*hexutil.Big)(unitPrice),
+				MaxPriorityFeePerGas: (*hexutil.Big)(unitPrice),
+				Value:                (*hexutil.Big)(value),
+				Nonce:                (*hexutil.Uint64)(&accountNonce),
+				Data:                 (*hexutil.Bytes)(&byteCode),
+				Input:                (*hexutil.Bytes)(&[]byte{0x1}),
+				AccessList:           nil,
+				ChainID:              (*hexutil.Big)(new(big.Int).SetUint64(1234)),
+			},
+			expectedResult:      EthTransactionArgs{},
+			dynamicFeeParamsSet: true,
+			nonceSet:            true,
+			chainIdSet:          true,
+			expectedError:       errors.New(`both "data" and "input" are set and not equal. Please use "input" to pass transaction call data`),
+		},
+	}
+	for _, test := range testSet {
+		mockBackend.EXPECT().CurrentBlock().Return(
+			types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(0)}),
+		)
+		mockBackend.EXPECT().SuggestPrice(gomock.Any()).Return(unitPrice, nil)
+		if !test.dynamicFeeParamsSet {
+			mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
+		}
+		if !test.nonceSet {
+			mockBackend.EXPECT().GetPoolNonce(context.Background(), gomock.Any()).Return(poolNonce)
+		}
+		if !test.chainIdSet {
+			mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
+		}
+		mockBackend.EXPECT().RPCGasCap().Return(nil)
+		txArgs := test.txArgs
+		err := txArgs.setDefaults(context.Background(), mockBackend)
+		require.Equal(t, test.expectedError, err)
+		if err == nil {
+			require.Equal(t, test.expectedResult, txArgs)
+		}
+	}
 }

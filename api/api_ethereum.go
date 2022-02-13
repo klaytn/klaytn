@@ -1006,6 +1006,12 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
 	// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.BaseFee.
 	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
+	// Klaytn uses fixed gasPrice policy determined by Governance, so
+	// only fixedGasPrice value is allowed to be used as args.MaxFeePerGas and args.MaxPriorityFeePerGas.
+	fixedGasPrice, err := b.SuggestPrice(ctx)
+	if err != nil {
+		return err
+	}
 
 	// If user specifies both maxPriorityFee and maxFee, then we do not
 	// need to consult the chain for defaults. It's definitely a London tx.
@@ -1015,11 +1021,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				// TODO-Klaytn: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
 				// But Klaytn currently uses fixed unit price determined by Governance, so using b.SuggestPrice
 				// is fine as now.
-				tip, err := b.SuggestPrice(ctx)
-				if err != nil {
-					return err
-				}
-				args.MaxPriorityFeePerGas = (*hexutil.Big)(tip)
+				args.MaxPriorityFeePerGas = (*hexutil.Big)(fixedGasPrice)
 			}
 			if args.MaxFeePerGas == nil {
 				// TODO-Klaytn: Calculating formula of gasFeeCap is same with Ethereum except for
@@ -1029,6 +1031,9 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 					new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
 				)
 				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
+			}
+			if args.MaxPriorityFeePerGas.ToInt().Cmp(fixedGasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(fixedGasPrice) != 0 {
+				return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", fixedGasPrice.Text(16))
 			}
 			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
@@ -1041,16 +1046,12 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				// TODO-Klaytn: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
 				// But Klaytn currently uses fixed unit price determined by Governance, so using b.SuggestPrice
 				// is fine as now.
-				price, err := b.SuggestPrice(ctx)
-				if err != nil {
-					return err
-				}
 				if b.ChainConfig().IsLondon(head.Number) {
 					// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
 					// if we apply dynamic BaseFee, we should add calculated BaseFee instead of params.BaseFee.
-					price.Add(price, new(big.Int).SetUint64(params.BaseFee))
+					fixedGasPrice.Add(fixedGasPrice, new(big.Int).SetUint64(params.BaseFee))
 				}
-				args.GasPrice = (*hexutil.Big)(price)
+				args.GasPrice = (*hexutil.Big)(fixedGasPrice)
 			}
 		}
 	} else {
