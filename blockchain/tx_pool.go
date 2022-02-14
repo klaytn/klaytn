@@ -199,6 +199,7 @@ type TxPool struct {
 	txMsgCh chan types.Transactions
 
 	eip2718 bool // Fork indicator whether we are using EIP-2718 type transactions.
+	eip1559 bool // Fork indicator whether we are using EIP-1559 type transactions.
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -452,6 +453,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	next := new(big.Int).Add(newHead.Number, big.NewInt(1))
 	// TODO-Klaytn-AccessList: Make another hardfork for eip2718 instead of London
 	pool.eip2718 = pool.chainconfig.IsLondon(next)
+	pool.eip1559 = pool.chainconfig.IsLondon(next)
 }
 
 // Stop terminates the transaction pool.
@@ -628,6 +630,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	if !pool.eip2718 && tx.IsEthTypedTransaction() {
 		return ErrTxTypeNotSupported
 	}
+	// Reject dynamic fee transactions until EIP-1559 activates.
+	if !pool.eip1559 && tx.Type() == types.TxTypeDynamicFee {
+		return ErrTxTypeNotSupported
+	}
 
 	gasFeePayer := uint64(0)
 
@@ -637,9 +643,36 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	// NOTE-Klaytn Drop transactions with unexpected gasPrice
-	if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
-		logger.Trace("fail to validate unitprice", "Klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
-		return ErrInvalidUnitPrice
+	// If the transaction type is DynamicFee tx, Compare transaction's GasFeeCap(MaxFeePerGas) and GasTipCap with tx pool's gasPrice to check to have same value.
+	if tx.Type() == types.TxTypeDynamicFee {
+		// Sanity check for extremely large numbers
+		if tx.GasTipCap().BitLen() > 256 {
+			return ErrTipVeryHigh
+		}
+
+		if tx.GasFeeCap().BitLen() > 256 {
+			return ErrFeeCapVeryHigh
+		}
+
+		// Ensure gasFeeCap is greater than or equal to gasTipCap.
+		if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
+			return ErrTipAboveFeeCap
+		}
+
+		if pool.gasPrice.Cmp(tx.GasTipCap()) != 0 {
+			logger.Trace("fail to validate maxPriorityFeePerGas", "Klaytn unitprice", pool.gasPrice, "tx max priority fee per gas", tx.GasFeeCap())
+			return ErrInvalidGasTipCap
+		}
+
+		if pool.gasPrice.Cmp(tx.GasFeeCap()) != 0 {
+			logger.Trace("fail to validate maxFeePerGas", "Klaytn unitprice", pool.gasPrice, "tx max fee per gas", tx.GasTipCap())
+			return ErrInvalidGasFeeCap
+		}
+	} else {
+		if pool.gasPrice.Cmp(tx.GasPrice()) != 0 {
+			logger.Trace("fail to validate unitprice", "Klaytn unitprice", pool.gasPrice, "tx unitprice", tx.GasPrice())
+			return ErrInvalidUnitPrice
+		}
 	}
 
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks

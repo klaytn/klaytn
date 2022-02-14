@@ -44,7 +44,7 @@ const (
 	// If types other than <base type> are not useful, they are declared with underscore(_).
 	// Each base type is self-descriptive.
 	// TODO-Klaytn-AccessList: Change TxTypeAccessList to another seperated value.
-	TxTypeLegacyTransaction, TxTypeAccessList, _ TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
+	TxTypeLegacyTransaction, TxTypeAccessList, TxTypeDynamicFee TxType = iota << SubTxTypeBits, iota<<SubTxTypeBits + 1, iota<<SubTxTypeBits + 2
 	TxTypeValueTransfer, TxTypeFeeDelegatedValueTransfer, TxTypeFeeDelegatedValueTransferWithRatio
 	TxTypeValueTransferMemo, TxTypeFeeDelegatedValueTransferMemo, TxTypeFeeDelegatedValueTransferMemoWithRatio
 	TxTypeAccountCreation, _, _
@@ -75,6 +75,8 @@ const (
 	TxValueKeyCodeFormat
 	TxValueKeyAccessList
 	TxValueKeyChainID
+	TxValueKeyGasTipCap
+	TxValueKeyGasFeeCap
 )
 
 type TxTypeMask uint8
@@ -108,6 +110,8 @@ var (
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
 	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of ChainID")
+	errValueKeyGasTipCapMustBigInt       = errors.New("GasTipCap must be a type of *big.Int")
+	errValueKeyGasFeeCapMustBigInt       = errors.New("GasFeeCap must be a type of *big.Int")
 
 	ErrTxTypeNotSupported = errors.New("transaction type not supported")
 )
@@ -144,6 +148,10 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyChainID"
 	case TxValueKeyAccessList:
 		return "TxValueKeyAccessList"
+	case TxValueKeyGasTipCap:
+		return "TxValueKeyGasTipCap"
+	case TxValueKeyGasFeeCap:
+		return "TxValueKeyGasFeeCap"
 	}
 
 	return "UndefinedTxValueKeyType"
@@ -201,6 +209,8 @@ func (t TxType) String() string {
 		return "TxTypeFeeDelegatedChainDataAnchoringWithRatio"
 	case TxTypeAccessList:
 		return "TxTypeAccessList"
+	case TxTypeDynamicFee:
+		return "TxTypeDynamicFee"
 	}
 
 	return "UndefinedTxType"
@@ -237,7 +247,7 @@ func (t TxType) IsFeeDelegatedWithRatioTransaction() bool {
 }
 
 func (t TxType) IsEthTypedTransaction() bool {
-	return t == TxTypeAccessList
+	return t == TxTypeAccessList || t == TxTypeDynamicFee
 }
 
 func (t TxType) IsChainDataAnchoring() bool {
@@ -375,6 +385,12 @@ type TxInternalDataEthTyped interface {
 	GetAccessList() AccessList
 }
 
+// TxInternalDataBaseFee has a function related to EIP-1559 Ethereum typed transaction.
+type TxInternalDataBaseFee interface {
+	GetGasTipCap() *big.Int
+	GetGasFeeCap() *big.Int
+}
+
 // Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
 // TODO-Klaytn-Refactoring: Transaction and related data structures should be a new package.
 type VM interface {
@@ -448,6 +464,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatio(), nil
 	case TxTypeAccessList:
 		return newTxInternalDataAccessList(), nil
+	case TxTypeDynamicFee:
+		return newTxInternalDataDynamicFee(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -503,6 +521,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataFeeDelegatedChainDataAnchoringWithRatioWithMap(values)
 	case TxTypeAccessList:
 		return newTxInternalDataAccessListWithMap(values)
+	case TxTypeDynamicFee:
+		return newTxInternalDataDynamicFeeWithMap(values)
 	}
 
 	return nil, errUndefinedTxType

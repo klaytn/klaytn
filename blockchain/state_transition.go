@@ -60,6 +60,8 @@ type StateTransition struct {
 	msg        Message
 	gas        uint64
 	gasPrice   *big.Int
+	gasTipCap  *big.Int
+	gasFeeCap  *big.Int
 	initialGas uint64
 	value      *big.Int
 	data       []byte
@@ -92,6 +94,13 @@ type Message interface {
 	Hash() common.Hash
 
 	GasPrice() *big.Int
+
+	// For TxTypeDynamicFee
+	GasTipCap() *big.Int
+	GasFeeCap() *big.Int
+	EffectiveGasTip(baseFee *big.Int) *big.Int
+	EffectiveGasPrice(baseFee *big.Int) *big.Int
+
 	Gas() uint64
 	Value() *big.Int
 
@@ -126,13 +135,17 @@ type kerror struct {
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
+	effectiveGasPrice := msg.EffectiveGasPrice(evm.BaseFee)
+
 	return &StateTransition{
-		evm:      evm,
-		msg:      msg,
-		gasPrice: msg.GasPrice(),
-		value:    msg.Value(),
-		data:     msg.Data(),
-		state:    evm.StateDB,
+		evm:       evm,
+		msg:       msg,
+		gasPrice:  effectiveGasPrice,
+		gasFeeCap: msg.GasFeeCap(),
+		gasTipCap: msg.GasTipCap(),
+		value:     msg.Value(),
+		data:      msg.Data(),
+		state:     evm.StateDB,
 	}
 }
 
@@ -272,7 +285,8 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, kerr kerr
 
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
-		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+		effectiveTip := msg.EffectiveGasTip(st.evm.BaseFee)
+		st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveTip))
 	}
 
 	kerr.ErrTxInvalid = nil

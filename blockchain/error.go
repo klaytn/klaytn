@@ -119,4 +119,20 @@ var (
 
 	// ErrInvalidTracer is returned if the tracer type is not vm.InternalTxTracer
 	ErrInvalidTracer = errors.New("tracer type is invalid for internal transaction tracing")
+
+	// ErrTipVeryHigh is a sanity error to avoid extremely big numbers specified in the tip field.
+	ErrTipVeryHigh = errors.New("max priority fee per gas higher than 2^256-1")
+
+	// ErrFeeCapVeryHigh is a sanity error to avoid extremely big numbers specified in the fee cap field.
+	ErrFeeCapVeryHigh = errors.New("max fee per gas higher than 2^256-1")
+
+	// ErrTipAboveFeeCap is a sanity error to ensure no one is able to specify a
+	// transaction with a tip higher than the total fee cap.
+	ErrTipAboveFeeCap = errors.New("max fee per gas higher than max priority fee per gas")
+
+	// ErrInvalidGasFeeCap is returned if gas fee cap of transaction is not equal to UnitPrice
+	ErrInvalidGasFeeCap = errors.New("invalid gas fee cap.")
+
+	// ErrInvalidGasTipCap is returned if gas tip cap of transaction is not equal to UnitPrice
+	ErrInvalidGasTipCap = errors.New("invalid gas tip cap.")
 )

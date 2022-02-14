@@ -31,6 +31,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/klaytn/klaytn/common/math"
+
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
@@ -254,8 +256,44 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 
 func (tx *Transaction) Gas() uint64        { return tx.data.GetGasLimit() }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.GetPrice()) }
-func (tx *Transaction) Value() *big.Int    { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64      { return tx.data.GetAccountNonce() }
+func (tx *Transaction) GasTipCap() *big.Int {
+	if tx.Type() == TxTypeDynamicFee {
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+		return te.GetGasTipCap()
+	}
+
+	return tx.data.GetPrice()
+}
+
+func (tx *Transaction) GasFeeCap() *big.Int {
+	if tx.Type() == TxTypeDynamicFee {
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+		return te.GetGasFeeCap()
+	}
+
+	return tx.data.GetPrice()
+}
+
+func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
+	if tx.Type() == TxTypeDynamicFee {
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+		return math.BigMin(te.GetGasTipCap(), new(big.Int).Sub(te.GetGasFeeCap(), baseFee))
+	}
+
+	return tx.GasPrice()
+}
+
+func (tx *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
+	if tx.Type() == TxTypeDynamicFee {
+		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
+		return math.BigMin(new(big.Int).Add(te.GetGasTipCap(), baseFee), te.GetGasFeeCap())
+	}
+
+	return tx.GasPrice()
+}
+
+func (tx *Transaction) Value() *big.Int { return new(big.Int).Set(tx.data.GetAmount()) }
+func (tx *Transaction) Nonce() uint64   { return tx.data.GetAccountNonce() }
 func (tx *Transaction) CheckNonce() bool {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()

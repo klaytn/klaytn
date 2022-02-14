@@ -58,7 +58,7 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 
 	// TODO-Klaytn-AccessList: Make another hardfork for EIP2930Signer instead of London
 	if config.IsLondon(blockNumber) {
-		signer = NewEIP2930Signer(config.ChainID)
+		signer = NewLondonSigner(config.ChainID)
 	} else {
 		signer = NewEIP155Signer(config.ChainID)
 	}
@@ -75,7 +75,7 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 // have the current block number available, use MakeSigner instead.
 func LatestSigner(config *params.ChainConfig) Signer {
 	if config.LondonCompatibleBlock != nil {
-		return NewEIP2930Signer(config.ChainID)
+		return NewLondonSigner(config.ChainID)
 	}
 
 	return NewEIP155Signer(config.ChainID)
@@ -89,7 +89,7 @@ func LatestSigner(config *params.ChainConfig) Signer {
 // configuration are unknown. If you have a ChainConfig, use LatestSigner instead.
 // If you have a ChainConfig and know the current block number, use MakeSigner instead.
 func LatestSignerForChainID(chainID *big.Int) Signer {
-	return NewEIP2930Signer(chainID)
+	return NewLondonSigner(chainID)
 }
 
 // SignTx signs the transaction using the given signer and private key
@@ -248,6 +248,112 @@ type Signer interface {
 	Equal(Signer) bool
 }
 
+type londonSigner struct{ eip2930Signer }
+
+// NewLondonSigner returns a signer that accepts
+// - EIP-1559 dynamic fee transactions,
+// - EIP-2930 access list transactions and
+// - EIP-155 replay protected transactions.
+func NewLondonSigner(chainId *big.Int) Signer {
+	return londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}
+}
+
+// ChainID returns the chain id.
+func (s londonSigner) ChainID() *big.Int {
+	return s.chainId
+}
+
+// Equal returns true if the given signer is the same as the receiver.
+func (s londonSigner) Equal(s2 Signer) bool {
+	x, ok := s2.(londonSigner)
+	return ok && x.chainId.Cmp(s.chainId) == 0
+}
+
+func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
+	if tx.Type() != TxTypeDynamicFee {
+		return s.eip2930Signer.Sender(tx)
+	}
+
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return common.Address{}, ErrInvalidChainId
+	}
+
+	return tx.data.RecoverAddress(s.Hash(tx), true, func(v *big.Int) *big.Int {
+		// AL txs are defined to use 0 and 1 as their recovery
+		// id, add 27 to become equivalent to unprotected Homestead signatures.
+		V := new(big.Int).Add(v, big.NewInt(27))
+		return V
+	})
+}
+
+// SenderPubkey returns the public key derived from tx signature and txhash.
+func (s londonSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
+	if tx.Type() != TxTypeDynamicFee {
+		return s.eip2930Signer.SenderPubkey(tx)
+	}
+
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return nil, ErrInvalidChainId
+	}
+
+	return tx.data.RecoverPubkey(s.Hash(tx), true, func(v *big.Int) *big.Int {
+		// AL txs are defined to use 0 and 1 as their recovery
+		// id, add 27 to become equivalent to unprotected Homestead signatures.
+		V := new(big.Int).Add(v, big.NewInt(27))
+		return V
+	})
+}
+
+// SenderFeePayer returns the public key derived from tx signature and txhash.
+func (s londonSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
+	//EIP-1559(Dynamic fee transaction) tx don't supported fee-delegation.
+	return s.eip2930Signer.SenderFeePayer(tx)
+}
+
+// SignatureValues returns a new transaction with the given signature. This signature
+// needs to be in the [R || S || V] format where V is 0 or 1.
+func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	if tx.Type() != TxTypeDynamicFee {
+		return s.eip2930Signer.SignatureValues(tx, sig)
+	}
+
+	if len(sig) != crypto.SignatureLength {
+		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
+	}
+
+	if tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
+		return nil, nil, nil, ErrInvalidChainId
+	}
+
+	R = new(big.Int).SetBytes(sig[:32])
+	S = new(big.Int).SetBytes(sig[32:64])
+	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset]))
+
+	return R, S, V, nil
+}
+
+// Hash returns the hash to be signed by the sender.
+// It does not uniquely identify the transaction.
+func (s londonSigner) Hash(tx *Transaction) common.Hash {
+	if tx.Type() != TxTypeDynamicFee {
+		return s.eip2930Signer.Hash(tx)
+	}
+
+	infs := tx.data.SerializeForSign()
+	//infs[0] always has chainID
+	txChainId := infs[0].(*big.Int)
+	if infs[0] == nil || txChainId.BitLen() == 0 {
+		infs[0] = s.chainId
+	}
+	return prefixedRlpHash(byte(tx.Type()), infs)
+}
+
+// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
+// It does not uniquely identify the transaction.
+func (s londonSigner) HashFeePayer(tx *Transaction) (common.Hash, error) {
+	return s.eip2930Signer.HashFeePayer(tx)
+}
+
 type eip2930Signer struct{ EIP155Signer }
 
 // NewEIP2930Signer returns a signer that accepts EIP-2930 access list transactions,
@@ -333,7 +439,13 @@ func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
 		return s.EIP155Signer.Hash(tx)
 	}
 
-	infs := append([]interface{}{s.ChainID()}, tx.data.SerializeForSign()...)
+	// infs[0] always has chainID
+	infs := tx.data.SerializeForSign()
+	txChainId := infs[0].(*big.Int)
+	if infs[0] == nil || txChainId.BitLen() == 0 {
+		infs[0] = s.chainId
+	}
+
 	return prefixedRlpHash(byte(tx.Type()), infs)
 }
 
