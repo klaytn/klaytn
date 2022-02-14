@@ -94,6 +94,7 @@ type BackendProtocolManager interface {
 	NodeType() common.ConnType
 	Start(maxPeers int)
 	Stop()
+	SetSyncStop(flag bool)
 }
 
 // CN implements the Klaytn consensus node service.
