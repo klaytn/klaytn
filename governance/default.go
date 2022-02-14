@@ -667,18 +667,21 @@ func (g *Governance) initializeCache() error {
 		}
 	}
 
-	lastGovernanceBlock, lastGovernanceStateBlock := indices[len(indices)-1], atomic.LoadUint64(&g.lastGovernanceStateBlock)
-	if lastGovernanceBlock >= lastGovernanceStateBlock {
-		// head block number is used to get the appropriate g.currentSet and g.actualGovernanceBlock
-		headBlockNumber := uint64(0)
-		if headBlockHash := g.db.ReadHeadBlockHash(); !common.EmptyHash(headBlockHash) {
-			if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
-				headBlockNumber = *num
-			}
+	// head block number is used to get the appropriate g.currentSet and g.actualGovernanceBlock
+	headBlockNumber := uint64(0)
+	if headBlockHash := g.db.ReadHeadBlockHash(); !common.EmptyHash(headBlockHash) {
+		if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
+			headBlockNumber = *num
 		}
-		newBlockNumber, newGovernanceSet, _ := g.ReadGovernance(headBlockNumber)
-		g.currentSet.Import(newGovernanceSet)
-		g.actualGovernanceBlock.Store(newBlockNumber)
+	}
+	newBlockNumber, newGovernanceSet, _ := g.ReadGovernance(headBlockNumber)
+	g.actualGovernanceBlock.Store(newBlockNumber)
+	g.currentSet.Import(newGovernanceSet)
+
+	governanceBlock, governanceStateBlock := g.actualGovernanceBlock.Load().(uint64), atomic.LoadUint64(&g.lastGovernanceStateBlock)
+	if governanceBlock >= governanceStateBlock {
+		ret, _ := g.itemCache.Get(getGovernanceCacheKey(governanceBlock))
+		g.currentSet.Import(ret.(map[string]interface{}))
 		g.updateGovernanceParams()
 	}
 
