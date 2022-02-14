@@ -979,7 +979,7 @@ func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, bloc
 		"type":              hexutil.Uint(byte(typeInt)),
 	}
 
-	fields["effectiveGasPrice"] = tx.GasPrice()
+	fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
 
 	// Always use the "status" field and Ignore the "root" field.
 	fields["status"] = hexutil.Uint(receipt.Status)

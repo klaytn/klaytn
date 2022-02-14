@@ -1083,7 +1083,7 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 	if !ok {
 		t.Fatal("effectiveGasPrice is not defined in Ethereum transaction receipt format.")
 	}
-	assert.Equal(t, effectiveGasPrice, kReceipt["gasPrice"].(*hexutil.Big).ToInt())
+	assert.Equal(t, effectiveGasPrice, hexutil.Uint64(kReceipt["gasPrice"].(*hexutil.Big).ToInt().Uint64()))
 
 	status, ok := ethReceipt["status"]
 	if !ok {
