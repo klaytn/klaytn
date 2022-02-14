@@ -310,7 +310,7 @@ func genAccessListTransaction(t *testing.T, signer types.Signer, from TestAccoun
 }
 
 func genDynamicFeeTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsic := genMapForDynamicFeeTransaction(from, to, gasPrice, types.TxTypeAccessList)
+	values, intrinsic := genMapForDynamicFeeTransaction(from, to, gasPrice, types.TxTypeDynamicFee)
 	tx, err := types.NewTransactionWithMap(types.TxTypeDynamicFee, values)
 	assert.Equal(t, nil, err)
 
@@ -1036,6 +1036,8 @@ func getIntrinsicGas(txType types.TxType) uint64 {
 	case types.TxTypeLegacyTransaction:
 		intrinsic = params.TxGas
 	case types.TxTypeAccessList:
+		intrinsic = params.TxGas
+	case types.TxTypeDynamicFee:
 		intrinsic = params.TxGas
 	case types.TxTypeValueTransfer:
 		intrinsic = params.TxGasValueTransfer
