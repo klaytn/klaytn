@@ -251,9 +251,9 @@ type Signer interface {
 type londonSigner struct{ eip2930Signer }
 
 // NewLondonSigner returns a signer that accepts
-// - EIP-1559 dynamic fee transactions
-// - EIP-2930 access list transactions,
-// - EIP-155 replay protected transactions, and
+// - EIP-1559 dynamic fee transactions,
+// - EIP-2930 access list transactions and
+// - EIP-155 replay protected transactions.
 func NewLondonSigner(chainId *big.Int) Signer {
 	return londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}
 }
