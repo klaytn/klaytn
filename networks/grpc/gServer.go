@@ -132,8 +132,6 @@ func (kns *klaytnServer) BiCall(stream KlaytnNode_BiCallServer) error {
 
 		//kns.handler.ServeSingleRequest(ctx, rpc.NewCodec(&grpcReadWriteNopCloser{reader, &grpcWriter{stream, nil}}, encoder, decoder), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
 		kns.handler.ServeSingleRequest(ctx, rpc.NewCodec(&grpcReadWriteNopCloser{reader, &grpcWriter{stream, nil}}, encoder, decoder))
-		//func (s *Server) ServeSingleRequest(ctx context.Context, codec ServerCodec) {
-
 	}
 }
 
