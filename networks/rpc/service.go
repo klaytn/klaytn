@@ -56,6 +56,8 @@ type callback struct {
 	hasCtx      bool           // method's first argument is a context (not included in argTypes)
 	errPos      int            // err return idx, of -1 when method cannot return error
 	isSubscribe bool           // true if this is a subscription callback
+	method      reflect.Method // callback
+
 }
 
 func (r *serviceRegistry) registerName(name string, rcvr interface{}) error {
@@ -72,10 +74,12 @@ func (r *serviceRegistry) registerName(name string, rcvr interface{}) error {
 	defer r.mu.Unlock()
 	if r.services == nil {
 		r.services = make(map[string]service)
+
 	}
 	svc, ok := r.services[name]
 	if !ok {
 		svc = service{
+
 			name:          name,
 			callbacks:     make(map[string]*callback),
 			subscriptions: make(map[string]*callback),

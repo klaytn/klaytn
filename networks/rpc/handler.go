@@ -20,13 +20,13 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"github.com/klaytn/klaytn/log"
+	"github.com/ethereum/go-ethereum/log"
+	//"github.com/klaytn/klaytn/log"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	//"github.com/ethereum/go-ethereum/log"
 )
 
 // handler handles JSON-RPC messages. There is one handler per connection. Note that
@@ -87,7 +87,7 @@ func newHandler(connCtx context.Context, conn jsonWriter, idgen func() ID, reg *
 		log:            log.Root(),
 	}
 	if conn.RemoteAddr() != "" {
-		//h.log = h.log.New("conn", conn.RemoteAddr())
+		h.log = h.log.New("conn", conn.RemoteAddr())
 	}
 	h.unsubscribeCb = newCallback(reflect.Value{}, reflect.ValueOf(h.unsubscribe))
 	return h

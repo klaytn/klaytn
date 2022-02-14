@@ -61,6 +61,12 @@ type jsonrpcMessage struct {
 	Result  json.RawMessage `json:"result,omitempty"`
 }
 
+type jsonErrResponse struct {
+	Version string      `json:"jsonrpc"`
+	Id      interface{} `json:"id,omitempty"`
+	Error   jsonError   `json:"error"`
+}
+
 func (msg *jsonrpcMessage) isNotification() bool {
 	return msg.ID == nil && msg.Method != ""
 }
@@ -122,12 +128,6 @@ func errorMessage(err error) *jsonrpcMessage {
 	return msg
 }
 
-type jsonErrResponse struct {
-	Version string      `json:"jsonrpc"`
-	Id      interface{} `json:"id,omitempty"`
-	Error   jsonError   `json:"error"`
-}
-
 type jsonError struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
@@ -179,12 +179,11 @@ type jsonCodec struct {
 	closed     chan interface{}          // closed on Close
 	decode     func(v interface{}) error // decoder to allow multiple transports
 	encMu      sync.Mutex                // guards the encoder
-	decMu      sync.Mutex                // guards the decoder
 	encode     func(v interface{}) error // encoder to allow multiple transports
 	conn       deadlineCloser
 }
 
-func newCodec(conn deadlineCloser, encode, decode func(v interface{}) error) ServerCodec {
+func NewCodec(conn deadlineCloser, encode, decode func(v interface{}) error) ServerCodec {
 	codec := &jsonCodec{
 		closed: make(chan interface{}),
 		encode: encode,
@@ -204,7 +203,7 @@ func NewJSONCodec(conn Conn) ServerCodec {
 	enc := json.NewEncoder(conn)
 	dec := json.NewDecoder(conn)
 	dec.UseNumber()
-	return newCodec(conn, enc.Encode, dec.Decode)
+	return NewCodec(conn, enc.Encode, dec.Decode)
 }
 
 func (c *jsonCodec) RemoteAddr() string {

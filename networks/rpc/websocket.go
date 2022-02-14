@@ -18,8 +18,18 @@
 package rpc
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"github.com/klaytn/klaytn/common"
+	"github.com/valyala/fasthttp"
+	"gopkg.in/fatih/set.v0"
+	"sync/atomic"
+	"time"
+
 	//"fmt"
 	"net/http"
 	"net/url"
@@ -29,6 +39,7 @@ import (
 
 	mapset "github.com/deckarep/golang-set"
 	//"github.com/ethereum/go-ethereum/log"
+	fastws "github.com/clevergo/websocket"
 	"github.com/gorilla/websocket"
 )
 
@@ -128,7 +139,7 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 		WriteBufferPool: wsBufferPool,
 	}
 	//return newClient(ctx, func(ctx context.Context) (ServerCodec, error) {
-	return newClient(ctx, func(ctx context.Context) (ServerCodec, error) {
+	return NewClient(ctx, func(ctx context.Context) (ServerCodec, error) {
 
 		conn, _, err := dialer.DialContext(ctx, endpoint, header)
 		if err != nil {
@@ -168,6 +179,123 @@ func wsClientHeaders(endpoint, origin string) (string, http.Header, error) {
 //func newWebsocketCodec(conn *websocket.Conn) ServerCodec {
 func newWebsocketCodec(conn *websocket.Conn) ServerCodec {
 	//conn.SetReadLimit(maxRequestContentLength)
-	conn.SetReadLimit(1024 * 1024 * 5)
-	return newCodec(conn, conn.WriteJSON, conn.ReadJSON)
+	conn.SetReadLimit(maxRequestContentLength)
+	return NewCodec(conn, conn.WriteJSON, conn.ReadJSON)
 }
+
+var upgrader = fastws.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+func NewFastWSServer(allowedOrigins []string, srv *Server) *fasthttp.Server {
+	upgrader.CheckOrigin = wsFastHandshakeValidator(allowedOrigins)
+
+	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
+	return &fasthttp.Server{
+		Concurrency:        ConcurrencyLimit,
+		MaxRequestBodySize: common.MaxRequestContentLength,
+		Handler:            srv.FastWebsocketHandler,
+	}
+}
+
+func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.RequestCtx) bool {
+	origins := set.New()
+	allowAllOrigins := false
+
+	for _, origin := range allowedOrigins {
+		if origin == "*" {
+			allowAllOrigins = true
+		}
+		if origin != "" {
+			origins.Add(strings.ToLower(origin))
+		}
+	}
+
+	// allow localhost if no allowedOrigins are specified.
+	if len(origins.List()) == 0 {
+		origins.Add("http://localhost")
+		if hostname, err := os.Hostname(); err == nil {
+			origins.Add("http://" + strings.ToLower(hostname))
+		}
+	}
+
+	logger.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.List()))
+
+	f := func(ctx *fasthttp.RequestCtx) bool {
+		origin := strings.ToLower(string(ctx.Request.Header.Peek("Origin")))
+		if allowAllOrigins || origins.Has(origin) {
+			return true
+		}
+		logger.Warn(fmt.Sprintf("origin '%s' not allowed on WS-RPC interface\n", origin))
+		return false
+	}
+
+	return f
+}
+
+func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
+
+	// TODO-Klaytn handle websocket protocol
+	protocol := ctx.Request.Header.Peek("Sec-WebSocket-Protocol")
+	if protocol != nil {
+		ctx.Response.Header.Set("Sec-WebSocket-Protocol", string(protocol))
+	}
+
+	err := upgrader.Upgrade(ctx, func(conn *fastws.Conn) {
+		if atomic.LoadInt32(&srv.wsConnCount) >= MaxWebsocketConnections {
+			return
+		}
+		atomic.AddInt32(&srv.wsConnCount, 1)
+		wsConnCounter.Inc(1)
+		defer func() {
+			atomic.AddInt32(&srv.wsConnCount, -1)
+			wsConnCounter.Dec(1)
+		}()
+		if WebsocketReadDeadline != 0 {
+			conn.SetReadDeadline(time.Now().Add(time.Duration(WebsocketReadDeadline) * time.Second))
+		}
+		if WebsocketWriteDeadline != 0 {
+			conn.SetWriteDeadline(time.Now().Add(time.Duration(WebsocketWriteDeadline) * time.Second))
+		}
+		//Create a custom encode/decode pair to enforce payload size and number encoding
+		encoder := func(v interface{}) error {
+			msg, err := json.Marshal(v)
+			if err != nil {
+				return err
+			}
+			err = conn.WriteMessage(websocket.TextMessage, msg)
+			if err != nil {
+				return err
+			}
+			//return fastws.WriteJSON(conn, v)
+			return err
+		}
+		decoder := func(v interface{}) error {
+			_, data, err := conn.ReadMessage()
+			if err != nil {
+				return err
+			}
+			dec := json.NewDecoder(bytes.NewReader(data))
+			dec.UseNumber()
+			return dec.Decode(v)
+			//return fastws.ReadJSON(conn, v)
+		}
+
+		reader := bufio.NewReaderSize(bytes.NewReader(ctx.Request.Body()), common.MaxRequestContentLength)
+		srv.ServeCodec(NewCodec(&httpReadWriteNopCloser{reader, ctx.Response.BodyWriter()}, encoder, decoder), OptionMethodInvocation|OptionSubscriptions)
+	})
+	if err != nil {
+		logger.Error("FastWebsocketHandler fail to upgrade message", "err", err)
+		return
+	}
+}
+
+// NewWSServer creates a new websocket RPC server around an API provider.
+//
+// Deprecated: use Server.WebsocketHandler
+//func NewWSServer(allowedOrigins []string, srv *Server) *http.Server {
+//	return &http.Server{
+//		Handler: srv.WebsocketHandler(allowedOrigins),
+//	}
+//}

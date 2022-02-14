@@ -97,6 +97,12 @@ type Notifier struct {
 	buffer       []json.RawMessage
 	callReturned bool
 	activated    bool
+
+	codec    ServerCodec
+	subMu    sync.Mutex
+	active   map[ID]*Subscription
+	inactive map[ID]*Subscription
+	//buffer   map[ID][]interface{} // unsent notifications of inactive subscriptions
 }
 
 // CreateSubscription returns a new subscription that is coupled to the
@@ -169,6 +175,26 @@ func (n *Notifier) activate() error {
 	n.activated = true
 	return nil
 }
+
+// activate enables a subscription. Until a subscription is enabled all
+// notifications are dropped. This method is called by the RPC server after
+// the subscription ID was sent to client. This prevents notifications being
+// send to the client before the subscription ID is send to the client.
+//func (n *Notifier) activate(id ID, namespace string) {
+//	n.subMu.Lock()
+//	defer n.subMu.Unlock()
+//
+//	if sub, found := n.inactive[id]; found {
+//		sub.namespace = namespace
+//		n.active[id] = sub
+//		delete(n.inactive, id)
+//		// Send buffered notifications.
+//		for _, data := range n.buffer[id] {
+//			n.send(sub, data)
+//		}
+//		delete(n.buffer, id)
+//	}
+//}
 
 func (n *Notifier) send(sub *Subscription, data json.RawMessage) error {
 	params, _ := json.Marshal(&subscriptionResult{ID: string(sub.ID), Result: data})
@@ -325,4 +351,28 @@ func (sub *ClientSubscription) unmarshal(result json.RawMessage) (interface{}, e
 func (sub *ClientSubscription) requestUnsubscribe() error {
 	var result interface{}
 	return sub.client.Call(&result, sub.namespace+unsubscribeMethodSuffix, sub.subid)
+}
+
+//// newNotifier creates a new notifier that can be used to send subscription
+//// notifications to the client.
+//func newNotifier(codec ServerCodec) *Notifier {
+//	return &Notifier{
+//		codec:    codec,
+//		active:   make(map[ID]*Subscription),
+//		inactive: make(map[ID]*Subscription),
+//		buffer:   make(map[ID][]interface{}),
+//	}
+//}
+
+// unsubscribe a subscription.
+// If the subscription could not be found ErrSubscriptionNotFound is returned.
+func (n *Notifier) unsubscribe(id ID) error {
+	n.subMu.Lock()
+	defer n.subMu.Unlock()
+	if s, found := n.active[id]; found {
+		close(s.err)
+		delete(n.active, id)
+		return nil
+	}
+	return ErrSubscriptionNotFound
 }
