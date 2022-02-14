@@ -250,14 +250,6 @@ func (t *TxInternalDataAccessList) GetAccessList() AccessList {
 	return t.AccessList
 }
 
-func (t *TxInternalDataAccessList) GetGasTipCap() *big.Int {
-	return t.Price
-}
-
-func (t *TxInternalDataAccessList) GetGasFeeCap() *big.Int {
-	return t.Price
-}
-
 func (t *TxInternalDataAccessList) SetHash(hash *common.Hash) {
 	t.Hash = hash
 }
