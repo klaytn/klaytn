@@ -22,10 +22,11 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/klaytn/klaytn/crypto/sha3"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/klaytn/klaytn/crypto/sha3"
 
 	"github.com/klaytn/klaytn/blockchain/types/accountkey"
 	"github.com/klaytn/klaytn/common"
