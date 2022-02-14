@@ -154,10 +154,10 @@ func testSetHead(t *testing.T, tt *rewindTest) {
 	chain.SetHead(tt.setheadBlock)
 
 	// Iterate over all the remaining blocks and ensure there are no gaps
-	//verifyNoGaps(t, chain, true, canonblocks)
-	//verifyNoGaps(t, chain, false, sideblocks)
-	//verifyCutoff(t, chain, true, canonblocks, tt.expCanonicalBlocks)
-	//verifyCutoff(t, chain, false, sideblocks, tt.expSidechainBlocks)
+	verifyNoGaps(t, chain, true, canonblocks)
+	verifyNoGaps(t, chain, false, sideblocks)
+	verifyCutoff(t, chain, true, canonblocks, tt.expCanonicalBlocks)
+	verifyCutoff(t, chain, false, sideblocks, tt.expSidechainBlocks)
 
 	if head := chain.CurrentHeader(); head.Number.Uint64() != tt.expHeadHeader {
 		t.Errorf("Head header mismatch!: have %d, want %d", head.Number, tt.expHeadHeader)
@@ -171,108 +171,108 @@ func testSetHead(t *testing.T, tt *rewindTest) {
 	}
 }
 
-//// verifyNoGaps checks that there are no gaps after the initial set of blocks in
-//// the database and errors if found.
-//func verifyNoGaps(t *testing.T, chain *BlockChain, canonical bool, inserted types.Blocks) {
-//	t.Helper()
-//
-//	var end uint64
-//	for i := uint64(0); i <= uint64(len(inserted)); i++ {
-//		header := chain.GetHeaderByNumber(i)
-//		if header == nil && end == 0 {
-//			end = i
-//		}
-//		if header != nil && end > 0 {
-//			if canonical {
-//				t.Errorf("Canonical header gap between #%d-#%d", end, i-1)
-//			} else {
-//				t.Errorf("Sidechain header gap between #%d-#%d", end, i-1)
-//			}
-//			end = 0 // Reset for further gap detection
-//		}
-//	}
-//	end = 0
-//	for i := uint64(0); i <= uint64(len(inserted)); i++ {
-//		block := chain.GetBlockByNumber(i)
-//		if block == nil && end == 0 {
-//			end = i
-//		}
-//		if block != nil && end > 0 {
-//			if canonical {
-//				t.Errorf("Canonical block gap between #%d-#%d", end, i-1)
-//			} else {
-//				t.Errorf("Sidechain block gap between #%d-#%d", end, i-1)
-//			}
-//			end = 0 // Reset for further gap detection
-//		}
-//	}
-//	end = 0
-//	for i := uint64(1); i <= uint64(len(inserted)); i++ {
-//		receipts := chain.GetReceiptsByBlockHash(inserted[i-1].Hash())
-//		if receipts == nil && end == 0 {
-//			end = i
-//		}
-//		if receipts != nil && end > 0 {
-//			if canonical {
-//				t.Errorf("Canonical receipt gap between #%d-#%d", end, i-1)
-//			} else {
-//				t.Errorf("Sidechain receipt gap between #%d-#%d", end, i-1)
-//			}
-//			end = 0 // Reset for further gap detection
-//		}
-//	}
-//}
-//
-//// verifyCutoff checks that there are no chain data available in the chain after
-//// the specified limit, but that it is available before.
-//func verifyCutoff(t *testing.T, chain *BlockChain, canonical bool, inserted types.Blocks, head int) {
-//	t.Helper()
-//
-//	for i := 1; i <= len(inserted); i++ {
-//		if i <= head {
-//			if header := chain.GetHeader(inserted[i-1].Hash(), uint64(i)); header == nil {
-//				if canonical {
-//					t.Errorf("Canonical header   #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				} else {
-//					t.Errorf("Sidechain header   #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				}
-//			}
-//			if block := chain.GetBlock(inserted[i-1].Hash(), uint64(i)); block == nil {
-//				if canonical {
-//					t.Errorf("Canonical block    #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				} else {
-//					t.Errorf("Sidechain block    #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				}
-//			}
-//			if receipts := chain.GetReceiptsByBlockHash(inserted[i-1].Hash()); receipts == nil {
-//				if canonical {
-//					t.Errorf("Canonical receipts #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				} else {
-//					t.Errorf("Sidechain receipts #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				}
-//			}
-//		} else {
-//			if header := chain.GetHeader(inserted[i-1].Hash(), uint64(i)); header != nil {
-//				if canonical {
-//					t.Errorf("Canonical header   #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				} else {
-//					t.Errorf("Sidechain header   #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				}
-//			}
-//			if block := chain.GetBlock(inserted[i-1].Hash(), uint64(i)); block != nil {
-//				if canonical {
-//					t.Errorf("Canonical block    #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				} else {
-//					t.Errorf("Sidechain block    #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				}
-//			}
-//			if receipts := chain.GetReceiptsByBlockHash(inserted[i-1].Hash()); receipts != nil {
-//				if canonical {
-//					t.Errorf("Canonical receipts #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				} else {
-//					t.Errorf("Sidechain receipts #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
-//				}
-//			}
-//		}
-//	}
-//}
+// verifyNoGaps checks that there are no gaps after the initial set of blocks in
+// the database and errors if found.
+func verifyNoGaps(t *testing.T, chain *BlockChain, canonical bool, inserted types.Blocks) {
+	t.Helper()
+
+	var end uint64
+	for i := uint64(0); i <= uint64(len(inserted)); i++ {
+		header := chain.GetHeaderByNumber(i)
+		if header == nil && end == 0 {
+			end = i
+		}
+		if header != nil && end > 0 {
+			if canonical {
+				t.Errorf("Canonical header gap between #%d-#%d", end, i-1)
+			} else {
+				t.Errorf("Sidechain header gap between #%d-#%d", end, i-1)
+			}
+			end = 0 // Reset for further gap detection
+		}
+	}
+	end = 0
+	for i := uint64(0); i <= uint64(len(inserted)); i++ {
+		block := chain.GetBlockByNumber(i)
+		if block == nil && end == 0 {
+			end = i
+		}
+		if block != nil && end > 0 {
+			if canonical {
+				t.Errorf("Canonical block gap between #%d-#%d", end, i-1)
+			} else {
+				t.Errorf("Sidechain block gap between #%d-#%d", end, i-1)
+			}
+			end = 0 // Reset for further gap detection
+		}
+	}
+	end = 0
+	for i := uint64(1); i <= uint64(len(inserted)); i++ {
+		receipts := chain.GetReceiptsByBlockHash(inserted[i-1].Hash())
+		if receipts == nil && end == 0 {
+			end = i
+		}
+		if receipts != nil && end > 0 {
+			if canonical {
+				t.Errorf("Canonical receipt gap between #%d-#%d", end, i-1)
+			} else {
+				t.Errorf("Sidechain receipt gap between #%d-#%d", end, i-1)
+			}
+			end = 0 // Reset for further gap detection
+		}
+	}
+}
+
+// verifyCutoff checks that there are no chain data available in the chain after
+// the specified limit, but that it is available before.
+func verifyCutoff(t *testing.T, chain *BlockChain, canonical bool, inserted types.Blocks, head int) {
+	t.Helper()
+
+	for i := 1; i <= len(inserted); i++ {
+		if i <= head {
+			if header := chain.GetHeader(inserted[i-1].Hash(), uint64(i)); header == nil {
+				if canonical {
+					t.Errorf("Canonical header   #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain header   #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+			if block := chain.GetBlock(inserted[i-1].Hash(), uint64(i)); block == nil {
+				if canonical {
+					t.Errorf("Canonical block    #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain block    #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+			if receipts := chain.GetReceiptsByBlockHash(inserted[i-1].Hash()); receipts == nil {
+				if canonical {
+					t.Errorf("Canonical receipts #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain receipts #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+		} else {
+			if header := chain.GetHeader(inserted[i-1].Hash(), uint64(i)); header != nil {
+				if canonical {
+					t.Errorf("Canonical header   #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain header   #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+			if block := chain.GetBlock(inserted[i-1].Hash(), uint64(i)); block != nil {
+				if canonical {
+					t.Errorf("Canonical block    #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain block    #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+			if receipts := chain.GetReceiptsByBlockHash(inserted[i-1].Hash()); receipts != nil {
+				if canonical {
+					t.Errorf("Canonical receipts #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain receipts #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+		}
+	}
+}
