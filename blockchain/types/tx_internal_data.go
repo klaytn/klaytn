@@ -390,13 +390,13 @@ type TxInternalDataPayload interface {
 type TxInternalDataEthTyped interface {
 	setSignatureValues(chainID, v, r, s *big.Int)
 	GetAccessList() AccessList
+	TxHash() common.Hash
 }
 
 // TxInternalDataBaseFee has a function related to EIP-1559 Ethereum typed transaction.
 type TxInternalDataBaseFee interface {
 	GetGasTipCap() *big.Int
 	GetGasFeeCap() *big.Int
-	TxHash() common.Hash
 }
 
 // Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
