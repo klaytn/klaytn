@@ -1760,7 +1760,7 @@ func TestValidateSender(t *testing.T) {
 
 	initialBalance := big.NewInt(1000000)
 
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil)
 	statedb.CreateEOA(anon.Addr, false, anon.AccKey)
 	statedb.SetNonce(anon.Addr, nonce)
 	statedb.SetBalance(anon.Addr, initialBalance)

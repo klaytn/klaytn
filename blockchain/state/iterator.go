@@ -254,12 +254,12 @@ func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit c
 	}()
 
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, oldDB)
+	oldState, err := New(root, oldDB, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open oldDB trie")
 	}
 
-	newState, err := New(root, newDB)
+	newState, err := New(root, newDB, nil)
 	if err != nil {
 		return errors.WithMessage(err, "can not open newDB trie")
 	}
@@ -327,12 +327,12 @@ func concurrentIterator(oldDB Database, newDB Database, root common.Hash, quit c
 // CheckStateConsistency checks the consistency of all state/storage trie of given two state database.
 func CheckStateConsistency(oldDB Database, newDB Database, root common.Hash, mapSize int, quit chan struct{}) error {
 	// Create and iterate a state trie rooted in a sub-node
-	oldState, err := New(root, oldDB)
+	oldState, err := New(root, oldDB, nil)
 	if err != nil {
 		return err
 	}
 
-	newState, err := New(root, newDB)
+	newState, err := New(root, newDB, nil)
 	if err != nil {
 		return err
 	}
