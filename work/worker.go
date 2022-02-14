@@ -462,7 +462,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	work := NewTask(self.config, types.NewEIP155Signer(self.config.ChainID), stateDB, header)
+	work := NewTask(self.config, types.LatestSignerForChainID(self.config.ChainID), stateDB, header)
 	if self.nodetype != common.CONSENSUSNODE {
 		work.Block = parent
 	}
@@ -726,6 +726,11 @@ CommitTransactionLoop:
 			}
 			// NOTE-Klaytn Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
+
+		case blockchain.ErrTxTypeNotSupported:
+			// Pop the unsupported transaction without shifting in the next from the account
+			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
+			txs.Pop()
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account

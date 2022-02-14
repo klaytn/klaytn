@@ -101,8 +101,8 @@ func genValueTx(nbytes int) func(int, *BlockGen) {
 	return func(i int, gen *BlockGen) {
 		toaddr := common.Address{}
 		data := make([]byte, nbytes)
-		gas, _ := types.IntrinsicGas(data, false, params.TestChainConfig.Rules(big.NewInt(0)))
-		signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
+		gas, _ := types.IntrinsicGas(data, nil, false, params.TestChainConfig.Rules(big.NewInt(0)))
+		signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 		tx, _ := types.SignTx(types.NewTransaction(gen.TxNonce(benchRootAddr), toaddr, big.NewInt(1), gas, nil, data), signer, benchRootKey)
 		gen.AddTx(tx)
 	}
@@ -127,7 +127,7 @@ func init() {
 // and fills the blocks with many small transactions.
 func genTxRing(naccounts int) func(int, *BlockGen) {
 	from := 0
-	signer := types.NewEIP155Signer(params.TestChainConfig.ChainID)
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	return func(i int, gen *BlockGen) {
 		gas := uint64(1000000)
 		for {

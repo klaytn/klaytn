@@ -17,15 +17,27 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"math/big"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/klaytn/klaytn/accounts/abi"
+
+	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/klaytn/klaytn/common/math"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/node/cn/filters"
@@ -41,6 +53,15 @@ const (
 	// DummyGasLimit exists for supporting Ethereum compatible data structure.
 	// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
 	DummyGasLimit uint64 = 999999999
+	// ZeroHashrate exists for supporting Ethereum compatible data structure.
+	// There is no POW mining mechanism in Klaytn.
+	ZeroHashrate uint64 = 0
+	// ZeroUncleCount is always zero because there is no uncle blocks in Klaytn.
+	ZeroUncleCount uint = 0
+)
+
+var (
+	errNoMiningWork = errors.New("no mining work available yet")
 )
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
@@ -53,6 +74,7 @@ type EthereumAPI struct {
 	publicBlockChainAPI      *PublicBlockChainAPI
 	publicTransactionPoolAPI *PublicTransactionPoolAPI
 	publicAccountAPI         *PublicAccountAPI
+	publicGovernanceAPI      *governance.PublicGovernanceAPI
 }
 
 // NewEthereumAPI creates a new ethereum API.
@@ -60,7 +82,7 @@ type EthereumAPI struct {
 // Therefore, it is necessary to use APIs defined in two different packages(cn and api),
 // so those apis will be defined through a setter.
 func NewEthereumAPI() *EthereumAPI {
-	return &EthereumAPI{nil, nil, nil, nil, nil, nil}
+	return &EthereumAPI{nil, nil, nil, nil, nil, nil, nil}
 }
 
 // SetPublicFilterAPI sets publicFilterAPI
@@ -93,40 +115,37 @@ func (api *EthereumAPI) SetPublicAccountAPI(publicAccountAPI *PublicAccountAPI) 
 	api.publicAccountAPI = publicAccountAPI
 }
 
-// Etherbase is the address that mining rewards will be send to.
-func (api *EthereumAPI) Etherbase() (common.Address, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return common.StringToAddress("0x0"), nil
+// SetPublicGovernanceAPI sets publicGovernanceAPI
+func (api *EthereumAPI) SetPublicGovernanceAPI(publicGovernanceAPI *governance.PublicGovernanceAPI) {
+	api.publicGovernanceAPI = publicGovernanceAPI
 }
 
-// Coinbase is the address that mining rewards will be send to (alias for Etherbase).
+// Etherbase is the address of operating node.
+// Unlike Ethereum, it only returns the node address because Klaytn does not have a POW mechanism.
+func (api *EthereumAPI) Etherbase() (common.Address, error) {
+	return api.publicGovernanceAPI.NodeAddress(), nil
+}
+
+// Coinbase is the address of operating node (alias for Etherbase).
 func (api *EthereumAPI) Coinbase() (common.Address, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return common.StringToAddress("0x0"), nil
+	return api.Etherbase()
 }
 
 // Hashrate returns the POW hashrate.
+// Unlike Ethereum, it always returns ZeroHashrate because Klaytn does not have a POW mechanism.
 func (api *EthereumAPI) Hashrate() hexutil.Uint64 {
-	// TODO-Klaytn: Not implemented yet.
-	return 0
+	return hexutil.Uint64(ZeroHashrate)
 }
 
 // Mining returns an indication if this node is currently mining.
+// Unlike Ethereum, it always returns false because Klaytn does not have a POW mechanism,
 func (api *EthereumAPI) Mining() bool {
-	// TODO-Klaytn: Not implemented yet.
 	return false
 }
 
-// GetWork returns a work package for external miner.
-//
-// The work package consists of 3 strings:
-//   result[0] - 32 bytes hex encoded current block header pow-hash
-//   result[1] - 32 bytes hex encoded seed hash used for DAG
-//   result[2] - 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
-//   result[3] - hex encoded block number
+// GetWork returns an errNoMiningWork because klaytn does not have a POW mechanism.
 func (api *EthereumAPI) GetWork() ([4]string, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return [4]string{}, nil
+	return [4]string{}, errNoMiningWork
 }
 
 // A BlockNonce is a 64-bit hash which proves (combined with the
@@ -156,29 +175,19 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 	return hexutil.UnmarshalFixedText("BlockNonce", input, n[:])
 }
 
-// SubmitWork can be used by external miner to submit their POW solution.
-// It returns an indication if the work was accepted.
-// Note either an invalid solution, a stale work a non-existent work will return false.
+// SubmitWork returns false because klaytn does not have a POW mechanism.
 func (api *EthereumAPI) SubmitWork(nonce BlockNonce, hash, digest common.Hash) bool {
-	// TODO-Klaytn: Not implemented yet.
 	return false
 }
 
-// SubmitHashrate can be used for remote miners to submit their hash rate.
-// This enables the node to report the combined hash rate of all miners
-// which submit work through this node.
-//
-// It accepts the miner hash rate and an identifier which must be unique
-// between nodes.
+// SubmitHashrate returns false because klaytn does not have a POW mechanism.
 func (api *EthereumAPI) SubmitHashrate(rate hexutil.Uint64, id common.Hash) bool {
-	// TODO-Klaytn: Not implemented yet.
 	return false
 }
 
-// GetHashrate returns the current hashrate for local CPU miner and remote miner.
+// GetHashrate returns ZeroHashrate because klaytn does not have a POW mechanism.
 func (api *EthereumAPI) GetHashrate() uint64 {
-	// TODO-Klaytn: Not implemented yet.
-	return 0
+	return ZeroHashrate
 }
 
 // NewPendingTransactionFilter creates a filter that fetches pending transaction hashes
@@ -189,15 +198,13 @@ func (api *EthereumAPI) GetHashrate() uint64 {
 //
 // https://eth.wiki/json-rpc/API#eth_newpendingtransactionfilter
 func (api *EthereumAPI) NewPendingTransactionFilter() rpc.ID {
-	// TODO-Klaytn: Not implemented yet.
-	return ""
+	return api.publicFilterAPI.NewPendingTransactionFilter()
 }
 
 // NewPendingTransactions creates a subscription that is triggered each time a transaction
 // enters the transaction pool and was signed from one of the transactions this nodes manages.
 func (api *EthereumAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicFilterAPI.NewPendingTransactions(ctx)
 }
 
 // NewBlockFilter creates a filter that fetches blocks that are imported into the chain.
@@ -205,24 +212,48 @@ func (api *EthereumAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscr
 //
 // https://eth.wiki/json-rpc/API#eth_newblockfilter
 func (api *EthereumAPI) NewBlockFilter() rpc.ID {
-	// TODO-Klaytn: Not implemented yet.
-	return ""
+	return api.publicFilterAPI.NewBlockFilter()
 }
 
 // NewHeads send a notification each time a new (header) block is appended to the chain.
 func (api *EthereumAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	notifier, supported := rpc.NotifierFromContext(ctx)
+	if !supported {
+		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
+	}
+
+	rpcSub := notifier.CreateSubscription()
+	go func() {
+		headers := make(chan *types.Header)
+		headersSub := api.publicFilterAPI.Events().SubscribeNewHeads(headers)
+
+		for {
+			select {
+			case h := <-headers:
+				header, err := api.rpcMarshalHeader(h)
+				if err != nil {
+					logger.Error("Failed to marshal header during newHeads subscription", "err", err)
+					headersSub.Unsubscribe()
+					return
+				}
+				notifier.Notify(rpcSub.ID, header)
+			case <-rpcSub.Err():
+				headersSub.Unsubscribe()
+				return
+			case <-notifier.Closed():
+				headersSub.Unsubscribe()
+				return
+			}
+		}
+	}()
+
+	return rpcSub, nil
 }
 
 // Logs creates a subscription that fires for all new log that match the given filter criteria.
-func (api *EthereumAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc.Subscription, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+func (api *EthereumAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (*rpc.Subscription, error) {
+	return api.publicFilterAPI.Logs(ctx, crit)
 }
-
-// FilterCriteria represents a request to create a new filter.
-type FilterCriteria filters.FilterCriteria
 
 // NewFilter creates a new filter and returns the filter id. It can be
 // used to retrieve logs when the state changes. This method cannot be
@@ -237,25 +268,22 @@ type FilterCriteria filters.FilterCriteria
 // In case "fromBlock" > "toBlock" an error is returned.
 //
 // https://eth.wiki/json-rpc/API#eth_newfilter
-func (api *EthereumAPI) NewFilter(crit FilterCriteria) (rpc.ID, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return "", nil
+func (api *EthereumAPI) NewFilter(crit filters.FilterCriteria) (rpc.ID, error) {
+	return api.publicFilterAPI.NewFilter(crit)
 }
 
 // GetLogs returns logs matching the given argument that are stored within the state.
 //
 // https://eth.wiki/json-rpc/API#eth_getlogs
-func (api *EthereumAPI) GetLogs(ctx context.Context, crit FilterCriteria) ([]*types.Log, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+func (api *EthereumAPI) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([]*types.Log, error) {
+	return api.publicFilterAPI.GetLogs(ctx, crit)
 }
 
 // UninstallFilter removes the filter with the given filter id.
 //
 // https://eth.wiki/json-rpc/API#eth_uninstallfilter
 func (api *EthereumAPI) UninstallFilter(id rpc.ID) bool {
-	// TODO-Klaytn: Not implemented yet.
-	return false
+	return api.publicFilterAPI.UninstallFilter(id)
 }
 
 // GetFilterLogs returns the logs for the filter with the given id.
@@ -263,8 +291,7 @@ func (api *EthereumAPI) UninstallFilter(id rpc.ID) bool {
 //
 // https://eth.wiki/json-rpc/API#eth_getfilterlogs
 func (api *EthereumAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicFilterAPI.GetFilterLogs(ctx, id)
 }
 
 // GetFilterChanges returns the logs for the filter with the given id since
@@ -275,23 +302,20 @@ func (api *EthereumAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.
 //
 // https://eth.wiki/json-rpc/API#eth_getfilterchanges
 func (api *EthereumAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicFilterAPI.GetFilterChanges(id)
 }
 
-// GasPrice returns a suggestion for a gas price for legacy transactions.
+// GasPrice returns a suggestion for a gas price.
 func (api *EthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicKlayAPI.GasPrice(ctx)
 }
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (api *EthereumAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicKlayAPI.GasPrice(ctx)
 }
 
-type feeHistoryResult struct {
+type FeeHistoryResult struct {
 	OldestBlock  *hexutil.Big     `json:"oldestBlock"`
 	Reward       [][]*hexutil.Big `json:"reward,omitempty"`
 	BaseFee      []*hexutil.Big   `json:"baseFeePerGas,omitempty"`
@@ -301,9 +325,49 @@ type feeHistoryResult struct {
 // DecimalOrHex unmarshals a non-negative decimal or hex parameter into a uint64.
 type DecimalOrHex uint64
 
-func (api *EthereumAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*feeHistoryResult, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+// UnmarshalJSON implements json.Unmarshaler.
+func (dh *DecimalOrHex) UnmarshalJSON(data []byte) error {
+	input := strings.TrimSpace(string(data))
+	if len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"' {
+		input = input[1 : len(input)-1]
+	}
+
+	value, err := strconv.ParseUint(input, 10, 64)
+	if err != nil {
+		value, err = hexutil.DecodeUint64(input)
+	}
+	if err != nil {
+		return err
+	}
+	*dh = DecimalOrHex(value)
+	return nil
+}
+
+func (api *EthereumAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
+	oldest, reward, baseFee, gasUsed, err := api.publicKlayAPI.b.FeeHistory(ctx, int(blockCount), lastBlock, rewardPercentiles)
+	if err != nil {
+		return nil, err
+	}
+	results := &FeeHistoryResult{
+		OldestBlock:  (*hexutil.Big)(oldest),
+		GasUsedRatio: gasUsed,
+	}
+	if reward != nil {
+		results.Reward = make([][]*hexutil.Big, len(reward))
+		for i, w := range reward {
+			results.Reward[i] = make([]*hexutil.Big, len(w))
+			for j, v := range w {
+				results.Reward[i][j] = (*hexutil.Big)(v)
+			}
+		}
+	}
+	if baseFee != nil {
+		results.BaseFee = make([]*hexutil.Big, len(baseFee))
+		for i, v := range baseFee {
+			results.BaseFee[i] = (*hexutil.Big)(v)
+		}
+	}
+	return results, nil
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
@@ -314,28 +378,24 @@ func (api *EthereumAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex,
 // - pulledStates:  number of state entries processed until now
 // - knownStates:   number of known state entries that still need to be pulled
 func (api *EthereumAPI) Syncing() (interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicKlayAPI.Syncing()
 }
 
 // ChainId is the EIP-155 replay-protection chain id for the current ethereum chain config.
 func (api *EthereumAPI) ChainId() (*hexutil.Big, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicBlockChainAPI.ChainId(), nil
 }
 
 // BlockNumber returns the block number of the chain head.
 func (api *EthereumAPI) BlockNumber() hexutil.Uint64 {
-	// TODO-Klaytn: Not implemented yet.
-	return 0
+	return api.publicBlockChainAPI.BlockNumber()
 }
 
 // GetBalance returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
 func (api *EthereumAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicBlockChainAPI.GetBalance(ctx, address, blockNrOrHash)
 }
 
 // EthAccountResult structs for GetProof
@@ -360,9 +420,34 @@ type EthStorageResult struct {
 }
 
 // GetProof returns the Merkle-proof for a given account and optionally some storage keys.
+// This feature is not supported in Klaytn yet. It just returns account information from state trie.
 func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	state, _, err := api.publicKlayAPI.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	storageTrie := state.StorageTrie(address)
+	storageHash := types.EmptyRootHash
+	codeHash := state.GetCodeHash(address)
+	storageProof := make([]EthStorageResult, len(storageKeys))
+
+	// if we have a storageTrie, (which means the account exists), we can update the storagehash
+	if storageTrie != nil {
+		storageHash = storageTrie.Hash()
+	} else {
+		// no storageTrie means the account does not exist, so the codeHash is the hash of an empty bytearray.
+		codeHash = crypto.Keccak256Hash(nil)
+	}
+
+	return &EthAccountResult{
+		Address:      address,
+		AccountProof: []string{},
+		Balance:      (*hexutil.Big)(state.GetBalance(address)),
+		CodeHash:     codeHash,
+		Nonce:        hexutil.Uint64(state.GetNonce(address)),
+		StorageHash:  storageHash,
+		StorageProof: storageProof,
+	}, state.Error()
 }
 
 // GetHeaderByNumber returns the requested canonical block header.
@@ -407,55 +492,62 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 // * When fullTx is true all transactions in the block are returned, otherwise
 //   only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
+	if klaytnBlock != nil && err == nil {
+		response, err := api.rpcMarshalBlock(klaytnBlock, true, fullTx)
+		if err == nil && number == rpc.PendingBlockNumber {
+			// Pending blocks need to nil out a few fields
+			for _, field := range []string{"hash", "nonce", "miner"} {
+				response[field] = nil
+			}
+		}
+		return response, err
+	}
+	return nil, err
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
 func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+	return api.rpcMarshalBlock(klaytnBlock, true, fullTx)
 }
 
-// GetUncleByBlockNumberAndIndex returns the uncle block for the given block hash and index. When fullTx is true
-// all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
+// GetUncleByBlockNumberAndIndex returns nil because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
 	return nil, nil
 }
 
-// GetUncleByBlockHashAndIndex returns the uncle block for the given block hash and index. When fullTx is true
-// all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
+// GetUncleByBlockHashAndIndex returns nil because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
 	return nil, nil
 }
 
-// GetUncleCountByBlockNumber returns number of uncles in the block for the given block number.
+// GetUncleCountByBlockNumber returns 0 because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	uncleCount := hexutil.Uint(ZeroUncleCount)
+	return &uncleCount
 }
 
-// GetUncleCountByBlockHash returns number of uncles in the block for the given block hash.
+// GetUncleCountByBlockHash returns 0 because there is no uncle block in Klaytn.
 func (api *EthereumAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	uncleCount := hexutil.Uint(ZeroUncleCount)
+	return &uncleCount
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number.
 func (api *EthereumAPI) GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicBlockChainAPI.GetCode(ctx, address, blockNrOrHash)
 }
 
 // GetStorageAt returns the storage from the state at the given address, key and
 // block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta block
 // numbers are also allowed.
 func (api *EthereumAPI) GetStorageAt(ctx context.Context, address common.Address, key string, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicBlockChainAPI.GetStorageAt(ctx, address, key, blockNrOrHash)
 }
 
 // EthOverrideAccount indicates the overriding fields of account during the execution
@@ -479,6 +571,40 @@ type EthOverrideAccount struct {
 // StateOverride is defined in go-ethereum's internal package, so StateOverride is redefined here as EthStateOverride.
 type EthStateOverride map[common.Address]EthOverrideAccount
 
+func (diff *EthStateOverride) Apply(state *state.StateDB) error {
+	if diff == nil {
+		return nil
+	}
+	for addr, account := range *diff {
+		// Override account nonce.
+		if account.Nonce != nil {
+			state.SetNonce(addr, uint64(*account.Nonce))
+		}
+		// Override account(contract) code.
+		if account.Code != nil {
+			state.SetCode(addr, *account.Code)
+		}
+		// Override account balance.
+		if account.Balance != nil {
+			state.SetBalance(addr, (*big.Int)(*account.Balance))
+		}
+		if account.State != nil && account.StateDiff != nil {
+			return fmt.Errorf("account %s has both 'state' and 'stateDiff'", addr.Hex())
+		}
+		// Replace entire state if caller requires.
+		if account.State != nil {
+			state.SetStorage(addr, *account.State)
+		}
+		// Apply state diff into specified accounts.
+		if account.StateDiff != nil {
+			for key, value := range *account.StateDiff {
+				state.SetState(addr, key, value)
+			}
+		}
+	}
+	return nil
+}
+
 // Call executes the given transaction on the state for the given block number.
 //
 // Additionally, the caller can specify a batch of contract for fields overriding.
@@ -486,27 +612,41 @@ type EthStateOverride map[common.Address]EthOverrideAccount
 // Note, this function doesn't make and changes in the state/blockchain and is
 // useful to execute and retrieve values.
 func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Bytes, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	gasCap := uint64(0)
+	if rpcGasCap := api.publicBlockChainAPI.b.RPCGasCap(); rpcGasCap != nil {
+		gasCap = rpcGasCap.Uint64()
+	}
+	result, _, err := EthDoCall(ctx, api.publicBlockChainAPI.b, args, blockNrOrHash, overrides, localTxExecutionTime, gasCap)
+	if isReverted(err) {
+		return nil, newRevertError(result)
+	}
+	return (hexutil.Bytes)(result), err
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
 // given transaction against the current pending block.
 func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return 0, nil
+	bNrOrHash := rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
+	if blockNrOrHash != nil {
+		bNrOrHash = *blockNrOrHash
+	}
+	gasCap := uint64(0)
+	if rpcGasCap := api.publicBlockChainAPI.b.RPCGasCap(); rpcGasCap != nil {
+		gasCap = rpcGasCap.Uint64()
+	}
+	return EthDoEstimateGas(ctx, api.publicBlockChainAPI.b, args, bNrOrHash, gasCap)
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
 func (api *EthereumAPI) GetBlockTransactionCountByNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	transactionCount, _ := api.publicTransactionPoolAPI.GetBlockTransactionCountByNumber(ctx, blockNr)
+	return transactionCount
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
 func (api *EthereumAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	transactionCount, _ := api.publicTransactionPoolAPI.GetBlockTransactionCountByHash(ctx, blockHash)
+	return transactionCount
 }
 
 // accessListResult returns an optional accesslist
@@ -559,52 +699,221 @@ type EthRPCTransaction struct {
 	S                *hexutil.Big    `json:"s"`
 }
 
+// newEthRPCTransactionFromBlockIndex creates an EthRPCTransaction from block and index parameters.
+func newEthRPCTransactionFromBlockIndex(b *types.Block, index uint64) *EthRPCTransaction {
+	txs := b.Transactions()
+	if index >= uint64(len(txs)) {
+		logger.Error("invalid transaction index", "given index", index, "length of txs", len(txs))
+		return nil
+	}
+	return newEthRPCTransaction(txs[index], b.Hash(), b.NumberU64(), index)
+}
+
+// newEthRPCTransactionFromBlockHash returns a transaction that will serialize to the RPC representation.
+func newEthRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) *EthRPCTransaction {
+	for idx, tx := range b.Transactions() {
+		if tx.Hash() == hash {
+			return newEthRPCTransactionFromBlockIndex(b, uint64(idx))
+		}
+	}
+	return nil
+}
+
+// resolveToField returns value which fits to `to` field based on transaction types.
+// This function is used when converting Klaytn transactions to Ethereum transaction types.
+func resolveToField(tx *types.Transaction) *common.Address {
+	switch tx.Type() {
+	case types.TxTypeAccountUpdate, types.TxTypeFeeDelegatedAccountUpdate, types.TxTypeFeeDelegatedAccountUpdateWithRatio,
+		types.TxTypeCancel, types.TxTypeFeeDelegatedCancel, types.TxTypeFeeDelegatedCancelWithRatio,
+		types.TxTypeChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoring, types.TxTypeFeeDelegatedChainDataAnchoringWithRatio:
+		// These type of transactions actually do not have `to` address, but Ethereum always have `to` field,
+		// so we Klaytn developers decided to fill the `to` field with `from` address value in these case.
+		from := getFrom(tx)
+		return &from
+	}
+	return tx.To()
+}
+
+// newEthRPCTransaction creates an EthRPCTransaction from Klaytn transaction.
+func newEthRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) *EthRPCTransaction {
+	// When an unknown transaction is requested through rpc call,
+	// nil is returned by Klaytn API, and it is handled.
+	if tx == nil {
+		return nil
+	}
+
+	// If tx is not TxTypeLegacyTransaction, the type is converted to TxTypeLegacyTransaction.
+	// TODO-Klaytn: In the case of Ethereum transaction type,
+	//  it must be returned as it is without converting the type.
+	typeInt := hexutil.Uint64(tx.Type())
+	if types.TxType(typeInt) != types.TxTypeLegacyTransaction {
+		typeInt = hexutil.Uint64(types.TxTypeLegacyTransaction)
+	}
+
+	signature := tx.GetTxInternalData().RawSignatureValues()[0]
+
+	result := &EthRPCTransaction{
+		Type:     typeInt,
+		From:     getFrom(tx),
+		Gas:      hexutil.Uint64(tx.Gas()),
+		GasPrice: (*hexutil.Big)(tx.GasPrice()),
+		Hash:     tx.Hash(),
+		Input:    tx.Data(),
+		Nonce:    hexutil.Uint64(tx.Nonce()),
+		To:       resolveToField(tx),
+		Value:    (*hexutil.Big)(tx.Value()),
+		V:        (*hexutil.Big)(signature.V),
+		R:        (*hexutil.Big)(signature.R),
+		S:        (*hexutil.Big)(signature.S),
+	}
+
+	if blockHash != (common.Hash{}) {
+		result.BlockHash = &blockHash
+		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
+		result.TransactionIndex = (*hexutil.Uint64)(&index)
+	}
+
+	// TODO-Klaytn: Have to add additional fields for ethereum transaction types.
+
+	return result
+}
+
+// newEthRPCPendingTransaction creates an EthRPCTransaction for pending tx.
+func newEthRPCPendingTransaction(tx *types.Transaction) *EthRPCTransaction {
+	return newEthRPCTransaction(tx, common.Hash{}, 0, 0)
+}
+
 // GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) *EthRPCTransaction {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	block, err := api.publicTransactionPoolAPI.b.BlockByNumber(ctx, blockNr)
+	if err != nil {
+		return nil
+	}
+
+	return newEthRPCTransactionFromBlockIndex(block, uint64(index))
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *EthRPCTransaction {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	block, err := api.publicTransactionPoolAPI.b.BlockByHash(ctx, blockHash)
+	if err != nil || block == nil {
+		return nil
+	}
+	return newEthRPCTransactionFromBlockIndex(block, uint64(index))
 }
 
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
 func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockNumberAndIndex(ctx, blockNr, index)
+	if err != nil {
+		return nil
+	}
+
+	return rawTx
 }
 
 // GetRawTransactionByBlockHashAndIndex returns the bytes of the transaction for the given block hash and index.
 func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockHashAndIndex(ctx, blockHash, index)
+	if err != nil {
+		return nil
+	}
+
+	return rawTx
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
 func (api *EthereumAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicTransactionPoolAPI.GetTransactionCount(ctx, address, blockNrOrHash)
 }
 
 // GetTransactionByHash returns the transaction for the given hash.
 func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*EthRPCTransaction, error) {
-	// TODO-Klaytn: Not implemented yet.
+	// Try to return an already finalized transaction
+	if tx, blockHash, blockNumber, index := api.publicTransactionPoolAPI.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
+		return newEthRPCTransaction(tx, blockHash, blockNumber, index), nil
+	}
+	// No finalized transaction, try to retrieve it from the pool
+	if tx := api.publicTransactionPoolAPI.b.GetPoolTransaction(hash); tx != nil {
+		return newEthRPCPendingTransaction(tx), nil
+	}
+	// Transaction unknown, return as such
 	return nil, nil
 }
 
 // GetRawTransactionByHash returns the bytes of the transaction for the given hash.
 func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByHash(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return rawTx, nil
 }
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	// Formats return Klaytn Transaction Receipt to the Ethereum Transaction Receipt.
+	tx, blockHash, blockNumber, index, receipt := api.publicTransactionPoolAPI.b.GetTxLookupInfoAndReceipt(ctx, hash)
+
+	receipts := api.publicTransactionPoolAPI.b.GetBlockReceipts(ctx, blockHash)
+	cumulativeGasUsed := uint64(0)
+	for i := uint64(0); i <= index; i++ {
+		cumulativeGasUsed += receipts[i].GasUsed
+	}
+
+	ethTx, err := newEthTransactionReceipt(tx, blockHash, blockNumber, index, cumulativeGasUsed, receipt)
+	if err != nil {
+		return nil, err
+	}
+	return ethTx, nil
+}
+
+// newEthTransactionReceipt creates a transaction receipt in Ethereum format.
+func newEthTransactionReceipt(tx *types.Transaction, blockHash common.Hash, blockNumber, index, cumulativeGasUsed uint64, receipt *types.Receipt) (map[string]interface{}, error) {
+	// When an unknown transaction receipt is requested through rpc call,
+	// nil is returned by Klaytn API, and it is handled.
+	if tx == nil || receipt == nil {
+		return nil, nil
+	}
+
+	// If tx is not TxTypeLegacyTransaction, the type is converted to TxTypeLegacyTransaction.
+	// TODO-Klaytn: In the case of Ethereum transaction type,
+	//  it must be returned as it is without converting the type.
+	typeInt := tx.Type()
+	if typeInt != types.TxTypeLegacyTransaction {
+		typeInt = types.TxTypeLegacyTransaction
+	}
+
+	fields := map[string]interface{}{
+		"blockHash":         blockHash,
+		"blockNumber":       hexutil.Uint64(blockNumber),
+		"transactionHash":   tx.Hash(),
+		"transactionIndex":  hexutil.Uint64(index),
+		"from":              getFrom(tx),
+		"to":                resolveToField(tx),
+		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
+		"cumulativeGasUsed": hexutil.Uint64(cumulativeGasUsed),
+		"contractAddress":   nil,
+		"logs":              receipt.Logs,
+		"logsBloom":         receipt.Bloom,
+		"type":              hexutil.Uint(typeInt),
+	}
+
+	fields["effectiveGasPrice"] = tx.GasPrice()
+
+	// Always use the "status" field and Ignore the "root" field.
+	fields["status"] = hexutil.Uint(receipt.Status)
+
+	if receipt.Logs == nil {
+		fields["logs"] = [][]*types.Log{}
+	}
+	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
+	if receipt.ContractAddress != (common.Address{}) {
+		fields["contractAddress"] = receipt.ContractAddress
+	}
+
+	return fields, nil
 }
 
 // EthTransactionArgs represents the arguments to construct a new transaction
@@ -630,6 +939,204 @@ type EthTransactionArgs struct {
 	// Introduced by AccessListTxType transaction.
 	AccessList *AccessList  `json:"accessList,omitempty"`
 	ChainID    *hexutil.Big `json:"chainId,omitempty"`
+}
+
+// from retrieves the transaction sender address.
+func (args *EthTransactionArgs) from() common.Address {
+	if args.From == nil {
+		return common.Address{}
+	}
+	return *args.From
+}
+
+// data retrieves the transaction calldata. Input field is preferred.
+func (args *EthTransactionArgs) data() []byte {
+	if args.Input != nil {
+		return *args.Input
+	}
+	if args.Data != nil {
+		return *args.Data
+	}
+	return nil
+}
+
+// setDefaults fills in default values for unspecified tx fields.
+func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) error {
+	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
+		return errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	}
+	// After london, default to 1559 uncles gasPrice is set
+	head := b.CurrentBlock().Header()
+	// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
+	// if we apply dynamic BaseFee, we should add calculated BaseFee instead of using params.BaseFee.
+	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
+
+	// If user specifies both maxPriorityFee and maxFee, then we do not
+	// need to consult the chain for defaults. It's definitely a London tx.
+	if args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil {
+		if b.ChainConfig().IsLondon(head.Number) && args.GasPrice == nil {
+			if args.MaxPriorityFeePerGas == nil {
+				// TODO-Klaytn: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
+				// But Klaytn currently uses fixed unit price determined by Governance, so using b.SuggestPrice
+				// is fine as now.
+				tip, err := b.SuggestPrice(ctx)
+				if err != nil {
+					return err
+				}
+				args.MaxPriorityFeePerGas = (*hexutil.Big)(tip)
+			}
+			if args.MaxFeePerGas == nil {
+				// TODO-Klaytn: Calculating formula of gasFeeCap is same with Ethereum except for
+				// using fixedBaseFee which means gasFeeCap is always same with args.MaxPriorityFeePerGas as now.
+				gasFeeCap := new(big.Int).Add(
+					(*big.Int)(args.MaxPriorityFeePerGas),
+					new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
+				)
+				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
+			}
+			if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+				return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
+			}
+		} else {
+			if args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil {
+				return errors.New("maxFeePerGas or maxPriorityFeePerGas specified but london is not active yet")
+			}
+			if args.GasPrice == nil {
+				// TODO-Klaytn: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
+				// But Klaytn currently uses fixed unit price determined by Governance, so using b.SuggestPrice
+				// is fine as now.
+				price, err := b.SuggestPrice(ctx)
+				if err != nil {
+					return err
+				}
+				if b.ChainConfig().IsLondon(head.Number) {
+					// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
+					// if we apply dynamic BaseFee, we should add calculated BaseFee instead of params.BaseFee.
+					price.Add(price, new(big.Int).SetUint64(params.BaseFee))
+				}
+			}
+		}
+	} else {
+		// Both maxPriorityFee and maxFee set by caller. Sanity-check their internal relation
+		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
+			return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
+		}
+	}
+	if args.Value == nil {
+		args.Value = new(hexutil.Big)
+	}
+	if args.Nonce == nil {
+		nonce := b.GetPoolNonce(ctx, args.from())
+		args.Nonce = (*hexutil.Uint64)(&nonce)
+	}
+	if args.Data != nil && args.Input != nil && !bytes.Equal(*args.Data, *args.Input) {
+		return errors.New(`both "data" and "input" are set and not equal. Please use "input" to pass transaction call data`)
+	}
+	if args.To == nil && len(args.data()) == 0 {
+		return errors.New(`contract creation without any data provided`)
+	}
+	// Estimate the gas usage if necessary.
+	if args.Gas == nil {
+		// These fields are immutable during the estimation, safe to
+		// pass the pointer directly.
+		data := args.data()
+		callArgs := EthTransactionArgs{
+			From:                 args.From,
+			To:                   args.To,
+			GasPrice:             args.GasPrice,
+			MaxFeePerGas:         args.MaxFeePerGas,
+			MaxPriorityFeePerGas: args.MaxPriorityFeePerGas,
+			Value:                args.Value,
+			Data:                 (*hexutil.Bytes)(&data),
+			AccessList:           args.AccessList,
+		}
+		pendingBlockNr := rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
+		gasCap := uint64(0)
+		if rpcGasCap := b.RPCGasCap(); rpcGasCap != nil {
+			gasCap = rpcGasCap.Uint64()
+		}
+		estimated, err := EthDoEstimateGas(ctx, b, callArgs, pendingBlockNr, gasCap)
+		if err != nil {
+			return err
+		}
+		args.Gas = &estimated
+		logger.Trace("Estimate gas usage automatically", "gas", args.Gas)
+	}
+	if args.ChainID == nil {
+		id := (*hexutil.Big)(b.ChainConfig().ChainID)
+		args.ChainID = id
+	}
+	return nil
+}
+
+// ToMessage change EthTransactionArgs to types.Transaction in Klaytn.
+func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error) {
+	// Reject invalid combinations of pre- and post-1559 fee styles
+	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
+		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	}
+	// Set sender address or use zero address if none specified.
+	addr := args.from()
+
+	// Set default gas & gas price if none were set
+	gas := globalGasCap
+	if gas == 0 {
+		gas = uint64(math.MaxUint64 / 2)
+	}
+	if args.Gas != nil {
+		gas = uint64(*args.Gas)
+	}
+	if globalGasCap != 0 && globalGasCap < gas {
+		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
+		gas = globalGasCap
+	}
+	var (
+		gasPrice  *big.Int
+		gasFeeCap *big.Int
+		gasTipCap *big.Int
+	)
+	if baseFee == nil {
+		// If there's no basefee, then it must be a non-1559 execution
+		gasPrice = new(big.Int)
+		if args.GasPrice != nil {
+			gasPrice = args.GasPrice.ToInt()
+		}
+		gasFeeCap, gasTipCap = gasPrice, gasPrice
+	} else {
+		// A basefee is provided, necessitating 1559-type execution
+		if args.GasPrice != nil {
+			// User specified the legacy gas field, convert to 1559 gas typing
+			gasPrice = args.GasPrice.ToInt()
+			gasFeeCap, gasTipCap = gasPrice, gasPrice
+		} else {
+			// User specified 1559 gas fields (or none), use those
+			gasFeeCap = new(big.Int)
+			if args.MaxFeePerGas != nil {
+				gasFeeCap = args.MaxFeePerGas.ToInt()
+			}
+			gasTipCap = new(big.Int)
+			if args.MaxPriorityFeePerGas != nil {
+				gasTipCap = args.MaxPriorityFeePerGas.ToInt()
+			}
+			// Backfill the legacy gasPrice for EVM execution, unless we're all zeros
+			gasPrice = new(big.Int)
+			if gasFeeCap.BitLen() > 0 || gasTipCap.BitLen() > 0 {
+				gasPrice = math.BigMin(new(big.Int).Add(gasTipCap, baseFee), gasFeeCap)
+			}
+		}
+	}
+	value := new(big.Int)
+	if args.Value != nil {
+		value = args.Value.ToInt()
+	}
+	data := args.data()
+
+	// TODO-Klaytn: Klaytn does not support accessList yet.
+	// var accessList AccessList
+	// if args.AccessList != nil {
+	//	 accessList = *args.AccessList
+	// }
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, data, false, intrinsicGas), nil
 }
 
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
@@ -691,8 +1198,7 @@ func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransaction
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return common.HexToHash("0x"), nil
+	return api.publicTransactionPoolAPI.SendRawTransaction(ctx, input)
 }
 
 // Sign calculates an ECDSA signature for:
@@ -705,8 +1211,7 @@ func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.By
 //
 // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sign
 func (api *EthereumAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	return api.publicTransactionPoolAPI.Sign(addr, data)
 }
 
 // SignTransaction will sign the given transaction with the from account.
@@ -720,8 +1225,23 @@ func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransaction
 // PendingTransactions returns the transactions that are in the transaction pool
 // and have a from address that is one of the accounts this node manages.
 func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
-	// TODO-Klaytn: Not implemented yet.
-	return nil, nil
+	pending, err := api.publicTransactionPoolAPI.b.GetPoolTransactions()
+	if err != nil {
+		return nil, err
+	}
+	accounts := getAccountsFromWallets(api.publicTransactionPoolAPI.b.AccountManager().Wallets())
+	transactions := make([]*EthRPCTransaction, 0, len(pending))
+	for _, tx := range pending {
+		from := getFrom(tx)
+		if _, exists := accounts[from]; exists {
+			ethTx := newEthRPCPendingTransaction(tx)
+			if ethTx == nil {
+				return nil, nil
+			}
+			transactions = append(transactions, ethTx)
+		}
+	}
+	return transactions, nil
 }
 
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
@@ -733,8 +1253,7 @@ func (api *EthereumAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs,
 
 // Accounts returns the collection of accounts this node manages.
 func (api *EthereumAPI) Accounts() []common.Address {
-	// TODO-Klaytn: Not implemented yet.
-	return nil
+	return api.publicAccountAPI.Accounts()
 }
 
 // rpcMarshalHeader marshal block header as Ethereum compatible format.
@@ -760,9 +1279,10 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 		"totalDifficulty": (*hexutil.Big)(api.publicKlayAPI.b.GetTd(head.Hash())),
 		// extraData always return empty Bytes because actual value of extraData in Klaytn header cannot be used as meaningful way because
 		// we cannot provide original header of Klaytn and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Klaytn.
-		"extraData":        hexutil.Bytes{},
-		"size":             hexutil.Uint64(head.Size()),
-		"gasLimit":         hexutil.Uint64(DummyGasLimit),
+		"extraData": hexutil.Bytes{},
+		"size":      hexutil.Uint64(head.Size()),
+		// There is no gas limit mechanism in Klaytn, check details in https://docs.klaytn.com/klaytn/design/computation/computation-cost.
+		"gasLimit":         hexutil.Uint64(params.UpperGasLimit),
 		"gasUsed":          hexutil.Uint64(head.GasUsed),
 		"timestamp":        hexutil.Big(*head.Time),
 		"transactionsRoot": head.TxHash,
@@ -771,4 +1291,258 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header) (map[string]interfa
 	}
 
 	return result, nil
+}
+
+// rpcMarshalBlock marshal block as Ethereum compatible format
+func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclTx, fullTx bool) (map[string]interface{}, error) {
+	fields, err := api.rpcMarshalHeader(block.Header())
+	if err != nil {
+		return nil, err
+	}
+	fields["size"] = hexutil.Uint64(block.Size())
+
+	if inclTx {
+		formatTx := func(tx *types.Transaction) (interface{}, error) {
+			return tx.Hash(), nil
+		}
+		if fullTx {
+			formatTx = func(tx *types.Transaction) (interface{}, error) {
+				return newEthRPCTransactionFromBlockHash(block, tx.Hash()), nil
+			}
+		}
+		txs := block.Transactions()
+		transactions := make([]interface{}, len(txs))
+		var err error
+		for i, tx := range txs {
+			if transactions[i], err = formatTx(tx); err != nil {
+				return nil, err
+			}
+		}
+		fields["transactions"] = transactions
+	}
+	// There is no uncles in Klaytn
+	fields["uncles"] = []common.Hash{}
+
+	return fields, nil
+}
+
+func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) ([]byte, uint64, error) {
+	defer func(start time.Time) { logger.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
+
+	st, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if st == nil || err != nil {
+		return nil, 0, err
+	}
+	if err := overrides.Apply(st); err != nil {
+		return nil, 0, err
+	}
+
+	// Setup context so it may be cancelled the call has completed
+	// or, in case of unmetered gas, setup a context with a timeout.
+	var cancel context.CancelFunc
+	if timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
+	}
+	// Make sure the context is cancelled when the call has completed
+	// this makes sure resources are cleaned up.
+	defer cancel()
+
+	// TODO-Klaytn: Klaytn is using fixed baseFee as now but, if we change this fixed baseFee as dynamic baseFee, we should update this logic too.
+	fixedBaseFee := new(big.Int).SetUint64(params.BaseFee)
+	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	if err != nil {
+		return nil, 0, err
+	}
+	msg, err := args.ToMessage(globalGasCap, fixedBaseFee, intrinsicGas)
+	if err != nil {
+		return nil, 0, err
+	}
+	evm, vmError, err := b.GetEVM(ctx, msg, st, header, vm.Config{})
+	if err != nil {
+		return nil, 0, err
+	}
+	// Wait for the context to be done and cancel the evm. Even if the
+	// EVM has finished, cancelling may be done (repeatedly)
+	go func() {
+		<-ctx.Done()
+		evm.Cancel(vm.CancelByCtxDone)
+	}()
+
+	// Execute the message.
+	res, gas, kerr := blockchain.ApplyMessage(evm, msg)
+	err = kerr.ErrTxInvalid
+	if err := vmError(); err != nil {
+		return nil, 0, err
+	}
+	// If the timer caused an abort, return an appropriate error message
+	if evm.Cancelled() {
+		return nil, 0, fmt.Errorf("execution aborted (timeout = %v)", timeout)
+	}
+
+	if err == nil {
+		err = blockchain.GetVMerrFromReceiptStatus(kerr.Status)
+	}
+	if err != nil {
+		return res, 0, fmt.Errorf("err: %w (supplied gas %d)", err, msg.Gas())
+	}
+	return res, gas, nil
+}
+
+func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
+	// Binary search the gas requirement, as it may be higher than the amount used
+	var (
+		lo  uint64 = params.TxGas - 1
+		hi  uint64
+		cap uint64
+	)
+	// Use zero address if sender unspecified.
+	if args.From == nil {
+		args.From = new(common.Address)
+	}
+	// Determine the highest gas limit can be used during the estimation.
+	if args.Gas != nil && uint64(*args.Gas) >= params.TxGas {
+		hi = uint64(*args.Gas)
+	} else {
+		// Ethereum set hi as gas ceiling of the block but,
+		// there is no actual gas limit in Klaytn, so we set it as params.UpperGasLimit.
+		hi = params.UpperGasLimit
+	}
+	// Normalize the max fee per gas the call is willing to spend.
+	var feeCap *big.Int
+	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
+		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	} else if args.GasPrice != nil {
+		feeCap = args.GasPrice.ToInt()
+	} else if args.MaxFeePerGas != nil {
+		feeCap = args.MaxFeePerGas.ToInt()
+	} else {
+		feeCap = common.Big0
+	}
+	// recap the highest gas limit with account's available balance.
+	if feeCap.BitLen() != 0 {
+		state, _, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+		if err != nil {
+			return 0, err
+		}
+		balance := state.GetBalance(*args.From) // from can't be nil
+		available := new(big.Int).Set(balance)
+		if args.Value != nil {
+			if args.Value.ToInt().Cmp(available) >= 0 {
+				return 0, errors.New("insufficient funds for transfer")
+			}
+			available.Sub(available, args.Value.ToInt())
+		}
+		allowance := new(big.Int).Div(available, feeCap)
+
+		// If the allowance is larger than maximum uint64, skip checking
+		if allowance.IsUint64() && hi > allowance.Uint64() {
+			transfer := args.Value
+			if transfer == nil {
+				transfer = new(hexutil.Big)
+			}
+			logger.Warn("Gas estimation capped by limited funds", "original", hi, "balance", balance,
+				"sent", transfer.ToInt(), "maxFeePerGas", feeCap, "fundable", allowance)
+			hi = allowance.Uint64()
+		}
+	}
+	// Recap the highest gas allowance with specified gascap.
+	if gasCap != 0 && hi > gasCap {
+		logger.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
+		hi = gasCap
+	}
+	cap = hi
+
+	// Create a helper to check if a gas allowance results in an executable transaction.
+	// executable returns
+	// - bool: true when a call with given args and gas is executable.
+	// - []byte: EVM execution result.
+	// - error: error occurred during EVM execution.
+	// - error: consensus error which is not EVM related error (less balance of caller, wrong nonce, etc...).
+	executable := func(gas uint64) (bool, []byte, error, error) {
+		args.Gas = (*hexutil.Uint64)(&gas)
+		ret, _, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, 0, gasCap)
+		if err != nil {
+			if vm.IsVMError(err) {
+				// If err is vmError, return vmError with returned data
+				return false, ret, err, nil
+			}
+			// Returns error when it is not VM error (less balance or wrong nonce, etc...).
+			return false, nil, nil, err
+		}
+		return true, ret, nil, nil
+	}
+	// Execute the binary search and hone in on an executable gas limit
+	for lo+1 < hi {
+		mid := (hi + lo) / 2
+		isExecutable, _, _, err := executable(mid)
+		if err != nil {
+			return 0, err
+		}
+
+		if !isExecutable {
+			lo = mid
+		} else {
+			hi = mid
+		}
+	}
+	// Reject the transaction as invalid if it still fails at the highest allowance
+	if hi == cap {
+		isExecutable, ret, vmErr, err := executable(hi)
+		if err != nil {
+			return 0, err
+		}
+		if !isExecutable {
+			if ret != nil {
+				if isReverted(vmErr) {
+					return 0, newRevertError(ret)
+				}
+				return 0, vmErr
+			}
+			// Otherwise, the specified gas cap is too low
+			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
+		}
+	}
+	return hexutil.Uint64(hi), nil
+}
+
+// isReverted checks given error is vm.ErrExecutionReverted
+func isReverted(err error) bool {
+	if err == vm.ErrExecutionReverted || strings.Contains(err.Error(), vm.ErrExecutionReverted.Error()) {
+		return true
+	}
+	return false
+}
+
+// newRevertError wraps data returned when EVM execution was reverted.
+// Make sure that data is returned when execution reverted situation.
+func newRevertError(data []byte) *revertError {
+	reason, errUnpack := abi.UnpackRevert(data)
+	err := errors.New("execution reverted")
+	if errUnpack == nil {
+		err = fmt.Errorf("execution reverted: %v", reason)
+	}
+	return &revertError{
+		error:  err,
+		reason: hexutil.Encode(data),
+	}
+}
+
+// revertError is an API error that encompassas an EVM revertal with JSON error
+// code and a binary data blob.
+type revertError struct {
+	error
+	reason string // revert reason hex encoded
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e *revertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e *revertError) ErrorData() interface{} {
+	return e.reason
 }

@@ -85,6 +85,10 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
 	}
 
+	if txType == types.TxTypeAccessList {
+		valueMap, gas = genMapForAccessListTransaction(from, to, gasPrice, txType)
+	}
+
 	return valueMap, gas
 }
 
@@ -121,6 +125,8 @@ func TestValidationPoolInsert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -129,7 +135,7 @@ func TestValidationPoolInsert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -244,6 +250,8 @@ func TestValidationBlockTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -252,7 +260,7 @@ func TestValidationBlockTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -404,7 +412,7 @@ func TestValidationInvalidSig(t *testing.T) {
 
 	var invalidCases = []struct {
 		Name string
-		fn   func(*testing.T, types.TxType, *TestAccountType, *TestAccountType, types.EIP155Signer) (*types.Transaction, error)
+		fn   func(*testing.T, types.TxType, *TestAccountType, *TestAccountType, types.Signer) (*types.Transaction, error)
 	}{
 		{"invalidSender", testInvalidSenderSig},
 		{"invalidFeePayer", testInvalidFeePayerSig},
@@ -417,6 +425,8 @@ func TestValidationInvalidSig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -425,7 +435,7 @@ func TestValidationInvalidSig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -499,8 +509,8 @@ func TestValidationInvalidSig(t *testing.T) {
 }
 
 // testInvalidSenderSig generates invalid txs signed by an invalid sender.
-func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.EIP155Signer) (*types.Transaction, error) {
-	if !txType.IsLegacyTransaction() {
+func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.Signer) (*types.Transaction, error) {
+	if !txType.IsLegacyTransaction() && !txType.IsEthTypedTransaction() {
 		newAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 		assert.Equal(t, nil, err)
 
@@ -526,7 +536,7 @@ func testInvalidSenderSig(t *testing.T, txType types.TxType, reservoir *TestAcco
 }
 
 // testInvalidFeePayerSig generates invalid txs signed by an invalid fee payer.
-func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.EIP155Signer) (*types.Transaction, error) {
+func testInvalidFeePayerSig(t *testing.T, txType types.TxType, reservoir *TestAccountType, contract *TestAccountType, signer types.Signer) (*types.Transaction, error) {
 	if txType.IsFeeDelegatedTransaction() {
 		newAcc, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 		assert.Equal(t, nil, err)
@@ -568,7 +578,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -627,6 +637,8 @@ func TestInvalidBalance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -635,7 +647,7 @@ func TestInvalidBalance(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -1019,6 +1031,8 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1027,7 +1041,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -1425,6 +1439,8 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1433,7 +1449,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -1581,6 +1597,8 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1589,7 +1607,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{
@@ -1730,7 +1748,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := types.NewEIP155Signer(bcdata.bc.Config().ChainID)
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// reservoir account
 	reservoir := &TestAccountType{

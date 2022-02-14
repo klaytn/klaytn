@@ -46,6 +46,7 @@ import (
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
@@ -622,7 +623,7 @@ func TestFastVsFullChains(t *testing.T) {
 			Alloc:  GenesisAlloc{address: {Balance: funds}},
 		}
 		genesis = gspec.MustCommit(gendb)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 	blocks, receipts := GenerateChain(gspec.Config, genesis, gxhash.NewFaker(), gendb, 1024, func(i int, block *BlockGen) {
 		// If the block number is multiple of 3, send a few bonus transactions to the miner
@@ -788,7 +789,7 @@ func TestChainTxReorgs(t *testing.T) {
 			},
 		}
 		genesis = gspec.MustCommit(db)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 
 	// Create two transactions shared between the chains:
@@ -894,7 +895,7 @@ func TestLogReorgs(t *testing.T) {
 		code    = common.Hex2Bytes("60606040525b7f24ec1d3ff24c2f6ff210738839dbc339cd45a5294d85c79361016243157aae7b60405180905060405180910390a15b600a8060416000396000f360606040526008565b00")
 		gspec   = &Genesis{Config: params.TestChainConfig, Alloc: GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}}}
 		genesis = gspec.MustCommit(db)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 
 	blockchain, _ := NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
@@ -941,7 +942,7 @@ func TestReorgSideEvent(t *testing.T) {
 			Alloc:  GenesisAlloc{addr1: {Balance: big.NewInt(10000000000000)}},
 		}
 		genesis = gspec.MustCommit(db)
-		signer  = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 
 	blockchain, _ := NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
@@ -1332,7 +1333,7 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 				}, // push 1, pop
 			},
 		}
-		signer = types.NewEIP155Signer(gspec.Config.ChainID)
+		signer = types.LatestSignerForChainID(gspec.Config.ChainID)
 	)
 	// Generate the original common chain segment and the two competing forks
 	engine := gxhash.NewFaker()
@@ -1523,7 +1524,7 @@ func TestCallTraceChainEventSubscription(t *testing.T) {
 			Alloc:  GenesisAlloc{address: {Balance: funds}},
 		}
 		genesis = testGenesis.MustCommit(gendb)
-		signer  = types.NewEIP155Signer(testGenesis.Config.ChainID)
+		signer  = types.LatestSignerForChainID(testGenesis.Config.ChainID)
 	)
 	db := database.NewMemoryDBManager()
 	testGenesis.MustCommit(db)
@@ -1585,7 +1586,7 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 			Alloc:  GenesisAlloc{address: {Balance: funds}},
 		}
 		genesis = testGenesis.MustCommit(gendb)
-		signer  = types.NewEIP155Signer(testGenesis.Config.ChainID)
+		signer  = types.LatestSignerForChainID(testGenesis.Config.ChainID)
 	)
 	db := database.NewMemoryDBManager()
 	testGenesis.MustCommit(db)
@@ -1631,6 +1632,8 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 }
 
 func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
+	storage.SkipLocalTest(t)
+
 	// prepare blockchain
 	blockchain := &BlockChain{
 		stateCache: state.NewDatabaseWithNewCache(database.NewMemoryDBManager(), &statedb.TrieNodeCacheConfig{

@@ -344,8 +344,7 @@ func (gs *GovernanceSet) SetValue(itemType int, value interface{}) error {
 	defer gs.mu.Unlock()
 
 	key := GovernanceKeyMapReverse[itemType]
-
-	if GovernanceItems[itemType].t != reflect.TypeOf(value) {
+	if !checkValueType(value, GovernanceItems[itemType].t) {
 		return ErrValueTypeMismatch
 	}
 	gs.items[key] = value
@@ -498,7 +497,8 @@ func (g *Governance) getKey(k string) string {
 
 // RemoveVote remove a vote from the voteMap to prevent repetitive addition of same vote
 func (g *Governance) RemoveVote(key string, value interface{}, number uint64) {
-	if g.voteMap.GetValue(key).Value == value {
+	k := GovernanceKeyMap[key]
+	if isEqualValue(k, g.voteMap.GetValue(key).Value, value) {
 		g.voteMap.SetValue(key, VoteStatus{
 			Value:  value,
 			Casted: true,
@@ -518,33 +518,69 @@ func (g *Governance) ClearVotes(num uint64) {
 	logger.Info("Governance votes are cleared", "num", num)
 }
 
-// parseVoteValue parse vote.Value from []uint8 to appropriate type
+// parseVoteValue parse vote.Value from []uint8, [][]uint8 to appropriate type
 func (g *Governance) ParseVoteValue(gVote *GovernanceVote) (*GovernanceVote, error) {
 	var val interface{}
-	k := GovernanceKeyMap[gVote.Key]
-
-	// filter out if vote value is an interface list
-	if reflect.TypeOf(gVote.Value) == reflect.TypeOf([]interface{}{}) {
-		return nil, ErrValueTypeMismatch
+	k, ok := GovernanceKeyMap[gVote.Key]
+	if !ok {
+		logger.Warn("Unknown key was given", "key", k)
+		return nil, ErrUnknownKey
 	}
 
 	switch k {
 	case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio:
-		val = string(gVote.Value.([]uint8))
-	case params.GoverningNode, params.AddValidator, params.RemoveValidator:
-		val = common.BytesToAddress(gVote.Value.([]uint8))
+		v, ok := gVote.Value.([]uint8)
+		if !ok {
+			return nil, ErrValueTypeMismatch
+		}
+		val = string(v)
+	case params.GoverningNode:
+		v, ok := gVote.Value.([]uint8)
+		if !ok || len(v) != common.AddressLength {
+			return nil, ErrValueTypeMismatch
+		}
+		val = common.BytesToAddress(v)
+	case params.AddValidator, params.RemoveValidator:
+		if v, ok := gVote.Value.([]uint8); ok {
+			// if value contains single address, gVote.Value type should be []uint8{}
+			if len(v) != common.AddressLength {
+				return nil, ErrValueTypeMismatch
+			}
+			val = common.BytesToAddress(v)
+		} else if addresses, ok := gVote.Value.([]interface{}); ok {
+			// if value contains multiple addresses, gVote.Value type should be [][]uint8{}
+			if len(addresses) == 0 {
+				return nil, ErrValueTypeMismatch
+			}
+			var nodeAddresses []common.Address
+			for _, item := range addresses {
+				if in, ok := item.([]uint8); !ok || len(in) != common.AddressLength {
+					return nil, ErrValueTypeMismatch
+				}
+				nodeAddresses = append(nodeAddresses, common.BytesToAddress(item.([]uint8)))
+			}
+			val = nodeAddresses
+		} else {
+			return nil, ErrValueTypeMismatch
+		}
 	case params.Epoch, params.CommitteeSize, params.UnitPrice, params.StakeUpdateInterval, params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout:
-		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
-		val = binary.BigEndian.Uint64(gVote.Value.([]uint8))
+		v, ok := gVote.Value.([]uint8)
+		if !ok {
+			return nil, ErrValueTypeMismatch
+		}
+		v = append(make([]byte, 8-len(v)), v...)
+		val = binary.BigEndian.Uint64(v)
 	case params.UseGiniCoeff, params.DeferredTxFee:
-		gVote.Value = append(make([]byte, 8-len(gVote.Value.([]uint8))), gVote.Value.([]uint8)...)
-		if binary.BigEndian.Uint64(gVote.Value.([]uint8)) != uint64(0) {
+		v, ok := gVote.Value.([]uint8)
+		if !ok {
+			return nil, ErrValueTypeMismatch
+		}
+		v = append(make([]byte, 8-len(v)), v...)
+		if binary.BigEndian.Uint64(v) != uint64(0) {
 			val = true
 		} else {
 			val = false
 		}
-	default:
-		logger.Warn("Unknown key was given", "key", k)
 	}
 	gVote.Value = val
 	return gVote, nil
@@ -612,7 +648,7 @@ func newGovernanceCache() common.Cache {
 }
 
 // initializeCache reads governance item data from database and updates Governance.itemCache.
-// The latest governance item data of Governance.itemCache is imported to Governance.currentSet.
+// It also initializes currentSet and actualGovernanceBlock according to head block number.
 func (g *Governance) initializeCache() error {
 	// get last n governance change block number
 	indices, err := g.db.ReadRecentGovernanceIdx(params.GovernanceIdxCacheLimit)
@@ -626,17 +662,23 @@ func (g *Governance) initializeCache() error {
 		if data, err := g.db.ReadGovernance(v); err == nil {
 			data = adjustDecodedSet(data)
 			g.itemCache.Add(getGovernanceCacheKey(v), data)
-			g.actualGovernanceBlock.Store(v)
 		} else {
 			logger.Crit("Couldn't read governance cache from database. Check database consistency", "index", v, "err", err)
 		}
 	}
 
-	governanceBlock := g.actualGovernanceBlock.Load().(uint64)
-	governanceStateBlock := atomic.LoadUint64(&g.lastGovernanceStateBlock)
-	if governanceBlock >= governanceStateBlock {
-		ret, _ := g.itemCache.Get(getGovernanceCacheKey(governanceBlock))
-		g.currentSet.Import(ret.(map[string]interface{}))
+	lastGovernanceBlock, lastGovernanceStateBlock := indices[len(indices)-1], atomic.LoadUint64(&g.lastGovernanceStateBlock)
+	if lastGovernanceBlock >= lastGovernanceStateBlock {
+		// head block number is used to get the appropriate g.currentSet and g.actualGovernanceBlock
+		headBlockNumber := uint64(0)
+		if headBlockHash := g.db.ReadHeadBlockHash(); !common.EmptyHash(headBlockHash) {
+			if num := g.db.ReadHeaderNumber(headBlockHash); num != nil {
+				headBlockNumber = *num
+			}
+		}
+		newBlockNumber, newGovernanceSet, _ := g.ReadGovernance(headBlockNumber)
+		g.currentSet.Import(newGovernanceSet)
+		g.actualGovernanceBlock.Store(newBlockNumber)
 		g.updateGovernanceParams()
 	}
 

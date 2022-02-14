@@ -197,6 +197,8 @@ type TxPool struct {
 	wg sync.WaitGroup // for shutdown sync
 
 	txMsgCh chan types.Transactions
+
+	eip2718 bool // Fork indicator whether we are using EIP-2718 type transactions.
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -210,7 +212,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		config:       config,
 		chainconfig:  chainconfig,
 		chain:        chain,
-		signer:       types.NewEIP155Signer(chainconfig.ChainID),
+		signer:       types.LatestSignerForChainID(chainconfig.ChainID),
 		pending:      make(map[common.Address]*txList),
 		queue:        make(map[common.Address]*txList),
 		beats:        make(map[common.Address]time.Time),
@@ -445,6 +447,11 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// Check the queue and move transactions over to the pending if possible
 	// or remove those that have become invalid
 	pool.promoteExecutables(nil)
+
+	// Update all fork indicator by next pending block number.
+	next := new(big.Int).Add(newHead.Number, big.NewInt(1))
+	// TODO-Klaytn-AccessList: Make another hardfork for eip2718 instead of London
+	pool.eip2718 = pool.chainconfig.IsLondon(next)
 }
 
 // Stop terminates the transaction pool.
@@ -617,6 +624,11 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
+	// Accept only legacy transactions until EIP-2718/2930 activates.
+	if !pool.eip2718 && tx.IsEthTypedTransaction() {
+		return ErrTxTypeNotSupported
+	}
+
 	gasFeePayer := uint64(0)
 
 	// Check chain Id first.

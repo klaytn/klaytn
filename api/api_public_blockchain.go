@@ -275,7 +275,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 		gasPrice = new(big.Int).SetUint64(defaultGasPrice)
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(args.Data, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.Data, nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, 0, false, err
 	}
@@ -295,6 +295,8 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
+	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
+	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GasPrice()))
 	// Get a new instance of the EVM.
 	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vmCfg)
 	if err != nil {
@@ -504,16 +506,21 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx)
 }
 
-// newRPCTransaction returns a transaction that will serialize to the RPC
-// representation, with the given location metadata set (if available).
-func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
+func getFrom(tx *types.Transaction) common.Address {
 	var from common.Address
-	if tx.IsLegacyTransaction() {
-		signer := types.NewEIP155Signer(tx.ChainId())
+	if tx.IsEthereumTransaction() {
+		signer := types.LatestSignerForChainID(tx.ChainId())
 		from, _ = types.Sender(signer, tx)
 	} else {
 		from, _ = tx.From()
 	}
+	return from
+}
+
+// newRPCTransaction returns a transaction that will serialize to the RPC
+// representation, with the given location metadata set (if available).
+func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
+	from := getFrom(tx)
 
 	output := tx.MakeRPCOutput()
 
