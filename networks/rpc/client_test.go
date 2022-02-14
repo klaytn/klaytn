@@ -383,7 +383,6 @@ func TestClientNotificationStorm(t *testing.T) {
 		}
 	}
 	doTest(8000, false)
-	//doTest(21000, true)
 	doTest(24000, true)
 
 }
