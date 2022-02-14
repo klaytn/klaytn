@@ -342,7 +342,7 @@ func (s londonSigner) Hash(tx *Transaction) common.Hash {
 	infs := tx.data.SerializeForSign()
 	//infs[0] always has chainID
 	txChainId := infs[0].(*big.Int)
-	if infs[0] == nil || txChainId.BitLen() == 0{
+	if infs[0] == nil || txChainId.BitLen() == 0 {
 		infs[0] = s.chainId
 	}
 	return prefixedRlpHash(byte(tx.Type()), infs)

@@ -337,7 +337,6 @@ func TestEffectiveGasPrice(t *testing.T) {
 	want = big.NewInt(3000)
 	assert.Equal(t, want, have)
 
-
 	baseFee = big.NewInt(0)
 	have = legacyTx.EffectiveGasPrice(baseFee)
 	want = big.NewInt(1000)
