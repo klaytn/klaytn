@@ -19,6 +19,8 @@ package rpc
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -47,6 +49,48 @@ func TestWebsocketClientHeaders(t *testing.T) {
 	}
 }
 
+func TestWebsocketAuthCheck(t *testing.T) {
+	t.Parallel()
+
+	var (
+		srv     = newTestServer()
+		httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"http://example.com"}))
+		wsURL   = "ws://testuser:test-PASS_01@" + strings.TrimPrefix(httpsrv.URL, "http://")
+	)
+	connect := false
+	origHandler := httpsrv.Config.Handler
+	httpsrv.Config.Handler = http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			auth := r.Header.Get("Authorization")
+			//fmt.Println("Received auth header = ", auth)
+			expectedAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte("testuser:test-PASS_01"))
+			//fmt.Println("expected auth  = ", expectedAuth)
+			if r.Method == http.MethodGet && auth == expectedAuth {
+				connect = true
+				w.WriteHeader(http.StatusSwitchingProtocols)
+				return
+			}
+			if !connect {
+				//fmt.Println("connect with authorization not received")
+				http.Error(w, "connect with authorization not received", http.StatusMethodNotAllowed)
+				return
+			}
+			origHandler.ServeHTTP(w, r)
+		})
+	defer srv.Stop()
+	defer httpsrv.Close()
+
+	client, err := DialWebsocket(context.Background(), wsURL, "http://example.com")
+	fmt.Println("err: ", err)
+	if err == nil {
+		client.Close()
+		t.Fatal("no error for connect with auth header")
+	}
+	if err != websocket.ErrBadHandshake {
+		t.Fatalf("wrong error for header: %q", err)
+	}
+}
+
 // This test checks that the server rejects connections from disallowed origins.
 func TestWebsocketOriginCheck(t *testing.T) {
 	t.Parallel()
@@ -56,6 +100,7 @@ func TestWebsocketOriginCheck(t *testing.T) {
 		httpsrv = httptest.NewServer(srv.WebsocketHandler([]string{"http://example.com"}))
 		wsURL   = "ws:" + strings.TrimPrefix(httpsrv.URL, "http:")
 	)
+
 	defer srv.Stop()
 	defer httpsrv.Close()
 

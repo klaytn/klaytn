@@ -140,7 +140,6 @@ func DialWebsocket(ctx context.Context, endpoint, origin string) (*Client, error
 	}
 	//return newClient(ctx, func(ctx context.Context) (ServerCodec, error) {
 	return NewClient(ctx, func(ctx context.Context) (ServerCodec, error) {
-
 		conn, _, err := dialer.DialContext(ctx, endpoint, header)
 		if err != nil {
 			return nil, err
@@ -160,7 +159,8 @@ func wsClientHeaders(endpoint, origin string) (string, http.Header, error) {
 			return endpoint, nil, err
 		}
 		if endpointURL.Scheme == "wss" {
-			origin = "https://" + strings.ToLower(origin)
+			//origin = "https://" + strings.ToLower(origin)
+			origin = ""
 		} else {
 			origin = "http://" + strings.ToLower(origin)
 		}
