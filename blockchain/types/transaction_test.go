@@ -172,7 +172,7 @@ func TestEIP2930Signer(t *testing.T) {
 			tx:             tx1,
 			signer:         signer2,
 			wantSenderErr:  ErrInvalidChainId,
-			wantSignerHash: common.HexToHash("367967247499343401261d718ed5aa4c9486583e4d89251afce47f4a33c33362"),
+			wantSignerHash: common.HexToHash("846ad7672f2a3a40c1f959cd4a8ad21786d620077084d84c8d7c077714caa139"),
 			wantSignErr:    ErrInvalidChainId,
 		},
 		{
@@ -180,7 +180,7 @@ func TestEIP2930Signer(t *testing.T) {
 			tx:             tx2,
 			signer:         signer1,
 			wantSenderErr:  ErrInvalidChainId,
-			wantSignerHash: common.HexToHash("846ad7672f2a3a40c1f959cd4a8ad21786d620077084d84c8d7c077714caa139"),
+			wantSignerHash: common.HexToHash("367967247499343401261d718ed5aa4c9486583e4d89251afce47f4a33c33362"),
 			wantSignErr:    ErrInvalidChainId,
 		},
 	}
@@ -248,7 +248,7 @@ func TestLondonSigner(t *testing.T) {
 			tx:             tx1,
 			signer:         signer2,
 			wantSenderErr:  ErrInvalidChainId,
-			wantSignerHash: common.HexToHash("b0759fc55582f3e60ded82843dcc17733d8c65f543d2cf2613a47a5c6ac9fc48"),
+			wantSignerHash: common.HexToHash("b6afee4d44e0392fb5d3204b350596d6677440bced7ebd998db73c9671527c57"),
 			wantSignErr:    ErrInvalidChainId,
 		},
 		{
@@ -256,7 +256,7 @@ func TestLondonSigner(t *testing.T) {
 			tx:             tx2,
 			signer:         signer1,
 			wantSenderErr:  ErrInvalidChainId,
-			wantSignerHash: common.HexToHash("b6afee4d44e0392fb5d3204b350596d6677440bced7ebd998db73c9671527c57"),
+			wantSignerHash: common.HexToHash("b0759fc55582f3e60ded82843dcc17733d8c65f543d2cf2613a47a5c6ac9fc48"),
 			wantSignErr:    ErrInvalidChainId,
 		},
 	}
@@ -369,6 +369,9 @@ func TestEffectiveGasTip(t *testing.T) {
 	have = dynamicTx.EffectiveGasTip(baseFee)
 	want = big.NewInt(1000)
 	assert.Equal(t, want, have)
+
+	a := new(big.Int)
+	assert.Equal(t, 0, a.BitLen())
 }
 
 func decodeTx(data []byte) (*Transaction, error) {

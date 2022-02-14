@@ -306,7 +306,9 @@ func (t *TxInternalDataAccessList) setSignatureValues(chainID, v, r, s *big.Int)
 }
 
 func (t *TxInternalDataAccessList) SerializeForSign() []interface{} {
+	// If the chainId has nil or empty value, It will be set signer's chainId.
 	return []interface{}{
+		t.ChainID,
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,

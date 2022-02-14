@@ -339,7 +339,12 @@ func (s londonSigner) Hash(tx *Transaction) common.Hash {
 		return s.eip2930Signer.Hash(tx)
 	}
 
-	infs := append([]interface{}{s.ChainID()}, tx.data.SerializeForSign()...)
+	infs := tx.data.SerializeForSign()
+	//infs[0] always has chainID
+	txChainId := infs[0].(*big.Int)
+	if infs[0] == nil || txChainId.BitLen() == 0{
+		infs[0] = s.chainId
+	}
 	return prefixedRlpHash(byte(tx.Type()), infs)
 }
 
@@ -434,7 +439,13 @@ func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
 		return s.EIP155Signer.Hash(tx)
 	}
 
-	infs := append([]interface{}{s.ChainID()}, tx.data.SerializeForSign()...)
+	// infs[0] always has chainID
+	infs := tx.data.SerializeForSign()
+	txChainId := infs[0].(*big.Int)
+	if infs[0] == nil || txChainId.BitLen() == 0 {
+		infs[0] = s.chainId
+	}
+
 	return prefixedRlpHash(byte(tx.Type()), infs)
 }
 

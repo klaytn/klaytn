@@ -375,7 +375,9 @@ func (t *TxInternalDataDynamicFee) String() string {
 }
 
 func (t *TxInternalDataDynamicFee) SerializeForSign() []interface{} {
+	// If the chainId has nil or empty value, It will be set signer's chainId.
 	return []interface{}{
+		t.ChainID,
 		t.AccountNonce,
 		t.GasTipCap,
 		t.GasFeeCap,
