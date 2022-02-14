@@ -132,7 +132,7 @@ func encodeBlockNumber(number uint64) []byte {
 
 // headerKeyPrefix = headerPrefix + num (uint64 big endian)
 func headerKeyPrefix(number uint64) []byte {
-	return append(headerPrefix, encodeBlockNumber(number)...)
+	return append(headerPrefix, common.Int64ToByteBigEndian(number)...)
 }
 
 // headerKey = headerPrefix + num (uint64 big endian) + hash
