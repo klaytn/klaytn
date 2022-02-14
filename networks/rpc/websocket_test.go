@@ -34,7 +34,7 @@ import (
 func TestWebsocketClientHeaders(t *testing.T) {
 	t.Parallel()
 
-	endpoint, header, err := wsClientHeaders("wss://testuser:test-PASS_01@example.com:1234", "")
+	endpoint, header, err := wsClientHeaders("wss://testuser:test-PASS_01@example.com:1234", "https://example.com")
 	if err != nil {
 		t.Fatalf("wsGetConfig failed: %s", err)
 	}
