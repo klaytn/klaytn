@@ -680,7 +680,11 @@ func (g *Governance) initializeCache() error {
 
 	governanceBlock, governanceStateBlock := g.actualGovernanceBlock.Load().(uint64), atomic.LoadUint64(&g.lastGovernanceStateBlock)
 	if governanceBlock >= governanceStateBlock {
-		ret, _ := g.itemCache.Get(getGovernanceCacheKey(governanceBlock))
+		ret, ok := g.itemCache.Get(getGovernanceCacheKey(governanceBlock))
+		if !ok || ret == nil {
+			logger.Error("cannot get governance data at actualGovernanceBlock", "actualGovernanceBlock", governanceBlock)
+			return errors.New("Currentset initialization failed")
+		}
 		g.currentSet.Import(ret.(map[string]interface{}))
 		g.updateGovernanceParams()
 	}
