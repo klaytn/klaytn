@@ -295,10 +295,7 @@ func (t *TxInternalDataDynamicFee) IntrinsicGas(currentBlockNumber uint64) (uint
 }
 
 func (t *TxInternalDataDynamicFee) ChainId() *big.Int {
-	if t.ChainID != nil {
-		return t.ChainID
-	}
-	return deriveChainId(t.V)
+	return t.ChainID
 }
 
 func (t *TxInternalDataDynamicFee) Equal(a TxInternalData) bool {
