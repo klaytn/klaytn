@@ -125,4 +125,14 @@ var (
 
 	// ErrFeeCapVeryHigh is a sanity error to avoid extremely big numbers specified in the fee cap field.
 	ErrFeeCapVeryHigh = errors.New("max fee per gas higher than 2^256-1")
+
+	// ErrTipAboveFeeCap is a sanity error to ensure no one is able to specify a
+	// transaction with a tip higher than the total fee cap.
+	ErrTipAboveFeeCap = errors.New("max fee per gas higher than 2^256-1")
+
+	// ErrInvalidGasFeeCap is returned if gas fee cap of transaction is not equal to UnitPrice
+	ErrInvalidGasFeeCap = error.New("invalid gas fee cap.")
+
+	// ErrInvalidGasTipCap is returned if gas tip cap of transaction is not equal to UnitPrice
+	ErrInvalidGasTipCap = error.New("invalid gas tip cap.")
 )
