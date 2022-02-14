@@ -223,7 +223,6 @@ func testTxRLPEncodeAccessList(t *testing.T) {
 }
 
 func testTxRLPEncodeDynamicFee(t *testing.T) {
-	//prvKey, _:= crypto.HexToECDSA("0cfd086137699e1371a78e648748be0011de423269805c28d2d7b9973dcdb3ad")
 	tx := genDynamicFeeTransaction().(*TxInternalDataDynamicFee)
 
 	signer := LatestSignerForChainID(big.NewInt(2))
