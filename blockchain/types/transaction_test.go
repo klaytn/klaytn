@@ -325,10 +325,10 @@ func TestEIP1559TransactionEncode(t *testing.T) {
 }
 
 func TestEffectiveGasPrice(t *testing.T) {
-	baseFee := big.NewInt(2000)
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
 	dynamicTx := NewTx(&TxInternalDataDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
+	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasPrice(baseFee)
 	want := big.NewInt(1000)
 	assert.Equal(t, want, have)
@@ -336,15 +336,34 @@ func TestEffectiveGasPrice(t *testing.T) {
 	have = dynamicTx.EffectiveGasPrice(baseFee)
 	want = big.NewInt(3000)
 	assert.Equal(t, want, have)
+
+
+	baseFee = big.NewInt(0)
+	have = legacyTx.EffectiveGasPrice(baseFee)
+	want = big.NewInt(1000)
+	assert.Equal(t, want, have)
+
+	have = dynamicTx.EffectiveGasPrice(baseFee)
+	want = big.NewInt(1000)
+	assert.Equal(t, want, have)
 }
 
 func TestEffectiveGasTip(t *testing.T) {
-	baseFee := big.NewInt(2000)
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
 	dynamicTx := NewTx(&TxInternalDataDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
+	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasTip(baseFee)
 	want := big.NewInt(1000)
+	assert.Equal(t, want, have)
+
+	have = dynamicTx.EffectiveGasTip(baseFee)
+	want = big.NewInt(1000)
+	assert.Equal(t, want, have)
+
+	baseFee = big.NewInt(0)
+	have = legacyTx.EffectiveGasTip(baseFee)
+	want = big.NewInt(1000)
 	assert.Equal(t, want, have)
 
 	have = dynamicTx.EffectiveGasTip(baseFee)
