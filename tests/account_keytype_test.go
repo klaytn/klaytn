@@ -1879,7 +1879,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeLast; i++ {
 		if i.IsLegacyTransaction() || i.IsEthTypedTransaction() {
-			continue // accounts with role-based key cannot a send legacy tx.
+			continue // accounts with role-based key cannot send the legacy tx and ethereum typed tx.
 		}
 		_, err := types.NewTxInternalData(i)
 		if err == nil {
