@@ -1285,9 +1285,14 @@ func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransaction
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
-	inputBytes := []byte{byte(types.TxTypeEthEnvelope)}
-	inputBytes = append(inputBytes, input...)
-	return api.publicTransactionPoolAPI.SendRawTransaction(ctx, inputBytes)
+	if 0 < input[0] && input[0] < 0x7f {
+		inputBytes := []byte{byte(types.TxTypeEthEnvelope)}
+		inputBytes = append(inputBytes, input...)
+		return api.publicTransactionPoolAPI.SendRawTransaction(ctx, inputBytes)
+	} else {
+		// legacy transaction
+		return api.publicTransactionPoolAPI.SendRawTransaction(ctx, input)
+	}
 }
 
 // Sign calculates an ECDSA signature for:
@@ -1332,8 +1337,12 @@ func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransaction
 	if err != nil {
 		return nil, err
 	}
-	// Return rawTx except types.TxTypeEthEnvelope: 0x78(= 1 byte)
-	return &EthSignTransactionResult{data[1:], formatTxToEthTxJSON(tx)}, nil
+	if tx.IsEthTypedTransaction() {
+		// Return rawTx except types.TxTypeEthEnvelope: 0x78(= 1 byte)
+		return &EthSignTransactionResult{data[1:], formatTxToEthTxJSON(tx)}, nil
+	} else {
+		return &EthSignTransactionResult{data, formatTxToEthTxJSON(tx)}, nil
+	}
 }
 
 // PendingTransactions returns the transactions that are in the transaction pool

@@ -340,7 +340,7 @@ func (s londonSigner) Hash(tx *Transaction) common.Hash {
 	}
 
 	infs := append([]interface{}{s.ChainID()}, tx.data.SerializeForSign()...)
-	return prefixedRlpHash(byte(tx.Type()&0x0011), infs)
+	return prefixedRlpHash(byte(tx.Type()&0b0000000011111111), infs)
 }
 
 // HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
@@ -435,7 +435,7 @@ func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
 	}
 
 	infs := append([]interface{}{s.ChainID()}, tx.data.SerializeForSign()...)
-	return prefixedRlpHash(byte(tx.Type()&0x0011), infs)
+	return prefixedRlpHash(byte(tx.Type()&0b0000000011111111), infs)
 }
 
 // HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
