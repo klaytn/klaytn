@@ -229,7 +229,6 @@ func testTxRLPEncodeDynamicFee(t *testing.T) {
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
-	//sigRLP := new(bytes.Buffer)
 	sigRLP := new(bytes.Buffer)
 	err := rlp.Encode(sigRLP, tx.Type())
 	assert.Equal(t, nil, err)
