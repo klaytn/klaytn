@@ -361,6 +361,7 @@ func TestClientNotificationStorm(t *testing.T) {
 				if val != i {
 					t.Fatalf("(%d/%d) unexpected value %d", i, count, val)
 				}
+
 			case err := <-sub.Err():
 				if wantError && err != ErrSubscriptionQueueOverflow {
 					t.Fatalf("(%d/%d) got error %q, want %q", i, count, err, ErrSubscriptionQueueOverflow)
@@ -383,7 +384,8 @@ func TestClientNotificationStorm(t *testing.T) {
 		}
 	}
 	doTest(8000, false)
-	doTest(21000, true)
+	doTest(24000, true)
+
 }
 
 func TestClientHTTP(t *testing.T) {
