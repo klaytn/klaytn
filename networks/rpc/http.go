@@ -18,11 +18,13 @@
 package rpc
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/klaytn/klaytn/common"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -34,28 +36,36 @@ import (
 
 	//"github.com/ethereum/go-ethereum/log"
 	"github.com/rs/cors"
+
+	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
 const (
-	maxRequestContentLength = 1024 * 512
+	maxRequestContentLength = 1024 * 1024 * 5
 	contentType             = "application/json"
 )
 
 // https://www.jsonrpc.org/historical/json-rpc-over-http.html#id13
 var acceptedContentTypes = []string{contentType, "application/json-rpc", "application/jsonrequest"}
+var nullAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 
 type httpConn struct {
 	client    *http.Client
 	req       *http.Request
 	closeOnce sync.Once
 	closed    chan interface{}
+	//CreateErrorResponse(id interface{}, err Error) interface{}
+	//ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, Error)
+	//// Assemble success response, expects response id and payload
+	//CreateResponse(id interface{}, reply interface{}) interface{}
 }
 
-func (hc *httpConn) ReadRequestHeaders() ([]rpcRequest, bool, Error) {
-	//TODO implement me
-	//panic("implement me")
-	panic("ReadRequestHeaders called on httpConn")
-}
+//func (hc *httpConn) ReadRequestHeaders() ([]rpcRequest, bool, Error) {
+//	//TODO implement me
+//	//panic("implement me")
+//	panic("ReadRequestHeaders called on httpConn")
+//}
 
 // httpConn is treated specially by Client.
 func (hc *httpConn) Write(context.Context, interface{}) error {
@@ -79,6 +89,13 @@ func (hc *httpConn) Closed() <-chan interface{} {
 	return hc.closed
 }
 
+// httpConn is treated specially by Client.
+func (hc *httpConn) LocalAddr() net.Addr { return nullAddr }
+
+func (hc *httpConn) SetReadDeadline(time.Time) error  { return nil }
+func (hc *httpConn) SetWriteDeadline(time.Time) error { return nil }
+func (hc *httpConn) SetDeadline(time.Time) error      { return nil }
+
 // HTTPTimeouts represents the configuration params for the HTTP RPC server.
 type HTTPTimeouts struct {
 	// ReadTimeout is the maximum duration for reading the entire
@@ -101,6 +118,11 @@ type HTTPTimeouts struct {
 	// is zero, the value of ReadTimeout is used. If both are
 	// zero, ReadHeaderTimeout is used.
 	IdleTimeout time.Duration
+
+	// ExecutionTimeout is the maximum duration for processing the
+	// entire request. If the process is over the time,
+	// the request is stopped immediately and timeout message is sent to client.
+	ExecutionTimeout time.Duration
 }
 
 // DefaultHTTPTimeouts represents the default timeout values used if further
@@ -122,7 +144,7 @@ func DialHTTPWithClient(endpoint string, client *http.Client) (*Client, error) {
 	req.Header.Set("Accept", contentType)
 
 	initctx := context.Background()
-	return newClient(initctx, func(context.Context) (ServerCodec, error) {
+	return NewClient(initctx, func(context.Context) (ServerCodec, error) {
 		return &httpConn{client: client, req: req, closed: make(chan interface{})}, nil
 	})
 }
@@ -211,6 +233,13 @@ type httpReadWriteNopCloser struct {
 	io.Writer
 }
 
+func (t *httpReadWriteNopCloser) SetWriteDeadline(t2 time.Time) error { return nil }
+
+// Close does nothing and returns always nil
+func (t *httpReadWriteNopCloser) Close() error {
+	return nil
+}
+
 // Close does nothing and always returns nil.
 func (t *httpServerConn) Close() error { return nil }
 
@@ -279,7 +308,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", contentType)
 	codec := newHTTPServerConn(r, w)
 	defer codec.Close()
-	s.serveSingleRequest(ctx, codec)
+	s.ServeSingleRequest(ctx, codec)
 }
 
 // validateRequest returns a non-zero response code and error message if the
@@ -368,4 +397,95 @@ func newVHostHandler(vhosts []string, next http.Handler) http.Handler {
 		vhostMap[strings.ToLower(allowedHost)] = struct{}{}
 	}
 	return &virtualHostHandler{vhostMap, next}
+}
+
+func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *fasthttp.Server {
+	timeouts = sanitizeTimeouts(timeouts)
+	if len(cors) == 0 {
+		for _, vhost := range vhosts {
+			if vhost == "*" {
+				return &fasthttp.Server{
+					Concurrency:        ConcurrencyLimit,
+					Handler:            fasthttp.TimeoutHandler(srv.HandleFastHTTP, timeouts.ExecutionTimeout, "timeout"),
+					ReadTimeout:        timeouts.ReadTimeout,
+					WriteTimeout:       timeouts.WriteTimeout,
+					IdleTimeout:        timeouts.IdleTimeout,
+					MaxRequestBodySize: common.MaxRequestContentLength,
+				}
+			}
+		}
+	}
+	// Wrap the CORS-handler within a host-handler
+	handler := newCorsHandler(srv, cors)
+	handler = newVHostHandler(vhosts, handler)
+
+	// If os environment variables for NewRelic exist, register the NewRelicHTTPHandler
+	nrApp := newNewRelicApp()
+	if nrApp != nil {
+		handler = newNewRelicHTTPHandler(nrApp, handler)
+	}
+
+	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
+	fhandler = fasthttp.TimeoutHandler(fhandler, timeouts.ExecutionTimeout, "timeout")
+
+	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
+	return &fasthttp.Server{
+		Concurrency:        ConcurrencyLimit,
+		Handler:            fhandler,
+		ReadTimeout:        timeouts.ReadTimeout,
+		WriteTimeout:       timeouts.WriteTimeout,
+		IdleTimeout:        timeouts.IdleTimeout,
+		MaxRequestBodySize: common.MaxRequestContentLength,
+	}
+}
+
+func (srv *Server) HandleFastHTTP(requestCtx *fasthttp.RequestCtx) {
+
+	r := &requestCtx.Request
+	w := &requestCtx.Response
+
+	// Permit dumb empty requests for remote health-checks (AWS)
+	if requestCtx.IsGet() && requestCtx.Request.Header.ContentLength() == 0 && string(requestCtx.URI().QueryString()) == "" {
+		return
+	}
+	if code, err := validateFastRequest(requestCtx); err != nil {
+		w.Header.Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header.Set("X-Content-Type-Options", "nosniff")
+		w.Header.SetStatusCode(code)
+		fmt.Fprintf(requestCtx, err.Error())
+		return
+	}
+	// All checks passed, create a codec that reads direct from the request body
+	// untilEOF and writes the response to w and order the server to process a
+	// single request.
+	var ctx context.Context
+	ctx = requestCtx
+	ctx = context.WithValue(ctx, "remote", requestCtx.RemoteAddr().String())
+	ctx = context.WithValue(ctx, "scheme", string(requestCtx.URI().Scheme()))
+	ctx = context.WithValue(ctx, "local", requestCtx.LocalAddr().String())
+
+	reader := bufio.NewReaderSize(bytes.NewReader(r.Body()), common.MaxRequestContentLength)
+	codec := NewJSONCodec(&httpReadWriteNopCloser{reader, w.BodyWriter()})
+	defer codec.Close()
+
+	w.Header.SetContentType(contentType)
+	srv.ServeSingleRequest(ctx, codec)
+}
+
+// validateRequest returns a non-zero response code and error message if the
+// request is invalid.
+func validateFastRequest(requestCtx *fasthttp.RequestCtx) (int, error) {
+	if requestCtx.IsPut() || requestCtx.IsDelete() {
+		return http.StatusMethodNotAllowed, errors.New("method not allowed")
+	}
+	if requestCtx.Request.Header.ContentLength() > common.MaxRequestContentLength {
+		err := fmt.Errorf("content length too large (%d>%d)", requestCtx.Request.Header.ContentLength(), common.MaxRequestContentLength)
+		return http.StatusRequestEntityTooLarge, err
+	}
+	mt, _, err := mime.ParseMediaType(string(requestCtx.Request.Header.ContentType()))
+	if string(requestCtx.Method()) != http.MethodOptions && (err != nil || mt != contentType) {
+		err := fmt.Errorf("invalid content type, only %s is supported", contentType)
+		return http.StatusUnsupportedMediaType, err
+	}
+	return 0, nil
 }

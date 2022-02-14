@@ -44,12 +44,17 @@ type RemoteBackend struct {
 	chainID   *big.Int
 }
 
+// Existing Klaytn rpc client used net.Conn as connect function
+// Ethereum's new rpc client uses rpc.ServerCodec as connect function
+
 func NewRpcClientP2P(sb *SubBridge) *rpc.Client {
 	initctx := context.Background()
-	c, _ := rpc.NewClient(initctx, func(context.Context) (net.Conn, error) {
+	//	c, _ := rpc.NewClient(initctx, func(context.Context) (net.Conn, error) {
+	c, _ := rpc.NewClient(initctx, func(context.Context) (rpc.ServerCodec, error) {
 		p1, p2 := net.Pipe()
 		sb.SetRPCConn(p1)
-		return p2, nil
+		//		return p2, nil
+		return rpc.NewJSONCodec(p2), nil
 	})
 	return c
 }

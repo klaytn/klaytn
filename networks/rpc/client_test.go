@@ -45,6 +45,7 @@ func TestClientRequest(t *testing.T) {
 	if err := client.Call(&resp, "test_echo", "hello", 10, &Args{"world"}); err != nil {
 		t.Fatal(err)
 	}
+
 	if !reflect.DeepEqual(resp, Result{"hello", 10, &Args{"world"}}) {
 		t.Errorf("incorrect result %#v", resp)
 	}
@@ -64,6 +65,7 @@ func TestClientBatchRequest(t *testing.T) {
 		},
 		{
 			Method: "test_echo",
+			//Args:   []interface{}{"hello", 10, &Args{"world"}},
 			Args:   []interface{}{"hello2", 11, &Args{"world"}},
 			Result: new(Result),
 		},
@@ -73,6 +75,7 @@ func TestClientBatchRequest(t *testing.T) {
 			Result: new(int),
 		},
 	}
+
 	if err := client.BatchCall(batch); err != nil {
 		t.Fatal(err)
 	}
@@ -380,7 +383,7 @@ func TestClientNotificationStorm(t *testing.T) {
 		}
 	}
 	doTest(8000, false)
-	doTest(21000, false)
+	doTest(21000, true)
 }
 
 func TestClientHTTP(t *testing.T) {

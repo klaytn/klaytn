@@ -1,4 +1,3 @@
-// Modifications Copyright 2022 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -38,7 +37,36 @@ const (
 	OptionMethodInvocation CodecOption = 1 << iota
 
 	// OptionSubscriptions is an indication that the codec suports RPC notifications
-	OptionSubscriptions = 1 << iota // support pub sub
+	OptionSubscriptions = 1 << iota // support pub sub	// OptionMethodInvocation is an indication that the codec supports RPC method calls
+
+	// pendingRequestLimit is a limit for concurrent RPC method calls
+	pendingRequestLimit = 200000
+)
+
+var (
+	// ConcurrencyLimit is a limit for the number of concurrency connection for RPC servers.
+	// It can be overwritten by rpc.concurrencylimit flag
+	ConcurrencyLimit = 3000
+
+	// pendingRequestCount is a total number of concurrent RPC method calls
+	pendingRequestCount int64 = 0
+
+	// TODO-Klaytn: move websocket configurations to Config struct in /network/rpc/server.go
+	// MaxSubscriptionPerWSConn is a maximum number of subscription for a websocket connection
+	MaxSubscriptionPerWSConn int32 = 3000
+
+	// WebsocketReadDeadline is the read deadline on the underlying network connection in seconds. 0 means read will not timeout
+	WebsocketReadDeadline int64 = 0
+
+	// WebsocketWriteDeadline is the write deadline on the underlying network connection in seconds. 0 means write will not timeout
+	WebsocketWriteDeadline int64 = 0
+
+	// MaxWebsocketConnections is a maximum number of websocket connections
+	MaxWebsocketConnections int32 = 3000
+
+	// NonEthCompatible is a bool value that determines whether to use return formatting of the eth namespace API  provided for compatibility.
+	// It can be overwritten by rpc.eth.noncompatible flag
+	NonEthCompatible = false
 )
 
 // Server is an RPC server.
@@ -47,6 +75,8 @@ type Server struct {
 	idgen    func() ID
 	run      int32
 	codecs   mapset.Set
+
+	wsConnCount int32
 }
 
 // NewServer creates a new server instance with no registered handlers.
@@ -89,10 +119,18 @@ func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
 	c.Close()
 }
 
+func (s *Server) GetServices() map[string]service {
+	return s.services.services
+}
+
+func GetNullServices() service {
+	return service{}
+}
+
 // serveSingleRequest reads and processes a single RPC request from the given codec. This
 // is used to serve HTTP connections. Subscriptions and reverse calls are not allowed in
 // this mode.
-func (s *Server) serveSingleRequest(ctx context.Context, codec ServerCodec) {
+func (s *Server) ServeSingleRequest(ctx context.Context, codec ServerCodec) {
 	// Don't serve if server is stopped.
 	if atomic.LoadInt32(&s.run) == 0 {
 		return

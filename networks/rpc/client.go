@@ -195,7 +195,7 @@ func ClientFromContext(ctx context.Context) (*Client, bool) {
 	return client, ok
 }
 
-func newClient(initctx context.Context, connect reconnectFunc) (*Client, error) {
+func NewClient(initctx context.Context, connect reconnectFunc) (*Client, error) {
 	conn, err := connect(initctx)
 	if err != nil {
 		return nil, err
@@ -625,4 +625,9 @@ func (c *Client) read(codec ServerCodec) {
 		}
 		c.readOp <- readOp{msgs, batch}
 	}
+}
+
+// KlaySubscribe registers a subscripion under the "klay" namespace.
+func (c *Client) KlaySubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
+	return c.Subscribe(ctx, "klay", channel, args...)
 }

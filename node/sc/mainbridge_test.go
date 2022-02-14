@@ -156,7 +156,12 @@ func TestMainBridge_basic(t *testing.T) {
 	// Check initial status of components
 	assert.Nil(t, mBridge.blockchain)
 	assert.Nil(t, mBridge.txPool)
-	assert.Nil(t, mBridge.rpcServer.GetServices()["klay"])
+
+	// return structure has been changed when no service has been registered yet.
+	// before modification: return type is nil
+	// after modification: return type is "nil, map[nil], map[nil], which equals to service{}"
+	// rpc.GetNullServices() returns service{}
+	assert.Equal(t, rpc.GetNullServices(), mBridge.rpcServer.GetServices()["klay"])
 
 	// Update and check MainBridge components
 	mBridge.SetComponents(comp)
